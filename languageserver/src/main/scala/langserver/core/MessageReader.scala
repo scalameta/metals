@@ -5,6 +5,7 @@ import java.nio.charset.Charset
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
+import com.typesafe.scalalogging.LazyLogging
 
 /**
  * A Language Server message Reader. It expects the following format:
@@ -19,7 +20,7 @@ import scala.collection.mutable.ArrayBuffer
  *
  * @note The header part is defined to be ASCII encoded, while the content part is UTF8.
  */
-class MessageReader(in: InputStream) {
+class MessageReader(in: InputStream) extends LazyLogging {
   val BufferSize = 8192
   
   private val buffer = new Array[Byte](BufferSize)
@@ -37,7 +38,7 @@ class MessageReader(in: InputStream) {
           lock.notify()
         }
       } while (nRead > 0) 
-      Console.err.println("End of stream, terminating thread")
+      logger.info("End of stream, terminating thread")
     }
   }
 
@@ -65,14 +66,14 @@ class MessageReader(in: InputStream) {
     }
 
     if (atDelimiter(i)) {
-      val headers = new String(data.slice(0, i).toArray, Charset.forName("ASCII"))
-      Console.err.println(s"Received headers:\n$headers")
+      val headers = new String(data.slice(0, i).toArray, MessageReader.AsciiCharset)
+      logger.debug(s"Received headers:\n$headers")
       
       val pairs = headers.split("\r\n").filter(_.trim.length() > 0) map { line =>
         line.split(":") match {
           case Array(key, value) => key.trim -> value.trim
           case _ => 
-            Console.err.println(s"Malformed input: $line")
+            logger.error(s"Malformed input: $line")
             EmptyPair
         }
       }
@@ -92,7 +93,7 @@ class MessageReader(in: InputStream) {
     assert(data.size >= len)
     val content = data.take(len).toArray
     data = data.drop(len)
-    new String(content, Charset.forName("UTF-8"))
+    new String(content, MessageReader.Utf8Charset)
   }
   
   /**
@@ -110,11 +111,14 @@ class MessageReader(in: InputStream) {
     if (length > 0)
       getContent(length)
     else {
-      Console.err.println("Input must have Content-Length header with a numeric value.")
+      logger.error("Input must have Content-Length header with a numeric value.")
       nextPayload()
     }
   }
 }
 
-
+object MessageReader {
+  val AsciiCharset = Charset.forName("ASCII")
+  val Utf8Charset = Charset.forName("UTF-8")
+}
 

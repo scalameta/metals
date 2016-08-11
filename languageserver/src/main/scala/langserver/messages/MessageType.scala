@@ -1,7 +1,5 @@
 package langserver.messages
 
-case class ShowMessageParams(tpe: Long, message: String)
-
 object MessageType {
   /** An error message. */
   final val Error = 1

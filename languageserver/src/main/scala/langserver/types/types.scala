@@ -1,14 +1,18 @@
 package langserver.types
 
+import play.api.libs.json._
+
 /**
  * Position in a text document expressed as zero-based line and character offset.
  */
 case class Position(line: Int, character: Int)
+object Position { implicit val format = Json.format[Position] }
 
 /**
  * A range in a text document.
  */
 case class Range(start: Position, end: Position)
+object Range { implicit val format = Json.format[Range] }
 
 /**
  * Represents a location inside a resource, such as a line
@@ -51,10 +55,10 @@ case class WorkspaceEdit(
   )
 
 case class TextDocumentIdentifier(uri: String)
+object TextDocumentIdentifier { implicit val format = Json.format[TextDocumentIdentifier] }
 
-abstract class VersionedTextDocumentIdentifier(uri: String) extends TextDocumentIdentifier(uri) {
-  def version: Long
-}
+case class VersionedTextDocumentIdentifier(uri: String, version: Long)
+object VersionedTextDocumentIdentifier { implicit val format = Json.format[VersionedTextDocumentIdentifier] }
 
 /**
  * An item to transfer a text document from the client to the
@@ -70,6 +74,10 @@ case class TextDocumentItem(
   version: Long,
   text: String)
 
+object TextDocumentItem {
+  implicit val format = Json.format[TextDocumentItem]
+}
+  
 object CompletionItemKind {
   final val Text = 1
   final val Method = 2
@@ -318,3 +326,7 @@ case class TextDocumentContentChangeEvent(
 	 */
 	text: String
 )
+
+object TextDocumentContentChangeEvent {
+  implicit val format = Json.format[TextDocumentContentChangeEvent]
+}
