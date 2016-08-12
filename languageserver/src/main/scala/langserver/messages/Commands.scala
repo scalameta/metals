@@ -55,63 +55,63 @@ case class ServerCapabilities(
    * Defines how text documents are synced.
    */
   textDocumentSync: Int = TextDocumentSyncKind.Full /*
-	/**
-	 * The server provides hover support.
-	 */
-	hoverProvider: Boolean,
-	/**
-	 * The server provides completion support.
-	 */
-	completionProvider: CompletionOptions,
-	/**
-	 * The server provides signature help support.
-	 */
-	signatureHelpProvider: SignatureHelpOptions,
-	/**
-	 * The server provides goto definition support.
-	 */
-	definitionProvider: Boolean,
-	/**
-	 * The server provides find references support.
-	 */
-	referencesProvider: Boolean,
-	/**
-	 * The server provides document highlight support.
-	 */
-	documentHighlightProvider: Boolean,
-	/**
-	 * The server provides document symbol support.
-	 */
-	documentSymbolProvider: Boolean,
-	/**
-	 * The server provides workspace symbol support.
-	 */
-	workspaceSymbolProvider: Boolean,
-	/**
-	 * The server provides code actions.
-	 */
-	codeActionProvider: Boolean,
-	/**
-	 * The server provides code lens.
-	 */
-	codeLensProvider: CodeLensOptions,
-	/**
-	 * The server provides document formatting.
-	 */
-	documentFormattingProvider: Boolean,
-	/**
-	 * The server provides document range formatting.
-	 */
-	documentRangeFormattingProvider: Boolean,
-	/**
-	 * The server provides document formatting on typing.
-	 */
-	documentOnTypeFormattingProvider: DocumentOnTypeFormattingOptions,
-	/**
-	 * The server provides rename support.
-	 */
-	renameProvider: Boolean
-	*/ ) extends ResultResponse
+  /**
+   * The server provides hover support.
+   */
+  hoverProvider: Boolean,
+  /**
+   * The server provides completion support.
+   */
+  completionProvider: CompletionOptions,
+  /**
+   * The server provides signature help support.
+   */
+  signatureHelpProvider: SignatureHelpOptions,
+  /**
+   * The server provides goto definition support.
+   */
+  definitionProvider: Boolean,
+  /**
+   * The server provides find references support.
+   */
+  referencesProvider: Boolean,
+  /**
+   * The server provides document highlight support.
+   */
+  documentHighlightProvider: Boolean,
+  /**
+   * The server provides document symbol support.
+   */
+  documentSymbolProvider: Boolean,
+  /**
+   * The server provides workspace symbol support.
+   */
+  workspaceSymbolProvider: Boolean,
+  /**
+   * The server provides code actions.
+   */
+  codeActionProvider: Boolean,
+  /**
+   * The server provides code lens.
+   */
+  codeLensProvider: CodeLensOptions,
+  /**
+   * The server provides document formatting.
+   */
+  documentFormattingProvider: Boolean,
+  /**
+   * The server provides document range formatting.
+   */
+  documentRangeFormattingProvider: Boolean,
+  /**
+   * The server provides document formatting on typing.
+   */
+  documentOnTypeFormattingProvider: DocumentOnTypeFormattingOptions,
+  /**
+   * The server provides rename support.
+   */
+  renameProvider: Boolean
+  */ ) extends ResultResponse
 
 case class Shutdown() extends ServerCommand
 object Shutdown {
@@ -153,8 +153,7 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
     "initialize" -> Json.format[InitializeParams],
     "shutdown" -> Shutdown.format,
     "textDocument/completion" -> Json.format[TextDocumentPositionParams],
-    "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams]
-    )
+    "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams])
 }
 
 object ClientCommand extends CommandCompanion[ClientCommand] {
@@ -199,6 +198,10 @@ object Notification extends NotificationCompanion[Notification] {
     "textDocument/didChange" -> Json.format[DidChangeTextDocumentParams],
     "textDocument/didClose" -> Json.format[DidCloseTextDocumentParams],
     "textDocument/didSave" -> Json.format[DidSaveTextDocumentParams],
-    "workspace/didChangeWatchedFiles" -> Json.format[DidChangeWatchedFiles]
-    )
+    "workspace/didChangeWatchedFiles" -> Json.format[DidChangeWatchedFiles])
+}
+
+object ResultResponse extends ResponseCompanion[ResultResponse] {
+  override val ResponseFormats = Message.MethodFormats(
+    "initialize" -> Json.format[ServerCapabilities])
 }

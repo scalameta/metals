@@ -21,20 +21,27 @@ import com.typesafe.scalalogging.LazyLogging
  */
 class MessageWriter(out: OutputStream) extends LazyLogging {
   private val ContentLen = "Content-Length"
-  
-  def write[T](msg: T, h: Map[String, String] = Map.empty)(implicit o: Format[T]): Unit = {
+
+  /** Lock protecting the output stream, so multiple writes don't mix message chunks. */
+  private val lock = new Object
+
+  /**
+   * Write a message to the output stream. This method can be called from multiple threads,
+   * but it may block waiting for other threads to finish writing.
+   */
+  def write[T](msg: T, h: Map[String, String] = Map.empty)(implicit o: Format[T]): Unit = lock.synchronized {
     require(h.get(ContentLen).isEmpty)
-    
+
     val str = Json.stringify(o.writes(msg))
     val contentBytes = str.getBytes(MessageReader.Utf8Charset)
     val headers = (h + (ContentLen -> contentBytes.length))
       .map { case (k, v) => s"$k: $v" }
       .mkString("", "\r\n", "\r\n\r\n")
-  
+
     logger.debug(s"Headers: \n$headers")
-    
+
     val headerBytes = headers.getBytes(MessageReader.AsciiCharset)
-    
+
     out.write(headerBytes)
     out.write(contentBytes)
     out.flush()
