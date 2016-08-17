@@ -11,7 +11,8 @@ import play.api.libs.json.JsObject
 
 class LanguageServer(inStream: InputStream, outStream: OutputStream) extends LazyLogging {
   val connection = (new ConnectionImpl(inStream, outStream)) {
-    case InitializeParams(pid, rootPath, capabilities, options) => initialize(pid, rootPath, capabilities, options)
+    case InitializeParams(pid, rootPath, capabilities) =>
+      InitializeResult(initialize(pid, rootPath, capabilities))
     case c =>
       logger.error(s"Unknown command $c")
       sys.error("Unknown command")
@@ -68,8 +69,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 //    ???
   }
 
-  def initialize(pid: Long, rootPath: String, capabilities: ClientCapabilities, options: JsObject): ServerCapabilities = {
-    logger.info(s"Initialized with $pid, $rootPath, $capabilities, $options")
+  def initialize(pid: Long, rootPath: String, capabilities: ClientCapabilities): ServerCapabilities = {
+    logger.info(s"Initialized with $pid, $rootPath, $capabilities")
     ServerCapabilities()
   }
 

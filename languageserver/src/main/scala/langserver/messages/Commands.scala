@@ -33,12 +33,7 @@ case class InitializeParams(
   /**
    * The capabilities provided by the client (editor)
    */
-  capabilities: ClientCapabilities,
-
-  /**
-   * User provided initialization options.
-   */
-  initializationOptions: JsObject) extends ServerCommand
+  capabilities: ClientCapabilities) extends ServerCommand
 
 case class InitializeError(retry: Boolean)
 
@@ -111,7 +106,13 @@ case class ServerCapabilities(
    * The server provides rename support.
    */
   renameProvider: Boolean
-  */ ) extends ResultResponse
+  */ )
+
+object ServerCapabilities {
+  implicit val format = Json.format[ServerCapabilities]
+}
+
+case class InitializeResult(capabilities: ServerCapabilities) extends ResultResponse
 
 case class Shutdown() extends ServerCommand
 object Shutdown {
@@ -203,5 +204,5 @@ object Notification extends NotificationCompanion[Notification] {
 
 object ResultResponse extends ResponseCompanion[ResultResponse] {
   override val ResponseFormats = Message.MethodFormats(
-    "initialize" -> Json.format[ServerCapabilities])
+    "initialize" -> Json.format[InitializeResult])
 }

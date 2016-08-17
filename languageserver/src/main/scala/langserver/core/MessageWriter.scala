@@ -38,7 +38,7 @@ class MessageWriter(out: OutputStream) extends LazyLogging {
       .map { case (k, v) => s"$k: $v" }
       .mkString("", "\r\n", "\r\n\r\n")
 
-    logger.debug(s"Headers: \n$headers")
+    logger.debug(s"$headers\n\n$str")
 
     val headerBytes = headers.getBytes(MessageReader.AsciiCharset)
 
