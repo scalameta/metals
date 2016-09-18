@@ -77,7 +77,7 @@ case class TextDocumentItem(
 object TextDocumentItem {
   implicit val format = Json.format[TextDocumentItem]
 }
-  
+
 object CompletionItemKind {
   final val Text = 1
   final val Method = 2
@@ -108,11 +108,13 @@ case class CompletionItem(
   filterText: Option[String],
   insertText: Option[String],
   textEdit: Option[String],
-  data: Option[Any]) // An data entry field that is preserved on a completion item between
+  data: Option[String]) // An data entry field that is preserved on a completion item between
 // a [CompletionRequest](#CompletionRequest) and a [CompletionResolveRequest]
-//	 (#CompletionResolveRequest)
+//   (#CompletionResolveRequest)
 
-case class CompletionList(isIncomplete: Boolean, items: Seq[CompletionItem])
+object CompletionItem {
+  implicit def format = Json.format[CompletionItem]
+}
 
 case class MarkedString(language: String, value: String) {
   def this(value: String) {
@@ -311,20 +313,20 @@ case class TextDocumentChangeEvent(document: TextDocument)
  * the new text is considered to be the full content of the document.
  */
 case class TextDocumentContentChangeEvent(
-	/**
-	 * The range of the document that changed.
-	 */
-	range: Option[Range],
+  /**
+   * The range of the document that changed.
+   */
+  range: Option[Range],
 
-	/**
-	 * The length of the range that got replaced.
-	 */
-	rangeLength: Option[Int],
+  /**
+   * The length of the range that got replaced.
+   */
+  rangeLength: Option[Int],
 
-	/**
-	 * The new text of the document.
-	 */
-	text: String
+  /**
+   * The new text of the document.
+   */
+  text: String
 )
 
 object TextDocumentContentChangeEvent {

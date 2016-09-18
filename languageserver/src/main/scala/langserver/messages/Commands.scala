@@ -49,67 +49,92 @@ case class ServerCapabilities(
   /**
    * Defines how text documents are synced.
    */
-  textDocumentSync: Int = TextDocumentSyncKind.Full /*
+  textDocumentSync: Int = TextDocumentSyncKind.Full,
   /**
    * The server provides hover support.
    */
-  hoverProvider: Boolean,
+  hoverProvider: Boolean = false,
   /**
    * The server provides completion support.
    */
-  completionProvider: CompletionOptions,
+  completionProvider: Option[CompletionOptions],
   /**
    * The server provides signature help support.
    */
-  signatureHelpProvider: SignatureHelpOptions,
+  signatureHelpProvider: Option[SignatureHelpOptions] = None,
   /**
    * The server provides goto definition support.
    */
-  definitionProvider: Boolean,
+  definitionProvider: Boolean = false,
   /**
    * The server provides find references support.
    */
-  referencesProvider: Boolean,
+  referencesProvider: Boolean = false,
   /**
    * The server provides document highlight support.
    */
-  documentHighlightProvider: Boolean,
+  documentHighlightProvider: Boolean = false,
   /**
    * The server provides document symbol support.
    */
-  documentSymbolProvider: Boolean,
+  documentSymbolProvider: Boolean = false,
   /**
    * The server provides workspace symbol support.
    */
-  workspaceSymbolProvider: Boolean,
+  workspaceSymbolProvider: Boolean = false,
   /**
    * The server provides code actions.
    */
-  codeActionProvider: Boolean,
+  codeActionProvider: Boolean = false,
   /**
    * The server provides code lens.
    */
-  codeLensProvider: CodeLensOptions,
+  codeLensProvider: Option[CodeLensOptions] = None,
   /**
    * The server provides document formatting.
    */
-  documentFormattingProvider: Boolean,
+  documentFormattingProvider: Boolean = false,
   /**
    * The server provides document range formatting.
    */
-  documentRangeFormattingProvider: Boolean,
+  documentRangeFormattingProvider: Boolean = false,
   /**
    * The server provides document formatting on typing.
    */
-  documentOnTypeFormattingProvider: DocumentOnTypeFormattingOptions,
+  documentOnTypeFormattingProvider: Option[DocumentOnTypeFormattingOptions] = None,
   /**
    * The server provides rename support.
    */
-  renameProvider: Boolean
-  */ )
+  renameProvider: Boolean = false
+)
 
 object ServerCapabilities {
   implicit val format = Json.format[ServerCapabilities]
+}
+
+case class CompletionOptions(resolveProvider: Boolean, triggerCharacters: Seq[String])
+object CompletionOptions {
+  implicit val format: Format[CompletionOptions] = Json.format[CompletionOptions]
+}
+
+case class SignatureHelpOptions(triggerCharacters: Seq[String])
+object SignatureHelpOptions {
+  implicit val format: Format[SignatureHelpOptions] = Json.format[SignatureHelpOptions]
+}
+
+case class CodeLensOptions(resolveProvider: Boolean = false)
+object CodeLensOptions {
+  implicit val format: Format[CodeLensOptions] = Json.format[CodeLensOptions]
+}
+
+case class DocumentOnTypeFormattingOptions(firstTriggerCharacter: String, moreTriggerCharacters: Seq[String])
+object DocumentOnTypeFormattingOptions {
+  implicit val format: Format[DocumentOnTypeFormattingOptions] = Json.format[DocumentOnTypeFormattingOptions]
+}
+
+case class CompletionList(isIncomplete: Boolean, items: Seq[CompletionItem]) extends ResultResponse
+object CompletionList {
+  implicit val format = Json.format[CompletionList]
 }
 
 case class InitializeResult(capabilities: ServerCapabilities) extends ResultResponse
@@ -204,5 +229,6 @@ object Notification extends NotificationCompanion[Notification] {
 
 object ResultResponse extends ResponseCompanion[ResultResponse] {
   override val ResponseFormats = Message.MethodFormats(
-    "initialize" -> Json.format[InitializeResult])
+    "initialize" -> Json.format[InitializeResult],
+    "textDocument/completion" -> Json.format[CompletionList])
 }

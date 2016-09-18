@@ -9,10 +9,15 @@ import langserver.messages._
 import langserver.types._
 import play.api.libs.json.JsObject
 
+/**
+ * A language server implementation. Users should subclass this class and implement specific behavior.
+ */
 class LanguageServer(inStream: InputStream, outStream: OutputStream) extends LazyLogging {
   val connection = (new ConnectionImpl(inStream, outStream)) {
     case InitializeParams(pid, rootPath, capabilities) =>
       InitializeResult(initialize(pid, rootPath, capabilities))
+    case TextDocumentPositionParams(textDocument, position) =>
+      completionRequest(textDocument, position)
     case c =>
       logger.error(s"Unknown command $c")
       sys.error("Unknown command")
@@ -31,12 +36,6 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
     connection.start()
   }
 
-//  def initialize(params: InitializeParams): Unit
-
-//  def shutdown(): Unit
-//
-//  def onDidChangeConfiguration(params: Any): Unit
-
   /**
    * A notification sent to the client to show a message.
    *
@@ -47,6 +46,23 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
     connection.sendNotification(ShowMessageParams(tpe, message))
   }
 
+  /**
+   * The log message notification is sent from the server to the client to ask
+   * the client to log a particular message.
+   *
+   * @param tpe One of MessageType values
+   * @param message The message to display in the client
+   */
+  def logMessage(tpe: Int, message: String): Unit = {
+    connection.sendNotification(LogMessageParams(tpe, message))
+  }
+
+  /**
+   * Publish compilation errors for the given file.
+   */
+  def publishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]): Unit = {
+    connection.sendNotification(PublishDiagnostics(uri, diagnostics))
+  }
 
   def onOpenTextDocument(td: TextDocumentItem) = {
     logger.debug(s"openTextDocuemnt $td")
@@ -71,7 +87,11 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   def initialize(pid: Long, rootPath: String, capabilities: ClientCapabilities): ServerCapabilities = {
     logger.info(s"Initialized with $pid, $rootPath, $capabilities")
-    ServerCapabilities()
+    ServerCapabilities(completionProvider = Some(CompletionOptions(false, Seq("."))))
+  }
+
+  def completionRequest(textDocument: TextDocumentIdentifier, position: Position): ResultResponse = {
+    CompletionList(isIncomplete = false, Nil)
   }
 
 }
