@@ -18,6 +18,9 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
       InitializeResult(initialize(pid, rootPath, capabilities))
     case TextDocumentPositionParams(textDocument, position) =>
       completionRequest(textDocument, position)
+    case Shutdown() =>
+      shutdown()
+      ShutdownResult(0) // the value is a dummy, because Play Json needs to serialize something
     case c =>
       logger.error(s"Unknown command $c")
       sys.error("Unknown command")
@@ -36,34 +39,6 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
     connection.start()
   }
 
-  /**
-   * A notification sent to the client to show a message.
-   *
-   * @param tpe One of MessageType values
-   * @param message The message to display in the client
-   */
-  def showMessage(tpe: Int, message: String): Unit = {
-    connection.sendNotification(ShowMessageParams(tpe, message))
-  }
-
-  /**
-   * The log message notification is sent from the server to the client to ask
-   * the client to log a particular message.
-   *
-   * @param tpe One of MessageType values
-   * @param message The message to display in the client
-   */
-  def logMessage(tpe: Int, message: String): Unit = {
-    connection.sendNotification(LogMessageParams(tpe, message))
-  }
-
-  /**
-   * Publish compilation errors for the given file.
-   */
-  def publishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]): Unit = {
-    connection.sendNotification(PublishDiagnostics(uri, diagnostics))
-  }
-
   def onOpenTextDocument(td: TextDocumentItem) = {
     logger.debug(s"openTextDocuemnt $td")
   }
@@ -74,7 +49,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   def onSaveTextDocument(td: TextDocumentIdentifier) = {
     logger.debug(s"saveTextDocuemnt $td")
-    showMessage(MessageType.Info, s"Saved text document ${td.uri}")
+    connection.showMessage(MessageType.Info, s"Saved text document ${td.uri}")
   }
 
   def onCloseTextDocument(td: TextDocumentIdentifier) = {
@@ -94,4 +69,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
     CompletionList(isIncomplete = false, Nil)
   }
 
+  def shutdown(): Unit = {
+
+  }
 }

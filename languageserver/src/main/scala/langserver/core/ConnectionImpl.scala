@@ -1,21 +1,22 @@
 package langserver.core
 
-import java.io.OutputStream
 import java.io.InputStream
-import com.dhpcs.jsonrpc._
-import langserver.messages.ServerCommand
-import scala.util.Try
-import play.api.libs.json._
+import java.io.OutputStream
+import java.util.concurrent.Executors
+
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
-import scala.collection.mutable.ListBuffer
-import langserver.messages.Notification
+import scala.util.Try
+
+import com.dhpcs.jsonrpc._
 import com.typesafe.scalalogging.LazyLogging
-import langserver.messages.Response
-import langserver.messages.ResultResponse
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext
-import java.util.concurrent.Executors
+
+import langserver.messages._
+import langserver.types._
+import play.api.libs.json._
 
 /**
  * A connection that reads and writes Language Server Protocol messages.
@@ -23,7 +24,8 @@ import java.util.concurrent.Executors
  * @note Commands are executed asynchronously via a thread pool
  * @note Notifications are executed synchronously on the calling thread
  */
-class ConnectionImpl(inStream: InputStream, outStream: OutputStream)(val commandHandler: ServerCommand => ResultResponse) extends LazyLogging {
+class ConnectionImpl(inStream: InputStream, outStream: OutputStream)(val commandHandler: ServerCommand => ResultResponse)
+    extends Connection with LazyLogging {
   private val msgReader = new MessageReader(inStream)
   private val msgWriter = new MessageWriter(outStream)
 
@@ -34,13 +36,44 @@ class ConnectionImpl(inStream: InputStream, outStream: OutputStream)(val command
 
   def notifySubscribers(n: Notification): Unit = {
     notificationHandlers.foreach(f =>
-      Try(f(n)).recover { case e => logger.error("failed notification handler", e) }
-    )
+      Try(f(n)).recover { case e => logger.error("failed notification handler", e) })
   }
 
-  def sendNotification(params: Notification): Unit = {
+  override def sendNotification(params: Notification): Unit = {
     val json = Notification.write(params)
     msgWriter.write(json)
+  }
+
+  /**
+   * A notification sent to the client to show a message.
+   *
+   * @param tpe One of MessageType values
+   * @param message The message to display in the client
+   */
+  override def showMessage(tpe: Int, message: String): Unit = {
+    sendNotification(ShowMessageParams(tpe, message))
+  }
+
+  def showMessage(tpe: Int, message: String, actions: String*): Unit = {
+    ???
+  }
+
+  /**
+   * The log message notification is sent from the server to the client to ask
+   * the client to log a particular message.
+   *
+   * @param tpe One of MessageType values
+   * @param message The message to display in the client
+   */
+  override def logMessage(tpe: Int, message: String): Unit = {
+    sendNotification(LogMessageParams(tpe, message))
+  }
+
+  /**
+   * Publish compilation errors for the given file.
+   */
+  override def publishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]): Unit = {
+    sendNotification(PublishDiagnostics(uri, diagnostics))
   }
 
   def start() {
@@ -118,7 +151,7 @@ class ConnectionImpl(inStream: InputStream, outStream: OutputStream)(val command
           command => request.id -> Right(command)))
   }
 
-  private def handleCommand(id: Either[String,BigDecimal], command: ServerCommand) = {
+  private def handleCommand(id: Either[String, BigDecimal], command: ServerCommand) = {
     logger.info(s"Received commmand: $id -- $command")
     Future(commandHandler(command)).map { result =>
       msgWriter.write(ResultResponse.write(Right(result), Some(id)))

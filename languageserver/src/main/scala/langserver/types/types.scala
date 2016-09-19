@@ -33,7 +33,10 @@ case class Diagnostic(
   code: Option[String], // a code for this diagnostic
   source: Option[String], // the source of this diagnostic (like 'typescript' or 'scala')
   message: String // the diagnostic message
-  )
+)
+object Diagnostic {
+  implicit val format = Json.format[Diagnostic]
+}
 
 /**
  * A reference to a command.

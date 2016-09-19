@@ -146,6 +146,8 @@ object Shutdown {
     Writes(s => Json.obj()))
 }
 
+case class ShutdownResult(dummy: Int) extends ResultResponse
+
 case class ShowMessageRequestParams(
   /**
    * The message type. @see MessageType
@@ -220,6 +222,7 @@ object Notification extends NotificationCompanion[Notification] {
   override val NotificationFormats = Message.MethodFormats(
     "window/showMessage" -> Json.format[ShowMessageParams],
     "window/logMessage" -> Json.format[LogMessageParams],
+    "textDocument/publishDiagnostics" -> Json.format[PublishDiagnostics],
     "textDocument/didOpen" -> Json.format[DidOpenTextDocumentParams],
     "textDocument/didChange" -> Json.format[DidChangeTextDocumentParams],
     "textDocument/didClose" -> Json.format[DidCloseTextDocumentParams],
@@ -230,5 +233,6 @@ object Notification extends NotificationCompanion[Notification] {
 object ResultResponse extends ResponseCompanion[ResultResponse] {
   override val ResponseFormats = Message.MethodFormats(
     "initialize" -> Json.format[InitializeResult],
-    "textDocument/completion" -> Json.format[CompletionList])
+    "textDocument/completion" -> Json.format[CompletionList],
+    "shutdown" -> Json.format[ShutdownResult])
 }
