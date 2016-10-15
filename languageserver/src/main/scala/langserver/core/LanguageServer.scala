@@ -13,7 +13,7 @@ import play.api.libs.json.JsObject
  * A language server implementation. Users should subclass this class and implement specific behavior.
  */
 class LanguageServer(inStream: InputStream, outStream: OutputStream) extends LazyLogging {
-  val connection = (new ConnectionImpl(inStream, outStream)) {
+  val connection = (new Connection(inStream, outStream)) {
     case InitializeParams(pid, rootPath, capabilities) =>
       InitializeResult(initialize(pid, rootPath, capabilities))
     case TextDocumentPositionParams(textDocument, position) =>
@@ -25,6 +25,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
       logger.error(s"Unknown command $c")
       sys.error("Unknown command")
   }
+
+  protected val documentManager = new TextDocumentManager(connection)
 
   connection.notificationHandlers += {
     case DidOpenTextDocumentParams(td) => onOpenTextDocument(td)

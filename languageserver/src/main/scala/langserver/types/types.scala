@@ -104,14 +104,14 @@ object CompletionItemKind {
 
 case class CompletionItem(
   label: String,
-  kind: Option[Int],
-  detail: Option[String],
-  documentation: Option[String],
-  sortText: Option[String],
-  filterText: Option[String],
-  insertText: Option[String],
-  textEdit: Option[String],
-  data: Option[String]) // An data entry field that is preserved on a completion item between
+  kind: Option[Int] = None,
+  detail: Option[String] = None,
+  documentation: Option[String] = None,
+  sortText: Option[String] = None,
+  filterText: Option[String] = None,
+  insertText: Option[String] = None,
+  textEdit: Option[String] = None,
+  data: Option[String] = None) // An data entry field that is preserved on a completion item between
 // a [CompletionRequest](#CompletionRequest) and a [CompletionResolveRequest]
 //   (#CompletionResolveRequest)
 

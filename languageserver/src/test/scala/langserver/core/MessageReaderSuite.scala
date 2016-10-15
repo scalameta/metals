@@ -56,7 +56,7 @@ Content""")
 
   test("multi-chunk header") {
     val msgReader = new MessageReader(inStream)
-    
+
     write("""Content-""")
     write("""Length: 80""")
     Thread.sleep(100)
@@ -69,7 +69,7 @@ Content-Type: application/vscode-jsonrpc; charset=utf8
     assert(headers.value("Content-Length") == "80")
     assert(headers.value("Content-Type") == "application/vscode-jsonrpc; charset=utf8")
   }
-  
+
   test("payload arrives") {
     val msgReader = new MessageReader(inStream)
     write("""Content-Length: 43
@@ -79,7 +79,7 @@ Content-Type: application/vscode-jsonrpc; charset=utf8
     val payload = msgReader.nextPayload()
     assert(payload == """{"jsonrpc":"2.0","id":1,"method":"example"}""")
   }
-  
+
   test("chunked payload arrives") {
     val msgReader = new MessageReader(inStream)
     write("""Content-Length: 43
@@ -90,7 +90,7 @@ Content-Type: application/vscode-jsonrpc; charset=utf8
     val payload = msgReader.nextPayload()
     assert(payload == """{"jsonrpc":"2.0","id":1,"method":"example"}""")
   }
-  
+
   private def write(msg: String): Unit = {
     out.print(msg.replaceAll("\n", "\r\n"))
     out.flush()
