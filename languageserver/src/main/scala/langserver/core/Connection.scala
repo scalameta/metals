@@ -23,8 +23,11 @@ import play.api.libs.json._
  *
  * @note Commands are executed asynchronously via a thread pool
  * @note Notifications are executed synchronously on the calling thread
+ * @note The command handler returns Any because sometimes response objects can't be part
+ *       of a sealed hierarchy. For instance, goto definition returns a {{{Seq[Location]}}}
+ *       and that can't subclass anything other than Any
  */
-class Connection(inStream: InputStream, outStream: OutputStream)(val commandHandler: ServerCommand => ResultResponse)
+class Connection(inStream: InputStream, outStream: OutputStream)(val commandHandler: (String, ServerCommand) => Any)
     extends LazyLogging {
   private val msgReader = new MessageReader(inStream)
   private val msgWriter = new MessageWriter(outStream)
@@ -96,7 +99,7 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
               case (_, Left(e)) => msgWriter.write(e)
               case (None, Right(c)) => // this is disallowed by the language server specification
                 logger.error(s"Received request without 'id'. $c")
-              case (Some(id), Right(command)) => handleCommand(id, command)
+              case (Some(id), Right(command)) => handleCommand(request.method, id, command)
             }
 
           case response: JsonRpcResponseMessage =>
@@ -151,9 +154,8 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
           command => request.id -> Right(command)))
   }
 
-  private def handleCommand(id: Either[String, BigDecimal], command: ServerCommand) = {
-    logger.info(s"Received commmand: $id -- $command")
-    Future(commandHandler(command)).map { result =>
+  private def handleCommand(method: String, id: Either[String, BigDecimal], command: ServerCommand) = {
+    Future(commandHandler(method, command)).map { result =>
       msgWriter.write(ResultResponse.write(Right(result), Some(id)))
     }
   }

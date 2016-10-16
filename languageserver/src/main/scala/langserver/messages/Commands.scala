@@ -177,15 +177,16 @@ case class TextDocumentPositionParams(textDocument: TextDocumentIdentifier, posi
 case class DocumentSymbolParams(textDocument: TextDocumentIdentifier) extends ServerCommand
 
 object ServerCommand extends CommandCompanion[ServerCommand] {
-  override val CommandTypeFormats = Message.MethodFormats(
+  override val CommandFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeParams],
     "shutdown" -> Shutdown.format,
     "textDocument/completion" -> Json.format[TextDocumentPositionParams],
+    "textDocument/definition" -> Json.format[TextDocumentPositionParams],
     "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams])
 }
 
 object ClientCommand extends CommandCompanion[ClientCommand] {
-  override val CommandTypeFormats = Message.MethodFormats(
+  override val CommandFormats = Message.MessageFormats(
     "window/showMessageRequest" -> Json.format[ShowMessageRequestParams])
 }
 
@@ -219,7 +220,7 @@ object FileChangeType {
 }
 
 object Notification extends NotificationCompanion[Notification] {
-  override val NotificationFormats = Message.MethodFormats(
+  override val NotificationFormats = Message.MessageFormats(
     "window/showMessage" -> Json.format[ShowMessageParams],
     "window/logMessage" -> Json.format[LogMessageParams],
     "textDocument/publishDiagnostics" -> Json.format[PublishDiagnostics],
@@ -230,9 +231,12 @@ object Notification extends NotificationCompanion[Notification] {
     "workspace/didChangeWatchedFiles" -> Json.format[DidChangeWatchedFiles])
 }
 
-object ResultResponse extends ResponseCompanion[ResultResponse] {
-  override val ResponseFormats = Message.MethodFormats(
+
+object ResultResponse extends ResponseCompanion[Any] {
+
+  override val ResponseFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeResult],
     "textDocument/completion" -> Json.format[CompletionList],
+    "textDocument/definition" -> implicitly[Format[Seq[Location]]],
     "shutdown" -> Json.format[ShutdownResult])
 }

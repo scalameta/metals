@@ -19,6 +19,7 @@ object Range { implicit val format = Json.format[Range] }
  * inside a text file.
  */
 case class Location(uri: String, range: Range)
+object Location { implicit val format = Json.format[Location] }
 
 object DiagnosticSeverity {
   final val Error = 1

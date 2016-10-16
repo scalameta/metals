@@ -13,17 +13,21 @@ import play.api.libs.json.JsObject
  * A language server implementation. Users should subclass this class and implement specific behavior.
  */
 class LanguageServer(inStream: InputStream, outStream: OutputStream) extends LazyLogging {
-  val connection = (new Connection(inStream, outStream)) {
-    case InitializeParams(pid, rootPath, capabilities) =>
-      InitializeResult(initialize(pid, rootPath, capabilities))
-    case TextDocumentPositionParams(textDocument, position) =>
-      completionRequest(textDocument, position)
-    case Shutdown() =>
-      shutdown()
-      ShutdownResult(0) // the value is a dummy, because Play Json needs to serialize something
-    case c =>
-      logger.error(s"Unknown command $c")
-      sys.error("Unknown command")
+  val connection = (new Connection(inStream, outStream)) { (method, params) =>
+    (method, params) match {
+      case (_, InitializeParams(pid, rootPath, capabilities)) =>
+        InitializeResult(initialize(pid, rootPath, capabilities))
+      case ("textDocument/completion", TextDocumentPositionParams(textDocument, position)) =>
+        completionRequest(textDocument, position)
+      case ("textDocument/definition", TextDocumentPositionParams(textDocument, position)) =>
+        gotoDefinitionRequest(textDocument, position)
+      case (_, Shutdown()) =>
+        shutdown()
+        ShutdownResult(0) // the value is a dummy, because Play Json needs to serialize something
+      case c =>
+        logger.error(s"Unknown command $c")
+        sys.error("Unknown command")
+    }
   }
 
   protected val documentManager = new TextDocumentManager(connection)
@@ -73,5 +77,9 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   def shutdown(): Unit = {
 
+  }
+
+  def gotoDefinitionRequest(textDocument: TextDocumentIdentifier, position: Position): Seq[Location] = {
+    Seq.empty[Location]
   }
 }
