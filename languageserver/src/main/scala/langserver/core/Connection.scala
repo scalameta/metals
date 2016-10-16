@@ -80,36 +80,40 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
   }
 
   def start() {
-    while (true) {
-      val jsonString = msgReader.nextPayload()
+    var streamClosed = false
+    do {
+      msgReader.nextPayload() match {
+        case None => streamClosed = true
 
-      readJsonRpcMessage(jsonString) match {
-        case Left(e) =>
-          msgWriter.write(e)
+        case Some(jsonString) =>
+          readJsonRpcMessage(jsonString) match {
+            case Left(e) =>
+              msgWriter.write(e)
 
-        case Right(message) => message match {
-          case notification: JsonRpcNotificationMessage =>
-            Notification.read(notification).fold {
-              logger.error(s"No notification type exists with method=${notification.method}")
-            }(_.fold({ errors => logger.error(s"Invalid Notification: $errors") },
-              notifySubscribers))
+            case Right(message) => message match {
+              case notification: JsonRpcNotificationMessage =>
+                Notification.read(notification).fold {
+                  logger.error(s"No notification type exists with method=${notification.method}")
+                }(_.fold({ errors => logger.error(s"Invalid Notification: $errors") },
+                  notifySubscribers))
 
-          case request: JsonRpcRequestMessage =>
-            unpackRequest(request) match {
-              case (_, Left(e)) => msgWriter.write(e)
-              case (None, Right(c)) => // this is disallowed by the language server specification
-                logger.error(s"Received request without 'id'. $c")
-              case (Some(id), Right(command)) => handleCommand(request.method, id, command)
+              case request: JsonRpcRequestMessage =>
+                unpackRequest(request) match {
+                  case (_, Left(e)) => msgWriter.write(e)
+                  case (None, Right(c)) => // this is disallowed by the language server specification
+                    logger.error(s"Received request without 'id'. $c")
+                  case (Some(id), Right(command)) => handleCommand(request.method, id, command)
+                }
+
+              case response: JsonRpcResponseMessage =>
+                logger.info(s"Received response: $response")
+
+              case m =>
+                logger.error(s"Received unknown message: $m")
             }
-
-          case response: JsonRpcResponseMessage =>
-            logger.info(s"Received response: $response")
-
-          case m =>
-            logger.error(s"Received unknown message: $m")
-        }
+          }
       }
-    }
+    } while (!streamClosed)
   }
 
   private def readJsonRpcMessage(jsonString: String): Either[JsonRpcResponseError, JsonRpcMessage] = {
@@ -119,7 +123,6 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
         Left(JsonRpcResponseError.parseError(exception))
 
       case Success(json) =>
-        logger.info(s"Received: ${Json.prettyPrint(json)}")
         Json.fromJson[JsonRpcMessage](json).fold({ errors =>
           Left(JsonRpcResponseError.invalidRequest(errors))
         }, Right(_))

@@ -22,10 +22,13 @@ import com.typesafe.scalalogging.LazyLogging
  */
 class MessageReader(in: InputStream) extends LazyLogging {
   val BufferSize = 8192
-  
+
   private val buffer = new Array[Byte](BufferSize)
+  @volatile
   private var data = ArrayBuffer.empty[Byte]
-  
+  @volatile
+  private var streamClosed = false
+
   private val lock = new Object
 
   private class PumpInput extends Thread("Input Reader") {
@@ -33,12 +36,16 @@ class MessageReader(in: InputStream) extends LazyLogging {
       var nRead = 0
       do {
         nRead = in.read(buffer)
-        if (nRead > 0) lock.synchronized { 
+        if (nRead > 0) lock.synchronized {
           data ++= buffer.slice(0, nRead)
           lock.notify()
         }
-      } while (nRead > 0) 
+      } while (nRead > 0)
       logger.info("End of stream, terminating thread")
+      lock.synchronized {
+        streamClosed = true
+        lock.notify() // some threads might be still waiting for input
+      }
     }
   }
 
@@ -47,9 +54,14 @@ class MessageReader(in: InputStream) extends LazyLogging {
   /**
    * Return headers, if any are available. It returns only full headers, after the
    * \r\n\r\n mark has been seen.
+   *
+   * @return A map of headers. If the map is empty it could be that the input stream
+   *         was closed, or there were no headers before the delimiter. You can disambiguate
+   *         by checking {{{this.streamClosed}}}
    */
-  private[core] final def getHeaders(): Option[Map[String, String]] = lock.synchronized {
+  private[core] final def getHeaders(): Map[String, String] = lock.synchronized {
     val EmptyPair = "" -> ""
+    val EmptyMap = Map.empty[String, String]
     def atDelimiter(idx: Int): Boolean = {
       (data.size >= idx + 4
         && data(idx) == '\r'
@@ -57,8 +69,10 @@ class MessageReader(in: InputStream) extends LazyLogging {
         && data(idx + 2) == '\r'
         && data(idx + 3) == '\n')
     }
-    
-    if (data.size < 4) lock.wait()
+
+    while (data.size < 4 && !streamClosed) lock.wait()
+
+    if (streamClosed) return EmptyMap
 
     var i = 0
     while (i + 4 < data.size && !atDelimiter(i)) {
@@ -68,11 +82,11 @@ class MessageReader(in: InputStream) extends LazyLogging {
     if (atDelimiter(i)) {
       val headers = new String(data.slice(0, i).toArray, MessageReader.AsciiCharset)
       logger.debug(s"Received headers:\n$headers")
-      
+
       val pairs = headers.split("\r\n").filter(_.trim.length() > 0) map { line =>
         line.split(":") match {
           case Array(key, value) => key.trim -> value.trim
-          case _ => 
+          case _ =>
             logger.error(s"Malformed input: $line")
             EmptyPair
         }
@@ -80,39 +94,56 @@ class MessageReader(in: InputStream) extends LazyLogging {
 
       // drop headers
       data = data.drop(i + 4)
-      if (pairs.exists(_ == EmptyPair)) None else Some(pairs.toMap)
+
+      // if there was a malformed header we keep trying to re-sync and read again
+      if (pairs.exists(_ == EmptyPair)) getHeaders else pairs.toMap
+    } else if (streamClosed) {
+      EmptyMap
     } else {
       lock.wait()
       getHeaders()
     }
   }
-  
+
+  /**
+   * Return `len` bytes of content as a string encoded in UTF8.
+   *
+   * @note If the stream was closed this method returns the empty string.
+   */
   private [core] def getContent(len: Int): String = lock.synchronized {
-    while (data.size < len) lock.wait()
-    
-    assert(data.size >= len)
-    val content = data.take(len).toArray
-    data = data.drop(len)
-    new String(content, MessageReader.Utf8Charset)
+    while (data.size < len && !streamClosed) lock.wait()
+
+    if (streamClosed) ""
+    else {
+      assert(data.size >= len)
+      val content = data.take(len).toArray
+      data = data.drop(len)
+      new String(content, MessageReader.Utf8Charset)
+    }
   }
-  
+
   /**
    * Return the next JSON RPC content payload. Blocks until enough data has been received.
    */
-  def nextPayload(): String = {
+  def nextPayload(): Option[String] = if (streamClosed) None else {
     // blocks until headers are available
-    val headers = getHeaders().get
-    
-    val length = headers.get("Content-Length") match {
-      case Some(len) => try len.toInt catch { case e: NumberFormatException => -1 } 
-      case _ => -1
-    }
-    
-    if (length > 0)
-      getContent(length)
+    val headers = getHeaders()
+
+    if (headers.isEmpty && streamClosed)
+      None
     else {
-      logger.error("Input must have Content-Length header with a numeric value.")
-      nextPayload()
+      val length = headers.get("Content-Length") match {
+        case Some(len) => try len.toInt catch { case e: NumberFormatException => -1 }
+        case _ => -1
+      }
+
+      if (length > 0) {
+        val content = getContent(length)
+        if (content.isEmpty() && streamClosed) None else Some(content)
+      } else {
+        logger.error("Input must have Content-Length header with a numeric value.")
+        nextPayload()
+      }
     }
   }
 }

@@ -37,7 +37,7 @@ class MessageWriterSuite extends FunSuite
     msgWriter.write(obj)
 
     val payload = msgReader.nextPayload()
-    val r = f.reads(Json.parse(payload))
+    val r = f.reads(Json.parse(payload.get))
 
     assert(r.isSuccess)
     assert(r.asOpt.value == obj)

@@ -36,8 +36,8 @@ Content-Type: application/vscode-jsonrpc; charset=utf8
 
     val headers = msgReader.getHeaders()
 
-    assert(headers.value("Content-Length") == "80")
-    assert(headers.value("Content-Type") == "application/vscode-jsonrpc; charset=utf8")
+    assert(headers("Content-Length") == "80")
+    assert(headers("Content-Type") == "application/vscode-jsonrpc; charset=utf8")
   }
 
   test("partial headers are correctly concatenated") {
@@ -50,8 +50,8 @@ Content""")
 """)
     val headers = msgReader.getHeaders()
 
-    assert(headers.value("Content-Length") == "80")
-    assert(headers.value("Content-Type") == "application/vscode-jsonrpc; charset=utf8")
+    assert(headers("Content-Length") == "80")
+    assert(headers("Content-Type") == "application/vscode-jsonrpc; charset=utf8")
   }
 
   test("multi-chunk header") {
@@ -66,8 +66,8 @@ Content-Type: application/vscode-jsonrpc; charset=utf8
 """)
     val headers = msgReader.getHeaders()
 
-    assert(headers.value("Content-Length") == "80")
-    assert(headers.value("Content-Type") == "application/vscode-jsonrpc; charset=utf8")
+    assert(headers("Content-Length") == "80")
+    assert(headers("Content-Type") == "application/vscode-jsonrpc; charset=utf8")
   }
 
   test("payload arrives") {
