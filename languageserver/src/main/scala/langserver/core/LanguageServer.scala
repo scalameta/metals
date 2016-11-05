@@ -17,9 +17,9 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
     (method, params) match {
       case (_, InitializeParams(pid, rootPath, capabilities)) =>
         InitializeResult(initialize(pid, rootPath, capabilities))
-      case ("textDocument/completion", TextDocumentPositionParams(textDocument, position)) =>
+      case ("textDocument/completion", TextDocumentCompletionRequest(TextDocumentPositionParams(textDocument, position))) =>
         completionRequest(textDocument, position)
-      case ("textDocument/definition", TextDocumentPositionParams(textDocument, position)) =>
+      case ("textDocument/definition", TextDocumentDefinitionRequest(TextDocumentPositionParams(textDocument, position))) =>
         gotoDefinitionRequest(textDocument, position)
       case (_, Shutdown()) =>
         shutdown()

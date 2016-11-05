@@ -4,6 +4,7 @@ import play.api.libs.json.JsObject
 import com.dhpcs.jsonrpc._
 import play.api.libs.json._
 import langserver.types._
+import langserver.utils.JsonRpcUtils
 
 sealed trait Message
 sealed trait ServerCommand extends Message
@@ -172,16 +173,22 @@ object MessageActionItem {
   implicit val format = Json.format[MessageActionItem]
 }
 
-case class TextDocumentPositionParams(textDocument: TextDocumentIdentifier, position: Position) extends ServerCommand
-
+case class TextDocumentPositionParams(textDocument: TextDocumentIdentifier, position: Position)
 case class DocumentSymbolParams(textDocument: TextDocumentIdentifier) extends ServerCommand
 
+case class TextDocumentCompletionRequest(params: TextDocumentPositionParams) extends ServerCommand
+case class TextDocumentDefinitionRequest(params: TextDocumentPositionParams) extends ServerCommand
+
 object ServerCommand extends CommandCompanion[ServerCommand] {
+  import JsonRpcUtils._
+
+  implicit val positionParamsFormat = Json.format[TextDocumentPositionParams]
+
   override val CommandFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeParams],
     "shutdown" -> Shutdown.format,
-    "textDocument/completion" -> Json.format[TextDocumentPositionParams],
-    "textDocument/definition" -> Json.format[TextDocumentPositionParams],
+    "textDocument/completion" -> valueFormat(TextDocumentCompletionRequest)(_.params),
+    "textDocument/definition" -> valueFormat(TextDocumentDefinitionRequest)(_.params),
     "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams])
 }
 

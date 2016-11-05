@@ -77,7 +77,7 @@ Content-Type: application/vscode-jsonrpc; charset=utf8
 {"jsonrpc":"2.0","id":1,"method":"example"}""")
 
     val payload = msgReader.nextPayload()
-    assert(payload == """{"jsonrpc":"2.0","id":1,"method":"example"}""")
+    assert(payload.value === """{"jsonrpc":"2.0","id":1,"method":"example"}""")
   }
 
   test("chunked payload arrives") {
@@ -88,7 +88,7 @@ Content-Type: application/vscode-jsonrpc; charset=utf8
     write(""""id":1,"method":"example"}""")
 
     val payload = msgReader.nextPayload()
-    assert(payload == """{"jsonrpc":"2.0","id":1,"method":"example"}""")
+    assert(payload.value === """{"jsonrpc":"2.0","id":1,"method":"example"}""")
   }
 
   private def write(msg: String): Unit = {
