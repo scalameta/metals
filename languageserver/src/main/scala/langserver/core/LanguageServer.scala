@@ -21,6 +21,9 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
         completionRequest(textDocument, position)
       case ("textDocument/definition", TextDocumentDefinitionRequest(TextDocumentPositionParams(textDocument, position))) =>
         gotoDefinitionRequest(textDocument, position)
+      case ("textDocument/hover", TextDocumentDefinitionRequest(TextDocumentPositionParams(textDocument, position))) =>
+        hoverRequest(textDocument, position)
+
       case (_, Shutdown()) =>
         shutdown()
         ShutdownResult(0) // the value is a dummy, because Play Json needs to serialize something
@@ -80,6 +83,10 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
   }
 
   def gotoDefinitionRequest(textDocument: TextDocumentIdentifier, position: Position): Seq[Location] = {
+    Seq.empty[Location]
+  }
+
+  def hoverRequest(textDocument: TextDocumentIdentifier, position: Position): Seq[Location] = {
     Seq.empty[Location]
   }
 }
