@@ -96,7 +96,10 @@ class MessageReader(in: InputStream) extends LazyLogging {
       data = data.drop(i + 4)
 
       // if there was a malformed header we keep trying to re-sync and read again
-      if (pairs.exists(_ == EmptyPair)) getHeaders else pairs.toMap
+      if (pairs.exists(_ == EmptyPair)) {
+        logger.error("There was an empty pair in $pairs, trying to read another header.")
+        getHeaders
+      } else pairs.toMap
     } else if (streamClosed) {
       EmptyMap
     } else {
