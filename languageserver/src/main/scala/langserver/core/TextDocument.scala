@@ -3,6 +3,8 @@ package langserver.core
 import langserver.types.TextDocumentIdentifier
 import langserver.types.TextDocumentContentChangeEvent
 import langserver.types.Position
+import java.io.File
+import java.net.URI
 
 case class TextDocument(uri: String, contents: Array[Char]) {
   def applyChanges(changes: Seq[TextDocumentContentChangeEvent]): TextDocument = {
@@ -17,6 +19,9 @@ case class TextDocument(uri: String, contents: Array[Char]) {
 
   private def peek(idx: Int) =
     if (idx < contents.size) contents(idx) else -1
+
+  def toFile: File =
+    new File(URI.create(uri))
 
   /**
    * Return the corresponding position in this text document as 0-based line and column.
