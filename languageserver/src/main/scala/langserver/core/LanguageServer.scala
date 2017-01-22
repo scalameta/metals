@@ -21,7 +21,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
         completionRequest(textDocument, position)
       case ("textDocument/definition", TextDocumentDefinitionRequest(TextDocumentPositionParams(textDocument, position))) =>
         gotoDefinitionRequest(textDocument, position)
-      case ("textDocument/hover", TextDocumentDefinitionRequest(TextDocumentPositionParams(textDocument, position))) =>
+      case ("textDocument/hover", TextDocumentHoverRequest(TextDocumentPositionParams(textDocument, position))) =>
         hoverRequest(textDocument, position)
 
       case (_, Shutdown()) =>
@@ -86,7 +86,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
     Seq.empty[Location]
   }
 
-  def hoverRequest(textDocument: TextDocumentIdentifier, position: Position): Seq[Location] = {
-    Seq.empty[Location]
+  def hoverRequest(textDocument: TextDocumentIdentifier, position: Position): Hover = {
+    Hover(Nil, None)
   }
 }

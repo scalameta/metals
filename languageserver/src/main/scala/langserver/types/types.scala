@@ -120,13 +120,26 @@ object CompletionItem {
   implicit def format = Json.format[CompletionItem]
 }
 
-case class MarkedString(language: String, value: String) {
+trait MarkedString
+
+case class RawMarkedString(language: String, value: String) extends MarkedString {
   def this(value: String) {
     this("text", value)
   }
 }
 
-case class Hover(contents: MarkedString, range: Option[Range])
+case class MarkdownString(contents: String) extends MarkedString
+
+object MarkedString {
+  implicit val reads: Reads[MarkedString] =
+    Json.reads[RawMarkedString].map(x => x: MarkedString).orElse(Json.reads[MarkdownString].map(x => x: MarkedString))
+
+  implicit val writes: Writes[MarkedString] = Writes[MarkedString] {
+    case raw: RawMarkedString => Json.writes[RawMarkedString].writes(raw)
+    case md: MarkdownString => Json.writes[MarkdownString].writes(md)
+  }
+}
+
 
 case class ParameterInformation(label: String, documentation: Option[String])
 
