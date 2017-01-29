@@ -80,4 +80,9 @@ case class TextDocument(uri: String, contents: Array[Char]) {
     else
       throw new IllegalArgumentException(s"$uri: Invalid column. Position $pos in line '${contents.slice(i, contents.size).mkString}'")
   }
+
+  def lineToOffset(lineNr: Int): Int = {
+    positionToOffset(Position(lineNr, 0))
+  }
+
 }

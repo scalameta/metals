@@ -246,13 +246,16 @@ object Notification extends NotificationCompanion[Notification] {
     "workspace/didChangeWatchedFiles" -> Json.format[DidChangeWatchedFiles])
 }
 
+case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
 
 object ResultResponse extends ResponseCompanion[Any] {
+  import JsonRpcUtils._
 
   override val ResponseFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeResult],
     "textDocument/completion" -> Json.format[CompletionList],
     "textDocument/definition" -> implicitly[Format[Seq[Location]]],
     "textDocument/hover" -> Json.format[Hover],
+    "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
     "shutdown" -> Json.format[ShutdownResult])
 }

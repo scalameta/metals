@@ -219,11 +219,9 @@ object SymbolKind {
 }
 
 case class SymbolInformation(name: String, kind: Int, location: Location, containerName: Option[String])
-
-/**
- * Parameters for a [DocumentSymbolRequest](#DocumentSymbolRequest).
- */
-case class DocumentSymbolParams(textDocument: TextDocumentIdentifier)
+object SymbolInformation {
+  implicit val format = Json.format[SymbolInformation]
+}
 
 /**
  * The parameters of a [WorkspaceSymbolRequest](#WorkspaceSymbolRequest).

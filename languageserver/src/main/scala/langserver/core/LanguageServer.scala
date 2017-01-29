@@ -23,6 +23,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
         gotoDefinitionRequest(textDocument, position)
       case ("textDocument/hover", TextDocumentHoverRequest(TextDocumentPositionParams(textDocument, position))) =>
         hoverRequest(textDocument, position)
+      case ("textDocument/documentSymbol", DocumentSymbolParams(tdi)) =>
+        DocumentSymbolResult(documentSymbols(tdi))
 
       case (_, Shutdown()) =>
         shutdown()
@@ -88,5 +90,9 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   def hoverRequest(textDocument: TextDocumentIdentifier, position: Position): Hover = {
     Hover(Nil, None)
+  }
+
+  def documentSymbols(tdi: TextDocumentIdentifier): Seq[SymbolInformation] = {
+    Seq.empty
   }
 }
