@@ -225,7 +225,7 @@ case class DidCloseTextDocumentParams(textDocument: TextDocumentIdentifier) exte
 case class DidSaveTextDocumentParams(textDocument: TextDocumentIdentifier) extends Notification
 case class DidChangeWatchedFiles(changes: Seq[FileEvent]) extends Notification
 
-case class FileEvent(uri: String, tpe: Int)
+case class FileEvent(uri: String, `type`: Int)
 object FileEvent { implicit val format = Json.format[FileEvent] }
 
 object FileChangeType {
