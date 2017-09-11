@@ -34,8 +34,8 @@ object JsonRpcUtils {
    *         )
    * }}}
    */
-   def valueFormat[A, B: Format](apply: B => A)(unapply: A => B): Format[A] = new Format[A] {
+   def valueFormat[A, B: Format](apply: B => A)(unapply: A => B): OFormat[A] = new OFormat[A] {
     override def reads(json: JsValue) = Reads.of[B].reads(json).map(apply(_))
-    override def writes(o: A) = Writes.of[B].writes(unapply(o))
+    override def writes(o: A) = Writes.of[B].writes(unapply(o)).as[JsObject]
   }
 }

@@ -142,9 +142,9 @@ case class InitializeResult(capabilities: ServerCapabilities) extends ResultResp
 
 case class Shutdown() extends ServerCommand
 object Shutdown {
-  implicit val format: Format[Shutdown] = Format(
+  implicit val format: Format[Shutdown] = OFormat(
     Reads(jsValue => JsSuccess(Shutdown())),
-    Writes(s => Json.obj()))
+    OWrites[Shutdown](s => Json.obj()))
 }
 
 case class ShutdownResult(dummy: Int) extends ResultResponse
@@ -248,13 +248,18 @@ object Notification extends NotificationCompanion[Notification] {
 
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
 
+case class LocationSeq(locs: Seq[Location]) extends ResultResponse
+
 object ResultResponse extends ResponseCompanion[Any] {
   import JsonRpcUtils._
+
+  implicit val positionParamsFormat = Json.format[Location]
 
   override val ResponseFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeResult],
     "textDocument/completion" -> Json.format[CompletionList],
-    "textDocument/definition" -> implicitly[Format[Seq[Location]]],
+    "textDocument/definition" -> Json.format[LocationSeq],
+    //"textDocument/definition" -> implicitly[Format[Seq[Location]]], //Runtime exception with latest play-json-rcp
     "textDocument/hover" -> Json.format[Hover],
     "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
     "shutdown" -> Json.format[ShutdownResult])

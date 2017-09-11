@@ -84,8 +84,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   }
 
-  def gotoDefinitionRequest(textDocument: TextDocumentIdentifier, position: Position): Seq[Location] = {
-    Seq.empty[Location]
+  def gotoDefinitionRequest(textDocument: TextDocumentIdentifier, position: Position): LocationSeq = {
+    LocationSeq(Seq.empty[Location])
   }
 
   def hoverRequest(textDocument: TextDocumentIdentifier, position: Position): Hover = {

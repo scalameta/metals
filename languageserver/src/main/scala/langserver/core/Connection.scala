@@ -17,7 +17,7 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.messages._
 import langserver.types._
 import play.api.libs.json._
-
+import com.dhpcs.jsonrpc.JsonRpcMessage._
 /**
  * A connection that reads and writes Language Server Protocol messages.
  *
@@ -92,9 +92,10 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
 
             case Right(message) => message match {
               case notification: JsonRpcNotificationMessage =>
-                Notification.read(notification).fold {
+                Option(Notification.read(notification)).fold(
                   logger.error(s"No notification type exists with method=${notification.method}")
-                }(_.fold({ errors => logger.error(s"Invalid Notification: $errors") },
+                )(_.fold(
+                  errors => logger.error(s"Invalid Notification: $errors"),
                   notifySubscribers))
 
               case request: JsonRpcRequestMessage =>
@@ -111,55 +112,67 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
               case m =>
                 logger.error(s"Received unknown message: $m")
             }
+            case m => logger.error(s"Received unknown message: $m")
           }
       }
     } while (!streamClosed)
   }
 
-  private def readJsonRpcMessage(jsonString: String): Either[JsonRpcResponseError, JsonRpcMessage] = {
+  private def readJsonRpcMessage(jsonString: String): Either[JsonRpcResponseErrorMessage, JsonRpcMessage] = {
     logger.debug(s"Received $jsonString")
     Try(Json.parse(jsonString)) match {
       case Failure(exception) =>
-        Left(JsonRpcResponseError.parseError(exception))
+        Left(JsonRpcResponseErrorMessage.parseError(exception,NoCorrelationId))
 
       case Success(json) =>
         Json.fromJson[JsonRpcMessage](json).fold({ errors =>
-          Left(JsonRpcResponseError.invalidRequest(errors))
+          Left(JsonRpcResponseErrorMessage.invalidRequest(JsError(errors),NoCorrelationId))
         }, Right(_))
     }
   }
 
-  private def readCommand(jsonString: String): (Option[Either[String, BigDecimal]], Either[JsonRpcResponseError, ServerCommand]) =
+  private def readCommand(jsonString: String): (Option[CorrelationId], Either[JsonRpcResponseErrorMessage, ServerCommand]) =
     Try(Json.parse(jsonString)) match {
       case Failure(exception) =>
-        None -> Left(JsonRpcResponseError.parseError(exception))
+        None -> Left(JsonRpcResponseErrorMessage.parseError(exception,NoCorrelationId ))
 
       case Success(json) =>
         Json.fromJson[JsonRpcRequestMessage](json).fold(
-          errors => None -> Left(JsonRpcResponseError.invalidRequest(errors)),
+          errors => None -> Left(JsonRpcResponseErrorMessage.invalidRequest(JsError(errors),NoCorrelationId)),
 
           jsonRpcRequestMessage =>
-            ServerCommand.read(jsonRpcRequestMessage)
-              .fold[(Option[Either[String, BigDecimal]], Either[JsonRpcResponseError, ServerCommand])](
-                jsonRpcRequestMessage.id -> Left(JsonRpcResponseError.methodNotFound(jsonRpcRequestMessage.method)))(commandJsResult => commandJsResult.fold(
-                  errors => jsonRpcRequestMessage.id -> Left(JsonRpcResponseError.invalidParams(errors)),
-                  command => jsonRpcRequestMessage.id -> Right(command))))
+            Option(ServerCommand.read(jsonRpcRequestMessage))
+              .fold[(Option[CorrelationId], Either[JsonRpcResponseErrorMessage, ServerCommand])](
+                Some(jsonRpcRequestMessage.id) -> Left(JsonRpcResponseErrorMessage.methodNotFound(jsonRpcRequestMessage.method,jsonRpcRequestMessage.id )))(commandJsResult => commandJsResult.fold(
+                  errors => Some(jsonRpcRequestMessage.id) -> Left(JsonRpcResponseErrorMessage.invalidParams(JsError(errors),jsonRpcRequestMessage.id)),
+                  command => Some(jsonRpcRequestMessage.id) -> Right(command))))
 
     }
 
-  private def unpackRequest(request: JsonRpcRequestMessage): (Option[Either[String, BigDecimal]], Either[JsonRpcResponseError, ServerCommand]) = {
-    ServerCommand.read(request)
-      .fold[(Option[Either[String, BigDecimal]], Either[JsonRpcResponseError, ServerCommand])](
-
-        request.id -> Left(
-          JsonRpcResponseError.methodNotFound(request.method)))(commandJsResult => commandJsResult.fold(
-          errors => request.id -> Left(JsonRpcResponseError.invalidParams(errors)),
-          command => request.id -> Right(command)))
+  private def unpackRequest(request: JsonRpcRequestMessage): (Option[CorrelationId], Either[JsonRpcResponseErrorMessage, ServerCommand]) = {
+    Option(ServerCommand.read(request))
+      .fold[(Option[CorrelationId], Either[JsonRpcResponseErrorMessage, ServerCommand])](
+        Some(request.id) -> Left(JsonRpcResponseErrorMessage.methodNotFound(request.method,request.id )))(
+          commandJsResult => commandJsResult.fold(errors => 
+            Some(request.id) -> Left(JsonRpcResponseErrorMessage.invalidParams(JsError(errors),request.id )),
+            command => Some(request.id) -> Right(command)))
+            
   }
 
-  private def handleCommand(method: String, id: Either[String, BigDecimal], command: ServerCommand) = {
+  private def handleCommand(method: String, id: CorrelationId, command: ServerCommand) = {
     Future(commandHandler(method, command)).map { result =>
-      msgWriter.write(ResultResponse.write(Right(result), Some(id)))
+      logger.info("Result:"+result)
+      val r = Try{
+        result match {
+          case ls:LocationSeq => JsonRpcResponseSuccessMessage(Json.toJson(ls.locs), id) //Special case, new play-json-rcp can not deal with Seq of JsValue
+          case r => ResultResponse.write(r, id)
+        }
+      }
+      r.recover{case e => logger.error("ResultResponse.write:"+result); e.printStackTrace }
+      r.foreach{rJson => 
+        logger.info("Result json:"+r)
+        msgWriter.write(rJson)
+      }
     }
   }
 }
