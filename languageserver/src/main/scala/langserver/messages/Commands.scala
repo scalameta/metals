@@ -225,6 +225,16 @@ case class DidCloseTextDocumentParams(textDocument: TextDocumentIdentifier) exte
 case class DidSaveTextDocumentParams(textDocument: TextDocumentIdentifier) extends Notification
 case class DidChangeWatchedFiles(changes: Seq[FileEvent]) extends Notification
 
+case class Initialized() extends Notification
+object Initialized {
+  implicit val format: Format[Initialized] = OFormat(
+    Reads(jsValue => JsSuccess(Initialized())),
+    OWrites[Initialized](s => Json.obj()))
+}
+
+
+case class CancelRequest(id: Int) extends Notification
+
 case class FileEvent(uri: String, `type`: Int)
 object FileEvent { implicit val format = Json.format[FileEvent] }
 
@@ -243,7 +253,10 @@ object Notification extends NotificationCompanion[Notification] {
     "textDocument/didChange" -> Json.format[DidChangeTextDocumentParams],
     "textDocument/didClose" -> Json.format[DidCloseTextDocumentParams],
     "textDocument/didSave" -> Json.format[DidSaveTextDocumentParams],
-    "workspace/didChangeWatchedFiles" -> Json.format[DidChangeWatchedFiles])
+    "workspace/didChangeWatchedFiles" -> Json.format[DidChangeWatchedFiles],
+    "initialized" -> Initialized.format,
+    "$/cancelRequest" -> Json.format[CancelRequest]
+  )
 }
 
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
@@ -261,6 +274,6 @@ object ResultResponse extends ResponseCompanion[Any] {
     "textDocument/definition" -> Json.format[LocationSeq],
     //"textDocument/definition" -> implicitly[Format[Seq[Location]]], //Runtime exception with latest play-json-rcp
     "textDocument/hover" -> Json.format[Hover],
-    "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
+    "textDocument/documentSymbol" -> Json.format[DocumentSymbolResult],
     "shutdown" -> Json.format[ShutdownResult])
 }

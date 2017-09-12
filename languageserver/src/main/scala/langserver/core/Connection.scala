@@ -95,7 +95,7 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
                 Option(Notification.read(notification)).fold(
                   logger.error(s"No notification type exists with method=${notification.method}")
                 )(_.fold(
-                  errors => logger.error(s"Invalid Notification: $errors"),
+                  errors => logger.error(s"Invalid Notification: $errors - Message: $message"),
                   notifySubscribers))
 
               case request: JsonRpcRequestMessage =>
@@ -161,16 +161,15 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
 
   private def handleCommand(method: String, id: CorrelationId, command: ServerCommand) = {
     Future(commandHandler(method, command)).map { result =>
-      logger.info("Result:"+result)
       val r = Try{
         result match {
-          case ls:LocationSeq => JsonRpcResponseSuccessMessage(Json.toJson(ls.locs), id) //Special case, new play-json-rcp can not deal with Seq of JsValue
+          case ls: LocationSeq => JsonRpcResponseSuccessMessage(Json.toJson(ls.locs), id) //Special case, new play-json-rcp can not deal with Seq of JsValue
+          case ds: DocumentSymbolResult => JsonRpcResponseSuccessMessage(Json.toJson(ds.params), id) //Special case, new play-json-rcp can not deal with Seq of JsValue
           case r => ResultResponse.write(r, id)
         }
       }
       r.recover{case e => logger.error("ResultResponse.write:"+result); e.printStackTrace }
       r.foreach{rJson => 
-        logger.info("Result json:"+r)
         msgWriter.write(rJson)
       }
     }
