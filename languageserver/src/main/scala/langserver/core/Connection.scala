@@ -161,17 +161,9 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
 
   private def handleCommand(method: String, id: CorrelationId, command: ServerCommand) = {
     Future(commandHandler(method, command)).map { result =>
-      val r = Try{
-        result match {
-          case ls: LocationSeq => JsonRpcResponseSuccessMessage(Json.toJson(ls.locs), id) //Special case, new play-json-rcp can not deal with Seq of JsValue
-          case ds: DocumentSymbolResult => JsonRpcResponseSuccessMessage(Json.toJson(ds.params), id) //Special case, new play-json-rcp can not deal with Seq of JsValue
-          case r => ResultResponse.write(r, id)
-        }
-      }
-      r.recover{case e => logger.error("ResultResponse.write:"+result); e.printStackTrace }
-      r.foreach{rJson => 
-        msgWriter.write(rJson)
-      }
+      val t = Try{ResultResponse.write(result, id)}
+      t.recover{case e => logger.error("ResultResponse.write:"+result); e.printStackTrace }
+      t.foreach{rJson => msgWriter.write(rJson)}
     }
   }
 }

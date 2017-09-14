@@ -260,20 +260,16 @@ object Notification extends NotificationCompanion[Notification] {
 }
 
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
-
-case class LocationSeq(locs: Seq[Location]) extends ResultResponse
+case class DefinitionResult(params: Seq[Location]) extends ResultResponse
 
 object ResultResponse extends ResponseCompanion[Any] {
   import JsonRpcUtils._
 
-  implicit val positionParamsFormat = Json.format[Location]
-
   override val ResponseFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeResult],
     "textDocument/completion" -> Json.format[CompletionList],
-    "textDocument/definition" -> Json.format[LocationSeq],
-    //"textDocument/definition" -> implicitly[Format[Seq[Location]]], //Runtime exception with latest play-json-rcp
+    "textDocument/definition" -> valueFormat(DefinitionResult)(_.params),
     "textDocument/hover" -> Json.format[Hover],
-    "textDocument/documentSymbol" -> Json.format[DocumentSymbolResult],
+    "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
     "shutdown" -> Json.format[ShutdownResult])
 }
