@@ -41,7 +41,7 @@ export async function activate(context: ExtensionContext) {
     'sonatype:releases',
     '-J',
     toolsJar,
-    'gabro:scalafix-lsp_2.12:0.1-SNAPSHOT',
+    'scalamet:scalameta-language-server_2.12:0.1-SNAPSHOT',
     '-M',
     'scalafix.lsp.Main'
   ];
