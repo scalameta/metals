@@ -1,6 +1,6 @@
 {
-    "name": "vscode-scalafix",
-    "displayName": "vscode-scalafix",
+    "name": "vscode-scalameta",
+    "displayName": "vscode-scalameta",
     "description": "",
     "version": "0.0.1",
     "publisher": "gabro",
@@ -14,14 +14,6 @@
         "onLanguage:scala"
     ],
     "main": "./out/extension",
-    "contributes": {
-        "commands": [
-            {
-                "command": "extension.sayHello",
-                "title": "Hello World"
-            }
-        ]
-    },
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
@@ -31,14 +23,14 @@
     },
     "devDependencies": {
         "typescript": "^2.5.3",
-        "vscode": "^1.1.5",
-        "vscode-languageclient": "^3.4.5",
         "@types/node": "^7.0.43",
         "@types/mocha": "^2.2.42"
     },
     "dependencies": {
         "expand-home-dir": "0.0.3",
         "find-java-home": "^0.2.0",
-        "path-exists": "^3.0.0"
+        "path-exists": "^3.0.0",
+        "vscode": "^1.1.5",
+        "vscode-languageclient": "^3.4.5"
     }
 }

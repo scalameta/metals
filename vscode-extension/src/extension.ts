@@ -43,7 +43,7 @@ export async function activate(context: ExtensionContext) {
     toolsJar,
     'scalamet:scalameta-language-server_2.12:0.1-SNAPSHOT',
     '-M',
-    'scalafix.lsp.Main'
+    'scala.meta.languageserver.Main'
   ];
 
   const javaArgs = [
@@ -68,8 +68,8 @@ export async function activate(context: ExtensionContext) {
   };
 
   const disposable = new LanguageClient(
-    'scalafix',
-    'Scalafix',
+    'scalameta',
+    'Scalameta',
     serverOptions,
     clientOptions
   ).start();

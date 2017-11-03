@@ -6,8 +6,9 @@ import java.io.{PrintStream, OutputStream, FileOutputStream}
 
 object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {
+    // FIXME(gabro): this is vscode specific (at least the name)
     val cwd = System.getProperty("vscode.workspace")
-    val server = new ScalafixLanguageServer(System.in, System.out)
+    val server = new ScalametaLanguageServer(System.in, System.out)
 
     // route System.out somewhere else. Any output not from the server (e.g. logging)
     // messes up with the client, since stdout is used for the language server protocol
