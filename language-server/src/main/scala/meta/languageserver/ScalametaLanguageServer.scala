@@ -59,8 +59,10 @@ class ScalametaLanguageServer(in: InputStream, out: OutputStream)
   override def onChangeTextDocument(
       td: VersionedTextDocumentIdentifier,
       changes: Seq[TextDocumentContentChangeEvent]): Unit = {
-    val diagnostics = runScalafixLint(td.uri)
-    connection.publishDiagnostics(td.uri, diagnostics)
+    if (scalafixService.configFile.isDefined) {
+      val diagnostics = runScalafixLint(td.uri)
+      connection.publishDiagnostics(td.uri, diagnostics)
+    }
   }
 
   override def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
