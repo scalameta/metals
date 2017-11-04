@@ -41,7 +41,7 @@ export async function activate(context: ExtensionContext) {
     'sonatype:releases',
     '-J',
     toolsJar,
-    'scalamet:scalameta-language-server_2.12:0.1-SNAPSHOT',
+    'org.scalameta:scalameta-language-server_2.12:0.1-SNAPSHOT',
     '-M',
     'scala.meta.languageserver.Main'
   ];
@@ -51,7 +51,7 @@ export async function activate(context: ExtensionContext) {
     `-Dvscode.logLevel=${logLevel}`,
     '-jar',
     coursierPath
-  ];
+  ].concat(coursierArgs);
 
   const serverOptions: ServerOptions = {
     run: { command: 'java', args: javaArgs },
