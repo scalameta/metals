@@ -1,6 +1,6 @@
 scalaVersion in ThisBuild := "2.12.3"
 
-lazy val root = project.in(file("."))
+lazy val `language-server` = project
   .settings(
     name := "scalameta-language-server",
     organization := "org.scalameta",
@@ -11,3 +11,5 @@ lazy val root = project.in(file("."))
         "com.github.dragos" %% "languageserver" % "0.2.1"
     )
   )
+
+lazy val paiges = project.in(file("paiges") / "core")
