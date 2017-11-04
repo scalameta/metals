@@ -37,6 +37,7 @@ class ScalametaLanguageServer(in: InputStream, out: OutputStream)
     } catch {
       case NonFatal(e) =>
         // parse errors, configuration errors, buggy scalafix rules, ...
+        connection.showMessage(MessageType.Error, e.getMessage)
         e.printStackTrace()
         Nil
     }
