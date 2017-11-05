@@ -6,7 +6,7 @@ import java.io.PrintStream
 import java.nio.file.Paths
 import java.net.URI
 import scalafix.languageserver.ScalafixLintProvider
-import scalafmt.languageserver.ScalafmtService
+import scalafmt.languageserver.ScalafmtProvider
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
 import langserver.messages.FileChangeType
@@ -21,7 +21,7 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
     extends LanguageServer(in, out) {
   val ps = new PrintStream(out)
   val scalafixService = new ScalafixLintProvider(cwd, out, connection)
-  val scalafmtService = new ScalafmtService(connection)
+  val scalafmtService = new ScalafmtProvider(cwd, connection)
 
   override def initialize(
       pid: Long,
