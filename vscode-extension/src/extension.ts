@@ -28,10 +28,7 @@ export async function activate(context: ExtensionContext) {
   // const logLevel = workspace.getConfiguration().get('scalaLanguageServer.logLevel')
   const logLevel = 'DEBUG';
 
-  // TODO(gabro): download coursier launcher and ship it with the extension
-  // For now we're just going to assume that `coursier` is in the user's $PATH
-  // const coursierPath = path.join(context.extensionPath, './coursier');
-  const coursierPath = '/usr/local/bin/coursier';
+  const coursierPath = path.join(context.extensionPath, './coursier');
 
   const coursierArgs = [
     'launch',
