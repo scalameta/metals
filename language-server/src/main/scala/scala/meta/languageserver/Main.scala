@@ -2,8 +2,6 @@ package scala.meta.languageserver
 
 import java.io.FileOutputStream
 import java.io.PrintStream
-import java.net.URI
-import java.nio.file.Paths
 import scala.util.Properties
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath

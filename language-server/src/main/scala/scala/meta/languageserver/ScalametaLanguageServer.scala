@@ -1,15 +1,14 @@
 package scala.meta.languageserver
 
-import java.io.PrintStream
 import java.io.InputStream
 import java.io.OutputStream
-import java.net.URI
-import java.nio.file.Paths
-import scalafix.languageserver.ScalafixResult
-import scalafix.languageserver.ScalafixService
+import java.io.PrintStream
+import scalafix.languageserver.ScalafixLintProvider
 import langserver.core.LanguageServer
-import langserver.messages._
-import langserver.types._
+import langserver.messages.ClientCapabilities
+import langserver.messages.FileChangeType
+import langserver.messages.FileEvent
+import langserver.messages.ServerCapabilities
 import org.langmeta.io.AbsolutePath
 
 class ScalametaLanguageServer(cwd: AbsolutePath,
@@ -17,7 +16,7 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
                               out: OutputStream)
     extends LanguageServer(in, out) {
   val ps = new PrintStream(out)
-  val scalafixService = new ScalafixService(cwd, out, connection)
+  val scalafixService = new ScalafixLintProvider(cwd, out, connection)
 
   override def initialize(
       pid: Long,
@@ -28,7 +27,7 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
     ServerCapabilities(completionProvider = None)
   }
 
-  def report(result: ScalafixResult): Unit = {
+  def report(result: DiagnosticsReport): Unit = {
     // NOTE(olafur) I must be doing something wrong, but nio.Path.toUri.toString
     // produces file:/// instead of file:/ which is what vscode expects
     val fileUri = s"file:${cwd.resolve(result.path)}"
@@ -36,17 +35,13 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
   }
 
   override def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
-    changes match {
-      case FileEvent(uri, FileChangeType.Created | FileChangeType.Changed) +: _ =>
-        val semanticdbUri = Paths.get(new URI(uri))
-        // TODO(gabro): not sure what is the strategy to manage .semanticdb is going to be
-        // but just in case we're being notified here about changes
-        logger.info(s"$semanticdbUri changed or created. Running scalafix...")
-        scalafixService
-          .onNewSemanticdb(AbsolutePath(semanticdbUri))
-          .foreach(report)
-      case _ =>
+    changes.foreach {
+      case FileEvent(SemanticdbUri(path),
+                     FileChangeType.Created | FileChangeType.Changed) =>
+        logger.info(s"$path changed or created. Running scalafix...")
+        scalafixService.onSemanticdbPath(path).foreach(report)
+      case event =>
+        logger.info(s"Unhandled file event: $event")
         ()
     }
-
 }
