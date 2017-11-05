@@ -25,9 +25,11 @@ object Formatter {
       .newInstance()
       .asInstanceOf[Scalafmt210]
     new Formatter {
-      override def format(code: String,
-                          configFile: String,
-                          filename: String): String =
+      override def format(
+          code: String,
+          configFile: String,
+          filename: String
+      ): String =
         scalafmt210.format(code, configFile, filename)
     }
   }

@@ -3,6 +3,7 @@ lazy val root = project
   .settings(
     scalaVersion := "2.12.3",
     addCompilerPlugin(
-      "org.scalameta" % "semanticdb-scalac" % "2.0.1" cross CrossVersion.full),
+      "org.scalameta" % "semanticdb-scalac" % "2.0.1" cross CrossVersion.full
+    ),
     scalacOptions += "-Yrangepos"
   )

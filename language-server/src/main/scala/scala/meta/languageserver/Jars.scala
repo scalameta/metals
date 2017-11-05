@@ -6,10 +6,12 @@ import java.io.PrintStream
 import coursier._
 
 object Jars {
-  def fetch(org: String,
-            artifact: String,
-            version: String,
-            out: PrintStream): List[File] = {
+  def fetch(
+      org: String,
+      artifact: String,
+      version: String,
+      out: PrintStream
+  ): List[File] = {
     val start = Resolution(Set(Dependency(Module(org, artifact), version)))
     val repositories = Seq(
       Cache.ivy2Local,

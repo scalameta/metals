@@ -26,9 +26,11 @@ import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 
-class ScalafixLintProvider(cwd: AbsolutePath,
-                           out: OutputStream,
-                           connection: Connection) {
+class ScalafixLintProvider(
+    cwd: AbsolutePath,
+    out: OutputStream,
+    connection: Connection
+) {
   def onSemanticdbPath(path: AbsolutePath): Seq[DiagnosticsReport] = {
     // NOTE(olafur): when we have multiple consumers of .semanticdb files
     // like DefinitionProvider/ReferenceProvider then we should move this out of the ScalafixService
@@ -41,8 +43,10 @@ class ScalafixLintProvider(cwd: AbsolutePath,
   }
 
   // Simple method to run syntactic scalafix rules on a string.
-  def onSyntacticInput(filename: String,
-                       contents: String): Seq[DiagnosticsReport] = {
+  def onSyntacticInput(
+      filename: String,
+      contents: String
+  ): Seq[DiagnosticsReport] = {
     onNewSemanticdb(
       EagerInMemorySemanticdbIndex(
         m.Database(
@@ -57,7 +61,8 @@ class ScalafixLintProvider(cwd: AbsolutePath,
         ),
         m.Sourcepath(Nil),
         m.Classpath(Nil)
-      ))
+      )
+    )
   }
 
   private def onNewSemanticdb(index: SemanticdbIndex): Seq[DiagnosticsReport] =
@@ -84,8 +89,10 @@ class ScalafixLintProvider(cwd: AbsolutePath,
       PlatformTokenizerCache.megaCache.clear()
 
       if (results.isEmpty) {
-        connection.showMessage(MessageType.Warning,
-                               "Ran scalafix but found no lint messages :(")
+        connection.showMessage(
+          MessageType.Warning,
+          "Ran scalafix but found no lint messages :("
+        )
       }
       results
     }
@@ -94,8 +101,10 @@ class ScalafixLintProvider(cwd: AbsolutePath,
   private def withConfig[T](f: m.Input => Seq[T]): Seq[T] =
     configFile match {
       case None =>
-        connection.showMessage(MessageType.Warning,
-                               s"Missing ${cwd.resolve(".scalafix.conf")}")
+        connection.showMessage(
+          MessageType.Warning,
+          s"Missing ${cwd.resolve(".scalafix.conf")}"
+        )
         Nil
       case Some(configInput) =>
         f(configInput)
@@ -104,7 +113,8 @@ class ScalafixLintProvider(cwd: AbsolutePath,
   private def lazySemanticdbIndex(index: SemanticdbIndex): LazySemanticdbIndex =
     new LazySemanticdbIndex(
       _ => Some(index),
-      ScalafixReporter.default.copy(outStream = new PrintStream(out)))
+      ScalafixReporter.default.copy(outStream = new PrintStream(out))
+    )
 
   private def toDiagnostic(name: RuleName, msg: LintMessage): l.Diagnostic = {
     l.Diagnostic(
@@ -117,9 +127,9 @@ class ScalafixLintProvider(cwd: AbsolutePath,
   }
 
   private def toSeverity(s: LintSeverity): Int = s match {
-    case LintSeverity.Error   => l.DiagnosticSeverity.Error
+    case LintSeverity.Error => l.DiagnosticSeverity.Error
     case LintSeverity.Warning => l.DiagnosticSeverity.Warning
-    case LintSeverity.Info    => l.DiagnosticSeverity.Information
+    case LintSeverity.Info => l.DiagnosticSeverity.Information
   }
 
   private def toRange(pos: m.Position): l.Range = l.Range(

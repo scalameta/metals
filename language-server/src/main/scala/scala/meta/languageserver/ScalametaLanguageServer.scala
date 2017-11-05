@@ -16,11 +16,12 @@ import langserver.messages.ServerCapabilities
 import langserver.types._
 import org.langmeta.io.AbsolutePath
 
-class ScalametaLanguageServer(cwd: AbsolutePath,
-                              in: InputStream,
-                              out: OutputStream,
-                              scalafmt: Formatter)
-    extends LanguageServer(in, out) {
+class ScalametaLanguageServer(
+    cwd: AbsolutePath,
+    in: InputStream,
+    out: OutputStream,
+    scalafmt: Formatter
+) extends LanguageServer(in, out) {
   val ps = new PrintStream(out)
   val buffers = Buffers()
   val scalafixService = new ScalafixLintProvider(cwd, out, connection)
@@ -30,11 +31,14 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
   override def initialize(
       pid: Long,
       rootPath: String,
-      capabilities: ClientCapabilities): ServerCapabilities = {
+      capabilities: ClientCapabilities
+  ): ServerCapabilities = {
     logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
 
-    ServerCapabilities(completionProvider = None,
-                       documentFormattingProvider = true)
+    ServerCapabilities(
+      completionProvider = None,
+      documentFormattingProvider = true
+    )
   }
 
   def report(result: DiagnosticsReport): Unit = {
@@ -46,9 +50,10 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
 
   override def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
     changes.foreach {
-      case FileEvent(uri @ Uri(path),
-                     FileChangeType.Created | FileChangeType.Changed)
-          if uri.endsWith(".semanticdb") =>
+      case FileEvent(
+          uri @ Uri(path),
+          FileChangeType.Created | FileChangeType.Changed
+          ) if uri.endsWith(".semanticdb") =>
         logger.info(s"$path changed or created. Running scalafix...")
         scalafixService.onSemanticdbPath(path).foreach(report)
       case event =>
@@ -58,7 +63,8 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
 
   override def documentFormattingRequest(
       td: TextDocumentIdentifier,
-      options: FormattingOptions): List[TextEdit] = {
+      options: FormattingOptions
+  ): List[TextEdit] = {
     try {
       val path = Uri.toPath(td.uri).get
       val contents = buffers.read(td.uri).getOrElse(read(path))
@@ -85,7 +91,8 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
     buffers.changed(td.uri, td.text)
   override def onChangeTextDocument(
       td: VersionedTextDocumentIdentifier,
-      changes: Seq[TextDocumentContentChangeEvent]): Unit = {
+      changes: Seq[TextDocumentContentChangeEvent]
+  ): Unit = {
     changes.foreach { c =>
       buffers.changed(td.uri, c.text)
     }
