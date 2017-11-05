@@ -1,35 +1,39 @@
 // In scalafix package to access private[scalafix] methods.
-package scalafix.lsp
+package scalafix.languageserver
 
 import java.nio.file.Files
-import java.nio.file.Path
-import scala.compat.Platform
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
 import scala.tools.nsc.interpreter.OutputStream
 import scala.{meta => m}
 import scalafix._
 import scalafix.internal.config.LazySemanticdbIndex
 import scalafix.internal.config.ScalafixConfig
-import scalafix.internal.reflect.ScalafixCompilerDecoder
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import scalafix.lint.LintSeverity
 import scalafix.patch.Patch
+import scalafix.reflect.ScalafixReflect
 import scalafix.rule.RuleCtx
 import scalafix.rule.RuleName
 import scalafix.util.SemanticdbIndex
+import langserver.core.Connection
+import langserver.messages.MessageType
 import langserver.{types => l}
 import metaconfig.ConfDecoder
 import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
+import org.langmeta.io.RelativePath
 
-class ScalafixService(cwd: AbsolutePath, out: OutputStream) {
-  def this(path: Path, out: OutputStream) = this(AbsolutePath(path), out)
-  val configFile: Option[m.Input] = ScalafixConfig.auto(cwd)
-  def onNewSemanticdb(path: Path): Seq[l.Diagnostic] =
-    onNewSemanticdb(s.Database.parseFrom(Files.readAllBytes(path)))
-  def onNewSemanticdb(database: s.Database): Seq[l.Diagnostic] =
+case class ScalafixResult(path: RelativePath, diagnostics: Seq[l.Diagnostic])
+
+class ScalafixService(cwd: AbsolutePath,
+                      out: OutputStream,
+                      connection: Connection) {
+  def configFile: Option[m.Input] = ScalafixConfig.auto(cwd)
+  def onNewSemanticdb(path: AbsolutePath): Seq[ScalafixResult] =
+    onNewSemanticdb(s.Database.parseFrom(Files.readAllBytes(path.toNIO)))
+  def onNewSemanticdb(database: s.Database): Seq[ScalafixResult] =
     onNewSemanticdb(database.toDb(None))
-  def onNewSemanticdb(database: m.Database): Seq[l.Diagnostic] = {
+  def onNewSemanticdb(database: m.Database): Seq[ScalafixResult] = {
     onNewSemanticdb(
       EagerInMemorySemanticdbIndex(database,
                                    m.Sourcepath(Nil),
@@ -38,7 +42,7 @@ class ScalafixService(cwd: AbsolutePath, out: OutputStream) {
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(filename: String,
-                       contents: String): Seq[l.Diagnostic] = {
+                       contents: String): Seq[ScalafixResult] = {
     onNewSemanticdb(
       EagerInMemorySemanticdbIndex(
         m.Database(
@@ -57,10 +61,13 @@ class ScalafixService(cwd: AbsolutePath, out: OutputStream) {
   }
 
   // NOTE throws exception on failure.
-  def onNewSemanticdb(index: SemanticdbIndex): Seq[l.Diagnostic] = {
+  def onNewSemanticdb(index: SemanticdbIndex): Seq[ScalafixResult] =
     configFile match {
       case None =>
-        sys.error(s"Missing .scalafix.conf in working directory $cwd")
+        connection.showMessage(
+          MessageType.Info,
+          s"Missing .scalafix.conf in working directory $cwd")
+        Nil
       case Some(configInput) =>
         val lazyIndex = LazySemanticdbIndex(_ => Some(index))
         val (rule, config) = ScalafixConfig
@@ -68,26 +75,32 @@ class ScalafixService(cwd: AbsolutePath, out: OutputStream) {
             configInput,
             lazyIndex,
             extraRules = Nil // Can pass in List("RemoveUnusedImports")
-          )(ScalafixCompilerDecoder.baseCompilerDecoder(lazyIndex))
+          )(ScalafixReflect.fromLazySemanticdbIndex(lazyIndex))
           .get
-        val results = for {
-          d <- index.database.documents
-          tree = {
+        val results = index.database.documents.map { d =>
+          val filename = RelativePath(d.input.syntax)
+          val tree = {
             import scala.meta._
             d.input.parse[m.Source].get
           }
-          ctx = RuleCtx(tree)
-          patches = rule.fixWithName(ctx)
-          (name, patch) <- patches
-          msg <- Patch.lintMessages(patch)
-        } yield toDiagnostic(name, msg)
+          val ctx = RuleCtx(tree)
+          val patches = rule.fixWithName(ctx)
+          val diagnostics = for {
+            (name, patch) <- patches.toIterator
+            msg <- Patch.lintMessages(patch)
+          } yield toDiagnostic(name, msg)
+          ScalafixResult(filename, diagnostics.toSeq)
+        }
         // megaCache needs to die, if we forget this we will read stale
         // snapshots of filenames if using m.Input.File.slurp
         // https://github.com/scalameta/scalameta/issues/1068
         PlatformTokenizerCache.megaCache.clear()
+        if (results.isEmpty) {
+          connection.showMessage(MessageType.Warning,
+                                 "Ran scalafix but found no lint messages :(")
+        }
         results
     }
-  }
 
   def toSeverity(s: LintSeverity): Int = {
     import LintSeverity._
