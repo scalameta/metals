@@ -12,6 +12,7 @@ import langserver.messages.ClientCapabilities
 import langserver.messages.FileChangeType
 import langserver.messages.FileEvent
 import langserver.messages.ServerCapabilities
+import langserver.types._
 import org.langmeta.io.AbsolutePath
 
 class ScalametaLanguageServer(cwd: AbsolutePath,
