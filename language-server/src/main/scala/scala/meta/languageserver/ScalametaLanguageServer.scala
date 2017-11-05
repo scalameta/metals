@@ -72,7 +72,6 @@ class ScalametaLanguageServer(
         start = Position(0, 0),
         end = Position(Int.MaxValue, Int.MaxValue)
       )
-      connection.showMessage(MessageType.Info, s"Running scalafmt on $path...")
       val formattedContent = scalafmt.format(
         contents,
         cwd.resolve(".scalafmt.conf").toString(),
@@ -89,6 +88,7 @@ class ScalametaLanguageServer(
 
   override def onOpenTextDocument(td: TextDocumentItem): Unit =
     buffers.changed(td.uri, td.text)
+
   override def onChangeTextDocument(
       td: VersionedTextDocumentIdentifier,
       changes: Seq[TextDocumentContentChangeEvent]
