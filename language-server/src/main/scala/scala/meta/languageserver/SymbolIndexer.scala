@@ -2,52 +2,74 @@ package scala.meta.languageserver
 
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
-import scala.{meta => m}
+import scala.meta._
 import java.util.{Map => JMap}
 import com.typesafe.scalalogging.Logger
 import org.langmeta.io.RelativePath
 import monix.execution.Scheduler
 import monix.reactive.Observable
 
-// NOTE(olafur) it would make a lot of sense to use tries where m.Symbol is key.
+// NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
     val indexer: Observable[Unit],
-    definitions: JMap[m.Symbol, m.Position.Range],
-    definitionsByDocument: JMap[RelativePath, Iterable[m.Symbol]],
+    documents: JMap[RelativePath, Document],
+    definitions: JMap[Symbol, Position.Range],
+    definitionsByDocument: JMap[RelativePath, Iterable[Symbol]],
     references: JMap[
-      m.Symbol,
-      Map[RelativePath, List[m.Position]]
+      Symbol,
+      Map[RelativePath, List[Position]]
     ]
-)
+) {
+  def goToDefinition(
+      path: RelativePath,
+      line: Int,
+      column: Int
+  ): Option[Position.Range] = {
+    for {
+      document <- Option(documents.get(path))
+      symbol <- document.names.collectFirst {
+        case ResolvedName(pos, sym, _)
+            if pos.startLine == line && pos.startColumn == column =>
+          sym
+      }
+      defn <- Option(definitions.get(symbol))
+    } yield defn
+  }
+}
 object SymbolIndexer {
   def apply(
-      semanticdbs: Observable[m.Database],
+      semanticdbs: Observable[Database],
       logger: Logger
   )(implicit s: Scheduler): SymbolIndexer = {
+    val documents =
+      new ConcurrentHashMap[RelativePath, Document]
     val definitions =
-      new ConcurrentHashMap[m.Symbol, m.Position.Range]
+      new ConcurrentHashMap[Symbol, Position.Range]
     val definitionsByDocument =
-      new ConcurrentHashMap[RelativePath, Iterable[m.Symbol]]
+      new ConcurrentHashMap[RelativePath, Iterable[Symbol]]
     val references =
-      new ConcurrentHashMap[m.Symbol, Map[RelativePath, List[m.Position]]]
+      new ConcurrentHashMap[Symbol, Map[RelativePath, List[Position]]]
 
-    def indexDocument(document: m.Document): Unit = {
+    def indexDocument(document: Document): Unit = {
       val input = document.input
       val filename = input.syntax
       val relpath = RelativePath(filename)
       logger.debug(s"Indexing $filename")
-      val nextReferencesBySymbol = mutable.Map.empty[m.Symbol, List[m.Position]]
-      val nextDefinitions = mutable.Set.empty[m.Symbol]
+      val nextReferencesBySymbol = mutable.Map.empty[Symbol, List[Position]]
+      val nextDefinitions = mutable.Set.empty[Symbol]
+
+      // documents
+      documents.put(relpath, document)
 
       // definitions
       document.names.foreach {
-        case m.ResolvedName(pos, symbol, isDefinition) =>
+        case ResolvedName(pos, symbol, isDefinition) =>
           if (isDefinition) {
-            definitions.put(symbol, m.Position.Range(input, pos.start, pos.end))
+            definitions.put(symbol, Position.Range(input, pos.start, pos.end))
             nextDefinitions += symbol
           } else {
             nextReferencesBySymbol(symbol) =
-              m.Position.Range(input, pos.start, pos.end) ::
+              Position.Range(input, pos.start, pos.end) ::
                 nextReferencesBySymbol.getOrElseUpdate(symbol, Nil)
           }
         case _ =>
@@ -55,7 +77,7 @@ object SymbolIndexer {
 
       // definitionsByFilename
       definitionsByDocument.getOrDefault(relpath, Nil).foreach {
-        case sym: m.Symbol.Global =>
+        case sym: Symbol.Global =>
           if (!nextDefinitions.contains(sym)) {
             definitions.remove(sym) // garbage collect old symbols.
           }
@@ -74,6 +96,12 @@ object SymbolIndexer {
 
     val indexer = semanticdbs.map(db => db.documents.foreach(indexDocument))
 
-    new SymbolIndexer(indexer, definitions, definitionsByDocument, references)
+    new SymbolIndexer(
+      indexer,
+      documents,
+      definitions,
+      definitionsByDocument,
+      references
+    )
   }
 }

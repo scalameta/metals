@@ -24,6 +24,7 @@ import metaconfig.ConfDecoder
 import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
+import scala.meta.languageserver.LanguageServerEnrichments._
 
 class ScalafixLintProvider(
     cwd: AbsolutePath,
@@ -115,7 +116,7 @@ class ScalafixLintProvider(
 
   private def toDiagnostic(name: RuleName, msg: LintMessage): l.Diagnostic = {
     l.Diagnostic(
-      range = toRange(msg.position),
+      range = msg.position.toRange,
       severity = Some(toSeverity(msg.category.severity)),
       code = Some(msg.category.key(name)),
       source = Some("scalafix"),
@@ -129,8 +130,4 @@ class ScalafixLintProvider(
     case LintSeverity.Info => l.DiagnosticSeverity.Information
   }
 
-  private def toRange(pos: m.Position): l.Range = l.Range(
-    l.Position(line = pos.startLine, character = pos.startColumn),
-    l.Position(line = pos.endLine, character = pos.endColumn)
-  )
 }

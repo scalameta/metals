@@ -6,10 +6,12 @@ import java.io.PrintStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
+import scala.meta.languageserver.LanguageServerEnrichments._
 import scala.util.control.NonFatal
 import scalafix.languageserver.ScalafixLintProvider
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
+import langserver.messages.DefinitionResult
 import langserver.messages.FileChangeType
 import langserver.messages.FileEvent
 import langserver.messages.MessageType
@@ -120,6 +122,20 @@ class ScalametaLanguageServer(
     changes.foreach { c =>
       buffers.changed(td.uri, c.text)
     }
+  }
+
+  override def gotoDefinitionRequest(
+      td: TextDocumentIdentifier,
+      position: Position
+  ): DefinitionResult = {
+    val path = Uri.toPath(td.uri).get.toRelative(cwd)
+    symbol
+      .goToDefinition(path, position.line, position.character)
+      .fold(DefinitionResult(Nil)) { pos =>
+        val uri = cwd.resolve(pos.input.syntax).toLanguageServerUri
+        val location = Location(uri, pos.toRange)
+        DefinitionResult(location :: Nil)
+      }
   }
 
   override def onSaveTextDocument(td: TextDocumentIdentifier): Unit = {}
