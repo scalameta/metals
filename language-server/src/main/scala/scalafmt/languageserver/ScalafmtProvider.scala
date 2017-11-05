@@ -8,9 +8,12 @@ import scala.meta.AbsolutePath
 
 class ScalafmtProvider(cwd: AbsolutePath, connection: Connection) {
 
+  // TODO(gabro): the path should be configurable
+  private def configFile = AbsolutePath(".scalafmt.conf")(cwd)
+
   def formatDocument(content: String): String = {
     (for {
-      config <- Config.fromHoconFile(cwd.toFile).toEither.left.map(_.msg)
+      config <- Config.fromHoconFile(configFile.toFile).toEither.left.map(_.msg)
       formatted <- Scalafmt
         .format(content, config)
         .toEither
