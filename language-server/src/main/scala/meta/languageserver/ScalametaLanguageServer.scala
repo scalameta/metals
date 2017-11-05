@@ -35,19 +35,13 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
     connection.publishDiagnostics(fileUri, result.diagnostics)
   }
 
-  override def onChangeTextDocument(
-      td: VersionedTextDocumentIdentifier,
-      changes: Seq[TextDocumentContentChangeEvent]): Unit = {
-    connection.showMessage(MessageType.Info, "Calling scalafix...")
-  }
-
   override def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
     changes match {
       case FileEvent(uri, FileChangeType.Created | FileChangeType.Changed) +: _ =>
         val semanticdbUri = Paths.get(new URI(uri))
         // TODO(gabro): not sure what is the strategy to manage .semanticdb is going to be
         // but just in case we're being notified here about changes
-        logger.info(s"$semanticdbUri changed, created or deleted")
+        logger.info(s"$semanticdbUri changed or created. Running scalafix...")
         scalafixService
           .onNewSemanticdb(AbsolutePath(semanticdbUri))
           .foreach(report)

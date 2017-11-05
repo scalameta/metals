@@ -1,6 +1,7 @@
 // In scalafix package to access private[scalafix] methods.
 package scalafix.languageserver
 
+import java.io.PrintStream
 import java.nio.file.Files
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
 import scala.tools.nsc.interpreter.OutputStream
@@ -8,6 +9,7 @@ import scala.{meta => m}
 import scalafix._
 import scalafix.internal.config.LazySemanticdbIndex
 import scalafix.internal.config.ScalafixConfig
+import scalafix.internal.config.ScalafixReporter
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import scalafix.lint.LintSeverity
 import scalafix.patch.Patch
@@ -29,6 +31,10 @@ class ScalafixService(cwd: AbsolutePath,
                       out: OutputStream,
                       connection: Connection) {
   def configFile: Option[m.Input] = ScalafixConfig.auto(cwd)
+  def lazySemanticdbIndex(index: SemanticdbIndex): LazySemanticdbIndex =
+    new LazySemanticdbIndex(
+      _ => Some(index),
+      ScalafixReporter.default.copy(outStream = new PrintStream(out)))
   def onNewSemanticdb(path: AbsolutePath): Seq[ScalafixResult] =
     onNewSemanticdb(s.Database.parseFrom(Files.readAllBytes(path.toNIO)))
   def onNewSemanticdb(database: s.Database): Seq[ScalafixResult] =
@@ -69,7 +75,7 @@ class ScalafixService(cwd: AbsolutePath,
           s"Missing .scalafix.conf in working directory $cwd")
         Nil
       case Some(configInput) =>
-        val lazyIndex = LazySemanticdbIndex(_ => Some(index))
+        val lazyIndex = lazySemanticdbIndex(index)
         val (rule, config) = ScalafixConfig
           .fromInput(
             configInput,
@@ -77,13 +83,13 @@ class ScalafixService(cwd: AbsolutePath,
             extraRules = Nil // Can pass in List("RemoveUnusedImports")
           )(ScalafixReflect.fromLazySemanticdbIndex(lazyIndex))
           .get
-        val results = index.database.documents.map { d =>
+        val results: Seq[ScalafixResult] = index.database.documents.map { d =>
           val filename = RelativePath(d.input.syntax)
           val tree = {
             import scala.meta._
             d.input.parse[m.Source].get
           }
-          val ctx = RuleCtx(tree)
+          val ctx = RuleCtx(tree, config)
           val patches = rule.fixWithName(ctx)
           val diagnostics = for {
             (name, patch) <- patches.toIterator
@@ -102,14 +108,12 @@ class ScalafixService(cwd: AbsolutePath,
         results
     }
 
-  def toSeverity(s: LintSeverity): Int = {
-    import LintSeverity._
-    s match {
-      case Error   => l.DiagnosticSeverity.Error
-      case Warning => l.DiagnosticSeverity.Warning
-      case Info    => l.DiagnosticSeverity.Information
-    }
+  def toSeverity(s: LintSeverity): Int = s match {
+    case LintSeverity.Error   => l.DiagnosticSeverity.Error
+    case LintSeverity.Warning => l.DiagnosticSeverity.Warning
+    case LintSeverity.Info    => l.DiagnosticSeverity.Information
   }
+
   def toRange(pos: m.Position): l.Range = l.Range(
     l.Position(line = pos.startLine, character = pos.startColumn),
     l.Position(line = pos.endLine, character = pos.endColumn)
@@ -124,7 +128,7 @@ class ScalafixService(cwd: AbsolutePath,
         if (msg.category.id.isEmpty) name.value
         else s"${name.value}.${msg.category.id}"
       ),
-      source = Some("scala"),
+      source = Some("scalafix"),
       message = msg.message
     )
   }
