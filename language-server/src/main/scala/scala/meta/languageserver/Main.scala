@@ -5,6 +5,7 @@ import java.io.PrintStream
 import scala.util.Properties
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
+import monix.execution.Scheduler.Implicits.global // TODO(olafur) may want to customize
 
 object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {
@@ -13,9 +14,8 @@ object Main extends LazyLogging {
     val out = new PrintStream(new FileOutputStream(s"$workspace/pc.stdout.log"))
     val err = new PrintStream(new FileOutputStream(s"$workspace/pc.stdout.log"))
     val cwd = AbsolutePath(workspace)
-    val scalafmt = Formatter.classloadScalafmt("1.3.0", out)
     val server =
-      new ScalametaLanguageServer(cwd, System.in, System.out, scalafmt)
+      new ScalametaLanguageServer(cwd, System.in, System.out, out)
 
     // route System.out somewhere else. Any output not from the server (e.g. logging)
     // messes up with the client, since stdout is used for the language server protocol

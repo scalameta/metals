@@ -1,9 +1,7 @@
 package scalafix.languageserver
 
 import java.io.PrintStream
-import java.nio.file.Files
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
-import scala.meta.languageserver.PublishDiagnostics
 import scala.meta.languageserver.Parser
 import scala.tools.nsc.interpreter.OutputStream
 import scala.{meta => m}
@@ -23,32 +21,30 @@ import langserver.messages.MessageType
 import langserver.messages.PublishDiagnostics
 import langserver.{types => l}
 import metaconfig.ConfDecoder
-import org.langmeta.internal.semanticdb.{schema => s}
+import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 
 class ScalafixLintProvider(
     cwd: AbsolutePath,
     out: OutputStream,
-    connection: Connection
+    connection: Connection,
+    semanticdbs: Observable[m.Database]
 ) {
-  def onSemanticdbPath(path: AbsolutePath): Seq[PublishDiagnostics] = {
-    // NOTE(olafur): when we have multiple consumers of .semanticdb files
-    // like DefinitionProvider/ReferenceProvider then we should move this out of the ScalafixService
-    val bytes = Files.readAllBytes(path.toNIO)
-    val sdb = s.Database.parseFrom(bytes)
-    val mdb = sdb.toDb(None)
-    val index =
-      EagerInMemorySemanticdbIndex(mdb, m.Sourcepath(Nil), m.Classpath(Nil))
-    onNewSemanticdb(index)
-  }
+  val linter: Observable[Unit] =
+    semanticdbs.map { mdb =>
+      val index =
+        EagerInMemorySemanticdbIndex(mdb, m.Sourcepath(Nil), m.Classpath(Nil))
+      val messages = analyzeIndex(index)
+      messages.foreach(connection.sendNotification)
+    }
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(
       filename: String,
       contents: String
   ): Seq[PublishDiagnostics] = {
-    onNewSemanticdb(
+    analyzeIndex(
       EagerInMemorySemanticdbIndex(
         m.Database(
           m.Document(
@@ -66,7 +62,7 @@ class ScalafixLintProvider(
     )
   }
 
-  private def onNewSemanticdb(index: SemanticdbIndex): Seq[PublishDiagnostics] =
+  private def analyzeIndex(index: SemanticdbIndex): Seq[PublishDiagnostics] =
     withConfig { configInput =>
       val lazyIndex = lazySemanticdbIndex(index)
       val configDecoder = ScalafixReflect.fromLazySemanticdbIndex(lazyIndex)

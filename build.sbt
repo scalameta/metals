@@ -13,6 +13,7 @@ lazy val `language-server` = project
     version := "0.1-SNAPSHOT",
     resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
     libraryDependencies ++= List(
+      "io.monix" %% "monix" % "2.3.0",
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "ch.epfl.scala" % "scalafix-cli" % "0.5.3" cross CrossVersion.full,
