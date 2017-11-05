@@ -73,7 +73,7 @@ class Linter(
         val filename = RelativePath(d.input.syntax)
         val tree = Parser.parse(d).get
         val ctx = RuleCtx.applyInternal(tree, config)
-        val patches: Map[RuleName, Patch] = rule.fixWithNameInternal(ctx)
+        val patches = rule.fixWithNameInternal(ctx)
         val diagnostics = for {
           (name, patch) <- patches.toIterator
           msg <- Patch.lintMessagesInternal(patch)

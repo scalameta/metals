@@ -1,11 +1,31 @@
 package scala.meta.languageserver
 
 import scala.{meta => m}
+import langserver.types.SymbolKind
 import langserver.{types => l}
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
 object ScalametaEnrichments {
+  type SymbolKind = Int
+
+  implicit class XtensionDenotationLSP(val denotation: m.Denotation)
+      extends AnyVal {
+    import denotation._
+    // copy-pasta from metadoc!
+    def symbolKind: SymbolKind = {
+      if (isParam || isTypeParam) SymbolKind.Variable // ???
+      else if (isVal || isVar) SymbolKind.Variable
+      else if (isDef) SymbolKind.Function
+      else if (isPrimaryCtor || isSecondaryCtor) SymbolKind.Constructor
+      else if (isClass) SymbolKind.Class
+      else if (isObject) SymbolKind.Module
+      else if (isTrait) SymbolKind.Interface
+      else if (isPackage || isPackageObject) SymbolKind.Package
+      else if (isType) SymbolKind.Namespace
+      else SymbolKind.Variable // ???
+    }
+  }
   implicit class XtensionInputLSP(val input: m.Input) extends AnyVal {
     def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
   }

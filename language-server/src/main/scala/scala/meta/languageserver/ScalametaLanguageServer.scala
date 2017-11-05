@@ -138,7 +138,7 @@ class ScalametaLanguageServer(
     symbol.documentSymbols(path.toRelative(cwd)).map {
       case (position, denotation @ Denotation(_, name, signature, _)) =>
         val location = path.toLocation(position)
-        val kind = ScalametaLanguageServer.symbolKind(denotation)
+        val kind = denotation.symbolKind
         SymbolInformation(name, kind, location, Some(signature))
     }
   }
@@ -162,22 +162,6 @@ class ScalametaLanguageServer(
 }
 
 object ScalametaLanguageServer {
-  type SymbolKind = Int
-  def symbolKind(denotation: Denotation): SymbolKind = {
-    import denotation._
-    // copy-pasta from metadoc!
-    if (isParam || isTypeParam) SymbolKind.Variable // ???
-    else if (isVal || isVar) SymbolKind.Variable
-    else if (isDef) SymbolKind.Function
-    else if (isPrimaryCtor || isSecondaryCtor) SymbolKind.Constructor
-    else if (isClass) SymbolKind.Class
-    else if (isObject) SymbolKind.Module
-    else if (isTrait) SymbolKind.Interface
-    else if (isPackage || isPackageObject) SymbolKind.Package
-    else if (isType) SymbolKind.Namespace
-    else SymbolKind.Variable // ???
-
-  }
   def semanticdbStream(
       implicit s: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
