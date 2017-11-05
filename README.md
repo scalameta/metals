@@ -7,6 +7,13 @@ implementation for Scala based on Scalameta.
 - `language-server` contains a Scala implementation of a language server
 - `vscode-extension` contains a Visual Studio Code extension, implementing a client for the language server
 
+## Features
+
+- [x] Scalafix lint on compile (requires `scalac-semanticdb` compiler plugin, see [instructions here](http://scalameta.org/tutorial/#semanticdb-scalac))
+- [ ] Document formatting with scalafmt
+
+... WIP
+
 ## Trying this out
 - publish the `language-server` locally
 
@@ -23,3 +30,4 @@ code .
 ```
 
 and press F5 to start debugging.
+
