@@ -44,4 +44,7 @@ class ScalametaLanguageServer(cwd: AbsolutePath,
         logger.info(s"Unhandled file event: $event")
         ()
     }
+
+  override def onSaveTextDocument(td: TextDocumentIdentifier): Unit = {}
+
 }
