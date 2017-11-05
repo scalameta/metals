@@ -1,5 +1,8 @@
 package example
 
 object Example {
-  List(1, "")
+  List (
+    
+    
+    1, "")
 }

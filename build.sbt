@@ -9,7 +9,6 @@ lazy val languageServer = ProjectRef(LanguageServer.build, "languageserver")
 
 lazy val `language-server` = project
   .settings(
-    name := "scalameta-language-server",
     organization := "org.scalameta",
     version := "0.1-SNAPSHOT",
     resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
@@ -19,3 +18,4 @@ lazy val `language-server` = project
     )
   )
   .dependsOn(languageServer)
+  .aggregate(languageServer)
