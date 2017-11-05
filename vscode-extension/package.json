@@ -19,12 +19,14 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",
-        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+        "test": "npm run compile && node ./node_modules/vscode/bin/test",
+        "build": "vsce package"
     },
     "devDependencies": {
-        "typescript": "^2.5.3",
+        "@types/mocha": "^2.2.42",
         "@types/node": "^7.0.43",
-        "@types/mocha": "^2.2.42"
+        "typescript": "^2.5.3",
+        "vsce": "^1.32.0"
     },
     "dependencies": {
         "expand-home-dir": "0.0.3",
