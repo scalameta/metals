@@ -25,6 +25,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
         hoverRequest(textDocument, position)
       case ("textDocument/documentSymbol", DocumentSymbolParams(tdi)) =>
         DocumentSymbolResult(documentSymbols(tdi))
+      case ("textDocument/formatting", TextDocumentFormattingRequest(DocumentFormattingParams(textDocument, options))) =>
+        DocumentFormattingResult(documentFormattingRequest(textDocument, options))
 
       case (_, Shutdown()) =>
         shutdown()
@@ -95,4 +97,9 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
   def documentSymbols(tdi: TextDocumentIdentifier): Seq[SymbolInformation] = {
     Seq.empty
   }
+
+  def documentFormattingRequest(textDocument: TextDocumentIdentifier, options: FormattingOptions) = {
+    List.empty[TextEdit]
+  }
+
 }

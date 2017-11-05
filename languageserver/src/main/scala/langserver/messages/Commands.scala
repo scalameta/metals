@@ -179,6 +179,7 @@ case class DocumentSymbolParams(textDocument: TextDocumentIdentifier) extends Se
 case class TextDocumentCompletionRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentDefinitionRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentHoverRequest(params: TextDocumentPositionParams) extends ServerCommand
+case class TextDocumentFormattingRequest(params: DocumentFormattingParams) extends ServerCommand
 
 case class Hover(contents: Seq[MarkedString], range: Option[Range]) extends ResultResponse
 object Hover {
@@ -196,7 +197,8 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
     "textDocument/completion" -> valueFormat(TextDocumentCompletionRequest)(_.params),
     "textDocument/definition" -> valueFormat(TextDocumentDefinitionRequest)(_.params),
     "textDocument/hover" -> valueFormat(TextDocumentHoverRequest)(_.params),
-    "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams]
+    "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams],
+    "textDocument/formatting" -> valueFormat(TextDocumentFormattingRequest)(_.params)
   )
 }
 
@@ -261,6 +263,7 @@ object Notification extends NotificationCompanion[Notification] {
 
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
 case class DefinitionResult(params: Seq[Location]) extends ResultResponse
+case class DocumentFormattingResult(params: Seq[TextEdit]) extends ResultResponse
 
 object ResultResponse extends ResponseCompanion[Any] {
   import JsonRpcUtils._
@@ -271,5 +274,6 @@ object ResultResponse extends ResponseCompanion[Any] {
     "textDocument/definition" -> valueFormat(DefinitionResult)(_.params),
     "textDocument/hover" -> Json.format[Hover],
     "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
+    "textDocument/formatting" -> valueFormat(DocumentFormattingResult)(_.params),
     "shutdown" -> Json.format[ShutdownResult])
 }

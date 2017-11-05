@@ -50,6 +50,10 @@ case class Command(title: String, command: String, arguments: Seq[Any])
 
 case class TextEdit(range: Range, newText: String)
 
+object TextEdit {
+  implicit val formatter = Json.format[TextEdit]
+}
+
 /**
  * A workspace edit represents changes to many resources managed
  * in the workspace.
@@ -272,8 +276,12 @@ case class FormattingOptions(
   /**
    * Signature for further properties.
    */
-  params: Map[String, Any] // [key: string]: boolean | number | string;
-  )
+  // params: Map[String, Any] // [key: string]: boolean | number | string;
+)
+
+object FormattingOptions {
+  implicit val formatter = Json.format[FormattingOptions]
+}
 
 trait TextDocument {
   /**
@@ -346,4 +354,20 @@ case class TextDocumentContentChangeEvent(
 
 object TextDocumentContentChangeEvent {
   implicit val format = Json.format[TextDocumentContentChangeEvent]
+}
+
+case class DocumentFormattingParams(
+	/**
+	 * The document to format.
+	 */
+	textDocument: TextDocumentIdentifier,
+
+	/**
+	 * The format options.
+	 */
+	options: FormattingOptions
+)
+
+object DocumentFormattingParams {
+  implicit val format = Json.format[DocumentFormattingParams]
 }
