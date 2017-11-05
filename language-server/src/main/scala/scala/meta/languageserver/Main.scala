@@ -1,22 +1,27 @@
 package scala.meta.languageserver
 
+import java.io.FileOutputStream
+import java.io.PrintStream
 import scala.util.Properties
 import com.typesafe.scalalogging.LazyLogging
-import java.io.{PrintStream, OutputStream, FileOutputStream}
+import org.langmeta.io.AbsolutePath
 
 object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {
     // FIXME(gabro): this is vscode specific (at least the name)
-    val cwd = System.getProperty("vscode.workspace")
-    val server = new ScalametaLanguageServer(System.in, System.out)
+    val workspace = System.getProperty("vscode.workspace")
+    val cwd = AbsolutePath(workspace)
+    val server = new ScalametaLanguageServer(cwd, System.in, System.out)
 
     // route System.out somewhere else. Any output not from the server (e.g. logging)
     // messes up with the client, since stdout is used for the language server protocol
     val origOut = System.out
     try {
-      System.setOut(new PrintStream(new FileOutputStream(s"$cwd/pc.stdout.log")))
-      System.setErr(new PrintStream(new FileOutputStream(s"$cwd/pc.stdout.log")))
-      logger.info(s"Starting server in $cwd")
+      System.setOut(
+        new PrintStream(new FileOutputStream(s"$workspace/pc.stdout.log")))
+      System.setErr(
+        new PrintStream(new FileOutputStream(s"$workspace/pc.stdout.log")))
+      logger.info(s"Starting server in $workspace")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
       server.start()
     } finally {
@@ -26,4 +31,3 @@ object Main extends LazyLogging {
     System.exit(0)
   }
 }
-
