@@ -8,7 +8,6 @@ import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.meta.languageserver.LanguageServerEnrichments._
 import scala.util.control.NonFatal
-import scalafix.languageserver.ScalafixLintProvider
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
 import langserver.messages.DefinitionResult
@@ -41,8 +40,8 @@ class ScalametaLanguageServer(
   val buffers: Buffers = Buffers()
   val symbol: SymbolIndexer =
     SymbolIndexer(semanticdbPublisher, logger, connection, buffers)
-  val scalafix: ScalafixLintProvider =
-    new ScalafixLintProvider(cwd, stdout, connection, semanticdbPublisher)
+  val scalafix: Linter =
+    new Linter(cwd, stdout, connection, semanticdbPublisher)
   val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0", stdout)
 
   private def readFromDisk(path: AbsolutePath): String =

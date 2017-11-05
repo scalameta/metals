@@ -1,8 +1,8 @@
-package scalafix.languageserver
+package scala.meta.languageserver
 
 import java.io.PrintStream
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
-import scala.meta.languageserver.Parser
+import scala.meta.languageserver.LanguageServerEnrichments._
 import scala.tools.nsc.interpreter.OutputStream
 import scala.{meta => m}
 import scalafix._
@@ -10,6 +10,7 @@ import scalafix.internal.config.LazySemanticdbIndex
 import scalafix.internal.config.ScalafixConfig
 import scalafix.internal.config.ScalafixReporter
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
+import scalafix.languageserver.ScalafixEnrichments._
 import scalafix.lint.LintSeverity
 import scalafix.patch.Patch
 import scalafix.reflect.ScalafixReflect
@@ -24,9 +25,8 @@ import metaconfig.ConfDecoder
 import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
-import scala.meta.languageserver.LanguageServerEnrichments._
 
-class ScalafixLintProvider(
+class Linter(
     cwd: AbsolutePath,
     out: OutputStream,
     connection: Connection,
@@ -72,11 +72,11 @@ class ScalafixLintProvider(
       val results: Seq[PublishDiagnostics] = index.database.documents.map { d =>
         val filename = RelativePath(d.input.syntax)
         val tree = Parser.parse(d).get
-        val ctx = RuleCtx(tree, config)
-        val patches = rule.fixWithName(ctx)
+        val ctx = RuleCtx.applyInternal(tree, config)
+        val patches: Map[RuleName, Patch] = rule.fixWithNameInternal(ctx)
         val diagnostics = for {
           (name, patch) <- patches.toIterator
-          msg <- Patch.lintMessages(patch)
+          msg <- Patch.lintMessagesInternal(patch)
         } yield toDiagnostic(name, msg)
         PublishDiagnostics(s"file:${cwd.resolve(filename)}", diagnostics.toSeq)
       }
@@ -95,7 +95,6 @@ class ScalafixLintProvider(
       results
     }
 
-  private def configFile: Option[m.Input] = ScalafixConfig.auto(cwd)
   private def withConfig[T](f: m.Input => Seq[T]): Seq[T] =
     configFile match {
       case None =>
@@ -108,6 +107,8 @@ class ScalafixLintProvider(
       case Some(configInput) =>
         f(configInput)
     }
+
+  private def configFile: Option[m.Input] = ScalafixConfig.auto(cwd)
 
   private def lazySemanticdbIndex(index: SemanticdbIndex): LazySemanticdbIndex =
     new LazySemanticdbIndex(
