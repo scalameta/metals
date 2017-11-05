@@ -1,5 +1,9 @@
 package example
 
 object Example {
-  List(1, "")
+  def jess = 2
+  AnotherFile.jumpHere
+  println(jess)
+  println(jess)
+  println(jess)
 }

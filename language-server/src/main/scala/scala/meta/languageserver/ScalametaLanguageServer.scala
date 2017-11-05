@@ -66,6 +66,7 @@ class ScalametaLanguageServer(
     toCancel += symbol.indexer.subscribe()
     ServerCapabilities(
       completionProvider = None,
+      definitionProvider = true,
       documentFormattingProvider = true
     )
   }

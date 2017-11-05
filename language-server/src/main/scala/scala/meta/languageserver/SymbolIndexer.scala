@@ -12,6 +12,7 @@ import monix.reactive.Observable
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
     val indexer: Observable[Unit],
+    logger: Logger,
     documents: JMap[RelativePath, Document],
     definitions: JMap[Symbol, Position.Range],
     definitionsByDocument: JMap[RelativePath, Iterable[Symbol]],
@@ -27,13 +28,23 @@ class SymbolIndexer(
   ): Option[Position.Range] = {
     for {
       document <- Option(documents.get(path))
+      _ = logger.info(s"Database for $path")
       symbol <- document.names.collectFirst {
-        case ResolvedName(pos, sym, _)
-            if pos.startLine == line && pos.startColumn == column =>
+        case ResolvedName(pos, sym, _) if {
+              logger.info(s"$sym at $path:${pos.startLine}:${pos.startColumn}")
+              pos.startLine <= line &&
+              pos.startColumn <= column &&
+              pos.endLine >= line &&
+              pos.endColumn >= column
+            } =>
           sym
       }
+      _ = logger.info(s"Found symbol $symbol")
       defn <- Option(definitions.get(symbol))
-    } yield defn
+    } yield {
+      logger.info(s"Found definition $defn")
+      defn
+    }
   }
 }
 object SymbolIndexer {
@@ -98,6 +109,7 @@ object SymbolIndexer {
 
     new SymbolIndexer(
       indexer,
+      logger,
       documents,
       definitions,
       definitionsByDocument,
