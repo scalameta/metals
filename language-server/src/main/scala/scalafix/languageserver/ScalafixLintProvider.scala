@@ -99,6 +99,7 @@ class ScalafixLintProvider(
   private def withConfig[T](f: m.Input => Seq[T]): Seq[T] =
     configFile match {
       case None =>
+        // would be good to debounce this message, see Observable[T].debounce
         connection.showMessage(
           MessageType.Warning,
           s"Missing ${cwd.resolve(".scalafix.conf")}"

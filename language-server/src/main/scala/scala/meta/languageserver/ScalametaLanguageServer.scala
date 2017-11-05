@@ -26,6 +26,7 @@ import monix.reactive.OverflowStrategy
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Database
+import org.langmeta.semanticdb.Denotation
 
 class ScalametaLanguageServer(
     cwd: AbsolutePath,
@@ -34,10 +35,12 @@ class ScalametaLanguageServer(
     stdout: PrintStream
 )(implicit s: Scheduler)
     extends LanguageServer(lspIn, lspOut) {
+  implicit val workspacePath: AbsolutePath = cwd
   val (semanticdbSubscriber, semanticdbPublisher) =
     ScalametaLanguageServer.semanticdbStream
   val buffers: Buffers = Buffers()
-  val symbol: SymbolIndexer = SymbolIndexer(semanticdbPublisher, logger)
+  val symbol: SymbolIndexer =
+    SymbolIndexer(semanticdbPublisher, logger, connection, buffers)
   val scalafix: ScalafixLintProvider =
     new ScalafixLintProvider(cwd, stdout, connection, semanticdbPublisher)
   val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0", stdout)
@@ -67,6 +70,7 @@ class ScalametaLanguageServer(
     ServerCapabilities(
       completionProvider = None,
       definitionProvider = true,
+      documentSymbolProvider = true,
       documentFormattingProvider = true
     )
   }
@@ -99,12 +103,15 @@ class ScalametaLanguageServer(
         start = Position(0, 0),
         end = Position(Int.MaxValue, Int.MaxValue)
       )
-      val formattedContent = scalafmt.format(
-        contents,
-        cwd.resolve(".scalafmt.conf").toString(),
-        path.toString()
-      )
-      List(TextEdit(fullDocumentRange, formattedContent))
+      val config = cwd.resolve(".scalafmt.conf")
+      if (Files.isRegularFile(config.toNIO)) {
+        val formattedContent =
+          scalafmt.format(contents, config.toString(), path.toString())
+        List(TextEdit(fullDocumentRange, formattedContent))
+      } else {
+        connection.showMessage(MessageType.Info, s"Missing $config")
+        Nil
+      }
     } catch {
       case NonFatal(e) =>
         connection.showMessage(MessageType.Error, e.getMessage)
@@ -125,6 +132,18 @@ class ScalametaLanguageServer(
     }
   }
 
+  override def documentSymbols(
+      td: TextDocumentIdentifier
+  ): Seq[SymbolInformation] = {
+    val path = Uri.toPath(td.uri).get
+    symbol.documentSymbols(path.toRelative(cwd)).map {
+      case (position, denotation @ Denotation(_, name, signature, _)) =>
+        val location = path.toLocation(position)
+        val kind = ScalametaLanguageServer.symbolKind(denotation)
+        SymbolInformation(name, kind, location, Some(signature))
+    }
+  }
+
   override def gotoDefinitionRequest(
       td: TextDocumentIdentifier,
       position: Position
@@ -132,10 +151,10 @@ class ScalametaLanguageServer(
     val path = Uri.toPath(td.uri).get.toRelative(cwd)
     symbol
       .goToDefinition(path, position.line, position.character)
-      .fold(DefinitionResult(Nil)) { pos =>
-        val uri = cwd.resolve(pos.input.syntax).toLanguageServerUri
-        val location = Location(uri, pos.toRange)
-        DefinitionResult(location :: Nil)
+      .fold(DefinitionResult(Nil)) { position =>
+        DefinitionResult(
+          cwd.resolve(position.input.syntax).toLocation(position) :: Nil
+        )
       }
   }
 
@@ -144,6 +163,22 @@ class ScalametaLanguageServer(
 }
 
 object ScalametaLanguageServer {
+  type SymbolKind = Int
+  def symbolKind(denotation: Denotation): SymbolKind = {
+    import denotation._
+    // copy-pasta from metadoc!
+    if (isParam || isTypeParam) SymbolKind.Variable // ???
+    else if (isVal || isVar) SymbolKind.Variable
+    else if (isDef) SymbolKind.Function
+    else if (isPrimaryCtor || isSecondaryCtor) SymbolKind.Constructor
+    else if (isClass) SymbolKind.Class
+    else if (isObject) SymbolKind.Module
+    else if (isTrait) SymbolKind.Interface
+    else if (isPackage || isPackageObject) SymbolKind.Package
+    else if (isType) SymbolKind.Namespace
+    else SymbolKind.Variable // ???
+
+  }
   def semanticdbStream(
       implicit s: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
