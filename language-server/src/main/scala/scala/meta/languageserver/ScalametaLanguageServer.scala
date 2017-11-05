@@ -41,13 +41,6 @@ class ScalametaLanguageServer(
     )
   }
 
-  def report(result: DiagnosticsReport): Unit = {
-    // NOTE(olafur) I must be doing something wrong, but nio.Path.toUri.toString
-    // produces file:/// instead of file:/ which is what vscode expects
-    val fileUri = s"file:${cwd.resolve(result.path)}"
-    connection.publishDiagnostics(fileUri, result.diagnostics)
-  }
-
   override def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
     changes.foreach {
       case FileEvent(
@@ -55,7 +48,9 @@ class ScalametaLanguageServer(
           FileChangeType.Created | FileChangeType.Changed
           ) if uri.endsWith(".semanticdb") =>
         logger.info(s"$path changed or created. Running scalafix...")
-        scalafixService.onSemanticdbPath(path).foreach(report)
+        scalafixService
+          .onSemanticdbPath(path)
+          .foreach(connection.sendNotification)
       case event =>
         logger.info(s"Unhandled file event: $event")
         ()

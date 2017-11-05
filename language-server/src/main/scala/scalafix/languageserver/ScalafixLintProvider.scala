@@ -3,7 +3,7 @@ package scalafix.languageserver
 import java.io.PrintStream
 import java.nio.file.Files
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
-import scala.meta.languageserver.DiagnosticsReport
+import scala.meta.languageserver.PublishDiagnostics
 import scala.meta.languageserver.Parser
 import scala.tools.nsc.interpreter.OutputStream
 import scala.{meta => m}
@@ -20,6 +20,7 @@ import scalafix.rule.RuleName
 import scalafix.util.SemanticdbIndex
 import langserver.core.Connection
 import langserver.messages.MessageType
+import langserver.messages.PublishDiagnostics
 import langserver.{types => l}
 import metaconfig.ConfDecoder
 import org.langmeta.internal.semanticdb.{schema => s}
@@ -31,7 +32,7 @@ class ScalafixLintProvider(
     out: OutputStream,
     connection: Connection
 ) {
-  def onSemanticdbPath(path: AbsolutePath): Seq[DiagnosticsReport] = {
+  def onSemanticdbPath(path: AbsolutePath): Seq[PublishDiagnostics] = {
     // NOTE(olafur): when we have multiple consumers of .semanticdb files
     // like DefinitionProvider/ReferenceProvider then we should move this out of the ScalafixService
     val bytes = Files.readAllBytes(path.toNIO)
@@ -46,7 +47,7 @@ class ScalafixLintProvider(
   def onSyntacticInput(
       filename: String,
       contents: String
-  ): Seq[DiagnosticsReport] = {
+  ): Seq[PublishDiagnostics] = {
     onNewSemanticdb(
       EagerInMemorySemanticdbIndex(
         m.Database(
@@ -65,13 +66,13 @@ class ScalafixLintProvider(
     )
   }
 
-  private def onNewSemanticdb(index: SemanticdbIndex): Seq[DiagnosticsReport] =
+  private def onNewSemanticdb(index: SemanticdbIndex): Seq[PublishDiagnostics] =
     withConfig { configInput =>
       val lazyIndex = lazySemanticdbIndex(index)
       val configDecoder = ScalafixReflect.fromLazySemanticdbIndex(lazyIndex)
       val (rule, config) =
         ScalafixConfig.fromInput(configInput, lazyIndex)(configDecoder).get
-      val results: Seq[DiagnosticsReport] = index.database.documents.map { d =>
+      val results: Seq[PublishDiagnostics] = index.database.documents.map { d =>
         val filename = RelativePath(d.input.syntax)
         val tree = Parser.parse(d).get
         val ctx = RuleCtx(tree, config)
@@ -80,7 +81,7 @@ class ScalafixLintProvider(
           (name, patch) <- patches.toIterator
           msg <- Patch.lintMessages(patch)
         } yield toDiagnostic(name, msg)
-        DiagnosticsReport(filename, diagnostics.toSeq)
+        PublishDiagnostics(s"file:${cwd.resolve(filename)}", diagnostics.toSeq)
       }
 
       // megaCache needs to die, if we forget this we will read stale
