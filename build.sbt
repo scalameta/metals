@@ -8,6 +8,7 @@ lazy val `language-server` = project
     resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
     libraryDependencies ++= List(
       "ch.epfl.scala" % "scalafix-cli" % "0.5.3" cross CrossVersion.full,
-      "com.github.dragos" %% "languageserver" % "0.2.1"
+      "com.github.dragos" %% "languageserver" % "0.2.1-SNAPSHOT",
+      "com.geirsson" %% "scalafmt-core" % "1.3.0"
     )
   )
