@@ -38,7 +38,7 @@ export async function activate(context: ExtensionContext) {
     'sonatype:releases',
     '-J',
     toolsJar,
-    'org.scalameta:scalameta-language-server_2.12:0.1-SNAPSHOT',
+    'org.scalameta:language-server_2.12:0.1-SNAPSHOT',
     '-M',
     'scala.meta.languageserver.Main'
   ];
