@@ -7,33 +7,29 @@ import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
 
 object Main extends LazyLogging {
-  def main(args: Array[String]): Unit = args.toList match {
-    case "--scalafmt-classpath" :: cp :: Nil =>
-      // FIXME(gabro): this is vscode specific (at least the name)
-      val workspace = System.getProperty("vscode.workspace")
-      val cwd = AbsolutePath(workspace)
-      val scalafmt = Formatter.classloadScalafmt(cp)
-      val server =
-        new ScalametaLanguageServer(cwd, System.in, System.out, scalafmt)
+  def main(args: Array[String]): Unit = {
+    // FIXME(gabro): this is vscode specific (at least the name)
+    val workspace = System.getProperty("vscode.workspace")
+    val out = new PrintStream(new FileOutputStream(s"$workspace/pc.stdout.log"))
+    val err = new PrintStream(new FileOutputStream(s"$workspace/pc.stdout.log"))
+    val cwd = AbsolutePath(workspace)
+    val scalafmt = Formatter.classloadScalafmt("1.3.0", out)
+    val server =
+      new ScalametaLanguageServer(cwd, System.in, System.out, scalafmt)
 
-      // route System.out somewhere else. Any output not from the server (e.g. logging)
-      // messes up with the client, since stdout is used for the language server protocol
-      val origOut = System.out
-      try {
-        System.setOut(
-          new PrintStream(new FileOutputStream(s"$workspace/pc.stdout.log")))
-        System.setErr(
-          new PrintStream(new FileOutputStream(s"$workspace/pc.stdout.log")))
-        logger.info(s"Starting server in $workspace")
-        logger.info(s"Classpath: ${Properties.javaClassPath}")
-        server.start()
-      } finally {
-        System.setOut(origOut)
-      }
+    // route System.out somewhere else. Any output not from the server (e.g. logging)
+    // messes up with the client, since stdout is used for the language server protocol
+    val origOut = System.out
+    try {
+      System.setOut(out)
+      System.setErr(err)
+      logger.info(s"Starting server in $workspace")
+      logger.info(s"Classpath: ${Properties.javaClassPath}")
+      server.start()
+    } finally {
+      System.setOut(origOut)
+    }
 
-      System.exit(0)
-    case _ =>
-      System.err.println("Missing --scalafmt-classpath")
-      System.exit(1)
+    System.exit(0)
   }
 }
