@@ -6,7 +6,7 @@ import java.io.PrintStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
-import scala.meta.languageserver.LanguageServerEnrichments._
+import scala.meta.languageserver.ScalametaEnrichments._
 import scala.util.control.NonFatal
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities

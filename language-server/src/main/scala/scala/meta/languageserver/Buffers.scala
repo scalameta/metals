@@ -3,7 +3,7 @@ package scala.meta.languageserver
 import java.util
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
-import LanguageServerEnrichments._
+import ScalametaEnrichments._
 
 /**
  * Utility to keep local state of file contents.

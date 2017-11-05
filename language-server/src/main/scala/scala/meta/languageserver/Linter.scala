@@ -2,7 +2,7 @@ package scala.meta.languageserver
 
 import java.io.PrintStream
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
-import scala.meta.languageserver.LanguageServerEnrichments._
+import scala.meta.languageserver.ScalametaEnrichments._
 import scala.tools.nsc.interpreter.OutputStream
 import scala.{meta => m}
 import scalafix._

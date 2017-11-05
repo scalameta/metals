@@ -2,7 +2,10 @@ package scala.meta.languageserver
 
 import scala.{meta => m}
 import langserver.{types => l}
-object LanguageServerEnrichments {
+
+// Extension methods for convenient reuse of data conversions between
+// scala.meta._ and language.types._
+object ScalametaEnrichments {
   implicit class XtensionInputLSP(val input: m.Input) extends AnyVal {
     def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
   }

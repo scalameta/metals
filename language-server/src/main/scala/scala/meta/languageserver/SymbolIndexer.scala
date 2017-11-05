@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.Logger
 import monix.execution.Scheduler
 import monix.reactive.Observable
 import org.langmeta.io.RelativePath
-import LanguageServerEnrichments._
+import ScalametaEnrichments._
 import langserver.core.Connection
 import langserver.messages.MessageType
 
