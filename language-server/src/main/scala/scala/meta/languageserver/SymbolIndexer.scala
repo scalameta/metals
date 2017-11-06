@@ -48,11 +48,11 @@ class SymbolIndexer(
       line: Int,
       column: Int
   ): Option[Position.Range] = {
-    logger.trace(s"goToDefintion at $path:$line:$column")
+    logger.info(s"goToDefintion at $path:$line:$column")
     for {
       document <- Option(documents.get(path))
       _ <- isFreshSemanticdb(path, document)
-      _ = logger.trace(s"Database for $path")
+      _ = logger.info(s"Database for $path")
       symbol <- document.names.collectFirst {
         case ResolvedName(pos, sym, _) if {
               logger.info(s"$sym at ${pos.location}")
@@ -63,13 +63,60 @@ class SymbolIndexer(
             } =>
           sym
       }
-      _ = logger.trace(s"Found symbol $symbol")
-      defn <- Option(definitions.get(symbol))
+      _ = logger.info(s"Found symbol $symbol")
+      defn <- definition(symbol).orElse {
+        alternatives(symbol).flatMap { alternative =>
+          logger.info(s"Trying alternative symbol $alternative")
+          definition(alternative)
+        }.headOption
+      }
     } yield {
       logger.trace(s"Found definition $defn")
       defn
     }
   }
+
+  private def definition(symbol: Symbol): Option[Position.Range] =
+    Option(definitions.get(symbol))
+
+  private def alternatives(symbol: Symbol): List[Symbol] =
+    symbol match {
+      case Symbol.Global(
+          companion @ Symbol.Global(owner, signature),
+          Signature.Method("apply" | "copy", _)
+          ) =>
+        // If we have `case class Foo(a: Int)` and jump to definition in `apply` in
+        // Foo.apply(1), then we try the companion object first and then class.
+        companion :: Symbol.Global(owner, Signature.Type(signature.name)) :: Nil
+      case Symbol.Global(
+          Symbol.Global(
+            Symbol.Global(owner, signature),
+            Signature.Method("copy" | "apply", _)
+          ),
+          param: Signature.TermParameter
+          ) =>
+        Symbol.Global(
+          Symbol.Global(owner, Signature.Type(signature.name)),
+          param
+        ) :: Nil
+      case Symbol.Global(owner, Signature.Term(name)) =>
+        // Given Term symbol a.B., returns class symbol a.B#
+        // This is useful when the companion object is synthesized, for example
+        // for case classes.
+        Symbol.Global(owner, Signature.Type(name)) :: Nil
+      case Symbol.Multi(symbols) =>
+        symbols
+      case _ =>
+        logger.info(s"Found no alternative for ${symbol.structure}")
+        Nil
+    }
+
+  private def companionClass(symbol: Symbol): Option[Symbol] =
+    symbol match {
+      case Symbol.Global(owner, Signature.Term(name)) =>
+        Some(Symbol.Global(owner, Signature.Type(name)))
+      case _ => None
+    }
 
   private def isFreshSemanticdb(
       path: RelativePath,
