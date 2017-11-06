@@ -7,3 +7,7 @@ object Example {
   println(jess)
   println(jess)
 }
+
+class Foo extends SomeTrait with SomeOtherTrait {
+  val y = someValue.toString + someOtherValue
+}
