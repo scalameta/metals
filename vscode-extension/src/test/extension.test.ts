@@ -1,22 +1,33 @@
-//
-// Note: This example test is leveraging the Mocha test framework.
-// Please refer to their documentation on https://mochajs.org/ for help.
-//
-
-// The module 'assert' provides assertion methods from node
 import * as assert from 'assert';
 
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
-import * as vscode from 'vscode';
-import * as myExtension from '../extension';
+import { window, Selection, Position, Uri, commands } from 'vscode';
+import * as path from 'path';
+import { execSync } from 'child_process';
 
-// Defines a Mocha test suite to group tests of similar kind together
-suite("Extension Tests", () => {
+const sleep = millis => new Promise(resolve => setTimeout(resolve, millis));
 
-    // Defines a Mocha unit test
-    test("Something 1", () => {
-        assert.equal(-1, [1, 2, 3].indexOf(5));
-        assert.equal(-1, [1, 2, 3].indexOf(0));
-    });
+suite('Extension Tests', () => {
+  const fixturePath = path.join(__dirname, '../../../test-workspace');
+  const uri = Uri.file(
+    path.join(fixturePath, 'src/main/scala/example/AnotherFile.scala')
+  );
+
+  suiteSetup(function() {
+    this.timeout(Infinity);
+    process.chdir(fixturePath);
+    execSync('sbt compile');
+  });
+
+  test('Go to definition', async () => {
+    const editor = await window.showTextDocument(uri);
+    const bananaUseSelection = new Selection(
+      new Position(6, 12),
+      new Position(6, 18)
+    );
+    const bananaDeclarationPosition = new Position(2, 11);
+    editor.selections = [bananaUseSelection];
+    await sleep(2000);
+    await commands.executeCommand('editor.action.goToDeclaration', uri);
+    assert.equal(editor.selection.active, bananaDeclarationPosition);
+  }).timeout(5000);
 });
