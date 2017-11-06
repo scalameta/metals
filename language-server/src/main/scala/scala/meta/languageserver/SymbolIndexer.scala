@@ -85,8 +85,10 @@ class SymbolIndexer(
           companion @ Symbol.Global(owner, signature),
           Signature.Method("apply" | "copy", _)
           ) =>
-        // If we have `case class Foo(a: Int)` and jump to definition in `apply` in
-        // Foo.apply(1) or `copy` in Foo(1).copy(a = 2)
+        // If `case class Foo(a: Int)`, then resolve
+        // `apply` in `Foo.apply(1)`, and
+        // `copy` in `Foo(1).copy(a = 2)`
+        // to the `Foo` class definition.
         companion :: Symbol.Global(owner, Signature.Type(signature.name)) :: Nil
       case Symbol.Global(
           Symbol.Global(
@@ -95,19 +97,24 @@ class SymbolIndexer(
           ),
           param: Signature.TermParameter
           ) =>
+        // If `case class Foo(a: Int)`, then resolve
+        // `a` in `Foo.apply(a = 1)`, and
+        // `a` in `Foo(1).copy(a = 2)`
+        // to the `Foo.a` primary constructor definition.
         Symbol.Global(
           Symbol.Global(owner, Signature.Type(signature.name)),
           param
         ) :: Nil
       case Symbol.Global(owner, Signature.Term(name)) =>
-        // Given Term symbol a.B., returns class symbol a.B#
-        // This is useful when the companion object is synthesized, for example
-        // for case classes.
+        // If `case class A(a: Int)` and there is no companion object, resolve
+        // `A` in `A(1)` to the class definition.
         Symbol.Global(owner, Signature.Type(name)) :: Nil
       case Symbol.Multi(symbols) =>
+        // If `import a.B` where `case class B()`, then
+        // resolve to either symbol, whichever has a definition.
         symbols
       case _ =>
-        logger.info(s"Found no alternative for ${symbol.structure}")
+        logger.trace(s"Found no alternative for ${symbol.structure}")
         Nil
     }
 
