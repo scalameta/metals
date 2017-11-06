@@ -86,7 +86,7 @@ class SymbolIndexer(
           Signature.Method("apply" | "copy", _)
           ) =>
         // If we have `case class Foo(a: Int)` and jump to definition in `apply` in
-        // Foo.apply(1), then we try the companion object first and then class.
+        // Foo.apply(1) or `copy` in Foo(1).copy(a = 2)
         companion :: Symbol.Global(owner, Signature.Type(signature.name)) :: Nil
       case Symbol.Global(
           Symbol.Global(

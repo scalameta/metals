@@ -1,6 +1,7 @@
 package scala.meta.languageserver
 
-import java.util
+import java.util.concurrent.ConcurrentHashMap
+import java.util.{Map => JMap}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 import ScalametaEnrichments._
@@ -16,7 +17,7 @@ import ScalametaEnrichments._
  * https://github.com/sourcegraph/language-server-protocol/blob/master/extension-files.md
  */
 class Buffers private (
-    contents: util.HashMap[String, String],
+    contents: JMap[String, String],
     cwd: AbsolutePath
 ) {
   def changed(uri: String, newContents: String): Unit =
@@ -27,5 +28,5 @@ class Buffers private (
 }
 object Buffers {
   def apply()(implicit cwd: AbsolutePath): Buffers =
-    new Buffers(new util.HashMap(), cwd)
+    new Buffers(new ConcurrentHashMap(), cwd)
 }
