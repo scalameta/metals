@@ -5,7 +5,8 @@ lazy val LanguageServer = RootProject(
     "git://github.com/gabro/dragos-vscode-scala.git#formatting"
   )
 )
-lazy val languageServer = ProjectRef(LanguageServer.build, "languageserver")
+lazy val `dragos-vscode-scala` =
+  ProjectRef(LanguageServer.build, "languageserver")
 
 lazy val `language-server` = project
   .settings(
@@ -20,5 +21,5 @@ lazy val `language-server` = project
       "com.geirsson" %% "scalafmt-core" % "1.3.0"
     )
   )
-  .dependsOn(languageServer)
-  .aggregate(languageServer)
+  .dependsOn(`dragos-vscode-scala`)
+  .aggregate(`dragos-vscode-scala`)
