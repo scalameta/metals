@@ -58,6 +58,16 @@ class ScalametaLanguageServer(
 
   private val toCancel = ListBuffer.empty[Cancelable]
 
+  private def loadAllSemanticdbsInWorkspace() = {
+    Files
+      .walk(workspacePath.toNIO)
+      .filter(
+        path =>
+          Files.isRegularFile(path) && path.toString.endsWith(".semanticdb")
+      )
+      .forEach(path => semanticdbSubscriber.onNext(AbsolutePath(path)))
+  }
+
   override def initialize(
       pid: Long,
       rootPath: String,
@@ -66,6 +76,7 @@ class ScalametaLanguageServer(
     logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
     toCancel += scalafix.linter.subscribe()
     toCancel += symbol.indexer.subscribe()
+    loadAllSemanticdbsInWorkspace()
     ServerCapabilities(
       completionProvider = None,
       definitionProvider = true,
