@@ -1,5 +1,6 @@
 package example
 
-object Example {
-  List(1, "")
+import example2.Bananas
+
+object a {
 }

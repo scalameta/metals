@@ -24,7 +24,7 @@ export async function activate(context: ExtensionContext) {
     '-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000,quiet=y'
   ];
 
-  // TODO(gabro): get this from the configuration
+  // TODO(gabro): get this from th configuration
   // const logLevel = workspace.getConfiguration().get('scalaLanguageServer.logLevel')
   const logLevel = 'DEBUG';
 

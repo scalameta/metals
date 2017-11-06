@@ -1,10 +1,8 @@
-package scalafix.languageserver
+package scala.meta.languageserver
 
 import java.io.PrintStream
-import java.nio.file.Files
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
-import scala.meta.languageserver.PublishDiagnostics
-import scala.meta.languageserver.Parser
+import scala.meta.languageserver.ScalametaEnrichments._
 import scala.tools.nsc.interpreter.OutputStream
 import scala.{meta => m}
 import scalafix._
@@ -12,6 +10,7 @@ import scalafix.internal.config.LazySemanticdbIndex
 import scalafix.internal.config.ScalafixConfig
 import scalafix.internal.config.ScalafixReporter
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
+import scalafix.languageserver.ScalafixEnrichments._
 import scalafix.lint.LintSeverity
 import scalafix.patch.Patch
 import scalafix.reflect.ScalafixReflect
@@ -23,32 +22,30 @@ import langserver.messages.MessageType
 import langserver.messages.PublishDiagnostics
 import langserver.{types => l}
 import metaconfig.ConfDecoder
-import org.langmeta.internal.semanticdb.{schema => s}
+import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 
-class ScalafixLintProvider(
+class Linter(
     cwd: AbsolutePath,
     out: OutputStream,
-    connection: Connection
+    connection: Connection,
+    semanticdbs: Observable[m.Database]
 ) {
-  def onSemanticdbPath(path: AbsolutePath): Seq[PublishDiagnostics] = {
-    // NOTE(olafur): when we have multiple consumers of .semanticdb files
-    // like DefinitionProvider/ReferenceProvider then we should move this out of the ScalafixService
-    val bytes = Files.readAllBytes(path.toNIO)
-    val sdb = s.Database.parseFrom(bytes)
-    val mdb = sdb.toDb(None)
-    val index =
-      EagerInMemorySemanticdbIndex(mdb, m.Sourcepath(Nil), m.Classpath(Nil))
-    onNewSemanticdb(index)
-  }
+  val linter: Observable[Unit] =
+    semanticdbs.map { mdb =>
+      val index =
+        EagerInMemorySemanticdbIndex(mdb, m.Sourcepath(Nil), m.Classpath(Nil))
+      val messages = analyzeIndex(index)
+      messages.foreach(connection.sendNotification)
+    }
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(
       filename: String,
       contents: String
   ): Seq[PublishDiagnostics] = {
-    onNewSemanticdb(
+    analyzeIndex(
       EagerInMemorySemanticdbIndex(
         m.Database(
           m.Document(
@@ -66,7 +63,7 @@ class ScalafixLintProvider(
     )
   }
 
-  private def onNewSemanticdb(index: SemanticdbIndex): Seq[PublishDiagnostics] =
+  private def analyzeIndex(index: SemanticdbIndex): Seq[PublishDiagnostics] =
     withConfig { configInput =>
       val lazyIndex = lazySemanticdbIndex(index)
       val configDecoder = ScalafixReflect.fromLazySemanticdbIndex(lazyIndex)
@@ -75,11 +72,11 @@ class ScalafixLintProvider(
       val results: Seq[PublishDiagnostics] = index.database.documents.map { d =>
         val filename = RelativePath(d.input.syntax)
         val tree = Parser.parse(d).get
-        val ctx = RuleCtx(tree, config)
-        val patches = rule.fixWithName(ctx)
+        val ctx = RuleCtx.applyInternal(tree, config)
+        val patches = rule.fixWithNameInternal(ctx)
         val diagnostics = for {
           (name, patch) <- patches.toIterator
-          msg <- Patch.lintMessages(patch)
+          msg <- Patch.lintMessagesInternal(patch)
         } yield toDiagnostic(name, msg)
         PublishDiagnostics(s"file:${cwd.resolve(filename)}", diagnostics.toSeq)
       }
@@ -98,10 +95,10 @@ class ScalafixLintProvider(
       results
     }
 
-  private def configFile: Option[m.Input] = ScalafixConfig.auto(cwd)
   private def withConfig[T](f: m.Input => Seq[T]): Seq[T] =
     configFile match {
       case None =>
+        // would be good to debounce this message, see Observable[T].debounce
         connection.showMessage(
           MessageType.Warning,
           s"Missing ${cwd.resolve(".scalafix.conf")}"
@@ -111,6 +108,8 @@ class ScalafixLintProvider(
         f(configInput)
     }
 
+  private def configFile: Option[m.Input] = ScalafixConfig.auto(cwd)
+
   private def lazySemanticdbIndex(index: SemanticdbIndex): LazySemanticdbIndex =
     new LazySemanticdbIndex(
       _ => Some(index),
@@ -119,7 +118,7 @@ class ScalafixLintProvider(
 
   private def toDiagnostic(name: RuleName, msg: LintMessage): l.Diagnostic = {
     l.Diagnostic(
-      range = toRange(msg.position),
+      range = msg.position.toRange,
       severity = Some(toSeverity(msg.category.severity)),
       code = Some(msg.category.key(name)),
       source = Some("scalafix"),
@@ -133,8 +132,4 @@ class ScalafixLintProvider(
     case LintSeverity.Info => l.DiagnosticSeverity.Information
   }
 
-  private def toRange(pos: m.Position): l.Range = l.Range(
-    l.Position(line = pos.startLine, character = pos.startColumn),
-    l.Position(line = pos.endLine, character = pos.endColumn)
-  )
 }
