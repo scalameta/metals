@@ -48,15 +48,14 @@ class SymbolIndexer(
       line: Int,
       column: Int
   ): Option[Position.Range] = {
-    def f(l: Int, c: Int) = s"$path:$l:$c"
-    logger.trace(s"goToDefintion at ${f(line, column)}")
+    logger.trace(s"goToDefintion at $path:$line:$column")
     for {
       document <- Option(documents.get(path))
       _ <- isFreshSemanticdb(path, document)
       _ = logger.trace(s"Database for $path")
       symbol <- document.names.collectFirst {
         case ResolvedName(pos, sym, _) if {
-              logger.info(s"$sym at ${f(pos.startLine, pos.startColumn)}")
+              logger.info(s"$sym at ${pos.location}")
               pos.startLine <= line &&
               pos.startColumn <= column &&
               pos.endLine >= line &&
@@ -123,9 +122,11 @@ object SymbolIndexer {
       document.names.foreach {
         case ResolvedName(pos, symbol, isDefinition) =>
           if (isDefinition) {
+            logger.trace(s"Definition of $symbol at ${pos.location}")
             definitions.put(symbol, Position.Range(input, pos.start, pos.end))
             nextDefinitions += symbol
           } else {
+            logger.trace(s"Reference to $symbol at ${pos.location}")
             nextReferencesBySymbol(symbol) =
               Position.Range(input, pos.start, pos.end) ::
                 nextReferencesBySymbol.getOrElseUpdate(symbol, Nil)

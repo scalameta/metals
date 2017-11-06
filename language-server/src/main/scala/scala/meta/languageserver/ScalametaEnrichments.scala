@@ -36,6 +36,8 @@ object ScalametaEnrichments {
     def toLanguageServerUri: String = "file:" + path.toString()
   }
   implicit class XtensionPositionRangeLSP(val pos: m.Position) extends AnyVal {
+    def location: String =
+      s"${pos.input.syntax}:${pos.startLine}:${pos.startColumn}"
     def toRange: l.Range = l.Range(
       l.Position(line = pos.startLine, character = pos.startColumn),
       l.Position(line = pos.endLine, character = pos.endColumn)
