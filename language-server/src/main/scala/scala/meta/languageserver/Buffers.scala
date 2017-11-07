@@ -1,10 +1,12 @@
 package scala.meta.languageserver
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Map => JMap}
+import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
-import ScalametaEnrichments._
 
 /**
  * Utility to keep local state of file contents.
@@ -17,14 +19,19 @@ import ScalametaEnrichments._
  * https://github.com/sourcegraph/language-server-protocol/blob/master/extension-files.md
  */
 class Buffers private (
-    contents: JMap[String, String],
+    contents: JMap[AbsolutePath, String],
     cwd: AbsolutePath
-) {
-  def changed(uri: String, newContents: String): Unit =
-    contents.put(uri, newContents)
-  def read(uri: String): Option[String] = Option(contents.get(uri))
-  def read(path: RelativePath): Option[String] =
-    Option(contents.get(cwd.resolve(path).toLanguageServerUri))
+) extends LazyLogging {
+  private def readFromDisk(path: AbsolutePath): String = {
+    logger.info(s"Reading $path from disk")
+    new String(Files.readAllBytes(path.toNIO), StandardCharsets.UTF_8)
+  }
+  def changed(path: AbsolutePath, newContents: String): Unit =
+    contents.put(path, newContents)
+  def read(path: RelativePath): String = // TODO(olafur) remove?
+    read(cwd.resolve(path))
+  def read(path: AbsolutePath): String =
+    Option(contents.get(path)).getOrElse(readFromDisk(path))
 }
 object Buffers {
   def apply()(implicit cwd: AbsolutePath): Buffers =
