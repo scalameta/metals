@@ -35,7 +35,8 @@ Please share your thoughts in
 See the [contributing guide](CONTRIBUTING.md).
 
 ### Team
-The current maintainers, people actively working on the project and can merge pull requests, are:
+The current maintainers (people who can merge pull requests) are:
 
 * Gabriele Petronella - [`@gabro`](https://github.com/gabro)
 * Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
+

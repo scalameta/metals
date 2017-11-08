@@ -43,6 +43,7 @@ sbt
 ########
 # Inside a new terminal window
 cd vscode-extension
+npm run download-coursier # Maybe not necessary
 npm install
 code vscode-extension
 > Debug > "Start debugging" (shortcut: F5)
