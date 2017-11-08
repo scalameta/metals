@@ -6,19 +6,6 @@ These instructions are intended for contributors to get a productive workflow wh
 This project follows [scalameta's contribution guidelines].
 Please read them for information about how to create good bug reports and submit pull requests.
 
-## Features
-
-- [x] Lint with Scalafix on compile
-- [x] Formatting with Scalafmt
-- [x] Go to definition in project sources using Semanticdb
-- [ ] Go to definition in dependencies
-- [ ] Red squigglies as you type
-- [ ] Auto completions
-- [ ] Signature helper (show parameter list)
-- [ ] Show type at position
-- [ ] Find references
-- [ ] Show docstring
-
 
 ## Project structure
 - `language-server` contains a Scala implementation of a language server
@@ -67,6 +54,10 @@ code vscode-extension
           # Open the test-workspace folder in the debugging window
           # of vscode. Open a file in the project.
 
+(optional) to install the plugin for your default vscode
+npm run build # builds a .vsix extension file
+code --install-extension vscode-scalameta-0.0.1.vsix
+
 ########
 # Step 3
 ########
@@ -78,8 +69,13 @@ sbt        # Open up long running sbt shell
 
 To test the plugin on another project than `test-workspace`, you must
 have the Scalameta `semanticdb-scalac` compiler plugin enabled.
-See example installation in `test-workspace/build.sbt` or
-http://scalameta.org/tutorial/#sbt
-The plugin should be able to work with any build tool, as long as
-you have the `semanticdb-scalac` compiler plugin enabled.
+You have two alternatives:
+
+1. [sbt-scalafix](https://scalacenter.github.io/scalafix/docs/users/installation#sbt-scalafix),
+   mostly automatic with `addSbtPlugin`.
+2. [semanticdb-scalac](http://scalameta.org/tutorial/#sbt), manually
+   enable the compiler plugin in your project.
+   This step should work similarly for other build tools than sbt.
+
+See an example manual installation in [test-workspace/build.sbt](test-workspace/build.sbt).
 
