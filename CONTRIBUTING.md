@@ -6,6 +6,26 @@ These instructions are intended for contributors to get a productive workflow wh
 This project follows [scalameta's contribution guidelines].
 Please read them for information about how to create good bug reports and submit pull requests.
 
+## Features
+
+- [x] Lint with Scalafix on compile
+- [x] Formatting with Scalafmt
+- [x] Go to definition in project sources using Semanticdb
+- [ ] Go to definition in dependencies
+- [ ] Red squigglies as you type
+- [ ] Auto completions
+- [ ] Signature helper (show parameter list)
+- [ ] Show type at position
+- [ ] Find references
+- [ ] Show docstring
+
+
+## Project structure
+- `language-server` contains a Scala implementation of a language server
+- `vscode-extension` contains a Visual Studio Code extension, implementing a client for the language server
+- `test-workspace` directory for manually testing the plugin locally
+
+
 ## Running locally
 
 First you need to have the following applications installed
