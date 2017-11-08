@@ -58,7 +58,10 @@ export async function activate(context: ExtensionContext) {
   const clientOptions: LanguageClientOptions = {
     documentSelector: ['scala'],
     synchronize: {
-      fileEvents: workspace.createFileSystemWatcher('**/*.semanticdb')
+      fileEvents: [
+        workspace.createFileSystemWatcher('**/*.semanticdb'),
+        workspace.createFileSystemWatcher('**/*.compilerconfig')
+      ]
     }
   };
 

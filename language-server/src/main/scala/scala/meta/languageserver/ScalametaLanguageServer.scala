@@ -4,17 +4,25 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable.ListBuffer
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.util.control.NonFatal
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
+import langserver.messages.CompletionList
+import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
 import langserver.messages.FileChangeType
 import langserver.messages.FileEvent
 import langserver.messages.MessageType
+import langserver.messages.ResultResponse
 import langserver.messages.ServerCapabilities
+import langserver.messages.ShutdownResult
 import langserver.types._
 import monix.execution.Cancelable
 import monix.execution.Scheduler
@@ -37,15 +45,25 @@ class ScalametaLanguageServer(
   implicit val workspacePath: AbsolutePath = cwd
   val (semanticdbSubscriber, semanticdbPublisher) =
     ScalametaLanguageServer.semanticdbStream
+  val (compilerConfigSubscriber, compilerConfigPublisher) =
+    Observable.multicast[AbsolutePath](
+      MulticastStrategy.Publish,
+      OverflowStrategy.ClearBuffer(2)
+    )
+  def onError(e: Throwable): Unit = {
+    logger.error(e.getMessage, e)
+  }
   val buffers: Buffers = Buffers()
   val symbol: SymbolIndexer =
     SymbolIndexer(semanticdbPublisher, logger, connection, buffers)
   val scalafix: Linter =
-    new Linter(cwd, stdout, connection, semanticdbPublisher)
+    new Linter(cwd, stdout, connection, semanticdbPublisher.doOnError(onError))
   val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0", stdout)
-
-  private def readFromDisk(path: AbsolutePath): String =
-    new String(Files.readAllBytes(path.toNIO), StandardCharsets.UTF_8)
+  val compiler = new Compiler(
+    compilerConfigPublisher.doOnError(onError),
+    connection,
+    buffers
+  )
 
   // TODO(olafur) more holistic error handling story.
   private def unsafe(thunk: => Unit): Unit =
@@ -58,14 +76,19 @@ class ScalametaLanguageServer(
 
   private val toCancel = ListBuffer.empty[Cancelable]
 
-  private def loadAllSemanticdbsInWorkspace() = {
-    Files
-      .walk(workspacePath.toNIO)
-      .filter(
-        path =>
-          Files.isRegularFile(path) && path.toString.endsWith(".semanticdb")
-      )
-      .forEach(path => semanticdbSubscriber.onNext(AbsolutePath(path)))
+  private def loadAllSemanticdbsInWorkspace(): Unit = {
+    Files.walkFileTree(
+      workspacePath.toNIO,
+      new SimpleFileVisitor[Path] {
+        override def visitFile(
+            file: Path,
+            attrs: BasicFileAttributes
+        ): FileVisitResult = {
+          onChangedFile(AbsolutePath(file))(_ => ())
+          FileVisitResult.CONTINUE
+        }
+      }
+    )
   }
 
   override def initialize(
@@ -76,9 +99,15 @@ class ScalametaLanguageServer(
     logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
     toCancel += scalafix.linter.subscribe()
     toCancel += symbol.indexer.subscribe()
+    toCancel += compiler.onNewCompilerConfig.subscribe()
     loadAllSemanticdbsInWorkspace()
     ServerCapabilities(
-      completionProvider = None,
+      completionProvider = Some(
+        CompletionOptions(
+          resolveProvider = true,
+          triggerCharacters = "." :: Nil
+        )
+      ),
       definitionProvider = true,
       documentSymbolProvider = true,
       documentFormattingProvider = true
@@ -89,14 +118,30 @@ class ScalametaLanguageServer(
     toCancel.foreach(_.cancel())
   }
 
+  private def onChangedFile(
+      path: AbsolutePath
+  )(fallback: AbsolutePath => Unit): Unit = {
+    logger.info(s"File $path changed.")
+    val name = path.toNIO.getFileName.toString
+    if (name.endsWith(".semanticdb")) {
+      semanticdbSubscriber.onNext(path)
+    } else if (name.endsWith(".compilerconfig")) {
+      compilerConfigSubscriber.onNext(path)
+    } else {
+      fallback(path)
+    }
+  }
+
   override def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
     changes.foreach {
       case FileEvent(
-          uri @ Uri(path),
+          Uri(path),
           FileChangeType.Created | FileChangeType.Changed
-          ) if uri.endsWith(".semanticdb") =>
-        semanticdbSubscriber.onNext(path)
-        logger.info(s"$path changed or created. Running scalafix...")
+          ) =>
+        onChangedFile(path) { _ =>
+          logger.warn(s"Unknown file extension for path $path")
+        }
+
       case event =>
         logger.info(s"Unhandled file event: $event")
         ()
@@ -108,7 +153,7 @@ class ScalametaLanguageServer(
   ): List[TextEdit] = {
     try {
       val path = Uri.toPath(td.uri).get
-      val contents = buffers.read(td.uri).getOrElse(readFromDisk(path))
+      val contents = buffers.read(path)
       val fullDocumentRange = Range(
         start = Position(0, 0),
         end = Position(Int.MaxValue, Int.MaxValue)
@@ -131,14 +176,14 @@ class ScalametaLanguageServer(
   }
 
   override def onOpenTextDocument(td: TextDocumentItem): Unit =
-    buffers.changed(td.uri, td.text)
+    Uri.toPath(td.uri).foreach(p => buffers.changed(p, td.text))
 
   override def onChangeTextDocument(
       td: VersionedTextDocumentIdentifier,
       changes: Seq[TextDocumentContentChangeEvent]
   ): Unit = {
     changes.foreach { c =>
-      buffers.changed(td.uri, c.text)
+      Uri.toPath(td.uri).foreach(p => buffers.changed(p, c.text))
     }
   }
 
@@ -169,6 +214,33 @@ class ScalametaLanguageServer(
   }
 
   override def onSaveTextDocument(td: TextDocumentIdentifier): Unit = {}
+
+  override def completionRequest(
+      td: TextDocumentIdentifier,
+      position: Position
+  ): ResultResponse = {
+    try {
+      val completions = compiler.autocomplete(
+        Uri.toPath(td.uri).get,
+        position.line,
+        position.character
+      )
+      CompletionList(
+        isIncomplete = false,
+        items = completions.map {
+          case (signature, name) =>
+            CompletionItem(
+              label = name,
+              detail = Some(signature)
+            )
+        }
+      )
+    } catch {
+      case NonFatal(e) =>
+        onError(e)
+        ShutdownResult(-1)
+    }
+  }
 
 }
 

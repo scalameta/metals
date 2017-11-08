@@ -130,18 +130,17 @@ class SymbolIndexer(
       document: Document
   ): Option[Unit] = {
     val ok = Option(())
-    buffers.read(path).fold(ok) { s =>
-      if (s == document.input.contents) ok
-      else {
-        // NOTE(olafur) it may be a bit annoying to bail on a single character
-        // edit in the file. In the future, we can try more to make sense of
-        // partially fresh files using something like edit distance.
-        connection.showMessage(
-          MessageType.Warning,
-          "Please recompile for up-to-date information"
-        )
-        None
-      }
+    val s = buffers.read(path)
+    if (s == document.input.contents) ok
+    else {
+      // NOTE(olafur) it may be a bit annoying to bail on a single character
+      // edit in the file. In the future, we can try more to make sense of
+      // partially fresh files using something like edit distance.
+      connection.showMessage(
+        MessageType.Warning,
+        "Please recompile for up-to-date information"
+      )
+      None
     }
   }
 
