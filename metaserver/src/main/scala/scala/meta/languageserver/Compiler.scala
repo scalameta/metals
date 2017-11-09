@@ -1,9 +1,11 @@
 package scala.meta.languageserver
 
 import java.io.File
+import java.io.PrintStream
 import java.nio.file.Files
 import java.util.Properties
 import scala.collection.mutable
+import scala.concurrent.Future
 import scala.reflect.io
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.{Global, Response}
@@ -17,15 +19,20 @@ import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Document
 
+case class ModuleID(organization: String, name: String, revision: String) {
+  override def toString: String = s"$organization:$name:$revision"
+}
 case class CompilerConfig(
     sources: List[AbsolutePath],
     scalacOptions: List[String],
-    classpath: String
+    classpath: String,
+    libraryDependencies: List[ModuleID]
 )
-object CompilerConfig {
+object CompilerConfig extends LazyLogging {
   def fromPath(
       path: AbsolutePath
   )(implicit cwd: AbsolutePath): CompilerConfig = {
+    logger.info(s"Parsing $path")
     val input = Files.newInputStream(path.toNIO)
     try {
       val props = new Properties()
@@ -38,11 +45,30 @@ object CompilerConfig {
         .toList
       val scalacOptions = props.getProperty("scalacOptions").split(" ").toList
       val classpath = props.getProperty("classpath")
-      CompilerConfig(sources, scalacOptions, classpath)
+      val libraryDependencies = props
+        .getProperty("libraryDependencies")
+        .split(";")
+        .iterator
+        .flatMap { moduleId =>
+          logger.info(s"Parsing $moduleId")
+          moduleId.split(":") match {
+            case Array(org, name, rev) =>
+              ModuleID(org, name, rev) :: Nil
+            case _ => Nil
+          }
+        }
+      CompilerConfig(
+        sources,
+        scalacOptions,
+        classpath,
+        libraryDependencies.toList
+      )
     } finally input.close()
   }
 }
+
 class Compiler(
+    out: PrintStream,
     config: Observable[AbsolutePath],
     connection: Connection,
     buffers: Buffers
@@ -110,10 +136,18 @@ class Compiler(
       // TODO(olafur) garbage collect compilers from removed files.
       compilerByPath(path) = compiler
     }
-    val classpath =
-      config.classpath.split(File.pathSeparator).map(AbsolutePath(_)).toList
-    Ctags.index(classpath) { doc =>
-      documentSubscriber.onNext(doc)
+    logger.warn(s"libs = ${config.libraryDependencies}")
+    Future {
+      val sourcesClasspath = config.libraryDependencies.flatMap {
+        case module @ ModuleID(org, name, version) =>
+          val sourceJars = Jars.fetch(org, name, version, out, sources = true)
+          logger.info(s"Fetched jars for $module")
+          sourceJars
+      }
+      logger.info(s"Start indexing classpath ${config.classpath}")
+      Ctags.index(sourcesClasspath) { doc =>
+        documentSubscriber.onNext(doc)
+      }
     }
   }
   private def noCompletions: List[(String, String)] = {

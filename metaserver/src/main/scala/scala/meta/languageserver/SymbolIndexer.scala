@@ -1,5 +1,7 @@
 package scala.meta.languageserver
 
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Map => JMap}
 import scala.collection.mutable
@@ -25,7 +27,7 @@ class SymbolIndexer(
       Symbol,
       Map[RelativePath, List[Position]]
     ]
-) {
+)(implicit cwd: AbsolutePath) {
 
   def documentSymbols(
       path: RelativePath
@@ -66,7 +68,24 @@ class SymbolIndexer(
   }
 
   private def definition(symbol: Symbol): Option[Position.Range] =
-    Option(definitions.get(symbol))
+    Option(definitions.get(symbol)).map {
+      case Position.Range(Input.VirtualFile(path, contents), start, end)
+          if path.contains("jar") =>
+        logger.info(
+          s"Jumping into jar $path, writing contents to file in target file"
+        )
+        val dir = cwd.resolve("target").resolve("sources")
+        Files.createDirectories(dir.toNIO)
+        val out = dir.toNIO.resolve(Paths.get(path).getFileName)
+        Files.write(out, contents.getBytes())
+        val pos = Position.Range(
+          Input.VirtualFile(cwd.toNIO.relativize(out).toString, contents),
+          start,
+          end
+        )
+        pos
+      case pos => pos
+    }
 
   private def alternatives(symbol: Symbol): List[Symbol] =
     symbol match {
@@ -102,6 +121,8 @@ class SymbolIndexer(
         // If `import a.B` where `case class B()`, then
         // resolve to either symbol, whichever has a definition.
         symbols
+      case Symbol.Global(owner, Signature.Method(name, _)) =>
+        Symbol.Global(owner, Signature.Term(name)) :: Nil
       case _ =>
         logger.trace(s"Found no alternative for ${symbol.structure}")
         Nil
@@ -163,7 +184,7 @@ object SymbolIndexer {
       logger: Logger,
       connection: Connection,
       buffers: Buffers
-  )(implicit s: Scheduler): SymbolIndexer = {
+  )(implicit s: Scheduler, cwd: AbsolutePath): SymbolIndexer = {
     val documents =
       new ConcurrentHashMap[RelativePath, Document]
     val definitions =

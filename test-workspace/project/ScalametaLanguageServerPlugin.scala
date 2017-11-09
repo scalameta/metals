@@ -35,6 +35,19 @@ object ScalametaLanguageServerPlugin extends AutoPlugin {
             "sources",
             sources.value.distinct.mkString(File.pathSeparator)
           )
+          props.setProperty(
+            "libraryDependencies",
+            libraryDependencies.value
+              .map { m =>
+                val cross = m.crossVersion match {
+                  case _: CrossVersion.Full => "_" + scalaVersion.value
+                  case _: CrossVersion.Binary => "_" + scalaBinaryVersion.value
+                  case _ => ""
+                }
+                s"${m.organization}:${m.name}${cross}:${m.revision}"
+              }
+              .mkString(";")
+          )
           val out = new ByteArrayOutputStream()
           props.store(out, null)
           out.toString()

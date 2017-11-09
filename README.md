@@ -28,7 +28,7 @@ Please share your thoughts in
 - [x] Auto completions as you type with presentation compiler
 - [x] Go to definition from project Scala sources to project Scala sources with Semanticdb
 - [x] Show type at position
-- [ ] Go to definition from project sources to dependency sources
+- [x] Go to definition from project sources to dependency sources
 - [ ] Go to definition from dependency sources to dependency sources
 - [ ] Go to definition in Java sources
 - [ ] Show red squigglies as you type

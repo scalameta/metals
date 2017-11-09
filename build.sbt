@@ -16,7 +16,7 @@ lazy val languageserver = project
       "ch.qos.logback" % "logback-classic" % "1.1.7",
       "org.codehaus.groovy" % "groovy" % "2.4.0",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
-    )
+    ),
   )
 
 lazy val metaserver = project

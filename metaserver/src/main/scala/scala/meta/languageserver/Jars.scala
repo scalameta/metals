@@ -15,7 +15,6 @@ object Jars {
       sources: Boolean = false
   ): List[AbsolutePath] = {
     val classifier = if (sources) "sources" :: Nil else Nil
-
     val res = Resolution(
       Set(
         Dependency(Module(org, artifact), version)
@@ -34,12 +33,15 @@ object Jars {
     if (errors.nonEmpty) {
       sys.error(errors.mkString("\n"))
     }
-    val localArtifacts = scalaz.concurrent.Task
-      .gatherUnordered(
+    val artifacts: Seq[Artifact] =
+      if (sources) {
         resolution
           .dependencyClassifiersArtifacts(classifier)
           .map(_._2)
-          .map(artifact => Cache.file(artifact).run)
+      } else resolution.artifacts
+    val localArtifacts = scalaz.concurrent.Task
+      .gatherUnordered(
+        artifacts.map(artifact => Cache.file(artifact).run)
       )
       .unsafePerformSync
       .map(_.toEither)
