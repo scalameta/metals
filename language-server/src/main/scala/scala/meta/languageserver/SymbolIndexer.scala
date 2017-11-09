@@ -43,27 +43,6 @@ class SymbolIndexer(
       } // not interesting for this service
     } yield pos -> denotation
 
-  private def resolvedNameAt(
-      path: RelativePath,
-      line: Int,
-      column: Int
-  ): Option[ResolvedName] =
-    for {
-      document <- Option(documents.get(path))
-      _ <- isFreshSemanticdb(path, document)
-      _ = logger.info(s"Database for $path")
-      name <- document.names.collectFirst {
-        case name @ ResolvedName(pos, sym, _) if {
-              logger.info(s"$sym at ${pos.location}")
-              pos.startLine <= line &&
-              pos.startColumn <= column &&
-              pos.endLine >= line &&
-              pos.endColumn >= column
-            } =>
-          name
-      }
-    } yield name
-
   def goToDefinition(
       path: RelativePath,
       line: Int,
@@ -169,6 +148,27 @@ class SymbolIndexer(
       None
     }
   }
+
+  private def resolvedNameAt(
+      path: RelativePath,
+      line: Int,
+      column: Int
+  ): Option[ResolvedName] =
+    for {
+      document <- Option(documents.get(path))
+      _ <- isFreshSemanticdb(path, document)
+      _ = logger.info(s"Database for $path")
+      name <- document.names.collectFirst {
+        case name @ ResolvedName(pos, sym, _) if {
+              logger.info(s"$sym at ${pos.location}")
+              pos.startLine <= line &&
+              pos.startColumn <= column &&
+              pos.endLine >= line &&
+              pos.endColumn >= column
+            } =>
+          name
+      }
+    } yield name
 
 }
 
