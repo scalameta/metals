@@ -49,7 +49,7 @@ The current maintainers (people who can merge pull requests) are:
 
 ## Acknowledgement
 Huge thanks to [`@dragos`](https://github.com/dragos) for his work on a Scala implemenation of the LSP protocol (see: https://github.com/dragos/dragos-vscode-scala).
-We've decide to copy the sources over in order to iterate much faster in adding features to the original implementation, with the explicit goal of contributing them back upstream.
+We've decided to copy the sources over in order to iterate much faster in adding features to the original implementation, with the explicit goal of contributing them back upstream.
 
 ## Related work
 
