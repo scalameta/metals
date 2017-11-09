@@ -54,17 +54,25 @@ class ScalametaLanguageServer(
   def onError(e: Throwable): Unit = {
     logger.error(e.getMessage, e)
   }
-  val buffers: Buffers = Buffers()
-  val symbol: SymbolIndexer =
-    SymbolIndexer(semanticdbPublisher, logger, connection, buffers)
-  val scalafix: Linter =
-    new Linter(cwd, stdout, connection, semanticdbPublisher.doOnError(onError))
-  val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0", stdout)
   val compiler = new Compiler(
     compilerConfigPublisher.doOnError(onError),
     connection,
     buffers
   )
+  val buffers: Buffers = Buffers()
+  val databasePublisher = Observable.merge(
+    semanticdbPublisher,
+    compiler.documentPublisher.map(doc => Database(doc :: Nil))
+  )
+  val symbol: SymbolIndexer = SymbolIndexer(
+    databasePublisher,
+    logger,
+    connection,
+    buffers
+  )
+  val scalafix: Linter =
+    new Linter(cwd, stdout, connection, semanticdbPublisher.doOnError(onError))
+  val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0", stdout)
 
   // TODO(olafur) more holistic error handling story.
   private def unsafe(thunk: => Unit): Unit =

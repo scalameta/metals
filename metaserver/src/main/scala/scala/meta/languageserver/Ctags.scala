@@ -34,7 +34,7 @@ import org.langmeta.io.RelativePath
 import org.langmeta.semanticdb._
 
 /**
- * Syntactically build a semanticdb containing only global symbol definition.
+ * Syntactically build a semanticdb index containing only global symbol definition.
  *
  * The purpose of this module is to provide "Go to definition" from
  * project sources to dependency sources without indexing classfiles or

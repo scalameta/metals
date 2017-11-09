@@ -11,8 +11,11 @@ import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
 import langserver.messages.MessageType
+import monix.execution.Scheduler
+import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
+import org.langmeta.semanticdb.Document
 
 case class CompilerConfig(
     sources: List[AbsolutePath],
@@ -43,8 +46,12 @@ class Compiler(
     config: Observable[AbsolutePath],
     connection: Connection,
     buffers: Buffers
-)(implicit cwd: AbsolutePath)
+)(implicit cwd: AbsolutePath, s: Scheduler)
     extends LazyLogging {
+  private val documentPubSub =
+    Observable.multicast[Document](MulticastStrategy.Publish)
+  private val documentSubscriber = documentPubSub._1
+  val documentPublisher: Observable[Document] = documentPubSub._2
   val onNewCompilerConfig: Observable[Unit] =
     config
       .map(path => CompilerConfig.fromPath(path))
@@ -99,10 +106,14 @@ class Compiler(
       ("-Ypresentation-any-thread" :: config.scalacOptions).mkString(" ")
     )
     val compiler = new Global(settings, new StoreReporter)
-
     config.sources.foreach { path =>
       // TODO(olafur) garbage collect compilers from removed files.
       compilerByPath(path) = compiler
+    }
+    val classpath =
+      config.classpath.split(File.pathSeparator).map(AbsolutePath(_)).toList
+    Ctags.index(classpath) { doc =>
+      documentSubscriber.onNext(doc)
     }
   }
   private def noCompletions: List[(String, String)] = {
