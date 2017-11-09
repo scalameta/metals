@@ -8,7 +8,8 @@ Please read them for information about how to create good bug reports and submit
 
 
 ## Project structure
-- `language-server` contains a Scala implementation of a language server
+- `languageserver` contains a Scala implementation of the [Language Server Protocol specification](https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md) (this is a fork of https://github.com/dragos/dragos-vscode-scala)
+- `metaserver` contains a Scala implementation of a language server based on Scalameta, which uses `languageserver`
 - `vscode-extension` contains a Visual Studio Code extension, implementing a client for the language server
 - `test-workspace` directory for manually testing the plugin locally
 
@@ -33,7 +34,7 @@ cd language-server
 # Step 1
 ########
 sbt
-> language-server/publishLocal # publish your latest changes locally
+> metaserver/publishLocal # publish your latest changes locally
                                # keep this sbt shell session open, and
                                # re-run publishLocal every time you
                                # edit *.scala sources.
@@ -47,9 +48,9 @@ npm install
 code vscode-extension
 > Debug > "Start debugging" (shortcut: F5)
           # Inside vscode, F5 will open a new window with the latest
-          # language-server/publishLocal of the plugin installed.
+          # metaserver/publishLocal of the plugin installed.
           # Close the window and run F5 again after every
-          # language-server/publishLocal
+          # metaserver/publishLocal
 > File > Open > language-server/test-workspace (shortcut Cmd+O on MacOS)
           # Open the test-workspace folder in the debugging window
           # of vscode. Open a file in the project.
