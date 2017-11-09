@@ -76,7 +76,7 @@ class Compiler(
   def typeAt(path: AbsolutePath, line: Int, column: Int): Option[String] = {
     val code = buffers.read(path)
     val offset = lineColumnToOffset(code, line, column)
-    compilerByPath.get(path).map { compiler =>
+    compilerByPath.get(path).flatMap { compiler =>
       compiler.reporter.reset()
       val unit = compiler.newCompilationUnit(code, path.toString())
       val richUnit = new compiler.RichCompilationUnit(unit.source)
@@ -84,7 +84,7 @@ class Compiler(
       val position = richUnit.position(offset)
       val response = ask[compiler.Tree](r => compiler.askTypeAt(position, r))
       val typedTree = response.get.left.get
-      typedTree.tpe.toString
+      typeOfTree(compiler)(typedTree)
     }
   }
 
@@ -131,6 +131,18 @@ class Compiler(
     val r = new Response[A]
     f(r)
     r
+  }
+
+  private def typeOfTree(c: Global)(t: c.Tree): Option[String] = {
+    import c._
+    val tpeStr = t match {
+      case t: ImplDef if t.impl != null => t.impl.tpe.toString
+      case t: ValOrDefDef if t.rhs != null => t.rhs.tpe.toString
+      case t: ValOrDefDef if t.tpt != null => t.tpt.tpe.toString
+      case t: TypeTree => t.toString
+      case x => x.tpe.toString
+    }
+    Option(tpeStr)
   }
 
 }
