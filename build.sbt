@@ -27,8 +27,9 @@ lazy val metaserver = project
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "ch.epfl.scala" % "scalafix-cli" % "0.5.3" cross CrossVersion.full,
-      "com.geirsson" %% "scalafmt-core" % "1.3.0"
+      "com.geirsson" %% "scalafmt-core" % "1.3.0",
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+      "org.scalameta" %% "testkit" % "2.0.1" % "test"
     )
   )
   .dependsOn(languageserver)
-  .aggregate(languageserver)
