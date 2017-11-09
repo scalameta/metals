@@ -1,18 +1,26 @@
 package scala.meta.languageserver
 
-import java.io.File
 import java.io.OutputStreamWriter
 import java.io.PrintStream
 import coursier._
+import org.langmeta.io.AbsolutePath
 
 object Jars {
+  // TODO(olafur) this method should return a monix.Task.
   def fetch(
       org: String,
       artifact: String,
       version: String,
-      out: PrintStream
-  ): List[File] = {
-    val start = Resolution(Set(Dependency(Module(org, artifact), version)))
+      out: PrintStream,
+      sources: Boolean = false
+  ): List[AbsolutePath] = {
+    val classifier = if (sources) "sources" :: Nil else Nil
+
+    val res = Resolution(
+      Set(
+        Dependency(Module(org, artifact), version)
+      )
+    )
     val repositories = Seq(
       Cache.ivy2Local,
       MavenRepository("https://repo1.maven.org/maven2")
@@ -21,14 +29,17 @@ object Jars {
       new TermDisplay(new OutputStreamWriter(out), fallbackMode = true)
     logger.init()
     val fetch = Fetch.from(repositories, Cache.fetch(logger = Some(logger)))
-    val resolution = start.process.run(fetch).unsafePerformSync
+    val resolution = res.process.run(fetch).unsafePerformSync
     val errors = resolution.metadataErrors
     if (errors.nonEmpty) {
       sys.error(errors.mkString("\n"))
     }
     val localArtifacts = scalaz.concurrent.Task
       .gatherUnordered(
-        resolution.artifacts.map(Cache.file(_).run)
+        resolution
+          .dependencyClassifiersArtifacts(classifier)
+          .map(_._2)
+          .map(artifact => Cache.file(artifact).run)
       )
       .unsafePerformSync
       .map(_.toEither)
@@ -41,7 +52,7 @@ object Jars {
           file
       }
       logger.stop()
-      jars
+      jars.map(AbsolutePath(_))
     }
   }
 
