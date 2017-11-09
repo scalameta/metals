@@ -6,7 +6,7 @@ import java.util.Properties
 import scala.collection.mutable
 import scala.reflect.io
 import scala.tools.nsc.Settings
-import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.interactive.{Global, Response}
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
@@ -49,6 +49,7 @@ class Compiler(
     config
       .map(path => CompilerConfig.fromPath(path))
       .map(onNewConfig)
+
   def autocomplete(
       path: AbsolutePath,
       line: Int,
@@ -71,6 +72,23 @@ class Compiler(
         .distinct
     }
   }
+
+  def typeAt(path: AbsolutePath, line: Int, column: Int): Option[String] = {
+    val code = buffers.read(path)
+    val offset = lineColumnToOffset(code, line, column)
+    compilerByPath.get(path).map { compiler =>
+      compiler.reporter.reset()
+      val unit = compiler.newCompilationUnit(code, path.toString())
+      val richUnit = new compiler.RichCompilationUnit(unit.source)
+      compiler.unitOfFile(richUnit.source.file) = richUnit
+      val position = richUnit.position(offset)
+      val r = new Response[compiler.Tree]
+      val results = compiler.askTypeAt(position, r)
+      val typedTree = r.get.left.get
+      typedTree.tpe.toString
+    }
+  }
+
   private val compilerByPath = mutable.Map.empty[AbsolutePath, Global]
   private def onNewConfig(config: CompilerConfig): Unit = {
     logger.info(s"Loading new compiler from config $config")
