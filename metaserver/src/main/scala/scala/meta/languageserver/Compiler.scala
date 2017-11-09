@@ -82,9 +82,8 @@ class Compiler(
       val richUnit = new compiler.RichCompilationUnit(unit.source)
       compiler.unitOfFile(richUnit.source.file) = richUnit
       val position = richUnit.position(offset)
-      val r = new Response[compiler.Tree]
-      val results = compiler.askTypeAt(position, r)
-      val typedTree = r.get.left.get
+      val response = ask[compiler.Tree](r => compiler.askTypeAt(position, r))
+      val typedTree = response.get.left.get
       typedTree.tpe.toString
     }
   }
@@ -126,6 +125,12 @@ class Compiler(
       i += 1
     }
     i + column
+  }
+
+  private def ask[A](f: Response[A] => Unit): Response[A] = {
+    val r = new Response[A]
+    f(r)
+    r
   }
 
 }
