@@ -49,4 +49,4 @@ The current maintainers (people who can merge pull requests) are:
 
 ## Related work
 
-- [ensime](ensime.org): ensime is a tool for providing IDE-like features to text editor, that [recently added LSP support](https://github.com/ensime/ensime-server/pull/1888)
+- [ensime](ensime.org): a tool for providing IDE-like features to text editor, that [recently added LSP support](https://github.com/ensime/ensime-server/pull/1888)
