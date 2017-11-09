@@ -23,6 +23,7 @@ import langserver.messages.MessageType
 import langserver.messages.ResultResponse
 import langserver.messages.ServerCapabilities
 import langserver.messages.ShutdownResult
+import langserver.messages.Hover
 import langserver.types._
 import monix.execution.Cancelable
 import monix.execution.Scheduler
@@ -110,7 +111,8 @@ class ScalametaLanguageServer(
       ),
       definitionProvider = true,
       documentSymbolProvider = true,
-      documentFormattingProvider = true
+      documentFormattingProvider = true,
+      hoverProvider = true
     )
   }
 
@@ -239,6 +241,23 @@ class ScalametaLanguageServer(
       case NonFatal(e) =>
         onError(e)
         ShutdownResult(-1)
+    }
+  }
+
+  override def hoverRequest(
+      td: TextDocumentIdentifier,
+      position: Position
+  ): Hover = {
+    val path = Uri.toPath(td.uri).get.toRelative(cwd)
+    symbol.hoverInformation(path, position.line, position.character) match {
+      case None => Hover(Nil, None)
+      case Some((pos, denotation)) =>
+        Hover(
+          contents = List(
+            RawMarkedString(language = "scala", value = denotation.signature)
+          ),
+          range = Some(pos.toRange)
+        )
     }
   }
 

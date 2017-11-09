@@ -50,19 +50,8 @@ class SymbolIndexer(
   ): Option[Position.Range] = {
     logger.info(s"goToDefintion at $path:$line:$column")
     for {
-      document <- Option(documents.get(path))
-      _ <- isFreshSemanticdb(path, document)
-      _ = logger.info(s"Database for $path")
-      symbol <- document.names.collectFirst {
-        case ResolvedName(pos, sym, _) if {
-              logger.info(s"$sym at ${pos.location}")
-              pos.startLine <= line &&
-              pos.startColumn <= column &&
-              pos.endLine >= line &&
-              pos.endColumn >= column
-            } =>
-          sym
-      }
+      name <- resolvedNameAt(path, line, column)
+      symbol = name.symbol
       _ = logger.info(s"Found symbol $symbol")
       defn <- definition(symbol).orElse {
         alternatives(symbol).flatMap { alternative =>
@@ -74,6 +63,22 @@ class SymbolIndexer(
       logger.trace(s"Found definition $defn")
       defn
     }
+  }
+
+  def hoverInformation(
+      path: RelativePath,
+      line: Int,
+      column: Int
+  ): Option[(Position.Range, Denotation)] = {
+    logger.info(s"hover at $path:$line:$column")
+    for {
+      ResolvedName(pos: Position.Range, sym: Symbol, _) <- resolvedNameAt(
+        path,
+        line,
+        column
+      )
+      denot <- Option(denotations.get(sym))
+    } yield (pos, denot)
   }
 
   private def definition(symbol: Symbol): Option[Position.Range] =
@@ -143,6 +148,27 @@ class SymbolIndexer(
       None
     }
   }
+
+  private def resolvedNameAt(
+      path: RelativePath,
+      line: Int,
+      column: Int
+  ): Option[ResolvedName] =
+    for {
+      document <- Option(documents.get(path))
+      _ <- isFreshSemanticdb(path, document)
+      _ = logger.info(s"Database for $path")
+      name <- document.names.collectFirst {
+        case name @ ResolvedName(pos, sym, _) if {
+              logger.info(s"$sym at ${pos.location}")
+              pos.startLine <= line &&
+              pos.startColumn <= column &&
+              pos.endLine >= line &&
+              pos.endColumn >= column
+            } =>
+          name
+      }
+    } yield name
 
 }
 
