@@ -8,6 +8,13 @@ for Scala using Scalameta semanticdb and the Scala presentation compiler.
 Expect bugs and surprising behavior.
 Ticket reports and patches are welcome!
 
+## Project Goals
+
+This project has the following goals:
+
+- provide a good UX for the final users
+- low memory requirements
+- integration with scalameta-based tools, such as [Scalafix](https://github.com/scalacenter/scalafix) and [Scalafmt](https://github.com/scalameta/scalafmt)
 
 ## Roadmap
 
@@ -40,3 +47,6 @@ The current maintainers (people who can merge pull requests) are:
 * Gabriele Petronella - [`@gabro`](https://github.com/gabro)
 * Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
 
+## Related work
+
+- [ensime](ensime.org): ensime is a tool for providing IDE-like features to text editor, that [recently added LSP support](https://github.com/ensime/ensime-server/pull/1888)
