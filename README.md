@@ -12,7 +12,7 @@ Ticket reports and patches are welcome!
 
 This project has the following goals:
 
-- provide a good UX for the final users
+- a good UX for the final users
 - low memory requirements
 - integration with scalameta-based tools, such as [Scalafix](https://github.com/scalacenter/scalafix) and [Scalafmt](https://github.com/scalameta/scalafmt)
 
