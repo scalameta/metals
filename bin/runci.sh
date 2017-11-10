@@ -7,7 +7,7 @@ case "$TEST" in
     ./scalafmt --test
     ;;
   * )
-    sbt metaserver/compile
+    sbt test
     ;;
 esac
 
