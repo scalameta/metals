@@ -55,7 +55,7 @@ class CtagsTest extends FunSuite with DiffAssertions {
         |_root_.a.b.c.K. => packageobject K
         |_root_.a.b.c.K.l. => def l
       """.stripMargin
-    val obtained = Ctags.index("d.scala", input).syntax
+    val obtained = Ctags.indexScalaSource("d.scala", input).syntax
     assertNoDiff(obtained, expected)
   }
 

@@ -27,6 +27,7 @@ object ScalametaEnrichments {
     }
   }
   implicit class XtensionInputLSP(val input: m.Input) extends AnyVal {
+
     def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
   }
   implicit class XtensionAbsolutePathLSP(val path: m.AbsolutePath)

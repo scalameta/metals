@@ -23,6 +23,9 @@ import scala.meta.Type
 import scala.meta.parsers.ParseException
 import scala.meta.transversers.Traverser
 import scala.util.control.NonFatal
+import com.github.javaparser.JavaParser
+import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.ast.visitor.VoidVisitorAdapter
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
@@ -63,9 +66,8 @@ object Ctags extends LazyLogging {
     val fragments = allClasspathFragments(classpath, inParallel)
     fragments.foreach { fragment =>
       try {
-        if (PathIO.extension(fragment.name.toNIO) == "scala" &&
-          shouldIndex(fragment.name)) {
-          callback(index(fragment))
+        if (shouldIndex(fragment.name)) {
+          index(fragment).foreach(callback)
         }
       } catch {
         case _: ParseException => // nothing
@@ -75,8 +77,85 @@ object Ctags extends LazyLogging {
     }
   }
 
+  def indexJavaSource(filename: String, contents: String): Document = {
+    import com.github.javaparser.ast
+    val input = Input.VirtualFile(filename, contents)
+    def getPosition(t: ast.Node): Position.Range =
+      getPositionOption(t).getOrElse(Position.Range(input, -1, -1))
+    def getPositionOption(t: ast.Node): Option[Position.Range] =
+      for {
+        start <- Option(t.getBegin.orElse(null))
+        end <- Option(t.getEnd.orElse(null))
+      } yield {
+        val startOffset = Positions.positionToOffset(
+          filename,
+          contents,
+          start.line - 1,
+          start.column - 1
+        )
+        val endOffset = Positions.positionToOffset(
+          filename,
+          contents,
+          end.line - 1,
+          end.column - 1
+        )
+        Position.Range(input, startOffset, endOffset)
+      }
+
+    val cu: CompilationUnit = JavaParser.parse(contents)
+    object visitor
+        extends VoidVisitorAdapter[Unit]
+        with SyntaxIndexer[CompilationUnit] {
+      override def visit(
+          t: ast.PackageDeclaration,
+          ignore: Unit
+      ): Unit = {
+        val pos = getPosition(t.getName)
+        def loop(name: ast.expr.Name): Unit =
+          Option(name.getQualifier.orElse(null)) match {
+            case None =>
+              term(name.getIdentifier, pos, PACKAGE)
+            case Some(qual) =>
+              loop(qual)
+              term(name.getIdentifier, pos, PACKAGE)
+          }
+        loop(t.getName)
+        super.visit(t, ignore)
+      }
+      override def visit(
+          t: ast.body.ClassOrInterfaceDeclaration,
+          ignore: Unit
+      ): Unit = {
+        val name = t.getName.asString()
+        val pos = getPosition(t.getName)
+        withOwner {
+          // TODO(olafur) handle static methods/terms
+          if (t.isInterface) tpe(name, pos, TRAIT)
+          else tpe(name, pos, CLASS)
+          super.visit(t, ignore)
+        }
+      }
+      override def visit(
+          t: ast.body.MethodDeclaration,
+          ignore: Unit
+      ): Unit = {
+        term(t.getNameAsString, getPosition(t.getName), DEF)
+      }
+      override def indexRoot(root: CompilationUnit): Unit = visit(root, ())
+    }
+    val (names, symbols) = visitor.index(cu)
+    Document(
+      input = input,
+      language = "java",
+      names = names,
+      messages = Nil,
+      symbols = symbols,
+      synthetics = Nil
+    )
+  }
+
   /** Build a Database for a single source file. */
-  def index(filename: String, contents: String): Document = {
+  def indexScalaSource(filename: String, contents: String): Document = {
     val input = Input.VirtualFile(filename, contents)
     val tree = {
       import scala.meta._
@@ -94,26 +173,21 @@ object Ctags extends LazyLogging {
     )
   }
 
-  def index(fragment: Fragment): Document = {
+  def index(fragment: Fragment): Option[Document] = {
     val filename = fragment.uri.toString
     val contents =
       new String(FileIO.readAllBytes(fragment.uri), StandardCharsets.UTF_8)
     logger.trace(s"Indexing $filename with length ${contents.length}")
-    index(filename, contents)
+    PathIO.extension(fragment.name.toNIO) match {
+      case "scala" => Some(indexScalaSource(filename, contents))
+      case els =>
+        logger.warn(s"Unknown file extension ${fragment.syntax}")
+        None
+    }
   }
 
-  private val root = Symbol("_root_.")
-  private sealed abstract class Next extends Product with Serializable
-  private case object Stop extends Next
-  private case object Continue extends Next
-  private class DefinitionTraverser extends Traverser {
-    def index(tree: Tree): (List[ResolvedName], List[ResolvedSymbol]) = {
-      apply(tree)
-      names.result() -> symbols.result()
-    }
-    private val names = List.newBuilder[ResolvedName]
-    private val symbols = List.newBuilder[ResolvedSymbol]
-    private var currentOwner: _root_.scala.meta.Symbol = root
+  private class DefinitionTraverser extends Traverser with SyntaxIndexer[Tree] {
+    override def indexRoot(root: Tree): Unit = apply(root)
     override def apply(tree: Tree): Unit = {
       val old = currentOwner
       val next = tree match {
@@ -135,7 +209,43 @@ object Ctags extends LazyLogging {
       }
       currentOwner = old
     }
-    def addSignature(
+  }
+
+  trait SyntaxIndexer[T] {
+    def indexRoot(root: T): Unit
+    def index(root: T): (List[ResolvedName], List[ResolvedSymbol]) = {
+      indexRoot(root)
+      names.result() -> symbols.result()
+    }
+    def withOwner[A](thunk: => A): A = {
+      val old = currentOwner
+      val result = thunk
+      currentOwner = old
+      result
+    }
+    def term(name: String, pos: Position, flags: Long): Unit =
+      addSignature(Signature.Term(name), pos, flags)
+    def term(name: Term.Name, flags: Long): Unit =
+      addSignature(Signature.Term(name.value), name.pos, flags)
+    def tpe(name: String, pos: Position, flags: Long): Unit =
+      addSignature(Signature.Type(name), pos, flags)
+    def tpe(name: Type.Name, flags: Long): Unit =
+      addSignature(Signature.Type(name.value), name.pos, flags)
+    def pkg(ref: Term): Unit = ref match {
+      case Name(name) =>
+        currentOwner = symbol(Signature.Term(name))
+      case Term.Select(qual, Name(name)) =>
+        pkg(qual)
+        currentOwner = symbol(Signature.Term(name))
+    }
+    private val root = Symbol("_root_.")
+    sealed abstract class Next
+    case object Stop extends Next
+    case object Continue extends Next
+    private val names = List.newBuilder[ResolvedName]
+    private val symbols = List.newBuilder[ResolvedSymbol]
+    var currentOwner: _root_.scala.meta.Symbol = root
+    private def addSignature(
         signature: Signature,
         definition: Position,
         flags: Long
@@ -151,20 +261,12 @@ object Ctags extends LazyLogging {
         Denotation(flags, signature.name, "", Nil)
       )
     }
-    def symbol(signature: Signature): Symbol =
+    private def symbol(signature: Signature): Symbol =
       Symbol.Global(currentOwner, signature)
-    def term(name: Term.Name, flags: Long): Unit =
-      addSignature(Signature.Term(name.value), name.pos, flags)
-    def tpe(name: Type.Name, flags: Long): Unit =
-      addSignature(Signature.Type(name.value), name.pos, flags)
-    def pkg(ref: Term.Ref): Unit = ref match {
-      case Name(name) =>
-        currentOwner = symbol(Signature.Term(name))
-      case Term.Select(qual: Term.Ref, Name(name)) =>
-        pkg(qual)
-        currentOwner = symbol(Signature.Term(name))
-    }
   }
+
+  private def isScala(path: String): Boolean = path.endsWith(".scala")
+  private def isScala(path: Path): Boolean = PathIO.extension(path) == "scala"
 
   /** Returns all *.scala fragments to index from this classpath
    *
@@ -232,7 +334,4 @@ object Ctags extends LazyLogging {
     }
     buf.result()
   }
-
-  private def isScala(path: String): Boolean = path.endsWith(".scala")
-  private def isScala(path: Path): Boolean = PathIO.extension(path) == "scala"
 }

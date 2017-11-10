@@ -17,7 +17,7 @@ case class TextDocument(uri: String, contents: Array[Char]) {
     copy(contents = change.text.toArray)
   }
 
-  private def peek(idx: Int) =
+  private def peek(idx: Int): Int =
     if (idx < contents.size) contents(idx) else -1
 
   def toFile: File =
