@@ -248,15 +248,15 @@ class ScalametaLanguageServer(
       td: TextDocumentIdentifier,
       position: Position
   ): Hover = {
-    val path = Uri.toPath(td.uri).get.toRelative(cwd)
-    symbol.hoverInformation(path, position.line, position.character) match {
+    val path = Uri.toPath(td.uri).get
+    compiler.typeAt(path, position.line, position.character) match {
       case None => Hover(Nil, None)
-      case Some((pos, denotation)) =>
+      case Some(tpeName) =>
         Hover(
           contents = List(
-            RawMarkedString(language = "scala", value = denotation.signature)
+            RawMarkedString(language = "scala", value = tpeName)
           ),
-          range = Some(pos.toRange)
+          range = None
         )
     }
   }

@@ -65,22 +65,6 @@ class SymbolIndexer(
     }
   }
 
-  def hoverInformation(
-      path: RelativePath,
-      line: Int,
-      column: Int
-  ): Option[(Position.Range, Denotation)] = {
-    logger.info(s"hover at $path:$line:$column")
-    for {
-      ResolvedName(pos: Position.Range, sym: Symbol, _) <- resolvedNameAt(
-        path,
-        line,
-        column
-      )
-      denot <- Option(denotations.get(sym))
-    } yield (pos, denot)
-  }
-
   private def definition(symbol: Symbol): Option[Position.Range] =
     Option(definitions.get(symbol))
 
