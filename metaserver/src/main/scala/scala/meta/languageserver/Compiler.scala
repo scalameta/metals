@@ -83,8 +83,8 @@ class Compiler(
       compiler.unitOfFile(richUnit.source.file) = richUnit
       val position = richUnit.position(offset)
       val response = ask[compiler.Tree](r => compiler.askTypeAt(position, r))
-      val typedTree = response.get.left.get
-      typeOfTree(compiler)(typedTree)
+      val typedTree = response.get.swap
+      typedTree.toOption.flatMap(t => typeOfTree(compiler)(t))
     }
   }
 
@@ -135,14 +135,15 @@ class Compiler(
 
   private def typeOfTree(c: Global)(t: c.Tree): Option[String] = {
     import c._
-    val tpeStr = t match {
-      case t: ImplDef if t.impl != null => t.impl.tpe.toString
-      case t: ValOrDefDef if t.rhs != null => t.rhs.tpe.toString
-      case t: ValOrDefDef if t.tpt != null => t.tpt.tpe.toString
-      case t: TypeTree => t.toString
-      case x => x.tpe.toString
+
+    val refinedTree = t match {
+      case t: ImplDef if t.impl != null => t.impl
+      case t: ValOrDefDef if t.tpt != null => t.tpt
+      case t: ValOrDefDef if t.rhs != null => t.rhs
+      case x => x
     }
-    Option(tpeStr)
+
+    Option(refinedTree.tpe).map(_.widen.toString)
   }
 
 }
