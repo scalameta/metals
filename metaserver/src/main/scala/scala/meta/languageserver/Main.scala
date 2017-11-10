@@ -12,7 +12,7 @@ object Main extends LazyLogging {
     // FIXME(gabro): this is vscode specific (at least the name)
     val workspace = System.getProperty("vscode.workspace")
     val out = new PrintStream(new FileOutputStream(s"$workspace/target/pc.stdout.log"))
-    val err = new PrintStream(new FileOutputStream(s"$workspace/target/pc.stderr.log"))
+    val err = new PrintStream(new FileOutputStream(s"$workspace/target/pc.stdout.log"))
     val cwd = AbsolutePath(workspace)
     val server =
       new ScalametaLanguageServer(cwd, System.in, System.out, out)
