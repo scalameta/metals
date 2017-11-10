@@ -11,7 +11,7 @@ object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {
     // FIXME(gabro): this is vscode specific (at least the name)
     val workspace = System.getProperty("vscode.workspace")
-    val logPath = s"${workspace}/target/metaserver.log"
+    val logPath = s"$workspace/target/metaserver.log"
     val out = new PrintStream(new FileOutputStream(logPath))
     val err = new PrintStream(new FileOutputStream(logPath))
     val cwd = AbsolutePath(workspace)

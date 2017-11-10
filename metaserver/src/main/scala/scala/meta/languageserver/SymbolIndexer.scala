@@ -198,7 +198,9 @@ object SymbolIndexer {
       val input = document.input
       val filename = input.syntax
       val relpath = RelativePath(filename)
-      logger.debug(s"Indexing $filename")
+      if (!filename.startsWith("jar")) {
+        logger.debug(s"Indexing $filename")
+      }
       val nextReferencesBySymbol = mutable.Map.empty[Symbol, List[Position]]
       val nextDefinitions = mutable.Set.empty[Symbol]
 

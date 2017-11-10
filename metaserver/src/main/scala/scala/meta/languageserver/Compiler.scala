@@ -4,6 +4,10 @@ import java.io.File
 import java.io.PrintStream
 import java.nio.file.Files
 import java.util.Properties
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentSkipListSet
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.reflect.io
@@ -13,59 +17,12 @@ import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
 import langserver.messages.MessageType
+import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Document
-
-case class ModuleID(organization: String, name: String, revision: String) {
-  override def toString: String = s"$organization:$name:$revision"
-}
-case class CompilerConfig(
-    sources: List[AbsolutePath],
-    scalacOptions: List[String],
-    classpath: String,
-    libraryDependencies: List[ModuleID]
-)
-object CompilerConfig extends LazyLogging {
-  def fromPath(
-      path: AbsolutePath
-  )(implicit cwd: AbsolutePath): CompilerConfig = {
-    logger.info(s"Parsing $path")
-    val input = Files.newInputStream(path.toNIO)
-    try {
-      val props = new Properties()
-      props.load(input)
-      val sources = props
-        .getProperty("sources")
-        .split(File.pathSeparator)
-        .iterator
-        .map(AbsolutePath(_))
-        .toList
-      val scalacOptions = props.getProperty("scalacOptions").split(" ").toList
-      val classpath = props.getProperty("classpath")
-      val libraryDependencies = props
-        .getProperty("libraryDependencies")
-        .split(";")
-        .iterator
-        .flatMap { moduleId =>
-          logger.info(s"Parsing $moduleId")
-          moduleId.split(":") match {
-            case Array(org, name, rev) =>
-              ModuleID(org, name, rev) :: Nil
-            case _ => Nil
-          }
-        }
-      CompilerConfig(
-        sources,
-        scalacOptions,
-        classpath,
-        libraryDependencies.toList
-      )
-    } finally input.close()
-  }
-}
 
 class Compiler(
     out: PrintStream,
@@ -77,11 +34,18 @@ class Compiler(
   private val documentPubSub =
     Observable.multicast[Document](MulticastStrategy.Publish)
   private val documentSubscriber = documentPubSub._1
+  private val indexedJars: java.util.Set[AbsolutePath] =
+    ConcurrentHashMap.newKeySet[AbsolutePath]()
   val documentPublisher: Observable[Document] = documentPubSub._2
   val onNewCompilerConfig: Observable[Unit] =
     config
       .map(path => CompilerConfig.fromPath(path))
-      .map(onNewConfig)
+      .flatMap { config =>
+        Observable.merge(
+          Observable.delay(loadNewCompilerGlobals(config)),
+          Observable.delay(indexDependencyClasspath(config))
+        )
+      }
 
   def autocomplete(
       path: AbsolutePath,
@@ -122,7 +86,7 @@ class Compiler(
   }
 
   private val compilerByPath = mutable.Map.empty[AbsolutePath, Global]
-  private def onNewConfig(config: CompilerConfig): Unit = {
+  private def loadNewCompilerGlobals(config: CompilerConfig): Unit = {
     logger.info(s"Loading new compiler from config $config")
     val vd = new io.VirtualDirectory("(memory)", None)
     val settings = new Settings
@@ -136,18 +100,20 @@ class Compiler(
       // TODO(olafur) garbage collect compilers from removed files.
       compilerByPath(path) = compiler
     }
-    logger.warn(s"libs = ${config.libraryDependencies}")
-    Future {
-      val sourcesClasspath = config.libraryDependencies.flatMap {
-        case module @ ModuleID(org, name, version) =>
-          val sourceJars = Jars.fetch(org, name, version, out, sources = true)
-          logger.info(s"Fetched jars for $module")
-          sourceJars
-      }
-      logger.info(s"Start indexing classpath ${config.classpath}")
-      Ctags.index(sourcesClasspath) { doc =>
-        documentSubscriber.onNext(doc)
-      }
+  }
+  private def indexDependencyClasspath(config: CompilerConfig): Unit = {
+    val sourcesClasspath = Jars
+      .fetch(config.libraryDependencies, out, sources = true)
+      .filterNot(jar => indexedJars.contains(jar))
+    import scala.collection.JavaConverters._
+    indexedJars.addAll(sourcesClasspath.asJava)
+    if (sourcesClasspath.nonEmpty) {
+      logger.info(
+        s"Indexing classpath ${sourcesClasspath.mkString(File.pathSeparator)}"
+      )
+    }
+    Ctags.index(sourcesClasspath) { doc =>
+      documentSubscriber.onNext(doc)
     }
   }
   private def noCompletions: List[(String, String)] = {
