@@ -69,23 +69,31 @@ class SymbolIndexer(
 
   private def definition(symbol: Symbol): Option[Position.Range] =
     Option(definitions.get(symbol)).map {
-      case Position.Range(Input.VirtualFile(path, contents), start, end)
+      case Position.Range(input @ Input.VirtualFile(path, _), start, end)
           if path.contains("jar") =>
-        logger.info(
-          s"Jumping into jar $path, writing contents to file in target file"
-        )
-        val dir = cwd.resolve("target").resolve("sources")
-        Files.createDirectories(dir.toNIO)
-        val out = dir.toNIO.resolve(Paths.get(path).getFileName)
-        Files.write(out, contents.getBytes())
-        val pos = Position.Range(
-          Input.VirtualFile(cwd.toNIO.relativize(out).toString, contents),
-          start,
-          end
-        )
-        pos
+        Position.Range(createFileInWorkspaceTarget(input), start, end)
       case pos => pos
     }
+
+  // Writes the contents from in-memory source file to a file in the target/source/*
+  // directory of the workspace. vscode has support for TextDocumentContentProvider
+  // which can provide hooks to open readonly views for custom uri schemes:
+  // https://code.visualstudio.com/docs/extensionAPI/vscode-api#TextDocumentContentProvider
+  // However, that is a vscode only solution and we'd like this work for all
+  // text editors. Therefore, we write instead the file contents to disk in order to
+  // return a file: uri.
+  private def createFileInWorkspaceTarget(
+      input: Input.VirtualFile
+  ): Input.VirtualFile = {
+    logger.info(
+      s"Jumping into jar ${input.path}, writing contents to file in target file"
+    )
+    val dir = cwd.resolve("target").resolve("sources")
+    Files.createDirectories(dir.toNIO)
+    val out = dir.toNIO.resolve(Paths.get(input.path).getFileName)
+    Files.write(out, input.contents.getBytes())
+    Input.VirtualFile(cwd.toNIO.relativize(out).toString, input.contents)
+  }
 
   private def alternatives(symbol: Symbol): List[Symbol] =
     symbol match {
