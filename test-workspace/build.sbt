@@ -4,8 +4,10 @@ inThisBuild(
     addCompilerPlugin(
       "org.scalameta" % "semanticdb-scalac" % "2.1.1" cross CrossVersion.full
     ),
-    libraryDependencies +=
-      ("org.scalatest" %% "scalatest" % "3.0.3" % Test).withSources(),
+    libraryDependencies ++= List(
+      "com.vladsch.flexmark" % "flexmark-all" % "0.26.4",
+      ("org.scalatest" %% "scalatest" % "3.0.3" % Test).withSources()
+    ),
     scalacOptions += "-Yrangepos"
   )
 )

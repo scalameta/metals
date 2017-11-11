@@ -1,13 +1,18 @@
 package scala.meta.languageserver.ctags
 
+import java.nio.file.FileVisitOption
 import com.github.javaparser.ast
 import scala.meta._
-import scala.meta.languageserver.Positions
 import com.github.javaparser.{Position => JPosition}
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter
+import org.langmeta.languageserver.InputEnrichments._
+import scala.meta.languageserver.ScalametaEnrichments._
 
 object JavaCtags {
+  locally {
+    FileVisitOption.FOLLOW_LINKS
+  }
   def index(input: Input.VirtualFile): CtagsIndexer = {
     def getPosition(t: ast.Node): Position.Range =
       getPositionOption(t).getOrElse(Position.Range(input, -1, -1))
@@ -23,13 +28,13 @@ object JavaCtags {
             new JPosition(start.line, start.column + n.asString().length)
           case _ => jend
         }
-      } yield {
-        val startOffset =
-          Positions.positionToOffset(input, start.line - 1, start.column - 1)
-        val endOffset =
-          Positions.positionToOffset(input, end.line - 1, end.column - 1)
-        Position.Range(input, startOffset, endOffset)
-      }
+      } yield
+        input.toPosition(
+          start.line - 1,
+          start.column - 1,
+          end.line - 1,
+          end.column - 1
+        )
     val cu: ast.CompilationUnit = JavaParser.parse(input.value)
     new VoidVisitorAdapter[Unit] with CtagsIndexer {
       override def language: String = "Java"
@@ -49,23 +54,25 @@ object JavaCtags {
         loop(t.getName)
         super.visit(t, ignore)
       }
+      def owner(isStatic: Boolean): Symbol.Global =
+        if (isStatic) currentOwner.toTerm
+        else currentOwner
+
       override def visit(
           t: ast.body.ClassOrInterfaceDeclaration,
           ignore: Unit
-      ): Unit = {
+      ): Unit = withOwner(owner(t.isStatic)) {
         val name = t.getName.asString()
         val pos = getPosition(t.getName)
-        withOwner {
-          // TODO(olafur) handle static methods/terms
-          if (t.isInterface) tpe(name, pos, TRAIT)
-          else tpe(name, pos, CLASS)
-          super.visit(t, ignore)
-        }
+        // TODO(olafur) handle static methods/terms
+        if (t.isInterface) tpe(name, pos, TRAIT)
+        else tpe(name, pos, CLASS)
+        super.visit(t, ignore)
       }
       override def visit(
           t: ast.body.MethodDeclaration,
           ignore: Unit
-      ): Unit = {
+      ): Unit = withOwner(owner(t.isStatic)) {
         term(t.getNameAsString, getPosition(t.getName), DEF)
       }
       override def indexRoot(): Unit = visit(cu, ())
