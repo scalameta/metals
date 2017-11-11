@@ -2,23 +2,16 @@ package scala.meta.languageserver
 
 import java.io.File
 import java.io.PrintStream
-import java.nio.file.Files
-import java.util.Properties
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentSkipListSet
 import scala.collection.mutable
-import scala.concurrent.Future
 import scala.reflect.io
-import scala.runtime.CharRef
 import scala.tools.nsc.Settings
-import scala.tools.nsc.interactive.{Global, Response}
+import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
 import langserver.messages.MessageType
-import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
@@ -32,12 +25,10 @@ class Compiler(
     buffers: Buffers
 )(implicit cwd: AbsolutePath, s: Scheduler)
     extends LazyLogging {
-  private val documentPubSub =
+  private val (documentSubscriber, documentPublisher) =
     Observable.multicast[Document](MulticastStrategy.Publish)
-  private val documentSubscriber = documentPubSub._1
   private val indexedJars: java.util.Map[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()
-  val documentPublisher: Observable[Document] = documentPubSub._2
   val onNewCompilerConfig: Observable[Unit] =
     config
       .map(path => CompilerConfig.fromPath(path))
