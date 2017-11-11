@@ -25,8 +25,9 @@ class Compiler(
     buffers: Buffers
 )(implicit cwd: AbsolutePath, s: Scheduler)
     extends LazyLogging {
-  private val (documentSubscriber, documentPublisher) =
+  private val (documentSubscriber, myDocumentPublisher) =
     Observable.multicast[Document](MulticastStrategy.Publish)
+  val documentPublisher: Observable[Document] = myDocumentPublisher
   private val indexedJars: java.util.Map[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()
   val onNewCompilerConfig: Observable[Unit] =

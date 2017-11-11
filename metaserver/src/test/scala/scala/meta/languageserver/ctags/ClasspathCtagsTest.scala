@@ -1,5 +1,10 @@
 package scala.meta.languageserver.ctags
 
+import java.nio.file.Paths
+import scala.meta.languageserver.Jars
+import scala.meta.testkit.DiffAssertions
+import org.scalatest.FunSuite
+
 class ClasspathCtagsTest extends FunSuite with DiffAssertions {
 
   // NOTE(olafur) this test is a bit slow since it downloads jars from the internet.
