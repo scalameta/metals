@@ -35,8 +35,8 @@ class Compiler(
   private val documentPubSub =
     Observable.multicast[Document](MulticastStrategy.Publish)
   private val documentSubscriber = documentPubSub._1
-  private val indexedJars: java.util.Set[AbsolutePath] =
-    ConcurrentHashMap.newKeySet[AbsolutePath]()
+  private val indexedJars: java.util.Map[AbsolutePath, Unit] =
+    new ConcurrentHashMap[AbsolutePath, Unit]()
   val documentPublisher: Observable[Document] = documentPubSub._2
   val onNewCompilerConfig: Observable[Unit] =
     config
@@ -103,11 +103,15 @@ class Compiler(
     }
   }
   private def indexDependencyClasspath(config: CompilerConfig): Unit = {
-    val sourcesClasspath = Jars
-      .fetch(config.libraryDependencies, out, sources = true)
-      .filterNot(jar => indexedJars.contains(jar))
-    import scala.collection.JavaConverters._
-    indexedJars.addAll(sourcesClasspath.asJava)
+    val buf = List.newBuilder[AbsolutePath]
+    Jars.fetch(config.libraryDependencies, out, sources = true).foreach { jar =>
+      // ensure we only index each jar once even under race conditions.
+      indexedJars.computeIfAbsent(
+        jar,
+        (path: AbsolutePath) => buf += path
+      )
+    }
+    val sourcesClasspath = buf.result()
     if (sourcesClasspath.nonEmpty) {
       logger.info(
         s"Indexing classpath ${sourcesClasspath.mkString(File.pathSeparator)}"
