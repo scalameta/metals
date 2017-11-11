@@ -1,63 +1,48 @@
-package scala.meta.languageserver
+package scala.meta.languageserver.ctags
 
-import java.nio.file.Paths
 import scala.meta.testkit.DiffAssertions
-import org.langmeta.semanticdb.Document
 import org.scalatest.FunSuite
 
-class CtagsTest extends FunSuite with DiffAssertions {
-  test("index individual source file") {
-    val input =
-      """
-        |package a.b.c
-        |object D {
-        |   def e = { def x = 3; x }
-        |   val f = 2
-        |   var g = 2
-        |   class H { def x = 3 }
-        |   trait I { def x = 3 }
-        |   object J { def k = 2 }
-        |}
-        |package object K {
-        |  def l = 2
-        |}
-      """.stripMargin
-    val expected =
+class JavaCtagsTest extends FunSuite with DiffAssertions {
+  test("index java source") {
+    val obtained = Ctags.index(
+      "a.java",
+      """package a.b;
+        |interface A { String a(); }
+        |class B { static void foo() { } }
+        |""".stripMargin
+    )
+    assertNoDiff(
+      obtained.syntax,
       """
         |Language:
-        |scala212
+        |Java
         |
         |Names:
-        |[22..23): D <= _root_.a.b.c.D.
-        |[33..34): e <= _root_.a.b.c.D.e.
-        |[61..62): f <= _root_.a.b.c.D.f.
-        |[74..75): g <= _root_.a.b.c.D.g.
-        |[89..90): H <= _root_.a.b.c.D.H#
-        |[97..98): x <= _root_.a.b.c.D.H#x.
-        |[114..115): I <= _root_.a.b.c.D.I#
-        |[122..123): x <= _root_.a.b.c.D.I#x.
-        |[140..141): J <= _root_.a.b.c.D.J.
-        |[148..149): k <= _root_.a.b.c.D.J.k.
-        |[173..174): K <= _root_.a.b.c.K.
-        |[183..184): l <= _root_.a.b.c.K.l.
+        |[8..11): a.b <= _root_.a.
+        |[8..11): a.b <= _root_.a.b.
+        |[23..24): A <= _root_.a.b.A#
+        |[34..35): a <= _root_.a.b.A#a.
+        |[47..48): B <= _root_.a.b.B#
+        |[63..66): foo <= _root_.a.b.B#foo.
         |
         |Symbols:
-        |_root_.a.b.c.D. => object D
-        |_root_.a.b.c.D.H# => class H
-        |_root_.a.b.c.D.H#x. => def x
-        |_root_.a.b.c.D.I# => trait I
-        |_root_.a.b.c.D.I#x. => def x
-        |_root_.a.b.c.D.J. => object J
-        |_root_.a.b.c.D.J.k. => def k
-        |_root_.a.b.c.D.e. => def e
-        |_root_.a.b.c.D.f. => def f
-        |_root_.a.b.c.D.g. => def g
-        |_root_.a.b.c.K. => packageobject K
-        |_root_.a.b.c.K.l. => def l
-      """.stripMargin
-    val obtained = Ctags.indexScalaSource("d.scala", input).syntax
-    assertNoDiff(obtained, expected)
+        |_root_.a. => package a
+        |_root_.a.b. => package b
+        |_root_.a.b.A# => trait A
+        |_root_.a.b.A#a. => def a
+        |_root_.a.b.B# => class B
+        |_root_.a.b.B#foo. => def foo
+        |""".stripMargin
+    )
   }
+}
+
+import java.nio.file.Paths
+import scala.meta.languageserver.Jars
+import org.scalatest.FunSuite
+
+class ClasspathCtagsTest extends FunSuite with DiffAssertions {
 
   // NOTE(olafur) this test is a bit slow since it downloads jars from the internet.
   test("index classpath") {
@@ -71,13 +56,16 @@ class CtagsTest extends FunSuite with DiffAssertions {
     val Compat = Paths.get("sourcecode").resolve("Compat.scala")
     val SourceContext = Paths.get("sourcecode").resolve("SourceContext.scala")
     val Predef = Paths.get("scala").resolve("io").resolve("AnsiColor.scala")
+    val CharRef = Paths.get("scala").resolve("runtime").resolve("CharRef.java")
     val docs = List.newBuilder[String]
     Ctags.index(
       classpath,
-      shouldIndex = path =>
+      shouldIndex = { path =>
+        path.toNIO.endsWith(CharRef) ||
         path.toNIO.endsWith(Compat) ||
-          path.toNIO.endsWith(SourceContext) ||
-          path.toNIO.endsWith(Predef)
+        path.toNIO.endsWith(SourceContext) ||
+        path.toNIO.endsWith(Predef)
+      }
     ) { doc =>
       val path = Paths.get(doc.input.syntax).getFileName.toString
       val underline = "-" * path.length
@@ -94,7 +82,7 @@ class CtagsTest extends FunSuite with DiffAssertions {
         |---------------
         |
         |Language:
-        |scala212
+        |Scala212
         |
         |Names:
         |[3580..3589): AnsiColor <= _root_.scala.io.AnsiColor#
@@ -149,11 +137,34 @@ class CtagsTest extends FunSuite with DiffAssertions {
         |_root_.scala.io.AnsiColor. => object AnsiColor
         |
         |
+        |CharRef.java
+        |------------
+        |
+        |Language:
+        |Java
+        |
+        |Names:
+        |[536..549): scala.runtime <= _root_.scala.
+        |[536..549): scala.runtime <= _root_.scala.runtime.
+        |[566..573): CharRef <= _root_.scala.runtime.CharRef#
+        |[772..780): toString <= _root_.scala.runtime.CharRef#toString.
+        |[857..863): create <= _root_.scala.runtime.CharRef#toString.create.
+        |[925..929): zero <= _root_.scala.runtime.CharRef#toString.create.zero.
+        |
+        |Symbols:
+        |_root_.scala. => package scala
+        |_root_.scala.runtime. => package runtime
+        |_root_.scala.runtime.CharRef# => class CharRef
+        |_root_.scala.runtime.CharRef#toString. => def toString
+        |_root_.scala.runtime.CharRef#toString.create. => def create
+        |_root_.scala.runtime.CharRef#toString.create.zero. => def zero
+        |
+        |
         |Compat.scala
         |------------
         |
         |Language:
-        |scala212
+        |Scala212
         |
         |Names:
         |[27..33): Compat <= _root_.sourcecode.Compat.
@@ -170,7 +181,7 @@ class CtagsTest extends FunSuite with DiffAssertions {
         |-------------------
         |
         |Language:
-        |scala212
+        |Scala212
         |
         |Names:
         |[65..69): Util <= _root_.sourcecode.Util.

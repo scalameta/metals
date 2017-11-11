@@ -1,6 +1,15 @@
 package scala.meta.languageserver
 
+import org.langmeta.inputs.Input
+
 object Positions {
+  def positionToOffset(
+      input: Input.VirtualFile,
+      line: Int,
+      column: Int
+  ): Int =
+    positionToOffset(input.path, input.value, line, column)
+
   def positionToOffset(
       filename: String,
       contents: String,

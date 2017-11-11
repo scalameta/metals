@@ -112,7 +112,7 @@ class Compiler(
         s"Indexing classpath ${sourcesClasspath.mkString(File.pathSeparator)}"
       )
     }
-    Ctags.index(sourcesClasspath) { doc =>
+    ctags.Ctags.index(sourcesClasspath) { doc =>
       documentSubscriber.onNext(doc)
     }
   }
