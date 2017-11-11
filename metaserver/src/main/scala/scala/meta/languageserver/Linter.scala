@@ -17,19 +17,24 @@ import scalafix.reflect.ScalafixReflect
 import scalafix.rule.RuleCtx
 import scalafix.rule.RuleName
 import scalafix.util.SemanticdbIndex
-import langserver.core.Connection
-import langserver.messages.MessageType
-import langserver.messages.PublishDiagnostics
-import langserver.{types => l}
 import metaconfig.ConfDecoder
 import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 
+import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.lsp4j.PublishDiagnosticsParams
+
+import scala.collection.JavaConverters._
+
 class Linter(
     cwd: AbsolutePath,
     out: OutputStream,
-    connection: Connection,
+    client: LanguageClient,
     semanticdbs: Observable[m.Database]
 ) {
   val linter: Observable[Unit] =
@@ -37,14 +42,14 @@ class Linter(
       val index =
         EagerInMemorySemanticdbIndex(mdb, m.Sourcepath(Nil), m.Classpath(Nil))
       val messages = analyzeIndex(index)
-      messages.foreach(connection.sendNotification)
+      messages.foreach(client.publishDiagnostics)
     }
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(
       filename: String,
       contents: String
-  ): Seq[PublishDiagnostics] = {
+  ): Seq[PublishDiagnosticsParams] = {
     analyzeIndex(
       EagerInMemorySemanticdbIndex(
         m.Database(
@@ -63,13 +68,13 @@ class Linter(
     )
   }
 
-  private def analyzeIndex(index: SemanticdbIndex): Seq[PublishDiagnostics] =
+  private def analyzeIndex(index: SemanticdbIndex): Seq[PublishDiagnosticsParams] =
     withConfig { configInput =>
       val lazyIndex = lazySemanticdbIndex(index)
       val configDecoder = ScalafixReflect.fromLazySemanticdbIndex(lazyIndex)
       val (rule, config) =
         ScalafixConfig.fromInput(configInput, lazyIndex)(configDecoder).get
-      val results: Seq[PublishDiagnostics] = index.database.documents.map { d =>
+      val results: Seq[PublishDiagnosticsParams] = index.database.documents.map { d =>
         val filename = RelativePath(d.input.syntax)
         val tree = Parser.parse(d).get
         val ctx = RuleCtx.applyInternal(tree, config)
@@ -78,7 +83,7 @@ class Linter(
           (name, patch) <- patches.toIterator
           msg <- Patch.lintMessagesInternal(patch)
         } yield toDiagnostic(name, msg)
-        PublishDiagnostics(s"file:${cwd.resolve(filename)}", diagnostics.toSeq)
+        new PublishDiagnosticsParams(s"file:${cwd.resolve(filename)}", diagnostics.toSeq.asJava)
       }
 
       // megaCache needs to die, if we forget this we will read stale
@@ -87,10 +92,10 @@ class Linter(
       PlatformTokenizerCache.megaCache.clear()
 
       if (results.isEmpty) {
-        connection.showMessage(
+        client.showMessage(new MessageParams(
           MessageType.Warning,
           "Ran scalafix but found no lint messages :("
-        )
+        ))
       }
       results
     }
@@ -111,20 +116,20 @@ class Linter(
       ScalafixReporter.default.copy(outStream = new PrintStream(out))
     )
 
-  private def toDiagnostic(name: RuleName, msg: LintMessage): l.Diagnostic = {
-    l.Diagnostic(
-      range = msg.position.toRange,
-      severity = Some(toSeverity(msg.category.severity)),
-      code = Some(msg.category.key(name)),
-      source = Some("scalafix"),
-      message = msg.message
+  private def toDiagnostic(name: RuleName, msg: LintMessage): Diagnostic = {
+    new Diagnostic(
+      msg.position.toRange,
+      msg.message,
+      toSeverity(msg.category.severity),
+      "scalafix",
+      msg.category.key(name)
     )
   }
 
-  private def toSeverity(s: LintSeverity): Int = s match {
-    case LintSeverity.Error => l.DiagnosticSeverity.Error
-    case LintSeverity.Warning => l.DiagnosticSeverity.Warning
-    case LintSeverity.Info => l.DiagnosticSeverity.Information
+  private def toSeverity(s: LintSeverity): DiagnosticSeverity = s match {
+    case LintSeverity.Error => DiagnosticSeverity.Error
+    case LintSeverity.Warning => DiagnosticSeverity.Warning
+    case LintSeverity.Info => DiagnosticSeverity.Information
   }
 
 }

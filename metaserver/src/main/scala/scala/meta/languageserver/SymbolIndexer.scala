@@ -9,14 +9,16 @@ import monix.execution.Scheduler
 import monix.reactive.Observable
 import org.langmeta.io.RelativePath
 import ScalametaEnrichments._
-import langserver.core.Connection
-import langserver.messages.MessageType
+
+import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
     val indexer: Observable[Unit],
     logger: Logger,
-    connection: Connection,
+    client: LanguageClient,
     buffers: Buffers,
     documents: JMap[RelativePath, Document],
     definitions: JMap[Symbol, Position.Range],
@@ -125,10 +127,10 @@ class SymbolIndexer(
       // NOTE(olafur) it may be a bit annoying to bail on a single character
       // edit in the file. In the future, we can try more to make sense of
       // partially fresh files using something like edit distance.
-      connection.showMessage(
+      client.showMessage(new MessageParams(
         MessageType.Warning,
         "Please recompile for up-to-date information"
-      )
+      ))
       None
     }
   }
@@ -161,7 +163,7 @@ object SymbolIndexer {
   def apply(
       semanticdbs: Observable[Database],
       logger: Logger,
-      connection: Connection,
+      client: LanguageClient,
       buffers: Buffers
   )(implicit s: Scheduler): SymbolIndexer = {
     val documents =
@@ -233,7 +235,7 @@ object SymbolIndexer {
     new SymbolIndexer(
       indexer,
       logger,
-      connection,
+      client,
       buffers,
       documents,
       definitions,

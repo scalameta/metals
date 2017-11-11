@@ -1,13 +1,15 @@
 package scala.meta.languageserver
 
 import scala.{meta => m}
-import langserver.types.SymbolKind
-import langserver.{types => l}
+
+import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.SymbolKind
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
 object ScalametaEnrichments {
-  type SymbolKind = Int
 
   implicit class XtensionDenotationLSP(val denotation: m.Denotation)
       extends AnyVal {
@@ -31,16 +33,16 @@ object ScalametaEnrichments {
   }
   implicit class XtensionAbsolutePathLSP(val path: m.AbsolutePath)
       extends AnyVal {
-    def toLocation(pos: m.Position): l.Location =
-      l.Location(path.toLanguageServerUri, pos.toRange)
+    def toLocation(pos: m.Position): Location =
+      new Location(path.toLanguageServerUri, pos.toRange)
     def toLanguageServerUri: String = "file:" + path.toString()
   }
   implicit class XtensionPositionRangeLSP(val pos: m.Position) extends AnyVal {
     def location: String =
       s"${pos.input.syntax}:${pos.startLine}:${pos.startColumn}"
-    def toRange: l.Range = l.Range(
-      l.Position(line = pos.startLine, character = pos.startColumn),
-      l.Position(line = pos.endLine, character = pos.endColumn)
+    def toRange: Range = new Range(
+      new Position(pos.startLine, pos.startColumn),
+      new Position(pos.endLine, pos.endColumn)
     )
   }
 }
