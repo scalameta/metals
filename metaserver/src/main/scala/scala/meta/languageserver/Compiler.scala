@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentSkipListSet
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.reflect.io
+import scala.runtime.CharRef
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.{Global, Response}
 import scala.tools.nsc.reporters.StoreReporter

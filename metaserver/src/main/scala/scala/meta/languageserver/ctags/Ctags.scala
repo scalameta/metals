@@ -117,14 +117,16 @@ object Ctags extends LazyLogging {
         val stream = Files.newInputStream(base.toNIO)
         try {
           val zip = new ZipInputStream(stream)
-          var entry = zip.getNextEntry
-          while (entry != null) {
-            if (!entry.getName.endsWith("/") && canIndex(entry.getName)) {
-              val name = RelativePath(entry.getName.stripPrefix("/"))
-              buf += Fragment(base, name)
+          try {
+            var entry = zip.getNextEntry
+            while (entry != null) {
+              if (!entry.getName.endsWith("/") && canIndex(entry.getName)) {
+                val name = RelativePath(entry.getName.stripPrefix("/"))
+                buf += Fragment(base, name)
+              }
+              entry = zip.getNextEntry
             }
-            entry = zip.getNextEntry
-          }
+          } finally zip.close()
         } catch {
           case ex: IOException =>
             logger.error(ex.getMessage, ex)
