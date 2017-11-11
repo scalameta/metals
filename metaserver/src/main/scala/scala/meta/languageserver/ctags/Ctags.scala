@@ -62,19 +62,24 @@ object Ctags extends LazyLogging {
     }
   }
 
+  /** Index single Scala or Java source file from memory */
   def index(filename: String, contents: String): Document =
     index(Input.VirtualFile(filename, contents))
+
+  /** Index single Scala or Java from disk or zip file. */
   def index(fragment: Fragment): Document = {
     val filename = fragment.uri.toString
     val contents =
       new String(FileIO.readAllBytes(fragment.uri), StandardCharsets.UTF_8)
     index(Input.VirtualFile(filename, contents))
   }
+
+  /** Index single Scala or Java source file from memory */
   def index(input: Input.VirtualFile): Document = {
     logger.trace(s"Indexing ${input.path} with length ${input.value.length}")
     val indexer: CtagsIndexer =
-      if (input.path.endsWith(".scala")) ScalaCtags.index(input)
-      else if (input.path.endsWith(".java")) JavaCtags.index(input)
+      if (isScala(input.path)) ScalaCtags.index(input)
+      else if (isJava(input.path)) JavaCtags.index(input)
       else {
         throw new IllegalArgumentException(
           s"Unknown file extension ${input.path}"

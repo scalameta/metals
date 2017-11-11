@@ -36,7 +36,8 @@ object ScalametaLanguageServerPlugin extends AutoPlugin {
             sources.value.distinct.mkString(File.pathSeparator)
           )
           def libraryDependencyToString(m: ModuleID): String = {
-            //
+            // HACK(olafur) This will not work for js/native, figure out
+            // a the correct way to do this.
             val cross = m.crossVersion match {
               case _: CrossVersion.Full => "_" + scalaVersion.value
               case _: CrossVersion.Binary =>
