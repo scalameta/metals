@@ -12,19 +12,6 @@ import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable.ListBuffer
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.util.control.NonFatal
-import langserver.core.LanguageServer
-import langserver.messages.ClientCapabilities
-import langserver.messages.CompletionList
-import langserver.messages.CompletionOptions
-import langserver.messages.DefinitionResult
-import langserver.messages.FileChangeType
-import langserver.messages.FileEvent
-import langserver.messages.MessageType
-import langserver.messages.ResultResponse
-import langserver.messages.ServerCapabilities
-import langserver.messages.ShutdownResult
-import langserver.messages.Hover
-import langserver.types._
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
@@ -36,33 +23,52 @@ import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Database
 import org.langmeta.semanticdb.Denotation
 
+import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.services._
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+
+import java.util.concurrent.CompletableFuture
+import java.util.{ List => JList }
+import scala.collection.JavaConverters._
+
+import com.typesafe.scalalogging.LazyLogging
+
+import metaserver._
+
 class ScalametaLanguageServer(
     cwd: AbsolutePath,
-    lspIn: InputStream,
-    lspOut: OutputStream,
     stdout: PrintStream
-)(implicit s: Scheduler)
-    extends LanguageServer(lspIn, lspOut) {
+)(implicit s: Scheduler) extends LanguageServer with LanguageClientAware with LazyLogging {
+
   implicit val workspacePath: AbsolutePath = cwd
-  val (semanticdbSubscriber, semanticdbPublisher) =
-    ScalametaLanguageServer.semanticdbStream
+
+  private var client: LanguageClient = _
+
+  val (semanticdbSubscriber, semanticdbPublisher) = ScalametaLanguageServer.semanticdbStream
+
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     Observable.multicast[AbsolutePath](
       MulticastStrategy.Publish,
       OverflowStrategy.ClearBuffer(2)
     )
+
   def onError(e: Throwable): Unit = {
     logger.error(e.getMessage, e)
   }
+
   val buffers: Buffers = Buffers()
+
   val symbol: SymbolIndexer =
-    SymbolIndexer(semanticdbPublisher, logger, connection, buffers)
+    SymbolIndexer(semanticdbPublisher, logger, client, buffers)
+
   val scalafix: Linter =
-    new Linter(cwd, stdout, connection, semanticdbPublisher.doOnError(onError))
+    new Linter(cwd, stdout, client, semanticdbPublisher.doOnError(onError))
+
   val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0", stdout)
+
   val compiler = new Compiler(
     compilerConfigPublisher.doOnError(onError),
-    connection,
+    client,
     buffers
   )
 
@@ -92,34 +98,6 @@ class ScalametaLanguageServer(
     )
   }
 
-  override def initialize(
-      pid: Long,
-      rootPath: String,
-      capabilities: ClientCapabilities
-  ): ServerCapabilities = {
-    logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
-    toCancel += scalafix.linter.subscribe()
-    toCancel += symbol.indexer.subscribe()
-    toCancel += compiler.onNewCompilerConfig.subscribe()
-    loadAllSemanticdbsInWorkspace()
-    ServerCapabilities(
-      completionProvider = Some(
-        CompletionOptions(
-          resolveProvider = true,
-          triggerCharacters = "." :: Nil
-        )
-      ),
-      definitionProvider = true,
-      documentSymbolProvider = true,
-      documentFormattingProvider = true,
-      hoverProvider = true
-    )
-  }
-
-  override def shutdown(): Unit = {
-    toCancel.foreach(_.cancel())
-  }
-
   private def onChangedFile(
       path: AbsolutePath
   )(fallback: AbsolutePath => Unit): Unit = {
@@ -134,14 +112,45 @@ class ScalametaLanguageServer(
     }
   }
 
-  override def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
-    changes.foreach {
-      case FileEvent(
-          Uri(path),
-          FileChangeType.Created | FileChangeType.Changed
-          ) =>
-        onChangedFile(path) { _ =>
-          logger.warn(s"Unknown file extension for path $path")
+  override def connect(client: LanguageClient): Unit = {
+    this.client = client
+  }
+
+  override def initialize(params: InitializeParams): CompletableFuture[InitializeResult] = CompletableFuture.completedFuture {
+    logger.info(s"Initialized with $cwd, ${params.getProcessId}, ${params.getRootUri}, ${params.getCapabilities}")
+    toCancel += scalafix.linter.subscribe()
+    toCancel += symbol.indexer.subscribe()
+    toCancel += compiler.onNewCompilerConfig.subscribe()
+    loadAllSemanticdbsInWorkspace()
+
+    val capabilities = new ServerCapabilities
+    capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
+    capabilities.setDocumentFormattingProvider(true)
+    capabilities.setDocumentSymbolProvider(true)
+    capabilities.setHoverProvider(true)
+    capabilities.setDefinitionProvider(true)
+    capabilities.setCompletionProvider(new CompletionOptions(true, List(".").asJava))
+
+    new InitializeResult(capabilities)
+  }
+
+  override def exit(): Unit = {}
+
+  override def shutdown(): CompletableFuture[Object] = CompletableFuture.completedFuture {
+    toCancel.foreach(_.cancel())
+    new Object
+  }
+
+  override def getTextDocumentService(): TextDocumentService = new ScalametaTextDocumentService(this)
+  override def getWorkspaceService(): WorkspaceService = new ScalametaWorkspaceService(this)
+
+  def didChangeWatchedFiles(params: DidChangeWatchedFilesParams): Unit =
+    params.getChanges.asScala.foreach {
+      case change: FileEvent if change.getType == FileChangeType.Created || change.getType == FileChangeType.Changed =>
+        Uri.toPath(change.getUri).foreach { path =>
+          onChangedFile(path) { _ =>
+            logger.warn(s"Unknown file extension for path $path")
+          }
         }
 
       case event =>
@@ -149,118 +158,125 @@ class ScalametaLanguageServer(
         ()
     }
 
-  override def documentFormattingRequest(
-      td: TextDocumentIdentifier,
-      options: FormattingOptions
-  ): List[TextEdit] = {
+  def didOpen(params: DidOpenTextDocumentParams): Unit = {
+    val document = params.getTextDocument
+    Uri.toPath(document.getUri).foreach(p => buffers.changed(p, document.getText))
+  }
+
+  def didChange(params: DidChangeTextDocumentParams): Unit = {
+    val document = params.getTextDocument
+    params.getContentChanges.asScala.foreach { c =>
+      Uri.toPath(document.getUri).foreach(p => buffers.changed(p, c.getText))
+    }
+  }
+
+  def formatting(params: DocumentFormattingParams): CompletableFuture[JList[_ <: TextEdit]] = CompletableFuture.completedFuture {
+    val document = params.getTextDocument
     try {
-      val path = Uri.toPath(td.uri).get
+      val path = Uri.toPath(document.getUri).get
       val contents = buffers.read(path)
-      val fullDocumentRange = Range(
-        start = Position(0, 0),
-        end = Position(Int.MaxValue, Int.MaxValue)
+      val fullDocumentRange = new Range(
+        new Position(0, 0),
+        new Position(Int.MaxValue, Int.MaxValue)
       )
       val config = cwd.resolve(".scalafmt.conf")
       if (Files.isRegularFile(config.toNIO)) {
         val formattedContent =
           scalafmt.format(contents, config.toString(), path.toString())
-        List(TextEdit(fullDocumentRange, formattedContent))
+        List(new TextEdit(fullDocumentRange, formattedContent)).asJava
       } else {
-        connection.showMessage(MessageType.Info, s"Missing $config")
-        Nil
+        client.showMessage(new MessageParams(MessageType.Info, s"Missing $config"))
+        Nil.asJava
       }
     } catch {
       case NonFatal(e) =>
-        connection.showMessage(MessageType.Error, e.getMessage)
+        client.showMessage(new MessageParams(MessageType.Error, e.getMessage))
         logger.error(e.getMessage, e)
-        Nil
+        Nil.asJava
     }
   }
 
-  override def onOpenTextDocument(td: TextDocumentItem): Unit =
-    Uri.toPath(td.uri).foreach(p => buffers.changed(p, td.text))
-
-  override def onChangeTextDocument(
-      td: VersionedTextDocumentIdentifier,
-      changes: Seq[TextDocumentContentChangeEvent]
-  ): Unit = {
-    changes.foreach { c =>
-      Uri.toPath(td.uri).foreach(p => buffers.changed(p, c.text))
-    }
-  }
-
-  override def documentSymbols(
-      td: TextDocumentIdentifier
-  ): Seq[SymbolInformation] = {
-    val path = Uri.toPath(td.uri).get
+  def documentSymbol(params: DocumentSymbolParams): CompletableFuture[JList[_ <: SymbolInformation]] = CompletableFuture.completedFuture {
+    val document = params.getTextDocument
+    val path = Uri.toPath(document.getUri).get
     symbol.documentSymbols(path.toRelative(cwd)).map {
       case (position, denotation @ Denotation(_, name, signature, _)) =>
         val location = path.toLocation(position)
         val kind = denotation.symbolKind
-        SymbolInformation(name, kind, location, Some(signature))
-    }
+        new SymbolInformation(name, kind, location, signature)
+    }.asJava
   }
 
-  override def gotoDefinitionRequest(
-      td: TextDocumentIdentifier,
-      position: Position
-  ): DefinitionResult = {
-    val path = Uri.toPath(td.uri).get.toRelative(cwd)
+  def definition(params: TextDocumentPositionParams): CompletableFuture[JList[_ <: Location]] = CompletableFuture.completedFuture {
+    val document = params.getTextDocument
+    val position = params.getPosition
+    val path = Uri.toPath(document.getUri).get.toRelative(cwd)
     symbol
-      .goToDefinition(path, position.line, position.character)
-      .fold(DefinitionResult(Nil)) { position =>
-        DefinitionResult(
-          cwd.resolve(position.input.syntax).toLocation(position) :: Nil
-        )
-      }
+      .goToDefinition(path, position.getLine, position.getCharacter)
+      .fold(List.empty[Location]) { position =>
+        cwd.resolve(position.input.syntax).toLocation(position) :: Nil
+      }.asJava
   }
 
-  override def onSaveTextDocument(td: TextDocumentIdentifier): Unit = {}
+  def completion(params: TextDocumentPositionParams): CompletableFuture[JEither[JList[CompletionItem], CompletionList]] = CompletableFuture.completedFuture {
+    val document = params.getTextDocument
+    val position = params.getPosition
 
-  override def completionRequest(
-      td: TextDocumentIdentifier,
-      position: Position
-  ): ResultResponse = {
     try {
       val completions = compiler.autocomplete(
-        Uri.toPath(td.uri).get,
-        position.line,
-        position.character
+        Uri.toPath(document.getUri).get,
+        position.getLine,
+        position.getCharacter
       )
-      CompletionList(
-        isIncomplete = false,
-        items = completions.map {
+      JEither.forRight(new CompletionList(
+        false,
+        completions.map {
           case (signature, name) =>
-            CompletionItem(
-              label = name,
-              detail = Some(signature)
-            )
-        }
-      )
+            val completionItem = new CompletionItem(name)
+            completionItem.setDetail(signature)
+            completionItem
+        }.asJava
+      ))
     } catch {
       case NonFatal(e) =>
         onError(e)
-        ShutdownResult(-1)
+        JEither.forRight(new CompletionList(Nil.asJava))
     }
   }
 
-  override def hoverRequest(
-      td: TextDocumentIdentifier,
-      position: Position
-  ): Hover = {
-    val path = Uri.toPath(td.uri).get
-    compiler.typeAt(path, position.line, position.character) match {
-      case None => Hover(Nil, None)
+  def hover(params: TextDocumentPositionParams) = CompletableFuture.completedFuture {
+    val document = params.getTextDocument
+    val position = params.getPosition
+    val path = Uri.toPath(document.getUri).get
+    compiler.typeAt(path, position.getLine, position.getCharacter) match {
+      case None => new Hover(Nil.asJava)
       case Some(tpeName) =>
-        Hover(
-          contents = List(
-            RawMarkedString(language = "scala", value = tpeName)
-          ),
-          range = None
+        new Hover(
+          List(
+            JEither.forRight[String, MarkedString](new MarkedString("scala", tpeName))
+          ).asJava
         )
     }
   }
 
+  // Unimplemented features
+  override def initialized(params: InitializedParams) = ???
+  def codeAction(params: CodeActionParams): CompletableFuture[JList[_ <: Command]] = ???
+  def codeLens(params: CodeLensParams): CompletableFuture[JList[_ <: CodeLens]] = ???
+  def didClose(params: DidCloseTextDocumentParams) = ???
+  def didSave(params: DidSaveTextDocumentParams) = ???
+  def documentHighlight(params: TextDocumentPositionParams): CompletableFuture[JList[_ <: DocumentHighlight]] = ???
+  def onTypeFormatting(params: DocumentOnTypeFormattingParams): CompletableFuture[JList[_ <: TextEdit]] = ???
+  def rangeFormatting(params: DocumentRangeFormattingParams): CompletableFuture[JList[_ <: TextEdit]] = ???
+  def references(params: ReferenceParams): CompletableFuture[JList[_ <: Location]] = ???
+  def rename(params: RenameParams): CompletableFuture[WorkspaceEdit] = ???
+  def resolveCodeLens(params: CodeLens): CompletableFuture[CodeLens] = ???
+  def resolveCompletionItem(params: CompletionItem): CompletableFuture[CompletionItem] = ???
+  def signatureHelp(params: TextDocumentPositionParams): CompletableFuture[SignatureHelp] = ???
+  def documentLink(params: DocumentLinkParams): CompletableFuture[JList[DocumentLink]] = ???
+  def documentLinkResolve(params: DocumentLink): CompletableFuture[DocumentLink] = ???
+  def didChangeConfiguration(params: DidChangeConfigurationParams) = ???
+  def symbol(params: WorkspaceSymbolParams): CompletableFuture[JList[_ <: SymbolInformation]] = ???
 }
 
 object ScalametaLanguageServer {
@@ -281,3 +297,4 @@ object ScalametaLanguageServer {
     subscriber -> semanticdbPublisher
   }
 }
+

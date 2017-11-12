@@ -7,6 +7,8 @@ import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
 import monix.execution.Scheduler.Implicits.global // TODO(olafur) may want to customize
 
+import org.eclipse.lsp4j.launch.LSPLauncher
+
 object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {
     // FIXME(gabro): this is vscode specific (at least the name)
@@ -15,8 +17,6 @@ object Main extends LazyLogging {
     val out = new PrintStream(new FileOutputStream(logPath))
     val err = new PrintStream(new FileOutputStream(logPath))
     val cwd = AbsolutePath(workspace)
-    val server =
-      new ScalametaLanguageServer(cwd, System.in, System.out, out)
 
     // route System.out somewhere else. Any output not from the server (e.g. logging)
     // messes up with the client, since stdout is used for the language server protocol
@@ -26,7 +26,11 @@ object Main extends LazyLogging {
       System.setErr(err)
       logger.info(s"Starting server in $workspace")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
-      server.start()
+      val server = new ScalametaLanguageServer(cwd, out)
+      val launcher = LSPLauncher.createServerLauncher(server, System.in, origOut)
+      val client = launcher.getRemoteProxy()
+      server.connect(client)
+      launcher.startListening()
     } finally {
       System.setOut(origOut)
     }

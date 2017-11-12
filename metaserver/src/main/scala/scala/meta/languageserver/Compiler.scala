@@ -9,10 +9,12 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.{Global, Response}
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
-import langserver.core.Connection
-import langserver.messages.MessageType
 import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
+
+import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 
 case class CompilerConfig(
     sources: List[AbsolutePath],
@@ -41,7 +43,7 @@ object CompilerConfig {
 }
 class Compiler(
     config: Observable[AbsolutePath],
-    connection: Connection,
+    client: LanguageClient,
     buffers: Buffers
 )(implicit cwd: AbsolutePath)
     extends LazyLogging {
@@ -106,11 +108,11 @@ class Compiler(
     }
   }
   private def noCompletions: List[(String, String)] = {
-    connection.showMessage(
+    client.showMessage(new MessageParams(
       MessageType.Warning,
       "Run project/config:scalametaEnableCompletions to setup completion for this " +
         "config.in(project) or *:scalametaEnableCompletions for all projects/configurations"
-    )
+    ))
     Nil
   }
   private def lineColumnToOffset(
