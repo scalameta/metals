@@ -54,8 +54,14 @@ object Ctags extends LazyLogging {
     val totalIndexedFiles = new AtomicInteger()
     val totalIndexedLines = new AtomicInteger()
     val start = System.nanoTime()
-    def elapsed: Long =
-      TimeUnit.SECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS)
+    def elapsed: Long = {
+      val result = TimeUnit.SECONDS.convert(
+        System.nanoTime() - start,
+        TimeUnit.NANOSECONDS
+      )
+      if (result == 0) 1 // prevent divide by zero
+      else result
+    }
     val decimal = new DecimalFormat("###.###")
     val N = fragments.length
     def updateTotalLines(doc: Document): Unit = doc.input match {
@@ -110,7 +116,7 @@ object Ctags extends LazyLogging {
     logger.trace(s"Indexing ${input.path} with length ${input.value.length}")
     val indexer: CtagsIndexer =
       if (isScala(input.path)) ScalaCtags.index(input)
-      else if (isJava(input.path)) QDoxCtags.index(input)
+      else if (isJava(input.path)) JavaCtags.index(input)
       else {
         throw new IllegalArgumentException(
           s"Unknown file extension ${input.path}"
@@ -128,8 +134,7 @@ object Ctags extends LazyLogging {
   }
 
   private def canIndex(path: String): Boolean =
-//    isScala(path) ||
-    isJava(path)
+    isScala(path) || isJava(path)
   private def isJava(path: String): Boolean = path.endsWith(".java")
   private def isScala(path: String): Boolean = path.endsWith(".scala")
   private def isScala(path: Path): Boolean = PathIO.extension(path) == "scala"

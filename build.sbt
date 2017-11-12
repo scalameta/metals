@@ -25,8 +25,7 @@ lazy val metaserver = project
     libraryDependencies ++= List(
       "io.monix" %% "monix" % "2.3.0",
       "com.lihaoyi" %% "pprint" % "0.5.3",
-      "com.github.javaparser" % "javaparser-core" % "3.4.3",
-      "com.thoughtworks.qdox" % "qdox" % "2.0-M7",
+      "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java ctags
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "ch.epfl.scala" % "scalafix-cli" % "0.5.3" cross CrossVersion.full,

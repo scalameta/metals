@@ -39,7 +39,7 @@ class ClasspathCtagsTest extends FunSuite with DiffAssertions {
            |$doc""".stripMargin
     }
     val obtained = docs.result().sorted.mkString("\n\n")
-//    println(obtained)
+    println(obtained)
     val expected =
       """
          |AnsiColor.scala
@@ -108,8 +108,9 @@ class ClasspathCtagsTest extends FunSuite with DiffAssertions {
          |Java
          |
          |Names:
-         |[536..549): scala.runtime => _root_.scala.
-         |[536..549): scala.runtime => _root_.scala.runtime.
+         |[267..272): scala => _root_.scala.
+         |[542..549): runtime => _root_.scala.runtime.
+         |[566..573): CharRef <= _root_.scala.runtime.CharRef.
          |[566..573): CharRef <= _root_.scala.runtime.CharRef#
          |[638..654): serialVersionUID <= _root_.scala.runtime.CharRef.serialVersionUID.
          |[696..700): elem <= _root_.scala.runtime.CharRef#elem.
@@ -123,6 +124,7 @@ class ClasspathCtagsTest extends FunSuite with DiffAssertions {
          |_root_.scala.runtime.CharRef# => class CharRef
          |_root_.scala.runtime.CharRef#elem. => var elem
          |_root_.scala.runtime.CharRef#toString. => def toString
+         |_root_.scala.runtime.CharRef. => object CharRef
          |_root_.scala.runtime.CharRef.create. => def create
          |_root_.scala.runtime.CharRef.serialVersionUID. => val serialVersionUID
          |_root_.scala.runtime.CharRef.zero. => def zero
