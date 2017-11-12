@@ -27,7 +27,7 @@ object Main extends LazyLogging {
       logger.info(s"Starting server in $workspace")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
       val server = new ScalametaLanguageServer(cwd, out)
-      val launcher = LSPLauncher.createServerLauncher(server, System.in, out)
+      val launcher = LSPLauncher.createServerLauncher(server, System.in, origOut)
       val client = launcher.getRemoteProxy()
       server.connect(client)
       launcher.startListening()

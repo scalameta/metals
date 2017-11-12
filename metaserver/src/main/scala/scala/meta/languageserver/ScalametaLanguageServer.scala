@@ -260,6 +260,7 @@ class ScalametaLanguageServer(
   }
 
   // Unimplemented features
+  override def initialized(params: InitializedParams) = ???
   def codeAction(params: CodeActionParams): CompletableFuture[JList[_ <: Command]] = ???
   def codeLens(params: CodeLensParams): CompletableFuture[JList[_ <: CodeLens]] = ???
   def didClose(params: DidCloseTextDocumentParams) = ???
