@@ -45,6 +45,7 @@ See the [contributing guide](CONTRIBUTING.md).
 The current maintainers (people who can merge pull requests) are:
 
 * Gabriele Petronella - [`@gabro`](https://github.com/gabro)
+* Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
 * Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
 
 ## Acknowledgement
