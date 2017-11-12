@@ -33,10 +33,12 @@ import scala.collection.JavaConverters._
 
 import com.typesafe.scalalogging.LazyLogging
 
+import metaserver._
+
 class ScalametaLanguageServer(
     cwd: AbsolutePath,
     stdout: PrintStream
-)(implicit s: Scheduler) extends LanguageServer with LanguageClientAware with TextDocumentService with WorkspaceService with LazyLogging {
+)(implicit s: Scheduler) extends LanguageServer with LanguageClientAware with LazyLogging {
 
   implicit val workspacePath: AbsolutePath = cwd
 
@@ -139,7 +141,10 @@ class ScalametaLanguageServer(
     new Object
   }
 
-  override def didChangeWatchedFiles(params: DidChangeWatchedFilesParams): Unit =
+  override def getTextDocumentService(): TextDocumentService = new ScalametaTextDocumentService(this)
+  override def getWorkspaceService(): WorkspaceService = new ScalametaWorkspaceService(this)
+
+  def didChangeWatchedFiles(params: DidChangeWatchedFilesParams): Unit =
     params.getChanges.asScala.foreach {
       case change: FileEvent if change.getType == FileChangeType.Created || change.getType == FileChangeType.Changed =>
         Uri.toPath(change.getUri).foreach { path =>
@@ -153,22 +158,19 @@ class ScalametaLanguageServer(
         ()
     }
 
-  override def didOpen(params: DidOpenTextDocumentParams): Unit = {
+  def didOpen(params: DidOpenTextDocumentParams): Unit = {
     val document = params.getTextDocument
     Uri.toPath(document.getUri).foreach(p => buffers.changed(p, document.getText))
   }
 
-  override def didChange(params: DidChangeTextDocumentParams): Unit = {
+  def didChange(params: DidChangeTextDocumentParams): Unit = {
     val document = params.getTextDocument
     params.getContentChanges.asScala.foreach { c =>
       Uri.toPath(document.getUri).foreach(p => buffers.changed(p, c.getText))
     }
   }
 
-  override def getTextDocumentService(): TextDocumentService = this
-  override def getWorkspaceService(): WorkspaceService = this
-
-  override def formatting(params: DocumentFormattingParams) = CompletableFuture.completedFuture {
+  def formatting(params: DocumentFormattingParams): CompletableFuture[JList[_ <: TextEdit]] = CompletableFuture.completedFuture {
     val document = params.getTextDocument
     try {
       val path = Uri.toPath(document.getUri).get
@@ -194,7 +196,7 @@ class ScalametaLanguageServer(
     }
   }
 
-  override def documentSymbol(params: DocumentSymbolParams) = CompletableFuture.completedFuture {
+  def documentSymbol(params: DocumentSymbolParams): CompletableFuture[JList[_ <: SymbolInformation]] = CompletableFuture.completedFuture {
     val document = params.getTextDocument
     val path = Uri.toPath(document.getUri).get
     symbol.documentSymbols(path.toRelative(cwd)).map {
@@ -205,7 +207,7 @@ class ScalametaLanguageServer(
     }.asJava
   }
 
-  override def definition(params: TextDocumentPositionParams) = CompletableFuture.completedFuture {
+  def definition(params: TextDocumentPositionParams): CompletableFuture[JList[_ <: Location]] = CompletableFuture.completedFuture {
     val document = params.getTextDocument
     val position = params.getPosition
     val path = Uri.toPath(document.getUri).get.toRelative(cwd)
@@ -216,7 +218,7 @@ class ScalametaLanguageServer(
       }.asJava
   }
 
-  override def completion(params: TextDocumentPositionParams) = CompletableFuture.completedFuture {
+  def completion(params: TextDocumentPositionParams): CompletableFuture[JEither[JList[CompletionItem], CompletionList]] = CompletableFuture.completedFuture {
     val document = params.getTextDocument
     val position = params.getPosition
 
@@ -242,7 +244,7 @@ class ScalametaLanguageServer(
     }
   }
 
-  override def hover(params: TextDocumentPositionParams) = CompletableFuture.completedFuture {
+  def hover(params: TextDocumentPositionParams) = CompletableFuture.completedFuture {
     val document = params.getTextDocument
     val position = params.getPosition
     val path = Uri.toPath(document.getUri).get
@@ -258,21 +260,22 @@ class ScalametaLanguageServer(
   }
 
   // Unimplemented features
-  override def codeAction(params: CodeActionParams) = ???
-  override def codeLens(params: CodeLensParams) = ???
-  override def didClose(params: DidCloseTextDocumentParams) = ???
-  override def didSave(params: DidSaveTextDocumentParams) = ???
-  override def documentHighlight(params: TextDocumentPositionParams) = ???
-  override def onTypeFormatting(params: DocumentOnTypeFormattingParams) = ???
-  override def rangeFormatting(params: DocumentRangeFormattingParams) = ???
-  override def references(params: ReferenceParams) = ???
-  override def rename(params: RenameParams) = ???
-  override def resolveCodeLens(params: CodeLens) = ???
-  override def resolveCompletionItem(params: CompletionItem) = ???
-  override def signatureHelp(params: TextDocumentPositionParams) = ???
-  override def didChangeConfiguration(params: DidChangeConfigurationParams) = ???
-  override def symbol(params: WorkspaceSymbolParams) = ???
-
+  def codeAction(params: CodeActionParams): CompletableFuture[JList[_ <: Command]] = ???
+  def codeLens(params: CodeLensParams): CompletableFuture[JList[_ <: CodeLens]] = ???
+  def didClose(params: DidCloseTextDocumentParams) = ???
+  def didSave(params: DidSaveTextDocumentParams) = ???
+  def documentHighlight(params: TextDocumentPositionParams): CompletableFuture[JList[_ <: DocumentHighlight]] = ???
+  def onTypeFormatting(params: DocumentOnTypeFormattingParams): CompletableFuture[JList[_ <: TextEdit]] = ???
+  def rangeFormatting(params: DocumentRangeFormattingParams): CompletableFuture[JList[_ <: TextEdit]] = ???
+  def references(params: ReferenceParams): CompletableFuture[JList[_ <: Location]] = ???
+  def rename(params: RenameParams): CompletableFuture[WorkspaceEdit] = ???
+  def resolveCodeLens(params: CodeLens): CompletableFuture[CodeLens] = ???
+  def resolveCompletionItem(params: CompletionItem): CompletableFuture[CompletionItem] = ???
+  def signatureHelp(params: TextDocumentPositionParams): CompletableFuture[SignatureHelp] = ???
+  def documentLink(params: DocumentLinkParams): CompletableFuture[JList[DocumentLink]] = ???
+  def documentLinkResolve(params: DocumentLink): CompletableFuture[DocumentLink] = ???
+  def didChangeConfiguration(params: DidChangeConfigurationParams) = ???
+  def symbol(params: WorkspaceSymbolParams): CompletableFuture[JList[_ <: SymbolInformation]] = ???
 }
 
 object ScalametaLanguageServer {
