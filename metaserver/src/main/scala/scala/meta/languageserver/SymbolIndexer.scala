@@ -13,6 +13,7 @@ import org.langmeta.io.RelativePath
 import ScalametaEnrichments._
 import langserver.core.Connection
 import langserver.messages.MessageType
+import langserver.types.SymbolInformation
 
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
@@ -31,11 +32,11 @@ class SymbolIndexer(
 
   def documentSymbols(
       path: RelativePath
-  ): Seq[(Position.Range, Denotation)] =
+  ): Seq[SymbolInformation] = {
     for {
       document <- Option(documents.get(path)).toList
       _ <- isFreshSemanticdb(path, document).toList
-      ResolvedName(pos: Position.Range, symbol: Symbol.Global, true) <- document.names
+      ResolvedName(position: Position.Range, symbol: Symbol.Global, true) <- document.names
       denotation <- Option(denotations.get(symbol))
       if ! {
         import denotation._
@@ -43,7 +44,13 @@ class SymbolIndexer(
         isTypeParam ||
         isParam
       } // not interesting for this service
-    } yield pos -> denotation
+    } yield SymbolInformation(
+      denotation.name,
+      denotation.symbolKind,
+      path.toAbsolute.toLocation(position),
+      Option(denotations.get(symbol.owner)).map(_.name)
+    )
+  }
 
   def goToDefinition(
       path: RelativePath,

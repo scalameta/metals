@@ -201,12 +201,7 @@ class ScalametaLanguageServer(
       td: TextDocumentIdentifier
   ): Seq[SymbolInformation] = {
     val path = Uri.toPath(td.uri).get
-    symbol.documentSymbols(path.toRelative(cwd)).map {
-      case (position, denotation @ Denotation(_, name, signature, _)) =>
-        val location = path.toLocation(position)
-        val kind = denotation.symbolKind
-        SymbolInformation(name, kind, location, Some(signature))
-    }
+    symbol.documentSymbols(path.toRelative(cwd))
   }
 
   override def gotoDefinitionRequest(
