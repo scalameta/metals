@@ -111,6 +111,8 @@ class ClasspathCtagsTest extends FunSuite with DiffAssertions {
          |[536..549): scala.runtime => _root_.scala.
          |[536..549): scala.runtime => _root_.scala.runtime.
          |[566..573): CharRef <= _root_.scala.runtime.CharRef#
+         |[638..654): serialVersionUID <= _root_.scala.runtime.CharRef.serialVersionUID.
+         |[696..700): elem <= _root_.scala.runtime.CharRef#elem.
          |[772..780): toString <= _root_.scala.runtime.CharRef#toString.
          |[857..863): create <= _root_.scala.runtime.CharRef.create.
          |[925..929): zero <= _root_.scala.runtime.CharRef.zero.
@@ -119,8 +121,10 @@ class ClasspathCtagsTest extends FunSuite with DiffAssertions {
          |_root_.scala. => package scala
          |_root_.scala.runtime. => package runtime
          |_root_.scala.runtime.CharRef# => class CharRef
+         |_root_.scala.runtime.CharRef#elem. => var elem
          |_root_.scala.runtime.CharRef#toString. => def toString
          |_root_.scala.runtime.CharRef.create. => def create
+         |_root_.scala.runtime.CharRef.serialVersionUID. => val serialVersionUID
          |_root_.scala.runtime.CharRef.zero. => def zero
          |
          |

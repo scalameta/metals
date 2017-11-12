@@ -83,6 +83,14 @@ object JavaCtags {
         super.visit(t, ignore)
       }
       override def visit(
+          t: ast.body.FieldDeclaration,
+          ignore: Unit
+      ): Unit = withOwner(owner(t.isStatic)) {
+        val name = t.getVariables.get(0).getName
+        val flags = if (t.isFinal) VAL else VAR
+        term(name.asString(), getPosition(name), flags)
+      }
+      override def visit(
           t: ast.body.MethodDeclaration,
           ignore: Unit
       ): Unit = withOwner(owner(t.isStatic)) {

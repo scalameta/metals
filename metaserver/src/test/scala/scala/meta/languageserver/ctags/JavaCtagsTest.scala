@@ -78,4 +78,25 @@ class JavaCtagsTest extends BaseCtagsTest {
       |_root_.G.I. => val I
       |""".stripMargin
   )
+
+  check(
+    "field.java",
+    """
+      |public class J {
+      |    public static final int FIELD = 1;
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Java
+      |
+      |Names:
+      |[14..15): J <= _root_.J#
+      |[46..51): FIELD <= _root_.J.FIELD.
+      |
+      |Symbols:
+      |_root_.J# => class J
+      |_root_.J.FIELD. => val FIELD
+    """.stripMargin
+  )
 }
