@@ -1,6 +1,7 @@
 package scala.meta.languageserver.ctags
 
 import java.io.IOException
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -15,6 +16,7 @@ import java.util.zip.ZipInputStream
 import scala.collection.GenSeq
 import scala.collection.parallel.mutable.ParArray
 import scala.meta.parsers.ParseException
+import com.thoughtworks.qdox.parser.{ParseException => QParseException}
 import scala.reflect.ClassTag
 import scala.util.Sorting
 import scala.util.control.NonFatal
@@ -25,6 +27,7 @@ import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Fragment
 import org.langmeta.io.RelativePath
+import org.langmeta.semanticdb.Database
 import org.langmeta.semanticdb.Document
 
 /**
@@ -62,7 +65,7 @@ object Ctags extends LazyLogging {
       if (result == 0) 1 // prevent divide by zero
       else result
     }
-    val decimal = new DecimalFormat("###.###")
+    val decimal = new DecimalFormat("###,###")
     val N = fragments.length
     def updateTotalLines(doc: Document): Unit = doc.input match {
       case Input.VirtualFile(_, contents) =>
@@ -92,11 +95,28 @@ object Ctags extends LazyLogging {
           callback(doc)
         }
       } catch {
-        case _: ParseException => // nothing
+        case _: ParseException | _: QParseException => // nothing
         case NonFatal(e) =>
-          logger.error(e.getMessage, e)
+          logger.error(s"Error indexing ${fragment.syntax}", e)
       }
     }
+    reportProgress(totalIndexedFiles.get)
+    logger.info(
+      s"Completed indexing ${decimal.format(totalIndexedFiles.get)} files with " +
+        s"total ${decimal.format(totalIndexedLines.get())} lines of code"
+    )
+  }
+
+  /** Index all documents into a single scala.meta.Database. */
+  def indexDatabase(
+      classpath: List[AbsolutePath],
+      shouldIndex: RelativePath => Boolean = _ => true
+  ): Database = {
+    val buffer = List.newBuilder[Document]
+    index(classpath, shouldIndex) { doc =>
+      buffer += doc
+    }
+    Database(buffer.result())
   }
 
   /** Index single Scala or Java source file from memory */
@@ -106,9 +126,14 @@ object Ctags extends LazyLogging {
   /** Index single Scala or Java from disk or zip file. */
   def index(fragment: Fragment): Document = {
     val filename = fragment.uri.toString
-    val contents =
-      new String(FileIO.readAllBytes(fragment.uri), StandardCharsets.UTF_8)
-    index(Input.VirtualFile(filename, contents))
+    val uri = {
+      // Need special handling because https://github.com/scalameta/scalameta/issues/1163
+      if (isZip(fragment.base.toNIO.getFileName.toString))
+        new URI(s"jar:${fragment.base.toURI.normalize()}!/${fragment.name}")
+      else fragment.uri
+    }
+    val contents = new String(FileIO.readAllBytes(uri), StandardCharsets.UTF_8)
+    index(Input.VirtualFile(uri.toString, contents))
   }
 
   /** Index single Scala or Java source file from memory */
@@ -135,6 +160,10 @@ object Ctags extends LazyLogging {
 
   private def canIndex(path: String): Boolean =
     isScala(path) || isJava(path)
+  private def canUnzip(path: String): Boolean =
+    isJar(path) || isZip(path)
+  private def isJar(path: String): Boolean = path.endsWith(".jar")
+  private def isZip(path: String): Boolean = path.endsWith(".zip")
   private def isJava(path: String): Boolean = path.endsWith(".java")
   private def isScala(path: String): Boolean = path.endsWith(".scala")
   private def isScala(path: Path): Boolean = PathIO.extension(path) == "scala"
@@ -190,7 +219,7 @@ object Ctags extends LazyLogging {
           }
         )
       } else if (base.isFile) {
-        if (base.toString.endsWith(".jar")) {
+        if (canUnzip(base.toString())) {
           exploreJar(base)
         } else {
           sys.error(

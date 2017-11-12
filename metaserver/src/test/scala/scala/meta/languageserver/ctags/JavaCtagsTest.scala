@@ -1,5 +1,8 @@
 package scala.meta.languageserver.ctags
 
+import java.nio.file.Paths
+import scala.meta.languageserver.CompilerConfig
+
 class JavaCtagsTest extends BaseCtagsTest {
   check(
     "interface.java",
@@ -115,4 +118,45 @@ class JavaCtagsTest extends BaseCtagsTest {
       |_root_.J.FIELD. => val FIELD
     """.stripMargin
   )
+
+  test("index jdk sources") {
+    val jdk = CompilerConfig.jdkSources.get
+    val DefaultFileSystem =
+      Paths.get("java").resolve("io").resolve("DefaultFileSystem.java")
+    val db = Ctags.indexDatabase(jdk :: Nil, shouldIndex = { path =>
+      path.toNIO.endsWith(DefaultFileSystem)
+    })
+    val obtained = db.syntax
+      .replace(jdk.toString(), "JAVA_HOME")
+      .replace("-" * jdk.toString().length, "-" * "JAVA_HOME".length)
+    val expected =
+      """
+        |jar:file://JAVA_HOME!/java/io/DefaultFileSystem.java
+        |----------------------------------------------------
+        |Language:
+        |Java
+        |
+        |Names:
+        |[219..223): java => _root_.java.
+        |[224..226): io => _root_.java.io.
+        |[260..277): DefaultFileSystem <= _root_.java.io.DefaultFileSystem.
+        |[260..277): DefaultFileSystem <= _root_.java.io.DefaultFileSystem#
+        |[387..400): getFileSystem <= _root_.java.io.DefaultFileSystem.getFileSystem.
+        |
+        |Symbols:
+        |_root_.java. => package java
+        |_root_.java.io. => package io
+        |_root_.java.io.DefaultFileSystem# => class DefaultFileSystem
+        |_root_.java.io.DefaultFileSystem. => object DefaultFileSystem
+        |_root_.java.io.DefaultFileSystem.getFileSystem. => def getFileSystem
+      """.stripMargin
+    println(obtained)
+    assertNoDiff(obtained, expected)
+  }
+
+  // Uncomment to run indexer on full JDK (~2.5M loc)
+  ignore("jdk all") {
+    val db = Ctags.indexDatabase(CompilerConfig.jdkSources.get :: Nil)
+    pprint.log(db.documents.length)
+  }
 }

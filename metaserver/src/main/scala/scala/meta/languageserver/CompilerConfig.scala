@@ -2,6 +2,7 @@ package scala.meta.languageserver
 
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.Properties
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
@@ -43,6 +44,15 @@ case class CompilerConfig(
 
 object CompilerConfig extends LazyLogging {
 
+  def jdkSourcePath: Option[AbsolutePath] =
+    sys.env.get("JAVA_HOME").map(AbsolutePath(_).resolve("src.zip"))
+
+  def jdkSources: Option[AbsolutePath] =
+    for {
+      path <- jdkSourcePath
+      if Files.isRegularFile(path.toNIO)
+    } yield path
+
   def fromPath(
       path: AbsolutePath
   )(implicit cwd: AbsolutePath): CompilerConfig = {
@@ -67,8 +77,10 @@ object CompilerConfig extends LazyLogging {
       props.getProperty("scalacOptions").split(" ").toList
     val dependencyClasspath =
       Classpath(props.getProperty("dependencyClasspath")).shallow
-    val sourceJars =
-      Classpath(props.getProperty("sourceJars")).shallow
+    val sourceJars = {
+      val result = Classpath(props.getProperty("sourceJars")).shallow
+      jdkSources.fold(result)(_ :: result)
+    }
     val classDirectory =
       AbsolutePath(props.getProperty("classDirectory"))
     CompilerConfig(
