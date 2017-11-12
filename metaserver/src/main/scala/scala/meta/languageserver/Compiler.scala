@@ -1,6 +1,5 @@
 package scala.meta.languageserver
 
-import java.io.File
 import java.io.PrintStream
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
@@ -12,6 +11,7 @@ import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
 import langserver.messages.MessageType
+import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
@@ -30,13 +30,15 @@ class Compiler(
   val documentPublisher: Observable[Document] = myDocumentPublisher
   private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()
-  val onNewCompilerConfig: Observable[Unit] =
+  val onNewCompilerConfig: Observable[
+    (Effects.InstallPresentationCompiler, Effects.IndexSourcesClasspath)
+  ] =
     config
       .map(path => CompilerConfig.fromPath(path))
       .flatMap { config =>
-        Observable.merge(
-          Observable.delay(loadNewCompilerGlobals(config)),
-          Observable.delay(indexDependencyClasspath(config))
+        Observable.fromTask(
+          Task(loadNewCompilerGlobals(config))
+            .zip(Task(indexDependencyClasspath(config)))
         )
       }
 
@@ -79,7 +81,9 @@ class Compiler(
   }
 
   private val compilerByPath = mutable.Map.empty[AbsolutePath, Global]
-  private def loadNewCompilerGlobals(config: CompilerConfig): Unit = {
+  private def loadNewCompilerGlobals(
+      config: CompilerConfig
+  ): Effects.InstallPresentationCompiler = {
     logger.info(s"Loading new compiler from config $config")
     val vd = new io.VirtualDirectory("(memory)", None)
     val settings = new Settings
@@ -93,10 +97,13 @@ class Compiler(
       // TODO(olafur) garbage collect compilers from removed files.
       compilerByPath(path) = compiler
     }
+    Effects.InstallPresentationCompiler
   }
-  private def indexDependencyClasspath(config: CompilerConfig): Unit = {
+  private def indexDependencyClasspath(
+      config: CompilerConfig
+  ): Effects.IndexSourcesClasspath = {
     val buf = List.newBuilder[AbsolutePath]
-    val sourceJars = Jars.fetch(config.libraryDependencies, out, sources = true)
+    val sourceJars = config.sourceJars
     sourceJars.foreach { jar =>
       // ensure we only index each jar once even under race conditions.
       indexedJars.computeIfAbsent(
@@ -107,12 +114,14 @@ class Compiler(
     val sourcesClasspath = buf.result()
     if (sourcesClasspath.nonEmpty) {
       logger.info(
-        s"Indexing classpath ${sourcesClasspath.mkString(File.pathSeparator)}"
+        s"Indexing classpath with ${sourcesClasspath.length} entries..."
       )
     }
     ctags.Ctags.index(sourcesClasspath) { doc =>
       documentSubscriber.onNext(doc)
     }
+    import scala.collection.JavaConverters._
+    Effects.IndexSourcesClasspath
   }
   private def noCompletions: List[(String, String)] = {
     connection.showMessage(

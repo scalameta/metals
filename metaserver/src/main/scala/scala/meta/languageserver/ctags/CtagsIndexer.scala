@@ -10,6 +10,9 @@ trait CtagsIndexer {
     indexRoot()
     names.result() -> symbols.result()
   }
+  def owner(isStatic: Boolean): Symbol.Global =
+    if (isStatic) currentOwner.toTerm
+    else currentOwner
   def withOwner[A](owner: Symbol.Global = currentOwner)(thunk: => A): A = {
     val old = currentOwner
     currentOwner = owner

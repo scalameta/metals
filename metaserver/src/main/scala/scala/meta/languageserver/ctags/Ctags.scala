@@ -7,10 +7,16 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.text.DecimalFormat
+import java.text.NumberFormat
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
 import scala.collection.GenSeq
 import scala.collection.parallel.mutable.ParArray
 import scala.meta.parsers.ParseException
+import scala.reflect.ClassTag
+import scala.util.Sorting
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.inputs.Input
@@ -37,22 +43,47 @@ object Ctags extends LazyLogging {
    * Build an index from a classpath of -sources.jar
    *
    * @param shouldIndex An optional filter to skip particular relative filenames.
-   * @param inParallel If true, use parallel collection to index using all
-   *                   available CPU power. If false, uses single-threaded
-   *                   collection.
    * @param callback A callback that is called as soon as a document has been
    *                 indexed.
    */
   def index(
       classpath: List[AbsolutePath],
-      shouldIndex: RelativePath => Boolean = _ => true,
-      inParallel: Boolean = true
+      shouldIndex: RelativePath => Boolean = _ => true
   )(callback: Document => Unit): Unit = {
-    val fragments = allClasspathFragments(classpath, inParallel)
+    val fragments = allClasspathFragments(classpath)
+    val totalIndexedFiles = new AtomicInteger()
+    val totalIndexedLines = new AtomicInteger()
+    val start = System.nanoTime()
+    def elapsed: Long =
+      TimeUnit.SECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS)
+    val decimal = new DecimalFormat("###.###")
+    val N = fragments.length
+    def updateTotalLines(doc: Document): Unit = doc.input match {
+      case Input.VirtualFile(_, contents) =>
+        // NOTE(olafur) it would be interesting to have separate statistics for
+        // Java/Scala lines/s but that would require a more sophisticated setup.
+        totalIndexedLines.addAndGet(countLines(contents))
+      case _ =>
+    }
+    def reportProgress(indexedFiles: Int): Unit = {
+      val percentage = ((indexedFiles / N.toDouble) * 100).toInt
+      val loc = decimal.format(totalIndexedLines.get() / elapsed)
+      logger.info(
+        s"Progress $percentage%, ${decimal.format(indexedFiles)} files indexed " +
+          s"out of total ${decimal.format(fragments.length)} ($loc loc/s)"
+      )
+    }
+    logger.info(s"Indexing $N source files")
     fragments.foreach { fragment =>
       try {
+        val indexedFiles = totalIndexedFiles.incrementAndGet()
+        if (indexedFiles % 200 == 0) {
+          reportProgress(indexedFiles)
+        }
         if (shouldIndex(fragment.name)) {
-          callback(index(fragment))
+          val doc = index(fragment)
+          updateTotalLines(doc)
+          callback(doc)
         }
       } catch {
         case _: ParseException => // nothing
@@ -79,7 +110,7 @@ object Ctags extends LazyLogging {
     logger.trace(s"Indexing ${input.path} with length ${input.value.length}")
     val indexer: CtagsIndexer =
       if (isScala(input.path)) ScalaCtags.index(input)
-      else if (isJava(input.path)) JavaCtags.index(input)
+      else if (isJava(input.path)) QDoxCtags.index(input)
       else {
         throw new IllegalArgumentException(
           s"Unknown file extension ${input.path}"
@@ -96,7 +127,9 @@ object Ctags extends LazyLogging {
     )
   }
 
-  private def canIndex(path: String): Boolean = isScala(path) || isJava(path)
+  private def canIndex(path: String): Boolean =
+//    isScala(path) ||
+    isJava(path)
   private def isJava(path: String): Boolean = path.endsWith(".java")
   private def isScala(path: String): Boolean = path.endsWith(".scala")
   private def isScala(path: Path): Boolean = PathIO.extension(path) == "scala"
@@ -112,11 +145,8 @@ object Ctags extends LazyLogging {
    */
   private def allClasspathFragments(
       classpath: List[AbsolutePath],
-      inParallel: Boolean
-  ): GenSeq[Fragment] = {
-    var buf =
-      if (inParallel) ParArray.newBuilder[Fragment]
-      else List.newBuilder[Fragment]
+  ): ParArray[Fragment] = {
+    var buf = ParArray.newBuilder[Fragment]
     classpath.foreach { base =>
       def exploreJar(base: AbsolutePath): Unit = {
         val stream = Files.newInputStream(base.toNIO)
@@ -167,6 +197,27 @@ object Ctags extends LazyLogging {
         // Skip
       }
     }
-    buf.result()
+    val result = buf.result()
+    Sorting.stableSort(result.arrayseq)(
+      implicitly[ClassTag[Fragment]],
+      Ordering.by { fragment =>
+        PathIO.extension(fragment.name.toNIO) match {
+          case "scala" => 1
+          case "java" => 2
+          case _ => 3
+        }
+      }
+    )
+    result
+  }
+
+  private def countLines(string: String): Int = {
+    var i = 0
+    var lines = 0
+    while (i < string.length) {
+      if (string.charAt(i) == '\n') lines += 1
+      i += 1
+    }
+    lines
   }
 }

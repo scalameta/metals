@@ -16,7 +16,7 @@ import langserver.messages.MessageType
 
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
-    val indexer: Observable[Unit],
+    val indexer: Observable[Effects.IndexSemanticdb],
     logger: Logger,
     connection: Connection,
     buffers: Buffers,
@@ -259,7 +259,10 @@ object SymbolIndexer {
       )
     }
 
-    val indexer = semanticdbs.map(db => db.documents.foreach(indexDocument))
+    val indexer = semanticdbs.map { db =>
+      db.documents.foreach(indexDocument)
+      Effects.IndexSemanticdb
+    }
 
     new SymbolIndexer(
       indexer,

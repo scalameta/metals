@@ -26,31 +26,28 @@ object ScalametaLanguageServerPlugin extends AutoPlugin {
             scalacOptions.value.mkString(" ")
           )
           props.setProperty(
-            "classpath",
-            fullClasspath.value
+            "dependencyClasspath",
+            dependencyClasspath.value
               .map(_.data.toString)
               .mkString(File.pathSeparator)
+          )
+          props.setProperty(
+            "classDirectory",
+            classDirectory.value.getAbsolutePath
           )
           props.setProperty(
             "sources",
             sources.value.distinct.mkString(File.pathSeparator)
           )
-          def libraryDependencyToString(m: ModuleID): String = {
-            // HACK(olafur) This will not work for js/native, figure out
-            // a the correct way to do this.
-            val cross = m.crossVersion match {
-              case _: CrossVersion.Full => "_" + scalaVersion.value
-              case _: CrossVersion.Binary =>
-                "_" + scalaBinaryVersion.value
-              case _ => ""
-            }
-            s"${m.organization}:${m.name}${cross}:${m.revision}"
-          }
+          val sourceJars = for {
+            configurationReport <- updateClassifiers.value.configurations
+            moduleReport <- configurationReport.modules
+            (artifact, file) <- moduleReport.artifacts
+            if artifact.classifier.exists(_ == "sources")
+          } yield file
           props.setProperty(
-            "libraryDependencies",
-            libraryDependencies.value
-              .map(libraryDependencyToString)
-              .mkString(";")
+            "sourceJars",
+            sourceJars.mkString(File.pathSeparator)
           )
           val out = new ByteArrayOutputStream()
           props.store(out, null)

@@ -1,18 +1,41 @@
 package scala.meta.languageserver.ctags
 
-import java.nio.file.FileVisitOption
-import com.github.javaparser.ast
 import scala.meta._
-import com.github.javaparser.{Position => JPosition}
-import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.visitor.VoidVisitorAdapter
-import org.langmeta.languageserver.InputEnrichments._
 import scala.meta.languageserver.ScalametaEnrichments._
+import com.github.javaparser.JavaParser
+import com.github.javaparser.ParseProblemException
+import com.github.javaparser.ParseStart.COMPILATION_UNIT
+import com.github.javaparser.ParserConfiguration
+import com.github.javaparser.Providers
+import com.github.javaparser.ast
+import com.github.javaparser.ast.Node
+import com.github.javaparser.ast.validator.ProblemReporter
+import com.github.javaparser.ast.validator.Validator
+import com.github.javaparser.ast.visitor.VoidVisitorAdapter
+import com.github.javaparser.{Position => JPosition}
+import org.langmeta.languageserver.InputEnrichments._
 
 object JavaCtags {
-  locally {
-    FileVisitOption.FOLLOW_LINKS
+  val parserConfig: ParserConfiguration = {
+    val config = new ParserConfiguration
+    // disable a few features we don't need, for performance reasons.
+    // early measurements with the default parser showed it handles ~10-15k loc/s,
+    // which is slow compared to 30-45k loc/s for scalameta.
+    config.setAttributeComments(false)
+    config.setDoNotConsiderAnnotationsAsNodeStartForCodeAttribution(true)
+    config.setValidator(new Validator {
+      override def accept(node: Node, problemReporter: ProblemReporter): Unit =
+        ()
+    })
+    config
   }
+  def parseJavaCompilationUnit(contents: String): ast.CompilationUnit = {
+    val result = new JavaParser(parserConfig)
+      .parse(COMPILATION_UNIT, Providers.provider(contents))
+    if (result.isSuccessful) result.getResult.get
+    else throw new ParseProblemException(result.getProblems)
+  }
+
   def index(input: Input.VirtualFile): CtagsIndexer = {
     def getPosition(t: ast.Node): Position.Range =
       getPositionOption(t).getOrElse(Position.Range(input, -1, -1))
@@ -35,12 +58,9 @@ object JavaCtags {
           end.line - 1,
           end.column - 1
         )
-    val cu: ast.CompilationUnit = JavaParser.parse(input.value)
+    val cu: ast.CompilationUnit = parseJavaCompilationUnit(input.value)
     new VoidVisitorAdapter[Unit] with CtagsIndexer {
       override def language: String = "Java"
-      def owner(isStatic: Boolean): Symbol.Global =
-        if (isStatic) currentOwner.toTerm
-        else currentOwner
       override def visit(
           t: ast.PackageDeclaration,
           ignore: Unit
