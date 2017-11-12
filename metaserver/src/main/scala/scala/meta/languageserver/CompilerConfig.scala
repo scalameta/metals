@@ -29,17 +29,8 @@ object CompilerConfig extends LazyLogging {
         .toList
       val scalacOptions = props.getProperty("scalacOptions").split(" ").toList
       val classpath = props.getProperty("classpath")
-      val libraryDependencies = props
-        .getProperty("libraryDependencies")
-        .split(";")
-        .iterator
-        .flatMap { moduleId =>
-          moduleId.split(":") match {
-            case Array(org, name, rev) =>
-              ModuleID(org, name, rev) :: Nil
-            case _ => Nil
-          }
-        }
+      val libraryDependencies =
+        ModuleID.fromString(props.getProperty("libraryDependencies"))
       CompilerConfig(
         sources,
         scalacOptions,

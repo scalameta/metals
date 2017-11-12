@@ -28,7 +28,7 @@ class Compiler(
   private val (documentSubscriber, myDocumentPublisher) =
     Observable.multicast[Document](MulticastStrategy.Publish)
   val documentPublisher: Observable[Document] = myDocumentPublisher
-  private val indexedJars: java.util.Map[AbsolutePath, Unit] =
+  private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()
   val onNewCompilerConfig: Observable[Unit] =
     config
@@ -96,7 +96,8 @@ class Compiler(
   }
   private def indexDependencyClasspath(config: CompilerConfig): Unit = {
     val buf = List.newBuilder[AbsolutePath]
-    Jars.fetch(config.libraryDependencies, out, sources = true).foreach { jar =>
+    val sourceJars = Jars.fetch(config.libraryDependencies, out, sources = true)
+    sourceJars.foreach { jar =>
       // ensure we only index each jar once even under race conditions.
       indexedJars.computeIfAbsent(
         jar,

@@ -2,6 +2,7 @@ package scala.meta.languageserver
 
 import java.io.OutputStreamWriter
 import java.io.PrintStream
+import com.typesafe.scalalogging.LazyLogging
 import coursier._
 import org.langmeta.io.AbsolutePath
 
@@ -9,7 +10,22 @@ case class ModuleID(organization: String, name: String, version: String) {
   def toCoursier: Dependency = Dependency(Module(organization, name), version)
   override def toString: String = s"$organization:$name:$version"
 }
-object Jars {
+object ModuleID {
+  def fromString(string: String): List[ModuleID] = {
+    string
+      .split(";")
+      .iterator
+      .flatMap { moduleId =>
+        moduleId.split(":") match {
+          case Array(org, name, rev) =>
+            ModuleID(org, name, rev) :: Nil
+          case _ => Nil
+        }
+      }
+      .toList
+  }
+}
+object Jars extends LazyLogging {
   def fetch(
       org: String,
       artifact: String,
@@ -30,10 +46,10 @@ object Jars {
       Cache.ivy2Local,
       MavenRepository("https://repo1.maven.org/maven2")
     )
-    val logger =
+    val term =
       new TermDisplay(new OutputStreamWriter(out), fallbackMode = true)
-    logger.init()
-    val fetch = Fetch.from(repositories, Cache.fetch(logger = Some(logger)))
+    term.init()
+    val fetch = Fetch.from(repositories, Cache.fetch(logger = Some(term)))
     val resolution = res.process.run(fetch).unsafePerformSync
     val errors = resolution.metadataErrors
     if (errors.nonEmpty) {
@@ -51,16 +67,20 @@ object Jars {
       )
       .unsafePerformSync
       .map(_.toEither)
-    val failures = localArtifacts.collect { case Left(e) => e }
-    if (failures.nonEmpty) {
-      sys.error(failures.mkString("\n"))
-    } else {
-      val jars = localArtifacts.collect {
-        case Right(file) if file.getName.endsWith(".jar") =>
-          file
-      }
-      logger.stop()
-      jars.map(AbsolutePath(_))
+    val jars = localArtifacts.flatMap {
+      case Left(e) =>
+        if (sources) {
+          // There is no need to fail fast here if we are fetching source jars.
+          logger.error(e.describe)
+          Nil
+        } else {
+          throw new IllegalArgumentException(e.describe)
+        }
+      case Right(jar) if jar.getName.endsWith(".jar") =>
+        AbsolutePath(jar) :: Nil
+      case _ => Nil
     }
+    term.stop()
+    jars
   }
 }

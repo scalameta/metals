@@ -38,6 +38,9 @@ object JavaCtags {
     val cu: ast.CompilationUnit = JavaParser.parse(input.value)
     new VoidVisitorAdapter[Unit] with CtagsIndexer {
       override def language: String = "Java"
+      def owner(isStatic: Boolean): Symbol.Global =
+        if (isStatic) currentOwner.toTerm
+        else currentOwner
       override def visit(
           t: ast.PackageDeclaration,
           ignore: Unit
@@ -54,10 +57,20 @@ object JavaCtags {
         loop(t.getName)
         super.visit(t, ignore)
       }
-      def owner(isStatic: Boolean): Symbol.Global =
-        if (isStatic) currentOwner.toTerm
-        else currentOwner
-
+      override def visit(
+          t: ast.body.EnumDeclaration,
+          ignore: Unit
+      ): Unit = withOwner(owner(t.isStatic)) {
+        term(t.getName.asString(), getPosition(t.getName), OBJECT)
+        super.visit(t, ignore)
+      }
+      override def visit(
+          t: ast.body.EnumConstantDeclaration,
+          ignore: Unit
+      ): Unit = withOwner() {
+        term(t.getName.asString(), getPosition(t.getName), VAL)
+        super.visit(t, ignore)
+      }
       override def visit(
           t: ast.body.ClassOrInterfaceDeclaration,
           ignore: Unit

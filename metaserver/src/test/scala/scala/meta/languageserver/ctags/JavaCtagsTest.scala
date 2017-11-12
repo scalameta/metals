@@ -1,51 +1,81 @@
 package scala.meta.languageserver.ctags
 
-import scala.meta.testkit.DiffAssertions
-import org.scalatest.FunSuite
-
-class JavaCtagsTest extends FunSuite with DiffAssertions {
-  test("index java source") {
-    val obtained = Ctags.index(
-      "a.java",
-      """package a.b;
-        |interface A { String a(); }
-        |class B {
-        |  static void c() { }
-        |  int d() { }
-        |  class E {}
-        |  static class F {}
-        |}
-        |""".stripMargin
-    )
-    println(obtained.syntax)
-    assertNoDiff(
-      obtained.syntax,
-      """
-        |Language:
-        |Java
-        |
-        |Names:
-        |[8..11): a.b => _root_.a.
-        |[8..11): a.b => _root_.a.b.
-        |[23..24): A <= _root_.a.b.A#
-        |[34..35): a <= _root_.a.b.A#a.
-        |[47..48): B <= _root_.a.b.B#
-        |[65..66): c <= _root_.a.b.B.c.
-        |[79..80): d <= _root_.a.b.B#d.
-        |[95..96): E <= _root_.a.b.B#E#
-        |[115..116): F <= _root_.a.b.B.F#
-        |
-        |Symbols:
-        |_root_.a. => package a
-        |_root_.a.b. => package b
-        |_root_.a.b.A# => trait A
-        |_root_.a.b.A#a. => def a
-        |_root_.a.b.B# => class B
-        |_root_.a.b.B#E# => class E
-        |_root_.a.b.B#d. => def d
-        |_root_.a.b.B.F# => class F
-        |_root_.a.b.B.c. => def c
-        |""".stripMargin
-    )
-  }
+class JavaCtagsTest extends BaseCtagsTest {
+  check(
+    "interface.java",
+    """package a.b;
+      |interface A {
+      |  public String a();
+      |}
+      |""".stripMargin,
+    """
+      |Language:
+      |Java
+      |
+      |Names:
+      |[8..11): a.b => _root_.a.
+      |[8..11): a.b => _root_.a.b.
+      |[23..24): A <= _root_.a.b.A#
+      |[43..44): a <= _root_.a.b.A#a.
+      |
+      |Symbols:
+      |_root_.a. => package a
+      |_root_.a.b. => package b
+      |_root_.a.b.A# => trait A
+      |_root_.a.b.A#a. => def a
+      |""".stripMargin
+  )
+  check(
+    "class.java",
+    """
+      |
+      |class B {
+      |  public static void c() { }
+      |  public int d() { }
+      |  public class E {}
+      |  public static class F {}
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Java
+      |
+      |Names:
+      |[8..9): B <= _root_.B#
+      |[33..34): c <= _root_.B.c.
+      |[54..55): d <= _root_.B#d.
+      |[77..78): E <= _root_.B#E#
+      |[104..105): F <= _root_.B.F#
+      |
+      |Symbols:
+      |_root_.B# => class B
+      |_root_.B#E# => class E
+      |_root_.B#d. => def d
+      |_root_.B.F# => class F
+      |_root_.B.c. => def c
+    """.stripMargin
+  )
+  check(
+    "enum.java",
+    """
+      |enum G {
+      |  H,
+      |  I
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Java
+      |
+      |Names:
+      |[6..7): G <= _root_.G.
+      |[12..13): H <= _root_.G.H.
+      |[17..18): I <= _root_.G.I.
+      |
+      |Symbols:
+      |_root_.G. => object G
+      |_root_.G.H. => val H
+      |_root_.G.I. => val I
+      |""".stripMargin
+  )
 }

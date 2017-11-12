@@ -131,12 +131,10 @@ class ScalametaLanguageServer(
   )(fallback: AbsolutePath => Unit): Unit = {
     val name = PathIO.extension(path.toNIO)
     logger.info(s"File $path changed, extension=$name")
-    if (name == "semanticdb") {
-      semanticdbSubscriber.onNext(path)
-    } else if (name == "compilerconfig") {
-      compilerConfigSubscriber.onNext(path)
-    } else {
-      fallback(path)
+    name match {
+      case "semanticdb" => semanticdbSubscriber.onNext(path)
+      case "compilerconfig" => compilerConfigSubscriber.onNext(path)
+      case _ => fallback(path)
     }
   }
 
