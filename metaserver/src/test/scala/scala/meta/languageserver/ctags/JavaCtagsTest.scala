@@ -73,24 +73,23 @@ class JavaCtagsTest extends BaseCtagsTest {
       |}
     """.stripMargin,
     """
+      |
       |Language:
       |Java
       |
       |Names:
       |[6..7): G <= _root_.G.
-      |[6..7): G <= _root_.G#
-      |[12..13): H <= _root_.G#H.
-      |[12..13): H <= _root_.G#H.
-      |[17..18): I <= _root_.G#I.
-      |[17..18): I <= _root_.G#I.
+      |[12..13): H <= _root_.G.H.
+      |[12..13): H <= _root_.G.H.
+      |[17..18): I <= _root_.G.I.
+      |[17..18): I <= _root_.G.I.
       |
       |Symbols:
-      |_root_.G# => class G
-      |_root_.G#H. => val H
-      |_root_.G#H. => val H
-      |_root_.G#I. => val I
-      |_root_.G#I. => val I
       |_root_.G. => object G
+      |_root_.G.H. => val H
+      |_root_.G.H. => val H
+      |_root_.G.I. => val I
+      |_root_.G.I. => val I
       |""".stripMargin
   )
 

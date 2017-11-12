@@ -25,7 +25,6 @@ object JavaCtags {
   def index(input: Input.VirtualFile): CtagsIndexer = {
     val builder = new JavaProjectBuilder()
     val source = builder.addSource(new StringReader(input.value))
-    source.getClasses.get(0).getNestedClasses
     new CtagsIndexer { self =>
       override def indexRoot(): Unit = {
 
@@ -72,8 +71,12 @@ object JavaCtags {
           withOwner(owner(cls.isStatic)) {
             val flags = if (cls.isInterface) TRAIT else CLASS
             val pos = toRangePosition(cls.lineNumber, cls.getName)
-            withOwner() { term(cls.getName, pos, OBJECT) } // object
-            tpe(cls.getName, pos, flags)
+            if (cls.isEnum) {
+              term(cls.getName, pos, OBJECT)
+            } else {
+              withOwner() { term(cls.getName, pos, OBJECT) } // object
+              tpe(cls.getName, pos, flags)
+            }
             visitClasses(cls.getNestedClasses)
             visitFields(cls.getMethods)
             visitFields(cls.getFields)
@@ -93,7 +96,7 @@ object JavaCtags {
             val flags: Long = m match {
               case c: JavaMethod => DEF
               case c: JavaField =>
-                if (c.isFinal) VAL
+                if (c.isFinal || c.isEnumConstant) VAL
                 else VAR
               // TODO(olafur) handle constructos
               case _ => 0L
