@@ -161,11 +161,11 @@ class JavaCtagsTest extends BaseCtagsTest {
     })
     val obtained = db.syntax
       .replace(jdk.toString(), "JAVA_HOME")
-      .replace("-" * jdk.toString().length, "-" * "JAVA_HOME".length)
+      .replaceAll("-+", "------------------") // consistent across machines.
     val expected =
       """
         |jar:file://JAVA_HOME!/java/io/DefaultFileSystem.java
-        |----------------------------------------------------
+        |------------------
         |Language:
         |Java
         |
