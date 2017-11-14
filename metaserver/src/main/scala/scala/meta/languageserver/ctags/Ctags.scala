@@ -53,7 +53,7 @@ object Ctags extends LazyLogging {
       classpath: List[AbsolutePath],
       shouldIndex: RelativePath => Boolean = _ => true
   )(callback: Document => Unit): Unit = {
-    val fragments = allClasspathFragments(classpath)
+    val fragments = allClasspathFragments(classpath, shouldIndex)
     val totalIndexedFiles = new AtomicInteger()
     val totalIndexedLines = new AtomicInteger()
     val start = System.nanoTime()
@@ -75,6 +75,7 @@ object Ctags extends LazyLogging {
       case _ =>
     }
     def reportProgress(indexedFiles: Int): Unit = {
+      if (indexedFiles < 100) return
       val percentage = ((indexedFiles / N.toDouble) * 100).toInt
       val loc = decimal.format(totalIndexedLines.get() / elapsed)
       logger.info(
@@ -179,8 +180,13 @@ object Ctags extends LazyLogging {
    */
   private def allClasspathFragments(
       classpath: List[AbsolutePath],
+      shouldIndex: RelativePath => Boolean = _ => true
   ): ParArray[Fragment] = {
     var buf = ParArray.newBuilder[Fragment]
+    def add(fragment: Fragment): Unit = {
+      if (shouldIndex(fragment.name)) buf += fragment
+      else ()
+    }
     classpath.foreach { base =>
       def exploreJar(base: AbsolutePath): Unit = {
         val stream = Files.newInputStream(base.toNIO)
@@ -189,9 +195,11 @@ object Ctags extends LazyLogging {
           try {
             var entry = zip.getNextEntry
             while (entry != null) {
-              if (!entry.getName.endsWith("/") && canIndex(entry.getName)) {
-                val name = RelativePath(entry.getName.stripPrefix("/"))
-                buf += Fragment(base, name)
+              if (!entry.getName.endsWith("/") &&
+                canIndex(entry.getName)) {
+                add(
+                  Fragment(base, RelativePath(entry.getName.stripPrefix("/")))
+                )
               }
               entry = zip.getNextEntry
             }
@@ -212,7 +220,7 @@ object Ctags extends LazyLogging {
                 attrs: BasicFileAttributes
             ): FileVisitResult = {
               if (isScala(file)) {
-                buf += Fragment(base, RelativePath(base.toNIO.relativize(file)))
+                add(Fragment(base, RelativePath(base.toNIO.relativize(file))))
               }
               FileVisitResult.CONTINUE
             }
