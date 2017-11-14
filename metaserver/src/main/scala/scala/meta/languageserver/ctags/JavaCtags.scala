@@ -70,23 +70,6 @@ object JavaCtags {
         pos
       }
 
-      /** Returns if this is a default field (could be wrong)
-       *
-       * I came across this example here
-       * {{{
-       * public interface Extension {
-       *   Set<Extension> EMPTY_SET = new HashSet<Extension>();
-       * }
-       * }}}
-       * from Flexmark where EMPTY_SET is static but doesn't have isStatic = true.
-       * This is a best guess at what's happening, but could be doing the
-       * totally wrong thing.
-       */
-      def isDefaultField(m: JavaMember): Boolean = m match {
-        case _: DefaultJavaField => true
-        case _ => false
-      }
-
       def visitFields[T <: JavaMember](fields: java.util.List[T]): Unit =
         if (fields == null) ()
         else fields.forEach(visitMember)
@@ -112,7 +95,7 @@ object JavaCtags {
         }
 
       def visitMember[T <: JavaMember](m: T): Unit =
-        withOwner(owner(m.isStatic || isDefaultField(m))) {
+        withOwner(owner(m.isStatic)) {
           val name = m.getName
           val line = m match {
             case c: JavaMethod => c.lineNumber

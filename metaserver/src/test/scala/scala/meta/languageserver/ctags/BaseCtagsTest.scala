@@ -4,6 +4,13 @@ import scala.meta.testkit.DiffAssertions
 import org.scalatest.FunSuite
 
 class BaseCtagsTest extends FunSuite with DiffAssertions {
+  def checkIgnore(
+      filename: String,
+      original: String,
+      expected: String
+  ): Unit = {
+    ignore(filename) {}
+  }
   def check(filename: String, original: String, expected: String): Unit = {
     test(filename) {
       val obtained = Ctags.index(filename, original)
