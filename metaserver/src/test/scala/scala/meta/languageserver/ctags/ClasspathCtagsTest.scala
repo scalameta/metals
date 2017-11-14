@@ -14,7 +14,7 @@ class ClasspathCtagsTest extends FunSuite with DiffAssertions {
       "sourcecode_2.12",
       "0.1.4",
       System.out,
-      sources = true
+      downloadSourceJars = true
     )
     val Compat = Paths.get("sourcecode").resolve("Compat.scala")
     val SourceContext = Paths.get("sourcecode").resolve("SourceContext.scala")

@@ -10,13 +10,13 @@ abstract class Formatter {
   def format(code: String, configFile: String, filename: String): String
 }
 object Formatter extends LazyLogging {
-  def classloadScalafmt(version: String, out: PrintStream): Formatter = {
+  def classloadScalafmt(version: String): Formatter = {
     val urls = Jars
-      .fetch("com.geirsson", "scalafmt-cli_2.12", version, out)
+      .fetch("com.geirsson", "scalafmt-cli_2.12", version, System.out)
       .iterator
       .map(_.toURI.toURL)
       .toArray
-    out.println(s"Classloading scalafmt with ${urls.length} downloaded jars")
+    logger.info(s"Classloading scalafmt with ${urls.length} downloaded jars")
     type Scalafmt210 = {
       def format(code: String, configFile: String, filename: String): String
     }

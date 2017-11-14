@@ -70,7 +70,7 @@ class ScalametaLanguageServer(
   )
   val scalafix: Linter =
     new Linter(cwd, stdout, connection, semanticdbPublisher.doOnError(onError))
-  val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0", stdout)
+  val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0")
 
   // TODO(olafur) more holistic error handling story.
   private def unsafe(thunk: => Unit): Unit =

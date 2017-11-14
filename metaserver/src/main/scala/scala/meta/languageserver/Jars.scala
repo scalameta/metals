@@ -30,10 +30,10 @@ object Jars extends LazyLogging {
       org: String,
       artifact: String,
       version: String,
-      out: PrintStream,
-      sources: Boolean = false
+      out: PrintStream = System.out,
+      downloadSourceJars: Boolean = false
   ): List[AbsolutePath] =
-    fetch(ModuleID(org, artifact, version) :: Nil, out, sources)
+    fetch(ModuleID(org, artifact, version) :: Nil, out, downloadSourceJars)
 
   def fetch(
       modules: Iterable[ModuleID],
