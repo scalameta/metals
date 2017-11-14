@@ -6,6 +6,8 @@ import scala.meta.languageserver.index.InMemoryDocumentStore
 import scala.meta.languageserver.{index => i}
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
+import langserver.messages.DefinitionResult
+import langserver.messages.DocumentSymbolResult
 import monix.execution.Scheduler
 import monix.reactive.Observable
 import org.langmeta.inputs.Input.Denotation
@@ -30,8 +32,11 @@ class SymbolIndexer(
       path: RelativePath,
       line: Int,
       column: Int
-  ): Option[Position.Range] = {
+  ): Option[DefinitionResult] = {
     logger.info(s"goToDefintion at $path:$line:$column")
+    // NOTE(olafur) this is false to assume that the filename is relative
+    // to cwd, what about jars?
+//    cwd.resolve(position.input.syntax).toLocation(position) :: Nil
     ???
   }
 
@@ -76,13 +81,6 @@ class SymbolIndexer(
         Nil
     }
 
-  private def companionClass(symbol: Symbol): Option[Symbol] =
-    symbol match {
-      case Symbol.Global(owner, Signature.Term(name)) =>
-        Some(Symbol.Global(owner, Signature.Type(name)))
-      case _ => None
-    }
-
 }
 
 object SymbolIndexer {
@@ -105,6 +103,11 @@ object SymbolIndexer {
           symbols.addDefinition(sym, i.Position(document.filename, start, end))
         case s.ResolvedName(Some(s.Position(start, end)), sym, false) =>
           symbols.addReference(document.filename, i.Range(start, end), sym)
+        case _ =>
+      }
+      document.symbols.foreach {
+        case s.ResolvedSymbol(sym, Some(denot)) =>
+          symbols.addDenotation(sym, denot.flags, denot.name, denot.signature)
         case _ =>
       }
     }

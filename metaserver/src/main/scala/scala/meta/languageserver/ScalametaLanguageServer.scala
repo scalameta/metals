@@ -262,13 +262,7 @@ class ScalametaLanguageServer(
     val path = Uri.toPath(td.uri).get.toRelative(cwd)
     symbol
       .goToDefinition(path, position.line, position.character)
-      .fold(DefinitionResult(Nil)) { position =>
-        DefinitionResult(
-          // NOTE(olafur) this is false to assume that the filename is relative
-          // to cwd, what about jars?
-          cwd.resolve(position.input.syntax).toLocation(position) :: Nil
-        )
-      }
+      .getOrElse(DefinitionResult(Nil))
   }
 
   override def onSaveTextDocument(td: TextDocumentIdentifier): Unit = {}

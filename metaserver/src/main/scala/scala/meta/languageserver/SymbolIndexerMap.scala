@@ -14,34 +14,50 @@ class SymbolIndexerMap(
     symbols: util.Map[String, AtomicReference[SymbolIndex]] =
       new ConcurrentHashMap()
 ) {
-  private val mappingFunction: Function[String, AtomicReference[SymbolIndex]] =
-    t => new AtomicReference(SymbolIndex(symbol = t))
+  private val mappingFunction
+    : Function[String, AtomicReference[SymbolIndex]] = { index =>
+    new AtomicReference(SymbolIndex(symbol = index))
+  }
 
-  def addDefinition(symbol: String, position: Position): Unit = {
+  def updated(symbol: String)(f: SymbolIndex => SymbolIndex): Unit = {
     val value = symbols.computeIfAbsent(symbol, mappingFunction)
     value.getAndUpdate(new UnaryOperator[SymbolIndex] {
-      override def apply(t: SymbolIndex): SymbolIndex =
-        t.definition.fold(t.copy(definition = Some(position))) { _ =>
-          // Do nothing, conflicting symbol definitions, for example js/jvm
-          t
-        }
+      override def apply(index: SymbolIndex): SymbolIndex =
+        f(index)
     })
+  }
+
+  def addDefinition(
+      symbol: String,
+      position: Position
+  ): Unit = updated(symbol) { index =>
+    index.definition match {
+      case Some(_) =>
+        // Do nothing, conflicting symbol definitions, for example js/jvm
+        index
+      case _ =>
+        index.copy(definition = Some(position))
+    }
+  }
+
+  def addDenotation(
+      symbol: String,
+      flags: Long,
+      name: String,
+      signature: String
+  ): Unit = updated(symbol) { index =>
+    index.copy(flags = flags, signature = signature, name = name)
   }
 
   def addReference(
       filename: String,
       range: Range,
       symbol: String
-  ): Unit = {
-    val value = symbols.computeIfAbsent(symbol, mappingFunction)
-    value.getAndUpdate(new UnaryOperator[SymbolIndex] {
-      override def apply(t: SymbolIndex): SymbolIndex = {
-        val ranges = t.references.getOrElse(filename, Ranges())
-        val newRanges = ranges.addRanges(range)
-        val newReferences = t.references + (filename -> newRanges)
-        t.copy(references = newReferences)
-      }
-    })
+  ): Unit = updated(symbol) { index =>
+    val ranges = index.references.getOrElse(filename, Ranges())
+    val newRanges = ranges.addRanges(range)
+    val newReferences = index.references + (filename -> newRanges)
+    index.copy(references = newReferences)
   }
 
 }
