@@ -31,16 +31,17 @@ object Jars extends LazyLogging {
       artifact: String,
       version: String,
       out: PrintStream = System.out,
-      downloadSourceJars: Boolean = false
+      // If true, fetches the -sources.jar files instead of regular jar with classfiles.
+      fetchSourceJars: Boolean = false
   ): List[AbsolutePath] =
-    fetch(ModuleID(org, artifact, version) :: Nil, out, downloadSourceJars)
+    fetch(ModuleID(org, artifact, version) :: Nil, out, fetchSourceJars)
 
   def fetch(
       modules: Iterable[ModuleID],
       out: PrintStream,
-      sources: Boolean
+      fetchSourceJars: Boolean
   ): List[AbsolutePath] = {
-    val classifier = if (sources) "sources" :: Nil else Nil
+    val classifier = if (fetchSourceJars) "sources" :: Nil else Nil
     val res = Resolution(modules.toIterator.map(_.toCoursier).toSet)
     val repositories = Seq(
       Cache.ivy2Local,
@@ -56,7 +57,7 @@ object Jars extends LazyLogging {
       sys.error(errors.mkString("\n"))
     }
     val artifacts: Seq[Artifact] =
-      if (sources) {
+      if (fetchSourceJars) {
         resolution
           .dependencyClassifiersArtifacts(classifier)
           .map(_._2)
@@ -69,7 +70,7 @@ object Jars extends LazyLogging {
       .map(_.toEither)
     val jars = localArtifacts.flatMap {
       case Left(e) =>
-        if (sources) {
+        if (fetchSourceJars) {
           // There is no need to fail fast here if we are fetching source jars.
           logger.error(e.describe)
           Nil
