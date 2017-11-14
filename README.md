@@ -26,16 +26,16 @@ Please share your thoughts in
 - [x] Linting with Scalafix
 - [x] Formatting with Scalafmt
 - [x] Auto completions as you type with presentation compiler
-- [x] Go to definition from project Scala sources to project Scala sources with Semanticdb
+- [x] Go to definition from project Scala sources to project Scala sources
 - [x] Show type at position
-- [ ] Go to definition from project sources to dependency sources
-- [ ] Go to definition from dependency sources to dependency sources
-- [ ] Go to definition in Java sources
+- [x] Go to definition from project sources to Scala dependency source files
+- [x] Go to definition from project sources to Java dependency source files
 - [ ] Show red squigglies as you type
 - [ ] Show red squigglies on compile
 - [ ] Show parameter list as you type, signature helper
 - [ ] Find symbol references
 - [ ] Show docstring on hover
+- [ ] Rename symbol
 
 ## Contributing
 

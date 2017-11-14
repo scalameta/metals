@@ -2,6 +2,7 @@ package scala.meta.languageserver
 
 import scala.{meta => m}
 import langserver.types.SymbolKind
+import langserver.types.TextDocumentIdentifier
 import langserver.{types => l}
 
 // Extension methods for convenient reuse of data conversions between
@@ -42,5 +43,18 @@ object ScalametaEnrichments {
       l.Position(line = pos.startLine, character = pos.startColumn),
       l.Position(line = pos.endLine, character = pos.endColumn)
     )
+  }
+  implicit class XtensionSymbolGlobalTerm(val sym: m.Symbol.Global)
+      extends AnyVal {
+    def toType: m.Symbol.Global = sym match {
+      case m.Symbol.Global(owner, m.Signature.Term(name)) =>
+        m.Symbol.Global(owner, m.Signature.Type(name))
+      case _ => sym
+    }
+    def toTerm: m.Symbol.Global = sym match {
+      case m.Symbol.Global(owner, m.Signature.Type(name)) =>
+        m.Symbol.Global(owner, m.Signature.Term(name))
+      case _ => sym
+    }
   }
 }

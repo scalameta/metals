@@ -1,54 +1,46 @@
 package scala.meta.languageserver
 
-import java.io.File
-import java.nio.file.Files
-import java.util.Properties
+import java.io.PrintStream
+import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
 import scala.reflect.io
 import scala.tools.nsc.Settings
-import scala.tools.nsc.interactive.{Global, Response}
+import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
 import langserver.messages.MessageType
+import monix.eval.Task
+import monix.execution.Scheduler
+import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
+import org.langmeta.semanticdb.Document
 
-case class CompilerConfig(
-    sources: List[AbsolutePath],
-    scalacOptions: List[String],
-    classpath: String
-)
-object CompilerConfig {
-  def fromPath(
-      path: AbsolutePath
-  )(implicit cwd: AbsolutePath): CompilerConfig = {
-    val input = Files.newInputStream(path.toNIO)
-    try {
-      val props = new Properties()
-      props.load(input)
-      val sources = props
-        .getProperty("sources")
-        .split(File.pathSeparator)
-        .iterator
-        .map(AbsolutePath(_))
-        .toList
-      val scalacOptions = props.getProperty("scalacOptions").split(" ").toList
-      val classpath = props.getProperty("classpath")
-      CompilerConfig(sources, scalacOptions, classpath)
-    } finally input.close()
-  }
-}
 class Compiler(
+    out: PrintStream,
     config: Observable[AbsolutePath],
     connection: Connection,
     buffers: Buffers
-)(implicit cwd: AbsolutePath)
+)(implicit cwd: AbsolutePath, s: Scheduler)
     extends LazyLogging {
-  val onNewCompilerConfig: Observable[Unit] =
+  private val (documentSubscriber, myDocumentPublisher) =
+    Observable.multicast[Document](MulticastStrategy.Publish)
+  val documentPublisher: Observable[Document] = myDocumentPublisher
+  private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
+    new ConcurrentHashMap[AbsolutePath, Unit]()
+  val onNewCompilerConfig: Observable[
+    (Effects.InstallPresentationCompiler, Effects.IndexSourcesClasspath)
+  ] =
     config
       .map(path => CompilerConfig.fromPath(path))
-      .map(onNewConfig)
+      .flatMap { config =>
+        Observable.fromTask(
+          Task(loadNewCompilerGlobals(config))
+            .zip(Task(indexDependencyClasspath(config)))
+        )
+      }
 
   def autocomplete(
       path: AbsolutePath,
@@ -89,7 +81,9 @@ class Compiler(
   }
 
   private val compilerByPath = mutable.Map.empty[AbsolutePath, Global]
-  private def onNewConfig(config: CompilerConfig): Unit = {
+  private def loadNewCompilerGlobals(
+      config: CompilerConfig
+  ): Effects.InstallPresentationCompiler = {
     logger.info(s"Loading new compiler from config $config")
     val vd = new io.VirtualDirectory("(memory)", None)
     val settings = new Settings
@@ -99,11 +93,31 @@ class Compiler(
       ("-Ypresentation-any-thread" :: config.scalacOptions).mkString(" ")
     )
     val compiler = new Global(settings, new StoreReporter)
-
     config.sources.foreach { path =>
       // TODO(olafur) garbage collect compilers from removed files.
       compilerByPath(path) = compiler
     }
+    Effects.InstallPresentationCompiler
+  }
+  private def indexDependencyClasspath(
+      config: CompilerConfig
+  ): Effects.IndexSourcesClasspath = {
+    val buf = List.newBuilder[AbsolutePath]
+    val sourceJars = config.sourceJars
+    sourceJars.foreach { jar =>
+      // ensure we only index each jar once even under race conditions.
+      indexedJars.computeIfAbsent(jar, _ => buf += jar)
+    }
+    val sourcesClasspath = buf.result()
+    if (sourcesClasspath.nonEmpty) {
+      logger.info(
+        s"Indexing classpath with ${sourcesClasspath.length} entries..."
+      )
+    }
+    ctags.Ctags.index(sourcesClasspath) { doc =>
+      documentSubscriber.onNext(doc)
+    }
+    Effects.IndexSourcesClasspath
   }
   private def noCompletions: List[(String, String)] = {
     connection.showMessage(

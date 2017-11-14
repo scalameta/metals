@@ -26,14 +26,28 @@ object ScalametaLanguageServerPlugin extends AutoPlugin {
             scalacOptions.value.mkString(" ")
           )
           props.setProperty(
-            "classpath",
-            fullClasspath.value
+            "dependencyClasspath",
+            dependencyClasspath.value
               .map(_.data.toString)
               .mkString(File.pathSeparator)
           )
           props.setProperty(
+            "classDirectory",
+            classDirectory.value.getAbsolutePath
+          )
+          props.setProperty(
             "sources",
             sources.value.distinct.mkString(File.pathSeparator)
+          )
+          val sourceJars = for {
+            configurationReport <- updateClassifiers.value.configurations
+            moduleReport <- configurationReport.modules
+            (artifact, file) <- moduleReport.artifacts
+            if artifact.classifier.exists(_ == "sources")
+          } yield file
+          props.setProperty(
+            "sourceJars",
+            sourceJars.mkString(File.pathSeparator)
           )
           val out = new ByteArrayOutputStream()
           props.store(out, null)

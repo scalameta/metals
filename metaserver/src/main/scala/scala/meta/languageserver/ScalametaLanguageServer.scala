@@ -3,7 +3,6 @@ package scala.meta.languageserver
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
-import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -19,11 +18,11 @@ import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
 import langserver.messages.FileChangeType
 import langserver.messages.FileEvent
+import langserver.messages.Hover
 import langserver.messages.MessageType
 import langserver.messages.ResultResponse
 import langserver.messages.ServerCapabilities
 import langserver.messages.ShutdownResult
-import langserver.messages.Hover
 import langserver.types._
 import monix.execution.Cancelable
 import monix.execution.Scheduler
@@ -31,6 +30,7 @@ import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import monix.reactive.Observer
 import monix.reactive.OverflowStrategy
+import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Database
@@ -47,24 +47,30 @@ class ScalametaLanguageServer(
   val (semanticdbSubscriber, semanticdbPublisher) =
     ScalametaLanguageServer.semanticdbStream
   val (compilerConfigSubscriber, compilerConfigPublisher) =
-    Observable.multicast[AbsolutePath](
-      MulticastStrategy.Publish,
-      OverflowStrategy.ClearBuffer(2)
-    )
+    Observable.multicast[AbsolutePath](MulticastStrategy.Publish)
   def onError(e: Throwable): Unit = {
     logger.error(e.getMessage, e)
   }
   val buffers: Buffers = Buffers()
-  val symbol: SymbolIndexer =
-    SymbolIndexer(semanticdbPublisher, logger, connection, buffers)
-  val scalafix: Linter =
-    new Linter(cwd, stdout, connection, semanticdbPublisher.doOnError(onError))
-  val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0", stdout)
   val compiler = new Compiler(
+    stdout,
     compilerConfigPublisher.doOnError(onError),
     connection,
     buffers
   )
+  val databasePublisher = Observable.merge(
+    semanticdbPublisher,
+    compiler.documentPublisher.map(doc => Database(doc :: Nil))
+  )
+  val symbol: SymbolIndexer = SymbolIndexer(
+    databasePublisher,
+    logger,
+    connection,
+    buffers
+  )
+  val scalafix: Linter =
+    new Linter(cwd, stdout, connection, semanticdbPublisher.doOnError(onError))
+  val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0")
 
   // TODO(olafur) more holistic error handling story.
   private def unsafe(thunk: => Unit): Unit =
@@ -77,7 +83,7 @@ class ScalametaLanguageServer(
 
   private val toCancel = ListBuffer.empty[Cancelable]
 
-  private def loadAllSemanticdbsInWorkspace(): Unit = {
+  private def loadAllRelevantFilesInThisWorkspace(): Unit = {
     Files.walkFileTree(
       workspacePath.toNIO,
       new SimpleFileVisitor[Path] {
@@ -85,7 +91,11 @@ class ScalametaLanguageServer(
             file: Path,
             attrs: BasicFileAttributes
         ): FileVisitResult = {
-          onChangedFile(AbsolutePath(file))(_ => ())
+          PathIO.extension(file) match {
+            case "semanticdb" | "compilerconfig" =>
+              onChangedFile(AbsolutePath(file))(_ => ())
+            case _ => // ignore, to avoid spamming console.
+          }
           FileVisitResult.CONTINUE
         }
       }
@@ -101,7 +111,7 @@ class ScalametaLanguageServer(
     toCancel += scalafix.linter.subscribe()
     toCancel += symbol.indexer.subscribe()
     toCancel += compiler.onNewCompilerConfig.subscribe()
-    loadAllSemanticdbsInWorkspace()
+    loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
       completionProvider = Some(
         CompletionOptions(
@@ -123,14 +133,12 @@ class ScalametaLanguageServer(
   private def onChangedFile(
       path: AbsolutePath
   )(fallback: AbsolutePath => Unit): Unit = {
-    logger.info(s"File $path changed.")
-    val name = path.toNIO.getFileName.toString
-    if (name.endsWith(".semanticdb")) {
-      semanticdbSubscriber.onNext(path)
-    } else if (name.endsWith(".compilerconfig")) {
-      compilerConfigSubscriber.onNext(path)
-    } else {
-      fallback(path)
+    val name = PathIO.extension(path.toNIO)
+    logger.info(s"File $path changed, extension=$name")
+    name match {
+      case "semanticdb" => semanticdbSubscriber.onNext(path)
+      case "compilerconfig" => compilerConfigSubscriber.onNext(path)
+      case _ => fallback(path)
     }
   }
 
@@ -210,6 +218,8 @@ class ScalametaLanguageServer(
       .goToDefinition(path, position.line, position.character)
       .fold(DefinitionResult(Nil)) { position =>
         DefinitionResult(
+          // NOTE(olafur) this is false to assume that the filename is relative
+          // to cwd, what about jars?
           cwd.resolve(position.input.syntax).toLocation(position) :: Nil
         )
       }

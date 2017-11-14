@@ -1,5 +1,7 @@
 package scala.meta.languageserver
 
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Map => JMap}
 import scala.collection.mutable
@@ -14,7 +16,7 @@ import langserver.messages.MessageType
 
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
-    val indexer: Observable[Unit],
+    val indexer: Observable[Effects.IndexSemanticdb],
     logger: Logger,
     connection: Connection,
     buffers: Buffers,
@@ -25,7 +27,7 @@ class SymbolIndexer(
       Symbol,
       Map[RelativePath, List[Position]]
     ]
-) {
+)(implicit cwd: AbsolutePath) {
 
   def documentSymbols(
       path: RelativePath
@@ -66,7 +68,33 @@ class SymbolIndexer(
   }
 
   private def definition(symbol: Symbol): Option[Position.Range] =
-    Option(definitions.get(symbol))
+    Option(definitions.get(symbol)).map {
+      case Position.Range(input @ Input.VirtualFile(path, _), start, end)
+          if path.contains("jar") =>
+        Position.Range(createFileInWorkspaceTarget(input), start, end)
+      case pos => pos
+    }
+
+  // Writes the contents from in-memory source file to a file in the target/source/*
+  // directory of the workspace. vscode has support for TextDocumentContentProvider
+  // which can provide hooks to open readonly views for custom uri schemes:
+  // https://code.visualstudio.com/docs/extensionAPI/vscode-api#TextDocumentContentProvider
+  // However, that is a vscode only solution and we'd like this work for all
+  // text editors. Therefore, we write instead the file contents to disk in order to
+  // return a file: uri.
+  // TODO: Fix this with https://github.com/scalameta/language-server/issues/36
+  private def createFileInWorkspaceTarget(
+      input: Input.VirtualFile
+  ): Input.VirtualFile = {
+    logger.info(
+      s"Jumping into jar ${input.path}, writing contents to file in target file"
+    )
+    val dir = cwd.resolve("target").resolve("sources")
+    Files.createDirectories(dir.toNIO)
+    val out = dir.toNIO.resolve(Paths.get(input.path).getFileName)
+    Files.write(out, input.contents.getBytes())
+    Input.VirtualFile(cwd.toNIO.relativize(out).toString, input.contents)
+  }
 
   private def alternatives(symbol: Symbol): List[Symbol] =
     symbol match {
@@ -102,6 +130,8 @@ class SymbolIndexer(
         // If `import a.B` where `case class B()`, then
         // resolve to either symbol, whichever has a definition.
         symbols
+      case Symbol.Global(owner, Signature.Method(name, _)) =>
+        Symbol.Global(owner, Signature.Term(name)) :: Nil
       case _ =>
         logger.trace(s"Found no alternative for ${symbol.structure}")
         Nil
@@ -163,7 +193,7 @@ object SymbolIndexer {
       logger: Logger,
       connection: Connection,
       buffers: Buffers
-  )(implicit s: Scheduler): SymbolIndexer = {
+  )(implicit s: Scheduler, cwd: AbsolutePath): SymbolIndexer = {
     val documents =
       new ConcurrentHashMap[RelativePath, Document]
     val definitions =
@@ -177,7 +207,10 @@ object SymbolIndexer {
       val input = document.input
       val filename = input.syntax
       val relpath = RelativePath(filename)
-      logger.debug(s"Indexing $filename")
+      if (!filename.startsWith("jar") &&
+          !filename.contains("")) {
+        logger.debug(s"Indexing $filename")
+      }
       val nextReferencesBySymbol = mutable.Map.empty[Symbol, List[Position]]
       val nextDefinitions = mutable.Set.empty[Symbol]
 
@@ -228,7 +261,10 @@ object SymbolIndexer {
       )
     }
 
-    val indexer = semanticdbs.map(db => db.documents.foreach(indexDocument))
+    val indexer = semanticdbs.map { db =>
+      db.documents.foreach(indexDocument)
+      Effects.IndexSemanticdb
+    }
 
     new SymbolIndexer(
       indexer,

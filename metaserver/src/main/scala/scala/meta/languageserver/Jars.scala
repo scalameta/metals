@@ -1,48 +1,87 @@
 package scala.meta.languageserver
 
-import java.io.File
 import java.io.OutputStreamWriter
 import java.io.PrintStream
+import com.typesafe.scalalogging.LazyLogging
 import coursier._
+import org.langmeta.io.AbsolutePath
 
-object Jars {
+case class ModuleID(organization: String, name: String, version: String) {
+  def toCoursier: Dependency = Dependency(Module(organization, name), version)
+  override def toString: String = s"$organization:$name:$version"
+}
+object ModuleID {
+  def fromString(string: String): List[ModuleID] = {
+    string
+      .split(";")
+      .iterator
+      .flatMap { moduleId =>
+        moduleId.split(":") match {
+          case Array(org, name, rev) =>
+            ModuleID(org, name, rev) :: Nil
+          case _ => Nil
+        }
+      }
+      .toList
+  }
+}
+object Jars extends LazyLogging {
   def fetch(
       org: String,
       artifact: String,
       version: String,
-      out: PrintStream
-  ): List[File] = {
-    val start = Resolution(Set(Dependency(Module(org, artifact), version)))
+      out: PrintStream = System.out,
+      // If true, fetches the -sources.jar files instead of regular jar with classfiles.
+      fetchSourceJars: Boolean = false
+  ): List[AbsolutePath] =
+    fetch(ModuleID(org, artifact, version) :: Nil, out, fetchSourceJars)
+
+  def fetch(
+      modules: Iterable[ModuleID],
+      out: PrintStream,
+      fetchSourceJars: Boolean
+  ): List[AbsolutePath] = {
+    val classifier = if (fetchSourceJars) "sources" :: Nil else Nil
+    val res = Resolution(modules.toIterator.map(_.toCoursier).toSet)
     val repositories = Seq(
       Cache.ivy2Local,
       MavenRepository("https://repo1.maven.org/maven2")
     )
-    val logger =
+    val term =
       new TermDisplay(new OutputStreamWriter(out), fallbackMode = true)
-    logger.init()
-    val fetch = Fetch.from(repositories, Cache.fetch(logger = Some(logger)))
-    val resolution = start.process.run(fetch).unsafePerformSync
+    term.init()
+    val fetch = Fetch.from(repositories, Cache.fetch(logger = Some(term)))
+    val resolution = res.process.run(fetch).unsafePerformSync
     val errors = resolution.metadataErrors
     if (errors.nonEmpty) {
       sys.error(errors.mkString("\n"))
     }
+    val artifacts: Seq[Artifact] =
+      if (fetchSourceJars) {
+        resolution
+          .dependencyClassifiersArtifacts(classifier)
+          .map(_._2)
+      } else resolution.artifacts
     val localArtifacts = scalaz.concurrent.Task
       .gatherUnordered(
-        resolution.artifacts.map(Cache.file(_).run)
+        artifacts.map(artifact => Cache.file(artifact).run)
       )
       .unsafePerformSync
       .map(_.toEither)
-    val failures = localArtifacts.collect { case Left(e) => e }
-    if (failures.nonEmpty) {
-      sys.error(failures.mkString("\n"))
-    } else {
-      val jars = localArtifacts.collect {
-        case Right(file) if file.getName.endsWith(".jar") =>
-          file
-      }
-      logger.stop()
-      jars
+    val jars = localArtifacts.flatMap {
+      case Left(e) =>
+        if (fetchSourceJars) {
+          // There is no need to fail fast here if we are fetching source jars.
+          logger.error(e.describe)
+          Nil
+        } else {
+          throw new IllegalArgumentException(e.describe)
+        }
+      case Right(jar) if jar.getName.endsWith(".jar") =>
+        AbsolutePath(jar) :: Nil
+      case _ => Nil
     }
+    term.stop()
+    jars
   }
-
 }
