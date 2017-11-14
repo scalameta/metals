@@ -83,7 +83,7 @@ class ScalametaLanguageServer(
 
   private val toCancel = ListBuffer.empty[Cancelable]
 
-  private def loadAllSemanticdbsInWorkspace(): Unit = {
+  private def loadAllRelevantFilesInThisWorkspace(): Unit = {
     Files.walkFileTree(
       workspacePath.toNIO,
       new SimpleFileVisitor[Path] {
@@ -91,7 +91,11 @@ class ScalametaLanguageServer(
             file: Path,
             attrs: BasicFileAttributes
         ): FileVisitResult = {
-          onChangedFile(AbsolutePath(file))(_ => ())
+          PathIO.extension(file) match {
+            case "semanticdb" | "compilerconfig" =>
+              onChangedFile(AbsolutePath(file))(_ => ())
+            case _ => // ignore, to avoid spamming console.
+          }
           FileVisitResult.CONTINUE
         }
       }
@@ -107,7 +111,7 @@ class ScalametaLanguageServer(
     toCancel += scalafix.linter.subscribe()
     toCancel += symbol.indexer.subscribe()
     toCancel += compiler.onNewCompilerConfig.subscribe()
-    loadAllSemanticdbsInWorkspace()
+    loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
       completionProvider = Some(
         CompletionOptions(
