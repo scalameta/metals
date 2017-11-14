@@ -27,8 +27,8 @@ import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Fragment
 import org.langmeta.io.RelativePath
-import org.langmeta.semanticdb.Database
-import org.langmeta.semanticdb.Document
+import org.langmeta.internal.semanticdb.schema.Database
+import org.langmeta.internal.semanticdb.schema.Document
 
 /**
  * Syntactically build a semanticdb index containing only global symbol definition.
@@ -67,12 +67,10 @@ object Ctags extends LazyLogging {
     }
     val decimal = new DecimalFormat("###,###")
     val N = fragments.length
-    def updateTotalLines(doc: Document): Unit = doc.input match {
-      case Input.VirtualFile(_, contents) =>
-        // NOTE(olafur) it would be interesting to have separate statistics for
-        // Java/Scala lines/s but that would require a more sophisticated setup.
-        totalIndexedLines.addAndGet(countLines(contents))
-      case _ =>
+    def updateTotalLines(doc: Document): Unit = {
+      // NOTE(olafur) it would be interesting to have separate statistics for
+      // Java/Scala lines/s but that would require a more sophisticated setup.
+      totalIndexedLines.addAndGet(countLines(doc.contents))
     }
     def reportProgress(indexedFiles: Int): Unit = {
       if (indexedFiles < 100) return
@@ -150,8 +148,9 @@ object Ctags extends LazyLogging {
       }
     val (names, symbols) = indexer.index()
     Document(
-      input,
-      indexer.language,
+      filename = input.path,
+      contents = input.value,
+      language = indexer.language,
       names,
       Nil,
       symbols,

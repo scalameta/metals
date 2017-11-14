@@ -30,7 +30,7 @@ class ClasspathCtagsTest extends FunSuite with DiffAssertions {
         path.toNIO.endsWith(Predef)
       }
     ) { doc =>
-      val path = Paths.get(doc.input.syntax).getFileName.toString
+      val path = Paths.get(doc.filename).getFileName.toString
       val underline = "-" * path.length
       docs +=
         s"""$path

@@ -1,5 +1,6 @@
 package scala.meta.languageserver
 
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
@@ -28,6 +29,8 @@ class Buffers private (
   }
   def changed(path: AbsolutePath, newContents: String): Unit =
     contents.put(path, newContents)
+  def read(uri: URI): String =
+    read(AbsolutePath(uri.getPath))
   def read(path: RelativePath): String = // TODO(olafur) remove?
     read(cwd.resolve(path))
   def read(path: AbsolutePath): String =

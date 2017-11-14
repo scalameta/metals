@@ -33,8 +33,8 @@ import monix.reactive.OverflowStrategy
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
-import org.langmeta.semanticdb.Database
-import org.langmeta.semanticdb.Denotation
+import org.langmeta.internal.semanticdb.schema.Database
+import org.langmeta.internal.semanticdb.schema.Denotation
 
 class ScalametaLanguageServer(
     cwd: AbsolutePath,
@@ -64,12 +64,15 @@ class ScalametaLanguageServer(
   )
   val symbol: SymbolIndexer = SymbolIndexer(
     databasePublisher,
-    logger,
     connection,
     buffers
   )
-  val scalafix: Linter =
-    new Linter(cwd, stdout, connection, semanticdbPublisher.doOnError(onError))
+  val scalafix: Linter = new Linter(
+    cwd,
+    stdout,
+    connection,
+    semanticdbPublisher.map(_.toDb(None)).doOnError(onError)
+  )
   val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0")
 
   // TODO(olafur) more holistic error handling story.
@@ -318,7 +321,7 @@ class ScalametaLanguageServer(
 
 object ScalametaLanguageServer {
   def semanticdbStream(
-      implicit s: Scheduler
+      implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
     val (subscriber, publisher) =
       Observable.multicast[AbsolutePath](
@@ -328,8 +331,7 @@ object ScalametaLanguageServer {
     val semanticdbPublisher = publisher.map { path =>
       val bytes = Files.readAllBytes(path.toNIO)
       val sdb = schema.Database.parseFrom(bytes)
-      val mdb = sdb.toDb(None)
-      mdb
+      sdb
     }
     subscriber -> semanticdbPublisher
   }

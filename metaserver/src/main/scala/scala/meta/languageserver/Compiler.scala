@@ -16,7 +16,7 @@ import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
-import org.langmeta.semanticdb.Document
+import org.langmeta.internal.semanticdb.schema.Document
 
 class Compiler(
     out: PrintStream,

@@ -1,8 +1,11 @@
 package scala.meta.languageserver
 
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
+import java.util.function.UnaryOperator
 import java.util.{Map => JMap}
 import scala.collection.mutable
 import scala.meta._
@@ -11,23 +14,24 @@ import monix.execution.Scheduler
 import monix.reactive.Observable
 import org.langmeta.io.RelativePath
 import ScalametaEnrichments._
+import scala.meta.languageserver.index.DocumentStore
+import scala.meta.languageserver.index.InMemoryDocumentStore
 import langserver.core.Connection
 import langserver.messages.MessageType
+import org.langmeta.internal.semanticdb.{schema => s}
+import scala.meta.languageserver.{index => i}
+import `scala`.meta.languageserver.index.SymbolIndex
+import com.typesafe.scalalogging.LazyLogging
 
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
     val indexer: Observable[Effects.IndexSemanticdb],
-    logger: Logger,
+    symbols: SymbolIndexerMap,
+    documents: DocumentStore,
     connection: Connection,
-    buffers: Buffers,
-    documents: JMap[RelativePath, Document],
-    definitions: JMap[Symbol, Position.Range],
-    denotations: JMap[Symbol, Denotation],
-    references: JMap[
-      Symbol,
-      Map[RelativePath, List[Position]]
-    ]
-)(implicit cwd: AbsolutePath) {
+    buffers: Buffers
+)(implicit cwd: AbsolutePath)
+    extends LazyLogging {
 
   def goToDefinition(
       path: RelativePath,
@@ -35,49 +39,7 @@ class SymbolIndexer(
       column: Int
   ): Option[Position.Range] = {
     logger.info(s"goToDefintion at $path:$line:$column")
-    for {
-      name <- resolvedNameAt(path, line, column)
-      symbol = name.symbol
-      _ = logger.info(s"Found symbol $symbol")
-      defn <- definition(symbol).orElse {
-        alternatives(symbol).flatMap { alternative =>
-          logger.info(s"Trying alternative symbol $alternative")
-          definition(alternative)
-        }.headOption
-      }
-    } yield {
-      logger.trace(s"Found definition $defn")
-      defn
-    }
-  }
-
-  private def definition(symbol: Symbol): Option[Position.Range] =
-    Option(definitions.get(symbol)).map {
-      case Position.Range(input @ Input.VirtualFile(path, _), start, end)
-          if path.contains("jar") =>
-        Position.Range(createFileInWorkspaceTarget(input), start, end)
-      case pos => pos
-    }
-
-  // Writes the contents from in-memory source file to a file in the target/source/*
-  // directory of the workspace. vscode has support for TextDocumentContentProvider
-  // which can provide hooks to open readonly views for custom uri schemes:
-  // https://code.visualstudio.com/docs/extensionAPI/vscode-api#TextDocumentContentProvider
-  // However, that is a vscode only solution and we'd like this work for all
-  // text editors. Therefore, we write instead the file contents to disk in order to
-  // return a file: uri.
-  // TODO: Fix this with https://github.com/scalameta/language-server/issues/36
-  private def createFileInWorkspaceTarget(
-      input: Input.VirtualFile
-  ): Input.VirtualFile = {
-    logger.info(
-      s"Jumping into jar ${input.path}, writing contents to file in target file"
-    )
-    val dir = cwd.resolve("target").resolve("sources")
-    Files.createDirectories(dir.toNIO)
-    val out = dir.toNIO.resolve(Paths.get(input.path).getFileName)
-    Files.write(out, input.contents.getBytes())
-    Input.VirtualFile(cwd.toNIO.relativize(out).toString, input.contents)
+    ???
   }
 
   private def alternatives(symbol: Symbol): List[Symbol] =
@@ -128,121 +90,31 @@ class SymbolIndexer(
       case _ => None
     }
 
-  private def isFreshSemanticdb(
-      path: RelativePath,
-      document: Document
-  ): Option[Unit] = {
-    val ok = Option(())
-    val s = buffers.read(path)
-    if (s == document.input.contents) ok
-    else {
-      // NOTE(olafur) it may be a bit annoying to bail on a single character
-      // edit in the file. In the future, we can try more to make sense of
-      // partially fresh files using something like edit distance.
-      connection.showMessage(
-        MessageType.Warning,
-        "Please recompile for up-to-date information"
-      )
-      None
-    }
-  }
-
-  private def resolvedNameAt(
-      path: RelativePath,
-      line: Int,
-      column: Int
-  ): Option[ResolvedName] =
-    for {
-      document <- Option(documents.get(path))
-      _ <- isFreshSemanticdb(path, document)
-      _ = logger.info(s"Database for $path")
-      name <- document.names.collectFirst {
-        case name @ ResolvedName(pos, sym, _) if {
-              logger.info(s"$sym at ${pos.location}")
-              pos.startLine <= line &&
-              pos.startColumn <= column &&
-              pos.endLine >= line &&
-              pos.endColumn >= column
-            } =>
-          name
-      }
-    } yield name
-
 }
 
 object SymbolIndexer {
   val emptyDocument: Document = Document(Input.None, "", Nil, Nil, Nil, Nil)
   def apply(
-      semanticdbs: Observable[Database],
-      logger: Logger,
+      semanticdbs: Observable[s.Database],
       connection: Connection,
       buffers: Buffers
-  )(implicit s: Scheduler, cwd: AbsolutePath): SymbolIndexer = {
-    val documents =
-      new ConcurrentHashMap[RelativePath, Document]
-    val definitions =
-      new ConcurrentHashMap[Symbol, Position.Range]
-    val denotations =
-      new ConcurrentHashMap[Symbol, Denotation]
-    val references =
-      new ConcurrentHashMap[Symbol, Map[RelativePath, List[Position]]]
+  )(implicit scheduler: Scheduler, cwd: AbsolutePath): SymbolIndexer = {
+    val symbols = new SymbolIndexerMap()
+    val documents = new InMemoryDocumentStore()
 
-    def indexDocument(document: Document): Unit = {
-      val input = document.input
-      val filename = input.syntax
-      val relpath = RelativePath(filename)
-      if (!filename.startsWith("jar") &&
-          !filename.contains("")) {
-        logger.debug(s"Indexing $filename")
-      }
-      val nextReferencesBySymbol = mutable.Map.empty[Symbol, List[Position]]
-      val nextDefinitions = mutable.Set.empty[Symbol]
-
-      // definitions
+    def indexDocument(document: s.Document): Unit = {
+      val uri = URI.create("file:" + cwd.resolve(document.filename))
+      documents.putDocument(uri, document)
       document.names.foreach {
-        case ResolvedName(pos, symbol, isDefinition) =>
-          if (isDefinition) {
-            logger.trace(s"Definition of $symbol at ${pos.location}")
-            definitions.put(symbol, Position.Range(input, pos.start, pos.end))
-            nextDefinitions += symbol
-          } else {
-            logger.trace(s"Reference to $symbol at ${pos.location}")
-            nextReferencesBySymbol(symbol) =
-              Position.Range(input, pos.start, pos.end) ::
-                nextReferencesBySymbol.getOrElseUpdate(symbol, Nil)
-          }
+        case s.ResolvedName(_, sym, _)
+            if !sym.endsWith(".") && !sym.endsWith("#") =>
+        // Do nothing, local symbol.
+        case s.ResolvedName(Some(s.Position(start, end)), sym, true) =>
+          symbols.addDefinition(sym, i.Position(document.filename, start, end))
+        case s.ResolvedName(Some(s.Position(start, end)), sym, false) =>
+          symbols.addReference(document.filename, i.Range(start, end), sym)
         case _ =>
       }
-
-      // denotations
-      document.symbols.foreach {
-        case ResolvedSymbol(symbol, denotation) =>
-          denotations.put(symbol, denotation)
-      }
-
-      // definitionsByFilename
-      documents.getOrDefault(relpath, emptyDocument).names.foreach {
-        case ResolvedName(_, sym, true) =>
-          if (!nextDefinitions.contains(sym)) {
-            definitions.remove(sym) // garbage collect old symbols.
-            denotations.remove(sym)
-          }
-        case _ =>
-      }
-
-      // references
-      nextReferencesBySymbol.foreach {
-        case (symbol, referencesToSymbol) =>
-          val old = references.getOrDefault(symbol, Map.empty)
-          val nextReferences = old + (relpath -> referencesToSymbol)
-          references.put(symbol, nextReferences)
-      }
-
-      // documents
-      documents.put(
-        relpath,
-        document.copy(names = document.names.sortBy(_.position.start))
-      )
     }
 
     val indexer = semanticdbs.map { db =>
@@ -252,13 +124,10 @@ object SymbolIndexer {
 
     new SymbolIndexer(
       indexer,
-      logger,
-      connection,
-      buffers,
+      symbols,
       documents,
-      definitions,
-      denotations,
-      references
+      connection,
+      buffers
     )
   }
 }

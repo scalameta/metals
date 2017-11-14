@@ -159,7 +159,7 @@ class JavaCtagsTest extends BaseCtagsTest {
     val db = Ctags.indexDatabase(jdk :: Nil, shouldIndex = { path =>
       path.toNIO.endsWith(DefaultFileSystem)
     })
-    val obtained = db.syntax
+    val obtained = db.toDb(None).syntax
       .replace(jdk.toString(), "JAVA_HOME")
       .replaceAll("-+", "------------------") // consistent across machines.
     val expected =

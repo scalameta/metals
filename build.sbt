@@ -21,6 +21,11 @@ lazy val languageserver = project
 
 lazy val metaserver = project
   .settings(
+    PB.targets.in(Compile) := Seq(
+      scalapb.gen(
+        flatPackage = true // Don't append filename to package
+      ) -> sourceManaged.in(Compile).value./("protobuf")
+    ),
     resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
     libraryDependencies ++= List(
       "io.monix" %% "monix" % "2.3.0",
