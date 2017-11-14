@@ -8,8 +8,8 @@ import org.langmeta.internal.semanticdb.schema.Document
 class InMemoryDocumentStore(
     documents: util.Map[URI, Document] = new ConcurrentHashMap()
 ) extends DocumentStore {
-  override def getDocument(uri: URI): Document =
-    documents.get(uri)
+  override def getDocument(uri: URI): Option[Document] =
+    Option(documents.get(uri))
   override def putDocument(uri: URI, document: Document): Unit =
     documents.put(uri, document)
 }

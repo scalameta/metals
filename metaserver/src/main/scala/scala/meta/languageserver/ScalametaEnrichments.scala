@@ -1,9 +1,11 @@
 package scala.meta.languageserver
 
+import java.net.URI
 import scala.{meta => m}
 import langserver.types.SymbolKind
 import langserver.types.TextDocumentIdentifier
 import langserver.{types => l}
+import scala.meta.languageserver.{index => i}
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
@@ -49,6 +51,19 @@ object ScalametaEnrichments {
   }
   implicit class XtensionInputLSP(val input: m.Input) extends AnyVal {
     def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
+  }
+  implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
+    def toLocation(implicit cwd: m.AbsolutePath): l.Location = {
+      val range = pos.range.get
+      val path = cwd.resolve(URI.create(pos.uri).getPath)
+      l.Location(
+        path.toLanguageServerUri,
+        l.Range(
+          l.Position(line = range.startLine, character = range.startColumn),
+          l.Position(line = range.endLine, character = range.endColumn)
+        )
+      )
+    }
   }
   implicit class XtensionAbsolutePathLSP(val path: m.AbsolutePath)
       extends AnyVal {

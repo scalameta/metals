@@ -27,8 +27,7 @@ message Position {
     // can be a local file, entry inside local zip file, http url, or anything
     // else.
     string uri = 1;
-    int32 start = 2;
-    int32 end = 3;
+    Range range = 2;
 }
 
 // A hack to workaround the fact that protobuf can't
@@ -40,6 +39,8 @@ message Ranges {
 // A slim range position, the filename is embedded in the
 // key of `references: map<string, ranges>`
 message Range {
-    int32 start = 2;
-    int32 end = 3;
+    int32 startLine = 1;
+    int32 startColumn = 2;
+    int32 endLine = 3;
+    int32 endColumn = 4;
 }

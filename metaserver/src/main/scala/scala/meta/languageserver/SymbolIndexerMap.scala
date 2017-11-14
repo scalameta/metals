@@ -27,6 +27,9 @@ class SymbolIndexerMap(
     })
   }
 
+  def get(symbol: String): Option[SymbolIndex] =
+    Option(symbols.get(symbols)).map(_.get)
+
   def addDefinition(
       symbol: String,
       position: Position

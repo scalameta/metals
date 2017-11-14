@@ -9,7 +9,6 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable.ListBuffer
-import scala.meta.languageserver.ScalametaEnrichments._
 import scala.util.control.NonFatal
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
@@ -32,9 +31,8 @@ import monix.reactive.Observer
 import monix.reactive.OverflowStrategy
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema
-import org.langmeta.io.AbsolutePath
 import org.langmeta.internal.semanticdb.schema.Database
-import org.langmeta.internal.semanticdb.schema.Denotation
+import org.langmeta.io.AbsolutePath
 
 class ScalametaLanguageServer(
     cwd: AbsolutePath,
@@ -58,15 +56,19 @@ class ScalametaLanguageServer(
     connection,
     buffers
   )
-  val databasePublisher = Observable.merge(
+  val databasePublisher: Observable[Database] = Observable.merge(
     semanticdbPublisher,
     compiler.documentPublisher.map(doc => Database(doc :: Nil))
   )
-  val symbol: SymbolIndexer = SymbolIndexer(
-    databasePublisher,
+  val symbolIndexer: SymbolIndexer = SymbolIndexer(
     connection,
     buffers
   )
+  val onIndexDatabase: Observable[Effects.IndexSemanticdb] =
+    databasePublisher.map { db =>
+      db.documents.foreach(symbolIndexer.indexDocument)
+      Effects.IndexSemanticdb
+    }
   val scalafix: Linter = new Linter(
     cwd,
     stdout,
@@ -112,7 +114,7 @@ class ScalametaLanguageServer(
   ): ServerCapabilities = {
     logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
     toCancel += scalafix.linter.subscribe()
-    toCancel += symbol.indexer.subscribe()
+    toCancel += onIndexDatabase.subscribe()
     toCancel += compiler.onNewCompilerConfig.subscribe()
     loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
@@ -260,7 +262,7 @@ class ScalametaLanguageServer(
       position: Position
   ): DefinitionResult = {
     val path = Uri.toPath(td.uri).get.toRelative(cwd)
-    symbol
+    symbolIndexer
       .goToDefinition(path, position.line, position.character)
       .getOrElse(DefinitionResult(Nil))
   }
