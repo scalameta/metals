@@ -15,19 +15,21 @@ object Main extends LazyLogging {
     val out = new PrintStream(new FileOutputStream(logPath))
     val err = new PrintStream(new FileOutputStream(logPath))
     val cwd = AbsolutePath(workspace)
-    val server = new ScalametaLanguageServer(cwd, System.in, System.out, out)
-
-    // route System.out somewhere else. Any output not from the server (e.g. logging)
-    // messes up with the client, since stdout is used for the language server protocol
-    val origOut = System.out
+    val stdin = System.in
+    val stdout = System.out
+    val stderr = System.err
     try {
+      // route System.out somewhere else. Any output not from the server (e.g. logging)
+      // messes up with the client, since stdout is used for the language server protocol
       System.setOut(out)
       System.setErr(err)
       logger.info(s"Starting server in $workspace")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
+      val server = new ScalametaLanguageServer(cwd, stdin, stdout, out)
       server.start()
     } finally {
-      System.setOut(origOut)
+      System.setOut(stdout)
+      System.setErr(stderr)
     }
 
     System.exit(0)

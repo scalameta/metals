@@ -106,10 +106,7 @@ class Compiler(
     val sourceJars = config.sourceJars
     sourceJars.foreach { jar =>
       // ensure we only index each jar once even under race conditions.
-      indexedJars.computeIfAbsent(
-        jar,
-        (path: AbsolutePath) => buf += path
-      )
+      indexedJars.computeIfAbsent(jar, _ => buf += jar)
     }
     val sourcesClasspath = buf.result()
     if (sourcesClasspath.nonEmpty) {
@@ -120,7 +117,6 @@ class Compiler(
     ctags.Ctags.index(sourcesClasspath) { doc =>
       documentSubscriber.onNext(doc)
     }
-    import scala.collection.JavaConverters._
     Effects.IndexSourcesClasspath
   }
   private def noCompletions: List[(String, String)] = {

@@ -15,7 +15,7 @@ lazy val languageserver = project
       "org.slf4j" % "slf4j-api" % "1.7.21",
       "ch.qos.logback" % "logback-classic" % "1.1.7",
       "org.codehaus.groovy" % "groovy" % "2.4.0",
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+      "org.scalatest" %% "scalatest" % "3.0.1" % Test
     )
   )
 
@@ -29,8 +29,8 @@ lazy val metaserver = project
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "ch.epfl.scala" % "scalafix-cli" % "0.5.3" cross CrossVersion.full,
-      "org.scalatest" %% "scalatest" % "3.0.3" % "test",
-      "org.scalameta" %% "testkit" % "2.0.1" % "test"
+      "org.scalatest" %% "scalatest" % "3.0.3" % Test,
+      "org.scalameta" %% "testkit" % "2.0.1" % Test
     )
   )
   .dependsOn(languageserver)
