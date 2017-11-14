@@ -119,6 +119,34 @@ class JavaCtagsTest extends BaseCtagsTest {
     """.stripMargin
   )
 
+  check(
+    "default.java",
+    """package k;
+      |public interface K {
+      |  L l = new L;
+      |  default M m() { new M() };
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Java
+      |
+      |Names:
+      |[8..9): k => _root_.k.
+      |[28..29): K <= _root_.k.K.
+      |[28..29): K <= _root_.k.K#
+      |[36..37): l <= _root_.k.K.l.
+      |[59..60): m <= _root_.k.K#m.
+      |
+      |Symbols:
+      |_root_.k. => package k
+      |_root_.k.K# => trait K
+      |_root_.k.K#m. => def m
+      |_root_.k.K. => object K
+      |_root_.k.K.l. => var l
+    """.stripMargin
+  )
+
   test("index jdk sources") {
     val jdk = CompilerConfig.jdkSources.get
     val DefaultFileSystem =

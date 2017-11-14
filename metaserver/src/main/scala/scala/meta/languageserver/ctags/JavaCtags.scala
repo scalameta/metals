@@ -16,6 +16,9 @@ import com.thoughtworks.qdox.model.JavaField
 import com.thoughtworks.qdox.model.JavaMember
 import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaModel
+import com.thoughtworks.qdox.model.impl.DefaultJavaAnnotation
+import com.thoughtworks.qdox.model.impl.DefaultJavaField
+import com.thoughtworks.qdox.model.impl.DefaultJavaMethod
 import org.langmeta.inputs.Position
 
 object JavaCtags {
@@ -59,6 +62,23 @@ object JavaCtags {
           pos
         }
 
+        /** (guess) returns if this is a default field
+         *
+         * I came across this example here
+         * {{{
+         * public interface Extension {
+         *   Set<Extension> EMPTY_SET = new HashSet<Extension>();
+         * }
+         * }}}
+         * from flexmark where EMPTY_SET is static but doesn't have isStatic = true.
+         * This is a best guess at what's happening, but could be doing the
+         * totally wrong thing.
+         */
+        def isDefaultField(m: JavaMember): Boolean = m match {
+          case field: DefaultJavaField => true
+          case _ => false
+        }
+
         def visitFields[T <: JavaMember](fields: java.util.List[T]): Unit =
           if (fields == null) ()
           else fields.forEach(visitMember)
@@ -84,7 +104,7 @@ object JavaCtags {
           }
 
         def visitMember[T <: JavaMember](m: T): Unit =
-          withOwner(owner(m.isStatic)) {
+          withOwner(owner(m.isStatic || isDefaultField(m))) {
             val name = m.getName
             val line = m match {
               case c: JavaMethod => c.lineNumber
