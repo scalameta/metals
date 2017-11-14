@@ -1,27 +1,20 @@
 package scala.meta.languageserver
 
 import java.net.URI
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicReference
-import java.util.function.UnaryOperator
-import java.util.{Map => JMap}
-import scala.collection.mutable
-import scala.meta._
-import com.typesafe.scalalogging.Logger
-import monix.execution.Scheduler
-import monix.reactive.Observable
-import org.langmeta.io.RelativePath
-import ScalametaEnrichments._
 import scala.meta.languageserver.index.DocumentStore
 import scala.meta.languageserver.index.InMemoryDocumentStore
-import langserver.core.Connection
-import langserver.messages.MessageType
-import org.langmeta.internal.semanticdb.{schema => s}
 import scala.meta.languageserver.{index => i}
-import `scala`.meta.languageserver.index.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
+import langserver.core.Connection
+import monix.execution.Scheduler
+import monix.reactive.Observable
+import org.langmeta.inputs.Input.Denotation
+import org.langmeta.inputs.Position
+import org.langmeta.semanticdb.Symbol
+import org.langmeta.semanticdb.Signature
+import org.langmeta.internal.semanticdb.{schema => s}
+import org.langmeta.io.AbsolutePath
+import org.langmeta.io.RelativePath
 
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
@@ -72,10 +65,10 @@ class SymbolIndexer(
         // If `case class A(a: Int)` and there is no companion object, resolve
         // `A` in `A(1)` to the class definition.
         Symbol.Global(owner, Signature.Type(name)) :: Nil
-      case Symbol.Multi(symbols) =>
+      case Symbol.Multi(ss) =>
         // If `import a.B` where `case class B()`, then
         // resolve to either symbol, whichever has a definition.
-        symbols
+        ss
       case Symbol.Global(owner, Signature.Method(name, _)) =>
         Symbol.Global(owner, Signature.Term(name)) :: Nil
       case _ =>
@@ -93,7 +86,6 @@ class SymbolIndexer(
 }
 
 object SymbolIndexer {
-  val emptyDocument: Document = Document(Input.None, "", Nil, Nil, Nil, Nil)
   def apply(
       semanticdbs: Observable[s.Database],
       connection: Connection,

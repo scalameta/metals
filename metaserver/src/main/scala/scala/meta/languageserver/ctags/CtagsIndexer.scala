@@ -5,6 +5,7 @@ import scala.meta.Term
 import scala.meta.PACKAGE
 import scala.meta.Type
 import scala.meta.languageserver.ScalametaEnrichments._
+import org.langmeta.internal.semanticdb.schema.Denotation
 import org.langmeta.internal.semanticdb.schema.ResolvedName
 import org.langmeta.internal.semanticdb.schema.Position
 import org.langmeta.internal.semanticdb.schema.ResolvedSymbol
@@ -58,15 +59,16 @@ trait CtagsIndexer {
       flags: Long
   ): Unit = {
     currentOwner = symbol(signature)
-    val pos = names += ResolvedName(
+    val syntax = currentOwner.syntax
+    names += ResolvedName(
       Some(Position(definition.start, definition.end)),
-      currentOwner.syntax,
+      syntax,
       isDefinition = (flags & PACKAGE) == 0
     )
-//    symbols += ResolvedSymbol(
-//      currentOwner,
-//      Denotation(flags, signature.name, "", Nil)
-//    )
+    symbols += ResolvedSymbol(
+      syntax,
+      Some(Denotation(flags, signature.name, "", Nil))
+    )
   }
   private def symbol(signature: Signature): Symbol.Global =
     Symbol.Global(currentOwner, signature)
