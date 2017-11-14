@@ -82,6 +82,7 @@ class SymbolIndexer(
   // However, that is a vscode only solution and we'd like this work for all
   // text editors. Therefore, we write instead the file contents to disk in order to
   // return a file: uri.
+  // TODO: Fix this with https://github.com/scalameta/language-server/issues/36
   private def createFileInWorkspaceTarget(
       input: Input.VirtualFile
   ): Input.VirtualFile = {
