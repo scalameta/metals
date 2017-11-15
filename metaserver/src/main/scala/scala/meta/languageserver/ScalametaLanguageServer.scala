@@ -200,8 +200,50 @@ class ScalametaLanguageServer(
   override def documentSymbols(
       td: TextDocumentIdentifier
   ): Seq[SymbolInformation] = {
+    import scala.meta._
+
+    // For a given node returns its closest ancestor which is a definition, declaration or a package object
+    // NOTE: package is not considered a wrapping definition, but it could be (a subject to discuss)
+    def wrappingDefinition(t: Tree): Option[Tree] = {
+      if (
+        t.is[Defn] ||
+        t.is[Decl] ||
+        t.is[Pkg.Object]
+      ) Some(t)
+      else t.parent.flatMap(wrappingDefinition)
+    }
+
+    // This is needed only to unfold full package names
+    def qualifiedName(t: Tree): Option[String] = t match {
+      case Term.Name(name) =>
+        Some(name)
+      case Term.Select(qual, name) =>
+        qualifiedName(qual).map { prefix => s"${prefix}.${name}" }
+      case Pkg(sel: Term.Select, _) =>
+        qualifiedName(sel)
+      case m: Member =>
+        Some(m.name.value)
+      case _ => None
+    }
+
     val path = Uri.toPath(td.uri).get
-    symbol.documentSymbols(path.toRelative(cwd))
+    val contents = buffers.read(path)
+    for {
+      tree <- contents.parse[Source].toOption.toList
+      node <- tree.collect {
+        case n if n.is[Member.Type] || n.is[Member.Term] => n
+      }
+      name <- qualifiedName(node)
+      // Package as a wrapping definition for itself:
+      defn <- if (node.is[Pkg]) Some(node) else wrappingDefinition(node)
+    } yield SymbolInformation(
+      name,
+      1, // TODO(alexey) add conversion from Tree to LSP SymbolKind
+      path.toLocation(defn.pos),
+      defn.parent
+        .flatMap(wrappingDefinition)
+        .flatMap(qualifiedName)
+    )
   }
 
   override def gotoDefinitionRequest(

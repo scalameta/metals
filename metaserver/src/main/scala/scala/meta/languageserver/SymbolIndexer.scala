@@ -38,31 +38,6 @@ class SymbolIndexer(
       } => member.pos
     }.headOption
 
-  def documentSymbols(
-      path: RelativePath
-  ): Seq[SymbolInformation] = {
-    for {
-      document <- Option(documents.get(path)).toList
-      _ <- isFreshSemanticdb(path, document).toList
-      tree <- document.input.parse[Source].toOption.toList
-      ResolvedName(pos, symbol: Symbol.Global, true) <- document.names
-      denotation <- Option(denotations.get(symbol))
-      if ! {
-        import denotation._
-        isPrimaryCtor ||
-        isTypeParam ||
-        isParam
-      } // not interesting for this service
-    } yield SymbolInformation(
-      denotation.name,
-      denotation.symbolKind,
-      path.toAbsolute.toLocation(
-        definitionPos(tree, pos, denotation.name).getOrElse(pos)
-      ),
-      Option(denotations.get(symbol.owner)).map(_.name)
-    )
-  }
-
   def goToDefinition(
       path: RelativePath,
       line: Int,
@@ -173,10 +148,10 @@ class SymbolIndexer(
       // NOTE(olafur) it may be a bit annoying to bail on a single character
       // edit in the file. In the future, we can try more to make sense of
       // partially fresh files using something like edit distance.
-      connection.showMessage(
-        MessageType.Warning,
-        "Please recompile for up-to-date information"
-      )
+      // connection.showMessage(
+      //   MessageType.Warning,
+      //   "Please recompile for up-to-date information"
+      // )
       None
     }
   }
