@@ -238,7 +238,7 @@ class ScalametaLanguageServer(
       defn <- if (node.is[Pkg]) Some(node) else wrappingDefinition(node)
     } yield SymbolInformation(
       name,
-      1, // TODO(alexey) add conversion from Tree to LSP SymbolKind
+      defn.symbolKind,
       path.toLocation(defn.pos),
       defn.parent
         .flatMap(wrappingDefinition)
