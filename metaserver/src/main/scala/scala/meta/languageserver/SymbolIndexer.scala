@@ -13,7 +13,6 @@ import org.langmeta.io.RelativePath
 import ScalametaEnrichments._
 import langserver.core.Connection
 import langserver.messages.MessageType
-import langserver.types.SymbolInformation
 
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
@@ -29,14 +28,6 @@ class SymbolIndexer(
       Map[RelativePath, List[Position]]
     ]
 )(implicit cwd: AbsolutePath) {
-
-  def definitionPos(tree: Source, pos: Position, name: String): Option[Position] =
-    tree.collect {
-      case member: Member if {
-        member.pos.startLine == pos.startLine &&
-        member.name.value == name
-      } => member.pos
-    }.headOption
 
   def goToDefinition(
       path: RelativePath,
@@ -148,10 +139,10 @@ class SymbolIndexer(
       // NOTE(olafur) it may be a bit annoying to bail on a single character
       // edit in the file. In the future, we can try more to make sense of
       // partially fresh files using something like edit distance.
-      // connection.showMessage(
-      //   MessageType.Warning,
-      //   "Please recompile for up-to-date information"
-      // )
+      connection.showMessage(
+        MessageType.Warning,
+        "Please recompile for up-to-date information"
+      )
       None
     }
   }
