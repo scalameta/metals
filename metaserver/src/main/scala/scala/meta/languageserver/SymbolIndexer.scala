@@ -30,13 +30,22 @@ class SymbolIndexer(
     ]
 )(implicit cwd: AbsolutePath) {
 
+  def definitionPos(tree: Source, pos: Position, name: String): Option[Position] =
+    tree.collect {
+      case member: Member if {
+        member.pos.startLine == pos.startLine &&
+        member.name.value == name
+      } => member.pos
+    }.headOption
+
   def documentSymbols(
       path: RelativePath
   ): Seq[SymbolInformation] = {
     for {
       document <- Option(documents.get(path)).toList
       _ <- isFreshSemanticdb(path, document).toList
-      ResolvedName(position: Position.Range, symbol: Symbol.Global, true) <- document.names
+      tree <- document.input.parse[Source].toOption.toList
+      ResolvedName(pos, symbol: Symbol.Global, true) <- document.names
       denotation <- Option(denotations.get(symbol))
       if ! {
         import denotation._
@@ -47,7 +56,9 @@ class SymbolIndexer(
     } yield SymbolInformation(
       denotation.name,
       denotation.symbolKind,
-      path.toAbsolute.toLocation(position),
+      path.toAbsolute.toLocation(
+        definitionPos(tree, pos, denotation.name).getOrElse(pos)
+      ),
       Option(denotations.get(symbol.owner)).map(_.name)
     )
   }
