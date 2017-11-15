@@ -13,6 +13,7 @@ object ScalametaEnrichments {
   implicit class XtensionTreeLSP(val tree: m.Tree) extends AnyVal {
     import scala.meta._
 
+    // TODO(alexey) function inside a block/if/for/etc.?
     def isFunction: Boolean = tree match {
       case d @ Decl.Val(_) => d.decltpe.is[Type.Function]
       case d @ Decl.Var(_) => d.decltpe.is[Type.Function]
@@ -25,7 +26,7 @@ object ScalametaEnrichments {
       case _ => false
     }
 
-    // we care only about descendants of Member.Type and Member.Term
+    // NOTE: we care only about descendants of Decl, Defn and Pkg[.Object] (see documentSymbols implementation)
     def symbolKind: SymbolKind = tree match {
       case f if f.isFunction => SymbolKind.Function
       case Decl.Var(_)  | Defn.Var(_)  => SymbolKind.Variable
@@ -38,6 +39,7 @@ object ScalametaEnrichments {
       case Defn.Object(_) => SymbolKind.Namespace
       case Pkg.Object(_)  => SymbolKind.Module
       case Pkg(_)         => SymbolKind.Package
+      // TODO(alexey) are these kinds useful?
       // case ??? => SymbolKind.Enum
       // case ??? => SymbolKind.String
       // case ??? => SymbolKind.Number
