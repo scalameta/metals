@@ -14,16 +14,15 @@ object ScalametaEnrichments {
     import scala.meta._
 
     // TODO(alexey) function inside a block/if/for/etc.?
-    def isFunction: Boolean = tree match {
-      case d @ Decl.Val(_) => d.decltpe.is[Type.Function]
-      case d @ Decl.Var(_) => d.decltpe.is[Type.Function]
-      case d @ Defn.Val(_) =>
-        d.decltpe.map(_.is[Type.Function]) getOrElse
-        d.rhs.is[Term.Function]
-      case d @ Defn.Var(_) =>
-        d.decltpe.map(_.is[Type.Function]) orElse
-        d.rhs.map(_.is[Term.Function]) getOrElse false
-      case _ => false
+    def isFunction: Boolean = {
+      val tpeOpt: Option[Type] = tree match {
+        case d @ Decl.Val(_) => Some(d.decltpe)
+        case d @ Decl.Var(_) => Some(d.decltpe)
+        case d @ Defn.Val(_) => d.decltpe
+        case d @ Defn.Var(_) => d.decltpe
+        case _ => None
+      }
+      tpeOpt.filter(_.is[Type.Function]).nonEmpty
     }
 
     // NOTE: we care only about descendants of Decl, Defn and Pkg[.Object] (see documentSymbols implementation)
