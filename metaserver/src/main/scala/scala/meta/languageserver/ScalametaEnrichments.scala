@@ -36,8 +36,8 @@ object ScalametaEnrichments {
       case Defn.Macro(_)  => SymbolKind.Constructor
       case Defn.Class(_)  => SymbolKind.Class
       case Defn.Trait(_)  => SymbolKind.Interface
-      case Defn.Object(_) => SymbolKind.Namespace
-      case Pkg.Object(_)  => SymbolKind.Module
+      case Defn.Object(_) => SymbolKind.Module
+      case Pkg.Object(_)  => SymbolKind.Namespace
       case Pkg(_)         => SymbolKind.Package
       // TODO(alexey) are these kinds useful?
       // case ??? => SymbolKind.Enum
