@@ -9,7 +9,7 @@
   <!-- Configure here which loggers you want to see in the
        console while running tests -->
   <logger name="ch.qos.logback" level="warn" />
-  <logger name="scala.meta.languageserver" level="warn" />
+  <!--<logger name="scala.meta.languageserver" level="warn" />-->
 
   <root level="debug">
     <appender-ref ref="STDOUT" />

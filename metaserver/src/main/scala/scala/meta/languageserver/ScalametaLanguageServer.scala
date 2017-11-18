@@ -5,6 +5,7 @@ import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
+import scala.meta.languageserver.ctags.Ctags
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.LanguageServer
@@ -29,14 +30,19 @@ import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 
-class ScalametaLanguageServer(
+case class ServerConfig(
     cwd: AbsolutePath,
+    indexJDK: Boolean = true
+)
+
+class ScalametaLanguageServer(
+    config: ServerConfig,
     lspIn: InputStream,
     lspOut: OutputStream,
     stdout: PrintStream
 )(implicit s: Scheduler)
     extends LanguageServer(lspIn, lspOut) {
-  implicit val workspacePath: AbsolutePath = cwd
+  implicit val cwd: AbsolutePath = config.cwd
   val (semanticdbSubscriber, semanticdbPublisher) =
     ScalametaLanguageServer.semanticdbStream
   val (compilerConfigSubscriber, compilerConfigPublisher) =

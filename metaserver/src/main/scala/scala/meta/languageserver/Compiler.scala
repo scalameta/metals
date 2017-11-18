@@ -23,7 +23,7 @@ class Compiler(
     config: Observable[AbsolutePath],
     connection: Connection,
     buffers: Buffers
-)(implicit cwd: AbsolutePath, s: Scheduler)
+)(implicit s: Scheduler)
     extends LazyLogging {
   private val (documentSubscriber, myDocumentPublisher) =
     Observable.multicast[Document](MulticastStrategy.Publish)
@@ -99,6 +99,7 @@ class Compiler(
     }
     Effects.InstallPresentationCompiler
   }
+
   private def indexDependencyClasspath(
       config: CompilerConfig
   ): Effects.IndexSourcesClasspath = {
