@@ -7,6 +7,14 @@ inThisBuild(
   )
 )
 
+lazy val noPublish = List(
+  publishArtifact in (Compile, packageDoc) := false,
+  publishArtifact in packageDoc := false,
+  sources in (Compile, doc) := Seq.empty,
+  publishArtifact := false,
+  publish := {}
+)
+
 lazy val semanticdbSettings = List(
   addCompilerPlugin(
     "org.scalameta" % "semanticdb-scalac" % "2.1.2" cross CrossVersion.full
@@ -43,6 +51,11 @@ lazy val metaserver = project
       scalaVersion,
       sbtVersion
     ),
+    compileInputs.in(Test, compile) :=
+      compileInputs
+        .in(Compile, compile)
+        .dependsOn(compile.in(testWorkspace, Test))
+        .value,
     buildInfoPackage := "scala.meta.languageserver",
     libraryDependencies ++= List(
       "io.monix" %% "monix" % "2.3.0",
@@ -55,9 +68,17 @@ lazy val metaserver = project
       "org.scalameta" %% "testkit" % "2.0.1" % Test
     )
   )
-  .dependsOn(languageserver, testWorkspace % Test)
+  .dependsOn(languageserver)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val testWorkspace = project
   .in(file("test-workspace") / "a")
-  .settings(semanticdbSettings)
+  .settings(
+    noPublish,
+    semanticdbSettings,
+    scalacOptions += {
+      // Need to fix source root so it matches the workspace folder.
+      val sourceRoot = baseDirectory.value / "test-workspace"
+      s"-P:semanticdb:sourceroot:$sourceRoot"
+    }
+  )

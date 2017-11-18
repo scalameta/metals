@@ -166,7 +166,7 @@ class SymbolIndexer(
     documents.putDocument(uri, document)
     document.names.foreach {
       // TODO(olafur) handle local symbols in go-to-definition
-      // case s.ResolvedName(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
+//      case s.ResolvedName(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
       case s.ResolvedName(Some(s.Position(start, end)), sym, true) =>
         symbols.addDefinition(
           sym,

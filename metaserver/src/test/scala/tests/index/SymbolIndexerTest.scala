@@ -2,6 +2,7 @@ package tests.index
 
 import java.net.URI
 import java.nio.file.Files
+import java.nio.file.Paths
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.meta.languageserver.Semanticdbs
@@ -38,6 +39,7 @@ object SymbolIndexerTest extends MegaSuite {
       .foreach { p =>
         val db = Semanticdbs.loadFromFile(p)
         schemaDocuments ++= db.documents.map(
+          // Wipe out irrelevant parts.
           _.withMessages(Nil).withSynthetics(Nil).withSymbols(Nil)
         )
         indexer.indexDatabase(db)
@@ -113,17 +115,25 @@ object SymbolIndexerTest extends MegaSuite {
             }
         }
       }
-      val obtained = m
+      val reconstructedDatabase = m
         .Database(
           db.values.iterator
             .filter(_.input.chars.nonEmpty)
             .toArray
             .sortBy(_.input.syntax)
         )
-        .syntax
-      val expected = testDatabase.syntax
-      println(testDatabase.syntax)
-      assertNoDiff(obtained, expected)
+      val inputs = reconstructedDatabase.documents
+        .map(
+          d => Paths.get(d.input.syntax).getFileName.toString
+        )
+        .toList
+      assert(
+        inputs == List(
+          "User.scala",
+          "UserTest.scala"
+        )
+      )
+      assertNoDiff(reconstructedDatabase.syntax, testDatabase.syntax)
     }
   }
 }

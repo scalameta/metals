@@ -35,9 +35,10 @@ cd language-server
 ########
 sbt
 > metaserver/publishLocal # publish your latest changes locally
-                               # keep this sbt shell session open, and
-                               # re-run publishLocal every time you
-                               # edit *.scala sources.
+                          # keep this sbt shell session open, and
+                          # re-run publishLocal every time you
+                          # edit *.scala sources.
+> ~testWorkspace/test:compile # compile the sources in test-workspace
 
 ########
 # Step 2
@@ -58,14 +59,6 @@ code vscode-extension
 (optional) to install the plugin for your default vscode
 npm run build # builds a .vsix extension file
 code --install-extension vscode-scalameta-0.0.1.vsix
-
-########
-# Step 3
-########
-# Inside the same terminal window as step 2
-cd ../test-workspace
-sbt        # Open up long running sbt shell
-> ~compile # Compile sources on file edit
 ```
 
 To test the plugin on another project than `test-workspace`, you must
@@ -80,3 +73,14 @@ You have two alternatives:
 
 See an example manual installation in [test-workspace/build.sbt](test-workspace/build.sbt).
 
+## Unit tests
+
+So far, we manually test the integration with vscode/LSP.
+However, we have a few unit tests for the parts unrelated to LSP or vscode.
+To run these tests,
+```
+sbt
+> metaserver/test                    # Run all unit tests
+> metaserver/testOnly -- tests.ctags # Only test the ctags tests
+> metaserver/testOnly -- tests.index # Only tests the indexer tests
+```
