@@ -6,5 +6,5 @@ class UserTest {
   List
     .apply(1, 2)
     .map(x => x.+(2))
-  java.nio.file.Paths.get("path")
+  scala.runtime.CharRef.create('a')
 }

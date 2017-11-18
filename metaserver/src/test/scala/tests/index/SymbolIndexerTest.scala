@@ -58,7 +58,7 @@ object SymbolIndexerTest extends MegaSuite {
     cwd,
     setupScalafmt = false,
     indexJDK = false,
-    indexClasspath = false
+    indexClasspath = true // set to false to speedup edit/debug cycle
   )
   val client = new PipedOutputStream()
   val stdin = new PipedInputStream(client)
@@ -104,9 +104,16 @@ object SymbolIndexerTest extends MegaSuite {
     }
 
     "classpath" - {
+      // ScalaCtags
       "<<List>>(...)" - {
         val term = indexer.findSymbol(path, 5, 5).get
         assertNoDiff(term.symbol, "_root_.scala.collection.immutable.List.")
+        assert(term.definition.isDefined)
+      }
+      // JavaCtags
+      "<<CharRef>>.create(...)" - {
+        val term = indexer.findSymbol(path, 8, 19).get
+        assertNoDiff(term.symbol, "_root_.scala.runtime.CharRef.")
         assert(term.definition.isDefined)
       }
     }
