@@ -47,8 +47,15 @@ object SymbolIndexerTest extends MegaSuite {
     val testDatabase = s.Database(schemaDocuments.sortBy(_.filename)).toDb(None)
 
     "fallback" - {
+
       "<<User>>(...)" - {
         val term = indexer.findSymbol(path, 3, 17).get
+        assertNoDiff(term.symbol, "_root_.a.User#")
+        assert(term.definition.isDefined)
+      }
+
+      "User.<<apply>>(...)" - {
+        val term = indexer.findSymbol(path, 3, 22).get
         assertNoDiff(term.symbol, "_root_.a.User#")
         assert(term.definition.isDefined)
       }
