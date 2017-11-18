@@ -2,18 +2,8 @@ package tests
 
 import scala.language.experimental.macros
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Paths
-import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.meta.Lit
-import scala.meta.languageserver.BuildInfo
 import scala.reflect.ClassTag
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigUtil
-import com.typesafe.config.ConfigValueFactory
 import utest.TestSuite
 import utest.Tests
 import utest.asserts.Asserts

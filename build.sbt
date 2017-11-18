@@ -44,19 +44,8 @@ lazy val metaserver = project
     ),
     resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
     testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
-    buildInfoKeys := Seq[BuildInfoKey](
-      name,
-      version,
-      "testSourceDirectory" -> sourceDirectory.in(Test).value,
-      scalaVersion,
-      sbtVersion
-    ),
-    compileInputs.in(Test, compile) :=
-      compileInputs
-        .in(Compile, compile)
-        .dependsOn(compile.in(testWorkspace, Test))
-        .value,
-    buildInfoPackage := "scala.meta.languageserver",
+//    compile.in(Test) :=
+//      compile.in(Test).dependsOn(compile.in(testWorkspace, Test)).value,
     libraryDependencies ++= List(
       "io.monix" %% "monix" % "2.3.0",
       "com.lihaoyi" %% "pprint" % "0.5.3",
@@ -68,8 +57,10 @@ lazy val metaserver = project
       "org.scalameta" %% "testkit" % "2.0.1" % Test
     )
   )
-  .dependsOn(languageserver)
-  .enablePlugins(BuildInfoPlugin)
+  .dependsOn(
+    languageserver,
+    testWorkspace % "test->test"
+  )
 
 lazy val testWorkspace = project
   .in(file("test-workspace") / "a")
@@ -78,7 +69,7 @@ lazy val testWorkspace = project
     semanticdbSettings,
     scalacOptions += {
       // Need to fix source root so it matches the workspace folder.
-      val sourceRoot = baseDirectory.value / "test-workspace"
+      val sourceRoot = baseDirectory.in(ThisBuild).value / "test-workspace"
       s"-P:semanticdb:sourceroot:$sourceRoot"
     }
   )

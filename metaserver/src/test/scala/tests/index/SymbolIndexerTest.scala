@@ -10,9 +10,9 @@ import scala.meta.languageserver.SymbolIndexer
 import scala.meta.languageserver.{index => i}
 import scala.{meta => m}
 import org.langmeta.inputs.Input
-import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.internal.io.FileIO
 import org.langmeta.internal.io.PathIO
+import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import tests.MegaSuite
@@ -44,7 +44,7 @@ object SymbolIndexerTest extends MegaSuite {
         )
         indexer.indexDatabase(db)
       }
-    var testDatabase = s.Database(schemaDocuments.sortBy(_.filename)).toDb(None)
+    val testDatabase = s.Database(schemaDocuments.sortBy(_.filename)).toDb(None)
 
     "fallback" - {
       "<<User>>(...)" - {
@@ -69,6 +69,7 @@ object SymbolIndexerTest extends MegaSuite {
       // Reconstruct an m.Database from the symbol index and asserts that the
       // reconstructed database is identical to the original semanticdbs that
       // built the symbol index.
+      // TODO(olafur) handle local symbols when we stop indexing them.
       val db = mutable.Map.empty[String, m.Document]
       def get(filename: String) = db.getOrElseUpdate(
         filename,
