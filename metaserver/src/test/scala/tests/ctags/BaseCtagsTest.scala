@@ -1,5 +1,6 @@
-package scala.meta.languageserver.ctags
+package tests.ctags
 
+import scala.meta.languageserver.ctags.Ctags
 import org.langmeta.internal.semanticdb.schema.Database
 import tests.MegaSuite
 

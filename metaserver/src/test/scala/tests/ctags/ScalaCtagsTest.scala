@@ -1,4 +1,4 @@
-package scala.meta.languageserver.ctags
+package tests.ctags
 
 object ScalaCtagsTest extends BaseCtagsTest {
   check(

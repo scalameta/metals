@@ -1,7 +1,8 @@
-package scala.meta.languageserver.ctags
+package tests.ctags
 
 import java.nio.file.Paths
 import scala.meta.languageserver.CompilerConfig
+import scala.meta.languageserver.ctags.Ctags
 
 object JavaCtagsTest extends BaseCtagsTest {
   check(
@@ -159,7 +160,9 @@ object JavaCtagsTest extends BaseCtagsTest {
     val db = Ctags.indexDatabase(jdk :: Nil, shouldIndex = { path =>
       path.toNIO.endsWith(DefaultFileSystem)
     })
-    val obtained = db.toDb(None).syntax
+    val obtained = db
+      .toDb(None)
+      .syntax
       .replace(jdk.toString(), "JAVA_HOME")
       .replaceAll("-+", "------------------") // consistent across machines.
     val expected =

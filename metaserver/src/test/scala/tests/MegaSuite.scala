@@ -25,7 +25,6 @@ import utest.ufansi.Str
 /**
  * Test suite that supports
  *
- * - snapshot testing
  * - beforeAll
  * - afterAll
  * - pretty multiline string diffing
@@ -58,7 +57,9 @@ class MegaSuite(implicit filename: sourcecode.File) extends TestSuite {
   private val myTests = IndexedSeq.newBuilder[(String, () => Unit)]
 
   def ignore(name: String)(fun: => Any): Unit = {
-    myTests += (name -> (() => ()))
+    myTests += (utest.ufansi.Color.LightRed(s"IGNORED - $name").toString() -> (
+        () => ()
+    ))
   }
   def test(name: String)(fun: => Any): Unit = {
     myTests += (name -> (() => fun))

@@ -1,8 +1,8 @@
-package scala.meta.languageserver.ctags
+package tests.ctags
 
 import java.nio.file.Paths
 import scala.meta.languageserver.Jars
-import scala.meta.testkit.DiffAssertions
+import scala.meta.languageserver.ctags.Ctags
 import tests.MegaSuite
 
 object ClasspathCtagsTest extends MegaSuite {

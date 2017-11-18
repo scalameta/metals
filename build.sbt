@@ -13,8 +13,8 @@ lazy val languageserver = project
     libraryDependencies ++= Seq(
       "com.dhpcs" %% "scala-json-rpc" % "2.0.1",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
-      "org.slf4j" % "slf4j-api" % "1.7.21",
-      "ch.qos.logback" % "logback-classic" % "1.1.7",
+      "org.slf4j" % "slf4j-api" % "1.7.25",
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
       "org.codehaus.groovy" % "groovy" % "2.4.0",
       "org.scalatest" %% "scalatest" % "3.0.1" % Test
     )
