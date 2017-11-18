@@ -18,9 +18,7 @@ import langserver.messages._
 import langserver.types._
 import play.api.libs.json._
 import com.dhpcs.jsonrpc.JsonRpcMessage._
-trait Notifications {
-  def showMessage(tpe: Int, message: String): Unit
-}
+
 /**
  * A connection that reads and writes Language Server Protocol messages.
  *

@@ -59,14 +59,9 @@ class SymbolIndexerMap(
       symbol: String,
       position: Position
   ): Unit = updated(symbol) { index =>
+    // NOTE(olafur): Here we override the previous definition, in some cases,
+    // we should accummulate them, for example non-pure JS/JVM/Native projects.
     index.copy(definition = Some(position))
-//    index.definition match {
-//      case Some(_) =>
-//        logger.info(s"Not persisting definition for $symbol, already exists")
-  // Do nothing, conflicting symbol definitions, for example js/jvm
-//        index
-//      case _ =>
-//    }
   }
 
   def addDenotation(
