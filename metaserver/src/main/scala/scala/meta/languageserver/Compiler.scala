@@ -19,12 +19,14 @@ import org.langmeta.io.AbsolutePath
 import org.langmeta.internal.semanticdb.schema.Document
 
 class Compiler(
+    serverConfig: ServerConfig,
     out: PrintStream,
     config: Observable[AbsolutePath],
     connection: Connection,
     buffers: Buffers
 )(implicit s: Scheduler)
     extends LazyLogging {
+  private implicit val cwd = serverConfig.cwd
   private val (documentSubscriber, myDocumentPublisher) =
     Observable.multicast[Document](MulticastStrategy.Publish)
   val documentPublisher: Observable[Document] = myDocumentPublisher
@@ -103,6 +105,7 @@ class Compiler(
   private def indexDependencyClasspath(
       config: CompilerConfig
   ): Effects.IndexSourcesClasspath = {
+    if (!serverConfig.indexClasspath) return Effects.IndexSourcesClasspath
     val buf = List.newBuilder[AbsolutePath]
     val sourceJars = config.sourceJars
     sourceJars.foreach { jar =>

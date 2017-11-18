@@ -32,7 +32,9 @@ import org.langmeta.io.AbsolutePath
 
 case class ServerConfig(
     cwd: AbsolutePath,
-    indexJDK: Boolean = true
+    setupScalafmt: Boolean = true,
+    indexJDK: Boolean = true,
+    indexClasspath: Boolean = true
 )
 
 class ScalametaLanguageServer(
@@ -52,6 +54,7 @@ class ScalametaLanguageServer(
   }
   val buffers: Buffers = Buffers()
   val compiler = new Compiler(
+    config,
     stdout,
     compilerConfigPublisher,
     connection,
@@ -76,7 +79,9 @@ class ScalametaLanguageServer(
     connection,
     semanticdbPublisher.map(_.toDb(None)).doOnError(onError)
   )
-  val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0")
+  val scalafmt: Formatter =
+    if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
+    else Formatter.empty
 
   // TODO(olafur) more holistic error handling story.
   private def unsafe(thunk: => Unit): Unit =

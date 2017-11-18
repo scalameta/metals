@@ -10,6 +10,13 @@ abstract class Formatter {
   def format(code: String, configFile: String, filename: String): String
 }
 object Formatter extends LazyLogging {
+  def empty: Formatter = new Formatter {
+    override def format(
+        code: String,
+        configFile: String,
+        filename: String
+    ): String = code
+  }
   def classloadScalafmt(version: String): Formatter = {
     val urls = Jars
       .fetch("com.geirsson", "scalafmt-cli_2.12", version, System.out)

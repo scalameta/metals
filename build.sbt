@@ -44,8 +44,6 @@ lazy val metaserver = project
     ),
     resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
     testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
-//    compile.in(Test) :=
-//      compile.in(Test).dependsOn(compile.in(testWorkspace, Test)).value,
     libraryDependencies ++= List(
       "io.monix" %% "monix" % "2.3.0",
       "com.lihaoyi" %% "pprint" % "0.5.3",
