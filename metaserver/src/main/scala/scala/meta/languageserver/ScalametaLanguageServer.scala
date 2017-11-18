@@ -5,7 +5,6 @@ import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
-import scala.meta.languageserver.ctags.Ctags
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.LanguageServer
@@ -46,7 +45,7 @@ class ScalametaLanguageServer(
     extends LanguageServer(lspIn, lspOut) {
   implicit val cwd: AbsolutePath = config.cwd
   val (semanticdbSubscriber, semanticdbPublisher) =
-    ScalametaLanguageServer.semanticdbStream
+    ScalametaLanguageServer.semanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     Observable.multicast[AbsolutePath](MulticastStrategy.Publish)
   def onError(e: Throwable): Unit = {
@@ -95,7 +94,7 @@ class ScalametaLanguageServer(
   private val toCancel = ListBuffer.empty[Cancelable]
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
-    Workspace.initialize { path =>
+    Workspace.initialize(cwd) { path =>
       onChangedFile(path)(_ => ())
     }
   }
@@ -309,14 +308,13 @@ class ScalametaLanguageServer(
 }
 
 object ScalametaLanguageServer extends LazyLogging {
-  def semanticdbStream(
-      implicit cwd: AbsolutePath,
-      scheduler: Scheduler
+  def semanticdbStream(cwd: AbsolutePath)(
+      implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
     val (subscriber, publisher) =
       Observable.multicast[AbsolutePath](MulticastStrategy.Publish)
     val semanticdbPublisher = publisher
-      .map(path => Semanticdbs.loadFromFile(path))
+      .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))
     subscriber -> semanticdbPublisher
   }
 }

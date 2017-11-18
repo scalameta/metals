@@ -9,9 +9,9 @@ import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 
 object Workspace {
-  def initialize(
+  def initialize(cwd: AbsolutePath)(
       callback: AbsolutePath => Unit
-  )(implicit cwd: AbsolutePath): Unit = {
+  ): Unit = {
     Files.walkFileTree(
       cwd.toNIO,
       new SimpleFileVisitor[Path] {

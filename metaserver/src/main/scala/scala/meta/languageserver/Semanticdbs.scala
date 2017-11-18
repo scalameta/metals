@@ -6,8 +6,11 @@ import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 
 object Semanticdbs extends LazyLogging {
-  def loadFromFile(path: AbsolutePath)(implicit cwd: AbsolutePath): Database = {
-    val bytes = Files.readAllBytes(path.toNIO)
+  def loadFromFile(
+      semanticdbPath: AbsolutePath,
+      cwd: AbsolutePath
+  ): Database = {
+    val bytes = Files.readAllBytes(semanticdbPath.toNIO)
     val sdb = Database.parseFrom(bytes)
     Database(
       sdb.documents.map { d =>
