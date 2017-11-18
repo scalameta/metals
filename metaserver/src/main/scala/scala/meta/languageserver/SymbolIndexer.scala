@@ -1,11 +1,6 @@
 package scala.meta.languageserver
 
 import java.net.URI
-import java.util
-import java.util
-import java.util.Comparator
-import scala.collection.Searching
-import scala.collection.mutable
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.index.DocumentStore
 import scala.meta.languageserver.index.InMemoryDocumentStore
@@ -29,7 +24,7 @@ import org.langmeta.semanticdb.Symbol
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
 class SymbolIndexer(
     val symbols: SymbolIndexerMap,
-    documents: DocumentStore,
+    val documents: DocumentStore,
     notifications: Notifications,
     buffers: Buffers
 )(implicit cwd: AbsolutePath)

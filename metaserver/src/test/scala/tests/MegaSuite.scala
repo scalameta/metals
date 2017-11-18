@@ -39,7 +39,7 @@ class MegaSuite(implicit filename: sourcecode.File) extends TestSuite {
       obtained: String,
       expected: String,
       title: String = ""
-  ): Boolean = {
+  ): Unit = {
     DiffAsserts.assertNoDiff(obtained, expected, title)
   }
   override def utestAfterAll(): Unit = afterAll()

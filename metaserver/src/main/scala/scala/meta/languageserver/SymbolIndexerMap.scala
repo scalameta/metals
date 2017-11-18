@@ -9,6 +9,7 @@ import scala.meta.languageserver.index.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.semanticdb.Symbol
 import scala.collection.concurrent.TrieMap
+import org.langmeta.internal.semanticdb.schema.Database
 
 class SymbolIndexerMap(
     symbols: TrieMap[String, AtomicReference[SymbolIndex]] = TrieMap.empty

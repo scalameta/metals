@@ -7,6 +7,13 @@ inThisBuild(
   )
 )
 
+lazy val semanticdbSettings = List(
+  addCompilerPlugin(
+    "org.scalameta" % "semanticdb-scalac" % "2.1.2" cross CrossVersion.full
+  ),
+  scalacOptions += "-Yrangepos"
+)
+
 lazy val languageserver = project
   .settings(
     resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
@@ -48,5 +55,9 @@ lazy val metaserver = project
       "org.scalameta" %% "testkit" % "2.0.1" % Test
     )
   )
-  .dependsOn(languageserver)
+  .dependsOn(languageserver, testWorkspace % Test)
   .enablePlugins(BuildInfoPlugin)
+
+lazy val testWorkspace = project
+  .in(file("test-workspace") / "a")
+  .settings(semanticdbSettings)
