@@ -1,34 +1,50 @@
 package scala.meta.languageserver
 
-import java.util
-import java.util.function.Function
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.UnaryOperator
 import scala.meta.languageserver.index.Position
 import scala.meta.languageserver.index.Ranges
 import scala.meta.languageserver.index.Range
 import scala.meta.languageserver.index.SymbolIndex
+import com.typesafe.scalalogging.LazyLogging
+import org.langmeta.semanticdb.Symbol
+import scala.collection.concurrent.TrieMap
 
 class SymbolIndexerMap(
-    symbols: util.Map[String, AtomicReference[SymbolIndex]] =
-      new ConcurrentHashMap()
-) {
-  private val mappingFunction
-    : Function[String, AtomicReference[SymbolIndex]] = { index =>
-    new AtomicReference(SymbolIndex(symbol = index))
+    symbols: TrieMap[String, AtomicReference[SymbolIndex]] = TrieMap.empty
+) extends LazyLogging { self =>
+  private def newValue(symbol: String) = {
+    new AtomicReference(SymbolIndex(symbol = symbol))
+  }
+
+  def index: Traversable[SymbolIndex] = new Traversable[SymbolIndex] {
+    override def foreach[U](f: SymbolIndex => U): Unit =
+      symbols.values.foreach(s => f(s.get))
   }
 
   def updated(symbol: String)(f: SymbolIndex => SymbolIndex): Unit = {
-    val value = symbols.computeIfAbsent(symbol, mappingFunction)
+    val value = symbols.getOrElseUpdate(symbol, newValue(symbol))
     value.getAndUpdate(new UnaryOperator[SymbolIndex] {
       override def apply(index: SymbolIndex): SymbolIndex =
         f(index)
     })
   }
 
+  def debug(): Unit = {
+    symbols.keys.foreach(value => logger.info(s"[symbolmap] $value"))
+  }
+
+  def get(symbol: Symbol): Option[SymbolIndex] = symbol match {
+    case Symbol.Multi(ss) => ss.collectFirst { case self(i) => i }
+    case s: Symbol => get(s.syntax)
+  }
   def get(symbol: String): Option[SymbolIndex] =
-    Option(symbols.get(symbols)).map(_.get)
+    symbols.get(symbol).map(_.get).filter(_.definition.isDefined)
+  def unapply(arg: Any): Option[SymbolIndex] = arg match {
+    case s: String => get(s)
+    case s: Symbol => get(s)
+    case _ => None
+  }
 
   def addDefinition(
       symbol: String,

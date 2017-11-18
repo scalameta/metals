@@ -124,7 +124,6 @@ object Ctags extends LazyLogging {
 
   /** Index single Scala or Java from disk or zip file. */
   def index(fragment: Fragment): Document = {
-    val filename = fragment.uri.toString
     val uri = {
       // Need special handling because https://github.com/scalameta/scalameta/issues/1163
       if (isZip(fragment.base.toNIO.getFileName.toString))

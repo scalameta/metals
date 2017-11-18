@@ -3,7 +3,7 @@ package scala.meta.languageserver.ctags
 import java.nio.file.Paths
 import scala.meta.languageserver.CompilerConfig
 
-class JavaCtagsTest extends BaseCtagsTest {
+object JavaCtagsTest extends BaseCtagsTest {
   check(
     "interface.java",
     """package a.b;

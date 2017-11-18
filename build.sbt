@@ -2,7 +2,8 @@ inThisBuild(
   List(
     scalaVersion := "2.12.3",
     organization := "org.scalameta",
-    version := "0.1-SNAPSHOT"
+    version := "0.1-SNAPSHOT",
+    sources.in(Compile, doc) := Nil // faster publishLocal.
   )
 )
 
@@ -27,6 +28,15 @@ lazy val metaserver = project
       ) -> sourceManaged.in(Compile).value./("protobuf")
     ),
     resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
+    testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
+    buildInfoKeys := Seq[BuildInfoKey](
+      name,
+      version,
+      "testSourceDirectory" -> sourceDirectory.in(Test).value,
+      scalaVersion,
+      sbtVersion
+    ),
+    buildInfoPackage := "scala.meta.languageserver",
     libraryDependencies ++= List(
       "io.monix" %% "monix" % "2.3.0",
       "com.lihaoyi" %% "pprint" % "0.5.3",
@@ -34,8 +44,9 @@ lazy val metaserver = project
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "ch.epfl.scala" % "scalafix-cli" % "0.5.3" cross CrossVersion.full,
-      "org.scalatest" %% "scalatest" % "3.0.3" % Test,
+      "com.lihaoyi" %% "utest" % "0.6.0" % Test,
       "org.scalameta" %% "testkit" % "2.0.1" % Test
     )
   )
   .dependsOn(languageserver)
+  .enablePlugins(BuildInfoPlugin)

@@ -1,10 +1,9 @@
 package scala.meta.languageserver.ctags
 
-import scala.meta.testkit.DiffAssertions
 import org.langmeta.internal.semanticdb.schema.Database
-import org.scalatest.FunSuite
+import tests.MegaSuite
 
-class BaseCtagsTest extends FunSuite with DiffAssertions {
+class BaseCtagsTest extends MegaSuite {
   def checkIgnore(
       filename: String,
       original: String,
@@ -15,11 +14,8 @@ class BaseCtagsTest extends FunSuite with DiffAssertions {
   def check(filename: String, original: String, expected: String): Unit = {
     test(filename) {
       val obtained = Database(Ctags.index(filename, original) :: Nil)
-        .toDb(None)
-        .documents
-        .head
-      println(obtained)
-      assertNoDiff(obtained.syntax, expected)
+//      println(obtained)
+      assertNoDiff(obtained.toDb(None).documents.head.syntax, expected)
     }
   }
 }

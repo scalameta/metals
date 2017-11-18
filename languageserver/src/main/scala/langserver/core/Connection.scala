@@ -18,6 +18,9 @@ import langserver.messages._
 import langserver.types._
 import play.api.libs.json._
 import com.dhpcs.jsonrpc.JsonRpcMessage._
+trait Notifications {
+  def showMessage(tpe: Int, message: String): Unit
+}
 /**
  * A connection that reads and writes Language Server Protocol messages.
  *
@@ -28,7 +31,7 @@ import com.dhpcs.jsonrpc.JsonRpcMessage._
  *       and that can't subclass anything other than Any
  */
 class Connection(inStream: InputStream, outStream: OutputStream)(val commandHandler: (String, ServerCommand) => Any)
-    extends LazyLogging {
+    extends LazyLogging with Notifications {
   private val msgReader = new MessageReader(inStream)
   private val msgWriter = new MessageWriter(outStream)
 
@@ -153,10 +156,10 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
     Option(ServerCommand.read(request))
       .fold[(Option[CorrelationId], Either[JsonRpcResponseErrorMessage, ServerCommand])](
         Some(request.id) -> Left(JsonRpcResponseErrorMessage.methodNotFound(request.method,request.id )))(
-          commandJsResult => commandJsResult.fold(errors => 
+          commandJsResult => commandJsResult.fold(errors =>
             Some(request.id) -> Left(JsonRpcResponseErrorMessage.invalidParams(JsError(errors),request.id )),
             command => Some(request.id) -> Right(command)))
-            
+
   }
 
   private def handleCommand(method: String, id: CorrelationId, command: ServerCommand) = {

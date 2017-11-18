@@ -3,6 +3,7 @@ package scala.meta.languageserver
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
+import java.net.URI
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -89,22 +90,9 @@ class ScalametaLanguageServer(
   private val toCancel = ListBuffer.empty[Cancelable]
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
-    Files.walkFileTree(
-      workspacePath.toNIO,
-      new SimpleFileVisitor[Path] {
-        override def visitFile(
-            file: Path,
-            attrs: BasicFileAttributes
-        ): FileVisitResult = {
-          PathIO.extension(file) match {
-            case "semanticdb" | "compilerconfig" =>
-              onChangedFile(AbsolutePath(file))(_ => ())
-            case _ => // ignore, to avoid spamming console.
-          }
-          FileVisitResult.CONTINUE
-        }
-      }
-    )
+    Workspace.initialize { path =>
+      onChangedFile(path)(_ => ())
+    }
   }
 
   override def initialize(
@@ -261,7 +249,7 @@ class ScalametaLanguageServer(
       td: TextDocumentIdentifier,
       position: Position
   ): DefinitionResult = {
-    val path = Uri.toPath(td.uri).get.toRelative(cwd)
+    val path = Uri.toPath(td.uri).get
     symbolIndexer
       .goToDefinition(path, position.line, position.character)
       .getOrElse(DefinitionResult(Nil))
@@ -317,7 +305,8 @@ class ScalametaLanguageServer(
 
 object ScalametaLanguageServer {
   def semanticdbStream(
-      implicit scheduler: Scheduler
+      implicit cwd: AbsolutePath,
+      scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
     val (subscriber, publisher) =
       Observable.multicast[AbsolutePath](
@@ -325,9 +314,7 @@ object ScalametaLanguageServer {
         OverflowStrategy.ClearBuffer(2)
       )
     val semanticdbPublisher = publisher.map { path =>
-      val bytes = Files.readAllBytes(path.toNIO)
-      val sdb = schema.Database.parseFrom(bytes)
-      sdb
+      Semanticdbs.loadFromFile(path)
     }
     subscriber -> semanticdbPublisher
   }
