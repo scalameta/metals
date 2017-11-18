@@ -3,14 +3,10 @@ package scala.meta.languageserver
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
-import java.net.URI
-import java.nio.file.FileVisitResult
 import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
+import com.typesafe.scalalogging.LazyLogging
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
 import langserver.messages.CompletionList
@@ -29,9 +25,7 @@ import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import monix.reactive.Observer
-import monix.reactive.OverflowStrategy
 import org.langmeta.internal.io.PathIO
-import org.langmeta.internal.semanticdb.schema
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 
@@ -53,12 +47,12 @@ class ScalametaLanguageServer(
   val buffers: Buffers = Buffers()
   val compiler = new Compiler(
     stdout,
-    compilerConfigPublisher.doOnError(onError),
+    compilerConfigPublisher,
     connection,
     buffers
   )
   val databasePublisher: Observable[Database] = Observable.merge(
-    semanticdbPublisher,
+    semanticdbPublisher.doOnError(onError),
     compiler.documentPublisher.map(doc => Database(doc :: Nil))
   )
   val symbolIndexer: SymbolIndexer = SymbolIndexer(
@@ -67,7 +61,7 @@ class ScalametaLanguageServer(
   )
   val onIndexDatabase: Observable[Effects.IndexSemanticdb] =
     databasePublisher.map { db =>
-      db.documents.foreach(symbolIndexer.indexDocument)
+      symbolIndexer.indexDatabase(db)
       Effects.IndexSemanticdb
     }
   val scalafix: Linter = new Linter(
@@ -303,19 +297,15 @@ class ScalametaLanguageServer(
 
 }
 
-object ScalametaLanguageServer {
+object ScalametaLanguageServer extends LazyLogging {
   def semanticdbStream(
       implicit cwd: AbsolutePath,
       scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
     val (subscriber, publisher) =
-      Observable.multicast[AbsolutePath](
-        MulticastStrategy.Publish,
-        OverflowStrategy.ClearBuffer(2)
-      )
-    val semanticdbPublisher = publisher.map { path =>
-      Semanticdbs.loadFromFile(path)
-    }
+      Observable.multicast[AbsolutePath](MulticastStrategy.Publish)
+    val semanticdbPublisher = publisher
+      .map(path => Semanticdbs.loadFromFile(path))
     subscriber -> semanticdbPublisher
   }
 }

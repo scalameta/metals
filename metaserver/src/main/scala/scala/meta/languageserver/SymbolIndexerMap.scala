@@ -2,14 +2,13 @@ package scala.meta.languageserver
 
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.UnaryOperator
+import scala.collection.concurrent.TrieMap
 import scala.meta.languageserver.index.Position
-import scala.meta.languageserver.index.Ranges
 import scala.meta.languageserver.index.Range
+import scala.meta.languageserver.index.Ranges
 import scala.meta.languageserver.index.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.semanticdb.Symbol
-import scala.collection.concurrent.TrieMap
-import org.langmeta.internal.semanticdb.schema.Database
 
 class SymbolIndexerMap(
     symbols: TrieMap[String, AtomicReference[SymbolIndex]] = TrieMap.empty
@@ -40,7 +39,16 @@ class SymbolIndexerMap(
     case s: Symbol => get(s.syntax)
   }
   def get(symbol: String): Option[SymbolIndex] =
-    symbols.get(symbol).map(_.get).filter(_.definition.isDefined)
+    symbols
+      .get(symbol)
+      .map(_.get)
+      .filter { s =>
+        if (s.definition.isEmpty) {
+          logger.info(s"Skipping symbol ${s.symbol}, has no definition")
+        }
+        s.definition.isDefined
+      }
+
   def unapply(arg: Any): Option[SymbolIndex] = arg match {
     case s: String => get(s)
     case s: Symbol => get(s)
@@ -51,13 +59,14 @@ class SymbolIndexerMap(
       symbol: String,
       position: Position
   ): Unit = updated(symbol) { index =>
-    index.definition match {
-      case Some(_) =>
-        // Do nothing, conflicting symbol definitions, for example js/jvm
-        index
-      case _ =>
-        index.copy(definition = Some(position))
-    }
+    index.copy(definition = Some(position))
+//    index.definition match {
+//      case Some(_) =>
+//        logger.info(s"Not persisting definition for $symbol, already exists")
+  // Do nothing, conflicting symbol definitions, for example js/jvm
+//        index
+//      case _ =>
+//    }
   }
 
   def addDenotation(

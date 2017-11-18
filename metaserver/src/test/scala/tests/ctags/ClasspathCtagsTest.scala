@@ -3,6 +3,7 @@ package tests.ctags
 import java.nio.file.Paths
 import scala.meta.languageserver.Jars
 import scala.meta.languageserver.ctags.Ctags
+import org.langmeta.internal.semanticdb.schema.Database
 import tests.MegaSuite
 
 object ClasspathCtagsTest extends MegaSuite {
@@ -32,11 +33,12 @@ object ClasspathCtagsTest extends MegaSuite {
     ) { doc =>
       val path = Paths.get(doc.filename).getFileName.toString
       val underline = "-" * path.length
+      val mdoc = Database(doc :: Nil).toDb(None).documents.head.toString()
       docs +=
         s"""$path
            |$underline
            |
-           |$doc""".stripMargin
+           |$mdoc""".stripMargin
     }
     val obtained = docs.result().sorted.mkString("\n\n")
     val expected =

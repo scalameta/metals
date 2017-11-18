@@ -13,7 +13,9 @@ class InMemoryDocumentStore(
   override def getDocument(uri: URI): Option[Document] =
     Option(documents.get(uri))
   override def putDocument(uri: URI, document: Document): Unit = {
-    logger.info(s"Storing in-memory document for uri $uri")
+    if (uri.getScheme != "jar") {
+      logger.info(s"Storing in-memory document for uri $uri")
+    }
     documents.put(uri, document)
   }
 }

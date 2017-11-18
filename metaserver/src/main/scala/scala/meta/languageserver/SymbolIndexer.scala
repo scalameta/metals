@@ -64,10 +64,7 @@ class SymbolIndexer(
       symbol <- symbols.get(name.symbol).orElse {
         val alts = alternatives(msym)
         logger.info(s"Trying alternatives: ${alts.mkString(" | ")}")
-        alts.collectFirst {
-          case symbols(alternative) =>
-            alternative
-        }
+        alts.collectFirst { case symbols(alternative) => alternative }
       }
       _ = logger.info(
         s"Found matching symbol index ${symbol.name}: ${symbol.signature}"
@@ -165,7 +162,9 @@ class SymbolIndexer(
     val uri = URI.create(document.filename)
     documents.putDocument(uri, document)
     document.names.foreach {
-      // TODO(olafur) handle local symbols in go-to-definition
+      // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
+      // local symbols don't need to be indexed globally, by skipping them we should
+      // be able to minimize the size of the global index significantly.
 //      case s.ResolvedName(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
       case s.ResolvedName(Some(s.Position(start, end)), sym, true) =>
         symbols.addDefinition(

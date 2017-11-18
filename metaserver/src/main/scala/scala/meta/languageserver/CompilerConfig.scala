@@ -80,7 +80,6 @@ object CompilerConfig extends LazyLogging {
     val sourceJars = {
       val result = Classpath(props.getProperty("sourceJars")).shallow
       jdkSources.fold(result)(_ :: result)
-      Nil
     }
     val classDirectory =
       AbsolutePath(props.getProperty("classDirectory"))
