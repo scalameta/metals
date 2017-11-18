@@ -14,11 +14,11 @@ message SymbolIndex {
     Position definition = 2;
     map<string, Ranges> references = 3;
     int64 flags = 4;
-    string name = 6;
-    string signature = 7;
+    string name = 5;
+    string signature = 6;
     // Planned for Scalameta v2.2, see https://github.com/scalameta/scalameta/milestone/9
-    // string docstring = 6; // javadoc/scaladoc
-    // string overrides = 7; // parent symbol that this symbol overrides
+    // string docstring = 7; // javadoc/scaladoc
+    // string overrides = 8; // parent symbol that this symbol overrides
 }
 
 // A standalone position used by "Go to definition" when jumping to a symbol
