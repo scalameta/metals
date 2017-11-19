@@ -10,13 +10,17 @@ import org.langmeta.languageserver.InputEnrichments._
 
 object InverseSymbolIndexer {
 
-  /** Returns a scala.meta.Database with only names filled out */
+  /** Rebuilds a scala.meta.Database with only names filled out
+   *
+   * @param cwd the working directory to relativize file URIs in the symbol index.
+   * @param documents store for looking up document contents.
+   * @param symbols symbol index, from [[SymbolIndexer.allSymbols]]
+   */
   def reconstructDatabase(
-                             cwd: AbsolutePath,
-                             documents: DocumentIndex,
-                             symbols: Traversable[i.SymbolData]
+      cwd: AbsolutePath,
+      documents: DocumentIndex,
+      symbols: Traversable[i.SymbolData]
   ): m.Database = {
-
     // Reconstruct an m.Database from the symbol index and asserts that the
     // reconstructed database is identical to the original semanticdbs that
     // built the symbol index.

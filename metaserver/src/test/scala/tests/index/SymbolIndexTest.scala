@@ -17,7 +17,7 @@ import org.langmeta.io.Classpath
 import tests.MegaSuite
 import utest._
 
-object SymbolIndexerTest extends MegaSuite {
+object SymbolIndexTest extends MegaSuite {
   implicit val cwd: AbsolutePath =
     PathIO.workingDirectory.resolve("test-workspace")
   override val tests = Tests {

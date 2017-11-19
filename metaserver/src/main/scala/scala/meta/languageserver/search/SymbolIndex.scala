@@ -20,14 +20,18 @@ import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb.Signature
 import org.langmeta.semanticdb.Symbol
 
-// NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
+/**
+ * A high-level wrapper around [[DocumentIndex]] and [[SymbolIndexer]].
+ *
+ * Can respond to high-level queries like "go to definition" and "find references".
+ */
 class SymbolIndex(
-    val symbols: SymbolIndexerMap,
+    val symbols: SymbolIndexer,
     val documents: DocumentIndex,
+    cwd: AbsolutePath,
     notifications: Notifications,
-    buffers: Buffers
-)(implicit cwd: AbsolutePath)
-    extends LazyLogging {
+    buffers: Buffers,
+) extends LazyLogging {
 
   def findSymbol(
       path: AbsolutePath,
@@ -85,6 +89,60 @@ class SymbolIndex(
     } yield DefinitionResult(definition.toLocation :: Nil)
   }
 
+  /** Register this Database to symbol indexer. */
+  def indexDatabase(document: s.Database): Unit = {
+    document.documents.foreach(indexDocument)
+  }
+
+  /**
+   *
+   * Register this Document to symbol indexer.
+   *
+   * Indexes definitions, denotations and references in this document.
+   *
+   * @param document Must respect the following conventions:
+   *                 - filename must be a URI
+   *                 - names must be sorted
+   */
+  def indexDocument(document: s.Document): Unit = {
+    val input = Input.VirtualFile(document.filename, document.contents)
+    // what do we put as the uri?
+    val uri = URI.create(document.filename)
+    documents.putDocument(uri, document)
+    document.names.foreach {
+      // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
+      // local symbols don't need to be indexed globally, by skipping them we should
+      // def isLocalSymbol(sym: String): Boolean =
+      // !sym.endsWith(".") &&
+      //     !sym.endsWith("#") &&
+      //     !sym.endsWith(")")
+      // be able to minimize the size of the global index significantly.
+      //      case s.ResolvedName(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
+      case s.ResolvedName(Some(s.Position(start, end)), sym, true) =>
+        symbols.addDefinition(
+          sym,
+          i.Position(document.filename, Some(input.toIndexRange(start, end)))
+        )
+      case s.ResolvedName(Some(s.Position(start, end)), sym, false) =>
+        symbols.addReference(
+          document.filename,
+          input.toIndexRange(start, end),
+          sym
+        )
+      case _ =>
+    }
+    document.symbols.foreach {
+      case s.ResolvedSymbol(sym, Some(denot)) =>
+        symbols.addDenotation(sym, denot.flags, denot.name, denot.signature)
+      case _ =>
+    }
+  }
+
+  /**
+   * Returns false this this document is stale.
+   *
+   * A document is considered stale if it's off-sync with the contents in [[buffers]].
+   */
   private def isFreshSemanticdb(
       path: AbsolutePath,
       document: Document
@@ -104,6 +162,7 @@ class SymbolIndex(
     }
   }
 
+  /** Returns a list of fallback symbols that can act instead of given symbol. */
   private def alternatives(symbol: Symbol): List[Symbol] =
     symbol match {
       case Symbol.Global(owner, Signature.Term(name)) =>
@@ -145,51 +204,6 @@ class SymbolIndex(
         Nil
     }
 
-  def indexDatabase(document: s.Database): Unit = {
-    document.documents.foreach(indexDocument)
-  }
-
-  /**
-   * Index definitions, denotations and references in this document.
-   * @param document Must respect the following conventions:
-   *                 - filename must be a URI
-   *                 - names must be sorted
-   */
-  def indexDocument(document: s.Document): Unit = {
-    val input = Input.VirtualFile(document.filename, document.contents)
-    // what do we put as the uri?
-    val uri = URI.create(document.filename)
-    documents.putDocument(uri, document)
-    document.names.foreach {
-      // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
-      // local symbols don't need to be indexed globally, by skipping them we should
-      // be able to minimize the size of the global index significantly.
-//      case s.ResolvedName(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
-      case s.ResolvedName(Some(s.Position(start, end)), sym, true) =>
-        symbols.addDefinition(
-          sym,
-          i.Position(document.filename, Some(input.toIndexRange(start, end)))
-        )
-      case s.ResolvedName(Some(s.Position(start, end)), sym, false) =>
-        symbols.addReference(
-          document.filename,
-          input.toIndexRange(start, end),
-          sym
-        )
-      case _ =>
-    }
-    document.symbols.foreach {
-      case s.ResolvedSymbol(sym, Some(denot)) =>
-        symbols.addDenotation(sym, denot.flags, denot.name, denot.signature)
-      case _ =>
-    }
-  }
-
-  def isLocalSymbol(sym: String): Boolean =
-    !sym.endsWith(".") &&
-      !sym.endsWith("#") &&
-      !sym.endsWith(")")
-
 }
 
 object SymbolIndex {
@@ -200,8 +214,8 @@ object SymbolIndex {
       notifications: Notifications,
       buffers: Buffers
   ): SymbolIndex = {
-    val symbols = new SymbolIndexerMap()
+    val symbols = new SymbolIndexer()
     val documents = new InMemoryDocumentIndex()
-    new SymbolIndex(symbols, documents, notifications, buffers)
+    new SymbolIndex(symbols, documents, cwd, notifications, buffers)
   }
 }
