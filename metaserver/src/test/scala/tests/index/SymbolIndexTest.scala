@@ -20,6 +20,30 @@ import utest._
 object SymbolIndexTest extends MegaSuite {
   implicit val cwd: AbsolutePath =
     PathIO.workingDirectory.resolve("test-workspace")
+  val path = cwd
+    .resolve("a")
+    .resolve("src")
+    .resolve("test")
+    .resolve("scala")
+    .resolve("example")
+    .resolve("UserTest.scala")
+  assert(Files.isRegularFile(path.toNIO))
+  val s = TestScheduler()
+  val config = ServerConfig(
+    cwd,
+    setupScalafmt = false,
+    indexJDK = false,
+    indexClasspath = true // set to false to speedup edit/debug cycle
+  )
+  val client = new PipedOutputStream()
+  val stdin = new PipedInputStream(client)
+  val stdout = new PipedOutputStream()
+  // TODO(olafur) run this as part of utest.runner.Framework.setup()
+  val server =
+    new ScalametaLanguageServer(config, stdin, stdout, System.out)(s)
+  server.initialize(0L, cwd.toString(), ClientCapabilities())
+  while (s.tickOne()) () // Trigger indexing
+  val indexer: SymbolIndex = server.symbolIndexer
   override val tests = Tests {
 
     def assertSymbolFound(
@@ -87,30 +111,6 @@ object SymbolIndexTest extends MegaSuite {
       assertNoDiff(reconstructedDatabase.syntax, originalDatabase.syntax)
     }
   }
-  assert(Files.isRegularFile(path.toNIO))
-  val path = cwd
-    .resolve("a")
-    .resolve("src")
-    .resolve("test")
-    .resolve("scala")
-    .resolve("example")
-    .resolve("UserTest.scala")
-  val s = TestScheduler()
-  val config = ServerConfig(
-    cwd,
-    setupScalafmt = false,
-    indexJDK = false,
-    indexClasspath = true // set to false to speedup edit/debug cycle
-  )
-  val client = new PipedOutputStream()
-  val stdin = new PipedInputStream(client)
-  val stdout = new PipedOutputStream()
-  // TODO(olafur) run this as part of utest.runner.Framework.setup()
-  while (s.tickOne()) () // Trigger indexing
-  val server =
-    new ScalametaLanguageServer(config, stdin, stdout, System.out)(s)
-  server.initialize(0L, cwd.toString(), ClientCapabilities())
-  val indexer: SymbolIndex = server.symbolIndexer
 
   override def utestAfterAll(): Unit = {
     println("Shutting down server...")
