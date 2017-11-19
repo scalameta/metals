@@ -30,16 +30,16 @@ object ScalametaEnrichments {
     // NOTE: we care only about descendants of Decl, Defn and Pkg[.Object] (see documentSymbols implementation)
     def symbolKind: SymbolKind = tree match {
       case f if f.isFunction => SymbolKind.Function
-      case Decl.Var(_)  | Defn.Var(_)  => SymbolKind.Variable
-      case Decl.Val(_)  | Defn.Val(_)  => SymbolKind.Constant
-      case Decl.Def(_)  | Defn.Def(_)  => SymbolKind.Method
+      case Decl.Var(_) | Defn.Var(_) => SymbolKind.Variable
+      case Decl.Val(_) | Defn.Val(_) => SymbolKind.Constant
+      case Decl.Def(_) | Defn.Def(_) => SymbolKind.Method
       case Decl.Type(_) | Defn.Type(_) => SymbolKind.Field
-      case Defn.Macro(_)  => SymbolKind.Constructor
-      case Defn.Class(_)  => SymbolKind.Class
-      case Defn.Trait(_)  => SymbolKind.Interface
+      case Defn.Macro(_) => SymbolKind.Constructor
+      case Defn.Class(_) => SymbolKind.Class
+      case Defn.Trait(_) => SymbolKind.Interface
       case Defn.Object(_) => SymbolKind.Module
-      case Pkg.Object(_)  => SymbolKind.Namespace
-      case Pkg(_)         => SymbolKind.Package
+      case Pkg.Object(_) => SymbolKind.Namespace
+      case Pkg(_) => SymbolKind.Package
       // TODO(alexey) are these kinds useful?
       // case ??? => SymbolKind.Enum
       // case ??? => SymbolKind.String

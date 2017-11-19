@@ -205,11 +205,9 @@ class ScalametaLanguageServer(
     // For a given node returns its closest ancestor which is a definition, declaration or a package object
     // NOTE: package is not considered a wrapping definition, but it could be (a subject to discuss)
     def wrappingDefinition(t: Tree): Option[Tree] = {
-      if (
-        t.is[Defn] ||
+      if (t.is[Defn] ||
         t.is[Decl] ||
-        t.is[Pkg.Object]
-      ) Some(t)
+        t.is[Pkg.Object]) Some(t)
       else t.parent.flatMap(wrappingDefinition)
     }
 
@@ -223,7 +221,9 @@ class ScalametaLanguageServer(
       case Term.Name(name) =>
         Some(name)
       case Term.Select(qual, name) =>
-        qualifiedName(qual).map { prefix => s"${prefix}.${name}" }
+        qualifiedName(qual).map { prefix =>
+          s"${prefix}.${name}"
+        }
       case Pkg(sel: Term.Select, _) =>
         qualifiedName(sel)
       case m: Member =>
@@ -241,15 +241,16 @@ class ScalametaLanguageServer(
       name <- qualifiedName(node)
       // Package as a wrapping definition for itself:
       defn <- if (node.is[Pkg]) Some(node) else wrappingDefinition(node)
-    } yield SymbolInformation(
-      name,
-      defn.symbolKind,
-      path.toLocation(defn.pos),
-      defn.parent
-        .flatMap(parentMember)
-        .flatMap(wrappingDefinition)
-        .flatMap(qualifiedName)
-    )
+    } yield
+      SymbolInformation(
+        name,
+        defn.symbolKind,
+        path.toLocation(defn.pos),
+        defn.parent
+          .flatMap(parentMember)
+          .flatMap(wrappingDefinition)
+          .flatMap(qualifiedName)
+      )
   }
 
   override def gotoDefinitionRequest(
@@ -321,4 +322,3 @@ object ScalametaLanguageServer extends LazyLogging {
     subscriber -> semanticdbPublisher
   }
 }
-

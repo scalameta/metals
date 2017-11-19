@@ -7,7 +7,8 @@ object ScalaCtags {
   def index(input: Input.VirtualFile): CtagsIndexer = {
     val root: Source = input.parse[Source].get
     new Traverser with CtagsIndexer {
-      override def language: String = "Scala212" // TODO(olafur) more accurate dialect
+      override def language: String =
+        "Scala212" // TODO(olafur) more accurate dialect
       override def indexRoot(): Unit = apply(root)
       override def apply(tree: Tree): Unit = {
         val old = currentOwner
