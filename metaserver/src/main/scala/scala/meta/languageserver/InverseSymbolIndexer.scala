@@ -1,0 +1,79 @@
+package scala.meta.languageserver
+
+import java.net.URI
+import java.nio.file.Paths
+import scala.collection.mutable
+import scala.meta.languageserver.index.DocumentStore
+import scala.meta.languageserver.{index => i}
+import scala.{meta => m}
+import org.langmeta.io.AbsolutePath
+import org.langmeta.languageserver.InputEnrichments._
+
+object InverseSymbolIndexer {
+  def reconstructDatabase(
+      cwd: AbsolutePath,
+      documents: DocumentStore,
+      symbols: Traversable[i.SymbolIndex]
+  ): m.Database = {
+
+    // Reconstruct an m.Database from the symbol index and asserts that the
+    // reconstructed database is identical to the original semanticdbs that
+    // built the symbol index.
+    // TODO(olafur) handle local symbols when we stop indexing them.
+    val db = mutable.Map.empty[String, m.Document]
+    def get(filename: String) = {
+      val key = if (filename.startsWith("file")) {
+        cwd.toNIO.relativize(Paths.get(URI.create(filename))).toString
+      } else filename
+      db.getOrElseUpdate(
+        key,
+        m.Document(
+          m.Input.VirtualFile(
+            key,
+            documents
+              .getDocument(URI.create(filename))
+              .fold("")(_.contents)
+          ),
+          "Scala212",
+          Nil,
+          Nil,
+          Nil,
+          Nil
+        )
+      )
+    }
+    def handleResolvedName(
+        uri: String,
+        symbol: String,
+        range: i.Range,
+        definition: Boolean
+    ): Unit = {
+      val doc = get(uri)
+      val pos = doc.input.toPosition(range)
+      val rs =
+        m.ResolvedName(pos, m.Symbol(symbol), isDefinition = definition)
+      val newDoc = doc.copy(names = rs :: doc.names)
+      db(doc.input.syntax) = newDoc
+    }
+    symbols.foreach { symbol =>
+      symbol.definition.collect {
+        case i.Position(uri, Some(range)) =>
+          handleResolvedName(uri, symbol.symbol, range, definition = true)
+      }
+      symbol.references.collect {
+        case (uri, ranges) =>
+          ranges.ranges.foreach { range =>
+            handleResolvedName(uri, symbol.symbol, range, definition = false)
+          }
+      }
+    }
+    val reconstructedDatabase = m.Database(
+      db.values.iterator
+        .filter(!_.input.syntax.startsWith("jar:"))
+        .filter(_.input.chars.nonEmpty)
+        .toArray
+        .sortBy(_.input.syntax)
+    )
+    reconstructedDatabase
+  }
+}

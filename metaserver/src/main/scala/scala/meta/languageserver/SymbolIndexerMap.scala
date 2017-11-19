@@ -17,7 +17,7 @@ class SymbolIndexerMap(
     new AtomicReference(SymbolIndex(symbol = symbol))
   }
 
-  def index: Traversable[SymbolIndex] = new Traversable[SymbolIndex] {
+  def allSymbols: Traversable[SymbolIndex] = new Traversable[SymbolIndex] {
     override def foreach[U](f: SymbolIndex => U): Unit =
       symbols.values.foreach(s => f(s.get))
   }
@@ -83,5 +83,4 @@ class SymbolIndexerMap(
     val newReferences = index.references + (filename -> newRanges)
     index.copy(references = newReferences)
   }
-
 }

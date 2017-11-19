@@ -1,45 +1,24 @@
 package tests.index
 
-import java.io.ByteArrayInputStream
-import java.io.InputStream
 import java.io.PipedInputStream
 import java.io.PipedOutputStream
-import java.net.URI
-import java.net.URLClassLoader
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
+import scala.meta.languageserver.InverseSymbolIndexer
 import scala.meta.languageserver.ScalametaLanguageServer
-import scala.meta.languageserver.Semanticdbs
 import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.SymbolIndexer
-import scala.meta.languageserver.ctags.Ctags
 import scala.meta.languageserver.{index => i}
 import scala.{meta => m}
-import langserver.core.MessageReader
-import langserver.core.MessageWriter
 import langserver.messages.ClientCapabilities
-import langserver.messages.DefinitionResult
-import langserver.messages.TextDocumentDefinitionRequest
-import langserver.messages.TextDocumentPositionParams
-import langserver.types.TextDocumentIdentifier
-import org.langmeta.inputs.Input
-import org.langmeta.internal.io.FileIO
+import langserver.{types => l}
+import monix.execution.schedulers.TestScheduler
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.{schema => s}
-import langserver.{types => l}
 import org.langmeta.io.AbsolutePath
-import org.langmeta.languageserver.InputEnrichments._
-import org.langmeta.semanticdb.Database
+import org.langmeta.io.Classpath
 import tests.MegaSuite
 import utest._
-import monix.execution.schedulers.TestScheduler
-import org.langmeta.io.Classpath
-import play.api.libs.json.Format
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
 
 object SymbolIndexerTest extends MegaSuite {
   implicit val cwd: AbsolutePath =
@@ -120,64 +99,10 @@ object SymbolIndexerTest extends MegaSuite {
         }
         m.Database(slimDocuments)
       }
-      println(originalDatabase.toString())
-      // Reconstruct an m.Database from the symbol index and asserts that the
-      // reconstructed database is identical to the original semanticdbs that
-      // built the symbol index.
-      // TODO(olafur) handle local symbols when we stop indexing them.
-      val db = mutable.Map.empty[String, m.Document]
-      def get(filename: String) = {
-        val key = if (filename.startsWith("file")) {
-          cwd.toNIO.relativize(Paths.get(URI.create(filename))).toString
-        } else filename
-        db.getOrElseUpdate(
-          key,
-          m.Document(
-            Input.VirtualFile(
-              key,
-              indexer.documents
-                .getDocument(URI.create(filename))
-                .fold("")(_.contents)
-            ),
-            "Scala212",
-            Nil,
-            Nil,
-            Nil,
-            Nil
-          )
-        )
-      }
-      def handleResolvedName(
-          uri: String,
-          symbol: String,
-          range: i.Range,
-          definition: Boolean
-      ): Unit = {
-        val doc = get(uri)
-        val pos = doc.input.toPosition(range)
-        val rs =
-          m.ResolvedName(pos, m.Symbol(symbol), isDefinition = definition)
-        val newDoc = doc.copy(names = rs :: doc.names)
-        db(doc.input.syntax) = newDoc
-      }
-      indexer.symbols.index.foreach { symbol =>
-        symbol.definition.collect {
-          case i.Position(uri, Some(range)) =>
-            handleResolvedName(uri, symbol.symbol, range, definition = true)
-        }
-        symbol.references.collect {
-          case (uri, ranges) =>
-            ranges.ranges.foreach { range =>
-              handleResolvedName(uri, symbol.symbol, range, definition = false)
-            }
-        }
-      }
-      val reconstructedDatabase = m.Database(
-        db.values.iterator
-          .filter(!_.input.syntax.startsWith("jar:"))
-          .filter(_.input.chars.nonEmpty)
-          .toArray
-          .sortBy(_.input.syntax)
+      val reconstructedDatabase = InverseSymbolIndexer.reconstructDatabase(
+        cwd,
+        indexer.documents,
+        indexer.symbols.allSymbols
       )
       val filenames = reconstructedDatabase.documents.toIterator.map { d =>
         Paths.get(d.input.syntax).getFileName.toString
