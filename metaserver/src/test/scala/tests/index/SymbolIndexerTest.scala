@@ -64,12 +64,8 @@ object SymbolIndexerTest extends MegaSuite {
   val stdin = new PipedInputStream(client)
   val stdout = new PipedOutputStream()
 
-  val server = new ScalametaLanguageServer(
-    config,
-    stdin,
-    stdout,
-    System.out
-  )(scheduler)
+  val server =
+    new ScalametaLanguageServer(config, stdin, stdout, System.out)(scheduler)
   server.initialize(0L, cwd.toString(), ClientCapabilities())
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
   while (scheduler.tickOne()) () // Trigger indexing
@@ -77,45 +73,36 @@ object SymbolIndexerTest extends MegaSuite {
 
   override val tests = Tests {
 
+    def assertSymbolFound(
+        line: Int,
+        column: Int,
+        expected: String
+    ): Unit = {
+      val term = indexer.findSymbol(path, line, column)
+      Predef.assert(term.isDefined, s"Symbol not found at $path:$line:$column")
+      assertNoDiff(term.get.symbol, expected)
+      Predef.assert(
+        term.get.definition.isDefined,
+        s"Definition not found for term $term"
+      )
+    }
+
     "fallback" - {
-      "<<User>>(...)" - {
-        val term = indexer.findSymbol(path, 3, 17).get
-        assertNoDiff(term.symbol, "_root_.a.User#")
-        assert(term.definition.isDefined)
-      }
-
-      "User.<<apply>>(...)" - {
-        val term = indexer.findSymbol(path, 3, 22).get
-        assertNoDiff(term.symbol, "_root_.a.User#")
-        assert(term.definition.isDefined)
-      }
-
-      "User.apply(<<name>> ...)" - {
-        val term = indexer.findSymbol(path, 3, 28).get
-        assertNoDiff(term.symbol, "_root_.a.User#(name)")
-        assert(term.definition.isDefined)
-      }
-
-      "user.copy(<<age>> = ...)" - {
-        val term = indexer.findSymbol(path, 4, 14).get
-        assertNoDiff(term.symbol, "_root_.a.User#(age)")
-        assert(term.definition.isDefined)
-      }
+      "<<User>>(...)" -
+        assertSymbolFound(3, 17, "_root_.a.User#")
+      "User.<<apply>>(...)" -
+        assertSymbolFound(3, 22, "_root_.a.User#")
+      "User.apply(<<name>> ...)" -
+        assertSymbolFound(3, 28, "_root_.a.User#(name)")
+      "user.copy(<<age>> = ...)" -
+        assertSymbolFound(4, 14, "_root_.a.User#(age)")
     }
 
     "classpath" - {
-      // ScalaCtags
-      "<<List>>(...)" - {
-        val term = indexer.findSymbol(path, 5, 5).get
-        assertNoDiff(term.symbol, "_root_.scala.collection.immutable.List.")
-        assert(term.definition.isDefined)
-      }
-      // JavaCtags
-      "<<CharRef>>.create(...)" - {
-        val term = indexer.findSymbol(path, 8, 19).get
-        assertNoDiff(term.symbol, "_root_.scala.runtime.CharRef.")
-        assert(term.definition.isDefined)
-      }
+      "<<List>>(...)" - // ScalaCtags
+        assertSymbolFound(5, 5, "_root_.scala.collection.immutable.List.")
+      "<<CharRef>>.create(...)" - // JavaCtags
+        assertSymbolFound(8, 19, "_root_.scala.runtime.CharRef.")
     }
 
     "bijection" - {
