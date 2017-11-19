@@ -213,6 +213,11 @@ class ScalametaLanguageServer(
       else t.parent.flatMap(wrappingDefinition)
     }
 
+    def parentMember(t: Tree): Option[Tree] = {
+      if (t.is[Member.Term] || t.is[Member.Type]) Some(t)
+      else t.parent.flatMap(parentMember)
+    }
+
     // This is needed only to unfold full package names
     def qualifiedName(t: Tree): Option[String] = t match {
       case Term.Name(name) =>
@@ -241,6 +246,7 @@ class ScalametaLanguageServer(
       defn.symbolKind,
       path.toLocation(defn.pos),
       defn.parent
+        .flatMap(parentMember)
         .flatMap(wrappingDefinition)
         .flatMap(qualifiedName)
     )
