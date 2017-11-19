@@ -10,6 +10,9 @@ import org.langmeta.semanticdb.Symbol
 /**
  * Fast, compact, incremental, parallel and persistable search index for symbols.
  *
+ * In a nutshell, a key/value store with String keys (by symbol syntax) and
+ * [[SymbolData]] as values.
+ *
  * - Fast: lookups should be instant to be useful from the editor.
  * - Compact: memory footprint should be small to fit in-memory even for
  *            large corpora (>millions of loc) on commodity hardware (dev laptop).
@@ -25,6 +28,8 @@ import org.langmeta.semanticdb.Symbol
  * [[InverseSymbolIndexer]].
  */
 class SymbolIndexer(
+    // simplest thing I could think of to get something off the ground.
+    // we may want to consider using a proper key/value store instead.
     symbols: TrieMap[String, AtomicReference[SymbolData]] = TrieMap.empty
 ) extends LazyLogging { self =>
 
