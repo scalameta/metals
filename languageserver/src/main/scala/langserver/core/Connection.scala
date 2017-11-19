@@ -3,17 +3,15 @@ package langserver.core
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.Executors
-
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
-
+import scala.util.control.NonFatal
 import com.dhpcs.jsonrpc._
 import com.typesafe.scalalogging.LazyLogging
-
 import langserver.messages._
 import langserver.types._
 import play.api.libs.json._
@@ -160,11 +158,15 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
 
   }
 
-  private def handleCommand(method: String, id: CorrelationId, command: ServerCommand) = {
-    Future(commandHandler(method, command)).map { result =>
+  private def handleCommand(method: String, id: CorrelationId, command: ServerCommand): Future[Unit] = {
+    Future(commandHandler(method, command)) .map { result =>
       val t = Try{ResultResponse.write(result, id)}
-      t.recover{case e => logger.error("ResultResponse.write:"+result); e.printStackTrace }
+      t.recover{case e => logger.error("ResultResponse.write:"+result); e.printStackTrace() }
       t.foreach{rJson => msgWriter.write(rJson)}
+    }.recover {
+      case NonFatal(e) =>
+        logger.error(e.getMessage, e)
+        ()
     }
   }
 }
