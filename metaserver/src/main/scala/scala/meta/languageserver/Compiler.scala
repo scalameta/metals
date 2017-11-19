@@ -157,7 +157,7 @@ class Compiler(
       case x => x
     }
 
-    Option(refinedTree.tpe).map(_.widen.toString)
+    Option(refinedTree.tpe).map(_.toLongString)
   }
 
 }
