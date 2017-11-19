@@ -64,6 +64,7 @@ class ScalametaLanguageServer(
     compiler.documentPublisher.map(doc => Database(doc :: Nil))
   )
   val symbolIndexer: SymbolIndexer = SymbolIndexer(
+    cwd,
     connection,
     buffers
   )

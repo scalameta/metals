@@ -194,16 +194,13 @@ class SymbolIndexer(
 }
 
 object SymbolIndexer {
-  def empty(cwd: AbsolutePath): SymbolIndexer = apply(
-    new Notifications {
-      override def showMessage(tpe: SymbolKind, message: String): Unit = ()
-    },
-    Buffers()
-  )
+  def empty(cwd: AbsolutePath): SymbolIndexer =
+    apply(cwd, (_, _) => (), Buffers())
   def apply(
+      cwd: AbsolutePath,
       notifications: Notifications,
       buffers: Buffers
-  )(implicit cwd: AbsolutePath): SymbolIndexer = {
+  ): SymbolIndexer = {
     val symbols = new SymbolIndexerMap()
     val documents = new InMemoryDocumentStore()
     new SymbolIndexer(symbols, documents, notifications, buffers)

@@ -15,7 +15,7 @@ object Main extends LazyLogging {
     val out = new PrintStream(new FileOutputStream(logPath))
     val err = new PrintStream(new FileOutputStream(logPath))
     val cwd = AbsolutePath(workspace)
-    val config = ServerConfig(cwd, indexJDK = true)
+    val config = ServerConfig(cwd)
     val stdin = System.in
     val stdout = System.out
     val stderr = System.err
