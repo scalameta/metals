@@ -167,7 +167,7 @@ object SymbolIndexerTest extends MegaSuite {
           definition: Boolean
       ): Unit = {
         val doc = get(uri)
-        val pos = doc.input.fromIndexRange(range)
+        val pos = doc.input.toPosition(range)
         val rs =
           m.ResolvedName(pos, m.Symbol(symbol), isDefinition = definition)
         val newDoc = doc.copy(names = rs :: doc.names)
