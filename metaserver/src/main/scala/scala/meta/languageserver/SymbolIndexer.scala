@@ -29,22 +29,6 @@ class SymbolIndexer(
     ]
 )(implicit cwd: AbsolutePath) {
 
-  def documentSymbols(
-      path: RelativePath
-  ): Seq[(Position.Range, Denotation)] =
-    for {
-      document <- Option(documents.get(path)).toList
-      _ <- isFreshSemanticdb(path, document).toList
-      ResolvedName(pos: Position.Range, symbol: Symbol.Global, true) <- document.names
-      denotation <- Option(denotations.get(symbol))
-      if ! {
-        import denotation._
-        isPrimaryCtor ||
-        isTypeParam ||
-        isParam
-      } // not interesting for this service
-    } yield pos -> denotation
-
   def goToDefinition(
       path: RelativePath,
       line: Int,
