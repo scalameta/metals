@@ -55,9 +55,8 @@ object ScalametaEnrichments {
   implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
     def toLocation(implicit cwd: m.AbsolutePath): l.Location = {
       val range = pos.range.get
-      val path = cwd.resolve(URI.create(pos.uri).getPath)
       l.Location(
-        path.toLanguageServerUri,
+        pos.uri,
         l.Range(
           l.Position(line = range.startLine, character = range.startColumn),
           l.Position(line = range.endLine, character = range.endColumn)

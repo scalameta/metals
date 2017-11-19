@@ -1,9 +1,13 @@
 package scala.meta.languageserver.search
 
 import java.net.URI
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Paths
 import scala.meta.languageserver.Buffers
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.{index => i}
+import `scala`.meta.languageserver.index.Position
 import `scala`.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
@@ -11,6 +15,7 @@ import langserver.messages.DefinitionResult
 import langserver.messages.DocumentSymbolResult
 import langserver.messages.MessageType
 import org.langmeta.inputs.Input
+import org.langmeta.internal.io.FileIO
 import org.langmeta.internal.semanticdb.schema.Document
 import org.langmeta.internal.semanticdb.schema.ResolvedName
 import org.langmeta.internal.semanticdb.{schema => s}
@@ -83,10 +88,17 @@ class SymbolIndex(
     for {
       symbol <- findSymbol(path, line, column)
       definition <- symbol.definition
-      _ = logger.info(
-        s"Found definition $definition"
-      )
-    } yield DefinitionResult(definition.toLocation :: Nil)
+    } yield {
+      val nonJarDefinition: Position =
+        if (definition.uri.startsWith("jar:file")) {
+          definition.withUri(
+            createFileInWorkspaceTarget(URI.create(definition.uri)).toString
+          )
+        } else definition
+      logger.info(s"Found definition $nonJarDefinition")
+      val location = nonJarDefinition.toLocation
+      DefinitionResult(location :: Nil)
+    }
   }
 
   /** Register this Database to symbol indexer. */
@@ -203,6 +215,36 @@ class SymbolIndex(
         logger.info(s"Found no alternative for ${symbol.structure}")
         Nil
     }
+
+  // Writes the contents from in-memory source file to a file in the target/source/*
+  // directory of the workspace. vscode has support for TextDocumentContentProvider
+  // which can provide hooks to open readonly views for custom uri schemes:
+  // https://code.visualstudio.com/docs/extensionAPI/vscode-api#TextDocumentContentProvider
+  // However, that is a vscode only solution and we'd like this work for all
+  // text editors. Therefore, we write instead the file contents to disk in order to
+  // return a file: uri.
+  // TODO: Fix this with https://github.com/scalameta/language-server/issues/36
+  private def createFileInWorkspaceTarget(
+      uri: URI
+  ): URI = {
+    logger.info(
+      s"Jumping into uri $uri, writing contents to file in target file"
+    )
+    val contents = new String(FileIO.readAllBytes(uri), StandardCharsets.UTF_8)
+    // HACK(olafur) URIs are not typesafe, jar:file://blah.scala will return
+    // null for `.getPath`. We should come up with nicer APIs to deal with this
+    // kinda stuff.
+    val path: String =
+      if (uri.getPath == null)
+        uri.getSchemeSpecificPart
+      else uri.getPath
+    val filename = Paths.get(path).getFileName
+    val dir = cwd.resolve("target").resolve("sources")
+    Files.createDirectories(dir.toNIO)
+    val out = dir.toNIO.resolve(filename)
+    Files.write(out, contents.getBytes(StandardCharsets.UTF_8))
+    out.toUri
+  }
 
 }
 

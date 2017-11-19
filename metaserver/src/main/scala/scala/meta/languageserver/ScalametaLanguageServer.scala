@@ -85,15 +85,6 @@ class ScalametaLanguageServer(
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
     else Formatter.noop
 
-  // TODO(olafur) more holistic error handling story.
-  private def unsafe(thunk: => Unit): Unit =
-    try thunk
-    catch { case NonFatal(e) => logger.error(e.getMessage, e) }
-
-  private def unsafeSeq[T](thunk: => Seq[T]): Seq[T] =
-    try thunk
-    catch { case NonFatal(e) => logger.error(e.getMessage, e); Nil }
-
   private val toCancel = ListBuffer.empty[Cancelable]
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {

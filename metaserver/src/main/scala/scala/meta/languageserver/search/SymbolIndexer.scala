@@ -6,7 +6,7 @@ import org.langmeta.semanticdb.Symbol
 /**
  *
  * A key/value store with String keys (by symbol syntax) and
- * [[SymbolData]] as values.
+ * SymbolData as values.
  *
  * A good implementation of this trait should be:
  * - Fast: lookups should be instant to be useful from the editor.
@@ -53,7 +53,7 @@ trait SymbolIndexer { self =>
   /**
    * Register metadata about a symbol.
    *
-   * @param flags the modifiers of this symbol, see [[org.langmeta.semanticdb.HasFlags]]
+   * @param flags the modifiers of this symbol, see org.langmeta.semanticdb.HasFlags
    * @param name the name of the symbol, example "get" for scala.Option.get
    * @param signature the type signature of this symbol, example "List[T]" for List.tail
    */
