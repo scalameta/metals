@@ -6,6 +6,7 @@ import java.io.PrintStream
 import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.meta.languageserver.search.SymbolIndex
+import scala.meta.languageserver.ScalametaEnrichments._
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.LanguageServer
