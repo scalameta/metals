@@ -80,7 +80,7 @@ class ScalametaLanguageServer(
   )
   val scalafmt: Formatter =
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
-    else Formatter.empty
+    else Formatter.noop
 
   // TODO(olafur) more holistic error handling story.
   private def unsafe(thunk: => Unit): Unit =
@@ -168,7 +168,7 @@ class ScalametaLanguageServer(
       val config = cwd.resolve(".scalafmt.conf")
       if (Files.isRegularFile(config.toNIO)) {
         val formattedContent =
-          scalafmt.format(contents, config.toString(), path.toString())
+          scalafmt.format(contents, path.toString(), config)
         List(TextEdit(fullDocumentRange, formattedContent))
       } else {
         connection.showMessage(MessageType.Info, s"Missing $config")
