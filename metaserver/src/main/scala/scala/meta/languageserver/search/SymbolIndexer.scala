@@ -1,18 +1,14 @@
 package scala.meta.languageserver.search
 
-import java.util.concurrent.atomic.AtomicReference
-import java.util.function.UnaryOperator
-import scala.collection.concurrent.TrieMap
 import scala.meta.languageserver.index._
-import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.semanticdb.Symbol
 
 /**
- * Fast, compact, incremental, parallel and persistable search index for symbols.
  *
- * In a nutshell, a key/value store with String keys (by symbol syntax) and
+ * A key/value store with String keys (by symbol syntax) and
  * [[SymbolData]] as values.
  *
+ * A good implementation of this trait should be:
  * - Fast: lookups should be instant to be useful from the editor.
  * - Compact: memory footprint should be small to fit in-memory even for
  *            large corpora (>millions of loc) on commodity hardware (dev laptop).
@@ -27,29 +23,13 @@ import org.langmeta.semanticdb.Symbol
  * It's possible to rebuild a [[scala.meta.Database]] from a SymbolIndexer with
  * [[InverseSymbolIndexer]].
  */
-class SymbolIndexer(
-    // simplest thing I could think of to get something off the ground.
-    // we may want to consider using a proper key/value store instead.
-    symbols: TrieMap[String, AtomicReference[SymbolData]] = TrieMap.empty
-) extends LazyLogging { self =>
+trait SymbolIndexer { self =>
 
   /** Lookup scala.meta.Symbol */
-  def get(symbol: Symbol): Option[SymbolData] = symbol match {
-    case Symbol.Multi(ss) => ss.collectFirst { case self(i) => i }
-    case s: Symbol => get(s.syntax)
-  }
+  def get(symbol: Symbol): Option[SymbolData]
 
   /** Lookup symbol by its syntax. */
-  def get(symbol: String): Option[SymbolData] =
-    symbols
-      .get(symbol)
-      .map(_.get)
-      .filter { s =>
-        if (s.definition.isEmpty) {
-          logger.info(s"Skipping symbol ${s.symbol}, has no definition")
-        }
-        s.definition.isDefined
-      }
+  def get(symbol: String): Option[SymbolData]
 
   /** Lookup symbol from inside a pattern match */
   def unapply(arg: Any): Option[SymbolData] = arg match {
@@ -59,10 +39,7 @@ class SymbolIndexer(
   }
 
   /** Iterator for all indexed symbols */
-  def allSymbols: Traversable[SymbolData] = new Traversable[SymbolData] {
-    override def foreach[U](f: SymbolData => U): Unit =
-      symbols.values.foreach(s => f(s.get))
-  }
+  def allSymbols: Traversable[SymbolData]
 
   /** Register the definition of a symbol at a given position.
    *
@@ -71,11 +48,7 @@ class SymbolIndexer(
   def addDefinition(
       symbol: String,
       position: Position
-  ): Unit = updated(symbol) { index =>
-    // NOTE(olafur): Here we override the previous definition, in some cases,
-    // we should accummulate them, for example non-pure JS/JVM/Native projects.
-    index.copy(definition = Some(position))
-  }
+  ): Unit
 
   /**
    * Register metadata about a symbol.
@@ -89,9 +62,7 @@ class SymbolIndexer(
       flags: Long,
       name: String,
       signature: String
-  ): Unit = updated(symbol) { index =>
-    index.copy(flags = flags, signature = signature, name = name)
-  }
+  ): Unit
 
   /**
    * Reguster a reference/call-site to this symbol.
@@ -102,24 +73,8 @@ class SymbolIndexer(
    * @param symbol
    */
   def addReference(
-      filename: String, // TODO(olafur) change to java.net.URI?
+      filename: String,
       range: Range,
-      symbol: String // TODO(olafur) move to first argument?
-  ): Unit = updated(symbol) { index =>
-    val ranges = index.references.getOrElse(filename, Ranges())
-    val newRanges = ranges.addRanges(range)
-    val newReferences = index.references + (filename -> newRanges)
-    index.copy(references = newReferences)
-  }
-
-  private def newValue(symbol: String) =
-    new AtomicReference(SymbolData(symbol = symbol))
-  private def updated(symbol: String)(f: SymbolData => SymbolData): Unit = {
-    val value = symbols.getOrElseUpdate(symbol, newValue(symbol))
-    value.getAndUpdate(new UnaryOperator[SymbolData] {
-      override def apply(index: SymbolData): SymbolData =
-        f(index)
-    })
-  }
-
+      symbol: String
+  ): Unit
 }

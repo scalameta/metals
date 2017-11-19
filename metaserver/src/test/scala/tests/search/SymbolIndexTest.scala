@@ -1,4 +1,4 @@
-package tests.index
+package tests.search
 
 import java.io.PipedInputStream
 import java.io.PipedOutputStream

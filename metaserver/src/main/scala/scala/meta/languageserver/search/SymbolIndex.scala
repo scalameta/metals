@@ -214,7 +214,7 @@ object SymbolIndex {
       notifications: Notifications,
       buffers: Buffers
   ): SymbolIndex = {
-    val symbols = new SymbolIndexer()
+    val symbols = new TrieMapSymbolIndexer()
     val documents = new InMemoryDocumentIndex()
     new SymbolIndex(symbols, documents, cwd, notifications, buffers)
   }
