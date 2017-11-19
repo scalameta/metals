@@ -4,11 +4,11 @@ package scala.meta.languageserver.index;
 
 // metaserver.index.zip
 message Index {
-    repeated SymbolIndex symbols = 1;
+    repeated SymbolData symbols = 1;
 }
 
 // All of the metadata associated with a single symbol definition
-message SymbolIndex {
+message SymbolData {
     string symbol = 1;
     // The Position where this symbol is defined.
     Position definition = 2;

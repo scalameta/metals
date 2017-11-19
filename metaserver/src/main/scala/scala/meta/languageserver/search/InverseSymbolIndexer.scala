@@ -1,19 +1,20 @@
-package scala.meta.languageserver
+package scala.meta.languageserver.search
 
 import java.net.URI
 import java.nio.file.Paths
 import scala.collection.mutable
-import scala.meta.languageserver.index.DocumentStore
 import scala.meta.languageserver.{index => i}
 import scala.{meta => m}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 
 object InverseSymbolIndexer {
+
+  /** Returns a scala.meta.Database with only names filled out */
   def reconstructDatabase(
-      cwd: AbsolutePath,
-      documents: DocumentStore,
-      symbols: Traversable[i.SymbolIndex]
+                             cwd: AbsolutePath,
+                             documents: DocumentIndex,
+                             symbols: Traversable[i.SymbolData]
   ): m.Database = {
 
     // Reconstruct an m.Database from the symbol index and asserts that the

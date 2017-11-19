@@ -5,6 +5,7 @@ import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
+import scala.meta.languageserver.search.SymbolIndex
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.LanguageServer
@@ -63,7 +64,7 @@ class ScalametaLanguageServer(
     semanticdbPublisher.doOnError(onError),
     compiler.documentPublisher.map(doc => Database(doc :: Nil))
   )
-  val symbolIndexer: SymbolIndexer = SymbolIndexer(
+  val symbolIndexer: SymbolIndex = SymbolIndex(
     cwd,
     connection,
     buffers
@@ -319,3 +320,4 @@ object ScalametaLanguageServer extends LazyLogging {
     subscriber -> semanticdbPublisher
   }
 }
+

@@ -1,31 +1,28 @@
-package scala.meta.languageserver
+package scala.meta.languageserver.search
 
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.UnaryOperator
 import scala.collection.concurrent.TrieMap
-import scala.meta.languageserver.index.Position
-import scala.meta.languageserver.index.Range
-import scala.meta.languageserver.index.Ranges
-import scala.meta.languageserver.index.SymbolIndex
+import scala.meta.languageserver.index._
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.semanticdb.Symbol
 
 class SymbolIndexerMap(
-    symbols: TrieMap[String, AtomicReference[SymbolIndex]] = TrieMap.empty
+    symbols: TrieMap[String, AtomicReference[SymbolData]] = TrieMap.empty
 ) extends LazyLogging { self =>
   private def newValue(symbol: String) = {
-    new AtomicReference(SymbolIndex(symbol = symbol))
+    new AtomicReference(SymbolData(symbol = symbol))
   }
 
-  def allSymbols: Traversable[SymbolIndex] = new Traversable[SymbolIndex] {
-    override def foreach[U](f: SymbolIndex => U): Unit =
+  def allSymbols: Traversable[SymbolData] = new Traversable[SymbolData] {
+    override def foreach[U](f: SymbolData => U): Unit =
       symbols.values.foreach(s => f(s.get))
   }
 
-  def updated(symbol: String)(f: SymbolIndex => SymbolIndex): Unit = {
+  def updated(symbol: String)(f: SymbolData => SymbolData): Unit = {
     val value = symbols.getOrElseUpdate(symbol, newValue(symbol))
-    value.getAndUpdate(new UnaryOperator[SymbolIndex] {
-      override def apply(index: SymbolIndex): SymbolIndex =
+    value.getAndUpdate(new UnaryOperator[SymbolData] {
+      override def apply(index: SymbolData): SymbolData =
         f(index)
     })
   }
@@ -34,11 +31,11 @@ class SymbolIndexerMap(
     symbols.keys.foreach(value => logger.info(s"[symbolmap] $value"))
   }
 
-  def get(symbol: Symbol): Option[SymbolIndex] = symbol match {
+  def get(symbol: Symbol): Option[SymbolData] = symbol match {
     case Symbol.Multi(ss) => ss.collectFirst { case self(i) => i }
     case s: Symbol => get(s.syntax)
   }
-  def get(symbol: String): Option[SymbolIndex] =
+  def get(symbol: String): Option[SymbolData] =
     symbols
       .get(symbol)
       .map(_.get)
@@ -49,7 +46,7 @@ class SymbolIndexerMap(
         s.definition.isDefined
       }
 
-  def unapply(arg: Any): Option[SymbolIndex] = arg match {
+  def unapply(arg: Any): Option[SymbolData] = arg match {
     case s: String => get(s)
     case s: Symbol => get(s)
     case _ => None

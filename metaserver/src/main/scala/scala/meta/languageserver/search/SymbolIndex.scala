@@ -1,11 +1,10 @@
-package scala.meta.languageserver
+package scala.meta.languageserver.search
 
 import java.net.URI
+import scala.meta.languageserver.Buffers
 import scala.meta.languageserver.ScalametaEnrichments._
-import scala.meta.languageserver.index.DocumentStore
-import scala.meta.languageserver.index.InMemoryDocumentStore
 import scala.meta.languageserver.{index => i}
-import `scala`.meta.languageserver.index.SymbolIndex
+import `scala`.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
 import langserver.messages.DefinitionResult
@@ -22,9 +21,9 @@ import org.langmeta.semanticdb.Signature
 import org.langmeta.semanticdb.Symbol
 
 // NOTE(olafur) it would make a lot of sense to use tries where Symbol is key.
-class SymbolIndexer(
+class SymbolIndex(
     val symbols: SymbolIndexerMap,
-    val documents: DocumentStore,
+    val documents: DocumentIndex,
     notifications: Notifications,
     buffers: Buffers
 )(implicit cwd: AbsolutePath)
@@ -34,7 +33,7 @@ class SymbolIndexer(
       path: AbsolutePath,
       line: Int,
       column: Int
-  ): Option[SymbolIndex] = {
+  ): Option[SymbolData] = {
     logger.info(s"findSymbol at $path:$line:$column")
 
     // NOTE(olafur) this is false to assume that the filename is relative
@@ -193,16 +192,16 @@ class SymbolIndexer(
 
 }
 
-object SymbolIndexer {
-  def empty(cwd: AbsolutePath): SymbolIndexer =
+object SymbolIndex {
+  def empty(cwd: AbsolutePath): SymbolIndex =
     apply(cwd, (_, _) => (), Buffers())
   def apply(
       cwd: AbsolutePath,
       notifications: Notifications,
       buffers: Buffers
-  ): SymbolIndexer = {
+  ): SymbolIndex = {
     val symbols = new SymbolIndexerMap()
-    val documents = new InMemoryDocumentStore()
-    new SymbolIndexer(symbols, documents, notifications, buffers)
+    val documents = new InMemoryDocumentIndex()
+    new SymbolIndex(symbols, documents, notifications, buffers)
   }
 }
