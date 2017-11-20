@@ -38,15 +38,13 @@ class SymbolIndex(
     buffers: Buffers,
 ) extends LazyLogging {
 
+  /** Returns a symbol at the given location with a non-empty definition */
   def findSymbol(
       path: AbsolutePath,
       line: Int,
       column: Int
   ): Option[SymbolData] = {
     logger.info(s"findSymbol at $path:$line:$column")
-
-    // NOTE(olafur) this is false to assume that the filename is relative
-    // to cwd, what about jars?
     for {
       document <- documents.getDocument(path.toNIO.toUri)
       _ = logger.info(s"Found document for $path")
@@ -80,6 +78,7 @@ class SymbolIndex(
     } yield symbol
   }
 
+  /** Returns the definition position of the symbol at the given position */
   def goToDefinition(
       path: AbsolutePath,
       line: Int,
@@ -249,8 +248,10 @@ class SymbolIndex(
 }
 
 object SymbolIndex {
+
   def empty(cwd: AbsolutePath): SymbolIndex =
     apply(cwd, (_, _) => (), Buffers())
+
   def apply(
       cwd: AbsolutePath,
       notifications: Notifications,
@@ -260,4 +261,5 @@ object SymbolIndex {
     val documents = new InMemoryDocumentIndex()
     new SymbolIndex(symbols, documents, cwd, notifications, buffers)
   }
+
 }

@@ -4,7 +4,6 @@ import scala.meta.languageserver.index._
 import org.langmeta.semanticdb.Symbol
 
 /**
- *
  * A key/value store with String keys (by symbol syntax) and
  * SymbolData as values.
  *

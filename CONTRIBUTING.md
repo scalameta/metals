@@ -80,7 +80,7 @@ However, we have a few unit tests for the parts unrelated to LSP or vscode.
 To run these tests,
 ```
 sbt
-> metaserver/test                    # Run all unit tests
-> metaserver/testOnly -- tests.ctags # Only test the ctags tests
-> metaserver/testOnly -- tests.index # Only tests the indexer tests
+> metaserver/test                     # Run all unit tests
+> metaserver/testOnly -- tests.ctags  # Only test the ctags tests
+> metaserver/testOnly -- tests.search # Only test the symbol indexer tests
 ```

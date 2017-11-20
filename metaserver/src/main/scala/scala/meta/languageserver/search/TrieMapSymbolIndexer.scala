@@ -3,17 +3,18 @@ package scala.meta.languageserver.search
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.UnaryOperator
 import scala.collection.concurrent.TrieMap
-import `scala`.meta.languageserver.index.Position
-import `scala`.meta.languageserver.index.Range
-import `scala`.meta.languageserver.index.Ranges
-import `scala`.meta.languageserver.index.SymbolData
+import scala.meta.languageserver.index.Position
+import scala.meta.languageserver.index.Range
+import scala.meta.languageserver.index.Ranges
+import scala.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.semanticdb.Symbol
 
 class TrieMapSymbolIndexer(
     // simplest thing I could think of to get something off the ground.
     // we may want to consider using a proper key/value store instead.
-    symbols: TrieMap[String, AtomicReference[SymbolData]] = TrieMap.empty
+    symbols: collection.concurrent.Map[String, AtomicReference[SymbolData]] =
+      TrieMap.empty
 ) extends SymbolIndexer
     with LazyLogging { self =>
 
@@ -76,6 +77,7 @@ class TrieMapSymbolIndexer(
 
   private def newValue(symbol: String) =
     new AtomicReference(SymbolData(symbol = symbol))
+
   private def updated(symbol: String)(f: SymbolData => SymbolData): Unit = {
     val value = symbols.getOrElseUpdate(symbol, newValue(symbol))
     value.getAndUpdate(new UnaryOperator[SymbolData] {
