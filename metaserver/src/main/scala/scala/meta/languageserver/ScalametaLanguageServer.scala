@@ -3,14 +3,12 @@ package scala.meta.languageserver
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
-import java.nio.file.FileVisitResult
 import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable.ListBuffer
+import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.util.control.NonFatal
+import com.typesafe.scalalogging.LazyLogging
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
 import langserver.messages.CompletionList
@@ -29,23 +27,27 @@ import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import monix.reactive.Observer
-import monix.reactive.OverflowStrategy
 import org.langmeta.internal.io.PathIO
-import org.langmeta.internal.semanticdb.schema
+import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
-import org.langmeta.semanticdb.Database
-import org.langmeta.semanticdb.Denotation
+
+case class ServerConfig(
+    cwd: AbsolutePath,
+    setupScalafmt: Boolean = true,
+    indexJDK: Boolean = true,
+    indexClasspath: Boolean = true
+)
 
 class ScalametaLanguageServer(
-    cwd: AbsolutePath,
+    config: ServerConfig,
     lspIn: InputStream,
     lspOut: OutputStream,
     stdout: PrintStream
 )(implicit s: Scheduler)
     extends LanguageServer(lspIn, lspOut) {
-  implicit val workspacePath: AbsolutePath = cwd
+  implicit val cwd: AbsolutePath = config.cwd
   val (semanticdbSubscriber, semanticdbPublisher) =
-    ScalametaLanguageServer.semanticdbStream
+    ScalametaLanguageServer.semanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     Observable.multicast[AbsolutePath](MulticastStrategy.Publish)
   def onError(e: Throwable): Unit = {
@@ -53,53 +55,42 @@ class ScalametaLanguageServer(
   }
   val buffers: Buffers = Buffers()
   val compiler = new Compiler(
+    config,
     stdout,
-    compilerConfigPublisher.doOnError(onError),
+    compilerConfigPublisher,
     connection,
     buffers
   )
-  val databasePublisher = Observable.merge(
-    semanticdbPublisher,
+  val databasePublisher: Observable[Database] = Observable.merge(
+    semanticdbPublisher.doOnError(onError),
     compiler.documentPublisher.map(doc => Database(doc :: Nil))
   )
-  val symbol: SymbolIndexer = SymbolIndexer(
-    databasePublisher,
-    logger,
+  val symbolIndexer: SymbolIndex = SymbolIndex(
+    cwd,
     connection,
     buffers
   )
-  val scalafix: Linter =
-    new Linter(cwd, stdout, connection, semanticdbPublisher.doOnError(onError))
-  val scalafmt: Formatter = Formatter.classloadScalafmt("1.3.0")
-
-  // TODO(olafur) more holistic error handling story.
-  private def unsafe(thunk: => Unit): Unit =
-    try thunk
-    catch { case NonFatal(e) => logger.error(e.getMessage, e) }
-
-  private def unsafeSeq[T](thunk: => Seq[T]): Seq[T] =
-    try thunk
-    catch { case NonFatal(e) => logger.error(e.getMessage, e); Nil }
+  val onIndexDatabase: Observable[Effects.IndexSemanticdb] =
+    databasePublisher.map { db =>
+      symbolIndexer.indexDatabase(db)
+      Effects.IndexSemanticdb
+    }
+  val scalafix: Linter = new Linter(
+    cwd,
+    stdout,
+    connection,
+    semanticdbPublisher.map(_.toDb(None)).doOnError(onError)
+  )
+  val scalafmt: Formatter =
+    if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
+    else Formatter.noop
 
   private val toCancel = ListBuffer.empty[Cancelable]
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
-    Files.walkFileTree(
-      workspacePath.toNIO,
-      new SimpleFileVisitor[Path] {
-        override def visitFile(
-            file: Path,
-            attrs: BasicFileAttributes
-        ): FileVisitResult = {
-          PathIO.extension(file) match {
-            case "semanticdb" | "compilerconfig" =>
-              onChangedFile(AbsolutePath(file))(_ => ())
-            case _ => // ignore, to avoid spamming console.
-          }
-          FileVisitResult.CONTINUE
-        }
-      }
-    )
+    Workspace.initialize(cwd) { path =>
+      onChangedFile(path)(_ => ())
+    }
   }
 
   override def initialize(
@@ -109,7 +100,7 @@ class ScalametaLanguageServer(
   ): ServerCapabilities = {
     logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
     toCancel += scalafix.linter.subscribe()
-    toCancel += symbol.indexer.subscribe()
+    toCancel += onIndexDatabase.subscribe()
     toCancel += compiler.onNewCompilerConfig.subscribe()
     loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
@@ -171,7 +162,7 @@ class ScalametaLanguageServer(
       val config = cwd.resolve(".scalafmt.conf")
       if (Files.isRegularFile(config.toNIO)) {
         val formattedContent =
-          scalafmt.format(contents, config.toString(), path.toString())
+          scalafmt.format(contents, path.toString(), config)
         List(TextEdit(fullDocumentRange, formattedContent))
       } else {
         connection.showMessage(MessageType.Info, s"Missing $config")
@@ -205,11 +196,9 @@ class ScalametaLanguageServer(
     // For a given node returns its closest ancestor which is a definition, declaration or a package object
     // NOTE: package is not considered a wrapping definition, but it could be (a subject to discuss)
     def wrappingDefinition(t: Tree): Option[Tree] = {
-      if (
-        t.is[Defn] ||
+      if (t.is[Defn] ||
         t.is[Decl] ||
-        t.is[Pkg.Object]
-      ) Some(t)
+        t.is[Pkg.Object]) Some(t)
       else t.parent.flatMap(wrappingDefinition)
     }
 
@@ -223,7 +212,9 @@ class ScalametaLanguageServer(
       case Term.Name(name) =>
         Some(name)
       case Term.Select(qual, name) =>
-        qualifiedName(qual).map { prefix => s"${prefix}.${name}" }
+        qualifiedName(qual).map { prefix =>
+          s"${prefix}.${name}"
+        }
       case Pkg(sel: Term.Select, _) =>
         qualifiedName(sel)
       case m: Member =>
@@ -241,31 +232,26 @@ class ScalametaLanguageServer(
       name <- qualifiedName(node)
       // Package as a wrapping definition for itself:
       defn <- if (node.is[Pkg]) Some(node) else wrappingDefinition(node)
-    } yield SymbolInformation(
-      name,
-      defn.symbolKind,
-      path.toLocation(defn.pos),
-      defn.parent
-        .flatMap(parentMember)
-        .flatMap(wrappingDefinition)
-        .flatMap(qualifiedName)
-    )
+    } yield
+      SymbolInformation(
+        name,
+        defn.symbolKind,
+        path.toLocation(defn.pos),
+        defn.parent
+          .flatMap(parentMember)
+          .flatMap(wrappingDefinition)
+          .flatMap(qualifiedName)
+      )
   }
 
   override def gotoDefinitionRequest(
       td: TextDocumentIdentifier,
       position: Position
   ): DefinitionResult = {
-    val path = Uri.toPath(td.uri).get.toRelative(cwd)
-    symbol
+    val path = Uri.toPath(td.uri).get
+    symbolIndexer
       .goToDefinition(path, position.line, position.character)
-      .fold(DefinitionResult(Nil)) { position =>
-        DefinitionResult(
-          // NOTE(olafur) this is false to assume that the filename is relative
-          // to cwd, what about jars?
-          cwd.resolve(position.input.syntax).toLocation(position) :: Nil
-        )
-      }
+      .getOrElse(DefinitionResult(Nil))
   }
 
   override def onSaveTextDocument(td: TextDocumentIdentifier): Unit = {}
@@ -316,21 +302,14 @@ class ScalametaLanguageServer(
 
 }
 
-object ScalametaLanguageServer {
-  def semanticdbStream(
-      implicit s: Scheduler
+object ScalametaLanguageServer extends LazyLogging {
+  def semanticdbStream(cwd: AbsolutePath)(
+      implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
     val (subscriber, publisher) =
-      Observable.multicast[AbsolutePath](
-        MulticastStrategy.Publish,
-        OverflowStrategy.ClearBuffer(2)
-      )
-    val semanticdbPublisher = publisher.map { path =>
-      val bytes = Files.readAllBytes(path.toNIO)
-      val sdb = schema.Database.parseFrom(bytes)
-      val mdb = sdb.toDb(None)
-      mdb
-    }
+      Observable.multicast[AbsolutePath](MulticastStrategy.Publish)
+    val semanticdbPublisher = publisher
+      .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))
     subscriber -> semanticdbPublisher
   }
 }

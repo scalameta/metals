@@ -1,7 +1,17 @@
 package scala.meta.languageserver.ctags
 
-import scala.meta._
+import scala.meta.Name
+import scala.meta.Term
+import scala.meta.PACKAGE
+import scala.meta.Type
 import scala.meta.languageserver.ScalametaEnrichments._
+import org.langmeta.internal.semanticdb.schema.Denotation
+import org.langmeta.internal.semanticdb.schema.ResolvedName
+import org.langmeta.internal.semanticdb.schema.Position
+import org.langmeta.internal.semanticdb.schema.ResolvedSymbol
+import org.{langmeta => m}
+import org.langmeta.semanticdb.Signature
+import org.langmeta.semanticdb.Symbol
 
 trait CtagsIndexer {
   def language: String
@@ -20,11 +30,11 @@ trait CtagsIndexer {
     currentOwner = old
     result
   }
-  def term(name: String, pos: Position, flags: Long): Unit =
+  def term(name: String, pos: m.Position, flags: Long): Unit =
     addSignature(Signature.Term(name), pos, flags)
   def term(name: Term.Name, flags: Long): Unit =
     addSignature(Signature.Term(name.value), name.pos, flags)
-  def tpe(name: String, pos: Position, flags: Long): Unit =
+  def tpe(name: String, pos: m.Position, flags: Long): Unit =
     addSignature(Signature.Type(name), pos, flags)
   def tpe(name: Type.Name, flags: Long): Unit =
     addSignature(Signature.Type(name.value), name.pos, flags)
@@ -45,18 +55,19 @@ trait CtagsIndexer {
   var currentOwner: Symbol.Global = root
   private def addSignature(
       signature: Signature,
-      definition: Position,
+      definition: m.Position,
       flags: Long
   ): Unit = {
     currentOwner = symbol(signature)
+    val syntax = currentOwner.syntax
     names += ResolvedName(
-      definition,
-      currentOwner,
+      Some(Position(definition.start, definition.end)),
+      syntax,
       isDefinition = (flags & PACKAGE) == 0
     )
     symbols += ResolvedSymbol(
-      currentOwner,
-      Denotation(flags, signature.name, "", Nil)
+      syntax,
+      Some(Denotation(flags, signature.name, "", Nil))
     )
   }
   private def symbol(signature: Signature): Symbol.Global =

@@ -15,6 +15,7 @@ object Main extends LazyLogging {
     val out = new PrintStream(new FileOutputStream(logPath))
     val err = new PrintStream(new FileOutputStream(logPath))
     val cwd = AbsolutePath(workspace)
+    val config = ServerConfig(cwd)
     val stdin = System.in
     val stdout = System.out
     val stderr = System.err
@@ -25,7 +26,7 @@ object Main extends LazyLogging {
       System.setErr(err)
       logger.info(s"Starting server in $workspace")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
-      val server = new ScalametaLanguageServer(cwd, stdin, stdout, out)
+      val server = new ScalametaLanguageServer(config, stdin, stdout, out)
       server.start()
     } finally {
       System.setOut(stdout)

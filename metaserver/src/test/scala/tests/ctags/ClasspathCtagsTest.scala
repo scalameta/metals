@@ -1,11 +1,12 @@
-package scala.meta.languageserver.ctags
+package tests.ctags
 
 import java.nio.file.Paths
 import scala.meta.languageserver.Jars
-import scala.meta.testkit.DiffAssertions
-import org.scalatest.FunSuite
+import scala.meta.languageserver.ctags.Ctags
+import org.langmeta.internal.semanticdb.schema.Database
+import tests.MegaSuite
 
-class ClasspathCtagsTest extends FunSuite with DiffAssertions {
+object ClasspathCtagsTest extends MegaSuite {
 
   // NOTE(olafur) this test is a bit slow since it downloads jars from the internet.
   ignore("index classpath") {
@@ -30,13 +31,14 @@ class ClasspathCtagsTest extends FunSuite with DiffAssertions {
         path.toNIO.endsWith(Predef)
       }
     ) { doc =>
-      val path = Paths.get(doc.input.syntax).getFileName.toString
+      val path = Paths.get(doc.filename).getFileName.toString
       val underline = "-" * path.length
+      val mdoc = Database(doc :: Nil).toDb(None).documents.head.toString()
       docs +=
         s"""$path
            |$underline
            |
-           |$doc""".stripMargin
+           |$mdoc""".stripMargin
     }
     val obtained = docs.result().sorted.mkString("\n\n")
     val expected =

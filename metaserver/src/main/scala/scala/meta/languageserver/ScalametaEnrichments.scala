@@ -1,9 +1,11 @@
 package scala.meta.languageserver
 
+import java.net.URI
 import scala.{meta => m}
 import langserver.types.SymbolKind
 import langserver.types.TextDocumentIdentifier
 import langserver.{types => l}
+import scala.meta.languageserver.{index => i}
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
@@ -28,16 +30,16 @@ object ScalametaEnrichments {
     // NOTE: we care only about descendants of Decl, Defn and Pkg[.Object] (see documentSymbols implementation)
     def symbolKind: SymbolKind = tree match {
       case f if f.isFunction => SymbolKind.Function
-      case Decl.Var(_)  | Defn.Var(_)  => SymbolKind.Variable
-      case Decl.Val(_)  | Defn.Val(_)  => SymbolKind.Constant
-      case Decl.Def(_)  | Defn.Def(_)  => SymbolKind.Method
+      case Decl.Var(_) | Defn.Var(_) => SymbolKind.Variable
+      case Decl.Val(_) | Defn.Val(_) => SymbolKind.Constant
+      case Decl.Def(_) | Defn.Def(_) => SymbolKind.Method
       case Decl.Type(_) | Defn.Type(_) => SymbolKind.Field
-      case Defn.Macro(_)  => SymbolKind.Constructor
-      case Defn.Class(_)  => SymbolKind.Class
-      case Defn.Trait(_)  => SymbolKind.Interface
+      case Defn.Macro(_) => SymbolKind.Constructor
+      case Defn.Class(_) => SymbolKind.Class
+      case Defn.Trait(_) => SymbolKind.Interface
       case Defn.Object(_) => SymbolKind.Module
-      case Pkg.Object(_)  => SymbolKind.Namespace
-      case Pkg(_)         => SymbolKind.Package
+      case Pkg.Object(_) => SymbolKind.Namespace
+      case Pkg(_) => SymbolKind.Package
       // TODO(alexey) are these kinds useful?
       // case ??? => SymbolKind.Enum
       // case ??? => SymbolKind.String
@@ -49,6 +51,18 @@ object ScalametaEnrichments {
   }
   implicit class XtensionInputLSP(val input: m.Input) extends AnyVal {
     def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
+  }
+  implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
+    def toLocation(implicit cwd: m.AbsolutePath): l.Location = {
+      val range = pos.range.get
+      l.Location(
+        pos.uri,
+        l.Range(
+          l.Position(line = range.startLine, character = range.startColumn),
+          l.Position(line = range.endLine, character = range.endColumn)
+        )
+      )
+    }
   }
   implicit class XtensionAbsolutePathLSP(val path: m.AbsolutePath)
       extends AnyVal {

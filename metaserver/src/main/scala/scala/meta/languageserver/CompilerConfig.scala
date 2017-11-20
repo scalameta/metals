@@ -77,10 +77,7 @@ object CompilerConfig extends LazyLogging {
       props.getProperty("scalacOptions").split(" ").toList
     val dependencyClasspath =
       Classpath(props.getProperty("dependencyClasspath")).shallow
-    val sourceJars = {
-      val result = Classpath(props.getProperty("sourceJars")).shallow
-      jdkSources.fold(result)(_ :: result)
-    }
+    val sourceJars = Classpath(props.getProperty("sourceJars")).shallow
     val classDirectory =
       AbsolutePath(props.getProperty("classDirectory"))
     CompilerConfig(

@@ -7,7 +7,7 @@ case "$TEST" in
     ./scalafmt --test
     ;;
   * )
-    sbt test
+    sbt "*:scalametaEnableCompletions" test
     ;;
 esac
 

@@ -2,9 +2,30 @@ package org.langmeta.languageserver
 
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
+import scala.meta.languageserver.{index => i}
 
 object InputEnrichments {
   implicit class XtensionInputOffset(val input: Input) extends AnyVal {
+
+    def toIndexRange(start: Int, end: Int): i.Range = {
+      val pos = Position.Range(input, start, end)
+      i.Range(
+        startLine = pos.startLine,
+        startColumn = pos.startColumn,
+        endLine = pos.endLine,
+        endColumn = pos.endColumn
+      )
+    }
+
+    /** Returns a scala.meta.Position from an index range. */
+    def toPosition(range: i.Range): Position = {
+      toPosition(
+        range.startLine,
+        range.startColumn,
+        range.endLine,
+        range.endColumn
+      )
+    }
 
     /** Returns an offset for this input */
     def toOffset(line: Int, column: Int): Int =

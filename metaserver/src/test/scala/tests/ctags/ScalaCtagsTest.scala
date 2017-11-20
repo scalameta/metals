@@ -1,6 +1,6 @@
-package scala.meta.languageserver.ctags
+package tests.ctags
 
-class ScalaCtagsTest extends BaseCtagsTest {
+object ScalaCtagsTest extends BaseCtagsTest {
   check(
     "vanilla.scala",
     """
