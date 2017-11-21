@@ -44,14 +44,12 @@ case class CompilerConfig(
 
 object CompilerConfig extends LazyLogging {
 
-  def jdkSourcePath: Option[AbsolutePath] =
-    sys.env.get("JAVA_HOME").map(AbsolutePath(_).resolve("src.zip"))
-
   def jdkSources: Option[AbsolutePath] =
     for {
-      path <- jdkSourcePath
-      if Files.isRegularFile(path.toNIO)
-    } yield path
+      javaHome <- sys.props.get("java.home")
+      jdkSources = Paths.get(javaHome).getParent.resolve("src.zip")
+      if Files.isRegularFile(jdkSources)
+    } yield AbsolutePath(jdkSources)
 
   def fromPath(
       path: AbsolutePath
