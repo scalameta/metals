@@ -31,6 +31,16 @@ object LevelDBMapTest extends MegaSuite {
     assert(intMap.get(2).isEmpty)
   }
 
+  test("getOrElseUpdate") {
+    var count = 0
+    val obtained =
+      map.getOrElseUpdate("unknown", () => { count += 1; count.toString })
+    assert(obtained == "1")
+    val obtained2 =
+      map.getOrElseUpdate("unknown", () => { count += 1; count.toString })
+    assert(obtained2 == "1")
+  }
+
   override def utestAfterAll(): Unit = {
     db.close()
   }

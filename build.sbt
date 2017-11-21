@@ -76,6 +76,10 @@ lazy val metaserver = project
     resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
     fork in Test := true,
+    buildInfoKeys := Seq[BuildInfoKey](
+      "testWorkspaceBaseDirectory" -> baseDirectory.in(testWorkspace).value.getParent
+    ),
+    buildInfoPackage := "scala.meta.languageserver.internal",
     libraryDependencies ++= List(
       "io.github.soc" % "directories" % "5",
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
@@ -93,6 +97,7 @@ lazy val metaserver = project
     languageserver,
     testWorkspace % "test->test"
   )
+  .enablePlugins(BuildInfoPlugin)
 
 lazy val testWorkspace = project
   .in(file("test-workspace") / "a")

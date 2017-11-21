@@ -37,15 +37,33 @@ class LevelDBMap[Key, Value](db: DB, keys: Bytes[Key], values: Bytes[Value])
     }
   }
 
+  /**
+   * Gets the value if it exists, otherwise computes the fallback value and stores it.
+   *
+   * This method is not thread-safe, the computed fallback value may get overwritten.
+   */
+  def getOrElseUpdate(key: Key, orElse: () => Value): Value = {
+    get(key) match {
+      case Some(value) => value
+      case None =>
+        val computed = orElse()
+        put(key, computed)
+    }
+  }
+
   /** Inserts a new value for the given key. */
-  def put(key: Key, value: Value): Unit = {
+  def put(key: Key, value: Value): Value = {
     try {
       db.put(keys.toBytes(key), values.toBytes(value))
+      value
     } catch {
       case e: DBException =>
         logger.error(e.getMessage, e)
+        value
     }
   }
+
+  def close(): Unit = db.close()
 }
 
 object LevelDBMap {
@@ -58,6 +76,12 @@ object LevelDBMap {
    */
   def apply[T](db: DB)(implicit ev: Bytes[T]): LevelDBMap[T, T] =
     new LevelDBMap(db, ev, ev)
+
+  def apply[Key, Value](db: DB)(
+      implicit keys: Bytes[Key],
+      values: Bytes[Value]
+  ): LevelDBMap[Key, Value] =
+    new LevelDBMap(db, keys, values)
 
   /**
    * Creates a new leveldb in the given directory.

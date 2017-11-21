@@ -7,8 +7,10 @@ import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.languageserver.storage.LevelDBMap
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
+import io.github.soc.directories.ProjectDirectories
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
 import langserver.messages.CompletionList
@@ -27,6 +29,7 @@ import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import monix.reactive.Observer
+import org.iq80.leveldb.DB
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
@@ -34,7 +37,8 @@ import org.langmeta.io.AbsolutePath
 case class ServerConfig(
     cwd: AbsolutePath,
     setupScalafmt: Boolean = true,
-    indexJDK: Boolean = true,
+    // TODO(olafur): re-enable indexJDK after https://github.com/scalameta/language-server/issues/43 is fixed
+    indexJDK: Boolean = false,
     indexClasspath: Boolean = true
 )
 
@@ -53,13 +57,28 @@ class ScalametaLanguageServer(
   def onError(e: Throwable): Unit = {
     logger.error(e.getMessage, e)
   }
+  var leveldb: DB = _
+  var indexingCache: LevelDBMap[AbsolutePath, Database] = _
+  def initializeIndexingCache(): Unit = {
+    val leveldbCacheDirectory = cacheDirectory.resolve("leveldb").toFile
+    logger.info(
+      s"Initializing leveldb cache in directory $leveldbCacheDirectory"
+    )
+    leveldb = LevelDBMap.createDBThatIPromiseToClose(leveldbCacheDirectory)
+    // TODO(olafur) store some version ID in the cached Database in order
+    // to be able to invalidate old caches when our indexing algorithms change.
+    indexingCache = LevelDBMap[String, Array[Byte]](leveldb)
+      .mapKeys[AbsolutePath](AbsolutePath.apply, _.toString)
+      .mapValues[Database](Database.parseFrom, _.toByteArray)
+  }
   val buffers: Buffers = Buffers()
   val compiler = new Compiler(
     config,
     stdout,
     compilerConfigPublisher,
     connection,
-    buffers
+    buffers,
+    () => indexingCache
   )
   val databasePublisher: Observable[Database] = Observable.merge(
     semanticdbPublisher.doOnError(onError),
@@ -85,6 +104,13 @@ class ScalametaLanguageServer(
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
     else Formatter.noop
 
+  private val cacheDirectory: AbsolutePath = {
+    val path = AbsolutePath(
+      ProjectDirectories.fromProjectName("metaserver").projectCacheDir
+    )
+    Files.createDirectories(path.toNIO)
+    path
+  }
   private val toCancel = ListBuffer.empty[Cancelable]
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
@@ -102,6 +128,7 @@ class ScalametaLanguageServer(
     toCancel += scalafix.linter.subscribe()
     toCancel += onIndexDatabase.subscribe()
     toCancel += compiler.onNewCompilerConfig.subscribe()
+    initializeIndexingCache()
     loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
       completionProvider = Some(
@@ -119,6 +146,7 @@ class ScalametaLanguageServer(
 
   override def shutdown(): Unit = {
     toCancel.foreach(_.cancel())
+    leveldb.close()
   }
 
   private def onChangedFile(
