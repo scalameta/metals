@@ -75,7 +75,10 @@ lazy val metaserver = project
     ),
     resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
+    fork in Test := true,
     libraryDependencies ++= List(
+      "io.github.soc" % "directories" % "5",
+      "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
       "io.monix" %% "monix" % "2.3.0",
       "com.lihaoyi" %% "pprint" % "0.5.3",
       "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java ctags

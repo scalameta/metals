@@ -118,9 +118,8 @@ class Compiler(
         s"Indexing classpath with ${sourcesClasspath.length} entries..."
       )
     }
-    ctags.Ctags.index(sourcesClasspath) { doc =>
-      documentSubscriber.onNext(doc)
-    }
+    val db = ctags.Ctags.indexDatabase(sourcesClasspath)
+    db.documents.foreach(documentSubscriber.onNext)
     Effects.IndexSourcesClasspath
   }
   private def noCompletions: List[(String, String)] = {
