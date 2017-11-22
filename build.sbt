@@ -2,7 +2,6 @@ inThisBuild(
   List(
     scalaVersion := "2.12.3",
     organization := "org.scalameta",
-    sources.in(Compile, doc) := Nil, // faster publishLocal
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
     ),
@@ -39,6 +38,9 @@ inThisBuild(
     publishMavenStyle := true,
     bintrayOrganization := Some("scalameta"),
     bintrayReleaseOnPublish := !isSnapshot.value
+    // faster publishLocal:
+    publishArtifact in packageDoc := sys.env.contains("CI"),
+    publishArtifact in packageSrc := sys.env.contains("CI")
   )
 )
 
