@@ -2,18 +2,49 @@ inThisBuild(
   List(
     scalaVersion := "2.12.3",
     organization := "org.scalameta",
-    version := "0.1-SNAPSHOT",
-    sources.in(Compile, doc) := Nil // faster publishLocal.
+    licenses := Seq(
+      "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
+    ),
+    homepage := Some(url("https://github.com/scalameta/language-server")),
+    developers := List(
+      Developer(
+        "olafurpg",
+        "Ólafur Páll Geirsson",
+        "olafurpg@gmail.com",
+        url("https://geirsson.com")
+      ),
+      Developer(
+        "gabro",
+        "Gabriele Petronella",
+        "gabriele@buildo.io",
+        url("https://github.com/gabro")
+      ),
+      Developer(
+        "laughedelic",
+        "Alexey Alekhin",
+        "laughedelic@gmail.com",
+        url("https://github.com/laughedelic")
+      )
+    ),
+    releaseEarlyWith := BintrayPublisher,
+    releaseEarlyEnableSyncToMaven := false,
+    publishMavenStyle := true,
+    bintrayOrganization := Some("scalameta"),
+    bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
+    // faster publishLocal:
+    publishArtifact in packageDoc := sys.env.contains("CI"),
+    publishArtifact in packageSrc := sys.env.contains("CI")
   )
 )
 
 lazy val noPublish = List(
-  publishArtifact in (Compile, packageDoc) := false,
-  publishArtifact in packageDoc := false,
-  sources in (Compile, doc) := Seq.empty,
+  publishTo := None,
   publishArtifact := false,
-  publish := {}
+  skip in publish := true
 )
+
+// not publishing the root project
+noPublish
 
 lazy val semanticdbSettings = List(
   addCompilerPlugin(
@@ -24,7 +55,7 @@ lazy val semanticdbSettings = List(
 
 lazy val languageserver = project
   .settings(
-    resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
+    resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     libraryDependencies ++= Seq(
       "com.dhpcs" %% "scala-json-rpc" % "2.0.1",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
@@ -42,7 +73,7 @@ lazy val metaserver = project
         flatPackage = true // Don't append filename to package
       ) -> sourceManaged.in(Compile).value./("protobuf")
     ),
-    resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
+    resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
     libraryDependencies ++= List(
       "io.monix" %% "monix" % "2.3.0",
