@@ -57,26 +57,13 @@ class ScalametaLanguageServer(
   def onError(e: Throwable): Unit = {
     logger.error(e.getMessage, e)
   }
-  var leveldb: DB = _
-  var indexingCache: LevelDBMap = _
-  def initializeIndexingCache(): Unit = {
-    val leveldbCacheDirectory = cacheDirectory.resolve("leveldb").toFile
-    logger.info(
-      s"Initializing leveldb cache in directory $leveldbCacheDirectory"
-    )
-    leveldb = LevelDBMap.createDBThatIPromiseToClose(leveldbCacheDirectory)
-    // TODO(olafur) store some version ID in the cached Database in order
-    // to be able to invalidate old caches when our indexing algorithms change.
-    indexingCache = LevelDBMap(leveldb)
-  }
   val buffers: Buffers = Buffers()
   val compiler = new Compiler(
     config,
     stdout,
     compilerConfigPublisher,
     connection,
-    buffers,
-    () => indexingCache
+    buffers
   )
   val databasePublisher: Observable[Database] = Observable.merge(
     semanticdbPublisher.doOnError(onError),
@@ -101,14 +88,6 @@ class ScalametaLanguageServer(
   val scalafmt: Formatter =
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
     else Formatter.noop
-
-  private val cacheDirectory: AbsolutePath = {
-    val path = AbsolutePath(
-      ProjectDirectories.fromProjectName("metaserver").projectCacheDir
-    )
-    Files.createDirectories(path.toNIO)
-    path
-  }
   private val toCancel = ListBuffer.empty[Cancelable]
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
@@ -126,7 +105,6 @@ class ScalametaLanguageServer(
     toCancel += scalafix.linter.subscribe()
     toCancel += onIndexDatabase.subscribe()
     toCancel += compiler.onNewCompilerConfig.subscribe()
-    initializeIndexingCache()
     loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
       completionProvider = Some(
@@ -144,7 +122,6 @@ class ScalametaLanguageServer(
 
   override def shutdown(): Unit = {
     toCancel.foreach(_.cancel())
-    leveldb.close()
   }
 
   private def onChangedFile(
@@ -329,6 +306,13 @@ class ScalametaLanguageServer(
 }
 
 object ScalametaLanguageServer extends LazyLogging {
+  lazy val cacheDirectory: AbsolutePath = {
+    val path = AbsolutePath(
+      ProjectDirectories.fromProjectName("metaserver").projectCacheDir
+    )
+    Files.createDirectories(path.toNIO)
+    path
+  }
   def semanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {

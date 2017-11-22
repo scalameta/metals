@@ -2,6 +2,8 @@ package scala.meta.languageserver.storage
 
 import java.io.File
 import com.typesafe.scalalogging.LazyLogging
+import monix.execution.schedulers.TestScheduler.Task
+import monix.reactive.Observable
 import org.fusesource.leveldbjni.JniDBFactory
 import org.iq80.leveldb.DB
 import org.iq80.leveldb.DBException
@@ -84,6 +86,17 @@ object LevelDBMap {
     options.createIfMissing(true)
     options.maxOpenFiles()
     JniDBFactory.factory.open(directory, options)
+  }
+
+  def withDB[T](directory: File)(f: LevelDBMap => T): T = {
+    // TODO(olafur) gracefully fallback when the db is in use by another thread.
+    // can happen with multiple language servers running at the same time.
+    val db = createDBThatIPromiseToClose(directory)
+    try {
+      f(apply(db))
+    } finally {
+      db.close()
+    }
   }
 
 }

@@ -19,14 +19,14 @@ import monix.reactive.Observable
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 import org.langmeta.internal.semanticdb.schema.Document
+import ScalametaLanguageServer.cacheDirectory
 
 class Compiler(
     serverConfig: ServerConfig,
     out: PrintStream,
     config: Observable[AbsolutePath],
     connection: Connection,
-    buffers: Buffers,
-    indexingCache: () => LevelDBMap
+    buffers: Buffers
 )(implicit s: Scheduler)
     extends LazyLogging {
   private implicit val cwd = serverConfig.cwd
@@ -124,13 +124,15 @@ class Compiler(
       indexedJars.computeIfAbsent(jar, _ => buf += jar)
     }
     val sourceJarsToIndex = buf.result()
-    sourceJarsToIndex.foreach { path =>
-      logger.info(s"Indexing classpath entry $path...")
-      val database: Database =
-        indexingCache().getOrElseUpdate[AbsolutePath, Database](path, { () =>
+    // Acquire a lock on the leveldb cache only during indexing.
+    LevelDBMap.withDB(cacheDirectory.resolve("leveldb").toFile) { db =>
+      sourceJarsToIndex.foreach { path =>
+        logger.info(s"Indexing classpath entry $path...")
+        val database = db.getOrElseUpdate[AbsolutePath, Database](path, { () =>
           ctags.Ctags.indexDatabase(path :: Nil)
         })
-      database.documents.foreach(documentSubscriber.onNext)
+        database.documents.foreach(documentSubscriber.onNext)
+      }
     }
     Effects.IndexSourcesClasspath
   }
