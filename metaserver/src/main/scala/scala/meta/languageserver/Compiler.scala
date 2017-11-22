@@ -26,7 +26,7 @@ class Compiler(
     config: Observable[AbsolutePath],
     connection: Connection,
     buffers: Buffers,
-    indexingCache: () => LevelDBMap[AbsolutePath, Database]
+    indexingCache: () => LevelDBMap
 )(implicit s: Scheduler)
     extends LazyLogging {
   private implicit val cwd = serverConfig.cwd
@@ -126,9 +126,10 @@ class Compiler(
     val sourceJarsToIndex = buf.result()
     sourceJarsToIndex.foreach { path =>
       logger.info(s"Indexing classpath entry $path...")
-      val database: Database = indexingCache().getOrElseUpdate(path, { () =>
-        ctags.Ctags.indexDatabase(path :: Nil)
-      })
+      val database: Database =
+        indexingCache().getOrElseUpdate[AbsolutePath, Database](path, { () =>
+          ctags.Ctags.indexDatabase(path :: Nil)
+        })
       database.documents.foreach(documentSubscriber.onNext)
     }
     Effects.IndexSourcesClasspath

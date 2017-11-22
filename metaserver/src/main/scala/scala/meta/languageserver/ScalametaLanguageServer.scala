@@ -58,7 +58,7 @@ class ScalametaLanguageServer(
     logger.error(e.getMessage, e)
   }
   var leveldb: DB = _
-  var indexingCache: LevelDBMap[AbsolutePath, Database] = _
+  var indexingCache: LevelDBMap = _
   def initializeIndexingCache(): Unit = {
     val leveldbCacheDirectory = cacheDirectory.resolve("leveldb").toFile
     logger.info(
@@ -67,9 +67,7 @@ class ScalametaLanguageServer(
     leveldb = LevelDBMap.createDBThatIPromiseToClose(leveldbCacheDirectory)
     // TODO(olafur) store some version ID in the cached Database in order
     // to be able to invalidate old caches when our indexing algorithms change.
-    indexingCache = LevelDBMap[String, Array[Byte]](leveldb)
-      .mapKeys[AbsolutePath](AbsolutePath.apply, _.toString)
-      .mapValues[Database](Database.parseFrom, _.toByteArray)
+    indexingCache = LevelDBMap(leveldb)
   }
   val buffers: Buffers = Buffers()
   val compiler = new Compiler(

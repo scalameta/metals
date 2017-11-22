@@ -1,43 +1,54 @@
 package tests.storage
 
 import java.nio.file.Files
+import scala.meta.languageserver.storage.FromBytes
 import scala.meta.languageserver.storage.LevelDBMap
+import scala.meta.languageserver.storage.ToBytes
 import tests.MegaSuite
 
 object LevelDBMapTest extends MegaSuite {
   val tmp = Files.createTempDirectory("metaserver").toFile
   tmp.deleteOnExit()
   val db = LevelDBMap.createDBThatIPromiseToClose(tmp)
-  val map = LevelDBMap[String](db)
+  val map = LevelDBMap(db)
 
   test("get/put") {
     map.put("key", "value")
-    assert(map.get("key").contains("value"))
-    assert(map.get("blah").isEmpty)
+    assert(map.get[String, String]("key").contains("value"))
+    assert(map.get[String, String]("blah").isEmpty)
   }
 
   test("mapValues") {
     case class User(name: String)
-    val userMap = map.mapValues[User](User.apply, _.name)
-    userMap.put("John", User("John"))
-    assert(userMap.get("John").contains(User("John")))
-    assert(userMap.get("Susan").isEmpty)
+    object User {
+      implicit val UserToBytes: ToBytes[User] =
+        ToBytes.StringToBytes.map[User](_.name)
+      implicit val UserFromBytes: FromBytes[User] =
+        FromBytes.StringFromBytes.map[User](User.apply)
+    }
+    map.put[String, User]("John", User("John"))
+    assert(map.get[String, User]("John").contains(User("John")))
+    assert(map.get[String, User]("Susan").isEmpty)
   }
 
   test("mapKeys") {
-    val intMap = map.mapKeys[Int](_.toInt, _.toString)
-    intMap.put(1, "2")
-    assert(intMap.get(1).contains("2"))
-    assert(intMap.get(2).isEmpty)
+    implicit val IntToBytes: ToBytes[Int] = _.toString.getBytes
+    map.put(1, "2")
+    assert(map.get[Int, String](1).contains("2"))
+    assert(map.get[Int, String](2).isEmpty)
   }
 
   test("getOrElseUpdate") {
     var count = 0
     val obtained =
-      map.getOrElseUpdate("unknown", () => { count += 1; count.toString })
+      map.getOrElseUpdate[String, String]("unknown", () => {
+        count += 1; count.toString
+      })
     assert(obtained == "1")
     val obtained2 =
-      map.getOrElseUpdate("unknown", () => { count += 1; count.toString })
+      map.getOrElseUpdate[String, String]("unknown", () => {
+        count += 1; count.toString
+      })
     assert(obtained2 == "1")
   }
 
