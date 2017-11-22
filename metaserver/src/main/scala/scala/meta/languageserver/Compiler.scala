@@ -3,6 +3,7 @@ package scala.meta.languageserver
 import java.io.PrintStream
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
+import scala.meta.languageserver.storage.LevelDBMap
 import scala.reflect.io
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -15,8 +16,10 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
+import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 import org.langmeta.internal.semanticdb.schema.Document
+import ScalametaLanguageServer.cacheDirectory
 
 class Compiler(
     serverConfig: ServerConfig,
@@ -40,7 +43,7 @@ class Compiler(
       .flatMap { config =>
         Observable.fromTask(
           Task(loadNewCompilerGlobals(config))
-            .zip(Task(indexDependencyClasspath(config)))
+            .zip(Task(indexDependencyClasspath(config.sourceJars)))
         )
       }
 
@@ -102,27 +105,39 @@ class Compiler(
     Effects.InstallPresentationCompiler
   }
 
-  private def indexDependencyClasspath(
-      config: CompilerConfig
+  // NOTE(olafur) this probably belongs somewhere else than Compiler, see
+  // https://github.com/scalameta/language-server/issues/48
+  def indexDependencyClasspath(
+      sourceJars: List[AbsolutePath]
   ): Effects.IndexSourcesClasspath = {
     if (!serverConfig.indexClasspath) return Effects.IndexSourcesClasspath
+    val sourceJarsWithJDK =
+      if (serverConfig.indexJDK)
+        CompilerConfig.jdkSources.fold(sourceJars)(_ :: sourceJars)
+      else sourceJars
     val buf = List.newBuilder[AbsolutePath]
-    val sourceJars = config.sourceJars
-    sourceJars.foreach { jar =>
+    sourceJarsWithJDK.foreach { jar =>
       // ensure we only index each jar once even under race conditions.
+      // race conditions are not unlikely since multiple .compilerconfig
+      // are typically created at the same time for each project/configuration
+      // combination. Duplicate tasks are expensive, for example we don't want
+      // to index the JDK twice on first startup.
       indexedJars.computeIfAbsent(jar, _ => buf += jar)
     }
-    val sourcesClasspath = buf.result()
-    if (sourcesClasspath.nonEmpty) {
-      logger.info(
-        s"Indexing classpath with ${sourcesClasspath.length} entries..."
-      )
-    }
-    ctags.Ctags.index(sourcesClasspath) { doc =>
-      documentSubscriber.onNext(doc)
+    val sourceJarsToIndex = buf.result()
+    // Acquire a lock on the leveldb cache only during indexing.
+    LevelDBMap.withDB(cacheDirectory.resolve("leveldb").toFile) { db =>
+      sourceJarsToIndex.foreach { path =>
+        logger.info(s"Indexing classpath entry $path...")
+        val database = db.getOrElseUpdate[AbsolutePath, Database](path, { () =>
+          ctags.Ctags.indexDatabase(path :: Nil)
+        })
+        database.documents.foreach(documentSubscriber.onNext)
+      }
     }
     Effects.IndexSourcesClasspath
   }
+
   private def noCompletions: List[(String, String)] = {
     connection.showMessage(
       MessageType.Warning,

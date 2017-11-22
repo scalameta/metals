@@ -4,6 +4,8 @@ import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
+
+import scala.meta.languageserver.internal.BuildInfo
 import scala.meta.languageserver.ScalametaLanguageServer
 import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.search.InverseSymbolIndexer
@@ -19,7 +21,7 @@ import utest._
 
 object SymbolIndexTest extends MegaSuite {
   implicit val cwd: AbsolutePath =
-    PathIO.workingDirectory.resolve("test-workspace")
+    AbsolutePath(BuildInfo.testWorkspaceBaseDirectory)
   val path = cwd
     .resolve("a")
     .resolve("src")
@@ -27,12 +29,12 @@ object SymbolIndexTest extends MegaSuite {
     .resolve("scala")
     .resolve("example")
     .resolve("UserTest.scala")
-  assert(Files.isRegularFile(path.toNIO))
+  Predef.assert(Files.isRegularFile(path.toNIO), path.toString())
   val s = TestScheduler()
   val config = ServerConfig(
     cwd,
     setupScalafmt = false,
-    indexJDK = false,
+    indexJDK = false, // TODO(olafur) enabling this breaks go to definition
     indexClasspath = true // set to false to speedup edit/debug cycle
   )
   val client = new PipedOutputStream()

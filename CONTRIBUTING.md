@@ -84,3 +84,34 @@ sbt
 > metaserver/testOnly -- tests.ctags  # Only test the ctags tests
 > metaserver/testOnly -- tests.search # Only test the symbol indexer tests
 ```
+
+## Clearing index cache
+
+This project caches globally in the computed symbol indices from your
+source classpath.
+This is done to prevent reindexing large dependencies like the JDK
+(which has ~2.5 million lines of code) on every editor startup.
+This directory where this cache is stored depends on your OS and is
+computed using [soc/directories](https://github.com/soc/directories)
+using the project name "metaserver".
+For example, on a Mac this directory is ~/Library/Caches/metaserver/.
+While developing this project, you may encounter the need to need
+`rm -rf` this cache directory to re-trigger indexing for some reason.
+
+
+## Troubleshooting
+
+- If SymbolIndexerTest.classpath tests fail with missing definitions for
+  `List` or `CharRef`, try to run `*:scalametaEnableCompletions` from the
+  sbt shell and then re-run. This command must be re-run after every
+  `clean`.
+- If you get the following error
+
+      org.fusesource.leveldbjni.internal.NativeDB$DBException: IO error: lock /path/to/Library/Cache/metaserver
+
+  that means you are running two scalameta/language-server instances
+  that are competing for the same lock on the global cache.
+  Try to turn off your editor (vscode/atom) while running the test suite
+  locally.
+  We hope to address this in the future by for example moving the cache to
+  each workspace directory or use an alternative storing mechanism.
