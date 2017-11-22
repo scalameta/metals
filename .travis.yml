@@ -5,8 +5,8 @@ jdk:
 - oraclejdk8
 env:
   matrix:
-  - CI_TEST: scalafmt
-  - CI_TEST: ci-fast
+    - CI_TEST=scalafmt
+    - CI_TEST=ci-fast
 
 cache:
   directories:
