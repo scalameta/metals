@@ -22,3 +22,12 @@ before_cache:
 - find $HOME/.sbt -name "*.lock" -type f -delete
 - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
 - rm -rf $HOME/.ivy2/local
+
+deploy:
+  provider: script
+  script: sbt releaseEarly
+  skip_cleanup: true
+  on:
+    branch: master
+    # only if HEAD is a merge commit:
+    condition: $(git rev-list --merges 'HEAD^..HEAD')
