@@ -26,11 +26,9 @@ inThisBuild(
 )
 
 lazy val noPublish = List(
-  publishArtifact in (Compile, packageDoc) := false,
-  publishArtifact in packageDoc := false,
-  sources in (Compile, doc) := Seq.empty,
+  publishTo := None,
   publishArtifact := false,
-  publish := {}
+  skip in publish := true
 )
 
 // not publishing the root project
