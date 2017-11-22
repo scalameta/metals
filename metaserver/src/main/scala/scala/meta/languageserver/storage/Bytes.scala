@@ -20,7 +20,7 @@ object FromBytes {
 
 trait ToBytes[A] { self =>
   def toBytes(e: A): Array[Byte]
-  def map[B](f: B => A): ToBytes[B] =
+  def contramap[B](f: B => A): ToBytes[B] =
     e => self.toBytes(f(e))
 }
 object ToBytes {

@@ -75,9 +75,10 @@ lazy val metaserver = project
     ),
     resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
-    fork in Test := true,
+    fork in Test := true, // required for jni interrop with leveldb.
     buildInfoKeys := Seq[BuildInfoKey](
-      "testWorkspaceBaseDirectory" -> baseDirectory.in(testWorkspace).value.getParent
+      "testWorkspaceBaseDirectory" ->
+        baseDirectory.in(testWorkspace).value.getParent
     ),
     buildInfoPackage := "scala.meta.languageserver.internal",
     libraryDependencies ++= List(

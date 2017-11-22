@@ -18,18 +18,13 @@ import org.iq80.leveldb.Options
 class LevelDBMap(db: DB) extends LazyLogging {
 
   /** Returns the value matching key, if any. */
+  @throws[DBException]
   def get[Key, Value](key: Key)(
       implicit
       keys: ToBytes[Key],
       values: FromBytes[Value]
   ): Option[Value] = {
-    try {
-      Option(db.get(keys.toBytes(key))).map(values.fromBytes)
-    } catch {
-      case e: DBException =>
-        logger.error(e.getMessage, e)
-        None
-    }
+    Option(db.get(keys.toBytes(key))).map(values.fromBytes)
   }
 
   /**
@@ -37,6 +32,7 @@ class LevelDBMap(db: DB) extends LazyLogging {
    *
    * This method is not thread-safe, the computed fallback value may get overwritten.
    */
+  @throws[DBException]
   def getOrElseUpdate[Key, Value](key: Key, orElse: () => Value)(
       implicit
       keys: ToBytes[Key],
@@ -52,19 +48,14 @@ class LevelDBMap(db: DB) extends LazyLogging {
   }
 
   /** Inserts a new value for the given key. */
+  @throws[DBException]
   def put[Key, Value](key: Key, value: Value)(
       implicit
       keys: ToBytes[Key],
       values: ToBytes[Value]
   ): Value = {
-    try {
-      db.put(keys.toBytes(key), values.toBytes(value))
-      value
-    } catch {
-      case e: DBException =>
-        logger.error(e.getMessage, e)
-        value
-    }
+    db.put(keys.toBytes(key), values.toBytes(value))
+    value
   }
 
   def close(): Unit = db.close()

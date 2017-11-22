@@ -22,7 +22,7 @@ object LevelDBMapTest extends MegaSuite {
     case class User(name: String)
     object User {
       implicit val UserToBytes: ToBytes[User] =
-        ToBytes.StringToBytes.map[User](_.name)
+        ToBytes.StringToBytes.contramap[User](_.name)
       implicit val UserFromBytes: FromBytes[User] =
         FromBytes.StringFromBytes.map[User](User.apply)
     }

@@ -105,7 +105,8 @@ class Compiler(
     Effects.InstallPresentationCompiler
   }
 
-  // NOTE(olafur) this probably belongs somewhere else than Compiler.
+  // NOTE(olafur) this probably belongs somewhere else than Compiler, see
+  // https://github.com/scalameta/language-server/issues/48
   def indexDependencyClasspath(
       sourceJars: List[AbsolutePath]
   ): Effects.IndexSourcesClasspath = {
