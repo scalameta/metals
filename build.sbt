@@ -26,18 +26,11 @@ inThisBuild(
         url("https://github.com/laughedelic")
       )
     ),
-    scmInfo in ThisBuild := Some(
-      ScmInfo(
-        url("https://github.com/scalameta/language-server"),
-        s"scm:git:git@github.com:scalameta/language-server.git"
-      )
-    ),
     releaseEarlyWith := BintrayPublisher,
     releaseEarlyEnableSyncToMaven := false,
-    releaseEarlyEnableLocalReleases := true, // TODO: remove once CI publishing is setup
     publishMavenStyle := true,
     bintrayOrganization := Some("scalameta"),
-    bintrayReleaseOnPublish := !isSnapshot.value
+    bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
     // faster publishLocal:
     publishArtifact in packageDoc := sys.env.contains("CI"),
     publishArtifact in packageSrc := sys.env.contains("CI")
@@ -62,7 +55,7 @@ lazy val semanticdbSettings = List(
 
 lazy val languageserver = project
   .settings(
-    resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
+    resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     libraryDependencies ++= Seq(
       "com.dhpcs" %% "scala-json-rpc" % "2.0.1",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
@@ -80,7 +73,7 @@ lazy val metaserver = project
         flatPackage = true // Don't append filename to package
       ) -> sourceManaged.in(Compile).value./("protobuf")
     ),
-    resolvers += "dhpcs at bintray" at "https://dl.bintray.com/dhpcs/maven",
+    resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
     libraryDependencies ++= List(
       "io.monix" %% "monix" % "2.3.0",
