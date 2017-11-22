@@ -146,8 +146,14 @@ object MarkedString {
 
 
 case class ParameterInformation(label: String, documentation: Option[String])
+object ParameterInformation {
+  implicit val format: OFormat[ParameterInformation] = Json.format[ParameterInformation]
+}
 
 case class SignatureInformation(label: String, documentation: Option[String], parameters: Seq[ParameterInformation])
+object SignatureInformation {
+  implicit val format: OFormat[SignatureInformation] = Json.format[SignatureInformation]
+}
 
 /**
  * Signature help represents the signature of something
@@ -163,6 +169,9 @@ case class SignatureHelp(
 
   /** The active parameter of the active signature. */
   activeParameter: Option[Int])
+object SignatureHelp {
+  implicit var format: OFormat[SignatureHelp] = Json.format[SignatureHelp]
+}
 
 /**
  * Value-object that contains additional information when
