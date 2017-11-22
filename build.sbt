@@ -3,12 +3,29 @@ inThisBuild(
     scalaVersion := "2.12.3",
     organization := "org.scalameta",
     sources.in(Compile, doc) := Nil, // faster publishLocal
-    licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+    licenses := Seq(
+      "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
+    ),
     homepage := Some(url("https://github.com/scalameta/language-server")),
     developers := List(
-      Developer("olafurpg", "Ólafur Páll Geirsson", "olafurpg@gmail.com", url("https://geirsson.com")),
-      Developer("gabro", "Gabriele Petronella", "gabriele@buildo.io", url("https://github.com/gabro")),
-      Developer("laughedelic", "Alexey Alekhin", "laughedelic@gmail.com", url("https://github.com/laughedelic"))
+      Developer(
+        "olafurpg",
+        "Ólafur Páll Geirsson",
+        "olafurpg@gmail.com",
+        url("https://geirsson.com")
+      ),
+      Developer(
+        "gabro",
+        "Gabriele Petronella",
+        "gabriele@buildo.io",
+        url("https://github.com/gabro")
+      ),
+      Developer(
+        "laughedelic",
+        "Alexey Alekhin",
+        "laughedelic@gmail.com",
+        url("https://github.com/laughedelic")
+      )
     ),
     scmInfo in ThisBuild := Some(
       ScmInfo(
