@@ -26,6 +26,12 @@ inThisBuild(
         url("https://github.com/laughedelic")
       )
     ),
+    scmInfo in ThisBuild := Some(
+      ScmInfo(
+        url("https://github.com/scalameta/language-server"),
+        s"scm:git:git@github.com:scalameta/language-server.git"
+      )
+    ),
     releaseEarlyWith := BintrayPublisher,
     releaseEarlyEnableSyncToMaven := false,
     publishMavenStyle := true,
