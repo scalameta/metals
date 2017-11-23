@@ -141,13 +141,13 @@ object CompletionList {
 case class InitializeResult(capabilities: ServerCapabilities) extends ResultResponse
 
 case class Shutdown() extends ServerCommand
-object Shutdown {
-  implicit val format: Format[Shutdown] = OFormat(
-    Reads(jsValue => JsSuccess(Shutdown())),
-    OWrites[Shutdown](s => Json.obj()))
-}
 
-case class ShutdownResult(dummy: Int) extends ResultResponse
+case class ShutdownResult() extends ResultResponse
+object ShutdownResult {
+  implicit val format: Format[ShutdownResult] = OFormat(
+    Reads(jsValue => JsSuccess(ShutdownResult())),
+    OWrites[ShutdownResult](s => Json.obj()))
+}
 
 case class ShowMessageRequestParams(
   /**
@@ -193,13 +193,20 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
 
   override val CommandFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeParams],
-    "shutdown" -> Shutdown.format,
     "textDocument/completion" -> valueFormat(TextDocumentCompletionRequest)(_.params),
     "textDocument/definition" -> valueFormat(TextDocumentDefinitionRequest)(_.params),
     "textDocument/hover" -> valueFormat(TextDocumentHoverRequest)(_.params),
     "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams],
     "textDocument/formatting" -> valueFormat(TextDocumentFormattingRequest)(_.params)
   )
+
+  // NOTE: this is a workaround to read `shutdown` request which doesn't have parameters (scala-json-rpc requires parameters for all requests)
+  override def read(jsonRpcRequestMessage: JsonRpcRequestMessage): JsResult[_ <: ServerCommand] = {
+    jsonRpcRequestMessage.method match {
+      case "shutdown" => JsSuccess(Shutdown())
+      case _ => super.read(jsonRpcRequestMessage)
+    }
+  }
 }
 
 object ClientCommand extends CommandCompanion[ClientCommand] {
@@ -217,7 +224,8 @@ case class PublishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]) extends
 
 // from client to server
 
-case class ExitNotification() extends Notification
+case class Exit() extends Notification
+
 case class DidOpenTextDocumentParams(textDocument: TextDocumentItem) extends Notification
 case class DidChangeTextDocumentParams(
   textDocument: VersionedTextDocumentIdentifier,
@@ -259,6 +267,14 @@ object Notification extends NotificationCompanion[Notification] {
     "initialized" -> Initialized.format,
     "$/cancelRequest" -> Json.format[CancelRequest]
   )
+
+  // NOTE: this is a workaround to read `exit` notification which doesn't have parameters (scala-json-rpc requires parameters for all notifications)
+  override def read(jsonRpcNotificationMessage: JsonRpcNotificationMessage): JsResult[_ <: Notification] = {
+    jsonRpcNotificationMessage.method match {
+      case "exit" => JsSuccess(Exit())
+      case _ => super.read(jsonRpcNotificationMessage)
+    }
+  }
 }
 
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
@@ -275,5 +291,6 @@ object ResultResponse extends ResponseCompanion[Any] {
     "textDocument/hover" -> Json.format[Hover],
     "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
     "textDocument/formatting" -> valueFormat(DocumentFormattingResult)(_.params),
-    "shutdown" -> Json.format[ShutdownResult])
+    "shutdown" -> ShutdownResult.format
+  )
 }

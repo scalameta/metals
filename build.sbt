@@ -1,5 +1,9 @@
 inThisBuild(
   List(
+    version ~= { old =>
+      if (sys.env.contains("CI")) old
+      else "0.1-SNAPSHOT" // to avoid manually updating extension.js
+    },
     scalaVersion := "2.12.3",
     organization := "org.scalameta",
     licenses := Seq(

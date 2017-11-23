@@ -30,7 +30,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
       case (_, Shutdown()) =>
         shutdown()
-        ShutdownResult(0) // the value is a dummy, because Play Json needs to serialize something
+        ShutdownResult()
       case c =>
         logger.error(s"Unknown command $c")
         sys.error("Unknown command")
@@ -40,6 +40,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
   protected val documentManager = new TextDocumentManager(connection)
 
   connection.notificationHandlers += {
+    case Exit() => onExit()
     case DidOpenTextDocumentParams(td) => onOpenTextDocument(td)
     case DidChangeTextDocumentParams(td, changes) => onChangeTextDocument(td, changes)
     case DidSaveTextDocumentParams(td) => onSaveTextDocument(td)
@@ -50,6 +51,12 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   def start(): Unit = {
     connection.start()
+  }
+
+  def onExit(): Unit = {
+    logger.debug("exit")
+    // TODO: should exit with success code 0 if the shutdown request has been received before; otherwise with error code 1
+    sys.exit(0)
   }
 
   def onOpenTextDocument(td: TextDocumentItem) = {
@@ -82,9 +89,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
     CompletionList(isIncomplete = false, Nil)
   }
 
-  def shutdown(): Unit = {
-
-  }
+  def shutdown(): Unit = {}
 
   def gotoDefinitionRequest(textDocument: TextDocumentIdentifier, position: Position): DefinitionResult = {
     DefinitionResult(Seq.empty[Location])

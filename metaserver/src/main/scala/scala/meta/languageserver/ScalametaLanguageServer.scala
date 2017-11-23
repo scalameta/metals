@@ -155,27 +155,20 @@ class ScalametaLanguageServer(
       td: TextDocumentIdentifier,
       options: FormattingOptions
   ): List[TextEdit] = {
-    try {
-      val path = Uri.toPath(td.uri).get
-      val contents = buffers.read(path)
-      val fullDocumentRange = Range(
-        start = Position(0, 0),
-        end = Position(Int.MaxValue, Int.MaxValue)
-      )
-      val config = cwd.resolve(".scalafmt.conf")
-      if (Files.isRegularFile(config.toNIO)) {
-        val formattedContent =
-          scalafmt.format(contents, path.toString(), config)
-        List(TextEdit(fullDocumentRange, formattedContent))
-      } else {
-        connection.showMessage(MessageType.Info, s"Missing $config")
-        Nil
-      }
-    } catch {
-      case NonFatal(e) =>
-        connection.showMessage(MessageType.Error, e.getMessage)
-        logger.error(e.getMessage, e)
-        Nil
+    val path = Uri.toPath(td.uri).get
+    val contents = buffers.read(path)
+    val fullDocumentRange = Range(
+      start = Position(0, 0),
+      end = Position(Int.MaxValue, Int.MaxValue)
+    )
+    val config = cwd.resolve(".scalafmt.conf")
+    if (Files.isRegularFile(config.toNIO)) {
+      val formattedContent =
+        scalafmt.format(contents, path.toString(), config)
+      List(TextEdit(fullDocumentRange, formattedContent))
+    } else {
+      connection.showMessage(MessageType.Info, s"Missing $config")
+      Nil
     }
   }
 
@@ -263,27 +256,21 @@ class ScalametaLanguageServer(
       td: TextDocumentIdentifier,
       position: Position
   ): ResultResponse = {
-    try {
-      val completions = compiler.autocomplete(
-        Uri.toPath(td.uri).get,
-        position.line,
-        position.character
-      )
-      CompletionList(
-        isIncomplete = false,
-        items = completions.map {
-          case (signature, name) =>
-            CompletionItem(
-              label = name,
-              detail = Some(signature)
-            )
-        }
-      )
-    } catch {
-      case NonFatal(e) =>
-        onError(e)
-        ShutdownResult(-1)
-    }
+    val completions = compiler.autocomplete(
+      Uri.toPath(td.uri).get,
+      position.line,
+      position.character
+    )
+    CompletionList(
+      isIncomplete = false,
+      items = completions.map {
+        case (signature, name) =>
+          CompletionItem(
+            label = name,
+            detail = Some(signature)
+          )
+      }
+    )
   }
 
   override def hoverRequest(
