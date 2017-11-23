@@ -131,4 +131,34 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin
   )
 
+  check(
+    "constructor",
+    """
+      |class User(name: String, age: Int) {
+      |  def this(name: String) = this(name, 42)
+      |}
+      |object Main {
+      |  new User(<<caret>>
+      |}
+    """.stripMargin,
+    """
+      |{
+      |  "signatures" : [ {
+      |    "label" : "<init>(name: String)User",
+      |    "parameters" : [ {
+      |      "label" : "name: String"
+      |    } ]
+      |  }, {
+      |    "label" : "<init>(name: String, age: Int)User",
+      |    "parameters" : [ {
+      |      "label" : "name: String"
+      |    }, {
+      |      "label" : "age: Int"
+      |    } ]
+      |  } ],
+      |  "activeParameter" : 0
+      |}
+    """.stripMargin
+  )
+
 }

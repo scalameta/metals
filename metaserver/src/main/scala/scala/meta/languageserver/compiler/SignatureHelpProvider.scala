@@ -36,7 +36,17 @@ object SignatureHelpProvider {
             fallbackSymbol.alternatives
           } else Nil
         } else {
-          completions.map(_.sym)
+          completions.flatMap { completion =>
+            if (completion.sym.isClass) {
+              // Match primary and secondary constructors, without this customization
+              // we would only return the primary constructor.
+              completion.sym.info.members.filter { member =>
+                member.name == compiler.nme.CONSTRUCTOR
+              }
+            } else {
+              completion.sym :: Nil
+            }
+          }
         }
       val signatureInformations = for {
         symbol <- matchedSymbols
