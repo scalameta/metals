@@ -3,7 +3,11 @@ package scala.meta.languageserver
 import java.io.PrintStream
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
+import scala.meta.languageserver.Compiler.ask
+import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
+import scala.meta.languageserver.compiler.SignatureHelpProvider
 import scala.meta.languageserver.storage.LevelDBMap
+import scala.reflect.internal.util.Position
 import scala.reflect.io
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -12,21 +16,14 @@ import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
 import langserver.messages.MessageType
+import langserver.types.SignatureHelp
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import org.langmeta.internal.semanticdb.schema.Database
-import org.langmeta.io.AbsolutePath
 import org.langmeta.internal.semanticdb.schema.Document
-import ScalametaLanguageServer.cacheDirectory
-import scala.reflect.internal.util.Position
-import langserver.types.SignatureHelp
-import langserver.types.SymbolInformation
-import Compiler.ask
-import scala.collection.immutable
-import langserver.types.ParameterInformation
-import langserver.types.SignatureInformation
+import org.langmeta.io.AbsolutePath
 
 class Compiler(
     serverConfig: ServerConfig,
@@ -59,51 +56,10 @@ class Compiler(
       line: Int,
       column: Int
   ): SignatureHelp = {
-    getCompiler(path, line, column - 1).fold(noSignatureHelp) {
+    logger.info(s"Signature help at $path:$line:$column")
+    getCompiler(path, line, column - 1).fold(SignatureHelpProvider.empty) {
       case (compiler, position) =>
-        logger.info(s"Signature help at $path:$line:$column")
-        // Find the last leading open paren to get the method symbol
-        // of this argument list. Note, this may still cause false positives
-        // in cases like `foo(bar(), <cursor>)` since we will find the
-        // symbol of `bar` when we want to match against `foo`.
-        // Related https://github.com/scalameta/language-server/issues/52
-        val lastParenOffset =
-          position.source.content.lastIndexOf('(', position.point)
-        if (lastParenOffset < 0) {
-          // bail if we can't find open paren to prevent false positives.
-          noSignatureHelp
-        } else {
-          val lastParenPosition = position.withPoint(lastParenOffset)
-          val signatureInformations = for {
-            member <- compiler
-              .completionsAt(lastParenPosition)
-              .matchingResults()
-              .distinct
-            if member.sym.isMethod
-          } yield {
-            val sym = member.sym.asMethod
-            val parameterInfos = sym.paramLists.headOption.map { params =>
-              params.map { param =>
-                ParameterInformation(
-                  label = s"${param.nameString}: ${param.info.toLongString}",
-                  documentation = None
-                )
-              }
-            }
-            SignatureInformation(
-              label = s"${sym.nameString}${sym.info.toLongString}",
-              documentation = None,
-              parameters = parameterInfos.getOrElse(Nil)
-            )
-          }
-          SignatureHelp(
-            signatures = signatureInformations,
-            // TODO(olafur) populate activeSignature and activeParameter fields, see
-            // https://github.com/scalameta/language-server/issues/52
-            activeSignature = None,
-            activeParameter = None
-          )
-        }
+        SignatureHelpProvider.signatureHelp(compiler, position)
     }
   }
 
@@ -194,7 +150,6 @@ class Compiler(
     Effects.IndexSourcesClasspath
   }
 
-  private def noSignatureHelp: SignatureHelp = SignatureHelp(Nil, None, None)
   private def noCompletions: List[(String, String)] = {
     connection.showMessage(
       MessageType.Warning,
@@ -232,7 +187,7 @@ class Compiler(
 
 }
 
-object Compiler {
+object Compiler extends LazyLogging {
   def addCompilationUnit(
       global: Global,
       code: String,
