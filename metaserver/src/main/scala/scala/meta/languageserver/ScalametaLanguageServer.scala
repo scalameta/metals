@@ -282,7 +282,8 @@ class ScalametaLanguageServer(
     } catch {
       case NonFatal(e) =>
         onError(e)
-        ShutdownResult(-1)
+        // FIXME: server shouldn't send shutdown response if there was no shutdown request
+        ShutdownResult()
     }
   }
 

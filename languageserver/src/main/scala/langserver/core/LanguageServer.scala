@@ -30,7 +30,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
       case (_, Shutdown()) =>
         shutdown()
-        ShutdownResult(0) // the value is a dummy, because Play Json needs to serialize something
+        ShutdownResult()
       case c =>
         logger.error(s"Unknown command $c")
         sys.error("Unknown command")
@@ -82,9 +82,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
     CompletionList(isIncomplete = false, Nil)
   }
 
-  def shutdown(): Unit = {
-
-  }
+  def shutdown(): Unit = {}
 
   def gotoDefinitionRequest(textDocument: TextDocumentIdentifier, position: Position): DefinitionResult = {
     DefinitionResult(Seq.empty[Location])
