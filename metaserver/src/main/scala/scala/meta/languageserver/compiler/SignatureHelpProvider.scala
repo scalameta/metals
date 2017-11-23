@@ -4,9 +4,11 @@ import scala.annotation.tailrec
 import scala.tools.nsc.interactive.Global
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.SourceFile
+import com.typesafe.scalalogging.LazyLogging
 import langserver.types.ParameterInformation
 import langserver.types.SignatureHelp
 import langserver.types.SignatureInformation
+import CompilerEnrichments._
 
 object SignatureHelpProvider {
   def empty: SignatureHelp = SignatureHelp(Nil, None, None)
@@ -18,18 +20,31 @@ object SignatureHelpProvider {
     // Related https://github.com/scalameta/language-server/issues/52
     findEnclosingCallSite(position).fold(empty) { callSite =>
       val lastParenPosition = position.withPoint(callSite.openParenOffset)
+      // NOTE(olafur) this statement is intentionally before `completionsAt`
+      // even if we don't use fallbackSymbol. typedTreeAt triggers compilation
+      // of the code that prevents a StringIndexOutOfBounds in `completionsAt.
+      val fallbackSymbol =
+        compiler.typedTreeAt(position.withPoint(position.point - 1)).symbol
+      val completions =
+        compiler.completionsAt(lastParenPosition).matchingResults().distinct
+      val matchedSymbols: Seq[compiler.Symbol] =
+        if (completions.isEmpty) {
+          // Can happen for synthetic .apply. This implementation does not
+          // correctly return overloads for case classes or even overloads
+          // defined in this compilation unit, despite the usage of `.alternatives`
+          fallbackSymbol.alternatives
+        } else {
+          completions.map(_.sym)
+        }
       val signatureInformations = for {
-        member <- compiler
-          .completionsAt(lastParenPosition)
-          .matchingResults()
-          .distinct
-        if member.sym.isMethod
-        if member.sym.asMethod.paramLists.headOption.exists { paramList =>
+        symbol <- matchedSymbols
+        if symbol.isMethod
+        if symbol.asMethod.paramLists.headOption.exists { paramList =>
           paramList.length > callSite.activeArgument
         }
       } yield {
-        val sym = member.sym.asMethod
-        val parameterInfos = sym.paramLists.headOption.map { params =>
+        val methodSymbol = symbol.asMethod
+        val parameterInfos = methodSymbol.paramLists.headOption.map { params =>
           params.map { param =>
             ParameterInformation(
               label = s"${param.nameString}: ${param.info.toLongString}",
@@ -38,7 +53,7 @@ object SignatureHelpProvider {
           }
         }
         SignatureInformation(
-          label = s"${sym.nameString}${sym.info.toLongString}",
+          label = s"${methodSymbol.nameString}${methodSymbol.info.toLongString}",
           documentation = None,
           parameters = parameterInfos.getOrElse(Nil)
         )

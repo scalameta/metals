@@ -95,7 +95,7 @@ object SignatureHelpTest extends CompilerSuite {
   check(
     "tricky-comma",
     """
-      |object b {
+      |object d {
       |  Predef.assert(","<<caret>>
       |}
     """.stripMargin, { obtained =>
@@ -107,4 +107,28 @@ object SignatureHelpTest extends CompilerSuite {
       assert(activeParameter.get == 1)
     }
   )
+
+  check(
+    "apply",
+    """
+      |case class User(name: String, age: Int)
+      |object Main {
+      |  User(<<caret>>
+      |}
+    """.stripMargin,
+    """
+      |{
+      |  "signatures" : [ {
+      |    "label" : "apply(name: String, age: Int)User",
+      |    "parameters" : [ {
+      |      "label" : "name: String"
+      |    }, {
+      |      "label" : "age: Int"
+      |    } ]
+      |  } ],
+      |  "activeParameter" : 0
+      |}
+    """.stripMargin
+  )
+
 }
