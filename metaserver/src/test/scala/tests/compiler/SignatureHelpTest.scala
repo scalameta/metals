@@ -113,7 +113,7 @@ object SignatureHelpTest extends CompilerSuite {
     """
       |case class User(name: String, age: Int)
       |object Main {
-      |  User(<<caret>>
+      |  User("John", <<caret>>
       |}
     """.stripMargin,
     """
@@ -126,7 +126,7 @@ object SignatureHelpTest extends CompilerSuite {
       |      "label" : "age: Int"
       |    } ]
       |  } ],
-      |  "activeParameter" : 0
+      |  "activeParameter" : 1
       |}
     """.stripMargin
   )

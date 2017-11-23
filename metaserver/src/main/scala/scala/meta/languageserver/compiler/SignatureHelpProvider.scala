@@ -8,7 +8,6 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.types.ParameterInformation
 import langserver.types.SignatureHelp
 import langserver.types.SignatureInformation
-import CompilerEnrichments._
 
 object SignatureHelpProvider {
   def empty: SignatureHelp = SignatureHelp(Nil, None, None)
@@ -23,16 +22,19 @@ object SignatureHelpProvider {
       // NOTE(olafur) this statement is intentionally before `completionsAt`
       // even if we don't use fallbackSymbol. typedTreeAt triggers compilation
       // of the code that prevents a StringIndexOutOfBounds in `completionsAt.
-      val fallbackSymbol =
-        compiler.typedTreeAt(position.withPoint(position.point - 1)).symbol
+      val fallbackSymbol = compiler
+        .typedTreeAt(position.withPoint(callSite.openParenOffset - 1))
+        .symbol
       val completions =
         compiler.completionsAt(lastParenPosition).matchingResults().distinct
       val matchedSymbols: Seq[compiler.Symbol] =
         if (completions.isEmpty) {
-          // Can happen for synthetic .apply. This implementation does not
-          // correctly return overloads for case classes or even overloads
-          // defined in this compilation unit, despite the usage of `.alternatives`
-          fallbackSymbol.alternatives
+          if (fallbackSymbol != null) {
+            // Can happen for synthetic .apply. This implementation does not
+            // correctly return overloads for case classes or even overloads
+            // defined in this compilation unit, despite the usage of `.alternatives`
+            fallbackSymbol.alternatives
+          } else Nil
         } else {
           completions.map(_.sym)
         }
@@ -68,9 +70,7 @@ object SignatureHelpProvider {
     }
   }
   case class CallSite(openParenOffset: Int, activeArgument: Int)
-  private def findEnclosingCallSite(
-      caret: Position
-  ): Option[CallSite] = {
+  private def findEnclosingCallSite(caret: Position): Option[CallSite] = {
     @tailrec
     def loop(i: Int, openParens: Int, commas: Int): Option[CallSite] = {
       if (i < 0) None
