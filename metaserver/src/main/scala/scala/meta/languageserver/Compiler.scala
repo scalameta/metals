@@ -70,15 +70,14 @@ class Compiler(
           val parameterInfos = sym.paramLists.headOption.map { params =>
             params.map { param =>
               ParameterInformation(
-                label = param.nameString,
-                documentation =
-                  Some(s"${param.nameString}: ${param.info.toLongString}")
+                label = s"${param.nameString}: ${param.info.toLongString}",
+                documentation = None
               )
             }
           }
           SignatureInformation(
-            label = sym.nameString,
-            documentation = Some(sym.info.toLongString),
+            label = s"${sym.nameString}${sym.info.toLongString}",
+            documentation = None,
             parameters = parameterInfos.getOrElse(Nil)
           )
         }
