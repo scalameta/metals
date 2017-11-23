@@ -224,7 +224,8 @@ case class PublishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]) extends
 
 // from client to server
 
-case class ExitNotification() extends Notification
+case class Exit() extends Notification
+
 case class DidOpenTextDocumentParams(textDocument: TextDocumentItem) extends Notification
 case class DidChangeTextDocumentParams(
   textDocument: VersionedTextDocumentIdentifier,
@@ -266,6 +267,14 @@ object Notification extends NotificationCompanion[Notification] {
     "initialized" -> Initialized.format,
     "$/cancelRequest" -> Json.format[CancelRequest]
   )
+
+  // NOTE: this is a workaround to read `exit` notification which doesn't have parameters (scala-json-rpc requires parameters for all notifications)
+  override def read(jsonRpcNotificationMessage: JsonRpcNotificationMessage): JsResult[_ <: Notification] = {
+    jsonRpcNotificationMessage.method match {
+      case "exit" => JsSuccess(Exit())
+      case _ => super.read(jsonRpcNotificationMessage)
+    }
+  }
 }
 
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
