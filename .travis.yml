@@ -30,5 +30,8 @@ deploy:
   on:
     branch: master
     # only if HEAD is a merge commit or a tag:
-    condition: '"$(git rev-list --merges HEAD^..HEAD)" || "$TRAVIS_TAG"'
-    condition: '"$CI_TEST" = "ci-fast"'
+    condition: >
+      "$CI_TEST" = "ci-fast" && (
+        "$(git rev-list --merges HEAD^..HEAD)" ||
+        "$TRAVIS_TAG"
+      )
