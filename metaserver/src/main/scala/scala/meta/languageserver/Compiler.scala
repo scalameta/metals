@@ -84,7 +84,7 @@ class Compiler(
       case (compiler, position) =>
         val response = ask[compiler.Tree](r => compiler.askTypeAt(position, r))
         val typedTree = response.get.swap
-        typedTree.toOption.flatMap(t => typeOfTree(compiler)(t))
+        typedTree.toOption.flatMap(t => Compiler.typeOfTree(compiler)(t))
     }
   }
 
@@ -172,19 +172,6 @@ class Compiler(
     i + column
   }
 
-  private def typeOfTree(c: Global)(t: c.Tree): Option[String] = {
-    import c._
-
-    val refinedTree = t match {
-      case t: ImplDef if t.impl != null => t.impl
-      case t: ValOrDefDef if t.tpt != null => t.tpt
-      case t: ValOrDefDef if t.rhs != null => t.rhs
-      case x => x
-    }
-
-    Option(refinedTree.tpe).map(_.toLongString)
-  }
-
 }
 
 object Compiler extends LazyLogging {
@@ -217,4 +204,17 @@ object Compiler extends LazyLogging {
     f(r)
     r
   }
+  def typeOfTree(c: Global)(t: c.Tree): Option[String] = {
+    import c._
+
+    val refinedTree = t match {
+      case t: ImplDef if t.impl != null => t.impl
+      case t: ValOrDefDef if t.tpt != null => t.tpt
+      case t: ValOrDefDef if t.rhs != null => t.rhs
+      case x => x
+    }
+
+    Option(refinedTree.tpe).map(_.toLongString)
+  }
+
 }
