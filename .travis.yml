@@ -1,37 +1,34 @@
 language: scala
-script:
-- "./bin/runci.sh $CI_TEST"
 jdk:
-- oraclejdk8
-env:
-  matrix:
-    - CI_TEST=scalafmt
-    - CI_TEST=ci-fast
+  - oraclejdk8
+
+stages:
+  - name: test
+  - name: release
+    if: (branch = master) AND (type = push)
+
+jobs:
+  include:
+    # default stage is test
+    - env: TEST="scalafmt"
+      script: ./bin/scalafmt --test
+    - env: TEST="sbt test"
+      script: sbt *:scalametaEnableCompletions test
+    # release only on merge commits or tags
+    - stage: release
+      script: if [[ "$(git rev-list --merges HEAD^..HEAD)" || "$TRAVIS_TAG" ]]; then sbt releaseEarly; else echo "skipping release"; fi
 
 cache:
   directories:
-  - "$HOME/.sbt/0.13/dependency"
-  - "$HOME/.sbt/boot/scala*"
-  - "$HOME/.sbt/launchers"
-  - "$HOME/.ivy2/cache"
-  - "$HOME/.coursier"
+    - $HOME/.sbt/0.13/dependency
+    - $HOME/.sbt/boot/scala*
+    - $HOME/.sbt/launchers
+    - $HOME/.ivy2/cache
+    - $HOME/.coursier
 
 before_cache:
-- du -h -d 1 $HOME/.ivy2/cache
-- du -h -d 2 $HOME/.sbt/
-- find $HOME/.sbt -name "*.lock" -type f -delete
-- find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
-- rm -rf $HOME/.ivy2/local
-
-deploy:
-  provider: script
-  script: sbt releaseEarly
-  skip_cleanup: true
-  on:
-    branch: master
-    # only if HEAD is a merge commit or a tag:
-    condition: >
-      "$CI_TEST" = "ci-fast" && (
-        "$(git rev-list --merges HEAD^..HEAD)" ||
-        "$TRAVIS_TAG"
-      )
+  - du -h -d 1 $HOME/.ivy2/cache
+  - du -h -d 2 $HOME/.sbt/
+  - find $HOME/.sbt -name "*.lock" -type f -delete
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
+  - rm -rf $HOME/.ivy2/local
