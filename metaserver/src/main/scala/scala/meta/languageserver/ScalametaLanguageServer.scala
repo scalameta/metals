@@ -256,8 +256,6 @@ class ScalametaLanguageServer(
       .getOrElse(DefinitionResult(Nil))
   }
 
-  override def onSaveTextDocument(td: TextDocumentIdentifier): Unit = {}
-
   override def signatureHelpRequest(
       td: TextDocumentIdentifier,
       position: Position
