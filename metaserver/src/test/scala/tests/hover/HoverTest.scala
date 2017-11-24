@@ -15,12 +15,13 @@ object HoverTest extends CompilerSuite {
       code, { pos =>
         val result = HoverProvider.hover(compiler, pos)
         val obtained = Json.prettyPrint(Json.toJson(result))
-        val expected = s"""{
-           |  "contents" : [ {
-           |    "language" : "scala",
-           |    "value" : "$expectedValue"
-           |  } ]
-           |}""".stripMargin
+        val expected =
+          s"""{
+             |  "contents" : [ {
+             |    "language" : "scala",
+             |    "value" : "$expectedValue"
+             |  } ]
+             |}""".stripMargin
         assertNoDiff(obtained, expected)
       }
     )
