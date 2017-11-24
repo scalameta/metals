@@ -19,6 +19,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
         InitializeResult(initialize(pid, rootPath, capabilities))
       case ("textDocument/completion", TextDocumentCompletionRequest(TextDocumentPositionParams(textDocument, position))) =>
         completionRequest(textDocument, position)
+      case ("textDocument/signatureHelp", TextDocumentSignatureHelpRequest(TextDocumentPositionParams(textDocument, position))) =>
+        signatureHelpRequest(textDocument, position)
       case ("textDocument/definition", TextDocumentDefinitionRequest(TextDocumentPositionParams(textDocument, position))) =>
         gotoDefinitionRequest(textDocument, position)
       case ("textDocument/hover", TextDocumentHoverRequest(TextDocumentPositionParams(textDocument, position))) =>
@@ -83,6 +85,10 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
   def initialize(pid: Long, rootPath: String, capabilities: ClientCapabilities): ServerCapabilities = {
     logger.info(s"Initialized with $pid, $rootPath, $capabilities")
     ServerCapabilities(completionProvider = Some(CompletionOptions(false, Seq("."))))
+  }
+
+  def signatureHelpRequest(textDocument: TextDocumentIdentifier, position: Position): SignatureHelp = {
+    SignatureHelp(Nil, None, None)
   }
 
   def completionRequest(textDocument: TextDocumentIdentifier, position: Position): ResultResponse = {

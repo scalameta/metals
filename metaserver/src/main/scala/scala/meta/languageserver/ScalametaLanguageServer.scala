@@ -23,6 +23,7 @@ import langserver.messages.MessageType
 import langserver.messages.ResultResponse
 import langserver.messages.ServerCapabilities
 import langserver.messages.ShutdownResult
+import langserver.messages.SignatureHelpOptions
 import langserver.types._
 import monix.execution.Cancelable
 import monix.execution.Scheduler
@@ -111,6 +112,11 @@ class ScalametaLanguageServer(
         CompletionOptions(
           resolveProvider = true,
           triggerCharacters = "." :: Nil
+        )
+      ),
+      signatureHelpProvider = Some(
+        SignatureHelpOptions(
+          triggerCharacters = "(" :: Nil
         )
       ),
       definitionProvider = true,
@@ -252,6 +258,16 @@ class ScalametaLanguageServer(
 
   override def onSaveTextDocument(td: TextDocumentIdentifier): Unit = {}
 
+  override def signatureHelpRequest(
+      td: TextDocumentIdentifier,
+      position: Position
+  ): SignatureHelp = {
+    compiler.signatureHelp(
+      Uri.toPath(td.uri).get,
+      position.line,
+      position.character
+    )
+  }
   override def completionRequest(
       td: TextDocumentIdentifier,
       position: Position
