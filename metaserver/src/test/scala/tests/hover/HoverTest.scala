@@ -47,6 +47,26 @@ object HoverTest extends CompilerSuite {
   )
 
   check(
+    "var assignment",
+    """
+      |object a {
+      |  var <<x>> = List(Some(1), Some(2), Some(3))
+      |}
+    """.stripMargin,
+    "List[Some[Int]]"
+  )
+
+  check(
+    "var assignment type annotation",
+    """
+      |object a {
+      |  var <<x>>: List[Option[Int]] = List(Some(1), Some(2), Some(3))
+      |}
+    """.stripMargin,
+    "List[Option[Int]]"
+  )
+
+  check(
     "select",
     """
       |object a {
@@ -93,6 +113,17 @@ object HoverTest extends CompilerSuite {
     """
       |object a {
       |  def <<test>>(x: String, y: List[Int]) = y.mkString.length
+      |}
+    """.stripMargin,
+    "(x: String, y: List[Int])Int"
+  )
+
+  check(
+    "def call site",
+    """
+      |object a {
+      |  def test(x: String, y: List[Int]) = y.mkString.length
+      |  <<test>>("foo", Nil)
       |}
     """.stripMargin,
     "(x: String, y: List[Int])Int"

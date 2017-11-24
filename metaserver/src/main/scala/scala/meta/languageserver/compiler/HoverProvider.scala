@@ -26,14 +26,19 @@ object HoverProvider {
   private def typeOfTree(c: Global)(t: c.Tree): Option[String] = {
     import c._
 
-    val refinedTree = t match {
-      case t: ImplDef if t.impl != null => t.impl
-      case t: ValOrDefDef if t.tpt != null => t.tpt
-      case t: ValOrDefDef if t.rhs != null => t.rhs
-      case x => x
+    val stringOrTree = t match {
+      case t: DefDef => Right(t.symbol.asMethod.info.toLongString)
+      case t: ValDef if t.tpt != null => Left(t.tpt)
+      case t: ValDef if t.rhs != null => Left(t.rhs)
+      case x => Left(x)
     }
 
-    Option(refinedTree.tpe).map(_.toLongString)
+    stringOrTree match {
+      case Right(string) => Some(string)
+      case Left(null) => None
+      case Left(tree) => Some(tree.tpe.widen.toString)
+    }
+
   }
 
 }
