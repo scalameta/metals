@@ -151,10 +151,30 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin
   )
 
+  check(
+    "apply3",
+    """
+      |object Main {
+      |  List[Int](<<1>>
+      |}
+    """.stripMargin,
+    """
+      |{
+      |  "signatures" : [ {
+      |    "label" : "apply[A](xs: A*)List[A]",
+      |    "parameters" : [ {
+      |      "label" : "xs: A*"
+      |    } ]
+      |  } ],
+      |  "activeParameter" : 0
+      |}
+    """.stripMargin
+  )
+
   // The PC doesn't seem to be able to discover this one here, there is
   // no attached symbol to `Process`.
   check(
-    "apply3",
+    "apply4",
     """
       |object Main {
       |  scala.sys.Process(<<1>>
@@ -196,6 +216,17 @@ object SignatureHelpTest extends CompilerSuite {
       |  "activeParameter" : 0
       |}
     """.stripMargin
+  )
+
+  check(
+    "vararg",
+    """
+      |object Main {
+      |  List(1, 2, <<3>>
+      |}
+    """.stripMargin, { result =>
+      assert(result.activeParameter.contains(0))
+    }
   )
 
 }

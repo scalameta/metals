@@ -4,14 +4,15 @@ import scala.annotation.tailrec
 import scala.meta.languageserver.compiler.CompilerUtils._
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
+import com.typesafe.scalalogging.LazyLogging
 import langserver.types.ParameterInformation
 import langserver.types.SignatureHelp
 import langserver.types.SignatureInformation
 
-object SignatureHelpProvider {
+object SignatureHelpProvider extends LazyLogging {
   def empty: SignatureHelp = SignatureHelp(Nil, None, None)
   def signatureHelp(compiler: Global, position: Position): SignatureHelp = {
-    findEnclosingCallSite(position).fold(empty) { callSite =>
+    findEnclosingMethod(position).fold(empty) { callSite =>
       val lastParenPosition = position.withPoint(callSite.openParenOffset)
       // NOTE(olafur) this statement is intentionally before `completionsAt`
       // even if we don't use fallbackSymbol. typedTreeAt triggers compilation
@@ -46,7 +47,9 @@ object SignatureHelpProvider {
         symbol <- matchedSymbols
         if symbol.isMethod
         if symbol.asMethod.paramLists.headOption.exists { paramList =>
-          paramList.length > callSite.activeArgument
+          paramList.length > callSite.activeArgument || {
+            symbol.asMethod.isVarargs
+          }
         }
       } yield {
         val methodSymbol = symbol.asMethod
@@ -64,35 +67,59 @@ object SignatureHelpProvider {
           parameters = parameterInfos.getOrElse(Nil)
         )
       }
+      val isVararg = signatureInformations.exists { info =>
+        info.parameters.length < callSite.activeArgument
+      }
+      val activeArgument: Int =
+        if (isVararg) signatureInformations.map(_.parameters.length - 1).max
+        else callSite.activeArgument
       SignatureHelp(
         signatures = signatureInformations,
         // TODO(olafur) populate activeSignature and activeParameter fields, see
         // https://github.com/scalameta/language-server/issues/52
         activeSignature = None,
-        activeParameter = Some(callSite.activeArgument)
+        activeParameter = Some(activeArgument)
       )
     }
   }
   case class CallSite(openParenOffset: Int, activeArgument: Int)
-  private def findEnclosingCallSite(caret: Position): Option[CallSite] = {
+  private def findEnclosingMethod(caret: Position): Option[CallSite] = {
+    val chars = caret.source.content
+    findOpen(chars, caret.point, '(', ')').map {
+      case c @ CallSite(openParen, activeArgument) =>
+        if (!caret.source.content.lift(openParen - 1).contains(']')) c
+        else {
+          // Hop over the type parameter list `T` to find `Foo`: Foo[T](<<a>
+          findOpen(chars, openParen - 2, '[', ']').fold(c) {
+            case CallSite(openBracket, _) =>
+              CallSite(openBracket - 1, activeArgument)
+          }
+        }
+    }
+  }
+  private def findOpen(
+      chars: Array[Char],
+      start: Int,
+      open: Char,
+      close: Char
+  ): Option[CallSite] = {
     @tailrec
-    def loop(i: Int, openParens: Int, commas: Int): Option[CallSite] = {
+    def loop(i: Int, opens: Int, commas: Int): Option[CallSite] = {
       if (i < 0) None
       else {
-        val char = caret.source.content(i)
-        char match {
-          case '(' =>
-            if (openParens == 0) Some(CallSite(i, commas))
-            else loop(i - 1, openParens - 1, commas)
-          case ')' =>
-            loop(i - 1, openParens + 1, commas)
-          case ',' if openParens == 0 =>
-            loop(i - 1, openParens, commas + 1)
-          case _ =>
-            loop(i - 1, openParens, commas)
+        val char = chars(i)
+        if (char == open) {
+          if (opens == 0) Some(CallSite(i, commas))
+          else loop(i - 1, opens - 1, commas)
+        } else if (char == close) {
+          loop(i - 1, opens + 1, commas)
+        } else if (char == ',' && opens == 0) {
+          loop(i - 1, opens, commas + 1)
+        } else {
+          loop(i - 1, opens, commas)
         }
       }
     }
-    loop(caret.point, 0, 0)
+    loop(start, 0, 0)
   }
 }
