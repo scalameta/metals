@@ -27,7 +27,10 @@ still learning and exploring what's possible.
 
 - [x] Linting with Scalafix on compile (textDocument/publishDiagnostics)
 - [ ] Linting with Scalafix as you type (textDocument/publishDiagnostics)
+- [ ] Refactoring with Scalafix (textDocument/codeAction)
 - [x] Formatting with Scalafmt (textDocument/formatting)
+- [ ] Formatting with Scalafmt for range (textDocument/rangeFormatting)
+- [ ] Formatting with Scalafmt as you type (textDocument/onTypeFormatting)
 - [x] Auto completions as you type with presentation compiler (textDocument/completions)
 - [x] Show type at position as you type (textDocument/hover)
 - [x] Go to definition from project Scala sources to project Scala sources on compile (textDocument/definition)
@@ -35,7 +38,6 @@ still learning and exploring what's possible.
 - [x] Go to definition from project sources to Java dependency source file on compile (textDocument/definition)
 - [ ] Go to definition as you type (textDocument/definition)
 - [x] Show parameter list as you type (textDocument/signatureHelper)
-- [ ] Refactoring with Scalafix (textDocument/codeAction)
 - [ ] Show red squigglies as you type (textDocument/publishDiagnostics)
 - [ ] Show red squigglies on compile (textDocument/publishDiagnostics)
 - [ ] Auto-insert missing import when completing a global symbol (textDocument/completions)
