@@ -9,11 +9,7 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
   val compiler: Global =
     Compiler.newCompiler(classpath = "", scalacOptions = Nil)
 
-  def pretty(position: Position): String =
-    s"""${position.lineContent}
-       |${position.lineCaret}""".stripMargin
-  val TIMEOUT = 100
-  private def computeDatabaseAndNamesFromMarkup(
+  private def computeChevronPositionFromMarkup(
       filename: String,
       markup: String
   ): List[Position] = {
@@ -31,18 +27,27 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
     }
   }
 
-  trait OverloadHack1; implicit object OverloadHack1 extends OverloadHack1
-  trait OverloadHack2; implicit object OverloadHack2 extends OverloadHack2
-  trait OverloadHack3; implicit object OverloadHack3 extends OverloadHack3
-  trait OverloadHack4; implicit object OverloadHack4 extends OverloadHack4
-  trait OverloadHack5; implicit object OverloadHack5 extends OverloadHack5
-
-  def targeted(filename: String, markup: String, fn: Position => Unit)(
-      implicit hack: OverloadHack1
-  ): Unit = {
+  /**
+   * Utility to test the presentation compiler with a position.
+   *
+   * Use it like like this:
+   * {{{
+   *   targeted(
+   *     "apply",
+   *     "object Main { Lis<<t>>", { arg =>
+   *       assert(compiler.typeCompletionsAt(arg) == "List" :: Nil)
+   *     }
+   *   )
+   * }}}
+   * The `<<t>>` chevron indicates the callback position.
+   *
+   * See SignatureHelpTest for more inspiration on how to abstract further on
+   * top of this method.
+   */
+  def targeted(filename: String, markup: String, fn: Position => Unit): Unit = {
     test(filename) {
       val positions =
-        computeDatabaseAndNamesFromMarkup(filename + ".scala", markup)
+        computeChevronPositionFromMarkup(filename + ".scala", markup)
       positions match {
         case List(pos) => fn(pos)
         case _ =>
@@ -51,19 +56,4 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
     }
   }
 
-  def targeted(
-      filename: String,
-      markup: String,
-      fn: (Position, Position) => Unit
-  )(implicit hack: OverloadHack2): Unit = {
-    test(filename) {
-      val positions =
-        computeDatabaseAndNamesFromMarkup(filename, markup)
-      positions match {
-        case pos :: pos2 :: Nil => fn(pos, pos2)
-        case _ =>
-          sys.error(s"2 chevrons expected, ${positions.length} chevrons found")
-      }
-    }
-  }
 }
