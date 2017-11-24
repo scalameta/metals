@@ -294,16 +294,7 @@ class ScalametaLanguageServer(
       position: Position
   ): Hover = {
     val path = Uri.toPath(td.uri).get
-    compiler.typeAt(path, position.line, position.character) match {
-      case None => Hover(Nil, None)
-      case Some(tpeName) =>
-        Hover(
-          contents = List(
-            RawMarkedString(language = "scala", value = tpeName)
-          ),
-          range = None
-        )
-    }
+    compiler.hover(path, position.line, position.character)
   }
 
 }

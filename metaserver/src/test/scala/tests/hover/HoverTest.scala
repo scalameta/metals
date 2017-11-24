@@ -1,32 +1,27 @@
 package tests.compiler
 
-import scala.meta.languageserver.Compiler
-import scala.reflect.runtime.universe._
-import scala.reflect.runtime.currentMirror
-import scala.tools.nsc.interactive.Global
-import scala.tools.reflect.ToolBox
-
-import tests.MegaSuite
-import utest._
+import scala.meta.languageserver.compiler.HoverProvider
+import play.api.libs.json.Json
 
 object HoverTest extends CompilerSuite {
 
   def check(
       filename: String,
       code: String,
-      expected: String
+      expectedValue: String
   ): Unit = {
     targeted(
       filename,
       code, { pos =>
-        val response =
-          Compiler.ask[compiler.Tree](r => compiler.askTypeAt(pos, r))
-        val typedTree = response.get.swap.toOption
-        val maybeObtained =
-          typedTree.flatMap(t => Compiler.typeOfTree(compiler)(t))
-        Predef.assert(maybeObtained.isDefined, s"No type information at ${pos}")
-        val obtained = maybeObtained.get
-        assert(obtained == expected)
+        val result = HoverProvider.hover(compiler, pos)
+        val obtained = Json.prettyPrint(Json.toJson(result))
+        val expected = s"""{
+           |  "contents" : [ {
+           |    "language" : "scala",
+           |    "value" : "$expectedValue"
+           |  } ]
+           |}""".stripMargin
+        assertNoDiff(obtained, expected)
       }
     )
   }

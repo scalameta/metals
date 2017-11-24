@@ -6,6 +6,7 @@ import scala.collection.mutable
 import scala.meta.languageserver.Compiler.ask
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
 import scala.meta.languageserver.compiler.SignatureHelpProvider
+import scala.meta.languageserver.compiler.HoverProvider
 import scala.meta.languageserver.storage.LevelDBMap
 import scala.reflect.internal.util.Position
 import scala.reflect.io
@@ -16,6 +17,7 @@ import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
 import langserver.messages.MessageType
+import langserver.messages.Hover
 import langserver.types.SignatureHelp
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -79,12 +81,11 @@ class Compiler(
     }
   }
 
-  def typeAt(path: AbsolutePath, line: Int, column: Int): Option[String] = {
-    getCompiler(path, line, column).flatMap {
+  def hover(path: AbsolutePath, line: Int, column: Int): Hover = {
+    logger.info(s"Hover at $path:$line:$column")
+    getCompiler(path, line, column).fold(HoverProvider.empty) {
       case (compiler, position) =>
-        val response = ask[compiler.Tree](r => compiler.askTypeAt(position, r))
-        val typedTree = response.get.swap
-        typedTree.toOption.flatMap(t => Compiler.typeOfTree(compiler)(t))
+        HoverProvider.hover(compiler, position)
     }
   }
 
@@ -204,17 +205,4 @@ object Compiler extends LazyLogging {
     f(r)
     r
   }
-  def typeOfTree(c: Global)(t: c.Tree): Option[String] = {
-    import c._
-
-    val refinedTree = t match {
-      case t: ImplDef if t.impl != null => t.impl
-      case t: ValOrDefDef if t.tpt != null => t.tpt
-      case t: ValOrDefDef if t.rhs != null => t.rhs
-      case x => x
-    }
-
-    Option(refinedTree.tpe).map(_.toLongString)
-  }
-
 }
