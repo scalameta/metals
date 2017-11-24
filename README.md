@@ -62,4 +62,4 @@ We've decided to copy the sources over in order to iterate much faster in adding
 
 ## Related work
 
-- [ensime](ensime.org): a tool for providing IDE-like features to text editors, that [recently added LSP support](https://github.com/ensime/ensime-server/pull/1888)
+- [ENSIME](http://ensime.org): a tool for providing IDE-like features to text editors, that [recently added LSP support](https://github.com/ensime/ensime-server/pull/1888)
