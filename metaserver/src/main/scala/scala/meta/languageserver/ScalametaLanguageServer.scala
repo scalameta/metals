@@ -279,27 +279,21 @@ class ScalametaLanguageServer(
       td: TextDocumentIdentifier,
       position: Position
   ): ResultResponse = {
-    try {
-      val completions = compiler.autocomplete(
-        Uri.toPath(td.uri).get,
-        position.line,
-        position.character
-      )
-      CompletionList(
-        isIncomplete = false,
-        items = completions.map {
-          case (signature, name) =>
-            CompletionItem(
-              label = name,
-              detail = Some(signature)
-            )
-        }
-      )
-    } catch {
-      case NonFatal(e) =>
-        onError(e)
-        ShutdownResult(-1)
-    }
+    val completions = compiler.autocomplete(
+      Uri.toPath(td.uri).get,
+      position.line,
+      position.character
+    )
+    CompletionList(
+      isIncomplete = false,
+      items = completions.map {
+        case (signature, name) =>
+          CompletionItem(
+            label = name,
+            detail = Some(signature)
+          )
+      }
+    )
   }
 
   override def hoverRequest(

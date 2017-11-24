@@ -132,6 +132,43 @@ object SignatureHelpTest extends CompilerSuite {
   )
 
   check(
+    "apply2",
+    """
+      |object Main {
+      |  List(<<1>>
+      |}
+    """.stripMargin,
+    """
+      |{
+      |  "signatures" : [ {
+      |    "label" : "apply[A](xs: A*)List[A]",
+      |    "parameters" : [ {
+      |      "label" : "xs: A*"
+      |    } ]
+      |  } ],
+      |  "activeParameter" : 0
+      |}
+    """.stripMargin
+  )
+
+  // The PC doesn't seem to be able to discover this one here, there is
+  // no attached symbol to `Process`.
+  check(
+    "apply3",
+    """
+      |object Main {
+      |  scala.sys.Process(<<1>>
+      |}
+    """.stripMargin,
+    """
+      |{
+      |  "signatures" : [ ],
+      |  "activeParameter" : 0
+      |}
+    """.stripMargin
+  )
+
+  check(
     "constructor",
     """
       |class User(name: String, age: Int) {

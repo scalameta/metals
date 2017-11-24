@@ -1,10 +1,9 @@
 package scala.meta.languageserver.compiler
 
 import scala.annotation.tailrec
-import scala.tools.nsc.interactive.Global
+import scala.meta.languageserver.compiler.CompilerUtils._
 import scala.reflect.internal.util.Position
-import scala.reflect.internal.util.SourceFile
-import com.typesafe.scalalogging.LazyLogging
+import scala.tools.nsc.interactive.Global
 import langserver.types.ParameterInformation
 import langserver.types.SignatureHelp
 import langserver.types.SignatureInformation
@@ -12,11 +11,6 @@ import langserver.types.SignatureInformation
 object SignatureHelpProvider {
   def empty: SignatureHelp = SignatureHelp(Nil, None, None)
   def signatureHelp(compiler: Global, position: Position): SignatureHelp = {
-    // Find the last leading open paren to get the method symbol
-    // of this argument list. Note, this may still cause false positives
-    // in cases like `foo(bar(), <cursor>)` since we will find the
-    // symbol of `bar` when we want to match against `foo`.
-    // Related https://github.com/scalameta/language-server/issues/52
     findEnclosingCallSite(position).fold(empty) { callSite =>
       val lastParenPosition = position.withPoint(callSite.openParenOffset)
       // NOTE(olafur) this statement is intentionally before `completionsAt`
@@ -26,7 +20,7 @@ object SignatureHelpProvider {
         .typedTreeAt(position.withPoint(callSite.openParenOffset - 1))
         .symbol
       val completions =
-        compiler.completionsAt(lastParenPosition).matchingResults().distinct
+        safeCompletionsAt[compiler.type](compiler, lastParenPosition)
       val matchedSymbols: Seq[compiler.Symbol] =
         if (completions.isEmpty) {
           if (fallbackSymbol != null) {
