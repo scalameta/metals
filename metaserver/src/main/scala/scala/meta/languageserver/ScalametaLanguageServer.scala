@@ -147,7 +147,7 @@ class ScalametaLanguageServer(
         }
 
       case event =>
-        logger.info(s"Unhandled file event: $event")
+        logger.warn(s"Unhandled file event: $event")
         ()
     }
 
