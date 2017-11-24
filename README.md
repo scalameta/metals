@@ -20,24 +20,30 @@ This project has the following goals:
 
 ## Roadmap
 
-Below is a rough summary of what features work and don't work.
-Some of those features are a likely outside the scope of this project, we are still learning and exploring what's possible.
-Please share your thoughts in
-[#2](https://github.com/scalameta/language-server/issues/2).
+Below is a rough summary of what features have been implemented.
+Even if some checkbox is marked it does not mean that feature works perfectly.
+Some of those features are a likely outside the scope of this project, we are
+still learning and exploring what's possible.
 
-- [x] Linting with Scalafix
-- [x] Formatting with Scalafmt
-- [x] Auto completions as you type with presentation compiler
-- [x] Go to definition from project Scala sources to project Scala sources
-- [x] Show type at position
-- [x] Go to definition from project sources to Scala dependency source files
-- [x] Go to definition from project sources to Java dependency source files
-- [ ] Show red squigglies as you type
-- [ ] Show red squigglies on compile
-- [ ] Show parameter list as you type, signature helper
-- [ ] Find symbol references
-- [ ] Show docstring on hover
-- [ ] Rename symbol
+- [x] Linting with Scalafix on compile (textDocument/publishDiagnostics)
+- [ ] Linting with Scalafix as you type (textDocument/publishDiagnostics)
+- [ ] Refactoring with Scalafix (textDocument/codeAction)
+- [x] Formatting with Scalafmt (textDocument/formatting)
+- [ ] Formatting with Scalafmt for range (textDocument/rangeFormatting)
+- [ ] Formatting with Scalafmt as you type (textDocument/onTypeFormatting)
+- [x] Auto completions as you type with presentation compiler (textDocument/completions)
+- [x] Show type at position as you type (textDocument/hover)
+- [x] Go to definition from project Scala sources to project Scala sources on compile (textDocument/definition)
+- [x] Go to definition from project sources to Scala dependency source files on compile (textDocument/definition)
+- [x] Go to definition from project sources to Java dependency source file on compile (textDocument/definition)
+- [ ] Go to definition as you type (textDocument/definition)
+- [x] Show parameter list as you type (textDocument/signatureHelper)
+- [ ] Show red squigglies as you type (textDocument/publishDiagnostics)
+- [ ] Show red squigglies on compile (textDocument/publishDiagnostics)
+- [ ] Auto-insert missing import when completing a global symbol (textDocument/completions)
+- [ ] Find symbol references (textDocument/references)
+- [ ] Rename local symbol (textDocument/rename)
+- [ ] Rename global symbol (textDocument/rename)
 
 ## Contributing
 

@@ -13,7 +13,7 @@ import play.api.libs.json.JsObject
  * A language server implementation. Users should subclass this class and implement specific behavior.
  */
 class LanguageServer(inStream: InputStream, outStream: OutputStream) extends LazyLogging {
-  val connection = (new Connection(inStream, outStream)) { (method, params) =>
+  val connection: Connection = (new Connection(inStream, outStream)) { (method, params) =>
     (method, params) match {
       case (_, InitializeParams(pid, rootPath, capabilities)) =>
         InitializeResult(initialize(pid, rootPath, capabilities))
