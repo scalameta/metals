@@ -81,7 +81,6 @@ class MessageReader(in: InputStream) extends LazyLogging {
 
     if (atDelimiter(i)) {
       val headers = new String(data.slice(0, i).toArray, MessageReader.AsciiCharset)
-      logger.debug(s"Received headers:\n$headers")
 
       val pairs = headers.split("\r\n").filter(_.trim.length() > 0) map { line =>
         line.split(":") match {
@@ -142,7 +141,10 @@ class MessageReader(in: InputStream) extends LazyLogging {
 
       if (length > 0) {
         val content = getContent(length)
-        if (content.isEmpty() && streamClosed) None else Some(content)
+        if (content.isEmpty() && streamClosed) None else {
+          logger.debug(s"<--  $content")
+          Some(content)
+        }
       } else {
         logger.error("Input must have Content-Length header with a numeric value.")
         nextPayload()
@@ -155,4 +157,3 @@ object MessageReader {
   val AsciiCharset = Charset.forName("ASCII")
   val Utf8Charset = Charset.forName("UTF-8")
 }
-
