@@ -90,6 +90,10 @@ object SignatureHelpProvider extends LazyLogging {
         if (!caret.source.content.lift(openParen - 1).contains(']')) c
         else {
           // Hop over the type parameter list `T` to find `Foo`: Foo[T](<<a>
+          // NOTE(olafur) this is a pretty hacky approach to find the enclosing
+          // method symbol of a type parameter. Ideally we could do something
+          // like `Tree.parent`. I'm not yet familiar enough with the
+          // presentation compiler to know if there exists such a utility.
           findOpen(chars, openParen - 2, '[', ']').fold(c) {
             case CallSite(openBracket, _) =>
               CallSite(openBracket - 1, activeArgument)
