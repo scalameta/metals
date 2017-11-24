@@ -38,7 +38,7 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
 
   def notifySubscribers(n: Notification): Unit = {
     notificationHandlers.foreach(f =>
-      Try(f(n)).recover { case e => logger.error("failed notification handler", e) })
+      Try(f(n)).recover { case e => logger.error("Failed notification handler", e) })
   }
 
   def sendNotification(params: Notification): Unit = {
@@ -106,7 +106,7 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
                 }
 
               case response: JsonRpcResponseMessage =>
-                logger.info(s"Received response: $response")
+                // logger.debug(s"Received response: $response")
 
               case m =>
                 logger.error(s"Received unknown message: $m")
@@ -118,7 +118,6 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
   }
 
   private def readJsonRpcMessage(jsonString: String): Either[JsonRpcResponseErrorMessage, JsonRpcMessage] = {
-    logger.debug(s"Received $jsonString")
     Try(Json.parse(jsonString)) match {
       case Failure(exception) =>
         Left(JsonRpcResponseErrorMessage.parseError(exception,NoCorrelationId))

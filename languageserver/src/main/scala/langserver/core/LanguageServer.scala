@@ -62,28 +62,28 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
   }
 
   def onOpenTextDocument(td: TextDocumentItem) = {
-    logger.debug(s"openTextDocuemnt $td")
+    logger.debug(s"openTextDocument $td")
   }
 
   def onChangeTextDocument(td: VersionedTextDocumentIdentifier, changes: Seq[TextDocumentContentChangeEvent]) = {
-    logger.debug(s"changeTextDocuemnt $td")
+    logger.debug(s"changeTextDocument $td")
   }
 
   def onSaveTextDocument(td: TextDocumentIdentifier) = {
-    logger.debug(s"saveTextDocuemnt $td")
+    logger.debug(s"saveTextDocument $td")
     connection.showMessage(MessageType.Info, s"Saved text document ${td.uri}")
   }
 
   def onCloseTextDocument(td: TextDocumentIdentifier) = {
-    logger.debug(s"closeTextDocuemnt $td")
+    logger.debug(s"closeTextDocument $td")
   }
 
   def onChangeWatchedFiles(changes: Seq[FileEvent]) = {
-//    ???
+    logger.debug(s"changeWatchedFiles $changes")
   }
 
   def initialize(pid: Long, rootPath: String, capabilities: ClientCapabilities): ServerCapabilities = {
-    logger.info(s"Initialized with $pid, $rootPath, $capabilities")
+    logger.debug(s"initialize with $pid, $rootPath, $capabilities")
     ServerCapabilities(completionProvider = Some(CompletionOptions(false, Seq("."))))
   }
 
