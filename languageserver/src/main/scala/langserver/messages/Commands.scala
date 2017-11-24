@@ -58,7 +58,7 @@ case class ServerCapabilities(
   /**
    * The server provides completion support.
    */
-  completionProvider: Option[CompletionOptions],
+  completionProvider: Option[CompletionOptions] = None,
   /**
    * The server provides signature help support.
    */

@@ -71,7 +71,6 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   def onSaveTextDocument(td: TextDocumentIdentifier) = {
     logger.debug(s"saveTextDocument $td")
-    connection.showMessage(MessageType.Info, s"Saved text document ${td.uri}")
   }
 
   def onCloseTextDocument(td: TextDocumentIdentifier) = {
@@ -84,7 +83,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   def initialize(pid: Long, rootPath: String, capabilities: ClientCapabilities): ServerCapabilities = {
     logger.debug(s"initialize with $pid, $rootPath, $capabilities")
-    ServerCapabilities(completionProvider = Some(CompletionOptions(false, Seq("."))))
+    ServerCapabilities()
   }
 
   def signatureHelpRequest(textDocument: TextDocumentIdentifier, position: Position): SignatureHelp = {
