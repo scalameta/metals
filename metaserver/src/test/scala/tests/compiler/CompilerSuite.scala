@@ -20,6 +20,7 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
       case ((s, e), i) => (s - 4 * i, e - 4 * i - 4)
     }
     val code = chevrons.replaceAllIn(markup, "$1")
+    println(code)
     val unit = Compiler.addCompilationUnit(compiler, code, filename)
     carets.map {
       case (start, end) =>

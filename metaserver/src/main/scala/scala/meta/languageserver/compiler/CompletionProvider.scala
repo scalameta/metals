@@ -1,5 +1,6 @@
 package scala.meta.languageserver.compiler
 
+import scala.collection.mutable
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
@@ -23,16 +24,21 @@ class CompletionProvider(notifications: Notifications) extends LazyLogging {
       compiler: Global,
       position: Position
   ): CompletionList = {
+    pprint.log(compiler.typedTreeAt(position))
+    val isUsedLabel = mutable.Set.empty[String]
     val items = compiler
       .completionsAt(position)
       .matchingResults()
-      .map { r =>
-        CompletionItem(
-          label = r.symNameDropLocal.decoded,
-          detail = Some(r.sym.signatureString)
-        )
+      .flatMap { r =>
+        val label = r.symNameDropLocal.decoded
+        if (!isUsedLabel(label)) {
+          isUsedLabel += label
+          CompletionItem(
+            label = label,
+            detail = Some(r.sym.signatureString)
+          ) :: Nil
+        } else Nil
       }
-      .distinct
     CompletionList(isIncomplete = false, items = items)
   }
 
