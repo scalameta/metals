@@ -5,6 +5,7 @@ import scala.tools.nsc.interactive.Global
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.SourceFile
 import com.typesafe.scalalogging.LazyLogging
+import langserver.core.Connection
 import langserver.messages.Hover
 import langserver.types.RawMarkedString
 

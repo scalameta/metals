@@ -266,24 +266,15 @@ class ScalametaLanguageServer(
       position.character
     )
   }
+
   override def completionRequest(
       td: TextDocumentIdentifier,
       position: Position
   ): ResultResponse = {
-    val completions = compiler.autocomplete(
+    compiler.autocomplete(
       Uri.toPath(td.uri).get,
       position.line,
       position.character
-    )
-    CompletionList(
-      isIncomplete = false,
-      items = completions.map {
-        case (signature, name) =>
-          CompletionItem(
-            label = name,
-            detail = Some(signature)
-          )
-      }
     )
   }
 

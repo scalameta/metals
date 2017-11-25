@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
 import scala.meta.languageserver.Compiler.ask
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
+import scala.meta.languageserver.compiler.CompletionProvider
 import scala.meta.languageserver.compiler.SignatureHelpProvider
 import scala.meta.languageserver.compiler.HoverProvider
 import scala.meta.languageserver.storage.LevelDBMap
@@ -16,6 +17,7 @@ import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
+import langserver.messages.CompletionList
 import langserver.messages.MessageType
 import langserver.messages.Hover
 import langserver.types.SignatureHelp
@@ -52,6 +54,7 @@ class Compiler(
             .zip(Task(indexDependencyClasspath(config.sourceJars)))
         )
       }
+  val completionProvider = new CompletionProvider(connection)
 
   def signatureHelp(
       path: AbsolutePath,
@@ -69,15 +72,11 @@ class Compiler(
       path: AbsolutePath,
       line: Int,
       column: Int
-  ): List[(String, String)] = {
+  ): CompletionList = {
     logger.info(s"Completion request at $path:$line:$column")
-    getCompiler(path, line, column).fold(noCompletions) {
+    getCompiler(path, line, column).fold(completionProvider.empty) {
       case (compiler, position) =>
-        logger.info(s"Completion request at position $position")
-        val results = compiler.completionsAt(position).matchingResults()
-        results
-          .map(r => (r.sym.signatureString, r.symNameDropLocal.decoded))
-          .distinct
+        completionProvider.completions(compiler, position)
     }
   }
 
@@ -151,14 +150,6 @@ class Compiler(
     Effects.IndexSourcesClasspath
   }
 
-  private def noCompletions: List[(String, String)] = {
-    connection.showMessage(
-      MessageType.Warning,
-      "Run project/config:scalametaEnableCompletions to setup completion for this " +
-        "config.in(project) or *:scalametaEnableCompletions for all projects/configurations"
-    )
-    Nil
-  }
   private def lineColumnToOffset(
       contents: String,
       line: Int,
