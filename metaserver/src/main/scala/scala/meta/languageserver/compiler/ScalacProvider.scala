@@ -1,26 +1,19 @@
-package scala.meta.languageserver
+package scala.meta.languageserver.compiler
 
-import java.io.PrintStream
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
-import scala.meta.languageserver.Compiler.ask
+import scala.meta.languageserver.Effects
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
-import scala.meta.languageserver.compiler.CompletionProvider
-import scala.meta.languageserver.compiler.SignatureHelpProvider
-import scala.meta.languageserver.compiler.HoverProvider
+import scala.meta.languageserver.ServerConfig
+import scala.meta.languageserver.Uri
+import scala.meta.languageserver.ctags
 import scala.meta.languageserver.storage.LevelDBMap
-import scala.reflect.internal.util.Position
 import scala.reflect.io
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
-import langserver.core.Connection
-import langserver.messages.CompletionList
-import langserver.messages.MessageType
-import langserver.messages.Hover
-import langserver.types.SignatureHelp
 import langserver.types.TextDocumentIdentifier
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -30,12 +23,10 @@ import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.internal.semanticdb.schema.Document
 import org.langmeta.io.AbsolutePath
 
-class Compiler(
+/** Responsible for keeping fresh scalac global instances. */
+class ScalacProvider(
     serverConfig: ServerConfig,
-    out: PrintStream,
-    config: Observable[AbsolutePath],
-    connection: Connection,
-    buffers: Buffers
+    config: Observable[AbsolutePath]
 )(implicit s: Scheduler)
     extends LazyLogging {
   private implicit val cwd = serverConfig.cwd
@@ -70,7 +61,8 @@ class Compiler(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {
     logger.info(s"Loading new compiler from config $config")
-    val compiler = Compiler.newCompiler(config.classpath, config.scalacOptions)
+    val compiler =
+      ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
     config.sources.foreach { path =>
       // TODO(olafur) garbage collect compilers from removed files.
       compilerByPath(path) = compiler
@@ -112,7 +104,7 @@ class Compiler(
   }
 }
 
-object Compiler extends LazyLogging {
+object ScalacProvider extends LazyLogging {
 
   def addCompilationUnit(
       global: Global,

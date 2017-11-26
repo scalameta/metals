@@ -1,6 +1,5 @@
 package scala.meta.languageserver.compiler
 
-import scala.meta.languageserver.Compiler
 import scala.tools.nsc.interactive.Global
 import langserver.messages.Hover
 import langserver.types.RawMarkedString
@@ -12,8 +11,12 @@ object HoverProvider {
       compiler: Global,
       cursor: Cursor
   ): Hover = {
-    val unit =
-      Compiler.addCompilationUnit(compiler, cursor.contents, cursor.uri, None)
+    val unit = ScalacProvider.addCompilationUnit(
+      global = compiler,
+      code = cursor.contents,
+      filename = cursor.uri,
+      cursor = None
+    )
     val pos = unit.position(cursor.offset)
     val typedTree = compiler.typedTreeAt(pos)
     typeOfTree(compiler)(typedTree).fold(empty) { tpeName =>

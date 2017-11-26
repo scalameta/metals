@@ -1,4 +1,4 @@
-package scala.meta.languageserver
+package scala.meta.languageserver.compiler
 
 import java.io.File
 import java.nio.file.Files

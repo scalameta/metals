@@ -1,13 +1,13 @@
 package tests.compiler
 
-import scala.meta.languageserver.Compiler
+import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.Cursor
 import scala.tools.nsc.interactive.Global
 import tests.MegaSuite
 
 class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
   val compiler: Global =
-    Compiler.newCompiler(classpath = "", scalacOptions = Nil)
+    ScalacProvider.newCompiler(classpath = "", scalacOptions = Nil)
 
   private def computeChevronPositionFromMarkup(
       filename: String,

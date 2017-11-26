@@ -9,7 +9,6 @@ import langserver.core.Notifications
 import langserver.messages.CompletionList
 import langserver.messages.MessageType
 import langserver.types.CompletionItem
-import scala.meta.languageserver.Compiler
 
 object CompletionProvider extends LazyLogging {
   def empty: CompletionList = CompletionList(isIncomplete = false, Nil)
@@ -18,7 +17,7 @@ object CompletionProvider extends LazyLogging {
       compiler: Global,
       cursor: Cursor
   ): CompletionList = {
-    val unit = Compiler.addCompilationUnit(
+    val unit = ScalacProvider.addCompilationUnit(
       global = compiler,
       code = cursor.contents,
       filename = cursor.uri,

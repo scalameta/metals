@@ -5,19 +5,17 @@ import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
-import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.compiler.CompletionProvider
-import scala.meta.languageserver.compiler.HoverProvider
 import scala.meta.languageserver.compiler.Cursor
+import scala.meta.languageserver.compiler.HoverProvider
+import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.SignatureHelpProvider
-import scala.meta.languageserver.storage.LevelDBMap
-import scala.util.control.NonFatal
+import scala.meta.languageserver.search.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
 import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
-import langserver.messages.CompletionList
 import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
 import langserver.messages.FileChangeType
@@ -26,7 +24,6 @@ import langserver.messages.Hover
 import langserver.messages.MessageType
 import langserver.messages.ResultResponse
 import langserver.messages.ServerCapabilities
-import langserver.messages.ShutdownResult
 import langserver.messages.SignatureHelpOptions
 import langserver.types._
 import monix.execution.Cancelable
@@ -34,7 +31,6 @@ import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import monix.reactive.Observer
-import org.iq80.leveldb.DB
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
@@ -63,16 +59,10 @@ class ScalametaLanguageServer(
     logger.error(e.getMessage, e)
   }
   val buffers: Buffers = Buffers()
-  val compiler = new Compiler(
-    config,
-    stdout,
-    compilerConfigPublisher,
-    connection,
-    buffers
-  )
+  val scalac = new ScalacProvider(config, compilerConfigPublisher)
   val databasePublisher: Observable[Database] = Observable.merge(
     semanticdbPublisher.doOnError(onError),
-    compiler.documentPublisher.map(doc => Database(doc :: Nil))
+    scalac.documentPublisher.map(doc => Database(doc :: Nil))
   )
   val symbolIndexer: SymbolIndex = SymbolIndex(
     cwd,
@@ -109,7 +99,7 @@ class ScalametaLanguageServer(
     logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
     toCancel += scalafix.linter.subscribe()
     toCancel += onIndexDatabase.subscribe()
-    toCancel += compiler.onNewCompilerConfig.subscribe()
+    toCancel += scalac.onNewCompilerConfig.subscribe()
     loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
       completionProvider = Some(
@@ -264,7 +254,7 @@ class ScalametaLanguageServer(
       td: TextDocumentIdentifier,
       pos: Position
   ): SignatureHelp = {
-    compiler.getCompiler(td) match {
+    scalac.getCompiler(td) match {
       case Some(g) => SignatureHelpProvider.signatureHelp(g, toPoint(td, pos))
       case None => SignatureHelpProvider.empty
     }
@@ -274,7 +264,7 @@ class ScalametaLanguageServer(
       td: TextDocumentIdentifier,
       pos: Position
   ): ResultResponse = {
-    compiler.getCompiler(td) match {
+    scalac.getCompiler(td) match {
       case Some(g) => CompletionProvider.completions(g, toPoint(td, pos))
       case None => CompletionProvider.empty
     }
@@ -284,7 +274,7 @@ class ScalametaLanguageServer(
       td: TextDocumentIdentifier,
       pos: Position
   ): Hover = {
-    compiler.getCompiler(td) match {
+    scalac.getCompiler(td) match {
       case Some(g) => HoverProvider.hover(g, toPoint(td, pos))
       case None => HoverProvider.empty
     }

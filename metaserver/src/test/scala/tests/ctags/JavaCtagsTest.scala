@@ -1,7 +1,7 @@
 package tests.ctags
 
 import java.nio.file.Paths
-import scala.meta.languageserver.CompilerConfig
+import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.ctags.Ctags
 
 object JavaCtagsTest extends BaseCtagsTest {
