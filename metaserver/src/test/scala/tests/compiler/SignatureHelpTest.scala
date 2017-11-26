@@ -228,5 +228,24 @@ object SignatureHelpTest extends CompilerSuite {
       assert(result.activeParameter.contains(0))
     }
   )
+  check(
+    "()",
+    """
+      |object Main {
+      |  List(<<)>>
+      |}
+    """.stripMargin,
+    """
+      |{
+      |  "signatures" : [ {
+      |    "label" : "apply[A](xs: A*)List[A]",
+      |    "parameters" : [ {
+      |      "label" : "xs: A*"
+      |    } ]
+      |  } ],
+      |  "activeParameter" : 0
+      |}
+    """.stripMargin
+  )
 
 }

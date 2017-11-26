@@ -93,9 +93,16 @@ object SignatureHelpProvider extends LazyLogging {
   case class CallSite(openParenOffset: Int, activeArgument: Int)
   private def findEnclosingMethod(caret: Position): Option[CallSite] = {
     val chars = caret.source.content
-    findOpen(chars, caret.point, '(', ')').map {
+    val char = chars.lift
+    val point =
+      if (char(caret.point).contains(')') &&
+        char(caret.point - 1).contains('(')) {
+        // cursor is inside `()`
+        caret.point - 1
+      } else caret.point
+    findOpen(chars, point, '(', ')').map {
       case c @ CallSite(openParen, activeArgument) =>
-        if (!caret.source.content.lift(openParen - 1).contains(']')) c
+        if (!char(openParen - 1).contains(']')) c
         else {
           // Hop over the type parameter list `T` to find `Foo`: Foo[T](<<a>
           // NOTE(olafur) this is a pretty hacky approach to find the enclosing
