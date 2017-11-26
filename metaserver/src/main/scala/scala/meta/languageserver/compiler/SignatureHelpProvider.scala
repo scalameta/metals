@@ -2,6 +2,7 @@ package scala.meta.languageserver.compiler
 
 import scala.annotation.tailrec
 import scala.meta.languageserver.compiler.CompilerUtils._
+import scala.meta.languageserver.Compiler
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
@@ -11,7 +12,14 @@ import langserver.types.SignatureInformation
 
 object SignatureHelpProvider extends LazyLogging {
   def empty: SignatureHelp = SignatureHelp(Nil, None, None)
-  def signatureHelp(compiler: Global, position: Position): SignatureHelp = {
+  def signatureHelp(compiler: Global, cursor: Cursor): SignatureHelp = {
+    val unit = Compiler.addCompilationUnit(
+      global = compiler,
+      code = cursor.contents,
+      filename = cursor.uri,
+      cursor = None
+    )
+    val position = unit.position(cursor.offset)
     findEnclosingMethod(position).fold(empty) { callSite =>
       val lastParenPosition = position.withPoint(callSite.openParenOffset)
       // NOTE(olafur) this statement is intentionally before `completionsAt`

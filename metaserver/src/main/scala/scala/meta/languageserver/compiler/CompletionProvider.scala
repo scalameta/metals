@@ -9,14 +9,22 @@ import langserver.core.Notifications
 import langserver.messages.CompletionList
 import langserver.messages.MessageType
 import langserver.types.CompletionItem
+import scala.meta.languageserver.Compiler
 
 object CompletionProvider extends LazyLogging {
   def empty: CompletionList = CompletionList(isIncomplete = false, Nil)
 
   def completions(
       compiler: Global,
-      position: Position
+      cursor: Cursor
   ): CompletionList = {
+    val unit = Compiler.addCompilationUnit(
+      global = compiler,
+      code = cursor.contents,
+      filename = cursor.uri,
+      cursor = Some(cursor.offset)
+    )
+    val position = unit.position(cursor.offset)
     val isUsedLabel = mutable.Set.empty[String]
     val items = List.newBuilder[CompletionItem]
     safeCompletionsAt(compiler, position).foreach { r =>

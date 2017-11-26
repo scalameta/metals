@@ -7,6 +7,10 @@ import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.languageserver.compiler.CompletionProvider
+import scala.meta.languageserver.compiler.HoverProvider
+import scala.meta.languageserver.compiler.Cursor
+import scala.meta.languageserver.compiler.SignatureHelpProvider
 import scala.meta.languageserver.storage.LevelDBMap
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
@@ -258,32 +262,46 @@ class ScalametaLanguageServer(
 
   override def signatureHelpRequest(
       td: TextDocumentIdentifier,
-      position: Position
+      pos: Position
   ): SignatureHelp = {
-    compiler.signatureHelp(
-      Uri.toPath(td.uri).get,
-      position.line,
-      position.character
-    )
+    compiler.getCompiler(td) match {
+      case Some(g) => SignatureHelpProvider.signatureHelp(g, toPoint(td, pos))
+      case None => SignatureHelpProvider.empty
+    }
   }
 
   override def completionRequest(
       td: TextDocumentIdentifier,
-      position: Position
+      pos: Position
   ): ResultResponse = {
-    compiler.autocomplete(
-      Uri.toPath(td.uri).get,
-      position.line,
-      position.character
-    )
+    compiler.getCompiler(td) match {
+      case Some(g) => CompletionProvider.completions(g, toPoint(td, pos))
+      case None => CompletionProvider.empty
+    }
   }
 
   override def hoverRequest(
       td: TextDocumentIdentifier,
-      position: Position
+      pos: Position
   ): Hover = {
-    val path = Uri.toPath(td.uri).get
-    compiler.hover(path, position.line, position.character)
+    compiler.getCompiler(td) match {
+      case Some(g) => HoverProvider.hover(g, toPoint(td, pos))
+      case None => HoverProvider.empty
+    }
+  }
+
+  private def toPoint(
+      td: TextDocumentIdentifier,
+      pos: Position
+  ): Cursor = {
+    val contents = buffers.read(td)
+    val offset = Positions.positionToOffset(
+      td.uri,
+      contents,
+      pos.line,
+      pos.character
+    )
+    Cursor(td.uri, contents, offset)
   }
 
 }

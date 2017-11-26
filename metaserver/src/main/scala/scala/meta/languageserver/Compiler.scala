@@ -21,6 +21,7 @@ import langserver.messages.CompletionList
 import langserver.messages.MessageType
 import langserver.messages.Hover
 import langserver.types.SignatureHelp
+import langserver.types.TextDocumentIdentifier
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
@@ -55,62 +56,12 @@ class Compiler(
         )
       }
 
-  def signatureHelp(
-      path: AbsolutePath,
-      line: Int,
-      column: Int
-  ): SignatureHelp = {
-    logger.info(s"Signature help at $path:$line:$column")
-    getCompiler(path, line, column - 1).fold(SignatureHelpProvider.empty) {
-      case (compiler, position) =>
-        SignatureHelpProvider.signatureHelp(compiler, position)
-    }
-  }
-
-  def autocomplete(
-      path: AbsolutePath,
-      line: Int,
-      column: Int
-  ): CompletionList = {
-    logger.info(s"Completion request at $path:$line:$column")
-    getCompiler(path, line, column) match {
-      case Some((compiler, position)) =>
-        CompletionProvider.completions(compiler, position)
-      case _ =>
-        connection.showMessage(
-          MessageType.Warning,
-          "Run project/config:scalametaEnableCompletions to setup completion for this " +
-            "config.in(project) or *:scalametaEnableCompletions for all projects/configurations"
-        )
-        CompletionProvider.empty
-    }
-  }
-
-  def hover(path: AbsolutePath, line: Int, column: Int): Hover = {
-    logger.info(s"Hover at $path:$line:$column")
-    getCompiler(path, line, column).fold(HoverProvider.empty) {
-      case (compiler, position) =>
-        HoverProvider.hover(compiler, position)
-    }
-  }
-
-  def getCompiler(
-      path: AbsolutePath,
-      line: Int,
-      column: Int
-  ): Option[(Global, Position)] = {
-    val code = buffers.read(path)
-    val offset = lineColumnToOffset(code, line, column)
+  def getCompiler(td: TextDocumentIdentifier): Option[Global] =
+    Uri.toPath(td.uri).flatMap(getCompiler)
+  def getCompiler(path: AbsolutePath): Option[Global] = {
     compilerByPath.get(path).map { compiler =>
       compiler.reporter.reset()
-      val richUnit = Compiler.addCompilationUnit(
-        global = compiler,
-        code = code,
-        filename = path.toString(),
-        cursor = Some(offset)
-      )
-      val position = richUnit.position(offset)
-      compiler -> position
+      compiler
     }
   }
 
@@ -159,21 +110,6 @@ class Compiler(
     }
     Effects.IndexSourcesClasspath
   }
-
-  private def lineColumnToOffset(
-      contents: String,
-      line: Int,
-      column: Int
-  ): Int = {
-    var i = 0
-    var l = line
-    while (l > 0) {
-      if (contents(i) == '\n') l -= 1
-      i += 1
-    }
-    i + column
-  }
-
 }
 
 object Compiler extends LazyLogging {
@@ -182,7 +118,7 @@ object Compiler extends LazyLogging {
       global: Global,
       code: String,
       filename: String,
-      cursor: Option[Int] = None
+      cursor: Option[Int]
   ): global.RichCompilationUnit = {
     val codeWithCursor = cursor match {
       case Some(offset) =>

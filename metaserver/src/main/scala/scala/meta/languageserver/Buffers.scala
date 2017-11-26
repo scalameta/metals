@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Map => JMap}
 import com.typesafe.scalalogging.LazyLogging
+import langserver.types.TextDocumentIdentifier
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 
@@ -29,6 +30,8 @@ class Buffers private (
   }
   def changed(path: AbsolutePath, newContents: String): Unit =
     contents.put(path, newContents)
+  def read(td: TextDocumentIdentifier): String =
+    read(URI.create(td.uri))
   def read(uri: URI): String =
     read(AbsolutePath(uri.getPath))
   def read(path: RelativePath): String = // TODO(olafur) remove?

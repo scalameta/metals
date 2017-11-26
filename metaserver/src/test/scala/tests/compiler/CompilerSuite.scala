@@ -1,7 +1,7 @@
 package tests.compiler
 
 import scala.meta.languageserver.Compiler
-import scala.reflect.internal.util.Position
+import scala.meta.languageserver.compiler.Cursor
 import scala.tools.nsc.interactive.Global
 import tests.MegaSuite
 
@@ -11,9 +11,8 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
 
   private def computeChevronPositionFromMarkup(
       filename: String,
-      markup: String,
-      addCursor: Boolean
-  ): Position = {
+      markup: String
+  ): Cursor = {
     val chevrons = "<<(.*?)>>".r
     val carets0 =
       chevrons.findAllIn(markup).matchData.map(m => (m.start, m.end)).toList
@@ -23,9 +22,7 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
     carets match {
       case (start, end) :: Nil =>
         val code = chevrons.replaceAllIn(markup, "$1")
-        val cursor = if (addCursor) Some(start) else None
-        val unit = Compiler.addCompilationUnit(compiler, code, filename, cursor)
-        unit.position(start)
+        Cursor(filename, code, start)
       case els =>
         throw new IllegalArgumentException(
           s"Expected one chevron, found ${els.length}"
@@ -53,13 +50,12 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
   def targeted(
       filename: String,
       markup: String,
-      fn: Position => Unit,
-      addCursor: Boolean = true
+      fn: Cursor => Unit
   ): Unit = {
-    test(filename) {
-      val pos =
-        computeChevronPositionFromMarkup(filename + ".scala", markup, addCursor)
-      fn(pos)
+    test(filename.replace(' ', '-')) {
+      val point =
+        computeChevronPositionFromMarkup(filename + ".scala", markup)
+      fn(point)
     }
   }
 

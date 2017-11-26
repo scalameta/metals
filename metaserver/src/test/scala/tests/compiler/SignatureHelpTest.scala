@@ -14,11 +14,10 @@ object SignatureHelpTest extends CompilerSuite {
   ): Unit = {
     targeted(
       filename,
-      code, { pos =>
-        val obtained = SignatureHelpProvider.signatureHelp(compiler, pos)
+      code, { point =>
+        val obtained = SignatureHelpProvider.signatureHelp(compiler, point)
         fn(obtained)
-      },
-      addCursor = false
+      }
     )
   }
 
