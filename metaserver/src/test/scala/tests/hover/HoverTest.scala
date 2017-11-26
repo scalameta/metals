@@ -23,7 +23,8 @@ object HoverTest extends CompilerSuite {
              |  } ]
              |}""".stripMargin
         assertNoDiff(obtained, expected)
-      }
+      },
+      addCursor = false
     )
   }
 

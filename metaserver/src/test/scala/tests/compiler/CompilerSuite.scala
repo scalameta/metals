@@ -11,20 +11,25 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
 
   private def computeChevronPositionFromMarkup(
       filename: String,
-      markup: String
-  ): List[Position] = {
+      markup: String,
+      addCursor: Boolean
+  ): Position = {
     val chevrons = "<<(.*?)>>".r
     val carets0 =
       chevrons.findAllIn(markup).matchData.map(m => (m.start, m.end)).toList
     val carets = carets0.zipWithIndex.map {
       case ((s, e), i) => (s - 4 * i, e - 4 * i - 4)
     }
-    val code = chevrons.replaceAllIn(markup, "$1")
-    println(code)
-    val unit = Compiler.addCompilationUnit(compiler, code, filename)
-    carets.map {
-      case (start, end) =>
+    carets match {
+      case (start, end) :: Nil =>
+        val code = chevrons.replaceAllIn(markup, "$1")
+        val cursor = if (addCursor) Some(start) else None
+        val unit = Compiler.addCompilationUnit(compiler, code, filename, cursor)
         unit.position(start)
+      case els =>
+        throw new IllegalArgumentException(
+          s"Expected one chevron, found ${els.length}"
+        )
     }
   }
 
@@ -45,15 +50,16 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
    * See SignatureHelpTest for more inspiration on how to abstract further on
    * top of this method.
    */
-  def targeted(filename: String, markup: String, fn: Position => Unit): Unit = {
+  def targeted(
+      filename: String,
+      markup: String,
+      fn: Position => Unit,
+      addCursor: Boolean = true
+  ): Unit = {
     test(filename) {
-      val positions =
-        computeChevronPositionFromMarkup(filename + ".scala", markup)
-      positions match {
-        case List(pos) => fn(pos)
-        case _ =>
-          sys.error(s"1 chevron expected, ${positions.length} chevrons found")
-      }
+      val pos =
+        computeChevronPositionFromMarkup(filename + ".scala", markup, addCursor)
+      fn(pos)
     }
   }
 

@@ -54,7 +54,6 @@ class Compiler(
             .zip(Task(indexDependencyClasspath(config.sourceJars)))
         )
       }
-  val completionProvider = new CompletionProvider(connection)
 
   def signatureHelp(
       path: AbsolutePath,
@@ -74,9 +73,16 @@ class Compiler(
       column: Int
   ): CompletionList = {
     logger.info(s"Completion request at $path:$line:$column")
-    getCompiler(path, line, column).fold(completionProvider.empty) {
-      case (compiler, position) =>
-        completionProvider.completions(compiler, position)
+    getCompiler(path, line, column) match {
+      case Some((compiler, position)) =>
+        CompletionProvider.completions(compiler, position)
+      case _ =>
+        connection.showMessage(
+          MessageType.Warning,
+          "Run project/config:scalametaEnableCompletions to setup completion for this " +
+            "config.in(project) or *:scalametaEnableCompletions for all projects/configurations"
+        )
+        CompletionProvider.empty
     }
   }
 
@@ -97,8 +103,12 @@ class Compiler(
     val offset = lineColumnToOffset(code, line, column)
     compilerByPath.get(path).map { compiler =>
       compiler.reporter.reset()
-      val richUnit =
-        Compiler.addCompilationUnit(compiler, code, path.toString())
+      val richUnit = Compiler.addCompilationUnit(
+        global = compiler,
+        code = code,
+        filename = path.toString(),
+        cursor = Some(offset)
+      )
       val position = richUnit.position(offset)
       compiler -> position
     }
@@ -167,12 +177,19 @@ class Compiler(
 }
 
 object Compiler extends LazyLogging {
+
   def addCompilationUnit(
       global: Global,
       code: String,
-      filename: String
+      filename: String,
+      cursor: Option[Int] = None
   ): global.RichCompilationUnit = {
-    val unit = global.newCompilationUnit(code, filename)
+    val codeWithCursor = cursor match {
+      case Some(offset) =>
+        code.take(offset) + "_CURSOR_" + code.drop(offset)
+      case _ => code
+    }
+    val unit = global.newCompilationUnit(codeWithCursor, filename)
     val richUnit = new global.RichCompilationUnit(unit.source)
     global.unitOfFile(richUnit.source.file) = richUnit
     richUnit

@@ -1,12 +1,10 @@
 package tests.compiler
 
 import scala.meta.languageserver.compiler.CompletionProvider
-import langserver.core.Notifications
 import langserver.messages.CompletionList
 import play.api.libs.json.Json
 
 object CompletionsTest extends CompilerSuite {
-  val provider = new CompletionProvider(Notifications.empty)
 
   def check(
       filename: String,
@@ -16,7 +14,7 @@ object CompletionsTest extends CompilerSuite {
     targeted(
       filename,
       code, { pos =>
-        val obtained = provider.completions(compiler, pos)
+        val obtained = CompletionProvider.completions(compiler, pos)
         fn(obtained)
       }
     )
@@ -112,16 +110,13 @@ object CompletionsTest extends CompilerSuite {
       |object a {
       | User("", 1).<<>>
       |}
-    """.stripMargin,
-    """
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "empty",
-      |    "detail" : "[A]: List[A]"
-      |  } ]
-      |}
-    """.stripMargin
+    """.stripMargin, { completions =>
+      val completionLength = completions.items.length
+      assert(completionLength > 2)
+      val completionLabels = completions.items.map(_.label)
+      assert(completionLabels.contains("name"))
+      assert(completionLabels.contains("age"))
+    }
   )
 
 }

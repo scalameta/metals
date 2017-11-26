@@ -17,7 +17,8 @@ object SignatureHelpTest extends CompilerSuite {
       code, { pos =>
         val obtained = SignatureHelpProvider.signatureHelp(compiler, pos)
         fn(obtained)
-      }
+      },
+      addCursor = false
     )
   }
 
