@@ -39,7 +39,9 @@ class MegaSuite(implicit filename: sourcecode.File) extends TestSuite {
         s: StackTraceElement
     ): Boolean = {
       s.getClassName.startsWith("scala.meta.languageserver.") ||
-      s.getClassName.contains("tests")
+      (s.getClassName.startsWith("tests") &&
+      !s.getClassName.startsWith("tests.DiffAsserts") &&
+      !s.getClassName.startsWith("tests.MegaSuite"))
     }
     override def formatException(x: Throwable, leftIndent: String): Str =
       super.formatException(x, "")

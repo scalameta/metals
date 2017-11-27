@@ -12,8 +12,8 @@ object HoverTest extends CompilerSuite {
   ): Unit = {
     targeted(
       filename,
-      code, { pos =>
-        val result = HoverProvider.hover(compiler, pos)
+      code, { point =>
+        val result = HoverProvider.hover(compiler, point)
         val obtained = Json.prettyPrint(Json.toJson(result))
         val expected =
           s"""{

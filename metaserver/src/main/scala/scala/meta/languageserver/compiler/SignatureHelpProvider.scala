@@ -11,7 +11,14 @@ import langserver.types.SignatureInformation
 
 object SignatureHelpProvider extends LazyLogging {
   def empty: SignatureHelp = SignatureHelp(Nil, None, None)
-  def signatureHelp(compiler: Global, position: Position): SignatureHelp = {
+  def signatureHelp(compiler: Global, cursor: Cursor): SignatureHelp = {
+    val unit = ScalacProvider.addCompilationUnit(
+      global = compiler,
+      code = cursor.contents,
+      filename = cursor.uri,
+      cursor = None
+    )
+    val position = unit.position(cursor.offset)
     findEnclosingMethod(position).fold(empty) { callSite =>
       val lastParenPosition = position.withPoint(callSite.openParenOffset)
       // NOTE(olafur) this statement is intentionally before `completionsAt`
@@ -85,9 +92,16 @@ object SignatureHelpProvider extends LazyLogging {
   case class CallSite(openParenOffset: Int, activeArgument: Int)
   private def findEnclosingMethod(caret: Position): Option[CallSite] = {
     val chars = caret.source.content
-    findOpen(chars, caret.point, '(', ')').map {
+    val char = chars.lift
+    val point =
+      if (char(caret.point).contains(')') &&
+        char(caret.point - 1).contains('(')) {
+        // cursor is inside `()`
+        caret.point - 1
+      } else caret.point
+    findOpen(chars, point, '(', ')').map {
       case c @ CallSite(openParen, activeArgument) =>
-        if (!caret.source.content.lift(openParen - 1).contains(']')) c
+        if (!char(openParen - 1).contains(']')) c
         else {
           // Hop over the type parameter list `T` to find `Foo`: Foo[T](<<a>
           // NOTE(olafur) this is a pretty hacky approach to find the enclosing

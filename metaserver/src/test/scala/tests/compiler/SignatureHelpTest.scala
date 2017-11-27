@@ -14,8 +14,8 @@ object SignatureHelpTest extends CompilerSuite {
   ): Unit = {
     targeted(
       filename,
-      code, { pos =>
-        val obtained = SignatureHelpProvider.signatureHelp(compiler, pos)
+      code, { point =>
+        val obtained = SignatureHelpProvider.signatureHelp(compiler, point)
         fn(obtained)
       }
     )
@@ -227,6 +227,25 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin, { result =>
       assert(result.activeParameter.contains(0))
     }
+  )
+  check(
+    "()",
+    """
+      |object Main {
+      |  List(<<)>>
+      |}
+    """.stripMargin,
+    """
+      |{
+      |  "signatures" : [ {
+      |    "label" : "apply[A](xs: A*)List[A]",
+      |    "parameters" : [ {
+      |      "label" : "xs: A*"
+      |    } ]
+      |  } ],
+      |  "activeParameter" : 0
+      |}
+    """.stripMargin
   )
 
 }

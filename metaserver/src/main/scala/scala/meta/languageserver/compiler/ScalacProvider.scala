@@ -1,24 +1,20 @@
-package scala.meta.languageserver
+package scala.meta.languageserver.compiler
 
-import java.io.PrintStream
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
-import scala.meta.languageserver.Compiler.ask
+import scala.meta.languageserver.Effects
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
-import scala.meta.languageserver.compiler.SignatureHelpProvider
-import scala.meta.languageserver.compiler.HoverProvider
+import scala.meta.languageserver.ServerConfig
+import scala.meta.languageserver.Uri
+import scala.meta.languageserver.ctags
 import scala.meta.languageserver.storage.LevelDBMap
-import scala.reflect.internal.util.Position
 import scala.reflect.io
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
-import langserver.core.Connection
-import langserver.messages.MessageType
-import langserver.messages.Hover
-import langserver.types.SignatureHelp
+import langserver.types.TextDocumentIdentifier
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
@@ -27,12 +23,10 @@ import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.internal.semanticdb.schema.Document
 import org.langmeta.io.AbsolutePath
 
-class Compiler(
+/** Responsible for keeping fresh scalac global instances. */
+class ScalacProvider(
     serverConfig: ServerConfig,
-    out: PrintStream,
-    config: Observable[AbsolutePath],
-    connection: Connection,
-    buffers: Buffers
+    config: Observable[AbsolutePath]
 )(implicit s: Scheduler)
     extends LazyLogging {
   private implicit val cwd = serverConfig.cwd
@@ -53,55 +47,12 @@ class Compiler(
         )
       }
 
-  def signatureHelp(
-      path: AbsolutePath,
-      line: Int,
-      column: Int
-  ): SignatureHelp = {
-    logger.info(s"Signature help at $path:$line:$column")
-    getCompiler(path, line, column - 1).fold(SignatureHelpProvider.empty) {
-      case (compiler, position) =>
-        SignatureHelpProvider.signatureHelp(compiler, position)
-    }
-  }
-
-  def autocomplete(
-      path: AbsolutePath,
-      line: Int,
-      column: Int
-  ): List[(String, String)] = {
-    logger.info(s"Completion request at $path:$line:$column")
-    getCompiler(path, line, column).fold(noCompletions) {
-      case (compiler, position) =>
-        logger.info(s"Completion request at position $position")
-        val results = compiler.completionsAt(position).matchingResults()
-        results
-          .map(r => (r.sym.signatureString, r.symNameDropLocal.decoded))
-          .distinct
-    }
-  }
-
-  def hover(path: AbsolutePath, line: Int, column: Int): Hover = {
-    logger.info(s"Hover at $path:$line:$column")
-    getCompiler(path, line, column).fold(HoverProvider.empty) {
-      case (compiler, position) =>
-        HoverProvider.hover(compiler, position)
-    }
-  }
-
-  def getCompiler(
-      path: AbsolutePath,
-      line: Int,
-      column: Int
-  ): Option[(Global, Position)] = {
-    val code = buffers.read(path)
-    val offset = lineColumnToOffset(code, line, column)
+  def getCompiler(td: TextDocumentIdentifier): Option[Global] =
+    Uri.toPath(td.uri).flatMap(getCompiler)
+  def getCompiler(path: AbsolutePath): Option[Global] = {
     compilerByPath.get(path).map { compiler =>
       compiler.reporter.reset()
-      val richUnit =
-        Compiler.addCompilationUnit(compiler, code, path.toString())
-      val position = richUnit.position(offset)
-      compiler -> position
+      compiler
     }
   }
 
@@ -110,7 +61,8 @@ class Compiler(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {
     logger.info(s"Loading new compiler from config $config")
-    val compiler = Compiler.newCompiler(config.classpath, config.scalacOptions)
+    val compiler =
+      ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
     config.sources.foreach { path =>
       // TODO(olafur) garbage collect compilers from removed files.
       compilerByPath(path) = compiler
@@ -150,38 +102,22 @@ class Compiler(
     }
     Effects.IndexSourcesClasspath
   }
-
-  private def noCompletions: List[(String, String)] = {
-    connection.showMessage(
-      MessageType.Warning,
-      "Run project/config:scalametaEnableCompletions to setup completion for this " +
-        "config.in(project) or *:scalametaEnableCompletions for all projects/configurations"
-    )
-    Nil
-  }
-  private def lineColumnToOffset(
-      contents: String,
-      line: Int,
-      column: Int
-  ): Int = {
-    var i = 0
-    var l = line
-    while (l > 0) {
-      if (contents(i) == '\n') l -= 1
-      i += 1
-    }
-    i + column
-  }
-
 }
 
-object Compiler extends LazyLogging {
+object ScalacProvider extends LazyLogging {
+
   def addCompilationUnit(
       global: Global,
       code: String,
-      filename: String
+      filename: String,
+      cursor: Option[Int]
   ): global.RichCompilationUnit = {
-    val unit = global.newCompilationUnit(code, filename)
+    val codeWithCursor = cursor match {
+      case Some(offset) =>
+        code.take(offset) + "_CURSOR_" + code.drop(offset)
+      case _ => code
+    }
+    val unit = global.newCompilationUnit(codeWithCursor, filename)
     val richUnit = new global.RichCompilationUnit(unit.source)
     global.unitOfFile(richUnit.source.file) = richUnit
     richUnit

@@ -1,18 +1,24 @@
 package scala.meta.languageserver.compiler
 
-import scala.annotation.tailrec
 import scala.tools.nsc.interactive.Global
-import scala.reflect.internal.util.Position
-import scala.reflect.internal.util.SourceFile
-import com.typesafe.scalalogging.LazyLogging
 import langserver.messages.Hover
 import langserver.types.RawMarkedString
 
 object HoverProvider {
   def empty: Hover = Hover(Nil, None)
 
-  def hover(compiler: Global, position: Position): Hover = {
-    val typedTree = compiler.typedTreeAt(position)
+  def hover(
+      compiler: Global,
+      cursor: Cursor
+  ): Hover = {
+    val unit = ScalacProvider.addCompilationUnit(
+      global = compiler,
+      code = cursor.contents,
+      filename = cursor.uri,
+      cursor = None
+    )
+    val pos = unit.position(cursor.offset)
+    val typedTree = compiler.typedTreeAt(pos)
     typeOfTree(compiler)(typedTree).fold(empty) { tpeName =>
       Hover(
         contents = List(
