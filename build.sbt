@@ -12,10 +12,10 @@ inThisBuild(
     homepage := Some(url("https://github.com/scalameta/language-server")),
     developers := List(
       Developer(
-        "olafurpg",
-        "Ólafur Páll Geirsson",
-        "olafurpg@gmail.com",
-        url("https://geirsson.com")
+        "laughedelic",
+        "Alexey Alekhin",
+        "laughedelic@gmail.com",
+        url("https://github.com/laughedelic")
       ),
       Developer(
         "gabro",
@@ -24,10 +24,16 @@ inThisBuild(
         url("https://github.com/gabro")
       ),
       Developer(
-        "laughedelic",
-        "Alexey Alekhin",
-        "laughedelic@gmail.com",
-        url("https://github.com/laughedelic")
+        "olafurpg",
+        "Ólafur Páll Geirsson",
+        "olafurpg@gmail.com",
+        url("https://geirsson.com")
+      ),
+      Developer(
+        "ShaneDelmore",
+        "Shane Delmore",
+        "shane@delmore.io",
+        url("http://delmore.io")
       )
     ),
     scmInfo in ThisBuild := Some(
