@@ -35,7 +35,7 @@ object CompletionsTest extends CompilerSuite {
   }
 
   check(
-    "object",
+    "companion object",
     """
       |object a {
       | Lis<<>>
@@ -46,6 +46,7 @@ object CompletionsTest extends CompilerSuite {
       |  "isIncomplete" : false,
       |  "items" : [ {
       |    "label" : "List",
+      |    "kind" : 2,
       |    "detail" : ": collection.immutable.List.type"
       |  } ]
       |}
@@ -79,6 +80,7 @@ object CompletionsTest extends CompilerSuite {
       |  "isIncomplete" : false,
       |  "items" : [ {
       |    "label" : "StringBuilder",
+      |    "kind" : 2,
       |    "detail" : ": collection.mutable.StringBuilder.type"
       |  } ]
       |}
@@ -97,6 +99,7 @@ object CompletionsTest extends CompilerSuite {
       |  "isIncomplete" : false,
       |  "items" : [ {
       |    "label" : "empty",
+      |    "kind" : 6,
       |    "detail" : "[A]: List[A]"
       |  } ]
       |}
@@ -108,7 +111,7 @@ object CompletionsTest extends CompilerSuite {
     """
       |case class User(name: String, age: Int)
       |object a {
-      | User("", 1).<<>>
+      |  User("", 1).<<>>
       |}
     """.stripMargin, { completions =>
       val completionLength = completions.items.length
@@ -117,6 +120,46 @@ object CompletionsTest extends CompilerSuite {
       assert(completionLabels.contains("name"))
       assert(completionLabels.contains("age"))
     }
+  )
+
+  check(
+    "trait",
+    """
+      |trait TestTrait
+      |object a {
+      |  val x: TestTr<<>>
+      |}
+    """.stripMargin,
+    """
+      |{
+      |  "isIncomplete" : false,
+      |  "items" : [ {
+      |    "label" : "TestTrait",
+      |    "kind" : 11,
+      |    "detail" : " extends "
+      |  } ]
+      |}
+    """.stripMargin
+  )
+
+  check(
+    "object",
+    """
+      |object testObject
+      |object a {
+      |  testObj<<>>
+      |}
+    """.stripMargin,
+    """
+      |{
+      |  "isIncomplete" : false,
+      |  "items" : [ {
+      |    "label" : "testObject",
+      |    "kind" : 2,
+      |    "detail" : ""
+      |  } ]
+      |}
+    """.stripMargin
   )
 
 }
