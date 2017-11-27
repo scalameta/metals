@@ -2,6 +2,7 @@ package tests.compiler
 
 import scala.meta.languageserver.compiler.CompletionProvider
 import langserver.messages.CompletionList
+import langserver.types.CompletionItemKind
 import play.api.libs.json.Json
 
 object CompletionsTest extends CompilerSuite {
@@ -38,16 +39,16 @@ object CompletionsTest extends CompilerSuite {
     "companion object",
     """
       |object a {
-      | Lis<<>>
+      | Opti<<>>
       |}
     """.stripMargin,
-    """
+    s"""
       |{
       |  "isIncomplete" : false,
       |  "items" : [ {
-      |    "label" : "List",
-      |    "kind" : 2,
-      |    "detail" : ": collection.immutable.List.type"
+      |    "label" : "Option",
+      |    "kind" : ${CompletionItemKind.Module},
+      |    "detail" : ""
       |  } ]
       |}
     """.stripMargin
@@ -75,12 +76,12 @@ object CompletionsTest extends CompilerSuite {
     """.stripMargin,
     // PC seems to return the companion object, which is incorrect
     // since we're in ype position.
-    """
+    s"""
       |{
       |  "isIncomplete" : false,
       |  "items" : [ {
       |    "label" : "StringBuilder",
-      |    "kind" : 2,
+      |    "kind" : ${CompletionItemKind.Value},
       |    "detail" : ": collection.mutable.StringBuilder.type"
       |  } ]
       |}
@@ -94,12 +95,12 @@ object CompletionsTest extends CompilerSuite {
       | List.em<<>>
       |}
     """.stripMargin,
-    """
+    s"""
       |{
       |  "isIncomplete" : false,
       |  "items" : [ {
       |    "label" : "empty",
-      |    "kind" : 6,
+      |    "kind" : ${CompletionItemKind.Method},
       |    "detail" : "[A]: List[A]"
       |  } ]
       |}
@@ -116,9 +117,12 @@ object CompletionsTest extends CompilerSuite {
     """.stripMargin, { completions =>
       val completionLength = completions.items.length
       assert(completionLength > 2)
-      val completionLabels = completions.items.map(_.label)
-      assert(completionLabels.contains("name"))
-      assert(completionLabels.contains("age"))
+      val name = completions.items.find(_.label == "name")
+      val age = completions.items.find(_.label == "age")
+      assert(name.isDefined)
+      assert(age.isDefined)
+      assert(name.get.kind == Some(CompletionItemKind.Field))
+      assert(age.get.kind == Some(CompletionItemKind.Field))
     }
   )
 
@@ -130,12 +134,12 @@ object CompletionsTest extends CompilerSuite {
       |  val x: TestTr<<>>
       |}
     """.stripMargin,
-    """
+    s"""
       |{
       |  "isIncomplete" : false,
       |  "items" : [ {
       |    "label" : "TestTrait",
-      |    "kind" : 11,
+      |    "kind" : ${CompletionItemKind.Interface},
       |    "detail" : " extends "
       |  } ]
       |}
@@ -150,12 +154,29 @@ object CompletionsTest extends CompilerSuite {
       |  testObj<<>>
       |}
     """.stripMargin,
-    """
+    s"""
       |{
       |  "isIncomplete" : false,
       |  "items" : [ {
       |    "label" : "testObject",
-      |    "kind" : 2,
+      |    "kind" : ${CompletionItemKind.Module},
+      |    "detail" : ""
+      |  } ]
+      |}
+    """.stripMargin
+  )
+
+  check(
+    "package",
+    """
+      | import scala.collect<<>>
+    """.stripMargin,
+    s"""
+      |{
+      |  "isIncomplete" : false,
+      |  "items" : [ {
+      |    "label" : "collection",
+      |    "kind" : ${CompletionItemKind.Module},
       |    "detail" : ""
       |  } ]
       |}
