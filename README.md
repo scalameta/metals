@@ -52,9 +52,10 @@ See the [contributing guide](CONTRIBUTING.md).
 ### Team
 The current maintainers (people who can merge pull requests) are:
 
-* Gabriele Petronella - [`@gabro`](https://github.com/gabro)
 * Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
+* Gabriele Petronella - [`@gabro`](https://github.com/gabro)
 * Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
+* Shane Delmore - [`@ShaneDelmore`](https://github.com/ShaneDelmore)
 
 ## Acknowledgement
 Huge thanks to [`@dragos`](https://github.com/dragos) for his work on a Scala implementation of the LSP protocol (see: https://github.com/dragos/dragos-vscode-scala).
