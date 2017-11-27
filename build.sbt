@@ -32,7 +32,7 @@ inThisBuild(
       Developer(
         "ShaneDelmore",
         "Shane Delmore",
-        "shane@delmore.io",
+        "sdelmore@twitter.com",
         url("http://delmore.io")
       )
     ),
