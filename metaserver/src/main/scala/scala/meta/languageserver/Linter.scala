@@ -70,15 +70,13 @@ class Linter(
       val (rule, config) =
         ScalafixConfig.fromInput(configInput, lazyIndex)(configDecoder).get
       val results: Seq[PublishDiagnostics] = index.database.documents.map { d =>
-        val filename = RelativePath(d.input.syntax)
         val tree = Parser.parse(d).get
         val ctx = RuleCtx.applyInternal(tree, config)
         val patches = rule.fixWithNameInternal(ctx)
-        val diagnostics = for {
-          (name, patch) <- patches.toIterator
-          msg <- Patch.lintMessagesInternal(patch)
-        } yield toDiagnostic(name, msg)
-        PublishDiagnostics(s"file:${cwd.resolve(filename)}", diagnostics.toSeq)
+        val diagnostics =
+          Patch.lintMessagesInternal(patches, ctx).map(toDiagnostic)
+        val uri = d.input.syntax
+        PublishDiagnostics(uri, diagnostics)
       }
 
       // megaCache needs to die, if we forget this we will read stale
@@ -111,11 +109,11 @@ class Linter(
       ScalafixReporter.default.copy(outStream = new PrintStream(out))
     )
 
-  private def toDiagnostic(name: RuleName, msg: LintMessage): l.Diagnostic = {
+  private def toDiagnostic(msg: LintMessage): l.Diagnostic = {
     l.Diagnostic(
       range = msg.position.toRange,
       severity = Some(toSeverity(msg.category.severity)),
-      code = Some(msg.category.key(name)),
+      code = Some(msg.category.id),
       source = Some("scalafix"),
       message = msg.message
     )
