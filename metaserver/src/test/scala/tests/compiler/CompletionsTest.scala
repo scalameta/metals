@@ -43,14 +43,14 @@ object CompletionsTest extends CompilerSuite {
       |}
     """.stripMargin,
     s"""
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "Option",
-      |    "kind" : ${CompletionItemKind.Module},
-      |    "detail" : ""
-      |  } ]
-      |}
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "Option",
+       |    "kind" : ${CompletionItemKind.Module},
+       |    "detail" : ""
+       |  } ]
+       |}
     """.stripMargin
   )
 
@@ -77,14 +77,14 @@ object CompletionsTest extends CompilerSuite {
     // PC seems to return the companion object, which is incorrect
     // since we're in ype position.
     s"""
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "StringBuilder",
-      |    "kind" : ${CompletionItemKind.Value},
-      |    "detail" : ": collection.mutable.StringBuilder.type"
-      |  } ]
-      |}
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "StringBuilder",
+       |    "kind" : ${CompletionItemKind.Value},
+       |    "detail" : ": collection.mutable.StringBuilder.type"
+       |  } ]
+       |}
     """.stripMargin
   )
 
@@ -96,14 +96,14 @@ object CompletionsTest extends CompilerSuite {
       |}
     """.stripMargin,
     s"""
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "empty",
-      |    "kind" : ${CompletionItemKind.Method},
-      |    "detail" : "[A]: List[A]"
-      |  } ]
-      |}
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "empty",
+       |    "kind" : ${CompletionItemKind.Method},
+       |    "detail" : "[A]: List[A]"
+       |  } ]
+       |}
     """.stripMargin
   )
 
@@ -135,14 +135,14 @@ object CompletionsTest extends CompilerSuite {
       |}
     """.stripMargin,
     s"""
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "TestTrait",
-      |    "kind" : ${CompletionItemKind.Interface},
-      |    "detail" : " extends "
-      |  } ]
-      |}
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "TestTrait",
+       |    "kind" : ${CompletionItemKind.Interface},
+       |    "detail" : " extends "
+       |  } ]
+       |}
     """.stripMargin
   )
 
@@ -155,14 +155,14 @@ object CompletionsTest extends CompilerSuite {
       |}
     """.stripMargin,
     s"""
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "testObject",
-      |    "kind" : ${CompletionItemKind.Module},
-      |    "detail" : ""
-      |  } ]
-      |}
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "testObject",
+       |    "kind" : ${CompletionItemKind.Module},
+       |    "detail" : ""
+       |  } ]
+       |}
     """.stripMargin
   )
 
@@ -172,14 +172,14 @@ object CompletionsTest extends CompilerSuite {
       | import scala.collect<<>>
     """.stripMargin,
     s"""
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "collection",
-      |    "kind" : ${CompletionItemKind.Module},
-      |    "detail" : ""
-      |  } ]
-      |}
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "collection",
+       |    "kind" : ${CompletionItemKind.Module},
+       |    "detail" : ""
+       |  } ]
+       |}
     """.stripMargin
   )
 
