@@ -3,12 +3,9 @@ package scala.meta.languageserver.compiler
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
 import scala.meta.languageserver.Effects
-import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
 import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.Uri
-import scala.meta.languageserver.ctags
 import scala.meta.languageserver.search.IndexDependencyClasspath
-import scala.meta.languageserver.storage.LevelDBMap
 import scala.reflect.io
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -20,7 +17,6 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
-import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.internal.semanticdb.schema.Document
 import org.langmeta.io.AbsolutePath
 
@@ -36,6 +32,26 @@ class ScalacProvider(
   val documentPublisher: Observable[Document] = myDocumentPublisher
   private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()
+  private def indexClasspathTask(
+      config: CompilerConfig
+  ): Task[Effects.IndexSourcesClasspath] =
+    (if (serverConfig.indexClasspath) {
+       val jars = CompilerConfig.jdkSources
+         .filter(_ => serverConfig.indexJDK)
+         .toList ++ config.sourceJars
+       val buf = List.newBuilder[AbsolutePath]
+       Task(
+         IndexDependencyClasspath.apply(
+           indexedJars,
+           documentSubscriber.onNext,
+           jars,
+           buf
+         )
+       )
+     } else {
+       Task.unit
+     }).map(_ => Effects.IndexSourcesClasspath)
+
   val onNewCompilerConfig: Observable[
     (Effects.InstallPresentationCompiler, Effects.IndexSourcesClasspath)
   ] =
@@ -43,18 +59,7 @@ class ScalacProvider(
       .map(path => CompilerConfig.fromPath(path))
       .flatMap { config =>
         Observable.fromTask(
-          Task(loadNewCompilerGlobals(config))
-            .zip(
-              Task(
-                IndexDependencyClasspath.apply(
-                  serverConfig,
-                  indexedJars,
-                  documentSubscriber,
-                  logger,
-                  config.sourceJars
-                )
-              )
-            )
+          Task(loadNewCompilerGlobals(config)).zip(indexClasspathTask(config))
         )
       }
 

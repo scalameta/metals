@@ -1,31 +1,21 @@
 package scala.meta.languageserver.search
 import java.util.concurrent.ConcurrentHashMap
+import scala.collection.mutable
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
-import scala.meta.languageserver.compiler.CompilerConfig
-import scala.meta.languageserver.{Effects, ServerConfig, ctags}
+import scala.meta.languageserver.ctags
 import scala.meta.languageserver.storage.LevelDBMap
-import com.typesafe.scalalogging.Logger
-import monix.reactive.Observer
+import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.internal.semanticdb.schema.{Database, Document}
 import org.langmeta.io.AbsolutePath
 
-object IndexDependencyClasspath {
-  // NOTE(olafur) this probably belongs somewhere else than Compiler, see
-  // https://github.com/scalameta/language-server/issues/48
+object IndexDependencyClasspath extends LazyLogging {
   def apply(
-      serverConfig: ServerConfig,
       indexedJars: ConcurrentHashMap[AbsolutePath, Unit],
-      documentSubscriber: Observer.Sync[Document],
-      logger: Logger,
-      sourceJars: List[AbsolutePath]
-  ): Effects.IndexSourcesClasspath = {
-    if (!serverConfig.indexClasspath) return Effects.IndexSourcesClasspath
-    val sourceJarsWithJDK =
-      if (serverConfig.indexJDK)
-        CompilerConfig.jdkSources.fold(sourceJars)(_ :: sourceJars)
-      else sourceJars
-    val buf = List.newBuilder[AbsolutePath]
-    sourceJarsWithJDK.foreach { jar =>
+      documentAction: Document => Unit,
+      sourceJars: List[AbsolutePath],
+      buf: mutable.Builder[AbsolutePath, List[AbsolutePath]]
+  ): Unit = {
+    sourceJars.foreach { jar =>
       // ensure we only index each jar once even under race conditions.
       // race conditions are not unlikely since multiple .compilerconfig
       // are typically created at the same time for each project/configuration
@@ -41,9 +31,8 @@ object IndexDependencyClasspath {
         val database = db.getOrElseUpdate[AbsolutePath, Database](path, { () =>
           ctags.Ctags.indexDatabase(path :: Nil)
         })
-        database.documents.foreach(documentSubscriber.onNext)
+        database.documents.foreach(documentAction)
       }
     }
-    Effects.IndexSourcesClasspath
   }
 }
