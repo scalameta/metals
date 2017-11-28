@@ -50,8 +50,7 @@ object CompletionProvider extends LazyLogging {
     else if (r.sym.isClass) Some(CompletionItemKind.Class)
     else if (r.sym.isPackageObject) Some(CompletionItemKind.Module)
     else if (r.sym.isMethod) Some(CompletionItemKind.Method)
-    else if (r.sym.isField && r.sym.owner != null && r.sym.owner.isCaseClass)
-      Some(CompletionItemKind.Field)
+    else if (r.sym.isCaseAccessor) Some(CompletionItemKind.Field)
     else if (r.sym.isVal) Some(CompletionItemKind.Value)
     else if (r.sym.isVar) Some(CompletionItemKind.Variable)
     else None
