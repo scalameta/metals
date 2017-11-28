@@ -6,12 +6,14 @@ import java.io.PrintStream
 import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.CompletionProvider
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.HoverProvider
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.SignatureHelpProvider
 import scala.meta.languageserver.search.SymbolIndex
+import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
 import langserver.core.LanguageServer
@@ -34,6 +36,7 @@ import monix.reactive.Observer
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
+import org.langmeta.semanticdb
 
 case class ServerConfig(
     cwd: AbsolutePath,
@@ -51,39 +54,38 @@ class ScalametaLanguageServer(
 )(implicit s: Scheduler)
     extends LanguageServer(lspIn, lspOut) {
   implicit val cwd: AbsolutePath = config.cwd
-  val (semanticdbSubscriber, semanticdbPublisher) =
+  val (fileSystemSemanticdbSubscriber, fileSystemSemanticdbsPublisher) =
     ScalametaLanguageServer.semanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
-    Observable.multicast[AbsolutePath](MulticastStrategy.Publish)
-  def onError(e: Throwable): Unit = {
-    logger.error(e.getMessage, e)
-  }
+    ScalametaLanguageServer.compilerConfigStream(cwd)
   val buffers: Buffers = Buffers()
-  val scalac = new ScalacProvider(config, compilerConfigPublisher)
-  val databasePublisher: Observable[Database] = Observable.merge(
-    semanticdbPublisher.doOnError(onError),
-    scalac.documentPublisher.map(doc => Database(doc :: Nil))
-  )
-  val symbolIndexer: SymbolIndex = SymbolIndex(
-    cwd,
-    connection,
-    buffers
-  )
-  val onIndexDatabase: Observable[Effects.IndexSemanticdb] =
-    databasePublisher.map { db =>
-      symbolIndexer.indexDatabase(db)
-      Effects.IndexSemanticdb
-    }
-  val scalafix: Linter = new Linter(
-    cwd,
-    stdout,
-    connection,
-    semanticdbPublisher.map(_.toDb(None)).doOnError(onError)
-  )
+  val scalac: ScalacProvider = new ScalacProvider(config)
+  val symbolIndexer: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
+  val scalafix: Linter = new Linter(cwd, stdout, connection)
+  val metaSemanticdbs: Observable[semanticdb.Database] =
+    fileSystemSemanticdbsPublisher.map(_.toDb(None))
   val scalafmt: Formatter =
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
     else Formatter.noop
-  private val toCancel = ListBuffer.empty[Cancelable]
+
+  // Effects
+  val indexedFileSystemSemanticdbs: Observable[Effects.IndexSemanticdb] =
+    fileSystemSemanticdbsPublisher.map(symbolIndexer.indexDatabase)
+  val indexedDependencyClasspath: Observable[Effects.IndexSourcesClasspath] =
+    compilerConfigPublisher.map(
+      c => symbolIndexer.indexDependencyClasspath(c.sourceJars)
+    )
+  val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
+    compilerConfigPublisher.map(scalac.loadNewCompilerGlobals)
+  val scalafixNotifications: Observable[Effects.PublishLinterDiagnostics] =
+    metaSemanticdbs.map(scalafix.reportLinterMessages)
+  private var cancelEffects: Cancelable = _
+  val effects: Observable[Effects] = Observable.merge(
+    indexedDependencyClasspath,
+    indexedFileSystemSemanticdbs,
+    installedCompilers,
+    scalafixNotifications
+  )
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
     Workspace.initialize(cwd) { path =>
@@ -97,9 +99,7 @@ class ScalametaLanguageServer(
       capabilities: ClientCapabilities
   ): ServerCapabilities = {
     logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
-    toCancel += scalafix.linter.subscribe()
-    toCancel += onIndexDatabase.subscribe()
-    toCancel += scalac.onNewCompilerConfig.subscribe()
+    cancelEffects = effects.subscribe()
     loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
       completionProvider = Some(
@@ -121,7 +121,7 @@ class ScalametaLanguageServer(
   }
 
   override def shutdown(): Unit = {
-    toCancel.foreach(_.cancel())
+    cancelEffects.cancel()
   }
 
   private def onChangedFile(
@@ -130,7 +130,7 @@ class ScalametaLanguageServer(
     val name = PathIO.extension(path.toNIO)
     logger.info(s"File $path changed, extension=$name")
     name match {
-      case "semanticdb" => semanticdbSubscriber.onNext(path)
+      case "semanticdb" => fileSystemSemanticdbSubscriber.onNext(path)
       case "compilerconfig" => compilerConfigSubscriber.onNext(path)
       case _ => fallback(path)
     }
@@ -304,13 +304,31 @@ object ScalametaLanguageServer extends LazyLogging {
     Files.createDirectories(path.toNIO)
     path
   }
+
+  def compilerConfigStream(cwd: AbsolutePath)(
+      implicit scheduler: Scheduler
+  ): (Observer.Sync[AbsolutePath], Observable[CompilerConfig]) = {
+    val (subscriber, publisher) = multicast[AbsolutePath]
+    val compilerConfigPublished = publisher
+      .map(path => CompilerConfig.fromPath(path))
+    subscriber -> compilerConfigPublished
+  }
+
   def semanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
-    val (subscriber, publisher) =
-      Observable.multicast[AbsolutePath](MulticastStrategy.Publish)
+    val (subscriber, publisher) = multicast[AbsolutePath]
     val semanticdbPublisher = publisher
       .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))
     subscriber -> semanticdbPublisher
+  }
+
+  private def multicast[T](implicit s: Scheduler) = {
+    val (sub, pub) = Observable.multicast[T](MulticastStrategy.Publish)
+    (sub, pub.doOnError(onError))
+  }
+
+  private def onError(e: Throwable): Unit = {
+    logger.error(e.getMessage, e)
   }
 }
