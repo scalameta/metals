@@ -63,7 +63,7 @@ class ScalametaLanguageServer(
   val symbolIndexer: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
   val scalafix: Linter = new Linter(cwd, stdout, connection)
   val metaSemanticdbs: Observable[semanticdb.Database] =
-    fileSystemSemanticdbsPublisher.map(_.toDb(None))
+    fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None))
   val scalafmt: Formatter =
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
     else Formatter.noop
@@ -79,7 +79,7 @@ class ScalametaLanguageServer(
     compilerConfigPublisher.map(scalac.loadNewCompilerGlobals)
   val scalafixNotifications: Observable[Effects.PublishLinterDiagnostics] =
     metaSemanticdbs.map(scalafix.reportLinterMessages)
-  private var cancelEffects: Cancelable = _
+  private var cancelEffects = Option.empty[Cancelable]
   val effects: Observable[Effects] = Observable.merge(
     indexedDependencyClasspath,
     indexedFileSystemSemanticdbs,
@@ -99,7 +99,7 @@ class ScalametaLanguageServer(
       capabilities: ClientCapabilities
   ): ServerCapabilities = {
     logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
-    cancelEffects = effects.subscribe()
+    cancelEffects = Some(effects.subscribe())
     loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
       completionProvider = Some(
@@ -121,7 +121,7 @@ class ScalametaLanguageServer(
   }
 
   override def shutdown(): Unit = {
-    cancelEffects.cancel()
+    cancelEffects.foreach(_.cancel())
   }
 
   private def onChangedFile(
