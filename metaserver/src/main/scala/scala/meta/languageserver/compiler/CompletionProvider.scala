@@ -20,17 +20,17 @@ object CompletionProvider extends LazyLogging {
   ): CompletionList = {
     import compiler.CompletionResult
 
-    def completionItemKind(r: CompletionResult#M): Option[Int] = {
-      if (r.sym.isPackage) Some(CompletionItemKind.Module)
-      else if (r.sym.isModuleOrModuleClass) Some(CompletionItemKind.Module)
-      else if (r.sym.isTraitOrInterface) Some(CompletionItemKind.Interface)
-      else if (r.sym.isClass) Some(CompletionItemKind.Class)
-      else if (r.sym.isPackageObject) Some(CompletionItemKind.Module)
-      else if (r.sym.isMethod) Some(CompletionItemKind.Method)
-      else if (r.sym.isCaseAccessor) Some(CompletionItemKind.Field)
-      else if (r.sym.isVal) Some(CompletionItemKind.Value)
-      else if (r.sym.isVar) Some(CompletionItemKind.Variable)
-      else None
+    def completionItemKind(r: CompletionResult#M): Int = {
+      if (r.sym.isPackage) CompletionItemKind.Module
+      else if (r.sym.isPackageObject) CompletionItemKind.Module
+      else if (r.sym.isModuleOrModuleClass) CompletionItemKind.Module
+      else if (r.sym.isTraitOrInterface) CompletionItemKind.Interface
+      else if (r.sym.isClass) CompletionItemKind.Class
+      else if (r.sym.isMethod) CompletionItemKind.Method
+      else if (r.sym.isCaseAccessor) CompletionItemKind.Field
+      else if (r.sym.isVal) CompletionItemKind.Value
+      else if (r.sym.isVar) CompletionItemKind.Variable
+      else CompletionItemKind.Value
     }
 
     val unit = ScalacProvider.addCompilationUnit(
@@ -49,7 +49,7 @@ object CompletionProvider extends LazyLogging {
         items += CompletionItem(
           label = label,
           detail = Some(r.sym.signatureString),
-          kind = completionItemKind(r)
+          kind = Some(completionItemKind(r))
         )
       }
     }
