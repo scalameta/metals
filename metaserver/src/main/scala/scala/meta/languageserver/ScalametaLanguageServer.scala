@@ -79,8 +79,8 @@ class ScalametaLanguageServer(
     compilerConfigPublisher.map(scalac.loadNewCompilerGlobals)
   val scalafixNotifications: Observable[Effects.PublishLinterDiagnostics] =
     metaSemanticdbs.map(scalafix.reportLinterMessages)
-  private var cancelEffects = Option.empty[Cancelable]
-  val effects: Observable[Effects] = Observable.merge(
+  private var cancelEffects = List.empty[Cancelable]
+  var effects: List[Observable[Effects]] = List(
     indexedDependencyClasspath,
     indexedFileSystemSemanticdbs,
     installedCompilers,
@@ -99,7 +99,7 @@ class ScalametaLanguageServer(
       capabilities: ClientCapabilities
   ): ServerCapabilities = {
     logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
-    cancelEffects = Some(effects.subscribe())
+    cancelEffects = effects.map(_.subscribe())
     loadAllRelevantFilesInThisWorkspace()
     ServerCapabilities(
       completionProvider = Some(
