@@ -72,17 +72,18 @@ object CompletionProvider extends LazyLogging {
         case r => (0, r.sym.nameString)
       }
       .zipWithIndex
-      .foreach { case (r, idx) =>
-        val label = r.symNameDropLocal.decoded
-        if (!isUsedLabel(label)) {
-          isUsedLabel += label
-          items += CompletionItem(
-            label = label,
-            detail = Some(r.sym.signatureString),
-            kind = Some(completionItemKind(r)),
-            sortText = Some(f"${idx}%05d")
-          )
-        }
+      .foreach {
+        case (r, idx) =>
+          val label = r.symNameDropLocal.decoded
+          if (!isUsedLabel(label)) {
+            isUsedLabel += label
+            items += CompletionItem(
+              label = label,
+              detail = Some(r.sym.signatureString),
+              kind = Some(completionItemKind(r)),
+              sortText = Some(f"${idx}%05d")
+            )
+          }
       }
     CompletionList(isIncomplete = false, items = items.result())
   }
