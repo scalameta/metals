@@ -9,6 +9,7 @@ import langserver.core.Notifications
 import langserver.messages.CompletionList
 import langserver.messages.MessageType
 import langserver.types.CompletionItem
+import langserver.types.CompletionItemKind
 
 object CompletionProvider extends LazyLogging {
   def empty: CompletionList = CompletionList(isIncomplete = false, Nil)
@@ -17,6 +18,21 @@ object CompletionProvider extends LazyLogging {
       compiler: Global,
       cursor: Cursor
   ): CompletionList = {
+    import compiler.CompletionResult
+
+    def completionItemKind(r: CompletionResult#M): Int = {
+      if (r.sym.isPackage) CompletionItemKind.Module
+      else if (r.sym.isPackageObject) CompletionItemKind.Module
+      else if (r.sym.isModuleOrModuleClass) CompletionItemKind.Module
+      else if (r.sym.isTraitOrInterface) CompletionItemKind.Interface
+      else if (r.sym.isClass) CompletionItemKind.Class
+      else if (r.sym.isMethod) CompletionItemKind.Method
+      else if (r.sym.isCaseAccessor) CompletionItemKind.Field
+      else if (r.sym.isVal) CompletionItemKind.Value
+      else if (r.sym.isVar) CompletionItemKind.Variable
+      else CompletionItemKind.Value
+    }
+
     val unit = ScalacProvider.addCompilationUnit(
       global = compiler,
       code = cursor.contents,
@@ -32,7 +48,8 @@ object CompletionProvider extends LazyLogging {
         isUsedLabel += label
         items += CompletionItem(
           label = label,
-          detail = Some(r.sym.signatureString)
+          detail = Some(r.sym.signatureString),
+          kind = Some(completionItemKind(r))
         )
       }
     }

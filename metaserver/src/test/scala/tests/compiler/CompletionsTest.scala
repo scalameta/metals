@@ -2,6 +2,7 @@ package tests.compiler
 
 import scala.meta.languageserver.compiler.CompletionProvider
 import langserver.messages.CompletionList
+import langserver.types.CompletionItemKind
 import play.api.libs.json.Json
 
 object CompletionsTest extends CompilerSuite {
@@ -35,20 +36,21 @@ object CompletionsTest extends CompilerSuite {
   }
 
   check(
-    "object",
+    "companion object",
     """
       |object a {
-      | Lis<<>>
+      | Opti<<>>
       |}
     """.stripMargin,
-    """
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "List",
-      |    "detail" : ": collection.immutable.List.type"
-      |  } ]
-      |}
+    s"""
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "Option",
+       |    "kind" : ${CompletionItemKind.Module},
+       |    "detail" : ""
+       |  } ]
+       |}
     """.stripMargin
   )
 
@@ -74,14 +76,15 @@ object CompletionsTest extends CompilerSuite {
     """.stripMargin,
     // PC seems to return the companion object, which is incorrect
     // since we're in ype position.
-    """
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "StringBuilder",
-      |    "detail" : ": collection.mutable.StringBuilder.type"
-      |  } ]
-      |}
+    s"""
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "StringBuilder",
+       |    "kind" : ${CompletionItemKind.Value},
+       |    "detail" : ": collection.mutable.StringBuilder.type"
+       |  } ]
+       |}
     """.stripMargin
   )
 
@@ -92,14 +95,15 @@ object CompletionsTest extends CompilerSuite {
       | List.em<<>>
       |}
     """.stripMargin,
-    """
-      |{
-      |  "isIncomplete" : false,
-      |  "items" : [ {
-      |    "label" : "empty",
-      |    "detail" : "[A]: List[A]"
-      |  } ]
-      |}
+    s"""
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "empty",
+       |    "kind" : ${CompletionItemKind.Method},
+       |    "detail" : "[A]: List[A]"
+       |  } ]
+       |}
     """.stripMargin
   )
 
@@ -108,15 +112,75 @@ object CompletionsTest extends CompilerSuite {
     """
       |case class User(name: String, age: Int)
       |object a {
-      | User("", 1).<<>>
+      |  User("", 1).<<>>
       |}
     """.stripMargin, { completions =>
       val completionLength = completions.items.length
       assert(completionLength > 2)
-      val completionLabels = completions.items.map(_.label)
-      assert(completionLabels.contains("name"))
-      assert(completionLabels.contains("age"))
+      val name = completions.items.find(_.label == "name")
+      val age = completions.items.find(_.label == "age")
+      assert(name.isDefined)
+      assert(age.isDefined)
+      assert(name.get.kind == Some(CompletionItemKind.Field))
+      assert(age.get.kind == Some(CompletionItemKind.Field))
     }
+  )
+
+  check(
+    "trait",
+    """
+      |trait TestTrait
+      |object a {
+      |  val x: TestTr<<>>
+      |}
+    """.stripMargin,
+    s"""
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "TestTrait",
+       |    "kind" : ${CompletionItemKind.Interface},
+       |    "detail" : " extends "
+       |  } ]
+       |}
+    """.stripMargin
+  )
+
+  check(
+    "object",
+    """
+      |object testObject
+      |object a {
+      |  testObj<<>>
+      |}
+    """.stripMargin,
+    s"""
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "testObject",
+       |    "kind" : ${CompletionItemKind.Module},
+       |    "detail" : ""
+       |  } ]
+       |}
+    """.stripMargin
+  )
+
+  check(
+    "package",
+    """
+      | import scala.collect<<>>
+    """.stripMargin,
+    s"""
+       |{
+       |  "isIncomplete" : false,
+       |  "items" : [ {
+       |    "label" : "collection",
+       |    "kind" : ${CompletionItemKind.Module},
+       |    "detail" : ""
+       |  } ]
+       |}
+    """.stripMargin
   )
 
 }
