@@ -17,10 +17,10 @@ import scala.meta.languageserver.{index => i}
 import `scala`.meta.languageserver.index.Position
 import `scala`.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
+import langserver.{types => l}
 import langserver.core.Notifications
 import langserver.messages.DefinitionResult
 import langserver.messages.DocumentSymbolResult
-import langserver.messages.MessageType
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.FileIO
 import org.langmeta.internal.semanticdb.schema.Database
@@ -213,7 +213,7 @@ class SymbolIndex(
       // edit in the file. In the future, we can try more to make sense of
       // partially fresh files using something like edit distance.
       notifications.showMessage(
-        MessageType.Warning,
+        l.MessageType.Warning,
         "Please recompile for up-to-date information"
       )
       None

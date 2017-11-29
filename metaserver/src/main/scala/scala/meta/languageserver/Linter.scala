@@ -18,7 +18,6 @@ import scalafix.rule.RuleCtx
 import scalafix.rule.RuleName
 import scalafix.util.SemanticdbIndex
 import langserver.core.Connection
-import langserver.messages.MessageType
 import langserver.messages.PublishDiagnostics
 import langserver.{types => l}
 import metaconfig.ConfDecoder
@@ -89,7 +88,7 @@ class Linter(
 
       if (results.isEmpty) {
         connection.showMessage(
-          MessageType.Warning,
+          l.MessageType.Warning,
           "Ran scalafix but found no lint messages :("
         )
       }
@@ -122,7 +121,7 @@ class Linter(
     )
   }
 
-  private def toSeverity(s: LintSeverity): Int = s match {
+  private def toSeverity(s: LintSeverity): l.DiagnosticSeverity = s match {
     case LintSeverity.Error => l.DiagnosticSeverity.Error
     case LintSeverity.Warning => l.DiagnosticSeverity.Warning
     case LintSeverity.Info => l.DiagnosticSeverity.Information

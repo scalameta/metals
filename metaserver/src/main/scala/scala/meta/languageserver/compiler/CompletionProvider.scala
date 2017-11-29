@@ -7,7 +7,6 @@ import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
 import langserver.messages.CompletionList
-import langserver.messages.MessageType
 import langserver.types.CompletionItem
 import langserver.types.CompletionItemKind
 

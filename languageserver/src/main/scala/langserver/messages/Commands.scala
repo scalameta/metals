@@ -50,7 +50,7 @@ case class ServerCapabilities(
   /**
    * Defines how text documents are synced.
    */
-  textDocumentSync: Int = TextDocumentSyncKind.Full,
+  textDocumentSync: TextDocumentSyncKind = TextDocumentSyncKind.Full,
   /**
    * The server provides hover support.
    */
@@ -151,9 +151,9 @@ object ShutdownResult {
 
 case class ShowMessageRequestParams(
   /**
-   * The message type. @see MessageType
+   * The message type. @see [[MessageType]]
    */
-  tpe: Long,
+  tpe: MessageType,
 
   /**
    * The actual message
@@ -220,8 +220,8 @@ object ClientCommand extends CommandCompanion[ClientCommand] {
 
 // From server to client
 
-case class ShowMessageParams(tpe: Long, message: String) extends Notification
-case class LogMessageParams(tpe: Long, message: String) extends Notification
+case class ShowMessageParams(tpe: MessageType, message: String) extends Notification
+case class LogMessageParams(tpe: MessageType, message: String) extends Notification
 case class PublishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]) extends Notification
 
 // from client to server
@@ -247,14 +247,8 @@ object Initialized {
 
 case class CancelRequest(id: Int) extends Notification
 
-case class FileEvent(uri: String, `type`: Int)
+case class FileEvent(uri: String, tpe: FileChangeType)
 object FileEvent { implicit val format = Json.format[FileEvent] }
-
-object FileChangeType {
-  final val Created = 1
-  final val Changed = 2
-  final val Deleted = 3
-}
 
 object Notification extends NotificationCompanion[Notification] {
   override val NotificationFormats = Message.MessageFormats(
