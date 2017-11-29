@@ -80,7 +80,7 @@ class ScalametaLanguageServer(
   val scalafixNotifications: Observable[Effects.PublishLinterDiagnostics] =
     metaSemanticdbs.map(scalafix.reportLinterMessages)
   private var cancelEffects = List.empty[Cancelable]
-  var effects: List[Observable[Effects]] = List(
+  val effects: List[Observable[Effects]] = List(
     indexedDependencyClasspath,
     indexedFileSystemSemanticdbs,
     installedCompilers,
