@@ -35,25 +35,29 @@ object CompletionsTest extends CompilerSuite {
     )
   }
 
-  check(
-    "companion object",
-    """
-      |object a {
-      | Opti<<>>
-      |}
-    """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "Option",
-       |    "kind" : ${CompletionItemKind.Module.value},
-       |    "detail" : "",
-       |    "sortText" : "00000"
-       |  } ]
-       |}
+  def check(
+      filename: String,
+      code: String,
+      label: String,
+      kind: CompletionItemKind,
+      detail: String
+  ): Unit = {
+    check(
+      filename,
+      code,
+      s"""
+         |{
+         |  "isIncomplete" : false,
+         |  "items" : [ {
+         |    "label" : "$label",
+         |    "kind" : ${kind.value},
+         |    "detail" : "$detail",
+         |    "sortText" : "00000"
+         |  } ]
+         |}
     """.stripMargin
-  )
+    )
+  }
 
   check(
     "empty",
@@ -69,23 +73,27 @@ object CompletionsTest extends CompilerSuite {
   )
 
   check(
+    "companion object",
+    """
+      |object a {
+      | Opti<<>>
+      |}
+    """.stripMargin,
+    label = "Option",
+    kind = CompletionItemKind.Module,
+    detail = ""
+  )
+
+  check(
     "ctor",
     """
       |object a {
       | new StringBui<<>>
       |}
     """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "StringBuilder",
-       |    "kind" : ${CompletionItemKind.Value.value},
-       |    "detail" : " = StringBuilder",
-       |    "sortText" : "00000"
-       |  } ]
-       |}
-    """.stripMargin
+    label = "StringBuilder",
+    kind = CompletionItemKind.Value,
+    detail = " = StringBuilder"
   )
 
   check(
@@ -95,17 +103,9 @@ object CompletionsTest extends CompilerSuite {
       | List.em<<>>
       |}
     """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "empty",
-       |    "kind" : ${CompletionItemKind.Method.value},
-       |    "detail" : "[A]: List[A]",
-       |    "sortText" : "00000"
-       |  } ]
-       |}
-    """.stripMargin
+    label = "empty",
+    kind = CompletionItemKind.Method,
+    detail = "[A]: List[A]"
   )
 
   check(
@@ -135,17 +135,9 @@ object CompletionsTest extends CompilerSuite {
       |  val x: TestTr<<>>
       |}
     """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "TestTrait",
-       |    "kind" : ${CompletionItemKind.Interface.value},
-       |    "detail" : " extends ",
-       |    "sortText" : "00000"
-       |  } ]
-       |}
-    """.stripMargin
+    label = "TestTrait",
+    kind = CompletionItemKind.Interface,
+    detail = " extends "
   )
 
   check(
@@ -156,17 +148,9 @@ object CompletionsTest extends CompilerSuite {
       |  testObj<<>>
       |}
     """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "testObject",
-       |    "kind" : ${CompletionItemKind.Module.value},
-       |    "detail" : "",
-       |    "sortText" : "00000"
-       |  } ]
-       |}
-    """.stripMargin
+    label = "testObject",
+    kind = CompletionItemKind.Module,
+    detail = ""
   )
 
   check(
@@ -174,17 +158,9 @@ object CompletionsTest extends CompilerSuite {
     """
       |import scala.collect<<>>
     """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "collection",
-       |    "kind" : ${CompletionItemKind.Module.value},
-       |    "detail" : "",
-       |    "sortText" : "00000"
-       |  } ]
-       |}
-    """.stripMargin
+    label = "collection",
+    kind = CompletionItemKind.Module,
+    detail = ""
   )
 
   check(
