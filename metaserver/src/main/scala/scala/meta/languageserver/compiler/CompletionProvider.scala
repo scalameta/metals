@@ -32,24 +32,34 @@ object CompletionProvider extends LazyLogging {
       else CompletionItemKind.Value
     }
 
+    /** Computes the relative relevance of a symbol in the completion list
+      * This is an adaptation of
+      * https://github.com/scala-ide/scala-ide/blob/a17ace0ee1be1875b8992664069d8ad26162eeee/org.scala-ide.sdt.core/src/org/scalaide/core/completion/ProposalRelevanceCalculator.scala
+      */
     def computeRelevance(
         sym: Symbol,
         viaView: Symbol,
         inherited: Boolean
     ): Int = {
       var relevance = 0
+      // local symbols are more relevant
       if (sym.isLocalToBlock) relevance += 10
+      // fields are more relevant than non fields
       if (sym.hasGetter) relevance += 5
+      // non-inherited members are more relevant
       if (!inherited) relevance += 10
+      // symbols not provided via an implicit are more relevant
       if (viaView == NoSymbol) relevance += 20
       if (!sym.hasPackageFlag) relevance += 30
+      // accessors of case class members are more relevant
       if (sym.isCaseAccessor) relevance += 10
+      // public symbols are more relevant
       if (sym.isPublic) relevance += 10
+      // synthetic symbols are less relevant (e.g. `copy` on case classes)
+      if (!sym.isSynthetic) relevance += 10
+      // symbols whose owner is a base class are less relevant
       if (sym.owner != definitions.AnyClass && sym.owner != definitions.AnyRefClass && sym.owner != definitions.ObjectClass)
         relevance += 40
-      if (sym.owner != null && sym.owner.isCaseClass && sym.nameString == "copy") {
-        relevance -= 10
-      }
       relevance
     }
 
