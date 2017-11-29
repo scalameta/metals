@@ -104,7 +104,7 @@ lazy val metaserver = project
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
       "io.monix" %% "monix" % "2.3.0",
       "com.lihaoyi" %% "pprint" % "0.5.3",
-      "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java ctags
+      "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "ch.epfl.scala" % "scalafix-cli" % "0.5.6" cross CrossVersion.full,

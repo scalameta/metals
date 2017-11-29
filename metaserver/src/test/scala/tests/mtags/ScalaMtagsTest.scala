@@ -1,6 +1,6 @@
-package tests.ctags
+package tests.mtags
 
-object ScalaCtagsTest extends BaseCtagsTest {
+object ScalaMtagsTest extends BaseMtagsTest {
   check(
     "vanilla.scala",
     """

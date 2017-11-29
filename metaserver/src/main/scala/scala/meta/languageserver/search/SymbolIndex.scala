@@ -10,7 +10,7 @@ import scala.meta.languageserver.Effects
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.compiler.CompilerConfig
-import scala.meta.languageserver.ctags.Ctags
+import scala.meta.languageserver.mtags.Mtags
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
 import scala.meta.languageserver.storage.LevelDBMap
 import scala.meta.languageserver.{index => i}
@@ -136,7 +136,7 @@ class SymbolIndex(
           logger.info(s"Indexing classpath entry $path...")
           val database = db.getOrElseUpdate[AbsolutePath, Database](path, {
             () =>
-              Ctags.indexDatabase(path :: Nil)
+              Mtags.indexDatabase(path :: Nil)
           })
           indexDatabase(database)
         }

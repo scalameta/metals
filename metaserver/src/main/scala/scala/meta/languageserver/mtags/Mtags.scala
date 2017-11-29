@@ -1,4 +1,4 @@
-package scala.meta.languageserver.ctags
+package scala.meta.languageserver.mtags
 
 import java.io.IOException
 import java.net.URI
@@ -38,9 +38,10 @@ import org.langmeta.internal.semanticdb.schema.Document
  * requiring dependencies to publish semanticdbs alongside their artifacts.
  *
  * One other use-case for this module is to implement "Workspace symbol provider"
- * without any build-tool or compiler integration. Essentially, ctags.
+ * without any build-tool or compiler integration. "Mtags" name comes from
+ * mixing "meta" and "ctags".
  */
-object Ctags extends LazyLogging {
+object Mtags extends LazyLogging {
 
   /**
    * Build an index from a classpath of -sources.jar
@@ -137,9 +138,9 @@ object Ctags extends LazyLogging {
   /** Index single Scala or Java source file from memory */
   def index(input: Input.VirtualFile): Document = {
     logger.trace(s"Indexing ${input.path} with length ${input.value.length}")
-    val indexer: CtagsIndexer =
-      if (isScala(input.path)) ScalaCtags.index(input)
-      else if (isJava(input.path)) JavaCtags.index(input)
+    val indexer: MtagsIndexer =
+      if (isScala(input.path)) ScalaMtags.index(input)
+      else if (isJava(input.path)) JavaMtags.index(input)
       else {
         throw new IllegalArgumentException(
           s"Unknown file extension ${input.path}"
