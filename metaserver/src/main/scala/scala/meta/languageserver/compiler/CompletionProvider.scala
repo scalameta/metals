@@ -43,8 +43,13 @@ object CompletionProvider extends LazyLogging {
       if (!inherited) relevance += 10
       if (viaView == NoSymbol) relevance += 20
       if (!sym.hasPackageFlag) relevance += 30
+      if (sym.isCaseAccessor) relevance += 10
+      if (sym.isPublic) relevance += 10
       if (sym.owner != definitions.AnyClass && sym.owner != definitions.AnyRefClass && sym.owner != definitions.ObjectClass)
         relevance += 40
+      if (sym.owner != null && sym.owner.isCaseClass && sym.nameString == "copy") {
+        relevance -= 10
+      }
       relevance
     }
 
@@ -61,19 +66,21 @@ object CompletionProvider extends LazyLogging {
       .sortBy {
         case TypeMember(sym, _, true, inherited, viaView) =>
           // logger.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
-          -computeRelevance(sym, viaView, inherited)
+          (-computeRelevance(sym, viaView, inherited), sym.nameString)
         case ScopeMember(sym, _, true, _) =>
-          -computeRelevance(sym, NoSymbol, false)
-        case _ => 0
+          (-computeRelevance(sym, NoSymbol, false), sym.nameString)
+        case r => (0, r.sym.nameString)
       }
-      .foreach { r =>
+      .zipWithIndex
+      .foreach { case (r, idx) =>
         val label = r.symNameDropLocal.decoded
         if (!isUsedLabel(label)) {
           isUsedLabel += label
           items += CompletionItem(
             label = label,
             detail = Some(r.sym.signatureString),
-            kind = Some(completionItemKind(r))
+            kind = Some(completionItemKind(r)),
+            sortText = Some(f"${idx}%05d")
           )
         }
       }

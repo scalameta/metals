@@ -48,7 +48,8 @@ object CompletionsTest extends CompilerSuite {
        |  "items" : [ {
        |    "label" : "Option",
        |    "kind" : ${CompletionItemKind.Module.value},
-       |    "detail" : ""
+       |    "detail" : "",
+       |    "sortText" : "00000"
        |  } ]
        |}
     """.stripMargin
@@ -74,15 +75,14 @@ object CompletionsTest extends CompilerSuite {
       | new StringBui<<>>
       |}
     """.stripMargin,
-    // PC seems to return the companion object, which is incorrect
-    // since we're in ype position.
     s"""
        |{
        |  "isIncomplete" : false,
        |  "items" : [ {
        |    "label" : "StringBuilder",
        |    "kind" : ${CompletionItemKind.Value.value},
-       |    "detail" : ": collection.mutable.StringBuilder.type"
+       |    "detail" : " = StringBuilder",
+       |    "sortText" : "00000"
        |  } ]
        |}
     """.stripMargin
@@ -101,7 +101,8 @@ object CompletionsTest extends CompilerSuite {
        |  "items" : [ {
        |    "label" : "empty",
        |    "kind" : ${CompletionItemKind.Method.value},
-       |    "detail" : "[A]: List[A]"
+       |    "detail" : "[A]: List[A]",
+       |    "sortText" : "00000"
        |  } ]
        |}
     """.stripMargin
@@ -140,7 +141,8 @@ object CompletionsTest extends CompilerSuite {
        |  "items" : [ {
        |    "label" : "TestTrait",
        |    "kind" : ${CompletionItemKind.Interface.value},
-       |    "detail" : " extends "
+       |    "detail" : " extends ",
+       |    "sortText" : "00000"
        |  } ]
        |}
     """.stripMargin
@@ -160,7 +162,8 @@ object CompletionsTest extends CompilerSuite {
        |  "items" : [ {
        |    "label" : "testObject",
        |    "kind" : ${CompletionItemKind.Module.value},
-       |    "detail" : ""
+       |    "detail" : "",
+       |    "sortText" : "00000"
        |  } ]
        |}
     """.stripMargin
@@ -169,7 +172,7 @@ object CompletionsTest extends CompilerSuite {
   check(
     "package",
     """
-      | import scala.collect<<>>
+      |import scala.collect<<>>
     """.stripMargin,
     s"""
        |{
@@ -177,10 +180,45 @@ object CompletionsTest extends CompilerSuite {
        |  "items" : [ {
        |    "label" : "collection",
        |    "kind" : ${CompletionItemKind.Module.value},
-       |    "detail" : ""
+       |    "detail" : "",
+       |    "sortText" : "00000"
        |  } ]
        |}
     """.stripMargin
+  )
+
+  check(
+    "sorting",
+    """
+      |case class User(name: String, age: Int) {
+      |  val someVal = 42
+      |  def someMethod(x: String) = x
+      |}
+      |object a {
+      |  User("test", 42).<<>>
+      |}
+    """.stripMargin, { completions =>
+      val first = completions.items(0)
+      assert(first.label == "age")
+      assert(first.kind == Some(CompletionItemKind.Field))
+
+      val second = completions.items(1)
+      assert(second.label == "name")
+      assert(second.kind == Some(CompletionItemKind.Field))
+
+      val third = completions.items(2)
+      assert(third.label == "someMethod")
+      assert(third.kind == Some(CompletionItemKind.Method))
+
+      val fourth = completions.items(3)
+      assert(fourth.label == "someVal")
+      assert(fourth.kind == Some(CompletionItemKind.Value))
+
+      val last = completions.items.last
+      assert(last.label == "wait")
+      assert(last.kind == Some(CompletionItemKind.Method))
+
+    }
   )
 
 }
