@@ -58,4 +58,66 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |_root_.a.b.c.K.l. => def l
       """.stripMargin
   )
+
+  check(
+    "pats.scala",
+    """
+      |object pats {
+      |  val o, p = 2
+      |  val q, r: Int
+      |  var s, t = 2
+      |  var v, w: Int
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Scala212
+      |
+      |Names:
+      |[8..12): pats <= _root_.pats.
+      |[21..22): o <= _root_.pats.o.
+      |[24..25): p <= _root_.pats.p.
+      |[36..37): q <= _root_.pats.q.
+      |[39..40): r <= _root_.pats.r.
+      |[52..53): s <= _root_.pats.s.
+      |[55..56): t <= _root_.pats.t.
+      |[67..68): v <= _root_.pats.v.
+      |[70..71): w <= _root_.pats.w.
+      |
+      |Symbols:
+      |_root_.pats. => object pats
+      |_root_.pats.o. => val o
+      |_root_.pats.p. => val p
+      |_root_.pats.q. => val q
+      |_root_.pats.r. => val r
+      |_root_.pats.s. => var s
+      |_root_.pats.t. => var t
+      |_root_.pats.v. => var v
+      |_root_.pats.w. => var w
+    """.stripMargin
+  )
+
+  check(
+    "type.scala",
+    """
+      |trait Tpe {
+      |  type M
+      |  type N = F
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Scala212
+      |
+      |Names:
+      |[7..10): Tpe <= _root_.Tpe#
+      |[20..21): M <= _root_.Tpe#M#
+      |[29..30): N <= _root_.Tpe#N#
+      |
+      |Symbols:
+      |_root_.Tpe# => trait Tpe
+      |_root_.Tpe#M# => type M
+      |_root_.Tpe#N# => type N
+    """.stripMargin
+  )
 }
