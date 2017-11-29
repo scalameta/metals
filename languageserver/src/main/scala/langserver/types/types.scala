@@ -314,17 +314,31 @@ object TextDocumentContentChangeEvent {
 }
 
 case class DocumentFormattingParams(
-	/**
-	 * The document to format.
-	 */
-	textDocument: TextDocumentIdentifier,
+  /**
+   * The document to format.
+   */
+  textDocument: TextDocumentIdentifier,
 
-	/**
-	 * The format options.
-	 */
-	options: FormattingOptions
+  /**
+   * The format options.
+   */
+  options: FormattingOptions
 )
 
 object DocumentFormattingParams {
   implicit val format = Json.format[DocumentFormattingParams]
+}
+
+/**
+  * An event describing a file change.
+  *
+  * @param uri The file's URI
+  * @param `type` The change type
+  */
+case class FileEvent(
+  uri: String,
+  `type`: FileChangeType
+)
+object FileEvent {
+  implicit val format = Json.format[FileEvent]
 }

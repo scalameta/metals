@@ -149,21 +149,20 @@ object ShutdownResult {
     OWrites[ShutdownResult](s => Json.obj()))
 }
 
+/**
+  * The show message request is sent from a server to a client to ask the client to display a
+  * particular message in the user interface. In addition to the show message notification the
+  * request allows to pass actions and to wait for an answer from the client.
+  *
+  * @param `type` The message type. @see [[MessageType]]
+  * @param message The actual message
+  * @param actions The message action items to present.
+  */
 case class ShowMessageRequestParams(
-  /**
-   * The message type. @see [[MessageType]]
-   */
-  tpe: MessageType,
-
-  /**
-   * The actual message
-   */
+  `type`: MessageType,
   message: String,
-
-  /**
-   * The message action items to present.
-   */
-  actions: Seq[MessageActionItem]) extends ClientCommand
+  actions: Seq[MessageActionItem]
+) extends ClientCommand
 
 /**
  * A short title like 'Retry', 'Open Log' etc.
@@ -220,8 +219,8 @@ object ClientCommand extends CommandCompanion[ClientCommand] {
 
 // From server to client
 
-case class ShowMessageParams(tpe: MessageType, message: String) extends Notification
-case class LogMessageParams(tpe: MessageType, message: String) extends Notification
+case class ShowMessageParams(`type`: MessageType, message: String) extends Notification
+case class LogMessageParams(`type`: MessageType, message: String) extends Notification
 case class PublishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]) extends Notification
 
 // from client to server
@@ -246,9 +245,6 @@ object Initialized {
 
 
 case class CancelRequest(id: Int) extends Notification
-
-case class FileEvent(uri: String, tpe: FileChangeType)
-object FileEvent { implicit val format = Json.format[FileEvent] }
 
 object Notification extends NotificationCompanion[Notification] {
   override val NotificationFormats = Message.MessageFormats(

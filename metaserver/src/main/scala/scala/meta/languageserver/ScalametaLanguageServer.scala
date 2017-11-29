@@ -20,7 +20,6 @@ import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
 import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
-import langserver.messages.FileEvent
 import langserver.messages.Hover
 import langserver.messages.ResultResponse
 import langserver.messages.ServerCapabilities
