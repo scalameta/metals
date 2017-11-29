@@ -14,9 +14,10 @@ class BaseMtagsTest extends MegaSuite {
   }
   def check(filename: String, original: String, expected: String): Unit = {
     test(filename) {
-      val obtained = Database(Mtags.index(filename, original) :: Nil)
+      val sdb = Database(Mtags.index(filename, original) :: Nil)
+      val obtained = sdb.toDb(None).documents.head.syntax
 //      println(obtained)
-      assertNoDiff(obtained.toDb(None).documents.head.syntax, expected)
+      assertNoDiff(obtained, expected)
     }
   }
 }

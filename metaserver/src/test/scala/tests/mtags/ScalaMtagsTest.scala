@@ -10,7 +10,11 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |   val f = 2
       |   var g = 2
       |   class H { def x = 3 }
-      |   trait I { def x = 3 }
+      |   trait I {
+      |     def x: Int
+      |     val y: Int
+      |     var z: Int
+      |   }
       |   object J { def k = 2 }
       |}
       |package object K {
@@ -29,11 +33,13 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |[89..90): H <= _root_.a.b.c.D.H#
       |[97..98): x <= _root_.a.b.c.D.H#x.
       |[114..115): I <= _root_.a.b.c.D.I#
-      |[122..123): x <= _root_.a.b.c.D.I#x.
-      |[140..141): J <= _root_.a.b.c.D.J.
-      |[148..149): k <= _root_.a.b.c.D.J.k.
-      |[173..174): K <= _root_.a.b.c.K.
-      |[183..184): l <= _root_.a.b.c.K.l.
+      |[127..128): x <= _root_.a.b.c.D.I#x.
+      |[143..144): y <= _root_.a.b.c.D.I#y.
+      |[159..160): z <= _root_.a.b.c.D.I#z.
+      |[181..182): J <= _root_.a.b.c.D.J.
+      |[189..190): k <= _root_.a.b.c.D.J.k.
+      |[214..215): K <= _root_.a.b.c.K.
+      |[224..225): l <= _root_.a.b.c.K.l.
       |
       |Symbols:
       |_root_.a.b.c.D. => object D
@@ -41,11 +47,13 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |_root_.a.b.c.D.H#x. => def x
       |_root_.a.b.c.D.I# => trait I
       |_root_.a.b.c.D.I#x. => def x
+      |_root_.a.b.c.D.I#y. => val y
+      |_root_.a.b.c.D.I#z. => var z
       |_root_.a.b.c.D.J. => object J
       |_root_.a.b.c.D.J.k. => def k
       |_root_.a.b.c.D.e. => def e
-      |_root_.a.b.c.D.f. => def f
-      |_root_.a.b.c.D.g. => def g
+      |_root_.a.b.c.D.f. => val f
+      |_root_.a.b.c.D.g. => var g
       |_root_.a.b.c.K. => packageobject K
       |_root_.a.b.c.K.l. => def l
       """.stripMargin
