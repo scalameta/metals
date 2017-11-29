@@ -7,7 +7,6 @@ import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
 import langserver.messages.CompletionList
-import langserver.messages.MessageType
 import langserver.types.CompletionItem
 import langserver.types.CompletionItemKind
 
@@ -20,7 +19,7 @@ object CompletionProvider extends LazyLogging {
   ): CompletionList = {
     import compiler.CompletionResult
 
-    def completionItemKind(r: CompletionResult#M): Int = {
+    def completionItemKind(r: CompletionResult#M): CompletionItemKind = {
       if (r.sym.isPackage) CompletionItemKind.Module
       else if (r.sym.isPackageObject) CompletionItemKind.Module
       else if (r.sym.isModuleOrModuleClass) CompletionItemKind.Module

@@ -10,7 +10,6 @@ import scala.meta.languageserver.{index => i}
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
 object ScalametaEnrichments {
-  type SymbolKind = Int
 
   implicit class XtensionTreeLSP(val tree: m.Tree) extends AnyVal {
     import scala.meta._

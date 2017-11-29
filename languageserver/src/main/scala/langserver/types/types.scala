@@ -21,19 +21,22 @@ object Range { implicit val format = Json.format[Range] }
 case class Location(uri: String, range: Range)
 object Location { implicit val format = Json.format[Location] }
 
-object DiagnosticSeverity {
-  final val Error = 1
-  final val Warning = 2
-  final val Information = 3
-  final val Hint = 4
-}
-
+/**
+  * Represents a diagnostic, such as a compiler error or warning. Diagnostic objects are only valid
+  * in the scope of a resource.
+  *
+  * @param range the range at which this diagnostic applies
+  * @param severity severity of this diagnostics (see above)
+  * @param code a code for this diagnostic
+  * @param source the source of this diagnostic (like 'typescript' or 'scala')
+  * @param message the diagnostic message
+  */
 case class Diagnostic(
-  range: Range, // the range at which this diagnostic applies
-  severity: Option[Int], // severity of this diagnostics (see above)
-  code: Option[String], // a code for this diagnostic
-  source: Option[String], // the source of this diagnostic (like 'typescript' or 'scala')
-  message: String // the diagnostic message
+  range: Range,
+  severity: Option[DiagnosticSeverity],
+  code: Option[String],
+  source: Option[String],
+  message: String
 )
 object Diagnostic {
   implicit val format = Json.format[Diagnostic]
@@ -86,30 +89,9 @@ object TextDocumentItem {
   implicit val format = Json.format[TextDocumentItem]
 }
 
-object CompletionItemKind {
-  final val Text = 1
-  final val Method = 2
-  final val Function = 3
-  final val Constructor = 4
-  final val Field = 5
-  final val Variable = 6
-  final val Class = 7
-  final val Interface = 8
-  final val Module = 9
-  final val Property = 10
-  final val Unit = 11
-  final val Value = 12
-  final val Enum = 13
-  final val Keyword = 14
-  final val Snippet = 15
-  final val Color = 16
-  final val File = 17
-  final val Reference = 18
-}
-
 case class CompletionItem(
   label: String,
-  kind: Option[Int] = None,
+  kind: Option[CompletionItemKind] = None,
   detail: Option[String] = None,
   documentation: Option[String] = None,
   sortText: Option[String] = None,
@@ -181,23 +163,6 @@ case class ReferenceContext(
   /** Include the declaration of the current symbol. */
   includeDeclaration: Boolean)
 
-object DocumentHighlightKind {
-  /**
-   * A textual occurrence.
-   */
-  final val Text = 1
-
-  /**
-   * Read-access of a symbol, like reading a variable.
-   */
-  final val Read = 2
-
-  /**
-   * Write-access of a symbol, like writing to a variable.
-   */
-  final val Write = 3
-}
-
 /**
  * A document highlight is a range inside a text document which deserves
  * special attention. Usually a document highlight is visualized by changing
@@ -208,30 +173,13 @@ case class DocumentHighlight(
   range: Range,
 
   /** The highlight kind, default is [text](#DocumentHighlightKind.Text). */
-  kind: Int = DocumentHighlightKind.Text)
+  kind: DocumentHighlightKind = DocumentHighlightKind.Text)
 
-object SymbolKind {
-  final val File = 1
-  final val Module = 2
-  final val Namespace = 3
-  final val Package = 4
-  final val Class = 5
-  final val Method = 6
-  final val Property = 7
-  final val Field = 8
-  final val Constructor = 9
-  final val Enum = 10
-  final val Interface = 11
-  final val Function = 12
-  final val Variable = 13
-  final val Constant = 14
-  final val String = 15
-  final val Number = 16
-  final val Boolean = 17
-  final val Array = 18
-}
-
-case class SymbolInformation(name: String, kind: Int, location: Location, containerName: Option[String])
+case class SymbolInformation(
+  name: String,
+  kind: SymbolKind,
+  location: Location,
+  containerName: Option[String])
 object SymbolInformation {
   implicit val format = Json.format[SymbolInformation]
 }
@@ -366,17 +314,31 @@ object TextDocumentContentChangeEvent {
 }
 
 case class DocumentFormattingParams(
-	/**
-	 * The document to format.
-	 */
-	textDocument: TextDocumentIdentifier,
+  /**
+   * The document to format.
+   */
+  textDocument: TextDocumentIdentifier,
 
-	/**
-	 * The format options.
-	 */
-	options: FormattingOptions
+  /**
+   * The format options.
+   */
+  options: FormattingOptions
 )
 
 object DocumentFormattingParams {
   implicit val format = Json.format[DocumentFormattingParams]
+}
+
+/**
+  * An event describing a file change.
+  *
+  * @param uri The file's URI
+  * @param `type` The change type
+  */
+case class FileEvent(
+  uri: String,
+  `type`: FileChangeType
+)
+object FileEvent {
+  implicit val format = Json.format[FileEvent]
 }

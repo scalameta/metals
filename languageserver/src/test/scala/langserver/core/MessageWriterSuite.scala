@@ -9,6 +9,7 @@ import org.scalatest.FunSuite
 import org.scalatest.OptionValues
 
 import langserver.messages.ShowMessageParams
+import langserver.types.MessageType
 import play.api.libs.json.Json
 
 class MessageWriterSuite extends FunSuite
@@ -33,7 +34,7 @@ class MessageWriterSuite extends FunSuite
     val msgWriter = new MessageWriter(outStream)
     val msgReader = new MessageReader(inStream)
 
-    val obj = ShowMessageParams(1, "test")
+    val obj = ShowMessageParams(MessageType.Error, "test")
     msgWriter.write(obj)
 
     val payload = msgReader.nextPayload()

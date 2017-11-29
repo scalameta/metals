@@ -52,11 +52,11 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
    * @param tpe One of MessageType values
    * @param message The message to display in the client
    */
-  def showMessage(tpe: Int, message: String): Unit = {
+  def showMessage(tpe: MessageType, message: String): Unit = {
     sendNotification(ShowMessageParams(tpe, message))
   }
 
-  def showMessage(tpe: Int, message: String, actions: String*): Unit = {
+  def showMessage(tpe: MessageType, message: String, actions: String*): Unit = {
     ???
   }
 
@@ -67,7 +67,7 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
    * @param tpe One of MessageType values
    * @param message The message to display in the client
    */
-  def logMessage(tpe: Int, message: String): Unit = {
+  def logMessage(tpe: MessageType, message: String): Unit = {
     sendNotification(LogMessageParams(tpe, message))
   }
 
