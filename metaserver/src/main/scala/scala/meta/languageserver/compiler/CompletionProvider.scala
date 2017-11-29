@@ -19,7 +19,7 @@ object CompletionProvider extends LazyLogging {
   ): CompletionList = {
     import compiler.CompletionResult
 
-    def completionItemKind(r: CompletionResult#M): Int = {
+    def completionItemKind(r: CompletionResult#M): CompletionItemKind = {
       if (r.sym.isPackage) CompletionItemKind.Module
       else if (r.sym.isPackageObject) CompletionItemKind.Module
       else if (r.sym.isModuleOrModuleClass) CompletionItemKind.Module

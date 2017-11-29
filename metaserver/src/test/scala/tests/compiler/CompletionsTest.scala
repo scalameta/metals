@@ -47,7 +47,7 @@ object CompletionsTest extends CompilerSuite {
        |  "isIncomplete" : false,
        |  "items" : [ {
        |    "label" : "Option",
-       |    "kind" : ${CompletionItemKind.Module},
+       |    "kind" : ${CompletionItemKind.Module.value},
        |    "detail" : ""
        |  } ]
        |}
@@ -81,7 +81,7 @@ object CompletionsTest extends CompilerSuite {
        |  "isIncomplete" : false,
        |  "items" : [ {
        |    "label" : "StringBuilder",
-       |    "kind" : ${CompletionItemKind.Value},
+       |    "kind" : ${CompletionItemKind.Value.value},
        |    "detail" : ": collection.mutable.StringBuilder.type"
        |  } ]
        |}
@@ -100,7 +100,7 @@ object CompletionsTest extends CompilerSuite {
        |  "isIncomplete" : false,
        |  "items" : [ {
        |    "label" : "empty",
-       |    "kind" : ${CompletionItemKind.Method},
+       |    "kind" : ${CompletionItemKind.Method.value},
        |    "detail" : "[A]: List[A]"
        |  } ]
        |}
@@ -139,7 +139,7 @@ object CompletionsTest extends CompilerSuite {
        |  "isIncomplete" : false,
        |  "items" : [ {
        |    "label" : "TestTrait",
-       |    "kind" : ${CompletionItemKind.Interface},
+       |    "kind" : ${CompletionItemKind.Interface.value},
        |    "detail" : " extends "
        |  } ]
        |}
@@ -159,7 +159,7 @@ object CompletionsTest extends CompilerSuite {
        |  "isIncomplete" : false,
        |  "items" : [ {
        |    "label" : "testObject",
-       |    "kind" : ${CompletionItemKind.Module},
+       |    "kind" : ${CompletionItemKind.Module.value},
        |    "detail" : ""
        |  } ]
        |}
@@ -176,7 +176,7 @@ object CompletionsTest extends CompilerSuite {
        |  "isIncomplete" : false,
        |  "items" : [ {
        |    "label" : "collection",
-       |    "kind" : ${CompletionItemKind.Module},
+       |    "kind" : ${CompletionItemKind.Module.value},
        |    "detail" : ""
        |  } ]
        |}
