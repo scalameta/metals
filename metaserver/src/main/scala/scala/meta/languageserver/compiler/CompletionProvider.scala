@@ -33,9 +33,9 @@ object CompletionProvider extends LazyLogging {
     }
 
     /** Computes the relative relevance of a symbol in the completion list
-      * This is an adaptation of
-      * https://github.com/scala-ide/scala-ide/blob/a17ace0ee1be1875b8992664069d8ad26162eeee/org.scala-ide.sdt.core/src/org/scalaide/core/completion/ProposalRelevanceCalculator.scala
-      */
+     * This is an adaptation of
+     * https://github.com/scala-ide/scala-ide/blob/a17ace0ee1be1875b8992664069d8ad26162eeee/org.scala-ide.sdt.core/src/org/scalaide/core/completion/ProposalRelevanceCalculator.scala
+     */
     def computeRelevance(
         sym: Symbol,
         viaView: Symbol,

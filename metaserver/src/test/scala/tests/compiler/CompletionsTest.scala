@@ -55,7 +55,7 @@ object CompletionsTest extends CompilerSuite {
          |    "sortText" : "00000"
          |  } ]
          |}
-    """.stripMargin
+      """.stripMargin
     )
   }
 
