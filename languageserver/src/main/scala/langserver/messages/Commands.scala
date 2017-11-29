@@ -172,12 +172,22 @@ object MessageActionItem {
   implicit val format = Json.format[MessageActionItem]
 }
 
-case class TextDocumentPositionParams(textDocument: TextDocumentIdentifier, position: Position)
+case class TextDocumentPositionParams(
+  textDocument: TextDocumentIdentifier,
+  position: Position
+)
+case class ReferenceParams(
+  textDocument: TextDocumentIdentifier,
+  position: Position,
+  context: ReferenceContext
+)
+
 case class DocumentSymbolParams(textDocument: TextDocumentIdentifier) extends ServerCommand
 
 case class TextDocumentSignatureHelpRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentCompletionRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentDefinitionRequest(params: TextDocumentPositionParams) extends ServerCommand
+case class TextDocumentReferencesRequest(params: ReferenceParams) extends ServerCommand
 case class TextDocumentHoverRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentFormattingRequest(params: DocumentFormattingParams) extends ServerCommand
 
@@ -190,12 +200,14 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
   import JsonRpcUtils._
 
   implicit val positionParamsFormat = Json.format[TextDocumentPositionParams]
+  implicit val referenceParamsFormat = Json.format[ReferenceParams]
 
   override val CommandFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeParams],
     "textDocument/completion" -> valueFormat(TextDocumentCompletionRequest)(_.params),
     "textDocument/signatureHelp" -> valueFormat(TextDocumentSignatureHelpRequest)(_.params),
     "textDocument/definition" -> valueFormat(TextDocumentDefinitionRequest)(_.params),
+    "textDocument/references" -> valueFormat(TextDocumentReferencesRequest)(_.params),
     "textDocument/hover" -> valueFormat(TextDocumentHoverRequest)(_.params),
     "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams],
     "textDocument/formatting" -> valueFormat(TextDocumentFormattingRequest)(_.params)
@@ -271,6 +283,7 @@ object Notification extends NotificationCompanion[Notification] {
 
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
 case class DefinitionResult(params: Seq[Location]) extends ResultResponse
+case class ReferencesResult(params: Seq[Location]) extends ResultResponse
 case class DocumentFormattingResult(params: Seq[TextEdit]) extends ResultResponse
 
 object ResultResponse extends ResponseCompanion[Any] {
@@ -281,6 +294,7 @@ object ResultResponse extends ResponseCompanion[Any] {
     "textDocument/completion" -> Json.format[CompletionList],
     "textDocument/signatureHelp" -> Json.format[SignatureHelp],
     "textDocument/definition" -> valueFormat(DefinitionResult)(_.params),
+    "textDocument/references" -> valueFormat(ReferencesResult)(_.params),
     "textDocument/hover" -> Json.format[Hover],
     "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
     "textDocument/formatting" -> valueFormat(DocumentFormattingResult)(_.params),

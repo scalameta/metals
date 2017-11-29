@@ -23,6 +23,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
         signatureHelpRequest(textDocument, position)
       case ("textDocument/definition", TextDocumentDefinitionRequest(TextDocumentPositionParams(textDocument, position))) =>
         gotoDefinitionRequest(textDocument, position)
+      case ("textDocument/references", TextDocumentReferencesRequest(ReferenceParams(textDocument, position, context))) =>
+        referencesRequest(textDocument, position, context)
       case ("textDocument/hover", TextDocumentHoverRequest(TextDocumentPositionParams(textDocument, position))) =>
         hoverRequest(textDocument, position)
       case ("textDocument/documentSymbol", DocumentSymbolParams(tdi)) =>
@@ -98,6 +100,10 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   def gotoDefinitionRequest(textDocument: TextDocumentIdentifier, position: Position): DefinitionResult = {
     DefinitionResult(Seq.empty[Location])
+  }
+
+  def referencesRequest(textDocument: TextDocumentIdentifier, position: Position, context: ReferenceContext): ReferencesResult = {
+    ReferencesResult(Seq.empty[Location])
   }
 
   def hoverRequest(textDocument: TextDocumentIdentifier, position: Position): Hover = {
