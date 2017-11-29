@@ -20,6 +20,7 @@ import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
 import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
+import langserver.messages.ReferencesResult
 import langserver.messages.Hover
 import langserver.messages.ResultResponse
 import langserver.messages.ServerCapabilities
@@ -111,6 +112,7 @@ class ScalametaLanguageServer(
         )
       ),
       definitionProvider = true,
+      referencesProvider = true,
       documentSymbolProvider = true,
       documentFormattingProvider = true,
       hoverProvider = true
@@ -245,6 +247,17 @@ class ScalametaLanguageServer(
     symbolIndexer
       .goToDefinition(path, position.line, position.character)
       .getOrElse(DefinitionResult(Nil))
+  }
+
+  override def referencesRequest(
+      td: TextDocumentIdentifier,
+      position: Position,
+      context: ReferenceContext
+  ): ReferencesResult = {
+    val path = Uri.toPath(td.uri).get
+    symbolIndexer
+      .references(path, position.line, position.character)
+    // TODO: context?
   }
 
   override def signatureHelpRequest(

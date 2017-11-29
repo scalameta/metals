@@ -20,6 +20,7 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.{types => l}
 import langserver.core.Notifications
 import langserver.messages.DefinitionResult
+import langserver.messages.ReferencesResult
 import langserver.messages.DocumentSymbolResult
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.FileIO
@@ -109,6 +110,21 @@ class SymbolIndex(
       val location = nonJarDefinition.toLocation
       DefinitionResult(location :: Nil)
     }
+  }
+
+  /** Returns the definition position of the symbol at the given position */
+  def references(
+      path: AbsolutePath,
+      line: Int,
+      column: Int
+  ): ReferencesResult = {
+    val locations = for {
+      symbol <- findSymbol(path, line, column).toSeq
+      (uri, ranges) <- symbol.references
+      range <- ranges.ranges
+    } yield i.Position(uri, Some(range)).toLocation
+    logger.info(s"Found references $locations")
+    ReferencesResult(locations)
   }
 
   def indexDependencyClasspath(
