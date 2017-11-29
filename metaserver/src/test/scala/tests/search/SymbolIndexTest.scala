@@ -54,7 +54,10 @@ object SymbolIndexTest extends MegaSuite {
         expected: String
     ): Unit = {
       val term = indexer.findSymbol(path, line, column)
-      Predef.assert(term.isDefined, s"Symbol not found at $path:$line:$column")
+      Predef.assert(
+        term.isDefined,
+        s"Symbol not found at $path:$line:$column. Did you run scalametaEnableCompletions from sbt?"
+      )
       assertNoDiff(term.get.symbol, expected)
       Predef.assert(
         term.get.definition.isDefined,
