@@ -30,15 +30,7 @@ class Linter(
     cwd: AbsolutePath,
     out: OutputStream,
     connection: Connection,
-    semanticdbs: Observable[m.Database]
 ) {
-  val linter: Observable[Unit] =
-    semanticdbs.map { mdb =>
-      val index =
-        EagerInMemorySemanticdbIndex(mdb, m.Sourcepath(Nil), m.Classpath(Nil))
-      val messages = analyzeIndex(index)
-      messages.foreach(connection.sendNotification)
-    }
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(
@@ -63,6 +55,17 @@ class Linter(
     )
   }
 
+  def reportLinterMessages(
+      mdb: m.Database
+  ): Effects.PublishLinterDiagnostics = {
+    val messages = analyzeIndex(mdb)
+    messages.foreach(connection.sendNotification)
+    Effects.PublishLinterDiagnostics
+  }
+  private def analyzeIndex(mdb: m.Database): Seq[PublishDiagnostics] =
+    analyzeIndex(
+      EagerInMemorySemanticdbIndex(mdb, m.Sourcepath(Nil), m.Classpath(Nil))
+    )
   private def analyzeIndex(index: SemanticdbIndex): Seq[PublishDiagnostics] =
     withConfig { configInput =>
       val lazyIndex = lazySemanticdbIndex(index)

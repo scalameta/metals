@@ -4,8 +4,15 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.concurrent.ConcurrentHashMap
 import scala.meta.languageserver.Buffers
+import scala.meta.languageserver.Effects
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.languageserver.ServerConfig
+import scala.meta.languageserver.compiler.CompilerConfig
+import scala.meta.languageserver.ctags.Ctags
+import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
+import scala.meta.languageserver.storage.LevelDBMap
 import scala.meta.languageserver.{index => i}
 import `scala`.meta.languageserver.index.Position
 import `scala`.meta.languageserver.index.SymbolData
@@ -16,6 +23,7 @@ import langserver.messages.DocumentSymbolResult
 import langserver.messages.MessageType
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.FileIO
+import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.internal.semanticdb.schema.Document
 import org.langmeta.internal.semanticdb.schema.ResolvedName
 import org.langmeta.internal.semanticdb.{schema => s}
@@ -36,7 +44,10 @@ class SymbolIndex(
     cwd: AbsolutePath,
     notifications: Notifications,
     buffers: Buffers,
+    serverConfig: ServerConfig,
 ) extends LazyLogging {
+  private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
+    new ConcurrentHashMap[AbsolutePath, Unit]()
 
   /** Returns a symbol at the given location with a non-empty definition */
   def findSymbol(
@@ -100,9 +111,44 @@ class SymbolIndex(
     }
   }
 
+  def indexDependencyClasspath(
+      sourceJars: List[AbsolutePath]
+  ): Effects.IndexSourcesClasspath = {
+    if (!serverConfig.indexClasspath) Effects.IndexSourcesClasspath
+    else {
+      val sourceJarsWithJDK =
+        if (serverConfig.indexJDK)
+          CompilerConfig.jdkSources.fold(sourceJars)(_ :: sourceJars)
+        else sourceJars
+      val buf = List.newBuilder[AbsolutePath]
+      sourceJarsWithJDK.foreach { jar =>
+        // ensure we only index each jar once even under race conditions.
+        // race conditions are not unlikely since multiple .compilerconfig
+        // are typically created at the same time for each project/configuration
+        // combination. Duplicate tasks are expensive, for example we don't want
+        // to index the JDK twice on first startup.
+        indexedJars.computeIfAbsent(jar, _ => buf += jar)
+      }
+      val sourceJarsToIndex = buf.result()
+      // Acquire a lock on the leveldb cache only during indexing.
+      LevelDBMap.withDB(cacheDirectory.resolve("leveldb").toFile) { db =>
+        sourceJarsToIndex.foreach { path =>
+          logger.info(s"Indexing classpath entry $path...")
+          val database = db.getOrElseUpdate[AbsolutePath, Database](path, {
+            () =>
+              Ctags.indexDatabase(path :: Nil)
+          })
+          indexDatabase(database)
+        }
+      }
+      Effects.IndexSourcesClasspath
+    }
+  }
+
   /** Register this Database to symbol indexer. */
-  def indexDatabase(document: s.Database): Unit = {
+  def indexDatabase(document: s.Database): Effects.IndexSemanticdb = {
     document.documents.foreach(indexDocument)
+    Effects.IndexSemanticdb
   }
 
   /**
@@ -115,7 +161,7 @@ class SymbolIndex(
    *                 - filename must be a URI
    *                 - names must be sorted
    */
-  def indexDocument(document: s.Document): Unit = {
+  def indexDocument(document: s.Document): Effects.IndexSemanticdb = {
     val input = Input.VirtualFile(document.filename, document.contents)
     // what do we put as the uri?
     val uri = URI.create(document.filename)
@@ -147,6 +193,7 @@ class SymbolIndex(
         symbols.addDenotation(sym, denot.flags, denot.name, denot.signature)
       case _ =>
     }
+    Effects.IndexSemanticdb
   }
 
   /**
@@ -250,16 +297,24 @@ class SymbolIndex(
 object SymbolIndex {
 
   def empty(cwd: AbsolutePath): SymbolIndex =
-    apply(cwd, (_, _) => (), Buffers())
+    apply(cwd, (_, _) => (), Buffers(), ServerConfig(cwd))
 
   def apply(
       cwd: AbsolutePath,
       notifications: Notifications,
-      buffers: Buffers
+      buffers: Buffers,
+      serverConfig: ServerConfig
   ): SymbolIndex = {
     val symbols = new TrieMapSymbolIndexer()
     val documents = new InMemoryDocumentIndex()
-    new SymbolIndex(symbols, documents, cwd, notifications, buffers)
+    new SymbolIndex(
+      symbols,
+      documents,
+      cwd,
+      notifications,
+      buffers,
+      serverConfig
+    )
   }
 
 }
