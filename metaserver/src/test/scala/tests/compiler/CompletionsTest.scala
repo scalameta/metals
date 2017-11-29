@@ -35,24 +35,29 @@ object CompletionsTest extends CompilerSuite {
     )
   }
 
-  check(
-    "companion object",
-    """
-      |object a {
-      | Opti<<>>
-      |}
-    """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "Option",
-       |    "kind" : ${CompletionItemKind.Module.value},
-       |    "detail" : ""
-       |  } ]
-       |}
-    """.stripMargin
-  )
+  def check(
+      filename: String,
+      code: String,
+      label: String,
+      kind: CompletionItemKind,
+      detail: String
+  ): Unit = {
+    check(
+      filename,
+      code,
+      s"""
+         |{
+         |  "isIncomplete" : false,
+         |  "items" : [ {
+         |    "label" : "$label",
+         |    "kind" : ${kind.value},
+         |    "detail" : "$detail",
+         |    "sortText" : "00000"
+         |  } ]
+         |}
+      """.stripMargin
+    )
+  }
 
   check(
     "empty",
@@ -68,24 +73,27 @@ object CompletionsTest extends CompilerSuite {
   )
 
   check(
+    "companion object",
+    """
+      |object a {
+      | Opti<<>>
+      |}
+    """.stripMargin,
+    label = "Option",
+    kind = CompletionItemKind.Module,
+    detail = ""
+  )
+
+  check(
     "ctor",
     """
       |object a {
       | new StringBui<<>>
       |}
     """.stripMargin,
-    // PC seems to return the companion object, which is incorrect
-    // since we're in ype position.
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "StringBuilder",
-       |    "kind" : ${CompletionItemKind.Value.value},
-       |    "detail" : ": collection.mutable.StringBuilder.type"
-       |  } ]
-       |}
-    """.stripMargin
+    label = "StringBuilder",
+    kind = CompletionItemKind.Value,
+    detail = " = StringBuilder"
   )
 
   check(
@@ -95,16 +103,9 @@ object CompletionsTest extends CompilerSuite {
       | List.em<<>>
       |}
     """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "empty",
-       |    "kind" : ${CompletionItemKind.Method.value},
-       |    "detail" : "[A]: List[A]"
-       |  } ]
-       |}
-    """.stripMargin
+    label = "empty",
+    kind = CompletionItemKind.Method,
+    detail = "[A]: List[A]"
   )
 
   check(
@@ -134,16 +135,9 @@ object CompletionsTest extends CompilerSuite {
       |  val x: TestTr<<>>
       |}
     """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "TestTrait",
-       |    "kind" : ${CompletionItemKind.Interface.value},
-       |    "detail" : " extends "
-       |  } ]
-       |}
-    """.stripMargin
+    label = "TestTrait",
+    kind = CompletionItemKind.Interface,
+    detail = " extends "
   )
 
   check(
@@ -154,33 +148,53 @@ object CompletionsTest extends CompilerSuite {
       |  testObj<<>>
       |}
     """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "testObject",
-       |    "kind" : ${CompletionItemKind.Module.value},
-       |    "detail" : ""
-       |  } ]
-       |}
-    """.stripMargin
+    label = "testObject",
+    kind = CompletionItemKind.Module,
+    detail = ""
   )
 
   check(
     "package",
     """
-      | import scala.collect<<>>
+      |import scala.collect<<>>
     """.stripMargin,
-    s"""
-       |{
-       |  "isIncomplete" : false,
-       |  "items" : [ {
-       |    "label" : "collection",
-       |    "kind" : ${CompletionItemKind.Module.value},
-       |    "detail" : ""
-       |  } ]
-       |}
-    """.stripMargin
+    label = "collection",
+    kind = CompletionItemKind.Module,
+    detail = ""
+  )
+
+  check(
+    "sorting",
+    """
+      |case class User(name: String, age: Int) {
+      |  val someVal = 42
+      |  def someMethod(x: String) = x
+      |}
+      |object a {
+      |  User("test", 42).<<>>
+      |}
+    """.stripMargin, { completions =>
+      val first = completions.items(0)
+      assert(first.label == "age")
+      assert(first.kind == Some(CompletionItemKind.Field))
+
+      val second = completions.items(1)
+      assert(second.label == "name")
+      assert(second.kind == Some(CompletionItemKind.Field))
+
+      val third = completions.items(2)
+      assert(third.label == "someMethod")
+      assert(third.kind == Some(CompletionItemKind.Method))
+
+      val fourth = completions.items(3)
+      assert(fourth.label == "someVal")
+      assert(fourth.kind == Some(CompletionItemKind.Value))
+
+      val last = completions.items.last
+      assert(last.label == "wait")
+      assert(last.kind == Some(CompletionItemKind.Method))
+
+    }
   )
 
 }
