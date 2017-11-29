@@ -1,4 +1,4 @@
-package scala.meta.languageserver.ctags
+package scala.meta.languageserver.mtags
 
 import java.io.StringReader
 import scala.meta.CLASS
@@ -19,13 +19,13 @@ import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
 import org.langmeta.languageserver.InputEnrichments._
 
-object JavaCtags {
+object JavaMtags {
   private implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
     def lineNumber: Int = m.getLineNumber - 1
   }
-  def index(input: Input.VirtualFile): CtagsIndexer = {
+  def index(input: Input.VirtualFile): MtagsIndexer = {
     val builder = new JavaProjectBuilder()
-    new CtagsIndexer { self =>
+    new MtagsIndexer { self =>
       override def indexRoot(): Unit = {
         try {
           val source = builder.addSource(new StringReader(input.value))

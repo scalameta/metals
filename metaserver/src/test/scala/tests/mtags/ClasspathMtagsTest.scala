@@ -1,12 +1,12 @@
-package tests.ctags
+package tests.mtags
 
 import java.nio.file.Paths
 import scala.meta.languageserver.Jars
-import scala.meta.languageserver.ctags.Ctags
+import scala.meta.languageserver.mtags.Mtags
 import org.langmeta.internal.semanticdb.schema.Database
 import tests.MegaSuite
 
-object ClasspathCtagsTest extends MegaSuite {
+object ClasspathMtagsTest extends MegaSuite {
 
   // NOTE(olafur) this test is a bit slow since it downloads jars from the internet.
   ignore("index classpath") {
@@ -22,7 +22,7 @@ object ClasspathCtagsTest extends MegaSuite {
     val Predef = Paths.get("scala").resolve("io").resolve("AnsiColor.scala")
     val CharRef = Paths.get("scala").resolve("runtime").resolve("CharRef.java")
     val docs = List.newBuilder[String]
-    Ctags.index(
+    Mtags.index(
       classpath,
       shouldIndex = { path =>
         path.toNIO.endsWith(CharRef) ||

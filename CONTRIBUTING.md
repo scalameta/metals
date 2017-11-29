@@ -81,7 +81,7 @@ To run these tests,
 ```
 sbt
 > metaserver/test                     # Run all unit tests
-> metaserver/testOnly -- tests.ctags  # Only test the ctags tests
+> metaserver/testOnly -- tests.mtags  # Only test the mtags tests
 > metaserver/testOnly -- tests.search # Only test the symbol indexer tests
 ```
 

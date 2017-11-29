@@ -1,4 +1,4 @@
-package scala.meta.languageserver.ctags
+package scala.meta.languageserver.mtags
 
 import scala.meta.Name
 import scala.meta.Term
@@ -13,7 +13,7 @@ import org.{langmeta => m}
 import org.langmeta.semanticdb.Signature
 import org.langmeta.semanticdb.Symbol
 
-trait CtagsIndexer {
+trait MtagsIndexer {
   def language: String
   def indexRoot(): Unit
   def index(): (List[ResolvedName], List[ResolvedSymbol]) = {

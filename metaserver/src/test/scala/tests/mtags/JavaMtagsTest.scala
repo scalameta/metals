@@ -1,10 +1,10 @@
-package tests.ctags
+package tests.mtags
 
 import java.nio.file.Paths
 import scala.meta.languageserver.compiler.CompilerConfig
-import scala.meta.languageserver.ctags.Ctags
+import scala.meta.languageserver.mtags.Mtags
 
-object JavaCtagsTest extends BaseCtagsTest {
+object JavaMtagsTest extends BaseMtagsTest {
   check(
     "interface.java",
     """package a.b;
@@ -127,7 +127,7 @@ object JavaCtagsTest extends BaseCtagsTest {
 //  }
 //  }}}
 //  from Flexmark where EMPTY_SET is static but doesn't have isStatic = true.
-// JavaCtags currently marks it as Extension#EMPTY_SET but scalac sees it as Extension.EMPTY_SET
+// JavaMtags currently marks it as Extension#EMPTY_SET but scalac sees it as Extension.EMPTY_SET
   checkIgnore(
     "default.java",
     """package k;
@@ -157,7 +157,7 @@ object JavaCtagsTest extends BaseCtagsTest {
     val jdk = CompilerConfig.jdkSources.get
     val DefaultFileSystem =
       Paths.get("java").resolve("io").resolve("DefaultFileSystem.java")
-    val db = Ctags.indexDatabase(jdk :: Nil, shouldIndex = { path =>
+    val db = Mtags.indexDatabase(jdk :: Nil, shouldIndex = { path =>
       path.toNIO.endsWith(DefaultFileSystem)
     })
     val obtained = db
@@ -191,7 +191,7 @@ object JavaCtagsTest extends BaseCtagsTest {
 
   // Ignored because it's slow
   ignore("index JDK") {
-    val db = Ctags.indexDatabase(CompilerConfig.jdkSources.get :: Nil)
+    val db = Mtags.indexDatabase(CompilerConfig.jdkSources.get :: Nil)
     pprint.log(db.documents.length)
   }
 }

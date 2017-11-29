@@ -77,9 +77,9 @@ object SymbolIndexTest extends MegaSuite {
     }
 
     "classpath" - {
-      "<<List>>(...)" - // ScalaCtags
+      "<<List>>(...)" - // ScalaMtags
         assertSymbolFound(5, 5, "_root_.scala.collection.immutable.List.")
-      "<<CharRef>>.create(...)" - // JavaCtags
+      "<<CharRef>>.create(...)" - // JavaMtags
         assertSymbolFound(8, 19, "_root_.scala.runtime.CharRef.")
     }
 

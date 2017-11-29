@@ -1,12 +1,12 @@
-package scala.meta.languageserver.ctags
+package scala.meta.languageserver.mtags
 
 import scala.meta._
 import org.langmeta.inputs.Input
 
-object ScalaCtags {
-  def index(input: Input.VirtualFile): CtagsIndexer = {
+object ScalaMtags {
+  def index(input: Input.VirtualFile): MtagsIndexer = {
     val root: Source = input.parse[Source].get
-    new Traverser with CtagsIndexer {
+    new Traverser with MtagsIndexer {
       override def language: String =
         "Scala212" // TODO(olafur) more accurate dialect
       override def indexRoot(): Unit = apply(root)
