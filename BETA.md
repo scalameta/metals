@@ -32,8 +32,18 @@ For this step, `node` and `npm` are required.
 ## Step 3 - publish the server locally
 From the repo root run `sbt publishLocal`
 
+## Step 4 - add semanticdb-scalac compiler plugin to your project
+Some features of the server rely on the artifacts produced by [`semanticdb-scalac`](http://scalameta.org/tutorial/#semanticdb-scalac).
+Enable it in your sbt build by:
+
+- adding the setting
+
+    `addCompilerPlugin("org.scalameta" % "semanticdb-scalac" % "2.1.2" cross CrossVersion.full)`
+
+- adding the `-Yrangepos` scalac flag (e.g. `scalacOptions += "-Yrangepos"`)
+
 # Usage
-In your project of choice, open `sbt` in your project and run `*:scalametaEnableCompletions`.
+In your project of choice, open `sbt` and run `*:scalametaEnableCompletions`.
 As mentioned above, this will produce the necessary metadata for the server.
 
 > **NOTE**: you will need to repeat this step every time you add a new source file to the project
