@@ -20,6 +20,9 @@ trait MtagsIndexer {
     indexRoot()
     names.result() -> symbols.result()
   }
+  private val root: Symbol.Global =
+    Symbol.Global(Symbol.None, Signature.Term("_root_"))
+  var currentOwner: Symbol.Global = root
   def owner(isStatic: Boolean): Symbol.Global =
     if (isStatic) currentOwner.toTerm
     else currentOwner
@@ -45,14 +48,8 @@ trait MtagsIndexer {
       pkg(qual)
       currentOwner = symbol(Signature.Term(name))
   }
-  private val root: Symbol.Global =
-    Symbol.Global(Symbol.None, Signature.Term("_root_"))
-  sealed abstract class Next
-  case object Stop extends Next
-  case object Continue extends Next
   private val names = List.newBuilder[ResolvedName]
   private val symbols = List.newBuilder[ResolvedSymbol]
-  var currentOwner: Symbol.Global = root
   private def addSignature(
       signature: Signature,
       definition: m.Position,

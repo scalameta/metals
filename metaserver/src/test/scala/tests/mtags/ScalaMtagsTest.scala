@@ -10,7 +10,11 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |   val f = 2
       |   var g = 2
       |   class H { def x = 3 }
-      |   trait I { def x = 3 }
+      |   trait I {
+      |     def x: Int
+      |     val y: Int
+      |     var z: Int
+      |   }
       |   object J { def k = 2 }
       |}
       |package object K {
@@ -29,11 +33,13 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |[89..90): H <= _root_.a.b.c.D.H#
       |[97..98): x <= _root_.a.b.c.D.H#x.
       |[114..115): I <= _root_.a.b.c.D.I#
-      |[122..123): x <= _root_.a.b.c.D.I#x.
-      |[140..141): J <= _root_.a.b.c.D.J.
-      |[148..149): k <= _root_.a.b.c.D.J.k.
-      |[173..174): K <= _root_.a.b.c.K.
-      |[183..184): l <= _root_.a.b.c.K.l.
+      |[127..128): x <= _root_.a.b.c.D.I#x.
+      |[143..144): y <= _root_.a.b.c.D.I#y.
+      |[159..160): z <= _root_.a.b.c.D.I#z.
+      |[181..182): J <= _root_.a.b.c.D.J.
+      |[189..190): k <= _root_.a.b.c.D.J.k.
+      |[214..215): K <= _root_.a.b.c.K.
+      |[224..225): l <= _root_.a.b.c.K.l.
       |
       |Symbols:
       |_root_.a.b.c.D. => object D
@@ -41,13 +47,77 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |_root_.a.b.c.D.H#x. => def x
       |_root_.a.b.c.D.I# => trait I
       |_root_.a.b.c.D.I#x. => def x
+      |_root_.a.b.c.D.I#y. => val y
+      |_root_.a.b.c.D.I#z. => var z
       |_root_.a.b.c.D.J. => object J
       |_root_.a.b.c.D.J.k. => def k
       |_root_.a.b.c.D.e. => def e
-      |_root_.a.b.c.D.f. => def f
-      |_root_.a.b.c.D.g. => def g
+      |_root_.a.b.c.D.f. => val f
+      |_root_.a.b.c.D.g. => var g
       |_root_.a.b.c.K. => packageobject K
       |_root_.a.b.c.K.l. => def l
       """.stripMargin
+  )
+
+  check(
+    "pats.scala",
+    """
+      |object pats {
+      |  val o, p = 2
+      |  val q, r: Int
+      |  var s, t = 2
+      |  var v, w: Int
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Scala212
+      |
+      |Names:
+      |[8..12): pats <= _root_.pats.
+      |[21..22): o <= _root_.pats.o.
+      |[24..25): p <= _root_.pats.p.
+      |[36..37): q <= _root_.pats.q.
+      |[39..40): r <= _root_.pats.r.
+      |[52..53): s <= _root_.pats.s.
+      |[55..56): t <= _root_.pats.t.
+      |[67..68): v <= _root_.pats.v.
+      |[70..71): w <= _root_.pats.w.
+      |
+      |Symbols:
+      |_root_.pats. => object pats
+      |_root_.pats.o. => val o
+      |_root_.pats.p. => val p
+      |_root_.pats.q. => val q
+      |_root_.pats.r. => val r
+      |_root_.pats.s. => var s
+      |_root_.pats.t. => var t
+      |_root_.pats.v. => var v
+      |_root_.pats.w. => var w
+    """.stripMargin
+  )
+
+  check(
+    "type.scala",
+    """
+      |trait Tpe {
+      |  type M
+      |  type N = F
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Scala212
+      |
+      |Names:
+      |[7..10): Tpe <= _root_.Tpe#
+      |[20..21): M <= _root_.Tpe#M#
+      |[29..30): N <= _root_.Tpe#N#
+      |
+      |Symbols:
+      |_root_.Tpe# => trait Tpe
+      |_root_.Tpe#M# => type M
+      |_root_.Tpe#N# => type N
+    """.stripMargin
   )
 }
