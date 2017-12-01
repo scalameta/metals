@@ -23,7 +23,6 @@ object SymbolIndexTest extends MegaSuite {
   implicit val cwd: AbsolutePath =
     AbsolutePath(BuildInfo.testWorkspaceBaseDirectory)
   val path = cwd
-    .resolve("a")
     .resolve("src")
     .resolve("test")
     .resolve("scala")
@@ -84,7 +83,7 @@ object SymbolIndexTest extends MegaSuite {
     }
 
     "bijection" - {
-      val target = cwd.resolve("a").resolve("target").resolve("scala-2.12")
+      val target = cwd.resolve("target").resolve("scala-2.12")
       val originalDatabase = {
         val complete = m.Database.load(
           Classpath(
