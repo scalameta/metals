@@ -16,7 +16,7 @@ object SignatureHelpProvider extends LazyLogging {
       global = compiler,
       code = cursor.contents,
       filename = cursor.uri,
-      cursor = None
+      cursor = Some(cursor.offset + 1)
     )
     val position = unit.position(cursor.offset)
     findEnclosingMethod(position).fold(empty) { callSite =>
