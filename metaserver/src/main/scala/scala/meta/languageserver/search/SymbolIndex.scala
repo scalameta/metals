@@ -40,8 +40,8 @@ import org.langmeta.semanticdb.Symbol
  * Can respond to high-level queries like "go to definition" and "find references".
  */
 class SymbolIndex(
-    val symbols: SymbolIndexer,
-    val documents: DocumentIndex,
+    val symbolIndexer: SymbolIndexer,
+    val documentIndex: DocumentIndex,
     cwd: AbsolutePath,
     notifications: Notifications,
     buffers: Buffers,
@@ -51,14 +51,14 @@ class SymbolIndex(
     new ConcurrentHashMap[AbsolutePath, Unit]()
 
   /** Returns a symbol at the given location with a non-empty definition */
-  def findSymbol(
+  def findSymbolData(
       path: AbsolutePath,
       line: Int,
       column: Int
   ): Option[SymbolData] = {
-    logger.info(s"findSymbol at $path:$line:$column")
+    logger.info(s"findSymbolData at $path:$line:$column")
     for {
-      document <- documents.getDocument(path.toNIO.toUri)
+      document <- documentIndex.getDocument(path.toNIO.toUri)
       _ = logger.info(s"Found document for $path")
       _ <- isFreshSemanticdb(path, document)
       input = Input.VirtualFile(document.filename, document.contents)
@@ -79,15 +79,15 @@ class SymbolIndex(
       }
       msym = Symbol(name.symbol)
       _ = logger.info(s"Found matching symbol $msym")
-      symbol <- symbols.get(name.symbol).orElse {
+      symbolData <- symbolIndexer.get(name.symbol).orElse {
         val alts = alternatives(msym)
         logger.info(s"Trying alternatives: ${alts.mkString(" | ")}")
-        alts.collectFirst { case symbols(alternative) => alternative }
+        alts.collectFirst { case symbolIndexer(alternative) => alternative }
       }
       _ = logger.info(
-        s"Found matching symbol index ${symbol.name}: ${symbol.signature}"
+        s"Found matching symbol index ${symbolData.name}: ${symbolData.signature}"
       )
-    } yield symbol
+    } yield symbolData
   }
 
   /** Returns the definition position of the symbol at the given position */
@@ -97,8 +97,8 @@ class SymbolIndex(
       column: Int
   ): Option[DefinitionResult] = {
     for {
-      symbol <- findSymbol(path, line, column)
-      definition <- symbol.definition
+      symbolData <- findSymbolData(path, line, column)
+      definition <- symbolData.definition
     } yield {
       val nonJarDefinition: Position =
         if (definition.uri.startsWith("jar:file")) {
@@ -119,8 +119,8 @@ class SymbolIndex(
       column: Int
   ): ReferencesResult = {
     val locations = for {
-      symbol <- findSymbol(path, line, column).toSeq
-      (uri, ranges) <- symbol.references
+      symbolData <- findSymbolData(path, line, column).toSeq
+      (uri, ranges) <- symbolData.references
       range <- ranges.ranges
     } yield i.Position(uri, Some(range)).toLocation
     logger.info(s"Found references $locations")
@@ -181,7 +181,7 @@ class SymbolIndex(
     val input = Input.VirtualFile(document.filename, document.contents)
     // what do we put as the uri?
     val uri = URI.create(document.filename)
-    documents.putDocument(uri, document)
+    documentIndex.putDocument(uri, document)
     document.names.foreach {
       // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
       // local symbols don't need to be indexed globally, by skipping them we should
@@ -192,12 +192,12 @@ class SymbolIndex(
       // be able to minimize the size of the global index significantly.
       //      case s.ResolvedName(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
       case s.ResolvedName(Some(s.Position(start, end)), sym, true) =>
-        symbols.addDefinition(
+        symbolIndexer.addDefinition(
           sym,
           i.Position(document.filename, Some(input.toIndexRange(start, end)))
         )
       case s.ResolvedName(Some(s.Position(start, end)), sym, false) =>
-        symbols.addReference(
+        symbolIndexer.addReference(
           document.filename,
           input.toIndexRange(start, end),
           sym
@@ -206,7 +206,7 @@ class SymbolIndex(
     }
     document.symbols.foreach {
       case s.ResolvedSymbol(sym, Some(denot)) =>
-        symbols.addDenotation(sym, denot.flags, denot.name, denot.signature)
+        symbolIndexer.addDenotation(sym, denot.flags, denot.name, denot.signature)
       case _ =>
     }
     Effects.IndexSemanticdb
@@ -321,11 +321,11 @@ object SymbolIndex {
       buffers: Buffers,
       serverConfig: ServerConfig
   ): SymbolIndex = {
-    val symbols = new TrieMapSymbolIndexer()
-    val documents = new InMemoryDocumentIndex()
+    val symbolIndexer = new TrieMapSymbolIndexer()
+    val documentIndex = new InMemoryDocumentIndex()
     new SymbolIndex(
-      symbols,
-      documents,
+      symbolIndexer,
+      documentIndex,
       cwd,
       notifications,
       buffers,

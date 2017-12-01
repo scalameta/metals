@@ -52,7 +52,7 @@ object SymbolIndexTest extends MegaSuite {
         column: Int,
         expected: String
     ): Unit = {
-      val term = indexer.findSymbol(path, line, column)
+      val term = indexer.findSymbolData(path, line, column)
       Predef.assert(
         term.isDefined,
         s"Symbol not found at $path:$line:$column. Did you run scalametaEnableCompletions from sbt?"
@@ -99,8 +99,8 @@ object SymbolIndexTest extends MegaSuite {
       }
       val reconstructedDatabase = InverseSymbolIndexer.reconstructDatabase(
         cwd,
-        indexer.documents,
-        indexer.symbols.allSymbols
+        indexer.documentIndex,
+        indexer.symbolIndexer.allSymbols
       )
       val filenames = reconstructedDatabase.documents.toIterator.map { d =>
         Paths.get(d.input.syntax).getFileName.toString
