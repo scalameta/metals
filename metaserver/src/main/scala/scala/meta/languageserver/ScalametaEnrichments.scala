@@ -53,14 +53,24 @@ object ScalametaEnrichments {
   }
   implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
     def toLocation(implicit cwd: m.AbsolutePath): l.Location = {
-      val range = pos.range.get
       l.Location(
         pos.uri,
-        l.Range(
-          l.Position(line = range.startLine, character = range.startColumn),
-          l.Position(line = range.endLine, character = range.endColumn)
-        )
+        pos.range.get.toRange
       )
+    }
+  }
+  implicit class XtensionIndexRange(val range: i.Range) extends AnyVal {
+    def pretty: String =
+      f"${range.startLine}%2d:${range.startColumn}%2d|${range.endLine}%2d:${range.endColumn}%2d"
+    def toRange: l.Range = l.Range(
+      l.Position(line = range.startLine, character = range.startColumn),
+      l.Position(line = range.endLine, character = range.endColumn)
+    )
+    def contains(line: Int, column: Int): Boolean = {
+      range.startLine <= line &&
+      range.startColumn <= column &&
+      range.endLine >= line &&
+      range.endColumn >= column
     }
   }
   implicit class XtensionAbsolutePathLSP(val path: m.AbsolutePath)
