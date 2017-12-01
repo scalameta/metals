@@ -96,7 +96,7 @@ lazy val metaserver = project
     fork in Test := true, // required for jni interrop with leveldb.
     buildInfoKeys := Seq[BuildInfoKey](
       "testWorkspaceBaseDirectory" ->
-        baseDirectory.in(testWorkspace).value.getParent
+        baseDirectory.in(testWorkspace).value
     ),
     buildInfoPackage := "scala.meta.languageserver.internal",
     libraryDependencies ++= List(
@@ -119,13 +119,12 @@ lazy val metaserver = project
   .enablePlugins(BuildInfoPlugin)
 
 lazy val testWorkspace = project
-  .in(file("test-workspace") / "a")
+  .in(file("test-workspace"))
   .settings(
     noPublish,
     semanticdbSettings,
     scalacOptions += {
       // Need to fix source root so it matches the workspace folder.
-      val sourceRoot = baseDirectory.in(ThisBuild).value / "test-workspace"
-      s"-P:semanticdb:sourceroot:$sourceRoot"
+      s"-P:semanticdb:sourceroot:${baseDirectory.value}"
     }
   )
