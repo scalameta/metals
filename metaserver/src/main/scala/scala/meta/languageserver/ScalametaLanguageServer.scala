@@ -101,7 +101,7 @@ class ScalametaLanguageServer(
     ServerCapabilities(
       completionProvider = Some(
         CompletionOptions(
-          resolveProvider = true,
+          resolveProvider = false,
           triggerCharacters = "." :: Nil
         )
       ),
