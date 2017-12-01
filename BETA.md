@@ -15,7 +15,7 @@ Here's the source of the plugin: https://github.com/scalameta/language-server/bl
 ### Globally
 Copy the source to either (depending on your sbt version):
 - `~/.sbt/0.13/plugins/project/ScalametaLanguageServerPlugin.scala` (sbt 0.13)
-- `~/.sbt/1.0/plugins/project/ScalametaLanguageServerPlugin.scala` (sbt 1.0)
+- `~/.sbt/1.0/plugins/ScalametaLanguageServerPlugin.scala` (sbt 1.0)
 
 ### Locally
 Copy the source to `/path/to/yourproject/project/ScalametaLanguageServerPlugin.scala`
