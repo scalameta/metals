@@ -50,13 +50,13 @@ class SymbolIndex(
   private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()
 
-  /** Returns a symbol at the given location with a non-empty definition */
-  def findSymbolData(
+  /** Returns a ResolvedName at the given location */
+  def resolveName(
       path: AbsolutePath,
       line: Int,
       column: Int
-  ): Option[SymbolData] = {
-    logger.info(s"findSymbolData at $path:$line:$column")
+  ): Option[ResolvedName] = {
+    logger.info(s"resolveName at $path:$line:$column")
     for {
       document <- documentIndex.getDocument(path.toNIO.toUri)
       _ = logger.info(s"Found document for $path")
@@ -64,67 +64,80 @@ class SymbolIndex(
       input = Input.VirtualFile(document.filename, document.contents)
       _ = logger.info(s"Document for $path is fresh")
       name <- document.names.collectFirst {
-        case name @ ResolvedName(Some(position), sym, _) if {
-              val pos = input.toIndexRange(position.start, position.end)
-              logger.info(
-                s"$sym at ${document.filename
-                  .replaceFirst(".*/", "")}:${pos.startLine}:${pos.startColumn}-${pos.endLine}:${pos.endColumn}"
-              )
-              pos.startLine <= line &&
-              pos.startColumn <= column &&
-              pos.endLine >= line &&
-              pos.endColumn >= column
-            } =>
-          name
+        case name @ ResolvedName(Some(position), symbol, _) if {
+          val range = input.toIndexRange(position.start, position.end)
+          logger.debug(s"${document.filename.replaceFirst(".*/", "")} [${range.pretty}] ${symbol}")
+          range.contains(line, column)
+        } => name
       }
-      msym = Symbol(name.symbol)
-      _ = logger.info(s"Found matching symbol $msym")
-      symbolData <- symbolIndexer.get(name.symbol).orElse {
-        val alts = alternatives(msym)
-        logger.info(s"Trying alternatives: ${alts.mkString(" | ")}")
-        alts.collectFirst { case symbolIndexer(alternative) => alternative }
-      }
-      _ = logger.info(
-        s"Found matching symbol index ${symbolData.name}: ${symbolData.signature}"
-      )
+    } yield name
+  }
+
+  /** Returns a symbol at the given location */
+  def findSymbol(
+      path: AbsolutePath,
+      line: Int,
+      column: Int
+  ): Option[Symbol] = {
+    for {
+      name <- resolveName(path, line, column)
+      symbol = Symbol(name.symbol)
+      _ = logger.info(s"Matching symbol ${symbol}")
+    } yield symbol
+  }
+
+  /** Returns symbol index data for the given symbol and optionally its alternatives */
+  def getSymbolData(
+    symbol: Symbol,
+    withAlternatives: Boolean = false
+  ): List[SymbolData] = {
+    logger.info(s"getSymbolData $symbol")
+
+    val alts = if (withAlternatives) alternatives(symbol) else  Nil
+    if (alts.nonEmpty) logger.info(s"Alternatives: ${alts.mkString(" | ")}")
+
+    for {
+      query <- (symbol :: alts)
+      symbolData <- symbolIndexer.get(query).toList
+      _ = logger.info(s"Found matching symbol index ${symbolData.name}: ${symbolData.signature}")
     } yield symbolData
   }
 
-  /** Returns the definition position of the symbol at the given position */
-  def goToDefinition(
-      path: AbsolutePath,
-      line: Int,
-      column: Int
-  ): Option[DefinitionResult] = {
-    for {
-      symbolData <- findSymbolData(path, line, column)
-      definition <- symbolData.definition
-    } yield {
-      val nonJarDefinition: Position =
-        if (definition.uri.startsWith("jar:file")) {
-          definition.withUri(
-            createFileInWorkspaceTarget(URI.create(definition.uri)).toString
-          )
-        } else definition
-      logger.info(s"Found definition $nonJarDefinition")
-      val location = nonJarDefinition.toLocation
-      DefinitionResult(location :: Nil)
-    }
+  /** A workaround for positions referring to jars */
+  def nonJarPosition(position: Position): Position = {
+    if (position.uri.startsWith("jar:file")) {
+      position.withUri(
+        createFileInWorkspaceTarget(URI.create(position.uri)).toString
+      )
+    } else position
   }
 
-  /** Returns the definition position of the symbol at the given position */
+  /** Returns the definition location of the given symbol */
+  def definition(
+    symbol: Symbol
+  ): Option[l.Location] = {
+    for {
+      symbolData <- getSymbolData(symbol, withAlternatives = true).find(_.definition.nonEmpty)
+      i.Position(uri, Some(range)) <- symbolData.definition
+      _ = logger.info(s"Found definition at ${uri.replaceFirst(".*/", "")} [${range.pretty}] ${symbolData.symbol}")
+    } yield l.Location(uri, range.toRange)
+  }
+
+  /** Returns reference locations for the given symbol */
   def references(
-      path: AbsolutePath,
-      line: Int,
-      column: Int
-  ): ReferencesResult = {
-    val locations = for {
-      symbolData <- findSymbolData(path, line, column).toSeq
-      (uri, ranges) <- symbolData.references
+      symbol: Symbol,
+      withDefinition: Boolean
+  ): List[l.Location] = {
+    def positionToRef(pos: i.Position): (String, i.Ranges) =
+      (pos.uri, i.Ranges(pos.range.toSeq))
+
+    for {
+      symbolData <- getSymbolData(symbol, withAlternatives = true)
+      definitionRef = if (withDefinition) symbolData.definition.map(positionToRef) else None
+      (uri, ranges) <- (symbolData.references.toList ++ definitionRef.toList)
       range <- ranges.ranges
-    } yield i.Position(uri, Some(range)).toLocation
-    logger.info(s"Found references $locations")
-    ReferencesResult(locations)
+      _ = logger.info(s"Found reference at ${uri.replaceFirst(".*/", "")} [${range.pretty}] ${symbolData.symbol}")
+    } yield l.Location(uri, range.toRange)
   }
 
   def indexDependencyClasspath(

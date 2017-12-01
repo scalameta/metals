@@ -52,7 +52,10 @@ object SymbolIndexTest extends MegaSuite {
         column: Int,
         expected: String
     ): Unit = {
-      val term = indexer.findSymbolData(path, line, column)
+      val term = for {
+        symbol <- indexer.findSymbol(path, line, column)
+        data <- indexer.getSymbolData(symbol).headOption
+      } yield data
       Predef.assert(
         term.isDefined,
         s"Symbol not found at $path:$line:$column. Did you run scalametaEnableCompletions from sbt?"

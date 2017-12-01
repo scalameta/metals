@@ -244,9 +244,11 @@ class ScalametaLanguageServer(
       position: Position
   ): DefinitionResult = {
     val path = Uri.toPath(td.uri).get
-    symbolIndexer
-      .goToDefinition(path, position.line, position.character)
-      .getOrElse(DefinitionResult(Nil))
+    val locations = for {
+      symbol <- symbolIndexer.findSymbol(path, position.line, position.character)
+      location <- symbolIndexer.definition(symbol)
+    } yield location
+    DefinitionResult(locations.toList)
   }
 
   override def referencesRequest(
@@ -255,9 +257,11 @@ class ScalametaLanguageServer(
       context: ReferenceContext
   ): ReferencesResult = {
     val path = Uri.toPath(td.uri).get
-    symbolIndexer
-      .references(path, position.line, position.character)
-    // TODO: context?
+    val locations = for {
+      symbol <- symbolIndexer.findSymbol(path, position.line, position.character).toList
+      location <- symbolIndexer.references(symbol, context.includeDeclaration)
+    } yield location
+    ReferencesResult(locations)
   }
 
   override def signatureHelpRequest(
