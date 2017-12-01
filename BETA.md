@@ -1,24 +1,20 @@
 > ⚠️ This project is very alpha stage. Expect bugs and surprising behavior. Ticket reports and patches are welcome!
 
-# Installation
 The following guide provides instructions on how to try this on a real project, with the purpose
 of collecting valuable feedback from real-world scenarios.
+
+# Global setup
+These steps are required once per machine.
 
 ## Step 1 - sbt plugin
 The server needs to access some metadata about the build configuration. This data are produced by
 an sbt plugin. This plugin is currently not published, so you will need to copy paste it on your machine.
-You have two options: enable the plugin globally (so that it will be available in all projects) or
-locally to a single project.
 
 Here's the source of the plugin: https://github.com/scalameta/language-server/blob/master/project/ScalametaLanguageServerPlugin.scala
 
-### Globally
 Copy the source to either (depending on your sbt version):
-- `~/.sbt/0.13/plugins/project/ScalametaLanguageServerPlugin.scala` (sbt 0.13)
-- `~/.sbt/1.0/plugins/ScalametaLanguageServerPlugin.scala` (sbt 1.0)
-
-### Locally
-Copy the source to `/path/to/yourproject/project/ScalametaLanguageServerPlugin.scala`
+- (sbt 0.13) `~/.sbt/0.13/plugins/project/ScalametaLanguageServerPlugin.scala`
+- (sbt 1.0) `~/.sbt/1.0/plugins/ScalametaLanguageServerPlugin.scala`
 
 ## Step 2 - build the VSCode extension
 The VSCode extension is not yet published on the Marketplace, so you'll need to build it locally.
@@ -32,7 +28,10 @@ For this step, `node` and `npm` are required.
 ## Step 3 - publish the server locally
 From the repo root run `sbt publishLocal`
 
-## Step 4 - add semanticdb-scalac compiler plugin to your project
+# Per-project setup
+These steps are required on each project.
+
+## Step 1 - add semanticdb-scalac compiler plugin to your project
 Some features of the server rely on the artifacts produced by [`semanticdb-scalac`](http://scalameta.org/tutorial/#semanticdb-scalac).
 Enable it in your sbt build by:
 
@@ -42,12 +41,13 @@ Enable it in your sbt build by:
 
 - adding the `-Yrangepos` scalac flag (e.g. `scalacOptions += "-Yrangepos"`)
 
-# Usage
+## Step 2 - produce the build metadata
 In your project of choice, open `sbt` and run `*:scalametaEnableCompletions`.
 As mentioned above, this will produce the necessary metadata for the server.
 
-> **NOTE**: you will need to repeat this step every time you add a new source file to the project
+> **NOTE**: you will need to repeat this step every time you add a new source file to the project or if you run `sbt clean`
 
+## Step 3 - start editing
 Open your project in VSCode (`code .` from your terminal) and open a Scala file; the server will now start.
 
 Please note that it may take a few seconds for the server to start and there's currently no explicit
