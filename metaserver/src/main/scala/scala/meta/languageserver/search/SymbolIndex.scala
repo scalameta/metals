@@ -65,10 +65,13 @@ class SymbolIndex(
       _ = logger.info(s"Document for $path is fresh")
       name <- document.names.collectFirst {
         case name @ ResolvedName(Some(position), symbol, _) if {
-          val range = input.toIndexRange(position.start, position.end)
-          logger.debug(s"${document.filename.replaceFirst(".*/", "")} [${range.pretty}] ${symbol}")
-          range.contains(line, column)
-        } => name
+              val range = input.toIndexRange(position.start, position.end)
+              logger.debug(
+                s"${document.filename.replaceFirst(".*/", "")} [${range.pretty}] ${symbol}"
+              )
+              range.contains(line, column)
+            } =>
+          name
       }
     } yield name
   }
@@ -86,24 +89,8 @@ class SymbolIndex(
     } yield symbol
   }
 
-  /** Returns symbol index data for the given symbol and optionally its alternatives */
-  def getSymbolData(
-    symbol: Symbol,
-    withAlternatives: Boolean = false
-  ): List[SymbolData] = {
-    logger.info(s"getSymbolData $symbol")
-
-    val alts = if (withAlternatives) alternatives(symbol) else  Nil
-    if (alts.nonEmpty) logger.info(s"Alternatives: ${alts.mkString(" | ")}")
-
-    for {
-      query <- (symbol :: alts)
-      symbolData <- symbolIndexer.get(query).toList
-      _ = logger.info(s"Found matching symbol index ${symbolData.name}: ${symbolData.signature}")
-    } yield symbolData
-  }
-
   /** A workaround for positions referring to jars */
+  // FIXME(alexey) this is not used anywhere; change to locations and apply after def/ref-locations
   def nonJarPosition(position: Position): Position = {
     if (position.uri.startsWith("jar:file")) {
       position.withUri(
@@ -112,31 +99,67 @@ class SymbolIndex(
     } else position
   }
 
-  /** Returns the definition location of the given symbol */
-  def definition(
-    symbol: Symbol
+  /** Returns symbol definition data from the index taking into account relevant alternatives */
+  def definitionData(
+      symbol: Symbol
+  ): Option[SymbolData] = {
+    (symbol :: definitionAlternatives(symbol))
+      .collectFirst {
+        case symbolIndexer(data) if data.definition.nonEmpty =>
+          logger.info(s"Found definition symbol ${data.symbol}")
+          data
+      }
+  }
+
+  /** Returns the definition location of the given symbol index data
+   * @param symbolData symbol data retrieved with [[definitionData]]
+   */
+  // TODO(alexey) this is not index-specific and should be moved to some SymbolData-ops
+  def definitionLocation(
+      symbolData: SymbolData
   ): Option[l.Location] = {
     for {
-      symbolData <- getSymbolData(symbol, withAlternatives = true).find(_.definition.nonEmpty)
       i.Position(uri, Some(range)) <- symbolData.definition
-      _ = logger.info(s"Found definition at ${uri.replaceFirst(".*/", "")} [${range.pretty}] ${symbolData.symbol}")
+      _ = logger.info(
+        s"Found definition ${uri.replaceFirst(".*/", "")} [${range.pretty}] ${symbolData.symbol}"
+      )
     } yield l.Location(uri, range.toRange)
   }
 
-  /** Returns reference locations for the given symbol */
-  def references(
-      symbol: Symbol,
+  /** Returns symbol references data from the index taking into account relevant alternatives */
+  def referencesData(
+      symbol: Symbol
+  ): List[SymbolData] = {
+    (symbol :: referenceAlternatives(symbol))
+      .collect {
+        case symbolIndexer(data) =>
+          if (data.symbol != symbol.syntax)
+            logger.info(s"Adding alternative references ${data.symbol}")
+          data
+      }
+  }
+
+  /** Returns references locations for the given symbol index data
+   * @param symbolData symbol data retrieved with [[referencesData]]
+   * @param withDefinition if set to `true` will include symbol definition location
+   */
+  // TODO(alexey) this is not index-specific and should be moved to some SymbolData-ops
+  def referencesLocations(
+      symbolData: SymbolData,
       withDefinition: Boolean
   ): List[l.Location] = {
     def positionToRef(pos: i.Position): (String, i.Ranges) =
       (pos.uri, i.Ranges(pos.range.toSeq))
 
+    val definitionRef =
+      if (withDefinition) symbolData.definition.map(positionToRef) else None
+
     for {
-      symbolData <- getSymbolData(symbol, withAlternatives = true)
-      definitionRef = if (withDefinition) symbolData.definition.map(positionToRef) else None
-      (uri, ranges) <- (symbolData.references.toList ++ definitionRef.toList)
+      (uri, ranges) <- (symbolData.references.toList ++ definitionRef.toList).distinct
       range <- ranges.ranges
-      _ = logger.info(s"Found reference at ${uri.replaceFirst(".*/", "")} [${range.pretty}] ${symbolData.symbol}")
+      _ = logger.info(
+        s"Found reference ${uri.replaceFirst(".*/", "")} [${range.pretty}] ${symbolData.symbol}"
+      )
     } yield l.Location(uri, range.toRange)
   }
 
@@ -219,7 +242,12 @@ class SymbolIndex(
     }
     document.symbols.foreach {
       case s.ResolvedSymbol(sym, Some(denot)) =>
-        symbolIndexer.addDenotation(sym, denot.flags, denot.name, denot.signature)
+        symbolIndexer.addDenotation(
+          sym,
+          denot.flags,
+          denot.name,
+          denot.signature
+        )
       case _ =>
     }
     Effects.IndexSemanticdb
@@ -249,8 +277,35 @@ class SymbolIndex(
     }
   }
 
+  // TODO(alexey) deduplicate this with `definitionAlternatives`
+  private def referenceAlternatives(symbol: Symbol): List[Symbol] =
+    symbol match {
+      case Symbol.Global(owner, Signature.Term(name)) =>
+        // If `case class A(a: Int)` and there is no companion object, resolve
+        // `A` in `A(1)` to the class definition.
+        Symbol.Global(owner, Signature.Type(name)) :: Nil
+      case Symbol.Global(
+          Symbol.Global(
+            Symbol.Global(owner, signature),
+            Signature.Method("copy" | "apply", _)
+          ),
+          param: Signature.TermParameter
+          ) =>
+        // If `case class Foo(a: Int)`, then resolve
+        // `a` in `Foo.apply(a = 1)`, and
+        // `a` in `Foo(1).copy(a = 2)`
+        // to the `Foo.a` primary constructor definition.
+        Symbol.Global(
+          Symbol.Global(owner, Signature.Type(signature.name)),
+          param
+        ) :: Nil
+      case _ =>
+        logger.info(s"Found no alternative for ${symbol.structure}")
+        Nil
+    }
+
   /** Returns a list of fallback symbols that can act instead of given symbol. */
-  private def alternatives(symbol: Symbol): List[Symbol] =
+  private def definitionAlternatives(symbol: Symbol): List[Symbol] =
     symbol match {
       case Symbol.Global(owner, Signature.Term(name)) =>
         // If `case class A(a: Int)` and there is no companion object, resolve
@@ -268,7 +323,7 @@ class SymbolIndex(
         // `apply` in `Foo.apply(1)`, and
         // `copy` in `Foo(1).copy(a = 2)`
         // to the `Foo` class definition.
-        companion :: Symbol.Global(owner, Signature.Type(signature.name)) :: Nil
+        Symbol.Global(owner, Signature.Type(signature.name)) :: Nil
       case Symbol.Global(owner, Signature.Method(name, _)) =>
         Symbol.Global(owner, Signature.Term(name)) :: Nil
       case Symbol.Global(

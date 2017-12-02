@@ -245,8 +245,13 @@ class ScalametaLanguageServer(
   ): DefinitionResult = {
     val path = Uri.toPath(td.uri).get
     val locations = for {
-      symbol <- symbolIndexer.findSymbol(path, position.line, position.character)
-      location <- symbolIndexer.definition(symbol)
+      symbol <- symbolIndexer.findSymbol(
+        path,
+        position.line,
+        position.character
+      )
+      data <- symbolIndexer.definitionData(symbol)
+      location <- symbolIndexer.definitionLocation(data)
     } yield location
     DefinitionResult(locations.toList)
   }
@@ -258,8 +263,14 @@ class ScalametaLanguageServer(
   ): ReferencesResult = {
     val path = Uri.toPath(td.uri).get
     val locations = for {
-      symbol <- symbolIndexer.findSymbol(path, position.line, position.character).toList
-      location <- symbolIndexer.references(symbol, context.includeDeclaration)
+      symbol <- symbolIndexer
+        .findSymbol(path, position.line, position.character)
+        .toList
+      data <- symbolIndexer.referencesData(symbol)
+      location <- symbolIndexer.referencesLocations(
+        data,
+        context.includeDeclaration
+      )
     } yield location
     ReferencesResult(locations)
   }

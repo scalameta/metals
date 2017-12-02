@@ -16,6 +16,7 @@ import monix.execution.schedulers.TestScheduler
 import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Classpath
+import org.langmeta.semanticdb.Symbol
 import tests.MegaSuite
 import utest._
 
@@ -51,31 +52,70 @@ object SymbolIndexTest extends MegaSuite {
         line: Int,
         column: Int,
         expected: String
-    ): Unit = {
-      val term = for {
-        symbol <- indexer.findSymbol(path, line, column)
-        data <- indexer.getSymbolData(symbol).headOption
-      } yield data
+    ): Option[Symbol] = {
+      val symbol = indexer.findSymbol(path, line, column)
       Predef.assert(
-        term.isDefined,
-        s"Symbol not found at $path:$line:$column. Did you run scalametaEnableCompletions from sbt?"
+        symbol.isDefined,
+        s"Symbol not found at $path:$line:$column."
       )
-      assertNoDiff(term.get.symbol, expected)
+      assertNoDiff(symbol.get.syntax, expected)
       Predef.assert(
-        term.get.definition.isDefined,
-        s"Definition not found for term $term"
+        indexer.symbolIndexer.get(symbol.get).isDefined,
+        s"Symbol ${symbol} is not found in the index. Did you run scalametaEnableCompletions from sbt?"
       )
+      symbol
     }
 
-    "fallback" - {
+    def assertSymbolDefinition(
+        expected: String
+    )(
+        symbol: Symbol
+    ): Unit = {
+      val data = indexer.definitionData(symbol)
+      Predef.assert(
+        data.isDefined,
+        s"Definition not found for term ${symbol}"
+      )
+      assertNoDiff(data.get.symbol, expected)
+    }
+
+    "find symbol and its definition" - {
       "<<User>>(...)" -
-        assertSymbolFound(3, 17, "_root_.a.User#")
+        assertSymbolFound(3, 17, "_root_.a.User.").map(
+          assertSymbolDefinition("_root_.a.User#")
+        )
       "User.<<apply>>(...)" -
-        assertSymbolFound(3, 22, "_root_.a.User#")
+        assertSymbolFound(
+          3,
+          22,
+          "_root_.a.User.apply(Ljava/lang/String;I)La/User;."
+        ).map(
+          assertSymbolDefinition("_root_.a.User#")
+        )
+      "User.<<copy>>(...)" -
+        assertSymbolFound(
+          4,
+          9,
+          "_root_.a.User#copy(Ljava/lang/String;I)La/User;."
+        ).map(
+          assertSymbolDefinition("_root_.a.User#")
+        )
       "User.apply(<<name>> ...)" -
-        assertSymbolFound(3, 28, "_root_.a.User#(name)")
+        assertSymbolFound(
+          3,
+          28,
+          "_root_.a.User.apply(Ljava/lang/String;I)La/User;.(name)"
+        ).map(
+          assertSymbolDefinition("_root_.a.User#(name)")
+        )
       "user.copy(<<age>> = ...)" -
-        assertSymbolFound(4, 14, "_root_.a.User#(age)")
+        assertSymbolFound(
+          4,
+          14,
+          "_root_.a.User#copy(Ljava/lang/String;I)La/User;.(age)"
+        ).map(
+          assertSymbolDefinition("_root_.a.User#(age)")
+        )
     }
 
     "classpath" - {
