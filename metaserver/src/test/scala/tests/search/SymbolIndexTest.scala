@@ -63,7 +63,7 @@ object SymbolIndexTest extends MegaSuite {
     new ScalametaLanguageServer(config, stdin, stdout, System.out)(s)
   server.initialize(0L, cwd.toString(), ClientCapabilities())
   while (s.tickOne()) () // Trigger indexing
-  val indexer: SymbolIndex = server.symbolIndexer
+  val index: SymbolIndex = server.symbolIndex
   val reminderMsg = "Did you run scalametaEnableCompletions from sbt?"
   override val tests = Tests {
 
@@ -71,7 +71,7 @@ object SymbolIndexTest extends MegaSuite {
     def assertSymbolFound(line: Int, column: Int)(
         expected: String
     ): Symbol = {
-      val symbol = indexer
+      val symbol = index
         .findSymbol(path.UserTest, line, column)
         .getOrElse(
           fail(
@@ -79,7 +79,7 @@ object SymbolIndexTest extends MegaSuite {
           )
         )
       assertNoDiff(symbol.syntax, expected)
-      val symbolData = indexer.symbolIndexer
+      val symbolData = index.symbolIndexer
         .get(symbol)
         .getOrElse(
           fail(s"Symbol ${symbol} is not found in the index. ${reminderMsg}")
@@ -94,7 +94,7 @@ object SymbolIndexTest extends MegaSuite {
         expectedDefn: String
     ): Unit = {
       val symbol = assertSymbolFound(line, column)(expectedSymbol)
-      val data = indexer
+      val data = index
         .definitionData(symbol)
         .getOrElse(
           fail(s"Definition not found for term ${symbol}")
@@ -110,14 +110,14 @@ object SymbolIndexTest extends MegaSuite {
     )(
         expected: l.Location*
     ): Unit = {
-      val symbol = indexer
+      val symbol = index
         .findSymbol(path.UserTest, line, column)
         .getOrElse(
           fail(
             s"Symbol not found at $path.UserTest:$line:$column. ${reminderMsg}"
           )
         )
-      val dataList = indexer.referencesData(symbol)
+      val dataList = index.referencesData(symbol)
       if (dataList.isEmpty) fail(s"References not found for term ${symbol}")
       // TODO: use `dataList` to test expected alternatives
       val found = for {
@@ -221,8 +221,8 @@ object SymbolIndexTest extends MegaSuite {
       }
       val reconstructedDatabase = InverseSymbolIndexer.reconstructDatabase(
         cwd,
-        indexer.documentIndex,
-        indexer.symbolIndexer.allSymbols
+        index.documentIndex,
+        index.symbolIndexer.allSymbols
       )
       val filenames = reconstructedDatabase.documents.toIterator.map { d =>
         Paths.get(d.input.syntax).getFileName.toString
