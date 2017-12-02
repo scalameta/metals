@@ -57,6 +57,9 @@ object ScalametaEnrichments {
     def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
   }
   implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
+    def pretty: String =
+      s"${pos.uri.replaceFirst(".*/", "")} [${pos.range.map(_.pretty).getOrElse("")}]"
+
     def toLocation(implicit cwd: m.AbsolutePath): l.Location = {
       l.Location(
         pos.uri,
@@ -215,5 +218,25 @@ object ScalametaEnrichments {
       Files.write(out, contents.getBytes(StandardCharsets.UTF_8))
       out.toUri
     }
+  }
+
+  implicit class XtensionSymbolData(val symbolData: i.SymbolData)
+      extends AnyVal {
+
+    /** Returns reference positions for the given symbol index data
+     * @param withDefinition if set to `true` will include symbol definition location
+     */
+    def referencePositions(withDefinition: Boolean): Set[i.Position] = {
+      val defPosition = if (withDefinition) symbolData.definition else None
+
+      val refPositions = for {
+        (uri, rangeSet) <- symbolData.references
+        range <- rangeSet.ranges
+      } yield i.Position(uri, Some(range))
+
+      (defPosition.toSet ++ refPositions.toSet)
+        .filterNot { _.uri.startsWith("jar:file") } // definition may refer to a jar
+    }
+
   }
 }

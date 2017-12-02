@@ -5,6 +5,7 @@ import java.io.PipedOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.internal.BuildInfo
 import scala.meta.languageserver.ScalametaLanguageServer
 import scala.meta.languageserver.ServerConfig
@@ -119,10 +120,11 @@ object SymbolIndexTest extends MegaSuite {
       val dataList = indexer.referencesData(symbol)
       if (dataList.isEmpty) fail(s"References not found for term ${symbol}")
       // TODO: use `dataList` to test expected alternatives
+      val found = for {
+        data <- dataList
+        pos <- data.referencePositions(withDefinition)
+      } yield pos.toLocation
 
-      val found = dataList.flatMap {
-        indexer.referencesLocations(_, withDefinition)
-      }
       val missingLocations = found.toSet diff expected.toSet
       assert(missingLocations.isEmpty)
       val unexpectedLocations = expected.toSet diff found.toSet

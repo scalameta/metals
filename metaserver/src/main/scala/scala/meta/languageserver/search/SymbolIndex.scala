@@ -101,21 +101,6 @@ class SymbolIndex(
       }
   }
 
-  /** Returns the definition location of the given symbol index data
-   * @param symbolData symbol data retrieved with [[definitionData]]
-   */
-  // TODO(alexey) this is not index-specific and should be moved to some SymbolData-ops
-  def definitionLocation(
-      symbolData: SymbolData
-  ): Option[l.Location] = {
-    for {
-      i.Position(uri, Some(range)) <- symbolData.definition
-      _ = logger.info(
-        s"Found definition ${uri.replaceFirst(".*/", "")} [${range.pretty}] ${symbolData.symbol}"
-      )
-    } yield l.Location(uri, range.toRange)
-  }
-
   /** Returns symbol references data from the index taking into account relevant alternatives */
   def referencesData(
       symbol: Symbol
@@ -127,31 +112,6 @@ class SymbolIndex(
             logger.info(s"Adding alternative references ${data.symbol}")
           data
       }
-  }
-
-  /** Returns references locations for the given symbol index data
-   * @param symbolData symbol data retrieved with [[referencesData]]
-   * @param withDefinition if set to `true` will include symbol definition location
-   */
-  // TODO(alexey) this is not index-specific and should be moved to some SymbolData-ops
-  def referencesLocations(
-      symbolData: SymbolData,
-      withDefinition: Boolean
-  ): Set[l.Location] = {
-    def positionToRef(pos: i.Position): (String, i.Ranges) =
-      (pos.uri, i.Ranges(pos.range.toSeq))
-
-    val definitionRef =
-      if (withDefinition) symbolData.definition.map(positionToRef) else None
-
-    for {
-      (uri, ranges) <- (symbolData.references.toSet ++ definitionRef.toSet)
-      if (!uri.startsWith("jar:file")) // definition may refer to a jar
-      range <- ranges.ranges
-      _ = logger.info(
-        s"Found reference ${uri.replaceFirst(".*/", "")} [${range.pretty}] ${symbolData.symbol}"
-      )
-    } yield l.Location(uri, range.toRange)
   }
 
   def indexDependencyClasspath(

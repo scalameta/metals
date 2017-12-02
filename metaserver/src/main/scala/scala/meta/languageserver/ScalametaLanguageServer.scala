@@ -253,8 +253,9 @@ class ScalametaLanguageServer(
         position.character
       )
       data <- symbolIndexer.definitionData(symbol)
-      location <- symbolIndexer.definitionLocation(data)
-    } yield location.toNonJar(tempSourcesDir)
+      pos <- data.definition
+      _ = logger.info(s"Found definition ${pos.pretty} ${data.symbol}")
+    } yield pos.toLocation.toNonJar(tempSourcesDir)
     DefinitionResult(locations.toList)
   }
 
@@ -269,11 +270,9 @@ class ScalametaLanguageServer(
         .findSymbol(path, position.line, position.character)
         .toList
       data <- symbolIndexer.referencesData(symbol)
-      location <- symbolIndexer.referencesLocations(
-        data,
-        context.includeDeclaration
-      )
-    } yield location
+      pos <- data.referencePositions(context.includeDeclaration)
+      _ = logger.info(s"Found reference ${pos.pretty} ${data.symbol}")
+    } yield pos.toLocation
     ReferencesResult(locations)
   }
 
