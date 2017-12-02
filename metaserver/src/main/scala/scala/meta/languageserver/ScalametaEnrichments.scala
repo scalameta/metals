@@ -105,6 +105,76 @@ object ScalametaEnrichments {
       case _ => sym
     }
   }
+  implicit class XtensionSymbol(val sym: m.Symbol) extends AnyVal {
+    import scala.meta._
+
+    /** Returns a list of fallback symbols that can act instead of given symbol. */
+    // TODO(alexey) review/refine this list
+    def referenceAlternatives: List[Symbol] = {
+      List(
+        caseClassCompanionToType,
+        caseClassApplyOrCopyParams
+      ).flatten
+    }
+
+    /** Returns a list of fallback symbols that can act instead of given symbol. */
+    // TODO(alexey) review/refine this list
+    def definitionAlternative: List[Symbol] = {
+      List(
+        caseClassCompanionToType,
+        caseClassApplyOrCopy,
+        caseClassApplyOrCopyParams,
+        methodToVal
+      ).flatten
+    }
+
+    /** If `case class A(a: Int)` and there is no companion object, resolve
+     * `A` in `A(1)` to the class definition.
+     */
+    def caseClassCompanionToType: Option[Symbol] = Option(sym).collect {
+      case Symbol.Global(owner, Signature.Term(name)) =>
+        Symbol.Global(owner, Signature.Type(name))
+    }
+
+    /** If `case class Foo(a: Int)`, then resolve
+     * `a` in `Foo.apply(a = 1)`, and
+     * `a` in `Foo(1).copy(a = 2)`
+     * to the `Foo.a` primary constructor definition.
+     */
+    def caseClassApplyOrCopyParams: Option[Symbol] = Option(sym).collect {
+      case Symbol.Global(
+          Symbol.Global(
+            Symbol.Global(owner, signature),
+            Signature.Method("copy" | "apply", _)
+          ),
+          param: Signature.TermParameter
+          ) =>
+        Symbol.Global(
+          Symbol.Global(owner, Signature.Type(signature.name)),
+          param
+        )
+    }
+
+    /** If `case class Foo(a: Int)`, then resolve
+     * `apply` in `Foo.apply(1)`, and
+     * `copy` in `Foo(1).copy(a = 2)`
+     * to the `Foo` class definition.
+     */
+    def caseClassApplyOrCopy: Option[Symbol] = Option(sym).collect {
+      case Symbol.Global(
+          Symbol.Global(owner, signature),
+          Signature.Method("apply" | "copy", _)
+          ) =>
+        Symbol.Global(owner, Signature.Type(signature.name))
+    }
+
+    /** Fallback to the val term for a def with multiple params */
+    def methodToVal: Option[Symbol] = Option(sym).collect {
+      case Symbol.Global(owner, Signature.Method(name, _)) =>
+        Symbol.Global(owner, Signature.Term(name))
+    }
+  }
+
   implicit class XtensionLocation(val loc: l.Location) extends AnyVal {
 
     /** A workaround for locations referring to jars */

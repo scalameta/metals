@@ -93,7 +93,7 @@ class SymbolIndex(
   def definitionData(
       symbol: Symbol
   ): Option[SymbolData] = {
-    (symbol :: alternatives.forDefinition(symbol))
+    (symbol :: symbol.definitionAlternative)
       .collectFirst {
         case symbolIndexer(data) if data.definition.nonEmpty =>
           logger.info(s"Found definition symbol ${data.symbol}")
@@ -120,7 +120,7 @@ class SymbolIndex(
   def referencesData(
       symbol: Symbol
   ): List[SymbolData] = {
-    (symbol :: alternatives.forReferences(symbol))
+    (symbol :: symbol.referenceAlternatives)
       .collect {
         case symbolIndexer(data) =>
           if (data.symbol != symbol.syntax)
@@ -265,75 +265,6 @@ class SymbolIndex(
         "Please recompile for up-to-date information"
       )
       None
-    }
-  }
-
-  // TODO(alexey) this is not index specific and could be moved somewhere else (like Symbol-ops)
-  case object alternatives {
-
-    /** Returns a list of fallback symbols that can act instead of given symbol. */
-    // TODO(alexey) review this list
-    def forReferences(symbol: Symbol): List[Symbol] = {
-      List(
-        caseClassCompanionToType,
-        caseClassApplyOrCopyParams
-      ).flatMap { _.lift(symbol) }
-    }
-
-    /** Returns a list of fallback symbols that can act instead of given symbol. */
-    def forDefinition(symbol: Symbol): List[Symbol] = {
-      List(
-        caseClassCompanionToType,
-        caseClassApplyOrCopy,
-        caseClassApplyOrCopyParams,
-        methodToTerm
-      ).flatMap { _.lift(symbol) }
-    }
-
-    /** If `case class A(a: Int)` and there is no companion object, resolve
-     * `A` in `A(1)` to the class definition.
-     */
-    val caseClassCompanionToType: PartialFunction[Symbol, Symbol] = {
-      case Symbol.Global(owner, Signature.Term(name)) =>
-        Symbol.Global(owner, Signature.Type(name))
-    }
-
-    /** If `case class Foo(a: Int)`, then resolve
-     * `a` in `Foo.apply(a = 1)`, and
-     * `a` in `Foo(1).copy(a = 2)`
-     * to the `Foo.a` primary constructor definition.
-     */
-    val caseClassApplyOrCopyParams: PartialFunction[Symbol, Symbol] = {
-      case Symbol.Global(
-          Symbol.Global(
-            Symbol.Global(owner, signature),
-            Signature.Method("copy" | "apply", _)
-          ),
-          param: Signature.TermParameter
-          ) =>
-        Symbol.Global(
-          Symbol.Global(owner, Signature.Type(signature.name)),
-          param
-        )
-    }
-
-    /** If `case class Foo(a: Int)`, then resolve
-     * `apply` in `Foo.apply(1)`, and
-     * `copy` in `Foo(1).copy(a = 2)`
-     * to the `Foo` class definition.
-     */
-    val caseClassApplyOrCopy: PartialFunction[Symbol, Symbol] = {
-      case Symbol.Global(
-          Symbol.Global(owner, signature),
-          Signature.Method("apply" | "copy", _)
-          ) =>
-        Symbol.Global(owner, Signature.Type(signature.name))
-    }
-
-    // FIXME(alexey) I'm not sure what this transformation does
-    val methodToTerm: PartialFunction[Symbol, Symbol] = {
-      case Symbol.Global(owner, Signature.Method(name, _)) =>
-        Symbol.Global(owner, Signature.Term(name))
     }
   }
 
