@@ -10,6 +10,7 @@ import scala.meta.languageserver.ScalametaLanguageServer
 import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.search.InverseSymbolIndexer
 import scala.meta.languageserver.search.SymbolIndex
+import scala.meta.languageserver.index.SymbolData
 import scala.{meta => m}
 import langserver.messages.ClientCapabilities
 import monix.execution.schedulers.TestScheduler
@@ -48,81 +49,67 @@ object SymbolIndexTest extends MegaSuite {
   val indexer: SymbolIndex = server.symbolIndexer
   override val tests = Tests {
 
-    def assertSymbolFound(
-        line: Int,
-        column: Int,
-        expected: String
-    ): Option[Symbol] = {
-      val symbol = indexer.findSymbol(path, line, column)
-      Predef.assert(
-        symbol.isDefined,
-        s"Symbol not found at $path:$line:$column."
+    /** Checks that there is a symbol at given position, it's in the index and has expected name */
+    def assertSymbolFound(line: Int, column: Int)(
+      expected: String
+    ): Symbol = {
+      val symbol = indexer.findSymbol(path, line, column).getOrElse(
+        fail(s"Symbol not found at $path:$line:$column. Did you run scalametaEnableCompletions from sbt?")
       )
-      assertNoDiff(symbol.get.syntax, expected)
-      Predef.assert(
-        indexer.symbolIndexer.get(symbol.get).isDefined,
-        s"Symbol ${symbol} is not found in the index. Did you run scalametaEnableCompletions from sbt?"
+      assertNoDiff(symbol.syntax, expected)
+      val symbolData = indexer.symbolIndexer.get(symbol).getOrElse(
+        fail(s"Symbol ${symbol} is not found in the index. Did you run scalametaEnableCompletions from sbt?")
       )
+      assertNoDiff(symbolData.symbol, expected)
       symbol
     }
 
-    def assertSymbolDefinition(
-        expected: String
-    )(
-        symbol: Symbol
-    ): Unit = {
-      val data = indexer.definitionData(symbol)
-      Predef.assert(
-        data.isDefined,
-        s"Definition not found for term ${symbol}"
+    /** Checks that given symbol has a definition with expected name */
+    def assertSymbolDefinition(line: Int, column: Int)(
+      found: String,
+      definition: String
+    ): SymbolData = {
+      val symbol = assertSymbolFound(line, column)(found)
+      val data = indexer.definitionData(symbol).getOrElse(
+        fail(s"Definition not found for term ${symbol}")
       )
-      assertNoDiff(data.get.symbol, expected)
+      assertNoDiff(data.symbol, definition)
+      data
     }
 
-    "find symbol and its definition" - {
+    "definition" - {
       "<<User>>(...)" -
-        assertSymbolFound(3, 17, "_root_.a.User.").map(
-          assertSymbolDefinition("_root_.a.User#")
+        assertSymbolDefinition(3, 17)(
+          "_root_.a.User.",
+          "_root_.a.User#"
         )
       "User.<<apply>>(...)" -
-        assertSymbolFound(
-          3,
-          22,
-          "_root_.a.User.apply(Ljava/lang/String;I)La/User;."
-        ).map(
-          assertSymbolDefinition("_root_.a.User#")
+        assertSymbolDefinition(3, 22)(
+          "_root_.a.User.apply(Ljava/lang/String;I)La/User;.",
+          "_root_.a.User#"
         )
       "User.<<copy>>(...)" -
-        assertSymbolFound(
-          4,
-          9,
-          "_root_.a.User#copy(Ljava/lang/String;I)La/User;."
-        ).map(
-          assertSymbolDefinition("_root_.a.User#")
+        assertSymbolDefinition(4, 9)(
+          "_root_.a.User#copy(Ljava/lang/String;I)La/User;.",
+          "_root_.a.User#"
         )
       "User.apply(<<name>> ...)" -
-        assertSymbolFound(
-          3,
-          28,
-          "_root_.a.User.apply(Ljava/lang/String;I)La/User;.(name)"
-        ).map(
-          assertSymbolDefinition("_root_.a.User#(name)")
+        assertSymbolDefinition(3, 28)(
+          "_root_.a.User.apply(Ljava/lang/String;I)La/User;.(name)",
+          "_root_.a.User#(name)"
         )
       "user.copy(<<age>> = ...)" -
-        assertSymbolFound(
-          4,
-          14,
-          "_root_.a.User#copy(Ljava/lang/String;I)La/User;.(age)"
-        ).map(
-          assertSymbolDefinition("_root_.a.User#(age)")
+        assertSymbolDefinition(4, 14)(
+          "_root_.a.User#copy(Ljava/lang/String;I)La/User;.(age)",
+          "_root_.a.User#(age)"
         )
     }
 
     "classpath" - {
       "<<List>>(...)" - // ScalaMtags
-        assertSymbolFound(5, 5, "_root_.scala.collection.immutable.List.")
+        assertSymbolFound(5, 5)("_root_.scala.collection.immutable.List.")
       "<<CharRef>>.create(...)" - // JavaMtags
-        assertSymbolFound(8, 19, "_root_.scala.runtime.CharRef.")
+        assertSymbolFound(8, 19)("_root_.scala.runtime.CharRef.")
     }
 
     "bijection" - {
