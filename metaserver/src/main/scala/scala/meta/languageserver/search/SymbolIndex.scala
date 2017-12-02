@@ -103,7 +103,7 @@ class SymbolIndex(
   def definitionData(
       symbol: Symbol
   ): Option[SymbolData] = {
-    (symbol :: definitionAlternatives(symbol))
+    (symbol :: alternatives.forDefinition(symbol))
       .collectFirst {
         case symbolIndexer(data) if data.definition.nonEmpty =>
           logger.info(s"Found definition symbol ${data.symbol}")
@@ -130,7 +130,7 @@ class SymbolIndex(
   def referencesData(
       symbol: Symbol
   ): List[SymbolData] = {
-    (symbol :: referenceAlternatives(symbol))
+    (symbol :: alternatives.forReferences(symbol))
       .collect {
         case symbolIndexer(data) =>
           if (data.symbol != symbol.syntax)
@@ -277,55 +277,42 @@ class SymbolIndex(
     }
   }
 
-  // TODO(alexey) deduplicate this with `definitionAlternatives`
-  private def referenceAlternatives(symbol: Symbol): List[Symbol] =
-    symbol match {
-      case Symbol.Global(owner, Signature.Term(name)) =>
-        // If `case class A(a: Int)` and there is no companion object, resolve
-        // `A` in `A(1)` to the class definition.
-        Symbol.Global(owner, Signature.Type(name)) :: Nil
-      case Symbol.Global(
-          Symbol.Global(
-            Symbol.Global(owner, signature),
-            Signature.Method("copy" | "apply", _)
-          ),
-          param: Signature.TermParameter
-          ) =>
-        // If `case class Foo(a: Int)`, then resolve
-        // `a` in `Foo.apply(a = 1)`, and
-        // `a` in `Foo(1).copy(a = 2)`
-        // to the `Foo.a` primary constructor definition.
-        Symbol.Global(
-          Symbol.Global(owner, Signature.Type(signature.name)),
-          param
-        ) :: Nil
-      case _ =>
-        logger.info(s"Found no alternative for ${symbol.structure}")
-        Nil
+  // TODO(alexey) this is not index specific and could be moved somewhere else (like Symbol-ops)
+  case object alternatives {
+
+    /** Returns a list of fallback symbols that can act instead of given symbol. */
+    // TODO(alexey) review this list
+    def forReferences(symbol: Symbol): List[Symbol] = {
+      List(
+        caseClassCompanionToType,
+        caseClassApplyOrCopyParams
+      ).flatMap { _.lift(symbol) }
     }
 
-  /** Returns a list of fallback symbols that can act instead of given symbol. */
-  private def definitionAlternatives(symbol: Symbol): List[Symbol] =
-    symbol match {
+    /** Returns a list of fallback symbols that can act instead of given symbol. */
+    def forDefinition(symbol: Symbol): List[Symbol] = {
+      List(
+        caseClassCompanionToType,
+        caseClassApplyOrCopy,
+        caseClassApplyOrCopyParams,
+        methodToTerm
+      ).flatMap { _.lift(symbol) }
+    }
+
+    /** If `case class A(a: Int)` and there is no companion object, resolve
+     * `A` in `A(1)` to the class definition.
+     */
+    val caseClassCompanionToType: PartialFunction[Symbol, Symbol] = {
       case Symbol.Global(owner, Signature.Term(name)) =>
-        // If `case class A(a: Int)` and there is no companion object, resolve
-        // `A` in `A(1)` to the class definition.
-        Symbol.Global(owner, Signature.Type(name)) :: Nil
-      case Symbol.Multi(ss) =>
-        // If `import a.B` where `case class B()`, then
-        // resolve to either symbol, whichever has a definition.
-        ss
-      case Symbol.Global(
-          companion @ Symbol.Global(owner, signature),
-          Signature.Method("apply" | "copy", _)
-          ) =>
-        // If `case class Foo(a: Int)`, then resolve
-        // `apply` in `Foo.apply(1)`, and
-        // `copy` in `Foo(1).copy(a = 2)`
-        // to the `Foo` class definition.
-        Symbol.Global(owner, Signature.Type(signature.name)) :: Nil
-      case Symbol.Global(owner, Signature.Method(name, _)) =>
-        Symbol.Global(owner, Signature.Term(name)) :: Nil
+        Symbol.Global(owner, Signature.Type(name))
+    }
+
+    /** If `case class Foo(a: Int)`, then resolve
+     * `a` in `Foo.apply(a = 1)`, and
+     * `a` in `Foo(1).copy(a = 2)`
+     * to the `Foo.a` primary constructor definition.
+     */
+    val caseClassApplyOrCopyParams: PartialFunction[Symbol, Symbol] = {
       case Symbol.Global(
           Symbol.Global(
             Symbol.Global(owner, signature),
@@ -333,18 +320,31 @@ class SymbolIndex(
           ),
           param: Signature.TermParameter
           ) =>
-        // If `case class Foo(a: Int)`, then resolve
-        // `a` in `Foo.apply(a = 1)`, and
-        // `a` in `Foo(1).copy(a = 2)`
-        // to the `Foo.a` primary constructor definition.
         Symbol.Global(
           Symbol.Global(owner, Signature.Type(signature.name)),
           param
-        ) :: Nil
-      case _ =>
-        logger.info(s"Found no alternative for ${symbol.structure}")
-        Nil
+        )
     }
+
+    /** If `case class Foo(a: Int)`, then resolve
+     * `apply` in `Foo.apply(1)`, and
+     * `copy` in `Foo(1).copy(a = 2)`
+     * to the `Foo` class definition.
+     */
+    val caseClassApplyOrCopy: PartialFunction[Symbol, Symbol] = {
+      case Symbol.Global(
+          Symbol.Global(owner, signature),
+          Signature.Method("apply" | "copy", _)
+          ) =>
+        Symbol.Global(owner, Signature.Type(signature.name))
+    }
+
+    // FIXME(alexey) I'm not sure what this transformation does
+    val methodToTerm: PartialFunction[Symbol, Symbol] = {
+      case Symbol.Global(owner, Signature.Method(name, _)) =>
+        Symbol.Global(owner, Signature.Term(name))
+    }
+  }
 
   // Writes the contents from in-memory source file to a file in the target/source/*
   // directory of the workspace. vscode has support for TextDocumentContentProvider
