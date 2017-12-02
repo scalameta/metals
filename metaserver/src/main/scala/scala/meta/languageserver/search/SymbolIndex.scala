@@ -137,7 +137,7 @@ class SymbolIndex(
   def referencesLocations(
       symbolData: SymbolData,
       withDefinition: Boolean
-  ): List[l.Location] = {
+  ): Set[l.Location] = {
     def positionToRef(pos: i.Position): (String, i.Ranges) =
       (pos.uri, i.Ranges(pos.range.toSeq))
 
@@ -145,7 +145,8 @@ class SymbolIndex(
       if (withDefinition) symbolData.definition.map(positionToRef) else None
 
     for {
-      (uri, ranges) <- (symbolData.references.toList ++ definitionRef.toList).distinct
+      (uri, ranges) <- (symbolData.references.toSet ++ definitionRef.toSet)
+      if (!uri.startsWith("jar:file")) // definition may refer to a jar
       range <- ranges.ranges
       _ = logger.info(
         s"Found reference ${uri.replaceFirst(".*/", "")} [${range.pretty}] ${symbolData.symbol}"
@@ -334,43 +335,6 @@ class SymbolIndex(
       case Symbol.Global(owner, Signature.Method(name, _)) =>
         Symbol.Global(owner, Signature.Term(name))
     }
-  }
-
-  /** A workaround for positions referring to jars */
-  def nonJarLocation(loc: l.Location): l.Location = {
-    if (loc.uri.startsWith("jar:file")) {
-      loc.copy(uri = createFileInWorkspaceTarget(URI.create(loc.uri)).toString)
-    } else loc
-  }
-
-  // Writes the contents from in-memory source file to a file in the target/source/*
-  // directory of the workspace. vscode has support for TextDocumentContentProvider
-  // which can provide hooks to open readonly views for custom uri schemes:
-  // https://code.visualstudio.com/docs/extensionAPI/vscode-api#TextDocumentContentProvider
-  // However, that is a vscode only solution and we'd like this work for all
-  // text editors. Therefore, we write instead the file contents to disk in order to
-  // return a file: uri.
-  // TODO: Fix this with https://github.com/scalameta/language-server/issues/36
-  private def createFileInWorkspaceTarget(
-      uri: URI
-  ): URI = {
-    logger.info(
-      s"Jumping into uri $uri, writing contents to file in target file"
-    )
-    val contents = new String(FileIO.readAllBytes(uri), StandardCharsets.UTF_8)
-    // HACK(olafur) URIs are not typesafe, jar:file://blah.scala will return
-    // null for `.getPath`. We should come up with nicer APIs to deal with this
-    // kinda stuff.
-    val path: String =
-      if (uri.getPath == null)
-        uri.getSchemeSpecificPart
-      else uri.getPath
-    val filename = Paths.get(path).getFileName
-    val dir = cwd.resolve("target").resolve("sources")
-    Files.createDirectories(dir.toNIO)
-    val out = dir.toNIO.resolve(filename)
-    Files.write(out, contents.getBytes(StandardCharsets.UTF_8))
-    out.toUri
   }
 
 }

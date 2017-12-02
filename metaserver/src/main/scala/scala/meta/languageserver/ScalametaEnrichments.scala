@@ -1,11 +1,16 @@
 package scala.meta.languageserver
 
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.charset.StandardCharsets
 import java.net.URI
 import scala.{meta => m}
 import langserver.types.SymbolKind
 import langserver.types.TextDocumentIdentifier
 import langserver.{types => l}
 import scala.meta.languageserver.{index => i}
+import org.langmeta.io.AbsolutePath
+import org.langmeta.internal.io.FileIO
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
@@ -98,6 +103,47 @@ object ScalametaEnrichments {
       case m.Symbol.Global(owner, m.Signature.Type(name)) =>
         m.Symbol.Global(owner, m.Signature.Term(name))
       case _ => sym
+    }
+  }
+  implicit class XtensionLocation(val loc: l.Location) extends AnyVal {
+
+    /** A workaround for locations referring to jars */
+    def toNonJar(destination: AbsolutePath): l.Location = {
+      if (loc.uri.startsWith("jar:file")) {
+        val newURI =
+          createFileInWorkspaceTarget(URI.create(loc.uri), destination)
+        loc.copy(uri = newURI.toString)
+      } else loc
+    }
+
+    // Writes the contents from in-memory source file to a file in the target/source/*
+    // directory of the workspace. vscode has support for TextDocumentContentProvider
+    // which can provide hooks to open readonly views for custom uri schemes:
+    // https://code.visualstudio.com/docs/extensionAPI/vscode-api#TextDocumentContentProvider
+    // However, that is a vscode only solution and we'd like this work for all
+    // text editors. Therefore, we write instead the file contents to disk in order to
+    // return a file: uri.
+    // TODO: Fix this with https://github.com/scalameta/language-server/issues/36
+    private def createFileInWorkspaceTarget(
+        uri: URI,
+        destination: AbsolutePath
+    ): URI = {
+      // logger.info(s"Jumping into uri $uri, writing contents to file in target file")
+      val contents =
+        new String(FileIO.readAllBytes(uri), StandardCharsets.UTF_8)
+      // HACK(olafur) URIs are not typesafe, jar:file://blah.scala will return
+      // null for `.getPath`. We should come up with nicer APIs to deal with this
+      // kinda stuff.
+      val path: String =
+        if (uri.getPath == null)
+          uri.getSchemeSpecificPart
+        else uri.getPath
+      val filename = Paths.get(path).getFileName
+
+      Files.createDirectories(destination.toNIO)
+      val out = destination.toNIO.resolve(filename)
+      Files.write(out, contents.getBytes(StandardCharsets.UTF_8))
+      out.toUri
     }
   }
 }
