@@ -252,7 +252,7 @@ class ScalametaLanguageServer(
       )
       data <- symbolIndexer.definitionData(symbol)
       location <- symbolIndexer.definitionLocation(data)
-    } yield location
+    } yield symbolIndexer.nonJarLocation(location)
     DefinitionResult(locations.toList)
   }
 
@@ -272,6 +272,8 @@ class ScalametaLanguageServer(
         context.includeDeclaration
       )
     } yield location
+    // TODO(alexey) should it return references to the jars where symbol is defined? or should such references be filtered out instead?
+    // } yield symbolIndexer.nonJarLocation(location)
     ReferencesResult(locations)
   }
 

@@ -89,16 +89,6 @@ class SymbolIndex(
     } yield symbol
   }
 
-  /** A workaround for positions referring to jars */
-  // FIXME(alexey) this is not used anywhere; change to locations and apply after def/ref-locations
-  def nonJarPosition(position: Position): Position = {
-    if (position.uri.startsWith("jar:file")) {
-      position.withUri(
-        createFileInWorkspaceTarget(URI.create(position.uri)).toString
-      )
-    } else position
-  }
-
   /** Returns symbol definition data from the index taking into account relevant alternatives */
   def definitionData(
       symbol: Symbol
@@ -344,6 +334,13 @@ class SymbolIndex(
       case Symbol.Global(owner, Signature.Method(name, _)) =>
         Symbol.Global(owner, Signature.Term(name))
     }
+  }
+
+  /** A workaround for positions referring to jars */
+  def nonJarLocation(loc: l.Location): l.Location = {
+    if (loc.uri.startsWith("jar:file")) {
+      loc.copy(uri = createFileInWorkspaceTarget(URI.create(loc.uri)).toString)
+    } else loc
   }
 
   // Writes the contents from in-memory source file to a file in the target/source/*
