@@ -12,6 +12,7 @@ import scala.meta.languageserver.search.InverseSymbolIndexer
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.index.SymbolData
 import scala.{meta => m}
+import langserver.{types => l}
 import langserver.messages.ClientCapabilities
 import monix.execution.schedulers.TestScheduler
 import org.langmeta.internal.io.PathIO
@@ -24,13 +25,28 @@ import utest._
 object SymbolIndexTest extends MegaSuite {
   implicit val cwd: AbsolutePath =
     AbsolutePath(BuildInfo.testWorkspaceBaseDirectory)
-  val path = cwd
-    .resolve("src")
-    .resolve("test")
-    .resolve("scala")
-    .resolve("example")
-    .resolve("UserTest.scala")
-  Predef.assert(Files.isRegularFile(path.toNIO), path.toString())
+  object path {
+    val User = cwd
+      .resolve("src")
+      .resolve("main")
+      .resolve("scala")
+      .resolve("example")
+      .resolve("User.scala")
+    val UserTest = cwd
+      .resolve("src")
+      .resolve("test")
+      .resolve("scala")
+      .resolve("example")
+      .resolve("UserTest.scala")
+  }
+  Predef.assert(
+    Files.isRegularFile(path.User.toNIO),
+    path.User.toString()
+  )
+  Predef.assert(
+    Files.isRegularFile(path.UserTest.toNIO),
+    path.UserTest.toString()
+  )
   val s = TestScheduler()
   val config = ServerConfig(
     cwd,
@@ -47,35 +63,84 @@ object SymbolIndexTest extends MegaSuite {
   server.initialize(0L, cwd.toString(), ClientCapabilities())
   while (s.tickOne()) () // Trigger indexing
   val indexer: SymbolIndex = server.symbolIndexer
+  val reminderMsg = "Did you run scalametaEnableCompletions from sbt?"
   override val tests = Tests {
 
     /** Checks that there is a symbol at given position, it's in the index and has expected name */
     def assertSymbolFound(line: Int, column: Int)(
-      expected: String
+        expected: String
     ): Symbol = {
-      val symbol = indexer.findSymbol(path, line, column).getOrElse(
-        fail(s"Symbol not found at $path:$line:$column. Did you run scalametaEnableCompletions from sbt?")
-      )
+      val symbol = indexer
+        .findSymbol(path.UserTest, line, column)
+        .getOrElse(
+          fail(
+            s"Symbol not found at $path.UserTest:$line:$column. ${reminderMsg}"
+          )
+        )
       assertNoDiff(symbol.syntax, expected)
-      val symbolData = indexer.symbolIndexer.get(symbol).getOrElse(
-        fail(s"Symbol ${symbol} is not found in the index. Did you run scalametaEnableCompletions from sbt?")
-      )
+      val symbolData = indexer.symbolIndexer
+        .get(symbol)
+        .getOrElse(
+          fail(s"Symbol ${symbol} is not found in the index. ${reminderMsg}")
+        )
       assertNoDiff(symbolData.symbol, expected)
       symbol
     }
 
     /** Checks that given symbol has a definition with expected name */
     def assertSymbolDefinition(line: Int, column: Int)(
-      found: String,
-      definition: String
-    ): SymbolData = {
-      val symbol = assertSymbolFound(line, column)(found)
-      val data = indexer.definitionData(symbol).getOrElse(
-        fail(s"Definition not found for term ${symbol}")
-      )
-      assertNoDiff(data.symbol, definition)
-      data
+        expectedSymbol: String,
+        expectedDefn: String
+    ): Unit = {
+      val symbol = assertSymbolFound(line, column)(expectedSymbol)
+      val data = indexer
+        .definitionData(symbol)
+        .getOrElse(
+          fail(s"Definition not found for term ${symbol}")
+        )
+      assertNoDiff(data.symbol, expectedDefn)
     }
+
+    /** Checks that given symbol has a definition with expected name */
+    def assertSymbolReferences(
+        line: Int,
+        column: Int,
+        withDefinition: Boolean
+    )(
+        expected: l.Location*
+    ): Unit = {
+      val symbol = indexer
+        .findSymbol(path.UserTest, line, column)
+        .getOrElse(
+          fail(
+            s"Symbol not found at $path.UserTest:$line:$column. ${reminderMsg}"
+          )
+        )
+      val dataList = indexer.referencesData(symbol)
+      if (dataList.isEmpty) fail(s"References not found for term ${symbol}")
+      // TODO: use `dataList` to test expected alternatives
+
+      val found = dataList.flatMap {
+        indexer.referencesLocations(_, withDefinition)
+      }
+      val missingLocations = found.toSet diff expected.toSet
+      assert(missingLocations.isEmpty)
+      val unexpectedLocations = expected.toSet diff found.toSet
+      assert(unexpectedLocations.isEmpty)
+    }
+
+    def ref(
+        path: AbsolutePath,
+        start: (Int, Int),
+        end: (Int, Int)
+    ): l.Location =
+      l.Location(
+        s"file:${path.toString}",
+        l.Range(
+          l.Position(start._1, start._2),
+          l.Position(end._1, end._2)
+        )
+      )
 
     "definition" - {
       "<<User>>(...)" -
@@ -110,6 +175,31 @@ object SymbolIndexTest extends MegaSuite {
         assertSymbolFound(5, 5)("_root_.scala.collection.immutable.List.")
       "<<CharRef>>.create(...)" - // JavaMtags
         assertSymbolFound(8, 19)("_root_.scala.runtime.CharRef.")
+    }
+
+    "references" - {
+      "<<User>>(...)" -
+        assertSymbolReferences(3, 17, withDefinition = true)(
+          ref(path.User, (2, 11), (2, 15)),
+          ref(path.UserTest, (3, 15), (3, 19))
+        )
+      "<<List>>" -
+        assertSymbolReferences(5, 5, withDefinition = false)(
+          ref(path.User, (6, 10), (6, 14)),
+          ref(path.UserTest, (5, 2), (5, 6))
+        )
+      "a.a.<<x>>" -
+        assertSymbolReferences(9, 28, withDefinition = true)(
+          ref(path.User, (5, 6), (5, 7)),
+          ref(path.User, (6, 18), (6, 19)),
+          ref(path.UserTest, (9, 28), (9, 29))
+        )
+      "User.apply(<<name>> ...)" -
+        assertSymbolReferences(3, 27, withDefinition = false)(
+          // ref(path.User,     (2,16),  (2,20)), // definition
+          ref(path.UserTest, (3, 26), (3, 30)),
+          ref(path.UserTest, (9, 17), (9, 21))
+        )
     }
 
     "bijection" - {

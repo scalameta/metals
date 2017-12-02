@@ -5,6 +5,7 @@ class UserTest {
   user.copy(age = 2)
   List
     .apply(1, 2)
-    .map(x => x.+(2))
+    .map(x => x.+(user.age))
   scala.runtime.CharRef.create('a')
+  val str = user.name + a.a.x
 }
