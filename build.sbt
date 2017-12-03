@@ -1,56 +1,57 @@
 inThisBuild(
-  List(
-    version ~= { old =>
-      if (sys.env.contains("CI")) old
-      else "0.1-SNAPSHOT" // to avoid manually updating extension.js
-    },
-    scalaVersion := "2.12.3",
-    organization := "org.scalameta",
-    licenses := Seq(
-      "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
-    ),
-    homepage := Some(url("https://github.com/scalameta/language-server")),
-    developers := List(
-      Developer(
-        "laughedelic",
-        "Alexey Alekhin",
-        "laughedelic@gmail.com",
-        url("https://github.com/laughedelic")
+  semanticdbSettings ++
+    List(
+      version ~= { old =>
+        if (sys.env.contains("CI")) old
+        else "0.1-SNAPSHOT" // to avoid manually updating extension.js
+      },
+      scalaVersion := "2.12.3",
+      organization := "org.scalameta",
+      licenses := Seq(
+        "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
       ),
-      Developer(
-        "gabro",
-        "Gabriele Petronella",
-        "gabriele@buildo.io",
-        url("https://github.com/gabro")
+      homepage := Some(url("https://github.com/scalameta/language-server")),
+      developers := List(
+        Developer(
+          "laughedelic",
+          "Alexey Alekhin",
+          "laughedelic@gmail.com",
+          url("https://github.com/laughedelic")
+        ),
+        Developer(
+          "gabro",
+          "Gabriele Petronella",
+          "gabriele@buildo.io",
+          url("https://github.com/gabro")
+        ),
+        Developer(
+          "olafurpg",
+          "Ólafur Páll Geirsson",
+          "olafurpg@gmail.com",
+          url("https://geirsson.com")
+        ),
+        Developer(
+          "ShaneDelmore",
+          "Shane Delmore",
+          "sdelmore@twitter.com",
+          url("http://delmore.io")
+        )
       ),
-      Developer(
-        "olafurpg",
-        "Ólafur Páll Geirsson",
-        "olafurpg@gmail.com",
-        url("https://geirsson.com")
+      scmInfo in ThisBuild := Some(
+        ScmInfo(
+          url("https://github.com/scalameta/language-server"),
+          s"scm:git:git@github.com:scalameta/language-server.git"
+        )
       ),
-      Developer(
-        "ShaneDelmore",
-        "Shane Delmore",
-        "sdelmore@twitter.com",
-        url("http://delmore.io")
-      )
-    ),
-    scmInfo in ThisBuild := Some(
-      ScmInfo(
-        url("https://github.com/scalameta/language-server"),
-        s"scm:git:git@github.com:scalameta/language-server.git"
-      )
-    ),
-    releaseEarlyWith := BintrayPublisher,
-    releaseEarlyEnableSyncToMaven := false,
-    publishMavenStyle := true,
-    bintrayOrganization := Some("scalameta"),
-    bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
-    // faster publishLocal:
-    publishArtifact in packageDoc := sys.env.contains("CI"),
-    publishArtifact in packageSrc := sys.env.contains("CI")
-  )
+      releaseEarlyWith := BintrayPublisher,
+      releaseEarlyEnableSyncToMaven := false,
+      publishMavenStyle := true,
+      bintrayOrganization := Some("scalameta"),
+      bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
+      // faster publishLocal:
+      publishArtifact in packageDoc := sys.env.contains("CI"),
+      publishArtifact in packageSrc := sys.env.contains("CI")
+    )
 )
 
 lazy val noPublish = List(
@@ -122,7 +123,6 @@ lazy val testWorkspace = project
   .in(file("test-workspace"))
   .settings(
     noPublish,
-    semanticdbSettings,
     scalacOptions += {
       // Need to fix source root so it matches the workspace folder.
       s"-P:semanticdb:sourceroot:${baseDirectory.value}"
