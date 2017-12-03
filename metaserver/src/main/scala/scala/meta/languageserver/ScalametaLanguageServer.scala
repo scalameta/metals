@@ -100,9 +100,12 @@ class ScalametaLanguageServer(
       rootPath: String,
       capabilities: ClientCapabilities
   ): ServerCapabilities = {
-    logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
+    val start = System.nanoTime()
+    logger.info(s"Initializing with $cwd, $pid, $rootPath, $capabilities")
     cancelEffects = effects.map(_.subscribe())
     loadAllRelevantFilesInThisWorkspace()
+    val end = System.nanoTime()
+    logger.info(s"Initialized in ${(end - start) / 1000000}ms")
     ServerCapabilities(
       completionProvider = Some(
         CompletionOptions(
