@@ -46,6 +46,8 @@ export async function activate(context: ExtensionContext) {
   const javaArgs = [
     `-Dvscode.workspace=${workspace.rootPath}`,
     `-Dvscode.logLevel=${logLevel}`,
+    `-XX:+UseG1GC`,
+    `-XX:+UseStringDeduplication`,
     '-jar',
     coursierPath
   ].concat(coursierArgs);
