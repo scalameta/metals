@@ -27,12 +27,6 @@ class TrieMapSymbolIndexer(
     symbols
       .get(symbol)
       .map(_.get)
-      .filter { s =>
-        if (s.definition.isEmpty) {
-          logger.info(s"Skipping symbol ${s.symbol}, has no definition")
-        }
-        s.definition.isDefined
-      }
 
   override def unapply(arg: Any): Option[SymbolData] = arg match {
     case s: String => get(s)

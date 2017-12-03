@@ -1,11 +1,16 @@
 package scala.meta.languageserver
 
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.charset.StandardCharsets
 import java.net.URI
 import scala.{meta => m}
 import langserver.types.SymbolKind
 import langserver.types.TextDocumentIdentifier
 import langserver.{types => l}
 import scala.meta.languageserver.{index => i}
+import org.langmeta.io.AbsolutePath
+import org.langmeta.internal.io.FileIO
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
@@ -52,15 +57,28 @@ object ScalametaEnrichments {
     def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
   }
   implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
+    def pretty: String =
+      s"${pos.uri.replaceFirst(".*/", "")} [${pos.range.map(_.pretty).getOrElse("")}]"
+
     def toLocation(implicit cwd: m.AbsolutePath): l.Location = {
-      val range = pos.range.get
       l.Location(
         pos.uri,
-        l.Range(
-          l.Position(line = range.startLine, character = range.startColumn),
-          l.Position(line = range.endLine, character = range.endColumn)
-        )
+        pos.range.get.toRange
       )
+    }
+  }
+  implicit class XtensionIndexRange(val range: i.Range) extends AnyVal {
+    def pretty: String =
+      f"${range.startLine}%2d:${range.startColumn}%2d|${range.endLine}%2d:${range.endColumn}%2d"
+    def toRange: l.Range = l.Range(
+      l.Position(line = range.startLine, character = range.startColumn),
+      l.Position(line = range.endLine, character = range.endColumn)
+    )
+    def contains(line: Int, column: Int): Boolean = {
+      range.startLine <= line &&
+      range.startColumn <= column &&
+      range.endLine >= line &&
+      range.endColumn >= column
     }
   }
   implicit class XtensionAbsolutePathLSP(val path: m.AbsolutePath)
@@ -89,5 +107,136 @@ object ScalametaEnrichments {
         m.Symbol.Global(owner, m.Signature.Term(name))
       case _ => sym
     }
+  }
+  implicit class XtensionSymbol(val sym: m.Symbol) extends AnyVal {
+    import scala.meta._
+
+    /** Returns a list of fallback symbols that can act instead of given symbol. */
+    // TODO(alexey) review/refine this list
+    def referenceAlternatives: List[Symbol] = {
+      List(
+        caseClassCompanionToType,
+        caseClassApplyOrCopyParams
+      ).flatten
+    }
+
+    /** Returns a list of fallback symbols that can act instead of given symbol. */
+    // TODO(alexey) review/refine this list
+    def definitionAlternative: List[Symbol] = {
+      List(
+        caseClassCompanionToType,
+        caseClassApplyOrCopy,
+        caseClassApplyOrCopyParams,
+        methodToVal
+      ).flatten
+    }
+
+    /** If `case class A(a: Int)` and there is no companion object, resolve
+     * `A` in `A(1)` to the class definition.
+     */
+    def caseClassCompanionToType: Option[Symbol] = Option(sym).collect {
+      case Symbol.Global(owner, Signature.Term(name)) =>
+        Symbol.Global(owner, Signature.Type(name))
+    }
+
+    /** If `case class Foo(a: Int)`, then resolve
+     * `a` in `Foo.apply(a = 1)`, and
+     * `a` in `Foo(1).copy(a = 2)`
+     * to the `Foo.a` primary constructor definition.
+     */
+    def caseClassApplyOrCopyParams: Option[Symbol] = Option(sym).collect {
+      case Symbol.Global(
+          Symbol.Global(
+            Symbol.Global(owner, signature),
+            Signature.Method("copy" | "apply", _)
+          ),
+          param: Signature.TermParameter
+          ) =>
+        Symbol.Global(
+          Symbol.Global(owner, Signature.Type(signature.name)),
+          param
+        )
+    }
+
+    /** If `case class Foo(a: Int)`, then resolve
+     * `apply` in `Foo.apply(1)`, and
+     * `copy` in `Foo(1).copy(a = 2)`
+     * to the `Foo` class definition.
+     */
+    def caseClassApplyOrCopy: Option[Symbol] = Option(sym).collect {
+      case Symbol.Global(
+          Symbol.Global(owner, signature),
+          Signature.Method("apply" | "copy", _)
+          ) =>
+        Symbol.Global(owner, Signature.Type(signature.name))
+    }
+
+    /** Fallback to the val term for a def with multiple params */
+    def methodToVal: Option[Symbol] = Option(sym).collect {
+      case Symbol.Global(owner, Signature.Method(name, _)) =>
+        Symbol.Global(owner, Signature.Term(name))
+    }
+  }
+
+  implicit class XtensionLocation(val loc: l.Location) extends AnyVal {
+
+    /** A workaround for locations referring to jars */
+    def toNonJar(destination: AbsolutePath): l.Location = {
+      if (loc.uri.startsWith("jar:file")) {
+        val newURI =
+          createFileInWorkspaceTarget(URI.create(loc.uri), destination)
+        loc.copy(uri = newURI.toString)
+      } else loc
+    }
+
+    // Writes the contents from in-memory source file to a file in the target/source/*
+    // directory of the workspace. vscode has support for TextDocumentContentProvider
+    // which can provide hooks to open readonly views for custom uri schemes:
+    // https://code.visualstudio.com/docs/extensionAPI/vscode-api#TextDocumentContentProvider
+    // However, that is a vscode only solution and we'd like this work for all
+    // text editors. Therefore, we write instead the file contents to disk in order to
+    // return a file: uri.
+    // TODO: Fix this with https://github.com/scalameta/language-server/issues/36
+    private def createFileInWorkspaceTarget(
+        uri: URI,
+        destination: AbsolutePath
+    ): URI = {
+      // logger.info(s"Jumping into uri $uri, writing contents to file in target file")
+      val contents =
+        new String(FileIO.readAllBytes(uri), StandardCharsets.UTF_8)
+      // HACK(olafur) URIs are not typesafe, jar:file://blah.scala will return
+      // null for `.getPath`. We should come up with nicer APIs to deal with this
+      // kinda stuff.
+      val path: String =
+        if (uri.getPath == null)
+          uri.getSchemeSpecificPart
+        else uri.getPath
+      val filename = Paths.get(path).getFileName
+
+      Files.createDirectories(destination.toNIO)
+      val out = destination.toNIO.resolve(filename)
+      Files.write(out, contents.getBytes(StandardCharsets.UTF_8))
+      out.toUri
+    }
+  }
+
+  implicit class XtensionSymbolData(val symbolData: i.SymbolData)
+      extends AnyVal {
+
+    /** Returns reference positions for the given symbol index data
+     * @param withDefinition if set to `true` will include symbol definition location
+     */
+    def referencePositions(withDefinition: Boolean): Set[i.Position] = {
+      val defPosition = if (withDefinition) symbolData.definition else None
+
+      val refPositions = for {
+        (uri, rangeSet) <- symbolData.references
+        range <- rangeSet.ranges
+      } yield i.Position(uri, Some(range))
+
+      (defPosition.toSet ++ refPositions.toSet)
+        .filterNot { _.uri.startsWith("jar:file") } // definition may refer to a jar
+    }
+
   }
 }

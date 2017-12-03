@@ -161,7 +161,11 @@ object SignatureHelp {
  */
 case class ReferenceContext(
   /** Include the declaration of the current symbol. */
-  includeDeclaration: Boolean)
+  includeDeclaration: Boolean
+)
+object ReferenceContext {
+  implicit var format: OFormat[ReferenceContext] = Json.format[ReferenceContext]
+}
 
 /**
  * A document highlight is a range inside a text document which deserves

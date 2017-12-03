@@ -13,6 +13,8 @@ import scala.meta.languageserver.compiler.HoverProvider
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.SignatureHelpProvider
 import scala.meta.languageserver.search.SymbolIndex
+import scala.meta.languageserver.search.DefinitionProvider
+import scala.meta.languageserver.search.ReferencesProvider
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
@@ -20,6 +22,7 @@ import langserver.core.LanguageServer
 import langserver.messages.ClientCapabilities
 import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
+import langserver.messages.ReferencesResult
 import langserver.messages.Hover
 import langserver.messages.ResultResponse
 import langserver.messages.ServerCapabilities
@@ -51,13 +54,15 @@ class ScalametaLanguageServer(
 )(implicit s: Scheduler)
     extends LanguageServer(lspIn, lspOut) {
   implicit val cwd: AbsolutePath = config.cwd
+  private val tempSourcesDir: AbsolutePath =
+    cwd.resolve("target").resolve("sources")
   val (fileSystemSemanticdbSubscriber, fileSystemSemanticdbsPublisher) =
     ScalametaLanguageServer.semanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     ScalametaLanguageServer.compilerConfigStream(cwd)
   val buffers: Buffers = Buffers()
   val scalac: ScalacProvider = new ScalacProvider(config)
-  val symbolIndexer: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
+  val symbolIndex: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
   val scalafix: Linter = new Linter(cwd, stdout, connection)
   val metaSemanticdbs: Observable[semanticdb.Database] =
     fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None))
@@ -67,10 +72,10 @@ class ScalametaLanguageServer(
 
   // Effects
   val indexedFileSystemSemanticdbs: Observable[Effects.IndexSemanticdb] =
-    fileSystemSemanticdbsPublisher.map(symbolIndexer.indexDatabase)
+    fileSystemSemanticdbsPublisher.map(symbolIndex.indexDatabase)
   val indexedDependencyClasspath: Observable[Effects.IndexSourcesClasspath] =
     compilerConfigPublisher.map(
-      c => symbolIndexer.indexDependencyClasspath(c.sourceJars)
+      c => symbolIndex.indexDependencyClasspath(c.sourceJars)
     )
   val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
     compilerConfigPublisher.map(scalac.loadNewCompilerGlobals)
@@ -111,6 +116,7 @@ class ScalametaLanguageServer(
         )
       ),
       definitionProvider = true,
+      referencesProvider = true,
       documentSymbolProvider = true,
       documentFormattingProvider = true,
       hoverProvider = true
@@ -240,12 +246,25 @@ class ScalametaLanguageServer(
   override def gotoDefinitionRequest(
       td: TextDocumentIdentifier,
       position: Position
-  ): DefinitionResult = {
-    val path = Uri.toPath(td.uri).get
-    symbolIndexer
-      .goToDefinition(path, position.line, position.character)
-      .getOrElse(DefinitionResult(Nil))
-  }
+  ): DefinitionResult =
+    DefinitionProvider.definition(
+      symbolIndex,
+      Uri.toPath(td.uri).get,
+      position,
+      tempSourcesDir
+    )
+
+  override def referencesRequest(
+      td: TextDocumentIdentifier,
+      position: Position,
+      context: ReferenceContext
+  ): ReferencesResult =
+    ReferencesProvider.references(
+      symbolIndex,
+      Uri.toPath(td.uri).get,
+      position,
+      context
+    )
 
   override def signatureHelpRequest(
       td: TextDocumentIdentifier,
