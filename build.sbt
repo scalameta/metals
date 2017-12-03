@@ -1,4 +1,5 @@
 inThisBuild(
+  semanticdbSettings ++
   List(
     version ~= { old =>
       if (sys.env.contains("CI")) old
@@ -122,7 +123,6 @@ lazy val testWorkspace = project
   .in(file("test-workspace"))
   .settings(
     noPublish,
-    semanticdbSettings,
     scalacOptions += {
       // Need to fix source root so it matches the workspace folder.
       s"-P:semanticdb:sourceroot:${baseDirectory.value}"
