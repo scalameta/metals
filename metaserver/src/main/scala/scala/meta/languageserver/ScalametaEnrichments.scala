@@ -52,6 +52,33 @@ object ScalametaEnrichments {
       // case ??? => SymbolKind.Array
       case _ => SymbolKind.Field
     }
+
+    /** Fully qualified name for packages, normal name for everything else */
+    def qualifiedName: Option[String] = tree match {
+      case Term.Name(name) => Some(name)
+      case Term.Select(qual, name) =>
+        qual.qualifiedName.map { prefix =>
+          s"${prefix}.${name}"
+        }
+      case Pkg(sel: Term.Select, _) => sel.qualifiedName
+      case m: Member => Some(m.name.value)
+      case _ => None
+    }
+
+    /** All names within the node.
+     * - if it's a package, it will have its qualified name: `package foo.bar.buh`
+     * - if it's a val/var, it may contain several names in the pattern: `val (x, y, z) = ...`
+     * - for everything else it's just its normal name (if it has one)
+     */
+    def names: Seq[String] = tree match {
+      case t: Pkg => t.qualifiedName.toSeq
+      case t: Defn.Val => t.pats.collect { case Pat.Var(name) => name.value }
+      case t: Decl.Val => t.pats.collect { case Pat.Var(name) => name.value }
+      case t: Defn.Var => t.pats.collect { case Pat.Var(name) => name.value }
+      case t: Decl.Var => t.pats.collect { case Pat.Var(name) => name.value }
+      case t: Member => Seq(t.name.value)
+      case _ => Seq()
+    }
   }
   implicit class XtensionInputLSP(val input: m.Input) extends AnyVal {
     def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
