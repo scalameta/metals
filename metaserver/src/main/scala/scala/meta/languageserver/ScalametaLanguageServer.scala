@@ -188,6 +188,9 @@ class ScalametaLanguageServer(
     }
   }
 
+  override def onCloseTextDocument(td: TextDocumentIdentifier): Unit =
+    Uri.toPath(td.uri).foreach(buffers.closed)
+
   override def documentSymbols(
       td: TextDocumentIdentifier
   ): List[SymbolInformation] = {
