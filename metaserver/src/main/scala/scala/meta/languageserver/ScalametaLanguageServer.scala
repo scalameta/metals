@@ -42,13 +42,18 @@ sealed trait InitializationScope
 final case object WholeWorkspace extends InitializationScope
 final case object DotMetaserver extends InitializationScope
 
+sealed trait IndexingStrategy
+final case object InMemory extends IndexingStrategy
+final case object Sqlite extends IndexingStrategy
+
 case class ServerConfig(
     cwd: AbsolutePath,
     setupScalafmt: Boolean = true,
     // TODO(olafur): re-enable indexJDK after https://github.com/scalameta/language-server/issues/43 is fixed
     indexJDK: Boolean = false,
     indexClasspath: Boolean = true,
-    initializationScope: InitializationScope = DotMetaserver
+    initializationScope: InitializationScope = DotMetaserver,
+    indexingStrategy: IndexingStrategy = InMemory
 ) {
   def initializationRoot: AbsolutePath = initializationScope match {
     case WholeWorkspace => cwd
