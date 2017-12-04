@@ -9,6 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.types.TextDocumentIdentifier
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
+import scala.meta._
 
 /**
  * Utility to keep local state of file contents.
@@ -38,6 +39,18 @@ class Buffers private (
     read(cwd.resolve(path))
   def read(path: AbsolutePath): String =
     Option(contents.get(path)).getOrElse(readFromDisk(path))
+
+  private val sources: JMap[AbsolutePath, Source] = new ConcurrentHashMap()
+  // Tries to parse and record it or fallback to an old source if it existed
+  def source(path: AbsolutePath): Option[Source] =
+    read(path)
+      .parse[Source]
+      .toOption
+      .map { tree =>
+        sources.put(path, tree)
+        tree
+      }
+      .orElse(Option(sources.get(path)))
 }
 object Buffers {
   def apply()(implicit cwd: AbsolutePath): Buffers =

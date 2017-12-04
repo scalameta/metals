@@ -189,11 +189,13 @@ class ScalametaLanguageServer(
 
   override def documentSymbols(
       td: TextDocumentIdentifier
-  ): List[SymbolInformation] =
-    OutlineProvider.documentSymbols(
-      buffers,
-      Uri.toPath(td.uri).get
-    )
+  ): List[SymbolInformation] = {
+    val path = Uri.toPath(td.uri).get
+    buffers.source(path) match {
+      case Some(source) => OutlineProvider.documentSymbols(path, source)
+      case None => Nil
+    }
+  }
 
   override def gotoDefinitionRequest(
       td: TextDocumentIdentifier,

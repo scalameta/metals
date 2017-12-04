@@ -57,11 +57,8 @@ object OutlineProvider extends LazyLogging {
   }
 
   def documentSymbols(
-      buffers: Buffers,
-      path: AbsolutePath
-  ): List[l.SymbolInformation] = {
-    buffers.read(path).parse[Source].toOption.toList.flatMap { tree =>
-      new OutlineTraverser(path).apply(tree)
-    }
-  }
+      path: AbsolutePath,
+      source: Source
+  ): List[l.SymbolInformation] =
+    new OutlineTraverser(path).apply(source)
 }
