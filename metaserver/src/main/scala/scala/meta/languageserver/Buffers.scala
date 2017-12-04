@@ -31,8 +31,10 @@ class Buffers private (
   }
   def changed(path: AbsolutePath, newContents: String): Unit =
     contents.put(path, newContents)
-  def closed(path: AbsolutePath): Unit =
+  def closed(path: AbsolutePath): Unit = {
+    contents.remove(path)
     sources.remove(path)
+  }
 
   def read(td: TextDocumentIdentifier): String =
     read(URI.create(td.uri))
