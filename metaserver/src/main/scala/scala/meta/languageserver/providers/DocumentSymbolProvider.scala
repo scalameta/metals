@@ -1,4 +1,4 @@
-package scala.meta.languageserver
+package scala.meta.languageserver.providers
 
 import scala.collection.mutable
 import com.typesafe.scalalogging.LazyLogging
@@ -8,9 +8,9 @@ import langserver.messages.DefinitionResult
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta._
 
-object OutlineProvider extends LazyLogging {
+object DocumentSymbolProvider extends LazyLogging {
 
-  private class OutlineTraverser(path: AbsolutePath) {
+  private class SymbolTraverser(path: AbsolutePath) {
     private val builder = List.newBuilder[l.SymbolInformation]
 
     val traverser = new Traverser {
@@ -60,5 +60,5 @@ object OutlineProvider extends LazyLogging {
       path: AbsolutePath,
       source: Source
   ): List[l.SymbolInformation] =
-    new OutlineTraverser(path).apply(source)
+    new SymbolTraverser(path).apply(source)
 }

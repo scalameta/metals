@@ -15,6 +15,7 @@ import scala.meta.languageserver.compiler.SignatureHelpProvider
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.search.DefinitionProvider
 import scala.meta.languageserver.search.ReferencesProvider
+import scala.meta.languageserver.providers._
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
@@ -192,7 +193,7 @@ class ScalametaLanguageServer(
   ): List[SymbolInformation] = {
     val path = Uri.toPath(td.uri).get
     buffers.source(path) match {
-      case Some(source) => OutlineProvider.documentSymbols(path, source)
+      case Some(source) => DocumentSymbolProvider.documentSymbols(path, source)
       case None => Nil
     }
   }
