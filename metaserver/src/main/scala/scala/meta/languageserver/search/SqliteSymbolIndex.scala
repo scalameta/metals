@@ -116,11 +116,50 @@ class SqliteSymbolIndex(
     }
   }
 
+  private val referencesDataSql =
+    """|select d.filename, n.start_line, n.start_character, n.end_line, n.end_character, n.is_definition
+       |from name as n, document as d
+       |where n.symbol == ?
+       |and d.id == n.document
+       |and d.filename is not null""".stripMargin
+  private val referencesDataStmt = conn.map(_.prepareStatement(referencesDataSql))
+
   def referencesData(symbol: Symbol): List[SymbolData] = {
-    conn match {
-      case Some(conn) =>
-        ???
-      case None =>
+    (symbolIdStmt, referencesDataStmt) match {
+      case (Some(symbolIdStmt), Some(referencesDataStmt)) =>
+        // TODO: Take into account symbol.referenceAlternatives.
+        symbolIdStmt.setString(1, symbol.toString)
+        val symbolIdRs = symbolIdStmt.executeQuery()
+        try {
+          while (symbolIdRs.next()) {
+            val symbolId = symbolIdRs.getInt(1)
+            referencesDataStmt.setInt(1, symbolId)
+            val referencesDataRs = referencesDataStmt.executeQuery()
+            try {
+              var definition: Option[i.Position] = None
+              val referencesBuf = List.newBuilder[i.Position]
+              while (referencesDataRs.next()) {
+                val uri = s"file://${cwd.resolve(referencesDataRs.getString(1))}"
+                val startLine = referencesDataRs.getInt(2)
+                val startCharacter = referencesDataRs.getInt(3)
+                val endLine = referencesDataRs.getInt(4)
+                val endCharacter = referencesDataRs.getInt(5)
+                val range = i.Range(startLine, startCharacter, endLine, endCharacter)
+                val position = i.Position(uri, Some(range))
+                if (referencesDataRs.getBoolean(6)) definition = Some(position)
+                else referencesBuf += position
+              }
+              val references = referencesBuf.result.groupBy(_.uri).mapValues(rs => i.Ranges(rs.map(_.range.get)))
+              return List(SymbolData(definition = definition, references = references))
+            } finally {
+              referencesDataRs.close()
+            }
+          }
+          Nil
+        } finally {
+          symbolIdRs.close()
+        }
+      case _ =>
         Nil
     }
   }
