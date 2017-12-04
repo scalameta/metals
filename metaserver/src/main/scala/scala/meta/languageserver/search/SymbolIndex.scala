@@ -44,7 +44,11 @@ object SymbolIndex {
           serverConfig
         )
       case Sqlite =>
-        ???
+        new SqliteSymbolIndex(
+          cwd,
+          notifications,
+          buffers,
+          serverConfig)
     }
   }
 

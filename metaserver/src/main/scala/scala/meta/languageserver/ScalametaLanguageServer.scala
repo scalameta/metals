@@ -53,7 +53,7 @@ case class ServerConfig(
     indexJDK: Boolean = false,
     indexClasspath: Boolean = true,
     initializationScope: InitializationScope = DotMetaserver,
-    indexingStrategy: IndexingStrategy = InMemory
+    indexingStrategy: IndexingStrategy = Sqlite
 ) {
   def initializationRoot: AbsolutePath = initializationScope match {
     case WholeWorkspace => cwd
