@@ -70,12 +70,14 @@ object ScalametaEnrichments {
      * - if it's a val/var, it may contain several names in the pattern: `val (x, y, z) = ...`
      * - for everything else it's just its normal name (if it has one)
      */
+    private def patternNames(pats: List[Pat]): Seq[String] =
+      pats.flatMap { _.collect { case Pat.Var(name) => name.value } }
     def names: Seq[String] = tree match {
       case t: Pkg => t.qualifiedName.toSeq
-      case t: Defn.Val => t.pats.collect { case Pat.Var(name) => name.value }
-      case t: Decl.Val => t.pats.collect { case Pat.Var(name) => name.value }
-      case t: Defn.Var => t.pats.collect { case Pat.Var(name) => name.value }
-      case t: Decl.Var => t.pats.collect { case Pat.Var(name) => name.value }
+      case t: Defn.Val => patternNames(t.pats)
+      case t: Decl.Val => patternNames(t.pats)
+      case t: Defn.Var => patternNames(t.pats)
+      case t: Decl.Var => patternNames(t.pats)
       case t: Member => Seq(t.name.value)
       case _ => Seq()
     }
