@@ -7,14 +7,9 @@ import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.compiler.CompilerConfig
-import scala.meta.languageserver.compiler.CompletionProvider
 import scala.meta.languageserver.compiler.Cursor
-import scala.meta.languageserver.compiler.HoverProvider
 import scala.meta.languageserver.compiler.ScalacProvider
-import scala.meta.languageserver.compiler.SignatureHelpProvider
 import scala.meta.languageserver.search.SymbolIndex
-import scala.meta.languageserver.search.DefinitionProvider
-import scala.meta.languageserver.search.ReferencesProvider
 import scala.meta.languageserver.providers._
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging

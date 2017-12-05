@@ -1,6 +1,6 @@
 package tests.compiler
 
-import scala.meta.languageserver.compiler.CompletionProvider
+import scala.meta.languageserver.providers.CompletionProvider
 import langserver.messages.CompletionList
 import langserver.types.CompletionItemKind
 import play.api.libs.json.Json

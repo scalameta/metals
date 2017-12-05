@@ -1,6 +1,6 @@
 package tests.compiler
 
-import scala.meta.languageserver.compiler.HoverProvider
+import scala.meta.languageserver.providers.HoverProvider
 import play.api.libs.json.Json
 
 object HoverTest extends CompilerSuite {

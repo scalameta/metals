@@ -1,6 +1,8 @@
-package scala.meta.languageserver.compiler
+package scala.meta.languageserver.providers
 
 import scala.collection.mutable
+import scala.meta.languageserver.compiler.Cursor
+import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.CompilerUtils._
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
