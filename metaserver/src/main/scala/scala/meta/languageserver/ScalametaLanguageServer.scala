@@ -24,6 +24,7 @@ import langserver.messages.ClientCapabilities
 import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
 import langserver.messages.ReferencesResult
+import langserver.messages.DocumentHighlightResult
 import langserver.messages.Hover
 import langserver.messages.ResultResponse
 import langserver.messages.ServerCapabilities
@@ -118,6 +119,7 @@ class ScalametaLanguageServer(
       ),
       definitionProvider = true,
       referencesProvider = true,
+      documentHighlightProvider = true,
       documentSymbolProvider = true,
       documentFormattingProvider = true,
       hoverProvider = true
@@ -222,6 +224,16 @@ class ScalametaLanguageServer(
       Uri.toPath(td.uri).get,
       position,
       context
+    )
+
+  override def documentHighlightRequest(
+      td: TextDocumentIdentifier,
+      position: Position
+  ): DocumentHighlightResult =
+    DocumentHighlightProvider.highlight(
+      symbolIndex,
+      Uri.toPath(td.uri).get,
+      position
     )
 
   override def signatureHelpRequest(

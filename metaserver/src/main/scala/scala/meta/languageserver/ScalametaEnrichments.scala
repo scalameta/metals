@@ -98,7 +98,7 @@ object ScalametaEnrichments {
   }
   implicit class XtensionIndexRange(val range: i.Range) extends AnyVal {
     def pretty: String =
-      f"${range.startLine}%2d:${range.startColumn}%2d|${range.endLine}%2d:${range.endColumn}%2d"
+      f"${range.startLine}%3d:${range.startColumn}%3d|${range.endLine}%3d:${range.endColumn}%3d"
     def toRange: l.Range = l.Range(
       l.Position(line = range.startLine, character = range.startColumn),
       l.Position(line = range.endLine, character = range.endColumn)
