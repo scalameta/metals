@@ -188,6 +188,7 @@ case class TextDocumentSignatureHelpRequest(params: TextDocumentPositionParams) 
 case class TextDocumentCompletionRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentDefinitionRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentReferencesRequest(params: ReferenceParams) extends ServerCommand
+case class TextDocumentDocumentHighlightRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentHoverRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentFormattingRequest(params: DocumentFormattingParams) extends ServerCommand
 
@@ -208,6 +209,7 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
     "textDocument/signatureHelp" -> valueFormat(TextDocumentSignatureHelpRequest)(_.params),
     "textDocument/definition" -> valueFormat(TextDocumentDefinitionRequest)(_.params),
     "textDocument/references" -> valueFormat(TextDocumentReferencesRequest)(_.params),
+    "textDocument/documentHighlight" -> valueFormat(TextDocumentDocumentHighlightRequest)(_.params),
     "textDocument/hover" -> valueFormat(TextDocumentHoverRequest)(_.params),
     "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams],
     "textDocument/formatting" -> valueFormat(TextDocumentFormattingRequest)(_.params)
@@ -284,6 +286,7 @@ object Notification extends NotificationCompanion[Notification] {
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
 case class DefinitionResult(params: Seq[Location]) extends ResultResponse
 case class ReferencesResult(params: Seq[Location]) extends ResultResponse
+case class DocumentHighlightResult(params: Seq[Location]) extends ResultResponse
 case class DocumentFormattingResult(params: Seq[TextEdit]) extends ResultResponse
 
 object ResultResponse extends ResponseCompanion[Any] {
@@ -295,6 +298,7 @@ object ResultResponse extends ResponseCompanion[Any] {
     "textDocument/signatureHelp" -> Json.format[SignatureHelp],
     "textDocument/definition" -> valueFormat(DefinitionResult)(_.params),
     "textDocument/references" -> valueFormat(ReferencesResult)(_.params),
+    "textDocument/documentHighlight" -> valueFormat(DocumentHighlightResult)(_.params),
     "textDocument/hover" -> Json.format[Hover],
     "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
     "textDocument/formatting" -> valueFormat(DocumentFormattingResult)(_.params),
