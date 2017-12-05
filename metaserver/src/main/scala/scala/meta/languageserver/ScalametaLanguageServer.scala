@@ -15,6 +15,7 @@ import scala.meta.languageserver.compiler.SignatureHelpProvider
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.search.DefinitionProvider
 import scala.meta.languageserver.search.ReferencesProvider
+import scala.meta.languageserver.providers._
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
@@ -187,60 +188,17 @@ class ScalametaLanguageServer(
     }
   }
 
+  override def onCloseTextDocument(td: TextDocumentIdentifier): Unit =
+    Uri.toPath(td.uri).foreach(buffers.closed)
+
   override def documentSymbols(
       td: TextDocumentIdentifier
-  ): Seq[SymbolInformation] = {
-    import scala.meta._
-
-    // For a given node returns its closest ancestor which is a definition, declaration or a package object
-    // NOTE: package is not considered a wrapping definition, but it could be (a subject to discuss)
-    def wrappingDefinition(t: Tree): Option[Tree] = {
-      if (t.is[Defn] ||
-        t.is[Decl] ||
-        t.is[Pkg.Object]) Some(t)
-      else t.parent.flatMap(wrappingDefinition)
-    }
-
-    def parentMember(t: Tree): Option[Tree] = {
-      if (t.is[Member.Term] || t.is[Member.Type]) Some(t)
-      else t.parent.flatMap(parentMember)
-    }
-
-    // This is needed only to unfold full package names
-    def qualifiedName(t: Tree): Option[String] = t match {
-      case Term.Name(name) =>
-        Some(name)
-      case Term.Select(qual, name) =>
-        qualifiedName(qual).map { prefix =>
-          s"${prefix}.${name}"
-        }
-      case Pkg(sel: Term.Select, _) =>
-        qualifiedName(sel)
-      case m: Member =>
-        Some(m.name.value)
-      case _ => None
-    }
-
+  ): List[SymbolInformation] = {
     val path = Uri.toPath(td.uri).get
-    val contents = buffers.read(path)
-    for {
-      tree <- contents.parse[Source].toOption.toList
-      node <- tree.collect {
-        case n if n.is[Member.Type] || n.is[Member.Term] => n
-      }
-      name <- qualifiedName(node)
-      // Package as a wrapping definition for itself:
-      defn <- if (node.is[Pkg]) Some(node) else wrappingDefinition(node)
-    } yield
-      SymbolInformation(
-        name,
-        defn.symbolKind,
-        path.toLocation(defn.pos),
-        defn.parent
-          .flatMap(parentMember)
-          .flatMap(wrappingDefinition)
-          .flatMap(qualifiedName)
-      )
+    buffers.source(path) match {
+      case Some(source) => DocumentSymbolProvider.documentSymbols(path, source)
+      case None => Nil
+    }
   }
 
   override def gotoDefinitionRequest(
