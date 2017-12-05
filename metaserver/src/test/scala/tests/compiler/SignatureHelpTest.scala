@@ -1,7 +1,7 @@
 package tests.compiler
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.meta.languageserver.compiler.SignatureHelpProvider
+import scala.meta.languageserver.providers.SignatureHelpProvider
 import langserver.types.SignatureHelp
 import play.api.libs.json.Json
 

@@ -1,6 +1,8 @@
-package scala.meta.languageserver.compiler
+package scala.meta.languageserver.providers
 
 import scala.tools.nsc.interactive.Global
+import scala.meta.languageserver.compiler.Cursor
+import scala.meta.languageserver.compiler.ScalacProvider
 import langserver.messages.Hover
 import langserver.types.RawMarkedString
 

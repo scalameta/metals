@@ -1,9 +1,10 @@
-package scala.meta.languageserver.search
+package scala.meta.languageserver.providers
 
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
 import langserver.{types => l}
 import langserver.messages.ReferencesResult
+import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
 
 object ReferencesProvider extends LazyLogging {
