@@ -25,25 +25,33 @@ Even if some checkbox is marked it does not mean that feature works perfectly.
 Some of those features are a likely outside the scope of this project, we are
 still learning and exploring what's possible.
 
-- [x] Linting with Scalafix on compile (textDocument/publishDiagnostics)
-- [ ] Linting with Scalafix as you type (textDocument/publishDiagnostics)
-- [ ] Refactoring with Scalafix (textDocument/codeAction)
-- [x] Formatting with Scalafmt (textDocument/formatting)
-- [ ] Formatting with Scalafmt for range (textDocument/rangeFormatting)
-- [ ] Formatting with Scalafmt as you type (textDocument/onTypeFormatting)
-- [x] Auto completions as you type with presentation compiler (textDocument/completions)
-- [x] Show type at position as you type (textDocument/hover)
-- [x] Go to definition from project Scala sources to project Scala sources on compile (textDocument/definition)
-- [x] Go to definition from project sources to Scala dependency source files on compile (textDocument/definition)
-- [x] Go to definition from project sources to Java dependency source file on compile (textDocument/definition)
-- [ ] Go to definition as you type (textDocument/definition)
-- [x] Show parameter list as you type (textDocument/signatureHelper)
-- [ ] Show red squigglies as you type (textDocument/publishDiagnostics)
-- [ ] Show red squigglies on compile (textDocument/publishDiagnostics)
-- [ ] Auto-insert missing import when completing a global symbol (textDocument/completions)
-- [ ] Find symbol references (textDocument/references)
-- [ ] Rename local symbol (textDocument/rename)
-- [ ] Rename global symbol (textDocument/rename)
+* Formatting with Scalafmt:
+  - [x] Whole file (`textDocument/formatting`)
+  - [ ] Selected range (`textDocument/rangeFormatting`)
+  - [ ] As you type (`textDocument/onTypeFormatting`)
+* Completions and signature help:
+  - [x] Auto completions as you type with presentation compiler (`textDocument/completions`)
+  - [x] Show type at position as you type (`textDocument/hover`)
+  - [x] Show parameter list as you type (`textDocument/signatureHelper`)
+* Symbols outline:
+  - [x] Current file symbols tree as you type (`textDocument/documentSymbol`)
+  - [ ] Workspace global symbols list (`workspace/symbol`)
+* Definition and references:
+  - [x] Go to definition from project Scala sources to project Scala sources on compile (`textDocument/definition`)
+  - [x] Go to definition from project sources to Scala dependency source files on compile (`textDocument/definition`)
+  - [x] Go to definition from project sources to Java dependency source file on compile (`textDocument/definition`)
+  - [ ] Go to definition as you type (`textDocument/definition`)
+  - [x] Find symbol references in the project (`textDocument/references`)
+  - [x] Highlight symbol references in the file (`textDocument/documentHighlight`)
+* Linting and refactoring:
+  - [x] Linting with Scalafix on compile (`textDocument/publishDiagnostics`)
+  - [ ] Linting with Scalafix as you type (`textDocument/publishDiagnostics`)
+  - [ ] Refactoring with Scalafix (`textDocument/codeAction`)
+  - [ ] Show red squigglies on compile (`textDocument/publishDiagnostics`)
+  - [ ] Show red squigglies as you type (`textDocument/publishDiagnostics`)
+  - [ ] Auto-insert missing import when completing a global symbol (`textDocument/completions`)
+  - [ ] Rename local symbol (`textDocument/rename`)
+  - [ ] Rename global symbol (`textDocument/rename`)
 
 ## Contributing
 
