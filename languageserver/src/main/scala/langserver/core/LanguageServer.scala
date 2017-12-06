@@ -25,6 +25,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
         gotoDefinitionRequest(textDocument, position)
       case ("textDocument/references", TextDocumentReferencesRequest(ReferenceParams(textDocument, position, context))) =>
         referencesRequest(textDocument, position, context)
+      case ("textDocument/documentHighlight", TextDocumentDocumentHighlightRequest(TextDocumentPositionParams(textDocument, position))) =>
+        documentHighlightRequest(textDocument, position)
       case ("textDocument/hover", TextDocumentHoverRequest(TextDocumentPositionParams(textDocument, position))) =>
         hoverRequest(textDocument, position)
       case ("textDocument/documentSymbol", DocumentSymbolParams(tdi)) =>
@@ -104,6 +106,10 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
 
   def referencesRequest(textDocument: TextDocumentIdentifier, position: Position, context: ReferenceContext): ReferencesResult = {
     ReferencesResult(Seq.empty[Location])
+  }
+
+  def documentHighlightRequest(textDocument: TextDocumentIdentifier, position: Position): DocumentHighlightResult = {
+    DocumentHighlightResult(Seq.empty[Location])
   }
 
   def hoverRequest(textDocument: TextDocumentIdentifier, position: Position): Hover = {
