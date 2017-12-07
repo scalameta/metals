@@ -5,7 +5,7 @@ inThisBuild(
         if (sys.env.contains("CI")) old
         else "0.1-SNAPSHOT" // to avoid manually updating extension.js
       },
-      scalaVersion := "2.12.3",
+      scalaVersion := "2.12.4",
       organization := "org.scalameta",
       licenses := Seq(
         "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -54,6 +54,10 @@ inThisBuild(
     )
 )
 
+lazy val V = new {
+  val scalameta = "2.1.3"
+}
+
 lazy val noPublish = List(
   publishTo := None,
   publishArtifact := false,
@@ -65,7 +69,7 @@ noPublish
 
 lazy val semanticdbSettings = List(
   addCompilerPlugin(
-    "org.scalameta" % "semanticdb-scalac" % "2.1.2" cross CrossVersion.full
+    "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
   ),
   scalacOptions += "-Yrangepos"
 )
@@ -108,9 +112,9 @@ lazy val metaserver = project
       "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
-      "ch.epfl.scala" % "scalafix-cli" % "0.5.6" cross CrossVersion.full,
+      "ch.epfl.scala" % "scalafix-cli" % "0.5.7" cross CrossVersion.full,
       "com.lihaoyi" %% "utest" % "0.6.0" % Test,
-      "org.scalameta" %% "testkit" % "2.1.2" % Test
+      "org.scalameta" %% "testkit" % V.scalameta % Test
     )
   )
   .dependsOn(
