@@ -65,6 +65,7 @@ class ScalametaLanguageServer(
   val scalac: ScalacProvider = new ScalacProvider(config)
   val symbolIndex: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
   val scalafix: Linter = new Linter(cwd, stdout, connection)
+  val scalacErrorReporter: ScalacErrorReporter =  new ScalacErrorReporter(connection)
   val metaSemanticdbs: Observable[semanticdb.Database] =
     Observable.merge(
       fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None)),
@@ -85,12 +86,15 @@ class ScalametaLanguageServer(
     compilerConfigPublisher.map(scalac.loadNewCompilerGlobals)
   val scalafixNotifications: Observable[Effects.PublishLinterDiagnostics] =
     metaSemanticdbs.map(scalafix.reportLinterMessages)
+  val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
+    metaSemanticdbs.map(scalacErrorReporter.reportErrors)
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
     indexedDependencyClasspath,
     indexedFileSystemSemanticdbs,
     installedCompilers,
-    scalafixNotifications
+    scalafixNotifications,
+    scalacErrors
   )
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
