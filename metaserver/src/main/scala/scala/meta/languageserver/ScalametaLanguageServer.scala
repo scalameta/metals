@@ -34,6 +34,8 @@ import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb
+import scala.meta.interactive.InteractiveSemanticdb
+import scala.tools.nsc.interactive.Global
 
 case class ServerConfig(
     cwd: AbsolutePath,
@@ -54,7 +56,9 @@ class ScalametaLanguageServer(
   private val tempSourcesDir: AbsolutePath =
     cwd.resolve("target").resolve("sources")
   val (fileSystemSemanticdbSubscriber, fileSystemSemanticdbsPublisher) =
-    ScalametaLanguageServer.semanticdbStream(cwd)
+    ScalametaLanguageServer.fileSystemSemanticdbStream(cwd)
+  val (interactiveSemanticdbSubscriber, interactiveSemanticdbPublisher) =
+    ScalametaLanguageServer.interactiveSemanticdbStream
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     ScalametaLanguageServer.compilerConfigStream(cwd)
   val buffers: Buffers = Buffers()
@@ -62,7 +66,10 @@ class ScalametaLanguageServer(
   val symbolIndex: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
   val scalafix: Linter = new Linter(cwd, stdout, connection)
   val metaSemanticdbs: Observable[semanticdb.Database] =
-    fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None))
+    Observable.merge(
+      fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None)),
+      interactiveSemanticdbPublisher
+    )
   val scalafmt: Formatter =
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
     else Formatter.noop
@@ -183,6 +190,9 @@ class ScalametaLanguageServer(
     changes.foreach { c =>
       Uri.toPath(td.uri).foreach(p => buffers.changed(p, c.text))
     }
+    scalac.getCompiler(td).foreach { compiler =>
+      interactiveSemanticdbSubscriber.onNext((compiler, td, buffers.read(td)))
+    }
   }
 
   override def onCloseTextDocument(td: TextDocumentIdentifier): Unit =
@@ -295,12 +305,22 @@ object ScalametaLanguageServer extends LazyLogging {
     subscriber -> compilerConfigPublished
   }
 
-  def semanticdbStream(cwd: AbsolutePath)(
+  def fileSystemSemanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
     val (subscriber, publisher) = multicast[AbsolutePath]
     val semanticdbPublisher = publisher
       .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))
+    subscriber -> semanticdbPublisher
+  }
+
+  def interactiveSemanticdbStream(
+      implicit scheduler: Scheduler
+  ): (Observer.Sync[(Global, VersionedTextDocumentIdentifier, String)], Observable[semanticdb.Database]) = {
+    val (subscriber, publisher) = multicast[(Global, VersionedTextDocumentIdentifier, String)]
+    val semanticdbPublisher = publisher.map { case (compiler, td, content) =>
+      Semanticdbs.loadFromTextDocument(compiler, td, content)
+    }
     subscriber -> semanticdbPublisher
   }
 

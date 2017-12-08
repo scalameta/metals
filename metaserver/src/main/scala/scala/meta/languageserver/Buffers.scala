@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.{Map => JMap}
 import com.typesafe.scalalogging.LazyLogging
 import langserver.types.TextDocumentIdentifier
+import langserver.types.VersionedTextDocumentIdentifier
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 import scala.meta.Source
@@ -37,6 +38,8 @@ class Buffers private (
   }
 
   def read(td: TextDocumentIdentifier): String =
+    read(URI.create(td.uri))
+  def read(td: VersionedTextDocumentIdentifier): String =
     read(URI.create(td.uri))
   def read(uri: URI): String =
     read(AbsolutePath(uri.getPath))

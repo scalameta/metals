@@ -113,8 +113,9 @@ lazy val metaserver = project
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "ch.epfl.scala" % "scalafix-cli" % "0.5.7" cross CrossVersion.full,
+      "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
       "com.lihaoyi" %% "utest" % "0.6.0" % Test,
-      "org.scalameta" %% "testkit" % V.scalameta % Test
+      "org.scalameta" %% "testkit" % V.scalameta % Test,
     )
   )
   .dependsOn(

@@ -71,14 +71,15 @@ class Linter(
       val configDecoder = ScalafixReflect.fromLazySemanticdbIndex(lazyIndex)
       val (rule, config) =
         ScalafixConfig.fromInput(configInput, lazyIndex)(configDecoder).get
-      val results: Seq[PublishDiagnostics] = index.database.documents.map { d =>
-        val tree = Parser.parse(d).get
-        val ctx = RuleCtx.applyInternal(tree, config)
-        val patches = rule.fixWithNameInternal(ctx)
-        val diagnostics =
-          Patch.lintMessagesInternal(patches, ctx).map(toDiagnostic)
-        val uri = d.input.syntax
-        PublishDiagnostics(uri, diagnostics)
+      val results: Seq[PublishDiagnostics] = index.database.documents.flatMap { d =>
+        Parser.parse(d).toOption.map { tree =>
+          val ctx = RuleCtx.applyInternal(tree, config)
+          val patches = rule.fixWithNameInternal(ctx)
+          val diagnostics =
+            Patch.lintMessagesInternal(patches, ctx).map(toDiagnostic)
+          val uri = d.input.syntax
+          PublishDiagnostics(uri, diagnostics)
+        }.toList
       }
 
       // megaCache needs to die, if we forget this we will read stale
@@ -86,12 +87,6 @@ class Linter(
       // https://github.com/scalameta/scalameta/issues/1068
       PlatformTokenizerCache.megaCache.clear()
 
-      if (results.isEmpty) {
-        connection.showMessage(
-          l.MessageType.Warning,
-          "Ran scalafix but found no lint messages :("
-        )
-      }
       results
     }
 
