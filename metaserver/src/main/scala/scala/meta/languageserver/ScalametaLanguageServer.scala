@@ -35,13 +35,28 @@ import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb
 
+sealed trait InitializationScope
+final case object WholeWorkspace extends InitializationScope
+final case object DotMetaserver extends InitializationScope
+
+sealed trait IndexingStrategy
+final case object InMemory extends IndexingStrategy
+final case object Sqlite extends IndexingStrategy
+
 case class ServerConfig(
     cwd: AbsolutePath,
     setupScalafmt: Boolean = true,
     // TODO(olafur): re-enable indexJDK after https://github.com/scalameta/language-server/issues/43 is fixed
     indexJDK: Boolean = false,
-    indexClasspath: Boolean = true
-)
+    indexClasspath: Boolean = true,
+    initializationScope: InitializationScope = DotMetaserver,
+    indexingStrategy: IndexingStrategy = Sqlite
+) {
+  def initializationRoot: AbsolutePath = initializationScope match {
+    case WholeWorkspace => cwd
+    case DotMetaserver => cwd.resolve(".metaserver")
+  }
+}
 
 class ScalametaLanguageServer(
     config: ServerConfig,
@@ -87,7 +102,7 @@ class ScalametaLanguageServer(
   )
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
-    Workspace.initialize(cwd) { path =>
+    Workspace.initialize(config.initializationRoot) { path =>
       onChangedFile(path)(_ => ())
     }
   }
@@ -97,9 +112,12 @@ class ScalametaLanguageServer(
       rootPath: String,
       capabilities: ClientCapabilities
   ): ServerCapabilities = {
-    logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
+    val start = System.nanoTime()
+    logger.info(s"Initializing with $cwd, $pid, $rootPath, $capabilities")
     cancelEffects = effects.map(_.subscribe())
     loadAllRelevantFilesInThisWorkspace()
+    val end = System.nanoTime()
+    logger.info(s"Initialized in ${(end - start) / 1000000}ms")
     ServerCapabilities(
       completionProvider = Some(
         CompletionOptions(

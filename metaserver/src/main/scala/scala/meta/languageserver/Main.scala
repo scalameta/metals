@@ -1,5 +1,6 @@
 package scala.meta.languageserver
 
+import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
 import scala.util.Properties
@@ -11,7 +12,9 @@ object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {
     // FIXME(gabro): this is vscode specific (at least the name)
     val workspace = System.getProperty("vscode.workspace")
-    val logPath = s"$workspace/target/metaserver.log"
+    val logDir = new File(s"$workspace/.metaserver")
+    if (!logDir.exists) logDir.mkdir()
+    val logPath = s"$logDir/metaserver.log"
     val out = new PrintStream(new FileOutputStream(logPath))
     val err = new PrintStream(new FileOutputStream(logPath))
     val cwd = AbsolutePath(workspace)
