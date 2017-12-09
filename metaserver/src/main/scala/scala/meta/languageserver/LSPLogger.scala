@@ -14,10 +14,13 @@ class LSPLogger(@BeanProperty var encoder: PatternLayoutEncoder)
   import LSPLogger._
 
   override def append(event: ILoggingEvent): Unit = {
-    val message =
-      if (encoder != null) new String(encoder.encode(event), UTF_8)
-      else event.getFormattedMessage
-    connection.foreach(_.logMessage(MessageType.Log, message))
+    // Skip rpc message noise.
+    if (!event.getLoggerName.startsWith("langserver.core.Message")) {
+      val message =
+        if (encoder != null) new String(encoder.encode(event), UTF_8)
+        else event.getFormattedMessage
+      connection.foreach(_.logMessage(MessageType.Log, message))
+    }
   }
 }
 

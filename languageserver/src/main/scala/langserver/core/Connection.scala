@@ -55,10 +55,6 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
     sendNotification(ShowMessageParams(tpe, message))
   }
 
-  def showMessage(tpe: MessageType, message: String, actions: String*): Unit = {
-    ???
-  }
-
   /**
    * The log message notification is sent from the server to the client to ask
    * the client to log a particular message.
