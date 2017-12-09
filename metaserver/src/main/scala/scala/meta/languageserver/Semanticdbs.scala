@@ -14,13 +14,20 @@ import ScalametaEnrichments._
 
 object Semanticdbs extends LazyLogging {
   def loadFromTextDocument(
-    compiler: Global,
-    td: VersionedTextDocumentIdentifier,
-    content: String,
-    cwd: AbsolutePath
+      compiler: Global,
+      td: VersionedTextDocumentIdentifier,
+      content: String,
+      cwd: AbsolutePath
   ): Database = {
     val documents = try {
-      List(InteractiveSemanticdb.toDocument(compiler, content, Uri.toPath(td.uri).get.toLanguageServerUri, 10000))
+      List(
+        InteractiveSemanticdb.toDocument(
+          compiler,
+          content,
+          Uri.toPath(td.uri).get.toLanguageServerUri,
+          10000
+        )
+      )
     } catch {
       case e: ParseException => Nil
     }

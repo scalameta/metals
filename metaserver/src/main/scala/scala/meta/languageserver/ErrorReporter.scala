@@ -40,10 +40,11 @@ class ScalacErrorReporter(
     )
   }
 
-  private def toSeverity(s: semanticdb.Severity): l.DiagnosticSeverity = s match {
-    case semanticdb.Severity.Error => l.DiagnosticSeverity.Error
-    case semanticdb.Severity.Warning => l.DiagnosticSeverity.Warning
-    case semanticdb.Severity.Info => l.DiagnosticSeverity.Information
-  }
+  private def toSeverity(s: semanticdb.Severity): l.DiagnosticSeverity =
+    s match {
+      case semanticdb.Severity.Error => l.DiagnosticSeverity.Error
+      case semanticdb.Severity.Warning => l.DiagnosticSeverity.Warning
+      case semanticdb.Severity.Info => l.DiagnosticSeverity.Information
+    }
 
 }
