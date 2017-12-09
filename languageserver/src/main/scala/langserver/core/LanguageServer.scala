@@ -28,9 +28,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
     }
   }
 
-  protected val documentManager = new TextDocumentManager(connection)
-
   connection.notificationHandlers += {
+    case Initialized() => logger.info("Client has initialized")
     case Exit() => onExit()
     case DidOpenTextDocumentParams(td) => onOpenTextDocument(td)
     case DidChangeTextDocumentParams(td, changes) => onChangeTextDocument(td, changes)
