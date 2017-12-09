@@ -17,9 +17,6 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |   }
       |   object J { def k = 2 }
       |}
-      |package object K {
-      |  def l = 2
-      |}
       """.stripMargin,
     """
       |Language:
@@ -38,8 +35,6 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |[159..160): z <= _root_.a.b.c.D.I#z.
       |[181..182): J <= _root_.a.b.c.D.J.
       |[189..190): k <= _root_.a.b.c.D.J.k.
-      |[214..215): K <= _root_.a.b.c.K.
-      |[224..225): l <= _root_.a.b.c.K.package.l.
       |
       |Symbols:
       |_root_.a.b.c.D. => object D
@@ -54,9 +49,30 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |_root_.a.b.c.D.e. => def e
       |_root_.a.b.c.D.f. => val f
       |_root_.a.b.c.D.g. => var g
-      |_root_.a.b.c.K. => packageobject K
-      |_root_.a.b.c.K.l. => def l
       """.stripMargin
+  )
+
+  check(
+    "pkgobject.scala",
+    """
+      |package object K {
+      |  def l = 2
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Scala212
+      |
+      |Names:
+      |[16..17): K <= _root_.K.
+      |[16..17): K <= _root_.K.package.
+      |[26..27): l <= _root_.K.package.l.
+      |
+      |Symbols:
+      |_root_.K. => packageobject K
+      |_root_.K.package. => object package
+      |_root_.K.package.l. => def l
+    """.stripMargin
   )
 
   check(

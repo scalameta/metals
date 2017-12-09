@@ -23,7 +23,10 @@ object ScalaMtags {
           case t: Source => continue()
           case t: Template => continue()
           case t: Pkg => pkg(t.ref); continue()
-          case t: Pkg.Object => term(t.name, PACKAGEOBJECT); continue()
+          case t: Pkg.Object =>
+            term(t.name, PACKAGEOBJECT);
+            term("package", t.name.pos, OBJECT);
+            continue()
           case t: Defn.Class => tpe(t.name, CLASS); continue()
           case t: Defn.Trait => tpe(t.name, TRAIT); continue()
           case t: Defn.Object => term(t.name, OBJECT); continue()
