@@ -157,14 +157,12 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
   }
 
   private def handleCommand(method: String, id: CorrelationId, command: ServerCommand): Future[Unit] = {
-    commandHandler(method, command).runAsync.map { result =>
-      val t = Try{ResultResponse.write(result, id)}
-      t.recover{case e => logger.error("ResultResponse.write:"+result, e) }
-      t.foreach{rJson => msgWriter.write(rJson)}
-    }.recover {
+    commandHandler(method, command).map { result =>
+      val rJson = ResultResponse.write(result, id)
+      msgWriter.write(rJson)
+    }.onErrorRecover {
       case NonFatal(e) =>
         logger.error(e.getMessage, e)
-        ()
-    }
+    }.runAsync
   }
 }
