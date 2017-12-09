@@ -1,5 +1,6 @@
 package langserver.types
 
+import langserver.messages.ResultResponse
 import play.api.libs.json._
 
 /**
@@ -137,23 +138,6 @@ object SignatureInformation {
   implicit val format: OFormat[SignatureInformation] = Json.format[SignatureInformation]
 }
 
-/**
- * Signature help represents the signature of something
- * callable. There can be multiple signature but only one
- * active and only one active parameter.
- */
-case class SignatureHelp(
-  /** One or more signatures. */
-  signatures: Seq[SignatureInformation],
-
-  /** The active signature. */
-  activeSignature: Option[Int],
-
-  /** The active parameter of the active signature. */
-  activeParameter: Option[Int])
-object SignatureHelp {
-  implicit var format: OFormat[SignatureHelp] = Json.format[SignatureHelp]
-}
 
 /**
  * Value-object that contains additional information when

@@ -2,10 +2,13 @@ package scala.meta.languageserver
 
 import java.io.FileOutputStream
 import java.io.PrintStream
+import java.util.concurrent.Executors
+import scala.concurrent.ExecutionContext
 import scala.util.Properties
 import com.typesafe.scalalogging.LazyLogging
+import monix.execution.Scheduler
+import monix.execution.schedulers.SchedulerService
 import org.langmeta.io.AbsolutePath
-import monix.execution.Scheduler.Implicits.global // TODO(olafur) may want to customize
 
 object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {
@@ -19,6 +22,8 @@ object Main extends LazyLogging {
     val stdin = System.in
     val stdout = System.out
     val stderr = System.err
+    implicit val s: SchedulerService =
+      Scheduler(Executors.newFixedThreadPool(4))
     try {
       // route System.out somewhere else. Any output not from the server (e.g. logging)
       // messes up with the client, since stdout is used for the language server protocol

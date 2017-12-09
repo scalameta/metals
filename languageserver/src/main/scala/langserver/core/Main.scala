@@ -2,6 +2,7 @@ package langserver.core
 
 import com.typesafe.scalalogging.LazyLogging
 import scala.util.Try
+import monix.execution.Scheduler.Implicits.global
 
 object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {

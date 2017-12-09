@@ -2,7 +2,7 @@ package tests.compiler
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.meta.languageserver.providers.SignatureHelpProvider
-import langserver.types.SignatureHelp
+import langserver.messages.SignatureHelpResult
 import play.api.libs.json.Json
 
 object SignatureHelpTest extends CompilerSuite {
@@ -10,7 +10,7 @@ object SignatureHelpTest extends CompilerSuite {
   def check(
       filename: String,
       code: String,
-      fn: SignatureHelp => Unit
+      fn: SignatureHelpResult => Unit
   ): Unit = {
     targeted(
       filename,

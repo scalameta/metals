@@ -1,12 +1,11 @@
 package scala.meta.languageserver.providers
 
-import scala.collection.mutable
-import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.io.AbsolutePath
-import langserver.{types => l}
-import langserver.messages.DefinitionResult
-import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta._
+import scala.meta.languageserver.ScalametaEnrichments._
+import com.typesafe.scalalogging.LazyLogging
+import langserver.messages.DocumentSymbolResult
+import langserver.{types => l}
+import org.langmeta.io.AbsolutePath
 
 object DocumentSymbolProvider extends LazyLogging {
 
@@ -56,9 +55,10 @@ object DocumentSymbolProvider extends LazyLogging {
     }
   }
 
+  def empty = DocumentSymbolResult(Nil)
   def documentSymbols(
       path: AbsolutePath,
       source: Source
-  ): List[l.SymbolInformation] =
-    new SymbolTraverser(path).apply(source)
+  ): DocumentSymbolResult =
+    DocumentSymbolResult(new SymbolTraverser(path).apply(source))
 }

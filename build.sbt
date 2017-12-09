@@ -82,6 +82,7 @@ lazy val languageserver = project
       "com.beachape" %% "enumeratum" % "1.5.12",
       "com.beachape" %% "enumeratum-play-json" % "1.5.12-2.6.0-M7",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
+      "io.monix" %% "monix" % "2.3.0",
       "org.slf4j" % "slf4j-api" % "1.7.25",
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "org.codehaus.groovy" % "groovy" % "2.4.0",
@@ -107,7 +108,6 @@ lazy val metaserver = project
     libraryDependencies ++= List(
       "io.github.soc" % "directories" % "5",
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
-      "io.monix" %% "monix" % "2.3.0",
       "com.lihaoyi" %% "pprint" % "0.5.3",
       "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,

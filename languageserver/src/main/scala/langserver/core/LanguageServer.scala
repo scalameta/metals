@@ -2,44 +2,29 @@ package langserver.core
 
 import java.io.InputStream
 import java.io.OutputStream
-
 import com.typesafe.scalalogging.LazyLogging
-
 import langserver.messages._
 import langserver.types._
-import play.api.libs.json.JsObject
+import monix.eval.Task
+import monix.execution.Scheduler
 
 /**
  * A language server implementation. Users should subclass this class and implement specific behavior.
  */
-class LanguageServer(inStream: InputStream, outStream: OutputStream) extends LazyLogging {
-  val connection: Connection = (new Connection(inStream, outStream)) { (method, params) =>
-    (method, params) match {
-      case (_, InitializeParams(pid, rootPath, capabilities)) =>
-        InitializeResult(initialize(pid, rootPath, capabilities))
-      case ("textDocument/completion", TextDocumentCompletionRequest(TextDocumentPositionParams(textDocument, position))) =>
-        completionRequest(textDocument, position)
-      case ("textDocument/signatureHelp", TextDocumentSignatureHelpRequest(TextDocumentPositionParams(textDocument, position))) =>
-        signatureHelpRequest(textDocument, position)
-      case ("textDocument/definition", TextDocumentDefinitionRequest(TextDocumentPositionParams(textDocument, position))) =>
-        gotoDefinitionRequest(textDocument, position)
-      case ("textDocument/references", TextDocumentReferencesRequest(ReferenceParams(textDocument, position, context))) =>
-        referencesRequest(textDocument, position, context)
-      case ("textDocument/documentHighlight", TextDocumentDocumentHighlightRequest(TextDocumentPositionParams(textDocument, position))) =>
-        documentHighlightRequest(textDocument, position)
-      case ("textDocument/hover", TextDocumentHoverRequest(TextDocumentPositionParams(textDocument, position))) =>
-        hoverRequest(textDocument, position)
-      case ("textDocument/documentSymbol", DocumentSymbolParams(tdi)) =>
-        DocumentSymbolResult(documentSymbols(tdi))
-      case ("textDocument/formatting", TextDocumentFormattingRequest(DocumentFormattingParams(textDocument, options))) =>
-        DocumentFormattingResult(documentFormattingRequest(textDocument, options))
-
-      case (_, Shutdown()) =>
-        shutdown()
-        ShutdownResult()
-      case c =>
-        logger.error(s"Unknown command $c")
-        sys.error("Unknown command")
+class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s: Scheduler) extends LazyLogging {
+  val connection: Connection = new Connection(inStream, outStream) {
+    override def commandHandler(method: String, command: ServerCommand): Task[ResultResponse] = (method, command) match {
+      case ("initialize", request: InitializeParams) => initialize(request)
+      case ("textDocument/completion", request: TextDocumentCompletionRequest) => completion(request)
+      case ("textDocument/definition", request: TextDocumentDefinitionRequest) => definition(request)
+      case ("textDocument/documentHighlight", request: TextDocumentDocumentHighlightRequest) => documentHighlight(request)
+      case ("textDocument/documentSymbol", request: DocumentSymbolParams) => documentSymbol(request)
+      case ("textDocument/formatting", request: TextDocumentFormattingRequest) => formatting(request)
+      case ("textDocument/hover", request: TextDocumentHoverRequest) => hover(request)
+      case ("textDocument/references", request: TextDocumentReferencesRequest) => references(request)
+      case ("textDocument/signatureHelp", request: TextDocumentSignatureHelpRequest) => signatureHelp(request)
+      case ("shutdown", request: Shutdown) => shutdown(request)
+      case c => Task.raiseError(new IllegalArgumentException(s"Unknown command $c"))
     }
   }
 
@@ -55,73 +40,54 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream) extends Laz
     case e => logger.error(s"Unknown notification $e")
   }
 
+  // lifecycle
   def start(): Unit = {
     connection.start()
   }
-
   def onExit(): Unit = {
     logger.debug("exit")
     // TODO: should exit with success code 0 if the shutdown request has been received before; otherwise with error code 1
     sys.exit(0)
   }
 
-  def onOpenTextDocument(td: TextDocumentItem) = {
+  def initialize(processId: Long, rootPath: String, capabilities: ClientCapabilities): Task[InitializeResult] =
+    initialize(InitializeParams(processId, rootPath, capabilities))
+  def initialize(request: InitializeParams): Task[InitializeResult] = Task.now {
+    logger.debug(s"initialize with $request")
+    InitializeResult(ServerCapabilities())
+  }
+  def shutdown(request: Shutdown): Task[ShutdownResult] =
+    Task.now(ShutdownResult())
+
+  // textDocument
+  def completion(request: TextDocumentCompletionRequest): Task[CompletionList] = Task.now(CompletionList(isIncomplete = false, Nil))
+  def definition(request: TextDocumentDefinitionRequest): Task[DefinitionResult] = Task.now(DefinitionResult(Nil))
+  def documentHighlight(request: TextDocumentDocumentHighlightRequest): Task[DocumentHighlightResult] = Task.now(DocumentHighlightResult(Nil))
+  def documentSymbol(request: DocumentSymbolParams): Task[DocumentSymbolResult] = Task.now(DocumentSymbolResult(Nil))
+  def formatting(request: TextDocumentFormattingRequest): Task[DocumentFormattingResult] = Task.now(DocumentFormattingResult(Nil))
+  def hover(request: TextDocumentHoverRequest): Task[Hover] = Task.now(Hover(Nil, None))
+  def references(request: TextDocumentReferencesRequest): Task[ReferencesResult] = Task.now(ReferencesResult(Nil))
+  def signatureHelp(request: TextDocumentSignatureHelpRequest): Task[SignatureHelpResult] = Task.now(SignatureHelpResult(Nil, None, None))
+
+
+  def onOpenTextDocument(td: TextDocumentItem): Unit = {
     logger.debug(s"openTextDocument $td")
   }
 
-  def onChangeTextDocument(td: VersionedTextDocumentIdentifier, changes: Seq[TextDocumentContentChangeEvent]) = {
+  def onChangeTextDocument(td: VersionedTextDocumentIdentifier, changes: Seq[TextDocumentContentChangeEvent]): Unit = {
     logger.debug(s"changeTextDocument $td")
   }
 
-  def onSaveTextDocument(td: TextDocumentIdentifier) = {
+  def onSaveTextDocument(td: TextDocumentIdentifier): Unit = {
     logger.debug(s"saveTextDocument $td")
   }
 
-  def onCloseTextDocument(td: TextDocumentIdentifier) = {
+  def onCloseTextDocument(td: TextDocumentIdentifier): Unit = {
     logger.debug(s"closeTextDocument $td")
   }
 
-  def onChangeWatchedFiles(changes: Seq[FileEvent]) = {
+  def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
     logger.debug(s"changeWatchedFiles $changes")
-  }
 
-  def initialize(pid: Long, rootPath: String, capabilities: ClientCapabilities): ServerCapabilities = {
-    logger.debug(s"initialize with $pid, $rootPath, $capabilities")
-    ServerCapabilities()
-  }
-
-  def signatureHelpRequest(textDocument: TextDocumentIdentifier, position: Position): SignatureHelp = {
-    SignatureHelp(Nil, None, None)
-  }
-
-  def completionRequest(textDocument: TextDocumentIdentifier, position: Position): ResultResponse = {
-    CompletionList(isIncomplete = false, Nil)
-  }
-
-  def shutdown(): Unit = {}
-
-  def gotoDefinitionRequest(textDocument: TextDocumentIdentifier, position: Position): DefinitionResult = {
-    DefinitionResult(Seq.empty[Location])
-  }
-
-  def referencesRequest(textDocument: TextDocumentIdentifier, position: Position, context: ReferenceContext): ReferencesResult = {
-    ReferencesResult(Seq.empty[Location])
-  }
-
-  def documentHighlightRequest(textDocument: TextDocumentIdentifier, position: Position): DocumentHighlightResult = {
-    DocumentHighlightResult(Seq.empty[Location])
-  }
-
-  def hoverRequest(textDocument: TextDocumentIdentifier, position: Position): Hover = {
-    Hover(Nil, None)
-  }
-
-  def documentSymbols(tdi: TextDocumentIdentifier): Seq[SymbolInformation] = {
-    Seq.empty
-  }
-
-  def documentFormattingRequest(textDocument: TextDocumentIdentifier, options: FormattingOptions) = {
-    List.empty[TextEdit]
-  }
 
 }
