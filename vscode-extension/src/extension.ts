@@ -6,7 +6,8 @@ import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
-  TransportKind
+  TransportKind,
+  RevealOutputChannelOn
 } from 'vscode-languageclient';
 import { Requirements } from './requirements';
 
@@ -64,7 +65,8 @@ export async function activate(context: ExtensionContext) {
         workspace.createFileSystemWatcher('**/*.semanticdb'),
         workspace.createFileSystemWatcher('**/*.compilerconfig')
       ]
-    }
+    },
+    revealOutputChannelOn: RevealOutputChannelOn.Never
   };
 
   const disposable = new LanguageClient(
