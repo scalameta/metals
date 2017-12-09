@@ -17,4 +17,6 @@ object Effects {
   final val InstallPresentationCompiler = new InstallPresentationCompiler
   final class PublishLinterDiagnostics extends Effects
   final val PublishLinterDiagnostics = new PublishLinterDiagnostics
+  final class PublishScalacDiagnostics extends Effects
+  final val PublishScalacDiagnostics = new PublishScalacDiagnostics
 }

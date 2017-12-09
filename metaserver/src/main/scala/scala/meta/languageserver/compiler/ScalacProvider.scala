@@ -11,6 +11,7 @@ import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.types.TextDocumentIdentifier
+import langserver.types.VersionedTextDocumentIdentifier
 import monix.execution.Scheduler
 import org.langmeta.io.AbsolutePath
 
@@ -23,6 +24,10 @@ class ScalacProvider(
 
   def getCompiler(td: TextDocumentIdentifier): Option[Global] =
     Uri.toPath(td.uri).flatMap(getCompiler)
+
+  def getCompiler(td: VersionedTextDocumentIdentifier): Option[Global] =
+    Uri.toPath(td.uri).flatMap(getCompiler)
+
   def getCompiler(path: AbsolutePath): Option[Global] = {
     compilerByPath.get(path).map { compiler =>
       compiler.reporter.reset()
