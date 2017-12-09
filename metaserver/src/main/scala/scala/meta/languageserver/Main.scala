@@ -27,7 +27,7 @@ object Main extends LazyLogging {
       logger.info(s"Starting server in $workspace")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
       val server = new ScalametaLanguageServer(config, stdin, stdout, out)
-      LSPLogger.connection = server.connection
+      LSPLogger.connection = Some(server.connection)
       server.start()
     } finally {
       System.setOut(stdout)
