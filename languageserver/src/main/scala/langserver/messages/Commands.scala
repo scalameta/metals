@@ -288,6 +288,12 @@ case class DefinitionResult(params: Seq[Location]) extends ResultResponse
 case class ReferencesResult(params: Seq[Location]) extends ResultResponse
 case class DocumentHighlightResult(params: Seq[Location]) extends ResultResponse
 case class DocumentFormattingResult(params: Seq[TextEdit]) extends ResultResponse
+case class SignatureHelpResult(signatures: Seq[SignatureInformation],
+                               activeSignature: Option[Int],
+                               activeParameter: Option[Int]) extends ResultResponse
+object SignatureHelpResult {
+  implicit val format = Json.format[SignatureHelpResult]
+}
 
 object ResultResponse extends ResponseCompanion[Any] {
   import JsonRpcUtils._
@@ -295,7 +301,7 @@ object ResultResponse extends ResponseCompanion[Any] {
   override val ResponseFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeResult],
     "textDocument/completion" -> Json.format[CompletionList],
-    "textDocument/signatureHelp" -> Json.format[SignatureHelp],
+    "textDocument/signatureHelp" -> Json.format[SignatureHelpResult],
     "textDocument/definition" -> valueFormat(DefinitionResult)(_.params),
     "textDocument/references" -> valueFormat(ReferencesResult)(_.params),
     "textDocument/documentHighlight" -> valueFormat(DocumentHighlightResult)(_.params),

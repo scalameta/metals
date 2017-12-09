@@ -2,9 +2,7 @@ package langserver.core
 
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.concurrent.Executors
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
@@ -16,23 +14,25 @@ import langserver.messages._
 import langserver.types._
 import play.api.libs.json._
 import com.dhpcs.jsonrpc.JsonRpcMessage._
+import monix.eval.Task
+import monix.execution.Scheduler
 
 /**
  * A connection that reads and writes Language Server Protocol messages.
  *
+ * @param s thread pool to run tasks with.
  * @note Commands are executed asynchronously via a thread pool
  * @note Notifications are executed synchronously on the calling thread
  * @note The command handler returns Any because sometimes response objects can't be part
  *       of a sealed hierarchy. For instance, goto definition returns a {{{Seq[Location]}}}
  *       and that can't subclass anything other than Any
  */
-class Connection(inStream: InputStream, outStream: OutputStream)(val commandHandler: (String, ServerCommand) => Any)
+abstract class Connection(inStream: InputStream, outStream: OutputStream)(implicit s: Scheduler)
     extends LazyLogging with Notifications {
   private val msgReader = new MessageReader(inStream)
   private val msgWriter = new MessageWriter(outStream)
 
-  // 4 threads should be enough for everyone
-  implicit private val commandExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))
+  def commandHandler(method: String, command: ServerCommand): Task[ResultResponse]
 
   val notificationHandlers: ListBuffer[Notification => Unit] = ListBuffer.empty
 
@@ -158,9 +158,9 @@ class Connection(inStream: InputStream, outStream: OutputStream)(val commandHand
   }
 
   private def handleCommand(method: String, id: CorrelationId, command: ServerCommand): Future[Unit] = {
-    Future(commandHandler(method, command)) .map { result =>
+    commandHandler(method, command).runAsync.map { result =>
       val t = Try{ResultResponse.write(result, id)}
-      t.recover{case e => logger.error("ResultResponse.write:"+result); e.printStackTrace() }
+      t.recover{case e => logger.error("ResultResponse.write:"+result, e) }
       t.foreach{rJson => msgWriter.write(rJson)}
     }.recover {
       case NonFatal(e) =>

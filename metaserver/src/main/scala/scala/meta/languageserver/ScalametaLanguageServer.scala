@@ -4,27 +4,40 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
-import scala.collection.mutable.ListBuffer
-import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
-import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.providers._
-import scalafix.internal.util.EagerInMemorySemanticdbIndex
+import scala.meta.languageserver.search.SymbolIndex
+import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
 import langserver.core.LanguageServer
-import langserver.messages.ClientCapabilities
+import langserver.messages.CompletionList
 import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
-import langserver.messages.ReferencesResult
+import langserver.messages.DocumentFormattingResult
 import langserver.messages.DocumentHighlightResult
+import langserver.messages.DocumentSymbolParams
+import langserver.messages.DocumentSymbolResult
 import langserver.messages.Hover
-import langserver.messages.ResultResponse
+import langserver.messages.InitializeParams
+import langserver.messages.InitializeResult
+import langserver.messages.ReferencesResult
 import langserver.messages.ServerCapabilities
+import langserver.messages.Shutdown
+import langserver.messages.ShutdownResult
 import langserver.messages.SignatureHelpOptions
+import langserver.messages.SignatureHelpResult
+import langserver.messages.TextDocumentCompletionRequest
+import langserver.messages.TextDocumentDefinitionRequest
+import langserver.messages.TextDocumentDocumentHighlightRequest
+import langserver.messages.TextDocumentFormattingRequest
+import langserver.messages.TextDocumentHoverRequest
+import langserver.messages.TextDocumentReferencesRequest
+import langserver.messages.TextDocumentSignatureHelpRequest
 import langserver.types._
+import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
@@ -34,8 +47,6 @@ import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb
-import scala.meta.interactive.InteractiveSemanticdb
-import scala.tools.nsc.interactive.Global
 
 case class ServerConfig(
     cwd: AbsolutePath,
@@ -106,14 +117,12 @@ class ScalametaLanguageServer(
   }
 
   override def initialize(
-      pid: Long,
-      rootPath: String,
-      capabilities: ClientCapabilities
-  ): ServerCapabilities = {
-    logger.info(s"Initialized with $cwd, $pid, $rootPath, $capabilities")
+      request: InitializeParams
+  ): Task[InitializeResult] = Task.now {
+    logger.info(s"Initialized with $cwd, $request")
     cancelEffects = effects.map(_.subscribe())
     loadAllRelevantFilesInThisWorkspace()
-    ServerCapabilities(
+    val capabilities = ServerCapabilities(
       completionProvider = Some(
         CompletionOptions(
           resolveProvider = false,
@@ -132,10 +141,14 @@ class ScalametaLanguageServer(
       documentFormattingProvider = true,
       hoverProvider = true
     )
+    InitializeResult(capabilities)
   }
 
-  override def shutdown(): Unit = {
+  override def shutdown(
+      request: Shutdown = Shutdown()
+  ): Task[ShutdownResult] = Task.now {
     cancelEffects.foreach(_.cancel())
+    ShutdownResult()
   }
 
   private def onChangedFile(
@@ -164,25 +177,90 @@ class ScalametaLanguageServer(
         logger.warn(s"Unhandled file event: $event")
         ()
     }
+  override def completion(
+      request: TextDocumentCompletionRequest
+  ): Task[CompletionList] = Task.now {
+    scalac.getCompiler(request.params.textDocument) match {
+      case Some(g) =>
+        CompletionProvider.completions(
+          g,
+          toPoint(request.params.textDocument, request.params.position)
+        )
+      case None => CompletionProvider.empty
+    }
+  }
 
-  override def documentFormattingRequest(
-      td: TextDocumentIdentifier,
-      options: FormattingOptions
-  ): List[TextEdit] = {
-    val path = Uri.toPath(td.uri).get
-    val contents = buffers.read(path)
-    val fullDocumentRange = Range(
-      start = Position(0, 0),
-      end = Position(Int.MaxValue, Int.MaxValue)
+  override def definition(
+      request: TextDocumentDefinitionRequest
+  ): Task[DefinitionResult] = Task.now {
+    DefinitionProvider.definition(
+      symbolIndex,
+      Uri.toPath(request.params.textDocument.uri).get,
+      request.params.position,
+      tempSourcesDir
     )
-    val config = cwd.resolve(".scalafmt.conf")
-    if (Files.isRegularFile(config.toNIO)) {
-      val formattedContent =
-        scalafmt.format(contents, path.toString(), config)
-      List(TextEdit(fullDocumentRange, formattedContent))
-    } else {
-      connection.showMessage(MessageType.Info, s"Missing $config")
-      Nil
+  }
+
+  override def documentHighlight(
+      request: TextDocumentDocumentHighlightRequest
+  ): Task[DocumentHighlightResult] = Task.now {
+    DocumentHighlightProvider.highlight(
+      symbolIndex,
+      Uri.toPath(request.params.textDocument.uri).get,
+      request.params.position
+    )
+  }
+
+  override def documentSymbol(
+      request: DocumentSymbolParams
+  ): Task[DocumentSymbolResult] = Task.now {
+    val path = Uri.toPath(request.textDocument.uri).get
+    buffers.source(path) match {
+      case Some(source) => DocumentSymbolProvider.documentSymbols(path, source)
+      case None => DocumentSymbolProvider.empty
+    }
+  }
+
+  override def formatting(
+      request: TextDocumentFormattingRequest
+  ): Task[DocumentFormattingResult] = Task.now {
+    DocumentFormattingProvider.format(request, scalafmt, buffers, cwd)
+  }
+
+  override def hover(
+      request: TextDocumentHoverRequest
+  ): Task[Hover] = Task.now {
+    scalac.getCompiler(request.params.textDocument) match {
+      case Some(g) =>
+        HoverProvider.hover(
+          g,
+          toPoint(request.params.textDocument, request.params.position)
+        )
+      case None => HoverProvider.empty
+    }
+  }
+
+  override def references(
+      request: TextDocumentReferencesRequest
+  ): Task[ReferencesResult] = Task.now {
+    ReferencesProvider.references(
+      symbolIndex,
+      Uri.toPath(request.params.textDocument.uri).get,
+      request.params.position,
+      request.params.context
+    )
+  }
+
+  override def signatureHelp(
+      request: TextDocumentSignatureHelpRequest
+  ): Task[SignatureHelpResult] = Task.now {
+    scalac.getCompiler(request.params.textDocument) match {
+      case Some(g) =>
+        SignatureHelpProvider.signatureHelp(
+          g,
+          toPoint(request.params.textDocument, request.params.position)
+        )
+      case None => SignatureHelpProvider.empty
     }
   }
 
@@ -203,79 +281,6 @@ class ScalametaLanguageServer(
 
   override def onCloseTextDocument(td: TextDocumentIdentifier): Unit =
     Uri.toPath(td.uri).foreach(buffers.closed)
-
-  override def documentSymbols(
-      td: TextDocumentIdentifier
-  ): List[SymbolInformation] = {
-    val path = Uri.toPath(td.uri).get
-    buffers.source(path) match {
-      case Some(source) => DocumentSymbolProvider.documentSymbols(path, source)
-      case None => Nil
-    }
-  }
-
-  override def gotoDefinitionRequest(
-      td: TextDocumentIdentifier,
-      position: Position
-  ): DefinitionResult =
-    DefinitionProvider.definition(
-      symbolIndex,
-      Uri.toPath(td.uri).get,
-      position,
-      tempSourcesDir
-    )
-
-  override def referencesRequest(
-      td: TextDocumentIdentifier,
-      position: Position,
-      context: ReferenceContext
-  ): ReferencesResult =
-    ReferencesProvider.references(
-      symbolIndex,
-      Uri.toPath(td.uri).get,
-      position,
-      context
-    )
-
-  override def documentHighlightRequest(
-      td: TextDocumentIdentifier,
-      position: Position
-  ): DocumentHighlightResult =
-    DocumentHighlightProvider.highlight(
-      symbolIndex,
-      Uri.toPath(td.uri).get,
-      position
-    )
-
-  override def signatureHelpRequest(
-      td: TextDocumentIdentifier,
-      pos: Position
-  ): SignatureHelp = {
-    scalac.getCompiler(td) match {
-      case Some(g) => SignatureHelpProvider.signatureHelp(g, toPoint(td, pos))
-      case None => SignatureHelpProvider.empty
-    }
-  }
-
-  override def completionRequest(
-      td: TextDocumentIdentifier,
-      pos: Position
-  ): ResultResponse = {
-    scalac.getCompiler(td) match {
-      case Some(g) => CompletionProvider.completions(g, toPoint(td, pos))
-      case None => CompletionProvider.empty
-    }
-  }
-
-  override def hoverRequest(
-      td: TextDocumentIdentifier,
-      pos: Position
-  ): Hover = {
-    scalac.getCompiler(td) match {
-      case Some(g) => HoverProvider.hover(g, toPoint(td, pos))
-      case None => HoverProvider.empty
-    }
-  }
 
   private def toPoint(
       td: TextDocumentIdentifier,
