@@ -58,7 +58,7 @@ class ScalametaLanguageServer(
   val (fileSystemSemanticdbSubscriber, fileSystemSemanticdbsPublisher) =
     ScalametaLanguageServer.fileSystemSemanticdbStream(cwd)
   val (interactiveSemanticdbSubscriber, interactiveSemanticdbPublisher) =
-    ScalametaLanguageServer.interactiveSemanticdbStream
+    ScalametaLanguageServer.interactiveSemanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     ScalametaLanguageServer.compilerConfigStream(cwd)
   val buffers: Buffers = Buffers()
@@ -69,7 +69,7 @@ class ScalametaLanguageServer(
   val metaSemanticdbs: Observable[semanticdb.Database] =
     Observable.merge(
       fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None)),
-      interactiveSemanticdbPublisher
+      interactiveSemanticdbPublisher.map(_.toDb(sourcepath = None))
     )
   val scalafmt: Formatter =
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
@@ -318,12 +318,12 @@ object ScalametaLanguageServer extends LazyLogging {
     subscriber -> semanticdbPublisher
   }
 
-  def interactiveSemanticdbStream(
+  def interactiveSemanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
-  ): (Observer.Sync[(Global, VersionedTextDocumentIdentifier, String)], Observable[semanticdb.Database]) = {
+  ): (Observer.Sync[(Global, VersionedTextDocumentIdentifier, String)], Observable[Database]) = {
     val (subscriber, publisher) = multicast[(Global, VersionedTextDocumentIdentifier, String)]
     val semanticdbPublisher = publisher.map { case (compiler, td, content) =>
-      Semanticdbs.loadFromTextDocument(compiler, td, content)
+      Semanticdbs.loadFromTextDocument(compiler, td, content, cwd)
     }
     subscriber -> semanticdbPublisher
   }
