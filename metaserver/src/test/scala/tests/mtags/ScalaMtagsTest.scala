@@ -39,7 +39,7 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |[181..182): J <= _root_.a.b.c.D.J.
       |[189..190): k <= _root_.a.b.c.D.J.k.
       |[214..215): K <= _root_.a.b.c.K.
-      |[224..225): l <= _root_.a.b.c.K.l.
+      |[224..225): l <= _root_.a.b.c.K.package.l.
       |
       |Symbols:
       |_root_.a.b.c.D. => object D

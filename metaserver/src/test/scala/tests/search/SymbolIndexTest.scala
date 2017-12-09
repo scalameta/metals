@@ -177,8 +177,6 @@ object SymbolIndexTest extends MegaSuite {
         assertSymbolFound(5, 5)("_root_.scala.collection.immutable.List.")
       "<<CharRef>>.create(...)" - // JavaMtags
         assertSymbolFound(8, 19)("_root_.scala.runtime.CharRef.")
-      "<<Either>>[...]" -
-        assertSymbolFound(10, 15)("_root_.scala.util.Either#")
     }
 
     "references" - {
