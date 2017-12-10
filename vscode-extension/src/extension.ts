@@ -85,7 +85,6 @@ export async function activate(context: ExtensionContext) {
       "Scalameta Language Server killed, it should restart in a few seconds",
       showLogsAction
     );
-    const myOutputChannel = window.createOutputChannel('Scalameta');
 
     if (selectedAction === showLogsAction) {
       client.outputChannel.show(true);
