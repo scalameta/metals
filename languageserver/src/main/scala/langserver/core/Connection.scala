@@ -20,12 +20,7 @@ import monix.execution.Scheduler
 /**
  * A connection that reads and writes Language Server Protocol messages.
  *
- * @param s thread pool to run tasks with.
- * @note Commands are executed asynchronously via a thread pool
- * @note Notifications are executed synchronously on the calling thread
- * @note The command handler returns Any because sometimes response objects can't be part
- *       of a sealed hierarchy. For instance, goto definition returns a {{{Seq[Location]}}}
- *       and that can't subclass anything other than Any
+ * @param s thread pool to execute commands and notifications.
  */
 abstract class Connection(inStream: InputStream, outStream: OutputStream)(implicit s: Scheduler)
     extends LazyLogging with Notifications {
@@ -37,8 +32,12 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
   val notificationHandlers: ListBuffer[Notification => Unit] = ListBuffer.empty
 
   def notifySubscribers(n: Notification): Unit = {
-    notificationHandlers.foreach(f =>
-      Try(f(n)).recover { case e => logger.error("Failed notification handler", e) })
+    Task.sequence {
+      notificationHandlers.map(f => Task(f(n)))
+    }.onErrorRecover {
+      case NonFatal(e) =>
+        logger.error("Failed notification handler", e)
+    }.runAsync
   }
 
   def sendNotification(params: Notification): Unit = {
@@ -54,10 +53,6 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
    */
   def showMessage(tpe: MessageType, message: String): Unit = {
     sendNotification(ShowMessageParams(tpe, message))
-  }
-
-  def showMessage(tpe: MessageType, message: String, actions: String*): Unit = {
-    ???
   }
 
   /**
@@ -158,14 +153,12 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
   }
 
   private def handleCommand(method: String, id: CorrelationId, command: ServerCommand): Future[Unit] = {
-    commandHandler(method, command).runAsync.map { result =>
-      val t = Try{ResultResponse.write(result, id)}
-      t.recover{case e => logger.error("ResultResponse.write:"+result, e) }
-      t.foreach{rJson => msgWriter.write(rJson)}
-    }.recover {
+    commandHandler(method, command).map { result =>
+      val rJson = ResultResponse.write(result, id)
+      msgWriter.write(rJson)
+    }.onErrorRecover {
       case NonFatal(e) =>
         logger.error(e.getMessage, e)
-        ()
-    }
+    }.runAsync
   }
 }

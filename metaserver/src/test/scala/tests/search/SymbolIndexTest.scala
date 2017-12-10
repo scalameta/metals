@@ -61,7 +61,7 @@ object SymbolIndexTest extends MegaSuite {
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
   val server =
     new ScalametaLanguageServer(config, stdin, stdout, System.out)(s)
-  server.initialize(0L, cwd.toString(), ClientCapabilities())
+  server.initialize(0L, cwd.toString(), ClientCapabilities()).runAsync(s)
   while (s.tickOne()) () // Trigger indexing
   val index: SymbolIndex = server.symbolIndex
   val reminderMsg = "Did you run scalametaEnableCompletions from sbt?"

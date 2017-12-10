@@ -23,14 +23,13 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
       case ("textDocument/hover", request: TextDocumentHoverRequest) => hover(request)
       case ("textDocument/references", request: TextDocumentReferencesRequest) => references(request)
       case ("textDocument/signatureHelp", request: TextDocumentSignatureHelpRequest) => signatureHelp(request)
-      case ("shutdown", request: Shutdown) => shutdown(request)
+      case ("shutdown", _: Shutdown) => shutdown()
       case c => Task.raiseError(new IllegalArgumentException(s"Unknown command $c"))
     }
   }
 
-  protected val documentManager = new TextDocumentManager(connection)
-
   connection.notificationHandlers += {
+    case Initialized() => logger.info("Client has initialized")
     case Exit() => onExit()
     case DidOpenTextDocumentParams(td) => onOpenTextDocument(td)
     case DidChangeTextDocumentParams(td, changes) => onChangeTextDocument(td, changes)
@@ -56,7 +55,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
     logger.debug(s"initialize with $request")
     InitializeResult(ServerCapabilities())
   }
-  def shutdown(request: Shutdown): Task[ShutdownResult] =
+  def shutdown(): Task[ShutdownResult] =
     Task.now(ShutdownResult())
 
   // textDocument

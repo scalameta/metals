@@ -68,8 +68,6 @@ class ScalametaLanguageServer(
     cwd.resolve("target").resolve("sources")
   val (fileSystemSemanticdbSubscriber, fileSystemSemanticdbsPublisher) =
     ScalametaLanguageServer.fileSystemSemanticdbStream(cwd)
-  val (interactiveSemanticdbSubscriber, interactiveSemanticdbPublisher) =
-    ScalametaLanguageServer.interactiveSemanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     ScalametaLanguageServer.compilerConfigStream(cwd)
   val buffers: Buffers = Buffers()
@@ -81,8 +79,7 @@ class ScalametaLanguageServer(
   )
   val metaSemanticdbs: Observable[semanticdb.Database] =
     Observable.merge(
-      fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None)),
-      interactiveSemanticdbPublisher.map(_.toDb(sourcepath = None))
+      fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None))
     )
   val scalafmt: Formatter =
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
@@ -107,7 +104,6 @@ class ScalametaLanguageServer(
     indexedFileSystemSemanticdbs,
     installedCompilers,
     scalafixNotifications,
-    scalacErrors
   )
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
@@ -118,7 +114,7 @@ class ScalametaLanguageServer(
 
   override def initialize(
       request: InitializeParams
-  ): Task[InitializeResult] = Task.now {
+  ): Task[InitializeResult] = Task {
     logger.info(s"Initialized with $cwd, $request")
     cancelEffects = effects.map(_.subscribe())
     loadAllRelevantFilesInThisWorkspace()
@@ -144,9 +140,8 @@ class ScalametaLanguageServer(
     InitializeResult(capabilities)
   }
 
-  override def shutdown(
-      request: Shutdown = Shutdown()
-  ): Task[ShutdownResult] = Task.now {
+  override def shutdown(): Task[ShutdownResult] = Task {
+    logger.info("Shutting down...")
     cancelEffects.foreach(_.cancel())
     ShutdownResult()
   }
@@ -179,7 +174,8 @@ class ScalametaLanguageServer(
     }
   override def completion(
       request: TextDocumentCompletionRequest
-  ): Task[CompletionList] = Task.now {
+  ): Task[CompletionList] = Task {
+    logger.info("completion")
     scalac.getCompiler(request.params.textDocument) match {
       case Some(g) =>
         CompletionProvider.completions(
@@ -192,7 +188,7 @@ class ScalametaLanguageServer(
 
   override def definition(
       request: TextDocumentDefinitionRequest
-  ): Task[DefinitionResult] = Task.now {
+  ): Task[DefinitionResult] = Task {
     DefinitionProvider.definition(
       symbolIndex,
       Uri.toPath(request.params.textDocument.uri).get,
@@ -203,7 +199,7 @@ class ScalametaLanguageServer(
 
   override def documentHighlight(
       request: TextDocumentDocumentHighlightRequest
-  ): Task[DocumentHighlightResult] = Task.now {
+  ): Task[DocumentHighlightResult] = Task {
     DocumentHighlightProvider.highlight(
       symbolIndex,
       Uri.toPath(request.params.textDocument.uri).get,
@@ -213,7 +209,7 @@ class ScalametaLanguageServer(
 
   override def documentSymbol(
       request: DocumentSymbolParams
-  ): Task[DocumentSymbolResult] = Task.now {
+  ): Task[DocumentSymbolResult] = Task {
     val path = Uri.toPath(request.textDocument.uri).get
     buffers.source(path) match {
       case Some(source) => DocumentSymbolProvider.documentSymbols(path, source)
@@ -223,13 +219,13 @@ class ScalametaLanguageServer(
 
   override def formatting(
       request: TextDocumentFormattingRequest
-  ): Task[DocumentFormattingResult] = Task.now {
+  ): Task[DocumentFormattingResult] = Task {
     DocumentFormattingProvider.format(request, scalafmt, buffers, cwd)
   }
 
   override def hover(
       request: TextDocumentHoverRequest
-  ): Task[Hover] = Task.now {
+  ): Task[Hover] = Task {
     scalac.getCompiler(request.params.textDocument) match {
       case Some(g) =>
         HoverProvider.hover(
@@ -242,7 +238,7 @@ class ScalametaLanguageServer(
 
   override def references(
       request: TextDocumentReferencesRequest
-  ): Task[ReferencesResult] = Task.now {
+  ): Task[ReferencesResult] = Task {
     ReferencesProvider.references(
       symbolIndex,
       Uri.toPath(request.params.textDocument.uri).get,
@@ -253,7 +249,7 @@ class ScalametaLanguageServer(
 
   override def signatureHelp(
       request: TextDocumentSignatureHelpRequest
-  ): Task[SignatureHelpResult] = Task.now {
+  ): Task[SignatureHelpResult] = Task {
     scalac.getCompiler(request.params.textDocument) match {
       case Some(g) =>
         SignatureHelpProvider.signatureHelp(
@@ -273,9 +269,6 @@ class ScalametaLanguageServer(
   ): Unit = {
     changes.foreach { c =>
       Uri.toPath(td.uri).foreach(p => buffers.changed(p, c.text))
-    }
-    scalac.getCompiler(td).foreach { compiler =>
-      interactiveSemanticdbSubscriber.onNext((compiler, td, buffers.read(td)))
     }
   }
 
@@ -322,21 +315,6 @@ object ScalametaLanguageServer extends LazyLogging {
     val (subscriber, publisher) = multicast[AbsolutePath]
     val semanticdbPublisher = publisher
       .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))
-    subscriber -> semanticdbPublisher
-  }
-
-  def interactiveSemanticdbStream(cwd: AbsolutePath)(
-      implicit scheduler: Scheduler
-  ): (
-      Observer.Sync[(Global, VersionedTextDocumentIdentifier, String)],
-      Observable[Database]
-  ) = {
-    val (subscriber, publisher) =
-      multicast[(Global, VersionedTextDocumentIdentifier, String)]
-    val semanticdbPublisher = publisher.map {
-      case (compiler, td, content) =>
-        Semanticdbs.loadFromTextDocument(compiler, td, content, cwd)
-    }
     subscriber -> semanticdbPublisher
   }
 
