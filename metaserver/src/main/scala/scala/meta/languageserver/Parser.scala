@@ -20,5 +20,5 @@ object Parser {
     }
 
   def parse(content: String): Parsed[Source] =
-    ScalafixConfig.DefaultDialect(content).parse[Source]
+    scala.meta.dialects.Scala212(content).parse[Source]
 }

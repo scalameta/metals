@@ -19,7 +19,7 @@ object ScalafixEnrichments {
         patches: Map[RuleName, Patch],
         ctx: RuleCtx
     ): List[LintMessage] =
-      Patch.lintMessages(patches, ctx)
+      Patch.lintMessages(patches.values.asPatch)
   }
   implicit class XtensionRuleLSP(val rule: Rule) extends AnyVal {
     def fixWithNameInternal(ctx: RuleCtx): Map[RuleName, Patch] =
