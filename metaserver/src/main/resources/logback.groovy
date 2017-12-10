@@ -13,3 +13,5 @@ appender("LSP", scala.meta.languageserver.LSPLogger) {
 }
 
 root(DEBUG, ["LSP", "STDOUT"])
+logger("langserver.core.MessageWriter", INFO, ["LSP", "STDOUT"])
+logger("langserver.core.MessageReader", INFO, ["LSP", "STDOUT"])
