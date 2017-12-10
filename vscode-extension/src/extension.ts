@@ -1,7 +1,7 @@
 'use strict';
 
 import * as path from 'path';
-import { workspace, ExtensionContext, window } from 'vscode';
+import { workspace, ExtensionContext, window, commands } from 'vscode';
 import {
   LanguageClient,
   LanguageClientOptions,
@@ -10,6 +10,7 @@ import {
   RevealOutputChannelOn
 } from 'vscode-languageclient';
 import { Requirements } from './requirements';
+import { exec } from 'child_process';
 
 export async function activate(context: ExtensionContext) {
   const req = new Requirements();
@@ -69,12 +70,26 @@ export async function activate(context: ExtensionContext) {
     revealOutputChannelOn: RevealOutputChannelOn.Never
   };
 
-  const disposable = new LanguageClient(
+  const client = new LanguageClient(
     'scalameta',
     'Scalameta',
     serverOptions,
     clientOptions
-  ).start();
+  );
 
-  context.subscriptions.push(disposable);
+  const restartServerCommand = commands.registerCommand("scalameta.restartServer", async () => {
+    const serverPid = client['_serverProcess'].pid;
+    await exec(`kill ${serverPid}`);
+    const showLogsAction = "Show server logs";
+    const selectedAction = await window.showInformationMessage(
+      "Scalameta Language Server killed, it should restart in a few seconds",
+      showLogsAction
+    );
+
+    if (selectedAction === showLogsAction) {
+      client.outputChannel.show(true);
+    }
+  });
+
+  context.subscriptions.push(client.start(), restartServerCommand);
 }

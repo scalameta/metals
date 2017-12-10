@@ -13,6 +13,13 @@
     "activationEvents": [
         "onLanguage:scala"
     ],
+    "contributes": {
+        "commands": [{
+            "command": "scalameta.restartServer",
+            "category": "Scalameta Language Server",
+            "title": "Restart server"
+        }]
+    },
     "main": "./out/extension",
     "scripts": {
         "vscode:prepublish": "npm run download-coursier && npm run compile",
