@@ -78,7 +78,8 @@ export async function activate(context: ExtensionContext) {
   );
 
   const restartServerCommand = commands.registerCommand("scalameta.restartServer", async () => {
-    await exec("jps | grep coursier | awk '{ print $1 }' | xargs kill");
+    const serverPid = client['_serverProcess'].pid;
+    await exec(`kill ${serverPid}`);
     const showLogsAction = "Show server logs";
     const selectedAction = await window.showInformationMessage(
       "Scalameta Language Server killed, it should restart in a few seconds",
