@@ -11,7 +11,6 @@ import langserver.{types => l}
 import scala.meta.languageserver.ScalametaEnrichments._
 import scalafix.lint.LintSeverity
 
-// TODO(olafur) figure out how to refactor scalafix api so this is no longer needed.
 object ScalafixEnrichments {
   implicit class XtensionLintMessageLSP(val msg: LintMessage) extends AnyVal {
     def toLSP: l.Diagnostic =
