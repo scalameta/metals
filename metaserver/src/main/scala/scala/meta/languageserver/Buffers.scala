@@ -30,8 +30,13 @@ class Buffers private (
     logger.info(s"Reading $path from disk")
     new String(Files.readAllBytes(path.toNIO), StandardCharsets.UTF_8)
   }
-  def changed(path: AbsolutePath, newContents: String): Unit =
+  def changed(
+      path: AbsolutePath,
+      newContents: String
+  ): Effects.UpdateBuffers = {
     contents.put(path, newContents)
+    Effects.UpdateBuffers
+  }
   def closed(path: AbsolutePath): Unit = {
     contents.remove(path)
     sources.remove(path)

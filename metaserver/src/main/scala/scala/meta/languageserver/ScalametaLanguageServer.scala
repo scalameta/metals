@@ -43,6 +43,7 @@ import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import monix.reactive.Observer
+import org.langmeta.inputs.Input
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
@@ -70,6 +71,8 @@ class ScalametaLanguageServer(
     ScalametaLanguageServer.fileSystemSemanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     ScalametaLanguageServer.compilerConfigStream(cwd)
+  val (sourceChangeSubscriber, sourceChangePublisher) =
+    ScalametaLanguageServer.multicast[Input.VirtualFile]
   val buffers: Buffers = Buffers()
   val scalac: ScalacProvider = new ScalacProvider(config)
   val symbolIndex: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
@@ -99,11 +102,17 @@ class ScalametaLanguageServer(
   val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
     metaSemanticdbs.map(scalacErrorReporter.reportErrors)
   private var cancelEffects = List.empty[Cancelable]
+  val updateBuffers: Observable[Effects.UpdateBuffers] =
+    sourceChangePublisher.collect {
+      case Input.VirtualFile(Uri(path), value) =>
+        buffers.changed(path, value)
+    }
   val effects: List[Observable[Effects]] = List(
     indexedDependencyClasspath,
     indexedFileSystemSemanticdbs,
     installedCompilers,
     scalafixNotifications,
+    updateBuffers,
   )
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
@@ -261,14 +270,14 @@ class ScalametaLanguageServer(
   }
 
   override def onOpenTextDocument(td: TextDocumentItem): Unit =
-    Uri.toPath(td.uri).foreach(p => buffers.changed(p, td.text))
+    sourceChangeSubscriber.onNext(Input.VirtualFile(td.uri, td.text))
 
   override def onChangeTextDocument(
       td: VersionedTextDocumentIdentifier,
       changes: Seq[TextDocumentContentChangeEvent]
   ): Unit = {
     changes.foreach { c =>
-      Uri.toPath(td.uri).foreach(p => buffers.changed(p, c.text))
+      sourceChangeSubscriber.onNext(Input.VirtualFile(td.uri, c.text))
     }
   }
 
@@ -318,7 +327,7 @@ object ScalametaLanguageServer extends LazyLogging {
     subscriber -> semanticdbPublisher
   }
 
-  private def multicast[T](implicit s: Scheduler) = {
+  def multicast[T](implicit s: Scheduler) = {
     val (sub, pub) = Observable.multicast[T](MulticastStrategy.Publish)
     (sub, pub.doOnError(onError))
   }

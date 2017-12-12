@@ -19,4 +19,6 @@ object Effects {
   final val PublishLinterDiagnostics = new PublishLinterDiagnostics
   final class PublishScalacDiagnostics extends Effects
   final val PublishScalacDiagnostics = new PublishScalacDiagnostics
+  final class UpdateBuffers extends Effects
+  final val UpdateBuffers = new UpdateBuffers
 }
