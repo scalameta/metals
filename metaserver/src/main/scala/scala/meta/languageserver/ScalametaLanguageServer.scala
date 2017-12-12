@@ -45,7 +45,8 @@ import monix.reactive.Observable
 import monix.reactive.Observer
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.PathIO
-import org.langmeta.internal.semanticdb.schema.Database
+import org.langmeta.internal.semanticdb.schema
+import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb
 
@@ -80,17 +81,26 @@ class ScalametaLanguageServer(
   val scalacErrorReporter: ScalacErrorReporter = new ScalacErrorReporter(
     connection
   )
+  val interactiveSemanticdbs: Observable[semanticdb.Database] =
+    sourceChangePublisher.flatMap(
+      input => Observable.fromIterable(Semanticdbs.toSemanticdb(input, scalac))
+    )
+  val interactiveSchemaSemanticdbs: Observable[schema.Database] =
+    interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
   val metaSemanticdbs: Observable[semanticdb.Database] =
     Observable.merge(
-      fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None))
+      fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None)),
+      interactiveSemanticdbs
     )
   val scalafmt: Formatter =
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
     else Formatter.noop
 
   // Effects
-  val indexedFileSystemSemanticdbs: Observable[Effects.IndexSemanticdb] =
-    fileSystemSemanticdbsPublisher.map(symbolIndex.indexDatabase)
+  val indexedSemanticdbs: Observable[Effects.IndexSemanticdb] =
+    Observable
+      .merge(fileSystemSemanticdbsPublisher, interactiveSchemaSemanticdbs)
+      .map(symbolIndex.indexDatabase)
   val indexedDependencyClasspath: Observable[Effects.IndexSourcesClasspath] =
     compilerConfigPublisher.map(
       c => symbolIndex.indexDependencyClasspath(c.sourceJars)
@@ -109,7 +119,7 @@ class ScalametaLanguageServer(
     }
   val effects: List[Observable[Effects]] = List(
     indexedDependencyClasspath,
-    indexedFileSystemSemanticdbs,
+    indexedSemanticdbs,
     installedCompilers,
     scalafixNotifications,
     updateBuffers,
@@ -320,7 +330,7 @@ object ScalametaLanguageServer extends LazyLogging {
 
   def fileSystemSemanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
-  ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
+  ): (Observer.Sync[AbsolutePath], Observable[schema.Database]) = {
     val (subscriber, publisher) = multicast[AbsolutePath]
     val semanticdbPublisher = publisher
       .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))

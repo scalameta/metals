@@ -40,8 +40,10 @@ class ScalacProvider(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {
     logger.info(s"Loading new compiler from config $config")
-    val compiler =
-      ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
+    val compiler = ScalacProvider.newCompiler(
+      config.withoutSemanticdb.classpath,
+      config.scalacOptions
+    )
     config.sources.foreach { path =>
       // TODO(olafur) garbage collect compilers from removed files.
       compilerByPath(path) = compiler

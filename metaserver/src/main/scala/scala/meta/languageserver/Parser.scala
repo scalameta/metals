@@ -6,6 +6,7 @@ import scala.meta.parsers.Parsed
 import org.langmeta.inputs.Position
 import org.langmeta.semanticdb.Document
 import scalafix.internal.config.ScalafixConfig
+import org.langmeta.inputs.Input
 
 // Small utility to parse inputs into scala.meta.Tree,
 // this is missing in the API after semanticdb went language agnostics with langmeta.
@@ -19,6 +20,8 @@ object Parser {
         Parsed.Error(Position.None, err, new IllegalArgumentException(err))
     }
 
+  def parse(input: Input): Parsed[Source] =
+    ScalafixConfig.DefaultDialect(input).parse[Source]
   def parse(content: String): Parsed[Source] =
-    scala.meta.dialects.Scala212(content).parse[Source]
+    parse(Input.String(content))
 }

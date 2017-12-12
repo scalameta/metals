@@ -16,6 +16,25 @@ import org.langmeta.internal.io.FileIO
 // scala.meta._ and language.types._
 object ScalametaEnrichments {
 
+  implicit class XtensionMessageLSP(val msg: m.Message) extends AnyVal {
+    def toLSP: l.Diagnostic =
+      l.Diagnostic(
+        range = msg.position.toRange,
+        severity = Some(msg.severity.toLSP),
+        code = None,
+        source = Some("scalac"),
+        message = msg.text
+      )
+  }
+
+  implicit class XtensionSeverityLSP(val severity: m.Severity) extends AnyVal {
+    def toLSP: l.DiagnosticSeverity = severity match {
+      case m.Severity.Info => l.DiagnosticSeverity.Information
+      case m.Severity.Warning => l.DiagnosticSeverity.Warning
+      case m.Severity.Error => l.DiagnosticSeverity.Error
+    }
+  }
+
   implicit class XtensionTreeLSP(val tree: m.Tree) extends AnyVal {
     import scala.meta._
 

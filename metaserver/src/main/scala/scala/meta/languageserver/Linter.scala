@@ -17,6 +17,7 @@ import scalafix.reflect.ScalafixReflect
 import scalafix.rule.RuleCtx
 import scalafix.rule.RuleName
 import scalafix.util.SemanticdbIndex
+import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
 import langserver.messages.PublishDiagnostics
 import langserver.{types => l}
@@ -24,12 +25,14 @@ import metaconfig.ConfDecoder
 import monix.reactive.Observable
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
+import org.langmeta.semanticdb.Message
+import org.langmeta.semanticdb.Severity
 
 class Linter(
     cwd: AbsolutePath,
     out: OutputStream,
     connection: Connection,
-) {
+) extends LazyLogging {
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(
@@ -71,20 +74,17 @@ class Linter(
       val configDecoder = ScalafixReflect.fromLazySemanticdbIndex(lazyIndex)
       val (rule, config) =
         ScalafixConfig.fromInput(configInput, lazyIndex)(configDecoder).get
-      val results: Seq[PublishDiagnostics] = index.database.documents.flatMap {
-        d =>
-          Parser
-            .parse(d)
-            .toOption
-            .map { tree =>
-              val ctx = RuleCtx.applyInternal(tree, config)
-              val patches = rule.fixWithNameInternal(ctx)
-              val diagnostics =
-                Patch.lintMessagesInternal(patches, ctx).map(toDiagnostic)
-              val uri = d.input.syntax
-              PublishDiagnostics(uri, diagnostics)
-            }
-            .toList
+      val results: Seq[PublishDiagnostics] = for {
+        document <- index.database.documents
+        tree <- Parser.parse(document.input).toOption.toList
+      } yield {
+        val ctx = RuleCtx.applyInternal(tree, config)
+        val patches = rule.fixWithNameInternal(ctx)
+        val diagnostics = Patch.lintMessagesInternal(patches, ctx).map(_.toLSP)
+        val uri = document.input.syntax
+        val compilerErrors = document.messages.map(_.toLSP)
+        val publish = PublishDiagnostics(uri, diagnostics ++ compilerErrors)
+        publish
       }
 
       // megaCache needs to die, if we forget this we will read stale
@@ -110,21 +110,5 @@ class Linter(
       _ => Some(index),
       ScalafixReporter.default.copy(outStream = new PrintStream(out))
     )
-
-  private def toDiagnostic(msg: LintMessage): l.Diagnostic = {
-    l.Diagnostic(
-      range = msg.position.toRange,
-      severity = Some(toSeverity(msg.category.severity)),
-      code = Some(msg.category.id),
-      source = Some("scalafix"),
-      message = msg.message
-    )
-  }
-
-  private def toSeverity(s: LintSeverity): l.DiagnosticSeverity = s match {
-    case LintSeverity.Error => l.DiagnosticSeverity.Error
-    case LintSeverity.Warning => l.DiagnosticSeverity.Warning
-    case LintSeverity.Info => l.DiagnosticSeverity.Information
-  }
 
 }
