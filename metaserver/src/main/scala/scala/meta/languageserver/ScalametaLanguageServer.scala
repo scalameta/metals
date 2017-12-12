@@ -4,12 +4,12 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
+import scala.concurrent.duration.FiniteDuration
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.search.SymbolIndex
-import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
 import langserver.core.LanguageServer
@@ -25,7 +25,6 @@ import langserver.messages.InitializeParams
 import langserver.messages.InitializeResult
 import langserver.messages.ReferencesResult
 import langserver.messages.ServerCapabilities
-import langserver.messages.Shutdown
 import langserver.messages.ShutdownResult
 import langserver.messages.SignatureHelpOptions
 import langserver.messages.SignatureHelpResult
@@ -45,8 +44,8 @@ import monix.reactive.Observable
 import monix.reactive.Observer
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.PathIO
-import org.langmeta.internal.semanticdb.schema
 import org.langmeta.internal.semanticdb.XtensionDatabase
+import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb
 
@@ -82,9 +81,12 @@ class ScalametaLanguageServer(
     connection
   )
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
-    sourceChangePublisher.flatMap(
-      input => Observable.fromIterable(Semanticdbs.toSemanticdb(input, scalac))
-    )
+    sourceChangePublisher
+      .debounce(FiniteDuration(1, "s"))
+      .flatMap(
+        input =>
+          Observable.fromIterable(Semanticdbs.toSemanticdb(input, scalac))
+      )
   val interactiveSchemaSemanticdbs: Observable[schema.Database] =
     interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
   val metaSemanticdbs: Observable[semanticdb.Database] =
