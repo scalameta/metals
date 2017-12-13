@@ -80,7 +80,7 @@ class ScalametaLanguageServer(
   val buffers: Buffers = Buffers()
   val scalac: ScalacProvider = new ScalacProvider(config)
   val symbolIndex: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
-  val scalafix: Linter = new Linter(cwd, stdout, connection)
+  val scalafix: Linter = new Linter(cwd, stdout)
   val scalacErrorReporter: ScalacErrorReporter = new ScalacErrorReporter(
     connection
   )

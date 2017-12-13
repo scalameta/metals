@@ -24,23 +24,28 @@ object Semanticdbs extends LazyLogging {
     for {
       path <- Uri.unapply(input.path)
       compiler <- scalac.getCompiler(path)
-    } yield {
-      val doc = try {
-        InteractiveSemanticdb.toDocument(
-          compiler = compiler,
-          code = input.value,
-          filename = input.path,
-          timeout = 10000
-        )
-      } catch {
-        case NonFatal(err) =>
-          if (!err.isInstanceOf[ParseException]) {
-            logger.error(s"Failed to emit semanticdb for $path", err)
-          }
-          toMessageOnlySemanticdb(input, compiler)
-      }
-      semanticdb.Database(doc.copy(language = "Scala212") :: Nil)
+    } yield toSemanticdb(input, compiler)
+
+  def toSemanticdb(
+      input: Input.VirtualFile,
+      compiler: Global,
+  ): semanticdb.Database = {
+    val doc = try {
+      InteractiveSemanticdb.toDocument(
+        compiler = compiler,
+        code = input.value,
+        filename = input.path,
+        timeout = 10000
+      )
+    } catch {
+      case NonFatal(err) =>
+        if (!err.isInstanceOf[ParseException]) {
+          logger.error(s"Failed to emit semanticdb for ${input.path}", err)
+        }
+        toMessageOnlySemanticdb(input, compiler)
     }
+    semanticdb.Database(doc.copy(language = "Scala212") :: Nil)
+  }
 
   def toMessageOnlySemanticdb(
       input: Input,

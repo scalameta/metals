@@ -1,5 +1,6 @@
 package tests.compiler
 
+import scala.meta.languageserver.Linter
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.Cursor
 import scala.tools.nsc.interactive.Global

@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets
 import java.net.URI
 import scala.{meta => m}
 import langserver.types.SymbolKind
-import langserver.types.TextDocumentIdentifier
 import langserver.{types => l}
 import scala.meta.languageserver.{index => i}
 import org.langmeta.io.AbsolutePath
