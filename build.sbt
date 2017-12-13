@@ -56,7 +56,7 @@ inThisBuild(
 
 lazy val V = new {
   val scala212 = "2.12.4"
-  val scalameta = "2.1.4"
+  val scalameta = "2.1.5"
   val scalafix = "0.5.7"
 }
 
