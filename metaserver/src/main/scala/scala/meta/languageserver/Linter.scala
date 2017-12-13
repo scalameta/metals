@@ -3,6 +3,7 @@ package scala.meta.languageserver
 import java.io.PrintStream
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.parsers.Parsed
 import scala.tools.nsc.interpreter.OutputStream
 import scala.{meta => m}
 import scalafix._
@@ -20,6 +21,7 @@ import scalafix.util.SemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Connection
 import langserver.messages.PublishDiagnostics
+import langserver.types.Diagnostic
 import langserver.{types => l}
 import metaconfig.ConfDecoder
 import monix.reactive.Observable
@@ -38,53 +40,49 @@ class Linter(
   def onSyntacticInput(
       filename: String,
       contents: String
-  ): Seq[PublishDiagnostics] = {
+  ): Seq[Diagnostic] = {
+    val mdoc = m.Document(
+      m.Input.VirtualFile(filename, contents),
+      "scala212",
+      Nil,
+      Nil,
+      Nil,
+      Nil
+    )
     analyzeIndex(
+      mdoc,
       EagerInMemorySemanticdbIndex(
-        m.Database(
-          m.Document(
-            m.Input.VirtualFile(filename, contents),
-            "scala212",
-            Nil,
-            Nil,
-            Nil,
-            Nil
-          ) :: Nil
-        ),
+        m.Database(mdoc :: Nil),
         m.Sourcepath(Nil),
         m.Classpath(Nil)
       )
     )
   }
 
-  def reportLinterMessages(
-      mdb: m.Database
-  ): Effects.PublishLinterDiagnostics = {
-    val messages = analyzeIndex(mdb)
-    messages.foreach(connection.sendNotification)
-    Effects.PublishLinterDiagnostics
-  }
-  private def analyzeIndex(mdb: m.Database): Seq[PublishDiagnostics] =
+  def linterMessages(mdoc: m.Document): Seq[Diagnostic] =
     analyzeIndex(
-      EagerInMemorySemanticdbIndex(mdb, m.Sourcepath(Nil), m.Classpath(Nil))
+      mdoc,
+      EagerInMemorySemanticdbIndex(
+        m.Database(mdoc :: Nil),
+        m.Sourcepath(Nil),
+        m.Classpath(Nil)
+      )
     )
-  private def analyzeIndex(index: SemanticdbIndex): Seq[PublishDiagnostics] =
+  private def analyzeIndex(
+      document: m.Document,
+      index: SemanticdbIndex
+  ): Seq[Diagnostic] =
     withConfig { configInput =>
       val lazyIndex = lazySemanticdbIndex(index)
       val configDecoder = ScalafixReflect.fromLazySemanticdbIndex(lazyIndex)
       val (rule, config) =
         ScalafixConfig.fromInput(configInput, lazyIndex)(configDecoder).get
-      val results: Seq[PublishDiagnostics] = for {
-        document <- index.database.documents
-        tree <- Parser.parse(document.input).toOption.toList
-      } yield {
-        val ctx = RuleCtx.applyInternal(tree, config)
-        val patches = rule.fixWithNameInternal(ctx)
-        val diagnostics = Patch.lintMessagesInternal(patches, ctx).map(_.toLSP)
-        val uri = document.input.syntax
-        val compilerErrors = document.messages.map(_.toLSP)
-        val publish = PublishDiagnostics(uri, diagnostics ++ compilerErrors)
-        publish
+      val results: Seq[Diagnostic] = Parser.parse(document.input) match {
+        case Parsed.Error(_, _, _) => Nil
+        case Parsed.Success(tree) =>
+          val ctx = RuleCtx.applyInternal(tree, config)
+          val patches = rule.fixWithNameInternal(ctx)
+          Patch.lintMessagesInternal(patches, ctx).map(_.toLSP)
       }
 
       // megaCache needs to die, if we forget this we will read stale

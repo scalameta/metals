@@ -3,8 +3,10 @@ package scala.meta.languageserver.compiler
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
+import scala.{meta => m}
 
-object CompilerUtils extends LazyLogging {
+object CompilerEnrichments extends LazyLogging {
+
   def safeCompletionsAt[G <: Global](
       global: Global,
       position: Position
@@ -12,6 +14,13 @@ object CompilerUtils extends LazyLogging {
     try {
       global.completionsAt(position).matchingResults().distinct
     } catch {
+      case e: ScalaReflectionException
+          if e.getMessage.contains("not a module") =>
+        // Do nothing, seems to happen regularly
+        // scala.ScalaReflectionException: value <error: object a> is not a module
+        // at scala.reflect.api.Symbols$SymbolApi.asModule(Symbols.scala:250)
+        // at scala.reflect.api.Symbols$SymbolApi.asModule$(Symbols.scala:250)
+        Nil
       case e: NullPointerException =>
         // do nothing, seems to happen regularly
         // java.lang.NullPointerException: null
@@ -29,4 +38,11 @@ object CompilerUtils extends LazyLogging {
     }
   }
 
+  implicit class XtensionPositionScalac(val pos: Position) extends AnyVal {
+    def toMeta(input: m.Input): m.Position = {
+      if (pos.isRange) m.Position.Range(input, pos.start, pos.end)
+      else if (pos.isDefined) m.Position.Range(input, pos.point, pos.point)
+      else m.Position.None
+    }
+  }
 }

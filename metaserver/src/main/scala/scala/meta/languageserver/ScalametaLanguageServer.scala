@@ -87,10 +87,9 @@ class ScalametaLanguageServer(
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
       .debounce(FiniteDuration(1, "s"))
-      .flatMap(
-        input =>
-          Observable.fromIterable(Semanticdbs.toSemanticdb(input, scalac))
-      )
+      .flatMap { input =>
+        Observable.fromIterable(Semanticdbs.toSemanticdb(input, scalac))
+      }
   val interactiveSchemaSemanticdbs: Observable[schema.Database] =
     interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
   val metaSemanticdbs: Observable[semanticdb.Database] =
@@ -113,8 +112,12 @@ class ScalametaLanguageServer(
     )
   val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
     compilerConfigPublisher.map(scalac.loadNewCompilerGlobals)
-  val scalafixNotifications: Observable[Effects.PublishLinterDiagnostics] =
-    metaSemanticdbs.map(scalafix.reportLinterMessages)
+  val publishDiagnostics: Observable[Effects.PublishSquigglies] =
+    metaSemanticdbs.map { db =>
+      val diagnostics = SquiggliesProvider.squigglies(db, scalafix)
+      diagnostics.foreach(connection.sendNotification)
+      Effects.PublishSquigglies
+    }
   val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
     metaSemanticdbs.map(scalacErrorReporter.reportErrors)
   private var cancelEffects = List.empty[Cancelable]
@@ -127,7 +130,7 @@ class ScalametaLanguageServer(
     indexedDependencyClasspath,
     indexedSemanticdbs,
     installedCompilers,
-    scalafixNotifications,
+    publishDiagnostics,
     updateBuffers,
   )
 
@@ -292,9 +295,10 @@ class ScalametaLanguageServer(
       td: VersionedTextDocumentIdentifier,
       changes: Seq[TextDocumentContentChangeEvent]
   ): Unit = {
-    changes.foreach { c =>
-      sourceChangeSubscriber.onNext(Input.VirtualFile(td.uri, c.text))
-    }
+    require(changes.length == 1, s"Expected one change, got $changes")
+    sourceChangeSubscriber.onNext(
+      Input.VirtualFile(td.uri, changes.head.text)
+    )
   }
 
   override def onCloseTextDocument(td: TextDocumentIdentifier): Unit =
