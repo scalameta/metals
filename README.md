@@ -25,7 +25,7 @@ Even if some checkbox is marked it does not mean that feature works perfectly.
 Some of those features are a likely outside the scope of this project, we are
 still learning and exploring what's possible.
 
-* Compile errors with the Scala Presentation Compiler:
+* Compile errors with the Scala Presentation Compiler (`textDocument/publishDiagnostics`):
   - [ ] On build compile
   - [x] As you type
 * Linting with Scalafix (`textDocument/publishDiagnostics`):
@@ -50,10 +50,10 @@ still learning and exploring what's possible.
   - [x] From project files to Java dependency source files
   - [ ] From project dependency to project dependency
 * Find references with SemanticDB (`textDocument/references`):
-  - [x] In file on hover (`textDocument/documentHighlight`)
+  - [x] In file (`textDocument/documentHighlight`)
   - [x] In project
   - [ ] In dependencies
-* Go to symbol definition by name:
+* Lookup symbol definition by name:
   - [x] In file (`textDocument/documentSymbol`)
   - [ ] In workspace (`workspace/symbol`)
 * Symbol outline:
