@@ -42,6 +42,7 @@ import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import monix.reactive.Observer
+import monix.reactive.OverflowStrategy
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.XtensionDatabase
@@ -72,7 +73,10 @@ class ScalametaLanguageServer(
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     ScalametaLanguageServer.compilerConfigStream(cwd)
   val (sourceChangeSubscriber, sourceChangePublisher) =
-    ScalametaLanguageServer.multicast[Input.VirtualFile]
+    Observable.multicast[Input.VirtualFile](
+      MulticastStrategy.Publish,
+      OverflowStrategy.DropOld(2)
+    )
   val buffers: Buffers = Buffers()
   val scalac: ScalacProvider = new ScalacProvider(config)
   val symbolIndex: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
