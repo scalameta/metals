@@ -11,12 +11,10 @@ import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.InverseSymbolIndexer
 import scala.meta.languageserver.search.SymbolIndex
-import scala.meta.languageserver.index.SymbolData
 import scala.{meta => m}
 import langserver.{types => l}
 import langserver.messages.ClientCapabilities
 import monix.execution.schedulers.TestScheduler
-import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Classpath
 import org.langmeta.semanticdb.Symbol

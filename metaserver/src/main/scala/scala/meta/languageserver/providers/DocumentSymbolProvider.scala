@@ -6,7 +6,6 @@ import scala.meta.languageserver.Uri
 import com.typesafe.scalalogging.LazyLogging
 import langserver.messages.DocumentSymbolResult
 import langserver.{types => l}
-import org.langmeta.io.AbsolutePath
 
 object DocumentSymbolProvider extends LazyLogging {
 
@@ -36,12 +35,12 @@ object DocumentSymbolProvider extends LazyLogging {
 
         currentNode match {
           // we need to go deeper
-          case Source(_) | Template(_) => continue()
+          case _: Source | _: Template => continue()
           // add package, but don't set it as a new root
-          case Pkg(_) => addNode(); continue()
+          case _: Pkg => addNode(); continue()
           // terminal nodes: add them, but don't go inside
-          case Defn.Def(_) | Defn.Val(_) | Defn.Var(_) => addNode()
-          case Decl.Def(_) | Decl.Val(_) | Decl.Var(_) => addNode()
+          case _: Defn.Def | _: Defn.Val | _: Defn.Var => addNode()
+          case _: Decl.Def | _: Decl.Val | _: Decl.Var => addNode()
           // all other (named) types and terms can contain more nodes
           case t if t.is[Member.Type] || t.is[Member.Term] =>
             addNode(); continue(withNewRoot = true)

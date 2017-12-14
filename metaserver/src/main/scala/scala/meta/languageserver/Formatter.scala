@@ -2,7 +2,6 @@ package scala.meta.languageserver
 
 import scala.language.reflectiveCalls
 
-import java.io.PrintStream
 import scala.reflect.internal.util.ScalaClassLoader.URLClassLoader
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath

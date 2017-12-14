@@ -6,7 +6,7 @@ import scala.meta.languageserver.compiler.ScalacProvider
 import scala.tools.nsc.interactive.Global
 import tests.MegaSuite
 
-class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
+class CompilerSuite extends MegaSuite {
   val compiler: Global = ScalacProvider.newCompiler(
     "",
     "-deprecation" ::

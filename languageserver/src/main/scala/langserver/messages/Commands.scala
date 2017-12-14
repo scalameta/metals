@@ -1,10 +1,10 @@
 package langserver.messages
 
-import play.api.libs.json.JsObject
 import com.dhpcs.jsonrpc._
 import play.api.libs.json._
 import langserver.types._
 import langserver.utils.JsonRpcUtils
+import play.api.libs.json.OFormat
 
 sealed trait Message
 sealed trait ServerCommand extends Message
@@ -114,7 +114,7 @@ case class ServerCapabilities(
 )
 
 object ServerCapabilities {
-  implicit val format = Json.format[ServerCapabilities]
+  implicit val format: OFormat[ServerCapabilities] = Json.format[ServerCapabilities]
 }
 
 case class CompletionOptions(resolveProvider: Boolean, triggerCharacters: Seq[String])
@@ -144,7 +144,7 @@ object ExecuteCommandOptions {
 
 case class CompletionList(isIncomplete: Boolean, items: Seq[CompletionItem]) extends ResultResponse
 object CompletionList {
-  implicit val format = Json.format[CompletionList]
+  implicit val format: OFormat[CompletionList] = Json.format[CompletionList]
 }
 
 case class InitializeResult(capabilities: ServerCapabilities) extends ResultResponse
@@ -178,7 +178,7 @@ case class ShowMessageRequestParams(
  */
 case class MessageActionItem(title: String)
 object MessageActionItem {
-  implicit val format = Json.format[MessageActionItem]
+  implicit val format: OFormat[MessageActionItem] = Json.format[MessageActionItem]
 }
 
 case class TextDocumentPositionParams(
@@ -203,14 +203,14 @@ case class WorkspaceExecuteCommandRequest(params: WorkspaceExecuteCommandParams)
 
 case class Hover(contents: Seq[MarkedString], range: Option[Range]) extends ResultResponse
 object Hover {
-  implicit val format = Json.format[Hover]
+  implicit val format: OFormat[Hover] = Json.format[Hover]
 }
 
 object ServerCommand extends CommandCompanion[ServerCommand] {
   import JsonRpcUtils._
 
-  implicit val positionParamsFormat = Json.format[TextDocumentPositionParams]
-  implicit val referenceParamsFormat = Json.format[ReferenceParams]
+  implicit val positionParamsFormat: OFormat[TextDocumentPositionParams] = Json.format[TextDocumentPositionParams]
+  implicit val referenceParamsFormat: OFormat[ReferenceParams] = Json.format[ReferenceParams]
 
   override val CommandFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeParams],
@@ -306,7 +306,7 @@ case class SignatureHelpResult(signatures: Seq[SignatureInformation],
                                activeParameter: Option[Int]) extends ResultResponse
 case object ExecuteCommandResult extends ResultResponse
 object SignatureHelpResult {
-  implicit val format = Json.format[SignatureHelpResult]
+  implicit val format: OFormat[SignatureHelpResult] = Json.format[SignatureHelpResult]
 }
 
 object ResultResponse extends ResponseCompanion[Any] {

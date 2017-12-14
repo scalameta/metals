@@ -40,10 +40,10 @@ object ScalametaEnrichments {
     // TODO(alexey) function inside a block/if/for/etc.?
     def isFunction: Boolean = {
       val tpeOpt: Option[Type] = tree match {
-        case d @ Decl.Val(_) => Some(d.decltpe)
-        case d @ Decl.Var(_) => Some(d.decltpe)
-        case d @ Defn.Val(_) => d.decltpe
-        case d @ Defn.Var(_) => d.decltpe
+        case d: Decl.Val => Some(d.decltpe)
+        case d: Decl.Var => Some(d.decltpe)
+        case d: Defn.Val => d.decltpe
+        case d: Defn.Var => d.decltpe
         case _ => None
       }
       tpeOpt.filter(_.is[Type.Function]).nonEmpty
@@ -52,16 +52,16 @@ object ScalametaEnrichments {
     // NOTE: we care only about descendants of Decl, Defn and Pkg[.Object] (see documentSymbols implementation)
     def symbolKind: SymbolKind = tree match {
       case f if f.isFunction => SymbolKind.Function
-      case Decl.Var(_) | Defn.Var(_) => SymbolKind.Variable
-      case Decl.Val(_) | Defn.Val(_) => SymbolKind.Constant
-      case Decl.Def(_) | Defn.Def(_) => SymbolKind.Method
-      case Decl.Type(_) | Defn.Type(_) => SymbolKind.Field
-      case Defn.Macro(_) => SymbolKind.Constructor
-      case Defn.Class(_) => SymbolKind.Class
-      case Defn.Trait(_) => SymbolKind.Interface
-      case Defn.Object(_) => SymbolKind.Module
-      case Pkg.Object(_) => SymbolKind.Namespace
-      case Pkg(_) => SymbolKind.Package
+      case _: Decl.Var | _: Defn.Var => SymbolKind.Variable
+      case _: Decl.Val | _: Defn.Val => SymbolKind.Constant
+      case _: Decl.Def | _: Defn.Def => SymbolKind.Method
+      case _: Decl.Type | _: Defn.Type => SymbolKind.Field
+      case _: Defn.Macro => SymbolKind.Constructor
+      case _: Defn.Class => SymbolKind.Class
+      case _: Defn.Trait => SymbolKind.Interface
+      case _: Defn.Object => SymbolKind.Module
+      case _: Pkg.Object => SymbolKind.Namespace
+      case _: Pkg => SymbolKind.Package
       // TODO(alexey) are these kinds useful?
       // case ??? => SymbolKind.Enum
       // case ??? => SymbolKind.String
@@ -107,7 +107,7 @@ object ScalametaEnrichments {
     def pretty: String =
       s"${pos.uri.replaceFirst(".*/", "")} [${pos.range.map(_.pretty).getOrElse("")}]"
 
-    def toLocation(implicit cwd: m.AbsolutePath): l.Location = {
+    def toLocation: l.Location = {
       l.Location(
         pos.uri,
         pos.range.get.toRange

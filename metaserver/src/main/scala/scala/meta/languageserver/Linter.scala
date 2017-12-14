@@ -16,9 +16,6 @@ import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
 import langserver.types.Diagnostic
-import langserver.{types => l}
-import metaconfig.ConfDecoder
-import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 
 class Linter(

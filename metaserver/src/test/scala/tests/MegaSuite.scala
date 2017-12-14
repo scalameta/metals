@@ -2,7 +2,6 @@ package tests
 
 import scala.language.experimental.macros
 
-import scala.meta.Lit
 import scala.reflect.ClassTag
 import utest.TestSuite
 import utest.Tests
@@ -20,7 +19,7 @@ import utest.ufansi.Str
  * - pretty multiline string diffing
  * - FunSuite-style test("name") { => fun }
  */
-class MegaSuite(implicit filename: sourcecode.File) extends TestSuite {
+class MegaSuite extends TestSuite {
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]

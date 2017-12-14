@@ -3,7 +3,6 @@ package langserver.core
 import java.io.InputStream
 import java.nio.charset.Charset
 
-import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import com.typesafe.scalalogging.LazyLogging
 
@@ -96,7 +95,7 @@ class MessageReader(in: InputStream) extends LazyLogging {
 
       // if there was a malformed header we keep trying to re-sync and read again
       if (pairs.exists(_ == EmptyPair)) {
-        logger.error("There was an empty pair in $pairs, trying to read another header.")
+        logger.error(s"There was an empty pair in $pairs, trying to read another header.")
         getHeaders
       } else pairs.toMap
     } else if (streamClosed) {

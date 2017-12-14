@@ -4,7 +4,6 @@ import java.io.FileOutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import java.util.concurrent.Executors
-import scala.concurrent.ExecutionContext
 import scala.util.Properties
 import com.typesafe.scalalogging.LazyLogging
 import monix.execution.Scheduler

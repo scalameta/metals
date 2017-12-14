@@ -1,7 +1,6 @@
 package scala.meta.languageserver.providers
 
 import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.io.AbsolutePath
 import langserver.{types => l}
 import langserver.messages.DocumentHighlightResult
 import scala.meta.languageserver.Uri

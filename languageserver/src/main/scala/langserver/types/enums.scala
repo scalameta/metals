@@ -1,7 +1,5 @@
 package langserver.types
 
-import play.api.libs.json._
-import enumeratum._
 import enumeratum.values._
 
 sealed abstract class DiagnosticSeverity(val value: Int) extends IntEnumEntry

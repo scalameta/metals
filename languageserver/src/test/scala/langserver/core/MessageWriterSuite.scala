@@ -4,7 +4,6 @@ import java.io.PipedInputStream
 import java.io.PipedOutputStream
 
 import org.scalatest.BeforeAndAfter
-import org.scalatest.Finders
 import org.scalatest.FunSuite
 import org.scalatest.OptionValues
 
