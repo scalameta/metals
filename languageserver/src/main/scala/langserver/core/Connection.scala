@@ -1,7 +1,9 @@
 package langserver.core
 
+import java.util.{Map => JMap}
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.util.Failure
@@ -15,6 +17,7 @@ import langserver.types._
 import play.api.libs.json._
 import com.dhpcs.jsonrpc.JsonRpcMessage._
 import monix.eval.Task
+import monix.execution.CancelableFuture
 import monix.execution.Scheduler
 
 /**
@@ -26,18 +29,33 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
     extends LazyLogging with Notifications {
   private val msgReader = new MessageReader(inStream)
   private val msgWriter = new MessageWriter(outStream)
+  private val activeRequestsById: JMap[Int, CancelableFuture[Unit]] =
+    new ConcurrentHashMap()
 
   def commandHandler(method: String, command: ServerCommand): Task[ResultResponse]
 
   val notificationHandlers: ListBuffer[Notification => Unit] = ListBuffer.empty
 
-  def notifySubscribers(n: Notification): Unit = {
-    Task.sequence {
-      notificationHandlers.map(f => Task(f(n)))
-    }.onErrorRecover {
-      case NonFatal(e) =>
-        logger.error("Failed notification handler", e)
-    }.runAsync
+  def notifySubscribers(n: Notification): Unit = n match {
+    case CancelRequest(id) => cancelRequest(id)
+    case _ =>
+      Task.sequence {
+        notificationHandlers.map(f => Task(f(n)))
+      }.onErrorRecover {
+        case NonFatal(e) =>
+          logger.error("Failed notification handler", e)
+      }.runAsync
+  }
+
+  def cancelAllActiveRequests(): Unit = {
+    activeRequestsById.values().forEach(_.cancel())
+  }
+  private def cancelRequest(id: Int): Unit = {
+    Option(activeRequestsById.get(id)).foreach { future =>
+      logger.info(s"Cancelling request $id")
+      future.cancel()
+      activeRequestsById.remove(id)
+    }
   }
 
   def sendNotification(params: Notification): Unit = {
@@ -153,12 +171,21 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
   }
 
   private def handleCommand(method: String, id: CorrelationId, command: ServerCommand): Future[Unit] = {
-    commandHandler(method, command).map { result =>
+    val future = commandHandler(method, command).map { result =>
       val rJson = ResultResponse.write(result, id)
       msgWriter.write(rJson)
     }.onErrorRecover {
       case NonFatal(e) =>
         logger.error(e.getMessage, e)
     }.runAsync
+    id match {
+      case NumericCorrelationId(value) =>
+        activeRequestsById.put(value.toIntExact, future)
+      case _ =>
+    }
+    future.onComplete { _ =>
+      activeRequestsById.remove(id)
+    }
+    future
   }
 }
