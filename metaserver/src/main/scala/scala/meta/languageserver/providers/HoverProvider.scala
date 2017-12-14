@@ -44,7 +44,8 @@ object HoverProvider {
     stringOrTree match {
       case Right(string) => Some(string)
       case Left(null) => None
-      case Left(tree) => Some(tree.tpe.widen.toString)
+      case Left(tree) if tree.tpe ne NoType => Some(tree.tpe.widen.toString)
+      case _ => None
     }
 
   }
