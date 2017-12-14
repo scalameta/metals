@@ -2,6 +2,7 @@ package scala.meta.languageserver.providers
 
 import scala.meta._
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.languageserver.Uri
 import com.typesafe.scalalogging.LazyLogging
 import langserver.messages.DocumentSymbolResult
 import langserver.{types => l}
@@ -9,7 +10,7 @@ import org.langmeta.io.AbsolutePath
 
 object DocumentSymbolProvider extends LazyLogging {
 
-  private class SymbolTraverser(uri: String) {
+  private class SymbolTraverser(uri: Uri) {
     private val builder = List.newBuilder[l.SymbolInformation]
 
     val traverser = new Traverser {
@@ -26,7 +27,7 @@ object DocumentSymbolProvider extends LazyLogging {
           builder += l.SymbolInformation(
             name = name,
             kind = currentNode.symbolKind,
-            location = l.Location(uri, currentNode.pos.toRange),
+            location = l.Location(uri.value, currentNode.pos.toRange),
             containerName = currentRoot.flatMap(_.qualifiedName)
           )
         }
@@ -57,7 +58,7 @@ object DocumentSymbolProvider extends LazyLogging {
 
   def empty = DocumentSymbolResult(Nil)
   def documentSymbols(
-      uri: String,
+      uri: Uri,
       source: Source
   ): DocumentSymbolResult =
     DocumentSymbolResult(new SymbolTraverser(uri).apply(source))

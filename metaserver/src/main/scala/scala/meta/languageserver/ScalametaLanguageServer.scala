@@ -234,7 +234,7 @@ class ScalametaLanguageServer(
   override def documentSymbol(
       request: DocumentSymbolParams
   ): Task[DocumentSymbolResult] = Task {
-    val uri = request.textDocument.uri
+    val uri = Uri(request.textDocument.uri)
     buffers.source(uri) match {
       case Some(source) => DocumentSymbolProvider.documentSymbols(uri, source)
       case None => DocumentSymbolProvider.empty
@@ -244,12 +244,8 @@ class ScalametaLanguageServer(
   override def formatting(
       request: TextDocumentFormattingRequest
   ): Task[DocumentFormattingResult] = Task {
-    val uri = request.params.textDocument.uri
-    DocumentFormattingProvider.format(
-      Input.VirtualFile(uri, buffers.read(uri)),
-      scalafmt,
-      cwd
-    )
+    val uri = Uri(request.params.textDocument)
+    DocumentFormattingProvider.format(uri.toInput(buffers), scalafmt, cwd)
   }
 
   override def hover(
@@ -306,7 +302,7 @@ class ScalametaLanguageServer(
   }
 
   override def onCloseTextDocument(td: TextDocumentIdentifier): Unit =
-    buffers.closed(td.uri)
+    buffers.closed(Uri(td))
 
   private def toPoint(
       td: TextDocumentIdentifier,

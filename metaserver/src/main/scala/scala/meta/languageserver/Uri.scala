@@ -4,6 +4,9 @@ import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import scala.meta.Source
+import langserver.types.TextDocumentIdentifier
+import langserver.types.VersionedTextDocumentIdentifier
+import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
 
 /**
@@ -20,6 +23,8 @@ case class Uri(value: String) {
   require(isJar || isFile, s"$value must start with file: or jar:")
   def isJar: Boolean = value.startsWith("jar:")
   def isFile: Boolean = value.startsWith("file:")
+  def toInput(buffers: Buffers): Input.VirtualFile =
+    Input.VirtualFile(value, buffers.read(this))
   def toURI: URI = URI.create(value)
   def toPath: Path = Paths.get(toURI)
   def toAbsolutePath: AbsolutePath = AbsolutePath(toPath)
@@ -27,6 +32,8 @@ case class Uri(value: String) {
 
 object Uri {
   def file(path: String): Uri = Uri(s"file:$path")
+  def apply(td: TextDocumentIdentifier): Uri = Uri(td.uri)
+  def apply(td: VersionedTextDocumentIdentifier): Uri = Uri(td.uri)
   def apply(path: AbsolutePath): Uri = Uri(s"file:$path")
   def apply(uri: URI): Uri =
     if (uri.getScheme == "file") {

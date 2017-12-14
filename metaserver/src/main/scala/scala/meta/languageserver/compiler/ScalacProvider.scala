@@ -3,6 +3,7 @@ package scala.meta.languageserver.compiler
 import scala.collection.mutable
 import scala.meta.languageserver.Effects
 import scala.meta.languageserver.ServerConfig
+import scala.meta.languageserver.Uri
 import scala.reflect.io
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -12,6 +13,7 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.types.TextDocumentIdentifier
 import langserver.types.VersionedTextDocumentIdentifier
 import monix.execution.Scheduler
+import org.langmeta.inputs.Input
 
 /** Responsible for keeping fresh scalac global instances. */
 class ScalacProvider(
@@ -20,20 +22,23 @@ class ScalacProvider(
     extends LazyLogging {
   private implicit val cwd = serverConfig.cwd
 
+  def getCompiler(input: Input.VirtualFile): Option[Global] =
+    getCompiler(Uri(input.path))
+
   def getCompiler(td: TextDocumentIdentifier): Option[Global] =
-    getCompiler(td.uri)
+    getCompiler(Uri(td.uri))
 
   def getCompiler(td: VersionedTextDocumentIdentifier): Option[Global] =
-    getCompiler(td.uri)
+    getCompiler(Uri(td.uri))
 
-  def getCompiler(uri: String): Option[Global] = {
+  def getCompiler(uri: Uri): Option[Global] = {
     compilerByPath.get(uri).map { compiler =>
       compiler.reporter.reset()
       compiler
     }
   }
 
-  private val compilerByPath = mutable.Map.empty[String, Global]
+  private val compilerByPath = mutable.Map.empty[Uri, Global]
   def loadNewCompilerGlobals(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {
@@ -41,7 +46,7 @@ class ScalacProvider(
     val compiler =
       ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
     config.sources.foreach { path =>
-      compilerByPath(path.toURI.toString) = compiler
+      compilerByPath(Uri(path)) = compiler
     }
     Effects.InstallPresentationCompiler
   }
