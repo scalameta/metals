@@ -16,7 +16,7 @@ object HoverProvider {
     val unit = ScalacProvider.addCompilationUnit(
       global = compiler,
       code = cursor.contents,
-      filename = cursor.uri,
+      filename = cursor.uri.value,
       cursor = None
     )
     val pos = unit.position(cursor.offset)

@@ -315,7 +315,7 @@ class ScalametaLanguageServer(
     val contents = buffers.read(td)
     val input = Input.VirtualFile(td.uri, contents)
     val offset = input.toOffset(pos)
-    Cursor(td.uri, contents, offset)
+    Cursor(Uri(td.uri), contents, offset)
   }
 
 }

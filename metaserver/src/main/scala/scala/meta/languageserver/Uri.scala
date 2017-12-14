@@ -27,6 +27,7 @@ case class Uri(value: String) {
 }
 
 object Uri {
+  def file(path: String): Uri = Uri(s"file:$path")
   def apply(path: AbsolutePath): Uri = Uri(s"file:$path")
   def apply(uri: URI): Uri =
     if (uri.getScheme == "file") {

@@ -68,7 +68,7 @@ object CompletionProvider extends LazyLogging {
     val unit = ScalacProvider.addCompilationUnit(
       global = compiler,
       code = cursor.contents,
-      filename = cursor.uri,
+      filename = cursor.uri.value,
       cursor = Some(cursor.offset)
     )
     val position = unit.position(cursor.offset)

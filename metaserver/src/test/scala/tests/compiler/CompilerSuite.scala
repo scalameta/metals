@@ -1,5 +1,6 @@
 package tests.compiler
 
+import scala.meta.languageserver.Uri
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.tools.nsc.interactive.Global
@@ -26,7 +27,7 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
     carets match {
       case (start, end) :: Nil =>
         val code = chevrons.replaceAllIn(markup, "$1")
-        Cursor(filename, code, start)
+        Cursor(Uri.file(filename), code, start)
       case els =>
         throw new IllegalArgumentException(
           s"Expected one chevron, found ${els.length}"
