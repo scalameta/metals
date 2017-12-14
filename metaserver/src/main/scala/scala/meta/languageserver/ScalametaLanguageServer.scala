@@ -1,5 +1,6 @@
 package scala.meta.languageserver
 
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
@@ -57,7 +58,10 @@ case class ServerConfig(
     // TODO(olafur): re-enable indexJDK after https://github.com/scalameta/language-server/issues/43 is fixed
     indexJDK: Boolean = false,
     indexClasspath: Boolean = true
-)
+) {
+  lazy val configDir: AbsolutePath = cwd.resolve(".metaserver")
+  lazy val logFile: File = configDir.resolve("metaserver.log").toFile
+}
 
 class ScalametaLanguageServer(
     config: ServerConfig,
