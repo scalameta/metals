@@ -39,10 +39,6 @@ case class CompilerConfig(
       s"classDirectory=$classDirectory, " +
       s"sourceJars={+${sourceJars.length}})"
 
-  /** Returns this compiler config with semanticdb-scalac disabled */
-  def withoutSemanticdb: CompilerConfig =
-    copy(scalacOptions = scalacOptions.filterNot(_.contains("semanticdb")))
-
   def classpath: String =
     (classDirectory :: dependencyClasspath).mkString(File.pathSeparator)
 }

@@ -1,14 +1,16 @@
 package tests.compiler
 
-import scala.meta.languageserver.Linter
-import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.Cursor
+import scala.meta.languageserver.compiler.ScalacProvider
 import scala.tools.nsc.interactive.Global
 import tests.MegaSuite
 
 class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
-  val compiler: Global =
-    ScalacProvider.newCompiler(classpath = "", scalacOptions = Nil)
+  val compiler: Global = ScalacProvider.newCompiler(
+    "",
+    "-deprecation" ::
+      Nil
+  )
 
   private def computeChevronPositionFromMarkup(
       filename: String,

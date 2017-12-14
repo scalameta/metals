@@ -40,10 +40,8 @@ class ScalacProvider(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {
     logger.info(s"Loading new compiler from config $config")
-    val compiler = ScalacProvider.newCompiler(
-      config.withoutSemanticdb.classpath,
-      config.scalacOptions
-    )
+    val compiler =
+      ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
     config.sources.foreach { path =>
       // TODO(olafur) garbage collect compilers from removed files.
       compilerByPath(path) = compiler
@@ -71,7 +69,11 @@ object ScalacProvider extends LazyLogging {
     global.unitOfFile(richUnit.source.file) = richUnit
     richUnit
   }
+
   def newCompiler(classpath: String, scalacOptions: List[String]): Global = {
+    val options =
+      "-Ypresentation-any-thread" ::
+        scalacOptions.filterNot(_.contains("semanticdb"))
     val vd = new io.VirtualDirectory("(memory)", None)
     val settings = new Settings
     settings.outputDirs.setSingleOutput(vd)
@@ -79,9 +81,7 @@ object ScalacProvider extends LazyLogging {
     if (classpath.isEmpty) {
       settings.usejavacp.value = true
     }
-    settings.processArgumentString(
-      ("-Ypresentation-any-thread" :: scalacOptions).mkString(" ")
-    )
+    settings.processArgumentString(options.mkString(" "))
     val compiler = new Global(settings, new StoreReporter)
     compiler
   }

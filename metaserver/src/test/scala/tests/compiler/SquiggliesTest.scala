@@ -82,4 +82,17 @@ object SquiggliesTest extends CompilerSuite {
     """.stripMargin
   )
 
+  // negative teest: the presentation compiler only runs up to typer
+  // and deprecation warnings are reported during a later phase refchecks.
+  check(
+    "deprecation.scala",
+    """
+      |import scala.collection.mutable.Stack
+      |object c {
+      |  val x: Stack[Int] = ???
+      |}
+    """.stripMargin,
+    ""
+  )
+
 }
