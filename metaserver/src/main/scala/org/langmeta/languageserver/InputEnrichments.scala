@@ -38,6 +38,9 @@ object InputEnrichments {
       )
     }
 
+    def toOffset(pos: l.Position): Int =
+      toOffset(pos.line, pos.character)
+
     /** Returns an offset for this input */
     def toOffset(line: Int, column: Int): Int =
       input.lineToOffset(line) + column

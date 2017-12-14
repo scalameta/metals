@@ -10,6 +10,7 @@ import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.search.SymbolIndex
+import org.langmeta.languageserver.InputEnrichments._
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
 import langserver.core.LanguageServer
@@ -121,17 +122,11 @@ class ScalametaLanguageServer(
   val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
     metaSemanticdbs.map(scalacErrorReporter.reportErrors)
   private var cancelEffects = List.empty[Cancelable]
-  val updateBuffers: Observable[Effects.UpdateBuffers] =
-    sourceChangePublisher.collect {
-      case Input.VirtualFile(Uri(path), value) =>
-        buffers.changed(path, value)
-    }
   val effects: List[Observable[Effects]] = List(
     indexedDependencyClasspath,
     indexedSemanticdbs,
     installedCompilers,
     publishDiagnostics,
-    updateBuffers,
   )
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
@@ -288,33 +283,32 @@ class ScalametaLanguageServer(
     }
   }
 
-  override def onOpenTextDocument(td: TextDocumentItem): Unit =
-    sourceChangeSubscriber.onNext(Input.VirtualFile(td.uri, td.text))
+  override def onOpenTextDocument(td: TextDocumentItem): Unit = {
+    val input = Input.VirtualFile(td.uri, td.text)
+    buffers.changed(input)
+    sourceChangeSubscriber.onNext(input)
+  }
 
   override def onChangeTextDocument(
       td: VersionedTextDocumentIdentifier,
       changes: Seq[TextDocumentContentChangeEvent]
   ): Unit = {
     require(changes.length == 1, s"Expected one change, got $changes")
-    sourceChangeSubscriber.onNext(
-      Input.VirtualFile(td.uri, changes.head.text)
-    )
+    val input = Input.VirtualFile(td.uri, changes.head.text)
+    buffers.changed(input)
+    sourceChangeSubscriber.onNext(input)
   }
 
   override def onCloseTextDocument(td: TextDocumentIdentifier): Unit =
-    Uri.toPath(td.uri).foreach(buffers.closed)
+    buffers.closed(td.uri)
 
   private def toPoint(
       td: TextDocumentIdentifier,
       pos: Position
   ): Cursor = {
     val contents = buffers.read(td)
-    val offset = Positions.positionToOffset(
-      td.uri,
-      contents,
-      pos.line,
-      pos.character
-    )
+    val input = Input.VirtualFile(td.uri, contents)
+    val offset = input.toOffset(pos)
     Cursor(td.uri, contents, offset)
   }
 
