@@ -35,12 +35,7 @@ object HoverTest extends CompilerSuite {
       filename,
       code, { point =>
         val result = HoverProvider.hover(compiler, point)
-        val obtained = Json.prettyPrint(Json.toJson(result))
-        val expected =
-          s"""{
-             |  "contents" : [ ]
-             |}""".stripMargin
-        assertNoDiff(obtained, expected)
+        assert(result.contents.isEmpty)
       }
     )
   }
