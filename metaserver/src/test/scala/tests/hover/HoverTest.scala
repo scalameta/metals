@@ -27,6 +27,19 @@ object HoverTest extends CompilerSuite {
     )
   }
 
+  def checkMissing(
+      filename: String,
+      code: String
+  ): Unit = {
+    targeted(
+      filename,
+      code, { point =>
+        val result = HoverProvider.hover(compiler, point)
+        assert(result.contents.isEmpty)
+      }
+    )
+  }
+
   check(
     "val assignment",
     """
@@ -128,6 +141,21 @@ object HoverTest extends CompilerSuite {
       |}
     """.stripMargin,
     "(x: String, y: List[Int])Int"
+  )
+
+  checkMissing(
+    "keywords",
+    """
+      |cl<<a>>ss A(x: Int, y: String)
+    """.stripMargin
+  )
+
+  // FIXME(gabro): this should return "A"
+  checkMissing(
+    "class",
+    """
+      |class <<A>>(x: Int, y: String)
+    """.stripMargin
   )
 
 }
