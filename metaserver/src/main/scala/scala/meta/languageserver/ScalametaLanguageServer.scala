@@ -4,12 +4,13 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
+import scala.concurrent.duration.FiniteDuration
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.search.SymbolIndex
-import scala.tools.nsc.interactive.Global
+import org.langmeta.languageserver.InputEnrichments._
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
 import langserver.core.LanguageServer
@@ -25,7 +26,6 @@ import langserver.messages.InitializeParams
 import langserver.messages.InitializeResult
 import langserver.messages.ReferencesResult
 import langserver.messages.ServerCapabilities
-import langserver.messages.Shutdown
 import langserver.messages.ShutdownResult
 import langserver.messages.SignatureHelpOptions
 import langserver.messages.SignatureHelpResult
@@ -43,8 +43,11 @@ import monix.execution.Scheduler
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import monix.reactive.Observer
+import monix.reactive.OverflowStrategy
+import org.langmeta.inputs.Input
 import org.langmeta.internal.io.PathIO
-import org.langmeta.internal.semanticdb.schema.Database
+import org.langmeta.internal.semanticdb.XtensionDatabase
+import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb
 
@@ -70,40 +73,60 @@ class ScalametaLanguageServer(
     ScalametaLanguageServer.fileSystemSemanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
     ScalametaLanguageServer.compilerConfigStream(cwd)
+  val (sourceChangeSubscriber, sourceChangePublisher) =
+    Observable.multicast[Input.VirtualFile](
+      MulticastStrategy.Publish,
+      OverflowStrategy.DropOld(2)
+    )
   val buffers: Buffers = Buffers()
   val scalac: ScalacProvider = new ScalacProvider(config)
   val symbolIndex: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
-  val scalafix: Linter = new Linter(cwd, stdout, connection)
+  val scalafix: Linter = new Linter(cwd, stdout)
   val scalacErrorReporter: ScalacErrorReporter = new ScalacErrorReporter(
     connection
   )
+  val interactiveSemanticdbs: Observable[semanticdb.Database] =
+    sourceChangePublisher
+      .debounce(FiniteDuration(1, "s"))
+      .flatMap { input =>
+        Observable.fromIterable(Semanticdbs.toSemanticdb(input, scalac))
+      }
+  val interactiveSchemaSemanticdbs: Observable[schema.Database] =
+    interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
   val metaSemanticdbs: Observable[semanticdb.Database] =
     Observable.merge(
-      fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None))
+      fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None)),
+      interactiveSemanticdbs
     )
   val scalafmt: Formatter =
     if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
     else Formatter.noop
 
   // Effects
-  val indexedFileSystemSemanticdbs: Observable[Effects.IndexSemanticdb] =
-    fileSystemSemanticdbsPublisher.map(symbolIndex.indexDatabase)
+  val indexedSemanticdbs: Observable[Effects.IndexSemanticdb] =
+    Observable
+      .merge(fileSystemSemanticdbsPublisher, interactiveSchemaSemanticdbs)
+      .map(symbolIndex.indexDatabase)
   val indexedDependencyClasspath: Observable[Effects.IndexSourcesClasspath] =
     compilerConfigPublisher.map(
       c => symbolIndex.indexDependencyClasspath(c.sourceJars)
     )
   val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
     compilerConfigPublisher.map(scalac.loadNewCompilerGlobals)
-  val scalafixNotifications: Observable[Effects.PublishLinterDiagnostics] =
-    metaSemanticdbs.map(scalafix.reportLinterMessages)
+  val publishDiagnostics: Observable[Effects.PublishSquigglies] =
+    metaSemanticdbs.map { db =>
+      val diagnostics = SquiggliesProvider.squigglies(db, scalafix)
+      diagnostics.foreach(connection.sendNotification)
+      Effects.PublishSquigglies
+    }
   val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
     metaSemanticdbs.map(scalacErrorReporter.reportErrors)
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
     indexedDependencyClasspath,
-    indexedFileSystemSemanticdbs,
+    indexedSemanticdbs,
     installedCompilers,
-    scalafixNotifications,
+    publishDiagnostics,
   )
 
   private def loadAllRelevantFilesInThisWorkspace(): Unit = {
@@ -260,32 +283,32 @@ class ScalametaLanguageServer(
     }
   }
 
-  override def onOpenTextDocument(td: TextDocumentItem): Unit =
-    Uri.toPath(td.uri).foreach(p => buffers.changed(p, td.text))
+  override def onOpenTextDocument(td: TextDocumentItem): Unit = {
+    val input = Input.VirtualFile(td.uri, td.text)
+    buffers.changed(input)
+    sourceChangeSubscriber.onNext(input)
+  }
 
   override def onChangeTextDocument(
       td: VersionedTextDocumentIdentifier,
       changes: Seq[TextDocumentContentChangeEvent]
   ): Unit = {
-    changes.foreach { c =>
-      Uri.toPath(td.uri).foreach(p => buffers.changed(p, c.text))
-    }
+    require(changes.length == 1, s"Expected one change, got $changes")
+    val input = Input.VirtualFile(td.uri, changes.head.text)
+    buffers.changed(input)
+    sourceChangeSubscriber.onNext(input)
   }
 
   override def onCloseTextDocument(td: TextDocumentIdentifier): Unit =
-    Uri.toPath(td.uri).foreach(buffers.closed)
+    buffers.closed(td.uri)
 
   private def toPoint(
       td: TextDocumentIdentifier,
       pos: Position
   ): Cursor = {
     val contents = buffers.read(td)
-    val offset = Positions.positionToOffset(
-      td.uri,
-      contents,
-      pos.line,
-      pos.character
-    )
+    val input = Input.VirtualFile(td.uri, contents)
+    val offset = input.toOffset(pos)
     Cursor(td.uri, contents, offset)
   }
 
@@ -311,14 +334,14 @@ object ScalametaLanguageServer extends LazyLogging {
 
   def fileSystemSemanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
-  ): (Observer.Sync[AbsolutePath], Observable[Database]) = {
+  ): (Observer.Sync[AbsolutePath], Observable[schema.Database]) = {
     val (subscriber, publisher) = multicast[AbsolutePath]
     val semanticdbPublisher = publisher
       .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))
     subscriber -> semanticdbPublisher
   }
 
-  private def multicast[T](implicit s: Scheduler) = {
+  def multicast[T](implicit s: Scheduler) = {
     val (sub, pub) = Observable.multicast[T](MulticastStrategy.Publish)
     (sub, pub.doOnError(onError))
   }

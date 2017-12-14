@@ -60,13 +60,11 @@ class SymbolIndex(
     for {
       document <- documentIndex.getDocument(path.toNIO.toUri)
       _ = logger.info(s"Found document for $path")
-      _ <- isFreshSemanticdb(path, document)
       input = Input.VirtualFile(document.filename, document.contents)
-      _ = logger.info(s"Document for $path is fresh")
       name <- document.names.collectFirst {
         case name @ ResolvedName(Some(position), symbol, _) if {
               val range = input.toIndexRange(position.start, position.end)
-              logger.debug(
+              logger.trace(
                 s"${document.filename.replaceFirst(".*/", "")} [${range.pretty}] ${symbol}"
               )
               range.contains(line, column)
@@ -202,30 +200,6 @@ class SymbolIndex(
       case _ =>
     }
     Effects.IndexSemanticdb
-  }
-
-  /**
-   * Returns false this this document is stale.
-   *
-   * A document is considered stale if it's off-sync with the contents in [[buffers]].
-   */
-  private def isFreshSemanticdb(
-      path: AbsolutePath,
-      document: Document
-  ): Option[Unit] = {
-    val ok = Option(())
-    val s = buffers.read(path)
-    if (s == document.contents) ok
-    else {
-      // NOTE(olafur) it may be a bit annoying to bail on a single character
-      // edit in the file. In the future, we can try more to make sense of
-      // partially fresh files using something like edit distance.
-      notifications.showMessage(
-        l.MessageType.Warning,
-        "Please recompile for up-to-date information"
-      )
-      None
-    }
   }
 
 }

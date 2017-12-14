@@ -2,89 +2,78 @@ package scala.meta.languageserver
 
 import java.io.PrintStream
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
-import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.parsers.Parsed
 import scala.tools.nsc.interpreter.OutputStream
 import scala.{meta => m}
-import scalafix._
 import scalafix.internal.config.LazySemanticdbIndex
 import scalafix.internal.config.ScalafixConfig
 import scalafix.internal.config.ScalafixReporter
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import scalafix.languageserver.ScalafixEnrichments._
-import scalafix.lint.LintSeverity
 import scalafix.patch.Patch
 import scalafix.reflect.ScalafixReflect
 import scalafix.rule.RuleCtx
-import scalafix.rule.RuleName
 import scalafix.util.SemanticdbIndex
-import langserver.core.Connection
-import langserver.messages.PublishDiagnostics
+import com.typesafe.scalalogging.LazyLogging
+import langserver.types.Diagnostic
 import langserver.{types => l}
 import metaconfig.ConfDecoder
-import monix.reactive.Observable
+import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
-import org.langmeta.io.RelativePath
 
 class Linter(
     cwd: AbsolutePath,
     out: OutputStream,
-    connection: Connection,
-) {
+) extends LazyLogging {
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(
       filename: String,
       contents: String
-  ): Seq[PublishDiagnostics] = {
+  ): Seq[Diagnostic] = {
+    val mdoc = m.Document(
+      m.Input.VirtualFile(filename, contents),
+      "scala212",
+      Nil,
+      Nil,
+      Nil,
+      Nil
+    )
     analyzeIndex(
+      mdoc,
       EagerInMemorySemanticdbIndex(
-        m.Database(
-          m.Document(
-            m.Input.VirtualFile(filename, contents),
-            "scala212",
-            Nil,
-            Nil,
-            Nil,
-            Nil
-          ) :: Nil
-        ),
+        m.Database(mdoc :: Nil),
         m.Sourcepath(Nil),
         m.Classpath(Nil)
       )
     )
   }
 
-  def reportLinterMessages(
-      mdb: m.Database
-  ): Effects.PublishLinterDiagnostics = {
-    val messages = analyzeIndex(mdb)
-    messages.foreach(connection.sendNotification)
-    Effects.PublishLinterDiagnostics
-  }
-  private def analyzeIndex(mdb: m.Database): Seq[PublishDiagnostics] =
+  def linterMessages(mdoc: m.Document): Seq[Diagnostic] =
     analyzeIndex(
-      EagerInMemorySemanticdbIndex(mdb, m.Sourcepath(Nil), m.Classpath(Nil))
+      mdoc,
+      EagerInMemorySemanticdbIndex(
+        m.Database(mdoc :: Nil),
+        m.Sourcepath(Nil),
+        m.Classpath(Nil)
+      )
     )
-  private def analyzeIndex(index: SemanticdbIndex): Seq[PublishDiagnostics] =
+
+  private def analyzeIndex(
+      document: m.Document,
+      index: SemanticdbIndex
+  ): Seq[Diagnostic] =
     withConfig { configInput =>
       val lazyIndex = lazySemanticdbIndex(index)
       val configDecoder = ScalafixReflect.fromLazySemanticdbIndex(lazyIndex)
       val (rule, config) =
         ScalafixConfig.fromInput(configInput, lazyIndex)(configDecoder).get
-      val results: Seq[PublishDiagnostics] = index.database.documents.flatMap {
-        d =>
-          Parser
-            .parse(d)
-            .toOption
-            .map { tree =>
-              val ctx = RuleCtx.applyInternal(tree, config)
-              val patches = rule.fixWithNameInternal(ctx)
-              val diagnostics =
-                Patch.lintMessagesInternal(patches, ctx).map(toDiagnostic)
-              val uri = d.input.syntax
-              PublishDiagnostics(uri, diagnostics)
-            }
-            .toList
+      val results: Seq[Diagnostic] = Parser.parse(document.input) match {
+        case Parsed.Error(_, _, _) => Nil
+        case Parsed.Success(tree) =>
+          val ctx = RuleCtx.applyInternal(tree, config)
+          val patches = rule.fixWithNameInternal(ctx)
+          Patch.lintMessagesInternal(patches, ctx).map(_.toLSP)
       }
 
       // megaCache needs to die, if we forget this we will read stale
@@ -110,21 +99,5 @@ class Linter(
       _ => Some(index),
       ScalafixReporter.default.copy(outStream = new PrintStream(out))
     )
-
-  private def toDiagnostic(msg: LintMessage): l.Diagnostic = {
-    l.Diagnostic(
-      range = msg.position.toRange,
-      severity = Some(toSeverity(msg.category.severity)),
-      code = Some(msg.category.id),
-      source = Some("scalafix"),
-      message = msg.message
-    )
-  }
-
-  private def toSeverity(s: LintSeverity): l.DiagnosticSeverity = s match {
-    case LintSeverity.Error => l.DiagnosticSeverity.Error
-    case LintSeverity.Warning => l.DiagnosticSeverity.Warning
-    case LintSeverity.Info => l.DiagnosticSeverity.Information
-  }
 
 }

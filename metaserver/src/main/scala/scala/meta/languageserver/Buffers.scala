@@ -3,6 +3,7 @@ package scala.meta.languageserver
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Map => JMap}
 import com.typesafe.scalalogging.LazyLogging
@@ -11,6 +12,7 @@ import langserver.types.VersionedTextDocumentIdentifier
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 import scala.meta.Source
+import org.langmeta.inputs.Input
 
 /**
  * Utility to keep local state of file contents.
@@ -23,30 +25,31 @@ import scala.meta.Source
  * https://github.com/sourcegraph/language-server-protocol/blob/master/extension-files.md
  */
 class Buffers private (
-    contents: JMap[AbsolutePath, String],
+    contents: JMap[String, String],
     cwd: AbsolutePath
 ) extends LazyLogging {
   private def readFromDisk(path: AbsolutePath): String = {
     logger.info(s"Reading $path from disk")
     new String(Files.readAllBytes(path.toNIO), StandardCharsets.UTF_8)
   }
-  def changed(path: AbsolutePath, newContents: String): Unit =
-    contents.put(path, newContents)
-  def closed(path: AbsolutePath): Unit = {
-    contents.remove(path)
-    sources.remove(path)
+  def changed(input: Input.VirtualFile): Effects.UpdateBuffers = {
+    contents.put(input.path, input.value)
+    Effects.UpdateBuffers
+  }
+  def closed(uri: String): Unit = {
+    contents.remove(uri)
+    sources.remove(uri)
   }
 
   def read(td: TextDocumentIdentifier): String =
-    read(URI.create(td.uri))
+    read(td.uri)
   def read(td: VersionedTextDocumentIdentifier): String =
-    read(URI.create(td.uri))
-  def read(uri: URI): String =
-    read(AbsolutePath(uri.getPath))
-  def read(path: RelativePath): String = // TODO(olafur) remove?
-    read(cwd.resolve(path))
+    read(td.uri)
   def read(path: AbsolutePath): String =
-    Option(contents.get(path)).getOrElse(readFromDisk(path))
+    read(s"file:$path")
+  def read(uri: String): String =
+    Option(contents.get(uri))
+      .getOrElse(readFromDisk(AbsolutePath(Paths.get(URI.create(uri)))))
 
   private val sources: JMap[AbsolutePath, Source] = new ConcurrentHashMap()
   // Tries to parse and record it or fallback to an old source if it existed

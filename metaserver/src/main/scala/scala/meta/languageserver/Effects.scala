@@ -15,8 +15,10 @@ object Effects {
   final val IndexSourcesClasspath = new IndexSourcesClasspath
   final class InstallPresentationCompiler extends Effects
   final val InstallPresentationCompiler = new InstallPresentationCompiler
-  final class PublishLinterDiagnostics extends Effects
-  final val PublishLinterDiagnostics = new PublishLinterDiagnostics
+  final class PublishSquigglies extends Effects
+  final val PublishSquigglies = new PublishSquigglies
   final class PublishScalacDiagnostics extends Effects
   final val PublishScalacDiagnostics = new PublishScalacDiagnostics
+  final class UpdateBuffers extends Effects
+  final val UpdateBuffers = new UpdateBuffers
 }

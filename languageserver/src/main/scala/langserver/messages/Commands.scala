@@ -236,6 +236,9 @@ object ClientCommand extends CommandCompanion[ClientCommand] {
 case class ShowMessageParams(`type`: MessageType, message: String) extends Notification
 case class LogMessageParams(`type`: MessageType, message: String) extends Notification
 case class PublishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]) extends Notification
+object PublishDiagnostics {
+  implicit val format: OFormat[PublishDiagnostics] = Json.format[PublishDiagnostics]
+}
 
 // from client to server
 

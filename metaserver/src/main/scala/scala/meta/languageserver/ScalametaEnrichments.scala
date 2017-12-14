@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets
 import java.net.URI
 import scala.{meta => m}
 import langserver.types.SymbolKind
-import langserver.types.TextDocumentIdentifier
 import langserver.{types => l}
 import scala.meta.languageserver.{index => i}
 import org.langmeta.io.AbsolutePath
@@ -15,6 +14,25 @@ import org.langmeta.internal.io.FileIO
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
 object ScalametaEnrichments {
+
+  implicit class XtensionMessageLSP(val msg: m.Message) extends AnyVal {
+    def toLSP: l.Diagnostic =
+      l.Diagnostic(
+        range = msg.position.toRange,
+        severity = Some(msg.severity.toLSP),
+        code = None,
+        source = Some("scalac"),
+        message = msg.text
+      )
+  }
+
+  implicit class XtensionSeverityLSP(val severity: m.Severity) extends AnyVal {
+    def toLSP: l.DiagnosticSeverity = severity match {
+      case m.Severity.Info => l.DiagnosticSeverity.Information
+      case m.Severity.Warning => l.DiagnosticSeverity.Warning
+      case m.Severity.Error => l.DiagnosticSeverity.Error
+    }
+  }
 
   implicit class XtensionTreeLSP(val tree: m.Tree) extends AnyVal {
     import scala.meta._

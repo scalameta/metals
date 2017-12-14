@@ -25,32 +25,39 @@ Even if some checkbox is marked it does not mean that feature works perfectly.
 Some of those features are a likely outside the scope of this project, we are
 still learning and exploring what's possible.
 
+* Compile errors with the Scala Presentation Compiler (`textDocument/publishDiagnostics`):
+  - [ ] On build compile
+  - [x] As you type
+* Linting with Scalafix (`textDocument/publishDiagnostics`):
+  - [x] On build compile
+  - [x] As you type
+* Refactoring with Scalafix:
+  - [ ] Quick-fix inspections (`textDocument/codeAction`)
+  - [ ] Rename local symbol (`textDocument/rename`)
+  - [ ] Rename global symbol (`textDocument/rename`)
 * Formatting with Scalafmt:
   - [x] Whole file (`textDocument/formatting`)
   - [ ] Selected range (`textDocument/rangeFormatting`)
   - [ ] As you type (`textDocument/onTypeFormatting`)
-* Context-aware code completion:
-  - [x] Autocompletion as you type (`textDocument/completions`)
+* Code assistance:
+  - [x] Auto-complete symbols in scope as you type (`textDocument/completions`)
+  - [ ] Auto-complete global symbol and insert missing imports (`textDocument/completions`)
   - [x] Show parameter list as you type (`textDocument/signatureHelp`)
   - [x] Show type at position (`textDocument/hover`)
-* Symbols outline:
-  - [x] Current file symbols tree as you type (`textDocument/documentSymbol`)
-  - [ ] Workspace global symbols list (`workspace/symbol`)
-* Go to definition (`textDocument/definition`):
+* Go to definition with SemanticDB (`textDocument/definition`):
   - [x] Inside the project
   - [x] From project files to Scala dependency source files
   - [x] From project files to Java dependency source files
-* Symbol references:
-  - [x] Find all references in the project (`textDocument/references`)
-  - [x] Highlight local references in the file (`textDocument/documentHighlight`)
-* Linting with Scalafix (`textDocument/publishDiagnostics`):
-  - [x] On compile
-  - [ ] As you type
-* Refactoring with Scalafix:
-  - [ ] Code actions (`textDocument/codeAction`)
-  - [ ] Auto-insert missing import when completing a global symbol (`textDocument/completions`)
-  - [ ] Rename local symbol (`textDocument/rename`)
-  - [ ] Rename global symbol (`textDocument/rename`)
+  - [ ] From project dependency to project dependency
+* Find references with SemanticDB (`textDocument/references`):
+  - [x] In file (`textDocument/documentHighlight`)
+  - [x] In project
+  - [ ] In dependencies
+* Lookup symbol definition by name:
+  - [x] In file (`textDocument/documentSymbol`)
+  - [ ] In workspace (`workspace/symbol`)
+* Symbol outline:
+  - [x] In file as you type (`textDocument/documentSymbol`)
 
 ## Contributing
 

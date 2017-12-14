@@ -3,7 +3,7 @@ package scala.meta.languageserver.providers
 import scala.annotation.tailrec
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
-import scala.meta.languageserver.compiler.CompilerUtils._
+import scala.meta.languageserver.compiler.CompilerEnrichments._
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging

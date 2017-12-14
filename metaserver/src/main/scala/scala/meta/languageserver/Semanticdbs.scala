@@ -1,12 +1,73 @@
 package scala.meta.languageserver
 
 import java.nio.file.Files
+import scala.meta.interactive.InteractiveSemanticdb
+import scala.meta.languageserver.compiler.ScalacProvider
+import scala.meta.languageserver.compiler.CompilerEnrichments._
+import scala.meta.parsers.ParseException
+import scala.meta.semanticdb
+import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.reporters.StoreReporter
+import scala.util.control.NonFatal
+import scala.{meta => m}
 import com.typesafe.scalalogging.LazyLogging
+import org.langmeta.inputs.Input
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
-import scala.meta.semanticdb
 
 object Semanticdbs extends LazyLogging {
+
+  def toSemanticdb(
+      input: Input.VirtualFile,
+      scalac: ScalacProvider
+  ): Option[semanticdb.Database] =
+    for {
+      path <- Uri.unapply(input.path)
+      compiler <- scalac.getCompiler(path)
+    } yield toSemanticdb(input, compiler)
+
+  def toSemanticdb(
+      input: Input.VirtualFile,
+      compiler: Global,
+  ): semanticdb.Database = {
+    val doc = try {
+      InteractiveSemanticdb.toDocument(
+        compiler = compiler,
+        code = input.value,
+        filename = input.path,
+        timeout = 10000
+      )
+    } catch {
+      case NonFatal(err) =>
+        if (!err.isInstanceOf[ParseException]) {
+          logger.error(s"Failed to emit semanticdb for ${input.path}", err)
+        }
+        toMessageOnlySemanticdb(input, compiler)
+    }
+    semanticdb.Database(doc.copy(language = "Scala212") :: Nil)
+  }
+
+  def toMessageOnlySemanticdb(
+      input: Input,
+      compiler: Global
+  ): m.Document = {
+    val messages = compiler.reporter match {
+      case r: StoreReporter =>
+        r.infos.collect {
+          case r.Info(pos, msg, severity) =>
+            val mpos = pos.toMeta(input)
+            val msev = severity match {
+              case r.INFO => m.Severity.Info
+              case r.WARNING => m.Severity.Warning
+              case _ => m.Severity.Error
+            }
+            m.Message(mpos, msev, msg)
+        }.toList
+      case _ => Nil
+    }
+    semanticdb.Document(input, "", Nil, messages, Nil, Nil)
+  }
+
   def loadFromFile(
       semanticdbPath: AbsolutePath,
       cwd: AbsolutePath

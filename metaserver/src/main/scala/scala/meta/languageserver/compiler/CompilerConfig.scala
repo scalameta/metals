@@ -38,6 +38,7 @@ case class CompilerConfig(
       s"dependencyClasspath={+${dependencyClasspath.length}}, " +
       s"classDirectory=$classDirectory, " +
       s"sourceJars={+${sourceJars.length}})"
+
   def classpath: String =
     (classDirectory :: dependencyClasspath).mkString(File.pathSeparator)
 }
