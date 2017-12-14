@@ -95,4 +95,18 @@ object SquiggliesTest extends CompilerSuite {
     ""
   )
 
+  check(
+    "UnusedImport.scala",
+    """
+      |import scala.concurrent.Future
+      |object d {
+      |}
+    """.stripMargin,
+    """
+      |UnusedImport.scala:2: Warning: Unused import
+      |import scala.concurrent.Future
+      |                        ^
+    """.stripMargin
+  )
+
 }

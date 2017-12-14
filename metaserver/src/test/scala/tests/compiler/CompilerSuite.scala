@@ -9,6 +9,7 @@ class CompilerSuite(implicit file: sourcecode.File) extends MegaSuite {
   val compiler: Global = ScalacProvider.newCompiler(
     "",
     "-deprecation" ::
+      "-Ywarn-unused-import" ::
       Nil
   )
 
