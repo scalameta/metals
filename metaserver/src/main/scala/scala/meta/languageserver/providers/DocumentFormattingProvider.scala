@@ -10,25 +10,22 @@ import langserver.messages.TextDocumentFormattingRequest
 import langserver.types.Position
 import langserver.types.Range
 import langserver.types.TextEdit
+import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
 
 object DocumentFormattingProvider extends LazyLogging {
   def format(
-      request: TextDocumentFormattingRequest,
+      input: Input.VirtualFile,
       scalafmt: Formatter,
-      buffers: Buffers,
       cwd: AbsolutePath
   ): DocumentFormattingResult = {
-    val path = Uri.toPath(request.params.textDocument.uri).get
-    val contents = buffers.read(path)
     val fullDocumentRange = Range(
       start = Position(0, 0),
       end = Position(Int.MaxValue, Int.MaxValue)
     )
     val config = cwd.resolve(".scalafmt.conf")
     val edits = if (Files.isRegularFile(config.toNIO)) {
-      val formattedContent =
-        scalafmt.format(contents, path.toString(), config)
+      val formattedContent = scalafmt.format(input.value, input.path, config)
       List(TextEdit(fullDocumentRange, formattedContent))
     } else {
       Nil

@@ -33,12 +33,15 @@ object SymbolIndexTest extends MegaSuite {
       .resolve("scala")
       .resolve("example")
       .resolve("User.scala")
+    val UserUri = s"file:$User"
+
     val UserTest = cwd
       .resolve("src")
       .resolve("test")
       .resolve("scala")
       .resolve("example")
       .resolve("UserTest.scala")
+    val UserTestUri = s"file:$UserTest"
   }
   Predef.assert(
     Files.isRegularFile(path.User.toNIO),
@@ -72,7 +75,7 @@ object SymbolIndexTest extends MegaSuite {
         expected: String
     ): Symbol = {
       val symbol = index
-        .findSymbol(path.UserTest, line, column)
+        .findSymbol(path.UserTestUri, line, column)
         .getOrElse(
           fail(
             s"Symbol not found at $path.UserTest:$line:$column. ${reminderMsg}"
@@ -111,7 +114,7 @@ object SymbolIndexTest extends MegaSuite {
         expected: l.Location*
     ): Unit = {
       val symbol = index
-        .findSymbol(path.UserTest, line, column)
+        .findSymbol(path.UserTestUri, line, column)
         .getOrElse(
           fail(
             s"Symbol not found at $path.UserTest:$line:$column. ${reminderMsg}"

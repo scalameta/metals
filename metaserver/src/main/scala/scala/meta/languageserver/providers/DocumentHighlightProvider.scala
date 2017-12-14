@@ -12,18 +12,18 @@ object DocumentHighlightProvider extends LazyLogging {
 
   def highlight(
       symbolIndex: SymbolIndex,
-      path: AbsolutePath,
+      uri: String,
       position: l.Position
   ): DocumentHighlightResult = {
-    logger.info(s"Document highlight in ${path}")
+    logger.info(s"Document highlight in $uri")
     val locations = for {
       name <- symbolIndex
-        .resolveName(path, position.line, position.character)
+        .resolveName(uri, position.line, position.character)
         .toList
       data <- symbolIndex.symbolIndexer.get(name.symbol).toList
       _ = logger.info(s"Highlighting symbol `${data.name}: ${data.signature}`")
       pos <- data.referencePositions(withDefinition = true)
-      if Uri.toPath(pos.uri) == Some(path)
+      if pos.uri == uri
       _ = logger.debug(s"Found highlight at [${pos.range.get.pretty}]")
     } yield pos.toLocation
     // TODO(alexey) add DocumentHighlightKind: Text (default), Read, Write

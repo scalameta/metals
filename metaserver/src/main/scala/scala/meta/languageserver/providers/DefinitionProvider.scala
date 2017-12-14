@@ -11,13 +11,13 @@ object DefinitionProvider extends LazyLogging {
 
   def definition(
       symbolIndex: SymbolIndex,
-      path: AbsolutePath,
+      uri: String,
       position: l.Position,
       tempSourcesDir: AbsolutePath
   ): DefinitionResult = {
     val locations = for {
       symbol <- symbolIndex.findSymbol(
-        path,
+        uri,
         position.line,
         position.character
       )

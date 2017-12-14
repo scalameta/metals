@@ -3,7 +3,6 @@ package scala.meta.languageserver.compiler
 import scala.collection.mutable
 import scala.meta.languageserver.Effects
 import scala.meta.languageserver.ServerConfig
-import scala.meta.languageserver.Uri
 import scala.reflect.io
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -13,7 +12,6 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.types.TextDocumentIdentifier
 import langserver.types.VersionedTextDocumentIdentifier
 import monix.execution.Scheduler
-import org.langmeta.io.AbsolutePath
 
 /** Responsible for keeping fresh scalac global instances. */
 class ScalacProvider(
@@ -23,19 +21,19 @@ class ScalacProvider(
   private implicit val cwd = serverConfig.cwd
 
   def getCompiler(td: TextDocumentIdentifier): Option[Global] =
-    Uri.toPath(td.uri).flatMap(getCompiler)
+    getCompiler(td.uri)
 
   def getCompiler(td: VersionedTextDocumentIdentifier): Option[Global] =
-    Uri.toPath(td.uri).flatMap(getCompiler)
+    getCompiler(td.uri)
 
-  def getCompiler(path: AbsolutePath): Option[Global] = {
-    compilerByPath.get(path).map { compiler =>
+  def getCompiler(uri: String): Option[Global] = {
+    compilerByPath.get(uri).map { compiler =>
       compiler.reporter.reset()
       compiler
     }
   }
 
-  private val compilerByPath = mutable.Map.empty[AbsolutePath, Global]
+  private val compilerByPath = mutable.Map.empty[String, Global]
   def loadNewCompilerGlobals(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {
@@ -43,8 +41,7 @@ class ScalacProvider(
     val compiler =
       ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
     config.sources.foreach { path =>
-      // TODO(olafur) garbage collect compilers from removed files.
-      compilerByPath(path) = compiler
+      compilerByPath(path.toURI.toString) = compiler
     }
     Effects.InstallPresentationCompiler
   }

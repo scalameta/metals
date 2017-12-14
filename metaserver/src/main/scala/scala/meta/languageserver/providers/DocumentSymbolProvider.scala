@@ -9,7 +9,7 @@ import org.langmeta.io.AbsolutePath
 
 object DocumentSymbolProvider extends LazyLogging {
 
-  private class SymbolTraverser(path: AbsolutePath) {
+  private class SymbolTraverser(uri: String) {
     private val builder = List.newBuilder[l.SymbolInformation]
 
     val traverser = new Traverser {
@@ -26,7 +26,7 @@ object DocumentSymbolProvider extends LazyLogging {
           builder += l.SymbolInformation(
             name = name,
             kind = currentNode.symbolKind,
-            location = path.toLocation(currentNode.pos),
+            location = l.Location(uri, currentNode.pos.toRange),
             containerName = currentRoot.flatMap(_.qualifiedName)
           )
         }
@@ -57,8 +57,8 @@ object DocumentSymbolProvider extends LazyLogging {
 
   def empty = DocumentSymbolResult(Nil)
   def documentSymbols(
-      path: AbsolutePath,
+      uri: String,
       source: Source
   ): DocumentSymbolResult =
-    DocumentSymbolResult(new SymbolTraverser(path).apply(source))
+    DocumentSymbolResult(new SymbolTraverser(uri).apply(source))
 }

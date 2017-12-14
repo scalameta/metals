@@ -51,17 +51,17 @@ class Buffers private (
     Option(contents.get(uri))
       .getOrElse(readFromDisk(AbsolutePath(Paths.get(URI.create(uri)))))
 
-  private val sources: JMap[AbsolutePath, Source] = new ConcurrentHashMap()
+  private val sources: JMap[String, Source] = new ConcurrentHashMap()
   // Tries to parse and record it or fallback to an old source if it existed
-  def source(path: AbsolutePath): Option[Source] =
+  def source(uri: String): Option[Source] =
     Parser
-      .parse(read(path))
+      .parse(read(uri))
       .toOption
       .map { tree =>
-        sources.put(path, tree)
+        sources.put(uri, tree)
         tree
       }
-      .orElse(Option(sources.get(path)))
+      .orElse(Option(sources.get(uri)))
 }
 object Buffers {
   def apply()(implicit cwd: AbsolutePath): Buffers =

@@ -195,6 +195,7 @@ class ScalametaLanguageServer(
         logger.warn(s"Unhandled file event: $event")
         ()
     }
+
   override def completion(
       request: TextDocumentCompletionRequest
   ): Task[CompletionList] = Task {
@@ -214,7 +215,7 @@ class ScalametaLanguageServer(
   ): Task[DefinitionResult] = Task {
     DefinitionProvider.definition(
       symbolIndex,
-      Uri.toPath(request.params.textDocument.uri).get,
+      request.params.textDocument.uri,
       request.params.position,
       tempSourcesDir
     )
@@ -225,7 +226,7 @@ class ScalametaLanguageServer(
   ): Task[DocumentHighlightResult] = Task {
     DocumentHighlightProvider.highlight(
       symbolIndex,
-      Uri.toPath(request.params.textDocument.uri).get,
+      request.params.textDocument.uri,
       request.params.position
     )
   }
@@ -233,9 +234,9 @@ class ScalametaLanguageServer(
   override def documentSymbol(
       request: DocumentSymbolParams
   ): Task[DocumentSymbolResult] = Task {
-    val path = Uri.toPath(request.textDocument.uri).get
-    buffers.source(path) match {
-      case Some(source) => DocumentSymbolProvider.documentSymbols(path, source)
+    val uri = request.textDocument.uri
+    buffers.source(uri) match {
+      case Some(source) => DocumentSymbolProvider.documentSymbols(uri, source)
       case None => DocumentSymbolProvider.empty
     }
   }
@@ -243,7 +244,12 @@ class ScalametaLanguageServer(
   override def formatting(
       request: TextDocumentFormattingRequest
   ): Task[DocumentFormattingResult] = Task {
-    DocumentFormattingProvider.format(request, scalafmt, buffers, cwd)
+    val uri = request.params.textDocument.uri
+    DocumentFormattingProvider.format(
+      Input.VirtualFile(uri, buffers.read(uri)),
+      scalafmt,
+      cwd
+    )
   }
 
   override def hover(
@@ -264,7 +270,7 @@ class ScalametaLanguageServer(
   ): Task[ReferencesResult] = Task {
     ReferencesProvider.references(
       symbolIndex,
-      Uri.toPath(request.params.textDocument.uri).get,
+      request.params.textDocument.uri,
       request.params.position,
       request.params.context
     )
