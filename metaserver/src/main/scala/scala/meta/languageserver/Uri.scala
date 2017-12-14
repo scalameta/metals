@@ -7,14 +7,13 @@ import scala.meta.Source
 import org.langmeta.io.AbsolutePath
 
 /**
- * Wrapper for an LSP uri string.
+ * Wrapper for a string representing an LSP-compliant URI.
  *
  * This is not a java.net.URI because
  * - URI a lot of methods that return null and we don't use anyways
- * - Paths.get(URI).toString produces file:///path when LSP URIs are file:/path
- *
- * By having our own wrapper, we an add custom methods that suit our needs like
- * `isJar`/`isFile` and guarantee we never have unexpected schemes.
+ * - URI supports any scheme while we are only interested in a couple schemes
+ * - Paths.get(URI).toString produces file:///path when LSP
+ *   expects URIs to be formatted as file:/path
  */
 case class Uri(value: String) {
   // Runtime check because wrapping constructor in Option[Uri] is too cumbersome
