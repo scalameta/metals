@@ -6,12 +6,13 @@ import langserver.{types => l}
 import langserver.messages.DefinitionResult
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.languageserver.Uri
 
 object DefinitionProvider extends LazyLogging {
 
   def definition(
       symbolIndex: SymbolIndex,
-      uri: String,
+      uri: Uri,
       position: l.Position,
       tempSourcesDir: AbsolutePath
   ): DefinitionResult = {

@@ -4,11 +4,11 @@ import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
-
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.internal.BuildInfo
 import scala.meta.languageserver.ScalametaLanguageServer
 import scala.meta.languageserver.ServerConfig
+import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.InverseSymbolIndexer
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.index.SymbolData
@@ -33,7 +33,7 @@ object SymbolIndexTest extends MegaSuite {
       .resolve("scala")
       .resolve("example")
       .resolve("User.scala")
-    val UserUri = s"file:$User"
+    val UserUri = Uri(User)
 
     val UserTest = cwd
       .resolve("src")
@@ -41,7 +41,7 @@ object SymbolIndexTest extends MegaSuite {
       .resolve("scala")
       .resolve("example")
       .resolve("UserTest.scala")
-    val UserTestUri = s"file:$UserTest"
+    val UserTestUri = Uri(UserTest)
   }
   Predef.assert(
     Files.isRegularFile(path.User.toNIO),

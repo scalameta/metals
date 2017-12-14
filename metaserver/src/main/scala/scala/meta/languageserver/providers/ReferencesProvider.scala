@@ -1,17 +1,17 @@
 package scala.meta.languageserver.providers
 
 import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.io.AbsolutePath
 import langserver.{types => l}
 import langserver.messages.ReferencesResult
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.languageserver.Uri
 
 object ReferencesProvider extends LazyLogging {
 
   def references(
       symbolIndex: SymbolIndex,
-      uri: String,
+      uri: Uri,
       position: l.Position,
       context: l.ReferenceContext
   ): ReferencesResult = {

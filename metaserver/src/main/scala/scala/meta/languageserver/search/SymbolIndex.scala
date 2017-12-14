@@ -11,6 +11,7 @@ import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.mtags.Mtags
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
+import scala.meta.languageserver.Uri
 import scala.meta.languageserver.storage.LevelDBMap
 import scala.meta.languageserver.{index => i}
 import `scala`.meta.languageserver.index.Position
@@ -51,7 +52,7 @@ class SymbolIndex(
 
   /** Returns a ResolvedName at the given location */
   def resolveName(
-      uri: String,
+      uri: Uri,
       line: Int,
       column: Int
   ): Option[ResolvedName] = {
@@ -75,7 +76,7 @@ class SymbolIndex(
 
   /** Returns a symbol at the given location */
   def findSymbol(
-      uri: String,
+      uri: Uri,
       line: Int,
       column: Int
   ): Option[Symbol] = {
@@ -162,8 +163,9 @@ class SymbolIndex(
    *                 - names must be sorted
    */
   def indexDocument(document: s.Document): Effects.IndexSemanticdb = {
+    val uri = Uri(document.filename)
     val input = Input.VirtualFile(document.filename, document.contents)
-    documentIndex.putDocument(input.path, document)
+    documentIndex.putDocument(uri, document)
     document.names.foreach {
       // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
       // local symbols don't need to be indexed globally, by skipping them we should

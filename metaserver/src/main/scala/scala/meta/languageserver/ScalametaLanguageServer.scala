@@ -187,7 +187,7 @@ class ScalametaLanguageServer(
           Uri(path),
           FileChangeType.Created | FileChangeType.Changed
           ) =>
-        onChangedFile(path) { _ =>
+        onChangedFile(path.toAbsolutePath) { _ =>
           logger.warn(s"Unknown file extension for path $path")
         }
 
@@ -215,7 +215,7 @@ class ScalametaLanguageServer(
   ): Task[DefinitionResult] = Task {
     DefinitionProvider.definition(
       symbolIndex,
-      request.params.textDocument.uri,
+      Uri(request.params.textDocument.uri),
       request.params.position,
       tempSourcesDir
     )
@@ -226,7 +226,7 @@ class ScalametaLanguageServer(
   ): Task[DocumentHighlightResult] = Task {
     DocumentHighlightProvider.highlight(
       symbolIndex,
-      request.params.textDocument.uri,
+      Uri(request.params.textDocument.uri),
       request.params.position
     )
   }
@@ -270,7 +270,7 @@ class ScalametaLanguageServer(
   ): Task[ReferencesResult] = Task {
     ReferencesProvider.references(
       symbolIndex,
-      request.params.textDocument.uri,
+      Uri(request.params.textDocument.uri),
       request.params.position,
       request.params.context
     )
