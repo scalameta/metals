@@ -1,19 +1,19 @@
 package scala.meta.languageserver.search
 
-import java.net.URI
 import java.util
 import java.util.concurrent.ConcurrentHashMap
+import scala.meta.languageserver.Uri
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.internal.semanticdb.schema.Document
 
 class InMemoryDocumentIndex(
-    documents: util.Map[URI, Document] = new ConcurrentHashMap()
+    documents: util.Map[Uri, Document] = new ConcurrentHashMap()
 ) extends DocumentIndex
     with LazyLogging {
-  override def getDocument(uri: URI): Option[Document] =
+  override def getDocument(uri: Uri): Option[Document] =
     Option(documents.get(uri))
-  override def putDocument(uri: URI, document: Document): Unit = {
-    if (uri.getScheme != "jar") {
+  override def putDocument(uri: Uri, document: Document): Unit = {
+    if (!uri.isJar) {
       logger.info(s"Storing in-memory document for uri $uri")
     }
     documents.put(uri, document)

@@ -1,3 +1,5 @@
 package scala.meta.languageserver.compiler
 
-case class Cursor(uri: String, contents: String, offset: Int)
+import scala.meta.languageserver.Uri
+
+case class Cursor(uri: Uri, contents: String, offset: Int)

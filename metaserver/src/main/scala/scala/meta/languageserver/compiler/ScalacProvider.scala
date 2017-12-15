@@ -13,7 +13,7 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.types.TextDocumentIdentifier
 import langserver.types.VersionedTextDocumentIdentifier
 import monix.execution.Scheduler
-import org.langmeta.io.AbsolutePath
+import org.langmeta.inputs.Input
 
 /** Responsible for keeping fresh scalac global instances. */
 class ScalacProvider(
@@ -22,20 +22,23 @@ class ScalacProvider(
     extends LazyLogging {
   private implicit val cwd = serverConfig.cwd
 
+  def getCompiler(input: Input.VirtualFile): Option[Global] =
+    getCompiler(Uri(input.path))
+
   def getCompiler(td: TextDocumentIdentifier): Option[Global] =
-    Uri.toPath(td.uri).flatMap(getCompiler)
+    getCompiler(Uri(td.uri))
 
   def getCompiler(td: VersionedTextDocumentIdentifier): Option[Global] =
-    Uri.toPath(td.uri).flatMap(getCompiler)
+    getCompiler(Uri(td.uri))
 
-  def getCompiler(path: AbsolutePath): Option[Global] = {
-    compilerByPath.get(path).map { compiler =>
+  def getCompiler(uri: Uri): Option[Global] = {
+    compilerByPath.get(uri).map { compiler =>
       compiler.reporter.reset()
       compiler
     }
   }
 
-  private val compilerByPath = mutable.Map.empty[AbsolutePath, Global]
+  private val compilerByPath = mutable.Map.empty[Uri, Global]
   def loadNewCompilerGlobals(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {
@@ -43,8 +46,7 @@ class ScalacProvider(
     val compiler =
       ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
     config.sources.foreach { path =>
-      // TODO(olafur) garbage collect compilers from removed files.
-      compilerByPath(path) = compiler
+      compilerByPath(Uri(path)) = compiler
     }
     Effects.InstallPresentationCompiler
   }

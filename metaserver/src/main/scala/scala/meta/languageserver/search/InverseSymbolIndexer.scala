@@ -3,6 +3,7 @@ package scala.meta.languageserver.search
 import java.net.URI
 import java.nio.file.Paths
 import scala.collection.mutable
+import scala.meta.languageserver.Uri
 import scala.meta.languageserver.{index => i}
 import scala.{meta => m}
 import org.langmeta.io.AbsolutePath
@@ -26,18 +27,16 @@ object InverseSymbolIndexer {
     // built the symbol index.
     // TODO(olafur) handle local symbols when we stop indexing them.
     val db = mutable.Map.empty[String, m.Document]
-    def get(filename: String) = {
-      val key = if (filename.startsWith("file")) {
-        cwd.toNIO.relativize(Paths.get(URI.create(filename))).toString
-      } else filename
+    def get(uri: Uri) = {
+      val key = if (uri.isFile) {
+        cwd.toNIO.relativize(uri.toPath).toString
+      } else uri.value
       db.getOrElseUpdate(
         key,
         m.Document(
           m.Input.VirtualFile(
             key,
-            documents
-              .getDocument(URI.create(filename))
-              .fold("")(_.contents)
+            documents.getDocument(uri).fold("")(_.contents)
           ),
           "Scala212",
           Nil,
@@ -48,7 +47,7 @@ object InverseSymbolIndexer {
       )
     }
     def handleResolvedName(
-        uri: String,
+        uri: Uri,
         symbol: String,
         range: i.Range,
         definition: Boolean
@@ -62,11 +61,11 @@ object InverseSymbolIndexer {
     }
     symbols.foreach { symbol =>
       symbol.definition.collect {
-        case i.Position(uri, Some(range)) =>
+        case i.Position(Uri(uri), Some(range)) =>
           handleResolvedName(uri, symbol.symbol, range, definition = true)
       }
       symbol.references.collect {
-        case (uri, ranges) =>
+        case (Uri(uri), ranges) =>
           ranges.ranges.foreach { range =>
             handleResolvedName(uri, symbol.symbol, range, definition = false)
           }

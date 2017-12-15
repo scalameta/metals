@@ -203,7 +203,7 @@ class ScalametaLanguageServer(
           Uri(path),
           FileChangeType.Created | FileChangeType.Changed
           ) =>
-        onChangedFile(path) { _ =>
+        onChangedFile(path.toAbsolutePath) { _ =>
           logger.warn(s"Unknown file extension for path $path")
         }
 
@@ -211,6 +211,7 @@ class ScalametaLanguageServer(
         logger.warn(s"Unhandled file event: $event")
         ()
     }
+
   override def completion(
       request: TextDocumentCompletionRequest
   ): Task[CompletionList] = Task {
@@ -230,7 +231,7 @@ class ScalametaLanguageServer(
   ): Task[DefinitionResult] = Task {
     DefinitionProvider.definition(
       symbolIndex,
-      Uri.toPath(request.params.textDocument.uri).get,
+      Uri(request.params.textDocument.uri),
       request.params.position,
       tempSourcesDir
     )
@@ -241,7 +242,7 @@ class ScalametaLanguageServer(
   ): Task[DocumentHighlightResult] = Task {
     DocumentHighlightProvider.highlight(
       symbolIndex,
-      Uri.toPath(request.params.textDocument.uri).get,
+      Uri(request.params.textDocument.uri),
       request.params.position
     )
   }
@@ -249,9 +250,9 @@ class ScalametaLanguageServer(
   override def documentSymbol(
       request: DocumentSymbolParams
   ): Task[DocumentSymbolResult] = Task {
-    val path = Uri.toPath(request.textDocument.uri).get
-    buffers.source(path) match {
-      case Some(source) => DocumentSymbolProvider.documentSymbols(path, source)
+    val uri = Uri(request.textDocument.uri)
+    buffers.source(uri) match {
+      case Some(source) => DocumentSymbolProvider.documentSymbols(uri, source)
       case None => DocumentSymbolProvider.empty
     }
   }
@@ -259,7 +260,8 @@ class ScalametaLanguageServer(
   override def formatting(
       request: TextDocumentFormattingRequest
   ): Task[DocumentFormattingResult] = Task {
-    DocumentFormattingProvider.format(request, scalafmt, buffers, cwd)
+    val uri = Uri(request.params.textDocument)
+    DocumentFormattingProvider.format(uri.toInput(buffers), scalafmt, cwd)
   }
 
   override def hover(
@@ -280,7 +282,7 @@ class ScalametaLanguageServer(
   ): Task[ReferencesResult] = Task {
     ReferencesProvider.references(
       symbolIndex,
-      Uri.toPath(request.params.textDocument.uri).get,
+      Uri(request.params.textDocument.uri),
       request.params.position,
       request.params.context
     )
@@ -328,7 +330,7 @@ class ScalametaLanguageServer(
   }
 
   override def onCloseTextDocument(td: TextDocumentIdentifier): Unit =
-    buffers.closed(td.uri)
+    buffers.closed(Uri(td))
 
   private def toPoint(
       td: TextDocumentIdentifier,
@@ -337,7 +339,7 @@ class ScalametaLanguageServer(
     val contents = buffers.read(td)
     val input = Input.VirtualFile(td.uri, contents)
     val offset = input.toOffset(pos)
-    Cursor(td.uri, contents, offset)
+    Cursor(Uri(td.uri), contents, offset)
   }
 
 }

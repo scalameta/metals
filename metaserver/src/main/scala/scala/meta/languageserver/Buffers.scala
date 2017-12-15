@@ -25,7 +25,7 @@ import org.langmeta.inputs.Input
  * https://github.com/sourcegraph/language-server-protocol/blob/master/extension-files.md
  */
 class Buffers private (
-    contents: JMap[String, String],
+    contents: JMap[Uri, String],
     cwd: AbsolutePath
 ) extends LazyLogging {
   private def readFromDisk(path: AbsolutePath): String = {
@@ -33,35 +33,35 @@ class Buffers private (
     new String(Files.readAllBytes(path.toNIO), StandardCharsets.UTF_8)
   }
   def changed(input: Input.VirtualFile): Effects.UpdateBuffers = {
-    contents.put(input.path, input.value)
+    contents.put(Uri(input.path), input.value)
     Effects.UpdateBuffers
   }
-  def closed(uri: String): Unit = {
+  def closed(uri: Uri): Unit = {
     contents.remove(uri)
     sources.remove(uri)
   }
 
   def read(td: TextDocumentIdentifier): String =
-    read(td.uri)
+    read(Uri(td.uri))
   def read(td: VersionedTextDocumentIdentifier): String =
-    read(td.uri)
+    read(Uri(td.uri))
   def read(path: AbsolutePath): String =
-    read(s"file:$path")
-  def read(uri: String): String =
+    read(Uri(path))
+  def read(uri: Uri): String =
     Option(contents.get(uri))
-      .getOrElse(readFromDisk(AbsolutePath(Paths.get(URI.create(uri)))))
+      .getOrElse(readFromDisk(uri.toAbsolutePath))
 
-  private val sources: JMap[AbsolutePath, Source] = new ConcurrentHashMap()
+  private val sources: JMap[Uri, Source] = new ConcurrentHashMap()
   // Tries to parse and record it or fallback to an old source if it existed
-  def source(path: AbsolutePath): Option[Source] =
+  def source(uri: Uri): Option[Source] =
     Parser
-      .parse(read(path))
+      .parse(read(uri))
       .toOption
       .map { tree =>
-        sources.put(path, tree)
+        sources.put(uri, tree)
         tree
       }
-      .orElse(Option(sources.get(path)))
+      .orElse(Option(sources.get(uri)))
 }
 object Buffers {
   def apply()(implicit cwd: AbsolutePath): Buffers =

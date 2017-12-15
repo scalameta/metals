@@ -1,6 +1,5 @@
 package scala.meta.languageserver.search
 
-import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -12,6 +11,7 @@ import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.mtags.Mtags
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
+import scala.meta.languageserver.Uri
 import scala.meta.languageserver.storage.LevelDBMap
 import scala.meta.languageserver.{index => i}
 import `scala`.meta.languageserver.index.Position
@@ -52,14 +52,14 @@ class SymbolIndex(
 
   /** Returns a ResolvedName at the given location */
   def resolveName(
-      path: AbsolutePath,
+      uri: Uri,
       line: Int,
       column: Int
   ): Option[ResolvedName] = {
-    logger.info(s"resolveName at $path:$line:$column")
+    logger.info(s"resolveName at $uri:$line:$column")
     for {
-      document <- documentIndex.getDocument(path.toNIO.toUri)
-      _ = logger.info(s"Found document for $path")
+      document <- documentIndex.getDocument(uri)
+      _ = logger.info(s"Found document for $uri")
       input = Input.VirtualFile(document.filename, document.contents)
       name <- document.names.collectFirst {
         case name @ ResolvedName(Some(position), symbol, _) if {
@@ -76,12 +76,12 @@ class SymbolIndex(
 
   /** Returns a symbol at the given location */
   def findSymbol(
-      path: AbsolutePath,
+      uri: Uri,
       line: Int,
       column: Int
   ): Option[Symbol] = {
     for {
-      name <- resolveName(path, line, column)
+      name <- resolveName(uri, line, column)
       symbol = Symbol(name.symbol)
       _ = logger.info(s"Matching symbol ${symbol}")
     } yield symbol
@@ -159,13 +159,12 @@ class SymbolIndex(
    * Indexes definitions, denotations and references in this document.
    *
    * @param document Must respect the following conventions:
-   *                 - filename must be a URI
+   *                 - filename must be formatted as a URI
    *                 - names must be sorted
    */
   def indexDocument(document: s.Document): Effects.IndexSemanticdb = {
+    val uri = Uri(document.filename)
     val input = Input.VirtualFile(document.filename, document.contents)
-    // what do we put as the uri?
-    val uri = URI.create(document.filename)
     documentIndex.putDocument(uri, document)
     document.names.foreach {
       // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition

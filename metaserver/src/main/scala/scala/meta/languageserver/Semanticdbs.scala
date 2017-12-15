@@ -22,8 +22,7 @@ object Semanticdbs extends LazyLogging {
       scalac: ScalacProvider
   ): Option[semanticdb.Database] =
     for {
-      path <- Uri.unapply(input.path)
-      compiler <- scalac.getCompiler(path)
+      compiler <- scalac.getCompiler(input)
     } yield toSemanticdb(input, compiler)
 
   def toSemanticdb(
