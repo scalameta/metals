@@ -3,7 +3,13 @@ package scala.meta.languageserver
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
+import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.FileVisitResult
+import java.nio.file.attribute.BasicFileAttributes
 import scala.concurrent.duration.FiniteDuration
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
@@ -36,6 +42,8 @@ import langserver.messages.TextDocumentFormattingRequest
 import langserver.messages.TextDocumentHoverRequest
 import langserver.messages.TextDocumentReferencesRequest
 import langserver.messages.TextDocumentSignatureHelpRequest
+import langserver.messages.WorkspaceExecuteCommandRequest
+import langserver.messages.ExecuteCommandOptions
 import langserver.types._
 import monix.eval.Task
 import monix.execution.Cancelable
@@ -135,6 +143,8 @@ class ScalametaLanguageServer(
     }
   }
 
+  private val clearIndexCacheCommand = "clearIndexCache"
+
   override def initialize(
       request: InitializeParams
   ): Task[InitializeResult] = Task {
@@ -158,7 +168,9 @@ class ScalametaLanguageServer(
       documentHighlightProvider = true,
       documentSymbolProvider = true,
       documentFormattingProvider = true,
-      hoverProvider = true
+      hoverProvider = true,
+      executeCommandProvider =
+        ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName))
     )
     InitializeResult(capabilities)
   }
@@ -289,6 +301,18 @@ class ScalametaLanguageServer(
     sourceChangeSubscriber.onNext(input)
   }
 
+  override def executeCommand(request: WorkspaceExecuteCommandRequest) = Task {
+    import WorkspaceCommand._
+    WorkspaceCommand
+      .withNameOption(request.params.command)
+      .map {
+        case ClearIndexCache =>
+          logger.info("Clearing the index cache")
+          ScalametaLanguageServer.clearCacheDirectory()
+      }
+      .getOrElse(logger.error(s"Unknown command ${request.params.command}"))
+  }
+
   override def onChangeTextDocument(
       td: VersionedTextDocumentIdentifier,
       changes: Seq[TextDocumentContentChangeEvent]
@@ -322,6 +346,27 @@ object ScalametaLanguageServer extends LazyLogging {
     Files.createDirectories(path.toNIO)
     path
   }
+
+  def clearCacheDirectory(): Unit =
+    Files.walkFileTree(
+      cacheDirectory.toNIO,
+      new SimpleFileVisitor[Path] {
+        override def visitFile(
+            file: Path,
+            attr: BasicFileAttributes
+        ): FileVisitResult = {
+          Files.delete(file)
+          FileVisitResult.CONTINUE
+        }
+        override def postVisitDirectory(
+            dir: Path,
+            exc: IOException
+        ): FileVisitResult = {
+          Files.delete(dir)
+          FileVisitResult.CONTINUE
+        }
+      }
+    )
 
   def compilerConfigStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler

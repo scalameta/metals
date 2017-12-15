@@ -317,6 +317,12 @@ object DocumentFormattingParams {
   implicit val format = Json.format[DocumentFormattingParams]
 }
 
+case class WorkspaceExecuteCommandParams(command: String, arguments: Option[Seq[JsValue]])
+object WorkspaceExecuteCommandParams {
+  implicit val format = Json.format[WorkspaceExecuteCommandParams]
+}
+
+
 /**
   * An event describing a file change.
   *

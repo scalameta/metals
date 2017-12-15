@@ -7,7 +7,8 @@ import {
   LanguageClientOptions,
   ServerOptions,
   TransportKind,
-  RevealOutputChannelOn
+  RevealOutputChannelOn,
+  ExecuteCommandRequest
 } from 'vscode-languageclient';
 import { Requirements } from './requirements';
 import { exec } from 'child_process';
@@ -89,6 +90,13 @@ export async function activate(context: ExtensionContext) {
     if (selectedAction === showLogsAction) {
       client.outputChannel.show(true);
     }
+  });
+
+  client.onReady().then(() => {
+    const clearIndexCacheCommand = commands.registerCommand("scalameta.clearIndexCache", async () => {
+      return client.sendRequest(ExecuteCommandRequest.type, { command: "clearIndexCache" });
+    });
+    context.subscriptions.push(clearIndexCacheCommand);
   });
 
   context.subscriptions.push(client.start(), restartServerCommand);

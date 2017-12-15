@@ -58,6 +58,7 @@ lazy val V = new {
   val scala212 = "2.12.4"
   val scalameta = "2.1.5"
   val scalafix = "0.5.7"
+  val enumeratum = "1.5.12"
 }
 
 lazy val noPublish = List(
@@ -81,7 +82,7 @@ lazy val languageserver = project
     resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     libraryDependencies ++= Seq(
       "com.dhpcs" %% "scala-json-rpc" % "2.0.1",
-      "com.beachape" %% "enumeratum" % "1.5.12",
+      "com.beachape" %% "enumeratum" % V.enumeratum,
       "com.beachape" %% "enumeratum-play-json" % "1.5.12-2.6.0-M7",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
       "io.monix" %% "monix" % "2.3.0",
@@ -116,6 +117,7 @@ lazy val metaserver = project
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "ch.epfl.scala" % "scalafix-cli" % V.scalafix cross CrossVersion.full,
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
+      "com.beachape" %% "enumeratum" % V.enumeratum,
       "com.lihaoyi" %% "utest" % "0.6.0" % Test,
       "org.scalameta" %% "testkit" % V.scalameta % Test,
     )
