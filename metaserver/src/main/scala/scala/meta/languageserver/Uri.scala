@@ -10,19 +10,22 @@ import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
 
 /**
- * Wrapper for a string representing an LSP-compliant URI.
+ * Wrapper for a string representing a URI.
  *
- * This is not a java.net.URI because
- * - URI a lot of methods that return null and we don't use anyways
+ * The value is a String and not java.net.URI because
+ * - URI has a lot of methods that return null and we don't use anyways
  * - URI supports any scheme while we are only interested in a couple schemes
- * - Paths.get(URI).toString produces file:///path when LSP
- *   expects URIs to be formatted as file:/path
+ * - Both file:///path and file:/path are valid URIs while we only use
+ *   file:///path in this project in order to support storing them as strings. For context, see https://github.com/scalameta/language-server/pull/127#issuecomment-351880150
  */
-case class Uri(value: String) {
+sealed abstract case class Uri(value: String) {
   // Runtime check because wrapping constructor in Option[Uri] is too cumbersome
-  require(isJar || isFile, s"$value must start with file: or jar:")
-  def isJar: Boolean = value.startsWith("jar:")
-  def isFile: Boolean = value.startsWith("file:")
+  require(isJar || isFile, s"$value must start with file:///path or jar:")
+  def isJar: Boolean =
+    value.startsWith("jar:")
+  def isFile: Boolean =
+    value.startsWith("file:///") &&
+      !value.startsWith("file:////")
   def toInput(buffers: Buffers): Input.VirtualFile =
     Input.VirtualFile(value, buffers.read(this))
   def toURI: URI = URI.create(value)
@@ -31,16 +34,20 @@ case class Uri(value: String) {
 }
 
 object Uri {
-  def file(path: String): Uri = Uri(s"file:$path")
+  def apply(uri: String): Uri = Uri(URI.create(uri))
+  def file(path: String): Uri = {
+    val slash = if (path.startsWith("/")) "" else "/"
+    Uri(s"file:$slash${path.replace(' ', '-')}")
+  }
   def apply(td: TextDocumentIdentifier): Uri = Uri(td.uri)
   def apply(td: VersionedTextDocumentIdentifier): Uri = Uri(td.uri)
-  def apply(path: AbsolutePath): Uri = Uri(s"file:$path")
+  def apply(path: AbsolutePath): Uri = Uri(path.toURI)
   def apply(uri: URI): Uri =
     if (uri.getScheme == "file") {
       // nio.Path.toUri.toString produces file:/// while LSP expected file:/
-      Uri(s"file:${uri.getPath}")
+      new Uri(s"file://${uri.getPath}") {}
     } else {
-      Uri(uri.toString)
+      new Uri(uri.toString) {}
     }
-  def unapply(arg: String): Option[Uri] = Some(Uri(arg))
+  def unapply(arg: String): Option[Uri] = Some(Uri(URI.create(arg)))
 }
