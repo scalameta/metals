@@ -169,7 +169,8 @@ class ScalametaLanguageServer(
       documentSymbolProvider = true,
       documentFormattingProvider = true,
       hoverProvider = true,
-      executeCommandProvider = ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName))
+      executeCommandProvider =
+        ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName))
     )
     InitializeResult(capabilities)
   }
@@ -302,11 +303,14 @@ class ScalametaLanguageServer(
 
   override def executeCommand(request: WorkspaceExecuteCommandRequest) = Task {
     import WorkspaceCommand._
-    WorkspaceCommand.withNameOption(request.params.command).map {
-      case ClearIndexCache =>
-        logger.info("Clearing the index cache")
-        ScalametaLanguageServer.clearCacheDirectory()
-    }.getOrElse(logger.error(s"Unknown command ${request.params.command}"))
+    WorkspaceCommand
+      .withNameOption(request.params.command)
+      .map {
+        case ClearIndexCache =>
+          logger.info("Clearing the index cache")
+          ScalametaLanguageServer.clearCacheDirectory()
+      }
+      .getOrElse(logger.error(s"Unknown command ${request.params.command}"))
   }
 
   override def onChangeTextDocument(
@@ -344,16 +348,25 @@ object ScalametaLanguageServer extends LazyLogging {
   }
 
   def clearCacheDirectory(): Unit =
-    Files.walkFileTree(cacheDirectory.toNIO, new SimpleFileVisitor[Path] {
-      override def visitFile(file: Path, attr: BasicFileAttributes): FileVisitResult = {
-        Files.delete(file)
-        FileVisitResult.CONTINUE
+    Files.walkFileTree(
+      cacheDirectory.toNIO,
+      new SimpleFileVisitor[Path] {
+        override def visitFile(
+            file: Path,
+            attr: BasicFileAttributes
+        ): FileVisitResult = {
+          Files.delete(file)
+          FileVisitResult.CONTINUE
+        }
+        override def postVisitDirectory(
+            dir: Path,
+            exc: IOException
+        ): FileVisitResult = {
+          Files.delete(dir)
+          FileVisitResult.CONTINUE
+        }
       }
-      override def postVisitDirectory(dir: Path, exc: IOException): FileVisitResult = {
-        Files.delete(dir)
-        FileVisitResult.CONTINUE
-      }
-    })
+    )
 
   def compilerConfigStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
