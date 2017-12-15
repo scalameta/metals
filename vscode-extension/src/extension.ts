@@ -27,10 +27,6 @@ export async function activate(context: ExtensionContext) {
     '-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000,quiet=y'
   ];
 
-  // TODO(gabro): get this from th configuration
-  // const logLevel = workspace.getConfiguration().get('scalaLanguageServer.logLevel')
-  const logLevel = 'DEBUG';
-
   const coursierPath = path.join(context.extensionPath, './coursier');
 
   const coursierArgs = [
@@ -47,8 +43,6 @@ export async function activate(context: ExtensionContext) {
   ];
 
   const javaArgs = [
-    `-Dvscode.workspace=${workspace.rootPath}`,
-    `-Dvscode.logLevel=${logLevel}`,
     `-XX:+UseG1GC`,
     `-XX:+UseStringDeduplication`,
     '-jar',
