@@ -18,6 +18,10 @@
             "command": "scalameta.restartServer",
             "category": "Scalameta Language Server",
             "title": "Restart server"
+        }, {
+            "command": "scalameta.clearIndexCache",
+            "category": "Scalameta Language Server",
+            "title": "Clear index cache"
         }]
     },
     "main": "./out/extension",

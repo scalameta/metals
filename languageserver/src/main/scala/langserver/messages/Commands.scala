@@ -106,7 +106,11 @@ case class ServerCapabilities(
   /**
    * The server provides rename support.
    */
-  renameProvider: Boolean = false
+  renameProvider: Boolean = false,
+  /**
+   * The server provides execute command support.
+   */
+  executeCommandProvider: ExecuteCommandOptions = ExecuteCommandOptions(Nil)
 )
 
 object ServerCapabilities {
@@ -131,6 +135,11 @@ object CodeLensOptions {
 case class DocumentOnTypeFormattingOptions(firstTriggerCharacter: String, moreTriggerCharacters: Seq[String])
 object DocumentOnTypeFormattingOptions {
   implicit val format: Format[DocumentOnTypeFormattingOptions] = Json.format[DocumentOnTypeFormattingOptions]
+}
+
+case class ExecuteCommandOptions(commands: Seq[String])
+object ExecuteCommandOptions {
+  implicit val format: Format[ExecuteCommandOptions] = Json.format[ExecuteCommandOptions]
 }
 
 case class CompletionList(isIncomplete: Boolean, items: Seq[CompletionItem]) extends ResultResponse
@@ -183,7 +192,6 @@ case class ReferenceParams(
 )
 
 case class DocumentSymbolParams(textDocument: TextDocumentIdentifier) extends ServerCommand
-
 case class TextDocumentSignatureHelpRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentCompletionRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentDefinitionRequest(params: TextDocumentPositionParams) extends ServerCommand
@@ -191,6 +199,7 @@ case class TextDocumentReferencesRequest(params: ReferenceParams) extends Server
 case class TextDocumentDocumentHighlightRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentHoverRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentFormattingRequest(params: DocumentFormattingParams) extends ServerCommand
+case class WorkspaceExecuteCommandRequest(params: WorkspaceExecuteCommandParams) extends ServerCommand
 
 case class Hover(contents: Seq[MarkedString], range: Option[Range]) extends ResultResponse
 object Hover {
@@ -212,7 +221,8 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
     "textDocument/documentHighlight" -> valueFormat(TextDocumentDocumentHighlightRequest)(_.params),
     "textDocument/hover" -> valueFormat(TextDocumentHoverRequest)(_.params),
     "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams],
-    "textDocument/formatting" -> valueFormat(TextDocumentFormattingRequest)(_.params)
+    "textDocument/formatting" -> valueFormat(TextDocumentFormattingRequest)(_.params),
+    "workspace/executeCommand" -> valueFormat(WorkspaceExecuteCommandRequest)(_.params)
   )
 
   // NOTE: this is a workaround to read `shutdown` request which doesn't have parameters (scala-json-rpc requires parameters for all requests)
@@ -294,6 +304,7 @@ case class DocumentFormattingResult(params: Seq[TextEdit]) extends ResultRespons
 case class SignatureHelpResult(signatures: Seq[SignatureInformation],
                                activeSignature: Option[Int],
                                activeParameter: Option[Int]) extends ResultResponse
+case object ExecuteCommandResult extends ResultResponse
 object SignatureHelpResult {
   implicit val format = Json.format[SignatureHelpResult]
 }
@@ -311,6 +322,7 @@ object ResultResponse extends ResponseCompanion[Any] {
     "textDocument/hover" -> Json.format[Hover],
     "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
     "textDocument/formatting" -> valueFormat(DocumentFormattingResult)(_.params),
+    "workspace/executeCommand" -> emptyFormat[ExecuteCommandResult.type],
     "shutdown" -> ShutdownResult.format
   )
 }

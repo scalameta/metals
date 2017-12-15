@@ -23,6 +23,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
       case ("textDocument/hover", request: TextDocumentHoverRequest) => hover(request)
       case ("textDocument/references", request: TextDocumentReferencesRequest) => references(request)
       case ("textDocument/signatureHelp", request: TextDocumentSignatureHelpRequest) => signatureHelp(request)
+      case ("workspace/executeCommand", request: WorkspaceExecuteCommandRequest) => executeCommand(request).map(_ => ExecuteCommandResult)
       case ("shutdown", _: Shutdown) => shutdown()
       case c => Task.raiseError(new IllegalArgumentException(s"Unknown command $c"))
     }
@@ -68,6 +69,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
   def references(request: TextDocumentReferencesRequest): Task[ReferencesResult] = Task.now(ReferencesResult(Nil))
   def signatureHelp(request: TextDocumentSignatureHelpRequest): Task[SignatureHelpResult] = Task.now(SignatureHelpResult(Nil, None, None))
 
+  // workspace
+  def executeCommand(request: WorkspaceExecuteCommandRequest): Task[Unit] = Task.now(())
 
   def onOpenTextDocument(td: TextDocumentItem): Unit = {
     logger.debug(s"openTextDocument $td")
@@ -87,6 +90,5 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
 
   def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
     logger.debug(s"changeWatchedFiles $changes")
-
 
 }
