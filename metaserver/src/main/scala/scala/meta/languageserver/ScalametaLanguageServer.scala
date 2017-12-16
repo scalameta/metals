@@ -182,6 +182,7 @@ class ScalametaLanguageServer(
   override def shutdown(): Task[ShutdownResult] = Task {
     logger.info("Shutting down...")
     cancelEffects.foreach(_.cancel())
+    connection.cancelAllActiveRequests()
     ShutdownResult()
   }
 

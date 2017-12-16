@@ -40,6 +40,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
     case e => logger.error(s"Unknown notification $e")
   }
 
+
   // lifecycle
   def start(): Unit = {
     connection.start()
