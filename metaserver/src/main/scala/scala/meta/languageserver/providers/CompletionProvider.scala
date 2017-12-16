@@ -4,10 +4,8 @@ import scala.collection.mutable
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.CompilerEnrichments._
-import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
-import langserver.core.Notifications
 import langserver.messages.CompletionList
 import langserver.types.CompletionItem
 import langserver.types.CompletionItemKind
@@ -22,7 +20,7 @@ object CompletionProvider extends LazyLogging {
     import compiler._
 
     def completionItemKind(r: CompletionResult#M): CompletionItemKind = {
-      if (r.sym.isPackage) CompletionItemKind.Module
+      if (r.sym.hasPackageFlag) CompletionItemKind.Module
       else if (r.sym.isPackageObject) CompletionItemKind.Module
       else if (r.sym.isModuleOrModuleClass) CompletionItemKind.Module
       else if (r.sym.isTraitOrInterface) CompletionItemKind.Interface

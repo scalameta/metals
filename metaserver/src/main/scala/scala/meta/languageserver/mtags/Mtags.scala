@@ -9,11 +9,9 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.text.DecimalFormat
-import java.text.NumberFormat
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
-import scala.collection.GenSeq
 import scala.collection.parallel.mutable.ParArray
 import scala.meta.parsers.ParseException
 import com.thoughtworks.qdox.parser.{ParseException => QParseException}
@@ -179,14 +177,14 @@ object Mtags extends LazyLogging {
    */
   private def allClasspathFragments(
       classpath: List[AbsolutePath],
-      shouldIndex: RelativePath => Boolean = _ => true
+      shouldIndex: RelativePath => Boolean
   ): ParArray[Fragment] = {
-    var buf = ParArray.newBuilder[Fragment]
+    val buf = ParArray.newBuilder[Fragment]
     def add(fragment: Fragment): Unit = {
       if (shouldIndex(fragment.name)) buf += fragment
       else ()
     }
-    classpath.foreach { base =>
+    classpath.foreach[Any] { base =>
       def exploreJar(base: AbsolutePath): Unit = {
         val stream = Files.newInputStream(base.toNIO)
         try {

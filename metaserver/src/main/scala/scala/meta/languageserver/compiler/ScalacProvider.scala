@@ -12,15 +12,12 @@ import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import langserver.types.TextDocumentIdentifier
 import langserver.types.VersionedTextDocumentIdentifier
-import monix.execution.Scheduler
 import org.langmeta.inputs.Input
 
 /** Responsible for keeping fresh scalac global instances. */
 class ScalacProvider(
     serverConfig: ServerConfig
-)(implicit s: Scheduler)
-    extends LazyLogging {
-  private implicit val cwd = serverConfig.cwd
+) extends LazyLogging {
 
   def getCompiler(input: Input.VirtualFile): Option[Global] =
     getCompiler(Uri(input.path))

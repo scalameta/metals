@@ -1,7 +1,5 @@
 package scala.meta.languageserver.search
 
-import java.net.URI
-import java.nio.file.Paths
 import scala.collection.mutable
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.{index => i}

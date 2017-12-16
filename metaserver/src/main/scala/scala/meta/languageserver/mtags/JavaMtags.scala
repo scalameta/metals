@@ -14,7 +14,6 @@ import com.thoughtworks.qdox.model.JavaField
 import com.thoughtworks.qdox.model.JavaMember
 import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaModel
-import com.thoughtworks.qdox.model.impl.DefaultJavaField
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
 import org.langmeta.languageserver.InputEnrichments._

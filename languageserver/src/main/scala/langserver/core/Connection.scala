@@ -41,7 +41,7 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
     case _ =>
       Task.sequence {
         notificationHandlers.map(f => Task(f(n)))
-      }.onErrorRecover {
+      }.onErrorRecover[Any] {
         case NonFatal(e) =>
           logger.error("Failed notification handler", e)
       }.runAsync
@@ -142,24 +142,6 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
     }
   }
 
-  private def readCommand(jsonString: String): (Option[CorrelationId], Either[JsonRpcResponseErrorMessage, ServerCommand]) =
-    Try(Json.parse(jsonString)) match {
-      case Failure(exception) =>
-        None -> Left(JsonRpcResponseErrorMessage.parseError(exception,NoCorrelationId ))
-
-      case Success(json) =>
-        Json.fromJson[JsonRpcRequestMessage](json).fold(
-          errors => None -> Left(JsonRpcResponseErrorMessage.invalidRequest(JsError(errors),NoCorrelationId)),
-
-          jsonRpcRequestMessage =>
-            Option(ServerCommand.read(jsonRpcRequestMessage))
-              .fold[(Option[CorrelationId], Either[JsonRpcResponseErrorMessage, ServerCommand])](
-                Some(jsonRpcRequestMessage.id) -> Left(JsonRpcResponseErrorMessage.methodNotFound(jsonRpcRequestMessage.method,jsonRpcRequestMessage.id )))(commandJsResult => commandJsResult.fold(
-                  errors => Some(jsonRpcRequestMessage.id) -> Left(JsonRpcResponseErrorMessage.invalidParams(JsError(errors),jsonRpcRequestMessage.id)),
-                  command => Some(jsonRpcRequestMessage.id) -> Right(command))))
-
-    }
-
   private def unpackRequest(request: JsonRpcRequestMessage): (Option[CorrelationId], Either[JsonRpcResponseErrorMessage, ServerCommand]) = {
     Option(ServerCommand.read(request))
       .fold[(Option[CorrelationId], Either[JsonRpcResponseErrorMessage, ServerCommand])](
@@ -174,7 +156,7 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
     val future = commandHandler(method, command).map { result =>
       val rJson = ResultResponse.write(result, id)
       msgWriter.write(rJson)
-    }.onErrorRecover {
+    }.onErrorRecover[Unit] {
       case NonFatal(e) =>
         logger.error(e.getMessage, e)
     }.runAsync

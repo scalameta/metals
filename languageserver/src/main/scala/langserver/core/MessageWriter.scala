@@ -2,7 +2,6 @@ package langserver.core
 
 import java.io.OutputStream
 import play.api.libs.json._
-import java.nio.charset.Charset
 import com.typesafe.scalalogging.LazyLogging
 
 /**

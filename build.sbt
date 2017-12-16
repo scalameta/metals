@@ -6,6 +6,11 @@ inThisBuild(
         else "0.1-SNAPSHOT" // to avoid manually updating extension.js
       },
       scalaVersion := V.scala212,
+      scalacOptions ++= List(
+        "-deprecation",
+        "-Xlint"
+      ),
+      scalafixEnabled := false,
       organization := "org.scalameta",
       licenses := Seq(
         "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -135,5 +140,7 @@ lazy val testWorkspace = project
     scalacOptions += {
       // Need to fix source root so it matches the workspace folder.
       s"-P:semanticdb:sourceroot:${baseDirectory.value}"
-    }
+    },
+    scalacOptions -= "-Xlint"
   )
+  .disablePlugins(ScalafixPlugin)

@@ -1,16 +1,13 @@
 package scala.meta.languageserver
 
-import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Map => JMap}
 import com.typesafe.scalalogging.LazyLogging
 import langserver.types.TextDocumentIdentifier
 import langserver.types.VersionedTextDocumentIdentifier
 import org.langmeta.io.AbsolutePath
-import org.langmeta.io.RelativePath
 import scala.meta.Source
 import org.langmeta.inputs.Input
 

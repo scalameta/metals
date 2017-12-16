@@ -3,7 +3,6 @@ package langserver.messages
 
 
 import org.scalatest.FunSuite
-import langserver.types.Position
 
 class CommandProtocolSuite extends FunSuite {
   test("ServerCommand instantiastes") {

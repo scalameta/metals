@@ -2,8 +2,6 @@ package scala.meta.languageserver.storage
 
 import java.io.File
 import com.typesafe.scalalogging.LazyLogging
-import monix.execution.schedulers.TestScheduler.Task
-import monix.reactive.Observable
 import org.fusesource.leveldbjni.JniDBFactory
 import org.iq80.leveldb.DB
 import org.iq80.leveldb.DBException

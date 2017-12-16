@@ -1,26 +1,26 @@
 package langserver.types
 
-import langserver.messages.ResultResponse
 import play.api.libs.json._
+import play.api.libs.json.OFormat
 
 /**
  * Position in a text document expressed as zero-based line and character offset.
  */
 case class Position(line: Int, character: Int)
-object Position { implicit val format = Json.format[Position] }
+object Position { implicit val format: OFormat[Position] = Json.format[Position] }
 
 /**
  * A range in a text document.
  */
 case class Range(start: Position, end: Position)
-object Range { implicit val format = Json.format[Range] }
+object Range { implicit val format: OFormat[Range] = Json.format[Range] }
 
 /**
  * Represents a location inside a resource, such as a line
  * inside a text file.
  */
 case class Location(uri: String, range: Range)
-object Location { implicit val format = Json.format[Location] }
+object Location { implicit val format: OFormat[Location] = Json.format[Location] }
 
 /**
   * Represents a diagnostic, such as a compiler error or warning. Diagnostic objects are only valid
@@ -40,7 +40,7 @@ case class Diagnostic(
   message: String
 )
 object Diagnostic {
-  implicit val format = Json.format[Diagnostic]
+  implicit val format: OFormat[Diagnostic] = Json.format[Diagnostic]
 }
 
 /**
@@ -55,7 +55,7 @@ case class Command(title: String, command: String, arguments: Seq[Any])
 case class TextEdit(range: Range, newText: String)
 
 object TextEdit {
-  implicit val formatter = Json.format[TextEdit]
+  implicit val formatter: OFormat[TextEdit] = Json.format[TextEdit]
 }
 
 /**
@@ -67,10 +67,10 @@ case class WorkspaceEdit(
   )
 
 case class TextDocumentIdentifier(uri: String)
-object TextDocumentIdentifier { implicit val format = Json.format[TextDocumentIdentifier] }
+object TextDocumentIdentifier { implicit val format: OFormat[TextDocumentIdentifier] = Json.format[TextDocumentIdentifier] }
 
 case class VersionedTextDocumentIdentifier(uri: String, version: Long)
-object VersionedTextDocumentIdentifier { implicit val format = Json.format[VersionedTextDocumentIdentifier] }
+object VersionedTextDocumentIdentifier { implicit val format: OFormat[VersionedTextDocumentIdentifier] = Json.format[VersionedTextDocumentIdentifier] }
 
 /**
  * An item to transfer a text document from the client to the
@@ -87,7 +87,7 @@ case class TextDocumentItem(
   text: String)
 
 object TextDocumentItem {
-  implicit val format = Json.format[TextDocumentItem]
+  implicit val format: OFormat[TextDocumentItem] = Json.format[TextDocumentItem]
 }
 
 case class CompletionItem(
@@ -104,7 +104,7 @@ case class CompletionItem(
 //   (#CompletionResolveRequest)
 
 object CompletionItem {
-  implicit def format = Json.format[CompletionItem]
+  implicit def format: OFormat[CompletionItem] = Json.format[CompletionItem]
 }
 
 trait MarkedString
@@ -169,7 +169,7 @@ case class SymbolInformation(
   location: Location,
   containerName: Option[String])
 object SymbolInformation {
-  implicit val format = Json.format[SymbolInformation]
+  implicit val format: OFormat[SymbolInformation] = Json.format[SymbolInformation]
 }
 
 /**
@@ -225,7 +225,7 @@ case class FormattingOptions(
 )
 
 object FormattingOptions {
-  implicit val formatter = Json.format[FormattingOptions]
+  implicit val formatter: OFormat[FormattingOptions] = Json.format[FormattingOptions]
 }
 
 trait TextDocument {
@@ -298,7 +298,7 @@ case class TextDocumentContentChangeEvent(
 )
 
 object TextDocumentContentChangeEvent {
-  implicit val format = Json.format[TextDocumentContentChangeEvent]
+  implicit val format: OFormat[TextDocumentContentChangeEvent] = Json.format[TextDocumentContentChangeEvent]
 }
 
 case class DocumentFormattingParams(
@@ -314,12 +314,12 @@ case class DocumentFormattingParams(
 )
 
 object DocumentFormattingParams {
-  implicit val format = Json.format[DocumentFormattingParams]
+  implicit val format: OFormat[DocumentFormattingParams] = Json.format[DocumentFormattingParams]
 }
 
 case class WorkspaceExecuteCommandParams(command: String, arguments: Option[Seq[JsValue]])
 object WorkspaceExecuteCommandParams {
-  implicit val format = Json.format[WorkspaceExecuteCommandParams]
+  implicit val format: OFormat[WorkspaceExecuteCommandParams] = Json.format[WorkspaceExecuteCommandParams]
 }
 
 
@@ -334,5 +334,5 @@ case class FileEvent(
   `type`: FileChangeType
 )
 object FileEvent {
-  implicit val format = Json.format[FileEvent]
+  implicit val format: OFormat[FileEvent] = Json.format[FileEvent]
 }

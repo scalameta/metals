@@ -1,6 +1,5 @@
 package langserver.core
 
-import langserver.types.TextDocumentIdentifier
 import langserver.types.TextDocumentContentChangeEvent
 import langserver.types.Position
 import java.io.File
@@ -58,7 +57,7 @@ case class TextDocument(uri: String, contents: Array[Char]) {
   def positionToOffset(pos: Position): Int = {
     val Position(line, col) = pos
 
-    var i, l, c = 0
+    var i, l = 0
     while (i < contents.size && l < line) {
       contents(i) match {
         case '\r' =>

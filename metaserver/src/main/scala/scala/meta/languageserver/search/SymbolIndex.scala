@@ -1,8 +1,5 @@
 package scala.meta.languageserver.search
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import scala.meta.languageserver.Buffers
 import scala.meta.languageserver.Effects
@@ -14,24 +11,15 @@ import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.storage.LevelDBMap
 import scala.meta.languageserver.{index => i}
-import `scala`.meta.languageserver.index.Position
 import `scala`.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
-import langserver.{types => l}
 import langserver.core.Notifications
-import langserver.messages.DefinitionResult
-import langserver.messages.ReferencesResult
-import langserver.messages.DocumentSymbolResult
 import org.langmeta.inputs.Input
-import org.langmeta.internal.io.FileIO
 import org.langmeta.internal.semanticdb.schema.Database
-import org.langmeta.internal.semanticdb.schema.Document
 import org.langmeta.internal.semanticdb.schema.ResolvedName
 import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
-import org.langmeta.io.RelativePath
 import org.langmeta.languageserver.InputEnrichments._
-import org.langmeta.semanticdb.Signature
 import org.langmeta.semanticdb.Symbol
 
 /**

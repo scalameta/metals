@@ -1,12 +1,9 @@
 package scala.meta.languageserver.providers
 
 import java.nio.file.Files
-import scala.meta.languageserver.Buffers
 import scala.meta.languageserver.Formatter
-import scala.meta.languageserver.Uri
 import com.typesafe.scalalogging.LazyLogging
 import langserver.messages.DocumentFormattingResult
-import langserver.messages.TextDocumentFormattingRequest
 import langserver.types.Position
 import langserver.types.Range
 import langserver.types.TextEdit
