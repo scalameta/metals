@@ -68,8 +68,10 @@ class ScalacProvider(
     Effects.InstallPresentationCompiler
   }
 
-  def resetCompilers(): Unit = {}
-
+  def resetCompilers(): Unit =
+    compilerByConfigOrigin.values.foreach {
+      case (_, global) => global.askReset()
+    }
 }
 
 object ScalacProvider extends LazyLogging {

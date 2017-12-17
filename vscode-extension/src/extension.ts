@@ -90,7 +90,10 @@ export async function activate(context: ExtensionContext) {
     const clearIndexCacheCommand = commands.registerCommand("scalameta.clearIndexCache", async () => {
       return client.sendRequest(ExecuteCommandRequest.type, { command: "clearIndexCache" });
     });
-    context.subscriptions.push(clearIndexCacheCommand);
+    const resetPresentationCompiler = commands.registerCommand("scalameta.resetPresentationCompiler", async () => {
+      return client.sendRequest(ExecuteCommandRequest.type, { command: "resetPresentationCompiler" });
+    });
+    context.subscriptions.push(clearIndexCacheCommand, resetPresentationCompiler);
   });
 
   context.subscriptions.push(client.start(), restartServerCommand);

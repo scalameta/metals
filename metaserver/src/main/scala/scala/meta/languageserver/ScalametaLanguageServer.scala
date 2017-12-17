@@ -314,6 +314,8 @@ class ScalametaLanguageServer(
           logger.info("Clearing the index cache")
           ScalametaLanguageServer.clearCacheDirectory()
         case ResetPresentationCompiler =>
+          logger.info("Resetting all compiler instances")
+          scalac.resetCompilers()
       }
   }
 
