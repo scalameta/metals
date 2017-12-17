@@ -16,10 +16,10 @@ object DocumentHighlightProvider extends LazyLogging {
   ): DocumentHighlightResult = {
     logger.info(s"Document highlight in $uri")
     val locations = for {
-      name <- symbolIndex
-        .resolveName(uri, position.line, position.character)
+      symbol <- symbolIndex
+        .findSymbol(uri, position.line, position.character)
         .toList
-      data <- symbolIndex.symbolIndexer.get(name.symbol).toList
+      data <- symbolIndex.referencesData(symbol)
       _ = logger.info(s"Highlighting symbol `${data.name}: ${data.signature}`")
       pos <- data.referencePositions(withDefinition = true)
       if pos.uri == uri.value

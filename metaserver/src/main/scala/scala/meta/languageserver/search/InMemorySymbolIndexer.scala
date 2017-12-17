@@ -10,7 +10,7 @@ import scala.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.semanticdb.Symbol
 
-class TrieMapSymbolIndexer(
+class InMemorySymbolIndexer(
     // simplest thing I could think of to get something off the ground.
     // we may want to consider using a proper key/value store instead.
     symbols: collection.concurrent.Map[String, AtomicReference[SymbolData]] =

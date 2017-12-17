@@ -9,6 +9,7 @@ import scala.meta.languageserver.internal.BuildInfo
 import scala.meta.languageserver.ScalametaLanguageServer
 import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.Uri
+import scala.meta.languageserver.search.InMemorySymbolIndex
 import scala.meta.languageserver.search.InverseSymbolIndexer
 import scala.meta.languageserver.search.SymbolIndex
 import scala.{meta => m}
@@ -80,8 +81,9 @@ object SymbolIndexTest extends MegaSuite {
           )
         )
       assertNoDiff(symbol.syntax, expected)
-      val symbolData = index.symbolIndexer
-        .get(symbol)
+      val symbolData = index
+        .referencesData(symbol)
+        .headOption
         .getOrElse(
           fail(s"Symbol ${symbol} is not found in the index. ${reminderMsg}")
         )
@@ -220,22 +222,27 @@ object SymbolIndexTest extends MegaSuite {
         }
         m.Database(slimDocuments)
       }
-      val reconstructedDatabase = InverseSymbolIndexer.reconstructDatabase(
-        cwd,
-        index.documentIndex,
-        index.symbolIndexer.allSymbols
-      )
-      val filenames = reconstructedDatabase.documents.toIterator.map { d =>
-        Paths.get(d.input.syntax).getFileName.toString
-      }.toList
-      assert(filenames.nonEmpty)
-      assert(
-        filenames == List(
-          "User.scala",
-          "UserTest.scala"
-        )
-      )
-      assertNoDiff(reconstructedDatabase.syntax, originalDatabase.syntax)
+      index match {
+        case index: InMemorySymbolIndex =>
+          val reconstructedDatabase = InverseSymbolIndexer.reconstructDatabase(
+            cwd,
+            index.documentIndex,
+            index.symbolIndexer.allSymbols
+          )
+          val filenames = reconstructedDatabase.documents.toIterator.map { d =>
+            Paths.get(d.input.syntax).getFileName.toString
+          }.toList
+          assert(filenames.nonEmpty)
+          assert(
+            filenames == List(
+              "User.scala",
+              "UserTest.scala"
+            )
+          )
+          assertNoDiff(reconstructedDatabase.syntax, originalDatabase.syntax)
+        case _ =>
+          fail(s"Unsupported index ${index.getClass}")
+      }
     }
   }
 
