@@ -309,12 +309,12 @@ class ScalametaLanguageServer(
     import WorkspaceCommand._
     WorkspaceCommand
       .withNameOption(request.params.command)
-      .map {
+      .fold(logger.error(s"Unknown command ${request.params.command}")) {
         case ClearIndexCache =>
           logger.info("Clearing the index cache")
           ScalametaLanguageServer.clearCacheDirectory()
+        case ResetPresentationCompiler =>
       }
-      .getOrElse(logger.error(s"Unknown command ${request.params.command}"))
   }
 
   override def onChangeTextDocument(

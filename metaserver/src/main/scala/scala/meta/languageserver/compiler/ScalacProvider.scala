@@ -13,6 +13,7 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.types.TextDocumentIdentifier
 import langserver.types.VersionedTextDocumentIdentifier
 import org.langmeta.inputs.Input
+import org.langmeta.io.AbsolutePath
 
 /** Responsible for keeping fresh scalac global instances. */
 class ScalacProvider(
@@ -29,12 +30,30 @@ class ScalacProvider(
     getCompiler(Uri(td.uri))
 
   def getCompiler(uri: Uri): Option[Global] = {
-    compilerByPath.get(uri).map { compiler =>
-      compiler.reporter.reset()
-      compiler
-    }
+    compilerByPath
+      .get(uri)
+      // Looking up by sourceDirectory alone is not enough since
+      // in sbt it's possible to `sources += file("blah")`, which would
+      // not be respected if we only went by directories.
+      .orElse(compilerBySourceDirectory(uri))
+      .map { compiler =>
+        compiler.reporter.reset()
+        compiler
+      }
   }
 
+  def compilerBySourceDirectory(uri: Uri): Option[Global] = {
+    val path = uri.toAbsolutePath.toNIO
+    compilerByConfigOrigin.values.collectFirst {
+      case (config, global)
+          if config.sourceDirectories.exists(
+            dir => path.startsWith(dir.toNIO)
+          ) =>
+        global
+    }
+  }
+  private val compilerByConfigOrigin =
+    mutable.Map.empty[AbsolutePath, (CompilerConfig, Global)]
   private val compilerByPath = mutable.Map.empty[Uri, Global]
   def loadNewCompilerGlobals(
       config: CompilerConfig
@@ -42,11 +61,14 @@ class ScalacProvider(
     logger.info(s"Loading new compiler from config $config")
     val compiler =
       ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
+    compilerByConfigOrigin(config.origin) = config -> compiler
     config.sources.foreach { path =>
       compilerByPath(Uri(path)) = compiler
     }
     Effects.InstallPresentationCompiler
   }
+
+  def resetCompilers(): Unit = {}
 
 }
 

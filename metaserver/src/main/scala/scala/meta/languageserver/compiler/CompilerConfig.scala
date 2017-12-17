@@ -6,7 +6,6 @@ import java.nio.file.Paths
 import java.util.Properties
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
-import org.langmeta.io.Classpath
 
 /**
  * Configuration to load up a presentation compiler.
@@ -16,6 +15,8 @@ import org.langmeta.io.Classpath
  * CompilerConfig.
  *
  * @param sources list of source files for this project
+ * @param unmanagedSourceDirectories list of directories that are manually edited, not auto-generated
+ * @param managedSourceDirectories list of directories that contain auto-generated code
  * @param scalacOptions space separated list of flags to pass to the Scala compiler
  * @param dependencyClasspath File.pathSeparated list of *.jar and classDirectories.
  *                  Includes both dependencyClasspath and classDirectory.
@@ -23,21 +24,28 @@ import org.langmeta.io.Classpath
  *                       for this project.
  * @param sourceJars File.pathSeparated list of *-sources.jar from the
  *                   dependencyClasspath.
+ * @param origin Path to this .compilerconfig file.
  */
 case class CompilerConfig(
     sources: List[AbsolutePath],
+    unmanagedSourceDirectories: List[AbsolutePath],
+    managedSourceDirectories: List[AbsolutePath],
     scalacOptions: List[String],
     classDirectory: AbsolutePath,
     dependencyClasspath: List[AbsolutePath],
-    sourceJars: List[AbsolutePath]
+    sourceJars: List[AbsolutePath],
+    origin: AbsolutePath
 ) {
+  lazy val sourceDirectories: List[AbsolutePath] =
+    unmanagedSourceDirectories ++ managedSourceDirectories
   override def toString: String =
     s"CompilerConfig(" +
       s"sources={+${sources.length}}, " +
       s"scalacOptions=${scalacOptions.mkString(" ")}, " +
       s"dependencyClasspath={+${dependencyClasspath.length}}, " +
       s"classDirectory=$classDirectory, " +
-      s"sourceJars={+${sourceJars.length}})"
+      s"sourceJars={+${sourceJars.length}}, " +
+      s"origin=$origin)"
 
   def classpath: String =
     (classDirectory :: dependencyClasspath).mkString(File.pathSeparator)
@@ -59,32 +67,44 @@ object CompilerConfig extends LazyLogging {
     try {
       val props = new Properties()
       props.load(input)
-      fromProperties(props)
+      fromProperties(props, path)
     } finally input.close()
   }
 
   def fromProperties(
-      props: Properties
+      props: Properties,
+      origin: AbsolutePath
   )(implicit cwd: AbsolutePath): CompilerConfig = {
-    val sources = props
-      .getProperty("sources")
-      .split(File.pathSeparator)
-      .iterator
-      .map(AbsolutePath(_))
-      .toList
-    val scalacOptions =
-      props.getProperty("scalacOptions").split(" ").toList
-    val dependencyClasspath =
-      Classpath(props.getProperty("dependencyClasspath")).shallow
-    val sourceJars = Classpath(props.getProperty("sourceJars")).shallow
-    val classDirectory =
-      AbsolutePath(props.getProperty("classDirectory"))
+
+    def getPaths(implicit name: sourcecode.Name): List[AbsolutePath] = {
+      Option(props.getProperty(name.value)) match {
+        case None =>
+          logger.warn(s"$origin: Missing key '${name.value}'")
+          Nil
+        case Some(paths) =>
+          paths
+            .split(File.pathSeparator)
+            .iterator
+            .map(AbsolutePath(_))
+            .toList
+      }
+    }
+    val sources = getPaths
+    val unmanagedSourceDirectories = getPaths
+    val managedSourceDirectories = getPaths
+    val scalacOptions = props.getProperty("scalacOptions").split(" ").toList
+    val dependencyClasspath = getPaths
+    val sourceJars = getPaths
+    val classDirectory = AbsolutePath(props.getProperty("classDirectory"))
     CompilerConfig(
       sources,
+      unmanagedSourceDirectories,
+      managedSourceDirectories,
       scalacOptions,
       classDirectory,
       dependencyClasspath,
-      sourceJars
+      sourceJars,
+      origin,
     )
   }
 }
