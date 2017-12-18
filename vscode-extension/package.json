@@ -22,6 +22,10 @@
             "command": "scalameta.clearIndexCache",
             "category": "Scalameta Language Server",
             "title": "Clear index cache"
+        }, {
+            "command": "scalameta.resetPresentationCompiler",
+            "category": "Scalameta Language Server",
+            "title": "Reset presentation compilers"
         }]
     },
     "main": "./out/extension",

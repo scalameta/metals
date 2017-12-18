@@ -22,22 +22,32 @@ object ScalametaLanguageServerPlugin extends AutoPlugin {
         scalametaCompilerConfig := {
           val props = new java.util.Properties()
           props.setProperty(
-            "scalacOptions",
-            scalacOptions.value.mkString(" ")
+            "sources",
+            sources.value.distinct.mkString(File.pathSeparator)
           )
           props.setProperty(
-            "dependencyClasspath",
-            dependencyClasspath.value
-              .map(_.data.toString)
+            "unmanagedSourceDirectories",
+            unmanagedSourceDirectories.value.distinct
               .mkString(File.pathSeparator)
+          )
+          props.setProperty(
+            "managedSourceDirectories",
+            managedSourceDirectories.value.distinct
+              .mkString(File.pathSeparator)
+          )
+          props.setProperty(
+            "scalacOptions",
+            scalacOptions.value.mkString(" ")
           )
           props.setProperty(
             "classDirectory",
             classDirectory.value.getAbsolutePath
           )
           props.setProperty(
-            "sources",
-            sources.value.distinct.mkString(File.pathSeparator)
+            "dependencyClasspath",
+            dependencyClasspath.value
+              .map(_.data.toString)
+              .mkString(File.pathSeparator)
           )
           val sourceJars = for {
             configurationReport <- updateClassifiers.value.configurations
