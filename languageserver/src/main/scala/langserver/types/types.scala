@@ -176,6 +176,9 @@ object SymbolInformation {
  * The parameters of a [WorkspaceSymbolRequest](#WorkspaceSymbolRequest).
  */
 case class WorkspaceSymbolParams(query: String)
+object WorkspaceSymbolParams {
+  implicit val format: OFormat[WorkspaceSymbolParams] = Json.format[WorkspaceSymbolParams]
+}
 
 case class CodeActionContext(diagnostics: Seq[Diagnostic])
 

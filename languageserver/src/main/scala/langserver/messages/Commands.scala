@@ -200,6 +200,7 @@ case class TextDocumentDocumentHighlightRequest(params: TextDocumentPositionPara
 case class TextDocumentHoverRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentFormattingRequest(params: DocumentFormattingParams) extends ServerCommand
 case class WorkspaceExecuteCommandRequest(params: WorkspaceExecuteCommandParams) extends ServerCommand
+case class WorkspaceSymbolRequest(params: WorkspaceSymbolParams) extends ServerCommand
 
 case class Hover(contents: Seq[MarkedString], range: Option[Range]) extends ResultResponse
 object Hover {
@@ -222,7 +223,8 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
     "textDocument/hover" -> valueFormat(TextDocumentHoverRequest)(_.params),
     "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams],
     "textDocument/formatting" -> valueFormat(TextDocumentFormattingRequest)(_.params),
-    "workspace/executeCommand" -> valueFormat(WorkspaceExecuteCommandRequest)(_.params)
+    "workspace/executeCommand" -> valueFormat(WorkspaceExecuteCommandRequest)(_.params),
+    "workspace/symbol" -> valueFormat(WorkspaceSymbolRequest)(_.params),
   )
 
   // NOTE: this is a workaround to read `shutdown` request which doesn't have parameters (scala-json-rpc requires parameters for all requests)
@@ -304,9 +306,13 @@ case class DocumentFormattingResult(params: Seq[TextEdit]) extends ResultRespons
 case class SignatureHelpResult(signatures: Seq[SignatureInformation],
                                activeSignature: Option[Int],
                                activeParameter: Option[Int]) extends ResultResponse
-case object ExecuteCommandResult extends ResultResponse
 object SignatureHelpResult {
   implicit val format: OFormat[SignatureHelpResult] = Json.format[SignatureHelpResult]
+}
+case object ExecuteCommandResult extends ResultResponse
+case class WorkspaceSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
+object WorkspaceSymbolResult {
+  implicit val format: OFormat[WorkspaceSymbolResult] = Json.format[WorkspaceSymbolResult]
 }
 
 object ResultResponse extends ResponseCompanion[Any] {
@@ -323,6 +329,7 @@ object ResultResponse extends ResponseCompanion[Any] {
     "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
     "textDocument/formatting" -> valueFormat(DocumentFormattingResult)(_.params),
     "workspace/executeCommand" -> emptyFormat[ExecuteCommandResult.type],
+    "workspace/symbol" -> valueFormat(WorkspaceSymbolResult.apply)(_.params),
     "shutdown" -> ShutdownResult.format
   )
 }
