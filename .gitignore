@@ -22,4 +22,6 @@ project/plugins/project/
 .ensime_cache/
 .ensime
 
-.metaserver
+.metaserver/
+
+.vscode/

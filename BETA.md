@@ -32,14 +32,24 @@ From the repo root run `sbt publishLocal`
 These steps are required on each project.
 
 ## Step 1 - add semanticdb-scalac compiler plugin to your project
-Some features of the server rely on the artifacts produced by [`semanticdb-scalac`](http://scalameta.org/tutorial/#semanticdb-scalac).
-Enable it in your sbt build by:
+Some features of the server rely on the artifacts produced by the [`semanticdb-scalac`](http://scalameta.org/tutorial/#semanticdb-scalac) compiler plugin.
+There are two alternative ways to install `semanticdb-scalac`.
 
-- adding the setting
+The first option is to enable `semanticdb-scalac` permanently for your project in `build.sbt` with:
 
-    `addCompilerPlugin("org.scalameta" % "semanticdb-scalac" % "2.1.2" cross CrossVersion.full)`
+```scala
+libraryDependencies += compilerPlugin("org.scalameta" % "semanticdb-scalac" % "2.1.2" cross CrossVersion.full)
+scalacOptions += "-Yrangepos"
+```
 
-- adding the `-Yrangepos` scalac flag (e.g. `scalacOptions += "-Yrangepos"`)
+The second option is to enable `semanticdb-scalac` only for an active sbt session by running `semanticdbEnable` from the sbt shell.
+```scala
+$ sbt
+> semanticdbEnable // automatically runs libraryDependencies += compilerPlugin(...)
+> compile // re-compile project with semanticdb-scalac compiler plugin
+> ...
+```
+As soon as you exit the sbt shell you need to re-run `semanticdbEnable` next time you open sbt.
 
 ## Step 2 - produce the build metadata
 In your project of choice, open `sbt` and run `*:scalametaEnableCompletions`.
