@@ -27,7 +27,13 @@ object ScalaMtags {
             term(t.name, PACKAGEOBJECT);
             term("package", t.name.pos, OBJECT);
             continue()
-          case t: Defn.Class => tpe(t.name, CLASS); continue()
+          case t: Defn.Class =>
+            tpe(t.name, CLASS)
+            for {
+              params <- t.ctor.paramss
+              param <- params
+            } withOwner() { super.param(param.name, VAL) }
+            continue()
           case t: Defn.Trait => tpe(t.name, TRAIT); continue()
           case t: Defn.Object => term(t.name, OBJECT); continue()
           case t: Defn.Type => tpe(t.name, TYPE); stop()
