@@ -16,6 +16,7 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
 import langserver.types.SymbolInformation
 import langserver.types.SymbolKind
+import me.xdrop.fuzzywuzzy.FuzzySearch
 import org.langmeta.inputs.Input
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.internal.semanticdb.schema.ResolvedName
@@ -200,8 +201,14 @@ class InMemorySymbolIndex(
       }
       .collect {
         case i.SymbolData(sym, Some(pos), _, flags, name, _)
-            if name.startsWith(query) &&
-              hasOneOfFlag(flags, CLASS | TRAIT | OBJECT) =>
+            if hasOneOfFlag(flags, CLASS | TRAIT | OBJECT) && {
+              // NOTE(olafur) fuzzy-wuzzy doesn't seem to do a great job
+              // for camelcase searches like "DocSymPr" when looking for
+              // "DocumentSymbolProvider. We should try and port something
+              // like https://blog.forrestthewoods.com/reverse-engineering-sublime-text-s-fuzzy-match-4cffeed33fdb
+              // instead.
+              FuzzySearch.partialRatio(query, name) >= 90
+            } =>
           val symbolKind =
             if (hasOneOfFlag(flags, CLASS)) SymbolKind.Class
             else if (hasOneOfFlag(flags, TRAIT)) SymbolKind.Interface
