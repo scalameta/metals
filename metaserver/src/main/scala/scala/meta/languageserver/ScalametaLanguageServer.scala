@@ -326,18 +326,7 @@ class ScalametaLanguageServer(
       request: WorkspaceSymbolRequest
   ): Task[WorkspaceSymbolResult] = Task {
     logger.info(s"Workspace $request")
-    WorkspaceSymbolResult(
-      SymbolInformation(
-        name = "Banana",
-        SymbolKind.Array,
-        Location(
-          "file:///Users/ollie/dev/language-server/build.sbt",
-          Range(Position(0, 0), Position(0, 0))
-        ),
-        None
-      ) :: Nil
-    )
-
+    WorkspaceSymbolResult(symbolIndex.workspaceSymbols(request.params.query))
   }
 
   override def onChangeTextDocument(

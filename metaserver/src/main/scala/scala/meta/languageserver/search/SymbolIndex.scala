@@ -6,6 +6,7 @@ import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.index.SymbolData
 import scala.meta.languageserver.Uri
 import langserver.core.Notifications
+import langserver.types.SymbolInformation
 import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Symbol
@@ -20,6 +21,9 @@ trait SymbolIndex {
 
   /** Returns symbol references data from the index taking into account relevant alternatives */
   def referencesData(symbol: Symbol): List[SymbolData]
+
+  /** Returns symbol definitions in this workspace */
+  def workspaceSymbols(query: String): List[SymbolInformation]
 
   def indexDependencyClasspath(
       sourceJars: List[AbsolutePath]

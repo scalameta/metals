@@ -11,9 +11,11 @@ import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.storage.LevelDBMap
 import scala.meta.languageserver.{index => i}
-import `scala`.meta.languageserver.index.SymbolData
+import scala.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
+import langserver.types.SymbolInformation
+import langserver.types.SymbolKind
 import org.langmeta.inputs.Input
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.internal.semanticdb.schema.ResolvedName
@@ -185,4 +187,32 @@ class InMemorySymbolIndex(
     Effects.IndexSemanticdb
   }
 
+  private def hasOneOfFlag(flags: Long, flag: Long): Boolean =
+    (flags & flag) != 0L
+
+  override def workspaceSymbols(query: String): List[SymbolInformation] = {
+    import scala.meta.semanticdb._
+    import scala.meta.languageserver.ScalametaEnrichments._
+    val result = symbolIndexer.allSymbols.toIterator
+      .withFilter { symbol =>
+        symbol.definition.isDefined && symbol.definition.get.uri
+          .startsWith("file:")
+      }
+      .collect {
+        case i.SymbolData(sym, Some(pos), _, flags, name, _)
+            if name.startsWith(query) &&
+              hasOneOfFlag(flags, CLASS | TRAIT | OBJECT) =>
+          val symbolKind =
+            if (hasOneOfFlag(flags, CLASS)) SymbolKind.Class
+            else if (hasOneOfFlag(flags, TRAIT)) SymbolKind.Interface
+            else SymbolKind.Module
+          SymbolInformation(
+            name,
+            symbolKind,
+            pos.toLocation,
+            Some(sym.stripPrefix("_root_."))
+          )
+      }
+    result.toList
+  }
 }
