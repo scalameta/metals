@@ -151,8 +151,8 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |
       |Symbols:
       |_root_.A# => class A
-      |_root_.A#(a) => val a
-      |_root_.A#(b) => val b
+      |_root_.A#(a) => val param a
+      |_root_.A#(b) => val param b
       |""".stripMargin
   )
 }
