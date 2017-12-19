@@ -55,6 +55,8 @@ class ScalacProvider(
   private val compilerByConfigOrigin =
     mutable.Map.empty[AbsolutePath, (CompilerConfig, Global)]
   private val compilerByPath = mutable.Map.empty[Uri, Global]
+  def allCompilerConfigs: Iterable[CompilerConfig] =
+    compilerByConfigOrigin.values.map(_._1)
   def loadNewCompilerGlobals(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {

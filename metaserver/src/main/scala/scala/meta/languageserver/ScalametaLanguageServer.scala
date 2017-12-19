@@ -316,6 +316,10 @@ class ScalametaLanguageServer(
         case ClearIndexCache =>
           logger.info("Clearing the index cache")
           ScalametaLanguageServer.clearCacheDirectory()
+          symbolIndex.clearIndex()
+          scalac.allCompilerConfigs.foreach(
+            config => symbolIndex.indexDependencyClasspath(config.sourceJars)
+          )
         case ResetPresentationCompiler =>
           logger.info("Resetting all compiler instances")
           scalac.resetCompilers()

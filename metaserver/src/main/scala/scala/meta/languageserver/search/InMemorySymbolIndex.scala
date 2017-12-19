@@ -215,4 +215,7 @@ class InMemorySymbolIndex(
       }
     result.toList
   }
+
+  def clearIndex(): Unit = indexedJars.clear()
+
 }
