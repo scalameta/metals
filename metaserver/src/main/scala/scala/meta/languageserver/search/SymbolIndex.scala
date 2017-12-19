@@ -31,6 +31,10 @@ trait SymbolIndex {
 
   /** Register this Database to symbol indexer. */
   def indexDatabase(document: s.Database): Effects.IndexSemanticdb
+
+  /** Remove any persisted files from index returning to a clean start */
+  def clearIndex(): Unit
+
 }
 
 object SymbolIndex {

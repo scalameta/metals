@@ -136,4 +136,23 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |_root_.Tpe#N# => type N
     """.stripMargin
   )
+
+  check(
+    "class-field.scala",
+    "case class A(a: Int, b: String)",
+    """
+      |Language:
+      |Scala212
+      |
+      |Names:
+      |[11..12): A <= _root_.A#
+      |[13..14): a <= _root_.A#(a)
+      |[21..22): b <= _root_.A#(b)
+      |
+      |Symbols:
+      |_root_.A# => class A
+      |_root_.A#(a) => val param a
+      |_root_.A#(b) => val param b
+      |""".stripMargin
+  )
 }

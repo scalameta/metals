@@ -3,7 +3,6 @@ package scala.meta.languageserver.mtags
 import scala.meta.Name
 import scala.meta.Term
 import scala.meta.PACKAGE
-import scala.meta.Type
 import scala.meta.languageserver.ScalametaEnrichments._
 import org.langmeta.internal.semanticdb.schema.Denotation
 import org.langmeta.internal.semanticdb.schema.ResolvedName
@@ -37,9 +36,11 @@ trait MtagsIndexer {
     addSignature(Signature.Term(name), pos, flags)
   def term(name: Term.Name, flags: Long): Unit =
     addSignature(Signature.Term(name.value), name.pos, flags)
+  def param(name: Name, flags: Long): Unit =
+    addSignature(Signature.TermParameter(name.value), name.pos, flags)
   def tpe(name: String, pos: m.Position, flags: Long): Unit =
     addSignature(Signature.Type(name), pos, flags)
-  def tpe(name: Type.Name, flags: Long): Unit =
+  def tpe(name: Name, flags: Long): Unit =
     addSignature(Signature.Type(name.value), name.pos, flags)
   def pkg(ref: Term): Unit = ref match {
     case Name(name) =>
