@@ -116,6 +116,7 @@ lazy val metaserver = project
     libraryDependencies ++= List(
       "io.github.soc" % "directories" % "5",
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
+      "me.xdrop" % "fuzzywuzzy" % "1.1.9",
       "com.lihaoyi" %% "pprint" % "0.5.3",
       "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,

@@ -44,6 +44,8 @@ import langserver.messages.TextDocumentReferencesRequest
 import langserver.messages.TextDocumentSignatureHelpRequest
 import langserver.messages.WorkspaceExecuteCommandRequest
 import langserver.messages.ExecuteCommandOptions
+import langserver.messages.WorkspaceSymbolRequest
+import langserver.messages.WorkspaceSymbolResult
 import langserver.types._
 import monix.eval.Task
 import monix.execution.Cancelable
@@ -171,7 +173,8 @@ class ScalametaLanguageServer(
       documentFormattingProvider = true,
       hoverProvider = true,
       executeCommandProvider =
-        ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName))
+        ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName)),
+      workspaceSymbolProvider = true
     )
     InitializeResult(capabilities)
   }
@@ -317,6 +320,13 @@ class ScalametaLanguageServer(
           logger.info("Resetting all compiler instances")
           scalac.resetCompilers()
       }
+  }
+
+  override def workspaceSymbol(
+      request: WorkspaceSymbolRequest
+  ): Task[WorkspaceSymbolResult] = Task {
+    logger.info(s"Workspace $request")
+    WorkspaceSymbolResult(symbolIndex.workspaceSymbols(request.params.query))
   }
 
   override def onChangeTextDocument(

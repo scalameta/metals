@@ -207,6 +207,20 @@ object SymbolIndexTest extends MegaSuite {
         )
     }
 
+    "workspace" - {
+      def checkQuery(
+          expected: String*
+      )(implicit path: utest.framework.TestPath): Unit = {
+        while (s.tickOne()) ()
+        val result = server.symbolIndex.workspaceSymbols(path.value.last)
+        val obtained = result.toIterator.map(_.name).mkString("\n")
+        assertNoDiff(obtained, expected.mkString("\n"))
+      }
+      "EmptyResult" - checkQuery()
+      "User" - checkQuery("User", "UserTest")
+      "Test" - checkQuery("UserTest")
+    }
+
     "bijection" - {
       val target = cwd.resolve("target").resolve("scala-2.12")
       val originalDatabase = {

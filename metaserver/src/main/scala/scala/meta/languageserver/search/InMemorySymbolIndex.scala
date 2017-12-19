@@ -4,22 +4,25 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.meta.languageserver.Buffers
 import scala.meta.languageserver.Effects
 import scala.meta.languageserver.ScalametaEnrichments._
-import scala.meta.languageserver.ServerConfig
-import scala.meta.languageserver.compiler.CompilerConfig
-import scala.meta.languageserver.mtags.Mtags
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
+import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.Uri
+import scala.meta.languageserver.compiler.CompilerConfig
+import scala.meta.languageserver.index.SymbolData
+import scala.meta.languageserver.mtags.Mtags
 import scala.meta.languageserver.storage.LevelDBMap
 import scala.meta.languageserver.{index => i}
-import `scala`.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
+import langserver.types.SymbolInformation
+import me.xdrop.fuzzywuzzy.FuzzySearch
 import org.langmeta.inputs.Input
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.internal.semanticdb.schema.ResolvedName
 import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
+import org.langmeta.semanticdb.SemanticdbEnrichments._
 import org.langmeta.semanticdb.Symbol
 
 class InMemorySymbolIndex(
@@ -185,4 +188,31 @@ class InMemorySymbolIndex(
     Effects.IndexSemanticdb
   }
 
+  override def workspaceSymbols(query: String): List[SymbolInformation] = {
+    import scala.meta.languageserver.ScalametaEnrichments._
+    import scala.meta.semanticdb._
+    val result = symbolIndexer.allSymbols.toIterator
+      .withFilter { symbol =>
+        symbol.definition.isDefined && symbol.definition.get.uri
+          .startsWith("file:")
+      }
+      .collect {
+        case i.SymbolData(sym, Some(pos), _, flags, name, _)
+            if flags.hasOneOfFlags(CLASS | TRAIT | OBJECT) && {
+              // NOTE(olafur) fuzzy-wuzzy doesn't seem to do a great job
+              // for camelcase searches like "DocSymPr" when looking for
+              // "DocumentSymbolProvider. We should try and port something
+              // like https://blog.forrestthewoods.com/reverse-engineering-sublime-text-s-fuzzy-match-4cffeed33fdb
+              // instead.
+              FuzzySearch.partialRatio(query, name) >= 90
+            } =>
+          SymbolInformation(
+            name,
+            flags.toSymbolKind,
+            pos.toLocation,
+            Some(sym.stripPrefix("_root_."))
+          )
+      }
+    result.toList
+  }
 }
