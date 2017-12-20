@@ -6,8 +6,24 @@ import scala.meta.languageserver.{index => i}
 import langserver.{types => l}
 
 object InputEnrichments {
+  implicit class XtensionPositionOffset(val pos: Position) extends AnyVal {
+    def caret: String = pos match {
+      case Position.None => "<none>"
+      case _ => " " * pos.startColumn + "^"
+    }
+    def path: String = pos match {
+      case Position.None => "<none>"
+      case _ => s"${pos.input.syntax}:${pos.startLine + 1}:${pos.startColumn}"
+    }
+    def lineContent: String = pos match {
+      case r: Position.Range =>
+        val start = pos.start - pos.startColumn
+        val end = pos.input.lineToOffset(pos.startLine + 1) - 1
+        r.copy(start = start, end = end).text
+      case _ => "<none>"
+    }
+  }
   implicit class XtensionInputOffset(val input: Input) extends AnyVal {
-
     def toIndexRange(start: Int, end: Int): i.Range = {
       val pos = Position.Range(input, start, end)
       i.Range(

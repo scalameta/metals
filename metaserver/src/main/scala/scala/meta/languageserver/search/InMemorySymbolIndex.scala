@@ -17,6 +17,7 @@ import langserver.core.Notifications
 import langserver.types.SymbolInformation
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import org.langmeta.inputs.Input
+import org.langmeta.inputs.Position
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.internal.semanticdb.schema.ResolvedName
 import org.langmeta.internal.semanticdb.{schema => s}
@@ -47,14 +48,16 @@ class InMemorySymbolIndex(
     for {
       document <- documentIndex.getDocument(uri)
       _ = logger.info(s"Found document for $uri")
-      input = Input.VirtualFile(document.filename, document.contents)
+      original = Input.VirtualFile(document.filename, document.contents)
+      revised = uri.toInput(buffers)
+      originalPosition <- findOriginalPosition(original, revised, line, column)
       name <- document.names.collectFirst {
         case name @ ResolvedName(Some(position), symbol, _) if {
-              val range = input.toIndexRange(position.start, position.end)
+              val range = original.toIndexRange(position.start, position.end)
               logger.trace(
                 s"${document.filename.replaceFirst(".*/", "")} [${range.pretty}] ${symbol}"
               )
-              range.contains(line, column)
+              range.contains(originalPosition)
             } =>
           name
       }
@@ -217,5 +220,34 @@ class InMemorySymbolIndex(
   }
 
   def clearIndex(): Unit = indexedJars.clear()
+
+  /** Returns the matching position in the original document.
+   *
+   * Falls back to TokenEditDistance in case the current open buffer
+   * is off-sync with the latest saved semanticdb document.
+   */
+  private def findOriginalPosition(
+      original: Input.VirtualFile,
+      revised: Input.VirtualFile,
+      line: Int,
+      column: Int
+  ): Option[Position] = {
+    if (original.value == revised.value) {
+      // Minor optimization, skip edit-distance when original is synced
+      Some(original.toPosition(line, column))
+    } else {
+      for {
+        edit <- TokenEditDistance(original, revised)
+        revisedOffset = revised.toOffset(line, column)
+        originalToken <- edit.toOriginalOffset(revisedOffset)
+        originalOffset = originalToken.start
+        originalPosition = Position.Range(
+          original,
+          originalOffset,
+          originalOffset
+        )
+      } yield originalPosition
+    }
+  }
 
 }

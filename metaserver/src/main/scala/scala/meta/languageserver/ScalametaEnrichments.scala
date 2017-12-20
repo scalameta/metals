@@ -121,6 +121,12 @@ object ScalametaEnrichments {
       l.Position(line = range.startLine, character = range.startColumn),
       l.Position(line = range.endLine, character = range.endColumn)
     )
+    def contains(pos: m.Position): Boolean = {
+      range.startLine <= pos.startLine &&
+      range.startColumn <= pos.startColumn &&
+      range.endLine >= pos.endLine &&
+      range.endColumn >= pos.endColumn
+    }
     def contains(line: Int, column: Int): Boolean = {
       range.startLine <= line &&
       range.startColumn <= column &&
@@ -135,6 +141,12 @@ object ScalametaEnrichments {
     def toLanguageServerUri: String = "file:" + path.toString()
   }
   implicit class XtensionPositionRangeLSP(val pos: m.Position) extends AnyVal {
+    def contains(offset: Int): Boolean =
+      if (pos.start == pos.end) pos.end == offset
+      else {
+        pos.start <= offset &&
+        pos.end > offset
+      }
     def location: String =
       s"${pos.input.syntax}:${pos.startLine}:${pos.startColumn}"
     def toRange: l.Range = l.Range(
