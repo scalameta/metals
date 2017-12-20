@@ -1,5 +1,6 @@
 package scala.meta.languageserver.search
 
+import scala.annotation.tailrec
 import scala.meta._
 import scala.meta.languageserver.ScalametaEnrichments._
 import com.typesafe.scalalogging.LazyLogging
@@ -52,12 +53,12 @@ object TokenEditDistance extends LazyLogging {
   def apply(original: Tokens, revised: Tokens): TokenEditDistance = {
     val buffer = Array.newBuilder[MatchingToken]
     buffer.sizeHint(original.length)
+    @tailrec
     def loop(
         i: Int,
         j: Int,
         ds: List[Delta[Token]]
     ): Unit = {
-      def increment(): Unit = loop(i + 1, j + 1, ds)
       val isDone: Boolean =
         i >= original.length ||
           j >= revised.length
@@ -67,10 +68,11 @@ object TokenEditDistance extends LazyLogging {
         val r = revised(j)
         if (TokenEqualizer.equals(o, r)) {
           buffer += MatchingToken(o, r)
-          increment()
+          loop(i + 1, j + 1, ds)
         } else {
           ds match {
-            case Nil => increment()
+            case Nil =>
+              loop(i + 1, j + 1, ds)
             case delta :: tail =>
               loop(
                 i + delta.getOriginal.size(),
