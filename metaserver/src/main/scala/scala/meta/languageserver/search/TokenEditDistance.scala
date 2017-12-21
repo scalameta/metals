@@ -52,7 +52,7 @@ object TokenEditDistance extends LazyLogging {
    */
   def apply(original: Tokens, revised: Tokens): TokenEditDistance = {
     val buffer = Array.newBuilder[MatchingToken]
-    buffer.sizeHint(original.length)
+    buffer.sizeHint(math.max(original.length, revised.length))
     @tailrec
     def loop(
         i: Int,
