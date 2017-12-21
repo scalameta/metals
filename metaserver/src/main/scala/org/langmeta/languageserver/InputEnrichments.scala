@@ -34,6 +34,10 @@ object InputEnrichments {
       )
     }
 
+    /** Returns offset position with end == start == offset */
+    def toOffsetPosition(offset: Int): Position =
+      Position.Range(input, offset, offset)
+
     /** Returns a scala.meta.Position from an index range. */
     def toPosition(range: l.Range): Position = {
       toPosition(

@@ -17,12 +17,7 @@ object DefinitionProvider extends LazyLogging {
       tempSourcesDir: AbsolutePath
   ): DefinitionResult = {
     val locations = for {
-      symbol <- symbolIndex.findSymbol(
-        uri,
-        position.line,
-        position.character
-      )
-      data <- symbolIndex.definitionData(symbol)
+      data <- symbolIndex.findDefinition(uri, position.line, position.character)
       pos <- data.definition
       _ = logger.info(s"Found definition ${pos.pretty} ${data.symbol}")
     } yield pos.toLocation.toNonJar(tempSourcesDir)

@@ -2,8 +2,6 @@ package tests.search
 
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.search.TokenEditDistance
-import org.langmeta.inputs.Input
-import org.langmeta.inputs.Position
 import org.langmeta.languageserver.InputEnrichments._
 import tests.MegaSuite
 
@@ -16,16 +14,13 @@ object TokenEditDistanceTest extends MegaSuite {
       keyword: String = "List"
   ): Unit = {
     test(name) {
-      val input = Input.VirtualFile(name + "-original", original)
       val edit = TokenEditDistance(original, revised).get
       val offset = revised.indexOf(keyword)
       val obtained = edit
-        .toOriginalOffset(offset)
-        .map { originalOffset =>
-          val pos =
-            Position.Range(input, originalOffset.start, originalOffset.end)
-          val reverse = edit.toRevisedPosition(originalOffset.start).get
-          assert(reverse.pos.contains(offset))
+        .toOriginal(offset)
+        .map { pos =>
+          val Right(reverse) = edit.toRevised(pos.start)
+          assert(reverse.contains(offset))
           s"""|${pos.lineContent}
               |${pos.caret}""".stripMargin
         }

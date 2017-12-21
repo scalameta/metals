@@ -43,14 +43,16 @@ class InMemorySymbolIndex(
       uri: Uri,
       line: Int,
       column: Int
-  ): Option[ResolvedName] = {
+  ): Option[(ResolvedName, TokenEditDistance)] = {
     logger.info(s"resolveName at $uri:$line:$column")
     for {
       document <- documentIndex.getDocument(uri)
       _ = logger.info(s"Found document for $uri")
       original = Input.VirtualFile(document.filename, document.contents)
       revised = uri.toInput(buffers)
-      originalPosition <- findOriginalPosition(original, revised, line, column)
+      (originalPosition, edit) <- {
+        findOriginalPosition(original, revised, line, column)
+      }
       name <- document.names.collectFirst {
         case name @ ResolvedName(Some(position), symbol, _) if {
               val range = original.toIndexRange(position.start, position.end)
@@ -61,7 +63,7 @@ class InMemorySymbolIndex(
             } =>
           name
       }
-    } yield name
+    } yield name -> edit
   }
 
   /** Returns a symbol at the given location */
@@ -69,12 +71,12 @@ class InMemorySymbolIndex(
       uri: Uri,
       line: Int,
       column: Int
-  ): Option[Symbol] = {
+  ): Option[(Symbol, TokenEditDistance)] = {
     for {
-      name <- resolveName(uri, line, column)
+      (name, edit) <- resolveName(uri, line, column)
       symbol = Symbol(name.symbol)
       _ = logger.info(s"Matching symbol ${symbol}")
-    } yield symbol
+    } yield symbol -> edit
   }
 
   /** Returns symbol definition data from the index taking into account relevant alternatives */
@@ -231,22 +233,16 @@ class InMemorySymbolIndex(
       revised: Input.VirtualFile,
       line: Int,
       column: Int
-  ): Option[Position] = {
+  ): Option[(Position, TokenEditDistance)] = {
     if (original.value == revised.value) {
       // Minor optimization, skip edit-distance when original is synced
-      Some(original.toPosition(line, column))
+      Some(original.toPosition(line, column) -> TokenEditDistance.empty)
     } else {
       for {
         edit <- TokenEditDistance(original, revised)
         revisedOffset = revised.toOffset(line, column)
-        originalToken <- edit.toOriginalOffset(revisedOffset)
-        originalOffset = originalToken.start
-        originalPosition = Position.Range(
-          original,
-          originalOffset,
-          originalOffset
-        )
-      } yield originalPosition
+        originalPosition <- edit.toOriginal(revisedOffset).right.toOption
+      } yield originalPosition -> edit
     }
   }
 

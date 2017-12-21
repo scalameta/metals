@@ -74,7 +74,7 @@ object SymbolIndexTest extends MegaSuite {
     def assertSymbolFound(line: Int, column: Int)(
         expected: String
     ): Symbol = {
-      val symbol = index
+      val (symbol, _) = index
         .findSymbol(path.UserTestUri, line, column)
         .getOrElse(
           fail(
@@ -114,7 +114,7 @@ object SymbolIndexTest extends MegaSuite {
     )(
         expected: l.Location*
     ): Unit = {
-      val symbol = index
+      val (symbol, _) = index
         .findSymbol(path.UserTestUri, line, column)
         .getOrElse(
           fail(

@@ -1,15 +1,15 @@
 package scala.meta.languageserver
 
+import java.net.URI
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.nio.charset.StandardCharsets
-import java.net.URI
+import scala.meta.languageserver.{index => i}
 import scala.{meta => m}
 import langserver.types.SymbolKind
 import langserver.{types => l}
-import scala.meta.languageserver.{index => i}
-import org.langmeta.io.AbsolutePath
 import org.langmeta.internal.io.FileIO
+import org.langmeta.io.AbsolutePath
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
@@ -141,6 +141,12 @@ object ScalametaEnrichments {
     def toLanguageServerUri: String = "file:" + path.toString()
   }
   implicit class XtensionPositionRangeLSP(val pos: m.Position) extends AnyVal {
+    def toIndexRange: i.Range = i.Range(
+      startLine = pos.startLine,
+      startColumn = pos.startColumn,
+      endLine = pos.endLine,
+      endColumn = pos.endColumn
+    )
     def contains(offset: Int): Boolean =
       if (pos.start == pos.end) pos.end == offset
       else {
@@ -279,17 +285,16 @@ object ScalametaEnrichments {
     }
   }
 
-  implicit class XtensionSymbolData(val symbolData: i.SymbolData)
-      extends AnyVal {
+  implicit class XtensionSymbolData(val data: i.SymbolData) extends AnyVal {
 
     /** Returns reference positions for the given symbol index data
      * @param withDefinition if set to `true` will include symbol definition location
      */
     def referencePositions(withDefinition: Boolean): Set[i.Position] = {
-      val defPosition = if (withDefinition) symbolData.definition else None
+      val defPosition = if (withDefinition) data.definition else None
 
       val refPositions = for {
-        (uri, rangeSet) <- symbolData.references
+        (uri, rangeSet) <- data.references
         range <- rangeSet.ranges
       } yield i.Position(uri, Some(range))
 
