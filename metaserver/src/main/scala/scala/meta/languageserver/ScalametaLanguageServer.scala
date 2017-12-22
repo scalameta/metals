@@ -10,6 +10,7 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.FileVisitResult
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.concurrent.Executors
 import scala.concurrent.duration.FiniteDuration
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
@@ -50,6 +51,7 @@ import langserver.types._
 import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.Scheduler
+import monix.execution.schedulers.SchedulerService
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
 import monix.reactive.Observer
@@ -82,6 +84,11 @@ class ScalametaLanguageServer(
   implicit val cwd: AbsolutePath = config.cwd
   private val tempSourcesDir: AbsolutePath =
     cwd.resolve("target").resolve("sources")
+  // Always run the presentation compiler on the same thread
+  private val presentationCompilerScheduler: SchedulerService =
+    Scheduler(Executors.newFixedThreadPool(1))
+  def withPC[A](f: => A): Task[A] =
+    Task(f).executeOn(presentationCompilerScheduler)
   val (fileSystemSemanticdbSubscriber, fileSystemSemanticdbsPublisher) =
     ScalametaLanguageServer.fileSystemSemanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
@@ -102,7 +109,9 @@ class ScalametaLanguageServer(
     sourceChangePublisher
       .debounce(FiniteDuration(1, "s"))
       .flatMap { input =>
-        Observable.fromIterable(Semanticdbs.toSemanticdb(input, scalac))
+        Observable
+          .fromIterable(Semanticdbs.toSemanticdb(input, scalac))
+          .executeOn(presentationCompilerScheduler)
       }
   val interactiveSchemaSemanticdbs: Observable[schema.Database] =
     interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
@@ -215,7 +224,7 @@ class ScalametaLanguageServer(
 
   override def completion(
       request: TextDocumentCompletionRequest
-  ): Task[CompletionList] = Task {
+  ): Task[CompletionList] = withPC {
     logger.info("completion")
     scalac.getCompiler(request.params.textDocument) match {
       case Some(g) =>
@@ -267,7 +276,7 @@ class ScalametaLanguageServer(
 
   override def hover(
       request: TextDocumentHoverRequest
-  ): Task[Hover] = Task {
+  ): Task[Hover] = withPC {
     scalac.getCompiler(request.params.textDocument) match {
       case Some(g) =>
         HoverProvider.hover(
