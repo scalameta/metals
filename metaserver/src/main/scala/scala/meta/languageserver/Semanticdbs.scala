@@ -6,6 +6,7 @@ import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.CompilerEnrichments._
 import scala.meta.parsers.ParseException
 import scala.meta.semanticdb
+import scala.meta.tokenizers.TokenizeException
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
@@ -38,8 +39,11 @@ object Semanticdbs extends LazyLogging {
       )
     } catch {
       case NonFatal(err) =>
-        if (!err.isInstanceOf[ParseException]) {
-          logger.error(s"Failed to emit semanticdb for ${input.path}", err)
+        err match {
+          case _: ParseException | _: TokenizeException =>
+          // ignore, expected.
+          case _ =>
+            logger.error(s"Failed to emit semanticdb for ${input.path}", err)
         }
         toMessageOnlySemanticdb(input, compiler)
     }

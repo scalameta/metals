@@ -191,7 +191,20 @@ case class ReferenceParams(
   context: ReferenceContext
 )
 
+case class RenameParams(
+  textDocument: TextDocumentIdentifier,
+  position: Position,
+  newName: String
+)
+object RenameParams {
+  implicit val format: OFormat[RenameParams] = Json.format[RenameParams]
+}
+
 case class DocumentSymbolParams(textDocument: TextDocumentIdentifier) extends ServerCommand
+case class TextDocumentRenameRequest(params: RenameParams) extends ServerCommand
+object TextDocumentRenameRequest {
+  implicit val format: OFormat[TextDocumentRenameRequest] = Json.format[TextDocumentRenameRequest]
+}
 case class TextDocumentSignatureHelpRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentCompletionRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentDefinitionRequest(params: TextDocumentPositionParams) extends ServerCommand
@@ -216,6 +229,7 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
   override val CommandFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeParams],
     "textDocument/completion" -> valueFormat(TextDocumentCompletionRequest)(_.params),
+    "textDocument/rename" -> valueFormat(TextDocumentRenameRequest.apply)(_.params),
     "textDocument/signatureHelp" -> valueFormat(TextDocumentSignatureHelpRequest)(_.params),
     "textDocument/definition" -> valueFormat(TextDocumentDefinitionRequest)(_.params),
     "textDocument/references" -> valueFormat(TextDocumentReferencesRequest)(_.params),
@@ -298,6 +312,10 @@ object Notification extends NotificationCompanion[Notification] {
   }
 }
 
+case class RenameResult(params: WorkspaceEdit) extends ResultResponse
+object RenameResult {
+  implicit val format: OFormat[RenameResult] = Json.format[RenameResult]
+}
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
 case class DefinitionResult(params: Seq[Location]) extends ResultResponse
 case class ReferencesResult(params: Seq[Location]) extends ResultResponse
@@ -321,6 +339,7 @@ object ResultResponse extends ResponseCompanion[Any] {
   override val ResponseFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeResult],
     "textDocument/completion" -> Json.format[CompletionList],
+    "textDocument/rename" -> valueFormat(RenameResult.apply)(_.params),
     "textDocument/signatureHelp" -> Json.format[SignatureHelpResult],
     "textDocument/definition" -> valueFormat(DefinitionResult)(_.params),
     "textDocument/references" -> valueFormat(ReferencesResult)(_.params),
@@ -333,3 +352,7 @@ object ResultResponse extends ResponseCompanion[Any] {
     "shutdown" -> ShutdownResult.format
   )
 }
+
+// Errors
+case class InvalidParamsResponseError(message: String) extends Exception(message) with Response
+

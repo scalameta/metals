@@ -22,6 +22,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
       case ("textDocument/formatting", request: TextDocumentFormattingRequest) => formatting(request)
       case ("textDocument/hover", request: TextDocumentHoverRequest) => hover(request)
       case ("textDocument/references", request: TextDocumentReferencesRequest) => references(request)
+      case ("textDocument/rename", request: TextDocumentRenameRequest) => rename(request)
       case ("textDocument/signatureHelp", request: TextDocumentSignatureHelpRequest) => signatureHelp(request)
       case ("workspace/executeCommand", request: WorkspaceExecuteCommandRequest) => executeCommand(request).map(_ => ExecuteCommandResult)
       case ("workspace/symbol", request: WorkspaceSymbolRequest) => workspaceSymbol(request)
@@ -69,6 +70,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
   def formatting(request: TextDocumentFormattingRequest): Task[DocumentFormattingResult] = Task.now(DocumentFormattingResult(Nil))
   def hover(request: TextDocumentHoverRequest): Task[Hover] = Task.now(Hover(Nil, None))
   def references(request: TextDocumentReferencesRequest): Task[ReferencesResult] = Task.now(ReferencesResult(Nil))
+  def rename(request: TextDocumentRenameRequest): Task[RenameResult] = Task.now(RenameResult(WorkspaceEdit(Map.empty)))
   def signatureHelp(request: TextDocumentSignatureHelpRequest): Task[SignatureHelpResult] = Task.now(SignatureHelpResult(Nil, None, None))
 
   // workspace

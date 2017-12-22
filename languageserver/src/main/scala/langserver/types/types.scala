@@ -65,6 +65,9 @@ object TextEdit {
 case class WorkspaceEdit(
   changes: Map[String, Seq[TextEdit]] // uri -> changes
   )
+object WorkspaceEdit {
+  implicit val format: OFormat[WorkspaceEdit] = Json.format[WorkspaceEdit]
+}
 
 case class TextDocumentIdentifier(uri: String)
 object TextDocumentIdentifier { implicit val format: OFormat[TextDocumentIdentifier] = Json.format[TextDocumentIdentifier] }
