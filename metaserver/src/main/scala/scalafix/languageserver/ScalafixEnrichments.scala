@@ -1,15 +1,18 @@
 package scalafix.languageserver
 
 import scala.meta.Tree
+import scala.meta.languageserver.ScalametaEnrichments._
+import scala.{meta => m}
 import scalafix.Rule
+import scalafix.SemanticdbIndex
 import scalafix.internal.config.ScalafixConfig
+import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import scalafix.lint.LintMessage
+import scalafix.lint.LintSeverity
 import scalafix.patch.Patch
 import scalafix.rule.RuleCtx
 import scalafix.rule.RuleName
 import langserver.{types => l}
-import scala.meta.languageserver.ScalametaEnrichments._
-import scalafix.lint.LintSeverity
 
 object ScalafixEnrichments {
   implicit class XtensionLintMessageLSP(val msg: LintMessage) extends AnyVal {
@@ -34,7 +37,7 @@ object ScalafixEnrichments {
     def applyInternal(tree: Tree, config: ScalafixConfig): RuleCtx =
       RuleCtx(tree, config)
   }
-  implicit class XtensionPatchLSP(val `_`: Patch.type) extends AnyVal {
+  implicit class XtensionPatchLSPObject(val `_`: Patch.type) extends AnyVal {
     def lintMessagesInternal(
         patches: Map[RuleName, Patch],
         ctx: RuleCtx
@@ -44,5 +47,14 @@ object ScalafixEnrichments {
   implicit class XtensionRuleLSP(val rule: Rule) extends AnyVal {
     def fixWithNameInternal(ctx: RuleCtx): Map[RuleName, Patch] =
       rule.fixWithName(ctx)
+  }
+  implicit class XtensionSemanticdbIndexObject(val `_`: SemanticdbIndex.type)
+      extends AnyVal {
+    def load(document: m.Document): SemanticdbIndex =
+      EagerInMemorySemanticdbIndex(
+        m.Database(document :: Nil),
+        m.Sourcepath(Nil),
+        m.Classpath(Nil)
+      )
   }
 }

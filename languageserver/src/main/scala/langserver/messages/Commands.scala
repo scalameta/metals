@@ -227,6 +227,10 @@ case class TextDocumentHoverRequest(params: TextDocumentPositionParams) extends 
 case class TextDocumentFormattingRequest(params: DocumentFormattingParams) extends ServerCommand
 case class WorkspaceExecuteCommandRequest(params: WorkspaceExecuteCommandParams) extends ServerCommand
 case class WorkspaceSymbolRequest(params: WorkspaceSymbolParams) extends ServerCommand
+case class ApplyWorkspaceEditParams(label: Option[String], edit: WorkspaceEdit)
+object ApplyWorkspaceEditParams {
+  implicit val format: OFormat[ApplyWorkspaceEditParams] = Json.format[ApplyWorkspaceEditParams]
+}
 
 case class Hover(contents: Seq[MarkedString], range: Option[Range]) extends ResultResponse
 object Hover {
@@ -242,7 +246,7 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
   override val CommandFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeParams],
     "textDocument/completion" -> valueFormat(TextDocumentCompletionRequest)(_.params),
-    "textDocument/codeAction" -> valueFormat(TextDocumentCompletionRequest)(_.params),
+    "textDocument/codeAction" -> valueFormat(CodeActionRequest.apply)(_.params),
     "textDocument/rename" -> valueFormat(TextDocumentRenameRequest.apply)(_.params),
     "textDocument/signatureHelp" -> valueFormat(TextDocumentSignatureHelpRequest)(_.params),
     "textDocument/definition" -> valueFormat(TextDocumentDefinitionRequest)(_.params),

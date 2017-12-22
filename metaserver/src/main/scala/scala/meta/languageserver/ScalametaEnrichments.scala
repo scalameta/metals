@@ -101,7 +101,10 @@ object ScalametaEnrichments {
     }
   }
   implicit class XtensionInputLSP(val input: m.Input) extends AnyVal {
-    def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
+    def contents: String = input match {
+      case m.Input.VirtualFile(_, value) => value
+      case _ => new String(input.chars)
+    }
   }
   implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
     def pretty: String =
