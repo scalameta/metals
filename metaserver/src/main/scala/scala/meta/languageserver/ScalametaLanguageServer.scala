@@ -21,6 +21,8 @@ import org.langmeta.languageserver.InputEnrichments._
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
 import langserver.core.LanguageServer
+import langserver.messages.CodeActionRequest
+import langserver.messages.CodeActionResult
 import langserver.messages.CompletionList
 import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
@@ -189,7 +191,8 @@ class ScalametaLanguageServer(
       executeCommandProvider =
         ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName)),
       workspaceSymbolProvider = true,
-      renameProvider = true
+      renameProvider = true,
+      codeActionProvider = true
     )
     InitializeResult(capabilities)
   }
@@ -250,6 +253,11 @@ class ScalametaLanguageServer(
       case None => CompletionProvider.empty
     }
   }
+
+  override def codeAction(request: CodeActionRequest): Task[CodeActionResult] =
+    Task {
+      CodeActionProvider.codeActions(request)
+    }
 
   override def definition(
       request: TextDocumentDefinitionRequest

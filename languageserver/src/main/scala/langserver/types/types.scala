@@ -50,7 +50,10 @@ object Diagnostic {
  * @param command The identifier of the actual command handler
  * @param arguments The arugments this command may be invoked with
  */
-case class Command(title: String, command: String, arguments: Seq[Any])
+case class Command(title: String, command: String, arguments: Seq[JsValue])
+object Command {
+  implicit val format: OFormat[Command] = Json.format[Command]
+}
 
 case class TextEdit(range: Range, newText: String)
 
@@ -184,6 +187,9 @@ object WorkspaceSymbolParams {
 }
 
 case class CodeActionContext(diagnostics: Seq[Diagnostic])
+object CodeActionContext {
+  implicit val format: OFormat[CodeActionContext] = Json.format[CodeActionContext]
+}
 
 /**
  * A code lens represents a [command](#Command) that should be shown along with
