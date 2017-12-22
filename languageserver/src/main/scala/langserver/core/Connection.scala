@@ -158,7 +158,13 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
       msgWriter.write(rJson)
     }.onErrorRecover[Unit] {
       case NonFatal(e) =>
-        logger.error(e.getMessage, e)
+        e match {
+          case InvalidParamsResponseError(message) =>
+            msgWriter.write(JsonRpcResponseErrorMessage.invalidRequest(JsError(message), id))
+          case _ =>
+            logger.error(e.getMessage, e)
+            msgWriter.write(JsonRpcResponseErrorMessage.internalError(Some(JsString(e.getMessage)), id))
+        }
     }.runAsync
     id match {
       case NumericCorrelationId(value) =>

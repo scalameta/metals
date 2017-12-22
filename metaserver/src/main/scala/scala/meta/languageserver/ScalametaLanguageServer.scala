@@ -44,6 +44,8 @@ import langserver.messages.TextDocumentReferencesRequest
 import langserver.messages.TextDocumentSignatureHelpRequest
 import langserver.messages.WorkspaceExecuteCommandRequest
 import langserver.messages.ExecuteCommandOptions
+import langserver.messages.RenameResult
+import langserver.messages.TextDocumentRenameRequest
 import langserver.messages.WorkspaceSymbolRequest
 import langserver.messages.WorkspaceSymbolResult
 import langserver.types._
@@ -174,7 +176,8 @@ class ScalametaLanguageServer(
       hoverProvider = true,
       executeCommandProvider =
         ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName)),
-      workspaceSymbolProvider = true
+      workspaceSymbolProvider = true,
+      renameProvider = true
     )
     InitializeResult(capabilities)
   }
@@ -288,6 +291,11 @@ class ScalametaLanguageServer(
       request.params.context
     )
   }
+
+  override def rename(request: TextDocumentRenameRequest): Task[RenameResult] =
+    Task {
+      RenameProvider.rename(request, symbolIndex, connection)
+    }
 
   override def signatureHelp(
       request: TextDocumentSignatureHelpRequest
