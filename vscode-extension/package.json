@@ -14,6 +14,26 @@
         "onLanguage:scala"
     ],
     "contributes": {
+        "configuration": {
+            "title": "Scalameta Language Server",
+            "properties": {
+                "scalameta.scalafixConfPath": {
+                    "type": "string",
+                    "default": ".scalafix.conf",
+                    "description": "Path to the Scalafix configuration, relative to the workspace path"
+                },
+                "scalameta.scalafmtConfPath": {
+                    "type": "string",
+                    "default": ".scalafmt.conf",
+                    "description": "Path to the Scalafmt configuration, relative to the workspace path"
+                },
+                "scalameta.enableCompletions": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enables completions as you type"
+                }
+            }
+        },
         "commands": [{
             "command": "scalameta.restartServer",
             "category": "Scalameta Language Server",

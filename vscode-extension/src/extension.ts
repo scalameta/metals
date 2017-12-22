@@ -60,7 +60,8 @@ export async function activate(context: ExtensionContext) {
       fileEvents: [
         workspace.createFileSystemWatcher('**/*.semanticdb'),
         workspace.createFileSystemWatcher('**/*.compilerconfig')
-      ]
+      ],
+      configurationSection: "scalameta"
     },
     revealOutputChannelOn: RevealOutputChannelOn.Never
   };
