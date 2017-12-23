@@ -91,6 +91,9 @@ class InMemorySymbolIndex(
       }
   }
 
+  def data(symbol: Symbol): Option[SymbolData] =
+    symbolIndexer.get(symbol)
+
   /** Returns symbol references data from the index taking into account relevant alternatives */
   def referencesData(
       symbol: Symbol

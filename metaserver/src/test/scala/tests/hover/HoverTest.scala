@@ -1,44 +1,6 @@
-package tests.compiler
+package tests.hover
 
-import scala.meta.languageserver.providers.HoverProvider
-import play.api.libs.json.Json
-
-object HoverTest extends CompilerSuite {
-
-  def check(
-      filename: String,
-      code: String,
-      expectedValue: String
-  ): Unit = {
-    targeted(
-      filename,
-      code, { point =>
-        val result = HoverProvider.hover(compiler, point)
-        val obtained = Json.prettyPrint(Json.toJson(result))
-        val expected =
-          s"""{
-             |  "contents" : [ {
-             |    "language" : "scala",
-             |    "value" : "$expectedValue"
-             |  } ]
-             |}""".stripMargin
-        assertNoDiff(obtained, expected)
-      }
-    )
-  }
-
-  def checkMissing(
-      filename: String,
-      code: String
-  ): Unit = {
-    targeted(
-      filename,
-      code, { point =>
-        val result = HoverProvider.hover(compiler, point)
-        assert(result.contents.isEmpty)
-      }
-    )
-  }
+object HoverTest extends BaseHoverTest {
 
   check(
     "val assignment",
@@ -47,100 +9,119 @@ object HoverTest extends CompilerSuite {
       |  val <<x>> = List(Some(1), Some(2), Some(3))
       |}
     """.stripMargin,
-    "List[Some[Int]]"
+    "val x: List[Some[Int]]"
   )
 
   check(
     "val assignment type annotation",
     """
-      |object a {
+      |object b {
       |  val <<x>>: List[Option[Int]] = List(Some(1), Some(2), Some(3))
       |}
     """.stripMargin,
-    "List[Option[Int]]"
+    "val x: List[Option[Int]]"
   )
 
   check(
     "var assignment",
     """
-      |object a {
+      |object c {
       |  var <<x>> = List(Some(1), Some(2), Some(3))
       |}
     """.stripMargin,
-    "List[Some[Int]]"
+    "var x: List[Some[Int]]"
   )
 
   check(
     "var assignment type annotation",
     """
-      |object a {
+      |object d {
       |  var <<x>>: List[Option[Int]] = List(Some(1), Some(2), Some(3))
       |}
     """.stripMargin,
-    "List[Option[Int]]"
+    "var x: List[Option[Int]]"
   )
 
   check(
     "select",
     """
-      |object a {
+      |object e {
       |  val x = List(1, 2, 3)
       |  <<x>>.mkString
       |}
     """.stripMargin,
-    "List[Int]"
+    "val x: List[Int]"
   )
 
-  check(
+  checkMissing( // TODO(olafur) fall back to tokenizer
     "literal Int",
     """
-      |object a {
+      |object f {
       |  val x = <<42>>
       |}
     """.stripMargin,
-    "Int"
   )
 
   check(
     "case class apply",
     """
-      |object a {
+      |object g {
       |  case class User(name: String, age: Int)
       |  val user = <<User>>("test", 42)
       |}
     """.stripMargin,
-    "(name: String, age: Int)a.User"
+    "object User"
   )
 
   check(
     "case class parameters",
     """
-      |object a {
+      |object h {
       |  case class User(<<name>>: String, age: Int)
       |}
     """.stripMargin,
-    "String"
+    "val name: String"
   )
 
   check(
     "def",
     """
-      |object a {
+      |object i {
       |  def <<test>>(x: String, y: List[Int]) = y.mkString.length
       |}
     """.stripMargin,
-    "(x: String, y: List[Int])Int"
+    "def test(x: String, y: List[Int]): Int"
+  )
+
+  check(
+    "def with type parameters",
+    """
+      |object i2 {
+      |  def <<test>>[T](lst: List[T]) = lst.tail
+      |}
+    """.stripMargin,
+    "def test[T](lst: List[T]): List[T]"
+  )
+
+  check(
+    "curried def",
+    """
+      |object i3 {
+      |  def <<curry>>[T](init: T)(f: T => T): T =  ???
+      |}
+    """.stripMargin,
+    "def curry[T](init: T)(f: T => T): T"
   )
 
   check(
     "def call site",
     """
-      |object a {
+      |object j {
       |  def test(x: String, y: List[Int]) = y.mkString.length
       |  <<test>>("foo", Nil)
       |}
     """.stripMargin,
-    "(x: String, y: List[Int])Int"
+    "def test(x: String, y: List[Int]): Int"
   )
 
   checkMissing(
@@ -150,12 +131,172 @@ object HoverTest extends CompilerSuite {
     """.stripMargin
   )
 
-  // FIXME(gabro): this should return "A"
   checkMissing(
-    "class",
+    "comments",
     """
-      |class <<A>>(x: Int, y: String)
+      |class B(x: Int, y: String) // <<good>>
     """.stripMargin
   )
 
+  check(
+    "class",
+    """
+      |class <<C>>(x: Int, y: String)
+    """.stripMargin,
+    "class C"
+  )
+
+  check(
+    "tuple literal",
+    """
+      |object l {
+      |  val <<increment>>: (Int, String) = ???
+      |}
+    """.stripMargin,
+    "val increment: (Int, String)"
+  )
+
+  check(
+    "TupleN",
+    """
+      |object m {
+      |  val <<increment>>: Tuple2[Int, String] = ???
+      |}
+    """.stripMargin,
+    "val increment: (Int, String)"
+  )
+
+  check(
+    "function literal",
+    """
+      |object n {
+      |  val <<increment>>: Int => Int = _ + 1
+      |}
+    """.stripMargin,
+    "val increment: Int => Int"
+  )
+
+  check(
+    "FunctionN",
+    """
+      |object o {
+      |  val <<increment>>: Function[Int, String] = _.toString
+      |}
+    """.stripMargin,
+    "val increment: Function[Int, String]"
+  )
+
+  // TODO(olafur) named arguments are not handled in InteractiveSemanticdb
+  checkMissing(
+    "named args",
+    """
+      |object p {
+      |  val foo = Left(<<value>> = 2)
+      |}
+    """.stripMargin
+  )
+
+  check(
+    "symbolic infix",
+    """
+      |object q {
+      |  type :+:[A, B] = Map[A, B]
+      |  val <<infix>>: :+:[Map[Int, String], :+:[Int, String]] = ???
+      |}
+    """.stripMargin,
+    "val infix: Map[Int, String] :+: Int :+: String"
+  )
+
+  check(
+    "pattern",
+    """
+      |object r {
+      |  List(1) match { case <<x>> :: Nil => }
+      |}
+    """.stripMargin,
+    "val x: Int"
+  )
+
+  check(
+    "pattern 2",
+    """
+      |object r2 {
+      |  List(1) match { case List(<<x>>) => }
+      |}
+    """.stripMargin,
+    "val x: Int"
+  )
+
+  check(
+    "imports",
+    """
+      |import scala.concurrent.<<Future>>
+      |object s {
+      |  val x: Future[Int] = Future.successful(1)
+      |}
+    """.stripMargin,
+    "object Future" // TODO(olafur) handle Symbol.Multi
+  )
+
+  check(
+    "params",
+    """
+      |object v {
+      |  List(1).foreach(<<x>> => println(x))
+      |}
+    """.stripMargin,
+    "Int"
+  )
+
+  check(
+    "for comprehension",
+    """
+      |object t {
+      |  for {
+      |    x <- List(1)
+      |    z <- 1.to(x)
+      |  } yield <<z>>
+      |}
+    """.stripMargin,
+    "Int"
+  )
+
+  check(
+    "package",
+    """
+      |object w {
+      |  <<scala>>.Left(1)
+      |}
+    """.stripMargin,
+    "package scala"
+  )
+
+  check(
+    "package object",
+    """
+      |package object <<pkg>>
+    """.stripMargin,
+    // TODO(olafur) make <<math>>.max(1, 2) resolve to package object math
+    "package object pkg"
+  )
+
+  check(
+    "type alias",
+    """
+      |object v {
+      |  type <<F>>[T] = Option[T]
+      |}
+    """.stripMargin,
+    "type F[T] = Option[T]"
+  )
+
+  check(
+    "abstract type alias",
+    """
+      |object v2 {
+      |  type <<F>>[T] <: Any
+      |}
+    """.stripMargin,
+    "type F"
+  )
 }

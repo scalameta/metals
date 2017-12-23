@@ -291,15 +291,13 @@ class ScalametaLanguageServer(
 
   override def hover(
       request: TextDocumentHoverRequest
-  ): Task[Hover] = withPC {
-    scalac.getCompiler(request.params.textDocument) match {
-      case Some(g) =>
-        HoverProvider.hover(
-          g,
-          toPoint(request.params.textDocument, request.params.position)
-        )
-      case None => HoverProvider.empty
-    }
+  ): Task[Hover] = Task {
+    HoverProvider.hover(
+      symbolIndex,
+      Uri(request.params.textDocument),
+      request.params.position.line,
+      request.params.position.character
+    )
   }
 
   override def references(

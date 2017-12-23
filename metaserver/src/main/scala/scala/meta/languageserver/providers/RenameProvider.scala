@@ -30,13 +30,12 @@ object RenameProvider extends LazyLogging {
     case Right(newName) =>
       val uri = Uri(request.params.textDocument.uri)
       val edits = for {
-        (symbol, _) <- symbolIndex
-          .findSymbol(
-            uri,
-            request.params.position.line,
-            request.params.position.character
-          )
-          .toList
+        reference <- symbolIndex.findReferences(
+          uri,
+          request.params.position.line,
+          request.params.position.character
+        )
+        symbol = Symbol(reference.symbol)
         if {
           symbol match {
             case _: Symbol.Local => true
@@ -49,11 +48,9 @@ object RenameProvider extends LazyLogging {
               false
           }
         }
-        data <- symbolIndex.referencesData(symbol)
-        reference <- data.referencePositions(true)
+        position <- reference.referencePositions(true)
       } yield {
-        val location = reference.toLocation
-        TextEdit(location.range, newName)
+        TextEdit(position.toLocation.range, newName)
       }
       // NOTE(olafur) uri.value is hardcoded here because local symbols
       // cannot be references across multiple files. When we add support for
