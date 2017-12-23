@@ -30,6 +30,9 @@ trait SymbolIndex extends LazyLogging {
       data <- definitionData(symbol)
     } yield edit.toRevisedDefinition(data)
 
+  /** Returns symbol data for this exact Symbol */
+  def data(symbol: Symbol): Option[SymbolData]
+
   /** Returns symbol references data from the index taking into account relevant alternatives */
   def referencesData(symbol: Symbol): List[SymbolData]
 
@@ -51,6 +54,8 @@ trait SymbolIndex extends LazyLogging {
 
   /** Remove any persisted files from index returning to a clean start */
   def clearIndex(): Unit
+
+  def documentIndex: DocumentIndex
 
 }
 
