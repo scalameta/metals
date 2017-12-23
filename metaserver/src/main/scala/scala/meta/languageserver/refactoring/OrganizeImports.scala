@@ -1,12 +1,11 @@
 package scala.meta.languageserver.refactoring
 
 import scala.meta._
-import org.langmeta.internal.semanticdb._
-import org.langmeta.internal.semanticdb.schema
 import scala.meta.languageserver.Parser
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.SymbolIndex
 import scalafix.internal.rule.RemoveUnusedImports
+import scala.meta.languageserver.ScalametaEnrichments._
 import scalafix.languageserver.ScalafixEnrichments._
 import scalafix.languageserver.ScalafixPatchEnrichments._
 import scalafix.rule.RuleCtx
@@ -42,10 +41,7 @@ object OrganizeImports extends LazyLogging {
   def removeUnused(uri: Uri, index: SymbolIndex): ApplyWorkspaceEditParams = {
     index.documentIndex.getDocument(uri) match {
       case Some(document) =>
-        removeUnused(
-          uri,
-          schema.Database(document :: Nil).toDb(None).documents.head
-        )
+        removeUnused(uri, document.toMetaDocument)
       case None => empty
     }
   }
