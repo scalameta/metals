@@ -3,9 +3,9 @@ package scala.meta.languageserver.search
 import java.util.concurrent.ConcurrentHashMap
 import scala.meta.languageserver.Buffers
 import scala.meta.languageserver.Effects
+import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
-import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.index.SymbolData
@@ -25,6 +25,8 @@ import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb.SemanticdbEnrichments._
 import org.langmeta.semanticdb.Symbol
+import monix.eval.Task
+import monix.reactive.Observable
 
 class InMemorySymbolIndex(
     val symbolIndexer: SymbolIndexer,
@@ -32,7 +34,7 @@ class InMemorySymbolIndex(
     cwd: AbsolutePath,
     notifications: Notifications,
     buffers: Buffers,
-    serverConfig: ServerConfig,
+    configuration: Observable[Configuration],
 ) extends SymbolIndex
     with LazyLogging {
   private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
@@ -109,11 +111,13 @@ class InMemorySymbolIndex(
 
   def indexDependencyClasspath(
       sourceJars: List[AbsolutePath]
-  ): Effects.IndexSourcesClasspath = {
-    if (!serverConfig.indexClasspath) Effects.IndexSourcesClasspath
+  ): Task[Effects.IndexSourcesClasspath] = for {
+    config <- configuration.lastL
+  } yield {
+    if (!config.indexing.classpath) Effects.IndexSourcesClasspath
     else {
       val sourceJarsWithJDK =
-        if (serverConfig.indexJDK)
+        if (config.indexing.jdk)
           CompilerConfig.jdkSources.fold(sourceJars)(_ :: sourceJars)
         else sourceJars
       val buf = List.newBuilder[AbsolutePath]

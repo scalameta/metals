@@ -19,7 +19,7 @@ abstract class Formatter {
 object Formatter extends LazyLogging {
 
   /** Returns formatter that does nothing */
-  def noop: Formatter = new Formatter {
+  lazy val noop: Formatter = new Formatter {
     override def format(
         code: String,
         filename: String,
