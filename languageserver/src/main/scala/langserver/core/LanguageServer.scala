@@ -7,6 +7,7 @@ import langserver.messages._
 import langserver.types._
 import monix.eval.Task
 import monix.execution.Scheduler
+import play.api.libs.json.JsValue
 
 /**
  * A language server implementation. Users should subclass this class and implement specific behavior.
@@ -38,7 +39,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
     case DidChangeTextDocumentParams(td, changes) => onChangeTextDocument(td, changes)
     case DidSaveTextDocumentParams(td) => onSaveTextDocument(td)
     case DidCloseTextDocumentParams(td) => onCloseTextDocument(td)
-    case DidChangeWatchedFiles(changes) => onChangeWatchedFiles(changes)
+    case DidChangeWatchedFilesParams(changes) => onChangeWatchedFiles(changes)
+    case DidChangeConfigurationParams(settings) => onChangeConfiguration(settings)
     case e => logger.error(s"Unknown notification $e")
   }
 
@@ -95,5 +97,8 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
 
   def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
     logger.debug(s"changeWatchedFiles $changes")
+
+  def onChangeConfiguration(settings: JsValue): Unit =
+    logger.debug(s"changeConfiguration $settings")
 
 }

@@ -277,7 +277,8 @@ case class DidChangeTextDocumentParams(
 
 case class DidCloseTextDocumentParams(textDocument: TextDocumentIdentifier) extends Notification
 case class DidSaveTextDocumentParams(textDocument: TextDocumentIdentifier) extends Notification
-case class DidChangeWatchedFiles(changes: Seq[FileEvent]) extends Notification
+case class DidChangeWatchedFilesParams(changes: Seq[FileEvent]) extends Notification
+case class DidChangeConfigurationParams(settings: JsValue) extends Notification
 
 case class Initialized() extends Notification
 object Initialized {
@@ -298,7 +299,8 @@ object Notification extends NotificationCompanion[Notification] {
     "textDocument/didChange" -> Json.format[DidChangeTextDocumentParams],
     "textDocument/didClose" -> Json.format[DidCloseTextDocumentParams],
     "textDocument/didSave" -> Json.format[DidSaveTextDocumentParams],
-    "workspace/didChangeWatchedFiles" -> Json.format[DidChangeWatchedFiles],
+    "workspace/didChangeWatchedFiles" -> Json.format[DidChangeWatchedFilesParams],
+    "workspace/didChangeConfiguration" -> Json.format[DidChangeConfigurationParams],
     "initialized" -> Initialized.format,
     "$/cancelRequest" -> Json.format[CancelRequest]
   )

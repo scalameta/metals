@@ -64,6 +64,9 @@ import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb
+import play.api.libs.json.JsValue
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.JsError
 
 case class ServerConfig(
     cwd: AbsolutePath,
@@ -224,6 +227,15 @@ class ScalametaLanguageServer(
         logger.warn(s"Unhandled file event: $event")
         ()
     }
+
+  override def onChangeConfiguration(settings: JsValue): Unit = {
+    (settings \ "scalameta").validate[Configuration] match {
+      case JsSuccess(value, _) =>
+        logger.info(s"Configuration changed $value")
+      case JsError(error) =>
+        logger.error(s"Can't decode configuration: $error")
+    }
+  }
 
   override def completion(
       request: TextDocumentCompletionRequest
