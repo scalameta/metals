@@ -156,7 +156,6 @@ object HoverTest extends BaseHoverTest {
     "val increment: (Int, String)"
   )
 
-  //  val x: Tuple2[]
   check(
     "TupleN",
     """
