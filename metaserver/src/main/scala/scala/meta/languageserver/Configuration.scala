@@ -9,8 +9,6 @@ import java.nio.file.Paths
 
 import Configuration._
 import play.api.libs.json.OFormat
-import scala.meta.languageserver.Configuration
-import scala.meta.languageserver.Configuration.{ Completions, Experimental, Hover, Indexing, Rename, Scalafix, Scalafmt }
 
 case class Configuration(
   scalafmt: Scalafmt = Scalafmt(),
