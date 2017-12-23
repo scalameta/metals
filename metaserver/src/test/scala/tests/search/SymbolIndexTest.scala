@@ -33,6 +33,7 @@ object SymbolIndexTest extends MegaSuite {
       .resolve("example")
       .resolve("User.scala")
     val UserUri = Uri(User)
+    val UserReferenceLine = 3
 
     val UserTest = cwd
       .resolve("src")
@@ -73,7 +74,7 @@ object SymbolIndexTest extends MegaSuite {
     def assertSymbolFound(line: Int, column: Int)(
         expected: String
     ): Symbol = {
-      val symbol = index
+      val (symbol, _) = index
         .findSymbol(path.UserTestUri, line, column)
         .getOrElse(
           fail(
@@ -113,7 +114,7 @@ object SymbolIndexTest extends MegaSuite {
     )(
         expected: l.Location*
     ): Unit = {
-      val symbol = index
+      val (symbol, _) = index
         .findSymbol(path.UserTestUri, line, column)
         .getOrElse(
           fail(
@@ -149,7 +150,7 @@ object SymbolIndexTest extends MegaSuite {
 
     "definition" - {
       "<<User>>(...)" -
-        assertSymbolDefinition(3, 17)(
+        assertSymbolDefinition(path.UserReferenceLine, 17)(
           "_root_.a.User.",
           "_root_.a.User#"
         )
@@ -257,6 +258,16 @@ object SymbolIndexTest extends MegaSuite {
         case _ =>
           fail(s"Unsupported index ${index.getClass}")
       }
+    }
+
+    "edit-distance" - {
+      val user = path.UserTestUri.toInput(server.buffers)
+      val newUser = user.copy(value = "// leading comment\n" + user.value)
+      server.buffers.changed(newUser)
+      assertSymbolDefinition(path.UserReferenceLine + 1, 17)(
+        "_root_.a.User.",
+        "_root_.a.User#"
+      )
     }
   }
 

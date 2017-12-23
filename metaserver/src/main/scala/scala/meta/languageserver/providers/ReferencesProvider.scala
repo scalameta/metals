@@ -16,10 +16,7 @@ object ReferencesProvider extends LazyLogging {
       context: l.ReferenceContext
   ): ReferencesResult = {
     val locations = for {
-      symbol <- symbolIndex
-        .findSymbol(uri, position.line, position.character)
-        .toList
-      data <- symbolIndex.referencesData(symbol)
+      data <- symbolIndex.findReferences(uri, position.line, position.character)
       pos <- data.referencePositions(context.includeDeclaration)
       _ = logger.info(s"Found reference ${pos.pretty} ${data.symbol}")
     } yield pos.toLocation

@@ -114,6 +114,7 @@ lazy val metaserver = project
     ),
     buildInfoPackage := "scala.meta.languageserver.internal",
     libraryDependencies ++= List(
+      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       "io.github.soc" % "directories" % "5",
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
       "me.xdrop" % "fuzzywuzzy" % "1.1.9",

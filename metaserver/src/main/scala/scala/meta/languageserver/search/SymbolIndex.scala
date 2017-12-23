@@ -3,24 +3,41 @@ package scala.meta.languageserver.search
 import scala.meta.languageserver.Buffers
 import scala.meta.languageserver.Effects
 import scala.meta.languageserver.ServerConfig
-import scala.meta.languageserver.index.SymbolData
 import scala.meta.languageserver.Uri
+import scala.meta.languageserver.index.SymbolData
+import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
 import langserver.types.SymbolInformation
 import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Symbol
 
-trait SymbolIndex {
+trait SymbolIndex extends LazyLogging {
 
   /** Returns a symbol at the given location */
-  def findSymbol(path: Uri, line: Int, column: Int): Option[Symbol]
+  def findSymbol(
+      path: Uri,
+      line: Int,
+      column: Int
+  ): Option[(Symbol, TokenEditDistance)]
 
   /** Returns symbol definition data from the index taking into account relevant alternatives */
   def definitionData(symbol: Symbol): Option[SymbolData]
 
+  def findDefinition(path: Uri, line: Int, column: Int): Option[SymbolData] =
+    for {
+      (symbol, edit) <- findSymbol(path, line, column)
+      data <- definitionData(symbol)
+    } yield edit.toRevisedDefinition(data)
+
   /** Returns symbol references data from the index taking into account relevant alternatives */
   def referencesData(symbol: Symbol): List[SymbolData]
+
+  def findReferences(path: Uri, line: Int, column: Int): List[SymbolData] =
+    for {
+      (symbol, edit) <- findSymbol(path, line, column).toList
+      data <- referencesData(symbol)
+    } yield edit.toRevisedReferences(data)
 
   /** Returns symbol definitions in this workspace */
   def workspaceSymbols(query: String): List[SymbolInformation]
