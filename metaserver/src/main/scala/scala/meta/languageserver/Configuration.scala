@@ -50,22 +50,22 @@ object Configuration {
     implicit val format: OFormat[Completions] = Json.using[Json.WithDefaultValues].format[Completions]
   }
   object Hover {
-    implicit val format: OFormat[Hover] = Json.format[Hover]
+    implicit val format: OFormat[Hover] = Json.using[Json.WithDefaultValues].format[Hover]
   }
   object Rename {
-    implicit val format: OFormat[Rename] = Json.format[Rename]
+    implicit val format: OFormat[Rename] = Json.using[Json.WithDefaultValues].format[Rename]
   }
   object Experimental {
-    implicit val format: OFormat[Experimental] = Json.format[Experimental]
+    implicit val format: OFormat[Experimental] = Json.using[Json.WithDefaultValues].format[Experimental]
   }
   object Scalafmt {
-    implicit val format: OFormat[Scalafmt] = Json.format[Scalafmt]
+    implicit val format: OFormat[Scalafmt] = Json.using[Json.WithDefaultValues].format[Scalafmt]
   }
   object Scalafix {
-    implicit val format: OFormat[Scalafix] = Json.format[Scalafix]
+    implicit val format: OFormat[Scalafix] = Json.using[Json.WithDefaultValues].format[Scalafix]
   }
   object Indexing {
-    implicit val format: OFormat[Indexing] = Json.format[Indexing]
+    implicit val format: OFormat[Indexing] = Json.using[Json.WithDefaultValues].format[Indexing]
   }
-  implicit val format: OFormat[Configuration] = Json.format[Configuration]
+  implicit val format: OFormat[Configuration] = Json.using[Json.WithDefaultValues].format[Configuration]
 }
