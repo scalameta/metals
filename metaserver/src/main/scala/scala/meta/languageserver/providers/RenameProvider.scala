@@ -30,7 +30,7 @@ object RenameProvider extends LazyLogging {
     case Right(newName) =>
       val uri = Uri(request.params.textDocument.uri)
       val edits = for {
-        symbol <- symbolIndex
+        (symbol, _) <- symbolIndex
           .findSymbol(
             uri,
             request.params.position.line,
