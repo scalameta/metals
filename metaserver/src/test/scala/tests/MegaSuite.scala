@@ -24,6 +24,11 @@ class MegaSuite extends TestSuite {
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
   def assert(exprs: Boolean*): Unit = macro Asserts.assertProxy
+  def assertEquals[T](a: T, b: T): Unit = {
+    if (a != b) {
+      fail(s"$a != $b")
+    }
+  }
   def assertNoDiff(
       obtained: String,
       expected: String,

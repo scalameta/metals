@@ -1,10 +1,12 @@
-package langserver.core
+package scala.meta.lsp
 
+import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import enumeratum.values.IntEnum
 import enumeratum.values.IntEnumEntry
 import enumeratum.values.IntPlayJsonValueEnum
 import monix.eval.Task
+import monix.reactive.Observable
 import play.api.libs.json.JsNull
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
@@ -12,7 +14,10 @@ import play.api.libs.json._
 
 sealed trait RPC
 case class Request(method: String, params: Option[JsValue], id: RequestId)
-    extends RPC
+    extends RPC {
+  def toError(code: ErrorCode, message: String): ErrorResponse =
+    ErrorResponse(ErrorObject(code, message, None), id)
+}
 case class Notification(method: String, params: JsValue) extends RPC
 
 sealed trait Response extends RPC
@@ -70,28 +75,47 @@ case object ErrorCode
   val values: collection.immutable.IndexedSeq[ErrorCode] = findValues
 }
 
-trait Service
-    extends RequestHandler[Request, Response]
-    with NotificationHandler[Notification]
+case class MethodRequestService(
+    method: String,
+    handler: JsonRequestService
+)
+case class MethodNotificationService(
+    method: String,
+    handler: JsonNotificationService
+)
+trait JsonRequestService {
+  def handleRequest(request: Request): Task[Response]
+}
+abstract class RequestService[A: Reads, B: Writes] extends JsonRequestService {
+  override def handleRequest(request: Request): Task[Response] =
+    request.params.getOrElse(JsNull).validate[A] match {
+      case err: JsError =>
+        Task.eval(request.toError(ErrorCode.InvalidParams, err.toString))
+      case JsSuccess(value, _) =>
+        handle(value)
+          .map[Response] {
+            case Right(response) =>
+              SuccessResponse(Json.toJson(response), request.id)
+            case Left(err) =>
+              err
+          }
+          .onErrorRecover {
+            case NonFatal(e) =>
+              request.toError(ErrorCode.InternalError, e.getMessage)
+          }
+    }
+  def handle(a: A): Task[Either[ErrorResponse, B]]
+}
+trait JsonNotificationService {
+  def handleNotification(notification: Notification): Task[Unit]
+  Observable.fromInputStream(???)
+}
 
-case class MethodRequestHandler(
-    method: String,
-    handler: RequestHandler[Request, Response]
-)
-case class MethodNotificationHandler(
-    method: String,
-    handler: NotificationHandler[Notification]
-)
-trait RequestHandler[-A, +B] {
-  def handleRequest(request: A): Task[B]
-}
-trait NotificationHandler[-A] {
-  def handleNotification(notification: A): Task[Unit]
-}
+trait Service extends JsonRequestService with JsonNotificationService
 
 class CompositeService(
-    notifications: List[MethodNotificationHandler],
-    requests: List[MethodRequestHandler]
+    notifications: List[MethodNotificationService],
+    requests: List[MethodRequestService]
 ) extends Service
     with LazyLogging {
   private val ns = notifications.iterator.map(n => n.method -> n).toMap
@@ -107,18 +131,13 @@ class CompositeService(
   override def handleRequest(request: Request): Task[Response] =
     rs.get(request.method) match {
       case None =>
-        Task.now(
-          ErrorResponse(
-            ErrorObject(
-              ErrorCode.MethodNotFound,
-              s"Method '${request.method}' not found, expected one of ${rs.keys.mkString(", ")}",
-              None
-            ),
-            request.id
+        Task.eval(
+          request.toError(
+            ErrorCode.MethodNotFound,
+            s"Method '${request.method}' not found, expected one of ${rs.keys.mkString(", ")}"
           )
         )
       case Some(service) =>
         service.handler.handleRequest(request)
     }
-
 }

@@ -25,6 +25,7 @@ class MessageReaderSuite extends FunSuite
     inStream.close()
   }
 
+
   test("full headers are supported") {
     val msgReader = new MessageReader(inStream)
 
@@ -82,10 +83,6 @@ Content-Type: application/vscode-jsonrpc; charset=utf8
 
   test("chunked payload arrives") {
     val msgReader = new MessageReader(inStream)
-    write("""Content-Length: 43
-
-{"jsonrpc":"2.0",""")
-    write(""""id":1,"method":"example"}""")
 
     val payload = msgReader.nextPayload()
     assert(payload.value === """{"jsonrpc":"2.0","id":1,"method":"example"}""")
