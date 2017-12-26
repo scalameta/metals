@@ -12,17 +12,60 @@ import play.api.libs.json.Reads
 import play.api.libs.json.Writes
 import play.api.libs.json._
 
-sealed trait RPC
-case class Request(method: String, params: Option[JsValue], id: RequestId)
-    extends RPC {
-  def toError(code: ErrorCode, message: String): ErrorResponse =
-    ErrorResponse(ErrorObject(code, message, None), id)
+sealed trait Message
+object Message {
+  private case class IndeterminateMessage(
+      method: String,
+      params: Option[JsValue],
+      id: Option[RequestId]
+  )
+  implicit val reads: Reads[Message] = Json.reads[IndeterminateMessage].map {
+    case IndeterminateMessage(method, params, Some(id)) =>
+      Request(method, params, id)
+    case IndeterminateMessage(method, params, None) =>
+      Notification(method, params)
+  }
 }
-case class Notification(method: String, params: JsValue) extends RPC
+case class Request(method: String, params: Option[JsValue], id: RequestId)
+    extends Message {
+  def toError(code: ErrorCode, message: String): Response =
+    Response.error(ErrorObject(code, message, None), id)
+}
+case class Notification(method: String, params: Option[JsValue]) extends Message
 
-sealed trait Response extends RPC
-case class SuccessResponse(result: JsValue, id: RequestId) extends Response
-case class ErrorResponse(error: ErrorObject, id: RequestId) extends Response
+sealed trait Response {
+  def toTask: Task[Response] = Task.eval(this)
+}
+object Response {
+  case class Success(result: JsValue, id: RequestId) extends Response
+  object Success {
+    implicit val format: OFormat[Success] = Json.format[Success]
+  }
+  case class Error(error: ErrorObject, id: RequestId) extends Response
+  object Error {
+    implicit val format: OFormat[Error] = Json.format[Error]
+  }
+  case object Empty extends Response
+  def empty: Response = Empty
+  def success(result: JsValue, id: RequestId): Response =
+    Success(result, id)
+  def error(error: ErrorObject, id: RequestId): Response =
+    Error(error, id)
+  def internalError(message: String, id: RequestId): Response =
+    Error(ErrorObject(ErrorCode.InternalError, message, None), id)
+  def invalidRequest(message: String): Response =
+    Error(
+      ErrorObject(ErrorCode.InvalidParams, message, None),
+      RequestId.Null
+    )
+  def cancelled(id: JsValue): Response =
+    Error(
+      ErrorObject(ErrorCode.RequestCancelled, "", None),
+      id.asOpt[RequestId].getOrElse(RequestId.Null)
+    )
+  def parseError(message: String): Response =
+    Error(ErrorObject(ErrorCode.ParseError, message, None), RequestId.Null)
+}
 
 sealed trait RequestId
 object RequestId {
@@ -45,33 +88,20 @@ object RequestId {
 }
 
 case class ErrorObject(code: ErrorCode, message: String, data: Option[JsValue])
+object ErrorObject {
+  implicit val format: OFormat[ErrorObject] = Json.format[ErrorObject]
+}
 sealed abstract class ErrorCode(val value: Int) extends IntEnumEntry
 case object ErrorCode
     extends IntEnum[ErrorCode]
     with IntPlayJsonValueEnum[ErrorCode] {
-
-  /**
-   * Invalid JSON was received by the server.
-   *
-   * An error occurred on the server while parsing the JSON text.
-   */
   case object ParseError extends ErrorCode(-32700)
-
-  /** The JSON sent is not a valid Request object. */
   case object InvalidRequest extends ErrorCode(-32600)
-
-  /** The method does not exist / is not available. */
   case object MethodNotFound extends ErrorCode(-32601)
-
-  /** Invalid method parameter(s). */
   case object InvalidParams extends ErrorCode(-32602)
-
-  /** Internal JSON-RPC error. */
   case object InternalError extends ErrorCode(-32603)
-
-  /** Reserved for implementation-defined server-errors. */
   case object ServerError extends ErrorCode(-32000)
-
+  case object RequestCancelled extends ErrorCode(-32800)
   val values: collection.immutable.IndexedSeq[ErrorCode] = findValues
 }
 
@@ -95,7 +125,7 @@ abstract class RequestService[A: Reads, B: Writes] extends JsonRequestService {
         handle(value)
           .map[Response] {
             case Right(response) =>
-              SuccessResponse(Json.toJson(response), request.id)
+              Response.success(Json.toJson(response), request.id)
             case Left(err) =>
               err
           }
@@ -104,7 +134,7 @@ abstract class RequestService[A: Reads, B: Writes] extends JsonRequestService {
               request.toError(ErrorCode.InternalError, e.getMessage)
           }
     }
-  def handle(a: A): Task[Either[ErrorResponse, B]]
+  def handle(a: A): Task[Either[Response, B]]
 }
 trait JsonNotificationService {
   def handleNotification(notification: Notification): Task[Unit]
@@ -140,4 +170,9 @@ class CompositeService(
       case Some(service) =>
         service.handler.handleRequest(request)
     }
+}
+
+case class CancelParams(id: JsValue)
+object CancelParams {
+  implicit val format: OFormat[CancelParams] = Json.format[CancelParams]
 }
