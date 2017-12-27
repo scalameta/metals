@@ -1,8 +1,9 @@
 package scala.meta.languageserver.protocol
 
 import java.io.OutputStream
-import java.util.concurrent.Executors
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.LazyLogging
@@ -17,7 +18,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 
 final class LanguageServer(
-    in: Observable[BaseProtocol],
+    in: Observable[BaseProtocolMessage],
     out: OutputStream,
     notifications: JsonNotificationService,
     requests: JsonRequestService,
@@ -59,7 +60,7 @@ final class LanguageServer(
         }
     }
 
-  def handleMessage(message: BaseProtocol): Task[Response] =
+  def handleMessage(message: BaseProtocolMessage): Task[Response] =
     LanguageServer.parseMessage(message) match {
       case Left(parseError) => Task.now(parseError)
       case Right(json) =>
@@ -69,28 +70,30 @@ final class LanguageServer(
         }
     }
 
-  def startTask: Task[Unit] = in.foreachL { msg =>
-    handleMessage(msg)
-      .map {
-        case Response.Empty => ()
-        case x: Response.Success => writer.write(x)
-        case x: Response.Error => writer.write(x)
-      }
-      .onErrorRecover {
-        case NonFatal(e) =>
-          logger.error("Unhandled error", e)
-      }
-      .runAsync(requestScheduler)
-  }
+  def startTask: Task[Unit] =
+    in.foreachL { msg =>
+      handleMessage(msg)
+        .map {
+          case Response.Empty => ()
+          case x: Response.Success => writer.write(x)
+          case x: Response.Error => writer.write(x)
+        }
+        .onErrorRecover {
+          case NonFatal(e) =>
+            logger.error("Unhandled error", e)
+        }
+        .runAsync(requestScheduler)
+    }
 
   def listen(): Unit = {
-    logger.info("Start listening....")
-    startTask.runAsync(Scheduler(Executors.newFixedThreadPool(1)))
+    val f = startTask.runAsync(requestScheduler)
+    logger.info("Listening....")
+    Await.result(f, Duration.Inf)
   }
 }
 
 object LanguageServer {
-  def parseMessage(message: BaseProtocol): Either[Response, JsValue] =
+  def parseMessage(message: BaseProtocolMessage): Either[Response, JsValue] =
     try {
       Right(Json.parse(message.content))
     } catch {

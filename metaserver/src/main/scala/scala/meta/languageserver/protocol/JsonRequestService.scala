@@ -36,3 +36,11 @@ abstract class RequestService[A: Reads, B: Writes](val method: String)
           }
     }
 }
+object RequestService {
+  def method[A: Reads, B: Writes](
+      name: String
+  )(f: A => Task[Either[Response.Error, B]]): RequestService[A, B] =
+    new RequestService[A, B](name) {
+      def handle(request: A): Task[Either[Response.Error, B]] = f(request)
+    }
+}

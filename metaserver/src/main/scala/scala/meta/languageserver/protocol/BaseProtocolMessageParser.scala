@@ -9,24 +9,30 @@ import monix.execution.Scheduler
 import monix.reactive.observables.ObservableLike.Operator
 import monix.reactive.observers.Subscriber
 
-final class ProtocolParser
-    extends Operator[Array[Byte], BaseProtocol]
+final class BaseProtocolMessageParser
+    extends Operator[Array[Byte], BaseProtocolMessage]
     with LazyLogging {
-  override def apply(out: Subscriber[BaseProtocol]): Subscriber[Array[Byte]] = {
+  override def apply(
+      out: Subscriber[BaseProtocolMessage]
+  ): Subscriber[Array[Byte]] = {
     new Subscriber[Array[Byte]] {
       import Ack._
+      // NOTE(olafur): We should first benchmark before going into any
+      // optimization, but my intuition tells me ArrayBuffer[Byte] with many .remove
+      // and ++= is wasteful and can probably be replaced with some ByteBuffer
+      // or mutable.Queue[Array[Byte]] to get better performance.
       private[this] val data = ArrayBuffer.empty[Byte]
       private[this] var contentLength = -1
       private[this] var header = Map.empty[String, String]
-      private def atDelimiter(idx: Int): Boolean = {
+      private[this] def atDelimiter(idx: Int): Boolean = {
         (data.size >= idx + 4
         && data(idx) == '\r'
         && data(idx + 1) == '\n'
         && data(idx + 2) == '\r'
         && data(idx + 3) == '\n')
       }
-      private val EmptyPair = "" -> ""
-      private[this] def readHeaders: Future[Ack] = {
+      private[this] val EmptyPair = "" -> ""
+      private[this] def readHeaders(): Future[Ack] = {
         if (data.size < 4) Continue
         else {
           var i = 0
@@ -39,6 +45,10 @@ final class ProtocolParser
             data.copyToArray(bytes)
             data.remove(0, i + 4)
             val headers = new String(bytes, StandardCharsets.US_ASCII)
+            // NOTE(olafur) all LSP messages from vscode seem to start with
+            // Content-Length: N and include no other headers.
+            // However, the spec says there can be other headers so we parse them
+            // here anyways, even if we don't use any other values than Content-Length.
             val pairs: Map[String, String] = headers
               .split("\r\n")
               .iterator
@@ -57,7 +67,7 @@ final class ProtocolParser
                 try {
                   contentLength = n.toInt
                   header = pairs
-                  readContent
+                  readContent()
                 } catch {
                   case _: NumberFormatException =>
                     logger.error(
@@ -72,7 +82,7 @@ final class ProtocolParser
           }
         }
       }
-      private[this] def readContent: Future[Ack] = {
+      private[this] def readContent(): Future[Ack] = {
         if (contentLength > data.size) Continue
         else {
           val contentBytes = new Array[Byte](contentLength)
@@ -80,9 +90,9 @@ final class ProtocolParser
           data.remove(0, contentLength)
           contentLength = -1
           val content = new String(contentBytes, StandardCharsets.UTF_8)
-          out.onNext(BaseProtocol(header, content)).flatMap {
-            case Continue => readHeaders
-            case els => els
+          out.onNext(BaseProtocolMessage(header, content)).flatMap {
+            case Continue => readHeaders()
+            case Stop => Stop
           }
         }
       }
@@ -94,8 +104,8 @@ final class ProtocolParser
       }
       override def onNext(elem: Array[Byte]): Future[Ack] = {
         data ++= elem
-        if (contentLength < 0) readHeaders
-        else readContent
+        if (contentLength < 0) readHeaders()
+        else readContent()
       }
     }
   }

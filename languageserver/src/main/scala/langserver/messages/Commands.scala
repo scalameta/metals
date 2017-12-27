@@ -35,6 +35,9 @@ case class InitializeParams(
    * The capabilities provided by the client (editor)
    */
   capabilities: ClientCapabilities) extends ServerCommand
+object InitializeParams {
+  implicit val format: OFormat[InitializeParams] = Json.format[InitializeParams]
+}
 
 case class InitializeError(retry: Boolean)
 
