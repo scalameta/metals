@@ -148,6 +148,9 @@ object CompletionList {
 }
 
 case class InitializeResult(capabilities: ServerCapabilities) extends ResultResponse
+object InitializeResult {
+  implicit val format: OFormat[InitializeResult] = Json.format[InitializeResult]
+}
 
 case class Shutdown() extends ServerCommand
 

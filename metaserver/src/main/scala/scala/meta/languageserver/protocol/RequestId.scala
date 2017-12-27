@@ -1,9 +1,8 @@
-package scala.meta.lsp
+package scala.meta.languageserver.protocol
 
 import play.api.libs.json._
 
 sealed trait RequestId
-
 object RequestId {
   implicit val format: Format[RequestId] = Format[RequestId](
     Reads {

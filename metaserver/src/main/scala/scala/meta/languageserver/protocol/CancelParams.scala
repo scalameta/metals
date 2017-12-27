@@ -1,4 +1,4 @@
-package scala.meta.lsp
+package scala.meta.languageserver.protocol
 
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json

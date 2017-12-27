@@ -1,4 +1,4 @@
-package scala.meta.lsp
+package scala.meta.languageserver.protocol
 
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
@@ -9,10 +9,10 @@ import monix.execution.Scheduler
 import monix.reactive.observables.ObservableLike.Operator
 import monix.reactive.observers.Subscriber
 
-final class LSPMessageParser
-    extends Operator[Array[Byte], LSPMessage]
+final class ProtocolParser
+    extends Operator[Array[Byte], BaseProtocol]
     with LazyLogging {
-  override def apply(out: Subscriber[LSPMessage]): Subscriber[Array[Byte]] = {
+  override def apply(out: Subscriber[BaseProtocol]): Subscriber[Array[Byte]] = {
     new Subscriber[Array[Byte]] {
       import Ack._
       private[this] val data = ArrayBuffer.empty[Byte]
@@ -80,7 +80,7 @@ final class LSPMessageParser
           data.remove(0, contentLength)
           contentLength = -1
           val content = new String(contentBytes, StandardCharsets.UTF_8)
-          out.onNext(LSPMessage(header, content)).flatMap {
+          out.onNext(BaseProtocol(header, content)).flatMap {
             case Continue => readHeaders
             case els => els
           }

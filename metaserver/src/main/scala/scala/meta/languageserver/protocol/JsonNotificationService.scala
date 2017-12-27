@@ -1,4 +1,4 @@
-package scala.meta.lsp
+package scala.meta.languageserver.protocol
 
 import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task
@@ -28,5 +28,12 @@ abstract class NotificationService[A: Reads](val method: String)
       case JsSuccess(value, _) =>
         handle(value)
     }
-
+}
+object NotificationService {
+  def method[A: Reads](
+      name: String
+  )(f: A => Task[Unit]): NotificationService[A] =
+    new NotificationService[A](name) {
+      override def handle(request: A): Task[Unit] = f(request)
+    }
 }

@@ -1,9 +1,9 @@
-package scala.meta.lsp
+package scala.meta.languageserver.protocol
 
 import java.io.InputStream
 import monix.reactive.Observable
 
-case class LSPMessage(header: Map[String, String], content: String) {
+case class BaseProtocol(header: Map[String, String], content: String) {
   override def toString: String = {
     val sb = new java.lang.StringBuilder()
     header.foreach {
@@ -16,7 +16,7 @@ case class LSPMessage(header: Map[String, String], content: String) {
   }
 }
 
-object LSPMessage {
-  def fromInputStream(in: InputStream): Observable[LSPMessage] =
-    Observable.fromInputStream(in).liftByOperator(new LSPMessageParser)
+object BaseProtocol {
+  def fromInputStream(in: InputStream): Observable[BaseProtocol] =
+    Observable.fromInputStream(in).liftByOperator(new ProtocolParser)
 }

@@ -39,7 +39,7 @@ export async function activate(context: ExtensionContext) {
     toolsJar,
     'org.scalameta:metaserver_2.12:0.1-SNAPSHOT',
     '-M',
-    'scala.meta.languageserver.Main'
+    'scala.meta.languageserver.protocol.SimpleMain'
   ];
 
   const javaArgs = [

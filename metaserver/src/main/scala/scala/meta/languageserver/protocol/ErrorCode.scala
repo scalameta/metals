@@ -1,4 +1,4 @@
-package scala.meta.lsp
+package scala.meta.languageserver.protocol
 
 import scala.collection.immutable.IndexedSeq
 import enumeratum.values.IntEnum

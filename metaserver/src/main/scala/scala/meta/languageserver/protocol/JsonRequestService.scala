@@ -1,4 +1,4 @@
-package scala.meta.lsp
+package scala.meta.languageserver.protocol
 
 import monix.eval.Task
 import monix.execution.misc.NonFatal

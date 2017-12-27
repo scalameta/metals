@@ -1,4 +1,4 @@
-package scala.meta.lsp
+package scala.meta.languageserver.protocol
 
 import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task

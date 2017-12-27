@@ -3,14 +3,14 @@ package tests
 import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.io.PrintWriter
-import scala.meta.lsp.LSPMessage
+import scala.meta.languageserver.protocol.BaseProtocol
 import monix.execution.CancelableFuture
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.schedulers.TestScheduler
 
 object JsonRpcSuite extends MegaSuite {
   var out: PrintWriter = _
-  var messages = List.empty[LSPMessage]
+  var messages = List.empty[BaseProtocol]
   implicit var s: TestScheduler = _
   var f: CancelableFuture[Unit] = CancelableFuture.unit
   override def utestBeforeEach(path: Seq[String]): Unit = {
@@ -18,7 +18,7 @@ object JsonRpcSuite extends MegaSuite {
     val in = new PipedInputStream
     out = new PrintWriter(new PipedOutputStream(in))
     messages = Nil
-    f = LSPMessage.fromInputStream(in).foreach { msg =>
+    f = BaseProtocol.fromInputStream(in).foreach { msg =>
       messages = msg :: messages
     }
   }
@@ -39,7 +39,7 @@ object JsonRpcSuite extends MegaSuite {
   val content = """{"jsonrpc":"2.0","id":1,"method":"example"}"""
 
   val message: String = header + content
-  val lspMessage = LSPMessage(Map("Content-Length" -> "43"), content)
+  val lspMessage = BaseProtocol(Map("Content-Length" -> "43"), content)
 
   test("header and content together") {
     write(message)
