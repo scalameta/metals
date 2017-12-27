@@ -18,7 +18,8 @@ import play.api.libs.json.Json
 final class LanguageServer(
     in: Observable[LSPMessage],
     out: OutputStream,
-    service: Service,
+    notifications: JsonNotificationService,
+    requests: JsonRequestService,
     requestScheduler: Scheduler
 ) extends LazyLogging {
   private val writer = new MessageWriter(out)
@@ -27,7 +28,7 @@ final class LanguageServer(
   def handleValidMessage(message: Message): Task[Response] =
     message match {
       case request: Request =>
-        val runningRequest = service
+        val runningRequest = requests
           .handleRequest(request)
           .onErrorRecover {
             case NonFatal(e) =>
@@ -42,7 +43,7 @@ final class LanguageServer(
           case Notification("$/cancelNotification", Some(id)) =>
             activeClientRequests.get(id) match {
               case None =>
-                Response.empty.toTask
+                Task.now(Response.empty)
               case Some(request) =>
                 Task.eval {
                   request.cancel()
@@ -51,7 +52,9 @@ final class LanguageServer(
                 }
             }
           case _ =>
-            service.handleNotification(notification).map(_ => Response.empty)
+            notifications
+              .handleNotification(notification)
+              .map(_ => Response.empty)
         }
     }
 
