@@ -114,10 +114,10 @@ class InMemorySymbolIndex(
   ): Task[Effects.IndexSourcesClasspath] = for {
     config <- configuration.lastL
   } yield {
-    if (!config.indexing.classpath) Effects.IndexSourcesClasspath
+    if (!config.search.indexClasspath) Effects.IndexSourcesClasspath
     else {
       val sourceJarsWithJDK =
-        if (config.indexing.jdk)
+        if (config.search.indexJDK)
           CompilerConfig.jdkSources.fold(sourceJars)(_ :: sourceJars)
         else sourceJars
       val buf = List.newBuilder[AbsolutePath]

@@ -13,25 +13,25 @@ import play.api.libs.json.OFormat
 case class Configuration(
   scalafmt: Scalafmt = Scalafmt(),
   scalafix: Scalafix = Scalafix(),
-  indexing: Indexing = Indexing(),
-  experimental: Experimental = Experimental()
+  search: Search = Search(),
+  experimental: Experimental = Experimental(),
+  hover: Hover = Hover(),
+  rename: Rename = Rename(),
 )
 
 object Configuration {
 
   case class Experimental(
-      completions: Completions = Completions(),
-      hover: Hover = Hover(),
-      rename: Rename = Rename()
+      scalac: Scalac = Scalac(),
   )
-  case class Completions(enable: Boolean = false)
-  case class Hover(enable: Boolean = false)
-  case class Rename(enable: Boolean = false)
+  case class Scalac(enableCompletions: Boolean = false)
+  case class Hover(enabled: Boolean = false)
+  case class Rename(enabled: Boolean = false)
 
-  case class Scalafmt(enable: Boolean = true, confPath: RelativePath = RelativePath(".scalafmt.conf"))
-  case class Scalafix(enable: Boolean = true, confPath: RelativePath = RelativePath(".scalafix.conf"))
+  case class Scalafmt(enabled: Boolean = true, confPath: RelativePath = RelativePath(".scalafmt.conf"))
+  case class Scalafix(enabled: Boolean = true, confPath: RelativePath = RelativePath(".scalafix.conf"))
   // TODO(olafur): re-enable indexJDK after https://github.com/scalameta/language-server/issues/43 is fixed
-  case class Indexing(jdk: Boolean = false, classpath: Boolean = true)
+  case class Search(indexJDK: Boolean = false, indexClasspath: Boolean = true)
 
   implicit val absolutePathReads: Reads[AbsolutePath] =
     Reads.StringReads
@@ -46,8 +46,8 @@ object Configuration {
 
   // TODO(gabro): Json.format[A] is tedious to write.
   // We should use an annotation macro to cut the boilerplate
-  object Completions {
-    implicit val format: OFormat[Completions] = Json.using[Json.WithDefaultValues].format[Completions]
+  object Scalac {
+    implicit val format: OFormat[Scalac] = Json.using[Json.WithDefaultValues].format[Scalac]
   }
   object Hover {
     implicit val format: OFormat[Hover] = Json.using[Json.WithDefaultValues].format[Hover]
@@ -64,8 +64,8 @@ object Configuration {
   object Scalafix {
     implicit val format: OFormat[Scalafix] = Json.using[Json.WithDefaultValues].format[Scalafix]
   }
-  object Indexing {
-    implicit val format: OFormat[Indexing] = Json.using[Json.WithDefaultValues].format[Indexing]
+  object Search {
+    implicit val format: OFormat[Search] = Json.using[Json.WithDefaultValues].format[Search]
   }
   implicit val format: OFormat[Configuration] = Json.using[Json.WithDefaultValues].format[Configuration]
 }
