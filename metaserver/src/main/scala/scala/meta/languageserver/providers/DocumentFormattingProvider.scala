@@ -28,21 +28,20 @@ class DocumentFormattingProvider(configuration: Observable[Configuration], cwd: 
 
   def format(
       input: Input.VirtualFile
-  ): Task[DocumentFormattingResult] = for {
-    formatter <- formatterFromConfiguration
-    config <- scalafmtConfigFromConfiguration
-  } yield {
-    val fullDocumentRange = Range(
-      start = Position(0, 0),
-      end = Position(Int.MaxValue, Int.MaxValue)
-    )
-    val edits = if (Files.isRegularFile(config.toNIO)) {
-      val formattedContent = scalafmt.format(input.value, input.path, config)
-      List(TextEdit(fullDocumentRange, formattedContent))
-    } else {
-      Nil
+  ): Task[DocumentFormattingResult] =
+    formatterFromConfiguration.zip(scalafmtConfigFromConfiguration).map {
+      case (formatter, config) =>
+        val fullDocumentRange = Range(
+          start = Position(0, 0),
+          end = Position(Int.MaxValue, Int.MaxValue)
+        )
+        val edits = if (Files.isRegularFile(config.toNIO)) {
+          val formattedContent = scalafmt.format(input.value, input.path, config)
+          List(TextEdit(fullDocumentRange, formattedContent))
+        } else {
+          Nil
+        }
+        DocumentFormattingResult(edits)
     }
-    DocumentFormattingResult(edits)
-  }
 
 }
