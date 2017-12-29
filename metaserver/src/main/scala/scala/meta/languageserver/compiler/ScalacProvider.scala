@@ -15,7 +15,7 @@ import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
 
 /** Responsible for keeping fresh scalac global instances. */
-object ScalacProvider extends LazyLogging {
+class ScalacProvider() extends LazyLogging {
 
   def getCompiler(input: Input.VirtualFile): Option[Global] =
     getCompiler(Uri(input.path))
@@ -71,6 +71,10 @@ object ScalacProvider extends LazyLogging {
     compilerByConfigOrigin.values.foreach {
       case (_, global) => global.askReset()
     }
+
+}
+
+object ScalacProvider {
 
   def addCompilationUnit(
       global: Global,

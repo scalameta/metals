@@ -101,12 +101,13 @@ class ScalametaLanguageServer(
   val scalacErrorReporter: ScalacErrorReporter = new ScalacErrorReporter(connection)
   val documentFormattingProvider = new DocumentFormattingProvider(configurationPublisher, cwd)
   val squiggliesProvider = new SquiggliesProvider(configurationPublisher, cwd, stdout)
+  val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
       .debounce(FiniteDuration(1, "s"))
       .flatMap { input =>
         Observable
-          .fromIterable(Semanticdbs.toSemanticdb(input))
+          .fromIterable(Semanticdbs.toSemanticdb(input, scalacProvider))
           .executeOn(presentationCompilerScheduler)
       }
   val interactiveSchemaSemanticdbs: Observable[schema.Database] =
@@ -127,7 +128,7 @@ class ScalametaLanguageServer(
       c => symbolIndex.indexDependencyClasspath(c.sourceJars)
     )
   val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
-    compilerConfigPublisher.map(ScalacProvider.loadNewCompilerGlobals)
+    compilerConfigPublisher.map(scalacProvider.loadNewCompilerGlobals)
   val publishDiagnostics: Observable[Effects.PublishSquigglies] =
     metaSemanticdbs.mapTask { db =>
       squiggliesProvider.squigglies(db).map { diagnostics =>
@@ -225,7 +226,7 @@ class ScalametaLanguageServer(
       request: TextDocumentCompletionRequest
   ): Task[CompletionList] = withPC {
     logger.info("completion")
-    ScalacProvider.getCompiler(request.params.textDocument) match {
+    scalacProvider.getCompiler(request.params.textDocument) match {
       case Some(g) =>
         CompletionProvider.completions(
           g,
@@ -280,6 +281,7 @@ class ScalametaLanguageServer(
 
   override def hover(
       request: TextDocumentHoverRequest
+<<<<<<< HEAD
   ): Task[Hover] = Task {
     HoverProvider.hover(
       symbolIndex,
@@ -287,6 +289,17 @@ class ScalametaLanguageServer(
       request.params.position.line,
       request.params.position.character
     )
+=======
+  ): Task[Hover] = withPC {
+    scalacProvider.getCompiler(request.params.textDocument) match {
+      case Some(g) =>
+        HoverProvider.hover(
+          g,
+          toPoint(request.params.textDocument, request.params.position)
+        )
+      case None => HoverProvider.empty
+    }
+>>>>>>> Re-make ScalacProvider a class
   }
 
   override def references(
@@ -308,7 +321,7 @@ class ScalametaLanguageServer(
   override def signatureHelp(
       request: TextDocumentSignatureHelpRequest
   ): Task[SignatureHelpResult] = Task {
-    ScalacProvider.getCompiler(request.params.textDocument) match {
+    scalacProvider.getCompiler(request.params.textDocument) match {
       case Some(g) =>
         SignatureHelpProvider.signatureHelp(
           g,
@@ -335,12 +348,12 @@ class ScalametaLanguageServer(
           logger.info("Clearing the index cache")
           ScalametaLanguageServer.clearCacheDirectory()
           symbolIndex.clearIndex()
-          ScalacProvider.allCompilerConfigs.foreach(
+          scalacProvider.allCompilerConfigs.foreach(
             config => symbolIndex.indexDependencyClasspath(config.sourceJars)
           )
         case ResetPresentationCompiler =>
           logger.info("Resetting all compiler instances")
-          Scalac.resetCompilers()
+          scalac.resetCompilers()
         case ScalafixUnusedImports =>
           logger.info("Removing unused imports")
           val result =
