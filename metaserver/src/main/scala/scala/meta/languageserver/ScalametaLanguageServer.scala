@@ -281,7 +281,6 @@ class ScalametaLanguageServer(
 
   override def hover(
       request: TextDocumentHoverRequest
-<<<<<<< HEAD
   ): Task[Hover] = Task {
     HoverProvider.hover(
       symbolIndex,
@@ -289,17 +288,6 @@ class ScalametaLanguageServer(
       request.params.position.line,
       request.params.position.character
     )
-=======
-  ): Task[Hover] = withPC {
-    scalacProvider.getCompiler(request.params.textDocument) match {
-      case Some(g) =>
-        HoverProvider.hover(
-          g,
-          toPoint(request.params.textDocument, request.params.position)
-        )
-      case None => HoverProvider.empty
-    }
->>>>>>> Re-make ScalacProvider a class
   }
 
   override def references(
@@ -353,7 +341,7 @@ class ScalametaLanguageServer(
           )
         case ResetPresentationCompiler =>
           logger.info("Resetting all compiler instances")
-          scalac.resetCompilers()
+          scalacProvider.resetCompilers()
         case ScalafixUnusedImports =>
           logger.info("Removing unused imports")
           val result =

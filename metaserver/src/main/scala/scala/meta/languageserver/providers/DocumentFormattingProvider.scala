@@ -18,7 +18,7 @@ class DocumentFormattingProvider(configuration: Observable[Configuration], cwd: 
   private lazy val scalafmt = Formatter.classloadScalafmt("1.3.0")
 
   private def formatterFromConfiguration: Task[Formatter] = configuration.lastL.map { conf =>
-    if (conf.scalafmt.enable) scalafmt
+    if (conf.scalafmt.enabled) scalafmt
     else Formatter.noop
   }
 

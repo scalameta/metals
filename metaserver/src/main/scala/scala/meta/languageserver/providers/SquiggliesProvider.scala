@@ -24,7 +24,7 @@ class SquiggliesProvider(configuration: Observable[Configuration], cwd: Absolute
       val uri = document.input.syntax
       val compilerErrors = document.messages.map(_.toLSP)
       val scalafixErrors =
-        if (config.scalafix.enable) linter.linterMessages(document)
+        if (config.scalafix.enabled) linter.linterMessages(document)
         else Nil
       PublishDiagnostics(uri, compilerErrors ++ scalafixErrors)
     }
