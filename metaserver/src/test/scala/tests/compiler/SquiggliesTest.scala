@@ -33,8 +33,8 @@ object SquiggliesTest extends CompilerSuite {
     test(name) {
       val input = Input.VirtualFile(name, original)
       val doc = Semanticdbs.toSemanticdb(input, compiler)
-      val PublishDiagnostics(_, diagnostics) :: Nil =
-        squiggliesProvider.squigglies(doc).runSyncMaybe.right.get
+      val Right(PublishDiagnostics(_, diagnostics) :: Nil) =
+        squiggliesProvider.squigglies(doc).runSyncMaybe
       val obtained = diagnostics.map { d =>
         val pos = input.toPosition(d.range)
         pos.formatMessage(d.severity.getOrElse(???).toString, d.message)
