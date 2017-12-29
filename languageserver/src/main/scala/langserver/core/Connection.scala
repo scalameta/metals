@@ -59,7 +59,7 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
     }
   }
 
-  var i = new AtomicInteger()
+  private val i = new AtomicInteger()
   // send request for workspace/applyEdit ignoring response
   def workspaceApplyEdit(params: ApplyWorkspaceEditParams): Unit = {
     val json = JsonRpcRequestMessage("workspace/applyEdit", Json.toJsObject(params), NumericCorrelationId(i.getAndIncrement()))
