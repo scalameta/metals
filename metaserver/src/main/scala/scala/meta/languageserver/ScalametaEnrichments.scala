@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 import scala.meta.languageserver.{index => i}
+import org.langmeta.internal.semanticdb.{schema => s}
 import scala.{meta => m}
 import langserver.types.SymbolKind
 import langserver.{types => l}
@@ -101,7 +102,10 @@ object ScalametaEnrichments {
     }
   }
   implicit class XtensionInputLSP(val input: m.Input) extends AnyVal {
-    def contents: String = input.asInstanceOf[m.Input.VirtualFile].value
+    def contents: String = input match {
+      case m.Input.VirtualFile(_, value) => value
+      case _ => new String(input.chars)
+    }
   }
   implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
     def pretty: String =
@@ -302,5 +306,12 @@ object ScalametaEnrichments {
         .filterNot { _.uri.startsWith("jar:file") } // definition may refer to a jar
     }
 
+  }
+  implicit class XtensionSchemaDocument(val document: s.Document)
+      extends AnyVal {
+
+    /** Returns scala.meta.Document from protobuf schema.Document */
+    def toMetaDocument: m.Document =
+      s.Database(document :: Nil).toDb(None).documents.head
   }
 }

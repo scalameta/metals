@@ -17,6 +17,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
     override def commandHandler(method: String, command: ServerCommand): Task[ResultResponse] = (method, command) match {
       case ("initialize", request: InitializeParams) => initialize(request)
       case ("textDocument/completion", request: TextDocumentCompletionRequest) => completion(request)
+      case ("textDocument/codeAction", request: CodeActionRequest) => codeAction(request)
       case ("textDocument/definition", request: TextDocumentDefinitionRequest) => definition(request)
       case ("textDocument/documentHighlight", request: TextDocumentDocumentHighlightRequest) => documentHighlight(request)
       case ("textDocument/documentSymbol", request: DocumentSymbolParams) => documentSymbol(request)
@@ -66,6 +67,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
 
   // textDocument
   def completion(request: TextDocumentCompletionRequest): Task[CompletionList] = Task.now(CompletionList(isIncomplete = false, Nil))
+  def codeAction(request: CodeActionRequest): Task[CodeActionResult] = Task.now(CodeActionResult(Nil))
   def definition(request: TextDocumentDefinitionRequest): Task[DefinitionResult] = Task.now(DefinitionResult(Nil))
   def documentHighlight(request: TextDocumentDocumentHighlightRequest): Task[DocumentHighlightResult] = Task.now(DocumentHighlightResult(Nil))
   def documentSymbol(request: DocumentSymbolParams): Task[DocumentSymbolResult] = Task.now(DocumentSymbolResult(Nil))

@@ -5,6 +5,7 @@ import java.io.PrintStream
 import java.nio.file.Files
 import java.util.concurrent.Executors
 import scala.util.Properties
+import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import monix.execution.Scheduler
 import monix.execution.schedulers.SchedulerService
@@ -32,6 +33,9 @@ object Main extends LazyLogging {
       val server = new ScalametaLanguageServer(config, stdin, stdout, out)
       LSPLogger.connection = Some(server.connection)
       server.start()
+    } catch {
+      case NonFatal(e) =>
+        logger.error("Uncaught top-level exception", e)
     } finally {
       System.setOut(stdout)
       System.setErr(stderr)

@@ -143,6 +143,7 @@ lazy val testWorkspace = project
       // Need to fix source root so it matches the workspace folder.
       s"-P:semanticdb:sourceroot:${baseDirectory.value}"
     },
+    scalacOptions += "-Ywarn-unused-import",
     scalacOptions -= "-Xlint"
   )
   .disablePlugins(ScalafixPlugin)

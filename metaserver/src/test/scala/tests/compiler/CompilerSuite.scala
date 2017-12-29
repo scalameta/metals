@@ -1,9 +1,11 @@
 package tests.compiler
 
+import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.tools.nsc.interactive.Global
+import org.langmeta.semanticdb.Document
 import tests.MegaSuite
 
 class CompilerSuite extends MegaSuite {
@@ -13,6 +15,10 @@ class CompilerSuite extends MegaSuite {
       "-Ywarn-unused-import" ::
       Nil
   )
+
+  def toDocument(name: String, code: String): Document = {
+    InteractiveSemanticdb.toDocument(compiler, code, name, 10000)
+  }
 
   private def computeChevronPositionFromMarkup(
       filename: String,

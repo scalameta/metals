@@ -200,6 +200,19 @@ object RenameParams {
   implicit val format: OFormat[RenameParams] = Json.format[RenameParams]
 }
 
+case class CodeActionParams(
+  textDocument: TextDocumentIdentifier,
+  range: Range,
+  context: CodeActionContext
+)
+object CodeActionParams {
+  implicit val format: OFormat[CodeActionParams] = Json.format[CodeActionParams]
+}
+
+case class CodeActionRequest(params: CodeActionParams) extends ServerCommand
+object CodeActionRequest {
+  implicit val format: OFormat[CodeActionRequest] = Json.format[CodeActionRequest]
+}
 case class DocumentSymbolParams(textDocument: TextDocumentIdentifier) extends ServerCommand
 case class TextDocumentRenameRequest(params: RenameParams) extends ServerCommand
 object TextDocumentRenameRequest {
@@ -214,6 +227,10 @@ case class TextDocumentHoverRequest(params: TextDocumentPositionParams) extends 
 case class TextDocumentFormattingRequest(params: DocumentFormattingParams) extends ServerCommand
 case class WorkspaceExecuteCommandRequest(params: WorkspaceExecuteCommandParams) extends ServerCommand
 case class WorkspaceSymbolRequest(params: WorkspaceSymbolParams) extends ServerCommand
+case class ApplyWorkspaceEditParams(label: Option[String], edit: WorkspaceEdit)
+object ApplyWorkspaceEditParams {
+  implicit val format: OFormat[ApplyWorkspaceEditParams] = Json.format[ApplyWorkspaceEditParams]
+}
 
 case class Hover(contents: Seq[MarkedString], range: Option[Range]) extends ResultResponse
 object Hover {
@@ -229,6 +246,7 @@ object ServerCommand extends CommandCompanion[ServerCommand] {
   override val CommandFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeParams],
     "textDocument/completion" -> valueFormat(TextDocumentCompletionRequest)(_.params),
+    "textDocument/codeAction" -> valueFormat(CodeActionRequest.apply)(_.params),
     "textDocument/rename" -> valueFormat(TextDocumentRenameRequest.apply)(_.params),
     "textDocument/signatureHelp" -> valueFormat(TextDocumentSignatureHelpRequest)(_.params),
     "textDocument/definition" -> valueFormat(TextDocumentDefinitionRequest)(_.params),
@@ -318,6 +336,10 @@ case class RenameResult(params: WorkspaceEdit) extends ResultResponse
 object RenameResult {
   implicit val format: OFormat[RenameResult] = Json.format[RenameResult]
 }
+case class CodeActionResult(params: Seq[Command]) extends ResultResponse
+object CodeActionResult {
+  implicit val format: OFormat[CodeActionResult] = Json.format[CodeActionResult]
+}
 case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
 case class DefinitionResult(params: Seq[Location]) extends ResultResponse
 case class ReferencesResult(params: Seq[Location]) extends ResultResponse
@@ -341,6 +363,7 @@ object ResultResponse extends ResponseCompanion[Any] {
   override val ResponseFormats = Message.MessageFormats(
     "initialize" -> Json.format[InitializeResult],
     "textDocument/completion" -> Json.format[CompletionList],
+    "textDocument/codeAction" -> valueFormat(CodeActionResult.apply)(_.params),
     "textDocument/rename" -> valueFormat(RenameResult.apply)(_.params),
     "textDocument/signatureHelp" -> Json.format[SignatureHelpResult],
     "textDocument/definition" -> valueFormat(DefinitionResult)(_.params),

@@ -1,14 +1,14 @@
 package scala.meta.languageserver
 
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
-import java.io.IOException
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
-import java.nio.file.FileVisitResult
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Executors
 import scala.concurrent.duration.FiniteDuration
@@ -16,11 +16,13 @@ import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.providers._
+import scala.meta.languageserver.refactoring.OrganizeImports
 import scala.meta.languageserver.search.SymbolIndex
-import org.langmeta.languageserver.InputEnrichments._
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
 import langserver.core.LanguageServer
+import langserver.messages.CodeActionRequest
+import langserver.messages.CodeActionResult
 import langserver.messages.CompletionList
 import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
@@ -28,10 +30,12 @@ import langserver.messages.DocumentFormattingResult
 import langserver.messages.DocumentHighlightResult
 import langserver.messages.DocumentSymbolParams
 import langserver.messages.DocumentSymbolResult
+import langserver.messages.ExecuteCommandOptions
 import langserver.messages.Hover
 import langserver.messages.InitializeParams
 import langserver.messages.InitializeResult
 import langserver.messages.ReferencesResult
+import langserver.messages.RenameResult
 import langserver.messages.ServerCapabilities
 import langserver.messages.ShutdownResult
 import langserver.messages.SignatureHelpOptions
@@ -42,11 +46,9 @@ import langserver.messages.TextDocumentDocumentHighlightRequest
 import langserver.messages.TextDocumentFormattingRequest
 import langserver.messages.TextDocumentHoverRequest
 import langserver.messages.TextDocumentReferencesRequest
+import langserver.messages.TextDocumentRenameRequest
 import langserver.messages.TextDocumentSignatureHelpRequest
 import langserver.messages.WorkspaceExecuteCommandRequest
-import langserver.messages.ExecuteCommandOptions
-import langserver.messages.RenameResult
-import langserver.messages.TextDocumentRenameRequest
 import langserver.messages.WorkspaceSymbolRequest
 import langserver.messages.WorkspaceSymbolResult
 import langserver.types._
@@ -63,6 +65,7 @@ import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
+import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsSuccess
@@ -189,7 +192,8 @@ class ScalametaLanguageServer(
       executeCommandProvider =
         ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName)),
       workspaceSymbolProvider = true,
-      renameProvider = true
+      renameProvider = true,
+      codeActionProvider = true
     )
     InitializeResult(capabilities)
   }
@@ -250,6 +254,11 @@ class ScalametaLanguageServer(
       case None => CompletionProvider.empty
     }
   }
+
+  override def codeAction(request: CodeActionRequest): Task[CodeActionResult] =
+    Task {
+      CodeActionProvider.codeActions(request)
+    }
 
   override def definition(
       request: TextDocumentDefinitionRequest
@@ -335,7 +344,9 @@ class ScalametaLanguageServer(
     sourceChangeSubscriber.onNext(input)
   }
 
-  override def executeCommand(request: WorkspaceExecuteCommandRequest) = Task {
+  override def executeCommand(
+      request: WorkspaceExecuteCommandRequest
+  ): Task[Unit] = Task {
     import WorkspaceCommand._
     WorkspaceCommand
       .withNameOption(request.params.command)
@@ -350,6 +361,11 @@ class ScalametaLanguageServer(
         case ResetPresentationCompiler =>
           logger.info("Resetting all compiler instances")
           scalac.resetCompilers()
+        case ScalafixUnusedImports =>
+          logger.info("Removing unused imports")
+          val result =
+            OrganizeImports.removeUnused(request.params.arguments, symbolIndex)
+          connection.workspaceApplyEdit(result)
       }
   }
 

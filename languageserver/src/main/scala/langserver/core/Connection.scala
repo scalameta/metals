@@ -4,6 +4,7 @@ import java.util.{Map => JMap}
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.util.Failure
@@ -56,6 +57,13 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
       future.cancel()
       activeRequestsById.remove(id)
     }
+  }
+
+  private val i = new AtomicInteger()
+  // send request for workspace/applyEdit ignoring response
+  def workspaceApplyEdit(params: ApplyWorkspaceEditParams): Unit = {
+    val json = JsonRpcRequestMessage("workspace/applyEdit", Json.toJsObject(params), NumericCorrelationId(i.getAndIncrement()))
+    msgWriter.write(json)
   }
 
   def sendNotification(params: Notification): Unit = {
@@ -119,7 +127,8 @@ abstract class Connection(inStream: InputStream, outStream: OutputStream)(implic
                 }
 
               case response: JsonRpcResponseMessage =>
-                // logger.debug(s"Received response: $response")
+                // TODO(olafur) complete request, for example workspace/applyEdit
+                logger.debug(s"Received response: $response")
 
               case m =>
                 logger.error(s"Received unknown message: $m")
