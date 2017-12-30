@@ -6,6 +6,15 @@ import langserver.types._
 import langserver.utils.JsonRpcUtils
 import play.api.libs.json.OFormat
 
+//an unparsed LspMessage
+case class UnparsedLspMessage(headers: Map[String, String], content: Array[Byte]) {
+  override def toString: String = {
+    //I am using standard unix newlines, on the wire lsp messages should use windows newlines
+    val header = headers.map { case (k, v) => k + ": " + v }.mkString("\n")
+    header + "\n" + new String(content, "UTF-8")
+  }
+}
+
 sealed trait Message
 sealed trait ServerCommand extends Message
 sealed trait ClientCommand extends Message
