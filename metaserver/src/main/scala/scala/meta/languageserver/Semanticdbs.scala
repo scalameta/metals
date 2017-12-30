@@ -18,7 +18,10 @@ import org.langmeta.io.AbsolutePath
 
 object Semanticdbs extends LazyLogging {
 
-  def toSemanticdb(input: Input.VirtualFile, scalacProvider: ScalacProvider): Option[semanticdb.Database] =
+  def toSemanticdb(
+      input: Input.VirtualFile,
+      scalacProvider: ScalacProvider
+  ): Option[semanticdb.Database] =
     for {
       compiler <- scalacProvider.getCompiler(input)
     } yield toSemanticdb(input, compiler)

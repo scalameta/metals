@@ -98,10 +98,15 @@ class ScalametaLanguageServer(
   val (configurationSubscriber, configurationPublisher) =
     ScalametaLanguageServer.configurationStream(connection)
   val buffers: Buffers = Buffers()
-  val symbolIndex: SymbolIndex = SymbolIndex(cwd, connection, buffers, configurationPublisher)
-  val scalacErrorReporter: ScalacErrorReporter = new ScalacErrorReporter(connection)
-  val documentFormattingProvider = new DocumentFormattingProvider(configurationPublisher, cwd)
-  val squiggliesProvider = new SquiggliesProvider(configurationPublisher, cwd, stdout)
+  val symbolIndex: SymbolIndex =
+    SymbolIndex(cwd, connection, buffers, configurationPublisher)
+  val scalacErrorReporter: ScalacErrorReporter = new ScalacErrorReporter(
+    connection
+  )
+  val documentFormattingProvider =
+    new DocumentFormattingProvider(configurationPublisher, cwd)
+  val squiggliesProvider =
+    new SquiggliesProvider(configurationPublisher, cwd, stdout)
   val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
@@ -432,7 +437,7 @@ object ScalametaLanguageServer extends LazyLogging {
   }
 
   def configurationStream(connection: Connection)(
-    implicit scheduler: Scheduler
+      implicit scheduler: Scheduler
   ): (Observer.Sync[JsValue], Observable[Configuration]) = {
     val (subscriber, publisher) = multicast[JsValue]
     val configurationPublisher = publisher

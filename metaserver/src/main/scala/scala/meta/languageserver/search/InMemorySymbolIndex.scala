@@ -111,39 +111,40 @@ class InMemorySymbolIndex(
 
   def indexDependencyClasspath(
       sourceJars: List[AbsolutePath]
-  ): Task[Effects.IndexSourcesClasspath] = for {
-    config <- configuration.lastL
-  } yield {
-    if (!config.search.indexClasspath) Effects.IndexSourcesClasspath
-    else {
-      val sourceJarsWithJDK =
-        if (config.search.indexJDK)
-          CompilerConfig.jdkSources.fold(sourceJars)(_ :: sourceJars)
-        else sourceJars
-      val buf = List.newBuilder[AbsolutePath]
-      sourceJarsWithJDK.foreach { jar =>
-        // ensure we only index each jar once even under race conditions.
-        // race conditions are not unlikely since multiple .compilerconfig
-        // are typically created at the same time for each project/configuration
-        // combination. Duplicate tasks are expensive, for example we don't want
-        // to index the JDK twice on first startup.
-        indexedJars.computeIfAbsent(jar, _ => buf += jar)
-      }
-      val sourceJarsToIndex = buf.result()
-      // Acquire a lock on the leveldb cache only during indexing.
-      LevelDBMap.withDB(cacheDirectory.resolve("leveldb").toFile) { db =>
-        sourceJarsToIndex.foreach { path =>
-          logger.info(s"Indexing classpath entry $path...")
-          val database = db.getOrElseUpdate[AbsolutePath, Database](path, {
-            () =>
-              Mtags.indexDatabase(path :: Nil)
-          })
-          indexDatabase(database)
+  ): Task[Effects.IndexSourcesClasspath] =
+    for {
+      config <- configuration.lastL
+    } yield {
+      if (!config.search.indexClasspath) Effects.IndexSourcesClasspath
+      else {
+        val sourceJarsWithJDK =
+          if (config.search.indexJDK)
+            CompilerConfig.jdkSources.fold(sourceJars)(_ :: sourceJars)
+          else sourceJars
+        val buf = List.newBuilder[AbsolutePath]
+        sourceJarsWithJDK.foreach { jar =>
+          // ensure we only index each jar once even under race conditions.
+          // race conditions are not unlikely since multiple .compilerconfig
+          // are typically created at the same time for each project/configuration
+          // combination. Duplicate tasks are expensive, for example we don't want
+          // to index the JDK twice on first startup.
+          indexedJars.computeIfAbsent(jar, _ => buf += jar)
         }
+        val sourceJarsToIndex = buf.result()
+        // Acquire a lock on the leveldb cache only during indexing.
+        LevelDBMap.withDB(cacheDirectory.resolve("leveldb").toFile) { db =>
+          sourceJarsToIndex.foreach { path =>
+            logger.info(s"Indexing classpath entry $path...")
+            val database = db.getOrElseUpdate[AbsolutePath, Database](path, {
+              () =>
+                Mtags.indexDatabase(path :: Nil)
+            })
+            indexDatabase(database)
+          }
+        }
+        Effects.IndexSourcesClasspath
       }
-      Effects.IndexSourcesClasspath
     }
-  }
 
   /** Register this Database to symbol indexer. */
   def indexDatabase(document: s.Database): Effects.IndexSemanticdb = {

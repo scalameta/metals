@@ -11,12 +11,12 @@ import Configuration._
 import play.api.libs.json.OFormat
 
 case class Configuration(
-  scalafmt: Scalafmt = Scalafmt(),
-  scalafix: Scalafix = Scalafix(),
-  search: Search = Search(),
-  experimental: Experimental = Experimental(),
-  hover: Hover = Hover(),
-  rename: Rename = Rename(),
+    scalafmt: Scalafmt = Scalafmt(),
+    scalafix: Scalafix = Scalafix(),
+    search: Search = Search(),
+    experimental: Experimental = Experimental(),
+    hover: Hover = Hover(),
+    rename: Rename = Rename(),
 )
 
 object Configuration {
@@ -28,8 +28,14 @@ object Configuration {
   case class Hover(enabled: Boolean = false)
   case class Rename(enabled: Boolean = false)
 
-  case class Scalafmt(enabled: Boolean = true, confPath: RelativePath = RelativePath(".scalafmt.conf"))
-  case class Scalafix(enabled: Boolean = true, confPath: RelativePath = RelativePath(".scalafix.conf"))
+  case class Scalafmt(
+      enabled: Boolean = true,
+      confPath: RelativePath = RelativePath(".scalafmt.conf")
+  )
+  case class Scalafix(
+      enabled: Boolean = true,
+      confPath: RelativePath = RelativePath(".scalafix.conf")
+  )
   // TODO(olafur): re-enable indexJDK after https://github.com/scalameta/language-server/issues/43 is fixed
   case class Search(indexJDK: Boolean = false, indexClasspath: Boolean = true)
 
@@ -47,25 +53,33 @@ object Configuration {
   // TODO(gabro): Json.format[A] is tedious to write.
   // We should use an annotation macro to cut the boilerplate
   object Scalac {
-    implicit val format: OFormat[Scalac] = Json.using[Json.WithDefaultValues].format[Scalac]
+    implicit val format: OFormat[Scalac] =
+      Json.using[Json.WithDefaultValues].format[Scalac]
   }
   object Hover {
-    implicit val format: OFormat[Hover] = Json.using[Json.WithDefaultValues].format[Hover]
+    implicit val format: OFormat[Hover] =
+      Json.using[Json.WithDefaultValues].format[Hover]
   }
   object Rename {
-    implicit val format: OFormat[Rename] = Json.using[Json.WithDefaultValues].format[Rename]
+    implicit val format: OFormat[Rename] =
+      Json.using[Json.WithDefaultValues].format[Rename]
   }
   object Experimental {
-    implicit val format: OFormat[Experimental] = Json.using[Json.WithDefaultValues].format[Experimental]
+    implicit val format: OFormat[Experimental] =
+      Json.using[Json.WithDefaultValues].format[Experimental]
   }
   object Scalafmt {
-    implicit val format: OFormat[Scalafmt] = Json.using[Json.WithDefaultValues].format[Scalafmt]
+    implicit val format: OFormat[Scalafmt] =
+      Json.using[Json.WithDefaultValues].format[Scalafmt]
   }
   object Scalafix {
-    implicit val format: OFormat[Scalafix] = Json.using[Json.WithDefaultValues].format[Scalafix]
+    implicit val format: OFormat[Scalafix] =
+      Json.using[Json.WithDefaultValues].format[Scalafix]
   }
   object Search {
-    implicit val format: OFormat[Search] = Json.using[Json.WithDefaultValues].format[Search]
+    implicit val format: OFormat[Search] =
+      Json.using[Json.WithDefaultValues].format[Search]
   }
-  implicit val format: OFormat[Configuration] = Json.using[Json.WithDefaultValues].format[Configuration]
+  implicit val format: OFormat[Configuration] =
+    Json.using[Json.WithDefaultValues].format[Configuration]
 }

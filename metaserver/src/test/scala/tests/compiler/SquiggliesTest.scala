@@ -21,7 +21,8 @@ object SquiggliesTest extends CompilerSuite {
   val logFile = tmp.resolve("metaserver.log").toFile
   val out = new PrintStream(new FileOutputStream(logFile))
   val config = Observable(Configuration())
-  val squiggliesProvider = new SquiggliesProvider(config, AbsolutePath(tmp), out)
+  val squiggliesProvider =
+    new SquiggliesProvider(config, AbsolutePath(tmp), out)
   Files.write(
     tmp.resolve(".scalafix.conf"),
     """
