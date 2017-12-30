@@ -113,7 +113,7 @@ class InMemorySymbolIndex(
       sourceJars: List[AbsolutePath]
   ): Task[Effects.IndexSourcesClasspath] =
     for {
-      config <- configuration.lastL
+      config <- configuration.take(1).lastL
     } yield {
       if (!config.search.indexClasspath) Effects.IndexSourcesClasspath
       else {

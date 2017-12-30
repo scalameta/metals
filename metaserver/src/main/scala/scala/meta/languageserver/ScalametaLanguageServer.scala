@@ -421,7 +421,7 @@ object ScalametaLanguageServer extends LazyLogging {
   def compilerConfigStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[CompilerConfig]) = {
-    val (subscriber, publisher) = multicast[AbsolutePath]
+    val (subscriber, publisher) = multicast[AbsolutePath]()
     val compilerConfigPublished = publisher
       .map(path => CompilerConfig.fromPath(path))
     subscriber -> compilerConfigPublished
@@ -430,7 +430,7 @@ object ScalametaLanguageServer extends LazyLogging {
   def fileSystemSemanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[schema.Database]) = {
-    val (subscriber, publisher) = multicast[AbsolutePath]
+    val (subscriber, publisher) = multicast[AbsolutePath]()
     val semanticdbPublisher = publisher
       .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))
     subscriber -> semanticdbPublisher
@@ -439,7 +439,9 @@ object ScalametaLanguageServer extends LazyLogging {
   def configurationStream(connection: Connection)(
       implicit scheduler: Scheduler
   ): (Observer.Sync[JsValue], Observable[Configuration]) = {
-    val (subscriber, publisher) = multicast[JsValue]
+    val initialValue = Json.toJson(Configuration())
+    val (subscriber, publisher) =
+      multicast[JsValue](MulticastStrategy.behavior(initialValue))
     val configurationPublisher = publisher
       .map(json => (json \ "scalameta").validate[Configuration])
       .doOnNext {
@@ -452,12 +454,13 @@ object ScalametaLanguageServer extends LazyLogging {
           logger.info(s"Configuration updated $conf")
           conf
       }
-    subscriber.onNext(Json.toJson(Configuration()))
     subscriber -> configurationPublisher
   }
 
-  def multicast[T](implicit s: Scheduler) = {
-    val (sub, pub) = Observable.multicast[T](MulticastStrategy.Publish)
+  def multicast[A](
+      strategy: MulticastStrategy[A] = MulticastStrategy.publish
+  )(implicit s: Scheduler) = {
+    val (sub, pub) = Observable.multicast[A](strategy)
     (sub, pub.doOnError(onError))
   }
 

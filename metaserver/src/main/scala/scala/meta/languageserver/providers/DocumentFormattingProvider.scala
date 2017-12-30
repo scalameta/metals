@@ -21,13 +21,13 @@ class DocumentFormattingProvider(
   private lazy val scalafmt = Formatter.classloadScalafmt("1.3.0")
 
   private def formatterFromConfiguration: Task[Formatter] =
-    configuration.lastL.map { conf =>
+    configuration.take(1).lastL.map { conf =>
       if (conf.scalafmt.enabled) scalafmt
       else Formatter.noop
     }
 
   private def scalafmtConfigFromConfiguration: Task[AbsolutePath] =
-    configuration.lastL.map { conf =>
+    configuration.take(1).lastL.map { conf =>
       cwd.resolve(conf.scalafmt.confPath)
     }
 

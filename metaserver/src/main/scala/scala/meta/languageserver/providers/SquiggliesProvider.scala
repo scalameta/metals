@@ -23,7 +23,7 @@ class SquiggliesProvider(
     squigglies(m.Database(doc :: Nil))
   def squigglies(db: m.Database): Task[Seq[PublishDiagnostics]] =
     for {
-      config <- configuration.lastL
+      config <- configuration.take(1).lastL
     } yield {
       db.documents.map { document =>
         val uri = document.input.syntax
