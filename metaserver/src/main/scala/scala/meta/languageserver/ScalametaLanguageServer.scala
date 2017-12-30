@@ -69,6 +69,8 @@ import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb
 import play.api.libs.json.Json
 import play.api.libs.json.JsValue
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.JsError
 
 class ScalametaLanguageServer(
     cwd: AbsolutePath,
@@ -434,9 +436,17 @@ object ScalametaLanguageServer extends LazyLogging {
   ): (Observer.Sync[JsValue], Observable[Configuration]) = {
     val (subscriber, publisher) = multicast[JsValue]
     val configurationPublisher = publisher
-      .map(json => (json \ "scalameta").as[Configuration])
-      .doOnNext(conf => logger.info(s"Configuration updated $conf"))
-      .doOnError(e => connection.showMessage(MessageType.Error, e.getMessage))
+      .map(json => (json \ "scalameta").validate[Configuration])
+      .doOnNext {
+        case JsError(errors) =>
+          connection.showMessage(MessageType.Error, errors.toString)
+        case _ => ()
+      }
+      .collect {
+        case JsSuccess(conf, _) =>
+          logger.info(s"Configuration updated $conf")
+          conf
+      }
     subscriber.onNext(Json.toJson(Configuration()))
     subscriber -> configurationPublisher
   }
