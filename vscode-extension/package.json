@@ -1,74 +1,107 @@
 {
-    "name": "vscode-scalameta",
-    "displayName": "vscode-scalameta",
-    "description": "",
-    "version": "0.0.1",
-    "publisher": "gabro",
-    "engines": {
-        "vscode": "^1.17.0"
-    },
-    "categories": [
-        "Other"
-    ],
-    "activationEvents": [
-        "onLanguage:scala"
-    ],
-    "contributes": {
-        "configuration": {
-            "title": "Scalameta Language Server",
-            "properties": {
-                "scalameta.scalafixConfPath": {
-                    "type": "string",
-                    "default": ".scalafix.conf",
-                    "description": "Path to the Scalafix configuration, relative to the workspace path"
-                },
-                "scalameta.scalafmtConfPath": {
-                    "type": "string",
-                    "default": ".scalafmt.conf",
-                    "description": "Path to the Scalafmt configuration, relative to the workspace path"
-                },
-                "scalameta.enableCompletions": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Enables completions as you type"
-                }
-            }
+  "name": "vscode-scalameta",
+  "displayName": "vscode-scalameta",
+  "description": "",
+  "version": "0.0.1",
+  "publisher": "gabro",
+  "engines": {
+    "vscode": "^1.17.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onLanguage:scala"],
+  "contributes": {
+    "configuration": {
+      "title": "Scalameta Language Server",
+      "properties": {
+        "scalameta.scalafmt.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable formatting with Scalafmt"
         },
-        "commands": [{
-            "command": "scalameta.restartServer",
-            "category": "Scalameta Language Server",
-            "title": "Restart server"
-        }, {
-            "command": "scalameta.clearIndexCache",
-            "category": "Scalameta Language Server",
-            "title": "Clear index cache"
-        }, {
-            "command": "scalameta.resetPresentationCompiler",
-            "category": "Scalameta Language Server",
-            "title": "Reset presentation compilers"
-        }]
+        "scalameta.scalafmt.confPath": {
+          "type": "string",
+          "default": ".scalafmt.conf",
+          "description":
+            "Path to the Scalafmt configuration, relative to the workspace path"
+        },
+        "scalameta.scalafix.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Scalafix diagnostics"
+        },
+        "scalameta.scalafix.confPath": {
+          "type": "string",
+          "default": ".scalafix.conf",
+          "description":
+            "Path to the Scalafix configuration, relative to the workspace path"
+        },
+        "scalameta.search.indexClasspath": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable indexing of the classpath"
+        },
+        "scalameta.search.indexJDK": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable indexing of the JDK"
+        },
+        "scalameta.hover.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable tooltips on hover"
+        },
+        "scalameta.rename.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable renaming symbols"
+        },
+        "scalameta.experimental.completions.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable completions as you type"
+        }
+      }
     },
-    "main": "./out/extension",
-    "scripts": {
-        "vscode:prepublish": "npm run download-coursier && npm run compile",
-        "download-coursier": "curl -L -o coursier https://github.com/coursier/coursier/raw/v1.0.0-RC13/coursier",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install",
-        "test": "npm run compile && node ./node_modules/vscode/bin/test",
-        "build": "vsce package"
-    },
-    "devDependencies": {
-        "@types/mocha": "^2.2.42",
-        "@types/node": "^7.0.43",
-        "typescript": "^2.5.3",
-        "vsce": "^1.32.0"
-    },
-    "dependencies": {
-        "expand-home-dir": "0.0.3",
-        "find-java-home": "^0.2.0",
-        "path-exists": "^3.0.0",
-        "vscode": "^1.1.5",
-        "vscode-languageclient": "^3.4.5"
-    }
+    "commands": [
+      {
+        "command": "scalameta.restartServer",
+        "category": "Scalameta Language Server",
+        "title": "Restart server"
+      },
+      {
+        "command": "scalameta.clearIndexCache",
+        "category": "Scalameta Language Server",
+        "title": "Clear index cache"
+      },
+      {
+        "command": "scalameta.resetPresentationCompiler",
+        "category": "Scalameta Language Server",
+        "title": "Reset presentation compilers"
+      }
+    ]
+  },
+  "main": "./out/extension",
+  "scripts": {
+    "vscode:prepublish": "npm run download-coursier && npm run compile",
+    "download-coursier":
+      "curl -L -o coursier https://github.com/coursier/coursier/raw/v1.0.0-RC13/coursier",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "test": "npm run compile && node ./node_modules/vscode/bin/test",
+    "build": "vsce package"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.42",
+    "@types/node": "^7.0.43",
+    "typescript": "^2.5.3",
+    "vsce": "^1.32.0"
+  },
+  "dependencies": {
+    "expand-home-dir": "0.0.3",
+    "find-java-home": "^0.2.0",
+    "path-exists": "^3.0.0",
+    "vscode": "^1.1.5",
+    "vscode-languageclient": "^3.4.5"
+  }
 }
