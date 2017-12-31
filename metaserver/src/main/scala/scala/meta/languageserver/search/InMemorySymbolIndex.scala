@@ -26,7 +26,6 @@ import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb.SemanticdbEnrichments._
 import org.langmeta.semanticdb.Symbol
 import monix.eval.Task
-import monix.reactive.Observable
 
 class InMemorySymbolIndex(
     val symbolIndexer: SymbolIndexer,
@@ -34,7 +33,7 @@ class InMemorySymbolIndex(
     cwd: AbsolutePath,
     notifications: Notifications,
     buffers: Buffers,
-    configuration: Observable[Configuration],
+    configuration: Task[Configuration],
 ) extends SymbolIndex
     with LazyLogging {
   private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
@@ -113,7 +112,7 @@ class InMemorySymbolIndex(
       sourceJars: List[AbsolutePath]
   ): Task[Effects.IndexSourcesClasspath] =
     for {
-      config <- configuration.take(1).lastL
+      config <- configuration
     } yield {
       if (!config.search.indexClasspath) Effects.IndexSourcesClasspath
       else {

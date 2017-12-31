@@ -24,7 +24,7 @@
           "description":
             "Path to the Scalafmt configuration, relative to the workspace path"
         },
-        "scalameta.scalafix.enable": {
+        "scalameta.scalafix.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable Scalafix diagnostics"
@@ -55,7 +55,7 @@
           "default": true,
           "description": "Enable renaming symbols"
         },
-        "scalameta.experimental.completions.enabled": {
+        "scalameta.experimental.scalac.enableCompletions": {
           "type": "boolean",
           "default": false,
           "description": "Enable completions as you type"

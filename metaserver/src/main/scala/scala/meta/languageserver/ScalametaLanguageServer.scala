@@ -14,6 +14,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
+import scala.meta.languageserver.MonixEnrichments._
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.refactoring.OrganizeImports
 import scala.meta.languageserver.search.SymbolIndex
@@ -53,6 +54,7 @@ import langserver.messages.WorkspaceSymbolRequest
 import langserver.messages.WorkspaceSymbolResult
 import langserver.types._
 import monix.eval.Task
+import monix.execution.Ack
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.execution.schedulers.SchedulerService
@@ -71,6 +73,7 @@ import play.api.libs.json.Json
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsError
+import play.api.libs.json.JsObject
 
 class ScalametaLanguageServer(
     cwd: AbsolutePath,
@@ -97,16 +100,18 @@ class ScalametaLanguageServer(
     )
   val (configurationSubscriber, configurationPublisher) =
     ScalametaLanguageServer.configurationStream(connection)
+  val lastConfiguration: Task[Configuration] =
+    configurationPublisher.take(1).lastL
   val buffers: Buffers = Buffers()
   val symbolIndex: SymbolIndex =
-    SymbolIndex(cwd, connection, buffers, configurationPublisher)
+    SymbolIndex(cwd, connection, buffers, lastConfiguration)
   val scalacErrorReporter: ScalacErrorReporter = new ScalacErrorReporter(
     connection
   )
   val documentFormattingProvider =
-    new DocumentFormattingProvider(configurationPublisher, cwd)
+    new DocumentFormattingProvider(lastConfiguration, cwd)
   val squiggliesProvider =
-    new SquiggliesProvider(configurationPublisher, cwd, stdout)
+    new SquiggliesProvider(lastConfiguration, cwd, stdout)
   val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
@@ -146,6 +151,7 @@ class ScalametaLanguageServer(
     metaSemanticdbs.map(scalacErrorReporter.reportErrors)
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
+    configurationPublisher.map(_ => Effects.UpdateBuffers),
     indexedDependencyClasspath,
     indexedSemanticdbs,
     installedCompilers,
@@ -439,21 +445,23 @@ object ScalametaLanguageServer extends LazyLogging {
   def configurationStream(connection: Connection)(
       implicit scheduler: Scheduler
   ): (Observer.Sync[JsValue], Observable[Configuration]) = {
-    val initialValue = Json.toJson(Configuration())
+    val initialValue = JsObject(
+      "scalameta" -> Json.toJson(Configuration()) :: Nil
+    )
     val (subscriber, publisher) =
       multicast[JsValue](MulticastStrategy.behavior(initialValue))
-    val configurationPublisher = publisher
-      .map(json => (json \ "scalameta").validate[Configuration])
-      .doOnNext {
-        case JsError(errors) =>
-          connection.showMessage(MessageType.Error, errors.toString)
-        case _ => ()
+    val configurationPublisher = publisher.distinctUntilChanged
+      .onNext[Configuration] { (out, json) =>
+        (json \ "scalameta").validate[Configuration] match {
+          case JsError(errors) =>
+            connection.showMessage(MessageType.Error, errors.toString)
+            Ack.Continue
+          case JsSuccess(conf, _) =>
+            logger.info(s"Configuration updated $conf")
+            out.onNext(conf)
+        }
       }
-      .collect {
-        case JsSuccess(conf, _) =>
-          logger.info(s"Configuration updated $conf")
-          conf
-      }
+
     subscriber -> configurationPublisher
   }
 

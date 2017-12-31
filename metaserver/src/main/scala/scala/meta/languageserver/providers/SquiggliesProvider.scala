@@ -8,11 +8,10 @@ import langserver.messages.PublishDiagnostics
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.tools.nsc.interpreter.OutputStream
 import monix.eval.Task
-import monix.reactive.Observable
 import org.langmeta.AbsolutePath
 
 class SquiggliesProvider(
-    configuration: Observable[Configuration],
+    configuration: Task[Configuration],
     cwd: AbsolutePath,
     stdout: OutputStream
 ) extends LazyLogging {
@@ -23,7 +22,7 @@ class SquiggliesProvider(
     squigglies(m.Database(doc :: Nil))
   def squigglies(db: m.Database): Task[Seq[PublishDiagnostics]] =
     for {
-      config <- configuration.take(1).lastL
+      config <- configuration
     } yield {
       db.documents.map { document =>
         val uri = document.input.syntax
