@@ -6,31 +6,35 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.{meta => m}
 import langserver.messages.PublishDiagnostics
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.languageserver.MonixEnrichments._
 import scala.tools.nsc.interpreter.OutputStream
 import monix.eval.Task
+import monix.execution.Scheduler
+import monix.reactive.Observable
 import org.langmeta.AbsolutePath
 
 class SquiggliesProvider(
-    configuration: Task[Configuration],
+    configuration: Observable[Configuration],
     cwd: AbsolutePath,
     stdout: OutputStream
-) extends LazyLogging {
+)(implicit s: Scheduler)
+    extends LazyLogging {
+  private val isEnabled: () => Boolean =
+    configuration.map(_.scalafix.enabled).toFunction0()
 
   lazy val linter = new Linter(cwd, stdout)
 
   def squigglies(doc: m.Document): Task[Seq[PublishDiagnostics]] =
     squigglies(m.Database(doc :: Nil))
-  def squigglies(db: m.Database): Task[Seq[PublishDiagnostics]] =
-    for {
-      config <- configuration
-    } yield {
+  def squigglies(db: m.Database): Task[Seq[PublishDiagnostics]] = Task.eval {
+    if (!isEnabled()) Nil
+    else {
       db.documents.map { document =>
         val uri = document.input.syntax
         val compilerErrors = document.messages.map(_.toLSP)
-        val scalafixErrors =
-          if (config.scalafix.enabled) linter.linterMessages(document)
-          else Nil
+        val scalafixErrors = linter.linterMessages(document)
         PublishDiagnostics(uri, compilerErrors ++ scalafixErrors)
       }
     }
+  }
 }

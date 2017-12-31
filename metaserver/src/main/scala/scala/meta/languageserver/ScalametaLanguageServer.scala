@@ -14,16 +14,16 @@ import scala.concurrent.duration.FiniteDuration
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
-import scala.meta.languageserver.MonixEnrichments._
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.refactoring.OrganizeImports
 import scala.meta.languageserver.search.SymbolIndex
+import scala.meta.languageserver.PlayJsonEnrichments._
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
+import langserver.core.Connection
 import langserver.core.LanguageServer
 import langserver.messages.CodeActionRequest
 import langserver.messages.CodeActionResult
-import langserver.core.Connection
 import langserver.messages.CompletionList
 import langserver.messages.CompletionOptions
 import langserver.messages.DefinitionResult
@@ -54,7 +54,6 @@ import langserver.messages.WorkspaceSymbolRequest
 import langserver.messages.WorkspaceSymbolResult
 import langserver.types._
 import monix.eval.Task
-import monix.execution.Ack
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.execution.schedulers.SchedulerService
@@ -69,11 +68,9 @@ import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb
-import play.api.libs.json.Json
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsError
-import play.api.libs.json.JsObject
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.JsValue
 
 class ScalametaLanguageServer(
     cwd: AbsolutePath,
@@ -100,18 +97,16 @@ class ScalametaLanguageServer(
     )
   val (configurationSubscriber, configurationPublisher) =
     ScalametaLanguageServer.configurationStream(connection)
-  val lastConfiguration: Task[Configuration] =
-    configurationPublisher.take(1).lastL
   val buffers: Buffers = Buffers()
   val symbolIndex: SymbolIndex =
-    SymbolIndex(cwd, connection, buffers, lastConfiguration)
+    SymbolIndex(cwd, connection, buffers, configurationPublisher)
   val scalacErrorReporter: ScalacErrorReporter = new ScalacErrorReporter(
     connection
   )
   val documentFormattingProvider =
-    new DocumentFormattingProvider(lastConfiguration, cwd)
+    new DocumentFormattingProvider(configurationPublisher, cwd, connection)
   val squiggliesProvider =
-    new SquiggliesProvider(lastConfiguration, cwd, stdout)
+    new SquiggliesProvider(configurationPublisher, cwd, stdout)
   val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
@@ -231,8 +226,15 @@ class ScalametaLanguageServer(
         ()
     }
 
-  override def onChangeConfiguration(settings: JsValue): Unit =
-    configurationSubscriber.onNext(settings)
+  override def onChangeConfiguration(settings: JsValue): Unit = {
+    (settings \ "scalameta").validate[Configuration] match {
+      case err: JsError =>
+        connection.showMessage(MessageType.Error, err.show)
+      case JsSuccess(conf, _) =>
+        logger.info(s"Configuration updated $conf")
+        configurationSubscriber.onNext(conf)
+    }
+  }
 
   override def completion(
       request: TextDocumentCompletionRequest
@@ -444,24 +446,10 @@ object ScalametaLanguageServer extends LazyLogging {
 
   def configurationStream(connection: Connection)(
       implicit scheduler: Scheduler
-  ): (Observer.Sync[JsValue], Observable[Configuration]) = {
-    val initialValue = JsObject(
-      "scalameta" -> Json.toJson(Configuration()) :: Nil
-    )
+  ): (Observer.Sync[Configuration], Observable[Configuration]) = {
     val (subscriber, publisher) =
-      multicast[JsValue](MulticastStrategy.behavior(initialValue))
-    val configurationPublisher = publisher.distinctUntilChanged
-      .onNext[Configuration] { (out, json) =>
-        (json \ "scalameta").validate[Configuration] match {
-          case JsError(errors) =>
-            connection.showMessage(MessageType.Error, errors.toString)
-            Ack.Continue
-          case JsSuccess(conf, _) =>
-            logger.info(s"Configuration updated $conf")
-            out.onNext(conf)
-        }
-      }
-
+      multicast[Configuration](MulticastStrategy.behavior(Configuration()))
+    val configurationPublisher = publisher
     subscriber -> configurationPublisher
   }
 

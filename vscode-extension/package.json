@@ -13,10 +13,10 @@
     "configuration": {
       "title": "Scalameta Language Server",
       "properties": {
-        "scalameta.scalafmt.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable formatting with Scalafmt"
+        "scalameta.scalafmt.version": {
+          "type": "string",
+          "default": "1.3.0",
+          "description": "Version of scalafmt to use, default to latest stable release."
         },
         "scalameta.scalafmt.confPath": {
           "type": "string",

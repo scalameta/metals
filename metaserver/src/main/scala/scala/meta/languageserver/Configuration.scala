@@ -29,8 +29,8 @@ object Configuration {
   case class Rename(enabled: Boolean = false)
 
   case class Scalafmt(
-      enabled: Boolean = true,
-      confPath: RelativePath = RelativePath(".scalafmt.conf")
+      version: String = "1.3.0",
+      confPath: Option[RelativePath] = None
   )
   case class Scalafix(
       enabled: Boolean = true,
@@ -69,6 +69,7 @@ object Configuration {
       Json.using[Json.WithDefaultValues].format[Experimental]
   }
   object Scalafmt {
+    lazy val DefaultConf = RelativePath(".scalafmt.conf")
     implicit val format: OFormat[Scalafmt] =
       Json.using[Json.WithDefaultValues].format[Scalafmt]
   }

@@ -12,6 +12,8 @@ import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Symbol
 import monix.eval.Task
+import monix.execution.Scheduler
+import monix.reactive.Observable
 
 trait SymbolIndex extends LazyLogging {
 
@@ -65,8 +67,8 @@ object SymbolIndex {
       cwd: AbsolutePath,
       notifications: Notifications,
       buffers: Buffers,
-      configuration: Task[Configuration]
-  ): SymbolIndex = {
+      configuration: Observable[Configuration]
+  )(implicit s: Scheduler): SymbolIndex = {
     val symbolIndexer = new InMemorySymbolIndexer()
     val documentIndex = new InMemoryDocumentIndex()
     new InMemorySymbolIndex(

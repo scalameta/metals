@@ -10,8 +10,8 @@ import scala.meta.languageserver.Linter
 import scala.meta.languageserver.Semanticdbs
 import scala.meta.languageserver.providers.SquiggliesProvider
 import langserver.messages.PublishDiagnostics
-import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
+import monix.reactive.Observable
 import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
@@ -20,7 +20,7 @@ object SquiggliesTest extends CompilerSuite {
   val tmp: Path = Files.createTempDirectory("metaserver")
   val logFile = tmp.resolve("metaserver.log").toFile
   val out = new PrintStream(new FileOutputStream(logFile))
-  val config = Task.now(Configuration())
+  val config = Observable.now(Configuration())
   val squiggliesProvider =
     new SquiggliesProvider(config, AbsolutePath(tmp), out)
   Files.write(

@@ -9,7 +9,8 @@ import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.SymbolIndex
 import scala.{meta => m}
 import langserver.core.Notifications
-import monix.eval.Task
+import monix.execution.Scheduler.Implicits.global
+import monix.reactive.Observable
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb._
 import tests.compiler.CompilerSuite
@@ -20,7 +21,7 @@ abstract class BaseIndexTest extends CompilerSuite {
     PathIO.workingDirectory,
     Notifications.empty,
     buffers,
-    Task.now(Configuration())
+    Observable.now(Configuration())
   )
   def indexDocument(document: m.Document): Effects.IndexSemanticdb =
     symbols.indexDatabase(
