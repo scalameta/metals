@@ -47,7 +47,7 @@ class DocumentFormattingProvider(
       .focus(_.scalafmt.confPath)
       .map[Either[String, Option[AbsolutePath]]] {
         case None =>
-          val default = cwd.resolve(Scalafmt.DefaultConf)
+          val default = cwd.resolve(Scalafmt.defaultConfPath)
           if (Files.isRegularFile(default.toNIO)) Right(Some(default))
           else Right(None)
         case Some(relpath) =>

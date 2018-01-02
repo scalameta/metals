@@ -13,6 +13,16 @@
     "configuration": {
       "title": "Scalameta Language Server",
       "properties": {
+        "scalameta.scalac.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "EXPERIMENTAL. Enable squigglies and completions as you type with the Scala Presentation Compiler."
+        },
+        "scalameta.scalafmt.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable formatting with scalafmt"
+        },
         "scalameta.scalafmt.version": {
           "type": "string",
           "default": "1.3.0",
@@ -43,7 +53,7 @@
         "scalameta.search.indexJDK": {
           "type": "boolean",
           "default": false,
-          "description": "Enable indexing of the JDK"
+          "description": "EXPERIMENTAL. Enable indexing of the JDK"
         },
         "scalameta.hover.enabled": {
           "type": "boolean",
@@ -54,11 +64,6 @@
           "type": "boolean",
           "default": true,
           "description": "Enable renaming symbols"
-        },
-        "scalameta.experimental.scalac.enableCompletions": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable completions as you type"
         }
       }
     },

@@ -11,24 +11,22 @@ import Configuration._
 import play.api.libs.json.OFormat
 
 case class Configuration(
+    scalac: Scalac = Scalac(),
     scalafmt: Scalafmt = Scalafmt(),
     scalafix: Scalafix = Scalafix(),
     search: Search = Search(),
-    experimental: Experimental = Experimental(),
     hover: Hover = Hover(),
     rename: Rename = Rename(),
 )
 
 object Configuration {
 
-  case class Experimental(
-      scalac: Scalac = Scalac(),
-  )
-  case class Scalac(enableCompletions: Boolean = false)
+  case class Scalac(enabled: Boolean = false)
   case class Hover(enabled: Boolean = false)
   case class Rename(enabled: Boolean = false)
 
   case class Scalafmt(
+      enabled: Boolean = true,
       version: String = "1.3.0",
       confPath: Option[RelativePath] = None
   )
@@ -64,12 +62,8 @@ object Configuration {
     implicit val format: OFormat[Rename] =
       Json.using[Json.WithDefaultValues].format[Rename]
   }
-  object Experimental {
-    implicit val format: OFormat[Experimental] =
-      Json.using[Json.WithDefaultValues].format[Experimental]
-  }
   object Scalafmt {
-    lazy val DefaultConf = RelativePath(".scalafmt.conf")
+    lazy val defaultConfPath = RelativePath(".scalafmt.conf")
     implicit val format: OFormat[Scalafmt] =
       Json.using[Json.WithDefaultValues].format[Scalafmt]
   }
