@@ -64,28 +64,30 @@ class DocumentFormattingProvider(
     end = Position(Int.MaxValue, Int.MaxValue)
   )
 
-  private def formatted(newText: String) =
-    List(TextEdit(fullDocumentRange, newText))
-
   def format(
       input: Input.VirtualFile
   ): Task[DocumentFormattingResult] = Task.eval {
-    val edits: List[TextEdit] = formatter() match {
-      case Left(error) =>
-        notifications.showMessage(MessageType.Error, error)
-        Nil
-      case Right(scalafmt) =>
-        config() match {
-          case Left(error) =>
-            notifications.showMessage(MessageType.Error, error)
-            Nil
-          case Right(None) => // default config
-            formatted(scalafmt.format(input.value, input.path))
-          case Right(Some(path)) =>
-            formatted(scalafmt.format(input.value, input.path, path))
-        }
+    val formatResult = for {
+      scalafmt <- formatter()
+      scalafmtConf <- config()
+    } yield {
+      scalafmtConf match {
+        case None => // default config
+          scalafmt.format(input.value, input.path)
+        case Some(path) =>
+          scalafmt.format(input.value, input.path, path)
+      }
     }
-    DocumentFormattingResult(edits)
+    formatResult match {
+      case Left(err) =>
+        // TODO(olafur) return invalid params when we refactor to lsp4s.
+        // We should not have to return a bogus empty result here.
+        notifications.showMessage(MessageType.Error, err)
+        DocumentFormattingResult(Nil)
+      case Right(formatted) =>
+        val edits = List(TextEdit(fullDocumentRange, formatted))
+        DocumentFormattingResult(edits)
+    }
   }
 
 }
