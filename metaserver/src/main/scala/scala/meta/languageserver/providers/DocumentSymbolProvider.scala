@@ -5,6 +5,7 @@ import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.Uri
 import com.typesafe.scalalogging.LazyLogging
 import langserver.messages.DocumentSymbolResult
+import langserver.types.SymbolInformation
 import langserver.{types => l}
 
 object DocumentSymbolProvider extends LazyLogging {
@@ -55,10 +56,10 @@ object DocumentSymbolProvider extends LazyLogging {
     }
   }
 
-  def empty = DocumentSymbolResult(Nil)
+  def empty: List[SymbolInformation] = Nil
   def documentSymbols(
       uri: Uri,
       source: Source
-  ): DocumentSymbolResult =
-    DocumentSymbolResult(new SymbolTraverser(uri).apply(source))
+  ): List[SymbolInformation] =
+    new SymbolTraverser(uri).apply(source)
 }

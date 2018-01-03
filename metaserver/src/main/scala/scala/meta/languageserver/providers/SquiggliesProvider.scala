@@ -15,14 +15,13 @@ import org.langmeta.AbsolutePath
 
 class SquiggliesProvider(
     configuration: Observable[Configuration],
-    cwd: AbsolutePath,
-    stdout: OutputStream
+    cwd: AbsolutePath
 )(implicit s: Scheduler)
     extends LazyLogging {
   private val isEnabled: () => Boolean =
     configuration.map(_.scalafix.enabled).toFunction0()
 
-  lazy val linter = new Linter(cwd, stdout)
+  lazy val linter = new Linter(cwd)
 
   def squigglies(doc: m.Document): Task[Seq[PublishDiagnostics]] =
     squigglies(m.Database(doc :: Nil))

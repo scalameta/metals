@@ -1,62 +1,62 @@
 inThisBuild(
-  semanticdbSettings ++
-    List(
-      version ~= { old =>
-        if (sys.env.contains("CI")) old
-        else "0.1-SNAPSHOT" // to avoid manually updating extension.js
-      },
-      scalaVersion := V.scala212,
-      scalacOptions ++= List(
-        "-deprecation",
-        "-Xlint"
+//  semanticdbSettings ++
+  List(
+    version ~= { old =>
+      if (sys.env.contains("CI")) old
+      else "0.1-SNAPSHOT" // to avoid manually updating extension.js
+    },
+    scalaVersion := V.scala212,
+    scalacOptions ++= List(
+      "-deprecation",
+//      "-Xlint"
+    ),
+    scalafixEnabled := false,
+    organization := "org.scalameta",
+    licenses := Seq(
+      "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
+    ),
+    homepage := Some(url("https://github.com/scalameta/language-server")),
+    developers := List(
+      Developer(
+        "laughedelic",
+        "Alexey Alekhin",
+        "laughedelic@gmail.com",
+        url("https://github.com/laughedelic")
       ),
-      scalafixEnabled := false,
-      organization := "org.scalameta",
-      licenses := Seq(
-        "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
+      Developer(
+        "gabro",
+        "Gabriele Petronella",
+        "gabriele@buildo.io",
+        url("https://github.com/gabro")
       ),
-      homepage := Some(url("https://github.com/scalameta/language-server")),
-      developers := List(
-        Developer(
-          "laughedelic",
-          "Alexey Alekhin",
-          "laughedelic@gmail.com",
-          url("https://github.com/laughedelic")
-        ),
-        Developer(
-          "gabro",
-          "Gabriele Petronella",
-          "gabriele@buildo.io",
-          url("https://github.com/gabro")
-        ),
-        Developer(
-          "olafurpg",
-          "Ólafur Páll Geirsson",
-          "olafurpg@gmail.com",
-          url("https://geirsson.com")
-        ),
-        Developer(
-          "ShaneDelmore",
-          "Shane Delmore",
-          "sdelmore@twitter.com",
-          url("http://delmore.io")
-        )
+      Developer(
+        "olafurpg",
+        "Ólafur Páll Geirsson",
+        "olafurpg@gmail.com",
+        url("https://geirsson.com")
       ),
-      scmInfo in ThisBuild := Some(
-        ScmInfo(
-          url("https://github.com/scalameta/language-server"),
-          s"scm:git:git@github.com:scalameta/language-server.git"
-        )
-      ),
-      releaseEarlyWith := BintrayPublisher,
-      releaseEarlyEnableSyncToMaven := false,
-      publishMavenStyle := true,
-      bintrayOrganization := Some("scalameta"),
-      bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
-      // faster publishLocal:
-      publishArtifact in packageDoc := sys.env.contains("CI"),
-      publishArtifact in packageSrc := sys.env.contains("CI")
-    )
+      Developer(
+        "ShaneDelmore",
+        "Shane Delmore",
+        "sdelmore@twitter.com",
+        url("http://delmore.io")
+      )
+    ),
+    scmInfo in ThisBuild := Some(
+      ScmInfo(
+        url("https://github.com/scalameta/language-server"),
+        s"scm:git:git@github.com:scalameta/language-server.git"
+      )
+    ),
+    releaseEarlyWith := BintrayPublisher,
+    releaseEarlyEnableSyncToMaven := false,
+    publishMavenStyle := true,
+    bintrayOrganization := Some("scalameta"),
+    bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
+    // faster publishLocal:
+    publishArtifact in packageDoc := sys.env.contains("CI"),
+    publishArtifact in packageSrc := sys.env.contains("CI")
+  )
 )
 
 lazy val V = new {
@@ -126,7 +126,7 @@ lazy val metaserver = project
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
       "com.beachape" %% "enumeratum" % V.enumeratum,
       "com.lihaoyi" %% "utest" % "0.6.0" % Test,
-      "org.scalameta" %% "testkit" % V.scalameta % Test,
+      "org.scalameta" %% "testkit" % V.scalameta % Test
     )
   )
   .dependsOn(

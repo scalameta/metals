@@ -20,57 +20,61 @@ import play.api.libs.json.Json
 final class LanguageServer(
     in: Observable[BaseProtocolMessage],
     out: OutputStream,
-    notifications: JsonNotificationService,
-    requests: JsonRequestService,
+    services: Services,
     requestScheduler: Scheduler
 ) extends LazyLogging {
-  def this(
-      in: Observable[BaseProtocolMessage],
-      out: OutputStream,
-      services: Services,
-      requestScheduler: Scheduler
-  ) = this(
-    in,
-    out,
-    new CompositeNotificationService(services.notifications),
-    new CompositeRequestService(services.requests),
-    requestScheduler
-  )
   private val writer = new MessageWriter(out)
   private val activeClientRequests: TrieMap[JsValue, Cancelable] = TrieMap.empty
+  private val cancelNotification =
+    Service.notification[JsValue]("$/cancelNotification") { id =>
+      activeClientRequests.get(id) match {
+        case None =>
+          Task {
+            logger.warn(s"Can't cancel request $id, no active request found.")
+            Response.empty
+          }
+        case Some(request) =>
+          Task {
+            request.cancel()
+            activeClientRequests.remove(id)
+            Response.cancelled(id)
+          }
+      }
+    }
+  private val handlersByMethodName: Map[String, NamedJsonRpcService] =
+    services.addService(cancelNotification).byMethodName
 
-  def handleValidMessage(message: Message): Task[Response] =
-    message match {
-      case request: Request =>
-        val runningRequest = requests
-          .handleRequest(request)
-          .onErrorRecover {
+  def handleValidMessage(message: Message): Task[Response] = message match {
+    case Notification(method, _) =>
+      handlersByMethodName.get(method) match {
+        case None =>
+          Task {
+            // Can't respond to invalid notifications
+            logger.error(s"Unknown method '$method'")
+            Response.empty
+          }
+        case Some(handler) =>
+          handler.handle(message).onErrorRecover {
+            case NonFatal(e) =>
+              logger.error(s"Error handling notification $message", e)
+              Response.empty
+          }
+      }
+    case request @ Request(method, _, id) =>
+      handlersByMethodName.get(method) match {
+        case None => Task(Response.methodNotFound(method, id))
+        case Some(handler) =>
+          val response = handler.handle(request).onErrorRecover {
             case NonFatal(e) =>
               logger.error(s"Unhandled error handling request $request", e)
               Response.internalError(e.getMessage, request.id)
           }
-          .runAsync(requestScheduler)
-        activeClientRequests.put(Json.toJson(request.id), runningRequest)
-        Task.fromFuture(runningRequest)
-      case notification: Notification =>
-        notification match {
-          case Notification("$/cancelNotification", Some(id)) =>
-            activeClientRequests.get(id) match {
-              case None =>
-                Task.now(Response.empty)
-              case Some(request) =>
-                Task.eval {
-                  request.cancel()
-                  activeClientRequests.remove(id)
-                  Response.cancelled(id)
-                }
-            }
-          case _ =>
-            notifications
-              .handleNotification(notification)
-              .map(_ => Response.empty)
-        }
-    }
+          val runningResponse = response.runAsync(requestScheduler)
+          activeClientRequests.put(Json.toJson(request.id), runningResponse)
+          Task.fromFuture(runningResponse)
+      }
+
+  }
 
   def handleMessage(message: BaseProtocolMessage): Task[Response] =
     LanguageServer.parseMessage(message) match {

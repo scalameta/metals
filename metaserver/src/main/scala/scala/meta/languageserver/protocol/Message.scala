@@ -2,7 +2,9 @@ package scala.meta.languageserver.protocol
 
 import play.api.libs.json._
 
-sealed trait Message
+sealed trait Message {
+  def method: String
+}
 object Message {
   private case class IndeterminateMessage(
       method: String,

@@ -6,6 +6,8 @@ import langserver.messages.DocumentHighlightResult
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
+import langserver.types.DocumentHighlight
+import langserver.types.Location
 
 object DocumentHighlightProvider extends LazyLogging {
 
@@ -13,17 +15,16 @@ object DocumentHighlightProvider extends LazyLogging {
       symbolIndex: SymbolIndex,
       uri: Uri,
       position: l.Position
-  ): DocumentHighlightResult = {
+  ): List[DocumentHighlight] = {
     logger.info(s"Document highlight in $uri")
-    val locations = for {
+    for {
       data <- symbolIndex.findReferences(uri, position.line, position.character)
       _ = logger.info(s"Highlighting symbol `${data.name}: ${data.signature}`")
       pos <- data.referencePositions(withDefinition = true)
       if pos.uri == uri.value
       _ = logger.debug(s"Found highlight at [${pos.range.get.pretty}]")
-    } yield pos.toLocation
+    } yield DocumentHighlight(pos.range.get.toRange)
     // TODO(alexey) add DocumentHighlightKind: Text (default), Read, Write
-    DocumentHighlightResult(locations)
   }
 
 }

@@ -18,10 +18,7 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.types.Diagnostic
 import org.langmeta.io.AbsolutePath
 
-class Linter(
-    cwd: AbsolutePath,
-    out: OutputStream,
-) extends LazyLogging {
+class Linter(cwd: AbsolutePath) extends LazyLogging {
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(
@@ -92,9 +89,6 @@ class Linter(
   private def configFile: Option[m.Input] = ScalafixConfig.auto(cwd)
 
   private def lazySemanticdbIndex(index: SemanticdbIndex): LazySemanticdbIndex =
-    new LazySemanticdbIndex(
-      _ => Some(index),
-      ScalafixReporter.default.copy(outStream = new PrintStream(out))
-    )
+    new LazySemanticdbIndex(_ => Some(index), ScalafixReporter.default)
 
 }

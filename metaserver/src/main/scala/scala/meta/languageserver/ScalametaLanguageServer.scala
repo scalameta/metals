@@ -1,9 +1,6 @@
 package scala.meta.languageserver
 
 import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
-import java.io.PrintStream
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -11,47 +8,19 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Executors
 import scala.concurrent.duration.FiniteDuration
+import scala.meta.languageserver.PlayJsonEnrichments._
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
+import scala.meta.languageserver.protocol.Response
+import scala.meta.languageserver.protocol.Services
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.refactoring.OrganizeImports
 import scala.meta.languageserver.search.SymbolIndex
-import scala.meta.languageserver.PlayJsonEnrichments._
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
 import langserver.core.Connection
-import langserver.core.LanguageServer
-import langserver.messages.CodeActionRequest
-import langserver.messages.CodeActionResult
-import langserver.messages.CompletionList
-import langserver.messages.CompletionOptions
-import langserver.messages.DefinitionResult
-import langserver.messages.DocumentFormattingResult
-import langserver.messages.DocumentHighlightResult
-import langserver.messages.DocumentSymbolParams
-import langserver.messages.DocumentSymbolResult
-import langserver.messages.ExecuteCommandOptions
-import langserver.messages.Hover
-import langserver.messages.InitializeParams
-import langserver.messages.InitializeResult
-import langserver.messages.ReferencesResult
-import langserver.messages.RenameResult
-import langserver.messages.ServerCapabilities
-import langserver.messages.ShutdownResult
-import langserver.messages.SignatureHelpOptions
-import langserver.messages.SignatureHelpResult
-import langserver.messages.TextDocumentCompletionRequest
-import langserver.messages.TextDocumentDefinitionRequest
-import langserver.messages.TextDocumentDocumentHighlightRequest
-import langserver.messages.TextDocumentFormattingRequest
-import langserver.messages.TextDocumentHoverRequest
-import langserver.messages.TextDocumentReferencesRequest
-import langserver.messages.TextDocumentRenameRequest
-import langserver.messages.TextDocumentSignatureHelpRequest
-import langserver.messages.WorkspaceExecuteCommandRequest
-import langserver.messages.WorkspaceSymbolRequest
-import langserver.messages.WorkspaceSymbolResult
+import langserver.messages._
 import langserver.types._
 import monix.eval.Task
 import monix.execution.Cancelable
@@ -69,23 +38,24 @@ import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb
 import play.api.libs.json.JsError
+import play.api.libs.json.JsNull
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 
 class ScalametaLanguageServer(
-    cwd: AbsolutePath,
-    lspIn: InputStream,
-    lspOut: OutputStream,
-    stdout: PrintStream
+    cwd: AbsolutePath
 )(implicit s: Scheduler)
-    extends LanguageServer(lspIn, lspOut) {
+    extends LazyLogging {
+  val connection: Connection = null
   private val tempSourcesDir: AbsolutePath =
     cwd.resolve("target").resolve("sources")
   // Always run the presentation compiler on the same thread
   private val presentationCompilerScheduler: SchedulerService =
     Scheduler(Executors.newFixedThreadPool(1))
-  def withPC[A](f: => A): Task[A] =
-    Task(f).executeOn(presentationCompilerScheduler)
+  def onPresentationCompilerThread[A](
+      f: => A
+  ): Task[Either[Response.Error, A]] =
+    Task(Right(f)).executeOn(presentationCompilerScheduler)
   val (fileSystemSemanticdbSubscriber, fileSystemSemanticdbsPublisher) =
     ScalametaLanguageServer.fileSystemSemanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
@@ -106,7 +76,7 @@ class ScalametaLanguageServer(
   val documentFormattingProvider =
     new DocumentFormattingProvider(configurationPublisher, cwd, connection)
   val squiggliesProvider =
-    new SquiggliesProvider(configurationPublisher, cwd, stdout)
+    new SquiggliesProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
@@ -158,46 +128,149 @@ class ScalametaLanguageServer(
       onChangedFile(path)(_ => ())
     }
   }
+  val services: Services = Services.empty
+    .request[InitializeParams, InitializeResult]("initialize") { params =>
+      pprint.log(params)
+      logger.info(s"Initialized with $cwd, $request")
+      cancelEffects = effects.map(_.subscribe())
+      loadAllRelevantFilesInThisWorkspace()
+      val capabilities = ServerCapabilities(
+        completionProvider = Some(
+          CompletionOptions(
+            resolveProvider = false,
+            triggerCharacters = "." :: Nil
+          )
+        ),
+        signatureHelpProvider = Some(
+          SignatureHelpOptions(
+            triggerCharacters = "(" :: Nil
+          )
+        ),
+        definitionProvider = true,
+        referencesProvider = true,
+        documentHighlightProvider = true,
+        documentSymbolProvider = true,
+        documentFormattingProvider = true,
+        hoverProvider = true,
+        executeCommandProvider =
+          ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName)),
+        workspaceSymbolProvider = true,
+        renameProvider = true,
+        codeActionProvider = true
+      )
+      InitializeResult(capabilities)
+    }
+    .request[JsValue, JsValue]("shutdown") { _ =>
+      logger.info("Shutting down...")
+      cancelEffects.foreach(_.cancel())
+      connection.cancelAllActiveRequests()
+      JsNull
+    }
+    .notification[JsValue]("exit") { _ =>
+      pprint.log("exit")
+      sys.exit(0)
+    }
+    .requestAsync[TextDocumentPositionParams, CompletionList](
+      "textDocument/completion"
+    ) { params =>
+      onPresentationCompilerThread {
+        logger.info("completion")
+        scalacProvider.getCompiler(params.textDocument) match {
+          case Some(g) =>
+            CompletionProvider.completions(
+              g,
+              toPoint(params.textDocument, params.position)
+            )
+          case None => CompletionProvider.empty
+        }
+      }
+    }
+    .request[TextDocumentPositionParams, List[Location]](
+      "textDocument/definition"
+    ) { params =>
+      DefinitionProvider.definition(
+        symbolIndex,
+        Uri(params.textDocument.uri),
+        params.position,
+        tempSourcesDir
+      )
+    }
+    .request[CodeActionParams, List[Command]](
+      "textDocument/codeActions"
+    ) { params =>
+      CodeActionProvider.codeActions(params)
+    }
+    .notification[DidCloseTextDocumentParams](
+      "textDocument/didClose"
+    ) { params =>
+      pprint.log(params)
+      ()
+    }
+    .notification[DidOpenTextDocumentParams](
+      "textDocument/didOpen"
+    ) { params =>
+      pprint.log(params)
+      ()
+    }
+    .notification[DidChangeTextDocumentParams](
+      "textDocument/didChange"
+    ) { params =>
+      pprint.log(params)
+      ()
+    }
+    .notification[DidSaveTextDocumentParams](
+      "textDocument/didSave"
+    ) { params =>
+      pprint.log(params)
+      ()
+    }
+    .notification[DidChangeConfigurationParams](
+      "workspace/didChangeConfiguration"
+    ) { params =>
+      (params.settings \ "scalameta").validate[Configuration] match {
+        case err: JsError =>
+          connection.showMessage(MessageType.Error, err.show)
+        case JsSuccess(conf, _) =>
+          logger.info(s"Configuration updated $conf")
+          configurationSubscriber.onNext(conf)
+      }
+    }
+    .notification[DidChangeWatchedFilesParams](
+      "workspace/didChangeWatchedFiles"
+    ) { params =>
+      params.changes.foreach {
+        case FileEvent(
+            Uri(path),
+            FileChangeType.Created | FileChangeType.Changed
+            ) =>
+          onChangedFile(path.toAbsolutePath) { _ =>
+            logger.warn(s"Unknown file extension for path $path")
+          }
 
-  override def initialize(
-      request: InitializeParams
-  ): Task[InitializeResult] = Task {
-    logger.info(s"Initialized with $cwd, $request")
-    cancelEffects = effects.map(_.subscribe())
-    loadAllRelevantFilesInThisWorkspace()
-    val capabilities = ServerCapabilities(
-      completionProvider = Some(
-        CompletionOptions(
-          resolveProvider = false,
-          triggerCharacters = "." :: Nil
-        )
-      ),
-      signatureHelpProvider = Some(
-        SignatureHelpOptions(
-          triggerCharacters = "(" :: Nil
-        )
-      ),
-      definitionProvider = true,
-      referencesProvider = true,
-      documentHighlightProvider = true,
-      documentSymbolProvider = true,
-      documentFormattingProvider = true,
-      hoverProvider = true,
-      executeCommandProvider =
-        ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName)),
-      workspaceSymbolProvider = true,
-      renameProvider = true,
-      codeActionProvider = true
-    )
-    InitializeResult(capabilities)
-  }
-
-  override def shutdown(): Task[ShutdownResult] = Task {
-    logger.info("Shutting down...")
-    cancelEffects.foreach(_.cancel())
-    connection.cancelAllActiveRequests()
-    ShutdownResult()
-  }
+        case event =>
+          logger.warn(s"Unhandled file event: $event")
+          ()
+      }
+      ()
+    }
+    .request[TextDocumentPositionParams, List[DocumentHighlight]](
+      "textDocument/documentHighlight"
+    ) { params =>
+      DocumentHighlightProvider.highlight(
+        symbolIndex,
+        Uri(params.textDocument.uri),
+        params.position
+      )
+    }
+    .request[DocumentSymbolParams, List[SymbolInformation]](
+      "textDocument/documentSymbol"
+    ) { params =>
+      val uri = Uri(params.textDocument.uri)
+      buffers.source(uri) match {
+        case Some(source) => DocumentSymbolProvider.documentSymbols(uri, source)
+        case None => DocumentSymbolProvider.empty
+      }
+    }
 
   private def onChangedFile(
       path: AbsolutePath
@@ -211,80 +284,9 @@ class ScalametaLanguageServer(
     }
   }
 
-  override def onChangeWatchedFiles(changes: Seq[FileEvent]): Unit =
-    changes.foreach {
-      case FileEvent(
-          Uri(path),
-          FileChangeType.Created | FileChangeType.Changed
-          ) =>
-        onChangedFile(path.toAbsolutePath) { _ =>
-          logger.warn(s"Unknown file extension for path $path")
-        }
-
-      case event =>
-        logger.warn(s"Unhandled file event: $event")
-        ()
-    }
-
-  override def onChangeConfiguration(settings: JsValue): Unit = {
-    (settings \ "scalameta").validate[Configuration] match {
-      case err: JsError =>
-        connection.showMessage(MessageType.Error, err.show)
-      case JsSuccess(conf, _) =>
-        logger.info(s"Configuration updated $conf")
-        configurationSubscriber.onNext(conf)
-    }
-  }
-
-  override def completion(
-      request: TextDocumentCompletionRequest
-  ): Task[CompletionList] = withPC {
-    logger.info("completion")
-    scalacProvider.getCompiler(request.params.textDocument) match {
-      case Some(g) =>
-        CompletionProvider.completions(
-          g,
-          toPoint(request.params.textDocument, request.params.position)
-        )
-      case None => CompletionProvider.empty
-    }
-  }
-
-  override def codeAction(request: CodeActionRequest): Task[CodeActionResult] =
-    Task {
-      CodeActionProvider.codeActions(request)
-    }
-
-  override def definition(
-      request: TextDocumentDefinitionRequest
-  ): Task[DefinitionResult] = Task {
-    DefinitionProvider.definition(
-      symbolIndex,
-      Uri(request.params.textDocument.uri),
-      request.params.position,
-      tempSourcesDir
-    )
-  }
-
-  override def documentHighlight(
-      request: TextDocumentDocumentHighlightRequest
-  ): Task[DocumentHighlightResult] = Task {
-    DocumentHighlightProvider.highlight(
-      symbolIndex,
-      Uri(request.params.textDocument.uri),
-      request.params.position
-    )
-  }
-
   override def documentSymbol(
       request: DocumentSymbolParams
-  ): Task[DocumentSymbolResult] = Task {
-    val uri = Uri(request.textDocument.uri)
-    buffers.source(uri) match {
-      case Some(source) => DocumentSymbolProvider.documentSymbols(uri, source)
-      case None => DocumentSymbolProvider.empty
-    }
-  }
+  ): Task[DocumentSymbolResult] = Task {}
 
   override def formatting(
       request: TextDocumentFormattingRequest
