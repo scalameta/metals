@@ -3,12 +3,14 @@ package tests.search
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.inputs._
 import scala.meta.languageserver.Buffers
+import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Effects
-import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.SymbolIndex
 import scala.{meta => m}
 import langserver.core.Notifications
+import monix.execution.Scheduler.Implicits.global
+import monix.reactive.Observable
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb._
 import tests.compiler.CompilerSuite
@@ -19,7 +21,7 @@ abstract class BaseIndexTest extends CompilerSuite {
     PathIO.workingDirectory,
     Notifications.empty,
     buffers,
-    ServerConfig(PathIO.workingDirectory)
+    Observable.now(Configuration())
   )
   def indexDocument(document: m.Document): Effects.IndexSemanticdb =
     symbols.indexDatabase(

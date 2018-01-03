@@ -2,7 +2,6 @@ package scala.meta.languageserver.compiler
 
 import scala.collection.mutable
 import scala.meta.languageserver.Effects
-import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.Uri
 import scala.reflect.io
 import scala.tools.nsc.Settings
@@ -16,9 +15,7 @@ import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
 
 /** Responsible for keeping fresh scalac global instances. */
-class ScalacProvider(
-    serverConfig: ServerConfig
-) extends LazyLogging {
+class ScalacProvider() extends LazyLogging {
 
   def getCompiler(input: Input.VirtualFile): Option[Global] =
     getCompiler(Uri(input.path))
@@ -74,9 +71,10 @@ class ScalacProvider(
     compilerByConfigOrigin.values.foreach {
       case (_, global) => global.askReset()
     }
+
 }
 
-object ScalacProvider extends LazyLogging {
+object ScalacProvider {
 
   def addCompilationUnit(
       global: Global,

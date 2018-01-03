@@ -7,7 +7,6 @@ import java.nio.file.Paths
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.internal.BuildInfo
 import scala.meta.languageserver.ScalametaLanguageServer
-import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.InMemorySymbolIndex
 import scala.meta.languageserver.search.InverseSymbolIndexer
@@ -52,18 +51,12 @@ object SymbolIndexTest extends MegaSuite {
     path.UserTest.toString()
   )
   val s = TestScheduler()
-  val config = ServerConfig(
-    cwd,
-    setupScalafmt = false,
-    indexJDK = false, // TODO(olafur) enabling this breaks go to definition
-    indexClasspath = true // set to false to speedup edit/debug cycle
-  )
   val client = new PipedOutputStream()
   val stdin = new PipedInputStream(client)
   val stdout = new PipedOutputStream()
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
   val server =
-    new ScalametaLanguageServer(config, stdin, stdout, System.out)(s)
+    new ScalametaLanguageServer(cwd, stdin, stdout, System.out)(s)
   server.initialize(0L, cwd.toString(), ClientCapabilities()).runAsync(s)
   while (s.tickOne()) () // Trigger indexing
   val index: SymbolIndex = server.symbolIndex

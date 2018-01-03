@@ -1,6 +1,5 @@
 package scala.meta.languageserver
 
-import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -18,8 +17,10 @@ import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.refactoring.OrganizeImports
 import scala.meta.languageserver.search.SymbolIndex
+import scala.meta.languageserver.PlayJsonEnrichments._
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
+import langserver.core.Connection
 import langserver.core.LanguageServer
 import langserver.messages.CodeActionRequest
 import langserver.messages.CodeActionResult
@@ -67,29 +68,17 @@ import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsError
-
-case class ServerConfig(
-    cwd: AbsolutePath,
-    setupScalafmt: Boolean = true,
-    // TODO(olafur): re-enable indexJDK after https://github.com/scalameta/language-server/issues/43 is fixed
-    indexJDK: Boolean = false,
-    indexClasspath: Boolean = true
-) {
-  lazy val configDir: AbsolutePath = cwd.resolve(".metaserver")
-  lazy val logFile: File = configDir.resolve("metaserver.log").toFile
-}
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.JsValue
 
 class ScalametaLanguageServer(
-    config: ServerConfig,
+    cwd: AbsolutePath,
     lspIn: InputStream,
     lspOut: OutputStream,
     stdout: PrintStream
 )(implicit s: Scheduler)
     extends LanguageServer(lspIn, lspOut) {
-  implicit val cwd: AbsolutePath = config.cwd
   private val tempSourcesDir: AbsolutePath =
     cwd.resolve("target").resolve("sources")
   // Always run the presentation compiler on the same thread
@@ -106,19 +95,25 @@ class ScalametaLanguageServer(
       MulticastStrategy.Publish,
       OverflowStrategy.DropOld(2)
     )
+  val (configurationSubscriber, configurationPublisher) =
+    ScalametaLanguageServer.configurationStream(connection)
   val buffers: Buffers = Buffers()
-  val scalac: ScalacProvider = new ScalacProvider(config)
-  val symbolIndex: SymbolIndex = SymbolIndex(cwd, connection, buffers, config)
-  val scalafix: Linter = new Linter(cwd, stdout)
+  val symbolIndex: SymbolIndex =
+    SymbolIndex(cwd, connection, buffers, configurationPublisher)
   val scalacErrorReporter: ScalacErrorReporter = new ScalacErrorReporter(
     connection
   )
+  val documentFormattingProvider =
+    new DocumentFormattingProvider(configurationPublisher, cwd, connection)
+  val squiggliesProvider =
+    new SquiggliesProvider(configurationPublisher, cwd, stdout)
+  val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
       .debounce(FiniteDuration(1, "s"))
       .flatMap { input =>
         Observable
-          .fromIterable(Semanticdbs.toSemanticdb(input, scalac))
+          .fromIterable(Semanticdbs.toSemanticdb(input, scalacProvider))
           .executeOn(presentationCompilerScheduler)
       }
   val interactiveSchemaSemanticdbs: Observable[schema.Database] =
@@ -128,9 +123,6 @@ class ScalametaLanguageServer(
       fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None)),
       interactiveSemanticdbs
     )
-  val scalafmt: Formatter =
-    if (config.setupScalafmt) Formatter.classloadScalafmt("1.3.0")
-    else Formatter.noop
 
   // Effects
   val indexedSemanticdbs: Observable[Effects.IndexSemanticdb] =
@@ -138,21 +130,23 @@ class ScalametaLanguageServer(
       .merge(fileSystemSemanticdbsPublisher, interactiveSchemaSemanticdbs)
       .map(symbolIndex.indexDatabase)
   val indexedDependencyClasspath: Observable[Effects.IndexSourcesClasspath] =
-    compilerConfigPublisher.map(
+    compilerConfigPublisher.mapTask(
       c => symbolIndex.indexDependencyClasspath(c.sourceJars)
     )
   val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
-    compilerConfigPublisher.map(scalac.loadNewCompilerGlobals)
+    compilerConfigPublisher.map(scalacProvider.loadNewCompilerGlobals)
   val publishDiagnostics: Observable[Effects.PublishSquigglies] =
-    metaSemanticdbs.map { db =>
-      val diagnostics = SquiggliesProvider.squigglies(db, scalafix)
-      diagnostics.foreach(connection.sendNotification)
-      Effects.PublishSquigglies
+    metaSemanticdbs.mapTask { db =>
+      squiggliesProvider.squigglies(db).map { diagnostics =>
+        diagnostics.foreach(connection.sendNotification)
+        Effects.PublishSquigglies
+      }
     }
   val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
     metaSemanticdbs.map(scalacErrorReporter.reportErrors)
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
+    configurationPublisher.map(_ => Effects.UpdateBuffers),
     indexedDependencyClasspath,
     indexedSemanticdbs,
     installedCompilers,
@@ -234,10 +228,11 @@ class ScalametaLanguageServer(
 
   override def onChangeConfiguration(settings: JsValue): Unit = {
     (settings \ "scalameta").validate[Configuration] match {
-      case JsSuccess(value, _) =>
-        logger.info(s"Configuration changed $value")
-      case JsError(error) =>
-        logger.error(s"Can't decode configuration: $error")
+      case err: JsError =>
+        connection.showMessage(MessageType.Error, err.show)
+      case JsSuccess(conf, _) =>
+        logger.info(s"Configuration updated $conf")
+        configurationSubscriber.onNext(conf)
     }
   }
 
@@ -245,7 +240,7 @@ class ScalametaLanguageServer(
       request: TextDocumentCompletionRequest
   ): Task[CompletionList] = withPC {
     logger.info("completion")
-    scalac.getCompiler(request.params.textDocument) match {
+    scalacProvider.getCompiler(request.params.textDocument) match {
       case Some(g) =>
         CompletionProvider.completions(
           g,
@@ -293,9 +288,9 @@ class ScalametaLanguageServer(
 
   override def formatting(
       request: TextDocumentFormattingRequest
-  ): Task[DocumentFormattingResult] = Task {
+  ): Task[DocumentFormattingResult] = {
     val uri = Uri(request.params.textDocument)
-    DocumentFormattingProvider.format(uri.toInput(buffers), scalafmt, cwd)
+    documentFormattingProvider.format(uri.toInput(buffers))
   }
 
   override def hover(
@@ -328,7 +323,7 @@ class ScalametaLanguageServer(
   override def signatureHelp(
       request: TextDocumentSignatureHelpRequest
   ): Task[SignatureHelpResult] = Task {
-    scalac.getCompiler(request.params.textDocument) match {
+    scalacProvider.getCompiler(request.params.textDocument) match {
       case Some(g) =>
         SignatureHelpProvider.signatureHelp(
           g,
@@ -355,12 +350,12 @@ class ScalametaLanguageServer(
           logger.info("Clearing the index cache")
           ScalametaLanguageServer.clearCacheDirectory()
           symbolIndex.clearIndex()
-          scalac.allCompilerConfigs.foreach(
+          scalacProvider.allCompilerConfigs.foreach(
             config => symbolIndex.indexDependencyClasspath(config.sourceJars)
           )
         case ResetPresentationCompiler =>
           logger.info("Resetting all compiler instances")
-          scalac.resetCompilers()
+          scalacProvider.resetCompilers()
         case ScalafixUnusedImports =>
           logger.info("Removing unused imports")
           val result =
@@ -434,7 +429,7 @@ object ScalametaLanguageServer extends LazyLogging {
   def compilerConfigStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[CompilerConfig]) = {
-    val (subscriber, publisher) = multicast[AbsolutePath]
+    val (subscriber, publisher) = multicast[AbsolutePath]()
     val compilerConfigPublished = publisher
       .map(path => CompilerConfig.fromPath(path))
     subscriber -> compilerConfigPublished
@@ -443,14 +438,25 @@ object ScalametaLanguageServer extends LazyLogging {
   def fileSystemSemanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
   ): (Observer.Sync[AbsolutePath], Observable[schema.Database]) = {
-    val (subscriber, publisher) = multicast[AbsolutePath]
+    val (subscriber, publisher) = multicast[AbsolutePath]()
     val semanticdbPublisher = publisher
       .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))
     subscriber -> semanticdbPublisher
   }
 
-  def multicast[T](implicit s: Scheduler) = {
-    val (sub, pub) = Observable.multicast[T](MulticastStrategy.Publish)
+  def configurationStream(connection: Connection)(
+      implicit scheduler: Scheduler
+  ): (Observer.Sync[Configuration], Observable[Configuration]) = {
+    val (subscriber, publisher) =
+      multicast[Configuration](MulticastStrategy.behavior(Configuration()))
+    val configurationPublisher = publisher
+    subscriber -> configurationPublisher
+  }
+
+  def multicast[A](
+      strategy: MulticastStrategy[A] = MulticastStrategy.publish
+  )(implicit s: Scheduler) = {
+    val (sub, pub) = Observable.multicast[A](strategy)
     (sub, pub.doOnError(onError))
   }
 

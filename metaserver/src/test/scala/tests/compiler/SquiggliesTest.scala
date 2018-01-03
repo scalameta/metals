@@ -1,18 +1,28 @@
 package tests.compiler
 
+import java.io.FileOutputStream
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
+import scala.meta.internal.inputs._
+import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Linter
 import scala.meta.languageserver.Semanticdbs
 import scala.meta.languageserver.providers.SquiggliesProvider
+import langserver.messages.PublishDiagnostics
+import monix.execution.Scheduler.Implicits.global
+import monix.reactive.Observable
 import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
-import scala.meta.internal.inputs._
-import langserver.messages.PublishDiagnostics
 import org.langmeta.languageserver.InputEnrichments._
 
 object SquiggliesTest extends CompilerSuite {
   val tmp: Path = Files.createTempDirectory("metaserver")
+  val logFile = tmp.resolve("metaserver.log").toFile
+  val out = new PrintStream(new FileOutputStream(logFile))
+  val config = Observable.now(Configuration())
+  val squiggliesProvider =
+    new SquiggliesProvider(config, AbsolutePath(tmp), out)
   Files.write(
     tmp.resolve(".scalafix.conf"),
     """
@@ -24,8 +34,8 @@ object SquiggliesTest extends CompilerSuite {
     test(name) {
       val input = Input.VirtualFile(name, original)
       val doc = Semanticdbs.toSemanticdb(input, compiler)
-      val PublishDiagnostics(_, diagnostics) :: Nil =
-        SquiggliesProvider.squigglies(doc, linter)
+      val Right(PublishDiagnostics(_, diagnostics) :: Nil) =
+        squiggliesProvider.squigglies(doc).runSyncMaybe
       val obtained = diagnostics.map { d =>
         val pos = input.toPosition(d.range)
         pos.formatMessage(d.severity.getOrElse(???).toString, d.message)

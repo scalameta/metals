@@ -1,8 +1,8 @@
 package scala.meta.languageserver.search
 
 import scala.meta.languageserver.Buffers
+import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Effects
-import scala.meta.languageserver.ServerConfig
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
@@ -11,6 +11,9 @@ import langserver.types.SymbolInformation
 import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Symbol
+import monix.eval.Task
+import monix.execution.Scheduler
+import monix.reactive.Observable
 
 trait SymbolIndex extends LazyLogging {
 
@@ -47,7 +50,7 @@ trait SymbolIndex extends LazyLogging {
 
   def indexDependencyClasspath(
       sourceJars: List[AbsolutePath]
-  ): Effects.IndexSourcesClasspath
+  ): Task[Effects.IndexSourcesClasspath]
 
   /** Register this Database to symbol indexer. */
   def indexDatabase(document: s.Database): Effects.IndexSemanticdb
@@ -64,8 +67,8 @@ object SymbolIndex {
       cwd: AbsolutePath,
       notifications: Notifications,
       buffers: Buffers,
-      serverConfig: ServerConfig
-  ): SymbolIndex = {
+      configuration: Observable[Configuration]
+  )(implicit s: Scheduler): SymbolIndex = {
     val symbolIndexer = new InMemorySymbolIndexer()
     val documentIndex = new InMemoryDocumentIndex()
     new InMemorySymbolIndex(
@@ -74,7 +77,7 @@ object SymbolIndex {
       cwd,
       notifications,
       buffers,
-      serverConfig
+      configuration
     )
   }
 
