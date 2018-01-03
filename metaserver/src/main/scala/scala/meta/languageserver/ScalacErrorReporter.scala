@@ -6,18 +6,19 @@ import scala.meta.semanticdb
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import scalafix.util.SemanticdbIndex
 import langserver.core.Connection
+import langserver.core.Notifications
 import langserver.messages.PublishDiagnostics
 import langserver.{types => l}
 
 class ScalacErrorReporter(
-    connection: Connection,
+    connection: Notifications,
 ) {
 
   def reportErrors(
       mdb: m.Database
   ): Effects.PublishScalacDiagnostics = {
     val messages = analyzeIndex(mdb)
-    messages.foreach(connection.sendNotification)
+    messages.foreach(connection.publishDiagnostics)
     Effects.PublishScalacDiagnostics
   }
   private def analyzeIndex(mdb: m.Database): Seq[PublishDiagnostics] =

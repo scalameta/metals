@@ -19,14 +19,13 @@ import play.api.libs.json.Json
 
 final class LanguageServer(
     in: Observable[BaseProtocolMessage],
-    out: OutputStream,
+    client: LanguageClient,
     services: Services,
     requestScheduler: Scheduler
 ) extends LazyLogging {
-  private val writer = new MessageWriter(out)
   private val activeClientRequests: TrieMap[JsValue, Cancelable] = TrieMap.empty
   private val cancelNotification =
-    Service.notification[JsValue]("$/cancelNotification") { id =>
+    Service.notification[JsValue]("$/cancelRequest") { id =>
       activeClientRequests.get(id) match {
         case None =>
           Task {
@@ -35,6 +34,7 @@ final class LanguageServer(
           }
         case Some(request) =>
           Task {
+            logger.info(s"Cancelling request $id")
             request.cancel()
             activeClientRequests.remove(id)
             Response.cancelled(id)
@@ -45,6 +45,11 @@ final class LanguageServer(
     services.addService(cancelNotification).byMethodName
 
   def handleValidMessage(message: Message): Task[Response] = message match {
+    case response: Response =>
+      Task {
+        client.clientRespond(response)
+        Response.empty
+      }
     case Notification(method, _) =>
       handlersByMethodName.get(method) match {
         case None =>
@@ -62,7 +67,11 @@ final class LanguageServer(
       }
     case request @ Request(method, _, id) =>
       handlersByMethodName.get(method) match {
-        case None => Task(Response.methodNotFound(method, id))
+        case None =>
+          Task {
+            logger.info(s"Method not found '$method'")
+            Response.methodNotFound(method, id)
+          }
         case Some(handler) =>
           val response = handler.handle(request).onErrorRecover {
             case NonFatal(e) =>
@@ -89,11 +98,7 @@ final class LanguageServer(
   def startTask: Task[Unit] =
     in.foreachL { msg =>
       handleMessage(msg)
-        .map {
-          case Response.Empty => ()
-          case x: Response.Success => writer.write(x)
-          case x: Response.Error => writer.write(x)
-        }
+        .map(client.serverRespond)
         .onErrorRecover {
           case NonFatal(e) =>
             logger.error("Unhandled error", e)

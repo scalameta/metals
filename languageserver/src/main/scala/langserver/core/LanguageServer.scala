@@ -75,7 +75,7 @@ class LanguageServer(inStream: InputStream, outStream: OutputStream)(implicit s:
   def hover(request: TextDocumentHoverRequest): Task[Hover] = Task.now(Hover(Nil, None))
   def references(request: TextDocumentReferencesRequest): Task[ReferencesResult] = Task.now(ReferencesResult(Nil))
   def rename(request: TextDocumentRenameRequest): Task[RenameResult] = Task.now(RenameResult(WorkspaceEdit(Map.empty)))
-  def signatureHelp(request: TextDocumentSignatureHelpRequest): Task[SignatureHelpResult] = Task.now(SignatureHelpResult(Nil, None, None))
+  def signatureHelp(request: TextDocumentSignatureHelpRequest): Task[SignatureHelp] = Task.now(SignatureHelp(Nil, None, None))
 
   // workspace
   def executeCommand(request: WorkspaceExecuteCommandRequest): Task[Unit] = Task.now(())

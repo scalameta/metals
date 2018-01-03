@@ -4,6 +4,8 @@ import play.api.libs.json._
 
 sealed trait RequestId
 object RequestId {
+  def apply(n: Int): RequestId.Number =
+    RequestId.Number(JsNumber(BigDecimal(n)))
   implicit val format: Format[RequestId] = Format[RequestId](
     Reads {
       case num: JsNumber => JsSuccess(Number(num))

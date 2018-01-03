@@ -168,6 +168,9 @@ case class DocumentHighlight(
 
   /** The highlight kind, default is [text](#DocumentHighlightKind.Text). */
   kind: DocumentHighlightKind = DocumentHighlightKind.Text)
+object DocumentHighlight {
+  implicit val format = Json.format[DocumentHighlight]
+}
 
 case class SymbolInformation(
   name: String,
@@ -329,9 +332,9 @@ object DocumentFormattingParams {
   implicit val format: OFormat[DocumentFormattingParams] = Json.format[DocumentFormattingParams]
 }
 
-case class WorkspaceExecuteCommandParams(command: String, arguments: Option[Seq[JsValue]])
-object WorkspaceExecuteCommandParams {
-  implicit val format: OFormat[WorkspaceExecuteCommandParams] = Json.format[WorkspaceExecuteCommandParams]
+case class ExecuteCommandParams(command: String, arguments: Option[Seq[JsValue]])
+object ExecuteCommandParams {
+  implicit val format: OFormat[ExecuteCommandParams] = Json.format[ExecuteCommandParams]
 }
 
 

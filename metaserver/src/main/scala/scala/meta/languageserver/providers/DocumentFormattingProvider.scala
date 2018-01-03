@@ -5,6 +5,8 @@ import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Configuration.Scalafmt
 import scala.meta.languageserver.Formatter
 import scala.meta.languageserver.MonixEnrichments._
+import scala.meta.languageserver.protocol.RequestId
+import scala.meta.languageserver.protocol.Response
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
@@ -66,7 +68,7 @@ class DocumentFormattingProvider(
 
   def format(
       input: Input.VirtualFile
-  ): Task[DocumentFormattingResult] = Task.eval {
+  ): Task[Either[Response.Error, List[TextEdit]]] = Task {
     val formatResult = for {
       scalafmt <- formatter()
       scalafmtConf <- config()
@@ -79,14 +81,11 @@ class DocumentFormattingProvider(
       }
     }
     formatResult match {
-      case Left(err) =>
-        // TODO(olafur) return invalid params when we refactor to lsp4s.
-        // We should not have to return a bogus empty result here.
-        notifications.showMessage(MessageType.Error, err)
-        DocumentFormattingResult(Nil)
+      case Left(errorMessage) =>
+        Left(Response.invalidParams(errorMessage))
       case Right(formatted) =>
         val edits = List(TextEdit(fullDocumentRange, formatted))
-        DocumentFormattingResult(edits)
+        Right(edits)
     }
   }
 

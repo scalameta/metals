@@ -23,8 +23,8 @@ object DocumentHighlightProvider extends LazyLogging {
       pos <- data.referencePositions(withDefinition = true)
       if pos.uri == uri.value
       _ = logger.debug(s"Found highlight at [${pos.range.get.pretty}]")
+      // TODO(alexey) add DocumentHighlightKind: Text (default), Read, Write
     } yield DocumentHighlight(pos.range.get.toRange)
-    // TODO(alexey) add DocumentHighlightKind: Text (default), Read, Write
   }
 
 }

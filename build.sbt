@@ -1,5 +1,5 @@
 inThisBuild(
-//  semanticdbSettings ++
+  semanticdbSettings ++
   List(
     version ~= { old =>
       if (sys.env.contains("CI")) old
@@ -8,7 +8,7 @@ inThisBuild(
     scalaVersion := V.scala212,
     scalacOptions ++= List(
       "-deprecation",
-//      "-Xlint"
+      "-Xlint"
     ),
     scalafixEnabled := false,
     organization := "org.scalameta",

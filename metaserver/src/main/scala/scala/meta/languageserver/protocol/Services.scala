@@ -29,7 +29,7 @@ object Service extends LazyLogging {
           case JsSuccess(value, _) =>
             f.handle(value).map {
               case Right(response) => Response.ok(Json.toJson(response), id)
-              case Left(err) => err
+              case Left(err) => err.copy(id = id)
             }
         }
       case Request(invalidMethod, _, id) =>
@@ -58,9 +58,9 @@ object Service extends LazyLogging {
           }
         case Notification(invalidMethod, _) =>
           fail(s"Expected method '$method', obtained '$invalidMethod'")
-        case request: Request =>
+        case _ =>
           fail(
-            s"Expected notification with no ID, obtained request with id $request"
+            s"Expected notification, obtained $message"
           )
       }
     }

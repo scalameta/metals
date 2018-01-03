@@ -199,6 +199,9 @@ case class ReferenceParams(
   position: Position,
   context: ReferenceContext
 )
+object ReferenceParams {
+  implicit val format = Json.format[ReferenceParams]
+}
 
 case class RenameParams(
   textDocument: TextDocumentIdentifier,
@@ -223,6 +226,9 @@ object CodeActionRequest {
   implicit val format: OFormat[CodeActionRequest] = Json.format[CodeActionRequest]
 }
 case class DocumentSymbolParams(textDocument: TextDocumentIdentifier) extends ServerCommand
+object DocumentSymbolParams {
+  implicit val format = Json.format[DocumentSymbolParams]
+}
 case class TextDocumentRenameRequest(params: RenameParams) extends ServerCommand
 object TextDocumentRenameRequest {
   implicit val format: OFormat[TextDocumentRenameRequest] = Json.format[TextDocumentRenameRequest]
@@ -234,8 +240,12 @@ case class TextDocumentReferencesRequest(params: ReferenceParams) extends Server
 case class TextDocumentDocumentHighlightRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentHoverRequest(params: TextDocumentPositionParams) extends ServerCommand
 case class TextDocumentFormattingRequest(params: DocumentFormattingParams) extends ServerCommand
-case class WorkspaceExecuteCommandRequest(params: WorkspaceExecuteCommandParams) extends ServerCommand
+case class WorkspaceExecuteCommandRequest(params: ExecuteCommandParams) extends ServerCommand
 case class WorkspaceSymbolRequest(params: WorkspaceSymbolParams) extends ServerCommand
+case class ApplyWorkspaceEditResponse(applied: Boolean)
+object ApplyWorkspaceEditResponse {
+  implicit val format = Json.format[ApplyWorkspaceEditResponse]
+}
 case class ApplyWorkspaceEditParams(label: Option[String], edit: WorkspaceEdit)
 object ApplyWorkspaceEditParams {
   implicit val format: OFormat[ApplyWorkspaceEditParams] = Json.format[ApplyWorkspaceEditParams]
@@ -287,6 +297,9 @@ object ClientCommand extends CommandCompanion[ClientCommand] {
 // From server to client
 
 case class ShowMessageParams(`type`: MessageType, message: String) extends Notification
+object ShowMessageParams {
+   implicit val format = Json.format[ShowMessageParams]
+}
 case class LogMessageParams(`type`: MessageType, message: String) extends Notification
 case class PublishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]) extends Notification
 object PublishDiagnostics {
@@ -317,7 +330,13 @@ object DidSaveTextDocumentParams {
   implicit val format = Json.format[DidSaveTextDocumentParams]
 }
 case class DidChangeWatchedFilesParams(changes: Seq[FileEvent]) extends Notification
+object DidChangeWatchedFilesParams {
+  implicit val format = Json.format[DidChangeWatchedFilesParams]
+}
 case class DidChangeConfigurationParams(settings: JsValue) extends Notification
+object DidChangeConfigurationParams {
+  implicit val format = Json.format[DidChangeConfigurationParams]
+}
 
 case class Initialized() extends Notification
 object Initialized {
@@ -366,11 +385,11 @@ case class DefinitionResult(params: Seq[Location]) extends ResultResponse
 case class ReferencesResult(params: Seq[Location]) extends ResultResponse
 case class DocumentHighlightResult(params: Seq[Location]) extends ResultResponse
 case class DocumentFormattingResult(params: Seq[TextEdit]) extends ResultResponse
-case class SignatureHelpResult(signatures: Seq[SignatureInformation],
-                               activeSignature: Option[Int],
-                               activeParameter: Option[Int]) extends ResultResponse
-object SignatureHelpResult {
-  implicit val format: OFormat[SignatureHelpResult] = Json.format[SignatureHelpResult]
+case class SignatureHelp(signatures: Seq[SignatureInformation],
+                         activeSignature: Option[Int],
+                         activeParameter: Option[Int]) extends ResultResponse
+object SignatureHelp {
+  implicit val format: OFormat[SignatureHelp] = Json.format[SignatureHelp]
 }
 case object ExecuteCommandResult extends ResultResponse
 case class WorkspaceSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
@@ -386,7 +405,7 @@ object ResultResponse extends ResponseCompanion[Any] {
     "textDocument/completion" -> Json.format[CompletionList],
     "textDocument/codeAction" -> valueFormat(CodeActionResult.apply)(_.params),
     "textDocument/rename" -> valueFormat(RenameResult.apply)(_.params),
-    "textDocument/signatureHelp" -> Json.format[SignatureHelpResult],
+    "textDocument/signatureHelp" -> Json.format[SignatureHelp],
     "textDocument/definition" -> valueFormat(DefinitionResult)(_.params),
     "textDocument/references" -> valueFormat(ReferencesResult)(_.params),
     "textDocument/documentHighlight" -> valueFormat(DocumentHighlightResult)(_.params),

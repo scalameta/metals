@@ -27,7 +27,7 @@ import monix.execution.Scheduler
  * @param s thread pool to execute commands and notifications.
  */
 abstract class Connection(inStream: InputStream, outStream: OutputStream)(implicit s: Scheduler)
-    extends LazyLogging with Notifications {
+    extends LazyLogging {
   private val msgReader = new MessageReader(inStream)
   private val msgWriter = new MessageWriter(outStream)
   private val activeRequestsById: JMap[Int, CancelableFuture[Unit]] =
