@@ -5,6 +5,25 @@ import play.api.libs.json._
 import langserver.types._
 import langserver.utils.JsonRpcUtils
 import play.api.libs.json.OFormat
+import scodec.Codec
+import scodec.codecs._
+import langserver.utils.ScodecUtils._
+import scodec.bits.ByteVector
+
+case class RawLspMessage(mimeType: Option[String], body: ByteVector)
+object RawLspMessage {
+  val CONTENT_LENGTH_KEY = "Content-Length"
+  val CONTENT_TYPE_KEY = "Content-Type"
+  val codec: Codec[RawLspMessage] =
+    (bracketedBy("Content-Length:", "\r\n").xmap[Int](_.trim.toInt, _.toString)
+      ~ optional(lookaheadIssue98Patch(constant('C')), bracketedBy("Content-Type:", "\r\n"))
+      ).dropRight(constant(ByteVector('\r', '\n')))
+      .consume { case (len, mime) =>
+        bytes(len).xmap[RawLspMessage](bytes => RawLspMessage(mime, bytes), lsp => lsp.body)
+      }(lsp => (lsp.body.length.toInt, lsp.mimeType))
+
+  val listCodec: Codec[List[RawLspMessage]] = list(codec)
+}
 
 sealed trait Message
 sealed trait ServerCommand extends Message

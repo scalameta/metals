@@ -94,6 +94,7 @@ lazy val languageserver = project
       "org.slf4j" % "slf4j-api" % "1.7.25",
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "org.codehaus.groovy" % "groovy" % "2.4.0",
+      "org.scodec" %% "scodec-core" % "1.10.3",
       "org.scalatest" %% "scalatest" % "3.0.1" % Test
     )
   )
