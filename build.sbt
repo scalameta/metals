@@ -84,9 +84,7 @@ lazy val semanticdbSettings = List(
 
 lazy val languageserver = project
   .settings(
-    resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     libraryDependencies ++= Seq(
-      "com.dhpcs" %% "scala-json-rpc" % "2.0.1",
       "com.beachape" %% "enumeratum" % V.enumeratum,
       "com.beachape" %% "enumeratum-play-json" % "1.5.12-2.6.0-M7",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
@@ -105,7 +103,6 @@ lazy val metaserver = project
         flatPackage = true // Don't append filename to package
       ) -> sourceManaged.in(Compile).value./("protobuf")
     ),
-    resolvers += Resolver.bintrayRepo("dhpcs", "maven"),
     testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
     fork in Test := true, // required for jni interrop with leveldb.
     buildInfoKeys := Seq[BuildInfoKey](

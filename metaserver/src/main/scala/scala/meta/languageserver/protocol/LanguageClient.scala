@@ -11,6 +11,7 @@ import langserver.messages.ApplyWorkspaceEditResponse
 import langserver.messages.LogMessageParams
 import langserver.messages.PublishDiagnostics
 import langserver.messages.ShowMessageParams
+import langserver.types.CancelParams
 import monix.eval.Callback
 import monix.eval.Task
 import monix.execution.Cancelable
@@ -111,5 +112,4 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
       "workspace/applyEdit",
       params
     )
-
 }

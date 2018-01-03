@@ -32,8 +32,6 @@ export async function activate(context: ExtensionContext) {
   const coursierArgs = [
     "launch",
     "-r",
-    "https://dl.bintray.com/dhpcs/maven",
-    "-r",
     "sonatype:releases",
     "-J",
     toolsJar,

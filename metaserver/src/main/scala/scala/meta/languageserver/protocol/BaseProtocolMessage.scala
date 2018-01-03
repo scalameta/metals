@@ -2,6 +2,7 @@ package scala.meta.languageserver.protocol
 
 import java.io.InputStream
 import java.util.concurrent.Executors
+import monix.execution.ExecutionModel
 import monix.execution.Scheduler
 import monix.reactive.Observable
 
@@ -22,6 +23,11 @@ object BaseProtocolMessage {
   def fromInputStream(in: InputStream): Observable[BaseProtocolMessage] =
     Observable
       .fromInputStream(in)
-      .executeOn(Scheduler(Executors.newFixedThreadPool(1)))
+      .executeOn(
+        Scheduler(
+          Executors.newFixedThreadPool(1),
+          ExecutionModel.AlwaysAsyncExecution
+        )
+      )
       .liftByOperator(new BaseProtocolMessageParser)
 }

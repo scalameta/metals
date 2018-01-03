@@ -19,17 +19,16 @@ final class BaseProtocolMessageParser
       import Ack._
       // NOTE(olafur): We should first benchmark before going into any
       // optimization, but my intuition tells me ArrayBuffer[Byte] with many .remove
-      // and ++= is wasteful and can probably be replaced with some ByteBuffer
-      // or mutable.Queue[Array[Byte]] to get better performance.
+      // and ++= is wasteful and can probably be replaced with scodec-bits BitVector
       private[this] val data = ArrayBuffer.empty[Byte]
       private[this] var contentLength = -1
       private[this] var header = Map.empty[String, String]
       private[this] def atDelimiter(idx: Int): Boolean = {
-        (data.size >= idx + 4
-        && data(idx) == '\r'
-        && data(idx + 1) == '\n'
-        && data(idx + 2) == '\r'
-        && data(idx + 3) == '\n')
+        data.size >= idx + 4 &&
+        data(idx) == '\r' &&
+        data(idx + 1) == '\n' &&
+        data(idx + 2) == '\r' &&
+        data(idx + 3) == '\n'
       }
       private[this] val EmptyPair = "" -> ""
       private[this] def readHeaders(): Future[Ack] = {

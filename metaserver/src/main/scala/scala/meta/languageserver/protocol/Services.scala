@@ -29,6 +29,9 @@ object Service extends LazyLogging {
           case JsSuccess(value, _) =>
             f.handle(value).map {
               case Right(response) => Response.ok(Json.toJson(response), id)
+              // Service[A, ...] doesn't have access to the request ID so
+              // by convention it's OK to set the ID to null by default
+              // and we fill it in here instead.
               case Left(err) => err.copy(id = id)
             }
         }
@@ -59,12 +62,9 @@ object Service extends LazyLogging {
         case Notification(invalidMethod, _) =>
           fail(s"Expected method '$method', obtained '$invalidMethod'")
         case _ =>
-          fail(
-            s"Expected notification, obtained $message"
-          )
+          fail(s"Expected notification, obtained $message")
       }
     }
-
 }
 
 object Services {
@@ -72,21 +72,27 @@ object Services {
 }
 
 class Services private (val services: List[NamedJsonRpcService]) {
+
   def request[A: Reads, B: Writes](method: String)(
       f: A => B
-  ): Services = requestAsync[A, B](method)(request => Task(Right(f(request))))
+  ): Services =
+    requestAsync[A, B](method)(request => Task(Right(f(request))))
+
   def requestAsync[A: Reads, B: Writes](method: String)(
       f: Service[A, Either[Response.Error, B]]
-  ): Services = addService(Service.request[A, B](method)(f))
+  ): Services =
+    addService(Service.request[A, B](method)(f))
+
   def notification[A: Reads](method: String)(
       f: A => Unit
-  ): Services = notificationAsync[A](method)(request => Task(f(request)))
+  ): Services =
+    notificationAsync[A](method)(request => Task(f(request)))
+
   def notificationAsync[A: Reads](method: String)(
       f: Service[A, Unit]
-  ): Services = addService(Service.notification[A](method)(f))
+  ): Services =
+    addService(Service.notification[A](method)(f))
 
-  def +(other: Services): Services =
-    other.services.foldLeft(this)(_ addService _)
   def byMethodName: Map[String, NamedJsonRpcService] =
     services.iterator.map(s => s.methodName -> s).toMap
   def addService(service: NamedJsonRpcService): Services = {

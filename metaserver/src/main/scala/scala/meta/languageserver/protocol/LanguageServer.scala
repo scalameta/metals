@@ -6,6 +6,7 @@ import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.LazyLogging
+import langserver.types.CancelParams
 import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.Scheduler
@@ -23,7 +24,8 @@ final class LanguageServer(
 ) extends LazyLogging {
   private val activeClientRequests: TrieMap[JsValue, Cancelable] = TrieMap.empty
   private val cancelNotification =
-    Service.notification[JsValue]("$/cancelRequest") { id =>
+    Service.notification[CancelParams]("$/cancelRequest") { params =>
+      val id = params.id
       activeClientRequests.get(id) match {
         case None =>
           Task {

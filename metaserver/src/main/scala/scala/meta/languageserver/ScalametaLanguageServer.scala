@@ -52,9 +52,7 @@ class ScalametaLanguageServer(
   // Always run the presentation compiler on the same thread
   private val presentationCompilerScheduler: SchedulerService =
     Scheduler(Executors.newFixedThreadPool(1))
-  def onPresentationCompilerThread[A](
-      f: => A
-  ): Task[Either[Response.Error, A]] =
+  def withPC[A](f: => A): Task[Either[Response.Error, A]] =
     Task(Right(f)).executeOn(presentationCompilerScheduler)
   val (fileSystemSemanticdbSubscriber, fileSystemSemanticdbsPublisher) =
     ScalametaLanguageServer.fileSystemSemanticdbStream(cwd)
@@ -172,13 +170,13 @@ class ScalametaLanguageServer(
       JsNull
     }
     .notification[JsValue]("exit") { _ =>
-      pprint.log("exit")
+      logger.info("exit(0)")
       sys.exit(0)
     }
     .requestAsync[TextDocumentPositionParams, CompletionList](
       "textDocument/completion"
     ) { params =>
-      onPresentationCompilerThread {
+      withPC {
         logger.info("completion")
         scalacProvider.getCompiler(params.textDocument) match {
           case Some(g) =>
@@ -233,7 +231,6 @@ class ScalametaLanguageServer(
     .notification[DidSaveTextDocumentParams](
       "textDocument/didSave"
     ) { params =>
-      pprint.log(params)
       ()
     }
     .notification[DidChangeConfigurationParams](

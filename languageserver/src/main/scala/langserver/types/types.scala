@@ -351,3 +351,9 @@ case class FileEvent(
 object FileEvent {
   implicit val format: OFormat[FileEvent] = Json.format[FileEvent]
 }
+
+case class CancelParams(id: JsValue)
+
+object CancelParams {
+  implicit val format: OFormat[CancelParams] = Json.format[CancelParams]
+}
