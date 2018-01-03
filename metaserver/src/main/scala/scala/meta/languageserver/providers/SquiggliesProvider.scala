@@ -7,7 +7,6 @@ import scala.{meta => m}
 import langserver.messages.PublishDiagnostics
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.MonixEnrichments._
-import scala.tools.nsc.interpreter.OutputStream
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable

@@ -1,9 +1,7 @@
 package scala.meta.languageserver
 
-import java.io.PrintStream
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
 import scala.meta.parsers.Parsed
-import scala.tools.nsc.interpreter.OutputStream
 import scala.{meta => m}
 import scalafix.internal.config.LazySemanticdbIndex
 import scalafix.internal.config.ScalafixConfig

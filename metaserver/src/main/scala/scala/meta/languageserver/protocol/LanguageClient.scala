@@ -8,6 +8,7 @@ import langserver.core.MessageWriter
 import langserver.core.Notifications
 import langserver.messages.ApplyWorkspaceEditParams
 import langserver.messages.ApplyWorkspaceEditResponse
+import langserver.messages.LogMessageParams
 import langserver.messages.PublishDiagnostics
 import langserver.messages.ShowMessageParams
 import monix.eval.Callback
@@ -17,7 +18,6 @@ import monix.execution.atomic.Atomic
 import monix.execution.atomic.AtomicInt
 import play.api.libs.json.JsError
 import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
@@ -50,9 +50,12 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
       callback.onSuccess(response)
     }
 
-  def request[A: Writes, B: Reads](method: String, request: A): Task[B] = {
+  def request[A: Writes, B: Reads](
+      method: String,
+      request: A
+  ): Task[Either[Response.Error, B]] = {
+    val nextId = RequestId(counter.incrementAndGet())
     val response = Task.create[Response] { (out, cb) =>
-      val nextId = RequestId(counter.incrementAndGet())
       val scheduled = out.scheduleOnce(Duration(0, "s")) {
         val json = Request(method, Some(Json.toJson(request)), nextId)
         activeServerRequests.put(nextId, cb)
@@ -63,27 +66,37 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
         this.notify("$/cancelRequest", CancelParams(nextId.value))
       }
     }
-    def fail(json: JsValue): Nothing =
-      throw new IllegalArgumentException(Json.prettyPrint(json))
     response.map {
       case Response.Empty =>
-        throw new IllegalArgumentException(
-          s"Got empty response for request $method -> $request"
+        Left(
+          Response.invalidParams(
+            s"Got empty response for request $request",
+            nextId
+          )
         )
-      case Response.Error(result, _) =>
-        fail(Json.toJson(result))
+      case err: Response.Error =>
+        Left(err)
       case Response.Success(result, _) =>
         result.validate[B] match {
           case JsSuccess(value, _) =>
-            value
+            Right(value)
           case err: JsError =>
-            fail(JsError.toJson(err))
+            Left(
+              Response.invalidParams(
+                Json.prettyPrint(JsError.toJson(err)),
+                nextId
+              )
+            )
         }
     }
   }
 
   override def showMessage(params: ShowMessageParams): Unit = {
     notify("window/showMessage", params)
+  }
+
+  override def logMessage(params: LogMessageParams): Unit = {
+    notify("window/logMessage", params)
   }
 
   override def publishDiagnostics(
@@ -93,12 +106,10 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
   }
   def workspaceApplyEdit(
       params: ApplyWorkspaceEditParams
-  ): Task[ApplyWorkspaceEditResponse] =
+  ): Task[Either[Response.Error, ApplyWorkspaceEditResponse]] =
     request[ApplyWorkspaceEditParams, ApplyWorkspaceEditResponse](
       "workspace/applyEdit",
       params
     )
 
 }
-
-

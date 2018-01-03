@@ -4,7 +4,6 @@ import scala.meta._
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.Uri
 import com.typesafe.scalalogging.LazyLogging
-import langserver.messages.DocumentSymbolResult
 import langserver.types.SymbolInformation
 import langserver.{types => l}
 

@@ -2,7 +2,6 @@ package scala.meta.languageserver.providers
 
 import com.typesafe.scalalogging.LazyLogging
 import langserver.{types => l}
-import langserver.messages.ReferencesResult
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.Uri

@@ -5,7 +5,6 @@ import scala.{meta => m}
 import scala.meta.semanticdb
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import scalafix.util.SemanticdbIndex
-import langserver.core.Connection
 import langserver.core.Notifications
 import langserver.messages.PublishDiagnostics
 import langserver.{types => l}

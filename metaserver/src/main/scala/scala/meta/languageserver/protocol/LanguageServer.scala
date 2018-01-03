@@ -1,13 +1,11 @@
 package scala.meta.languageserver.protocol
 
-import java.io.OutputStream
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.LazyLogging
-import langserver.core.MessageWriter
 import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.Scheduler

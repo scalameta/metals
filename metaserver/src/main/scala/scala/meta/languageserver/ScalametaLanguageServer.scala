@@ -20,7 +20,6 @@ import scala.meta.languageserver.refactoring.OrganizeImports
 import scala.meta.languageserver.search.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
 import io.github.soc.directories.ProjectDirectories
-import langserver.core.Connection
 import langserver.messages._
 import langserver.types._
 import monix.eval.Task
@@ -128,6 +127,7 @@ class ScalametaLanguageServer(
       params: InitializeParams
   ): Task[Either[Response.Error, InitializeResult]] = {
     logger.info(s"Initialized with $cwd, $params")
+    LSPLogger.connection = Some(client)
     cancelEffects = effects.map(_.subscribe())
     loadAllRelevantFilesInThisWorkspace()
     val capabilities = ServerCapabilities(
@@ -326,35 +326,58 @@ class ScalametaLanguageServer(
         case None => SignatureHelpProvider.empty
       }
     }
-    .request[ExecuteCommandParams, JsValue](
+    .requestAsync[ExecuteCommandParams, JsValue](
       "workspace/executeCommand"
     ) { params =>
       logger.info(s"executeCommand $params")
       import WorkspaceCommand._
-      WorkspaceCommand
-        .withNameOption(params.command)
-        .fold(logger.error(s"Unknown command ${params.command}")) {
-          case ClearIndexCache =>
-            logger.info("Clearing the index cache")
-            ScalametaLanguageServer.clearCacheDirectory()
-            symbolIndex.clearIndex()
-            scalacProvider.allCompilerConfigs.foreach(
-              config => symbolIndex.indexDependencyClasspath(config.sourceJars)
+      val ok = Task(Right(JsNull))
+      WorkspaceCommand.withNameOption(params.command) match {
+        case None =>
+          val msg = s"Unknown command ${params.command}"
+          logger.error(msg)
+          Task(Left(Response.invalidParams(msg)))
+        case Some(ClearIndexCache) =>
+          logger.info("Clearing the index cache")
+          ScalametaLanguageServer.clearCacheDirectory()
+          symbolIndex.clearIndex()
+          scalacProvider.allCompilerConfigs.foreach(
+            config => symbolIndex.indexDependencyClasspath(config.sourceJars)
+          )
+          ok
+        case Some(ResetPresentationCompiler) =>
+          logger.info("Resetting all compiler instances")
+          scalacProvider.resetCompilers()
+          ok
+        case Some(ScalafixUnusedImports) =>
+          logger.info("Removing unused imports")
+          val response = for {
+            result <- OrganizeImports.removeUnused(
+              params.arguments,
+              symbolIndex
             )
-          case ResetPresentationCompiler =>
-            logger.info("Resetting all compiler instances")
-            scalacProvider.resetCompilers()
-          case ScalafixUnusedImports =>
-            logger.info("Removing unused imports")
-            val result =
-              OrganizeImports.removeUnused(
-                params.arguments,
-                symbolIndex
-              )
-            // TODO(olafur) make method return async
-            client.workspaceApplyEdit(result).runAsync
-        }
-      JsNull
+            applied <- result match {
+              // TODO(olafur): Monad Transformers? (no please!)
+              case Left(err) => Task(Left(err))
+              case Right(command) => client.workspaceApplyEdit(command)
+            }
+          } yield {
+            applied match {
+              case Left(err) =>
+                logger.warn(s"Failed to apply command $err")
+                Right(JsNull)
+              case Right(edit) =>
+                if (edit.applied) {
+                  logger.info(s"Successfully applied command $params")
+                } else {
+                  logger.warn(s"Failed to apply edit for command $params")
+                }
+              case _ =>
+            }
+            applied
+          }
+          response.map(_ => Right(JsNull))
+      }
     }
     .request[WorkspaceSymbolParams, List[SymbolInformation]](
       "workspace/symbol"

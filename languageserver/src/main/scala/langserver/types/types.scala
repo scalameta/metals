@@ -169,7 +169,7 @@ case class DocumentHighlight(
   /** The highlight kind, default is [text](#DocumentHighlightKind.Text). */
   kind: DocumentHighlightKind = DocumentHighlightKind.Text)
 object DocumentHighlight {
-  implicit val format = Json.format[DocumentHighlight]
+  implicit val format: OFormat[DocumentHighlight] = Json.format[DocumentHighlight]
 }
 
 case class SymbolInformation(

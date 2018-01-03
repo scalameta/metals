@@ -1,5 +1,6 @@
 package scala.meta.languageserver.protocol
 
+import monix.eval.Task
 import play.api.libs.json._
 
 sealed trait Message
@@ -46,6 +47,8 @@ object Response {
   def empty: Response = Empty
   def ok(result: JsValue, id: RequestId): Response =
     success(result, id)
+  def okAsync[T](value: T): Task[Either[Response.Error, T]] =
+    Task(Right(value))
   def success(result: JsValue, id: RequestId): Response =
     Success(result, id)
   def error(error: ErrorObject, id: RequestId): Response.Error =

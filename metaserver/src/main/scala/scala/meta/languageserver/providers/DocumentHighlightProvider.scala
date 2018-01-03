@@ -2,12 +2,10 @@ package scala.meta.languageserver.providers
 
 import com.typesafe.scalalogging.LazyLogging
 import langserver.{types => l}
-import langserver.messages.DocumentHighlightResult
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
 import langserver.types.DocumentHighlight
-import langserver.types.Location
 
 object DocumentHighlightProvider extends LazyLogging {
 

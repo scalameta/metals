@@ -1,19 +1,9 @@
 package langserver.messages
 
-import com.dhpcs.jsonrpc._
-import play.api.libs.json._
 import langserver.types._
-import langserver.utils.JsonRpcUtils
 import play.api.libs.json.OFormat
+import play.api.libs.json._
 
-sealed trait Message
-sealed trait ServerCommand extends Message
-sealed trait ClientCommand extends Message
-
-sealed trait Response extends Message
-sealed trait ResultResponse extends Response
-
-sealed trait Notification extends Message
 
 /**
  * Parameters and types used in the `initialize` message.
@@ -34,7 +24,7 @@ case class InitializeParams(
   /**
    * The capabilities provided by the client (editor)
    */
-  capabilities: ClientCapabilities) extends ServerCommand
+  capabilities: ClientCapabilities)
 object InitializeParams {
   implicit val format: OFormat[InitializeParams] = Json.format[InitializeParams]
 }
@@ -145,19 +135,19 @@ object ExecuteCommandOptions {
   implicit val format: Format[ExecuteCommandOptions] = Json.format[ExecuteCommandOptions]
 }
 
-case class CompletionList(isIncomplete: Boolean, items: Seq[CompletionItem]) extends ResultResponse
+case class CompletionList(isIncomplete: Boolean, items: Seq[CompletionItem])
 object CompletionList {
   implicit val format: OFormat[CompletionList] = Json.format[CompletionList]
 }
 
-case class InitializeResult(capabilities: ServerCapabilities) extends ResultResponse
+case class InitializeResult(capabilities: ServerCapabilities)
 object InitializeResult {
   implicit val format: OFormat[InitializeResult] = Json.format[InitializeResult]
 }
 
-case class Shutdown() extends ServerCommand
+case class Shutdown()
 
-case class ShutdownResult() extends ResultResponse
+case class ShutdownResult()
 object ShutdownResult {
   implicit val format: Format[ShutdownResult] = OFormat(
     Reads(jsValue => JsSuccess(ShutdownResult())),
@@ -177,7 +167,7 @@ case class ShowMessageRequestParams(
   `type`: MessageType,
   message: String,
   actions: Seq[MessageActionItem]
-) extends ClientCommand
+)
 
 /**
  * A short title like 'Retry', 'Open Log' etc.
@@ -192,7 +182,7 @@ case class TextDocumentPositionParams(
   position: Position
 )
 object TextDocumentPositionParams {
-  implicit val format = Json.format[TextDocumentPositionParams]
+  implicit val format: OFormat[TextDocumentPositionParams] = Json.format[TextDocumentPositionParams]
 }
 case class ReferenceParams(
   textDocument: TextDocumentIdentifier,
@@ -200,7 +190,7 @@ case class ReferenceParams(
   context: ReferenceContext
 )
 object ReferenceParams {
-  implicit val format = Json.format[ReferenceParams]
+  implicit val format: OFormat[ReferenceParams] = Json.format[ReferenceParams]
 }
 
 case class RenameParams(
@@ -221,124 +211,92 @@ object CodeActionParams {
   implicit val format: OFormat[CodeActionParams] = Json.format[CodeActionParams]
 }
 
-case class CodeActionRequest(params: CodeActionParams) extends ServerCommand
+case class CodeActionRequest(params: CodeActionParams)
 object CodeActionRequest {
   implicit val format: OFormat[CodeActionRequest] = Json.format[CodeActionRequest]
 }
-case class DocumentSymbolParams(textDocument: TextDocumentIdentifier) extends ServerCommand
+case class DocumentSymbolParams(textDocument: TextDocumentIdentifier)
 object DocumentSymbolParams {
-  implicit val format = Json.format[DocumentSymbolParams]
+  implicit val format: OFormat[DocumentSymbolParams] = Json.format[DocumentSymbolParams]
 }
-case class TextDocumentRenameRequest(params: RenameParams) extends ServerCommand
+case class TextDocumentRenameRequest(params: RenameParams)
 object TextDocumentRenameRequest {
   implicit val format: OFormat[TextDocumentRenameRequest] = Json.format[TextDocumentRenameRequest]
 }
-case class TextDocumentSignatureHelpRequest(params: TextDocumentPositionParams) extends ServerCommand
-case class TextDocumentCompletionRequest(params: TextDocumentPositionParams) extends ServerCommand
-case class TextDocumentDefinitionRequest(params: TextDocumentPositionParams) extends ServerCommand
-case class TextDocumentReferencesRequest(params: ReferenceParams) extends ServerCommand
-case class TextDocumentDocumentHighlightRequest(params: TextDocumentPositionParams) extends ServerCommand
-case class TextDocumentHoverRequest(params: TextDocumentPositionParams) extends ServerCommand
-case class TextDocumentFormattingRequest(params: DocumentFormattingParams) extends ServerCommand
-case class WorkspaceExecuteCommandRequest(params: ExecuteCommandParams) extends ServerCommand
-case class WorkspaceSymbolRequest(params: WorkspaceSymbolParams) extends ServerCommand
+case class TextDocumentSignatureHelpRequest(params: TextDocumentPositionParams)
+case class TextDocumentCompletionRequest(params: TextDocumentPositionParams)
+case class TextDocumentDefinitionRequest(params: TextDocumentPositionParams)
+case class TextDocumentReferencesRequest(params: ReferenceParams)
+case class TextDocumentDocumentHighlightRequest(params: TextDocumentPositionParams)
+case class TextDocumentHoverRequest(params: TextDocumentPositionParams)
+case class TextDocumentFormattingRequest(params: DocumentFormattingParams)
+case class WorkspaceExecuteCommandRequest(params: ExecuteCommandParams)
+case class WorkspaceSymbolRequest(params: WorkspaceSymbolParams)
 case class ApplyWorkspaceEditResponse(applied: Boolean)
 object ApplyWorkspaceEditResponse {
-  implicit val format = Json.format[ApplyWorkspaceEditResponse]
+  implicit val format: OFormat[ApplyWorkspaceEditResponse] = Json.format[ApplyWorkspaceEditResponse]
 }
 case class ApplyWorkspaceEditParams(label: Option[String], edit: WorkspaceEdit)
 object ApplyWorkspaceEditParams {
   implicit val format: OFormat[ApplyWorkspaceEditParams] = Json.format[ApplyWorkspaceEditParams]
 }
 
-case class Hover(contents: Seq[MarkedString], range: Option[Range]) extends ResultResponse
+case class Hover(contents: Seq[MarkedString], range: Option[Range])
 object Hover {
   implicit val format: OFormat[Hover] = Json.format[Hover]
 }
 
-object ServerCommand extends CommandCompanion[ServerCommand] {
-  import JsonRpcUtils._
-
-  implicit val positionParamsFormat: OFormat[TextDocumentPositionParams] = Json.format[TextDocumentPositionParams]
-  implicit val referenceParamsFormat: OFormat[ReferenceParams] = Json.format[ReferenceParams]
-
-  override val CommandFormats = Message.MessageFormats(
-    "initialize" -> Json.format[InitializeParams],
-    "textDocument/completion" -> valueFormat(TextDocumentCompletionRequest)(_.params),
-    "textDocument/codeAction" -> valueFormat(CodeActionRequest.apply)(_.params),
-    "textDocument/rename" -> valueFormat(TextDocumentRenameRequest.apply)(_.params),
-    "textDocument/signatureHelp" -> valueFormat(TextDocumentSignatureHelpRequest)(_.params),
-    "textDocument/definition" -> valueFormat(TextDocumentDefinitionRequest)(_.params),
-    "textDocument/references" -> valueFormat(TextDocumentReferencesRequest)(_.params),
-    "textDocument/documentHighlight" -> valueFormat(TextDocumentDocumentHighlightRequest)(_.params),
-    "textDocument/hover" -> valueFormat(TextDocumentHoverRequest)(_.params),
-    "textDocument/documentSymbol" -> Json.format[DocumentSymbolParams],
-    "textDocument/formatting" -> valueFormat(TextDocumentFormattingRequest)(_.params),
-    "workspace/executeCommand" -> valueFormat(WorkspaceExecuteCommandRequest)(_.params),
-    "workspace/symbol" -> valueFormat(WorkspaceSymbolRequest)(_.params),
-  )
-
-  // NOTE: this is a workaround to read `shutdown` request which doesn't have parameters (scala-json-rpc requires parameters for all requests)
-  override def read(jsonRpcRequestMessage: JsonRpcRequestMessage): JsResult[_ <: ServerCommand] = {
-    jsonRpcRequestMessage.method match {
-      case "shutdown" => JsSuccess(Shutdown())
-      case _ => super.read(jsonRpcRequestMessage)
-    }
-  }
-}
-
-object ClientCommand extends CommandCompanion[ClientCommand] {
-  override val CommandFormats = Message.MessageFormats(
-    "window/showMessageRequest" -> Json.format[ShowMessageRequestParams])
-}
 
 ///////////////////////////// Notifications ///////////////////////////////
 
 // From server to client
 
-case class ShowMessageParams(`type`: MessageType, message: String) extends Notification
+case class ShowMessageParams(`type`: MessageType, message: String)
 object ShowMessageParams {
-   implicit val format = Json.format[ShowMessageParams]
+   implicit val format: OFormat[ShowMessageParams] = Json.format[ShowMessageParams]
 }
-case class LogMessageParams(`type`: MessageType, message: String) extends Notification
-case class PublishDiagnostics(uri: String, diagnostics: Seq[Diagnostic]) extends Notification
+case class LogMessageParams(`type`: MessageType, message: String)
+object LogMessageParams {
+  implicit val format: OFormat[LogMessageParams] = Json.format[LogMessageParams]
+}
+case class PublishDiagnostics(uri: String, diagnostics: Seq[Diagnostic])
 object PublishDiagnostics {
   implicit val format: OFormat[PublishDiagnostics] = Json.format[PublishDiagnostics]
 }
 
 // from client to server
 
-case class Exit() extends Notification
+case class Exit()
 
-case class DidOpenTextDocumentParams(textDocument: TextDocumentItem) extends Notification
+case class DidOpenTextDocumentParams(textDocument: TextDocumentItem)
 object DidOpenTextDocumentParams {
-  implicit val format = Json.format[DidOpenTextDocumentParams]
+  implicit val format: OFormat[DidOpenTextDocumentParams] = Json.format[DidOpenTextDocumentParams]
 }
 case class DidChangeTextDocumentParams(
   textDocument: VersionedTextDocumentIdentifier,
-  contentChanges: Seq[TextDocumentContentChangeEvent]) extends Notification
+  contentChanges: Seq[TextDocumentContentChangeEvent])
 object DidChangeTextDocumentParams {
   implicit val format: OFormat[DidChangeTextDocumentParams] = Json.format[DidChangeTextDocumentParams]
 }
 
-case class DidCloseTextDocumentParams(textDocument: TextDocumentIdentifier) extends Notification
+case class DidCloseTextDocumentParams(textDocument: TextDocumentIdentifier)
 object DidCloseTextDocumentParams {
-  implicit val format = Json.format[DidCloseTextDocumentParams]
+  implicit val format: OFormat[DidCloseTextDocumentParams] = Json.format[DidCloseTextDocumentParams]
 }
-case class DidSaveTextDocumentParams(textDocument: TextDocumentIdentifier) extends Notification
+case class DidSaveTextDocumentParams(textDocument: TextDocumentIdentifier)
 object DidSaveTextDocumentParams {
-  implicit val format = Json.format[DidSaveTextDocumentParams]
+  implicit val format: OFormat[DidSaveTextDocumentParams] = Json.format[DidSaveTextDocumentParams]
 }
-case class DidChangeWatchedFilesParams(changes: Seq[FileEvent]) extends Notification
+case class DidChangeWatchedFilesParams(changes: Seq[FileEvent])
 object DidChangeWatchedFilesParams {
-  implicit val format = Json.format[DidChangeWatchedFilesParams]
+  implicit val format: OFormat[DidChangeWatchedFilesParams] = Json.format[DidChangeWatchedFilesParams]
 }
-case class DidChangeConfigurationParams(settings: JsValue) extends Notification
+case class DidChangeConfigurationParams(settings: JsValue)
 object DidChangeConfigurationParams {
-  implicit val format = Json.format[DidChangeConfigurationParams]
+  implicit val format: OFormat[DidChangeConfigurationParams] = Json.format[DidChangeConfigurationParams]
 }
 
-case class Initialized() extends Notification
+case class Initialized()
 object Initialized {
   implicit val format: Format[Initialized] = OFormat(
     Reads(jsValue => JsSuccess(Initialized())),
@@ -346,78 +304,34 @@ object Initialized {
 }
 
 
-case class CancelRequest(id: Int) extends Notification
+case class CancelRequest(id: Int)
 
-object Notification extends NotificationCompanion[Notification] {
-  override val NotificationFormats = Message.MessageFormats(
-    "window/showMessage" -> Json.format[ShowMessageParams],
-    "window/logMessage" -> Json.format[LogMessageParams],
-    "textDocument/publishDiagnostics" -> Json.format[PublishDiagnostics],
-    "textDocument/didOpen" -> Json.format[DidOpenTextDocumentParams],
-    "textDocument/didChange" -> Json.format[DidChangeTextDocumentParams],
-    "textDocument/didClose" -> Json.format[DidCloseTextDocumentParams],
-    "textDocument/didSave" -> Json.format[DidSaveTextDocumentParams],
-    "workspace/didChangeWatchedFiles" -> Json.format[DidChangeWatchedFilesParams],
-    "workspace/didChangeConfiguration" -> Json.format[DidChangeConfigurationParams],
-    "initialized" -> Initialized.format,
-    "$/cancelRequest" -> Json.format[CancelRequest]
-  )
-
-  // NOTE: this is a workaround to read `exit` notification which doesn't have parameters (scala-json-rpc requires parameters for all notifications)
-  override def read(jsonRpcNotificationMessage: JsonRpcNotificationMessage): JsResult[_ <: Notification] = {
-    jsonRpcNotificationMessage.method match {
-      case "exit" => JsSuccess(Exit())
-      case _ => super.read(jsonRpcNotificationMessage)
-    }
-  }
-}
-
-case class RenameResult(params: WorkspaceEdit) extends ResultResponse
+case class RenameResult(params: WorkspaceEdit)
 object RenameResult {
   implicit val format: OFormat[RenameResult] = Json.format[RenameResult]
 }
-case class CodeActionResult(params: Seq[Command]) extends ResultResponse
+case class CodeActionResult(params: Seq[Command])
 object CodeActionResult {
   implicit val format: OFormat[CodeActionResult] = Json.format[CodeActionResult]
 }
-case class DocumentSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
-case class DefinitionResult(params: Seq[Location]) extends ResultResponse
-case class ReferencesResult(params: Seq[Location]) extends ResultResponse
-case class DocumentHighlightResult(params: Seq[Location]) extends ResultResponse
-case class DocumentFormattingResult(params: Seq[TextEdit]) extends ResultResponse
+case class DocumentSymbolResult(params: Seq[SymbolInformation])
+case class DefinitionResult(params: Seq[Location])
+case class ReferencesResult(params: Seq[Location])
+case class DocumentHighlightResult(params: Seq[Location])
+case class DocumentFormattingResult(params: Seq[TextEdit])
 case class SignatureHelp(signatures: Seq[SignatureInformation],
                          activeSignature: Option[Int],
-                         activeParameter: Option[Int]) extends ResultResponse
+                         activeParameter: Option[Int])
 object SignatureHelp {
   implicit val format: OFormat[SignatureHelp] = Json.format[SignatureHelp]
 }
-case object ExecuteCommandResult extends ResultResponse
-case class WorkspaceSymbolResult(params: Seq[SymbolInformation]) extends ResultResponse
+case object ExecuteCommandResult
+case class WorkspaceSymbolResult(params: Seq[SymbolInformation])
 object WorkspaceSymbolResult {
   implicit val format: OFormat[WorkspaceSymbolResult] = Json.format[WorkspaceSymbolResult]
 }
 
-object ResultResponse extends ResponseCompanion[Any] {
-  import JsonRpcUtils._
-
-  override val ResponseFormats = Message.MessageFormats(
-    "initialize" -> Json.format[InitializeResult],
-    "textDocument/completion" -> Json.format[CompletionList],
-    "textDocument/codeAction" -> valueFormat(CodeActionResult.apply)(_.params),
-    "textDocument/rename" -> valueFormat(RenameResult.apply)(_.params),
-    "textDocument/signatureHelp" -> Json.format[SignatureHelp],
-    "textDocument/definition" -> valueFormat(DefinitionResult)(_.params),
-    "textDocument/references" -> valueFormat(ReferencesResult)(_.params),
-    "textDocument/documentHighlight" -> valueFormat(DocumentHighlightResult)(_.params),
-    "textDocument/hover" -> Json.format[Hover],
-    "textDocument/documentSymbol" -> valueFormat(DocumentSymbolResult)(_.params),
-    "textDocument/formatting" -> valueFormat(DocumentFormattingResult)(_.params),
-    "workspace/executeCommand" -> emptyFormat[ExecuteCommandResult.type],
-    "workspace/symbol" -> valueFormat(WorkspaceSymbolResult.apply)(_.params),
-    "shutdown" -> ShutdownResult.format
-  )
-}
 
 // Errors
-case class InvalidParamsResponseError(message: String) extends Exception(message) with Response
+case class InvalidParamsResponseError(message: String) extends Exception(message)
 

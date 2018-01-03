@@ -1,6 +1,7 @@
 package langserver.core
 
 import java.io.OutputStream
+import java.nio.charset.StandardCharsets
 import play.api.libs.json._
 import com.typesafe.scalalogging.LazyLogging
 
@@ -32,14 +33,14 @@ class MessageWriter(out: OutputStream) extends LazyLogging {
     require(h.get(ContentLen).isEmpty)
 
     val str = Json.stringify(o.writes(msg))
-    val contentBytes = str.getBytes(MessageReader.Utf8Charset)
+    val contentBytes = str.getBytes(StandardCharsets.UTF_8)
     val headers = (h + (ContentLen -> contentBytes.length))
       .map { case (k, v) => s"$k: $v" }
       .mkString("", "\r\n", "\r\n\r\n")
 
     logger.debug(s" --> $str")
 
-    val headerBytes = headers.getBytes(MessageReader.AsciiCharset)
+    val headerBytes = headers.getBytes(StandardCharsets.US_ASCII)
 
     out.write(headerBytes)
     out.write(contentBytes)

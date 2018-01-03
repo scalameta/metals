@@ -5,13 +5,10 @@ import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Configuration.Scalafmt
 import scala.meta.languageserver.Formatter
 import scala.meta.languageserver.MonixEnrichments._
-import scala.meta.languageserver.protocol.RequestId
 import scala.meta.languageserver.protocol.Response
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import langserver.core.Notifications
-import langserver.messages.DocumentFormattingResult
-import langserver.types.MessageType
 import langserver.types.Position
 import langserver.types.Range
 import langserver.types.TextEdit
