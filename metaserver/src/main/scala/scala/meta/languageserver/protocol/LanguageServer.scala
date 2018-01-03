@@ -24,6 +24,18 @@ final class LanguageServer(
     requests: JsonRequestService,
     requestScheduler: Scheduler
 ) extends LazyLogging {
+  def this(
+      in: Observable[BaseProtocolMessage],
+      out: OutputStream,
+      services: Services,
+      requestScheduler: Scheduler
+  ) = this(
+    in,
+    out,
+    new CompositeNotificationService(services.notifications),
+    new CompositeRequestService(services.requests),
+    requestScheduler
+  )
   private val writer = new MessageWriter(out)
   private val activeClientRequests: TrieMap[JsValue, Cancelable] = TrieMap.empty
 

@@ -14,15 +14,19 @@ object Response {
   }
   case object Empty extends Response
   def empty: Response = Empty
+  def ok(result: JsValue, id: RequestId): Response =
+    success(result, id)
   def success(result: JsValue, id: RequestId): Response =
     Success(result, id)
   def error(error: ErrorObject, id: RequestId): Response.Error =
     Error(error, id)
   def internalError(message: String, id: RequestId): Response.Error =
     Error(ErrorObject(ErrorCode.InternalError, message, None), id)
+  def invalidParams(message: String, id: RequestId): Response.Error =
+    Error(ErrorObject(ErrorCode.InvalidParams, message, None), id)
   def invalidRequest(message: String): Response.Error =
     Error(
-      ErrorObject(ErrorCode.InvalidParams, message, None),
+      ErrorObject(ErrorCode.InvalidRequest, message, None),
       RequestId.Null
     )
   def cancelled(id: JsValue): Response.Error =

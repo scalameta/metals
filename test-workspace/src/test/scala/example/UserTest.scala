@@ -8,5 +8,5 @@ class UserTest {
     .map(x => x.+(user.age))
   scala.runtime.CharRef.create('a')
   val str = user.name + a.a.x
-  val left: Either[String, Int] = Left("")
+ val left: Either[String, Int] = Left("")
 }

@@ -191,6 +191,9 @@ case class TextDocumentPositionParams(
   textDocument: TextDocumentIdentifier,
   position: Position
 )
+object TextDocumentPositionParams {
+  implicit val format = Json.format[TextDocumentPositionParams]
+}
 case class ReferenceParams(
   textDocument: TextDocumentIdentifier,
   position: Position,
@@ -295,12 +298,24 @@ object PublishDiagnostics {
 case class Exit() extends Notification
 
 case class DidOpenTextDocumentParams(textDocument: TextDocumentItem) extends Notification
+object DidOpenTextDocumentParams {
+  implicit val format = Json.format[DidOpenTextDocumentParams]
+}
 case class DidChangeTextDocumentParams(
   textDocument: VersionedTextDocumentIdentifier,
   contentChanges: Seq[TextDocumentContentChangeEvent]) extends Notification
+object DidChangeTextDocumentParams {
+  implicit val format: OFormat[DidChangeTextDocumentParams] = Json.format[DidChangeTextDocumentParams]
+}
 
 case class DidCloseTextDocumentParams(textDocument: TextDocumentIdentifier) extends Notification
+object DidCloseTextDocumentParams {
+  implicit val format = Json.format[DidCloseTextDocumentParams]
+}
 case class DidSaveTextDocumentParams(textDocument: TextDocumentIdentifier) extends Notification
+object DidSaveTextDocumentParams {
+  implicit val format = Json.format[DidSaveTextDocumentParams]
+}
 case class DidChangeWatchedFilesParams(changes: Seq[FileEvent]) extends Notification
 case class DidChangeConfigurationParams(settings: JsValue) extends Notification
 

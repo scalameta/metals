@@ -29,10 +29,11 @@ abstract class NotificationService[A: Reads](val method: String)
         handle(value)
     }
 }
+
 object NotificationService {
-  def method[A: Reads](
-      name: String
-  )(f: A => Task[Unit]): NotificationService[A] =
+  def notification[A: Reads](name: String)(
+      f: A => Task[Unit]
+  ): NamedNotificationService =
     new NotificationService[A](name) {
       override def handle(request: A): Task[Unit] = f(request)
     }
