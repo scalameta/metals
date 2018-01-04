@@ -4,6 +4,9 @@ import java.io.FileOutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import java.util.concurrent.Executors
+import scala.meta.languageserver.protocol.BaseProtocolMessage
+import scala.meta.languageserver.protocol.LanguageClient
+import scala.meta.languageserver.protocol.LanguageServer
 import scala.util.Properties
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
@@ -31,9 +34,15 @@ object Main extends LazyLogging {
       System.setErr(err)
       logger.info(s"Starting server in $cwd")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
-      val server = new ScalametaLanguageServer(cwd, stdin, stdout, out)
-      LSPLogger.connection = Some(server.connection)
-      server.start()
+      val client = new LanguageClient(stdout)
+      val services = new ScalametaServices(cwd, client)(s)
+      val languageServer = new LanguageServer(
+        BaseProtocolMessage.fromInputStream(stdin),
+        client,
+        services.services,
+        s
+      )
+      languageServer.listen()
     } catch {
       case NonFatal(e) =>
         logger.error("Uncaught top-level exception", e)

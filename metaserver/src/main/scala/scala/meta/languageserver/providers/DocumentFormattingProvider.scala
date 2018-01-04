@@ -5,10 +5,12 @@ import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Configuration.Scalafmt
 import scala.meta.languageserver.Formatter
 import scala.meta.languageserver.MonixEnrichments._
+import scala.meta.languageserver.protocol.Response
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
+import cats.syntax.bifunctor._
+import cats.instances.either._
 import langserver.core.Notifications
-import langserver.messages.DocumentFormattingResult
 import langserver.types.MessageType
 import langserver.types.Position
 import langserver.types.Range
@@ -66,7 +68,7 @@ class DocumentFormattingProvider(
 
   def format(
       input: Input.VirtualFile
-  ): Task[DocumentFormattingResult] = Task.eval {
+  ): Task[Either[Response.Error, List[TextEdit]]] = Task {
     val formatResult = for {
       scalafmt <- formatter()
       scalafmtConf <- config()
@@ -78,16 +80,16 @@ class DocumentFormattingProvider(
           scalafmt.format(input.value, input.path, path)
       }
     }
-    formatResult match {
-      case Left(err) =>
-        // TODO(olafur) return invalid params when we refactor to lsp4s.
-        // We should not have to return a bogus empty result here.
-        notifications.showMessage(MessageType.Error, err)
-        DocumentFormattingResult(Nil)
-      case Right(formatted) =>
-        val edits = List(TextEdit(fullDocumentRange, formatted))
-        DocumentFormattingResult(edits)
-    }
+    formatResult.bimap(
+      message => {
+        // We show a message here to be sure the message is
+        // reported in the UI. invalidParams responses don't
+        // get reported in vscode at least.
+        notifications.showMessage(MessageType.Error, message)
+        Response.invalidParams(message)
+      },
+      formatted => List(TextEdit(fullDocumentRange, formatted))
+    )
   }
 
 }

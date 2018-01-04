@@ -1,12 +1,12 @@
 package scala.meta.languageserver
 
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.encoder.PatternLayoutEncoder
-import ch.qos.logback.core.AppenderBase
-import langserver.core.Connection
-import langserver.types.MessageType
 import java.nio.charset.StandardCharsets.UTF_8
 import scala.beans.BeanProperty
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.AppenderBase
+import langserver.core.Notifications
+import langserver.types.MessageType
 
 class LSPLogger(@BeanProperty var encoder: PatternLayoutEncoder)
     extends AppenderBase[ILoggingEvent] {
@@ -16,10 +16,10 @@ class LSPLogger(@BeanProperty var encoder: PatternLayoutEncoder)
     val message =
       if (encoder != null) new String(encoder.encode(event), UTF_8)
       else event.getFormattedMessage
-    connection.foreach(_.logMessage(MessageType.Log, message))
+    notifications.foreach(_.logMessage(MessageType.Log, message))
   }
 }
 
 object LSPLogger {
-  var connection: Option[Connection] = None
+  var notifications: Option[Notifications] = None
 }

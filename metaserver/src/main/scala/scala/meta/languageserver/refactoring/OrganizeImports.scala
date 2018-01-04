@@ -1,38 +1,39 @@
 package scala.meta.languageserver.refactoring
 
-import scala.meta._
+import cats.syntax.either._
+import scala.meta.Document
 import scala.meta.languageserver.Parser
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.SymbolIndex
 import scalafix.internal.rule.RemoveUnusedImports
 import scala.meta.languageserver.ScalametaEnrichments._
+import scala.meta.languageserver.protocol.Response
 import scalafix.languageserver.ScalafixEnrichments._
 import scalafix.languageserver.ScalafixPatchEnrichments._
 import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
 import langserver.messages.ApplyWorkspaceEditParams
-import langserver.messages.InvalidParamsResponseError
 import langserver.types.TextDocumentIdentifier
 import langserver.types.WorkspaceEdit
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
+import io.circe.Json
 
 object OrganizeImports extends LazyLogging {
 
   val empty = ApplyWorkspaceEditParams(None, WorkspaceEdit(Map.empty))
 
   def removeUnused(
-      arguments: Option[Seq[JsValue]],
+      arguments: Option[Seq[Json]],
       index: SymbolIndex
-  ): ApplyWorkspaceEditParams = {
+  ): Either[Response.Error, ApplyWorkspaceEditParams] = {
     val result = for {
       as <- arguments
       argument <- as.headOption
-      textDocument <- Json.fromJson[TextDocumentIdentifier](argument).asOpt
+      textDocument <- argument.as[TextDocumentIdentifier].toOption
     } yield removeUnused(Uri(textDocument), index)
-    result.getOrElse(
-      throw InvalidParamsResponseError(
+    Either.fromOption(
+      result,
+      Response.invalidParams(
         s"Unable to parse TextDocumentIdentifier from $arguments"
       )
     )

@@ -1,19 +1,20 @@
 package tests.search
 
-import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import scala.meta.languageserver.ScalametaEnrichments._
-import scala.meta.languageserver.internal.BuildInfo
-import scala.meta.languageserver.ScalametaLanguageServer
+import scala.meta.languageserver.ScalametaServices
 import scala.meta.languageserver.Uri
+import scala.meta.languageserver.internal.BuildInfo
+import scala.meta.languageserver.protocol.LanguageClient
 import scala.meta.languageserver.search.InMemorySymbolIndex
 import scala.meta.languageserver.search.InverseSymbolIndexer
 import scala.meta.languageserver.search.SymbolIndex
 import scala.{meta => m}
-import langserver.{types => l}
 import langserver.messages.ClientCapabilities
+import langserver.messages.InitializeParams
+import langserver.{types => l}
 import monix.execution.schedulers.TestScheduler
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Classpath
@@ -51,15 +52,15 @@ object SymbolIndexTest extends MegaSuite {
     path.UserTest.toString()
   )
   val s = TestScheduler()
-  val client = new PipedOutputStream()
-  val stdin = new PipedInputStream(client)
   val stdout = new PipedOutputStream()
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
-  val server =
-    new ScalametaLanguageServer(cwd, stdin, stdout, System.out)(s)
-  server.initialize(0L, cwd.toString(), ClientCapabilities()).runAsync(s)
+  val client = new LanguageClient(stdout)
+  val metaserver = new ScalametaServices(cwd, client)(s)
+  metaserver
+    .initialize(InitializeParams(0L, cwd.toString(), ClientCapabilities()))
+    .runAsync(s)
   while (s.tickOne()) () // Trigger indexing
-  val index: SymbolIndex = server.symbolIndex
+  val index: SymbolIndex = metaserver.symbolIndex
   val reminderMsg = "Did you run scalametaEnableCompletions from sbt?"
   override val tests = Tests {
 
@@ -206,7 +207,7 @@ object SymbolIndexTest extends MegaSuite {
           expected: String*
       )(implicit path: utest.framework.TestPath): Unit = {
         while (s.tickOne()) ()
-        val result = server.symbolIndex.workspaceSymbols(path.value.last)
+        val result = metaserver.symbolIndex.workspaceSymbols(path.value.last)
         val obtained = result.toIterator.map(_.name).mkString("\n")
         assertNoDiff(obtained, expected.mkString("\n"))
       }
@@ -254,9 +255,9 @@ object SymbolIndexTest extends MegaSuite {
     }
 
     "edit-distance" - {
-      val user = path.UserTestUri.toInput(server.buffers)
+      val user = path.UserTestUri.toInput(metaserver.buffers)
       val newUser = user.copy(value = "// leading comment\n" + user.value)
-      server.buffers.changed(newUser)
+      metaserver.buffers.changed(newUser)
       assertSymbolDefinition(path.UserReferenceLine + 1, 17)(
         "_root_.a.User.",
         "_root_.a.User#"
@@ -266,8 +267,7 @@ object SymbolIndexTest extends MegaSuite {
 
   override def utestAfterAll(): Unit = {
     println("Shutting down server...")
-    server.shutdown()
+    metaserver.shutdown()
     while (s.tickOne()) ()
-    stdin.close()
   }
 }

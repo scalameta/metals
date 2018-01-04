@@ -1,26 +1,26 @@
 package langserver.types
 
-import play.api.libs.json._
-import play.api.libs.json.OFormat
+import io.circe.Json
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.generic.JsonCodec
+import cats.syntax.either._
 
 /**
  * Position in a text document expressed as zero-based line and character offset.
  */
-case class Position(line: Int, character: Int)
-object Position { implicit val format: OFormat[Position] = Json.format[Position] }
+@JsonCodec case class Position(line: Int, character: Int)
 
 /**
  * A range in a text document.
  */
-case class Range(start: Position, end: Position)
-object Range { implicit val format: OFormat[Range] = Json.format[Range] }
+@JsonCodec case class Range(start: Position, end: Position)
 
 /**
  * Represents a location inside a resource, such as a line
  * inside a text file.
  */
-case class Location(uri: String, range: Range)
-object Location { implicit val format: OFormat[Location] = Json.format[Location] }
+@JsonCodec case class Location(uri: String, range: Range)
 
 /**
   * Represents a diagnostic, such as a compiler error or warning. Diagnostic objects are only valid
@@ -32,16 +32,13 @@ object Location { implicit val format: OFormat[Location] = Json.format[Location]
   * @param source the source of this diagnostic (like 'typescript' or 'scala')
   * @param message the diagnostic message
   */
-case class Diagnostic(
+@JsonCodec case class Diagnostic(
   range: Range,
   severity: Option[DiagnosticSeverity],
   code: Option[String],
   source: Option[String],
   message: String
 )
-object Diagnostic {
-  implicit val format: OFormat[Diagnostic] = Json.format[Diagnostic]
-}
 
 /**
  * A reference to a command.
@@ -50,39 +47,27 @@ object Diagnostic {
  * @param command The identifier of the actual command handler
  * @param arguments The arugments this command may be invoked with
  */
-case class Command(title: String, command: String, arguments: Seq[JsValue])
-object Command {
-  implicit val format: OFormat[Command] = Json.format[Command]
-}
+@JsonCodec case class Command(title: String, command: String, arguments: Seq[Json])
 
-case class TextEdit(range: Range, newText: String)
-
-object TextEdit {
-  implicit val formatter: OFormat[TextEdit] = Json.format[TextEdit]
-}
+@JsonCodec case class TextEdit(range: Range, newText: String)
 
 /**
  * A workspace edit represents changes to many resources managed
  * in the workspace.
  */
-case class WorkspaceEdit(
+@JsonCodec case class WorkspaceEdit(
   changes: Map[String, Seq[TextEdit]] // uri -> changes
 )
-object WorkspaceEdit {
-  implicit val format: OFormat[WorkspaceEdit] = Json.format[WorkspaceEdit]
-}
 
-case class TextDocumentIdentifier(uri: String)
-object TextDocumentIdentifier { implicit val format: OFormat[TextDocumentIdentifier] = Json.format[TextDocumentIdentifier] }
+@JsonCodec case class TextDocumentIdentifier(uri: String)
 
-case class VersionedTextDocumentIdentifier(uri: String, version: Long)
-object VersionedTextDocumentIdentifier { implicit val format: OFormat[VersionedTextDocumentIdentifier] = Json.format[VersionedTextDocumentIdentifier] }
+@JsonCodec case class VersionedTextDocumentIdentifier(uri: String, version: Long)
 
 /**
  * An item to transfer a text document from the client to the
  * server.
  */
-case class TextDocumentItem(
+@JsonCodec case class TextDocumentItem(
   uri: String,
   languageId: String,
   /**
@@ -90,13 +75,11 @@ case class TextDocumentItem(
    * change, including undo/redo).
    */
   version: Long,
-  text: String)
+  text: String
+)
 
-object TextDocumentItem {
-  implicit val format: OFormat[TextDocumentItem] = Json.format[TextDocumentItem]
-}
 
-case class CompletionItem(
+@JsonCodec case class CompletionItem(
   label: String,
   kind: Option[CompletionItemKind] = None,
   detail: Option[String] = None,
@@ -105,91 +88,70 @@ case class CompletionItem(
   filterText: Option[String] = None,
   insertText: Option[String] = None,
   textEdit: Option[String] = None,
-  data: Option[String] = None) // An data entry field that is preserved on a completion item between
-// a [CompletionRequest](#CompletionRequest) and a [CompletionResolveRequest]
-//   (#CompletionResolveRequest)
+  /** An data entry field that is preserved on a completion item between
+   * a [CompletionRequest](#CompletionRequest) and a [CompletionResolveRequest]
+   *   (#CompletionResolveRequest)
+   */
+   data: Option[String] = None
+)
 
-object CompletionItem {
-  implicit def format: OFormat[CompletionItem] = Json.format[CompletionItem]
-}
-
-trait MarkedString
-
-case class RawMarkedString(language: String, value: String) extends MarkedString {
-  def this(value: String) {
-    this("text", value)
-  }
-}
-
-case class MarkdownString(contents: String) extends MarkedString
-
+sealed trait MarkedString
 object MarkedString {
-  implicit val reads: Reads[MarkedString] =
-    Json.reads[RawMarkedString].map(x => x: MarkedString).orElse(Json.reads[MarkdownString].map(x => x: MarkedString))
-
-  implicit val writes: Writes[MarkedString] = Writes[MarkedString] {
-    case raw: RawMarkedString => Json.writes[RawMarkedString].writes(raw)
-    case md: MarkdownString => Json.writes[MarkdownString].writes(md)
+  implicit val encoder: Encoder[MarkedString] = {
+    case m: RawMarkedString => Encoder[RawMarkedString].apply(m)
+    case m: MarkdownString => Encoder[MarkdownString].apply(m)
+  }
+  implicit val decoder: Decoder[MarkedString] = Decoder.decodeJsonObject.emap { obj =>
+    val json = Json.fromJsonObject(obj)
+    val result =
+      if (obj.contains("value")) json.as[RawMarkedString]
+      else json.as[MarkdownString]
+    result.leftMap(_.toString)
   }
 }
+@JsonCodec case class RawMarkedString(language: String, value: String) extends MarkedString
 
+@JsonCodec case class MarkdownString(contents: String) extends MarkedString
 
-case class ParameterInformation(label: String, documentation: Option[String])
-object ParameterInformation {
-  implicit val format: OFormat[ParameterInformation] = Json.format[ParameterInformation]
-}
+@JsonCodec case class ParameterInformation(label: String, documentation: Option[String])
 
-case class SignatureInformation(label: String, documentation: Option[String], parameters: Seq[ParameterInformation])
-object SignatureInformation {
-  implicit val format: OFormat[SignatureInformation] = Json.format[SignatureInformation]
-}
-
+@JsonCodec case class SignatureInformation(label: String, documentation: Option[String], parameters: Seq[ParameterInformation])
 
 /**
  * Value-object that contains additional information when
  * requesting references.
  */
-case class ReferenceContext(
+@JsonCodec case class ReferenceContext(
   /** Include the declaration of the current symbol. */
   includeDeclaration: Boolean
 )
-object ReferenceContext {
-  implicit var format: OFormat[ReferenceContext] = Json.format[ReferenceContext]
-}
 
 /**
  * A document highlight is a range inside a text document which deserves
  * special attention. Usually a document highlight is visualized by changing
  * the background color of its range.
  */
-case class DocumentHighlight(
+@JsonCodec case class DocumentHighlight(
   /** The range this highlight applies to. */
   range: Range,
 
   /** The highlight kind, default is [text](#DocumentHighlightKind.Text). */
-  kind: DocumentHighlightKind = DocumentHighlightKind.Text)
+  kind: DocumentHighlightKind = DocumentHighlightKind.Text
+)
 
-case class SymbolInformation(
+@JsonCodec case class SymbolInformation(
   name: String,
   kind: SymbolKind,
   location: Location,
-  containerName: Option[String])
-object SymbolInformation {
-  implicit val format: OFormat[SymbolInformation] = Json.format[SymbolInformation]
-}
+  containerName: Option[String]
+)
 
 /**
  * The parameters of a [WorkspaceSymbolRequest](#WorkspaceSymbolRequest).
  */
-case class WorkspaceSymbolParams(query: String)
-object WorkspaceSymbolParams {
-  implicit val format: OFormat[WorkspaceSymbolParams] = Json.format[WorkspaceSymbolParams]
-}
+@JsonCodec case class WorkspaceSymbolParams(query: String)
 
-case class CodeActionContext(diagnostics: Seq[Diagnostic])
-object CodeActionContext {
-  implicit val format: OFormat[CodeActionContext] = Json.format[CodeActionContext]
-}
+@JsonCodec case class CodeActionContext(diagnostics: Seq[Diagnostic])
 
 /**
  * A code lens represents a [command](#Command) that should be shown along with
@@ -219,7 +181,7 @@ case class CodeLens(
 /**
  * Value-object describing what options formatting should use.
  */
-case class FormattingOptions(
+@JsonCodec case class FormattingOptions(
   /**
    * Size of a tab in spaces.
    */
@@ -235,10 +197,6 @@ case class FormattingOptions(
    */
   // params: Map[String, Any] // [key: string]: boolean | number | string;
 )
-
-object FormattingOptions {
-  implicit val formatter: OFormat[FormattingOptions] = Json.format[FormattingOptions]
-}
 
 trait TextDocument {
   /**
@@ -292,7 +250,7 @@ case class TextDocumentChangeEvent(document: TextDocument)
  * An event describing a change to a text document. If range and rangeLength are omitted
  * the new text is considered to be the full content of the document.
  */
-case class TextDocumentContentChangeEvent(
+@JsonCodec case class TextDocumentContentChangeEvent(
   /**
    * The range of the document that changed.
    */
@@ -309,11 +267,7 @@ case class TextDocumentContentChangeEvent(
   text: String
 )
 
-object TextDocumentContentChangeEvent {
-  implicit val format: OFormat[TextDocumentContentChangeEvent] = Json.format[TextDocumentContentChangeEvent]
-}
-
-case class DocumentFormattingParams(
+@JsonCodec case class DocumentFormattingParams(
   /**
    * The document to format.
    */
@@ -325,15 +279,7 @@ case class DocumentFormattingParams(
   options: FormattingOptions
 )
 
-object DocumentFormattingParams {
-  implicit val format: OFormat[DocumentFormattingParams] = Json.format[DocumentFormattingParams]
-}
-
-case class WorkspaceExecuteCommandParams(command: String, arguments: Option[Seq[JsValue]])
-object WorkspaceExecuteCommandParams {
-  implicit val format: OFormat[WorkspaceExecuteCommandParams] = Json.format[WorkspaceExecuteCommandParams]
-}
-
+@JsonCodec case class ExecuteCommandParams(command: String, arguments: Option[Seq[Json]])
 
 /**
   * An event describing a file change.
@@ -341,10 +287,9 @@ object WorkspaceExecuteCommandParams {
   * @param uri The file's URI
   * @param `type` The change type
   */
-case class FileEvent(
+@JsonCodec case class FileEvent(
   uri: String,
   `type`: FileChangeType
 )
-object FileEvent {
-  implicit val format: OFormat[FileEvent] = Json.format[FileEvent]
-}
+
+@JsonCodec case class CancelParams(id: Json)

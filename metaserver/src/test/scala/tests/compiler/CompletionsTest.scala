@@ -3,7 +3,7 @@ package tests.compiler
 import scala.meta.languageserver.providers.CompletionProvider
 import langserver.messages.CompletionList
 import langserver.types.CompletionItemKind
-import play.api.libs.json.Json
+import io.circe.syntax._
 
 object CompletionsTest extends CompilerSuite {
 
@@ -29,8 +29,7 @@ object CompletionsTest extends CompilerSuite {
     check(
       filename,
       code, { completions =>
-        val obtained = Json.prettyPrint(Json.toJson(completions))
-        assertNoDiff(obtained, expected)
+        assertNoDiff(completions.asJson, expected)
       }
     )
   }
@@ -48,12 +47,14 @@ object CompletionsTest extends CompilerSuite {
       s"""
          |{
          |  "isIncomplete" : false,
-         |  "items" : [ {
-         |    "label" : "$label",
-         |    "kind" : ${kind.value},
-         |    "detail" : "$detail",
-         |    "sortText" : "00000"
-         |  } ]
+         |  "items" : [
+         |    {
+         |      "label" : "$label",
+         |      "kind" : ${kind.value},
+         |      "detail" : "$detail",
+         |      "sortText" : "00000"
+         |    }
+         |  ]
          |}
       """.stripMargin
     )
@@ -67,7 +68,8 @@ object CompletionsTest extends CompilerSuite {
     """
       |{
       |  "isIncomplete" : false,
-      |  "items" : [ ]
+      |  "items" : [
+      |  ]
       |}
     """.stripMargin
   )
