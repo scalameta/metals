@@ -7,15 +7,17 @@ import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.SymbolIndex
 import scalafix.internal.rule.RemoveUnusedImports
 import scala.meta.languageserver.ScalametaEnrichments._
-import scala.meta.languageserver.protocol.Response
+import org.langmeta.lsp
+import org.langmeta.lsp.ApplyWorkspaceEditParams
+import org.langmeta.lsp.TextDocumentIdentifier
+import org.langmeta.lsp.WorkspaceEdit
+import org.langmeta.jsonrpc.Response
 import scalafix.languageserver.ScalafixEnrichments._
 import scalafix.languageserver.ScalafixPatchEnrichments._
 import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
-import langserver.messages.ApplyWorkspaceEditParams
-import langserver.types.TextDocumentIdentifier
-import langserver.types.WorkspaceEdit
+import org.langmeta.lsp.TextDocumentIdentifier
 import io.circe.Json
 
 object OrganizeImports extends LazyLogging {
@@ -56,7 +58,7 @@ object OrganizeImports extends LazyLogging {
     val edits = patch.toTextEdits(ctx, index)
     ApplyWorkspaceEditParams(
       label = Some(s"Remove unused imports"),
-      edit = WorkspaceEdit(Map(uri.value -> edits))
+      edit = lsp.WorkspaceEdit(Map(uri.value -> edits))
     )
   }
 }

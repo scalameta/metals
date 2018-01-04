@@ -4,11 +4,11 @@ import scala.collection.mutable
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.CompilerEnrichments._
+import org.langmeta.lsp.CompletionItem
+import org.langmeta.lsp.CompletionList
 import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
-import langserver.messages.CompletionList
-import langserver.types.CompletionItem
-import langserver.types.CompletionItemKind
+import org.langmeta.lsp.CompletionItemKind
 
 object CompletionProvider extends LazyLogging {
   def empty: CompletionList = CompletionList(isIncomplete = false, Nil)

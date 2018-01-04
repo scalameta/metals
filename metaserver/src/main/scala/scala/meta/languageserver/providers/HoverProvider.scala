@@ -2,6 +2,8 @@ package scala.meta.languageserver.providers
 
 import scala.meta.Type
 import scala.meta.languageserver.Uri
+import org.langmeta.lsp.Hover
+import org.langmeta.lsp.RawMarkedString
 import scala.meta.languageserver.search.SymbolIndex
 import scala.{meta => m}
 import scalafix.internal.util.DenotationOps
@@ -10,8 +12,6 @@ import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
 import `scala`.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
-import langserver.messages.Hover
-import langserver.types.RawMarkedString
 import org.langmeta.internal.semanticdb.schema
 
 object HoverProvider extends LazyLogging {

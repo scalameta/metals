@@ -4,15 +4,15 @@ import java.io.FileOutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import java.util.concurrent.Executors
-import scala.meta.languageserver.protocol.BaseProtocolMessage
-import scala.meta.languageserver.protocol.LanguageClient
-import scala.meta.languageserver.protocol.LanguageServer
+import org.langmeta.jsonrpc.BaseProtocolMessage
 import scala.util.Properties
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import monix.execution.Scheduler
 import monix.execution.schedulers.SchedulerService
 import org.langmeta.internal.io.PathIO
+import org.langmeta.lsp.LanguageClient
+import org.langmeta.lsp.LanguageServer
 
 object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {
@@ -35,7 +35,7 @@ object Main extends LazyLogging {
       logger.info(s"Starting server in $cwd")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
       val client = new LanguageClient(stdout)
-      val services = new ScalametaServices(cwd, client)(s)
+      val services = new ScalametaServices(cwd, client, s)
       val languageServer = new LanguageServer(
         BaseProtocolMessage.fromInputStream(stdin),
         client,

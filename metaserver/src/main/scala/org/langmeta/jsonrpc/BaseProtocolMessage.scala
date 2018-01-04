@@ -1,4 +1,4 @@
-package scala.meta.languageserver.protocol
+package org.langmeta.jsonrpc
 
 import java.io.InputStream
 import java.util.concurrent.Executors

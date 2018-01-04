@@ -2,11 +2,11 @@ package scala.meta.languageserver
 
 import java.nio.charset.StandardCharsets.UTF_8
 import scala.beans.BeanProperty
+import org.langmeta.lsp.Window._
+import org.langmeta.jsonrpc.JsonRpcClient
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
-import langserver.core.Notifications
-import langserver.types.MessageType
 
 class LSPLogger(@BeanProperty var encoder: PatternLayoutEncoder)
     extends AppenderBase[ILoggingEvent] {
@@ -16,10 +16,12 @@ class LSPLogger(@BeanProperty var encoder: PatternLayoutEncoder)
     val message =
       if (encoder != null) new String(encoder.encode(event), UTF_8)
       else event.getFormattedMessage
-    notifications.foreach(_.logMessage(MessageType.Log, message))
+    notifications.foreach { implicit client =>
+      logMessage.log(message)
+    }
   }
 }
 
 object LSPLogger {
-  var notifications: Option[Notifications] = None
+  var notifications: Option[JsonRpcClient] = None
 }

@@ -4,11 +4,14 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
+import org.langmeta.lsp.Diagnostic
+import org.langmeta.lsp.Location
+import org.langmeta.lsp.Position
 import scala.meta.languageserver.{index => i}
 import org.langmeta.internal.semanticdb.{schema => s}
 import scala.{meta => m}
-import langserver.types.SymbolKind
-import langserver.{types => l}
+import org.langmeta.lsp.SymbolKind
+import org.langmeta.{lsp => l}
 import org.langmeta.internal.io.FileIO
 import org.langmeta.io.AbsolutePath
 
@@ -17,7 +20,7 @@ import org.langmeta.io.AbsolutePath
 object ScalametaEnrichments {
 
   implicit class XtensionMessageLSP(val msg: m.Message) extends AnyVal {
-    def toLSP: l.Diagnostic =
+    def toLSP: Diagnostic =
       l.Diagnostic(
         range = msg.position.toRange,
         severity = Some(msg.severity.toLSP),
@@ -111,7 +114,7 @@ object ScalametaEnrichments {
     def pretty: String =
       s"${pos.uri.replaceFirst(".*/", "")} [${pos.range.map(_.pretty).getOrElse("")}]"
 
-    def toLocation: l.Location = {
+    def toLocation: Location = {
       l.Location(
         pos.uri,
         pos.range.get.toRange
@@ -122,7 +125,7 @@ object ScalametaEnrichments {
     def pretty: String =
       f"${range.startLine}%3d:${range.startColumn}%3d|${range.endLine}%3d:${range.endColumn}%3d"
     def toRange: l.Range = l.Range(
-      l.Position(line = range.startLine, character = range.startColumn),
+      Position(line = range.startLine, character = range.startColumn),
       l.Position(line = range.endLine, character = range.endColumn)
     )
     def contains(pos: m.Position): Boolean = {
@@ -140,7 +143,7 @@ object ScalametaEnrichments {
   }
   implicit class XtensionAbsolutePathLSP(val path: m.AbsolutePath)
       extends AnyVal {
-    def toLocation(pos: m.Position): l.Location =
+    def toLocation(pos: m.Position): Location =
       l.Location(path.toLanguageServerUri, pos.toRange)
     def toLanguageServerUri: String = "file:" + path.toString()
   }
@@ -247,10 +250,10 @@ object ScalametaEnrichments {
     }
   }
 
-  implicit class XtensionLocation(val loc: l.Location) extends AnyVal {
+  implicit class XtensionLocation(val loc: Location) extends AnyVal {
 
     /** A workaround for locations referring to jars */
-    def toNonJar(destination: AbsolutePath): l.Location = {
+    def toNonJar(destination: AbsolutePath): Location = {
       if (loc.uri.startsWith("jar:file")) {
         val newURI =
           createFileInWorkspaceTarget(URI.create(loc.uri), destination)

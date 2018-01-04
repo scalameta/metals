@@ -1,4 +1,4 @@
-package langserver.core
+package org.langmeta.jsonrpc
 
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
@@ -30,21 +30,22 @@ class MessageWriter(out: OutputStream) extends LazyLogging {
    * Write a message to the output stream. This method can be called from multiple threads,
    * but it may block waiting for other threads to finish writing.
    */
-  def write[T: Encoder](msg: T, h: Map[String, String] = Map.empty): Unit = lock.synchronized {
-    require(h.get(ContentLen).isEmpty)
+  def write[T: Encoder](msg: T, h: Map[String, String] = Map.empty): Unit =
+    lock.synchronized {
+      require(h.get(ContentLen).isEmpty)
 
-    val str = msg.asJson.noSpaces
-    val contentBytes = str.getBytes(StandardCharsets.UTF_8)
-    val headers = (h + (ContentLen -> contentBytes.length))
-      .map { case (k, v) => s"$k: $v" }
-      .mkString("", "\r\n", "\r\n\r\n")
+      val str = msg.asJson.noSpaces
+      val contentBytes = str.getBytes(StandardCharsets.UTF_8)
+      val headers = (h + (ContentLen -> contentBytes.length))
+        .map { case (k, v) => s"$k: $v" }
+        .mkString("", "\r\n", "\r\n\r\n")
 
-    logger.debug(s" --> $str")
+      logger.debug(s" --> $str")
 
-    val headerBytes = headers.getBytes(StandardCharsets.US_ASCII)
+      val headerBytes = headers.getBytes(StandardCharsets.US_ASCII)
 
-    out.write(headerBytes)
-    out.write(contentBytes)
-    out.flush()
-  }
+      out.write(headerBytes)
+      out.write(contentBytes)
+      out.flush()
+    }
 }

@@ -1,4 +1,4 @@
-package scala.meta.languageserver.protocol
+package org.langmeta.jsonrpc
 
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer

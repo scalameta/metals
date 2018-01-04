@@ -89,25 +89,6 @@ lazy val semanticdbSettings = List(
   scalacOptions += "-Yrangepos"
 )
 
-lazy val languageserver = project
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % V.circe,
-      "io.circe" %% "circe-generic" % V.circe,
-      "io.circe" %% "circe-generic-extras" % V.circe,
-      "io.circe" %% "circe-parser" % V.circe,
-      "org.typelevel" %% "cats-core" % V.cats,
-      "com.beachape" %% "enumeratum" % V.enumeratum,
-      "com.beachape" %% "enumeratum-circe" % "1.5.15",
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
-      "io.monix" %% "monix" % "2.3.0",
-      "org.slf4j" % "slf4j-api" % "1.7.25",
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "org.codehaus.groovy" % "groovy" % "2.4.0",
-      "org.scalatest" %% "scalatest" % "3.0.1" % Test
-    )
-  )
-
 lazy val metaserver = project
   .settings(
     PB.targets.in(Compile) := Seq(
@@ -123,23 +104,33 @@ lazy val metaserver = project
     ),
     buildInfoPackage := "scala.meta.languageserver.internal",
     libraryDependencies ++= List(
+      "ch.epfl.scala" % "scalafix-cli" % V.scalafix cross CrossVersion.full,
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "com.beachape" %% "enumeratum" % V.enumeratum,
+      "com.beachape" %% "enumeratum-circe" % "1.5.15",
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-      "io.github.soc" % "directories" % "5",
-      "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
-      "me.xdrop" % "fuzzywuzzy" % "1.1.9",
       "com.lihaoyi" %% "pprint" % "0.5.3",
+      "com.lihaoyi" %% "utest" % "0.6.0" % Test,
       "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
+      "io.circe" %% "circe-core" % V.circe,
+      "io.circe" %% "circe-generic" % V.circe,
+      "io.circe" %% "circe-generic-extras" % V.circe,
+      "io.circe" %% "circe-parser" % V.circe,
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
-      "ch.epfl.scala" % "scalafix-cli" % V.scalafix cross CrossVersion.full,
+      "io.github.soc" % "directories" % "5",
+      "io.monix" %% "monix" % "2.3.0",
+      "me.xdrop" % "fuzzywuzzy" % "1.1.9",
+      "org.codehaus.groovy" % "groovy" % "2.4.0",
+      "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
-      "com.beachape" %% "enumeratum" % V.enumeratum,
-      "com.lihaoyi" %% "utest" % "0.6.0" % Test,
-      "org.scalameta" %% "testkit" % V.scalameta % Test
+      "org.scalameta" %% "testkit" % V.scalameta % Test,
+      "org.slf4j" % "slf4j-api" % "1.7.25",
+      "org.typelevel" %% "cats-core" % V.cats
     )
   )
   .dependsOn(
-    languageserver,
     testWorkspace % "test->test"
   )
   .enablePlugins(BuildInfoPlugin)

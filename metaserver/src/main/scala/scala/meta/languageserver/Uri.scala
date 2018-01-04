@@ -3,8 +3,9 @@ package scala.meta.languageserver
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
-import langserver.types.TextDocumentIdentifier
-import langserver.types.VersionedTextDocumentIdentifier
+import org.langmeta.lsp.TextDocumentIdentifier
+import org.langmeta.lsp.VersionedTextDocumentIdentifier
+import org.langmeta.lsp.VersionedTextDocumentIdentifier
 import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
 

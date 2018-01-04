@@ -4,9 +4,9 @@ import scala.meta.languageserver.Linter
 import scala.meta.languageserver.Configuration
 import com.typesafe.scalalogging.LazyLogging
 import scala.{meta => m}
-import langserver.messages.PublishDiagnostics
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.MonixEnrichments._
+import org.langmeta.lsp.PublishDiagnostics
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable

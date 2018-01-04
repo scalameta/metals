@@ -1,18 +1,18 @@
-package scala.meta.languageserver.protocol
+package org.langmeta.lsp
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
-import langserver.types.CancelParams
+import io.circe.Json
+import io.circe.parser.parse
+import io.circe.syntax._
 import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.reactive.Observable
-import io.circe.Json
-import io.circe.parser.parse
-import io.circe.syntax._
+import org.langmeta.jsonrpc._
 
 final class LanguageServer(
     in: Observable[BaseProtocolMessage],
@@ -57,11 +57,22 @@ final class LanguageServer(
             Response.empty
           }
         case Some(handler) =>
-          handler.handle(message).onErrorRecover {
-            case NonFatal(e) =>
-              logger.error(s"Error handling notification $message", e)
-              Response.empty
-          }
+          handler
+            .handle(message)
+            .map {
+              case Response.Empty => Response.empty
+              case nonEmpty =>
+                logger.error(
+                  s"Obtained non-empty response $nonEmpty for notification $message. " +
+                    s"Expected Response.empty"
+                )
+                Response.empty
+            }
+            .onErrorRecover {
+              case NonFatal(e) =>
+                logger.error(s"Error handling notification $message", e)
+                Response.empty
+            }
       }
     case request @ Request(method, _, id) =>
       handlersByMethodName.get(method) match {
