@@ -19,6 +19,7 @@ import monix.execution.atomic.Atomic
 import monix.execution.atomic.AtomicInt
 import io.circe.Encoder
 import io.circe.Decoder
+import io.circe.syntax._
 import cats.syntax.either._
 
 class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
@@ -26,8 +27,8 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
   private val counter: AtomicInt = Atomic(1)
   private val activeServerRequests =
     TrieMap.empty[RequestId, Callback[Response]]
-  def notify[A](method: String, notification: A)(implicit encode: Encoder[A]): Unit =
-    writer.write(Notification(method, Some(encode(notification))))
+  def notify[A: Encoder](method: String, notification: A): Unit =
+    writer.write(Notification(method, Some(notification.asJson)))
   def serverRespond(response: Response): Unit = response match {
     case Response.Empty => ()
     case x: Response.Success => writer.write(x)
@@ -49,14 +50,14 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
       callback.onSuccess(response)
     }
 
-  def request[A, B](
+  def request[A: Encoder, B: Decoder](
       method: String,
       request: A
-  )(implicit encode: Encoder[A], decode: Decoder[B]): Task[Either[Response.Error, B]] = {
+  ): Task[Either[Response.Error, B]] = {
     val nextId = RequestId(counter.incrementAndGet())
     val response = Task.create[Response] { (out, cb) =>
       val scheduled = out.scheduleOnce(Duration(0, "s")) {
-        val json = Request(method, Some(encode(request)), nextId)
+        val json = Request(method, Some(request.asJson), nextId)
         activeServerRequests.put(nextId, cb)
         writer.write(json)
       }

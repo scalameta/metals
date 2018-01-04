@@ -4,6 +4,7 @@ import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.Encoder
+import io.circe.syntax._
 
 /**
  * A class to write Json RPC messages on an output stream, following the Language Server Protocol.
@@ -29,10 +30,10 @@ class MessageWriter(out: OutputStream) extends LazyLogging {
    * Write a message to the output stream. This method can be called from multiple threads,
    * but it may block waiting for other threads to finish writing.
    */
-  def write[T](msg: T, h: Map[String, String] = Map.empty)(implicit encode: Encoder[T]): Unit = lock.synchronized {
+  def write[T: Encoder](msg: T, h: Map[String, String] = Map.empty): Unit = lock.synchronized {
     require(h.get(ContentLen).isEmpty)
 
-    val str = encode(msg).noSpaces
+    val str = msg.asJson.noSpaces
     val contentBytes = str.getBytes(StandardCharsets.UTF_8)
     val headers = (h + (ContentLen -> contentBytes.length))
       .map { case (k, v) => s"$k: $v" }
