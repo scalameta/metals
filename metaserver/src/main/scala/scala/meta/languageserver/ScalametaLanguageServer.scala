@@ -232,13 +232,13 @@ class ScalametaLanguageServer(
     .notification[DidChangeConfigurationParams](
       "workspace/didChangeConfiguration"
     ) { params =>
-      params.settings.hcursor.downField("scalameta").as[Configuration]// match {
-      //   case Left(err) =>
-      //     client.showMessage(MessageType.Error, err.show)
-      //   case Right(conf) =>
-      //     logger.info(s"Configuration updated $conf")
-      //     configurationSubscriber.onNext(conf)
-      // }
+      params.settings.hcursor.downField("scalameta").as[Configuration] match {
+        case Left(err) =>
+          client.showMessage(MessageType.Error, err.toString)
+        case Right(conf) =>
+          logger.info(s"Configuration updated $conf")
+          configurationSubscriber.onNext(conf)
+      }
     }
     .notification[DidChangeWatchedFilesParams](
       "workspace/didChangeWatchedFiles"
