@@ -3,12 +3,12 @@ package scala.meta.languageserver.protocol
 import scala.collection.immutable.IndexedSeq
 import enumeratum.values.IntEnum
 import enumeratum.values.IntEnumEntry
-import enumeratum.values.IntPlayJsonValueEnum
+import enumeratum.values.IntCirceEnum
 
 sealed abstract class ErrorCode(val value: Int) extends IntEnumEntry
 case object ErrorCode
     extends IntEnum[ErrorCode]
-    with IntPlayJsonValueEnum[ErrorCode] {
+    with IntCirceEnum[ErrorCode] {
   case object ParseError extends ErrorCode(-32700)
   case object InvalidRequest extends ErrorCode(-32600)
   case object MethodNotFound extends ErrorCode(-32601)

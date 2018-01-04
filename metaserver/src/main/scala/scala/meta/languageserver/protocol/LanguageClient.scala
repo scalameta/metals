@@ -17,19 +17,17 @@ import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.atomic.Atomic
 import monix.execution.atomic.AtomicInt
-import play.api.libs.json.JsError
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.Json
-import play.api.libs.json.Reads
-import play.api.libs.json.Writes
+import io.circe.Encoder
+import io.circe.Decoder
+import cats.syntax.either._
 
 class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
   private val writer = new MessageWriter(out)
   private val counter: AtomicInt = Atomic(1)
   private val activeServerRequests =
     TrieMap.empty[RequestId, Callback[Response]]
-  def notify[A: Writes](method: String, notification: A): Unit =
-    writer.write(Notification(method, Some(Json.toJson(notification))))
+  def notify[A](method: String, notification: A)(implicit encode: Encoder[A]): Unit =
+    writer.write(Notification(method, Some(encode(notification))))
   def serverRespond(response: Response): Unit = response match {
     case Response.Empty => ()
     case x: Response.Success => writer.write(x)
@@ -51,14 +49,14 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
       callback.onSuccess(response)
     }
 
-  def request[A: Writes, B: Reads](
+  def request[A, B](
       method: String,
       request: A
-  ): Task[Either[Response.Error, B]] = {
+  )(implicit encode: Encoder[A], decode: Decoder[B]): Task[Either[Response.Error, B]] = {
     val nextId = RequestId(counter.incrementAndGet())
     val response = Task.create[Response] { (out, cb) =>
       val scheduled = out.scheduleOnce(Duration(0, "s")) {
-        val json = Request(method, Some(Json.toJson(request)), nextId)
+        val json = Request(method, Some(encode(request)), nextId)
         activeServerRequests.put(nextId, cb)
         writer.write(json)
       }
@@ -78,16 +76,8 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
       case err: Response.Error =>
         Left(err)
       case Response.Success(result, _) =>
-        result.validate[B] match {
-          case JsSuccess(value, _) =>
-            Right(value)
-          case err: JsError =>
-            Left(
-              Response.invalidParams(
-                Json.prettyPrint(JsError.toJson(err)),
-                nextId
-              )
-            )
+        result.as[B].leftMap { err =>
+          Response.invalidParams(err.toString, nextId)
         }
     }
   }

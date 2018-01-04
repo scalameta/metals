@@ -4,17 +4,15 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
-import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.LazyLogging
 import langserver.types.CancelParams
 import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.reactive.Observable
-import play.api.libs.json.JsError
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
+import io.circe.Json
+import io.circe.parser.parse
+import io.circe.syntax._
 
 final class LanguageServer(
     in: Observable[BaseProtocolMessage],
@@ -22,7 +20,7 @@ final class LanguageServer(
     services: Services,
     requestScheduler: Scheduler
 ) extends LazyLogging {
-  private val activeClientRequests: TrieMap[JsValue, Cancelable] = TrieMap.empty
+  private val activeClientRequests: TrieMap[Json, Cancelable] = TrieMap.empty
   private val cancelNotification =
     Service.notification[CancelParams]("$/cancelRequest") { params =>
       val id = params.id
@@ -79,19 +77,19 @@ final class LanguageServer(
               Response.internalError(e.getMessage, request.id)
           }
           val runningResponse = response.runAsync(requestScheduler)
-          activeClientRequests.put(Json.toJson(request.id), runningResponse)
+          activeClientRequests.put(request.id.asJson, runningResponse)
           Task.fromFuture(runningResponse)
       }
 
   }
 
   def handleMessage(message: BaseProtocolMessage): Task[Response] =
-    LanguageServer.parseMessage(message) match {
-      case Left(parseError) => Task.now(parseError)
+    parse(message.content) match {
+      case Left(err) => Task.now(Response.parseError(err.toString))
       case Right(json) =>
-        json.validate[Message] match {
-          case err: JsError => Task.now(Response.invalidRequest(err.toString))
-          case JsSuccess(msg, _) => handleValidMessage(msg)
+        json.as[Message] match {
+          case Left(err) => Task.now(Response.invalidRequest(err.toString))
+          case Right(msg) => handleValidMessage(msg)
         }
     }
 
@@ -111,14 +109,4 @@ final class LanguageServer(
     logger.info("Listening....")
     Await.result(f, Duration.Inf)
   }
-}
-
-object LanguageServer {
-  def parseMessage(message: BaseProtocolMessage): Either[Response, JsValue] =
-    try {
-      Right(Json.parse(message.content))
-    } catch {
-      case e: JsonParseException =>
-        Left(Response.parseError(e.getMessage))
-    }
 }

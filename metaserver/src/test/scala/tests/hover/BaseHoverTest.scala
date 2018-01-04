@@ -4,8 +4,8 @@ import scala.meta.languageserver.Uri
 import scala.meta.languageserver.providers.HoverProvider
 import scala.{meta => m}
 import langserver.messages.Hover
-import play.api.libs.json.Json
 import tests.search.BaseIndexTest
+import io.circe.syntax._
 
 abstract class BaseHoverTest extends BaseIndexTest {
 
@@ -37,13 +37,16 @@ abstract class BaseHoverTest extends BaseIndexTest {
     check(
       filename,
       code, { result =>
-        val obtained = Json.prettyPrint(Json.toJson(result))
+        val obtained = result.asJson.spaces2
         val expected =
           s"""{
-             |  "contents" : [ {
-             |    "language" : "scala",
-             |    "value" : "$expectedValue"
-             |  } ]
+             |  "contents" : [
+             |    {
+             |      "language" : "scala",
+             |      "value" : "$expectedValue"
+             |    }
+             |  ],
+             |  "range" : null
              |}""".stripMargin
         assertNoDiff(obtained, expected)
       }

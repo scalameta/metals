@@ -1,55 +1,45 @@
 package scala.meta.languageserver.protocol
 
 import monix.eval.Task
-import play.api.libs.json._
+import io.circe.Json
+import io.circe.Decoder
+import io.circe.generic.JsonCodec
+import cats.syntax.either._
 
 sealed trait Message
 object Message {
-  implicit val reads: Reads[Message] = Reads {
-    case json @ JsObject(map) =>
-      if (map.contains("id")) {
-        if (map.contains("error")) json.validate[Response.Error]
-        else if (map.contains("result")) json.validate[Response.Success]
-        else json.validate[Request]
-      } else json.validate[Notification]
-    case els =>
-      JsError(s"Expected object, obtained $els")
+  implicit val decoder: Decoder[Message] = Decoder.decodeJsonObject.emap { obj =>
+    val json = Json.fromJsonObject(obj)
+    val result = if (obj.contains("id"))
+      if (obj.contains("error")) json.as[Response.Error]
+      else if (obj.contains("result")) json.as[Response.Success]
+      else json.as[Request]
+    else json.as[Notification]
+    result.leftMap(_.toString)
   }
 }
 
-case class Request(method: String, params: Option[JsValue], id: RequestId)
+@JsonCodec case class Request(method: String, params: Option[Json], id: RequestId)
     extends Message {
   def toError(code: ErrorCode, message: String): Response =
     Response.error(ErrorObject(code, message, None), id)
 }
-object Request {
-  implicit val format: OFormat[Request] = Json.format[Request]
-}
 
-case class Notification(method: String, params: Option[JsValue]) extends Message
-object Notification {
-  implicit val format: OFormat[Notification] = Json.format[Notification]
-}
+@JsonCodec case class Notification(method: String, params: Option[Json]) extends Message
 
-sealed trait Response extends Message {
+@JsonCodec sealed trait Response extends Message {
   def isSuccess: Boolean = this.isInstanceOf[Response.Success]
 }
 object Response {
-  case class Success(result: JsValue, id: RequestId) extends Response
-  object Success {
-    implicit val format: OFormat[Success] = Json.format[Success]
-  }
-  case class Error(error: ErrorObject, id: RequestId) extends Response
-  object Error {
-    implicit val format: OFormat[Error] = Json.format[Error]
-  }
+  @JsonCodec case class Success(result: Json, id: RequestId) extends Response
+  @JsonCodec case class Error(error: ErrorObject, id: RequestId) extends Response
   case object Empty extends Response
   def empty: Response = Empty
-  def ok(result: JsValue, id: RequestId): Response =
+  def ok(result: Json, id: RequestId): Response =
     success(result, id)
   def okAsync[T](value: T): Task[Either[Response.Error, T]] =
     Task(Right(value))
-  def success(result: JsValue, id: RequestId): Response =
+  def success(result: Json, id: RequestId): Response =
     Success(result, id)
   def error(error: ErrorObject, id: RequestId): Response.Error =
     Error(error, id)
@@ -65,10 +55,10 @@ object Response {
       ErrorObject(ErrorCode.InvalidRequest, message, None),
       RequestId.Null
     )
-  def cancelled(id: JsValue): Response.Error =
+  def cancelled(id: Json): Response.Error =
     Error(
       ErrorObject(ErrorCode.RequestCancelled, "", None),
-      id.asOpt[RequestId].getOrElse(RequestId.Null)
+      id.as[RequestId].getOrElse(RequestId.Null)
     )
   def parseError(message: String): Response.Error =
     Error(ErrorObject(ErrorCode.ParseError, message, None), RequestId.Null)

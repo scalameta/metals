@@ -55,7 +55,8 @@ inThisBuild(
       bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
       // faster publishLocal:
       publishArtifact in packageDoc := sys.env.contains("CI"),
-      publishArtifact in packageSrc := sys.env.contains("CI")
+      publishArtifact in packageSrc := sys.env.contains("CI"),
+      addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
     )
 )
 
@@ -64,6 +65,7 @@ lazy val V = new {
   val scalameta = "2.1.5"
   val scalafix = "0.5.7"
   val enumeratum = "1.5.12"
+  val circe = "0.9.0"
 }
 
 lazy val noPublish = List(
@@ -85,8 +87,12 @@ lazy val semanticdbSettings = List(
 lazy val languageserver = project
   .settings(
     libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % V.circe,
+      "io.circe" %% "circe-generic" % V.circe,
+      "io.circe" %% "circe-generic-extras" % V.circe,
+      "io.circe" %% "circe-parser" % V.circe,
       "com.beachape" %% "enumeratum" % V.enumeratum,
-      "com.beachape" %% "enumeratum-play-json" % "1.5.12-2.6.0-M7",
+      "com.beachape" %% "enumeratum-circe" % "1.5.15",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
       "io.monix" %% "monix" % "2.3.0",
       "org.slf4j" % "slf4j-api" % "1.7.25",

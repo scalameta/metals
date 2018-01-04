@@ -2,7 +2,7 @@ package tests.compiler
 
 import scala.meta.languageserver.providers.SignatureHelpProvider
 import langserver.messages.SignatureHelp
-import play.api.libs.json.Json
+import io.circe.syntax._
 
 object SignatureHelpTest extends CompilerSuite {
 
@@ -26,7 +26,7 @@ object SignatureHelpTest extends CompilerSuite {
       expected: String
   ): Unit = {
     check(filename, code, { result =>
-      val obtained = Json.prettyPrint(Json.toJson(result))
+      val obtained = result.asJson.spaces2
       assertNoDiff(obtained, expected)
     })
   }
@@ -40,19 +40,33 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin,
     """
       |{
-      |  "signatures" : [ {
-      |    "label" : "assert(assertion: Boolean, message: => Any)Unit",
-      |    "parameters" : [ {
-      |      "label" : "assertion: Boolean"
-      |    }, {
-      |      "label" : "message: => Any"
-      |    } ]
-      |  }, {
-      |    "label" : "assert(assertion: Boolean)Unit",
-      |    "parameters" : [ {
-      |      "label" : "assertion: Boolean"
-      |    } ]
-      |  } ],
+      |  "signatures" : [
+      |    {
+      |      "label" : "assert(assertion: Boolean, message: => Any)Unit",
+      |      "documentation" : null,
+      |      "parameters" : [
+      |        {
+      |          "label" : "assertion: Boolean",
+      |          "documentation" : null
+      |        },
+      |        {
+      |          "label" : "message: => Any",
+      |          "documentation" : null
+      |        }
+      |      ]
+      |    },
+      |    {
+      |      "label" : "assert(assertion: Boolean)Unit",
+      |      "documentation" : null,
+      |      "parameters" : [
+      |        {
+      |          "label" : "assertion: Boolean",
+      |          "documentation" : null
+      |        }
+      |      ]
+      |    }
+      |  ],
+      |  "activeSignature" : null,
       |  "activeParameter" : 0
       |}""".stripMargin
   )
@@ -66,14 +80,23 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin,
     """
       |{
-      |  "signatures" : [ {
-      |    "label" : "assert(assertion: Boolean, message: => Any)Unit",
-      |    "parameters" : [ {
-      |      "label" : "assertion: Boolean"
-      |    }, {
-      |      "label" : "message: => Any"
-      |    } ]
-      |  } ],
+      |  "signatures" : [
+      |    {
+      |      "label" : "assert(assertion: Boolean, message: => Any)Unit",
+      |      "documentation" : null,
+      |      "parameters" : [
+      |        {
+      |          "label" : "assertion: Boolean",
+      |          "documentation" : null
+      |        },
+      |        {
+      |          "label" : "message: => Any",
+      |          "documentation" : null
+      |        }
+      |      ]
+      |    }
+      |  ],
+      |  "activeSignature" : null,
       |  "activeParameter" : 1
       |}
     """.stripMargin
@@ -117,14 +140,23 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin,
     """
       |{
-      |  "signatures" : [ {
-      |    "label" : "apply(name: String, age: Int)User",
-      |    "parameters" : [ {
-      |      "label" : "name: String"
-      |    }, {
-      |      "label" : "age: Int"
-      |    } ]
-      |  } ],
+      |  "signatures" : [
+      |    {
+      |      "label" : "apply(name: String, age: Int)User",
+      |      "documentation" : null,
+      |      "parameters" : [
+      |        {
+      |          "label" : "name: String",
+      |          "documentation" : null
+      |        },
+      |        {
+      |          "label" : "age: Int",
+      |          "documentation" : null
+      |        }
+      |      ]
+      |    }
+      |  ],
+      |  "activeSignature" : null,
       |  "activeParameter" : 1
       |}
     """.stripMargin
@@ -139,12 +171,19 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin,
     """
       |{
-      |  "signatures" : [ {
-      |    "label" : "apply[A](xs: A*)List[A]",
-      |    "parameters" : [ {
-      |      "label" : "xs: A*"
-      |    } ]
-      |  } ],
+      |  "signatures" : [
+      |    {
+      |      "label" : "apply[A](xs: A*)List[A]",
+      |      "documentation" : null,
+      |      "parameters" : [
+      |        {
+      |          "label" : "xs: A*",
+      |          "documentation" : null
+      |        }
+      |      ]
+      |    }
+      |  ],
+      |  "activeSignature" : null,
       |  "activeParameter" : 0
       |}
     """.stripMargin
@@ -159,12 +198,19 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin,
     """
       |{
-      |  "signatures" : [ {
-      |    "label" : "apply[A](xs: A*)List[A]",
-      |    "parameters" : [ {
-      |      "label" : "xs: A*"
-      |    } ]
-      |  } ],
+      |  "signatures" : [
+      |    {
+      |      "label" : "apply[A](xs: A*)List[A]",
+      |      "documentation" : null,
+      |      "parameters" : [
+      |        {
+      |          "label" : "xs: A*",
+      |          "documentation" : null
+      |        }
+      |      ]
+      |    }
+      |  ],
+      |  "activeSignature" : null,
       |  "activeParameter" : 0
       |}
     """.stripMargin
@@ -181,7 +227,9 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin,
     """
       |{
-      |  "signatures" : [ ],
+      |  "signatures" : [
+      |  ],
+      |  "activeSignature" : null,
       |  "activeParameter" : 0
       |}
     """.stripMargin
@@ -199,19 +247,33 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin,
     """
       |{
-      |  "signatures" : [ {
-      |    "label" : "<init>(name: String)User",
-      |    "parameters" : [ {
-      |      "label" : "name: String"
-      |    } ]
-      |  }, {
-      |    "label" : "<init>(name: String, age: Int)User",
-      |    "parameters" : [ {
-      |      "label" : "name: String"
-      |    }, {
-      |      "label" : "age: Int"
-      |    } ]
-      |  } ],
+      |  "signatures" : [
+      |    {
+      |      "label" : "<init>(name: String)User",
+      |      "documentation" : null,
+      |      "parameters" : [
+      |        {
+      |          "label" : "name: String",
+      |          "documentation" : null
+      |        }
+      |      ]
+      |    },
+      |    {
+      |      "label" : "<init>(name: String, age: Int)User",
+      |      "documentation" : null,
+      |      "parameters" : [
+      |        {
+      |          "label" : "name: String",
+      |          "documentation" : null
+      |        },
+      |        {
+      |          "label" : "age: Int",
+      |          "documentation" : null
+      |        }
+      |      ]
+      |    }
+      |  ],
+      |  "activeSignature" : null,
       |  "activeParameter" : 0
       |}
     """.stripMargin
@@ -236,12 +298,19 @@ object SignatureHelpTest extends CompilerSuite {
     """.stripMargin,
     """
       |{
-      |  "signatures" : [ {
-      |    "label" : "apply[A](xs: A*)List[A]",
-      |    "parameters" : [ {
-      |      "label" : "xs: A*"
-      |    } ]
-      |  } ],
+      |  "signatures" : [
+      |    {
+      |      "label" : "apply[A](xs: A*)List[A]",
+      |      "documentation" : null,
+      |      "parameters" : [
+      |        {
+      |          "label" : "xs: A*",
+      |          "documentation" : null
+      |        }
+      |      ]
+      |    }
+      |  ],
+      |  "activeSignature" : null,
       |  "activeParameter" : 0
       |}
     """.stripMargin

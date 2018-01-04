@@ -1,9 +1,11 @@
 package scala.meta.languageserver.protocol
 
-import scala.meta.languageserver.PlayJsonEnrichments._
 import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task
-import play.api.libs.json._
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.Json
+import io.circe.syntax._
 
 trait Service[A, B] {
   def handle(request: A): Task[B]
@@ -17,18 +19,18 @@ trait NamedJsonRpcService extends JsonRpcService with MethodName
 
 object Service extends LazyLogging {
 
-  def request[A: Reads, B: Writes](method: String)(
+  def request[A: Decoder, B: Encoder](method: String)(
       f: Service[A, Either[Response.Error, B]]
   ): NamedJsonRpcService = new NamedJsonRpcService {
     override def methodName: String = method
     override def handle(message: Message): Task[Response] = message match {
       case Request(`method`, params, id) =>
-        params.getOrElse(JsNull).validate[A] match {
-          case err: JsError =>
-            Task(Response.invalidParams(err.show, id))
-          case JsSuccess(value, _) =>
+        params.getOrElse(Json.Null).as[A] match {
+          case Left(err) =>
+            Task(Response.invalidParams(err.toString, id))
+          case Right(value) =>
             f.handle(value).map {
-              case Right(response) => Response.ok(Json.toJson(response), id)
+              case Right(response) => Response.ok(response.asJson, id)
               // Service[A, ...] doesn't have access to the request ID so
               // by convention it's OK to set the ID to null by default
               // and we fill it in here instead.
@@ -42,7 +44,7 @@ object Service extends LazyLogging {
     }
   }
 
-  def notification[A: Reads](method: String)(
+  def notification[A: Decoder](method: String)(
       f: Service[A, Unit]
   ): NamedJsonRpcService =
     new NamedJsonRpcService {
@@ -53,10 +55,10 @@ object Service extends LazyLogging {
       }
       override def handle(message: Message): Task[Response] = message match {
         case Notification(`method`, params) =>
-          params.getOrElse(JsNull).validate[A] match {
-            case err: JsError =>
+          params.getOrElse(Json.Null).as[A] match {
+            case Left(err) =>
               fail(s"Failed to parse notification $message. Errors: $err")
-            case JsSuccess(value, _) =>
+            case Right(value) =>
               f.handle(value).map(_ => Response.empty)
           }
         case Notification(invalidMethod, _) =>
@@ -73,22 +75,22 @@ object Services {
 
 class Services private (val services: List[NamedJsonRpcService]) {
 
-  def request[A: Reads, B: Writes](method: String)(
+  def request[A: Decoder, B: Encoder](method: String)(
       f: A => B
   ): Services =
     requestAsync[A, B](method)(request => Task(Right(f(request))))
 
-  def requestAsync[A: Reads, B: Writes](method: String)(
+  def requestAsync[A: Decoder, B: Encoder](method: String)(
       f: Service[A, Either[Response.Error, B]]
   ): Services =
     addService(Service.request[A, B](method)(f))
 
-  def notification[A: Reads](method: String)(
+  def notification[A: Decoder](method: String)(
       f: A => Unit
   ): Services =
     notificationAsync[A](method)(request => Task(f(request)))
 
-  def notificationAsync[A: Reads](method: String)(
+  def notificationAsync[A: Decoder](method: String)(
       f: Service[A, Unit]
   ): Services =
     addService(Service.notification[A](method)(f))

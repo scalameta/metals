@@ -8,7 +8,6 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Executors
 import scala.concurrent.duration.FiniteDuration
-import scala.meta.languageserver.PlayJsonEnrichments._
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
@@ -37,10 +36,7 @@ import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb
-import play.api.libs.json.JsError
-import play.api.libs.json.JsNull
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsValue
+import io.circe.Json
 
 class ScalametaLanguageServer(
     cwd: AbsolutePath,
@@ -165,11 +161,11 @@ class ScalametaLanguageServer(
     .requestAsync[InitializeParams, InitializeResult]("initialize") { params =>
       initialize(params)
     }
-    .request[JsValue, JsValue]("shutdown") { _ =>
+    .request[Json, Json]("shutdown") { _ =>
       shutdown()
-      JsNull
+      Json.Null
     }
-    .notification[JsValue]("exit") { _ =>
+    .notification[Json]("exit") { _ =>
       logger.info("exit(0)")
       sys.exit(0)
     }
@@ -236,13 +232,13 @@ class ScalametaLanguageServer(
     .notification[DidChangeConfigurationParams](
       "workspace/didChangeConfiguration"
     ) { params =>
-      (params.settings \ "scalameta").validate[Configuration] match {
-        case err: JsError =>
-          client.showMessage(MessageType.Error, err.show)
-        case JsSuccess(conf, _) =>
-          logger.info(s"Configuration updated $conf")
-          configurationSubscriber.onNext(conf)
-      }
+      params.settings.hcursor.downField("scalameta").as[Configuration]// match {
+      //   case Left(err) =>
+      //     client.showMessage(MessageType.Error, err.show)
+      //   case Right(conf) =>
+      //     logger.info(s"Configuration updated $conf")
+      //     configurationSubscriber.onNext(conf)
+      // }
     }
     .notification[DidChangeWatchedFilesParams](
       "workspace/didChangeWatchedFiles"
@@ -323,12 +319,12 @@ class ScalametaLanguageServer(
         case None => SignatureHelpProvider.empty
       }
     }
-    .requestAsync[ExecuteCommandParams, JsValue](
+    .requestAsync[ExecuteCommandParams, Json](
       "workspace/executeCommand"
     ) { params =>
       logger.info(s"executeCommand $params")
       import WorkspaceCommand._
-      val ok = Task(Right(JsNull))
+      val ok = Task(Right(Json.Null))
       WorkspaceCommand.withNameOption(params.command) match {
         case None =>
           val msg = s"Unknown command ${params.command}"
@@ -362,7 +358,7 @@ class ScalametaLanguageServer(
             applied match {
               case Left(err) =>
                 logger.warn(s"Failed to apply command $err")
-                Right(JsNull)
+                Right(Json.Null)
               case Right(edit) =>
                 if (edit.applied) {
                   logger.info(s"Successfully applied command $params")
@@ -373,7 +369,7 @@ class ScalametaLanguageServer(
             }
             applied
           }
-          response.map(_ => Right(JsNull))
+          response.map(_ => Right(Json.Null))
       }
     }
     .request[WorkspaceSymbolParams, List[SymbolInformation]](

@@ -5,7 +5,7 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.messages.CodeActionParams
 import langserver.types.Command
 import langserver.types.Diagnostic
-import play.api.libs.json.Json
+import io.circe.syntax._
 
 object CodeActionProvider extends LazyLogging {
   def codeActions(params: CodeActionParams): List[Command] = {
@@ -14,7 +14,7 @@ object CodeActionProvider extends LazyLogging {
         Command(
           "Remove unused imports",
           ScalafixUnusedImports.entryName,
-          Json.toJson(params.textDocument) :: Nil
+          params.textDocument.asJson :: Nil
         )
     }.toList
   }

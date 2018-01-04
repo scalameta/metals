@@ -1,6 +1,6 @@
 package scala.meta.languageserver.refactoring
 
-import scala.meta._
+import scala.meta.Document
 import scala.meta.languageserver.Parser
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.SymbolIndex
@@ -16,21 +16,20 @@ import langserver.messages.ApplyWorkspaceEditParams
 import langserver.types.TextDocumentIdentifier
 import langserver.types.WorkspaceEdit
 import monix.eval.Task
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
+import io.circe.Json
 
 object OrganizeImports extends LazyLogging {
 
   val empty = ApplyWorkspaceEditParams(None, WorkspaceEdit(Map.empty))
 
   def removeUnused(
-      arguments: Option[Seq[JsValue]],
+      arguments: Option[Seq[Json]],
       index: SymbolIndex
   ): Task[Either[Response.Error, ApplyWorkspaceEditParams]] = {
     val result = for {
       as <- arguments
       argument <- as.headOption
-      textDocument <- Json.fromJson[TextDocumentIdentifier](argument).asOpt
+      textDocument <- argument.as[TextDocumentIdentifier].toOption
     } yield removeUnused(Uri(textDocument), index)
     Task {
       result match {
