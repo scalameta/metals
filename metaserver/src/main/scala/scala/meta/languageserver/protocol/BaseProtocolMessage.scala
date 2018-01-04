@@ -11,9 +11,9 @@ case class BaseProtocolMessage(header: Map[String, String], content: String) {
     val sb = new java.lang.StringBuilder()
     header.foreach {
       case (key, value) =>
-        sb.append(key).append(": ").append(value).append("\n")
+        sb.append(key).append(": ").append(value).append("\r\n")
     }
-    sb.append("\n")
+    sb.append("\r\n")
       .append(content)
     sb.toString
   }

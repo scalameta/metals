@@ -8,7 +8,10 @@ import scala.meta.languageserver.MonixEnrichments._
 import scala.meta.languageserver.protocol.Response
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
+import cats.syntax.bifunctor._
+import cats.instances.either._
 import langserver.core.Notifications
+import langserver.types.MessageType
 import langserver.types.Position
 import langserver.types.Range
 import langserver.types.TextEdit
@@ -77,13 +80,16 @@ class DocumentFormattingProvider(
           scalafmt.format(input.value, input.path, path)
       }
     }
-    formatResult match {
-      case Left(errorMessage) =>
-        Left(Response.invalidParams(errorMessage))
-      case Right(formatted) =>
-        val edits = List(TextEdit(fullDocumentRange, formatted))
-        Right(edits)
-    }
+    formatResult.bimap(
+      message => {
+        // We show a message here to be sure the message is
+        // reported in the UI. invalidParams responses don't
+        // get reported in vscode at least.
+        notifications.showMessage(MessageType.Error, message)
+        Response.invalidParams(message)
+      },
+      formatted => List(TextEdit(fullDocumentRange, formatted))
+    )
   }
 
 }

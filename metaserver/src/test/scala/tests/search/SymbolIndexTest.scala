@@ -4,7 +4,7 @@ import java.io.PipedOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import scala.meta.languageserver.ScalametaEnrichments._
-import scala.meta.languageserver.ScalametaLanguageServer
+import scala.meta.languageserver.ScalametaServices
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.internal.BuildInfo
 import scala.meta.languageserver.protocol.LanguageClient
@@ -55,7 +55,7 @@ object SymbolIndexTest extends MegaSuite {
   val stdout = new PipedOutputStream()
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
   val client = new LanguageClient(stdout)
-  val metaserver = new ScalametaLanguageServer(cwd, client)(s)
+  val metaserver = new ScalametaServices(cwd, client)(s)
   metaserver
     .initialize(InitializeParams(0L, cwd.toString(), ClientCapabilities()))
     .runAsync(s)

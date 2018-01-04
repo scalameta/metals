@@ -5,7 +5,7 @@ import scala.meta.languageserver.Buffers
 import scala.meta.languageserver.Effects
 import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.ScalametaEnrichments._
-import scala.meta.languageserver.ScalametaLanguageServer.cacheDirectory
+import scala.meta.languageserver.ScalametaServices.cacheDirectory
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.index.SymbolData

@@ -16,9 +16,9 @@ trait Notifications {
 
   def logMessage(params: LogMessageParams): Unit
   final def logMessage(
-      `type`: MessageType,
+      tpe: MessageType,
       message: String
-  ): Unit = logMessage(LogMessageParams(`type`, message))
+  ): Unit = logMessage(LogMessageParams(tpe, message))
 
   def showMessage(params: ShowMessageParams): Unit
   final def showMessage(

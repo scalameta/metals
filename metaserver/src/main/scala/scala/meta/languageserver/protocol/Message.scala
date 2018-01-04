@@ -50,12 +50,13 @@ object Response {
     Success(result, id)
   def error(error: ErrorObject, id: RequestId): Response.Error =
     Error(error, id)
+  def internalError(message: String): Response.Error =
+    internalError(message, RequestId.Null)
   def internalError(message: String, id: RequestId): Response.Error =
     Error(ErrorObject(ErrorCode.InternalError, message, None), id)
-  def invalidParams(
-      message: String,
-      id: RequestId = RequestId.Null
-  ): Response.Error =
+  def invalidParams(message: String): Response.Error =
+    invalidParams(message, RequestId.Null)
+  def invalidParams(message: String, id: RequestId): Response.Error =
     Error(ErrorObject(ErrorCode.InvalidParams, message, None), id)
   def invalidRequest(message: String): Response.Error =
     Error(

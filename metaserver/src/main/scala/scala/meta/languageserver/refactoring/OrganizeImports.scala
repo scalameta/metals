@@ -1,5 +1,6 @@
 package scala.meta.languageserver.refactoring
 
+import cats.syntax.either._
 import scala.meta.Document
 import scala.meta.languageserver.Parser
 import scala.meta.languageserver.Uri
@@ -15,7 +16,6 @@ import com.typesafe.scalalogging.LazyLogging
 import langserver.messages.ApplyWorkspaceEditParams
 import langserver.types.TextDocumentIdentifier
 import langserver.types.WorkspaceEdit
-import monix.eval.Task
 import io.circe.Json
 
 object OrganizeImports extends LazyLogging {
@@ -25,24 +25,18 @@ object OrganizeImports extends LazyLogging {
   def removeUnused(
       arguments: Option[Seq[Json]],
       index: SymbolIndex
-  ): Task[Either[Response.Error, ApplyWorkspaceEditParams]] = {
+  ): Either[Response.Error, ApplyWorkspaceEditParams] = {
     val result = for {
       as <- arguments
       argument <- as.headOption
       textDocument <- argument.as[TextDocumentIdentifier].toOption
     } yield removeUnused(Uri(textDocument), index)
-    Task {
-      result match {
-        case Some(x) =>
-          Right(x)
-        case None =>
-          Left(
-            Response.invalidParams(
-              s"Unable to parse TextDocumentIdentifier from $arguments"
-            )
-          )
-      }
-    }
+    Either.fromOption(
+      result,
+      Response.invalidParams(
+        s"Unable to parse TextDocumentIdentifier from $arguments"
+      )
+    )
   }
 
   def removeUnused(uri: Uri, index: SymbolIndex): ApplyWorkspaceEditParams = {

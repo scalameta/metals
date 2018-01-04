@@ -16,10 +16,10 @@ class LSPLogger(@BeanProperty var encoder: PatternLayoutEncoder)
     val message =
       if (encoder != null) new String(encoder.encode(event), UTF_8)
       else event.getFormattedMessage
-    connection.foreach(_.logMessage(MessageType.Log, message))
+    notifications.foreach(_.logMessage(MessageType.Log, message))
   }
 }
 
 object LSPLogger {
-  var connection: Option[Notifications] = None
+  var notifications: Option[Notifications] = None
 }

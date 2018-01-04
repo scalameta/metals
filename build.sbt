@@ -8,7 +8,9 @@ inThisBuild(
       scalaVersion := V.scala212,
       scalacOptions ++= List(
         "-deprecation",
-        "-Xlint"
+        // -Xlint is unusable because of
+        // https://github.com/scala/bug/issues/10448
+        "-Ywarn-unused:imports"
       ),
       scalafixEnabled := false,
       organization := "org.scalameta",

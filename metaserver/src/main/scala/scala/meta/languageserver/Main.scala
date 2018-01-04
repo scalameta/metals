@@ -32,17 +32,17 @@ object Main extends LazyLogging {
       // messes up with the client, since stdout is used for the language server protocol
       System.setOut(out)
       System.setErr(err)
-      val client = new LanguageClient(stdout)
       logger.info(s"Starting server in $cwd")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
-      val metaserver = new ScalametaLanguageServer(cwd, client)(s)
-      val langserver = new LanguageServer(
+      val client = new LanguageClient(stdout)
+      val services = new ScalametaServices(cwd, client)(s)
+      val languageServer = new LanguageServer(
         BaseProtocolMessage.fromInputStream(stdin),
         client,
-        metaserver.services,
+        services.services,
         s
       )
-      langserver.listen()
+      languageServer.listen()
     } catch {
       case NonFatal(e) =>
         logger.error("Uncaught top-level exception", e)

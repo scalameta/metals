@@ -37,8 +37,9 @@ import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb
 import io.circe.Json
+import monix.execution.atomic.Atomic
 
-class ScalametaLanguageServer(
+class ScalametaServices(
     cwd: AbsolutePath,
     client: LanguageClient
 )(implicit s: Scheduler)
@@ -51,16 +52,16 @@ class ScalametaLanguageServer(
   def withPC[A](f: => A): Task[Either[Response.Error, A]] =
     Task(Right(f)).executeOn(presentationCompilerScheduler)
   val (fileSystemSemanticdbSubscriber, fileSystemSemanticdbsPublisher) =
-    ScalametaLanguageServer.fileSystemSemanticdbStream(cwd)
+    ScalametaServices.fileSystemSemanticdbStream(cwd)
   val (compilerConfigSubscriber, compilerConfigPublisher) =
-    ScalametaLanguageServer.compilerConfigStream(cwd)
+    ScalametaServices.compilerConfigStream(cwd)
   val (sourceChangeSubscriber, sourceChangePublisher) =
     Observable.multicast[Input.VirtualFile](
       MulticastStrategy.Publish,
       OverflowStrategy.DropOld(2)
     )
   val (configurationSubscriber, configurationPublisher) =
-    ScalametaLanguageServer.configurationStream
+    ScalametaServices.configurationStream
   val buffers: Buffers = Buffers()
   val symbolIndex: SymbolIndex =
     SymbolIndex(cwd, client, buffers, configurationPublisher)
@@ -121,7 +122,7 @@ class ScalametaLanguageServer(
       params: InitializeParams
   ): Task[Either[Response.Error, InitializeResult]] = {
     logger.info(s"Initialized with $cwd, $params")
-    LSPLogger.connection = Some(client)
+    LSPLogger.notifications = Some(client)
     cancelEffects = effects.map(_.subscribe())
     loadAllRelevantFilesInThisWorkspace()
     val capabilities = ServerCapabilities(
@@ -157,17 +158,23 @@ class ScalametaLanguageServer(
     cancelEffects.foreach(_.cancel())
   }
 
+  private val shutdownReceived = Atomic(false)
   val services: Services = Services.empty
     .requestAsync[InitializeParams, InitializeResult]("initialize") { params =>
       initialize(params)
     }
     .request[Json, Json]("shutdown") { _ =>
       shutdown()
+      shutdownReceived.set(true)
       Json.Null
     }
     .notification[Json]("exit") { _ =>
-      logger.info("exit(0)")
-      sys.exit(0)
+      // The server should exit with success code 0 if the shutdown request has
+      // been received before; otherwise with error code 1
+      // -- https://microsoft.github.io/language-server-protocol/specification#exit
+      val code = if (shutdownReceived.get) 0 else 1
+      logger.info(s"exit($code)")
+      sys.exit(code)
     }
     .requestAsync[TextDocumentPositionParams, CompletionList](
       "textDocument/completion"
@@ -323,53 +330,15 @@ class ScalametaLanguageServer(
       "workspace/executeCommand"
     ) { params =>
       logger.info(s"executeCommand $params")
-      import WorkspaceCommand._
-      val ok = Task(Right(Json.Null))
       WorkspaceCommand.withNameOption(params.command) match {
         case None =>
-          val msg = s"Unknown command ${params.command}"
-          logger.error(msg)
-          Task(Left(Response.invalidParams(msg)))
-        case Some(ClearIndexCache) =>
-          logger.info("Clearing the index cache")
-          ScalametaLanguageServer.clearCacheDirectory()
-          symbolIndex.clearIndex()
-          scalacProvider.allCompilerConfigs.foreach(
-            config => symbolIndex.indexDependencyClasspath(config.sourceJars)
-          )
-          ok
-        case Some(ResetPresentationCompiler) =>
-          logger.info("Resetting all compiler instances")
-          scalacProvider.resetCompilers()
-          ok
-        case Some(ScalafixUnusedImports) =>
-          logger.info("Removing unused imports")
-          val response = for {
-            result <- OrganizeImports.removeUnused(
-              params.arguments,
-              symbolIndex
-            )
-            applied <- result match {
-              // TODO(olafur): Monad Transformers? (no please!)
-              case Left(err) => Task(Left(err))
-              case Right(command) => client.workspaceApplyEdit(command)
-            }
-          } yield {
-            applied match {
-              case Left(err) =>
-                logger.warn(s"Failed to apply command $err")
-                Right(Json.Null)
-              case Right(edit) =>
-                if (edit.applied) {
-                  logger.info(s"Successfully applied command $params")
-                } else {
-                  logger.warn(s"Failed to apply edit for command $params")
-                }
-              case _ =>
-            }
-            applied
+          Task {
+            val msg = s"Unknown command ${params.command}"
+            logger.error(msg)
+            Left(Response.invalidParams(msg))
           }
-          response.map(_ => Right(Json.Null))
+        case Some(command) =>
+          executeCommand(command, params)
       }
     }
     .request[WorkspaceSymbolParams, List[SymbolInformation]](
@@ -377,6 +346,56 @@ class ScalametaLanguageServer(
     ) { params =>
       symbolIndex.workspaceSymbols(params.query)
     }
+
+  import WorkspaceCommand._
+  val ok = Right(Json.Null)
+  private def executeCommand(
+      command: WorkspaceCommand,
+      params: ExecuteCommandParams
+  ): Task[Either[Response.Error, Json]] = command match {
+    case ClearIndexCache =>
+      Task {
+        logger.info("Clearing the index cache")
+        ScalametaServices.clearCacheDirectory()
+        symbolIndex.clearIndex()
+        scalacProvider.allCompilerConfigs.foreach(
+          config => symbolIndex.indexDependencyClasspath(config.sourceJars)
+        )
+        Right(Json.Null)
+      }
+    case ResetPresentationCompiler =>
+      Task {
+        logger.info("Resetting all compiler instances")
+        scalacProvider.resetCompilers()
+        Right(Json.Null)
+      }
+    case ScalafixUnusedImports =>
+      logger.info("Removing unused imports")
+      val response = for {
+        result <- Task(
+          OrganizeImports.removeUnused(params.arguments, symbolIndex)
+        )
+        applied <- result match {
+          case Left(err) => Task.now(Left(err))
+          case Right(workspaceEdit) => client.workspaceApplyEdit(workspaceEdit)
+        }
+      } yield {
+        applied match {
+          case Left(err) =>
+            logger.warn(s"Failed to apply command $err")
+            Right(Json.Null)
+          case Right(edit) =>
+            if (edit.applied) {
+              logger.info(s"Successfully applied command $params")
+            } else {
+              logger.warn(s"Failed to apply edit for command $params")
+            }
+          case _ =>
+        }
+        applied.right.map(_ => Json.Null)
+      }
+      response
+  }
 
   private def toCursor(
       td: TextDocumentIdentifier,
@@ -407,7 +426,7 @@ class ScalametaLanguageServer(
   }
 }
 
-object ScalametaLanguageServer extends LazyLogging {
+object ScalametaServices extends LazyLogging {
   lazy val cacheDirectory: AbsolutePath = {
     val path = AbsolutePath(
       ProjectDirectories.fromProjectName("metaserver").projectCacheDir
