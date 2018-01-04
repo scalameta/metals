@@ -68,6 +68,7 @@ lazy val V = new {
   val scalafix = "0.5.7"
   val enumeratum = "1.5.12"
   val circe = "0.9.0"
+  val cats = "1.0.1"
 }
 
 lazy val noPublish = List(
@@ -93,6 +94,7 @@ lazy val languageserver = project
       "io.circe" %% "circe-generic" % V.circe,
       "io.circe" %% "circe-generic-extras" % V.circe,
       "io.circe" %% "circe-parser" % V.circe,
+      "org.typelevel" %% "cats-core" % V.cats,
       "com.beachape" %% "enumeratum" % V.enumeratum,
       "com.beachape" %% "enumeratum-circe" % "1.5.15",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
