@@ -20,7 +20,8 @@ import Configuration._
 )
 
 object Configuration {
-  implicit val circeConfiguration: CirceConfiguration = CirceConfiguration.default.withDefaults
+  implicit val circeConfiguration: CirceConfiguration =
+    CirceConfiguration.default.withDefaults
 
   @JsonCodec case class Scalac(enabled: Boolean = false)
   @JsonCodec case class Hover(enabled: Boolean = false)
@@ -39,7 +40,10 @@ object Configuration {
       confPath: RelativePath = RelativePath(".scalafix.conf")
   )
   // TODO(olafur): re-enable indexJDK after https://github.com/scalameta/language-server/issues/43 is fixed
-  @JsonCodec case class Search(indexJDK: Boolean = false, indexClasspath: Boolean = true)
+  @JsonCodec case class Search(
+      indexJDK: Boolean = false,
+      indexClasspath: Boolean = true
+  )
 
   implicit val absolutePathReads: Decoder[AbsolutePath] =
     Decoder.decodeString.emapTry(s => Try(AbsolutePath(s)))
