@@ -7,13 +7,13 @@ import scala.meta.languageserver.compiler.CompilerEnrichments._
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
-import langserver.messages.SignatureHelpResult
+import langserver.messages.SignatureHelp
 import langserver.types.ParameterInformation
 import langserver.types.SignatureInformation
 
 object SignatureHelpProvider extends LazyLogging {
-  def empty: SignatureHelpResult = SignatureHelpResult(Nil, None, None)
-  def signatureHelp(compiler: Global, cursor: Cursor): SignatureHelpResult = {
+  def empty: SignatureHelp = SignatureHelp(Nil, None, None)
+  def signatureHelp(compiler: Global, cursor: Cursor): SignatureHelp = {
     val unit = ScalacProvider.addCompilationUnit(
       global = compiler,
       code = cursor.contents,
@@ -82,7 +82,7 @@ object SignatureHelpProvider extends LazyLogging {
       val activeArgument: Int =
         if (isVararg) signatureInformations.map(_.parameters.length - 1).max
         else callSite.activeArgument
-      SignatureHelpResult(
+      SignatureHelp(
         signatures = signatureInformations,
         // TODO(olafur) populate activeSignature and activeParameter fields, see
         // https://github.com/scalameta/language-server/issues/52

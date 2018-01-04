@@ -4,7 +4,7 @@ import enumeratum.values._
 
 sealed abstract class DiagnosticSeverity(val value: Int) extends IntEnumEntry
 
-case object DiagnosticSeverity extends IntEnum[DiagnosticSeverity] with IntPlayJsonValueEnum[DiagnosticSeverity] {
+case object DiagnosticSeverity extends IntEnum[DiagnosticSeverity] with IntCirceEnum[DiagnosticSeverity] {
 
   case object Error       extends DiagnosticSeverity(1)
   case object Warning     extends DiagnosticSeverity(2)
@@ -16,7 +16,7 @@ case object DiagnosticSeverity extends IntEnum[DiagnosticSeverity] with IntPlayJ
 
 sealed abstract class CompletionItemKind(val value: Int) extends IntEnumEntry
 
-case object CompletionItemKind extends IntEnum[CompletionItemKind] with IntPlayJsonValueEnum[CompletionItemKind] {
+case object CompletionItemKind extends IntEnum[CompletionItemKind] with IntCirceEnum[CompletionItemKind] {
 
   case object Text        extends CompletionItemKind(1)
   case object Method      extends CompletionItemKind(2)
@@ -42,7 +42,7 @@ case object CompletionItemKind extends IntEnum[CompletionItemKind] with IntPlayJ
 
 sealed abstract class DocumentHighlightKind(val value: Int) extends IntEnumEntry
 
-case object DocumentHighlightKind extends IntEnum[DocumentHighlightKind] with IntPlayJsonValueEnum[DocumentHighlightKind] {
+case object DocumentHighlightKind extends IntEnum[DocumentHighlightKind] with IntCirceEnum[DocumentHighlightKind] {
   /** A textual occurrence */
   case object Text  extends DocumentHighlightKind(1)
   /** Read-access of a symbol, like reading a variable */
@@ -55,7 +55,7 @@ case object DocumentHighlightKind extends IntEnum[DocumentHighlightKind] with In
 
 sealed abstract class SymbolKind(val value: Int) extends IntEnumEntry
 
-case object SymbolKind extends IntEnum[SymbolKind] with IntPlayJsonValueEnum[SymbolKind] {
+case object SymbolKind extends IntEnum[SymbolKind] with IntCirceEnum[SymbolKind] {
 
   case object File        extends SymbolKind(1)
   case object Module      extends SymbolKind(2)
@@ -81,7 +81,7 @@ case object SymbolKind extends IntEnum[SymbolKind] with IntPlayJsonValueEnum[Sym
 
 sealed abstract class MessageType(val value: Int) extends IntEnumEntry
 
-case object MessageType extends IntEnum[MessageType] with IntPlayJsonValueEnum[MessageType] {
+case object MessageType extends IntEnum[MessageType] with IntCirceEnum[MessageType] {
 
   /** An error message. */
   case object Error   extends MessageType(1)
@@ -97,7 +97,7 @@ case object MessageType extends IntEnum[MessageType] with IntPlayJsonValueEnum[M
 
 sealed abstract class TextDocumentSyncKind(val value: Int) extends IntEnumEntry
 
-case object TextDocumentSyncKind extends IntEnum[TextDocumentSyncKind] with IntPlayJsonValueEnum[TextDocumentSyncKind] {
+case object TextDocumentSyncKind extends IntEnum[TextDocumentSyncKind] with IntCirceEnum[TextDocumentSyncKind] {
 
   /** Documents should not be synced at all */
   case object None        extends TextDocumentSyncKind(0)
@@ -113,7 +113,7 @@ case object TextDocumentSyncKind extends IntEnum[TextDocumentSyncKind] with IntP
 
 sealed abstract class FileChangeType(val value: Int) extends IntEnumEntry
 
-case object FileChangeType extends IntEnum[FileChangeType] with IntPlayJsonValueEnum[FileChangeType] {
+case object FileChangeType extends IntEnum[FileChangeType] with IntCirceEnum[FileChangeType] {
 
   case object Created extends FileChangeType(1)
   case object Changed extends FileChangeType(2)

@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-import * as path from 'path';
-import { workspace, ExtensionContext, window, commands } from 'vscode';
+import * as path from "path";
+import { workspace, ExtensionContext, window, commands } from "vscode";
 import {
   LanguageClient,
   LanguageClientOptions,
@@ -9,9 +9,9 @@ import {
   TransportKind,
   RevealOutputChannelOn,
   ExecuteCommandRequest
-} from 'vscode-languageclient';
-import { Requirements } from './requirements';
-import { exec } from 'child_process';
+} from "vscode-languageclient";
+import { Requirements } from "./requirements";
+import { exec } from "child_process";
 
 export async function activate(context: ExtensionContext) {
   const req = new Requirements();
@@ -19,47 +19,45 @@ export async function activate(context: ExtensionContext) {
     window.showErrorMessage(pathNotFound);
   });
 
-  const toolsJar = javaHome + '/lib/tools.jar';
+  const toolsJar = javaHome + "/lib/tools.jar";
 
   // The debug options for the server
   const debugOptions = [
-    '-Xdebug',
-    '-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000,quiet=y'
+    "-Xdebug",
+    "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000,quiet=y"
   ];
 
-  const coursierPath = path.join(context.extensionPath, './coursier');
+  const coursierPath = path.join(context.extensionPath, "./coursier");
 
   const coursierArgs = [
-    'launch',
-    '-r',
-    'https://dl.bintray.com/dhpcs/maven',
-    '-r',
-    'sonatype:releases',
-    '-J',
+    "launch",
+    "-r",
+    "sonatype:releases",
+    "-J",
     toolsJar,
-    'org.scalameta:metaserver_2.12:0.1-SNAPSHOT',
-    '-M',
-    'scala.meta.languageserver.Main'
+    "org.scalameta:metaserver_2.12:0.1-SNAPSHOT",
+    "-M",
+    "scala.meta.languageserver.Main"
   ];
 
   const javaArgs = [
     `-XX:+UseG1GC`,
     `-XX:+UseStringDeduplication`,
-    '-jar',
+    "-jar",
     coursierPath
   ].concat(coursierArgs);
 
   const serverOptions: ServerOptions = {
-    run: { command: 'java', args: javaArgs },
-    debug: { command: 'java', args: debugOptions.concat(javaArgs) }
+    run: { command: "java", args: javaArgs },
+    debug: { command: "java", args: debugOptions.concat(javaArgs) }
   };
 
   const clientOptions: LanguageClientOptions = {
-    documentSelector: ['scala'],
+    documentSelector: ["scala"],
     synchronize: {
       fileEvents: [
-        workspace.createFileSystemWatcher('**/*.semanticdb'),
-        workspace.createFileSystemWatcher('**/*.compilerconfig')
+        workspace.createFileSystemWatcher("**/*.semanticdb"),
+        workspace.createFileSystemWatcher("**/*.compilerconfig")
       ],
       configurationSection: "scalameta"
     },
@@ -67,34 +65,50 @@ export async function activate(context: ExtensionContext) {
   };
 
   const client = new LanguageClient(
-    'scalameta',
-    'Scalameta',
+    "scalameta",
+    "Scalameta",
     serverOptions,
     clientOptions
   );
 
-  const restartServerCommand = commands.registerCommand("scalameta.restartServer", async () => {
-    const serverPid = client['_serverProcess'].pid;
-    await exec(`kill ${serverPid}`);
-    const showLogsAction = "Show server logs";
-    const selectedAction = await window.showInformationMessage(
-      "Scalameta Language Server killed, it should restart in a few seconds",
-      showLogsAction
-    );
+  const restartServerCommand = commands.registerCommand(
+    "scalameta.restartServer",
+    async () => {
+      const serverPid = client["_serverProcess"].pid;
+      await exec(`kill ${serverPid}`);
+      const showLogsAction = "Show server logs";
+      const selectedAction = await window.showInformationMessage(
+        "Scalameta Language Server killed, it should restart in a few seconds",
+        showLogsAction
+      );
 
-    if (selectedAction === showLogsAction) {
-      client.outputChannel.show(true);
+      if (selectedAction === showLogsAction) {
+        client.outputChannel.show(true);
+      }
     }
-  });
+  );
 
   client.onReady().then(() => {
-    const clearIndexCacheCommand = commands.registerCommand("scalameta.clearIndexCache", async () => {
-      return client.sendRequest(ExecuteCommandRequest.type, { command: "clearIndexCache" });
-    });
-    const resetPresentationCompiler = commands.registerCommand("scalameta.resetPresentationCompiler", async () => {
-      return client.sendRequest(ExecuteCommandRequest.type, { command: "resetPresentationCompiler" });
-    });
-    context.subscriptions.push(clearIndexCacheCommand, resetPresentationCompiler);
+    const clearIndexCacheCommand = commands.registerCommand(
+      "scalameta.clearIndexCache",
+      async () => {
+        return client.sendRequest(ExecuteCommandRequest.type, {
+          command: "clearIndexCache"
+        });
+      }
+    );
+    const resetPresentationCompiler = commands.registerCommand(
+      "scalameta.resetPresentationCompiler",
+      async () => {
+        return client.sendRequest(ExecuteCommandRequest.type, {
+          command: "resetPresentationCompiler"
+        });
+      }
+    );
+    context.subscriptions.push(
+      clearIndexCacheCommand,
+      resetPresentationCompiler
+    );
   });
 
   context.subscriptions.push(client.start(), restartServerCommand);

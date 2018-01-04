@@ -21,15 +21,14 @@ object SquiggliesTest extends CompilerSuite {
   val logFile = tmp.resolve("metaserver.log").toFile
   val out = new PrintStream(new FileOutputStream(logFile))
   val config = Observable.now(Configuration())
-  val squiggliesProvider =
-    new SquiggliesProvider(config, AbsolutePath(tmp), out)
+  val squiggliesProvider = new SquiggliesProvider(config, AbsolutePath(tmp))
   Files.write(
     tmp.resolve(".scalafix.conf"),
     """
       |rules = [ NoInfer ]
     """.stripMargin.getBytes()
   )
-  val linter: Linter = new Linter(AbsolutePath(tmp), System.out)
+  val linter: Linter = new Linter(AbsolutePath(tmp))
   def check(name: String, original: String, expected: String): Unit = {
     test(name) {
       val input = Input.VirtualFile(name, original)
