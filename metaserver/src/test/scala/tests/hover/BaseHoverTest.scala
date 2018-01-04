@@ -37,7 +37,6 @@ abstract class BaseHoverTest extends BaseIndexTest {
     check(
       filename,
       code, { result =>
-        val obtained = result.asJson.spaces2
         val expected =
           s"""{
              |  "contents" : [
@@ -45,10 +44,9 @@ abstract class BaseHoverTest extends BaseIndexTest {
              |      "language" : "scala",
              |      "value" : "$expectedValue"
              |    }
-             |  ],
-             |  "range" : null
+             |  ]
              |}""".stripMargin
-        assertNoDiff(obtained, expected)
+        assertNoDiff(result.asJson, expected)
       }
     )
   }

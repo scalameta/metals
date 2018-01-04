@@ -11,6 +11,9 @@ import utest.framework.TestCallTree
 import utest.framework.Tree
 import utest.ufansi.Str
 
+import io.circe.Json
+import io.circe.Printer
+
 /**
  * Test suite that supports
  *
@@ -20,6 +23,7 @@ import utest.ufansi.Str
  * - FunSuite-style test("name") { => fun }
  */
 class MegaSuite extends TestSuite {
+  private val jsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
@@ -35,6 +39,12 @@ class MegaSuite extends TestSuite {
       title: String = ""
   ): Unit = {
     DiffAsserts.assertNoDiff(obtained, expected, title)
+  }
+  def assertNoDiff(
+      obtained: Json,
+      expected: String
+  ): Unit = {
+    assertNoDiff(obtained.pretty(jsonPrinter), expected)
   }
   override def utestAfterAll(): Unit = afterAll()
 

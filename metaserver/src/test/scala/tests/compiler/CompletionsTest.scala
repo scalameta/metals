@@ -29,8 +29,7 @@ object CompletionsTest extends CompilerSuite {
     check(
       filename,
       code, { completions =>
-        val obtained = completions.asJson.spaces2
-        assertNoDiff(obtained, expected)
+        assertNoDiff(completions.asJson, expected)
       }
     )
   }
@@ -53,12 +52,7 @@ object CompletionsTest extends CompilerSuite {
          |      "label" : "$label",
          |      "kind" : ${kind.value},
          |      "detail" : "$detail",
-         |      "documentation" : null,
-         |      "sortText" : "00000",
-         |      "filterText" : null,
-         |      "insertText" : null,
-         |      "textEdit" : null,
-         |      "data" : null
+         |      "sortText" : "00000"
          |    }
          |  ]
          |}
