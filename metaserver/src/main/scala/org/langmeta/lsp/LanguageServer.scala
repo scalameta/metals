@@ -6,7 +6,7 @@ import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.Json
-import io.circe.parser.parse
+import io.circe.jawn.parseByteBuffer
 import io.circe.syntax._
 import monix.eval.Task
 import monix.execution.Cancelable
@@ -95,7 +95,7 @@ final class LanguageServer(
   }
 
   def handleMessage(message: BaseProtocolMessage): Task[Response] =
-    parse(message.content) match {
+    parseByteBuffer(message.content.toByteBuffer) match {
       case Left(err) => Task.now(Response.parseError(err.toString))
       case Right(json) =>
         json.as[Message] match {

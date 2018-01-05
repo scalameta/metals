@@ -2,9 +2,12 @@ package org.langmeta.jsonrpc
 
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
+
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.Encoder
 import io.circe.syntax._
+import scodec.Attempt.{Failure, Successful}
+import scodec.Attempt
 
 /**
  * A class to write Json RPC messages on an output stream, following the Language Server Protocol.
@@ -21,7 +24,6 @@ import io.circe.syntax._
  * @note The header part is defined to be ASCII encoded, while the content part is UTF8.
  */
 class MessageWriter(out: OutputStream) extends LazyLogging {
-  private val ContentLen = "Content-Length"
 
   /** Lock protecting the output stream, so multiple writes don't mix message chunks. */
   private val lock = new Object
@@ -30,22 +32,22 @@ class MessageWriter(out: OutputStream) extends LazyLogging {
    * Write a message to the output stream. This method can be called from multiple threads,
    * but it may block waiting for other threads to finish writing.
    */
-  def write[T: Encoder](msg: T, h: Map[String, String] = Map.empty): Unit =
+  def write[T: Encoder](msg: T): Unit =
     lock.synchronized {
-      require(h.get(ContentLen).isEmpty)
-
       val str = msg.asJson.noSpaces
       val contentBytes = str.getBytes(StandardCharsets.UTF_8)
-      val headers = (h + (ContentLen -> contentBytes.length))
-        .map { case (k, v) => s"$k: $v" }
-        .mkString("", "\r\n", "\r\n\r\n")
+      val encoded: Attempt[Array[Byte]] =
+        BaseProtocolMessage.codec
+          .encode(BaseProtocolMessage.fromJsonRpcBytes(contentBytes))
+          .map(_.toByteArray)
 
-      logger.debug(s" --> $str")
-
-      val headerBytes = headers.getBytes(StandardCharsets.US_ASCII)
-
-      out.write(headerBytes)
-      out.write(contentBytes)
-      out.flush()
+      encoded match {
+        case Successful(bytes) =>
+          logger.debug(s" --> $str")
+          out.write(bytes)
+          out.flush()
+        case Failure(err) =>
+          logger.error(s"Failed to encode message $msg}", err)
+      }
     }
 }

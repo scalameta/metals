@@ -126,6 +126,7 @@ lazy val metaserver = project
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta % Test,
+      "org.scodec" %% "scodec-core" % "1.10.3",
       "org.slf4j" % "slf4j-api" % "1.7.25",
       "org.typelevel" %% "cats-core" % V.cats
     )
