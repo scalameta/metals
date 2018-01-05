@@ -1,4 +1,4 @@
-package scala.meta.languageserver.protocol
+package org.langmeta.jsonrpc
 
 import monix.eval.Task
 import io.circe.Json
@@ -8,8 +8,8 @@ import cats.syntax.either._
 
 sealed trait Message
 object Message {
-  implicit val decoder: Decoder[Message] = Decoder.decodeJsonObject.emap {
-    obj =>
+  implicit val decoder: Decoder[Message] =
+    Decoder.decodeJsonObject.emap { obj =>
       val json = Json.fromJsonObject(obj)
       val result =
         if (obj.contains("id"))
@@ -18,7 +18,7 @@ object Message {
           else json.as[Request]
         else json.as[Notification]
       result.leftMap(_.toString)
-  }
+    }
 }
 
 @JsonCodec case class Request(

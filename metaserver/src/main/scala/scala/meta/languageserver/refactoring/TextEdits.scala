@@ -3,8 +3,8 @@ package scala.meta.languageserver.refactoring
 import scala.meta.Input
 import org.langmeta.languageserver.InputEnrichments._
 import scala.annotation.tailrec
-import langserver.types.TextEdit
 import scala.meta.languageserver.ScalametaEnrichments._
+import org.langmeta.lsp.TextEdit
 
 /** Re-implementation of how TextEdits should be handled by the editor client
  *

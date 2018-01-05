@@ -11,19 +11,24 @@ import scala.concurrent.duration.FiniteDuration
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
-import scala.meta.languageserver.protocol.LanguageClient
-import scala.meta.languageserver.protocol.Response
-import scala.meta.languageserver.protocol.Services
+import org.langmeta.lsp.{
+  Lifecycle => lc,
+  TextDocument => td,
+  Workspace => ws,
+  _
+}
+import org.langmeta.jsonrpc.Response
+import org.langmeta.jsonrpc.Services
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.refactoring.OrganizeImports
 import scala.meta.languageserver.search.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
+import io.circe.Json
 import io.github.soc.directories.ProjectDirectories
-import langserver.messages._
-import langserver.types._
 import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.Scheduler
+import monix.execution.atomic.Atomic
 import monix.execution.schedulers.SchedulerService
 import monix.reactive.MulticastStrategy
 import monix.reactive.Observable
@@ -35,15 +40,16 @@ import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
+import org.langmeta.lsp.LanguageClient
 import org.langmeta.semanticdb
-import io.circe.Json
-import monix.execution.atomic.Atomic
 
 class ScalametaServices(
     cwd: AbsolutePath,
-    client: LanguageClient
-)(implicit s: Scheduler)
-    extends LazyLogging {
+    client: LanguageClient,
+    s: Scheduler,
+) extends LazyLogging {
+  implicit val scheduler: Scheduler = s
+  implicit val languageClient: LanguageClient = client
   private val tempSourcesDir: AbsolutePath =
     cwd.resolve("target").resolve("sources")
   // Always run the presentation compiler on the same thread
@@ -64,11 +70,11 @@ class ScalametaServices(
     ScalametaServices.configurationStream
   val buffers: Buffers = Buffers()
   val symbolIndex: SymbolIndex =
-    SymbolIndex(cwd, client, buffers, configurationPublisher)
+    SymbolIndex(cwd, buffers, configurationPublisher)
   val scalacErrorReporter: ScalacErrorReporter =
-    new ScalacErrorReporter(client)
+    new ScalacErrorReporter()
   val documentFormattingProvider =
-    new DocumentFormattingProvider(configurationPublisher, cwd, client)
+    new DocumentFormattingProvider(configurationPublisher, cwd)
   val squiggliesProvider =
     new SquiggliesProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
@@ -102,7 +108,7 @@ class ScalametaServices(
   val publishDiagnostics: Observable[Effects.PublishSquigglies] =
     metaSemanticdbs.mapTask { db =>
       squiggliesProvider.squigglies(db).map { diagnostics =>
-        diagnostics.foreach(client.publishDiagnostics)
+        diagnostics.foreach(td.publishDiagnostics.notify)
         Effects.PublishSquigglies
       }
     }
@@ -160,15 +166,16 @@ class ScalametaServices(
 
   private val shutdownReceived = Atomic(false)
   val services: Services = Services.empty
-    .requestAsync[InitializeParams, InitializeResult]("initialize") { params =>
-      initialize(params)
+    .requestAsync(lc.initialize)(initialize)
+    .notification(lc.initialized) { _ =>
+      logger.info("Client is initialized")
     }
-    .request[Json, Json]("shutdown") { _ =>
+    .request(lc.shutdown) { _ =>
       shutdown()
       shutdownReceived.set(true)
       Json.Null
     }
-    .notification[Json]("exit") { _ =>
+    .notification(lc.exit) { _ =>
       // The server should exit with success code 0 if the shutdown request has
       // been received before; otherwise with error code 1
       // -- https://microsoft.github.io/language-server-protocol/specification#exit
@@ -176,11 +183,8 @@ class ScalametaServices(
       logger.info(s"exit($code)")
       sys.exit(code)
     }
-    .requestAsync[TextDocumentPositionParams, CompletionList](
-      "textDocument/completion"
-    ) { params =>
+    .requestAsync(td.completion) { params =>
       withPC {
-        logger.info("completion")
         scalacProvider.getCompiler(params.textDocument) match {
           case Some(g) =>
             CompletionProvider.completions(
@@ -191,9 +195,7 @@ class ScalametaServices(
         }
       }
     }
-    .request[TextDocumentPositionParams, List[Location]](
-      "textDocument/definition"
-    ) { params =>
+    .request(td.definition) { params =>
       DefinitionProvider.definition(
         symbolIndex,
         Uri(params.textDocument.uri),
@@ -201,29 +203,21 @@ class ScalametaServices(
         tempSourcesDir
       )
     }
-    .request[CodeActionParams, List[Command]](
-      "textDocument/codeAction"
-    ) { params =>
+    .request(td.codeAction) { params =>
       CodeActionProvider.codeActions(params)
     }
-    .notification[DidCloseTextDocumentParams](
-      "textDocument/didClose"
-    ) { params =>
+    .notification(td.didClose) { params =>
       buffers.closed(Uri(params.textDocument))
       ()
     }
-    .notification[DidOpenTextDocumentParams](
-      "textDocument/didOpen"
-    ) { params =>
+    .notification(td.didOpen) { params =>
       val input =
         Input.VirtualFile(params.textDocument.uri, params.textDocument.text)
       buffers.changed(input)
       sourceChangeSubscriber.onNext(input)
       ()
     }
-    .notification[DidChangeTextDocumentParams](
-      "textDocument/didChange"
-    ) { params =>
+    .notification(td.didChange) { params =>
       val changes = params.contentChanges
       require(changes.length == 1, s"Expected one change, got $changes")
       val input = Input.VirtualFile(params.textDocument.uri, changes.head.text)
@@ -231,25 +225,21 @@ class ScalametaServices(
       sourceChangeSubscriber.onNext(input)
       ()
     }
-    .notification[DidSaveTextDocumentParams](
-      "textDocument/didSave"
-    ) { params =>
+    .notification(td.didSave) { _ =>
       ()
     }
-    .notification[DidChangeConfigurationParams](
-      "workspace/didChangeConfiguration"
-    ) { params =>
+    .notification(ws.didChangeConfiguration) { params =>
       params.settings.hcursor.downField("scalameta").as[Configuration] match {
         case Left(err) =>
-          client.showMessage(MessageType.Error, err.toString)
+          Window.showMessage.notify(
+            ShowMessageParams(MessageType.Error, err.toString)
+          )
         case Right(conf) =>
           logger.info(s"Configuration updated $conf")
           configurationSubscriber.onNext(conf)
       }
     }
-    .notification[DidChangeWatchedFilesParams](
-      "workspace/didChangeWatchedFiles"
-    ) { params =>
+    .notification(ws.didChangeWatchedFiles) { params =>
       params.changes.foreach {
         case FileEvent(
             Uri(path),
@@ -265,33 +255,25 @@ class ScalametaServices(
       }
       ()
     }
-    .request[TextDocumentPositionParams, List[DocumentHighlight]](
-      "textDocument/documentHighlight"
-    ) { params =>
+    .request(td.documentHighlight) { params =>
       DocumentHighlightProvider.highlight(
         symbolIndex,
         Uri(params.textDocument.uri),
         params.position
       )
     }
-    .request[DocumentSymbolParams, List[SymbolInformation]](
-      "textDocument/documentSymbol"
-    ) { params =>
+    .request(td.documentSymbol) { params =>
       val uri = Uri(params.textDocument.uri)
       buffers.source(uri) match {
         case Some(source) => DocumentSymbolProvider.documentSymbols(uri, source)
         case None => DocumentSymbolProvider.empty
       }
     }
-    .requestAsync[DocumentFormattingParams, List[TextEdit]](
-      "textDocument/formatting"
-    ) { params =>
+    .requestAsync(td.formatting) { params =>
       val uri = Uri(params.textDocument)
       documentFormattingProvider.format(uri.toInput(buffers))
     }
-    .request[TextDocumentPositionParams, Hover](
-      "textDocument/hover"
-    ) { params =>
+    .request(td.hover) { params =>
       HoverProvider.hover(
         symbolIndex,
         Uri(params.textDocument),
@@ -299,9 +281,7 @@ class ScalametaServices(
         params.position.character
       )
     }
-    .request[ReferenceParams, List[Location]](
-      "textDocument/references"
-    ) { params =>
+    .request(td.references) { params =>
       ReferencesProvider.references(
         symbolIndex,
         Uri(params.textDocument.uri),
@@ -309,14 +289,10 @@ class ScalametaServices(
         params.context
       )
     }
-    .request[RenameParams, WorkspaceEdit](
-      "textDocument/rename"
-    ) { params =>
-      RenameProvider.rename(params, symbolIndex, client)
+    .request(td.rename) { params =>
+      RenameProvider.rename(params, symbolIndex)
     }
-    .request[TextDocumentPositionParams, SignatureHelp](
-      "textDocument/signatureHelp"
-    ) { params =>
+    .request(td.signatureHelp) { params =>
       scalacProvider.getCompiler(params.textDocument) match {
         case Some(g) =>
           SignatureHelpProvider.signatureHelp(
@@ -326,9 +302,7 @@ class ScalametaServices(
         case None => SignatureHelpProvider.empty
       }
     }
-    .requestAsync[ExecuteCommandParams, Json](
-      "workspace/executeCommand"
-    ) { params =>
+    .requestAsync(ws.executeCommand) { params =>
       logger.info(s"executeCommand $params")
       WorkspaceCommand.withNameOption(params.command) match {
         case None =>
@@ -341,9 +315,7 @@ class ScalametaServices(
           executeCommand(command, params)
       }
     }
-    .request[WorkspaceSymbolParams, List[SymbolInformation]](
-      "workspace/symbol"
-    ) { params =>
+    .request(ws.symbol) { params =>
       symbolIndex.workspaceSymbols(params.query)
     }
 
@@ -377,7 +349,7 @@ class ScalametaServices(
         )
         applied <- result match {
           case Left(err) => Task.now(Left(err))
-          case Right(workspaceEdit) => client.workspaceApplyEdit(workspaceEdit)
+          case Right(workspaceEdit) => ws.applyEdit.request(workspaceEdit)
         }
       } yield {
         applied match {

@@ -2,6 +2,7 @@ package scalafix.languageserver
 
 import scala.collection.immutable.Seq
 import scala.meta.languageserver.ScalametaEnrichments._
+import org.langmeta.lsp.TextEdit
 import scalafix.SemanticdbIndex
 import scalafix.internal.patch.ImportPatchOps
 import scalafix.internal.patch.ReplaceSymbolOps
@@ -15,7 +16,6 @@ import scalafix.patch.TokenPatch
 import scalafix.patch.TreePatch.ImportPatch
 import scalafix.patch.TreePatch.ReplaceSymbol
 import scalafix.rule.RuleCtx
-import langserver.types.TextEdit
 
 // Copy-pasta from scalafix because all of these methods are private.
 // We should expose a package private API to get a list of token patches from

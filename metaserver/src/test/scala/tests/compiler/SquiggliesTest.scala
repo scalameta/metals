@@ -8,8 +8,8 @@ import scala.meta.internal.inputs._
 import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Linter
 import scala.meta.languageserver.Semanticdbs
+import org.langmeta.lsp.PublishDiagnostics
 import scala.meta.languageserver.providers.SquiggliesProvider
-import langserver.messages.PublishDiagnostics
 import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.langmeta.inputs.Input

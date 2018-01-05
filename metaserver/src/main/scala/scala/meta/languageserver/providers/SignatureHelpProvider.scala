@@ -4,12 +4,13 @@ import scala.annotation.tailrec
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
 import scala.meta.languageserver.compiler.CompilerEnrichments._
+import org.langmeta.lsp.ParameterInformation
+import org.langmeta.lsp.SignatureHelp
+import org.langmeta.lsp.SignatureInformation
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
 import com.typesafe.scalalogging.LazyLogging
-import langserver.messages.SignatureHelp
-import langserver.types.ParameterInformation
-import langserver.types.SignatureInformation
+import org.langmeta.lsp.SignatureInformation
 
 object SignatureHelpProvider extends LazyLogging {
   def empty: SignatureHelp = SignatureHelp(Nil, None, None)

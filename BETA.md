@@ -63,7 +63,7 @@ Open your project in VSCode (`code .` from your terminal) and open a Scala file;
 Please note that it may take a few seconds for the server to start and there's currently no explicit
 indication that the server has started (other than features starting to work).
 To monitor the server activity, we suggest to watch the log file in your project's target directory,
-for instance: `tail -f target/metaserver.log`.
+for instance: `tail -f .metaserver/metaserver.log`.
 
 Finally, since most features currently rely on a successful compilation step, make sure you incrementally
 compile your project by running `~compile` in `sbt`.

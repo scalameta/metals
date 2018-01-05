@@ -5,9 +5,9 @@ import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Effects
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.index.SymbolData
+import org.langmeta.lsp.SymbolInformation
+import org.langmeta.jsonrpc.JsonRpcClient
 import com.typesafe.scalalogging.LazyLogging
-import langserver.core.Notifications
-import langserver.types.SymbolInformation
 import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Symbol
@@ -65,17 +65,15 @@ trait SymbolIndex extends LazyLogging {
 object SymbolIndex {
   def apply(
       cwd: AbsolutePath,
-      notifications: Notifications,
       buffers: Buffers,
       configuration: Observable[Configuration]
-  )(implicit s: Scheduler): SymbolIndex = {
+  )(implicit s: Scheduler, client: JsonRpcClient): SymbolIndex = {
     val symbolIndexer = new InMemorySymbolIndexer()
     val documentIndex = new InMemoryDocumentIndex()
     new InMemorySymbolIndex(
       symbolIndexer,
       documentIndex,
       cwd,
-      notifications,
       buffers,
       configuration
     )

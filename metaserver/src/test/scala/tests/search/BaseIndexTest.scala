@@ -6,9 +6,9 @@ import scala.meta.languageserver.Buffers
 import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Effects
 import scala.meta.languageserver.Uri
+import org.langmeta.jsonrpc.JsonRpcClient
 import scala.meta.languageserver.search.SymbolIndex
 import scala.{meta => m}
-import langserver.core.Notifications
 import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.langmeta.internal.io.PathIO
@@ -17,9 +17,9 @@ import tests.compiler.CompilerSuite
 
 abstract class BaseIndexTest extends CompilerSuite {
   val buffers = Buffers()
+  implicit val client: JsonRpcClient = JsonRpcClient.empty
   val symbols = SymbolIndex(
     PathIO.workingDirectory,
-    Notifications.empty,
     buffers,
     Observable.now(Configuration())
   )

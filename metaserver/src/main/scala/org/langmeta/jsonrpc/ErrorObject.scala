@@ -1,4 +1,4 @@
-package scala.meta.languageserver.protocol
+package org.langmeta.jsonrpc
 
 import io.circe.Json
 import io.circe.generic.JsonCodec

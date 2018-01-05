@@ -1,18 +1,18 @@
 package scala.meta.languageserver.providers
 
 import com.typesafe.scalalogging.LazyLogging
-import langserver.{types => l}
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.search.SymbolIndex
 import scala.meta.languageserver.ScalametaEnrichments._
-import langserver.types.DocumentHighlight
+import org.langmeta.lsp.DocumentHighlight
+import org.langmeta.lsp.Position
 
 object DocumentHighlightProvider extends LazyLogging {
 
   def highlight(
       symbolIndex: SymbolIndex,
       uri: Uri,
-      position: l.Position
+      position: Position
   ): List[DocumentHighlight] = {
     logger.info(s"Document highlight in $uri")
     for {

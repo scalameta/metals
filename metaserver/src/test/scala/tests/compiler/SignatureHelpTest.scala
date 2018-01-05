@@ -1,7 +1,7 @@
 package tests.compiler
 
+import org.langmeta.lsp.SignatureHelp
 import scala.meta.languageserver.providers.SignatureHelpProvider
-import langserver.messages.SignatureHelp
 import io.circe.syntax._
 
 object SignatureHelpTest extends CompilerSuite {

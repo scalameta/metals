@@ -72,8 +72,10 @@ The current maintainers (people who can merge pull requests) are:
 * Shane Delmore - [`@ShaneDelmore`](https://github.com/ShaneDelmore)
 
 ## Acknowledgement
-Huge thanks to [`@dragos`](https://github.com/dragos) for his work on a Scala implementation of the LSP protocol (see: https://github.com/dragos/dragos-vscode-scala).
-We've decided to copy the sources over in order to iterate much faster in adding features to the original implementation, with the explicit goal of contributing them back upstream.
+Huge thanks to [`@dragos`](https://github.com/dragos) for his work on a Scala implementation of the LSP (see: https://github.com/dragos/dragos-vscode-scala).
+This project helped us get quickly started with LSP.
+Since then, we have refactored the project's original sources to the
+point where only a few simple case classes remain.
 
 ## Related work
 

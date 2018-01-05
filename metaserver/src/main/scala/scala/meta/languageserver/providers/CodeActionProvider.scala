@@ -1,10 +1,11 @@
 package scala.meta.languageserver.providers
 
 import scala.meta.languageserver.WorkspaceCommand.ScalafixUnusedImports
+import org.langmeta.lsp.CodeActionParams
+import org.langmeta.lsp.Command
+import org.langmeta.lsp.Diagnostic
 import com.typesafe.scalalogging.LazyLogging
-import langserver.messages.CodeActionParams
-import langserver.types.Command
-import langserver.types.Diagnostic
+import org.langmeta.lsp.Command
 import io.circe.syntax._
 
 object CodeActionProvider extends LazyLogging {
