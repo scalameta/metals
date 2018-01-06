@@ -1,8 +1,8 @@
 package org.langmeta.lsp
 
+import java.io.OutputStream
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
-import scala.tools.nsc.interpreter.OutputStream
 import cats.syntax.either._
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.Decoder

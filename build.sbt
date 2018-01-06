@@ -89,6 +89,27 @@ lazy val semanticdbSettings = List(
   scalacOptions += "-Yrangepos"
 )
 
+lazy val jsonrpc = project
+  .settings(
+    libraryDependencies ++= List(
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "com.beachape" %% "enumeratum" % V.enumeratum,
+      "com.beachape" %% "enumeratum-circe" % "1.5.15",
+      "com.lihaoyi" %% "pprint" % "0.5.3",
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
+      "io.circe" %% "circe-core" % V.circe,
+      "io.circe" %% "circe-generic" % V.circe,
+      "io.circe" %% "circe-generic-extras" % V.circe,
+      "io.circe" %% "circe-parser" % V.circe,
+      "io.monix" %% "monix" % "2.3.0",
+      "org.codehaus.groovy" % "groovy" % "2.4.0",
+      "org.slf4j" % "slf4j-api" % "1.7.25",
+      "org.typelevel" %% "cats-core" % V.cats
+    )
+  )
+
+lazy val lsp4s = project.dependsOn(jsonrpc)
+
 lazy val metaserver = project
   .settings(
     PB.targets.in(Compile) := Seq(
@@ -105,33 +126,21 @@ lazy val metaserver = project
     buildInfoPackage := "scala.meta.languageserver.internal",
     libraryDependencies ++= List(
       "ch.epfl.scala" % "scalafix-cli" % V.scalafix cross CrossVersion.full,
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "com.beachape" %% "enumeratum" % V.enumeratum,
-      "com.beachape" %% "enumeratum-circe" % "1.5.15",
-      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-      "com.lihaoyi" %% "pprint" % "0.5.3",
-      "com.lihaoyi" %% "utest" % "0.6.0" % Test,
+      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
       "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
-      "io.circe" %% "circe-core" % V.circe,
-      "io.circe" %% "circe-generic" % V.circe,
-      "io.circe" %% "circe-generic-extras" % V.circe,
-      "io.circe" %% "circe-parser" % V.circe,
-      "io.get-coursier" %% "coursier" % coursier.util.Properties.version,
+      "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
-      "io.github.soc" % "directories" % "5",
-      "io.monix" %% "monix" % "2.3.0",
-      "me.xdrop" % "fuzzywuzzy" % "1.1.9",
-      "org.codehaus.groovy" % "groovy" % "2.4.0",
-      "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
+      "io.github.soc" % "directories" % "5", // for cache location
+      "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
+      "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
-      "org.scalameta" %% "testkit" % V.scalameta % Test,
-      "org.slf4j" % "slf4j-api" % "1.7.25",
-      "org.typelevel" %% "cats-core" % V.cats
+      "com.lihaoyi" %% "utest" % "0.6.0" % Test,
+      "org.scalameta" %% "testkit" % V.scalameta % Test
     )
   )
   .dependsOn(
-    testWorkspace % "test->test"
+    testWorkspace % "test->test",
+    lsp4s
   )
   .enablePlugins(BuildInfoPlugin)
 
