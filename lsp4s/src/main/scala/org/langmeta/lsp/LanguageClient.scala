@@ -1,28 +1,26 @@
-package scala.meta.languageserver.protocol
+package org.langmeta.lsp
 
+import java.io.OutputStream
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
-import scala.tools.nsc.interpreter.OutputStream
+import cats.syntax.either._
 import com.typesafe.scalalogging.LazyLogging
-import langserver.core.MessageWriter
-import langserver.core.Notifications
-import langserver.messages.ApplyWorkspaceEditParams
-import langserver.messages.ApplyWorkspaceEditResponse
-import langserver.messages.LogMessageParams
-import langserver.messages.PublishDiagnostics
-import langserver.messages.ShowMessageParams
-import langserver.types.CancelParams
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.syntax._
 import monix.eval.Callback
 import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.atomic.Atomic
 import monix.execution.atomic.AtomicInt
-import io.circe.Encoder
-import io.circe.Decoder
-import io.circe.syntax._
-import cats.syntax.either._
+import org.langmeta.jsonrpc.JsonRpcClient
+import org.langmeta.jsonrpc.MessageWriter
+import org.langmeta.jsonrpc.Notification
+import org.langmeta.jsonrpc.Request
+import org.langmeta.jsonrpc.RequestId
+import org.langmeta.jsonrpc.Response
 
-class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
+class LanguageClient(out: OutputStream) extends LazyLogging with JsonRpcClient {
   private val writer = new MessageWriter(out)
   private val counter: AtomicInt = Atomic(1)
   private val activeServerRequests =
@@ -32,7 +30,9 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
   def serverRespond(response: Response): Unit = response match {
     case Response.Empty => ()
     case x: Response.Success => writer.write(x)
-    case x: Response.Error => writer.write(x)
+    case x: Response.Error =>
+      logger.error(s"Response error: $x")
+      writer.write(x)
   }
   def clientRespond(response: Response): Unit =
     for {
@@ -82,25 +82,4 @@ class LanguageClient(out: OutputStream) extends LazyLogging with Notifications {
         }
     }
   }
-
-  override def showMessage(params: ShowMessageParams): Unit = {
-    notify("window/showMessage", params)
-  }
-
-  override def logMessage(params: LogMessageParams): Unit = {
-    notify("window/logMessage", params)
-  }
-
-  override def publishDiagnostics(
-      publishDiagnostics: PublishDiagnostics
-  ): Unit = {
-    notify("textDocument/publishDiagnostics", publishDiagnostics)
-  }
-  def workspaceApplyEdit(
-      params: ApplyWorkspaceEditParams
-  ): Task[Either[Response.Error, ApplyWorkspaceEditResponse]] =
-    request[ApplyWorkspaceEditParams, ApplyWorkspaceEditResponse](
-      "workspace/applyEdit",
-      params
-    )
 }

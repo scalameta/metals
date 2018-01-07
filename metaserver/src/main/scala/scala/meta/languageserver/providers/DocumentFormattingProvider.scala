@@ -5,16 +5,17 @@ import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Configuration.Scalafmt
 import scala.meta.languageserver.Formatter
 import scala.meta.languageserver.MonixEnrichments._
-import scala.meta.languageserver.protocol.Response
+import org.langmeta.lsp.Position
+import org.langmeta.lsp.TextEdit
+import org.langmeta.jsonrpc.JsonRpcClient
+import org.langmeta.jsonrpc.Response
+import org.langmeta.lsp.Window.showMessage
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import cats.syntax.bifunctor._
 import cats.instances.either._
-import langserver.core.Notifications
-import langserver.types.MessageType
-import langserver.types.Position
-import langserver.types.Range
-import langserver.types.TextEdit
+import org.langmeta.lsp.Range
+import org.langmeta.lsp.TextEdit
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable
@@ -23,9 +24,8 @@ import org.langmeta.io.AbsolutePath
 
 class DocumentFormattingProvider(
     configuration: Observable[Configuration],
-    cwd: AbsolutePath,
-    notifications: Notifications
-)(implicit s: Scheduler)
+    cwd: AbsolutePath
+)(implicit client: JsonRpcClient, s: Scheduler)
     extends LazyLogging {
 
   private val formatter: () => Either[String, Formatter] =
@@ -85,7 +85,7 @@ class DocumentFormattingProvider(
         // We show a message here to be sure the message is
         // reported in the UI. invalidParams responses don't
         // get reported in vscode at least.
-        notifications.showMessage(MessageType.Error, message)
+        showMessage.error(message)
         Response.invalidParams(message)
       },
       formatted => List(TextEdit(fullDocumentRange, formatted))

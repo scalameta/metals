@@ -7,17 +7,20 @@ import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.ScalametaServices
 import scala.meta.languageserver.Uri
 import scala.meta.languageserver.internal.BuildInfo
-import scala.meta.languageserver.protocol.LanguageClient
+import org.langmeta.{lsp => l}
+import org.langmeta.lsp.ClientCapabilities
+import org.langmeta.lsp.InitializeParams
+import org.langmeta.lsp.Location
+import org.langmeta.lsp.Position
+import org.langmeta.lsp.Range
 import scala.meta.languageserver.search.InMemorySymbolIndex
 import scala.meta.languageserver.search.InverseSymbolIndexer
 import scala.meta.languageserver.search.SymbolIndex
 import scala.{meta => m}
-import langserver.messages.ClientCapabilities
-import langserver.messages.InitializeParams
-import langserver.{types => l}
 import monix.execution.schedulers.TestScheduler
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Classpath
+import org.langmeta.lsp.LanguageClient
 import org.langmeta.semanticdb.Symbol
 import tests.MegaSuite
 import utest._
@@ -55,7 +58,7 @@ object SymbolIndexTest extends MegaSuite {
   val stdout = new PipedOutputStream()
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
   val client = new LanguageClient(stdout)
-  val metaserver = new ScalametaServices(cwd, client)(s)
+  val metaserver = new ScalametaServices(cwd, client, s)
   metaserver
     .initialize(InitializeParams(0L, cwd.toString(), ClientCapabilities()))
     .runAsync(s)
@@ -106,7 +109,7 @@ object SymbolIndexTest extends MegaSuite {
         column: Int,
         withDefinition: Boolean
     )(
-        expected: l.Location*
+        expected: Location*
     ): Unit = {
       val (symbol, _) = index
         .findSymbol(path.UserTestUri, line, column)
@@ -133,11 +136,11 @@ object SymbolIndexTest extends MegaSuite {
         path: AbsolutePath,
         start: (Int, Int),
         end: (Int, Int)
-    ): l.Location =
+    ): Location =
       l.Location(
         s"file:${path.toString}",
-        l.Range(
-          l.Position(start._1, start._2),
+        Range(
+          Position(start._1, start._2),
           l.Position(end._1, end._2)
         )
       )

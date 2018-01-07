@@ -12,7 +12,7 @@ import scalafix.lint.LintSeverity
 import scalafix.patch.Patch
 import scalafix.rule.RuleCtx
 import scalafix.rule.RuleName
-import langserver.{types => l}
+import org.langmeta.{lsp => l}
 
 object ScalafixEnrichments {
   implicit class XtensionLintMessageLSP(val msg: LintMessage) extends AnyVal {

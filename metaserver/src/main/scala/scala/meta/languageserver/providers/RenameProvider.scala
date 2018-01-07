@@ -3,20 +3,19 @@ package scala.meta.languageserver.providers
 import scala.meta._
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.Uri
+import org.langmeta.lsp.RenameParams
+import org.langmeta.lsp.TextEdit
+import org.langmeta.lsp.Window.showMessage
+import org.langmeta.lsp.WorkspaceEdit
+import org.langmeta.jsonrpc.JsonRpcClient
 import scala.meta.languageserver.refactoring.Backtick
 import scala.meta.languageserver.search.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
-import langserver.core.Notifications
-import langserver.messages.RenameParams
-import langserver.types.MessageType
-import langserver.types.TextEdit
-import langserver.types.WorkspaceEdit
+import org.langmeta.lsp.WorkspaceEdit
 
 object RenameProvider extends LazyLogging {
-  def rename(
-      params: RenameParams,
-      symbolIndex: SymbolIndex,
-      notifications: Notifications
+  def rename(params: RenameParams, symbolIndex: SymbolIndex)(
+      implicit client: JsonRpcClient
   ): WorkspaceEdit = Backtick.backtickWrap(params.newName) match {
     case Left(err) =>
       // LSP specifies that a ResponseError should be returned in this case
@@ -24,7 +23,7 @@ object RenameProvider extends LazyLogging {
       // message, only "No result" is displayed to the user, which is not helpful.
       // I prefer to use showMessage to explain what went wrong and perform
       // no text edit.
-      notifications.showMessage(MessageType.Warning, err)
+      showMessage.warn(err)
       WorkspaceEdit(Map.empty)
     case Right(newName) =>
       val uri = Uri(params.textDocument.uri)
@@ -39,8 +38,7 @@ object RenameProvider extends LazyLogging {
           symbol match {
             case _: Symbol.Local => true
             case _ =>
-              notifications.showMessage(
-                MessageType.Warning,
+              showMessage.warn(
                 s"Rename for global symbol $symbol is not supported yet. " +
                   s"Only local symbols can be renamed."
               )

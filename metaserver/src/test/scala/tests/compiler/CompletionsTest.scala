@@ -1,8 +1,8 @@
 package tests.compiler
 
+import org.langmeta.lsp.CompletionList
 import scala.meta.languageserver.providers.CompletionProvider
-import langserver.messages.CompletionList
-import langserver.types.CompletionItemKind
+import org.langmeta.lsp.CompletionItemKind
 import io.circe.syntax._
 
 object CompletionsTest extends CompilerSuite {

@@ -1,9 +1,9 @@
 package tests.hover
 
 import scala.meta.languageserver.Uri
+import org.langmeta.lsp.Hover
 import scala.meta.languageserver.providers.HoverProvider
 import scala.{meta => m}
-import langserver.messages.Hover
 import tests.search.BaseIndexTest
 import io.circe.syntax._
 

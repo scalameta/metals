@@ -1,4 +1,4 @@
-package scala.meta.languageserver.protocol
+package org.langmeta.jsonrpc
 
 import scala.collection.immutable.IndexedSeq
 import enumeratum.values.IntEnum

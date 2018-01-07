@@ -1,23 +1,23 @@
 package scala.meta.languageserver
 
 import scala.meta.languageserver.ScalametaEnrichments._
+import org.langmeta.lsp.Diagnostic
+import org.langmeta.lsp.PublishDiagnostics
+import org.langmeta.jsonrpc.JsonRpcClient
 import scala.{meta => m}
 import scala.meta.semanticdb
 import scalafix.internal.util.EagerInMemorySemanticdbIndex
 import scalafix.util.SemanticdbIndex
-import langserver.core.Notifications
-import langserver.messages.PublishDiagnostics
-import langserver.{types => l}
+import org.langmeta.lsp.TextDocument.publishDiagnostics
+import org.langmeta.{lsp => l}
 
-class ScalacErrorReporter(
-    connection: Notifications,
-) {
+class ScalacErrorReporter()(implicit connection: JsonRpcClient) {
 
   def reportErrors(
       mdb: m.Database
   ): Effects.PublishScalacDiagnostics = {
     val messages = analyzeIndex(mdb)
-    messages.foreach(connection.publishDiagnostics)
+    messages.foreach(publishDiagnostics.notify)
     Effects.PublishScalacDiagnostics
   }
   private def analyzeIndex(mdb: m.Database): Seq[PublishDiagnostics] =
@@ -30,7 +30,7 @@ class ScalacErrorReporter(
       PublishDiagnostics(uri, d.messages.map(toDiagnostic))
     }
 
-  private def toDiagnostic(msg: semanticdb.Message): l.Diagnostic = {
+  private def toDiagnostic(msg: semanticdb.Message): Diagnostic = {
     l.Diagnostic(
       range = msg.position.toRange,
       severity = Some(toSeverity(msg.severity)),
@@ -40,7 +40,9 @@ class ScalacErrorReporter(
     )
   }
 
-  private def toSeverity(s: semanticdb.Severity): l.DiagnosticSeverity =
+  private def toSeverity(
+      s: semanticdb.Severity
+  ): l.DiagnosticSeverity =
     s match {
       case semanticdb.Severity.Error => l.DiagnosticSeverity.Error
       case semanticdb.Severity.Warning => l.DiagnosticSeverity.Warning

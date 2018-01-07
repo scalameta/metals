@@ -1,4 +1,4 @@
-package scala.meta.languageserver.protocol
+package org.langmeta.jsonrpc
 
 import com.typesafe.scalalogging.LazyLogging
 import monix.eval.Task
@@ -75,25 +75,26 @@ object Services {
 
 class Services private (val services: List[NamedJsonRpcService]) {
 
-  def request[A: Decoder, B: Encoder](method: String)(
-      f: A => B
-  ): Services =
-    requestAsync[A, B](method)(request => Task(Right(f(request))))
+  def request[A, B](endpoint: Endpoint[A, B])(f: A => B): Services =
+    requestAsync[A, B](endpoint)(params => Task(Right(f(params))))
 
-  def requestAsync[A: Decoder, B: Encoder](method: String)(
-      f: Service[A, Either[Response.Error, B]]
-  ): Services =
-    addService(Service.request[A, B](method)(f))
+  def requestAsync[A, B](
+      endpoint: Endpoint[A, B]
+  )(f: Service[A, Either[Response.Error, B]]): Services =
+    addService(
+      Service.request[A, B](endpoint.method)(f)(
+        endpoint.decoderA,
+        endpoint.encoderB
+      )
+    )
 
-  def notification[A: Decoder](method: String)(
-      f: A => Unit
-  ): Services =
-    notificationAsync[A](method)(request => Task(f(request)))
+  def notification[A](endpoint: Endpoint[A, Unit])(f: A => Unit): Services =
+    notificationAsync[A](endpoint)(request => Task(f(request)))
 
-  def notificationAsync[A: Decoder](method: String)(
-      f: Service[A, Unit]
-  ): Services =
-    addService(Service.notification[A](method)(f))
+  def notificationAsync[A](
+      endpoint: Endpoint[A, Unit]
+  )(f: Service[A, Unit]): Services =
+    addService(Service.notification[A](endpoint.method)(f)(endpoint.decoderA))
 
   def byMethodName: Map[String, NamedJsonRpcService] =
     services.iterator.map(s => s.methodName -> s).toMap

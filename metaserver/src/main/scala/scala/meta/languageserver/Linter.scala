@@ -1,6 +1,7 @@
 package scala.meta.languageserver
 
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
+import org.langmeta.lsp.Diagnostic
 import scala.meta.parsers.Parsed
 import scala.{meta => m}
 import scalafix.internal.config.LazySemanticdbIndex
@@ -13,7 +14,6 @@ import scalafix.reflect.ScalafixReflect
 import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
-import langserver.types.Diagnostic
 import org.langmeta.io.AbsolutePath
 
 class Linter(cwd: AbsolutePath) extends LazyLogging {

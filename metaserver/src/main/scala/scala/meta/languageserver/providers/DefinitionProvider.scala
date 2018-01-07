@@ -2,10 +2,10 @@ package scala.meta.languageserver.providers
 
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.Uri
+import org.langmeta.lsp.Location
+import org.langmeta.lsp.Position
 import scala.meta.languageserver.search.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
-import langserver.types.Location
-import langserver.{types => l}
 import org.langmeta.io.AbsolutePath
 
 object DefinitionProvider extends LazyLogging {
@@ -13,7 +13,7 @@ object DefinitionProvider extends LazyLogging {
   def definition(
       symbolIndex: SymbolIndex,
       uri: Uri,
-      position: l.Position,
+      position: Position,
       tempSourcesDir: AbsolutePath
   ): List[Location] = {
     val locations = for {

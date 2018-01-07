@@ -3,14 +3,15 @@ package scala.meta.languageserver.providers
 import scala.meta._
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.Uri
+import org.langmeta.lsp
+import org.langmeta.lsp.Location
+import org.langmeta.lsp.SymbolInformation
 import com.typesafe.scalalogging.LazyLogging
-import langserver.types.SymbolInformation
-import langserver.{types => l}
 
 object DocumentSymbolProvider extends LazyLogging {
 
   private class SymbolTraverser(uri: Uri) {
-    private val builder = List.newBuilder[l.SymbolInformation]
+    private val builder = List.newBuilder[SymbolInformation]
 
     val traverser = new Traverser {
       private var currentRoot: Option[Tree] = None
@@ -23,10 +24,10 @@ object DocumentSymbolProvider extends LazyLogging {
         }
 
         def addName(name: String): Unit = {
-          builder += l.SymbolInformation(
+          builder += lsp.SymbolInformation(
             name = name,
             kind = currentNode.symbolKind,
-            location = l.Location(uri.value, currentNode.pos.toRange),
+            location = Location(uri.value, currentNode.pos.toRange),
             containerName = currentRoot.flatMap(_.qualifiedName)
           )
         }
@@ -49,7 +50,7 @@ object DocumentSymbolProvider extends LazyLogging {
       }
     }
 
-    def apply(tree: Tree): List[l.SymbolInformation] = {
+    def apply(tree: Tree): List[SymbolInformation] = {
       traverser.apply(tree)
       builder.result()
     }

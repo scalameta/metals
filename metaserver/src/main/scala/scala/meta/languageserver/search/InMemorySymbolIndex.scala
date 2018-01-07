@@ -12,10 +12,10 @@ import scala.meta.languageserver.index.SymbolData
 import scala.meta.languageserver.mtags.Mtags
 import scala.meta.languageserver.storage.LevelDBMap
 import scala.meta.languageserver.MonixEnrichments._
+import org.langmeta.lsp.SymbolInformation
+import org.langmeta.jsonrpc.JsonRpcClient
 import scala.meta.languageserver.{index => i}
 import com.typesafe.scalalogging.LazyLogging
-import langserver.core.Notifications
-import langserver.types.SymbolInformation
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
@@ -34,10 +34,9 @@ class InMemorySymbolIndex(
     val symbolIndexer: SymbolIndexer,
     val documentIndex: DocumentIndex,
     cwd: AbsolutePath,
-    notifications: Notifications,
     buffers: Buffers,
     configuration: Observable[Configuration],
-)(implicit scheduler: Scheduler)
+)(implicit scheduler: Scheduler, client: JsonRpcClient)
     extends SymbolIndex
     with LazyLogging {
   private val config = configuration.map(_.search).toFunction0()
