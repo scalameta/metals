@@ -3,6 +3,7 @@ package org.langmeta.lsp
 import java.io.OutputStream
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
+import scala.util.Try
 import cats.syntax.either._
 import com.typesafe.scalalogging.Logger
 import io.circe.Decoder
@@ -42,8 +43,19 @@ class LanguageClient(out: OutputStream, logger: Logger) extends JsonRpcClient {
         case Response.Error(_, requestId) => Some(requestId)
       }
       callback <- activeServerRequests.get(id).orElse {
-        logger.error(s"Response to unknown request: $response")
-        None
+        val fallback = for {
+          string <- id.asJson.asString
+          number <- Try(string.toInt).toOption
+          request <- activeServerRequests.get(RequestId(number))
+        } yield {
+          // seems to be necessary for sbt-server :(
+          logger.info(s"Expected int response id, got string $id")
+          request
+        }
+        fallback.orElse {
+          logger.error(s"Response to unknown request: $response")
+          None
+        }
       }
     } {
       activeServerRequests.remove(id)

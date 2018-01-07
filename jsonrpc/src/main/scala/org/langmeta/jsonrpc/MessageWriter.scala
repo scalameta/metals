@@ -4,6 +4,7 @@ import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 import com.typesafe.scalalogging.Logger
 import io.circe.Encoder
+import io.circe.Json
 import io.circe.syntax._
 
 /**
@@ -34,13 +35,16 @@ class MessageWriter(out: OutputStream, logger: Logger) {
     lock.synchronized {
       require(h.get(ContentLen).isEmpty)
 
-      val str = msg.asJson.noSpaces
+      val json = msg.asJson.withObject(
+        obj => Json.fromJsonObject(obj.add("jsonrpc", Json.fromString("2.0")))
+      )
+      val str = json.noSpaces
       val contentBytes = str.getBytes(StandardCharsets.UTF_8)
       val headers = (h + (ContentLen -> contentBytes.length))
         .map { case (k, v) => s"$k: $v" }
         .mkString("", "\r\n", "\r\n\r\n")
 
-      logger.debug(s" --> $str")
+      logger.trace(s" --> $str")
 
       val headerBytes = headers.getBytes(StandardCharsets.US_ASCII)
 

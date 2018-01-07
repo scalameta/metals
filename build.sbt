@@ -17,6 +17,8 @@ inThisBuild(
       licenses := Seq(
         "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
       ),
+      testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
+      libraryDependencies += "com.lihaoyi" %% "utest" % "0.6.0" % Test,
       homepage := Some(url("https://github.com/scalameta/language-server")),
       developers := List(
         Developer(
@@ -71,6 +73,7 @@ lazy val V = new {
   val enumeratum = "1.5.12"
   val circe = "0.9.0"
   val cats = "1.0.1"
+  val monix = "2.3.0"
 }
 
 lazy val noPublish = List(
@@ -88,6 +91,15 @@ lazy val semanticdbSettings = List(
   ),
   scalacOptions += "-Yrangepos"
 )
+
+lazy val sbtrpc = project
+  .settings(
+    libraryDependencies ++= List(
+      "net.java.dev.jna" % "jna" % "4.1.0",
+      "net.java.dev.jna" % "jna-platform" % "4.1.0"
+    )
+  )
+  .disablePlugins(ScalafixPlugin)
 
 lazy val jsonrpc = project
   .settings(
@@ -117,7 +129,6 @@ lazy val metaserver = project
         flatPackage = true // Don't append filename to package
       ) -> sourceManaged.in(Compile).value./("protobuf")
     ),
-    testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
     fork in Test := true, // required for jni interrop with leveldb.
     buildInfoKeys := Seq[BuildInfoKey](
       "testWorkspaceBaseDirectory" ->
@@ -125,7 +136,7 @@ lazy val metaserver = project
     ),
     buildInfoPackage := "scala.meta.languageserver.internal",
     libraryDependencies ++= List(
-      "ch.epfl.scala" % "scalafix-cli" % V.scalafix cross CrossVersion.full,
+      "ch.epfl.scala" % "scalafix-reflect" % V.scalafix cross CrossVersion.full,
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
       "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
@@ -134,13 +145,13 @@ lazy val metaserver = project
       "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
-      "com.lihaoyi" %% "utest" % "0.6.0" % Test,
       "org.scalameta" %% "testkit" % V.scalameta % Test
     )
   )
   .dependsOn(
     testWorkspace % "test->test",
-    lsp4s
+    lsp4s,
+    sbtrpc
   )
   .enablePlugins(BuildInfoPlugin)
 
