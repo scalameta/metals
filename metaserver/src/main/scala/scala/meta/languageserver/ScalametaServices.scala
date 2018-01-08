@@ -26,6 +26,8 @@ import scala.meta.languageserver.refactoring.OrganizeImports
 import scala.meta.languageserver.sbtserver.Sbt
 import scala.meta.languageserver.sbtserver.SbtServer
 import scala.meta.languageserver.search.SymbolIndex
+import scala.util.Failure
+import scala.util.Success
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.Json
@@ -127,7 +129,7 @@ class ScalametaServices(
         case true =>
           connectToSbtServer()
         case false =>
-          sbtServer.foreach(_.listen.cancel())
+          sbtServer.foreach(_.runningServer.cancel())
           sbtServer = None
       }
       .toFunction0()
@@ -421,7 +423,7 @@ class ScalametaServices(
   }
 
   private def connectToSbtServer(): Unit = {
-    sbtServer.foreach(_.listen.cancel())
+    sbtServer.foreach(_.runningServer.cancel())
     val services = SbtServer.forwardingServices(client)
     SbtServer.connect(cwd, services).foreach {
       case Left(err) => showMessage.error(err)
@@ -430,7 +432,15 @@ class ScalametaServices(
         logger.info(msg)
         showMessage.info(msg)
         sbtServer = Some(server)
-        cancelEffects ::= server.listen
+        cancelEffects ::= server.runningServer
+        server.runningServer.onComplete {
+          case Failure(err) =>
+            logger.error(s"Unexpected failure from sbt server connection", err)
+            showMessage.error(err.getMessage)
+          case Success(()) =>
+            sbtServer = None
+            showMessage.warn("Disconnected from sbt server")
+        }
         sbtCompile() // run compile right away.
     }
   }

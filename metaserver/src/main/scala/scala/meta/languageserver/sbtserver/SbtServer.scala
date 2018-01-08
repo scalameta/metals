@@ -11,7 +11,7 @@ import scala.util.Try
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.jawn.parseByteBuffer
 import monix.eval.Task
-import monix.execution.Cancelable
+import monix.execution.CancelableFuture
 import monix.execution.Scheduler
 import org.langmeta.io.AbsolutePath
 import org.langmeta.jsonrpc.BaseProtocolMessage
@@ -28,9 +28,16 @@ import org.scalasbt.ipcsocket.UnixDomainSocket
  *
  * @param client client that can send requests and notifications
  *               to the sbt server.
- * @param listen Use listen.cancel() to stop disconnect to this server.
+ * @param runningServer The running client listening for requests from the server.
+ *               Use runningServer.cancel() to stop disconnect to this server.
+ *               Use runningServer.onComplete to attach callbacks on
+ *               disconnect.
+ *
  */
-case class SbtServer(client: JsonRpcClient, listen: Cancelable)
+case class SbtServer(
+    client: JsonRpcClient,
+    runningServer: CancelableFuture[Unit]
+)
 
 object SbtServer extends LazyLogging {
   private def fail(message: String) = Task.now(Left(message))
@@ -72,14 +79,11 @@ object SbtServer extends LazyLogging {
         val messages =
           BaseProtocolMessage.fromInputStream(socket.getInputStream)
         val server = new LanguageServer(messages, client, services, scheduler)
-        val runningServer = server.startTask.runAsync
-        val listen = Cancelable { () =>
-          socket.close()
-          runningServer.cancel()
-        }
+        val runningServer =
+          server.startTask.doOnCancel(Task.eval(socket.close())).runAsync
         val initialize = client.request(Sbt.initialize, SbtInitializeParams())
         initialize.map { _ =>
-          Right(SbtServer(client, listen))
+          Right(SbtServer(client, runningServer))
         }
     }
   }
