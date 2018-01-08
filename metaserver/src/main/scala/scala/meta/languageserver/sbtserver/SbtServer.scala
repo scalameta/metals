@@ -1,8 +1,6 @@
 package scala.meta.languageserver.sbtserver
 
 import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
 import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.file.Files
@@ -28,7 +26,7 @@ import org.scalasbt.ipcsocket.UnixDomainSocket
 /**
  * A wrapper around a connection to an sbt server.
  *
- * @param client our client that can be used to send requests and notifications
+ * @param client client that can send requests and notifications
  *               to the sbt server.
  * @param listen Use listen.cancel() to stop disconnect to this server.
  */
@@ -49,8 +47,9 @@ object SbtServer extends LazyLogging {
    *                 the sbt server.
    * @param scheduler the scheduler on which to run the services handling
    *                  sbt responses and notifications.
-   * @return A task to start listening to sbt server, or a user-friendly
-   *         error message if something went wrong.
+   * @return A client to communicate with sbt server in case of success or a
+   *         user-friendly error message if something went wrong in case of
+   *         failure.
    */
   def connect(cwd: AbsolutePath, services: Services)(
       implicit scheduler: Scheduler
@@ -67,21 +66,29 @@ object SbtServer extends LazyLogging {
         val msg = s"Unexpected error opening connection to sbt server"
         logger.error(msg, err)
         fail(msg + ". Check .metaserver/metaserver.log")
-      case Right((in, out)) =>
-        val client: LanguageClient = new LanguageClient(out, logger)
-        val messages = BaseProtocolMessage.fromInputStream(in)
+      case Right(socket) =>
+        val client: LanguageClient =
+          new LanguageClient(socket.getOutputStream, logger)
+        val messages =
+          BaseProtocolMessage.fromInputStream(socket.getInputStream)
         val server = new LanguageServer(messages, client, services, scheduler)
-        val stopServer = server.startTask.runAsync
+        val runningServer = server.startTask.runAsync
+        val listen = Cancelable { () =>
+          socket.close()
+          runningServer.cancel()
+        }
         val initialize = client.request(Sbt.initialize, SbtInitializeParams())
         initialize.map { _ =>
-          Right(SbtServer(client, stopServer))
+          Right(SbtServer(client, listen))
         }
     }
   }
 
   /**
-   * Handler that forward logMessage and publishNotifications to the sbt server.
-   * @param editorClient the LSP editor client.
+   * Handler that forwards logMessage and publishNotifications to the sbt server.
+   *
+   * @param editorClient the LSP editor client to forward the notifications
+   *                     from the sbt server.
    */
   def forwardingServices(editorClient: JsonRpcClient): Services =
     Services.empty
@@ -92,12 +99,18 @@ object SbtServer extends LazyLogging {
         editorClient.notify(TextDocument.publishDiagnostics, msg)
       }
 
+  /**
+   * Returns path to project/target/active.json from the base directory of an sbt build.
+   */
   def activeJson(cwd: AbsolutePath): AbsolutePath =
     cwd.resolve("project").resolve("target").resolve("active.json")
 
+  /**
+   * Establishes a unix domain socket connection with sbt server.
+   */
   def openSocketConnection(
       cwd: AbsolutePath
-  ): Either[Throwable, (InputStream, OutputStream)] = {
+  ): Either[Throwable, UnixDomainSocket] = {
     val active = activeJson(cwd)
     for {
       bytes <- {
@@ -114,6 +127,6 @@ object SbtServer extends LazyLogging {
         case invalid =>
           Left(new IllegalArgumentException(s"Unsupported scheme $invalid"))
       }
-    } yield socket.getInputStream -> socket.getOutputStream
+    } yield socket
   }
 }

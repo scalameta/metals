@@ -92,15 +92,6 @@ lazy val semanticdbSettings = List(
   scalacOptions += "-Yrangepos"
 )
 
-lazy val sbtrpc = project
-  .settings(
-    libraryDependencies ++= List(
-      "net.java.dev.jna" % "jna" % "4.1.0",
-      "net.java.dev.jna" % "jna-platform" % "4.1.0"
-    )
-  )
-  .disablePlugins(ScalafixPlugin)
-
 lazy val jsonrpc = project
   .settings(
     libraryDependencies ++= List(
@@ -136,7 +127,7 @@ lazy val metaserver = project
     ),
     buildInfoPackage := "scala.meta.languageserver.internal",
     libraryDependencies ++= List(
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0", // for sbt server
       "ch.epfl.scala" % "scalafix-reflect" % V.scalafix cross CrossVersion.full,
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
       "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags
@@ -151,8 +142,7 @@ lazy val metaserver = project
   )
   .dependsOn(
     testWorkspace % "test->test",
-    lsp4s,
-    sbtrpc
+    lsp4s
   )
   .enablePlugins(BuildInfoPlugin)
 
