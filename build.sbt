@@ -146,6 +146,13 @@ lazy val metaserver = project
   )
   .enablePlugins(BuildInfoPlugin)
 
+lazy val integration = project
+  .in(file("tests/integration"))
+  .settings(
+    noPublish
+  )
+  .dependsOn(metaserver % "compile->compile;test->test")
+
 lazy val testWorkspace = project
   .in(file("test-workspace"))
   .settings(

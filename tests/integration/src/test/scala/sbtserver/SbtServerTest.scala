@@ -48,8 +48,7 @@ object SbtServerTest extends MegaSuite {
   }
 
   test("correct sbt 1.1 project establishes successful connection") {
-    val sbt1project =
-      PathIO.workingDirectory.resolve("..").resolve("test-workspace-sbt-1.1")
+    val sbt1project = PathIO.workingDirectory.resolve("test-workspace-sbt-1.1")
     openConnection(sbt1project)
     val program = for {
       sbt <- openConnection(sbt1project)
@@ -60,7 +59,7 @@ object SbtServerTest extends MegaSuite {
       assertEquals(crossScalaVersions, List("2.12.4"))
       crossScalaVersions
     }
-    val result = Await.result(program.materialize.runAsync, Duration(30, "s"))
+    val result = Await.result(program.materialize.runAsync, Duration(40, "s"))
     result match {
       case Success(_) => // hurrah :clap:
       case Failure(err) => throw err
