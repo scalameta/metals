@@ -136,6 +136,7 @@ lazy val metaserver = project
     ),
     buildInfoPackage := "scala.meta.languageserver.internal",
     libraryDependencies ++= List(
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "ch.epfl.scala" % "scalafix-reflect" % V.scalafix cross CrossVersion.full,
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
       "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags

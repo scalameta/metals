@@ -44,7 +44,6 @@ import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
-import org.langmeta.jsonrpc.JsonRpcClient
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.lsp.LanguageClient
 import org.langmeta.semanticdb
@@ -56,8 +55,7 @@ class ScalametaServices(
 ) extends LazyLogging {
   implicit val scheduler: Scheduler = s
   implicit val languageClient: LanguageClient = client
-  private var sbtClient: Option[JsonRpcClient] = None
-  private var sbtCancelable: Option[Cancelable] = None
+  private var sbtServer: Option[SbtServer] = None
   private val tempSourcesDir: AbsolutePath =
     cwd.resolve("target").resolve("sources")
   // Always run the presentation compiler on the same thread
@@ -129,9 +127,8 @@ class ScalametaServices(
         case true =>
           connectToSbtServer()
         case false =>
-          sbtClient = None
-          sbtCancelable.foreach(_.cancel())
-          sbtCancelable = None
+          sbtServer.foreach(_.listen.cancel())
+          sbtServer = None
       }
       .toFunction0()
   val latestConfig: () => Configuration =
@@ -402,14 +399,14 @@ class ScalametaServices(
       }
   }
 
-  private def sbtCompile(): Unit = sbtClient match {
+  private def sbtCompile(): Unit = sbtServer match {
     case None => ()
     case Some(sbt) =>
       // TODO(olafur) support running other commands than "compile"
       // running top-level "compile" is sub-optimal for large builds
       // especially cross-built builds with scala.js/native
       Sbt
-        .exec(latestConfig().sbt.command)(sbt, s)
+        .exec(latestConfig().sbt.command)(sbt.client, s)
         .onErrorRecover {
           case NonFatal(err) =>
             // TODO(olafur) figure out why this "broken pipe" is not getting
@@ -424,14 +421,16 @@ class ScalametaServices(
   }
 
   private def connectToSbtServer(): Unit = {
-    sbtCancelable.foreach(_.cancel())
-    new SbtServer(cwd, client).connect.foreach {
+    sbtServer.foreach(_.listen.cancel())
+    val services = SbtServer.forwardingServices(client)
+    SbtServer.connect(cwd, services).foreach {
       case Left(err) => showMessage.error(err)
-      case Right((newSbtClient, cancel)) =>
-        logger.info("Established connection with sbt server 😎")
-        sbtClient = Some(newSbtClient)
-        sbtCancelable = Some(cancel)
-        cancelEffects ::= cancel
+      case Right(server) =>
+        val msg = "Established connection with sbt server 😎"
+        logger.info(msg)
+        showMessage.info(msg)
+        sbtServer = Some(server)
+        cancelEffects ::= server.listen
         sbtCompile() // run compile right away.
     }
   }
