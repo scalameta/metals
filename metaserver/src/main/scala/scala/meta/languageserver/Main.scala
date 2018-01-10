@@ -34,13 +34,14 @@ object Main extends LazyLogging {
       System.setErr(err)
       logger.info(s"Starting server in $cwd")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
-      val client = new LanguageClient(stdout)
+      val client = new LanguageClient(stdout, logger)
       val services = new ScalametaServices(cwd, client, s)
       val languageServer = new LanguageServer(
         BaseProtocolMessage.fromInputStream(stdin),
         client,
         services.services,
-        s
+        s,
+        logger
       )
       languageServer.listen()
     } catch {

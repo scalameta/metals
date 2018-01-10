@@ -1,11 +1,12 @@
 package org.langmeta.jsonrpc
 
 import com.typesafe.scalalogging.LazyLogging
-import monix.eval.Task
+import com.typesafe.scalalogging.Logger
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.Json
 import io.circe.syntax._
+import monix.eval.Task
 
 trait Service[A, B] {
   def handle(request: A): Task[B]
@@ -45,6 +46,10 @@ object Service extends LazyLogging {
   }
 
   def notification[A: Decoder](method: String)(
+      f: Service[A, Unit]
+  ): NamedJsonRpcService = notification[A](method, logger)(f)
+
+  def notification[A: Decoder](method: String, logger: Logger)(
       f: Service[A, Unit]
   ): NamedJsonRpcService =
     new NamedJsonRpcService {

@@ -4,7 +4,7 @@ import java.io.OutputStream
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
 import cats.syntax.either._
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.Logger
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.syntax._
@@ -20,8 +20,8 @@ import org.langmeta.jsonrpc.Request
 import org.langmeta.jsonrpc.RequestId
 import org.langmeta.jsonrpc.Response
 
-class LanguageClient(out: OutputStream) extends LazyLogging with JsonRpcClient {
-  private val writer = new MessageWriter(out)
+class LanguageClient(out: OutputStream, logger: Logger) extends JsonRpcClient {
+  private val writer = new MessageWriter(out, logger)
   private val counter: AtomicInt = Atomic(1)
   private val activeServerRequests =
     TrieMap.empty[RequestId, Callback[Response]]

@@ -2,6 +2,8 @@ package org.langmeta.jsonrpc
 
 import java.io.InputStream
 import java.util.concurrent.Executors
+import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.Logger
 import monix.execution.ExecutionModel
 import monix.execution.Scheduler
 import monix.reactive.Observable
@@ -19,8 +21,13 @@ case class BaseProtocolMessage(header: Map[String, String], content: String) {
   }
 }
 
-object BaseProtocolMessage {
+object BaseProtocolMessage extends LazyLogging {
   def fromInputStream(in: InputStream): Observable[BaseProtocolMessage] =
+    fromInputStream(in, logger)
+  def fromInputStream(
+      in: InputStream,
+      logger: Logger
+  ): Observable[BaseProtocolMessage] =
     Observable
       .fromInputStream(in)
       .executeOn(
@@ -29,5 +36,5 @@ object BaseProtocolMessage {
           ExecutionModel.AlwaysAsyncExecution
         )
       )
-      .liftByOperator(new BaseProtocolMessageParser)
+      .liftByOperator(new BaseProtocolMessageParser(logger))
 }
