@@ -148,6 +148,9 @@ lazy val testWorkspace = project
   .in(file("test-workspace"))
   .settings(
     noPublish,
+    libraryDependencies ++= List(
+      "org.scalatest" %% "scalatest" % "3.0.1"
+    ),
     scalacOptions += {
       // Need to fix source root so it matches the workspace folder.
       s"-P:semanticdb:sourceroot:${baseDirectory.value}"

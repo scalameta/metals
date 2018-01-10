@@ -35,6 +35,9 @@ sealed abstract case class Uri(value: String) {
 
 object Uri {
   def apply(uri: String): Uri = Uri(URI.create(uri))
+  def file(path: AbsolutePath): Uri = {
+    Uri(s"file://$path")
+  }
   def file(path: String): Uri = {
     val slash = if (path.startsWith("/")) "" else "/"
     Uri(s"file:$slash${path.replace(' ', '-')}")

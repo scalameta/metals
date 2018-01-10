@@ -40,6 +40,8 @@ trait TextDocument {
     request[TextDocumentPositionParams, Hover]("textDocument/hover")
   val codeAction: Endpoint[CodeActionParams, List[Command]] =
     request[CodeActionParams, List[Command]]("textDocument/codeAction")
+  val codeLens: Endpoint[CodeLensParams, List[CodeLens]] =
+    request[CodeLensParams, List[CodeLens]]("textDocument/codeLens")
   val documentHighlight: Endpoint[TextDocumentPositionParams, List[DocumentHighlight]] =
     request[TextDocumentPositionParams, List[DocumentHighlight]]("textDocument/documentHighlight")
   val documentSymbol: Endpoint[DocumentSymbolParams, List[SymbolInformation]] =

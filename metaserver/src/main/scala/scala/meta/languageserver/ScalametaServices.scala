@@ -153,7 +153,8 @@ class ScalametaServices(
         ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName)),
       workspaceSymbolProvider = true,
       renameProvider = true,
-      codeActionProvider = true
+      codeActionProvider = true,
+      codeLensProvider = Some(CodeLensOptions(true))
     )
     Task(Right(InitializeResult(capabilities)))
   }
@@ -205,6 +206,10 @@ class ScalametaServices(
     }
     .request(td.codeAction) { params =>
       CodeActionProvider.codeActions(params)
+    }
+    .request(td.codeLens) { params =>
+      pprint.log(params)
+      CodeLensProvider.codeLens(Uri(params.textDocument.uri), symbolIndex)
     }
     .notification(td.didClose) { params =>
       buffers.closed(Uri(params.textDocument))
@@ -367,6 +372,17 @@ class ScalametaServices(
         applied.right.map(_ => Json.Null)
       }
       response
+
+    case SwitchPlatform =>
+      Task {
+        logger.info(s"Switching to platform ${params.arguments}")
+        ok
+      }
+    case RunTestSuite =>
+      Task {
+        logger.info(s"Running test ${params.arguments}")
+        ok
+      }
   }
 
   private def toCursor(

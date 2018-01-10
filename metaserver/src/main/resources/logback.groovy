@@ -1,4 +1,4 @@
-def defaultPattern = "%d{HH:mm:ss.SSS} %-5level %logger{20} - %msg%n"
+def defaultPattern = "%d{HH:mm:ss.SSS} %-5level [%F:%L] - %msg%n"
 
 appender("STDOUT", ch.qos.logback.core.ConsoleAppender) {
   encoder(PatternLayoutEncoder) {

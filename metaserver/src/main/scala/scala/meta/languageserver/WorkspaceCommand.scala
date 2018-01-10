@@ -11,6 +11,8 @@ case object WorkspaceCommand extends Enum[WorkspaceCommand] {
   case object ClearIndexCache extends WorkspaceCommand
   case object ResetPresentationCompiler extends WorkspaceCommand
   case object ScalafixUnusedImports extends WorkspaceCommand
+  case object SwitchPlatform extends WorkspaceCommand
+  case object RunTestSuite extends WorkspaceCommand
 
   val values = findValues
 
