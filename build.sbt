@@ -110,6 +110,18 @@ lazy val jsonrpc = project
 
 lazy val lsp4s = project.dependsOn(jsonrpc)
 
+lazy val bsp = project
+  .settings(
+    resolvers += Resolver.bintrayRepo("scalameta", "maven"),
+    libraryDependencies ++= List(
+      "io.github.scalapb-json" %% "scalapb-circe" % "0.1.1"
+    ),
+    PB.targets in Compile := Seq(
+      scalapb.gen(flatPackage = true) -> (sourceManaged in Compile).value
+    )
+  )
+  .dependsOn(lsp4s)
+
 lazy val metaserver = project
   .settings(
     PB.targets.in(Compile) := Seq(

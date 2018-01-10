@@ -1,0 +1,3 @@
+[submodule "bsp"]
+	path = bsp
+	url = git@github.com:scalacenter/bsp.git
