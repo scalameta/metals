@@ -4,7 +4,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.Logger
 import io.circe.Json
 import io.circe.parser.parse
 import io.circe.syntax._
@@ -18,8 +18,9 @@ final class LanguageServer(
     in: Observable[BaseProtocolMessage],
     client: LanguageClient,
     services: Services,
-    requestScheduler: Scheduler
-) extends LazyLogging {
+    requestScheduler: Scheduler,
+    logger: Logger
+) {
   private val activeClientRequests: TrieMap[Json, Cancelable] = TrieMap.empty
   private val cancelNotification =
     Service.notification[CancelParams]("$/cancelRequest") { params =>

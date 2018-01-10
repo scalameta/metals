@@ -3,15 +3,14 @@ package org.langmeta.jsonrpc
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.Logger
 import monix.execution.Ack
 import monix.execution.Scheduler
 import monix.reactive.observables.ObservableLike.Operator
 import monix.reactive.observers.Subscriber
 
-final class BaseProtocolMessageParser
-    extends Operator[Array[Byte], BaseProtocolMessage]
-    with LazyLogging {
+final class BaseProtocolMessageParser(logger: Logger)
+    extends Operator[Array[Byte], BaseProtocolMessage] {
   override def apply(
       out: Subscriber[BaseProtocolMessage]
   ): Subscriber[Array[Byte]] = {

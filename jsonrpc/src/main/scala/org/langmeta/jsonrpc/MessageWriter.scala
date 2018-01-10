@@ -2,7 +2,7 @@ package org.langmeta.jsonrpc
 
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.Logger
 import io.circe.Encoder
 import io.circe.syntax._
 
@@ -20,7 +20,7 @@ import io.circe.syntax._
  *
  * @note The header part is defined to be ASCII encoded, while the content part is UTF8.
  */
-class MessageWriter(out: OutputStream) extends LazyLogging {
+class MessageWriter(out: OutputStream, logger: Logger) {
   private val ContentLen = "Content-Length"
 
   /** Lock protecting the output stream, so multiple writes don't mix message chunks. */

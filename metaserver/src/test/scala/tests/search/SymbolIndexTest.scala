@@ -17,6 +17,7 @@ import scala.meta.languageserver.search.InMemorySymbolIndex
 import scala.meta.languageserver.search.InverseSymbolIndexer
 import scala.meta.languageserver.search.SymbolIndex
 import scala.{meta => m}
+import com.typesafe.scalalogging.LazyLogging
 import monix.execution.schedulers.TestScheduler
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Classpath
@@ -25,7 +26,7 @@ import org.langmeta.semanticdb.Symbol
 import tests.MegaSuite
 import utest._
 
-object SymbolIndexTest extends MegaSuite {
+object SymbolIndexTest extends MegaSuite with LazyLogging {
   implicit val cwd: AbsolutePath =
     AbsolutePath(BuildInfo.testWorkspaceBaseDirectory)
   object path {
@@ -57,7 +58,7 @@ object SymbolIndexTest extends MegaSuite {
   val s = TestScheduler()
   val stdout = new PipedOutputStream()
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
-  val client = new LanguageClient(stdout)
+  val client = new LanguageClient(stdout, logger)
   val metaserver = new ScalametaServices(cwd, client, s)
   metaserver
     .initialize(InitializeParams(0L, cwd.toString(), ClientCapabilities()))
