@@ -12,6 +12,7 @@ import Configuration._
 
 @JsonCodec case class Configuration(
     scalac: Scalac = Scalac(),
+    bsp: Bsp = Bsp(),
     scalafmt: Scalafmt = Scalafmt(),
     scalafix: Scalafix = Scalafix(),
     search: Search = Search(),
@@ -22,6 +23,11 @@ import Configuration._
 object Configuration {
   implicit val circeConfiguration: CirceConfiguration =
     CirceConfiguration.default.withDefaults
+
+  @JsonCodec case class Bsp(
+      enabled: Boolean = false,
+      runCommand: String = "bloop bsp"
+  )
 
   @JsonCodec case class Scalac(enabled: Boolean = false)
   @JsonCodec case class Hover(enabled: Boolean = false)

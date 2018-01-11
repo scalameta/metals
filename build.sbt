@@ -123,6 +123,7 @@ lazy val bsp = project
   .dependsOn(lsp4s)
 
 lazy val metaserver = project
+  .dependsOn(bsp)
   .settings(
     PB.targets.in(Compile) := Seq(
       scalapb.gen(

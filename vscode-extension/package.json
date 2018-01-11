@@ -7,12 +7,26 @@
   "engines": {
     "vscode": "^1.17.0"
   },
-  "categories": ["Other"],
-  "activationEvents": ["onLanguage:scala"],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:scala"
+  ],
   "contributes": {
     "configuration": {
       "title": "Scalameta Language Server",
       "properties": {
+        "scalameta.bsp.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "EXPERIMENTAL. Use sbt language server to compile on file save and report squgglies. Requires sbt 1.1.0"
+        },
+        "scalameta.bsp.command": {
+          "type": "string",
+          "default": "bloop bsp",
+          "description": "Which command to run to connect to the bsp server."
+        },
         "scalameta.scalac.enabled": {
           "type": "boolean",
           "default": false,
@@ -31,8 +45,7 @@
         "scalameta.scalafmt.confPath": {
           "type": "string",
           "default": ".scalafmt.conf",
-          "description":
-            "Path to the Scalafmt configuration, relative to the workspace path"
+          "description": "Path to the Scalafmt configuration, relative to the workspace path"
         },
         "scalameta.scalafix.enabled": {
           "type": "boolean",
@@ -42,8 +55,7 @@
         "scalameta.scalafix.confPath": {
           "type": "string",
           "default": ".scalafix.conf",
-          "description":
-            "Path to the Scalafix configuration, relative to the workspace path"
+          "description": "Path to the Scalafix configuration, relative to the workspace path"
         },
         "scalameta.search.indexClasspath": {
           "type": "boolean",
@@ -79,17 +91,26 @@
         "title": "Clear index cache"
       },
       {
+        "command": "scalameta.bspConnect",
+        "category": "Scalameta Language Server",
+        "title": "Connect to the bsp server"
+      },
+      {
         "command": "scalameta.resetPresentationCompiler",
         "category": "Scalameta Language Server",
         "title": "Reset presentation compilers"
+      },
+      {
+        "command": "scalameta.bspConnect",
+        "category": "Scalameta Language Server",
+        "title": "Connect to the bsp server"
       }
     ]
   },
   "main": "./out/extension",
   "scripts": {
     "vscode:prepublish": "npm run download-coursier && npm run compile",
-    "download-coursier":
-      "curl -L -o coursier https://github.com/coursier/coursier/raw/v1.0.0-RC13/coursier",
+    "download-coursier": "curl -L -o coursier https://github.com/coursier/coursier/raw/v1.0.0-RC13/coursier",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "postinstall": "node ./node_modules/vscode/bin/install",
