@@ -110,7 +110,20 @@ lazy val jsonrpc = project
 
 lazy val lsp4s = project.dependsOn(jsonrpc)
 
+lazy val bsp = project
+  .settings(
+    resolvers += Resolver.bintrayRepo("scalameta", "maven"),
+    libraryDependencies ++= List(
+      "io.github.scalapb-json" %% "scalapb-circe" % "0.1.1"
+    ),
+    PB.targets in Compile := Seq(
+      scalapb.gen(flatPackage = true) -> (sourceManaged in Compile).value
+    )
+  )
+  .dependsOn(lsp4s)
+
 lazy val metaserver = project
+  .dependsOn(bsp)
   .settings(
     PB.targets.in(Compile) := Seq(
       scalapb.gen(
@@ -148,6 +161,9 @@ lazy val testWorkspace = project
   .in(file("test-workspace"))
   .settings(
     noPublish,
+    libraryDependencies ++= List(
+      "org.scalatest" %% "scalatest" % "3.0.1"
+    ),
     scalacOptions += {
       // Need to fix source root so it matches the workspace folder.
       s"-P:semanticdb:sourceroot:${baseDirectory.value}"

@@ -7,18 +7,18 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Executors
+
+import ch.epfl.`scala`.bsp.schema.{CompileParams, WorkspaceBuildTargetsRequest}
+
 import scala.concurrent.duration.FiniteDuration
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
-import org.langmeta.lsp.{
-  Lifecycle => lc,
-  TextDocument => td,
-  Workspace => ws,
-  _
-}
+import org.langmeta.lsp.{Lifecycle => lc, TextDocument => td, Workspace => ws, _}
 import org.langmeta.jsonrpc.Response
 import org.langmeta.jsonrpc.Services
+
+import scala.meta.languageserver.MonixEnrichments._
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.refactoring.OrganizeImports
 import scala.meta.languageserver.search.SymbolIndex
@@ -43,11 +43,16 @@ import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.lsp.LanguageClient
 import org.langmeta.semanticdb
 
+import scala.meta.languageserver.bsp.BspServer
+import scala.util.{Failure, Success}
+import scala.util.control.NonFatal
+
 class ScalametaServices(
     cwd: AbsolutePath,
     client: LanguageClient,
     s: Scheduler,
 ) extends LazyLogging {
+  private var bspServer: Option[BspServer] = None
   implicit val scheduler: Scheduler = s
   implicit val languageClient: LanguageClient = client
   private val tempSourcesDir: AbsolutePath =
@@ -114,6 +119,21 @@ class ScalametaServices(
     }
   val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
     metaSemanticdbs.map(scalacErrorReporter.reportErrors)
+
+  val bspServerEnabled: () => Boolean = {
+    configurationPublisher
+      .focus(_.bsp.enabled)
+      .doOnNext {
+        case true => connectToBspServer()
+        case false =>
+          bspServer.foreach(_.runningServer.cancel())
+          bspServer = None
+      }
+      .toFunction0()
+  }
+  val latestConfig: () => Configuration =
+    configurationPublisher.toFunction0()
+
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
     configurationPublisher.map(_ => Effects.UpdateBuffers),
@@ -153,7 +173,8 @@ class ScalametaServices(
         ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName)),
       workspaceSymbolProvider = true,
       renameProvider = true,
-      codeActionProvider = true
+      codeActionProvider = true,
+      codeLensProvider = Some(CodeLensOptions(true))
     )
     Task(Right(InitializeResult(capabilities)))
   }
@@ -206,6 +227,10 @@ class ScalametaServices(
     .request(td.codeAction) { params =>
       CodeActionProvider.codeActions(params)
     }
+    .request(td.codeLens) { params =>
+      pprint.log(params)
+      CodeLensProvider.codeLens(Uri(params.textDocument.uri), symbolIndex)
+    }
     .notification(td.didClose) { params =>
       buffers.closed(Uri(params.textDocument))
       ()
@@ -226,6 +251,7 @@ class ScalametaServices(
       ()
     }
     .notification(td.didSave) { _ =>
+      if (bspServerEnabled()) runBspCompile()
       ()
     }
     .notification(ws.didChangeConfiguration) { params =>
@@ -367,6 +393,75 @@ class ScalametaServices(
         applied.right.map(_ => Json.Null)
       }
       response
+
+    case SwitchPlatform =>
+      Task {
+        logger.info(s"Switching to platform ${params.arguments}")
+        ok
+      }
+    case RunTestSuite =>
+      Task {
+        logger.info(s"Running test ${params.arguments}")
+        ok
+      }
+
+    case BspConnect =>
+      Task {
+        import org.langmeta.lsp.Window.showMessage
+        if (!bspServerEnabled())
+          showMessage.error("Set scalameta.sbt.enabled=true to use sbt server.")
+        else connectToBspServer()
+        Right(Json.Null)
+      }
+  }
+
+  private def runBspCompile(): Unit = bspServer match {
+    case Some(bsp) =>
+      import ch.epfl.scala.bsp.endpoints
+      endpoints.Workspace.buildTargets
+        .request(WorkspaceBuildTargetsRequest())(bsp.client)
+        .flatMap {
+          case Right(targets) =>
+            targets.targets.headOption match {
+              case Some(head) =>
+                endpoints.BuildTarget.compile
+                  .request(CompileParams(List(head.id.get)))(bsp.client)
+              case None => sys.error("There is no target")
+            }
+        }
+        .onErrorRecover {
+          case NonFatal(err) =>
+            logger.error("Failed to send sbt compile", err)
+            Window.showMessage.warn(
+              "Lost connection to bsp server. Run the 'Re-connect to bsp server' command"
+            )
+        }
+        .runAsync
+    case None => ()
+  }
+
+  private def connectToBspServer(): Unit = {
+    val bspCommand = latestConfig().bsp.runCommand
+    bspServer.foreach(_.runningServer.cancel())
+    val services = BspServer.forwardingServices(client)
+    BspServer.connect(cwd, services, bspCommand, logger).foreach {
+      case Left(err) => Window.showMessage.error(err)
+      case Right(server) =>
+        val msg = "Established connection with sbt server 😎"
+        logger.info(msg)
+        Window.showMessage.info(msg)
+        bspServer = Some(server)
+        cancelEffects ::= server.runningServer
+        server.runningServer.onComplete {
+          case Failure(err) =>
+            logger.error(s"Unexpected failure from sbt server connection", err)
+            Window.showMessage.error(err.getMessage)
+          case Success(()) =>
+            bspServer = None
+            Window.showMessage.warn("Disconnected from sbt server")
+        }
+        runBspCompile()
+    }
   }
 
   private def toCursor(

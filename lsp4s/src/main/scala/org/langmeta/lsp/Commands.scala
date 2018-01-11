@@ -157,6 +157,8 @@ import io.circe.generic.JsonCodec
 
 @JsonCodec case class CodeActionRequest(params: CodeActionParams)
 
+@JsonCodec case class CodeLensParams(textDocument: TextDocumentIdentifier)
+
 @JsonCodec case class DocumentSymbolParams(textDocument: TextDocumentIdentifier)
 
 @JsonCodec case class TextDocumentRenameRequest(params: RenameParams)

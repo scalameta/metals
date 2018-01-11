@@ -173,7 +173,7 @@ object MarkedString {
  * A code lens is _unresolved_ when no command is associated to it. For performance
  * reasons the creation of a code lens and resolving should be done to two stages.
  */
-case class CodeLens(
+@JsonCodec case class CodeLens(
     /**
      * The range in which this code lens is valid. Should only span a single line.
      */
@@ -187,7 +187,7 @@ case class CodeLens(
      * a [CodeLensRequest](#CodeLensRequest) and a [CodeLensResolveRequest]
      * (#CodeLensResolveRequest)
      */
-    data: Option[Any]
+    data: Option[Json]
 )
 
 /**
