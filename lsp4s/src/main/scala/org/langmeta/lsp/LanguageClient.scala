@@ -43,19 +43,8 @@ class LanguageClient(out: OutputStream, logger: Logger) extends JsonRpcClient {
         case Response.Error(_, requestId) => Some(requestId)
       }
       callback <- activeServerRequests.get(id).orElse {
-        val fallback = for {
-          string <- id.asJson.asString
-          number <- Try(string.toInt).toOption
-          request <- activeServerRequests.get(RequestId(number))
-        } yield {
-          // seems to be necessary for sbt-server :(
-          logger.info(s"Expected int response id, got string $id")
-          request
-        }
-        fallback.orElse {
-          logger.error(s"Response to unknown request: $response")
-          None
-        }
+        logger.error(s"Response to unknown request: $response")
+        None
       }
     } {
       activeServerRequests.remove(id)

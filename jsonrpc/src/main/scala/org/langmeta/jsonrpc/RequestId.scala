@@ -6,8 +6,8 @@ import io.circe.Encoder
 
 sealed trait RequestId
 object RequestId {
-  def apply(n: Int): RequestId.Number =
-    RequestId.Number(Json.fromBigDecimal(BigDecimal(n)))
+  def apply(n: Int): RequestId.String =
+    RequestId.String(Json.fromString(n.toString))
   implicit val decoder: Decoder[RequestId] = Decoder.decodeJson.map {
     case s if s.isString => RequestId.String(s)
     case n if n.isNumber => RequestId.Number(n)
