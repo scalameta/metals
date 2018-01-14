@@ -34,13 +34,14 @@ class MessageWriter(out: OutputStream, logger: Logger) {
     lock.synchronized {
       require(h.get(ContentLen).isEmpty)
 
-      val str = msg.asJson.noSpaces
+      val json = msg.asJson.withObject(_.add("jsonrpc", "2.0".asJson).asJson)
+      val str = json.noSpaces
       val contentBytes = str.getBytes(StandardCharsets.UTF_8)
       val headers = (h + (ContentLen -> contentBytes.length))
         .map { case (k, v) => s"$k: $v" }
         .mkString("", "\r\n", "\r\n\r\n")
 
-      logger.debug(s" --> $str")
+      logger.trace(s" --> $str")
 
       val headerBytes = headers.getBytes(StandardCharsets.US_ASCII)
 

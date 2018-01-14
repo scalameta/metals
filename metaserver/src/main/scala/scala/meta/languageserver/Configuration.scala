@@ -11,6 +11,7 @@ import io.circe.generic.extras.{Configuration => CirceConfiguration}
 import Configuration._
 
 @JsonCodec case class Configuration(
+    sbt: Sbt = Sbt(),
     scalac: Scalac = Scalac(),
     scalafmt: Scalafmt = Scalafmt(),
     scalafix: Scalafix = Scalafix(),
@@ -23,6 +24,10 @@ object Configuration {
   implicit val circeConfiguration: CirceConfiguration =
     CirceConfiguration.default.withDefaults
 
+  @JsonCodec case class Sbt(
+      enabled: Boolean = false,
+      command: String = "test:compile"
+  )
   @JsonCodec case class Scalac(enabled: Boolean = false)
   @JsonCodec case class Hover(enabled: Boolean = false)
   @JsonCodec case class Rename(enabled: Boolean = false)

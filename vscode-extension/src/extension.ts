@@ -105,9 +105,18 @@ export async function activate(context: ExtensionContext) {
         });
       }
     );
+    const sbtConnectCommand = commands.registerCommand(
+      "scalameta.sbtConnect",
+      async () => {
+        return client.sendRequest(ExecuteCommandRequest.type, {
+          command: "sbtConnect"
+        });
+      }
+    );
     context.subscriptions.push(
       clearIndexCacheCommand,
-      resetPresentationCompiler
+      resetPresentationCompiler,
+      sbtConnectCommand
     );
   });
 

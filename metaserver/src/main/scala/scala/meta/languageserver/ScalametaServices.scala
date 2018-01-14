@@ -11,17 +11,24 @@ import scala.concurrent.duration.FiniteDuration
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.compiler.Cursor
 import scala.meta.languageserver.compiler.ScalacProvider
+import org.langmeta.lsp.Window.showMessage
 import org.langmeta.lsp.{
   Lifecycle => lc,
   TextDocument => td,
   Workspace => ws,
   _
 }
+import scala.meta.languageserver.MonixEnrichments._
 import org.langmeta.jsonrpc.Response
 import org.langmeta.jsonrpc.Services
 import scala.meta.languageserver.providers._
 import scala.meta.languageserver.refactoring.OrganizeImports
+import scala.meta.languageserver.sbtserver.Sbt
+import scala.meta.languageserver.sbtserver.SbtServer
 import scala.meta.languageserver.search.SymbolIndex
+import scala.util.Failure
+import scala.util.Success
+import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.Json
 import io.github.soc.directories.ProjectDirectories
@@ -50,6 +57,7 @@ class ScalametaServices(
 ) extends LazyLogging {
   implicit val scheduler: Scheduler = s
   implicit val languageClient: LanguageClient = client
+  private var sbtServer: Option[SbtServer] = None
   private val tempSourcesDir: AbsolutePath =
     cwd.resolve("target").resolve("sources")
   // Always run the presentation compiler on the same thread
@@ -114,6 +122,19 @@ class ScalametaServices(
     }
   val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
     metaSemanticdbs.map(scalacErrorReporter.reportErrors)
+  val sbtServerEnabled: () => Boolean =
+    configurationPublisher
+      .focus(_.sbt.enabled)
+      .doOnNext {
+        case true =>
+          connectToSbtServer()
+        case false =>
+          sbtServer.foreach(_.runningServer.cancel())
+          sbtServer = None
+      }
+      .toFunction0()
+  val latestConfig: () => Configuration =
+    configurationPublisher.toFunction0()
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
     configurationPublisher.map(_ => Effects.UpdateBuffers),
@@ -131,6 +152,7 @@ class ScalametaServices(
     LSPLogger.notifications = Some(client)
     cancelEffects = effects.map(_.subscribe())
     loadAllRelevantFilesInThisWorkspace()
+    val commands = WorkspaceCommand.values.map(_.entryName)
     val capabilities = ServerCapabilities(
       completionProvider = Some(
         CompletionOptions(
@@ -149,8 +171,7 @@ class ScalametaServices(
       documentSymbolProvider = true,
       documentFormattingProvider = true,
       hoverProvider = true,
-      executeCommandProvider =
-        ExecuteCommandOptions(WorkspaceCommand.values.map(_.entryName)),
+      executeCommandProvider = ExecuteCommandOptions(commands),
       workspaceSymbolProvider = true,
       renameProvider = true,
       codeActionProvider = true
@@ -226,12 +247,14 @@ class ScalametaServices(
       ()
     }
     .notification(td.didSave) { _ =>
-      ()
+      if (sbtServerEnabled()) {
+        sbtCompile()
+      }
     }
     .notification(ws.didChangeConfiguration) { params =>
       params.settings.hcursor.downField("scalameta").as[Configuration] match {
         case Left(err) =>
-          Window.showMessage.notify(
+          showMessage.notify(
             ShowMessageParams(MessageType.Error, err.toString)
           )
         case Right(conf) =>
@@ -367,6 +390,59 @@ class ScalametaServices(
         applied.right.map(_ => Json.Null)
       }
       response
+    case SbtConnect =>
+      Task {
+        if (!sbtServerEnabled()) {
+          showMessage.error("Set scalameta.sbt.enabled=true to use sbt server.")
+        } else {
+          connectToSbtServer()
+        }
+        Right(Json.Null)
+      }
+  }
+
+  private def sbtCompile(): Unit = sbtServer match {
+    case None => ()
+    case Some(sbt) =>
+      // TODO(olafur) support running other commands than "compile"
+      // running top-level "compile" is sub-optimal for large builds
+      // especially cross-built builds with scala.js/native
+      Sbt
+        .exec(latestConfig().sbt.command)(sbt.client, s)
+        .onErrorRecover {
+          case NonFatal(err) =>
+            // TODO(olafur) figure out why this "broken pipe" is not getting
+            // caught here.
+            logger.error("Failed to send sbt compile", err)
+            showMessage.warn(
+              "Lost connection to sbt server. " +
+                "Restart the sbt session and run the 'Re-connect to sbt server' command"
+            )
+        }
+        .runAsync
+  }
+
+  private def connectToSbtServer(): Unit = {
+    sbtServer.foreach(_.runningServer.cancel())
+    val services = SbtServer.forwardingServices(client)
+    SbtServer.connect(cwd, services).foreach {
+      case Left(err) => showMessage.error(err)
+      case Right(server) =>
+        val msg = "Established connection with sbt server 😎"
+        logger.info(msg)
+        showMessage.info(msg)
+        sbtServer = Some(server)
+        cancelEffects ::= server.runningServer
+        server.runningServer.onComplete {
+          case Failure(err) =>
+            logger.error(s"Unexpected failure from sbt server connection", err)
+            showMessage.error(err.getMessage)
+          case Success(()) =>
+            sbtServer = None
+            showMessage.warn("Disconnected from sbt server")
+        }
+        sbtCompile() // run compile right away.
+    }
   }
 
   private def toCursor(
