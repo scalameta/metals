@@ -78,7 +78,8 @@ object SbtServer extends LazyLogging {
           new LanguageClient(socket.getOutputStream, logger)
         val messages =
           BaseProtocolMessage.fromInputStream(socket.getInputStream)
-        val server = new LanguageServer(messages, client, services, scheduler)
+        val server =
+          new LanguageServer(messages, client, services, scheduler, logger)
         val runningServer =
           server.startTask.doOnCancel(Task.eval(socket.close())).runAsync
         val initialize = client.request(Sbt.initialize, SbtInitializeParams())

@@ -6,10 +6,8 @@ import scala.meta.languageserver.sbtserver.Sbt
 import scala.meta.languageserver.sbtserver.SbtServer
 import scala.util.Failure
 import scala.util.Success
-import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 import org.langmeta.internal.io.PathIO
-import org.langmeta.io.AbsolutePath
 import org.langmeta.jsonrpc.Services
 import org.langmeta.lsp.TextDocument
 import org.langmeta.lsp.Window

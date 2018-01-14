@@ -3,7 +3,6 @@ package org.langmeta.lsp
 import java.io.OutputStream
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
-import scala.util.Try
 import cats.syntax.either._
 import com.typesafe.scalalogging.Logger
 import io.circe.Decoder
