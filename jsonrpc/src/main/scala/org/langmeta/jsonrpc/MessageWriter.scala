@@ -34,7 +34,7 @@ class MessageWriter(out: OutputStream, logger: Logger) {
     lock.synchronized {
       require(h.get(ContentLen).isEmpty)
 
-      val json = msg.asJson.withObject(_.add("jsonrpc", "2.0".asJson).asJson)
+      val json = msg.asJson.mapObject(_.add("jsonrpc", "2.0".asJson))
       val str = json.noSpaces
       val contentBytes = str.getBytes(StandardCharsets.UTF_8)
       val headers = (h + (ContentLen -> contentBytes.length))
