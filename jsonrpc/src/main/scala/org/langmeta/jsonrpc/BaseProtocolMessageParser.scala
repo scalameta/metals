@@ -1,5 +1,6 @@
 package org.langmeta.jsonrpc
 
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
@@ -10,15 +11,15 @@ import monix.reactive.observables.ObservableLike.Operator
 import monix.reactive.observers.Subscriber
 
 final class BaseProtocolMessageParser(logger: Logger)
-    extends Operator[Array[Byte], BaseProtocolMessage] {
+    extends Operator[ByteBuffer, BaseProtocolMessage] {
   override def apply(
       out: Subscriber[BaseProtocolMessage]
-  ): Subscriber[Array[Byte]] = {
-    new Subscriber[Array[Byte]] {
+  ): Subscriber[ByteBuffer] = {
+    new Subscriber[ByteBuffer] {
       import Ack._
       // NOTE(olafur): We should first benchmark before going into any
       // optimization, but my intuition tells me ArrayBuffer[Byte] with many .remove
-      // and ++= is wasteful and can probably be replaced with scodec-bits BitVector
+      // and ++= is wasteful and can probably be replaced with a growing ByteBuffer.
       private[this] val data = ArrayBuffer.empty[Byte]
       private[this] var contentLength = -1
       private[this] var header = Map.empty[String, String]
@@ -100,8 +101,10 @@ final class BaseProtocolMessageParser(logger: Logger)
         data.clear()
         out.onComplete()
       }
-      override def onNext(elem: Array[Byte]): Future[Ack] = {
-        data ++= elem
+      override def onNext(elem: ByteBuffer): Future[Ack] = {
+        val array = new Array[Byte](elem.remaining())
+        elem.get(array)
+        data ++= array
         if (contentLength < 0) readHeaders()
         else readContent()
       }

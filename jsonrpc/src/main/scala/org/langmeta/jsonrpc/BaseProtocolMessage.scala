@@ -1,6 +1,7 @@
 package org.langmeta.jsonrpc
 
 import java.io.InputStream
+import java.nio.ByteBuffer
 import java.util.concurrent.Executors
 import com.typesafe.scalalogging.LazyLogging
 import com.typesafe.scalalogging.Logger
@@ -22,15 +23,27 @@ case class BaseProtocolMessage(header: Map[String, String], content: String) {
 }
 
 object BaseProtocolMessage extends LazyLogging {
+
   def fromInputStream(in: InputStream): Observable[BaseProtocolMessage] =
     fromInputStream(in, logger)
+
   def fromInputStream(
       in: InputStream,
       logger: Logger
   ): Observable[BaseProtocolMessage] =
-    Observable
-      .fromInputStream(in)
-      .executeOn(
+    fromBytes(Observable.fromInputStream(in), logger)
+
+  def fromBytes(
+      in: Observable[Array[Byte]],
+      logger: Logger
+  ): Observable[BaseProtocolMessage] =
+    fromByteBuffers(in.map(ByteBuffer.wrap), logger)
+
+  def fromByteBuffers(
+      in: Observable[ByteBuffer],
+      logger: Logger
+  ): Observable[BaseProtocolMessage] =
+    in.executeOn(
         Scheduler(
           Executors.newFixedThreadPool(1),
           ExecutionModel.AlwaysAsyncExecution
