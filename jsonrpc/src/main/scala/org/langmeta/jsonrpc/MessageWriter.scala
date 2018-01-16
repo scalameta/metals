@@ -1,10 +1,13 @@
 package org.langmeta.jsonrpc
 
-import java.io.OutputStream
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import scala.concurrent.Future
 import com.typesafe.scalalogging.Logger
 import io.circe.Encoder
 import io.circe.syntax._
+import monix.execution.Ack
+import monix.reactive.Observer
 
 /**
  * A class to write Json RPC messages on an output stream, following the Language Server Protocol.
@@ -20,9 +23,10 @@ import io.circe.syntax._
  *
  * @note The header part is defined to be ASCII encoded, while the content part is UTF8.
  */
-class MessageWriter(out: OutputStream, logger: Logger) {
+class MessageWriter(out: Observer[ByteBuffer], logger: Logger) {
   private val ContentLen = "Content-Length"
 
+  // TODO(olafur) is this necessary now that we refactored to Observer?
   /** Lock protecting the output stream, so multiple writes don't mix message chunks. */
   private val lock = new Object
 
@@ -30,7 +34,10 @@ class MessageWriter(out: OutputStream, logger: Logger) {
    * Write a message to the output stream. This method can be called from multiple threads,
    * but it may block waiting for other threads to finish writing.
    */
-  def write[T: Encoder](msg: T, h: Map[String, String] = Map.empty): Unit =
+  def write[T: Encoder](
+      msg: T,
+      h: Map[String, String] = Map.empty
+  ): Future[Ack] =
     lock.synchronized {
       require(h.get(ContentLen).isEmpty)
 
@@ -44,9 +51,11 @@ class MessageWriter(out: OutputStream, logger: Logger) {
       logger.trace(s" --> $str")
 
       val headerBytes = headers.getBytes(StandardCharsets.US_ASCII)
-
-      out.write(headerBytes)
-      out.write(contentBytes)
-      out.flush()
+      // TODO(olafur) slim down on allocations!
+      val bb = ByteBuffer.allocate(headerBytes.length + contentBytes.length)
+      bb.put(headerBytes)
+      bb.put(contentBytes)
+      bb.flip()
+      out.onNext(bb)
     }
 }

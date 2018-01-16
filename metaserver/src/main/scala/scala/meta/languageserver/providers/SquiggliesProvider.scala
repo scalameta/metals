@@ -5,7 +5,7 @@ import scala.meta.languageserver.Configuration
 import com.typesafe.scalalogging.LazyLogging
 import scala.{meta => m}
 import scala.meta.languageserver.ScalametaEnrichments._
-import scala.meta.languageserver.MonixEnrichments._
+import org.langmeta.lsp.MonixEnrichments._
 import org.langmeta.lsp.PublishDiagnostics
 import monix.eval.Task
 import monix.execution.Scheduler

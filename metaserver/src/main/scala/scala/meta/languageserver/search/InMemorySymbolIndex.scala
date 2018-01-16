@@ -11,7 +11,7 @@ import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.index.SymbolData
 import scala.meta.languageserver.mtags.Mtags
 import scala.meta.languageserver.storage.LevelDBMap
-import scala.meta.languageserver.MonixEnrichments._
+import org.langmeta.lsp.MonixEnrichments._
 import org.langmeta.lsp.SymbolInformation
 import org.langmeta.jsonrpc.JsonRpcClient
 import scala.meta.languageserver.{index => i}

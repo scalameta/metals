@@ -18,7 +18,7 @@ import org.langmeta.lsp.{
   Workspace => ws,
   _
 }
-import scala.meta.languageserver.MonixEnrichments._
+import MonixEnrichments._
 import org.langmeta.jsonrpc.Response
 import org.langmeta.jsonrpc.Services
 import scala.meta.languageserver.providers._

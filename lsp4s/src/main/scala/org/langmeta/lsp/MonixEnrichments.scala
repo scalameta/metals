@@ -1,8 +1,14 @@
-package scala.meta.languageserver
+package org.langmeta.lsp
 
+import java.io.IOException
+import java.io.OutputStream
+import java.nio.ByteBuffer
+import com.typesafe.scalalogging.Logger
+import monix.execution.Ack
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.reactive.Observable
+import monix.reactive.Observer
 
 object MonixEnrichments {
 
@@ -44,6 +50,35 @@ object MonixEnrichments {
         implicit s: Scheduler
     ): ObservableCurrentValue[A] =
       new ObservableCurrentValue[A](obs)
+  }
+
+  implicit class XtensionObserverCompanion[A](val `_`: Observer.type)
+      extends AnyVal {
+    def fromOutputStream(
+        out: OutputStream,
+        logger: Logger
+    ): Observer.Sync[ByteBuffer] = {
+      new Observer.Sync[ByteBuffer] {
+        private[this] var isClosed: Boolean = false
+        override def onNext(elem: ByteBuffer): Ack = {
+          if (isClosed) Ack.Stop
+          else {
+            try {
+              while (elem.hasRemaining) out.write(elem.get())
+              out.flush()
+              Ack.Continue
+            } catch {
+              case _: IOException =>
+                logger.error("OutputStream closed!")
+                isClosed = true
+                Ack.Stop
+            }
+          }
+        }
+        override def onError(ex: Throwable): Unit = ()
+        override def onComplete(): Unit = out.close()
+      }
+    }
   }
 
 }
