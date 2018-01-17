@@ -4,7 +4,7 @@ import java.nio.file.Files
 import scala.meta.languageserver.Configuration
 import scala.meta.languageserver.Configuration.Scalafmt
 import scala.meta.languageserver.Formatter
-import scala.meta.languageserver.MonixEnrichments._
+import org.langmeta.lsp.MonixEnrichments._
 import org.langmeta.lsp.Position
 import org.langmeta.lsp.TextEdit
 import org.langmeta.jsonrpc.JsonRpcClient

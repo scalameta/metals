@@ -1,7 +1,9 @@
 package org.langmeta.lsp
 
 import java.io.OutputStream
+import java.nio.ByteBuffer
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import cats.syntax.either._
 import com.typesafe.scalalogging.Logger
@@ -10,25 +12,31 @@ import io.circe.Encoder
 import io.circe.syntax._
 import monix.eval.Callback
 import monix.eval.Task
+import monix.execution.Ack
 import monix.execution.Cancelable
 import monix.execution.atomic.Atomic
 import monix.execution.atomic.AtomicInt
+import monix.reactive.Observer
 import org.langmeta.jsonrpc.JsonRpcClient
 import org.langmeta.jsonrpc.MessageWriter
 import org.langmeta.jsonrpc.Notification
 import org.langmeta.jsonrpc.Request
 import org.langmeta.jsonrpc.RequestId
 import org.langmeta.jsonrpc.Response
+import org.langmeta.lsp.MonixEnrichments._
 
-class LanguageClient(out: OutputStream, logger: Logger) extends JsonRpcClient {
+class LanguageClient(out: Observer[ByteBuffer], logger: Logger)
+    extends JsonRpcClient {
+  def this(out: OutputStream, logger: Logger) =
+    this(Observer.fromOutputStream(out, logger), logger)
   private val writer = new MessageWriter(out, logger)
   private val counter: AtomicInt = Atomic(1)
   private val activeServerRequests =
     TrieMap.empty[RequestId, Callback[Response]]
-  def notify[A: Encoder](method: String, notification: A): Unit =
+  def notify[A: Encoder](method: String, notification: A): Future[Ack] =
     writer.write(Notification(method, Some(notification.asJson)))
-  def serverRespond(response: Response): Unit = response match {
-    case Response.Empty => ()
+  def serverRespond(response: Response): Future[Ack] = response match {
+    case Response.Empty => Ack.Continue
     case x: Response.Success => writer.write(x)
     case x: Response.Error =>
       logger.error(s"Response error: $x")
