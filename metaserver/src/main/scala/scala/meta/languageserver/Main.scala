@@ -3,13 +3,10 @@ package scala.meta.languageserver
 import java.io.FileOutputStream
 import java.io.PrintStream
 import java.nio.file.Files
-import java.util.concurrent.Executors
 import org.langmeta.jsonrpc.BaseProtocolMessage
 import scala.util.Properties
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
-import monix.execution.Scheduler
-import monix.execution.schedulers.SchedulerService
 import org.langmeta.internal.io.PathIO
 import org.langmeta.lsp.LanguageClient
 import org.langmeta.lsp.LanguageServer
@@ -25,8 +22,6 @@ object Main extends LazyLogging {
     val stdin = System.in
     val stdout = System.out
     val stderr = System.err
-    implicit val s: SchedulerService =
-      Scheduler(Executors.newFixedThreadPool(4))
     try {
       // route System.out somewhere else. Any output not from the server (e.g. logging)
       // messes up with the client, since stdout is used for the language server protocol
@@ -34,13 +29,17 @@ object Main extends LazyLogging {
       System.setErr(err)
       logger.info(s"Starting server in $cwd")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
+      val s = MSchedulers()
       val client = new LanguageClient(stdout, logger)
       val services = new ScalametaServices(cwd, client, s)
+      val messages = BaseProtocolMessage
+        .fromInputStream(stdin)
+        .executeOn(s.lsp)
       val languageServer = new LanguageServer(
-        BaseProtocolMessage.fromInputStream(stdin),
+        messages,
         client,
         services.services,
-        s,
+        s.global,
         logger
       )
       languageServer.listen()

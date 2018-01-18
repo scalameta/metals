@@ -53,9 +53,9 @@ import org.langmeta.semanticdb
 class ScalametaServices(
     cwd: AbsolutePath,
     client: LanguageClient,
-    s: Scheduler,
+    s: MSchedulers,
 ) extends LazyLogging {
-  implicit val scheduler: Scheduler = s
+  implicit val scheduler: Scheduler = s.global
   implicit val languageClient: LanguageClient = client
   private var sbtServer: Option[SbtServer] = None
   private val tempSourcesDir: AbsolutePath =
@@ -408,7 +408,7 @@ class ScalametaServices(
       // running top-level "compile" is sub-optimal for large builds
       // especially cross-built builds with scala.js/native
       Sbt
-        .exec(latestConfig().sbt.command)(sbt.client, s)
+        .exec(latestConfig().sbt.command)(sbt.client)
         .onErrorRecover {
           case NonFatal(err) =>
             // TODO(olafur) figure out why this "broken pipe" is not getting
@@ -425,7 +425,7 @@ class ScalametaServices(
   private def connectToSbtServer(): Unit = {
     sbtServer.foreach(_.runningServer.cancel())
     val services = SbtServer.forwardingServices(client)
-    SbtServer.connect(cwd, services).foreach {
+    SbtServer.connect(cwd, services)(s.sbt).foreach {
       case Left(err) => showMessage.error(err)
       case Right(server) =>
         val msg = "Established connection with sbt server 😎"

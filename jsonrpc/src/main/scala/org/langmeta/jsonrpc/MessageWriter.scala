@@ -31,7 +31,7 @@ class MessageWriter(out: Observer[ByteBuffer], logger: Logger) {
   /** Lock protecting the output stream, so multiple writes don't mix message chunks. */
   private val lock = new Object
 
-  private val baos = new OpenByteArrayOutputStream()
+  private val baos = new ByteArrayOutputStream()
   private val headerOut = MessageWriter.headerWriter(baos)
 
   /**
@@ -48,10 +48,6 @@ class MessageWriter(out: Observer[ByteBuffer], logger: Logger) {
   }
 }
 
-class OpenByteArrayOutputStream extends ByteArrayOutputStream {
-  def getByteArray: Array[Byte] = buf
-}
-
 object MessageWriter {
 
   def headerWriter(out: OutputStream): PrintWriter = {
@@ -59,14 +55,14 @@ object MessageWriter {
   }
 
   def write(message: BaseProtocolMessage): ByteBuffer = {
-    val out = new OpenByteArrayOutputStream()
+    val out = new ByteArrayOutputStream()
     val header = headerWriter(out)
     write(message, out, header)
   }
 
   def write(
       message: BaseProtocolMessage,
-      out: OpenByteArrayOutputStream,
+      out: ByteArrayOutputStream,
       headerOut: PrintWriter
   ): ByteBuffer = {
     message.header.foreach {
@@ -79,7 +75,7 @@ object MessageWriter {
     headerOut.write("\r\n")
     headerOut.flush()
     out.write(message.content)
-    val buffer = ByteBuffer.wrap(out.getByteArray, 0, out.size())
+    val buffer = ByteBuffer.wrap(out.toByteArray, 0, out.size())
     buffer
   }
 }
