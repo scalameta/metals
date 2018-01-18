@@ -72,6 +72,10 @@ inThisBuild(
     )
 )
 
+lazy val benchmarks = project
+  .dependsOn(metaserver)
+  .enablePlugins(JmhPlugin)
+
 lazy val V = new {
   val scala212 = "2.12.4"
   val scalameta = "2.1.5"
