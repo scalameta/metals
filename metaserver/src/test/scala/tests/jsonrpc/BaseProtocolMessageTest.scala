@@ -14,7 +14,9 @@ import tests.MegaSuite
 object BaseProtocolMessageTest extends MegaSuite with LazyLogging {
   val request = Request("method", Some("params".asJson), RequestId(1))
   val message = BaseProtocolMessage(request)
-  def bytes: ByteBuffer = MessageWriter.write(message)
+  val byteArray = MessageWriter.write(message).array()
+  val byteArray2 = byteArray ++ byteArray
+  def bytes: ByteBuffer = ByteBuffer.wrap(byteArray)
 
   test("toString") {
     assertNoDiff(
@@ -62,13 +64,13 @@ object BaseProtocolMessageTest extends MegaSuite with LazyLogging {
       assertEquals(obtained, expected)
     }
   }
-  def array: ByteBuffer = ByteBuffer.wrap(bytes.array())
-  def take(n: Int): ByteBuffer = ByteBuffer.wrap(bytes.array().take(n))
-  def drop(n: Int): ByteBuffer = ByteBuffer.wrap(bytes.array().drop(n))
+  def array: ByteBuffer = ByteBuffer.wrap(byteArray)
+  def take(n: Int): ByteBuffer = ByteBuffer.wrap(byteArray.take(n))
+  def drop(n: Int): ByteBuffer = ByteBuffer.wrap(byteArray.drop(n))
 
   checkTwoMessages(
     "combined",
-    ByteBuffer.wrap(bytes.array() ++ bytes.array()) ::
+    ByteBuffer.wrap(byteArray2) ::
       Nil
   )
 
@@ -88,4 +90,15 @@ object BaseProtocolMessageTest extends MegaSuite with LazyLogging {
       Nil
   )
 
+  test("chunked-property") {
+    0.to(byteArray2.length).foreach { i =>
+      val buffers =
+        ByteBuffer.wrap(byteArray2.take(i)) ::
+          ByteBuffer.wrap(byteArray2.drop(i)) ::
+          Nil
+      val obtained = parse(buffers)
+      val expected = List(message, message)
+      assertEquals(obtained, expected, hint = s"chunked, i=$i")
+    }
+  }
 }
