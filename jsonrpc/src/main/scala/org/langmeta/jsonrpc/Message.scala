@@ -5,9 +5,22 @@ import io.circe.Json
 import io.circe.Decoder
 import io.circe.generic.JsonCodec
 import cats.syntax.either._
+import io.circe.Encoder
+import io.circe.JsonObject
+import io.circe.syntax._
 
 sealed trait Message
 object Message {
+  implicit val encoder: Encoder[Message] = new Encoder[Message] {
+    override def apply(a: Message): Json = {
+      val json = a match {
+        case r: Request => r.asJson
+        case r: Notification => r.asJson
+        case r: Response => r.asJson
+      }
+      json.mapObject(_.add("jsonrpc", "2.0".asJson))
+    }
+  }
   implicit val decoder: Decoder[Message] =
     Decoder.decodeJsonObject.emap { obj =>
       val json = Json.fromJsonObject(obj)
@@ -33,10 +46,17 @@ object Message {
 @JsonCodec case class Notification(method: String, params: Option[Json])
     extends Message
 
-@JsonCodec sealed trait Response extends Message {
+sealed trait Response extends Message {
   def isSuccess: Boolean = this.isInstanceOf[Response.Success]
 }
 object Response {
+  implicit val encoderResponse: Encoder[Response] = new Encoder[Response] {
+    override def apply(a: Response): Json = a match {
+      case r: Response.Success => r.asJson
+      case r: Response.Error => r.asJson
+      case Response.Empty => JsonObject.empty.asJson
+    }
+  }
   @JsonCodec case class Success(result: Json, id: RequestId) extends Response
   @JsonCodec case class Error(error: ErrorObject, id: RequestId)
       extends Response

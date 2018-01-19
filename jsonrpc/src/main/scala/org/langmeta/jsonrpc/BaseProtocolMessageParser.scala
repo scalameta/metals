@@ -19,7 +19,7 @@ final class BaseProtocolMessageParser(logger: Logger)
       import Ack._
       // NOTE(olafur): We should first benchmark before going into any
       // optimization, but my intuition tells me ArrayBuffer[Byte] with many .remove
-      // and ++= is wasteful and can probably be replaced with a growing ByteBuffer.
+      // and ++= is wasteful and can probably be replaced with a Queue[ByteBuffer]
       private[this] val data = ArrayBuffer.empty[Byte]
       private[this] var contentLength = -1
       private[this] var header = Map.empty[String, String]
@@ -88,8 +88,8 @@ final class BaseProtocolMessageParser(logger: Logger)
           data.copyToArray(contentBytes)
           data.remove(0, contentLength)
           contentLength = -1
-          val content = new String(contentBytes, StandardCharsets.UTF_8)
-          out.onNext(BaseProtocolMessage(header, content)).flatMap {
+          val message = new BaseProtocolMessage(header, contentBytes)
+          out.onNext(message).flatMap {
             case Continue => readHeaders()
             case Stop => Stop
           }
@@ -98,7 +98,6 @@ final class BaseProtocolMessageParser(logger: Logger)
       override implicit val scheduler: Scheduler = out.scheduler
       override def onError(ex: Throwable): Unit = out.onError(ex)
       override def onComplete(): Unit = {
-        data.clear()
         out.onComplete()
       }
       override def onNext(elem: ByteBuffer): Future[Ack] = {

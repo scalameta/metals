@@ -2,27 +2,46 @@ package org.langmeta.jsonrpc
 
 import java.io.InputStream
 import java.nio.ByteBuffer
-import java.util.concurrent.Executors
+import java.nio.charset.StandardCharsets
+import java.util
 import com.typesafe.scalalogging.LazyLogging
 import com.typesafe.scalalogging.Logger
-import monix.execution.ExecutionModel
-import monix.execution.Scheduler
+import io.circe.Json
+import io.circe.syntax._
 import monix.reactive.Observable
 
-case class BaseProtocolMessage(header: Map[String, String], content: String) {
-  override def toString: String = {
-    val sb = new java.lang.StringBuilder()
-    header.foreach {
-      case (key, value) =>
-        sb.append(key).append(": ").append(value).append("\r\n")
+final class BaseProtocolMessage(
+    val header: Map[String, String],
+    val content: Array[Byte]
+) {
+
+  override def equals(obj: scala.Any): Boolean =
+    this.eq(obj.asInstanceOf[Object]) || {
+      obj match {
+        case m: BaseProtocolMessage =>
+          header.equals(m.header) &&
+            util.Arrays.equals(content, m.content)
+      }
     }
-    sb.append("\r\n")
-      .append(content)
-    sb.toString
+
+  override def toString: String = {
+    val bytes = MessageWriter.write(this)
+    StandardCharsets.UTF_8.decode(bytes).toString
   }
 }
 
 object BaseProtocolMessage extends LazyLogging {
+  val ContentLen = "Content-Length"
+
+  def apply(msg: Message): BaseProtocolMessage =
+    fromJson(msg.asJson)
+  def fromJson(json: Json): BaseProtocolMessage =
+    fromBytes(json.noSpaces.getBytes(StandardCharsets.UTF_8))
+  def fromBytes(bytes: Array[Byte]): BaseProtocolMessage =
+    new BaseProtocolMessage(
+      Map("Content-Length" -> bytes.length.toString),
+      bytes
+    )
 
   def fromInputStream(in: InputStream): Observable[BaseProtocolMessage] =
     fromInputStream(in, logger)
@@ -43,11 +62,5 @@ object BaseProtocolMessage extends LazyLogging {
       in: Observable[ByteBuffer],
       logger: Logger
   ): Observable[BaseProtocolMessage] =
-    in.executeOn(
-        Scheduler(
-          Executors.newFixedThreadPool(1),
-          ExecutionModel.AlwaysAsyncExecution
-        )
-      )
-      .liftByOperator(new BaseProtocolMessageParser(logger))
+    in.executeWithFork.liftByOperator(new BaseProtocolMessageParser(logger))
 }

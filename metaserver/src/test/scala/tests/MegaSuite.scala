@@ -28,9 +28,15 @@ class MegaSuite extends TestSuite {
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
   def assert(exprs: Boolean*): Unit = macro Asserts.assertProxy
-  def assertEquals[T](a: T, b: T): Unit = {
-    if (a != b) {
-      fail(s"$a != $b")
+  def assertEquals[T](obtained: T, expected: T, hint: String = ""): Unit = {
+    if (obtained != expected) {
+      val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
+      // TODO(olafur) handle sequences
+      val diff =
+        DiffAsserts.error2message(obtained.toString, expected.toString)
+      if (diff.isEmpty)
+        fail(s"obtained=<$obtained> != expected=<$expected>$hintMsg")
+      else fail(diff + hintMsg)
     }
   }
   def assertNoDiff(

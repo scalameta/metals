@@ -1,13 +1,14 @@
 package org.langmeta.lsp
 
+import java.nio.ByteBuffer
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.Logger
 import io.circe.Json
-import io.circe.parser.parse
 import io.circe.syntax._
+import io.circe.jawn.parseByteBuffer
 import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.Scheduler
@@ -96,7 +97,7 @@ final class LanguageServer(
   }
 
   def handleMessage(message: BaseProtocolMessage): Task[Response] =
-    parse(message.content) match {
+    parseByteBuffer(ByteBuffer.wrap(message.content)) match {
       case Left(err) => Task.now(Response.parseError(err.toString))
       case Right(json) =>
         json.as[Message] match {

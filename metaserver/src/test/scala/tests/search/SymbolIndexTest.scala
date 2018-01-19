@@ -3,6 +3,7 @@ package tests.search
 import java.io.PipedOutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
+import scala.meta.languageserver.MSchedulers
 import scala.meta.languageserver.ScalametaEnrichments._
 import scala.meta.languageserver.ScalametaServices
 import scala.meta.languageserver.Uri
@@ -56,10 +57,11 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
     path.UserTest.toString()
   )
   val s = TestScheduler()
+  val mscheduler = new MSchedulers(s, s, s)
   val stdout = new PipedOutputStream()
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
   val client = new LanguageClient(stdout, logger)
-  val metaserver = new ScalametaServices(cwd, client, s)
+  val metaserver = new ScalametaServices(cwd, client, mscheduler)
   metaserver
     .initialize(InitializeParams(0L, cwd.toString(), ClientCapabilities()))
     .runAsync(s)

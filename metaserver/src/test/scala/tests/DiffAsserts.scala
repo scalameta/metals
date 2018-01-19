@@ -1,5 +1,7 @@
 package tests
 
+import scala.util.matching.Regex
+
 object DiffAsserts {
 
   def assertNoDiff(
@@ -28,16 +30,17 @@ object DiffAsserts {
         title + "\n" + error2message(obtained, expected)
       )
 
-  private def error2message(obtained: String, expected: String): String = {
+  def error2message(obtained: String, expected: String): String = {
     val sb = new StringBuilder
-    if (obtained.length < 1000) {
-      sb.append(
-        s"""#${header("Obtained")}
-            #${stripTrailingWhitespace(obtained)}
+    val obtainedStr =
+      if (obtained.length < 1000) stripTrailingWhitespace(obtained)
+      else s"<...truncated>"
+    sb.append(
+      s"""#${header("Obtained")}
+            #$obtainedStr
             #
             #""".stripMargin('#')
-      )
-    }
+    )
     sb.append(
       s"""#${header("Diff")}
           #${stripTrailingWhitespace(compareContents(obtained, expected))}"""
@@ -46,11 +49,16 @@ object DiffAsserts {
     sb.toString()
   }
 
+  val linebreak: Regex = "(\n|\r\n|\r)".r
+
   private def stripTrailingWhitespace(str: String): String =
     str.replaceAll(" \n", "∙\n")
 
-  private def compareContents(original: String, revised: String): String =
-    compareContents(original.trim.split("\n"), revised.trim.split("\n"))
+  def compareContents(original: String, revised: String): String =
+    compareContents(
+      linebreak.split(original.trim),
+      linebreak.split(revised.trim)
+    )
 
   private def compareContents(
       original: Seq[String],

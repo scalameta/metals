@@ -6,7 +6,6 @@ import scala.meta.languageserver.SbtInitializeResult
 import scala.meta.languageserver.SettingParams
 import scala.meta.languageserver.SettingResult
 import monix.eval.Task
-import monix.execution.Scheduler
 import org.langmeta.jsonrpc.Endpoint
 import org.langmeta.jsonrpc.JsonRpcClient
 import org.langmeta.jsonrpc.Response
@@ -24,7 +23,7 @@ trait Sbt {
   object exec extends Endpoint[SbtExecParams, Unit]("sbt/exec") {
     def apply(
         commandLine: String
-    )(implicit client: JsonRpcClient, s: Scheduler): Task[Unit] = {
+    )(implicit client: JsonRpcClient): Task[Unit] = {
       // NOTE(olafur) sbt/exec is a request that never responds
       super.request(SbtExecParams(commandLine)).map(_ => Unit)
     }
