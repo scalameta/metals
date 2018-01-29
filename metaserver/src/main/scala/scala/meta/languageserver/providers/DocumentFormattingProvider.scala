@@ -54,10 +54,12 @@ class DocumentFormattingProvider(
           else Right(None)
         case Some(relpath) =>
           val custom = cwd.resolve(relpath)
-          if (Files.isRegularFile(custom.toNIO)) Right(Some(custom))
-          else {
+          if (Files.isRegularFile(custom.toNIO))
+            Right(Some(custom))
+          else if (relpath == Configuration.Scalafmt.defaultConfPath)
+            Right(None)
+          else
             Left(s"scalameta.scalafmt.confPath=$relpath is not a file")
-          }
       }
       .toFunction0()
 
