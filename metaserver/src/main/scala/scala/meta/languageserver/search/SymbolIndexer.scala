@@ -52,13 +52,15 @@ trait SymbolIndexer { self =>
   /**
    * Register metadata about a symbol.
    *
-   * @param flags the modifiers of this symbol, see org.langmeta.semanticdb.HasFlags
+   * @param kind the kind of this symbol, see scala.meta.internal.semanticdb3.SymbolInformation
+   * @param properties the properties of this symbol, scala.meta.internal.semanticdb3.SymbolInformation
    * @param name the name of the symbol, example "get" for scala.Option.get
    * @param signature the type signature of this symbol, example "List[T]" for List.tail
    */
   def addDenotation(
       symbol: String,
-      flags: Long,
+      kind: Int,
+      properties: Int,
       name: String,
       signature: String
   ): Unit

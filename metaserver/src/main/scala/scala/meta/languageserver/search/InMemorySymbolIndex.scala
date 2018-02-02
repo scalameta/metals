@@ -19,9 +19,10 @@ import com.typesafe.scalalogging.LazyLogging
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
-import org.langmeta.internal.semanticdb.schema.Database
-import org.langmeta.internal.semanticdb.schema.ResolvedName
-import org.langmeta.internal.semanticdb.{schema => s}
+import scala.meta.internal.semanticdb3.SymbolOccurrence
+import scala.meta.internal.semanticdb3.SymbolOccurrence.Role
+import scala.meta.internal.semanticdb3.TextDocuments
+import scala.meta.internal.{semanticdb3 => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb.SemanticdbEnrichments._
@@ -43,32 +44,32 @@ class InMemorySymbolIndex(
   private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()
 
-  /** Returns a ResolvedName at the given location */
+  /** Returns a SymbolOccurrence at the given location */
   def resolveName(
       uri: Uri,
       line: Int,
       column: Int
-  ): Option[(ResolvedName, TokenEditDistance)] = {
+  ): Option[(SymbolOccurrence, TokenEditDistance)] = {
     logger.info(s"resolveName at $uri:$line:$column")
     for {
       document <- documentIndex.getDocument(uri)
       _ = logger.info(s"Found document for $uri")
-      original = Input.VirtualFile(document.filename, document.contents)
+      original = Input.VirtualFile(document.uri, document.text)
       revised = uri.toInput(buffers)
       (originalPosition, edit) <- {
         findOriginalPosition(original, revised, line, column)
       }
-      name <- document.names.collectFirst {
-        case name @ ResolvedName(Some(position), symbol, _) if {
-              val range = original.toIndexRange(position.start, position.end)
+      occ <- document.occurrences.collectFirst {
+        case occ @ SymbolOccurrence(Some(srange), symbol, _) if {
+              val irange = original.toIndexRange(srange)
               logger.trace(
-                s"${document.filename.replaceFirst(".*/", "")} [${range.pretty}] ${symbol}"
+                s"${document.uri.replaceFirst(".*/", "")} [${irange.pretty}] ${symbol}"
               )
-              range.contains(originalPosition)
+              irange.contains(originalPosition)
             } =>
-          name
+          occ
       }
-    } yield name -> edit
+    } yield occ -> edit
   }
 
   /** Returns a symbol at the given location */
@@ -135,20 +136,20 @@ class InMemorySymbolIndex(
       LevelDBMap.withDB(cacheDirectory.resolve("leveldb").toFile) { db =>
         sourceJarsToIndex.foreach { path =>
           logger.info(s"Indexing classpath entry $path...")
-          val database = db.getOrElseUpdate[AbsolutePath, Database](path, {
+          val docs = db.getOrElseUpdate[AbsolutePath, TextDocuments](path, {
             () =>
               Mtags.indexDatabase(path :: Nil)
           })
-          indexDatabase(database)
+          indexDatabase(docs)
         }
       }
       Effects.IndexSourcesClasspath
     }
   }
 
-  /** Register this Database to symbol indexer. */
-  def indexDatabase(document: s.Database): Effects.IndexSemanticdb = {
-    document.documents.foreach(indexDocument)
+  /** Register these documents in the symbol indexer. */
+  def indexDatabase(documents: s.TextDocuments): Effects.IndexSemanticdb = {
+    documents.documents.foreach(indexDocument)
     Effects.IndexSemanticdb
   }
 
@@ -162,11 +163,11 @@ class InMemorySymbolIndex(
    *                 - filename must be formatted as a URI
    *                 - names must be sorted
    */
-  def indexDocument(document: s.Document): Effects.IndexSemanticdb = {
-    val uri = Uri(document.filename)
-    val input = Input.VirtualFile(document.filename, document.contents)
+  def indexDocument(document: s.TextDocument): Effects.IndexSemanticdb = {
+    val uri = Uri(document.uri)
+    val input = Input.VirtualFile(document.uri, document.text)
     documentIndex.putDocument(uri, document)
-    document.names.foreach {
+    document.occurrences.foreach {
       // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
       // local symbols don't need to be indexed globally, by skipping them we should
       // def isLocalSymbol(sym: String): Boolean =
@@ -174,27 +175,28 @@ class InMemorySymbolIndex(
       //     !sym.endsWith("#") &&
       //     !sym.endsWith(")")
       // be able to minimize the size of the global index significantly.
-      //      case s.ResolvedName(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
-      case s.ResolvedName(Some(s.Position(start, end)), sym, true) =>
+      //      case s.SymbolOccurrence(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
+      case s.SymbolOccurrence(Some(srange), sym, Role.DEFINITION) =>
         symbolIndexer.addDefinition(
           sym,
-          i.Position(document.filename, Some(input.toIndexRange(start, end)))
+          i.Position(document.uri, Some(input.toIndexRange(srange)))
         )
-      case s.ResolvedName(Some(s.Position(start, end)), sym, false) =>
+      case s.SymbolOccurrence(Some(srange), sym, Role.REFERENCE) =>
         symbolIndexer.addReference(
-          document.filename,
-          input.toIndexRange(start, end),
+          document.uri,
+          input.toIndexRange(srange),
           sym
         )
       case _ =>
     }
     document.symbols.foreach {
-      case s.ResolvedSymbol(sym, Some(denot)) =>
+      case s.SymbolInformation(sym, _, kind, properties, name, _, signature, _, _) =>
         symbolIndexer.addDenotation(
           sym,
-          denot.flags,
-          denot.name,
-          denot.signature
+          kind.value,
+          properties,
+          name,
+          signature.map(_.text).getOrElse("")
         )
       case _ =>
     }
@@ -203,15 +205,14 @@ class InMemorySymbolIndex(
 
   override def workspaceSymbols(query: String): List[SymbolInformation] = {
     import scala.meta.languageserver.ScalametaEnrichments._
-    import scala.meta.semanticdb._
     val result = symbolIndexer.allSymbols.toIterator
       .withFilter { symbol =>
         symbol.definition.isDefined && symbol.definition.get.uri
           .startsWith("file:")
       }
       .collect {
-        case i.SymbolData(sym, Some(pos), _, flags, name, _)
-            if flags.hasOneOfFlags(CLASS | TRAIT | OBJECT) && {
+        case i.SymbolData(sym, Some(pos), _, kind, _, name, _)
+            if kind.isClass || kind.isTrait || kind.isObject && {
               // NOTE(olafur) fuzzy-wuzzy doesn't seem to do a great job
               // for camelcase searches like "DocSymPr" when looking for
               // "DocumentSymbolProvider. We should try and port something
@@ -221,7 +222,7 @@ class InMemorySymbolIndex(
             } =>
           SymbolInformation(
             name,
-            flags.toSymbolKind,
+            kind.toSymbolKind,
             pos.toLocation,
             Some(sym.stripPrefix("_root_."))
           )

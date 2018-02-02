@@ -44,7 +44,8 @@ import monix.reactive.OverflowStrategy
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.XtensionDatabase
-import org.langmeta.internal.semanticdb.schema
+import org.langmeta.internal.semanticdb.XtensionSchemaTextDocuments
+import scala.meta.internal.{semanticdb3 => schema}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.lsp.LanguageClient
@@ -94,7 +95,7 @@ class ScalametaServices(
           .fromIterable(Semanticdbs.toSemanticdb(input, scalacProvider))
           .executeOn(presentationCompilerScheduler)
       }
-  val interactiveSchemaSemanticdbs: Observable[schema.Database] =
+  val interactiveSchemaSemanticdbs: Observable[schema.TextDocuments] =
     interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
   val metaSemanticdbs: Observable[semanticdb.Database] =
     Observable.merge(
@@ -515,7 +516,7 @@ object ScalametaServices extends LazyLogging {
 
   def fileSystemSemanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
-  ): (Observer.Sync[AbsolutePath], Observable[schema.Database]) = {
+  ): (Observer.Sync[AbsolutePath], Observable[schema.TextDocuments]) = {
     val (subscriber, publisher) = multicast[AbsolutePath]()
     val semanticdbPublisher = publisher
       .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))

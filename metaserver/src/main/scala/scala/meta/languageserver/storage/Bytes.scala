@@ -1,7 +1,7 @@
 package scala.meta.languageserver.storage
 
 import java.nio.charset.StandardCharsets
-import org.langmeta.internal.semanticdb.schema.Database
+import scala.meta.internal.semanticdb3.TextDocuments
 import org.langmeta.io.AbsolutePath
 
 trait FromBytes[A] { self =>
@@ -14,8 +14,8 @@ object FromBytes {
     new String(_, StandardCharsets.UTF_8)
   implicit val ByteArrayFromBytes: FromBytes[Array[Byte]] =
     identity[Array[Byte]]
-  implicit val DatabaseFromBytes: FromBytes[Database] =
-    bytes => Database.parseFrom(bytes)
+  implicit val TextDocumentsFromBytes: FromBytes[TextDocuments] =
+    bytes => TextDocuments.parseFrom(bytes)
 }
 
 trait ToBytes[A] { self =>
@@ -28,7 +28,7 @@ object ToBytes {
     _.getBytes(StandardCharsets.UTF_8)
   implicit val ByteArrayToBytes: ToBytes[Array[Byte]] =
     identity[Array[Byte]]
-  implicit val DatabaseToBytes: ToBytes[Database] =
+  implicit val TextDocumentsToBytes: ToBytes[TextDocuments] =
     _.toByteArray
   implicit val AbsolutePathToBytes: ToBytes[AbsolutePath] =
     _.toString().getBytes(StandardCharsets.UTF_8)

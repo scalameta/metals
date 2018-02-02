@@ -2,12 +2,12 @@ package scala.meta.languageserver.mtags
 
 import scala.meta.Name
 import scala.meta.Term
-import scala.meta.PACKAGE
 import scala.meta.languageserver.ScalametaEnrichments._
-import org.langmeta.internal.semanticdb.schema.Denotation
-import org.langmeta.internal.semanticdb.schema.ResolvedName
-import org.langmeta.internal.semanticdb.schema.Position
-import org.langmeta.internal.semanticdb.schema.ResolvedSymbol
+import scala.meta.internal.semanticdb3.Range
+import scala.meta.internal.semanticdb3.SymbolInformation
+import scala.meta.internal.semanticdb3.SymbolInformation.Kind
+import scala.meta.internal.semanticdb3.SymbolOccurrence
+import scala.meta.internal.semanticdb3.SymbolOccurrence.Role
 import org.{langmeta => m}
 import org.langmeta.semanticdb.Signature
 import org.langmeta.semanticdb.Symbol
@@ -15,9 +15,9 @@ import org.langmeta.semanticdb.Symbol
 trait MtagsIndexer {
   def language: String
   def indexRoot(): Unit
-  def index(): (List[ResolvedName], List[ResolvedSymbol]) = {
+  def index(): (List[SymbolOccurrence], List[SymbolInformation]) = {
     indexRoot()
-    names.result() -> symbols.result()
+    occs.result() -> infos.result()
   }
   private val root: Symbol.Global =
     Symbol.Global(Symbol.None, Signature.Term("_root_"))
@@ -32,16 +32,16 @@ trait MtagsIndexer {
     currentOwner = old
     result
   }
-  def term(name: String, pos: m.Position, flags: Long): Unit =
-    addSignature(Signature.Term(name), pos, flags)
-  def term(name: Term.Name, flags: Long): Unit =
-    addSignature(Signature.Term(name.value), name.pos, flags)
-  def param(name: Name, flags: Long): Unit =
-    addSignature(Signature.TermParameter(name.value), name.pos, flags)
-  def tpe(name: String, pos: m.Position, flags: Long): Unit =
-    addSignature(Signature.Type(name), pos, flags)
-  def tpe(name: Name, flags: Long): Unit =
-    addSignature(Signature.Type(name.value), name.pos, flags)
+  def term(name: String, pos: m.Position, kind: Kind, properties: Int): Unit =
+    addSignature(Signature.Term(name), pos, kind, properties)
+  def term(name: Term.Name, kind: Kind, properties: Int): Unit =
+    addSignature(Signature.Term(name.value), name.pos, kind, properties)
+  def param(name: Name, kind: Kind, properties: Int): Unit =
+    addSignature(Signature.TermParameter(name.value), name.pos, kind, properties)
+  def tpe(name: String, pos: m.Position, kind: Kind, properties: Int): Unit =
+    addSignature(Signature.Type(name), pos, kind, properties)
+  def tpe(name: Name, kind: Kind, properties: Int): Unit =
+    addSignature(Signature.Type(name.value), name.pos, kind, properties)
   def pkg(ref: Term): Unit = ref match {
     case Name(name) =>
       currentOwner = symbol(Signature.Term(name))
@@ -49,23 +49,31 @@ trait MtagsIndexer {
       pkg(qual)
       currentOwner = symbol(Signature.Term(name))
   }
-  private val names = List.newBuilder[ResolvedName]
-  private val symbols = List.newBuilder[ResolvedSymbol]
+  private val occs = List.newBuilder[SymbolOccurrence]
+  private val infos = List.newBuilder[SymbolInformation]
   private def addSignature(
       signature: Signature,
       definition: m.Position,
-      flags: Long
+      kind: Kind,
+      properties: Int
   ): Unit = {
     currentOwner = symbol(signature)
     val syntax = currentOwner.syntax
-    names += ResolvedName(
-      Some(Position(definition.start, definition.end)),
+    occs += SymbolOccurrence(
+      Some(Range(definition.startLine, definition.startColumn, definition.endLine, definition.endColumn)),
       syntax,
-      isDefinition = (flags & PACKAGE) == 0
+      if (kind != Kind.PACKAGE) Role.DEFINITION else Role.REFERENCE
     )
-    symbols += ResolvedSymbol(
+    infos += SymbolInformation(
       syntax,
-      Some(Denotation(flags, signature.name, "", Nil))
+      language,
+      kind,
+      properties,
+      signature.name,
+      None,
+      None,
+      Nil,
+      Nil
     )
   }
   private def symbol(signature: Signature): Symbol.Global =

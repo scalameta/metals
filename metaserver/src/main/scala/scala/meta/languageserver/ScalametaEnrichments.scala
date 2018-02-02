@@ -8,11 +8,12 @@ import org.langmeta.lsp.Diagnostic
 import org.langmeta.lsp.Location
 import org.langmeta.lsp.Position
 import scala.meta.languageserver.{index => i}
-import org.langmeta.internal.semanticdb.{schema => s}
+import scala.meta.internal.{semanticdb3 => s}
 import scala.{meta => m}
 import org.langmeta.lsp.SymbolKind
 import org.langmeta.{lsp => l}
 import org.langmeta.internal.io.FileIO
+import org.langmeta.internal.semanticdb.XtensionSchemaTextDocuments
 import org.langmeta.io.AbsolutePath
 
 // Extension methods for convenient reuse of data conversions between
@@ -310,11 +311,11 @@ object ScalametaEnrichments {
     }
 
   }
-  implicit class XtensionSchemaDocument(val document: s.Document)
+  implicit class XtensionsSchemaTextDocument(val document: s.TextDocument)
       extends AnyVal {
 
     /** Returns scala.meta.Document from protobuf schema.Document */
     def toMetaDocument: m.Document =
-      s.Database(document :: Nil).toDb(None).documents.head
+      s.TextDocuments(document :: Nil).toDb(None).documents.head
   }
 }

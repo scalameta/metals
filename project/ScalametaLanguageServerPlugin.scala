@@ -86,7 +86,7 @@ object SemanticdbEnable {
     }
 
   private val supportedScalaVersions = List("2.12.4", "2.11.12")
-  private val semanticdbVersion = "2.1.5"
+  private val semanticdbVersion = "3.0.0"
 
   lazy val partialToFullScalaVersion: Map[(Long, Long), String] = (for {
     v <- supportedScalaVersions

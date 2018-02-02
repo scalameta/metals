@@ -1,13 +1,6 @@
 package scala.meta.languageserver.mtags
 
 import java.io.StringReader
-import scala.meta.CLASS
-import scala.meta.DEF
-import scala.meta.OBJECT
-import scala.meta.PACKAGE
-import scala.meta.TRAIT
-import scala.meta.VAL
-import scala.meta.VAR
 import com.thoughtworks.qdox._
 import com.thoughtworks.qdox.model.JavaClass
 import com.thoughtworks.qdox.model.JavaField
@@ -17,6 +10,7 @@ import com.thoughtworks.qdox.model.JavaModel
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
 import org.langmeta.languageserver.InputEnrichments._
+import scala.meta.internal.semanticdb3.SymbolInformation.{Kind => k}
 
 object JavaMtags {
   private implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
@@ -30,7 +24,7 @@ object JavaMtags {
           val source = builder.addSource(new StringReader(input.value))
           if (source.getPackage != null) {
             source.getPackageName.split("\\.").foreach { p =>
-              term(p, toRangePosition(source.getPackage.lineNumber, p), PACKAGE)
+              term(p, toRangePosition(source.getPackage.lineNumber, p), k.PACKAGE, 0)
             }
           }
           source.getClasses.forEach(visitClass)
@@ -79,13 +73,13 @@ object JavaMtags {
 
       def visitClass(cls: JavaClass): Unit =
         withOwner(owner(cls.isStatic)) {
-          val flags = if (cls.isInterface) TRAIT else CLASS
+          val kind = if (cls.isInterface) k.TRAIT else k.CLASS
           val pos = toRangePosition(cls.lineNumber, cls.getName)
           if (cls.isEnum) {
-            term(cls.getName, pos, OBJECT)
+            term(cls.getName, pos, k.OBJECT, 0)
           } else {
-            withOwner() { term(cls.getName, pos, OBJECT) } // object
-            tpe(cls.getName, pos, flags)
+            withOwner() { term(cls.getName, pos, k.OBJECT, 0) } // object
+            tpe(cls.getName, pos, kind, 0)
           }
           visitClasses(cls.getNestedClasses)
           visitFields(cls.getMethods)
@@ -103,15 +97,15 @@ object JavaMtags {
             case _ => 0
           }
           val pos = toRangePosition(line, name)
-          val flags: Long = m match {
-            case c: JavaMethod => DEF
+          val kind = m match {
+            case c: JavaMethod => k.DEF
             case c: JavaField =>
-              if (c.isFinal || c.isEnumConstant) VAL
-              else VAR
+              if (c.isFinal || c.isEnumConstant) k.VAL
+              else k.VAR
             // TODO(olafur) handle constructos
-            case _ => 0L
+            case _ => k.UNKNOWN_KIND
           }
-          term(name, pos, flags)
+          term(name, pos, kind, 0)
         }
       override def language: String = "Java"
     }

@@ -4,6 +4,7 @@ import scala.meta.Type
 import scala.meta.languageserver.Uri
 import org.langmeta.lsp.Hover
 import org.langmeta.lsp.RawMarkedString
+import org.langmeta.internal.semanticdb.XtensionSchemaTextDocuments
 import scala.meta.languageserver.search.SymbolIndex
 import scala.{meta => m}
 import scalafix.internal.util.DenotationOps
@@ -12,7 +13,9 @@ import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
 import `scala`.meta.languageserver.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.internal.semanticdb.schema
+import scala.meta.internal.{semanticdb3 => schema}
+import scala.meta.internal.semanticdb3.SymbolInformation.{Kind => k}
+import scala.meta.internal.semanticdb3.SymbolInformation.{Property => p}
 
 object HoverProvider extends LazyLogging {
   def empty: Hover = Hover(Nil, None)
@@ -32,7 +35,7 @@ object HoverProvider extends LazyLogging {
       document <- index.documentIndex.getDocument(uri)
     } yield {
       val scalafixIndex = SemanticdbIndex.load(
-        schema.Database(document :: Nil).toDb(None),
+        schema.TextDocuments(document :: Nil).toDb(None),
         m.Sourcepath(Nil),
         m.Classpath(Nil)
       )
@@ -50,7 +53,37 @@ object HoverProvider extends LazyLogging {
       symbol: m.Symbol,
       data: SymbolData
   ): Option[m.Tree] = {
-    val denotation = m.Denotation(data.flags, data.name, data.signature, Nil)
+    val flags = {
+      var flags = 0L
+      def mflip(dbit: Long) = flags ^= dbit
+      if (data.kind == k.VAL.value) mflip(m.VAL)
+      else if (data.kind == k.VAR.value) mflip(m.VAR)
+      else if (data.kind == k.DEF.value) mflip(m.DEF)
+      else if (data.kind == k.PRIMARY_CONSTRUCTOR.value) mflip(m.PRIMARYCTOR)
+      else if (data.kind == k.SECONDARY_CONSTRUCTOR.value) mflip(m.SECONDARYCTOR)
+      else if (data.kind == k.MACRO.value) mflip(m.MACRO)
+      else if (data.kind == k.TYPE.value) mflip(m.TYPE)
+      else if (data.kind == k.PARAMETER.value) mflip(m.PARAM)
+      else if (data.kind == k.TYPE_PARAMETER.value) mflip(m.TYPEPARAM)
+      else if (data.kind == k.OBJECT.value) mflip(m.OBJECT)
+      else if (data.kind == k.PACKAGE.value) mflip(m.PACKAGE)
+      else if (data.kind == k.PACKAGE_OBJECT.value) mflip(m.PACKAGEOBJECT)
+      else if (data.kind == k.CLASS.value) mflip(m.CLASS)
+      else if (data.kind == k.TRAIT.value) mflip(m.TRAIT)
+      def ptest(bit: Long) = (data.properties & bit) == bit
+      if (ptest(p.PRIVATE.value)) mflip(m.PRIVATE)
+      if (ptest(p.PROTECTED.value)) mflip(m.PROTECTED)
+      if (ptest(p.ABSTRACT.value)) mflip(m.ABSTRACT)
+      if (ptest(p.FINAL.value)) mflip(m.FINAL)
+      if (ptest(p.SEALED.value)) mflip(m.SEALED)
+      if (ptest(p.IMPLICIT.value)) mflip(m.IMPLICIT)
+      if (ptest(p.LAZY.value)) mflip(m.LAZY)
+      if (ptest(p.CASE.value)) mflip(m.CASE)
+      if (ptest(p.COVARIANT.value)) mflip(m.COVARIANT)
+      if (ptest(p.CONTRAVARIANT.value)) mflip(m.CONTRAVARIANT)
+      flags
+    }
+    val denotation = m.Denotation(flags, data.name, data.signature, Nil)
     val input = m.Input.Denotation(denotation.signature, symbol)
     val mods = getMods(denotation)
     val name = m.Term.Name(denotation.name)
