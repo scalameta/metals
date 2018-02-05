@@ -4,6 +4,7 @@ import scala.meta._
 import org.langmeta.inputs.Input
 import scala.meta.internal.semanticdb3.SymbolInformation.Kind
 import scala.meta.internal.semanticdb3.SymbolInformation.{Kind => k}
+import scala.meta.internal.semanticdb3.SymbolInformation.{Property => p}
 
 object ScalaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer = {
@@ -37,10 +38,7 @@ object ScalaMtags {
             } withOwner() {
               // TODO(olafur) More precise flags, we add VAL here blindly even if
               // it's not a val, it might even be a var!
-              // TODO: This is a bug in Scalameta 3.0.0.
-              // https://github.com/scalameta/scalameta/pull/1244
-              // super.param(param.name, k.PARAM, p.VALPARAM)
-              super.param(param.name, k.PARAMETER, 0)
+              super.param(param.name, k.PARAMETER, p.VALPARAM.value)
             }
             continue()
           case t: Defn.Trait => tpe(t.name, k.TRAIT, 0); continue()

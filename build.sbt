@@ -78,7 +78,7 @@ lazy val benchmarks = project
 
 lazy val V = new {
   val scala212 = "2.12.4"
-  val scalameta = "3.0.0"
+  val scalameta = "3.1.0"
   val scalafix = "0.5.7"
   val enumeratum = "1.5.12"
   val circe = "0.9.0"
@@ -146,10 +146,7 @@ lazy val metaserver = project
       "io.github.soc" % "directories" % "5", // for cache location
       "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
-      // TODO: This is a bug in Scalameta 3.0.0.
-      // See https://github.com/scalameta/scalameta/pull/1245.
-      // "org.scalameta" % "interactive" % Version.scalameta cross CrossVersion.full
-      "org.scalameta" %% "interactive" % V.scalameta,
+      "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta % Test
     )
   )

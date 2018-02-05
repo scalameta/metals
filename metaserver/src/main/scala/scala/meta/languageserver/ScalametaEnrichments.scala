@@ -36,6 +36,7 @@ object ScalametaEnrichments {
       case m.Severity.Info => l.DiagnosticSeverity.Information
       case m.Severity.Warning => l.DiagnosticSeverity.Warning
       case m.Severity.Error => l.DiagnosticSeverity.Error
+      case m.Severity.Hint => l.DiagnosticSeverity.Hint
     }
   }
 
