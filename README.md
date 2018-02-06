@@ -1,6 +1,6 @@
 # Scalameta language-server
 
-[![](https://travis-ci.org/scalameta/language-server.svg?branch=master)](https://travis-ci.org/scalameta/language-server)
+[![](https://travis-ci.org/scalameta/metals.svg?branch=master)](https://travis-ci.org/scalameta/metals)
 
 This project is an experiment to implement a [Language Server](https://github.com/Microsoft/language-server-protocol)
 for Scala using Scalameta semanticdb and the Scala presentation compiler.
