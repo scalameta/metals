@@ -12,6 +12,10 @@ jobs:
     # default stage is test
     - env: TEST="scalafmt"
       script: ./bin/scalafmt --test
+    - env: TEST="2.11"
+      script:
+        - sbt ++2.11.12 lsp4s/test
+        - sbt ++2.11.12 jsonrpc/test
     - env: TEST="sbt test"
       script:
         - sbt startServer *:scalametaEnableCompletions test scalafixTest
