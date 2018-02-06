@@ -201,7 +201,7 @@ case class CodeLens(
     /**
      * Prefer spaces over tabs.
      */
-    insertSpaces: Boolean,
+    insertSpaces: Boolean
     /**
      * Signature for further properties.
      */
