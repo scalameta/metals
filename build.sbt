@@ -10,7 +10,7 @@ inThisBuild(
         "-deprecation",
         // -Xlint is unusable because of
         // https://github.com/scala/bug/issues/10448
-        "-Ywarn-unused:imports"
+        "-Ywarn-unused-import"
       ),
       scalafixEnabled := false,
       organization := "org.scalameta",
@@ -77,6 +77,7 @@ lazy val benchmarks = project
   .enablePlugins(JmhPlugin)
 
 lazy val V = new {
+  val scala211 = "2.11.12"
   val scala212 = "2.12.4"
   val scalameta = "2.1.5"
   val scalafix = "0.5.7"
@@ -104,6 +105,7 @@ lazy val semanticdbSettings = List(
 
 lazy val jsonrpc = project
   .settings(
+    crossScalaVersions := List(V.scala211, V.scala212),
     libraryDependencies ++= List(
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "com.beachape" %% "enumeratum" % V.enumeratum,
@@ -121,7 +123,9 @@ lazy val jsonrpc = project
     )
   )
 
-lazy val lsp4s = project.dependsOn(jsonrpc)
+lazy val lsp4s = project
+  .settings(crossScalaVersions := List(V.scala211, V.scala212))
+  .dependsOn(jsonrpc)
 
 lazy val metaserver = project
   .settings(
