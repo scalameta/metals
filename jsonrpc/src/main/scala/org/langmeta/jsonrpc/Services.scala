@@ -81,7 +81,10 @@ object Services {
 class Services private (val services: List[NamedJsonRpcService]) {
 
   def request[A, B](endpoint: Endpoint[A, B])(f: A => B): Services =
-    requestAsync[A, B](endpoint)(params => Task(Right(f(params))))
+    requestAsync[A, B](endpoint)(new Service[A, Either[Response.Error, B]] {
+      def handle(request: A): Task[Either[Response.Error, B]] =
+        Task(Right(f(request)))
+    })
 
   def requestAsync[A, B](
       endpoint: Endpoint[A, B]
@@ -94,7 +97,9 @@ class Services private (val services: List[NamedJsonRpcService]) {
     )
 
   def notification[A](endpoint: Endpoint[A, Unit])(f: A => Unit): Services =
-    notificationAsync[A](endpoint)(request => Task(f(request)))
+    notificationAsync[A](endpoint)(new Service[A, Unit] {
+      def handle(request: A): Task[Unit] = Task(f(request))
+    })
 
   def notificationAsync[A](
       endpoint: Endpoint[A, Unit]

@@ -102,7 +102,7 @@ import io.circe.generic.JsonCodec
 
 sealed trait MarkedString
 object MarkedString {
-  implicit val encoder: Encoder[MarkedString] = {
+  implicit val encoder: Encoder[MarkedString] = Encoder.instance {
     case m: RawMarkedString => Encoder[RawMarkedString].apply(m)
     case m: MarkdownString => Encoder[MarkdownString].apply(m)
   }

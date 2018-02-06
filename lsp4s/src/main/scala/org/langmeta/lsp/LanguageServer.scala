@@ -24,21 +24,27 @@ final class LanguageServer(
 ) {
   private val activeClientRequests: TrieMap[Json, Cancelable] = TrieMap.empty
   private val cancelNotification =
-    Service.notification[CancelParams]("$/cancelRequest") { params =>
-      val id = params.id
-      activeClientRequests.get(id) match {
-        case None =>
-          Task {
-            logger.warn(s"Can't cancel request $id, no active request found.")
-            Response.empty
+    Service.notification[CancelParams]("$/cancelRequest") {
+      new Service[CancelParams, Unit] {
+        def handle(params: CancelParams): Task[Unit] = {
+          val id = params.id
+          activeClientRequests.get(id) match {
+            case None =>
+              Task {
+                logger.warn(
+                  s"Can't cancel request $id, no active request found."
+                )
+                Response.empty
+              }
+            case Some(request) =>
+              Task {
+                logger.info(s"Cancelling request $id")
+                request.cancel()
+                activeClientRequests.remove(id)
+                Response.cancelled(id)
+              }
           }
-        case Some(request) =>
-          Task {
-            logger.info(s"Cancelling request $id")
-            request.cancel()
-            activeClientRequests.remove(id)
-            Response.cancelled(id)
-          }
+        }
       }
     }
   private val handlersByMethodName: Map[String, NamedJsonRpcService] =
