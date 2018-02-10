@@ -25,11 +25,42 @@ import io.circe.generic.JsonCodec
 
 @JsonCodec case class ClientCapabilities()
 
+@JsonCodec case class SaveOptions(
+    /**
+     * The client is supposed to include the content on save.
+     */
+    includeText: Option[Boolean] = None
+)
+
+@JsonCodec case class TextDocumentSyncOptions(
+    /**
+     * Open and close notifications are sent to the server.
+     */
+    openClose: Option[Boolean] = None,
+    /**
+     * Change notifications are sent to the server. See TextDocumentSyncKind.None, TextDocumentSyncKind.Full
+     * and TextDocumentSyncKind.Incremental.
+     */
+    change: Option[TextDocumentSyncKind] = None,
+    /**
+     * Will save notifications are sent to the server.
+     */
+    willSave: Option[Boolean] = None,
+    /**
+     * Will save wait until requests are sent to the server.
+     */
+    willSaveWaitUntil: Option[Boolean] = None,
+    /**
+     * Save notifications are sent to the server.
+     */
+    save: Option[SaveOptions] = None
+)
+
 @JsonCodec case class ServerCapabilities(
     /**
      * Defines how text documents are synced.
      */
-    textDocumentSync: TextDocumentSyncKind = TextDocumentSyncKind.Full,
+    textDocumentSync: Option[TextDocumentSyncOptions] = None,
     /**
      * The server provides hover support.
      */
