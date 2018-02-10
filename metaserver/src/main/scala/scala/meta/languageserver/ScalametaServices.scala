@@ -262,6 +262,16 @@ class ScalametaServices(
     .notification(td.willSave) { _ =>
       ()
     }
+    .requestAsync(td.willSaveWaitUntil) { params =>
+      params.reason match {
+        case TextDocumentSaveReason.Manual if latestConfig().scalafmt.onSave =>
+          logger.info(s"Formatting on manual save: $params.textDocument")
+          val uri = Uri(params.textDocument)
+          documentFormattingProvider.format(uri.toInput(buffers))
+        case _ =>
+          Task.now { Right(List()) }
+      }
+    }
     .notification(td.didSave) { _ =>
       if (sbtServerEnabled()) {
         sbtCompile()
