@@ -130,6 +130,31 @@ case object TextDocumentSyncKind
   val values = findValues
 }
 
+/**
+ * Represents reasons why a text document is saved.
+ */
+sealed abstract class TextDocumentSaveReason(val value: Int)
+    extends IntEnumEntry
+
+case object TextDocumentSaveReason
+    extends IntEnum[TextDocumentSaveReason]
+    with IntCirceEnum[TextDocumentSaveReason] {
+
+  /**
+   * Manually triggered, e.g. by the user pressing save, by starting debugging,
+   * or by an API call.
+   */
+  case object Manual extends TextDocumentSaveReason(1)
+
+  /** Automatic after a delay. */
+  case object AfterDelay extends TextDocumentSaveReason(2)
+
+  /** When the editor lost focus. */
+  case object FocusOut extends TextDocumentSaveReason(3)
+
+  val values = findValues
+}
+
 sealed abstract class FileChangeType(val value: Int) extends IntEnumEntry
 
 case object FileChangeType

@@ -246,6 +246,9 @@ class ScalametaServices(
       sourceChangeSubscriber.onNext(input)
       ()
     }
+    .notification(td.willSave) { _ =>
+      ()
+    }
     .notification(td.didSave) { _ =>
       if (sbtServerEnabled()) {
         sbtCompile()

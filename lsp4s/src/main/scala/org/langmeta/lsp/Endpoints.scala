@@ -24,6 +24,8 @@ trait TextDocument {
     notification[PublishDiagnostics]("textDocument/publishDiagnostics")
   val didClose: Endpoint[DidCloseTextDocumentParams, Unit] =
     notification[DidCloseTextDocumentParams]("textDocument/didClose")
+  val willSave: Endpoint[WillSaveTextDocumentParams, Unit] =
+    notification[WillSaveTextDocumentParams]("textDocument/willSave")
   val didSave: Endpoint[DidSaveTextDocumentParams, Unit] =
     notification[DidSaveTextDocumentParams]("textDocument/didSave")
   val didOpen: Endpoint[DidOpenTextDocumentParams, Unit] =

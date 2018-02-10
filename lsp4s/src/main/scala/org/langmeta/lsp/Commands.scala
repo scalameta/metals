@@ -219,6 +219,10 @@ import io.circe.generic.JsonCodec
 @JsonCodec case class DidCloseTextDocumentParams(
     textDocument: TextDocumentIdentifier
 )
+@JsonCodec case class WillSaveTextDocumentParams(
+    textDocument: TextDocumentIdentifier,
+    reason: TextDocumentSaveReason
+)
 @JsonCodec case class DidSaveTextDocumentParams(
     textDocument: TextDocumentIdentifier
 )
