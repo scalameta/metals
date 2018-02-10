@@ -154,6 +154,19 @@ class ScalametaServices(
     loadAllRelevantFilesInThisWorkspace()
     val commands = WorkspaceCommand.values.map(_.entryName)
     val capabilities = ServerCapabilities(
+      textDocumentSync = Some(
+        TextDocumentSyncOptions(
+          openClose = Some(true),
+          change = Some(TextDocumentSyncKind.Full),
+          willSave = Some(false),
+          willSaveWaitUntil = Some(true),
+          save = Some(
+            SaveOptions(
+              includeText = Some(true)
+            )
+          )
+        )
+      ),
       completionProvider = Some(
         CompletionOptions(
           resolveProvider = false,
