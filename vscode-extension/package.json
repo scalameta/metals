@@ -1,6 +1,6 @@
 {
-  "name": "vscode-scalameta",
-  "displayName": "vscode-scalameta",
+  "name": "vscode-metals",
+  "displayName": "Metals",
   "description": "",
   "version": "0.0.1",
   "publisher": "gabro",
@@ -11,68 +11,69 @@
   "activationEvents": ["onLanguage:scala"],
   "contributes": {
     "configuration": {
-      "title": "Scalameta Language Server",
+      "title": "Metals",
       "properties": {
-        "scalameta.sbt.enabled": {
+        "metals.sbt.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "EXPERIMENTAL. Use sbt language server to compile on file save and report squgglies. Requires sbt 1.1.0"
+          "description":
+            "EXPERIMENTAL. Use sbt language server to compile on file save and report squgglies. Requires sbt 1.1.0"
         },
-        "scalameta.sbt.command": {
+        "metals.sbt.command": {
           "type": "string",
           "default": "test:compile",
           "description": "Which sbt command to run on file save."
         },
-        "scalameta.scalac.enabled": {
+        "metals.scalac.enabled": {
           "type": "boolean",
           "default": false,
           "description":
             "EXPERIMENTAL. Enable squigglies and completions as you type with the Scala Presentation Compiler."
         },
-        "scalameta.scalafmt.enabled": {
+        "metals.scalafmt.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable formatting with scalafmt"
         },
-        "scalameta.scalafmt.version": {
+        "metals.scalafmt.version": {
           "type": "string",
           "default": "1.3.0",
           "description":
             "Version of scalafmt to use, default to latest stable release."
         },
-        "scalameta.scalafmt.confPath": {
+        "metals.scalafmt.confPath": {
           "type": "string",
           "default": ".scalafmt.conf",
           "description":
             "Path to the Scalafmt configuration, relative to the workspace path"
         },
-        "scalameta.scalafix.enabled": {
+        "metals.scalafix.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable Scalafix diagnostics"
         },
-        "scalameta.scalafix.confPath": {
+        "metals.scalafix.confPath": {
           "type": "string",
           "default": ".scalafix.conf",
           "description":
             "Path to the Scalafix configuration, relative to the workspace path"
         },
-        "scalameta.search.indexClasspath": {
+        "metals.search.indexClasspath": {
           "type": "boolean",
           "default": true,
           "description": "Enable indexing of the classpath"
         },
-        "scalameta.search.indexJDK": {
+        "metals.search.indexJDK": {
           "type": "boolean",
           "default": false,
           "description": "EXPERIMENTAL. Enable indexing of the JDK"
         },
-        "scalameta.hover.enabled": {
+        "metals.hover.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable tooltips on hover"
         },
-        "scalameta.rename.enabled": {
+        "metals.rename.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable renaming symbols"
@@ -81,23 +82,23 @@
     },
     "commands": [
       {
-        "command": "scalameta.restartServer",
-        "category": "Scalameta Language Server",
+        "command": "metals.restartServer",
+        "category": "Metals",
         "title": "Restart server"
       },
       {
-        "command": "scalameta.clearIndexCache",
-        "category": "Scalameta Language Server",
+        "command": "metals.clearIndexCache",
+        "category": "Metals",
         "title": "Clear index cache"
       },
       {
-        "command": "scalameta.sbtConnect",
-        "category": "Scalameta Language Server",
+        "command": "metals.sbtConnect",
+        "category": "Metals",
         "title": "Connect to sbt server"
       },
       {
-        "command": "scalameta.resetPresentationCompiler",
-        "category": "Scalameta Language Server",
+        "command": "metals.resetPresentationCompiler",
+        "category": "Metals",
         "title": "Reset presentation compilers"
       }
     ]

@@ -252,7 +252,7 @@ class ScalametaServices(
       }
     }
     .notification(ws.didChangeConfiguration) { params =>
-      params.settings.hcursor.downField("scalameta").as[Configuration] match {
+      params.settings.hcursor.downField("metals").as[Configuration] match {
         case Left(err) =>
           showMessage.notify(
             ShowMessageParams(MessageType.Error, err.toString)

@@ -59,26 +59,26 @@ export async function activate(context: ExtensionContext) {
         workspace.createFileSystemWatcher("**/*.semanticdb"),
         workspace.createFileSystemWatcher("**/*.compilerconfig")
       ],
-      configurationSection: "scalameta"
+      configurationSection: 'metals'
     },
     revealOutputChannelOn: RevealOutputChannelOn.Never
   };
 
   const client = new LanguageClient(
-    "scalameta",
-    "Scalameta",
+    'metals',
+    'Metals',
     serverOptions,
     clientOptions
   );
 
   const restartServerCommand = commands.registerCommand(
-    "scalameta.restartServer",
+    'metals.restartServer',
     async () => {
       const serverPid = client["_serverProcess"].pid;
       await exec(`kill ${serverPid}`);
       const showLogsAction = "Show server logs";
       const selectedAction = await window.showInformationMessage(
-        "Scalameta Language Server killed, it should restart in a few seconds",
+        'Metals Language Server killed, it should restart in a few seconds',
         showLogsAction
       );
 
@@ -90,7 +90,7 @@ export async function activate(context: ExtensionContext) {
 
   client.onReady().then(() => {
     const clearIndexCacheCommand = commands.registerCommand(
-      "scalameta.clearIndexCache",
+      'metals.clearIndexCache',
       async () => {
         return client.sendRequest(ExecuteCommandRequest.type, {
           command: "clearIndexCache"
@@ -98,7 +98,7 @@ export async function activate(context: ExtensionContext) {
       }
     );
     const resetPresentationCompiler = commands.registerCommand(
-      "scalameta.resetPresentationCompiler",
+      'metals.resetPresentationCompiler',
       async () => {
         return client.sendRequest(ExecuteCommandRequest.type, {
           command: "resetPresentationCompiler"
@@ -106,7 +106,7 @@ export async function activate(context: ExtensionContext) {
       }
     );
     const sbtConnectCommand = commands.registerCommand(
-      "scalameta.sbtConnect",
+      'metals.sbtConnect',
       async () => {
         return client.sendRequest(ExecuteCommandRequest.type, {
           command: "sbtConnect"
