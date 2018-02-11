@@ -3,6 +3,7 @@ package tests.mtags
 import java.nio.file.Paths
 import scala.meta.languageserver.compiler.CompilerConfig
 import scala.meta.languageserver.mtags.Mtags
+import org.langmeta.internal.semanticdb.XtensionSchemaTextDocuments
 
 object JavaMtagsTest extends BaseMtagsTest {
   check(
@@ -24,11 +25,11 @@ object JavaMtagsTest extends BaseMtagsTest {
       |[43..44): a <= _root_.a.b.A#a.
       |
       |Symbols:
-      |_root_.a. => package a
-      |_root_.a.b. => package b
-      |_root_.a.b.A# => trait A
-      |_root_.a.b.A#a. => def a
-      |_root_.a.b.A. => object A
+      |_root_.a. => javadefined package a
+      |_root_.a.b. => javadefined package b
+      |_root_.a.b.A# => javadefined trait A
+      |_root_.a.b.A#a. => javadefined def a
+      |_root_.a.b.A. => javadefined object A
       |""".stripMargin
   )
 
@@ -57,14 +58,14 @@ object JavaMtagsTest extends BaseMtagsTest {
       |[103..104): F <= _root_.B.F#
       |
       |Symbols:
-      |_root_.B# => class B
-      |_root_.B#E# => class E
-      |_root_.B#E. => object E
-      |_root_.B#d. => def d
-      |_root_.B. => object B
-      |_root_.B.F# => class F
-      |_root_.B.F. => object F
-      |_root_.B.c. => def c
+      |_root_.B# => javadefined class B
+      |_root_.B#E# => javadefined class E
+      |_root_.B#E. => javadefined object E
+      |_root_.B#d. => javadefined def d
+      |_root_.B. => javadefined object B
+      |_root_.B.F# => javadefined class F
+      |_root_.B.F. => javadefined object F
+      |_root_.B.c. => javadefined def c
     """.stripMargin
   )
 
@@ -89,11 +90,11 @@ object JavaMtagsTest extends BaseMtagsTest {
       |[17..18): I <= _root_.G.I.
       |
       |Symbols:
-      |_root_.G. => object G
-      |_root_.G.H. => val H
-      |_root_.G.H. => val H
-      |_root_.G.I. => val I
-      |_root_.G.I. => val I
+      |_root_.G. => javadefined object G
+      |_root_.G.H. => javadefined val H
+      |_root_.G.H. => javadefined val H
+      |_root_.G.I. => javadefined val I
+      |_root_.G.I. => javadefined val I
       |""".stripMargin
   )
 
@@ -114,9 +115,9 @@ object JavaMtagsTest extends BaseMtagsTest {
       |[46..51): FIELD <= _root_.J.FIELD.
       |
       |Symbols:
-      |_root_.J# => class J
-      |_root_.J. => object J
-      |_root_.J.FIELD. => val FIELD
+      |_root_.J# => javadefined class J
+      |_root_.J. => javadefined object J
+      |_root_.J.FIELD. => javadefined val FIELD
     """.stripMargin
   )
 
@@ -146,10 +147,10 @@ object JavaMtagsTest extends BaseMtagsTest {
       |[36..37): l <= _root_.k.K.l.
       |
       |Symbols:
-      |_root_.k. => package k
-      |_root_.k.K# => trait K
-      |_root_.k.K#m. => def m
-      |_root_.k.K. => object K
+      |_root_.k. => javadefined package k
+      |_root_.k.K# => javadefined trait K
+      |_root_.k.K#m. => javadefined def m
+      |_root_.k.K. => javadefined object K
     """.stripMargin
   )
 
@@ -180,11 +181,11 @@ object JavaMtagsTest extends BaseMtagsTest {
         |[387..400): getFileSystem <= _root_.java.io.DefaultFileSystem.getFileSystem.
         |
         |Symbols:
-        |_root_.java. => package java
-        |_root_.java.io. => package io
-        |_root_.java.io.DefaultFileSystem# => class DefaultFileSystem
-        |_root_.java.io.DefaultFileSystem. => object DefaultFileSystem
-        |_root_.java.io.DefaultFileSystem.getFileSystem. => def getFileSystem
+        |_root_.java. => javadefined package java
+        |_root_.java.io. => javadefined package io
+        |_root_.java.io.DefaultFileSystem# => javadefined class DefaultFileSystem
+        |_root_.java.io.DefaultFileSystem. => javadefined object DefaultFileSystem
+        |_root_.java.io.DefaultFileSystem.getFileSystem. => javadefined def getFileSystem
       """.stripMargin
     assertNoDiff(obtained, expected)
   }

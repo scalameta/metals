@@ -13,7 +13,7 @@ import scala.util.control.NonFatal
 import scala.{meta => m}
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.inputs.Input
-import org.langmeta.internal.semanticdb.schema.Database
+import scala.meta.internal.semanticdb3.TextDocuments
 import org.langmeta.io.AbsolutePath
 
 object Semanticdbs extends LazyLogging {
@@ -74,21 +74,21 @@ object Semanticdbs extends LazyLogging {
   def loadFromFile(
       semanticdbPath: AbsolutePath,
       cwd: AbsolutePath
-  ): Database = {
+  ): TextDocuments = {
     val bytes = Files.readAllBytes(semanticdbPath.toNIO)
-    val sdb = Database.parseFrom(bytes)
-    Database(
-      sdb.documents.map { d =>
-        val filename = s"file:${cwd.resolve(d.filename)}"
-        logger.info(s"Loading file $filename")
-        d.withFilename(filename)
-          .withNames {
+    val docs = TextDocuments.parseFrom(bytes)
+    TextDocuments(
+      docs.documents.map { d =>
+        val uri = s"file:${cwd.resolve(d.uri)}"
+        logger.info(s"Loading file $uri")
+        d.withUri(uri)
+          .withOccurrences {
             // This should be done inside semanticdb-scalac.
-            val names = d.names.toArray
-            util.Sorting.quickSort(names)(
-              Ordering.by(_.position.fold(-1)(_.start))
+            val occs = d.occurrences.toArray
+            util.Sorting.quickSort(occs)(
+              Ordering.by(_.range.fold((-1, -1))(r => (r.startLine, r.startCharacter)))
             )
-            names
+            occs
           }
       }
     )

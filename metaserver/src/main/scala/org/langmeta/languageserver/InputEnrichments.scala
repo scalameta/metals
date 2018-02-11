@@ -4,6 +4,7 @@ import org.langmeta.lsp
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
 import scala.meta.languageserver.{index => i}
+import scala.meta.internal.{semanticdb3 => s}
 
 object InputEnrichments {
   implicit class XtensionPositionOffset(val pos: Position) extends AnyVal {
@@ -24,13 +25,12 @@ object InputEnrichments {
     }
   }
   implicit class XtensionInputOffset(val input: Input) extends AnyVal {
-    def toIndexRange(start: Int, end: Int): i.Range = {
-      val pos = Position.Range(input, start, end)
+    def toIndexRange(range: s.Range): i.Range = {
       i.Range(
-        startLine = pos.startLine,
-        startColumn = pos.startColumn,
-        endLine = pos.endLine,
-        endColumn = pos.endColumn
+        startLine = range.startLine,
+        startColumn = range.startCharacter,
+        endLine = range.endLine,
+        endColumn = range.endCharacter
       )
     }
 

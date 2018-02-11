@@ -34,7 +34,7 @@ object InverseSymbolIndexer {
         m.Document(
           m.Input.VirtualFile(
             key,
-            documents.getDocument(uri).fold("")(_.contents)
+            documents.getDocument(uri).fold("")(_.text)
           ),
           "Scala212",
           Nil,

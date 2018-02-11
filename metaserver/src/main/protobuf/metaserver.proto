@@ -4,16 +4,18 @@ package scala.meta.languageserver.index;
 
 // All of the metadata associated with a single symbol definition
 message SymbolData {
+    reserved 4;
     string symbol = 1;
     // The Position where this symbol is defined.
     Position definition = 2;
     map<string, Ranges> references = 3;
-    int64 flags = 4;
+    int32 kind = 7;
+    int32 properties = 8;
     string name = 5;
     string signature = 6;
-    // Planned for Scalameta v2.2, see https://github.com/scalameta/scalameta/milestone/9
-    // string docstring = 7; // javadoc/scaladoc
-    // string overrides = 8; // parent symbol that this symbol overrides
+    // Planned for Scalameta v3.1 maybe
+    // string docstring = 9; // javadoc/scaladoc
+    // string overrides = 10; // parent symbol that this symbol overrides
 }
 
 // A standalone position used by "Go to definition" when jumping to a symbol

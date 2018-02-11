@@ -47,6 +47,7 @@ class ScalacErrorReporter()(implicit connection: JsonRpcClient) {
       case semanticdb.Severity.Error => l.DiagnosticSeverity.Error
       case semanticdb.Severity.Warning => l.DiagnosticSeverity.Warning
       case semanticdb.Severity.Info => l.DiagnosticSeverity.Information
+      case semanticdb.Severity.Hint => l.DiagnosticSeverity.Hint
     }
 
 }
