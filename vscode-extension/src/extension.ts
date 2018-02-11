@@ -35,9 +35,9 @@ export async function activate(context: ExtensionContext) {
     "sonatype:releases",
     "-J",
     toolsJar,
-    "org.scalameta:metaserver_2.12:0.1-SNAPSHOT",
+    "org.scalameta:metals_2.12:0.1-SNAPSHOT",
     "-M",
-    "scala.meta.languageserver.Main"
+    "scala.meta.metals.Main"
   ];
 
   const javaArgs = [

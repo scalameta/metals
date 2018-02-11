@@ -1,10 +1,9 @@
-# Scalameta language-server
+# Metals
 
 [![](https://travis-ci.org/scalameta/metals.svg?branch=master)](https://travis-ci.org/scalameta/metals)
 
 This project is an experiment to implement a [Language Server](https://github.com/Microsoft/language-server-protocol)
 for Scala using Scalameta semanticdb and the Scala presentation compiler.
-
 
 :warning: This project is very alpha stage.
 Expect bugs and surprising behavior.
@@ -81,3 +80,6 @@ point where only a few simple case classes remain.
 ## Related work
 
 - [ENSIME](http://ensime.org): a tool for providing IDE-like features to text editors, that [recently added LSP support](https://github.com/ensime/ensime-server/pull/1888)
+
+## Why Metals?
+Metals = Meta (from Scalameta) + LS (from Language Server)

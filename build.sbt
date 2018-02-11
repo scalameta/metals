@@ -19,7 +19,7 @@ inThisBuild(
       ),
       testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
       libraryDependencies += "com.lihaoyi" %% "utest" % "0.6.0" % Test,
-      homepage := Some(url("https://github.com/scalameta/language-server")),
+      homepage := Some(url("https://github.com/scalameta/metals")),
       developers := List(
         Developer(
           "laughedelic",
@@ -54,8 +54,8 @@ inThisBuild(
       ),
       scmInfo in ThisBuild := Some(
         ScmInfo(
-          url("https://github.com/scalameta/language-server"),
-          s"scm:git:git@github.com:scalameta/language-server.git"
+          url("https://github.com/scalameta/metals"),
+          s"scm:git:git@github.com:scalameta/metals.git"
         )
       ),
       releaseEarlyWith := BintrayPublisher,
@@ -73,7 +73,7 @@ inThisBuild(
 )
 
 lazy val benchmarks = project
-  .dependsOn(metaserver)
+  .dependsOn(metals)
   .enablePlugins(JmhPlugin)
 
 lazy val V = new {
@@ -127,7 +127,7 @@ lazy val lsp4s = project
   .settings(crossScalaVersions := List(V.scala211, V.scala212))
   .dependsOn(jsonrpc)
 
-lazy val metaserver = project
+lazy val metals = project
   .settings(
     PB.targets.in(Compile) := Seq(
       scalapb.gen(
@@ -139,7 +139,7 @@ lazy val metaserver = project
       "testWorkspaceBaseDirectory" ->
         baseDirectory.in(testWorkspace).value
     ),
-    buildInfoPackage := "scala.meta.languageserver.internal",
+    buildInfoPackage := "scala.meta.metals.internal",
     libraryDependencies ++= List(
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0", // for sbt server
       "ch.epfl.scala" % "scalafix-reflect" % V.scalafix cross CrossVersion.full,
@@ -165,7 +165,7 @@ lazy val integration = project
   .settings(
     noPublish
   )
-  .dependsOn(metaserver % "compile->compile;test->test")
+  .dependsOn(metals % "compile->compile;test->test")
 
 lazy val testWorkspace = project
   .in(file("test-workspace"))
