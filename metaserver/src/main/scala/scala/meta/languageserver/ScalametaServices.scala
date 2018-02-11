@@ -154,6 +154,19 @@ class ScalametaServices(
     loadAllRelevantFilesInThisWorkspace()
     val commands = WorkspaceCommand.values.map(_.entryName)
     val capabilities = ServerCapabilities(
+      textDocumentSync = Some(
+        TextDocumentSyncOptions(
+          openClose = Some(true),
+          change = Some(TextDocumentSyncKind.Full),
+          willSave = Some(false),
+          willSaveWaitUntil = Some(true),
+          save = Some(
+            SaveOptions(
+              includeText = Some(true)
+            )
+          )
+        )
+      ),
       completionProvider = Some(
         CompletionOptions(
           resolveProvider = false,
@@ -245,6 +258,19 @@ class ScalametaServices(
       buffers.changed(input)
       sourceChangeSubscriber.onNext(input)
       ()
+    }
+    .notification(td.willSave) { _ =>
+      ()
+    }
+    .requestAsync(td.willSaveWaitUntil) { params =>
+      params.reason match {
+        case TextDocumentSaveReason.Manual if latestConfig().scalafmt.onSave =>
+          logger.info(s"Formatting on manual save: $params.textDocument")
+          val uri = Uri(params.textDocument)
+          documentFormattingProvider.format(uri.toInput(buffers))
+        case _ =>
+          Task.now { Right(List()) }
+      }
     }
     .notification(td.didSave) { _ =>
       if (sbtServerEnabled()) {
