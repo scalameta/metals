@@ -10,11 +10,11 @@ These steps are required once per machine.
 The server needs to access some metadata about the build configuration. This data are produced by
 an sbt plugin. This plugin is currently not published, so you will need to copy paste it on your machine.
 
-Here's the source of the plugin: https://github.com/scalameta/language-server/blob/master/project/ScalametaLanguageServerPlugin.scala
+Here's the source of the plugin: https://github.com/scalameta/metals/blob/master/project/MetalsPlugin.scala
 
 Copy the source to either (depending on your sbt version):
-- (sbt 0.13) `~/.sbt/0.13/plugins/ScalametaLanguageServerPlugin.scala`
-- (sbt 1.0) `~/.sbt/1.0/plugins/ScalametaLanguageServerPlugin.scala`
+- (sbt 0.13) `~/.sbt/0.13/plugins/MetalsPlugin.scala`
+- (sbt 1.0) `~/.sbt/1.0/plugins/MetalsPlugin.scala`
 
 ## Step 2 - build the VSCode extension
 The VSCode extension is not yet published on the Marketplace, so you'll need to build it locally.
@@ -23,7 +23,7 @@ For this step, `node` and `npm` are required.
 - `cd vscode-extension`
 - `npm install`
 - `npm run build`
-- `code --install-extension vscode-scalameta-0.0.1.vsix`
+- `code --install-extension vscode-metals-0.0.1.vsix`
 
 ## Step 3 - publish the server locally
 From the repo root run `sbt publishLocal`
@@ -52,7 +52,7 @@ $ sbt
 As soon as you exit the sbt shell you need to re-run `semanticdbEnable` next time you open sbt.
 
 ## Step 2 - produce the build metadata
-In your project of choice, open `sbt` and run `*:scalametaEnableCompletions`.
+In your project of choice, open `sbt` and run `*:metalsEnableCompletions`.
 As mentioned above, this will produce the necessary metadata for the server.
 
 > **NOTE**: you will need to repeat this step every time you add a new source file to the project or if you run `sbt clean`
@@ -63,7 +63,7 @@ Open your project in VSCode (`code .` from your terminal) and open a Scala file;
 Please note that it may take a few seconds for the server to start and there's currently no explicit
 indication that the server has started (other than features starting to work).
 To monitor the server activity, we suggest to watch the log file in your project's target directory,
-for instance: `tail -f target/metaserver.log`.
+for instance: `tail -f .metals/metals.log`.
 
 Finally, since most features currently rely on a successful compilation step, make sure you incrementally
 compile your project by running `~compile` in `sbt`.

@@ -18,7 +18,7 @@ fi
 
 TOOLS_JAR="$JAVA_HOME/lib/tools.jar"
 LAUNCH="$COURSIER_PATH launch -r sonatype:releases \
-                              -J $TOOLS_JAR org.scalameta:metaserver_2.12:0.1-SNAPSHOT \
-                              -M scala.meta.languageserver.Main"
+                              -J $TOOLS_JAR org.scalameta:metals_2.12:0.1-SNAPSHOT \
+                              -M scala.meta.metals.Main"
 
 eval "$LAUNCH"

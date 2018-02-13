@@ -2,8 +2,8 @@ package tests.sbtserver
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.meta.languageserver.sbtserver.Sbt
-import scala.meta.languageserver.sbtserver.SbtServer
+import scala.meta.metals.sbtserver.Sbt
+import scala.meta.metals.sbtserver.SbtServer
 import scala.util.Failure
 import scala.util.Success
 import monix.execution.Scheduler.Implicits.global
@@ -28,7 +28,7 @@ object SbtServerTest extends MegaSuite {
           println("Established connection to sbt server.")
           ok
       }
-      response <- Sbt.setting.query("metaserver/crossScalaVersions")(sbt.client)
+      response <- Sbt.setting.query("metals/crossScalaVersions")(sbt.client)
     } yield {
       val Right(json) = response
       val Right(crossScalaVersions) = json.value.as[List[String]]
