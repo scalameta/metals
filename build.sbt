@@ -72,6 +72,8 @@ inThisBuild(
     )
 )
 
+name := "metalsRoot"
+
 lazy val benchmarks = project
   .dependsOn(metals)
   .enablePlugins(JmhPlugin)
