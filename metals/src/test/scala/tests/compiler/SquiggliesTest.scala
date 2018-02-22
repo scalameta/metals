@@ -29,7 +29,8 @@ object SquiggliesTest extends CompilerSuite with LazyLogging {
   val scalafixConfPath = ".customScalafixConfPath"
   val config = Observable.now(
     Configuration(
-      scalafix = Configuration.Scalafix(confPath = Some(RelativePath(scalafixConfPath)))
+      scalafix =
+        Configuration.Scalafix(confPath = Some(RelativePath(scalafixConfPath)))
     )
   )
   val stdout = new PipedOutputStream()
