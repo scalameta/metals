@@ -43,8 +43,11 @@ object Configuration {
   }
   @JsonCodec case class Scalafix(
       enabled: Boolean = true,
-      confPath: RelativePath = RelativePath(".scalafix.conf")
+      confPath: Option[RelativePath] = None
   )
+  object Scalafix {
+    lazy val defaultConfPath = RelativePath(".scalafix.conf")
+  }
   @JsonCodec case class Search(
       indexJDK: Boolean = true,
       indexClasspath: Boolean = true
