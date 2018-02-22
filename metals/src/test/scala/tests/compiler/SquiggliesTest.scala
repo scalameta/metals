@@ -34,7 +34,7 @@ object SquiggliesTest extends CompilerSuite with LazyLogging {
     )
   )
   val stdout = new PipedOutputStream()
-  implicit val client = new LanguageClient(stdout, logger)
+  implicit val client: LanguageClient = new LanguageClient(stdout, logger)
   val squiggliesProvider = new SquiggliesProvider(config, AbsolutePath(tmp))
   Files.write(
     tmp.resolve(scalafixConfPath),
