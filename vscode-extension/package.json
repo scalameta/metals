@@ -70,8 +70,8 @@
         },
         "metals.search.indexJDK": {
           "type": "boolean",
-          "default": false,
-          "description": "EXPERIMENTAL. Enable indexing of the JDK"
+          "default": true,
+          "description": "Enable indexing of the JDK"
         },
         "metals.hover.enabled": {
           "type": "boolean",
