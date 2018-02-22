@@ -45,9 +45,8 @@ object Configuration {
       enabled: Boolean = true,
       confPath: RelativePath = RelativePath(".scalafix.conf")
   )
-  // TODO(olafur): re-enable indexJDK after https://github.com/scalameta/metals/issues/43 is fixed
   @JsonCodec case class Search(
-      indexJDK: Boolean = false,
+      indexJDK: Boolean = true,
       indexClasspath: Boolean = true
   )
 
