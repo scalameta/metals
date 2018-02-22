@@ -125,21 +125,6 @@ class Linter(configuration: Observable[Configuration], cwd: AbsolutePath)(
     }
   }
 
-  private def withConfig[T](f: m.Input => Seq[T]): Seq[T] =
-    configFile match {
-      case None =>
-        Nil
-      case Some(configInput) =>
-        f(configInput)
-    }
-
-  private def configFile: Option[m.Input] = {
-    val file = cwd.resolve(".scalafix.conf")
-    if (file.isFile && file.toFile.exists())
-      Some(Input.File(file))
-    else None
-  }
-
   private def lazySemanticdbIndex(index: SemanticdbIndex): LazySemanticdbIndex =
     new LazySemanticdbIndex(_ => Some(index), ScalafixReporter.default)
 
