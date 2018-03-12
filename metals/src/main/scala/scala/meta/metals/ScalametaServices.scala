@@ -121,7 +121,13 @@ class MetalsServices(
       }
     }
   val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
-    metaSemanticdbs.map(scalacErrorReporter.reportErrors)
+    metaSemanticdbs.map { db =>
+      if (latestConfig().scalac.enabled) {
+        scalacErrorReporter.reportErrors(db)
+      } else {
+        Effects.PublishScalacDiagnostics
+      }
+    }
   val sbtServerEnabled: () => Boolean =
     configurationPublisher
       .focus(_.sbt.enabled)
@@ -218,16 +224,18 @@ class MetalsServices(
       sys.exit(code)
     }
     .requestAsync(td.completion) { params =>
-      withPC {
-        scalacProvider.getCompiler(params.textDocument) match {
-          case Some(g) =>
-            CompletionProvider.completions(
-              g,
-              toCursor(params.textDocument, params.position)
-            )
-          case None => CompletionProvider.empty
+      if (latestConfig().scalac.enabled) {
+        withPC {
+          scalacProvider.getCompiler(params.textDocument) match {
+            case Some(g) =>
+              CompletionProvider.completions(
+                g,
+                toCursor(params.textDocument, params.position)
+              )
+            case None => CompletionProvider.empty
+          }
         }
-      }
+      } else Task.now { Right(CompletionProvider.empty) }
     }
     .request(td.definition) { params =>
       DefinitionProvider.definition(
@@ -344,14 +352,16 @@ class MetalsServices(
       RenameProvider.rename(params, symbolIndex)
     }
     .request(td.signatureHelp) { params =>
-      scalacProvider.getCompiler(params.textDocument) match {
-        case Some(g) =>
-          SignatureHelpProvider.signatureHelp(
-            g,
-            toCursor(params.textDocument, params.position)
-          )
-        case None => SignatureHelpProvider.empty
-      }
+      if (latestConfig().scalac.enabled) {
+        scalacProvider.getCompiler(params.textDocument) match {
+          case Some(g) =>
+            SignatureHelpProvider.signatureHelp(
+              g,
+              toCursor(params.textDocument, params.position)
+            )
+          case None => SignatureHelpProvider.empty
+        }
+      } else SignatureHelpProvider.empty
     }
     .requestAsync(ws.executeCommand) { params =>
       logger.info(s"executeCommand $params")
