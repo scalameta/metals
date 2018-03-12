@@ -323,12 +323,14 @@ class MetalsServices(
       documentFormattingProvider.format(uri.toInput(buffers))
     }
     .request(td.hover) { params =>
-      HoverProvider.hover(
-        symbolIndex,
-        Uri(params.textDocument),
-        params.position.line,
-        params.position.character
-      )
+      if (latestConfig().hover.enabled) {
+        HoverProvider.hover(
+          symbolIndex,
+          Uri(params.textDocument),
+          params.position.line,
+          params.position.character
+        )
+      } else HoverProvider.empty
     }
     .request(td.references) { params =>
       ReferencesProvider.references(
