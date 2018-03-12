@@ -313,11 +313,13 @@ class MetalsServices(
       ()
     }
     .request(td.documentHighlight) { params =>
-      DocumentHighlightProvider.highlight(
-        symbolIndex,
-        Uri(params.textDocument.uri),
-        params.position
-      )
+      if (latestConfig().highlight.enabled) {
+        DocumentHighlightProvider.highlight(
+          symbolIndex,
+          Uri(params.textDocument.uri),
+          params.position
+        )
+      } else DocumentHighlightProvider.empty
     }
     .request(td.documentSymbol) { params =>
       val uri = Uri(params.textDocument.uri)

@@ -8,6 +8,7 @@ import org.langmeta.lsp.DocumentHighlight
 import org.langmeta.lsp.Position
 
 object DocumentHighlightProvider extends LazyLogging {
+  def empty: List[DocumentHighlight] = Nil
 
   def highlight(
       symbolIndex: SymbolIndex,

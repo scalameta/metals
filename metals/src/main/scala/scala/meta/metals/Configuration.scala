@@ -17,6 +17,7 @@ import Configuration._
     scalafix: Scalafix = Scalafix(),
     search: Search = Search(),
     hover: Hover = Hover(),
+    highlight: Highlight = Highlight(),
     rename: Rename = Rename(),
 )
 
@@ -30,6 +31,7 @@ object Configuration {
   )
   @JsonCodec case class Scalac(enabled: Boolean = false)
   @JsonCodec case class Hover(enabled: Boolean = false)
+  @JsonCodec case class Highlight(enabled: Boolean = false)
   @JsonCodec case class Rename(enabled: Boolean = false)
 
   @JsonCodec case class Scalafmt(
