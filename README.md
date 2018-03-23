@@ -36,7 +36,7 @@ still learning and exploring what's possible.
 * Refactoring with Scalafix:
   - [ ] Quick-fix inspections (`textDocument/codeAction`)
     + [x] Remove unused imports
-  - [ ] Rename local symbol (`textDocument/rename`)
+  - [x] Rename local symbol (`textDocument/rename`)
   - [ ] Rename global symbol (`textDocument/rename`)
 * Formatting with Scalafmt:
   - [x] Whole file (`textDocument/formatting`)
