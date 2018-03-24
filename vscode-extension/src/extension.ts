@@ -19,8 +19,6 @@ export async function activate(context: ExtensionContext) {
     window.showErrorMessage(pathNotFound);
   });
 
-  const toolsJar = javaHome + "/lib/tools.jar";
-
   // The debug options for the server
   const debugOptions = [
     "-Xdebug",
@@ -31,13 +29,9 @@ export async function activate(context: ExtensionContext) {
 
   const coursierArgs = [
     "launch",
-    "-r",
-    "sonatype:releases",
-    "-J",
-    toolsJar,
+    "-r", "bintray:scalameta/maven",
     "org.scalameta:metals_2.12:0.1-SNAPSHOT",
-    "-M",
-    "scala.meta.metals.Main"
+    "-M", "scala.meta.metals.Main"
   ];
 
   const javaArgs = [
