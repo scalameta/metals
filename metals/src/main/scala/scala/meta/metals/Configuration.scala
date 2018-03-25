@@ -30,8 +30,8 @@ object Configuration {
       command: String = "test:compile"
   )
   @JsonCodec case class Scalac(
-    completions: ScalacCompletions = ScalacCompletions(),
-    diagnostics: ScalacDiagnostics = ScalacDiagnostics(),
+      completions: ScalacCompletions = ScalacCompletions(),
+      diagnostics: ScalacDiagnostics = ScalacDiagnostics(),
   )
   @JsonCodec case class ScalacCompletions(enabled: Boolean = false)
   @JsonCodec case class ScalacDiagnostics(enabled: Boolean = false)

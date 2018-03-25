@@ -89,10 +89,8 @@ class MetalsServices(
     new SquiggliesProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
-    if (
-      latestConfig().scalac.completions.enabled ||
-      latestConfig().scalac.diagnostics.enabled
-    ) {
+    if (latestConfig().scalac.completions.enabled ||
+      latestConfig().scalac.diagnostics.enabled) {
       sourceChangePublisher
         .debounce(FiniteDuration(1, "s"))
         .flatMap { input =>
@@ -120,17 +118,17 @@ class MetalsServices(
     )
   val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
     compilerConfigPublisher.map(scalacProvider.loadNewCompilerGlobals)
-  val publishDiagnostics: Observable[Effects.PublishSquigglies] =
+  val publishDiagnostics: Observable[Effects.PublishDiagnostics] =
     metaSemanticdbs.mapTask { db =>
       squiggliesProvider.squigglies(db).map { diagnostics =>
         diagnostics.foreach(td.publishDiagnostics.notify)
-        Effects.PublishSquigglies
+        Effects.PublishDiagnostics
       }
     }
-  val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
+  val scalacErrors: Observable[Effects.PublishDiagnostics] =
     if (latestConfig().scalac.diagnostics.enabled) {
       metaSemanticdbs.map(scalacErrorReporter.reportErrors)
-    } else Observable(Effects.PublishScalacDiagnostics)
+    } else Observable(Effects.PublishDiagnostics)
   val sbtServerEnabled: () => Boolean =
     configurationPublisher
       .focus(_.sbt.enabled)
