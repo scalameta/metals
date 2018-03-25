@@ -76,6 +76,8 @@ class MetalsServices(
     )
   val (configurationSubscriber, configurationPublisher) =
     MetalsServices.configurationStream
+  val latestConfig: () => Configuration =
+    configurationPublisher.toFunction0()
   val buffers: Buffers = Buffers()
   val symbolIndex: SymbolIndex =
     SymbolIndex(cwd, buffers, configurationPublisher)
@@ -87,7 +89,10 @@ class MetalsServices(
     new SquiggliesProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
-    if (latestConfig().scalac.enabled) {
+    if (
+      latestConfig().scalac.completions.enabled ||
+      latestConfig().scalac.diagnostics.enabled
+    ) {
       sourceChangePublisher
         .debounce(FiniteDuration(1, "s"))
         .flatMap { input =>
@@ -123,7 +128,9 @@ class MetalsServices(
       }
     }
   val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
-    metaSemanticdbs.map(scalacErrorReporter.reportErrors)
+    if (latestConfig().scalac.diagnostics.enabled) {
+      metaSemanticdbs.map(scalacErrorReporter.reportErrors)
+    } else Observable(Effects.PublishScalacDiagnostics)
   val sbtServerEnabled: () => Boolean =
     configurationPublisher
       .focus(_.sbt.enabled)
@@ -135,8 +142,6 @@ class MetalsServices(
           sbtServer = None
       }
       .toFunction0()
-  val latestConfig: () => Configuration =
-    configurationPublisher.toFunction0()
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
     configurationPublisher.map(_ => Effects.UpdateBuffers),
@@ -220,7 +225,7 @@ class MetalsServices(
       sys.exit(code)
     }
     .requestAsync(td.completion) { params =>
-      if (latestConfig().scalac.enabled) {
+      if (latestConfig().scalac.completions.enabled) {
         withPC {
           scalacProvider.getCompiler(params.textDocument) match {
             case Some(g) =>
@@ -350,7 +355,7 @@ class MetalsServices(
       RenameProvider.rename(params, symbolIndex)
     }
     .request(td.signatureHelp) { params =>
-      if (latestConfig().scalac.enabled) {
+      if (latestConfig().scalac.completions.enabled) {
         scalacProvider.getCompiler(params.textDocument) match {
           case Some(g) =>
             SignatureHelpProvider.signatureHelp(

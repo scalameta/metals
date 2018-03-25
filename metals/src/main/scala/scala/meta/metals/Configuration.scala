@@ -29,7 +29,13 @@ object Configuration {
       enabled: Boolean = false,
       command: String = "test:compile"
   )
-  @JsonCodec case class Scalac(enabled: Boolean = false)
+  @JsonCodec case class Scalac(
+    completions: ScalacCompletions = ScalacCompletions(),
+    diagnostics: ScalacDiagnostics = ScalacDiagnostics(),
+  )
+  @JsonCodec case class ScalacCompletions(enabled: Boolean = false)
+  @JsonCodec case class ScalacDiagnostics(enabled: Boolean = false)
+
   @JsonCodec case class Hover(enabled: Boolean = false)
   @JsonCodec case class Highlight(enabled: Boolean = false)
   @JsonCodec case class Rename(enabled: Boolean = false)
