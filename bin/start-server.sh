@@ -9,16 +9,8 @@ test -e "$COURSIER_PATH" || ( \
   chmod +x "$COURSIER_PATH" \
 )
 
-if [ "x$JAVA_HOME" = "x" ]; then
-  JAVA_HOME=$(java -XshowSettings:properties -version 2>&1 >/dev/null \
-                | grep java.home \
-                | tr -d '[:space:]' \
-                | cut -d'=' -f2)
-fi
-
-TOOLS_JAR="$JAVA_HOME/lib/tools.jar"
-LAUNCH="$COURSIER_PATH launch -r sonatype:releases \
-                              -J $TOOLS_JAR org.scalameta:metals_2.12:0.1-SNAPSHOT \
+LAUNCH="$COURSIER_PATH launch -r bintray:scalameta/maven \
+                              org.scalameta:metals_2.12:0.1-SNAPSHOT \
                               -M scala.meta.metals.Main"
 
 eval "$LAUNCH"
