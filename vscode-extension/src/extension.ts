@@ -10,17 +10,9 @@ import {
   RevealOutputChannelOn,
   ExecuteCommandRequest
 } from "vscode-languageclient";
-import { Requirements } from "./requirements";
 import { exec } from "child_process";
 
 export async function activate(context: ExtensionContext) {
-  const req = new Requirements();
-  const javaHome = await req.getJavaHome().catch(pathNotFound => {
-    window.showErrorMessage(pathNotFound);
-  });
-
-  const toolsJar = javaHome + "/lib/tools.jar";
-
   // The debug options for the server
   const debugOptions = [
     "-Xdebug",
@@ -31,20 +23,15 @@ export async function activate(context: ExtensionContext) {
 
   const coursierArgs = [
     "launch",
-    "-r",
-    "sonatype:releases",
-    "-J",
-    toolsJar,
+    "-r", "bintray:scalameta/maven",
     "org.scalameta:metals_2.12:0.1-SNAPSHOT",
-    "-M",
-    "scala.meta.metals.Main"
+    "-M", "scala.meta.metals.Main"
   ];
 
   const javaArgs = [
     `-XX:+UseG1GC`,
     `-XX:+UseStringDeduplication`,
-    "-jar",
-    coursierPath
+    "-jar", coursierPath
   ].concat(coursierArgs);
 
   const serverOptions: ServerOptions = {

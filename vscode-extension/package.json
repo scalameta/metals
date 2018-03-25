@@ -126,9 +126,6 @@
     "vsce": "^1.32.0"
   },
   "dependencies": {
-    "expand-home-dir": "0.0.3",
-    "find-java-home": "^0.2.0",
-    "path-exists": "^3.0.0",
     "vscode": "^1.1.5",
     "vscode-languageclient": "^3.4.5"
   }
