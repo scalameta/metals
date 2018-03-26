@@ -32,7 +32,9 @@ object Configuration {
   @JsonCodec case class Scalac(
       completions: ScalacCompletions = ScalacCompletions(),
       diagnostics: ScalacDiagnostics = ScalacDiagnostics(),
-  )
+  ) {
+    def enabled: Boolean = completions.enabled || diagnostics.enabled
+  }
   @JsonCodec case class ScalacCompletions(enabled: Boolean = false)
   @JsonCodec case class ScalacDiagnostics(enabled: Boolean = false)
 

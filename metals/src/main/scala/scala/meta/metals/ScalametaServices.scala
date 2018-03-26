@@ -89,16 +89,15 @@ class MetalsServices(
     new SquiggliesProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
-    if (latestConfig().scalac.completions.enabled ||
-      latestConfig().scalac.diagnostics.enabled) {
-      sourceChangePublisher
-        .debounce(FiniteDuration(1, "s"))
-        .flatMap { input =>
+    sourceChangePublisher
+      .debounce(FiniteDuration(1, "s"))
+      .flatMap { input =>
+        if (latestConfig().scalac.enabled) {
           Observable
             .fromIterable(Semanticdbs.toSemanticdb(input, scalacProvider))
             .executeOn(presentationCompilerScheduler)
-        }
-    } else Observable.empty
+        } else Observable.empty
+      }
   val interactiveSchemaSemanticdbs: Observable[schema.Database] =
     interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
   val metaSemanticdbs: Observable[semanticdb.Database] =
