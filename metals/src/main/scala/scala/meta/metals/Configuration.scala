@@ -17,6 +17,7 @@ import Configuration._
     scalafix: Scalafix = Scalafix(),
     search: Search = Search(),
     hover: Hover = Hover(),
+    highlight: Highlight = Highlight(),
     rename: Rename = Rename(),
 )
 
@@ -28,8 +29,17 @@ object Configuration {
       enabled: Boolean = false,
       command: String = "test:compile"
   )
-  @JsonCodec case class Scalac(enabled: Boolean = false)
+  @JsonCodec case class Scalac(
+      completions: ScalacCompletions = ScalacCompletions(),
+      diagnostics: ScalacDiagnostics = ScalacDiagnostics(),
+  ) {
+    def enabled: Boolean = completions.enabled || diagnostics.enabled
+  }
+  @JsonCodec case class ScalacCompletions(enabled: Boolean = false)
+  @JsonCodec case class ScalacDiagnostics(enabled: Boolean = false)
+
   @JsonCodec case class Hover(enabled: Boolean = false)
+  @JsonCodec case class Highlight(enabled: Boolean = false)
   @JsonCodec case class Rename(enabled: Boolean = false)
 
   @JsonCodec case class Scalafmt(

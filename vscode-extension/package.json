@@ -78,6 +78,11 @@
           "default": true,
           "description": "Enable tooltips on hover"
         },
+        "metals.highlight.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "EXPERIMENTAL. Enable symbol highlights"
+        },
         "metals.rename.enabled": {
           "type": "boolean",
           "default": true,

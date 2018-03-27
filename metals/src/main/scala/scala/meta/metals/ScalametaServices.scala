@@ -76,6 +76,8 @@ class MetalsServices(
     )
   val (configurationSubscriber, configurationPublisher) =
     MetalsServices.configurationStream
+  val latestConfig: () => Configuration =
+    configurationPublisher.toFunction0()
   val buffers: Buffers = Buffers()
   val symbolIndex: SymbolIndex =
     SymbolIndex(cwd, buffers, configurationPublisher)
@@ -90,9 +92,11 @@ class MetalsServices(
     sourceChangePublisher
       .debounce(FiniteDuration(1, "s"))
       .flatMap { input =>
-        Observable
-          .fromIterable(Semanticdbs.toSemanticdb(input, scalacProvider))
-          .executeOn(presentationCompilerScheduler)
+        if (latestConfig().scalac.enabled) {
+          Observable
+            .fromIterable(Semanticdbs.toSemanticdb(input, scalacProvider))
+            .executeOn(presentationCompilerScheduler)
+        } else Observable.empty
       }
   val interactiveSchemaSemanticdbs: Observable[schema.Database] =
     interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
@@ -113,15 +117,17 @@ class MetalsServices(
     )
   val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
     compilerConfigPublisher.map(scalacProvider.loadNewCompilerGlobals)
-  val publishDiagnostics: Observable[Effects.PublishSquigglies] =
+  val publishDiagnostics: Observable[Effects.PublishDiagnostics] =
     metaSemanticdbs.mapTask { db =>
       squiggliesProvider.squigglies(db).map { diagnostics =>
         diagnostics.foreach(td.publishDiagnostics.notify)
-        Effects.PublishSquigglies
+        Effects.PublishDiagnostics
       }
     }
-  val scalacErrors: Observable[Effects.PublishScalacDiagnostics] =
-    metaSemanticdbs.map(scalacErrorReporter.reportErrors)
+  val scalacErrors: Observable[Effects.PublishDiagnostics] =
+    if (latestConfig().scalac.diagnostics.enabled) {
+      metaSemanticdbs.map(scalacErrorReporter.reportErrors)
+    } else Observable(Effects.PublishDiagnostics)
   val sbtServerEnabled: () => Boolean =
     configurationPublisher
       .focus(_.sbt.enabled)
@@ -133,8 +139,6 @@ class MetalsServices(
           sbtServer = None
       }
       .toFunction0()
-  val latestConfig: () => Configuration =
-    configurationPublisher.toFunction0()
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
     configurationPublisher.map(_ => Effects.UpdateBuffers),
@@ -218,16 +222,18 @@ class MetalsServices(
       sys.exit(code)
     }
     .requestAsync(td.completion) { params =>
-      withPC {
-        scalacProvider.getCompiler(params.textDocument) match {
-          case Some(g) =>
-            CompletionProvider.completions(
-              g,
-              toCursor(params.textDocument, params.position)
-            )
-          case None => CompletionProvider.empty
+      if (latestConfig().scalac.completions.enabled) {
+        withPC {
+          scalacProvider.getCompiler(params.textDocument) match {
+            case Some(g) =>
+              CompletionProvider.completions(
+                g,
+                toCursor(params.textDocument, params.position)
+              )
+            case None => CompletionProvider.empty
+          }
         }
-      }
+      } else Task.now { Right(CompletionProvider.empty) }
     }
     .request(td.definition) { params =>
       DefinitionProvider.definition(
@@ -305,11 +311,13 @@ class MetalsServices(
       ()
     }
     .request(td.documentHighlight) { params =>
-      DocumentHighlightProvider.highlight(
-        symbolIndex,
-        Uri(params.textDocument.uri),
-        params.position
-      )
+      if (latestConfig().highlight.enabled) {
+        DocumentHighlightProvider.highlight(
+          symbolIndex,
+          Uri(params.textDocument.uri),
+          params.position
+        )
+      } else DocumentHighlightProvider.empty
     }
     .request(td.documentSymbol) { params =>
       val uri = Uri(params.textDocument.uri)
@@ -323,12 +331,14 @@ class MetalsServices(
       documentFormattingProvider.format(uri.toInput(buffers))
     }
     .request(td.hover) { params =>
-      HoverProvider.hover(
-        symbolIndex,
-        Uri(params.textDocument),
-        params.position.line,
-        params.position.character
-      )
+      if (latestConfig().hover.enabled) {
+        HoverProvider.hover(
+          symbolIndex,
+          Uri(params.textDocument),
+          params.position.line,
+          params.position.character
+        )
+      } else HoverProvider.empty
     }
     .request(td.references) { params =>
       ReferencesProvider.references(
@@ -342,14 +352,16 @@ class MetalsServices(
       RenameProvider.rename(params, symbolIndex)
     }
     .request(td.signatureHelp) { params =>
-      scalacProvider.getCompiler(params.textDocument) match {
-        case Some(g) =>
-          SignatureHelpProvider.signatureHelp(
-            g,
-            toCursor(params.textDocument, params.position)
-          )
-        case None => SignatureHelpProvider.empty
-      }
+      if (latestConfig().scalac.completions.enabled) {
+        scalacProvider.getCompiler(params.textDocument) match {
+          case Some(g) =>
+            SignatureHelpProvider.signatureHelp(
+              g,
+              toCursor(params.textDocument, params.position)
+            )
+          case None => SignatureHelpProvider.empty
+        }
+      } else SignatureHelpProvider.empty
     }
     .requestAsync(ws.executeCommand) { params =>
       logger.info(s"executeCommand $params")

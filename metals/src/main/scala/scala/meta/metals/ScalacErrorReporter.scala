@@ -15,10 +15,10 @@ class ScalacErrorReporter()(implicit connection: JsonRpcClient) {
 
   def reportErrors(
       mdb: m.Database
-  ): Effects.PublishScalacDiagnostics = {
+  ): Effects.PublishDiagnostics = {
     val messages = analyzeIndex(mdb)
     messages.foreach(publishDiagnostics.notify)
-    Effects.PublishScalacDiagnostics
+    Effects.PublishDiagnostics
   }
   private def analyzeIndex(mdb: m.Database): Seq[PublishDiagnostics] =
     analyzeIndex(
