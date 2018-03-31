@@ -29,8 +29,15 @@ object DiagnosticsTest extends CompilerSuite with LazyLogging {
   val scalafixConfPath = ".customScalafixConfPath"
   val config = Observable.now(
     Configuration(
-      scalafix =
-        Configuration.Scalafix(confPath = Some(RelativePath(scalafixConfPath)))
+      scalac = Configuration.Scalac(
+        diagnostics = Configuration.ScalacDiagnostics(
+          enabled = true
+        )
+      ),
+      scalafix = Configuration.Scalafix(
+        enabled = true,
+        confPath = Some(RelativePath(scalafixConfPath)),
+      )
     )
   )
   val stdout = new PipedOutputStream()
