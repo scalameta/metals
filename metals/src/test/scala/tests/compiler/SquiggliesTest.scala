@@ -10,7 +10,7 @@ import scala.meta.metals.Configuration
 import scala.meta.metals.Linter
 import scala.meta.metals.Semanticdbs
 import org.langmeta.lsp.PublishDiagnostics
-import scala.meta.metals.providers.SquiggliesProvider
+import scala.meta.metals.providers.DiagnosticsProvider
 import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.langmeta.inputs.Input
@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object SquiggliesTest extends CompilerSuite with LazyLogging {
+object DiagnosticsTest extends CompilerSuite with LazyLogging {
   val tmp: Path = Files.createTempDirectory("metals")
   val logFile = tmp.resolve("metals.log").toFile
   val out = new PrintStream(new FileOutputStream(logFile))
@@ -35,7 +35,7 @@ object SquiggliesTest extends CompilerSuite with LazyLogging {
   )
   val stdout = new PipedOutputStream()
   implicit val client: LanguageClient = new LanguageClient(stdout, logger)
-  val squiggliesProvider = new SquiggliesProvider(config, AbsolutePath(tmp))
+  val diagnosticsProvider = new DiagnosticsProvider(config, AbsolutePath(tmp))
   Files.write(
     tmp.resolve(scalafixConfPath),
     """
@@ -47,9 +47,9 @@ object SquiggliesTest extends CompilerSuite with LazyLogging {
     test(name) {
       val input = Input.VirtualFile(name, original)
       val doc = Semanticdbs.toSemanticdb(input, compiler)
-      val result = squiggliesProvider.squigglies(doc).runSyncMaybe
+      val result = diagnosticsProvider.diagnostics(doc).runSyncMaybe
       val (PublishDiagnostics(_, diagnostics) :: Nil) =
-        Await.result(squiggliesProvider.squigglies(doc).runAsync, 1.second)
+        Await.result(diagnosticsProvider.diagnostics(doc).runAsync, 1.second)
       val obtained = diagnostics.map { d =>
         val pos = input.toPosition(d.range)
         pos.formatMessage(d.severity.getOrElse(???).toString, d.message)

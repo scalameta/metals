@@ -14,7 +14,7 @@ import monix.reactive.Observable
 import org.langmeta.AbsolutePath
 import org.langmeta.lsp.Diagnostic
 
-class SquiggliesProvider(
+class DiagnosticsProvider(
     configuration: Observable[Configuration],
     cwd: AbsolutePath
 )(implicit s: Scheduler, client: JsonRpcClient)
@@ -27,26 +27,27 @@ class SquiggliesProvider(
 
   lazy val linter = new Linter(configuration, cwd)
 
-  def squigglies(doc: m.Document): Task[Seq[PublishDiagnostics]] =
-    squigglies(m.Database(doc :: Nil))
-  def squigglies(db: m.Database): Task[Seq[PublishDiagnostics]] = {
+  def diagnostics(doc: m.Document): Task[Seq[PublishDiagnostics]] =
+    diagnostics(m.Database(doc :: Nil))
+  def diagnostics(db: m.Database): Task[Seq[PublishDiagnostics]] = {
     if (scalafixDisabled && scalacDisabled) Task(Nil)
-    else Task.sequence {
-      db.documents.map { document =>
-        val uri = document.input.syntax
+    else
+      Task.sequence {
+        db.documents.map { document =>
+          val uri = document.input.syntax
 
-        val scalacDiagnostics: Seq[Diagnostic] =
-          if (scalacDisabled) Nil
-          else document.messages.map(_.toLSP("scalac"))
+          val scalacDiagnostics: Seq[Diagnostic] =
+            if (scalacDisabled) Nil
+            else document.messages.map(_.toLSP("scalac"))
 
-        val linterTask: Task[Seq[Diagnostic]] =
-          if (scalafixDisabled) Task(Nil)
-          else linter.linterMessages(document).map(_.getOrElse(Nil))
+          val linterTask: Task[Seq[Diagnostic]] =
+            if (scalafixDisabled) Task(Nil)
+            else linter.linterMessages(document).map(_.getOrElse(Nil))
 
-        linterTask.map { linterDiagnostics =>
-          PublishDiagnostics(uri, scalacDiagnostics ++ linterDiagnostics)
+          linterTask.map { linterDiagnostics =>
+            PublishDiagnostics(uri, scalacDiagnostics ++ linterDiagnostics)
+          }
         }
       }
-    }
   }
 }

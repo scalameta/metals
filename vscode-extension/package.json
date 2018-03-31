@@ -17,7 +17,7 @@
           "type": "boolean",
           "default": false,
           "description":
-            "EXPERIMENTAL. Use sbt language server to compile on file save and report squgglies. Requires sbt 1.1.0"
+            "EXPERIMENTAL. Use sbt language server to compile on file save and report diagnostics. Requires sbt 1.1.0"
         },
         "metals.sbt.command": {
           "type": "string",
@@ -32,7 +32,7 @@
         "metals.scalac.diagnostics.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "EXPERIMENTAL. Enable squigglies as you type with the Scala Presentation Compiler."
+          "description": "EXPERIMENTAL. Enable diagnostics as you type with the Scala Presentation Compiler."
         },
         "metals.scalafmt.enabled": {
           "type": "boolean",

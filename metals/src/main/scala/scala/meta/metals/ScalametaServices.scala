@@ -83,8 +83,8 @@ class MetalsServices(
     SymbolIndex(cwd, buffers, configurationPublisher)
   val documentFormattingProvider =
     new DocumentFormattingProvider(configurationPublisher, cwd)
-  val squiggliesProvider =
-    new SquiggliesProvider(configurationPublisher, cwd)
+  val diagnosticsProvider =
+    new DiagnosticsProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
@@ -117,7 +117,7 @@ class MetalsServices(
     compilerConfigPublisher.map(scalacProvider.loadNewCompilerGlobals)
   val publishDiagnostics: Observable[Effects.PublishDiagnostics] =
     metaSemanticdbs.mapTask { db =>
-      squiggliesProvider.squigglies(db).map { diagnostics =>
+      diagnosticsProvider.diagnostics(db).map { diagnostics =>
         diagnostics.foreach(td.publishDiagnostics.notify)
         Effects.PublishDiagnostics
       }
