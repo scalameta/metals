@@ -25,6 +25,11 @@ instructions are primarily intended for project contributors.
 See the [installation instructions](BETA.md) and
 [contributing guide](CONTRIBUTING.md).
 
+## Roadmap
+
+See the [roadmap](roadmap.md) for a rough summary of what has been implemented
+so far.
+
 ### Team
 
 The current maintainers (people who can merge pull requests) are:

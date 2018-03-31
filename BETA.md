@@ -24,16 +24,16 @@ Copy the source to either (depending on your sbt version):
 ## Step 2 - build the VSCode extension
 
 The VSCode extension is not yet published on the Marketplace, so you'll need to
-build it locally. For this step, `node`, `npm` and VS Code are required.
+build it locally.
 
+* Make sure you have installed `node`, `npm` and VS Code.
+* Install the
+  ["Scala Syntax"](https://marketplace.visualstudio.com/items?itemName=daltonjorge.scala)
+  plugin in VS Code.
 * `cd vscode-extension`
 * `npm install`
 * `npm run build`
 * `code --install-extension vscode-metals-0.0.1.vsix`
-
-Make sure you have the
-["Scala Syntax"](https://marketplace.visualstudio.com/items?itemName=daltonjorge.scala)
-plugin installed in VS Code.
 
 ## Step 3 - publish the server locally
 
@@ -53,7 +53,7 @@ The first option is to enable `semanticdb-scalac` permanently for your project
 in `build.sbt` with:
 
 ```scala
- addCompilerPlugin("org.scalameta" % "semanticdb-scalac" % "2.1.2" cross CrossVersion.full)
+ addCompilerPlugin("org.scalameta" % "semanticdb-scalac" % "2.1.8" cross CrossVersion.full)
 scalacOptions += "-Yrangepos"
 ```
 
@@ -91,7 +91,8 @@ Please note that it may take a few seconds for the server to start and there's
 currently no explicit indication that the server has started (other than
 features starting to work). To monitor the server activity, we suggest to watch
 the log file in your project's target directory, for instance:
-`tail -f .metals/metals.log`.
+`tail -f .metals/metals.log`. Alternatively, you can watch this log in the
+VSCode output panel (selecting Metals on the right).
 
 Finally, since most features currently rely on a successful compilation step,
 make sure you incrementally compile your project by running `~compile` in `sbt`.
