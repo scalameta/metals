@@ -7,14 +7,14 @@ object MetalsPlugin extends AutoPlugin {
   override def requires = sbt.plugins.JvmPlugin
   val metalsCompilerConfig =
     taskKey[String]("Configuration parameters for autocompletion.")
-  val metalsEnableCompletions =
-    taskKey[Unit]("Setup environment for metals")
+  val metalsSetup =
+    taskKey[Unit]("Generate build metadata for completions and indexing dependency sources")
   override lazy val globalSettings = List(
     commands += SemanticdbEnable.command,
     // `*:metalsSetupCompletions` sets up all configuration in all projects (note *: prefix, that's needed!)
-    metalsEnableCompletions := Def.taskDyn {
+    metalsSetup := Def.taskDyn {
       val filter = ScopeFilter(inAnyProject, inConfigurations(Compile, Test))
-      metalsEnableCompletions.all(filter)
+      metalsSetup.all(filter)
     }.value
   )
   override lazy val projectSettings = List(Compile, Test).flatMap { c =>
@@ -64,7 +64,7 @@ object MetalsPlugin extends AutoPlugin {
           props.store(out, null)
           out.toString()
         },
-        metalsEnableCompletions := {
+        metalsSetup := {
           val f = target.value / (c.name + ".compilerconfig")
           IO.write(f, metalsCompilerConfig.value)
           streams.value.log.info(
