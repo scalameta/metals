@@ -8,7 +8,9 @@ object MetalsPlugin extends AutoPlugin {
   val metalsCompilerConfig =
     taskKey[String]("Configuration parameters for autocompletion.")
   val metalsSetup =
-    taskKey[Unit]("Generate build metadata for completions and indexing dependency sources")
+    taskKey[Unit](
+      "Generate build metadata for completions and indexing dependency sources"
+    )
   override lazy val globalSettings = List(
     commands += SemanticdbEnable.command,
     // `*:metalsSetupCompletions` sets up all configuration in all projects (note *: prefix, that's needed!)
