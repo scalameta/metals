@@ -24,11 +24,15 @@
           "default": "test:compile",
           "description": "Which sbt command to run on file save."
         },
-        "metals.scalac.enabled": {
+        "metals.scalac.completions.enabled": {
           "type": "boolean",
           "default": false,
-          "description":
-            "EXPERIMENTAL. Enable squigglies and completions as you type with the Scala Presentation Compiler."
+          "description": "EXPERIMENTAL. Enable completions as you type with the Scala Presentation Compiler."
+        },
+        "metals.scalac.diagnostics.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "EXPERIMENTAL. Enable squigglies as you type with the Scala Presentation Compiler."
         },
         "metals.scalafmt.enabled": {
           "type": "boolean",
