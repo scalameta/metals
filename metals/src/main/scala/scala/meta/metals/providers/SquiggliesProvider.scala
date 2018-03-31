@@ -12,31 +12,41 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable
 import org.langmeta.AbsolutePath
+import org.langmeta.lsp.Diagnostic
 
 class SquiggliesProvider(
     configuration: Observable[Configuration],
     cwd: AbsolutePath
 )(implicit s: Scheduler, client: JsonRpcClient)
     extends LazyLogging {
-  private val isEnabled: () => Boolean =
-    configuration.map(_.scalafix.enabled).toFunction0()
+  private def latestConfig = configuration.toFunction0()
+  private def scalafixDisabled: Boolean =
+    !latestConfig().scalafix.enabled
+  private def scalacDisabled: Boolean =
+    !latestConfig().scalac.diagnostics.enabled
 
   lazy val linter = new Linter(configuration, cwd)
 
   def squigglies(doc: m.Document): Task[Seq[PublishDiagnostics]] =
     squigglies(m.Database(doc :: Nil))
   def squigglies(db: m.Database): Task[Seq[PublishDiagnostics]] = {
-    if (!isEnabled()) Task(Nil)
-    else
-      Task.sequence {
-        db.documents.map { document =>
-          val uri = document.input.syntax
-          val compilerErrors = document.messages.map(_.toLSP)
-          linter.linterMessages(document).map { scalafixResult =>
-            val scalafixErrors = scalafixResult.getOrElse(Nil)
-            PublishDiagnostics(uri, compilerErrors ++ scalafixErrors)
-          }
+    if (scalafixDisabled && scalacDisabled) Task(Nil)
+    else Task.sequence {
+      db.documents.map { document =>
+        val uri = document.input.syntax
+
+        val scalacDiagnostics: Seq[Diagnostic] =
+          if (scalacDisabled) Nil
+          else document.messages.map(_.toLSP("scalac"))
+
+        val linterTask: Task[Seq[Diagnostic]] =
+          if (scalafixDisabled) Task(Nil)
+          else linter.linterMessages(document).map(_.getOrElse(Nil))
+
+        linterTask.map { linterDiagnostics =>
+          PublishDiagnostics(uri, scalacDiagnostics ++ linterDiagnostics)
         }
       }
+    }
   }
 }
