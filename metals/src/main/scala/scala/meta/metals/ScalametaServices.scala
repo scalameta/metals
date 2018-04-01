@@ -81,12 +81,10 @@ class MetalsServices(
   val buffers: Buffers = Buffers()
   val symbolIndex: SymbolIndex =
     SymbolIndex(cwd, buffers, configurationPublisher)
-  val scalacErrorReporter: ScalacErrorReporter =
-    new ScalacErrorReporter()
   val documentFormattingProvider =
     new DocumentFormattingProvider(configurationPublisher, cwd)
-  val squiggliesProvider =
-    new SquiggliesProvider(configurationPublisher, cwd)
+  val diagnosticsProvider =
+    new DiagnosticsProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
@@ -119,15 +117,11 @@ class MetalsServices(
     compilerConfigPublisher.map(scalacProvider.loadNewCompilerGlobals)
   val publishDiagnostics: Observable[Effects.PublishDiagnostics] =
     metaSemanticdbs.mapTask { db =>
-      squiggliesProvider.squigglies(db).map { diagnostics =>
+      diagnosticsProvider.diagnostics(db).map { diagnostics =>
         diagnostics.foreach(td.publishDiagnostics.notify)
         Effects.PublishDiagnostics
       }
     }
-  val scalacErrors: Observable[Effects.PublishDiagnostics] =
-    if (latestConfig().scalac.diagnostics.enabled) {
-      metaSemanticdbs.map(scalacErrorReporter.reportErrors)
-    } else Observable(Effects.PublishDiagnostics)
   val sbtServerEnabled: () => Boolean =
     configurationPublisher
       .focus(_.sbt.enabled)

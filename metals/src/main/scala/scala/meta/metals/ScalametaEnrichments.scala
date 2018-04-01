@@ -20,12 +20,12 @@ import org.langmeta.io.AbsolutePath
 object ScalametaEnrichments {
 
   implicit class XtensionMessageLSP(val msg: m.Message) extends AnyVal {
-    def toLSP: Diagnostic =
+    def toLSP(source: String): Diagnostic =
       l.Diagnostic(
         range = msg.position.toRange,
         severity = Some(msg.severity.toLSP),
         code = None,
-        source = Some("scalac"),
+        source = Some(source),
         message = msg.text
       )
   }
