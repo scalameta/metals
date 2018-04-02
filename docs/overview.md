@@ -75,6 +75,8 @@ architecture as [Index-While-Building][] in XCode 9.
   * [ ] Java dependency references
 * [x] Highlight references to symbol at position
       (`textDocument/documentHighlight`).
+  * Disabled by default. Can be enabled with configuration option
+    `highlight.enabled=true`.
 * [x] Goto symbol in file (`textDocument/documentSymbol`)
 * [x] Goto symbol in workspace (`workspace/symbol`)
 * [x] Symbol outline in the sidebar as you type (`textDocument/documentSymbol`).
