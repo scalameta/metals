@@ -60,15 +60,7 @@ class ScalacProvider()(implicit client: JsonRpcClient) extends LazyLogging {
   def loadNewCompilerGlobals(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {
-    if (config.scalaVersion.major != 2 || config.scalaVersion.minor != 12) {
-      val scalaV = config.scalaVersion.unparse
-      logger.warn(
-        s"Unsupported scala version $scalaV. Skipping presentation compiler instantiation"
-      )
-      showMessage.warn(
-        s"Unsupported scala version $scalaV. Completions and scalac diagnostics won't be available"
-      )
-    } else {
+    if (config.scalaVersion.major == 2 && config.scalaVersion.minor == 12) {
       logger.info(s"Loading new compiler from config $config")
       val compiler =
         ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
@@ -76,6 +68,14 @@ class ScalacProvider()(implicit client: JsonRpcClient) extends LazyLogging {
       config.sources.foreach { path =>
         compilerByPath(Uri(path)) = compiler
       }
+    } else {
+      val scalaV = config.scalaVersion.unparse
+      logger.warn(
+        s"Unsupported scala version $scalaV. Skipping presentation compiler instantiation"
+      )
+      showMessage.warn(
+        s"Unsupported scala version $scalaV. Completions and scalac diagnostics won't be available"
+      )
     }
     Effects.InstallPresentationCompiler
   }
