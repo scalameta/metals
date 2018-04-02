@@ -1,7 +1,7 @@
 > ⚠️ This project is very alpha stage. Expect bugs and incomplete documentation.
 
 The following instructions are intended for contributors who want to try Metals
-on a real-world project.
+and provide feedback. We do not provide support for day-to-day usage of Metals.
 
 # Global setup
 
