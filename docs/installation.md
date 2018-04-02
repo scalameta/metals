@@ -19,7 +19,7 @@ https://github.com/scalameta/metals/blob/master/project/MetalsPlugin.scala
 Copy the source to either (depending on your sbt version):
 
 * (sbt 0.13) `~/.sbt/0.13/plugins/MetalsPlugin.scala`
-* (sbt 1.0) `~/.sbt/1.0/plugins/MetalsPlugin.scala`
+* (sbt 1.+) `~/.sbt/1.0/plugins/MetalsPlugin.scala`
 
 ## Step 2 - build the VSCode extension
 

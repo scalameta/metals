@@ -19,10 +19,10 @@ instructions are primarily intended for project contributors.
 See the [installation instructions](docs/installation.md) and
 [contributing guide](CONTRIBUTING.md).
 
-## Roadmap
+## Overview
 
-See the [roadmap](docs/roadmap.md) for an overview of what features have been
-implemented and what features we're planning to work on next.
+See [here](docs/overview.md) for an overview of a what features are supported or
+not supported by Metals.
 
 ### Team
 
@@ -44,7 +44,7 @@ case classes remain.
 
 ## Alternatives
 
-* [IntelliJ](https://www.jetbrains.com/help/idea/discover-intellij-idea-for-scala.html):
+* [IntelliJ IDEA](https://www.jetbrains.com/help/idea/discover-intellij-idea-for-scala.html):
   the most widely used IDE for Scala using a re-implementation of the Scala
   typechecker.
 * [ENSIME](http://ensime.org): brings Scala and Java IDE-like features to

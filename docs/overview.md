@@ -1,4 +1,7 @@
-# Roadmap
+# Overview
+
+This document is an overview of the Metals project. Metals is a community driven
+project with no official funding or dedicated resources.
 
 * [**Simple installation**](#simple-installation): importing a project should be
   simple and require as few steps as possible.
@@ -46,7 +49,7 @@ the best option.
       in-sync with build diagnostics but at the cost of higher latency.
   * Disabled by default. Can be enabled with configuration option
     `sbt.enabled=true`.
-  * Requires sbt 1.1 or later.
+  * Requires a running sbt 1.1 server or later.
 * [x] Linting with [Scalafix][].
   * Requires [semanticdb-scalac](#semanticdb-scalac).
   * Supports both built-in and custom linter rules.
@@ -67,14 +70,13 @@ architecture as [Index-While-Building][] in XCode 9.
   * [ ] dependency -> dependency.
 * [x] Find references (`textDocument/references`). Works the same as goto
       definition.
-  * [x] project -> project.
-  * [ ] project -> Scala dependency.
-  * [ ] project -> Java dependency.
-  * [ ] dependency -> dependency.
+  * [x] project references
+  * [ ] Scala dependency references
+  * [ ] Java dependency references
 * [x] Highlight references to symbol at position
       (`textDocument/documentHighlight`).
-* [x] Open symbol in file (`textDocument/documentSymbol`)
-* [x] Open symbol in workspace (`workspace/symbol`)
+* [x] Goto symbol in file (`textDocument/documentSymbol`)
+* [x] Goto symbol in workspace (`workspace/symbol`)
 * [x] Symbol outline in the sidebar as you type (`textDocument/documentSymbol`).
 * [ ] Goto implementation (`textDocument/implementation`)
 * [ ] Goto type definition (`textDocument/typeDefinition`)
