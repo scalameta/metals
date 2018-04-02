@@ -64,7 +64,7 @@ code .
 
 (optional) to install the plugin for your default vscode
 npm run build # builds a .vsix extension file
-code --install-extension vscode-metals-0.0.1.vsix
+code --install-extension metals-0.1.0.vsix
 ```
 
 To test the plugin on another project than `test-workspace`, you must have the
