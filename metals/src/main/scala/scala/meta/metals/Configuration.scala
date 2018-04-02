@@ -39,7 +39,7 @@ object Configuration {
   @JsonCodec case class ScalacDiagnostics(enabled: Boolean = false)
 
   @JsonCodec case class Hover(enabled: Boolean = false)
-  @JsonCodec case class Highlight(enabled: Boolean = false)
+  @JsonCodec case class Highlight(enabled: Boolean = true)
   @JsonCodec case class Rename(enabled: Boolean = false)
 
   @JsonCodec case class Scalafmt(

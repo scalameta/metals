@@ -116,8 +116,8 @@
         },
         "metals.highlight.enabled": {
           "type": "boolean",
-          "default": false,
-          "description": "EXPERIMENTAL. Enable symbol highlights"
+          "default": true,
+          "description": "Enable highlighting references to symbol on hover"
         },
         "metals.rename.enabled": {
           "type": "boolean",
