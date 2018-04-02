@@ -175,5 +175,9 @@
   "dependencies": {
     "vscode": "^1.1.5",
     "vscode-languageclient": "^3.4.5"
-  }
+  },
+  "extensionDependencies": [
+    "scala-lang.scala",
+    "patrys.vscode-code-outline"
+  ]
 }
