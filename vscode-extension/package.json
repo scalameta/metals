@@ -123,6 +123,11 @@
           "type": "boolean",
           "default": true,
           "description": "Enable renaming symbols"
+        },
+        "metals.serverVersion": {
+          "type": "string",
+          "default": "0.1.0",
+          "description": "The version of the server artifact. Requires reloading the window. Change only if you know what you're doing"
         }
       }
     },

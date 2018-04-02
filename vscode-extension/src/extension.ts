@@ -21,10 +21,12 @@ export async function activate(context: ExtensionContext) {
 
   const coursierPath = path.join(context.extensionPath, "./coursier");
 
+  const serverVersion = workspace.getConfiguration("metals").get("serverVersion")
+
   const coursierArgs = [
     "launch",
     "-r", "bintray:scalameta/maven",
-    "org.scalameta:metals_2.12:0.1-SNAPSHOT",
+    `org.scalameta:metals_2.12:${serverVersion}`,
     "-M", "scala.meta.metals.Main"
   ];
 
