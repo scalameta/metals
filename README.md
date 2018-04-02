@@ -5,30 +5,24 @@
 
 This project is an experiment to implement a
 [Language Server](https://github.com/Microsoft/language-server-protocol) for
-Scala using [Scalameta](http://scalameta.org/)-related technologies.
+Scala using [Scalameta](http://scalameta.org/) projects such as
+[Scalafmt](http://scalameta.org/scalafmt/),
+[Scalafix](https://scalacenter.github.io/scalafix/) and
+[SemanticDB](https://github.com/scalameta/scalameta/blob/master/semanticdb/semanticdb3/semanticdb3.md).
 
 :warning: This project is under development and is not intended to be used for
 day-to-day coding. Expect bugs and incomplete documentation. Installation
 instructions are primarily intended for project contributors.
 
-## Project Goals
-
-* simple installation
-* correct diagnostics (red squiggles)
-* robust navigation (goto definition anywhere)
-* fast completions
-* low CPU and memory usage
-* refactoring (rename, organize imports, move class, insert type annotation)
-
 ## Contributing
 
-See the [installation instructions](BETA.md) and
+See the [installation instructions](docs/installation.md) and
 [contributing guide](CONTRIBUTING.md).
 
-## Roadmap
+## Overview
 
-See the [roadmap](roadmap.md) for a rough summary of what has been implemented
-so far.
+See [here](docs/overview.md) for an overview of a what features are supported or
+not supported by Metals.
 
 ### Team
 
@@ -48,11 +42,15 @@ This project helped us get quickly started with LSP. Since then, we have
 refactored the project's original sources to the point where only a few simple
 case classes remain.
 
-## Related work
+## Alternatives
 
-* [ENSIME](http://ensime.org): a tool for providing IDE-like features to text
-  editors, that
-  [recently added LSP support](https://github.com/ensime/ensime-server/pull/1888)
+* [IntelliJ IDEA](https://www.jetbrains.com/help/idea/discover-intellij-idea-for-scala.html):
+  the most widely used IDE for Scala using a re-implementation of the Scala
+  typechecker.
+* [ENSIME](http://ensime.org): brings Scala and Java IDE-like features to
+  editors like Emacs and Sublime Text using the Scala Presentation Compiler.
+* [Scala IDE](http://scala-ide.org/): Eclipse-based IDE using the Scala
+  Presentation Compiler.
 
 ## Why Metals?
 
