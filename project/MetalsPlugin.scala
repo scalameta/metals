@@ -9,11 +9,20 @@ object MetalsPlugin extends AutoPlugin {
   object autoImport {
 
     val metalsCompilerConfig =
-      taskKey[String]("String containing build metadata in properties file format.")
+      taskKey[String](
+        "String containing build metadata in properties file format."
+      )
     val metalsWriteCompilerConfig =
       taskKey[Unit](
         "Generate build metadata for completions and indexing dependency sources"
       )
+
+    lazy val semanticdbSettings = List(
+      addCompilerPlugin(
+        "org.scalameta" % "semanticdb-scalac" % SemanticdbEnable.semanticdbVersion cross CrossVersion.full
+      ),
+      scalacOptions += "-Yrangepos"
+    )
 
     def metalsConfig(c: Configuration) = Seq(
       metalsCompilerConfig := {
@@ -109,8 +118,8 @@ object SemanticdbEnable {
       case (a, b) => (a.toLong, b.toLong)
     }
 
-  private val supportedScalaVersions = List("2.12.4", "2.11.12")
-  private val semanticdbVersion = "2.1.5"
+  val supportedScalaVersions = List("2.12.4", "2.11.12")
+  val semanticdbVersion = "2.1.7"
 
   lazy val partialToFullScalaVersion: Map[(Long, Long), String] = (for {
     v <- supportedScalaVersions

@@ -46,7 +46,7 @@ export async function activate(context: ExtensionContext) {
     synchronize: {
       fileEvents: [
         workspace.createFileSystemWatcher("**/*.semanticdb"),
-        workspace.createFileSystemWatcher("**/*.compilerconfig")
+        workspace.createFileSystemWatcher("**/.metals/config/*.properties")
       ],
       configurationSection: 'metals'
     },

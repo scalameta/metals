@@ -42,7 +42,6 @@ import monix.reactive.Observable
 import monix.reactive.Observer
 import monix.reactive.OverflowStrategy
 import org.langmeta.inputs.Input
-import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
@@ -496,11 +495,12 @@ class MetalsServices(
   private def onChangedFile(
       path: AbsolutePath
   )(fallback: AbsolutePath => Unit): Unit = {
-    val name = PathIO.extension(path.toNIO)
-    logger.info(s"File $path changed, extension=$name")
-    name match {
-      case "semanticdb" => fileSystemSemanticdbSubscriber.onNext(path)
-      case "compilerconfig" => compilerConfigSubscriber.onNext(path)
+    logger.info(s"File $path changed")
+    path.toNIO match {
+      case Semanticdbs.File() =>
+        fileSystemSemanticdbSubscriber.onNext(path)
+      case CompilerConfig.File() =>
+        compilerConfigSubscriber.onNext(path)
       case _ => fallback(path)
     }
   }
