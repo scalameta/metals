@@ -33,7 +33,7 @@ build it locally.
 * `cd vscode-extension`
 * `npm install`
 * `npm run build`
-* `code --install-extension vscode-metals-0.0.1.vsix`
+* `code --install-extension metals-0.1.0.vsix`
 
 ## Step 3 - publish the server locally
 

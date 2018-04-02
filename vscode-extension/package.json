@@ -1,14 +1,50 @@
 {
-  "name": "vscode-metals",
+  "name": "metals",
   "displayName": "Metals",
-  "description": "",
-  "version": "0.0.1",
-  "publisher": "gabro",
+  "description": "EXPERIMENTAL Language Server for Scala based on Scalameta",
+  "keywords": [
+    "scala",
+    "lsp",
+    "language server",
+    "scalameta"
+  ],
+  "version": "0.1.0",
+  "publisher": "scalameta",
+  "contributors": [
+    {
+      "name": "Alexey Alekhin",
+      "url": "https://github.com/laughedelic"
+    },
+    {
+      "name": "Gabriele Petronella",
+      "url": "https://github.com/gabro"
+    },
+    {
+      "name": "Ólafur Páll Geirsson",
+      "url": "https://github.com/olafurpg"
+    }
+  ],
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/scalameta/metals/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scalameta/metals.git"
+  },
+  "homepage": "http://metals.rocks",
   "engines": {
     "vscode": "^1.17.0"
   },
-  "categories": ["Other"],
-  "activationEvents": ["onLanguage:scala"],
+  "icon": "images/logo.png",
+  "categories": [
+    "Linters",
+    "Formatters",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:scala"
+  ],
   "contributes": {
     "configuration": {
       "title": "Metals",
@@ -16,8 +52,7 @@
         "metals.sbt.enabled": {
           "type": "boolean",
           "default": false,
-          "description":
-            "EXPERIMENTAL. Use sbt language server to compile on file save and report diagnostics. Requires sbt 1.1.0"
+          "description": "EXPERIMENTAL. Use sbt language server to compile on file save and report diagnostics. Requires sbt 1.1.0"
         },
         "metals.sbt.command": {
           "type": "string",
@@ -47,14 +82,12 @@
         "metals.scalafmt.version": {
           "type": "string",
           "default": "1.3.0",
-          "description":
-            "Version of scalafmt to use, default to latest stable release."
+          "description": "Version of scalafmt to use, default to latest stable release."
         },
         "metals.scalafmt.confPath": {
           "type": "string",
           "default": ".scalafmt.conf",
-          "description":
-            "Path to the Scalafmt configuration, relative to the workspace path"
+          "description": "Path to the Scalafmt configuration, relative to the workspace path"
         },
         "metals.scalafix.enabled": {
           "type": "boolean",
@@ -64,8 +97,7 @@
         "metals.scalafix.confPath": {
           "type": "string",
           "default": ".scalafix.conf",
-          "description":
-            "Path to the Scalafix configuration, relative to the workspace path"
+          "description": "Path to the Scalafix configuration, relative to the workspace path"
         },
         "metals.search.indexClasspath": {
           "type": "boolean",
@@ -120,19 +152,20 @@
   "main": "./out/extension",
   "scripts": {
     "vscode:prepublish": "npm run download-coursier && npm run compile",
-    "download-coursier":
-      "curl -L -o coursier https://github.com/coursier/coursier/raw/v1.0.0-RC13/coursier",
+    "download-coursier": "curl -L -o coursier https://github.com/coursier/coursier/raw/v1.0.0-RC13/coursier",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "postinstall": "node ./node_modules/vscode/bin/install",
     "test": "npm run compile && node ./node_modules/vscode/bin/test",
-    "build": "vsce package"
+    "prebuild": "cp ../README.md . && cp ../LICENSE LICENSE.md",
+    "build": "vsce package",
+    "postbuild": "rm README.md && rm LICENSE.md"
   },
   "devDependencies": {
     "@types/mocha": "^2.2.42",
     "@types/node": "^7.0.43",
     "typescript": "^2.5.3",
-    "vsce": "^1.32.0"
+    "vsce": "^1.37.6"
   },
   "dependencies": {
     "vscode": "^1.1.5",
