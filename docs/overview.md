@@ -122,7 +122,7 @@ and memory usage becomes even more important when working in larger codebases.
       in-memory, which can consume multiple GB of RAM for large projects.
 * [ ] Faster Scala and Java outline indexing. Currently, Metals can index the
       outlines of Scala sources at ~30-40k loc/s and Java sources at ~450k
-      loc/s.
+      loc/s. Indexing should be able to process ~500k loc/s.
 * [ ] Throttled background indexing. Currently, all available CPUs are utilized
       for indexing, which makes the computer slow for a period after running
       `metalsSetup`.
