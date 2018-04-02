@@ -12,11 +12,13 @@ import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.lsp.VersionedTextDocumentIdentifier
+import org.langmeta.lsp.Window.showMessage
 import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
+import org.langmeta.jsonrpc.JsonRpcClient
 
 /** Responsible for keeping fresh scalac global instances. */
-class ScalacProvider() extends LazyLogging {
+class ScalacProvider()(implicit client: JsonRpcClient) extends LazyLogging {
 
   def getCompiler(input: Input.VirtualFile): Option[Global] =
     getCompiler(Uri(input.path))
@@ -58,12 +60,22 @@ class ScalacProvider() extends LazyLogging {
   def loadNewCompilerGlobals(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {
-    logger.info(s"Loading new compiler from config $config")
-    val compiler =
-      ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
-    compilerByConfigOrigin(config.origin) = config -> compiler
-    config.sources.foreach { path =>
-      compilerByPath(Uri(path)) = compiler
+    if (config.scalaVersion.major == 2 && config.scalaVersion.minor == 12) {
+      logger.info(s"Loading new compiler from config $config")
+      val compiler =
+        ScalacProvider.newCompiler(config.classpath, config.scalacOptions)
+      compilerByConfigOrigin(config.origin) = config -> compiler
+      config.sources.foreach { path =>
+        compilerByPath(Uri(path)) = compiler
+      }
+    } else {
+      val scalaV = config.scalaVersion.unparse
+      logger.warn(
+        s"Unsupported scala version $scalaV. Skipping presentation compiler instantiation"
+      )
+      showMessage.warn(
+        s"Unsupported scala version $scalaV. Completions and scalac diagnostics won't be available"
+      )
     }
     Effects.InstallPresentationCompiler
   }
