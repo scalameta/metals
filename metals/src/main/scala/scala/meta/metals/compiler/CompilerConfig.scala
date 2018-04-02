@@ -1,12 +1,13 @@
 package scala.meta.metals.compiler
 
-import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Properties
 import scala.tools.nsc.settings.ScalaVersion
 import scala.tools.nsc.settings.SpecificScalaVersion
 import com.typesafe.scalalogging.LazyLogging
+import java.nio.file.Path
+import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 
 /**
@@ -52,10 +53,17 @@ case class CompilerConfig(
       s"scalaVersion=${scalaVersion.unparse})"
 
   def classpath: String =
-    (classDirectory :: dependencyClasspath).mkString(File.pathSeparator)
+    (classDirectory :: dependencyClasspath).mkString(java.io.File.pathSeparator)
 }
 
 object CompilerConfig extends LazyLogging {
+  val Directory: Path = Paths.get(".metals").resolve("config")
+  object File {
+    def unapply(path: Path): Boolean = {
+      path.getParent.endsWith(Directory) &&
+      PathIO.extension(path) == "properties"
+    }
+  }
 
   def jdkSources: Option[AbsolutePath] =
     for {
@@ -87,7 +95,7 @@ object CompilerConfig extends LazyLogging {
           Nil
         case Some(paths) =>
           paths
-            .split(File.pathSeparator)
+            .split(java.io.File.pathSeparator)
             .iterator
             .map(AbsolutePath(_))
             .toList
