@@ -1,85 +1,103 @@
 import sbt._
 import sbt.Keys._
 import java.io._
+import sbt.Def
 
 object MetalsPlugin extends AutoPlugin {
   override def trigger = allRequirements
   override def requires = sbt.plugins.JvmPlugin
-  val metalsCompilerConfig =
-    taskKey[String]("Configuration parameters for autocompletion.")
-  val metalsSetup =
-    taskKey[Unit](
-      "Generate build metadata for completions and indexing dependency sources"
-    )
-  override lazy val globalSettings = List(
-    commands += SemanticdbEnable.command,
-    // `*:metalsSetupCompletions` sets up all configuration in all projects (note *: prefix, that's needed!)
-    metalsSetup := Def.taskDyn {
-      val filter = ScopeFilter(inAnyProject, inConfigurations(Compile, Test))
-      metalsSetup.all(filter)
-    }.value
-  )
-  override lazy val projectSettings = List(Compile, Test).flatMap { c =>
-    inConfig(c)(
-      Seq(
-        metalsCompilerConfig := {
-          val props = new java.util.Properties()
-          props.setProperty(
-            "sources",
-            sources.value.distinct.mkString(File.pathSeparator)
-          )
-          props.setProperty(
-            "unmanagedSourceDirectories",
-            unmanagedSourceDirectories.value.distinct
-              .mkString(File.pathSeparator)
-          )
-          props.setProperty(
-            "managedSourceDirectories",
-            managedSourceDirectories.value.distinct
-              .mkString(File.pathSeparator)
-          )
-          props.setProperty(
-            "scalacOptions",
-            scalacOptions.value.mkString(" ")
-          )
-          props.setProperty(
-            "classDirectory",
-            classDirectory.value.getAbsolutePath
-          )
-          props.setProperty(
-            "dependencyClasspath",
-            dependencyClasspath.value
-              .map(_.data.toString)
-              .mkString(File.pathSeparator)
-          )
-          props.setProperty(
-            "scalaVersion",
-            scalaVersion.value
-          )
-          val sourceJars = for {
-            configurationReport <- updateClassifiers.value.configurations
-            moduleReport <- configurationReport.modules
-            (artifact, file) <- moduleReport.artifacts
-            if artifact.classifier.exists(_ == "sources")
-          } yield file
-          props.setProperty(
-            "sourceJars",
-            sourceJars.mkString(File.pathSeparator)
-          )
-          val out = new ByteArrayOutputStream()
-          props.store(out, null)
-          out.toString()
-        },
-        metalsSetup := {
-          val f = target.value / (c.name + ".compilerconfig")
-          IO.write(f, metalsCompilerConfig.value)
-          streams.value.log.info(
-            "Wrote metals configuration to: " + f.getAbsolutePath
-          )
-        }
+  object autoImport {
+
+    val metalsCompilerConfig =
+      taskKey[String]("String containing build metadata in properties file format.")
+    val metalsWriteCompilerConfig =
+      taskKey[Unit](
+        "Generate build metadata for completions and indexing dependency sources"
       )
+
+    def metalsConfig(c: Configuration) = Seq(
+      metalsCompilerConfig := {
+        val props = new java.util.Properties()
+        props.setProperty(
+          "sources",
+          sources.value.distinct.mkString(File.pathSeparator)
+        )
+        props.setProperty(
+          "unmanagedSourceDirectories",
+          unmanagedSourceDirectories.value.distinct
+            .mkString(File.pathSeparator)
+        )
+        props.setProperty(
+          "managedSourceDirectories",
+          managedSourceDirectories.value.distinct
+            .mkString(File.pathSeparator)
+        )
+        props.setProperty(
+          "scalacOptions",
+          scalacOptions.value.mkString(" ")
+        )
+        props.setProperty(
+          "classDirectory",
+          classDirectory.value.getAbsolutePath
+        )
+        props.setProperty(
+          "dependencyClasspath",
+          dependencyClasspath.value
+            .map(_.data.toString)
+            .mkString(File.pathSeparator)
+        )
+        props.setProperty(
+          "scalaVersion",
+          scalaVersion.value
+        )
+        val sourceJars = for {
+          configurationReport <- updateClassifiers.value.configurations
+          moduleReport <- configurationReport.modules
+          (artifact, file) <- moduleReport.artifacts
+          if artifact.classifier.exists(_ == "sources")
+        } yield file
+        props.setProperty(
+          "sourceJars",
+          sourceJars.mkString(File.pathSeparator)
+        )
+        val out = new ByteArrayOutputStream()
+        props.store(out, null)
+        out.toString()
+      },
+      metalsWriteCompilerConfig := {
+        val filename = s"${thisProject.value.id}-${c.name}.properties"
+        val basedir = baseDirectory.in(ThisBuild).value / ".metals" / "config"
+        basedir.mkdirs()
+        val f = basedir / filename
+        IO.write(f, metalsCompilerConfig.value)
+        streams.value.log.info("Created: " + f.getAbsolutePath)
+      }
     )
   }
+  import autoImport._
+  override lazy val globalSettings = List(
+    commands += SemanticdbEnable.command,
+    commands += Command.command(
+      "metalsSetup",
+      briefHelp =
+        "Generates .metals/config/*.properties files containing build metadata " +
+          "such as classpath and source directories.",
+      detail = ""
+    ) { s =>
+      val configDir = s.baseDir / ".metals" / "config"
+      IO.delete(IO.listFiles(configDir))
+      configDir.mkdirs()
+      "semanticdbEnable" ::
+        "*:metalsWriteCompilerConfig" ::
+        s
+    },
+    metalsWriteCompilerConfig := Def.taskDyn {
+      val filter = ScopeFilter(inAnyProject, inConfigurations(Compile, Test))
+      metalsWriteCompilerConfig.all(filter)
+    }.value
+  )
+  override lazy val projectSettings: List[Def.Setting[_]] =
+    List(Compile, Test).flatMap(c => inConfig(c)(metalsConfig(c)))
 }
 
 /** Command to automatically enable semanticdb-scalac for shell session */
