@@ -2,14 +2,14 @@
 
 * [**Simple installation**](#simple-installation): importing a project should be
   simple and require as few steps as possible.
-* [**Correct diagnostics**](#correct-diagnostics): the editor should never show
+* [**Correct diagnostics**](#correct-diagnostics): the editor should not show
   spurious red squiggles, even at the cost of higher latency.
 * [**Robust navigation**](#robust-navigation): goto definition should work
   everywhere, even for Java dependencies.
 * [**Fast completions**](#fast-completions): completions suggestions should
   respond in ~200ms, even at the cost of occasionally wrong results.
-* [**Low CPU and memory usage**](#low-cpu-and-memory-usage): indexing should be
-  lightweight and run in the background.
+* [**Low CPU and memory usage**](#low-cpu-and-memory-usage): indexing should run
+  in the background and not get in your way from coding.
 * [**Solid refactoring**](#solid-refactoring): rename, organize imports and
   insert type annotation should always leave the codebase in a compiling state.
 
@@ -90,13 +90,14 @@ suggestions update on every keystroke. Correct and fast completions are
 difficult to support in Scala due to several challenges:
 
 1.  the presentation compiler does not lend itself well to interactive editing
-2.  some completions semantics are are difficult to reproduce outside of the
+2.  some completions semantics are difficult to reproduce outside of the
     compiler
     * extension methods depend on implicit conversions
     * whitebox macros can refine result types which influences completion
       suggestions
 
-It will take a while until Metals can robustly support completions.
+Given these challenges, we are still exploring how to best support correct and
+fast completions.
 
 * [x] Scala Presentation Compiler. Faithfully reproduces full language semantics
       but may be slow and difficult to keep in-sync with the build for

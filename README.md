@@ -22,7 +22,7 @@ See the [installation instructions](docs/installation.md) and
 ## Roadmap
 
 See the [roadmap](docs/roadmap.md) for an overview of what features have been
-implemented.
+implemented and what features we're planning to work on next.
 
 ### Team
 
