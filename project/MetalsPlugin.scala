@@ -52,6 +52,10 @@ object MetalsPlugin extends AutoPlugin {
               .map(_.data.toString)
               .mkString(File.pathSeparator)
           )
+          props.setProperty(
+            "scalaVersion",
+            scalaVersion.value
+          )
           val sourceJars = for {
             configurationReport <- updateClassifiers.value.configurations
             moduleReport <- configurationReport.modules

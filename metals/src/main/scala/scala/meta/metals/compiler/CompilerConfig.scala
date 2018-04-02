@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Properties
+import scala.tools.nsc.settings.ScalaVersion
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
 
@@ -34,7 +35,8 @@ case class CompilerConfig(
     classDirectory: AbsolutePath,
     dependencyClasspath: List[AbsolutePath],
     sourceJars: List[AbsolutePath],
-    origin: AbsolutePath
+    origin: AbsolutePath,
+    scalaVersion: ScalaVersion
 ) {
   lazy val sourceDirectories: List[AbsolutePath] =
     unmanagedSourceDirectories ++ managedSourceDirectories
@@ -45,7 +47,8 @@ case class CompilerConfig(
       s"dependencyClasspath={+${dependencyClasspath.length}}, " +
       s"classDirectory=$classDirectory, " +
       s"sourceJars={+${sourceJars.length}}, " +
-      s"origin=$origin)"
+      s"origin=$origin, " +
+      s"scalaVersion=${scalaVersion.unparse})"
 
   def classpath: String =
     (classDirectory :: dependencyClasspath).mkString(File.pathSeparator)
@@ -96,6 +99,7 @@ object CompilerConfig extends LazyLogging {
     val dependencyClasspath = getPaths
     val sourceJars = getPaths
     val classDirectory = AbsolutePath(props.getProperty("classDirectory"))
+    val scalaVersion = ScalaVersion(props.getProperty("scalaVersion"))
     CompilerConfig(
       sources,
       unmanagedSourceDirectories,
@@ -105,6 +109,7 @@ object CompilerConfig extends LazyLogging {
       dependencyClasspath,
       sourceJars,
       origin,
+      scalaVersion
     )
   }
 }
