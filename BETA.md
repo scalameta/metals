@@ -27,9 +27,6 @@ The VSCode extension is not yet published on the Marketplace, so you'll need to
 build it locally.
 
 * Make sure you have installed `node`, `npm` and VS Code.
-* Install the
-  ["Scala Syntax"](https://marketplace.visualstudio.com/items?itemName=daltonjorge.scala)
-  plugin in VS Code.
 * `cd vscode-extension`
 * `npm install`
 * `npm run build`
