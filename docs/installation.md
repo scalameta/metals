@@ -69,15 +69,12 @@ time you open sbt.
 
 ## Step 2 - produce the build metadata
 
-In your project of choice, open `sbt` and run `*:metalsSetup`. Running the task
+In your project of choice, open `sbt` and run `metalsSetup`. Running the task
 produces the necessary metadata for the server to support features like
 completions and goto definition in dependency sources.
 
 > **NOTE**: you will need to repeat this step every time you add a new
 > dependency in your build or when you run `sbt clean`.
-
-> **NOTE**: `metalsSetup` previously used to be called
-> `metalsEnableCompletions`.
 
 ## Step 3 - start editing
 

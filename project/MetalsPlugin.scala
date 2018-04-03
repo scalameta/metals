@@ -118,7 +118,9 @@ object SemanticdbEnable {
       case (a, b) => (a.toLong, b.toLong)
     }
 
-  val supportedScalaVersions = List("2.12.4", "2.11.12")
+  val scala211 ="2.11.12"
+  val scala212 ="2.12.4"
+  val supportedScalaVersions = List(scala212, scala211)
   val semanticdbVersion = "2.1.7"
 
   lazy val partialToFullScalaVersion: Map[(Long, Long), String] = (for {
