@@ -72,12 +72,6 @@ inThisBuild(
     )
 )
 
-name := "metalsRoot"
-
-lazy val benchmarks = project
-  .dependsOn(metals)
-  .enablePlugins(JmhPlugin)
-
 lazy val V = new {
   val scala211 = SemanticdbEnable.scala211
   val scala212 = SemanticdbEnable.scala212
@@ -95,8 +89,15 @@ lazy val noPublish = List(
   skip in publish := true
 )
 
-// not publishing the root project
-noPublish
+lazy val metalsRoot = project
+  .in(file("."))
+  .settings(
+    noPublish
+  )
+
+lazy val benchmarks = project
+  .dependsOn(metals)
+  .enablePlugins(JmhPlugin)
 
 lazy val jsonrpc = project
   .settings(
@@ -174,3 +175,18 @@ lazy val testWorkspace = project
     scalacOptions -= "-Xlint"
   )
   .disablePlugins(ScalafixPlugin)
+
+lazy val `sbt-metals` = project
+  .settings(
+    sbtPlugin := true,
+    // we use 1.0 (instead of 1.1) to ensure compatibility with all 1.* versions
+    sbtVersion := "1.0.4",
+    crossSbtVersions := Seq("0.13.17", sbtVersion.value),
+    libraryDependencies := Seq(),
+    scalacOptions := scalacOptions.value diff {
+      Seq("-Yrangepos") ++
+        Seq("-Ywarn-unused-import").filter { _ =>
+          scalaBinaryVersion.value == "2.10"
+        }
+    }
+  )
