@@ -9,6 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 import java.nio.file.Path
 import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
+import scala.util.control.NonFatal
 
 /**
  * Configuration to load up a presentation compiler.
@@ -81,7 +82,13 @@ object CompilerConfig extends LazyLogging {
       val props = new Properties()
       props.load(input)
       fromProperties(props, path)
-    } finally input.close()
+    } catch {
+      case NonFatal(e) =>
+        logger.error(s"Failed to parse $path", e)
+        throw new IllegalArgumentException(path.toString(), e)
+    } finally {
+      input.close()
+    }
   }
 
   def fromProperties(

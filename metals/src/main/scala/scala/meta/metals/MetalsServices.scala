@@ -109,9 +109,9 @@ class MetalsServices(
       .merge(fileSystemSemanticdbsPublisher, interactiveSchemaSemanticdbs)
       .map(symbolIndex.indexDatabase)
   val indexedDependencyClasspath: Observable[Effects.IndexSourcesClasspath] =
-    compilerConfigPublisher.mapTask(
-      c => symbolIndex.indexDependencyClasspath(c.sourceJars)
-    )
+    compilerConfigPublisher.mapTask { config =>
+      symbolIndex.indexDependencyClasspath(config.sourceJars)
+    }
   val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
     compilerConfigPublisher.map(scalacProvider.loadNewCompilerGlobals)
   val publishDiagnostics: Observable[Effects.PublishDiagnostics] =
@@ -139,7 +139,7 @@ class MetalsServices(
     indexedSemanticdbs,
     installedCompilers,
     publishDiagnostics,
-  )
+  ).map(_.doOnError(MetalsServices.onError))
 
   // TODO(olafur): make it easier to invoke fluid services from tests
   def initialize(
@@ -570,7 +570,7 @@ object MetalsServices extends LazyLogging {
     (sub, pub.doOnError(onError))
   }
 
-  private def onError(e: Throwable): Unit = {
+  def onError(e: Throwable): Unit = {
     logger.error(e.getMessage, e)
   }
 }
