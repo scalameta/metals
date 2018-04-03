@@ -23,7 +23,7 @@ Language Server Protocol does not provide utilities to extract metadata from a
 build tool (module source files, dependencies, configuration data), so we are
 still exploring what is the best option.
 
-* [ ] sbt-metals: plugin that provides a `*:metalsSetup` task to export sbt
+* [ ] sbt-metals: plugin that provides a `metalsSetup` task to export sbt
       build metadata.
 * [ ] [BSP][]: LSP-inspired protocol to standardize on communication between a
       language server and build tool. In theory, should enable automatic
@@ -156,7 +156,7 @@ best practices.
 
 ### metalsSetup
 
-Task in sbt-metals to generate build metadata. Run `*:metalsSetup` to generate
+Task in sbt-metals to generate build metadata. Run `metalsSetup` to generate
 metadata for all modules in the build, including main and test sources.
 
 ### semanticdb-scalac

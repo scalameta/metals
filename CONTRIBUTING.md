@@ -106,7 +106,7 @@ cache directory to re-trigger indexing for some reason.
 ## Troubleshooting
 
 * If SymbolIndexerTest.classpath tests fail with missing definitions for `List`
-  or `CharRef`, try to run `*:metalsSetup` from the sbt shell and then re-run.
+  or `CharRef`, try to run `metalsSetup` from the sbt shell and then re-run.
   This command must be re-run after every `clean`.
 * If you get the following error
 
