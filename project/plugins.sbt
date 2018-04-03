@@ -7,3 +7,6 @@ addSbtPlugin(
   "com.thesamet" % "sbt-protoc" % "0.99.13" exclude ("com.trueaccord.scalapb", "protoc-bridge_2.12")
 )
 libraryDependencies += "com.trueaccord.scalapb" %% "compilerplugin-shaded" % "0.6.6"
+
+unmanagedSourceDirectories in Compile +=
+  baseDirectory.value.getParentFile / "sbt-metals" / "src" / "main" / "scala"
