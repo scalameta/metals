@@ -57,10 +57,11 @@ case class CompilerConfig(
 }
 
 object CompilerConfig extends LazyLogging {
-  val Directory: Path = Paths.get(".metals").resolve("config")
+  val Directory: Path = Paths.get(".metals").resolve("buildinfo")
   object File {
     def unapply(path: Path): Boolean = {
-      path.getParent.endsWith(Directory) &&
+      Files.exists(path) &&
+      path.getParent.getParent.endsWith(Directory) &&
       PathIO.extension(path) == "properties"
     }
   }
