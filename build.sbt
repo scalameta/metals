@@ -73,6 +73,7 @@ inThisBuild(
 )
 
 lazy val V = new {
+  import scala.meta.sbt.SemanticdbEnable
   val scala211 = SemanticdbEnable.scala211
   val scala212 = SemanticdbEnable.scala212
   val scalameta = SemanticdbEnable.semanticdbVersion
