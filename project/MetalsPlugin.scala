@@ -74,12 +74,13 @@ object MetalsPlugin extends AutoPlugin {
         out.toString()
       },
       metalsWriteCompilerConfig := {
-        val filename = s"${thisProject.value.id}-${c.name}.properties"
-        val basedir = baseDirectory.in(ThisBuild).value / ".metals" / "config"
+        val filename = s"${c.name}.properties"
+        val basedir = baseDirectory.in(ThisBuild).value /
+          ".metals" / "buildinfo" / thisProject.value.id
         basedir.mkdirs()
-        val f = basedir / filename
-        IO.write(f, metalsCompilerConfig.value)
-        streams.value.log.info("Created: " + f.getAbsolutePath)
+        val outFile = basedir / filename
+        IO.write(outFile, metalsCompilerConfig.value)
+        streams.value.log.info("Created: " + outFile.getAbsolutePath)
       }
     )
   }
@@ -89,12 +90,12 @@ object MetalsPlugin extends AutoPlugin {
     commands += Command.command(
       "metalsSetup",
       briefHelp =
-        "Generates .metals/config/*.properties files containing build metadata " +
+        "Generates .metals/buildinfo/**.properties files containing build metadata " +
           "such as classpath and source directories.",
       detail = ""
     ) { s =>
-      val configDir = s.baseDir / ".metals" / "config"
-      IO.delete(IO.listFiles(configDir))
+      val configDir = s.baseDir / ".metals" / "buildinfo"
+      IO.delete(configDir)
       configDir.mkdirs()
       "semanticdbEnable" ::
         "*:metalsWriteCompilerConfig" ::
@@ -118,8 +119,8 @@ object SemanticdbEnable {
       case (a, b) => (a.toLong, b.toLong)
     }
 
-  val scala211 ="2.11.12"
-  val scala212 ="2.12.4"
+  val scala211 = "2.11.12"
+  val scala212 = "2.12.4"
   val supportedScalaVersions = List(scala212, scala211)
   val semanticdbVersion = "2.1.7"
 
