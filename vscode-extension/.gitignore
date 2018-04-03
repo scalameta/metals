@@ -2,4 +2,4 @@ out
 node_modules
 .vscode-test/
 *.vsix
-coursier
+/coursier
