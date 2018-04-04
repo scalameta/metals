@@ -198,3 +198,9 @@ lazy val `sbt-metals` = project
     libraryDependencies := Seq(),
     scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
   )
+
+commands += Command.command("release") { st =>
+  "+releaseEarly" ::
+  "^sbt-metals/releaseEarly" ::
+  st
+}
