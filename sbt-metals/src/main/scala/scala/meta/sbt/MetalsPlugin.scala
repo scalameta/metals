@@ -31,7 +31,7 @@ object MetalsPlugin extends AutoPlugin {
         inConfig(config)(
           Seq(
             metalsBuildInfo := Metals.metalsBuildInfoTask.value,
-            metalsWriteBuildInfo := Metals.metalsWriteBuildInfoTask.value,
+            metalsWriteBuildInfo := Metals.metalsWriteBuildInfoTask.value
           )
         )
       } ++ Seq(
@@ -55,7 +55,7 @@ object MetalsPlugin extends AutoPlugin {
   override def globalSettings = Seq(
     commands ++= Seq(
       Metals.semanticdbEnable,
-      Metals.metalsSetup,
+      Metals.metalsSetup
     ),
     // without project scope it will aggregate over all projects
     metalsWriteBuildInfo := {
@@ -90,7 +90,7 @@ object Metals {
             if artifact.classifier.exists(_ == "sources")
           } yield file
           sourceJars.mkString(File.pathSeparator)
-        },
+        }
       )
     }
 
