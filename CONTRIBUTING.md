@@ -58,9 +58,13 @@ code .
           # metals/publishLocal of the plugin installed.
           # Close the window and run F5 again after every
           # metals/publishLocal
-> File > Open > metals/test-workspace (shortcut Cmd+O on MacOS)
+> File > Open > metals/test-workspace (shortcut Cmd+O on macOS)
           # Open the test-workspace folder in the debugging window
           # of vscode. Open a file in the project.
+
+NOTE. If you encounter "Error: Channel has been closed", open Settings (Cmd+, on macOS)
+and configure:
+  "metals.serverVersion": "0.1-SNAPSHOT"
 
 (optional) to install the plugin for your default vscode
 npm run build # builds a .vsix extension file
@@ -106,7 +110,7 @@ cache directory to re-trigger indexing for some reason.
 ## Troubleshooting
 
 * If SymbolIndexerTest.classpath tests fail with missing definitions for `List`
-  or `CharRef`, try to run `*:metalsSetup` from the sbt shell and then re-run.
+  or `CharRef`, try to run `metalsSetup` from the sbt shell and then re-run.
   This command must be re-run after every `clean`.
 * If you get the following error
 

@@ -42,7 +42,6 @@ import monix.reactive.Observable
 import monix.reactive.Observer
 import monix.reactive.OverflowStrategy
 import org.langmeta.inputs.Input
-import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
@@ -110,9 +109,9 @@ class MetalsServices(
       .merge(fileSystemSemanticdbsPublisher, interactiveSchemaSemanticdbs)
       .map(symbolIndex.indexDatabase)
   val indexedDependencyClasspath: Observable[Effects.IndexSourcesClasspath] =
-    compilerConfigPublisher.mapTask(
-      c => symbolIndex.indexDependencyClasspath(c.sourceJars)
-    )
+    compilerConfigPublisher.mapTask { config =>
+      symbolIndex.indexDependencyClasspath(config.sourceJars)
+    }
   val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
     compilerConfigPublisher.map(scalacProvider.loadNewCompilerGlobals)
   val publishDiagnostics: Observable[Effects.PublishDiagnostics] =
@@ -140,7 +139,7 @@ class MetalsServices(
     indexedSemanticdbs,
     installedCompilers,
     publishDiagnostics,
-  )
+  ).map(_.doOnError(MetalsServices.onError))
 
   // TODO(olafur): make it easier to invoke fluid services from tests
   def initialize(
@@ -496,11 +495,12 @@ class MetalsServices(
   private def onChangedFile(
       path: AbsolutePath
   )(fallback: AbsolutePath => Unit): Unit = {
-    val name = PathIO.extension(path.toNIO)
-    logger.info(s"File $path changed, extension=$name")
-    name match {
-      case "semanticdb" => fileSystemSemanticdbSubscriber.onNext(path)
-      case "compilerconfig" => compilerConfigSubscriber.onNext(path)
+    logger.info(s"File $path changed")
+    path.toNIO match {
+      case Semanticdbs.File() =>
+        fileSystemSemanticdbSubscriber.onNext(path)
+      case CompilerConfig.File() =>
+        compilerConfigSubscriber.onNext(path)
       case _ => fallback(path)
     }
   }
@@ -570,7 +570,7 @@ object MetalsServices extends LazyLogging {
     (sub, pub.doOnError(onError))
   }
 
-  private def onError(e: Throwable): Unit = {
+  def onError(e: Throwable): Unit = {
     logger.error(e.getMessage, e)
   }
 }
