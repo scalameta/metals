@@ -74,11 +74,6 @@
           "default": true,
           "description": "Enable formatting with scalafmt"
         },
-        "metals.scalafmt.onSave": {
-          "type": "boolean",
-          "default": false,
-          "description": "Format file before saving it"
-        },
         "metals.scalafmt.version": {
           "type": "string",
           "default": "1.4.0",
