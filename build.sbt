@@ -171,7 +171,8 @@ lazy val testWorkspace = project
   )
   .disablePlugins(ScalafixPlugin)
 
-lazy val metalsRoot = project.in(file("."))
+lazy val metalsRoot = project
+  .in(file("."))
   .settings(
     noPublish,
     // this is used only by the sbt-metals subproject:
@@ -201,6 +202,6 @@ lazy val `sbt-metals` = project
 
 commands += Command.command("release") { st =>
   "+releaseEarly" ::
-  "^sbt-metals/releaseEarly" ::
-  st
+    "^sbt-metals/releaseEarly" ::
+    st
 }
