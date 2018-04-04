@@ -121,7 +121,7 @@ object Metals {
     IO.delete(configDir)
     configDir.mkdirs()
     "semanticdbEnable" ::
-      "Global / metalsWriteBuildinfo" ::
+      "*/metalsWriteBuildinfo" ::
       s
   }
 
