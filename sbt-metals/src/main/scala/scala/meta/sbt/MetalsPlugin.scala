@@ -9,13 +9,13 @@ object MetalsPlugin extends AutoPlugin {
   override def requires = sbt.plugins.JvmPlugin
   object autoImport {
 
-    val metalsBuildinfo =
-      taskKey[Seq[(String, String)]](
-        "Build metadata for completions and indexing dependency sources"
+    val metalsBuildInfo =
+      taskKey[Map[String, String]](
+        "List of key/value pairs for build information such as classpath/sourceDirectories"
       )
-    val metalsWriteBuildinfo =
+    val metalsWriteBuildInfo =
       taskKey[Unit](
-        "Write build metadata to .metals/buildinfo/"
+        "Write build information to .metals/buildinfo/"
       )
 
     lazy val semanticdbSettings = Seq(
@@ -30,19 +30,19 @@ object MetalsPlugin extends AutoPlugin {
       configs.flatMap { config =>
         inConfig(config)(
           Seq(
-            metalsBuildinfo := Metals.metalsBuildinfoTask.value,
-            metalsWriteBuildinfo := Metals.metalsWriteBuildinfoTask.value,
+            metalsBuildInfo := Metals.metalsBuildInfoTask.value,
+            metalsWriteBuildInfo := Metals.metalsWriteBuildInfoTask.value,
           )
         )
       } ++ Seq(
         // without config scope it will aggregate over all project dependencies
         // and their configurations
-        metalsWriteBuildinfo := Def.taskDyn {
+        metalsWriteBuildInfo := Def.taskDyn {
           val depsAndConfigs = ScopeFilter(
             inDependencies(ThisProject),
             inConfigurations(configs: _*)
           )
-          metalsWriteBuildinfo.all(depsAndConfigs)
+          metalsWriteBuildInfo.all(depsAndConfigs)
         }.value
       )
     }
@@ -58,8 +58,8 @@ object MetalsPlugin extends AutoPlugin {
       Metals.metalsSetup,
     ),
     // without project scope it will aggregate over all projects
-    metalsWriteBuildinfo := {
-      metalsWriteBuildinfo.all(ScopeFilter(inAnyProject)).value
+    metalsWriteBuildInfo := {
+      metalsWriteBuildInfo.all(ScopeFilter(inAnyProject)).value
       streams.value.log.info("Metals rocks! 🤘")
     }
   )
@@ -67,9 +67,9 @@ object MetalsPlugin extends AutoPlugin {
 
 object Metals {
 
-  def metalsBuildinfoTask: Def.Initialize[Task[Seq[(String, String)]]] =
+  def metalsBuildInfoTask: Def.Initialize[Task[Map[String, String]]] =
     Def.task {
-      Seq(
+      Map(
         "sources" -> sources.value.distinct.mkString(File.pathSeparator),
         "unmanagedSourceDirectories" ->
           unmanagedSourceDirectories.value.distinct
@@ -94,9 +94,9 @@ object Metals {
       )
     }
 
-  def metalsWriteBuildinfoTask: Def.Initialize[Task[Unit]] = Def.task {
+  def metalsWriteBuildInfoTask: Def.Initialize[Task[Unit]] = Def.task {
     val props = new java.util.Properties()
-    metalsBuildinfoTask.value.foreach {
+    metalsBuildInfoTask.value.foreach {
       case (k, v) => props.setProperty(k, v)
     }
     val out = new ByteArrayOutputStream()
@@ -121,7 +121,7 @@ object Metals {
     IO.delete(configDir)
     configDir.mkdirs()
     "semanticdbEnable" ::
-      "*/metalsWriteBuildinfo" ::
+      "*/metalsWriteBuildInfo" ::
       s
   }
 
