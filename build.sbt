@@ -180,6 +180,7 @@ lazy val `sbt-metals` = project
     // we use 1.0 (instead of 1.1) to ensure compatibility with all 1.* versions
     sbtVersion := "1.0.4",
     crossSbtVersions := Seq("0.13.17", sbtVersion.value),
+    publishMavenStyle := false,
     libraryDependencies := Seq(),
     scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
   )
