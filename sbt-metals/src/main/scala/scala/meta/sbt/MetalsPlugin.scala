@@ -60,7 +60,7 @@ object MetalsPlugin extends AutoPlugin {
     // without project scope it will aggregate over all projects
     metalsWriteBuildInfo := {
       metalsWriteBuildInfo.all(ScopeFilter(inAnyProject)).value
-      streams.value.log.info("Metals rocks! 🤘")
+      streams.value.log.info("🤘 Metals is ready, time to rock!")
     }
   )
 }
@@ -101,13 +101,13 @@ object Metals {
     }
     val out = new ByteArrayOutputStream()
     props.store(out, null)
-    val basedir = baseDirectory.in(ThisBuild).value /
-      ".metals" / "buildinfo" / thisProject.value.id
-    IO.delete(basedir)
-    basedir.mkdirs()
-    val outFile = basedir / s"${configuration.value.name}.properties"
-    streams.value.log.info(s"Writing to ${outFile} ...")
+    val baseDir = baseDirectory.in(ThisBuild).value
+    val buildinfoDir = baseDir / ".metals" / "buildinfo" / thisProject.value.id
+    IO.delete(buildinfoDir)
+    buildinfoDir.mkdirs()
+    val outFile = buildinfoDir / s"${configuration.value.name}.properties"
     IO.write(outFile, out.toString())
+    streams.value.log.info(s"Created ${outFile.relativeTo(baseDir).get}")
   }
 
   lazy val metalsSetup = Command.command(
@@ -183,7 +183,7 @@ object Metals {
       )
     } yield setting
     val semanticdbInstalled = extracted.append(settings, s)
-    s.log.info("semanticdb-scalac installed 👌")
+    s.log.info("👌 semanticdb-scalac is enabled")
     semanticdbInstalled
   }
 }
