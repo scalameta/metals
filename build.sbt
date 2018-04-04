@@ -79,9 +79,9 @@ lazy val benchmarks = project
   .enablePlugins(JmhPlugin)
 
 lazy val V = new {
-  val scala211 = "2.11.12"
-  val scala212 = "2.12.4"
-  val scalameta = "2.1.5"
+  val scala211 = SemanticdbEnable.scala211
+  val scala212 = SemanticdbEnable.scala212
+  val scalameta = SemanticdbEnable.semanticdbVersion
   val scalafix = "0.5.7"
   val enumeratum = "1.5.12"
   val circe = "0.9.0"
@@ -97,13 +97,6 @@ lazy val noPublish = List(
 
 // not publishing the root project
 noPublish
-
-lazy val semanticdbSettings = List(
-  addCompilerPlugin(
-    "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
-  ),
-  scalacOptions += "-Yrangepos"
-)
 
 lazy val jsonrpc = project
   .settings(

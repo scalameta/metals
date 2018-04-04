@@ -67,7 +67,7 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
     .runAsync(s)
   while (s.tickOne()) () // Trigger indexing
   val index: SymbolIndex = metals.symbolIndex
-  val reminderMsg = "Did you run *:metalsSetup from sbt?"
+  val reminderMsg = "Did you run metalsSetup from sbt?"
   override val tests = Tests {
 
     /** Checks that there is a symbol at given position, it's in the index and has expected name */

@@ -29,6 +29,7 @@ import org.langmeta.semanticdb.Symbol
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable
+import scala.util.control.NonFatal
 
 class InMemorySymbolIndex(
     val symbolIndexer: SymbolIndexer,
@@ -114,7 +115,7 @@ class InMemorySymbolIndex(
 
   def indexDependencyClasspath(
       sourceJars: List[AbsolutePath]
-  ): Task[Effects.IndexSourcesClasspath] = Task.eval {
+  ): Task[Effects.IndexSourcesClasspath] = Task {
     if (!config().indexClasspath) Effects.IndexSourcesClasspath
     else {
       val sourceJarsWithJDK =
@@ -134,12 +135,17 @@ class InMemorySymbolIndex(
       // Acquire a lock on the leveldb cache only during indexing.
       LevelDBMap.withDB(cacheDirectory.resolve("leveldb").toFile) { db =>
         sourceJarsToIndex.foreach { path =>
-          logger.info(s"Indexing classpath entry $path...")
-          val database = db.getOrElseUpdate[AbsolutePath, Database](path, {
-            () =>
-              Mtags.indexDatabase(path :: Nil)
-          })
-          indexDatabase(database)
+          logger.info(s"Indexing classpath entry $path")
+          try {
+            val database = db.getOrElseUpdate[AbsolutePath, Database](
+              path,
+              () => Mtags.indexDatabase(path :: Nil)
+            )
+            indexDatabase(database)
+          } catch {
+            case NonFatal(e) =>
+              logger.error(s"Failed to index $path", e)
+          }
         }
       }
       Effects.IndexSourcesClasspath
@@ -148,7 +154,13 @@ class InMemorySymbolIndex(
 
   /** Register this Database to symbol indexer. */
   def indexDatabase(document: s.Database): Effects.IndexSemanticdb = {
-    document.documents.foreach(indexDocument)
+    document.documents.foreach { doc =>
+      try indexDocument(doc)
+      catch {
+        case NonFatal(e) =>
+          logger.error(s"Failed to index ${doc.filename}", e)
+      }
+    }
     Effects.IndexSemanticdb
   }
 

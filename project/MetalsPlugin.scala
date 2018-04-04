@@ -1,85 +1,113 @@
 import sbt._
 import sbt.Keys._
 import java.io._
+import sbt.Def
 
 object MetalsPlugin extends AutoPlugin {
   override def trigger = allRequirements
   override def requires = sbt.plugins.JvmPlugin
-  val metalsCompilerConfig =
-    taskKey[String]("Configuration parameters for autocompletion.")
-  val metalsSetup =
-    taskKey[Unit](
-      "Generate build metadata for completions and indexing dependency sources"
-    )
-  override lazy val globalSettings = List(
-    commands += SemanticdbEnable.command,
-    // `*:metalsSetupCompletions` sets up all configuration in all projects (note *: prefix, that's needed!)
-    metalsSetup := Def.taskDyn {
-      val filter = ScopeFilter(inAnyProject, inConfigurations(Compile, Test))
-      metalsSetup.all(filter)
-    }.value
-  )
-  override lazy val projectSettings = List(Compile, Test).flatMap { c =>
-    inConfig(c)(
-      Seq(
-        metalsCompilerConfig := {
-          val props = new java.util.Properties()
-          props.setProperty(
-            "sources",
-            sources.value.distinct.mkString(File.pathSeparator)
-          )
-          props.setProperty(
-            "unmanagedSourceDirectories",
-            unmanagedSourceDirectories.value.distinct
-              .mkString(File.pathSeparator)
-          )
-          props.setProperty(
-            "managedSourceDirectories",
-            managedSourceDirectories.value.distinct
-              .mkString(File.pathSeparator)
-          )
-          props.setProperty(
-            "scalacOptions",
-            scalacOptions.value.mkString(" ")
-          )
-          props.setProperty(
-            "classDirectory",
-            classDirectory.value.getAbsolutePath
-          )
-          props.setProperty(
-            "dependencyClasspath",
-            dependencyClasspath.value
-              .map(_.data.toString)
-              .mkString(File.pathSeparator)
-          )
-          props.setProperty(
-            "scalaVersion",
-            scalaVersion.value
-          )
-          val sourceJars = for {
-            configurationReport <- updateClassifiers.value.configurations
-            moduleReport <- configurationReport.modules
-            (artifact, file) <- moduleReport.artifacts
-            if artifact.classifier.exists(_ == "sources")
-          } yield file
-          props.setProperty(
-            "sourceJars",
-            sourceJars.mkString(File.pathSeparator)
-          )
-          val out = new ByteArrayOutputStream()
-          props.store(out, null)
-          out.toString()
-        },
-        metalsSetup := {
-          val f = target.value / (c.name + ".compilerconfig")
-          IO.write(f, metalsCompilerConfig.value)
-          streams.value.log.info(
-            "Wrote metals configuration to: " + f.getAbsolutePath
-          )
-        }
+  object autoImport {
+
+    val metalsCompilerConfig =
+      taskKey[String](
+        "String containing build metadata in properties file format."
       )
+    val metalsWriteCompilerConfig =
+      taskKey[Unit](
+        "Generate build metadata for completions and indexing dependency sources"
+      )
+
+    lazy val semanticdbSettings = List(
+      addCompilerPlugin(
+        "org.scalameta" % "semanticdb-scalac" % SemanticdbEnable.semanticdbVersion cross CrossVersion.full
+      ),
+      scalacOptions += "-Yrangepos"
+    )
+
+    def metalsConfig(c: Configuration) = Seq(
+      metalsCompilerConfig := {
+        val props = new java.util.Properties()
+        props.setProperty(
+          "sources",
+          sources.value.distinct.mkString(File.pathSeparator)
+        )
+        props.setProperty(
+          "unmanagedSourceDirectories",
+          unmanagedSourceDirectories.value.distinct
+            .mkString(File.pathSeparator)
+        )
+        props.setProperty(
+          "managedSourceDirectories",
+          managedSourceDirectories.value.distinct
+            .mkString(File.pathSeparator)
+        )
+        props.setProperty(
+          "scalacOptions",
+          scalacOptions.value.mkString(" ")
+        )
+        props.setProperty(
+          "classDirectory",
+          classDirectory.value.getAbsolutePath
+        )
+        props.setProperty(
+          "dependencyClasspath",
+          dependencyClasspath.value
+            .map(_.data.toString)
+            .mkString(File.pathSeparator)
+        )
+        props.setProperty(
+          "scalaVersion",
+          scalaVersion.value
+        )
+        val sourceJars = for {
+          configurationReport <- updateClassifiers.value.configurations
+          moduleReport <- configurationReport.modules
+          (artifact, file) <- moduleReport.artifacts
+          if artifact.classifier.exists(_ == "sources")
+        } yield file
+        props.setProperty(
+          "sourceJars",
+          sourceJars.mkString(File.pathSeparator)
+        )
+        val out = new ByteArrayOutputStream()
+        props.store(out, null)
+        out.toString()
+      },
+      metalsWriteCompilerConfig := {
+        val filename = s"${c.name}.properties"
+        val basedir = baseDirectory.in(ThisBuild).value /
+          ".metals" / "buildinfo" / thisProject.value.id
+        basedir.mkdirs()
+        val outFile = basedir / filename
+        IO.write(outFile, metalsCompilerConfig.value)
+        streams.value.log.info("Created: " + outFile.getAbsolutePath)
+      }
     )
   }
+  import autoImport._
+  override lazy val globalSettings = List(
+    commands += SemanticdbEnable.command,
+    commands += Command.command(
+      "metalsSetup",
+      briefHelp =
+        "Generates .metals/buildinfo/**.properties files containing build metadata " +
+          "such as classpath and source directories.",
+      detail = ""
+    ) { s =>
+      val configDir = s.baseDir / ".metals" / "buildinfo"
+      IO.delete(configDir)
+      configDir.mkdirs()
+      "semanticdbEnable" ::
+        "*:metalsWriteCompilerConfig" ::
+        s
+    },
+    metalsWriteCompilerConfig := Def.taskDyn {
+      val filter = ScopeFilter(inAnyProject, inConfigurations(Compile, Test))
+      metalsWriteCompilerConfig.all(filter)
+    }.value
+  )
+  override lazy val projectSettings: List[Def.Setting[_]] =
+    List(Compile, Test).flatMap(c => inConfig(c)(metalsConfig(c)))
 }
 
 /** Command to automatically enable semanticdb-scalac for shell session */
@@ -91,8 +119,10 @@ object SemanticdbEnable {
       case (a, b) => (a.toLong, b.toLong)
     }
 
-  private val supportedScalaVersions = List("2.12.4", "2.11.12")
-  private val semanticdbVersion = "2.1.5"
+  val scala211 = "2.11.12"
+  val scala212 = "2.12.4"
+  val supportedScalaVersions = List(scala212, scala211)
+  val semanticdbVersion = "2.1.7"
 
   lazy val partialToFullScalaVersion: Map[(Long, Long), String] = (for {
     v <- supportedScalaVersions
