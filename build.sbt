@@ -90,8 +90,18 @@ lazy val noPublish = List(
   skip in publish := true
 )
 
-name := "metalsRoot"
-noPublish
+lazy val metalsRoot = project
+  .in(file("."))
+  .settings(
+    noPublish
+  )
+  .aggregate(
+    benchmarks,
+    jsonrpc,
+    lsp4s,
+    metals,
+    integration
+  )
 
 lazy val benchmarks = project
   .dependsOn(metals)
