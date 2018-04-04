@@ -73,7 +73,7 @@ inThisBuild(
 )
 
 lazy val V = new {
-  import scala.meta.sbt.metals.Metals
+  import scala.meta.sbt.Metals
   val scala211 = Metals.scala211
   val scala212 = Metals.scala212
   val scalameta = Metals.semanticdbVersion

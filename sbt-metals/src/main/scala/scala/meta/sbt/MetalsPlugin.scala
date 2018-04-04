@@ -1,7 +1,8 @@
-package scala.meta.sbt.metals
+package scala.meta.sbt
 
 import sbt._
 import sbt.Keys._
+import java.io._
 
 object MetalsPlugin extends AutoPlugin {
   override def trigger = allRequirements
