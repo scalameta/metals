@@ -73,10 +73,10 @@ inThisBuild(
 )
 
 lazy val V = new {
-  import scala.meta.sbt.SemanticdbEnable
-  val scala211 = SemanticdbEnable.scala211
-  val scala212 = SemanticdbEnable.scala212
-  val scalameta = SemanticdbEnable.semanticdbVersion
+  import scala.meta.sbt.metals.Metals
+  val scala211 = Metals.scala211
+  val scala212 = Metals.scala212
+  val scalameta = Metals.semanticdbVersion
   val scalafix = "0.5.7"
   val enumeratum = "1.5.12"
   val circe = "0.9.0"
@@ -184,10 +184,5 @@ lazy val `sbt-metals` = project
     sbtVersion := "1.0.4",
     crossSbtVersions := Seq("0.13.17", sbtVersion.value),
     libraryDependencies := Seq(),
-    scalacOptions := scalacOptions.value diff {
-      Seq("-Yrangepos") ++
-        Seq("-Ywarn-unused-import").filter { _ =>
-          scalaBinaryVersion.value == "2.10"
-        }
-    }
+    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
   )
