@@ -90,19 +90,6 @@ lazy val noPublish = List(
   skip in publish := true
 )
 
-lazy val metalsRoot = project
-  .in(file("."))
-  .settings(
-    noPublish
-  )
-  .aggregate(
-    benchmarks,
-    jsonrpc,
-    lsp4s,
-    metals,
-    integration
-  )
-
 lazy val benchmarks = project
   .dependsOn(metals)
   .enablePlugins(JmhPlugin)
@@ -184,12 +171,29 @@ lazy val testWorkspace = project
   )
   .disablePlugins(ScalafixPlugin)
 
+lazy val metalsRoot = project.in(file("."))
+  .settings(
+    noPublish,
+    // this is used only by the sbt-metals subproject:
+    // we use 1.0 (instead of 1.1) to ensure compatibility with all 1.* versions
+    // also the order is important: first 1.+, then 0.13
+    crossSbtVersions := Seq("1.0.4", "0.13.17"),
+  )
+  .aggregate(
+    benchmarks,
+    jsonrpc,
+    lsp4s,
+    metals,
+    integration
+  )
+
 lazy val `sbt-metals` = project
   .settings(
     sbtPlugin := true,
-    // we use 1.0 (instead of 1.1) to ensure compatibility with all 1.* versions
-    sbtVersion := "1.0.4",
-    crossSbtVersions := Seq("0.13.17", sbtVersion.value),
+    scalaVersion := {
+      if (sbtVersion.in(pluginCrossBuild).value.startsWith("0.13")) "2.10.6"
+      else Keys.scalaVersion.value
+    },
     publishMavenStyle := false,
     libraryDependencies := Seq(),
     scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
