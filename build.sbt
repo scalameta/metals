@@ -63,6 +63,8 @@ inThisBuild(
       publishMavenStyle := true,
       bintrayOrganization := Some("scalameta"),
       bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
+      pgpPublicRing := file("./travis/local.pubring.asc"),
+      pgpSecretRing := file("./travis/local.secring.asc"),
       // faster publishLocal:
       publishArtifact in packageDoc := sys.env.contains("CI"),
       publishArtifact in packageSrc := sys.env.contains("CI"),
