@@ -21,35 +21,39 @@ pull requests.
   client for the language server
 * `test-workspace` directory for manually testing the plugin locally
 
-## Running locally
-
-First you need to have the following applications installed
+## Running a local version of the server
+You will need the following applications installed:
 
 * `git`
 * `sbt`
 * Visual Studio Code (`code` from the console)
-* `npm`
-
-To try out metals locally, it's best to keep two open terminal windows.
 
 ```
-git clone https://github.com/scalameta/metals.git
-cd metals
-
-########
-# Step 1
-########
 sbt
-> metals/publishLocal # publish your latest changes locally
+> metals/publishLocal     # publish your latest changes locally
                           # keep this sbt shell session open, and
                           # re-run publishLocal every time you
                           # edit *.scala sources.
 > ~testWorkspace/test:compile # compile the sources in test-workspace
+```
 
-########
-# Step 2
-########
-# Inside a new terminal window
+You can then use the Metals VSCode extension published on the Marketplace, and point it to the local
+snapshot version of the server you've just published by changing the settings:
+
+```json
+"metals.serverVersion": "0.2.0-SNAPSHOT"
+```
+
+Then open the metals root with VSCode (`code test-workspace` from the console) and try your changes.
+
+## Running a local version of the VSCode extension
+You will need the following applications installed:
+
+* `git`
+* `npm`
+* Visual Studio Code (`code` from the console)
+
+```
 cd vscode-extension
 npm install
 code .
@@ -61,28 +65,18 @@ code .
 > File > Open > metals/test-workspace (shortcut Cmd+O on macOS)
           # Open the test-workspace folder in the debugging window
           # of vscode. Open a file in the project.
+```
 
-NOTE. If you encounter "Error: Channel has been closed", open Settings (Cmd+, on macOS)
-and configure:
-  "metals.serverVersion": "0.1-SNAPSHOT"
+You can optionally build the extension and install it for your regular VSCode.
 
-(optional) to install the plugin for your default vscode
+```
 npm run build # builds a .vsix extension file
-code --install-extension metals-0.1.0.vsix
+code --install-extension metals-0.1.0.vsix # or whatever the name is
 ```
 
 To test the plugin on another project than `test-workspace`, you must have the
-Scalameta `semanticdb-scalac` compiler plugin enabled. You have two
-alternatives:
-
-1.  [sbt-scalafix](https://scalacenter.github.io/scalafix/docs/users/installation#sbt-scalafix),
-    mostly automatic with `addSbtPlugin`.
-2.  [semanticdb-scalac](http://scalameta.org/tutorial/#sbt), manually enable the
-    compiler plugin in your project. This step should work similarly for other
-    build tools than sbt.
-
-See an example manual installation in
-[test-workspace/build.sbt](test-workspace/build.sbt).
+Scalameta `semanticdb-scalac` compiler plugin enabled.
+Refer to the [installation instructions](/docs/installation.md) for details on how to enable it.
 
 ## Unit tests
 
@@ -112,6 +106,7 @@ cache directory to re-trigger indexing for some reason.
 * If SymbolIndexerTest.classpath tests fail with missing definitions for `List`
   or `CharRef`, try to run `metalsSetup` from the sbt shell and then re-run.
   This command must be re-run after every `clean`.
+
 * If you get the following error
 
       org.fusesource.leveldbjni.internal.NativeDB$DBException: IO error: lock /path/to/Library/Cache/metals
@@ -121,3 +116,7 @@ cache directory to re-trigger indexing for some reason.
   running the test suite locally. We hope to address this in the future by for
   example moving the cache to each workspace directory or use an alternative
   storing mechanism.
+
+* If you encounter "Error: Channel has been closed" in VSCode, open Settings (Cmd+, on macOS)
+and make sure the `"metals.serverVersion"` setting points to an existing version of the server
+(either locally or remotely published)
