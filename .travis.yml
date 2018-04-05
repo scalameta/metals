@@ -39,3 +39,13 @@ before_cache:
   - find $HOME/.sbt -name "*.lock" -type f -delete
   - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
   - rm -rf $HOME/.ivy2/local
+
+before_install:
+  - if [ $TRAVIS_PULL_REQUEST = 'false'  ]; then
+      openssl aes-256-cbc -K $encrypted_df92ba612cfd_key -iv $encrypted_df92ba612cfd_iv -in travis/secrets.tar.enc -out travis/local.secrets.tar -d;
+      tar xv -C travis -f travis/secrets.tar;
+    fi
+
+env:
+  global:
+    secure: ocKXPTJqPfzoPCBdug4LPEL+Bd/e9QikupsoqcWn90Ay8gkjVUXsf7YXkZkpwalKJILUMchI/JSPIwCjnVZY6M+3JkmahuRlW9DKlDzSqB2wUiwjDKa4wbJhXfwndzlIG6oxbaAmdG1gDMkEjsv/aiP6aTgFf3JSBwB1HMlU99IHfp2Xcoy7WRuzJK8X+1+aV+q+ke2Za9dcBaI6PL8SF1zsMuuiqQoqGfRnTch7hM9QDEl3oZMyb01pVECZMPxuvpdsQnDux7yR1ZOiSzRKPwqho0bEw6ARh6fo5lRe6VrDKvsgh7TmR3ivHwWSEZx4lM//fRVFqmEXycrL28I5pAbwBcwB5YVOHK+mkU1pJgrJFJ0tRnQDyzhML8TaW7ZuuDZQ8dxwNQ3x4m1sQDaLNqzC+7bisHbqvsbQwN5fw4V542NbO/kp43nZa2zoL7+qaiXgnz5BF/mjQldrCCiQeXDeJmpNZ5DhMUY485HhpAOkLyHOSLGXL9DAI+BTX+drVnW8ou8c+hZzPR25LaDlDs5Pc1RvgRob3G6XPW+XMtsIX5MgMaAMyZmLsdHNWWBWBiC18wTKnQpClopjYySr8cX3Z5Q4U6KkxwZLdn9nH5VMDQI1ZJXJIQPAbWGPIg/yzpiGP9Hdt+7ivsRgi8pK5A/YjfO3yDqE8eSZN+a1eOc=
