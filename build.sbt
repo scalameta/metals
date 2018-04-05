@@ -72,16 +72,11 @@ inThisBuild(
     )
 )
 
-name := "metalsRoot"
-
-lazy val benchmarks = project
-  .dependsOn(metals)
-  .enablePlugins(JmhPlugin)
-
 lazy val V = new {
-  val scala211 = SemanticdbEnable.scala211
-  val scala212 = SemanticdbEnable.scala212
-  val scalameta = SemanticdbEnable.semanticdbVersion
+  import scala.meta.sbt.Metals
+  val scala211 = Metals.scala211
+  val scala212 = Metals.scala212
+  val scalameta = Metals.semanticdbVersion
   val scalafix = "0.5.7"
   val enumeratum = "1.5.12"
   val circe = "0.9.0"
@@ -95,8 +90,9 @@ lazy val noPublish = List(
   skip in publish := true
 )
 
-// not publishing the root project
-noPublish
+lazy val benchmarks = project
+  .dependsOn(metals)
+  .enablePlugins(JmhPlugin)
 
 lazy val jsonrpc = project
   .settings(
@@ -174,3 +170,38 @@ lazy val testWorkspace = project
     scalacOptions -= "-Xlint"
   )
   .disablePlugins(ScalafixPlugin)
+
+lazy val metalsRoot = project
+  .in(file("."))
+  .settings(
+    noPublish,
+    // this is used only by the sbt-metals subproject:
+    // we use 1.0 (instead of 1.1) to ensure compatibility with all 1.* versions
+    // also the order is important: first 1.+, then 0.13
+    crossSbtVersions := Seq("1.0.4", "0.13.17"),
+  )
+  .aggregate(
+    benchmarks,
+    jsonrpc,
+    lsp4s,
+    metals,
+    integration
+  )
+
+lazy val `sbt-metals` = project
+  .settings(
+    sbtPlugin := true,
+    scalaVersion := {
+      if (sbtVersion.in(pluginCrossBuild).value.startsWith("0.13")) "2.10.6"
+      else Keys.scalaVersion.value
+    },
+    publishMavenStyle := false,
+    libraryDependencies := Seq(),
+    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
+  )
+
+commands += Command.command("release") { st =>
+  "+releaseEarly" ::
+    "^sbt-metals/releaseEarly" ::
+    st
+}
