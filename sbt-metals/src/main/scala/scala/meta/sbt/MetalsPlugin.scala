@@ -101,13 +101,13 @@ object Metals {
     }
     val out = new ByteArrayOutputStream()
     props.store(out, null)
-    val baseDir = baseDirectory.in(ThisBuild).value
-    val buildinfoDir = baseDir / ".metals" / "buildinfo" / thisProject.value.id
+    val buildinfoDir = baseDirectory.in(ThisBuild).value /
+      ".metals" / "buildinfo" / thisProject.value.id
     IO.delete(buildinfoDir)
     buildinfoDir.mkdirs()
     val outFile = buildinfoDir / s"${configuration.value.name}.properties"
     IO.write(outFile, out.toString())
-    streams.value.log.info(s"Created ${outFile.relativeTo(baseDir).get}")
+    streams.value.log.info(s"Wrote ${outFile}")
   }
 
   lazy val metalsSetup = Command.command(
