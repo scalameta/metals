@@ -151,8 +151,7 @@
   },
   "main": "./out/extension",
   "scripts": {
-    "vscode:prepublish": "npm run download-coursier && npm run compile",
-    "download-coursier": "curl -L -o coursier https://github.com/coursier/coursier/raw/v1.0.0/coursier",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "postinstall": "node ./node_modules/vscode/bin/install",
