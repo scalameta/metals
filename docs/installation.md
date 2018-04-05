@@ -27,6 +27,12 @@ These steps are required on each project.
 
 ## Quick-start
 The quickest way to get started with Metals is to use the `metalsSetup` command in sbt.
+
+```
+sbt
+> metalsSetup
+```
+
 The command will create the necessary metadata in the `.metals` directory
 (which you should not checkout into version control) and setup the `semanticdb-scalac` compiler
 plugin for the current sbt ession.
