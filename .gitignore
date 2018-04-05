@@ -25,3 +25,5 @@ project/plugins/project/
 .metals/
 
 .vscode/
+
+local.*
