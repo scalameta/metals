@@ -119,10 +119,11 @@ Clients are also encouraged to implement this setting:
   recommended to allow end-users to easily configure the version of the metals
   server.
 
-Note: we recommend to implement the `scalafmt.onSave: Boolean` setting only if
-the editor does not already have a more general mechanism for handling
-formatting on save. For example, this setting is not included in the VS Code
-extension because that particular editor has a dedicated API for it.
+Note: the `scalafmt.onSave: Boolean` setting may overlap with existing
+functionality of your editor. For example, in VS Code it's possible to configure
+`"editor.formatOnSave": true` to trigger a `textDocument/formatting` request on
+file save and for that reason the VS Code metals plugin does not support
+`scalafmt.onSave`.
 
 ## Commands
 
