@@ -24,8 +24,9 @@ trait Sbt {
     def apply(
         commandLine: String
     )(implicit client: JsonRpcClient): Task[Unit] = {
+      if (commandLine.isEmpty) Task(())
       // NOTE(olafur) sbt/exec is a request that never responds
-      super.request(SbtExecParams(commandLine)).map(_ => Unit)
+      else super.request(SbtExecParams(commandLine)).map(_ => Unit)
     }
   }
 }
