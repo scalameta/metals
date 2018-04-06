@@ -69,9 +69,6 @@ addCompilerPlugin("org.scalameta" % "semanticdb-scalac" % "2.1.8" cross CrossVer
 scalacOptions += "-Yrangepos"
 ```
 
-As soon as you exit the sbt shell you need to re-run `semanticdbEnable` next
-time you open sbt.
-
 ## Start editing
 Open your project in VSCode (`code .` from your terminal) and open a Scala file;
 the server will now start.
