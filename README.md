@@ -1,6 +1,6 @@
 # Metals
 
-[![Join the chat at https://gitter.im/scalameta/scalameta](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/scalameta/scalameta)
+[![Join the chat at https://gitter.im/scalameta/metals](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/scalameta/metals)
 [![](https://travis-ci.org/scalameta/metals.svg?branch=master)](https://travis-ci.org/scalameta/metals)
 
 This project is an experiment to implement a
