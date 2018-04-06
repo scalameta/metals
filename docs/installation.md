@@ -7,77 +7,69 @@ and provide feedback. We do not provide support for day-to-day usage of Metals.
 
 These steps are required once per machine.
 
-## Step 1 - sbt plugin
+## sbt plugin
 
 The server needs to access some metadata about the build configuration. This
-data are produced by an sbt plugin. This plugin is currently not published, so
-you will need to copy paste it on your machine.
+data are produced by an sbt plugin.
 
-Here's the source of the plugin:
-https://github.com/scalameta/metals/blob/master/project/MetalsPlugin.scala
+You can install the plugin with (replace `<version>` with the latest available version)
 
-Copy the source to either (depending on your sbt version):
+[![Download](https://api.bintray.com/packages/scalameta/sbt-plugins/sbt-metals/images/download.svg)](https://bintray.com/scalameta/sbt-plugins/sbt-metals/_latestVersion)
 
-* (sbt 0.13) `~/.sbt/0.13/plugins/MetalsPlugin.scala`
-* (sbt 1.+) `~/.sbt/1.0/plugins/MetalsPlugin.scala`
+```scala
+addSbtPlugin("org.scalameta" % "sbt-metals" % "<version>")
+```
 
-## Step 2 - build the VSCode extension
+You can add the plugin to a specific project (adding it to `project/plugins.sbt`) or globally adding it to:
 
-The VSCode extension is not yet published on the Marketplace, so you'll need to
-build it locally.
+- (sbt 1) `~/.sbt/1.0/plugins/plugins.sbt`
+- (sbt 0.13) `~/.sbt/0.13/plugins/plugins.sbt`
 
-* Make sure you have installed `node`, `npm` and VS Code.
-* `cd vscode-extension`
-* `npm install`
-* `npm run build`
-* `code --install-extension metals-0.1.0.vsix`
-
-## Step 3 - publish the server locally
-
-From the repo root run `sbt publishLocal`
+## VSCode extension
+The VSCode extension is [published on the Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals).
+You can open VSCode and search for it or click [here](vscode:extension/scalameta.metals) to install
+it directly.
 
 # Per-project setup
 
 These steps are required on each project.
 
-## Step 1 - add semanticdb-scalac compiler plugin to your project
+## Quick-start
+The quickest way to get started with Metals is to use the `metalsSetup` command in sbt.
 
-Some features like definition/references/hover rely on artifacts produced by a
-compiler plugin called `semanticdb-scalac`. There are two alternative ways to
-install `semanticdb-scalac`.
+```
+sbt
+> metalsSetup
+```
 
-The first option is to enable `semanticdb-scalac` permanently for your project
-in `build.sbt` with:
+The command will create the necessary metadata in the `.metals` directory
+(which you should not checkout into version control) and setup the `semanticdb-scalac` compiler
+plugin for the current sbt ession.
+
+You should not checkout the `.metals` directory into version control. We recommend to add it to your
+project's `.gitignore` or/and to your global `.gitignore`:
+
+```
+echo ".metals/" >> .gitignore
+```
+
+Note that you will need to invoke `metalsSetup` (or `semanticdbEnable`) whenever you close and
+re-open sbt. For a more persistent setup, keep reading.
+
+## Persisting the semanticdb-scalac compiler plugin
+Some features like definition/references/hover rely on artifacts produced by a compiler plugin
+called `semanticdb-scalac`.
+
+`metalsSetup` enables the plugin on the current session (by invoking `semanticdbEnable`), but you
+can choose to enable it permanently on your project by adding these two settings in your sbt build
+definition:
 
 ```scala
- addCompilerPlugin("org.scalameta" % "semanticdb-scalac" % "2.1.8" cross CrossVersion.full)
+addCompilerPlugin(semanticdbScalac)
 scalacOptions += "-Yrangepos"
 ```
 
-The second option is to enable `semanticdb-scalac` only for an active sbt
-session by running `semanticdbEnable` from the sbt shell.
-
-```scala
-$ sbt
-> semanticdbEnable // automatically runs libraryDependencies += compilerPlugin(...)
-> compile // re-compile project with semanticdb-scalac compiler plugin
-> ...
-```
-
-As soon as you exit the sbt shell you need to re-run `semanticdbEnable` next
-time you open sbt.
-
-## Step 2 - produce the build metadata
-
-In your project of choice, open `sbt` and run `metalsSetup`. Running the task
-produces the necessary metadata for the server to support features like
-completions and goto definition in dependency sources.
-
-> **NOTE**: you will need to repeat this step every time you add a new
-> dependency in your build or when you run `sbt clean`.
-
-## Step 3 - start editing
-
+## Start editing
 Open your project in VSCode (`code .` from your terminal) and open a Scala file;
 the server will now start.
 
