@@ -18,10 +18,11 @@ object MetalsPlugin extends AutoPlugin {
         "Write build information to .metals/buildinfo/"
       )
 
+    val semanticdbScalac =
+      "org.scalameta" % "semanticdb-scalac" % Metals.semanticdbVersion cross CrossVersion.full
+
     lazy val semanticdbSettings = Seq(
-      addCompilerPlugin(
-        "org.scalameta" % "semanticdb-scalac" % Metals.semanticdbVersion cross CrossVersion.full
-      ),
+      addCompilerPlugin(semanticdbScalac),
       scalacOptions += "-Yrangepos"
     )
 
