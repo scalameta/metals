@@ -7,19 +7,28 @@ and provide feedback. We do not provide support for day-to-day usage of Metals.
 
 These steps are required once per machine.
 
-## Step 1 - sbt plugin
+## sbt plugin
 
 The server needs to access some metadata about the build configuration. This
 data are produced by an sbt plugin.
 
-You can install the plugin with
+You can install the plugin with (replace `<version>` with the latest available version)
 
-```
+[![Download](https://api.bintray.com/packages/scalameta/sbt-plugins/sbt-metals/images/download.svg)](https://bintray.com/scalameta/sbt-plugins/sbt-metals/_latestVersion)
+
+```scala
 addSbtPlugin("org.scalameta" % "sbt-metals" % "<version>")
 ```
 
-## Step 2 - VSCode extension
-The VSCode extension is published on the Marketplace. You can open VSCode and search for it.
+You can add the plugin to a specific project (adding it to `project/plugins.sbt`) or globally adding it to:
+
+- (sbt 1) `~/.sbt/1.0/plugins/plugins.sbt`
+- (sbt 0.13) `~/.sbt/0.13/plugins/plugins.sbt`
+
+## VSCode extension
+The VSCode extension is [published on the Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals).
+You can open VSCode and search for it or click [here](vscode:extension/scalameta.metals) to install
+it directly.
 
 # Per-project setup
 
@@ -37,7 +46,14 @@ The command will create the necessary metadata in the `.metals` directory
 (which you should not checkout into version control) and setup the `semanticdb-scalac` compiler
 plugin for the current sbt ession.
 
-Note that you will need to invoke `metalsSetup` (or `semanticdbEnable`) whenevery you close and
+You should not checkout the `.metals` directory into version control. We recommend to add it to your
+project's `.gitignore` or/and to your global `.gitignore`:
+
+```
+echo ".metals/" >> .gitignore
+```
+
+Note that you will need to invoke `metalsSetup` (or `semanticdbEnable`) whenever you close and
 re-open sbt. For a more persistent setup, keep reading.
 
 ## Persisting the semanticdb-scalac compiler plugin
