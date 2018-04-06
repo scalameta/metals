@@ -36,7 +36,7 @@ Open a sbt shell session with
 sbt
 ```
 
-We recommend to keep this keep this sbt shell session open.
+We recommend to keep this sbt shell session open.
 
 Publish your latest changes locally and re-run every time you edit *.scala sources.
 ```
