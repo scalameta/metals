@@ -455,7 +455,7 @@ class MetalsServices(
 
   private def connectToSbtServer(): Unit = {
     sbtServer.foreach(_.runningServer.cancel())
-    val services = SbtServer.forwardingServices(client)
+    val services = SbtServer.forwardingServices(client, latestConfig)
     SbtServer.connect(cwd, services)(s.sbt).foreach {
       case Left(err) => showMessage.error(err)
       case Right(server) =>

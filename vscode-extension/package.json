@@ -52,7 +52,12 @@
         "metals.sbt.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "EXPERIMENTAL. Use sbt language server to compile on file save and report diagnostics. Requires sbt 1.1.0"
+          "description": "EXPERIMENTAL. Use sbt language server to compile on file save and report diagnostics. Requires sbt 1.1+."
+        },
+        "metals.sbt.diagnostics.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable diagnostics from the sbt server."
         },
         "metals.sbt.command": {
           "type": "string",

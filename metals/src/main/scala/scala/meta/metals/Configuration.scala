@@ -27,7 +27,8 @@ object Configuration {
 
   @JsonCodec case class Sbt(
       enabled: Boolean = false,
-      command: String = "test:compile"
+      diagnostics: Diagnostics = Diagnostics(enabled = true),
+      command: String = "test:compile",
   )
   @JsonCodec case class Scalac(
       completions: Completions = Completions(enabled = false),
