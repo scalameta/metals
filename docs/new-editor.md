@@ -119,10 +119,10 @@ Clients are also encouraged to implement this setting:
   recommended to allow end-users to easily configure the version of the metals
   server.
 
-Note: we recommend to implement the scalafmt.onSave: Boolean setting only if the
-editor doesn't already have a more general mechanism for hanlding formatting on
-save. For example, thi setting is not included in the Visual Studio Code
-extension, becuase that particular editor has a dedicated API for it.
+Note: we recommend to implement the `scalafmt.onSave: Boolean` setting only if
+the editor does not already have a more general mechanism for handling
+formatting on save. For example, this setting is not included in the VS Code
+extension because that particular editor has a dedicated API for it.
 
 ## Commands
 
@@ -162,6 +162,7 @@ shortcut (on macOS).
 [`textdocument/codeaction`]: https://microsoft.github.io/language-server-protocol/specification#textDocument_codeAction
 [`workspace/executecommand`]: https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand
 [workspacecommand.scala]: https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/metals/WorkspaceCommand.scala
+[configuration.scala]: https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/metals/Configuration.scala
 [package.json]: https://github.com/scalameta/metals/blob/master/vscode-extension/package.json
 [`workspace/didchangewatchedfiles`]: https://microsoft.github.io/language-server-protocol/specification#workspace_didChangeWatchedFiles
 [#216]: https://github.com/scalameta/metals/issues/216
