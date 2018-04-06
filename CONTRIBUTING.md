@@ -56,10 +56,8 @@ and point it to the local snapshot version of the server you've just published b
 setting (<kbd>CMD</kbd> + <kbd>,</kbd> on macOS):
 
 ```json
-"metals.serverVersion": "<SNAPSHOT_VERSION>"
+"metals.serverVersion": "SNAPSHOT"
 ```
-
-Change `<SNAPSHOT_VERSION>` according to the published snapshot on your machine.
 
 Then open the `test-workspace` project with VSCode (`code test-workspace` from the console)
 and try your changes.
