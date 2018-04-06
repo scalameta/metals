@@ -30,13 +30,13 @@ object Configuration {
       command: String = "test:compile"
   )
   @JsonCodec case class Scalac(
-      completions: ScalacCompletions = ScalacCompletions(),
-      diagnostics: ScalacDiagnostics = ScalacDiagnostics(),
+      completions: Completions = Completions(enabled = false),
+      diagnostics: Diagnostics = Diagnostics(enabled = false),
   ) {
     def enabled: Boolean = completions.enabled || diagnostics.enabled
   }
-  @JsonCodec case class ScalacCompletions(enabled: Boolean = false)
-  @JsonCodec case class ScalacDiagnostics(enabled: Boolean = false)
+  @JsonCodec case class Completions(enabled: Boolean = false)
+  @JsonCodec case class Diagnostics(enabled: Boolean = false)
 
   @JsonCodec case class Hover(enabled: Boolean = true)
   @JsonCodec case class Highlight(enabled: Boolean = false)

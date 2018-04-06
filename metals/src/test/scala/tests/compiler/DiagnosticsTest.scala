@@ -30,7 +30,7 @@ object DiagnosticsTest extends CompilerSuite with LazyLogging {
   val config = Observable.now(
     Configuration(
       scalac = Configuration.Scalac(
-        diagnostics = Configuration.ScalacDiagnostics(
+        diagnostics = Configuration.Diagnostics(
           enabled = true
         )
       ),
