@@ -1,10 +1,11 @@
-> ⚠️ This project is very alpha stage. Expect bugs and incomplete documentation.
-
 # Contributing
 
 :warning: This project is very alpha, expect bugs! These instructions are
 intended for contributors to get a productive workflow when developing the
 plugin.
+
+If anything isn't clear, please open an issue or
+[ask on [gitter](https://gitter.im/scalameta/metals)].
 
 This project follows
 [Scalameta's contribution guidelines](https://github.com/scalameta/scalameta/blob/master/CONTRIBUTING.md).
