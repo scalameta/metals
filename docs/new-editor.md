@@ -1,4 +1,4 @@
-# Writing a new editor client
+# Integrating a new editor
 
 Before writing a new editor client, first check if someone else has managed to
 integrate metals with your favorite text editor.
