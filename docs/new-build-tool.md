@@ -43,7 +43,7 @@ The keys of the build property file format are:
 * `scalaVersion`: String of the Scala compiler version used to compile this
   target. Only 2.12 is supported, consider contributing to
   [#201](https://github.com/scalameta/metals/issues/201) if you would like to
-  add support 2.11 support.
+  add 2.11 support.
 * `sourceJars`: String of path separated list of jars or directories containing
   `*.scala` and `*.java` source files for the dependencies in
   `libraryDependencies`. Matches the `-source.jar` that are typically published
