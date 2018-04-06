@@ -1,9 +1,9 @@
 inThisBuild(
   semanticdbSettings ++
     List(
-      version ~= { old =>
-        if (sys.env.contains("CI")) old
-        else "0.1-SNAPSHOT" // to avoid manually updating extension.js
+      version ~= { dynVer =>
+        if (sys.env.contains("CI")) dynVer
+        else "SNAPSHOT" // only for local publishng
       },
       scalaVersion := V.scala212,
       scalacOptions ++= List(
