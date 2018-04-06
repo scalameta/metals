@@ -21,55 +21,76 @@ pull requests.
   client for the language server
 * `test-workspace` directory for manually testing the plugin locally
 
-## Running a local version of the server
+## Prerequisites
 You will need the following applications installed:
 
 * `git`
-* `sbt`
+* `sbt` (for building a local version of the server)
+* `npm` (for building a local version of the VSCode extension)
 * Visual Studio Code (`code` from the console)
+
+## Running a local version of the server
+Open a sbt shell session with
 
 ```
 sbt
-> metals/publishLocal     # publish your latest changes locally
-                          # keep this sbt shell session open, and
-                          # re-run publishLocal every time you
-                          # edit *.scala sources.
-> ~testWorkspace/test:compile # compile the sources in test-workspace
 ```
 
-You can then use the Metals VSCode extension published on the Marketplace, and point it to the local
-snapshot version of the server you've just published by changing the settings:
+We recommend to keep this keep this sbt shell session open.
+
+Publish your latest changes locally and re-run every time you edit *.scala sources.
+```
+sbt
+> ~publishLocal
+```
+
+When you're ready to try your new server, compile the sources in test-workspace
+
+```
+> ~testWorkspace/test:compile
+```
+
+You can then use the Metals VSCode extension [published on the Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals),
+and point it to the local snapshot version of the server you've just published by changing the
+setting (<kbd>CMD</kbd> + <kbd>,</kbd> on macOS):
 
 ```json
-"metals.serverVersion": "0.2.0-SNAPSHOT"
+"metals.serverVersion": "<SNAPSHOT_VERSION>"
 ```
 
-Then open the metals root with VSCode (`code test-workspace` from the console) and try your changes.
+Change `<SNAPSHOT_VERSION>` according to the published snapshot on your machine.
+
+Then open the `test-workspace` project with VSCode (`code test-workspace` from the console)
+and try your changes.
 
 ## Running a local version of the VSCode extension
-You will need the following applications installed:
 
-* `git`
-* `npm`
-* Visual Studio Code (`code` from the console)
+Install the extension dependencies
 
-```
+```sh
 cd vscode-extension
 npm install
+```
+
+Then open the project
+
+```sh
 code .
-> Debug > "Start debugging" (shortcut: F5)
-          # Inside vscode, F5 will open a new window with the latest
-          # metals/publishLocal of the plugin installed.
-          # Close the window and run F5 again after every
-          # metals/publishLocal
-> File > Open > metals/test-workspace (shortcut Cmd+O on macOS)
-          # Open the test-workspace folder in the debugging window
-          # of vscode. Open a file in the project.
 ```
 
-You can optionally build the extension and install it for your regular VSCode.
+and start a debugging session (`Debug > Start debuggin` or `F5`)
 
-```
+This will open new VSCode window with the latest version of the plugin installed.
+(If you also have the plugin from the Marketplace installed, you will get a warning. This is normal)
+
+Then open the `test-workspace` directory (<kbd>CMD</kbd> + <kbd>O</kdb> on macOS) and open a Scala
+file. Metals will now start, and you should see the features working after a few seconds.
+
+Close the window and run F5 again after every `publishLocal` of the server.
+
+You can optionally build the modified extension and install it for your regular VSCode.
+
+```sh
 npm run build # builds a .vsix extension file
 code --install-extension metals-0.1.0.vsix # or whatever the name is
 ```
@@ -105,7 +126,6 @@ cache directory to re-trigger indexing for some reason.
 
 * If SymbolIndexerTest.classpath tests fail with missing definitions for `List`
   or `CharRef`, try to run `metalsSetup` from the sbt shell and then re-run.
-  This command must be re-run after every `clean`.
 
 * If you get the following error
 
@@ -117,6 +137,7 @@ cache directory to re-trigger indexing for some reason.
   example moving the cache to each workspace directory or use an alternative
   storing mechanism.
 
-* If you encounter "Error: Channel has been closed" in VSCode, open Settings (Cmd+, on macOS)
+* If you encounter "Error: Channel has been closed" in VSCode, open Settings
+(<kbd>CMD</kbd> + <kbd>,</kbd> on macOS)
 and make sure the `"metals.serverVersion"` setting points to an existing version of the server
 (either locally or remotely published)
