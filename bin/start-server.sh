@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-METALS_VERSION=${1:-"0.1-SNAPSHOT"}
+METALS_VERSION=${1:-"SNAPSHOT"}
 COURSIER_DIR="$HOME/.coursier"
 COURSIER_PATH="$COURSIER_DIR/coursier"
 
