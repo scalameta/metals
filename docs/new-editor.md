@@ -3,17 +3,17 @@
 Before writing a new editor client, first check if someone else has managed to
 integrate metals with your favorite text editor.
 
-* [VS Code](https://github.com/scalameta/metals/blob/master/vscode-extension/src/extension.ts),
+* [Visual Studio Code](https://github.com/scalameta/metals/blob/master/vscode-extension/src/extension.ts),
   maintained in this repo
 * [Atom](https://github.com/laughedelic/atom-ide-scala), maintained by
   [@laughedelic](https://github.com/laughedelic)
 * [Emacs](https://github.com/rossabaker/lsp-scala), maintained by
   [@rossabaker](https://github.com/rossabaker)
 * Others, see [#217](https://github.com/scalameta/metals/issues/217). Please
-  open an issue or ask on [gitter](https://gitter.im/scalameta/scalameta) if you
+  open an issue or ask on [gitter](https://gitter.im/scalameta/metals) if you
   want to create a new editor client.
 
-To integrate metals with a new editor, a couple of things should be kept in mind
+To integrate metals with a new editor, a few things should be kept in mind
 
 <!-- TOC depthFrom:2 depthTo:2 -->
 
@@ -97,11 +97,12 @@ notifications to allow end-users to control behavior of the server. The editor
 client is expected to send a `workspace/didChangeConfiguration` notification
 containing user configuration right after the `initialized` notification.
 
-A full list of supported configuration options can be found in the VS Code
-plugin
+A full list of server configuration options can be found in
+[Configuration.scala][]. All configuration options have default values. An
+example of how the configuration options are used from the VS Code plugin can be
+seen in the
 [package.json](https://github.com/scalameta/metals/blob/master/vscode-extension/package.json)
-manifest. Some configuration options are required by the server while others
-should be handled by the client.
+manifest.
 
 Server side configuration options include settings to enable
 experimental/unstable features such as completions with the presentation
@@ -112,13 +113,16 @@ completions are disabled in the configuration
 (`scalac.completions.enabled=false`, default value), then metals responds with
 an empty list of completion suggestions.
 
-Client side configuration options include
+Clients are also encouraged to implement this setting:
 
 * `serverVersion: String`: while metals is still under active development, it is
   recommended to allow end-users to easily configure the version of the metals
   server.
-* `scalafmt.onSave: Boolean`: if true, runs scalafmt on
-  [`textDocument/willSaveWaitUntil`][] client requests.
+
+Note: we recommend to implement the scalafmt.onSave: Boolean setting only if the
+editor doesn't already have a more general mechanism for hanlding formatting on
+save. For example, thi setting is not included in the Visual Studio Code
+extension, becuase that particular editor has a dedicated API for it.
 
 ## Commands
 
@@ -130,10 +134,10 @@ that `restartServer` must be handled client-side.
 
 ## Code actions
 
-The metals server uses [`textDocument/codeAction`][] requests from the editor
-client to provide passive refactoring hints with scalafix. Currently, only the
-"removed unused import" refactoring is supported but more refactorings may be
-added in the future.
+Metals uses [`textDocument/codeAction`][] requests from the editor client to
+provide passive refactoring hints with scalafix. Currently, only the "removed
+unused import" refactoring is supported but more refactorings may be added in
+the future.
 
 <img src="img/code-actions.png" align="right" width="150px" style="padding-left: 20px"/>
 
@@ -149,7 +153,8 @@ The sequence diagram for refactoring hints is quite involved.
 5.  Server responds to `workspace/executeCommand` request.
 
 In VS Code, code actions are suggested to the user via light bulbs when hovering
-above the "Unused import" warnings.
+above the "Unused import" warnings and can be triggered with the `CMD` + `.`
+shortcut (on macOS).
 
 ![](img/code-actions.gif)
 
