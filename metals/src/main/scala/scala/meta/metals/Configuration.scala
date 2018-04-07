@@ -42,7 +42,7 @@ object Configuration {
   @JsonCodec case class Scalafmt(
       enabled: Boolean = true,
       onSave: Boolean = false,
-      version: String = "1.3.0",
+      version: String = "1.4.0",
       confPath: Option[RelativePath] = None
   )
   object Scalafmt {
