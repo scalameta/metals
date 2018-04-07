@@ -209,7 +209,10 @@ lazy val `sbt-metals` = project
     libraryDependencies := Seq(),
     scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import"),
     scriptedBufferLog := false,
-    scriptedLaunchOpts ++= Seq("-Xmx1024M"),
+    scriptedLaunchOpts ++= Seq(
+      "-Xmx1024M",
+      s"-Dplugin.version=${version.value}",
+    ),
   )
 
 commands += Command.command("release") { st =>

@@ -1,1 +1,1 @@
-addSbtPlugin("org.scalameta" % "sbt-metals" % "SNAPSHOT")
+addSbtPlugin("org.scalameta" % "sbt-metals" % System.getProperty("plugin.version"))
