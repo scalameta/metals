@@ -183,7 +183,7 @@ object Metals {
         )
       )
     } yield setting
-    val semanticdbInstalled = extracted.appendWithSession(settings, s)
+    val semanticdbInstalled = Compat.appendWithSession(extracted, settings, s)
     s.log.info("👌 semanticdb-scalac is enabled")
     semanticdbInstalled
   }
