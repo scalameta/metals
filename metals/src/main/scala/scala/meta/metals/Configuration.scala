@@ -43,14 +43,14 @@ object Configuration {
       enabled: Boolean = true,
       onSave: Boolean = false,
       version: String = "1.4.0",
-      confPath: Option[RelativePath] = None
+      confPath: Option[RelativePath] = Some(Scalafmt.defaultConfPath)
   )
   object Scalafmt {
     lazy val defaultConfPath = RelativePath(".scalafmt.conf")
   }
   @JsonCodec case class Scalafix(
       enabled: Boolean = true,
-      confPath: Option[RelativePath] = None
+      confPath: Option[RelativePath] = Some(Scalafix.defaultConfPath)
   )
   object Scalafix {
     lazy val defaultConfPath = RelativePath(".scalafix.conf")
