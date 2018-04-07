@@ -21,7 +21,7 @@ jobs:
         - sbt startServer metalsSetup test scalafixTest
     - env: TEST="sbt-metals"
       script:
-        - sbt ^sbt-metals/compile
+        - sbt sbt-metals/scripted
     - stage: release
       script: ./bin/release.sh
 
