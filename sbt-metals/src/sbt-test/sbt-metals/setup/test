@@ -1,0 +1,9 @@
+> semanticdbEnable
+> compile
+$ exists target/scala-2.12/classes/META-INF/semanticdb/A.semanticdb
+
+$ absent .metals/buildinfo/
+> Compile/metalsWriteBuildInfo
+$ exists .metals/buildinfo/metals/compile.properties
+> Test/metalsWriteBuildInfo
+$ exists .metals/buildinfo/metals/test.properties

@@ -191,6 +191,7 @@ lazy val metalsRoot = project
   )
 
 lazy val `sbt-metals` = project
+  .enablePlugins(ScriptedPlugin)
   .settings(
     sbtPlugin := true,
     scalaVersion := {
@@ -199,7 +200,9 @@ lazy val `sbt-metals` = project
     },
     publishMavenStyle := false,
     libraryDependencies := Seq(),
-    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
+    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import"),
+    scriptedBufferLog := false,
+    scriptedLaunchOpts ++= Seq("-Xmx1024M"),
   )
 
 commands += Command.command("release") { st =>
