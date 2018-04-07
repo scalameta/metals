@@ -8,9 +8,5 @@ addSbtPlugin(
 )
 libraryDependencies += "com.trueaccord.scalapb" %% "compilerplugin-shaded" % "0.6.6"
 
-unmanagedSourceDirectories in Compile ++= {
-  Seq(
-    baseDirectory.value.getParentFile / "sbt-metals" / "src" / "main" / "scala",
-    baseDirectory.value.getParentFile / "sbt-metals" / "src" / "main" / "scala-sbt-1.0"
-  )
-}
+unmanagedSourceDirectories in Compile +=
+  baseDirectory.value.getParentFile / "sbt-metals" / "src" / "main" / "scala"
