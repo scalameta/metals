@@ -1,1 +1,1 @@
-This document has moved to [here](#docs/overview.md).
+This document has moved to [here](docs/overview.md).
