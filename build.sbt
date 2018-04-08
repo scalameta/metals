@@ -208,7 +208,7 @@ lazy val `sbt-metals` = project
     publishMavenStyle := false,
     libraryDependencies --= libraryDependencies.in(ThisBuild).value,
     scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import"),
-    scriptedBufferLog := false,
+    scriptedBufferLog := !sys.env.contains("CI"),
     scriptedLaunchOpts ++= Seq(
       "-Xmx1024M",
       s"-Dplugin.version=${version.value}",
