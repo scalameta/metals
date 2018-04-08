@@ -1,13 +1,68 @@
 $ absent .metals/buildinfo/
 
+# check that project-scoped task generates buildinfo for all configs:
 > a/metalsWriteBuildInfo
 $ exists .metals/buildinfo/a/compile.properties
 $ exists .metals/buildinfo/a/test.properties
+# but only for that project:
 $ absent .metals/buildinfo/b/
 
+# just run for another project:
 > b/metalsWriteBuildInfo
 $ exists .metals/buildinfo/b/compile.properties
 $ exists .metals/buildinfo/b/test.properties
+# $ newer .metals/buildinfo/b/compile.properties .metals/buildinfo/a/compile.properties
+# $ newer .metals/buildinfo/b/test.properties .metals/buildinfo/a/test.properties
 
+# check that config-scoped task rewrites only one file and doesn't touch the other:
 > a/compile:metalsWriteBuildInfo
-$ newer .metals/buildinfo/a/compile.properties .metals/buildinfo/a/test.properties
+$ exists .metals/buildinfo/a/compile.properties
+$ exists .metals/buildinfo/a/test.properties
+# $ newer .metals/buildinfo/a/compile.properties .metals/buildinfo/a/test.properties
+> a/test:metalsWriteBuildInfo
+# $ newer .metals/buildinfo/a/test.properties .metals/buildinfo/a/compile.properties
+
+# project-scoped task should also aggregate over subprojects:
+$ delete .metals/buildinfo/
+> c/metalsWriteBuildInfo
+$ exists .metals/buildinfo/a/compile.properties
+$ exists .metals/buildinfo/a/test.properties
+$ exists .metals/buildinfo/b/compile.properties
+$ exists .metals/buildinfo/b/test.properties
+$ exists .metals/buildinfo/c/compile.properties
+$ exists .metals/buildinfo/c/test.properties
+# but not the root-project:
+$ absent .metals/buildinfo/scopes/
+
+# global-scoped task should aggregate all projects:
+$ delete .metals/buildinfo/
+> */metalsWriteBuildInfo
+$ exists .metals/buildinfo/a/compile.properties
+$ exists .metals/buildinfo/a/test.properties
+$ exists .metals/buildinfo/b/compile.properties
+$ exists .metals/buildinfo/b/test.properties
+$ exists .metals/buildinfo/c/compile.properties
+$ exists .metals/buildinfo/c/test.properties
+$ exists .metals/buildinfo/scopes/compile.properties
+$ exists .metals/buildinfo/scopes/test.properties
+
+# cleanups
+$ touch .metals/buildinfo/a/foo
+$ touch .metals/buildinfo/b/bar
+
+# config-scoped task doesn't touch other files:
+> a/test:metalsWriteBuildInfo
+$ exists .metals/buildinfo/a/foo
+
+# project-scoped task cleans up its own directory and only it:
+> a/metalsWriteBuildInfo
+$ absent .metals/buildinfo/a/foo
+$ exists .metals/buildinfo/b/bar
+> b/metalsWriteBuildInfo
+$ absent .metals/buildinfo/b/bar
+$ exists .metals/buildinfo/a/compile.properties
+
+# global-scoped task cleans ups the root buildinfo directory:
+$ touch .metals/buildinfo/stale-project/compile.properties
+> */metalsWriteBuildInfo
+$ absent .metals/buildinfo/stale-project/
