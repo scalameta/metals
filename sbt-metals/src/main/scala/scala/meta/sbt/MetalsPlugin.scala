@@ -39,6 +39,7 @@ package scala.meta.sbt {
           // without config scope it will aggregate over all project dependencies
           // and their configurations
           metalsWriteBuildInfo := Def.taskDyn {
+            IO.delete(Metals.buildinfoDir.value / thisProject.value.id)
             val depsAndConfigs = ScopeFilter(
               inDependencies(ThisProject),
               inConfigurations(configs: _*)
@@ -60,13 +61,21 @@ package scala.meta.sbt {
       ),
       // without project scope it will aggregate over all projects
       metalsWriteBuildInfo := {
-        metalsWriteBuildInfo.all(ScopeFilter(inAnyProject)).value
-        streams.value.log.info("🤘 Metals is ready, time to rock!")
-      }
+        Def.task {
+          metalsWriteBuildInfo.all(ScopeFilter(inAnyProject)).value
+          streams.value.log.info("🤘 Metals is ready, time to rock!")
+        } dependsOn Def.task {
+          IO.delete(Metals.buildinfoDir.value)
+        }
+      }.value
     )
   }
 
   object Metals {
+
+    def buildinfoDir: Def.Initialize[File] = Def.setting {
+      baseDirectory.in(ThisBuild).value / ".metals" / "buildinfo"
+    }
 
     def metalsBuildInfoTask: Def.Initialize[Task[Map[String, String]]] =
       Def.task {
@@ -102,11 +111,9 @@ package scala.meta.sbt {
       }
       val out = new ByteArrayOutputStream()
       props.store(out, null)
-      val buildinfoDir = baseDirectory.in(ThisBuild).value /
-        ".metals" / "buildinfo" / thisProject.value.id
-      IO.delete(buildinfoDir)
-      buildinfoDir.mkdirs()
-      val outFile = buildinfoDir / s"${configuration.value.name}.properties"
+      val outDir = buildinfoDir.value / thisProject.value.id
+      outDir.mkdirs()
+      val outFile = outDir / s"${configuration.value.name}.properties"
       IO.write(outFile, out.toString())
       streams.value.log.info(s"Wrote ${outFile}")
     }
@@ -117,13 +124,8 @@ package scala.meta.sbt {
         "Generates .metals/buildinfo/**.properties files containing build metadata " +
           "such as classpath and source directories.",
       detail = ""
-    ) { s =>
-      val configDir = s.baseDir / ".metals" / "buildinfo"
-      IO.delete(configDir)
-      configDir.mkdirs()
-      "semanticdbEnable" ::
-        "*/metalsWriteBuildInfo" ::
-        s
+    ) { st: State =>
+      "semanticdbEnable" :: "*/metalsWriteBuildInfo" :: st
     }
 
     /** sbt 1.0 and 0.13 compatible implementation of partialVersion */
