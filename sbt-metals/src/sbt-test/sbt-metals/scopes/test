@@ -1,0 +1,13 @@
+$ absent .metals/buildinfo/
+
+> a/metalsWriteBuildInfo
+$ exists .metals/buildinfo/a/compile.properties
+$ exists .metals/buildinfo/a/test.properties
+$ absent .metals/buildinfo/b/
+
+> b/metalsWriteBuildInfo
+$ exists .metals/buildinfo/b/compile.properties
+$ exists .metals/buildinfo/b/test.properties
+
+> a/compile:metalsWriteBuildInfo
+$ newer .metals/buildinfo/a/compile.properties .metals/buildinfo/a/test.properties
