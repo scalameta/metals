@@ -206,7 +206,6 @@ lazy val `sbt-metals` = project
       else Keys.scalaVersion.value
     },
     publishMavenStyle := false,
-    libraryDependencies := Seq(),
     scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import"),
     scriptedBufferLog := false,
     scriptedLaunchOpts ++= Seq(
