@@ -1,0 +1,8 @@
+$ absent target/
+> metalsSetup
+
+# check that semanticdb-scalac is enabled
+> compile:compile
+$ exists target/scala-2.12/classes/META-INF/semanticdb/src/main/scala/main.semanticdb
+> test:compile
+$ exists target/scala-2.12/test-classes/META-INF/semanticdb/src/test/scala/test.semanticdb
