@@ -417,9 +417,6 @@ class MetalsServices(
   }
 
   private def sbtExec(): Unit = sbtServer.foreach { sbt =>
-    // TODO(olafur) support running other commands than "compile"
-    // running top-level "compile" is sub-optimal for large builds
-    // especially cross-built builds with scala.js/native
     Sbt
       .exec(latestConfig().sbt.command)(sbt.client)
       .onErrorRecover {
