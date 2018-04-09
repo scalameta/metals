@@ -7,6 +7,7 @@ import java.nio.file.Files
 import scala.meta.metals.ActiveJson
 import scala.meta.metals.MissingActiveJson
 import scala.meta.metals.SbtInitializeParams
+import scala.meta.metals.Configuration
 import scala.util.Try
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.jawn.parseByteBuffer
@@ -67,7 +68,7 @@ object SbtServer extends LazyLogging {
       case Left(_: IOException) =>
         fail(
           s"Unable to establish connection with sbt server. " +
-            s"Do you have an active sbt 1.1.0 session?"
+            s"Do you have an active sbt 1.1+ session?"
         )
       case Left(err) =>
         val msg = s"Unexpected error opening connection to sbt server"
@@ -95,13 +96,18 @@ object SbtServer extends LazyLogging {
    * @param editorClient the LSP editor client to forward the notifications
    *                     from the sbt server.
    */
-  def forwardingServices(editorClient: JsonRpcClient): Services =
+  def forwardingServices(
+      editorClient: JsonRpcClient,
+      config: () => Configuration
+  ): Services =
     Services.empty
       .notification(Window.logMessage) { msg =>
         editorClient.notify(Window.logMessage, msg)
       }
       .notification(TextDocument.publishDiagnostics) { msg =>
-        editorClient.notify(TextDocument.publishDiagnostics, msg)
+        if (config().sbt.diagnostics.enabled) {
+          editorClient.notify(TextDocument.publishDiagnostics, msg)
+        }
       }
 
   /**
