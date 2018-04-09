@@ -1,2 +1,2 @@
-addCompilerPlugin(MetalsPlugin.semanticdbScalac)
+addCompilerPlugin(Metals.semanticdbScalac)
 scalacOptions += "-Yrangepos"
