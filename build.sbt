@@ -93,10 +93,12 @@ lazy val noPublish = List(
 )
 
 lazy val benchmarks = project
-  .dependsOn(metals)
+  .disablePlugins(ScriptedPlugin)
   .enablePlugins(JmhPlugin)
+  .dependsOn(metals)
 
 lazy val jsonrpc = project
+  .disablePlugins(ScriptedPlugin)
   .settings(
     crossScalaVersions := List(V.scala211, V.scala212),
     libraryDependencies ++= List(
@@ -117,10 +119,13 @@ lazy val jsonrpc = project
   )
 
 lazy val lsp4s = project
+  .disablePlugins(ScriptedPlugin)
   .settings(crossScalaVersions := List(V.scala211, V.scala212))
   .dependsOn(jsonrpc)
 
 lazy val metals = project
+  .enablePlugins(BuildInfoPlugin)
+  .disablePlugins(ScriptedPlugin)
   .settings(
     PB.targets.in(Compile) := Seq(
       scalapb.gen(
@@ -151,10 +156,10 @@ lazy val metals = project
     testWorkspace % "test->test",
     lsp4s
   )
-  .enablePlugins(BuildInfoPlugin)
 
 lazy val integration = project
   .in(file("tests/integration"))
+  .disablePlugins(ScriptedPlugin)
   .settings(
     noPublish
   )
@@ -162,6 +167,7 @@ lazy val integration = project
 
 lazy val testWorkspace = project
   .in(file("test-workspace"))
+  .disablePlugins(ScriptedPlugin)
   .settings(
     noPublish,
     scalacOptions += {
@@ -175,6 +181,7 @@ lazy val testWorkspace = project
 
 lazy val metalsRoot = project
   .in(file("."))
+  .disablePlugins(ScriptedPlugin)
   .settings(
     noPublish,
     // this is used only by the sbt-metals subproject:
@@ -191,6 +198,7 @@ lazy val metalsRoot = project
   )
 
 lazy val `sbt-metals` = project
+  .enablePlugins(ScriptedPlugin)
   .settings(
     sbtPlugin := true,
     scalaVersion := {
@@ -198,8 +206,13 @@ lazy val `sbt-metals` = project
       else Keys.scalaVersion.value
     },
     publishMavenStyle := false,
-    libraryDependencies := Seq(),
-    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
+    libraryDependencies --= libraryDependencies.in(ThisBuild).value,
+    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import"),
+    scriptedBufferLog := !sys.env.contains("CI"),
+    scriptedLaunchOpts ++= Seq(
+      "-Xmx1024M",
+      s"-Dplugin.version=${version.value}",
+    ),
   )
 
 commands += Command.command("release") { st =>

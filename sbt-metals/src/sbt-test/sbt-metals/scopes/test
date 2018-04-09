@@ -1,0 +1,79 @@
+$ absent .metals/buildinfo/
+
+### CONFIG SCOPE ###
+
+# config-scoped task rewrites only one file and doesn't touch the other:
+$ touch .metals/buildinfo/a/foo
+> a/compile:metalsWriteBuildInfo
+$ exists .metals/buildinfo/a/compile.properties
+
+# doesn't touch other files:
+$ exists .metals/buildinfo/a/foo
+$ absent .metals/buildinfo/a/test.properties
+> a/test:metalsWriteBuildInfo
+$ exists .metals/buildinfo/a/test.properties
+
+# it created test buildinfo but still didn't touch foo:
+$ exists .metals/buildinfo/a/foo
+
+
+### PROJECT SCOPE ###
+
+# project-scoped task generates buildinfo for all configs:
+$ delete .metals/buildinfo/
+$ touch  .metals/buildinfo/a/foo
+$ touch  .metals/buildinfo/b/bar
+> a/metalsWriteBuildInfo
+$ exists .metals/buildinfo/a/compile.properties
+$ exists .metals/buildinfo/a/test.properties
+
+# project-scoped task cleans up its own directory:
+$ absent .metals/buildinfo/a/foo
+
+# but doesn't touch another project:
+$ exists .metals/buildinfo/b/bar
+$ absent .metals/buildinfo/b/compile.properties
+$ absent .metals/buildinfo/b/test.properties
+
+# another project does the same:
+> b/metalsWriteBuildInfo
+$ absent .metals/buildinfo/b/bar
+$ exists .metals/buildinfo/a/compile.properties
+$ exists .metals/buildinfo/a/test.properties
+
+
+### AGGREGATION ###
+
+# project-scoped task should also aggregate over subprojects:
+$ delete .metals/buildinfo/
+> c/metalsWriteBuildInfo
+$ exists .metals/buildinfo/a/compile.properties
+$ exists .metals/buildinfo/a/test.properties
+$ exists .metals/buildinfo/b/compile.properties
+$ exists .metals/buildinfo/b/test.properties
+$ exists .metals/buildinfo/c/compile.properties
+$ exists .metals/buildinfo/c/test.properties
+
+# but not the root-project:
+$ absent .metals/buildinfo/scopes/
+
+
+### GLOBAL SCOPE ###
+
+# global-scoped task should aggregate all projects:
+$ delete .metals/buildinfo/
+$ touch .metals/buildinfo/stale-project/compile.properties
+$ touch .metals/buildinfo/something-else
+> */metalsWriteBuildInfo
+$ exists .metals/buildinfo/a/compile.properties
+$ exists .metals/buildinfo/a/test.properties
+$ exists .metals/buildinfo/b/compile.properties
+$ exists .metals/buildinfo/b/test.properties
+$ exists .metals/buildinfo/c/compile.properties
+$ exists .metals/buildinfo/c/test.properties
+$ exists .metals/buildinfo/scopes/compile.properties
+$ exists .metals/buildinfo/scopes/test.properties
+
+# it cleans ups stale projects (and anything else):
+$ absent .metals/buildinfo/stale-project/
+$ absent .metals/buildinfo/something-else
