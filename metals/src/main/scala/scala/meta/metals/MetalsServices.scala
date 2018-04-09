@@ -121,17 +121,6 @@ class MetalsServices(
         Effects.PublishDiagnostics
       }
     }
-  val sbtServerEnabled: () => Boolean =
-    configurationPublisher
-      .focus(_.sbt.enabled)
-      .doOnNext {
-        case true =>
-          connectToSbtServer()
-        case false =>
-          sbtServer.foreach(_.runningServer.cancel())
-          sbtServer = None
-      }
-      .toFunction0()
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
     configurationPublisher.map(_ => Effects.UpdateBuffers),
@@ -272,9 +261,8 @@ class MetalsServices(
       }
     }
     .notification(td.didSave) { _ =>
-      if (sbtServerEnabled()) {
-        sbtCompile()
-      }
+      // if sbt is not connected or the command is empty it won't do anything
+      sbtExec()
     }
     .notification(ws.didChangeConfiguration) { params =>
       params.settings.hcursor.downField("metals").as[Configuration] match {
@@ -423,39 +411,30 @@ class MetalsServices(
       response
     case SbtConnect =>
       Task {
-        if (!sbtServerEnabled()) {
-          showMessage.error("Set metals.sbt.enabled=true to use sbt server.")
-        } else {
-          connectToSbtServer()
-        }
+        connectToSbtServer()
         Right(Json.Null)
       }
   }
 
-  private def sbtCompile(): Unit = sbtServer match {
-    case None => ()
-    case Some(sbt) =>
-      // TODO(olafur) support running other commands than "compile"
-      // running top-level "compile" is sub-optimal for large builds
-      // especially cross-built builds with scala.js/native
-      Sbt
-        .exec(latestConfig().sbt.command)(sbt.client)
-        .onErrorRecover {
-          case NonFatal(err) =>
-            // TODO(olafur) figure out why this "broken pipe" is not getting
-            // caught here.
-            logger.error("Failed to send sbt compile", err)
-            showMessage.warn(
-              "Lost connection to sbt server. " +
-                "Restart the sbt session and run the 'Re-connect to sbt server' command"
-            )
-        }
-        .runAsync
+  private def sbtExec(): Unit = sbtServer.foreach { sbt =>
+    Sbt
+      .exec(latestConfig().sbt.command)(sbt.client)
+      .onErrorRecover {
+        case NonFatal(err) =>
+          // TODO(olafur) figure out why this "broken pipe" is not getting
+          // caught here.
+          logger.error("Failed to send sbt compile", err)
+          showMessage.warn(
+            "Lost connection to sbt server. " +
+              "Restart the sbt session and run the 'Re-connect to sbt server' command"
+          )
+      }
+      .runAsync
   }
 
   private def connectToSbtServer(): Unit = {
     sbtServer.foreach(_.runningServer.cancel())
-    val services = SbtServer.forwardingServices(client)
+    val services = SbtServer.forwardingServices(client, latestConfig)
     SbtServer.connect(cwd, services)(s.sbt).foreach {
       case Left(err) => showMessage.error(err)
       case Right(server) =>
@@ -472,7 +451,7 @@ class MetalsServices(
             sbtServer = None
             showMessage.warn("Disconnected from sbt server")
         }
-        sbtCompile() // run compile right away.
+        sbtExec() // run compile right away.
     }
   }
 

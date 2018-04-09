@@ -16,44 +16,40 @@ import Configuration._
     scalafmt: Scalafmt = Scalafmt(),
     scalafix: Scalafix = Scalafix(),
     search: Search = Search(),
-    hover: Hover = Hover(),
-    highlight: Highlight = Highlight(),
-    rename: Rename = Rename(),
+    hover: Enabled = Enabled(true),
+    highlight: Enabled = Enabled(false),
+    rename: Enabled = Enabled(false),
 )
 
 object Configuration {
   implicit val circeConfiguration: CirceConfiguration =
     CirceConfiguration.default.withDefaults
 
+  @JsonCodec case class Enabled(enabled: Boolean)
+
   @JsonCodec case class Sbt(
-      enabled: Boolean = false,
-      command: String = "test:compile"
+      diagnostics: Enabled = Enabled(true),
+      command: String = "",
   )
   @JsonCodec case class Scalac(
-      completions: ScalacCompletions = ScalacCompletions(),
-      diagnostics: ScalacDiagnostics = ScalacDiagnostics(),
+      completions: Enabled = Enabled(false),
+      diagnostics: Enabled = Enabled(false),
   ) {
     def enabled: Boolean = completions.enabled || diagnostics.enabled
   }
-  @JsonCodec case class ScalacCompletions(enabled: Boolean = false)
-  @JsonCodec case class ScalacDiagnostics(enabled: Boolean = false)
-
-  @JsonCodec case class Hover(enabled: Boolean = true)
-  @JsonCodec case class Highlight(enabled: Boolean = false)
-  @JsonCodec case class Rename(enabled: Boolean = false)
 
   @JsonCodec case class Scalafmt(
       enabled: Boolean = true,
       onSave: Boolean = false,
-      version: String = "1.3.0",
-      confPath: Option[RelativePath] = None
+      version: String = "1.4.0",
+      confPath: Option[RelativePath] = Some(Scalafmt.defaultConfPath)
   )
   object Scalafmt {
     lazy val defaultConfPath = RelativePath(".scalafmt.conf")
   }
   @JsonCodec case class Scalafix(
       enabled: Boolean = true,
-      confPath: Option[RelativePath] = None
+      confPath: Option[RelativePath] = Some(Scalafix.defaultConfPath)
   )
   object Scalafix {
     lazy val defaultConfPath = RelativePath(".scalafix.conf")
