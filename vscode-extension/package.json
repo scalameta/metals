@@ -52,12 +52,12 @@
         "metals.sbt.diagnostics.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "EXPERIMENTAL. Enable diagnostics from the sbt server. Requires a running sbt 1.1+ instance."
+          "description": "Enable diagnostics from the sbt server. Requires a running sbt 1.1+ instance."
         },
         "metals.sbt.command": {
           "type": "string",
           "default": "",
-          "description": "EXPERIMENTAL. Which sbt command to run on file save. Requires a running sbt 1.1+ instance."
+          "description": "Which sbt command to run on file save. Requires a running sbt 1.1+ instance."
         },
         "metals.scalac.completions.enabled": {
           "type": "boolean",
