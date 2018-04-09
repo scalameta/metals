@@ -68,7 +68,7 @@ inThisBuild(
     // faster publishLocal:
     publishArtifact in packageDoc := sys.env.contains("CI"),
     publishArtifact in packageSrc := sys.env.contains("CI"),
-    addCompilerPlugin(Metals.semanticdbScalac),
+    addCompilerPlugin(MetalsPlugin.semanticdbScalac),
     addCompilerPlugin(
       "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
     )
@@ -76,10 +76,9 @@ inThisBuild(
 )
 
 lazy val V = new {
-  import scala.meta.sbt.Metals
-  val scala211 = Metals.scala211
-  val scala212 = Metals.scala212
-  val scalameta = Metals.semanticdbVersion
+  val scala211 = MetalsPlugin.scala211
+  val scala212 = MetalsPlugin.scala212
+  val scalameta = MetalsPlugin.semanticdbVersion
   val scalafix = "0.5.7"
   val enumeratum = "1.5.12"
   val circe = "0.9.0"
@@ -185,7 +184,7 @@ lazy val metalsRoot = project
   .disablePlugins(ScriptedPlugin)
   .settings(
     noPublish,
-    // this is used only by the sbt-metals subproject:
+    // this is used only by the sbt-etals subproject:
     // we use 1.0 (instead of 1.1) to ensure compatibility with all 1.* versions
     // also the order is important: first 1.+, then 0.13
     crossSbtVersions := Seq("1.0.4", "0.13.17"),
