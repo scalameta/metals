@@ -146,6 +146,11 @@
         "command": "metals.resetPresentationCompiler",
         "category": "Metals",
         "title": "Reset presentation compilers"
+      },
+      {
+        "command": "metals.downloadDebugPayload",
+        "category": "Metals",
+        "title": "Download debug payload"
       }
     ]
   },

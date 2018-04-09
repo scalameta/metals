@@ -11,6 +11,7 @@ import {
   ExecuteCommandRequest
 } from "vscode-languageclient";
 import { exec } from "child_process";
+import { writeFile } from 'fs';
 
 export async function activate(context: ExtensionContext) {
   // The debug options for the server
@@ -102,10 +103,28 @@ export async function activate(context: ExtensionContext) {
         });
       }
     );
+    const downloadDebugPayloadCommand = commands.registerCommand(
+      'metals.downloadDebugPayload',
+      async () => {
+        const byteArray = await client.sendRequest(ExecuteCommandRequest.type, {
+          command: "downloadDebugPayload"
+        })
+        const workspaceRoot = workspace.workspaceFolders[0].uri.fsPath
+        const fileName = `${workspaceRoot}/.metals/debug-${Date.now()}.zip`
+        writeFile(fileName, new Buffer(byteArray), (err: Error) => {
+          if (err) {
+            window.showErrorMessage(err.message)
+          } else  {
+            window.showInformationMessage(`Debug payload saved as ${fileName}`)
+          }
+        })
+      }
+    )
     context.subscriptions.push(
       clearIndexCacheCommand,
       resetPresentationCompiler,
-      sbtConnectCommand
+      sbtConnectCommand,
+      downloadDebugPayloadCommand
     );
   });
 
