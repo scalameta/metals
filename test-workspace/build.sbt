@@ -1,1 +1,2 @@
-semanticdbSettings
+addCompilerPlugin(MetalsPlugin.semanticdbScalac)
+scalacOptions += "-Yrangepos"

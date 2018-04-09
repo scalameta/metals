@@ -65,7 +65,7 @@ can choose to enable it permanently on your project by adding these two settings
 definition:
 
 ```scala
-addCompilerPlugin(semanticdbScalac)
+addCompilerPlugin(MetalsPlugin.semanticdbScalac)
 scalacOptions += "-Yrangepos"
 ```
 
