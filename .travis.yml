@@ -21,13 +21,14 @@ jobs:
         - sbt startServer metalsSetup test scalafixTest
     - env: TEST="sbt-metals"
       script:
-        - sbt ^sbt-metals/compile
+        - sbt ^sbt-metals/scripted
     - stage: release
       script: ./bin/release.sh
 
 cache:
   directories:
     - $HOME/.sbt/0.13/dependency
+    - $HOME/.sbt/1.0/dependency
     - $HOME/.sbt/boot/scala*
     - $HOME/.sbt/launchers
     - $HOME/.ivy2/cache
