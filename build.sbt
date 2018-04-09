@@ -79,7 +79,7 @@ lazy val V = new {
   val scala211 = MetalsPlugin.scala211
   val scala212 = MetalsPlugin.scala212
   val scalameta = MetalsPlugin.semanticdbVersion
-  val scalafix = "0.5.7"
+  val scalafix = "0.6.0-M1"
   val enumeratum = "1.5.12"
   val circe = "0.9.0"
   val cats = "1.0.1"
@@ -149,7 +149,7 @@ lazy val metals = project
       "io.github.soc" % "directories" % "5", // for cache location
       "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
-      "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
+      "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta % Test
     )
   )

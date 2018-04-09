@@ -1,13 +1,8 @@
 package scala.meta.metals.mtags
 
 import java.io.StringReader
-import scala.meta.CLASS
-import scala.meta.DEF
-import scala.meta.OBJECT
-import scala.meta.PACKAGE
-import scala.meta.TRAIT
-import scala.meta.VAL
-import scala.meta.VAR
+import scala.meta.internal.semanticdb3.SymbolInformation.Property
+import scala.meta.internal.semanticdb3.SymbolInformation.Kind
 import com.thoughtworks.qdox._
 import com.thoughtworks.qdox.model.JavaClass
 import com.thoughtworks.qdox.model.JavaField
@@ -17,6 +12,7 @@ import com.thoughtworks.qdox.model.JavaModel
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
 import org.langmeta.languageserver.InputEnrichments._
+import scala.meta.internal.semanticdb3.Language
 
 object JavaMtags {
   private implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
@@ -30,7 +26,12 @@ object JavaMtags {
           val source = builder.addSource(new StringReader(input.value))
           if (source.getPackage != null) {
             source.getPackageName.split("\\.").foreach { p =>
-              term(p, toRangePosition(source.getPackage.lineNumber, p), PACKAGE)
+              term(
+                p,
+                toRangePosition(source.getPackage.lineNumber, p),
+                Kind.PACKAGE,
+                0
+              )
             }
           }
           source.getClasses.forEach(visitClass)
@@ -79,14 +80,14 @@ object JavaMtags {
 
       def visitClass(cls: JavaClass): Unit =
         withOwner(owner(cls.isStatic)) {
-          val flags = if (cls.isInterface) TRAIT else CLASS
+          val kind = if (cls.isInterface) Kind.INTERFACE else Kind.CLASS
           val pos = toRangePosition(cls.lineNumber, cls.getName)
-          if (cls.isEnum) {
-            term(cls.getName, pos, OBJECT)
-          } else {
-            withOwner() { term(cls.getName, pos, OBJECT) } // object
-            tpe(cls.getName, pos, flags)
-          }
+          tpe(
+            cls.getName,
+            pos,
+            kind,
+            if (cls.isEnum) Property.ENUM.value else 0
+          )
           visitClasses(cls.getNestedClasses)
           visitFields(cls.getMethods)
           visitFields(cls.getFields)
@@ -103,17 +104,17 @@ object JavaMtags {
             case _ => 0
           }
           val pos = toRangePosition(line, name)
-          val flags: Long = m match {
-            case c: JavaMethod => DEF
-            case c: JavaField =>
-              if (c.isFinal || c.isEnumConstant) VAL
-              else VAR
-            // TODO(olafur) handle constructos
-            case _ => 0L
+          val kind: Kind = m match {
+            case _: JavaMethod => Kind.METHOD
+            case _: JavaField => Kind.FIELD
+            case c: JavaClass =>
+              if (c.isInterface) Kind.INTERFACE
+              else Kind.CLASS
+            case _ => Kind.UNKNOWN_KIND
           }
-          term(name, pos, flags)
+          term(name, pos, kind, 0)
         }
-      override def language: String = "Java"
+      override def language: Language = Language.JAVA
     }
   }
 

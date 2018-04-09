@@ -40,9 +40,10 @@ object ScalafixEnrichments {
   implicit class XtensionPatchLSPObject(val `_`: Patch.type) extends AnyVal {
     def lintMessagesInternal(
         patches: Map[RuleName, Patch],
-        ctx: RuleCtx
+        ctx: RuleCtx,
+        index: SemanticdbIndex
     ): List[LintMessage] =
-      Patch.lintMessages(patches, ctx)
+      Patch(patches, ctx, Some(index))._2
   }
   implicit class XtensionRuleLSP(val rule: Rule) extends AnyVal {
     def fixWithNameInternal(ctx: RuleCtx): Map[RuleName, Patch] =

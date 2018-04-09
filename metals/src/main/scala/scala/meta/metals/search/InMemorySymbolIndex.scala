@@ -19,16 +19,18 @@ import com.typesafe.scalalogging.LazyLogging
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
-import org.langmeta.internal.semanticdb.schema.Database
-import org.langmeta.internal.semanticdb.schema.ResolvedName
-import org.langmeta.internal.semanticdb.{schema => s}
+import scala.meta.internal.semanticdb3
+import scala.meta.internal.semanticdb3.SymbolOccurrence
+import scala.meta.internal.semanticdb3.TextDocument
+import scala.meta.internal.semanticdb3.TextDocuments
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
-import org.langmeta.semanticdb.SemanticdbEnrichments._
 import org.langmeta.semanticdb.Symbol
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable
+import scala.meta.internal.semanticdb3.SymbolInformation.Kind
+import scala.meta.internal.semanticdb3.SymbolInformation.Property
 import scala.util.control.NonFatal
 
 class InMemorySymbolIndex(
@@ -44,26 +46,26 @@ class InMemorySymbolIndex(
   private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()
 
-  /** Returns a ResolvedName at the given location */
+  /** Returns a SymbolOccurrence at the given location */
   def resolveName(
       uri: Uri,
       line: Int,
       column: Int
-  ): Option[(ResolvedName, TokenEditDistance)] = {
+  ): Option[(SymbolOccurrence, TokenEditDistance)] = {
     logger.info(s"resolveName at $uri:$line:$column")
     for {
       document <- documentIndex.getDocument(uri)
       _ = logger.info(s"Found document for $uri")
-      original = Input.VirtualFile(document.filename, document.contents)
+      original = Input.VirtualFile(document.uri, document.text)
       revised = uri.toInput(buffers)
       (originalPosition, edit) <- {
         findOriginalPosition(original, revised, line, column)
       }
-      name <- document.names.collectFirst {
-        case name @ ResolvedName(Some(position), symbol, _) if {
-              val range = original.toIndexRange(position.start, position.end)
+      name <- document.occurrences.collectFirst {
+        case name @ SymbolOccurrence(Some(r), symbol, _) if {
+              val range = original.toIndexRange(r)
               logger.trace(
-                s"${document.filename.replaceFirst(".*/", "")} [${range.pretty}] ${symbol}"
+                s"${document.uri.replaceFirst(".*/", "")} [${range.pretty}] $symbol"
               )
               range.contains(originalPosition)
             } =>
@@ -81,7 +83,7 @@ class InMemorySymbolIndex(
     for {
       (name, edit) <- resolveName(uri, line, column)
       symbol = Symbol(name.symbol)
-      _ = logger.info(s"Matching symbol ${symbol}")
+      _ = logger.info(s"Matching symbol $symbol")
     } yield symbol -> edit
   }
 
@@ -137,7 +139,7 @@ class InMemorySymbolIndex(
         sourceJarsToIndex.foreach { path =>
           logger.info(s"Indexing classpath entry $path")
           try {
-            val database = db.getOrElseUpdate[AbsolutePath, Database](
+            val database = db.getOrElseUpdate[AbsolutePath, TextDocuments](
               path,
               () => Mtags.indexDatabase(path :: Nil)
             )
@@ -153,12 +155,12 @@ class InMemorySymbolIndex(
   }
 
   /** Register this Database to symbol indexer. */
-  def indexDatabase(document: s.Database): Effects.IndexSemanticdb = {
+  def indexDatabase(document: TextDocuments): Effects.IndexSemanticdb = {
     document.documents.foreach { doc =>
       try indexDocument(doc)
       catch {
         case NonFatal(e) =>
-          logger.error(s"Failed to index ${doc.filename}", e)
+          logger.error(s"Failed to index ${doc.uri}", e)
       }
     }
     Effects.IndexSemanticdb
@@ -174,11 +176,11 @@ class InMemorySymbolIndex(
    *                 - filename must be formatted as a URI
    *                 - names must be sorted
    */
-  def indexDocument(document: s.Document): Effects.IndexSemanticdb = {
-    val uri = Uri(document.filename)
-    val input = Input.VirtualFile(document.filename, document.contents)
+  def indexDocument(document: TextDocument): Effects.IndexSemanticdb = {
+    val uri = Uri(document.uri)
+    val input = Input.VirtualFile(document.uri, document.text)
     documentIndex.putDocument(uri, document)
-    document.names.foreach {
+    document.occurrences.foreach {
       // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
       // local symbols don't need to be indexed globally, by skipping them we should
       // def isLocalSymbol(sym: String): Boolean =
@@ -186,27 +188,33 @@ class InMemorySymbolIndex(
       //     !sym.endsWith("#") &&
       //     !sym.endsWith(")")
       // be able to minimize the size of the global index significantly.
-      //      case s.ResolvedName(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
-      case s.ResolvedName(Some(s.Position(start, end)), sym, true) =>
+      //      case s.SymbolOccurrence(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
+      case SymbolOccurrence(Some(r), sym, SymbolOccurrence.Role.DEFINITION) =>
         symbolIndexer.addDefinition(
           sym,
-          i.Position(document.filename, Some(input.toIndexRange(start, end)))
+          i.Position(document.uri, Some(input.toIndexRange(r)))
         )
-      case s.ResolvedName(Some(s.Position(start, end)), sym, false) =>
+      case SymbolOccurrence(Some(r), sym, SymbolOccurrence.Role.REFERENCE) =>
         symbolIndexer.addReference(
-          document.filename,
-          input.toIndexRange(start, end),
+          document.uri,
+          input.toIndexRange(r),
           sym
         )
       case _ =>
     }
     document.symbols.foreach {
-      case s.ResolvedSymbol(sym, Some(denot)) =>
+      case denot: semanticdb3.SymbolInformation =>
+        val isField = denot.properties.hasOneOfFlags(
+          Property.VAL.value | Property.VAR.value
+        )
+        val kind =
+          if (isField) Kind.FIELD
+          else denot.kind
         symbolIndexer.addDenotation(
-          sym,
-          denot.flags,
-          denot.name,
-          denot.signature
+          symbol = denot.symbol,
+          kind = kind.value,
+          name = denot.name,
+          signature = denot.symbol // TODO: blocked by https://github.com/scalameta/scalameta/issues/1479
         )
       case _ =>
     }

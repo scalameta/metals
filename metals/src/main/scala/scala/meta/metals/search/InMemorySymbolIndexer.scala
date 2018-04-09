@@ -51,11 +51,11 @@ class InMemorySymbolIndexer(
 
   override def addDenotation(
       symbol: String,
-      flags: Long,
+      kind: Int,
       name: String,
       signature: String
   ): Unit = updated(symbol) { index =>
-    index.copy(flags = flags, signature = signature, name = name)
+    index.copy(kind = kind, signature = signature, name = name)
   }
 
   override def addReference(

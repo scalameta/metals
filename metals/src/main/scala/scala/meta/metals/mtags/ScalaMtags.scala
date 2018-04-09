@@ -2,52 +2,62 @@ package scala.meta.metals.mtags
 
 import scala.meta._
 import org.langmeta.inputs.Input
+import scala.meta.internal.semanticdb3.SymbolInformation.Kind
+import scala.meta.internal.semanticdb3.Language
+import scala.meta.internal.semanticdb3.SymbolInformation.Property
 
 object ScalaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer = {
     val root: Source = input.parse[Source].get
     new Traverser with MtagsIndexer {
-      override def language: String =
-        "Scala212" // TODO(olafur) more accurate dialect
+      override def language: Language = Language.SCALA
       override def indexRoot(): Unit = apply(root)
       override def apply(tree: Tree): Unit = withOwner() {
         def continue(): Unit = super.apply(tree)
         def stop(): Unit = ()
-        def pats(ps: List[Pat], flag: Long): Unit = {
+        def pats(ps: List[Pat], kind: Kind, properties: Int): Unit = {
           ps.foreach {
-            case Pat.Var(name) => withOwner() { term(name, flag) }
+            case Pat.Var(name) => withOwner() { term(name, kind, properties) }
             case _ =>
           }
         }
         tree match {
-          case t: Source => continue()
-          case t: Template => continue()
+          case _: Source => continue()
+          case _: Template => continue()
           case t: Pkg => pkg(t.ref); continue()
           case t: Pkg.Object =>
-            term(t.name, PACKAGEOBJECT);
-            term("package", t.name.pos, OBJECT);
+            term(t.name, Kind.PACKAGE_OBJECT, 0);
+            term("package", t.name.pos, Kind.OBJECT, 0);
             continue()
           case t: Defn.Class =>
-            tpe(t.name, CLASS)
+            tpe(t.name, Kind.CLASS, 0)
             for {
               params <- t.ctor.paramss
               param <- params
             } withOwner() {
-              // TODO(olafur) More precise flags, we add VAL here blindly even if
-              // it's not a val, it might even be a var!
-              super.param(param.name, VAL | PARAM)
+              super.param(param.name, Kind.PARAMETER, 0)
             }
             continue()
-          case t: Defn.Trait => tpe(t.name, TRAIT); continue()
-          case t: Defn.Object => term(t.name, OBJECT); continue()
-          case t: Defn.Type => tpe(t.name, TYPE); stop()
-          case t: Decl.Type => tpe(t.name, TYPE); stop()
-          case t: Defn.Def => term(t.name, DEF); stop()
-          case t: Decl.Def => term(t.name, DEF); stop()
-          case t: Defn.Val => pats(t.pats, VAL); stop()
-          case t: Decl.Val => pats(t.pats, VAL); stop()
-          case t: Defn.Var => pats(t.pats, VAR); stop()
-          case t: Decl.Var => pats(t.pats, VAR); stop()
+          case t: Defn.Trait =>
+            tpe(t.name, Kind.TRAIT, 0); continue()
+          case t: Defn.Object =>
+            term(t.name, Kind.OBJECT, 0); continue()
+          case t: Defn.Type =>
+            tpe(t.name, Kind.TYPE, 0); stop()
+          case t: Decl.Type =>
+            tpe(t.name, Kind.TYPE, 0); stop()
+          case t: Defn.Def =>
+            term(t.name, Kind.METHOD, 0); stop()
+          case t: Decl.Def =>
+            term(t.name, Kind.METHOD, 0); stop()
+          case t: Defn.Val =>
+            pats(t.pats, Kind.METHOD, Property.VAL.value); stop()
+          case t: Decl.Val =>
+            pats(t.pats, Kind.METHOD, Property.VAL.value); stop()
+          case t: Defn.Var =>
+            pats(t.pats, Kind.METHOD, Property.VAR.value); stop()
+          case t: Decl.Var =>
+            pats(t.pats, Kind.METHOD, Property.VAR.value); stop()
           case _ => stop()
         }
       }

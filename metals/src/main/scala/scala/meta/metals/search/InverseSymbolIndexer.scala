@@ -12,7 +12,7 @@ object InverseSymbolIndexer {
   /** Rebuilds a scala.meta.Database with only names filled out
    *
    * @param cwd the working directory to relativize file URIs in the symbol index.
-   * @param documents store for looking up document contents.
+   * @param documents store for looking up document text.
    * @param symbols symbol index, from [[SymbolIndexer.allSymbols]]
    */
   def reconstructDatabase(
@@ -34,7 +34,7 @@ object InverseSymbolIndexer {
         m.Document(
           m.Input.VirtualFile(
             key,
-            documents.getDocument(uri).fold("")(_.contents)
+            documents.getDocument(uri).fold("")(_.text)
           ),
           "Scala212",
           Nil,

@@ -8,12 +8,14 @@ import org.langmeta.lsp.Diagnostic
 import org.langmeta.lsp.Location
 import org.langmeta.lsp.Position
 import scala.meta.metals.{index => i}
-import org.langmeta.internal.semanticdb.{schema => s}
+import scala.meta.internal.semanticdb3
 import scala.{meta => m}
 import org.langmeta.lsp.SymbolKind
 import org.langmeta.{lsp => l}
 import org.langmeta.internal.io.FileIO
 import org.langmeta.io.AbsolutePath
+import org.langmeta.internal.semanticdb._
+import scala.meta.internal.semanticdb3.SymbolInformation.Kind
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
@@ -35,6 +37,7 @@ object ScalametaEnrichments {
       case m.Severity.Info => l.DiagnosticSeverity.Information
       case m.Severity.Warning => l.DiagnosticSeverity.Warning
       case m.Severity.Error => l.DiagnosticSeverity.Error
+      case m.Severity.Hint => l.DiagnosticSeverity.Hint
     }
   }
 
@@ -50,7 +53,7 @@ object ScalametaEnrichments {
         case d: Defn.Var => d.decltpe
         case _ => None
       }
-      tpeOpt.filter(_.is[Type.Function]).nonEmpty
+      tpeOpt.exists(_.is[Type.Function])
     }
 
     // NOTE: we care only about descendants of Decl, Defn and Pkg[.Object] (see documentSymbols implementation)
@@ -150,6 +153,14 @@ object ScalametaEnrichments {
     def toLanguageServerUri: String = "file:" + path.toString()
   }
   implicit class XtensionPositionRangeLSP(val pos: m.Position) extends AnyVal {
+    def toSchemaRange: semanticdb3.Range = {
+      semanticdb3.Range(
+        startLine = pos.startLine,
+        startCharacter = pos.startColumn,
+        endLine = pos.endLine,
+        endCharacter = pos.endColumn
+      )
+    }
     def toIndexRange: i.Range = i.Range(
       startLine = pos.startLine,
       startColumn = pos.startColumn,
@@ -312,11 +323,23 @@ object ScalametaEnrichments {
     }
 
   }
-  implicit class XtensionSchemaDocument(val document: s.Document)
+  implicit class XtensionSchemaDocument(val document: semanticdb3.TextDocument)
       extends AnyVal {
 
     /** Returns scala.meta.Document from protobuf schema.Document */
     def toMetaDocument: m.Document =
-      s.Database(document :: Nil).toDb(None).documents.head
+      semanticdb3.TextDocuments(document :: Nil).toDb(None).documents.head
+  }
+
+  implicit class XtensionIntAsSymbolKind(val flags: Int) {
+    def hasOneOfFlags(flags: Long): Boolean =
+      (this.flags & flags) != 0L
+    def toSymbolKind: SymbolKind =
+      if (hasOneOfFlags(Kind.CLASS.value))
+        SymbolKind.Class
+      else if (hasOneOfFlags(Kind.TRAIT.value | Kind.INTERFACE.value))
+        SymbolKind.Interface
+      else
+        SymbolKind.Module
   }
 }

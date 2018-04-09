@@ -8,7 +8,7 @@ import scala.meta.metals.index.SymbolData
 import org.langmeta.lsp.SymbolInformation
 import org.langmeta.jsonrpc.JsonRpcClient
 import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.internal.semanticdb.{schema => s}
+import scala.meta.internal.semanticdb3
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Symbol
 import monix.eval.Task
@@ -53,7 +53,7 @@ trait SymbolIndex extends LazyLogging {
   ): Task[Effects.IndexSourcesClasspath]
 
   /** Register this Database to symbol indexer. */
-  def indexDatabase(document: s.Database): Effects.IndexSemanticdb
+  def indexDatabase(document: semanticdb3.TextDocuments): Effects.IndexSemanticdb
 
   /** Remove any persisted files from index returning to a clean start */
   def clearIndex(): Unit
