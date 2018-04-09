@@ -1,84 +1,84 @@
 inThisBuild(
-  semanticdbSettings ++
-    List(
-      version ~= { dynVer =>
-        if (sys.env.contains("CI")) dynVer
-        else "SNAPSHOT" // only for local publishng
-      },
-      scalaVersion := V.scala212,
-      scalacOptions ++= List(
-        "-deprecation",
-        // -Xlint is unusable because of
-        // https://github.com/scala/bug/issues/10448
-        "-Ywarn-unused-import"
+  List(
+    version ~= { dynVer =>
+      if (sys.env.contains("CI")) dynVer
+      else "SNAPSHOT" // only for local publishng
+    },
+    scalaVersion := V.scala212,
+    scalacOptions ++= List(
+      "-Yrangepos",
+      "-deprecation",
+      // -Xlint is unusable because of
+      // https://github.com/scala/bug/issues/10448
+      "-Ywarn-unused-import"
+    ),
+    scalafixEnabled := false,
+    organization := "org.scalameta",
+    licenses := Seq(
+      "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
+    ),
+    testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
+    libraryDependencies += "com.lihaoyi" %% "utest" % "0.6.0" % Test,
+    homepage := Some(url("https://github.com/scalameta/metals")),
+    developers := List(
+      Developer(
+        "laughedelic",
+        "Alexey Alekhin",
+        "laughedelic@gmail.com",
+        url("https://github.com/laughedelic")
       ),
-      scalafixEnabled := false,
-      organization := "org.scalameta",
-      licenses := Seq(
-        "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
+      Developer(
+        "gabro",
+        "Gabriele Petronella",
+        "gabriele@buildo.io",
+        url("https://github.com/gabro")
       ),
-      testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
-      libraryDependencies += "com.lihaoyi" %% "utest" % "0.6.0" % Test,
-      homepage := Some(url("https://github.com/scalameta/metals")),
-      developers := List(
-        Developer(
-          "laughedelic",
-          "Alexey Alekhin",
-          "laughedelic@gmail.com",
-          url("https://github.com/laughedelic")
-        ),
-        Developer(
-          "gabro",
-          "Gabriele Petronella",
-          "gabriele@buildo.io",
-          url("https://github.com/gabro")
-        ),
-        Developer(
-          "jvican",
-          "Jorge Vicente Cantero",
-          "jorgevc@fastmail.es",
-          url("https://jvican.github.io/")
-        ),
-        Developer(
-          "olafurpg",
-          "Ólafur Páll Geirsson",
-          "olafurpg@gmail.com",
-          url("https://geirsson.com")
-        ),
-        Developer(
-          "ShaneDelmore",
-          "Shane Delmore",
-          "sdelmore@twitter.com",
-          url("http://delmore.io")
-        )
+      Developer(
+        "jvican",
+        "Jorge Vicente Cantero",
+        "jorgevc@fastmail.es",
+        url("https://jvican.github.io/")
       ),
-      scmInfo in ThisBuild := Some(
-        ScmInfo(
-          url("https://github.com/scalameta/metals"),
-          s"scm:git:git@github.com:scalameta/metals.git"
-        )
+      Developer(
+        "olafurpg",
+        "Ólafur Páll Geirsson",
+        "olafurpg@gmail.com",
+        url("https://geirsson.com")
       ),
-      releaseEarlyWith := BintrayPublisher,
-      releaseEarlyEnableSyncToMaven := false,
-      publishMavenStyle := true,
-      bintrayOrganization := Some("scalameta"),
-      bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
-      pgpPublicRing := file("./travis/local.pubring.asc"),
-      pgpSecretRing := file("./travis/local.secring.asc"),
-      // faster publishLocal:
-      publishArtifact in packageDoc := sys.env.contains("CI"),
-      publishArtifact in packageSrc := sys.env.contains("CI"),
-      addCompilerPlugin(
-        "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
+      Developer(
+        "ShaneDelmore",
+        "Shane Delmore",
+        "sdelmore@twitter.com",
+        url("http://delmore.io")
       )
+    ),
+    scmInfo in ThisBuild := Some(
+      ScmInfo(
+        url("https://github.com/scalameta/metals"),
+        s"scm:git:git@github.com:scalameta/metals.git"
+      )
+    ),
+    releaseEarlyWith := BintrayPublisher,
+    releaseEarlyEnableSyncToMaven := false,
+    publishMavenStyle := true,
+    bintrayOrganization := Some("scalameta"),
+    bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
+    pgpPublicRing := file("./travis/local.pubring.asc"),
+    pgpSecretRing := file("./travis/local.secring.asc"),
+    // faster publishLocal:
+    publishArtifact in packageDoc := sys.env.contains("CI"),
+    publishArtifact in packageSrc := sys.env.contains("CI"),
+    addCompilerPlugin(MetalsPlugin.semanticdbScalac),
+    addCompilerPlugin(
+      "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
     )
+  )
 )
 
 lazy val V = new {
-  import scala.meta.sbt.Metals
-  val scala211 = Metals.scala211
-  val scala212 = Metals.scala212
-  val scalameta = Metals.semanticdbVersion
+  val scala211 = MetalsPlugin.scala211
+  val scala212 = MetalsPlugin.scala212
+  val scalameta = MetalsPlugin.semanticdbVersion
   val scalafix = "0.5.7"
   val enumeratum = "1.5.12"
   val circe = "0.9.0"

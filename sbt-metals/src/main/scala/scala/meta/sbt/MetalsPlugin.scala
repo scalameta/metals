@@ -8,38 +8,20 @@ package scala.meta.sbt {
     override def trigger = allRequirements
     override def requires = sbt.plugins.JvmPlugin
     object autoImport {
-
-      val metalsBuildInfo =
-        taskKey[Map[String, String]](
-          "List of key/value pairs for build information such as classpath/sourceDirectories"
-        )
-      val metalsWriteBuildInfo =
-        taskKey[Unit](
-          "Write build information to .metals/buildinfo/"
-        )
-
-      val semanticdbScalac =
-        "org.scalameta" % "semanticdb-scalac" % Metals.semanticdbVersion cross CrossVersion.full
-
-      lazy val semanticdbSettings = Seq(
-        addCompilerPlugin(semanticdbScalac),
-        scalacOptions += "-Yrangepos"
-      )
-
       def metalsSettings(cs: Configuration*): Seq[Def.Setting[_]] = {
         val configs = if (cs.nonEmpty) cs else Seq(Compile)
         configs.flatMap { config =>
           inConfig(config)(
             Seq(
-              metalsBuildInfo := Metals.metalsBuildInfoTask.value,
-              metalsWriteBuildInfo := Metals.metalsWriteBuildInfoTask.value
+              metalsBuildInfo := metalsBuildInfoTask.value,
+              metalsWriteBuildInfo := metalsWriteBuildInfoTask.value
             )
           )
         } ++ Seq(
           // without config scope it will aggregate over all project dependencies
           // and their configurations
           metalsWriteBuildInfo := Def.taskDyn {
-            IO.delete(Metals.buildinfoDir.value / thisProject.value.id)
+            IO.delete(buildinfoDir.value / thisProject.value.id)
             val depsAndConfigs = ScopeFilter(
               inDependencies(ThisProject),
               inConfigurations(configs: _*)
@@ -49,15 +31,39 @@ package scala.meta.sbt {
         )
       }
     }
+
     import autoImport._
+
+    def scala211 = "2.11.12"
+
+    def scala212 = "2.12.4"
+
+    def supportedScalaVersions = List(scala212, scala211)
+
+    def semanticdbVersion = "2.1.7"
+
+    val metalsBuildInfo = taskKey[Map[String, String]](
+      "List of key/value pairs for build information such as classpath/sourceDirectories"
+    )
+
+    val metalsWriteBuildInfo = taskKey[Unit](
+      "Write build information to .metals/buildinfo/"
+    )
+
+    def semanticdbScalac =
+      "org.scalameta" % "semanticdb-scalac" % semanticdbVersion cross CrossVersion.full
+
+    def buildinfoDir: Def.Initialize[File] = Def.setting {
+      baseDirectory.in(ThisBuild).value / ".metals" / "buildinfo"
+    }
 
     override def projectSettings =
       metalsSettings(Compile, Test)
 
     override def globalSettings = Seq(
       commands ++= Seq(
-        Metals.semanticdbEnable,
-        Metals.metalsSetup
+        semanticdbEnable,
+        metalsSetup
       ),
       // without project scope it will aggregate over all projects
       metalsWriteBuildInfo := {
@@ -65,17 +71,10 @@ package scala.meta.sbt {
           metalsWriteBuildInfo.all(ScopeFilter(inAnyProject)).value
           streams.value.log.info("🤘 Metals is ready, time to rock!")
         } dependsOn Def.task {
-          IO.delete(Metals.buildinfoDir.value)
+          IO.delete(buildinfoDir.value)
         }
       }.value
     )
-  }
-
-  object Metals {
-
-    def buildinfoDir: Def.Initialize[File] = Def.setting {
-      baseDirectory.in(ThisBuild).value / ".metals" / "buildinfo"
-    }
 
     def metalsBuildInfoTask: Def.Initialize[Task[Map[String, String]]] =
       Def.task {
@@ -134,17 +133,13 @@ package scala.meta.sbt {
         case (a, b) => (a.toLong, b.toLong)
       }
 
-    val scala211 = "2.11.12"
-    val scala212 = "2.12.4"
-    val supportedScalaVersions = List(scala212, scala211)
-    val semanticdbVersion = "2.1.7"
+    private lazy val partialToFullScalaVersion: Map[(Long, Long), String] =
+      (for {
+        v <- supportedScalaVersions
+        p <- partialVersion(v).toList
+      } yield p -> v).toMap
 
-    lazy val partialToFullScalaVersion: Map[(Long, Long), String] = (for {
-      v <- supportedScalaVersions
-      p <- partialVersion(v).toList
-    } yield p -> v).toMap
-
-    def projectsWithMatchingScalaVersion(
+    private def projectsWithMatchingScalaVersion(
         state: State
     ): Seq[(ProjectRef, String)] = {
       val extracted = Project.extract(state)
