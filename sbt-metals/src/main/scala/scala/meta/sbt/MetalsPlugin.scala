@@ -8,16 +8,6 @@ package scala.meta.sbt {
     override def trigger = allRequirements
     override def requires = sbt.plugins.JvmPlugin
     object autoImport {
-
-      val metalsBuildInfo =
-        taskKey[Map[String, String]](
-          "List of key/value pairs for build information such as classpath/sourceDirectories"
-        )
-      val metalsWriteBuildInfo =
-        taskKey[Unit](
-          "Write build information to .metals/buildinfo/"
-        )
-
       def metalsSettings(cs: Configuration*): Seq[Def.Setting[_]] = {
         val configs = if (cs.nonEmpty) cs else Seq(Compile)
         configs.flatMap { config =>
@@ -43,6 +33,13 @@ package scala.meta.sbt {
     }
 
     import autoImport._
+
+    val metalsBuildInfo = taskKey[Map[String, String]](
+      "List of key/value pairs for build information such as classpath/sourceDirectories"
+    )
+    val metalsWriteBuildInfo = taskKey[Unit](
+      "Write build information to .metals/buildinfo/"
+    )
 
     val semanticdbScalac =
       "org.scalameta" % "semanticdb-scalac" % Metals.semanticdbVersion cross CrossVersion.full
