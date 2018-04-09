@@ -68,7 +68,7 @@ object SbtServer extends LazyLogging {
       case Left(_: IOException) =>
         fail(
           s"Unable to establish connection with sbt server. " +
-            s"Do you have an active sbt 1.1.0 session?"
+            s"Do you have an active sbt 1.1+ session?"
         )
       case Left(err) =>
         val msg = s"Unexpected error opening connection to sbt server"
