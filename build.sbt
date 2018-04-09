@@ -184,7 +184,7 @@ lazy val metalsRoot = project
   .disablePlugins(ScriptedPlugin)
   .settings(
     noPublish,
-    // this is used only by the sbt-etals subproject:
+    // this is used only by the sbt-metals subproject:
     // we use 1.0 (instead of 1.1) to ensure compatibility with all 1.* versions
     // also the order is important: first 1.+, then 0.13
     crossSbtVersions := Seq("1.0.4", "0.13.17"),
