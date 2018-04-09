@@ -133,10 +133,11 @@ package scala.meta.sbt {
         case (a, b) => (a.toLong, b.toLong)
       }
 
-    private lazy val partialToFullScalaVersion: Map[(Long, Long), String] = (for {
-      v <- supportedScalaVersions
-      p <- partialVersion(v).toList
-    } yield p -> v).toMap
+    private lazy val partialToFullScalaVersion: Map[(Long, Long), String] =
+      (for {
+        v <- supportedScalaVersions
+        p <- partialVersion(v).toList
+      } yield p -> v).toMap
 
     private def projectsWithMatchingScalaVersion(
         state: State
