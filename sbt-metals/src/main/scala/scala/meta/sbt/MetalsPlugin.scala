@@ -34,16 +34,6 @@ package scala.meta.sbt {
 
     import autoImport._
 
-    val metalsBuildInfo = taskKey[Map[String, String]](
-      "List of key/value pairs for build information such as classpath/sourceDirectories"
-    )
-    val metalsWriteBuildInfo = taskKey[Unit](
-      "Write build information to .metals/buildinfo/"
-    )
-
-    val semanticdbScalac =
-      "org.scalameta" % "semanticdb-scalac" % Metals.semanticdbVersion cross CrossVersion.full
-
     override def projectSettings =
       metalsSettings(Compile, Test)
 
@@ -65,6 +55,17 @@ package scala.meta.sbt {
   }
 
   object Metals {
+
+    val metalsBuildInfo = taskKey[Map[String, String]](
+      "List of key/value pairs for build information such as classpath/sourceDirectories"
+    )
+
+    val metalsWriteBuildInfo = taskKey[Unit](
+      "Write build information to .metals/buildinfo/"
+    )
+
+    val semanticdbScalac =
+      "org.scalameta" % "semanticdb-scalac" % Metals.semanticdbVersion cross CrossVersion.full
 
     def buildinfoDir: Def.Initialize[File] = Def.setting {
       baseDirectory.in(ThisBuild).value / ".metals" / "buildinfo"
