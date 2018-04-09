@@ -49,20 +49,15 @@
     "configuration": {
       "title": "Metals",
       "properties": {
-        "metals.sbt.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "EXPERIMENTAL. Use sbt language server to compile on file save and report diagnostics. Requires sbt 1.1+."
-        },
         "metals.sbt.diagnostics.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable diagnostics from the sbt server."
+          "description": "EXPERIMENTAL. Enable diagnostics from the sbt server. Requires a running sbt 1.1+ instance."
         },
         "metals.sbt.command": {
           "type": "string",
-          "default": "test:compile",
-          "description": "Which sbt command to run on file save."
+          "default": "",
+          "description": "EXPERIMENTAL. Which sbt command to run on file save. Requires a running sbt 1.1+ instance."
         },
         "metals.scalac.completions.enabled": {
           "type": "boolean",
