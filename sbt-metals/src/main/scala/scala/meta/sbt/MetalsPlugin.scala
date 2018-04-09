@@ -18,14 +18,6 @@ package scala.meta.sbt {
           "Write build information to .metals/buildinfo/"
         )
 
-      val semanticdbScalac =
-        "org.scalameta" % "semanticdb-scalac" % Metals.semanticdbVersion cross CrossVersion.full
-
-      lazy val semanticdbSettings = Seq(
-        addCompilerPlugin(semanticdbScalac),
-        scalacOptions += "-Yrangepos"
-      )
-
       def metalsSettings(cs: Configuration*): Seq[Def.Setting[_]] = {
         val configs = if (cs.nonEmpty) cs else Seq(Compile)
         configs.flatMap { config =>
@@ -49,7 +41,11 @@ package scala.meta.sbt {
         )
       }
     }
+
     import autoImport._
+
+    val semanticdbScalac =
+      "org.scalameta" % "semanticdb-scalac" % Metals.semanticdbVersion cross CrossVersion.full
 
     override def projectSettings =
       metalsSettings(Compile, Test)
