@@ -24,7 +24,6 @@ object InverseSymbolIndexer {
     // Reconstruct an m.Database from the symbol index and asserts that the
     // reconstructed database is identical to the original semanticdbs that
     // built the symbol index.
-    // TODO(olafur) handle local symbols when we stop indexing them.
     val db = mutable.Map.empty[String, m.Document]
     def get(uri: Uri) = {
       val key = if (uri.isFile) {
@@ -37,7 +36,7 @@ object InverseSymbolIndexer {
             key,
             documents.getDocument(uri).fold("")(_.text)
           ),
-          "Scala212",
+          "Scala",
           Nil,
           Nil,
           Nil,
@@ -51,6 +50,7 @@ object InverseSymbolIndexer {
         range: i.Range,
         role: SymbolOccurrence.Role
     ): Unit = {
+      if (symbol.startsWith("local")) return
       val doc = get(uri)
       val pos = doc.input.toPosition(range)
       val rs =

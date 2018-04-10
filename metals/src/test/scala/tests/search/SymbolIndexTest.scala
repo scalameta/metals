@@ -114,6 +114,12 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
     )(
         expected: Location*
     ): Unit = {
+      def pretty(location: Location): String =
+        location.uri + ":" +
+          location.range.startLine + "L" +
+          location.range.startColumn + "C-" +
+          location.range.endLine + "L" +
+          location.range.endColumn + "C"
       val (symbol, _) = index
         .findSymbol(path.UserTestUri, line, column)
         .getOrElse(
@@ -123,16 +129,13 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
         )
       val dataList = index.referencesData(symbol)
       if (dataList.isEmpty) fail(s"References not found for term ${symbol}")
-      // TODO: use `dataList` to test expected alternatives
       val found = for {
         data <- dataList
         pos <- data.referencePositions(withDefinition)
       } yield pos.toLocation
-
-      val missingLocations = found.toSet diff expected.toSet
-      assert(missingLocations.isEmpty)
-      val unexpectedLocations = expected.toSet diff found.toSet
-      assert(unexpectedLocations.isEmpty)
+      val expectedPretty = expected.map(pretty).sorted.mkString("\n")
+      val foundPretty = found.map(pretty).sorted.mkString("\n")
+      assertNoDiff(foundPretty, expectedPretty)
     }
 
     def ref(
@@ -141,7 +144,7 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
         end: (Int, Int)
     ): Location =
       l.Location(
-        s"file:${path.toString}",
+        path.toURI.toString,
         Range(
           Position(start._1, start._2),
           l.Position(end._1, end._2)
@@ -151,38 +154,39 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
     "definition" - {
       "<<User>>(...)" -
         assertSymbolDefinition(path.UserReferenceLine, 17)(
-          "_root_.a.User.",
-          "_root_.a.User#"
+          "a.User.",
+          "a.User#"
         )
       "User.<<apply>>(...)" -
         assertSymbolDefinition(3, 22)(
-          "_root_.a.User.apply(Ljava/lang/String;I)La/User;.",
-          "_root_.a.User#"
+          "a.User.apply(String,Int).",
+          "a.User#"
         )
       "User.<<copy>>(...)" -
         assertSymbolDefinition(4, 9)(
-          "_root_.a.User#copy(Ljava/lang/String;I)La/User;.",
-          "_root_.a.User#"
+          "a.User#copy(String,Int).",
+          "a.User#"
         )
       "User.apply(<<name>> ...)" -
         assertSymbolDefinition(3, 28)(
-          "_root_.a.User.apply(Ljava/lang/String;I)La/User;.(name)",
-          "_root_.a.User#(name)"
+          "a.User.apply(String,Int).(name)",
+          "a.User#name()."
         )
       "user.copy(<<age>> = ...)" -
         assertSymbolDefinition(4, 14)(
-          "_root_.a.User#copy(Ljava/lang/String;I)La/User;.(age)",
-          "_root_.a.User#(age)"
+          "a.User#copy(String,Int).(age)",
+          "a.User#age()."
         )
     }
 
     "classpath" - {
       "<<List>>(...)" - // ScalaMtags
-        assertSymbolFound(5, 5)("_root_.scala.collection.immutable.List.")
+        assertSymbolFound(5, 5)("scala.collection.immutable.List.")
       "<<CharRef>>.create(...)" - // JavaMtags
-        assertSymbolFound(8, 19)("_root_.scala.runtime.CharRef.")
+        assertSymbolFound(8, 19)("scala.runtime.CharRef#")
     }
 
+    // Test failures here are impossible to understand, needs rewriting.
     "references" - {
       "<<User>>(...)" -
         assertSymbolReferences(3, 17, withDefinition = true)(
@@ -214,7 +218,7 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
       )(implicit path: utest.framework.TestPath): Unit = {
         while (s.tickOne()) ()
         val result = metals.symbolIndex.workspaceSymbols(path.value.last)
-        val obtained = result.toIterator.map(_.name).mkString("\n")
+        val obtained = result.map(_.name).sorted.mkString("\n")
         assertNoDiff(obtained, expected.mkString("\n"))
       }
       "EmptyResult" - checkQuery()
@@ -233,7 +237,12 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
           )
         )
         val slimDocuments = complete.documents.map { d =>
-          d.copy(messages = Nil, synthetics = Nil, symbols = Nil)
+          d.copy(
+            messages = Nil,
+            synthetics = Nil,
+            symbols = Nil,
+            names = d.names.filterNot(_.symbol.isInstanceOf[Symbol.Local])
+          )
         }
         m.Database(slimDocuments)
       }
@@ -265,8 +274,8 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
       val newUser = user.copy(value = "// leading comment\n" + user.value)
       metals.buffers.changed(newUser)
       assertSymbolDefinition(path.UserReferenceLine + 1, 17)(
-        "_root_.a.User.",
-        "_root_.a.User#"
+        "a.User.",
+        "a.User#"
       )
     }
   }

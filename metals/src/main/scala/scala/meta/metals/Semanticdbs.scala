@@ -111,7 +111,7 @@ object Semanticdbs extends LazyLogging {
     val bytes = Files.readAllBytes(semanticdbPath.toNIO)
     val sdb = semanticdb3.TextDocuments.parseFrom(bytes)
     val docs = sdb.documents.map { d =>
-      val filename = s"file:${cwd.resolve(d.uri)}"
+      val filename = cwd.resolve(d.uri).toURI.toString
       logger.info(s"Loading file $filename")
       d.withUri(filename)
         .withOccurrences {
