@@ -10,7 +10,6 @@ build_script:
 test_script:
   - sbt compile
 cache:
-  - C:\Users\appveyor\.m2
   - C:\Users\appveyor\.ivy2
   - C:\Users\appveyor\.coursier
   - C:\Users\appveyor\.sbt
