@@ -7,6 +7,7 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Executors
+import java.util.Properties
 import scala.concurrent.duration.FiniteDuration
 import scala.meta.metals.compiler.CompilerConfig
 import scala.meta.metals.compiler.Cursor
@@ -26,6 +27,7 @@ import scala.meta.metals.refactoring.OrganizeImports
 import scala.meta.metals.sbtserver.Sbt
 import scala.meta.metals.sbtserver.SbtServer
 import scala.meta.metals.search.SymbolIndex
+import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
@@ -411,7 +413,25 @@ class MetalsServices(
       response
     case SbtConnect =>
       Task {
-        connectToSbtServer()
+        val path = cwd.resolve("project").resolve("build.properties")
+        val input = Files.newInputStream(path.toNIO)
+        val sbtVersion: Option[String] =
+          Try {
+            val props = new Properties()
+            props.load(input)
+            Option(props.getProperty("sbt.version"))
+          }.toOption.flatten
+        input.close()
+
+        sbtVersion match {
+          case Some(ver) if ver.startsWith("0.13") || ver.startsWith("1.0") =>
+            showMessage.warn(
+              s"sbt v${ver} used in this project doesn't have server functionality. " +
+                "Upgrade to sbt v1.1+ to enjoy Metals integration with the sbt server."
+            )
+          case _ =>
+            connectToSbtServer()
+        }
         Right(Json.Null)
       }
   }
