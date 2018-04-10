@@ -1,0 +1,16 @@
+version: '{build}'
+os: Windows Server 2012
+install:
+  - ps: iex (new-object net.webclient).downloadstring('https://get.scoop.sh')
+  - ps: scoop install sbt
+environment:
+  APPVEYOR_CACHE_ENTRY_ZIP_ARGS: "-t7z -m0=lzma -mx=9"
+build_script:
+  - sbt version # dummy step, a build_script step is required by appveyor.
+test_script:
+  - sbt compile
+cache:
+  - C:\Users\appveyor\.ivy2
+  - C:\Users\appveyor\.coursier
+  - C:\Users\appveyor\.sbt
+  - C:\Users\appveyor\scoop\cache
