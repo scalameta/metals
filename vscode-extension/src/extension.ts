@@ -107,7 +107,8 @@ export async function activate(context: ExtensionContext) {
       'metals.downloadDebugPayload',
       async () => {
         const byteArray = await client.sendRequest(ExecuteCommandRequest.type, {
-          command: "downloadDebugPayload"
+          command: "downloadDebugPayload",
+          arguments: [window.activeTextEditor.document.uri.toString()]
         })
         const workspaceRoot = workspace.workspaceFolders[0].uri.fsPath
         const fileName = `${workspaceRoot}/.metals/debug-${Date.now()}.zip`

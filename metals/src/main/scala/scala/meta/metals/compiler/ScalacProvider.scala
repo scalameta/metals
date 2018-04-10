@@ -42,16 +42,25 @@ class ScalacProvider()(implicit client: JsonRpcClient) extends LazyLogging {
       }
   }
 
-  def compilerBySourceDirectory(uri: Uri): Option[Global] = {
+  private def compilerAndConfigBySourceDirectory(
+      uri: Uri
+  ): Option[(CompilerConfig, Global)] = {
     val path = uri.toAbsolutePath.toNIO
     compilerByConfigOrigin.values.collectFirst {
       case (config, global)
           if config.sourceDirectories.exists(
             dir => path.startsWith(dir.toNIO)
           ) =>
-        global
+        (config, global)
     }
   }
+
+  def compilerBySourceDirectory(uri: Uri): Option[Global] =
+    compilerAndConfigBySourceDirectory(uri).map(_._2)
+
+  def configBySourceDirectory(uri: Uri): Option[CompilerConfig] =
+    compilerAndConfigBySourceDirectory(uri).map(_._1)
+
   private val compilerByConfigOrigin =
     mutable.Map.empty[AbsolutePath, (CompilerConfig, Global)]
   private val compilerByPath = mutable.Map.empty[Uri, Global]

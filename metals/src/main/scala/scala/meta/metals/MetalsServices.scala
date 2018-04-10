@@ -31,7 +31,7 @@ import scala.util.Success
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.Json
-import io.circe.syntax._
+import cats.syntax.either._
 import io.github.soc.directories.ProjectDirectories
 import monix.eval.Task
 import monix.execution.Cancelable
@@ -86,7 +86,8 @@ class MetalsServices(
   val diagnosticsProvider =
     new DiagnosticsProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
-  val debugPayloadProvider = new DebugPayloadProvider(cwd, latestConfig)
+  val debugPayloadProvider =
+    new DebugPayloadProvider(cwd, latestConfig, scalacProvider)
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
       .debounce(FiniteDuration(1, "s"))
@@ -418,7 +419,10 @@ class MetalsServices(
       }
     case DownloadDebugPayload =>
       Task {
-        Right(debugPayloadProvider.generatePayload().asJson)
+        debugPayloadProvider.generatePayload(params.arguments).leftMap { err =>
+          logger.warn(err.error.message)
+          err
+        }
       }
   }
 
