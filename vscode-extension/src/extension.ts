@@ -114,7 +114,7 @@ export async function activate(context: ExtensionContext) {
         writeFile(fileName, new Buffer(byteArray), (err: Error) => {
           if (err) {
             window.showErrorMessage(err.message)
-          } else  {
+          } else {
             window.showInformationMessage(`Debug payload saved as ${fileName}`)
           }
         })

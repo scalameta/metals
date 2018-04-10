@@ -5,21 +5,31 @@ import java.util.zip.ZipOutputStream
 import java.io.ByteArrayOutputStream
 import scala.meta.AbsolutePath
 import com.typesafe.scalalogging.LazyLogging
+import io.circe.syntax._
+import scala.meta.metals.Configuration
 
 class DebugPayloadProvider(
-    cwd: AbsolutePath
+    cwd: AbsolutePath,
+    latestConfig: () => Configuration
 ) extends LazyLogging {
-  def generatePayload(): Array[Byte] = {
+  private def zipWithFiles(f: (String, Array[Byte])*): Array[Byte] = {
     val out = new ByteArrayOutputStream
     val zip = new ZipOutputStream(out)
-
-    val logFile = cwd.resolve(".metals").resolve("metals.log")
-    val logZipEntry = new ZipEntry("metals.log")
-    zip.putNextEntry(new ZipEntry("metals.log"))
-    zip.write(logFile.readAllBytes)
-    zip.closeEntry()
-
+    f.foreach {
+      case (name, bytes) =>
+        zip.putNextEntry(new ZipEntry(name))
+        zip.write(bytes)
+        zip.closeEntry()
+    }
     zip.close()
     out.toByteArray
+  }
+
+  def generatePayload(): Array[Byte] = {
+    zipWithFiles(
+      "metals.log" -> cwd.resolve(".metals").resolve("metals.log").readAllBytes,
+      "configuration.json" -> latestConfig().asJson.spaces2.toCharArray
+        .map(_.toByte)
+    )
   }
 }
