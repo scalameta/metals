@@ -220,6 +220,8 @@ class InMemorySymbolIndex(
               Kind.OBJECT,
               Kind.TRAIT,
               Kind.INTERFACE
+              // Blocked by https://github.com/scalameta/scalameta/issues/1484, package object has name "package".
+              // Kind.PACKAGE_OBJECT
             ) && {
               // NOTE(olafur) fuzzy-wuzzy doesn't seem to do a great job
               // for camelcase searches like "DocSymPr" when looking for
