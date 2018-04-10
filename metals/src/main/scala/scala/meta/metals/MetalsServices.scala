@@ -480,6 +480,8 @@ class MetalsServices(
         fileSystemSemanticdbSubscriber.onNext(path)
       case CompilerConfig.File() =>
         compilerConfigSubscriber.onNext(path)
+      case _ if path == SbtServer.activeJson(cwd) =>
+        connectToSbtServer()
       case _ => fallback(path)
     }
   }
