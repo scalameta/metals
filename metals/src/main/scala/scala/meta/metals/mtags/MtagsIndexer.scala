@@ -20,9 +20,7 @@ trait MtagsIndexer {
   private val root: Symbol.Global =
     Symbol.Global(Symbol.None, Signature.Term("_root_"))
   var currentOwner: Symbol.Global = root
-  def owner(isStatic: Boolean): Symbol.Global =
-    if (isStatic) currentOwner.toTerm
-    else currentOwner
+  def owner = currentOwner
   def withOwner[A](owner: Symbol.Global = currentOwner)(thunk: => A): A = {
     val old = currentOwner
     currentOwner = owner
@@ -64,7 +62,7 @@ trait MtagsIndexer {
     val syntax = currentOwner.syntax
     val role =
       if (kind.isPackage) s.SymbolOccurrence.Role.REFERENCE
-      else s.SymbolOccurrence.Role.REFERENCE
+      else s.SymbolOccurrence.Role.DEFINITION
     names += s.SymbolOccurrence(
       range = Some(definition.toSchemaRange),
       syntax,

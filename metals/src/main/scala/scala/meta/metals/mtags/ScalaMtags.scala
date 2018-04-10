@@ -6,6 +6,7 @@ import scala.meta.internal.semanticdb3.SymbolInformation.Kind
 import scala.meta.internal.semanticdb3.Language
 import scala.meta.internal.semanticdb3.SymbolInformation.Property
 
+// TODO, emit correct method overload symbols https://github.com/scalameta/metals/issues/282
 object ScalaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer = {
     val root: Source = input.parse[Source].get

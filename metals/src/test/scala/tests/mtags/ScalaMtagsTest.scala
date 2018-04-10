@@ -20,35 +20,35 @@ object ScalaMtagsTest extends BaseMtagsTest {
       """.stripMargin,
     """
       |Language:
-      |Scala212
+      |Scala
       |
       |Names:
-      |[22..23): D <= _root_.a.b.c.D.
-      |[33..34): e <= _root_.a.b.c.D.e.
-      |[61..62): f <= _root_.a.b.c.D.f.
-      |[74..75): g <= _root_.a.b.c.D.g.
-      |[89..90): H <= _root_.a.b.c.D.H#
-      |[97..98): x <= _root_.a.b.c.D.H#x.
-      |[114..115): I <= _root_.a.b.c.D.I#
-      |[127..128): x <= _root_.a.b.c.D.I#x.
-      |[143..144): y <= _root_.a.b.c.D.I#y.
-      |[159..160): z <= _root_.a.b.c.D.I#z.
-      |[181..182): J <= _root_.a.b.c.D.J.
-      |[189..190): k <= _root_.a.b.c.D.J.k.
+      |[22..23): D <= a.b.c.D.
+      |[33..34): e <= a.b.c.D.e.
+      |[61..62): f <= a.b.c.D.f.
+      |[74..75): g <= a.b.c.D.g.
+      |[89..90): H <= a.b.c.D.H#
+      |[97..98): x <= a.b.c.D.H#x.
+      |[114..115): I <= a.b.c.D.I#
+      |[127..128): x <= a.b.c.D.I#x.
+      |[143..144): y <= a.b.c.D.I#y.
+      |[159..160): z <= a.b.c.D.I#z.
+      |[181..182): J <= a.b.c.D.J.
+      |[189..190): k <= a.b.c.D.J.k.
       |
       |Symbols:
-      |_root_.a.b.c.D. => object D
-      |_root_.a.b.c.D.H# => class H
-      |_root_.a.b.c.D.H#x. => def x
-      |_root_.a.b.c.D.I# => trait I
-      |_root_.a.b.c.D.I#x. => def x
-      |_root_.a.b.c.D.I#y. => val y
-      |_root_.a.b.c.D.I#z. => var z
-      |_root_.a.b.c.D.J. => object J
-      |_root_.a.b.c.D.J.k. => def k
-      |_root_.a.b.c.D.e. => def e
-      |_root_.a.b.c.D.f. => val f
-      |_root_.a.b.c.D.g. => var g
+      |a.b.c.D. => object D
+      |a.b.c.D.H# => class H
+      |a.b.c.D.H#x. => method x
+      |a.b.c.D.I# => trait I
+      |a.b.c.D.I#x. => method x
+      |a.b.c.D.I#y. => val method y
+      |a.b.c.D.I#z. => var method z
+      |a.b.c.D.J. => object J
+      |a.b.c.D.J.k. => method k
+      |a.b.c.D.e. => method e
+      |a.b.c.D.f. => val method f
+      |a.b.c.D.g. => var method g
       """.stripMargin
   )
 
@@ -61,17 +61,17 @@ object ScalaMtagsTest extends BaseMtagsTest {
     """.stripMargin,
     """
       |Language:
-      |Scala212
+      |Scala
       |
       |Names:
-      |[16..17): K <= _root_.K.
-      |[16..17): K <= _root_.K.package.
-      |[26..27): l <= _root_.K.package.l.
+      |[16..17): K <= K.
+      |[16..17): K <= K.package.
+      |[26..27): l <= K.package.l.
       |
       |Symbols:
-      |_root_.K. => packageobject K
-      |_root_.K.package. => object package
-      |_root_.K.package.l. => def l
+      |K. => packageobject K
+      |K.package. => object package
+      |K.package.l. => method l
     """.stripMargin
   )
 
@@ -87,29 +87,29 @@ object ScalaMtagsTest extends BaseMtagsTest {
     """.stripMargin,
     """
       |Language:
-      |Scala212
+      |Scala
       |
       |Names:
-      |[8..12): pats <= _root_.pats.
-      |[21..22): o <= _root_.pats.o.
-      |[24..25): p <= _root_.pats.p.
-      |[36..37): q <= _root_.pats.q.
-      |[39..40): r <= _root_.pats.r.
-      |[52..53): s <= _root_.pats.s.
-      |[55..56): t <= _root_.pats.t.
-      |[67..68): v <= _root_.pats.v.
-      |[70..71): w <= _root_.pats.w.
+      |[8..12): pats <= pats.
+      |[21..22): o <= pats.o.
+      |[24..25): p <= pats.p.
+      |[36..37): q <= pats.q.
+      |[39..40): r <= pats.r.
+      |[52..53): s <= pats.s.
+      |[55..56): t <= pats.t.
+      |[67..68): v <= pats.v.
+      |[70..71): w <= pats.w.
       |
       |Symbols:
-      |_root_.pats. => object pats
-      |_root_.pats.o. => val o
-      |_root_.pats.p. => val p
-      |_root_.pats.q. => val q
-      |_root_.pats.r. => val r
-      |_root_.pats.s. => var s
-      |_root_.pats.t. => var t
-      |_root_.pats.v. => var v
-      |_root_.pats.w. => var w
+      |pats. => object pats
+      |pats.o. => val method o
+      |pats.p. => val method p
+      |pats.q. => val method q
+      |pats.r. => val method r
+      |pats.s. => var method s
+      |pats.t. => var method t
+      |pats.v. => var method v
+      |pats.w. => var method w
     """.stripMargin
   )
 
@@ -123,17 +123,17 @@ object ScalaMtagsTest extends BaseMtagsTest {
     """.stripMargin,
     """
       |Language:
-      |Scala212
+      |Scala
       |
       |Names:
-      |[7..10): Tpe <= _root_.Tpe#
-      |[20..21): M <= _root_.Tpe#M#
-      |[29..30): N <= _root_.Tpe#N#
+      |[7..10): Tpe <= Tpe#
+      |[20..21): M <= Tpe#M#
+      |[29..30): N <= Tpe#N#
       |
       |Symbols:
-      |_root_.Tpe# => trait Tpe
-      |_root_.Tpe#M# => type M
-      |_root_.Tpe#N# => type N
+      |Tpe# => trait Tpe
+      |Tpe#M# => type M
+      |Tpe#N# => type N
     """.stripMargin
   )
 
@@ -142,17 +142,17 @@ object ScalaMtagsTest extends BaseMtagsTest {
     "case class A(a: Int, b: String)",
     """
       |Language:
-      |Scala212
+      |Scala
       |
       |Names:
-      |[11..12): A <= _root_.A#
-      |[13..14): a <= _root_.A#(a)
-      |[21..22): b <= _root_.A#(b)
+      |[11..12): A <= A#
+      |[13..14): a <= A#(a)
+      |[21..22): b <= A#(b)
       |
       |Symbols:
-      |_root_.A# => class A
-      |_root_.A#(a) => val param a
-      |_root_.A#(b) => val param b
+      |A# => class A
+      |A#(a) => param a
+      |A#(b) => param b
       |""".stripMargin
   )
 }

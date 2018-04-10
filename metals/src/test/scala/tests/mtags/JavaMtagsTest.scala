@@ -18,18 +18,16 @@ object JavaMtagsTest extends BaseMtagsTest {
       |Java
       |
       |Names:
-      |[8..9): a => _root_.a.
-      |[10..11): b => _root_.a.b.
-      |[23..24): A <= _root_.a.b.A.
-      |[23..24): A <= _root_.a.b.A#
-      |[43..44): a <= _root_.a.b.A#a.
+      |[8..9): a => a.
+      |[10..11): b => a.b.
+      |[23..24): A <= a.b.A#
+      |[43..44): a <= a.b.A#a.
       |
       |Symbols:
-      |_root_.a. => package a
-      |_root_.a.b. => package b
-      |_root_.a.b.A# => trait A
-      |_root_.a.b.A#a. => def a
-      |_root_.a.b.A. => object A
+      |a. => javadefined package a
+      |a.b. => javadefined package b
+      |a.b.A# => javadefined interface A
+      |a.b.A#a. => javadefined method a
       |""".stripMargin
   )
 
@@ -48,24 +46,18 @@ object JavaMtagsTest extends BaseMtagsTest {
       |Java
       |
       |Names:
-      |[7..8): B <= _root_.B.
-      |[7..8): B <= _root_.B#
-      |[18..19): c <= _root_.B.c.
-      |[53..54): d <= _root_.B#d.
-      |[76..77): E <= _root_.B#E.
-      |[76..77): E <= _root_.B#E#
-      |[103..104): F <= _root_.B.F.
-      |[103..104): F <= _root_.B.F#
+      |[7..8): B <= B#
+      |[18..19): c <= B#c.
+      |[53..54): d <= B#d.
+      |[76..77): E <= B#E#
+      |[103..104): F <= B#F#
       |
       |Symbols:
-      |_root_.B# => class B
-      |_root_.B#E# => class E
-      |_root_.B#E. => object E
-      |_root_.B#d. => def d
-      |_root_.B. => object B
-      |_root_.B.F# => class F
-      |_root_.B.F. => object F
-      |_root_.B.c. => def c
+      |B# => javadefined class B
+      |B#E# => javadefined class E
+      |B#F# => javadefined class F
+      |B#c. => javadefined method c
+      |B#d. => javadefined method d
     """.stripMargin
   )
 
@@ -83,18 +75,14 @@ object JavaMtagsTest extends BaseMtagsTest {
       |Java
       |
       |Names:
-      |[6..7): G <= _root_.G.
-      |[12..13): H <= _root_.G.H.
-      |[12..13): H <= _root_.G.H.
-      |[17..18): I <= _root_.G.I.
-      |[17..18): I <= _root_.G.I.
+      |[6..7): G <= G#
+      |[12..13): H <= G#H.
+      |[17..18): I <= G#I.
       |
       |Symbols:
-      |_root_.G. => object G
-      |_root_.G.H. => val H
-      |_root_.G.H. => val H
-      |_root_.G.I. => val I
-      |_root_.G.I. => val I
+      |G# => javadefined enum class G
+      |G#H. => javadefined field H
+      |G#I. => javadefined field I
       |""".stripMargin
   )
 
@@ -110,14 +98,12 @@ object JavaMtagsTest extends BaseMtagsTest {
       |Java
       |
       |Names:
-      |[14..15): J <= _root_.J.
-      |[14..15): J <= _root_.J#
-      |[46..51): FIELD <= _root_.J.FIELD.
+      |[14..15): J <= J#
+      |[46..51): FIELD <= J#FIELD.
       |
       |Symbols:
-      |_root_.J# => class J
-      |_root_.J. => object J
-      |_root_.J.FIELD. => val FIELD
+      |J# => javadefined class J
+      |J#FIELD. => javadefined field FIELD
     """.stripMargin
   )
 
@@ -141,16 +127,15 @@ object JavaMtagsTest extends BaseMtagsTest {
       |Java
       |
       |Names:
-      |[8..9): k => _root_.k.
-      |[28..29): K <= _root_.k.K.
-      |[28..29): K <= _root_.k.K#
-      |[36..37): l <= _root_.k.K.l.
+      |[8..9): k => k.
+      |[28..29): K <= k.K.
+      |[28..29): K <= k.K#
+      |[36..37): l <= k.K.l.
       |
       |Symbols:
-      |_root_.k. => package k
-      |_root_.k.K# => trait K
-      |_root_.k.K#m. => def m
-      |_root_.k.K. => object K
+      |k. => javadefined package k
+      |k.K# => javadefined interface K
+      |k.K#m. => javadefined method m
     """.stripMargin
   )
 
@@ -174,18 +159,16 @@ object JavaMtagsTest extends BaseMtagsTest {
         |Java
         |
         |Names:
-        |[219..223): java => _root_.java.
-        |[224..226): io => _root_.java.io.
-        |[260..277): DefaultFileSystem <= _root_.java.io.DefaultFileSystem.
-        |[260..277): DefaultFileSystem <= _root_.java.io.DefaultFileSystem#
-        |[387..400): getFileSystem <= _root_.java.io.DefaultFileSystem.getFileSystem.
+        |[219..223): java => java.
+        |[224..226): io => java.io.
+        |[260..277): DefaultFileSystem <= java.io.DefaultFileSystem#
+        |[387..400): getFileSystem <= java.io.DefaultFileSystem#getFileSystem.
         |
         |Symbols:
-        |_root_.java. => package java
-        |_root_.java.io. => package io
-        |_root_.java.io.DefaultFileSystem# => class DefaultFileSystem
-        |_root_.java.io.DefaultFileSystem. => object DefaultFileSystem
-        |_root_.java.io.DefaultFileSystem.getFileSystem. => def getFileSystem
+        |java. => javadefined package java
+        |java.io. => javadefined package io
+        |java.io.DefaultFileSystem# => javadefined class DefaultFileSystem
+        |java.io.DefaultFileSystem#getFileSystem. => javadefined method getFileSystem
       """.stripMargin
     assertNoDiff(obtained, expected)
   }

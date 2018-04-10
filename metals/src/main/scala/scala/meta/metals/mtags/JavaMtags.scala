@@ -14,6 +14,7 @@ import org.langmeta.inputs.Position
 import org.langmeta.languageserver.InputEnrichments._
 import scala.meta.internal.semanticdb3.Language
 
+// TODO, emit correct method overload symbols https://github.com/scalameta/metals/issues/281
 object JavaMtags {
   private implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
     def lineNumber: Int = m.getLineNumber - 1
@@ -79,7 +80,7 @@ object JavaMtags {
         else classes.forEach(visitClass)
 
       def visitClass(cls: JavaClass): Unit =
-        withOwner(owner(cls.isStatic)) {
+        withOwner(owner) {
           val kind = if (cls.isInterface) Kind.INTERFACE else Kind.CLASS
           val pos = toRangePosition(cls.lineNumber, cls.getName)
           tpe(
@@ -91,11 +92,10 @@ object JavaMtags {
           visitClasses(cls.getNestedClasses)
           visitFields(cls.getMethods)
           visitFields(cls.getFields)
-          visitFields(cls.getEnumConstants)
         }
 
       def visitMember[T <: JavaMember](m: T): Unit =
-        withOwner(owner(m.isStatic)) {
+        withOwner(owner) {
           val name = m.getName
           val line = m match {
             case c: JavaMethod => c.lineNumber
