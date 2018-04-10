@@ -41,5 +41,8 @@ object Workspace {
         }
       }
     )
+    Option(sbtserver.SbtServer.activeJson(cwd))
+      .filter { active => Files.exists(active.toNIO) }
+      .foreach(callback)
   }
 }
