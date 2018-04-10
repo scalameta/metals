@@ -3,6 +3,7 @@ package tests.mtags
 import java.nio.file.Paths
 import scala.meta.metals.compiler.CompilerConfig
 import scala.meta.metals.mtags.Mtags
+import org.langmeta.internal.semanticdb._
 
 object JavaMtagsTest extends BaseMtagsTest {
   check(

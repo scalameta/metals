@@ -23,6 +23,7 @@ object DiagnosticsProviderTest extends CompilerSuite with LazyLogging {
   val logFile = tmp.resolve("metals.log").toFile
   val out = new PrintStream(new FileOutputStream(logFile))
   val scalafixConfPath = ".customScalafixConfPath"
+  
   val config = Observable.now(
     Configuration(
       scalac = Configuration.Scalac(
