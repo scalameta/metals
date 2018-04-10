@@ -16,6 +16,7 @@ import org.langmeta.lsp.SymbolInformation
 import org.langmeta.jsonrpc.JsonRpcClient
 import scala.meta.metals.{index => i}
 import com.typesafe.scalalogging.LazyLogging
+import java.util
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
@@ -30,7 +31,6 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable
 import scala.meta.internal.semanticdb3.SymbolInformation.Kind
-import scala.meta.internal.semanticdb3.SymbolInformation.Property
 import scala.util.control.NonFatal
 
 class InMemorySymbolIndex(
@@ -91,12 +91,11 @@ class InMemorySymbolIndex(
   def definitionData(
       symbol: Symbol
   ): Option[SymbolData] = {
-    (symbol :: symbol.definitionAlternative)
-      .collectFirst {
-        case symbolIndexer(data) if data.definition.nonEmpty =>
-          logger.info(s"Found definition symbol ${data.symbol}")
-          data
-      }
+    (symbol :: symbol.definitionAlternative).collectFirst {
+      case symbolIndexer(data) if data.definition.nonEmpty =>
+        logger.info(s"Found definition symbol ${data.symbol}")
+        data
+    }
   }
 
   def data(symbol: Symbol): Option[SymbolData] =
@@ -106,13 +105,12 @@ class InMemorySymbolIndex(
   def referencesData(
       symbol: Symbol
   ): List[SymbolData] = {
-    (symbol :: symbol.referenceAlternatives)
-      .collect {
-        case symbolIndexer(data) =>
-          if (data.symbol != symbol.syntax)
-            logger.info(s"Adding alternative references ${data.symbol}")
-          data
-      }
+    (symbol :: symbol.referenceAlternatives).collect {
+      case symbolIndexer(data) =>
+        if (data.symbol != symbol.syntax)
+          logger.info(s"Adding alternative references ${data.symbol}")
+        data
+    }
   }
 
   def indexDependencyClasspath(
@@ -179,30 +177,52 @@ class InMemorySymbolIndex(
   def indexDocument(document: TextDocument): Effects.IndexSemanticdb = {
     val uri = Uri(document.uri)
     val input = Input.VirtualFile(document.uri, document.text)
-    documentIndex.putDocument(uri, document)
-    document.occurrences.foreach {
-      // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
-      // local symbols don't need to be indexed globally, by skipping them we should
-      // def isLocalSymbol(sym: String): Boolean =
-      // !sym.endsWith(".") &&
-      //     !sym.endsWith("#") &&
-      //     !sym.endsWith(")")
-      // be able to minimize the size of the global index significantly.
-      //      case s.SymbolOccurrence(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
-      case SymbolOccurrence(Some(r), sym, SymbolOccurrence.Role.DEFINITION) =>
-        symbolIndexer.addDefinition(
-          sym,
-          i.Position(document.uri, input.toIndexRange(r))
-        )
-      case SymbolOccurrence(Some(r), sym, SymbolOccurrence.Role.REFERENCE) =>
-        symbolIndexer.addReference(
-          Uri(document.uri),
-          input.toIndexRange(r),
-          sym
-        )
-      case _ =>
+    val locals = new util.HashMap[String, semanticdb3.SymbolInformation]()
+    document.symbols.foreach { info =>
+      if (info.kind.isLocal) {
+        locals.put(info.symbol, info)
+      } else {
+        symbolIndexer.addSymbolInformation(info)
+      }
     }
-    document.symbols.foreach(symbolIndexer.addSymbolInformation)
+    val documentWithOnlyLocalSymbols =
+      document.copy(symbols = new SymbolInformationsBySymbol(locals))
+    documentIndex.putDocument(uri, documentWithOnlyLocalSymbols)
+    document.occurrences.foreach { occurence =>
+      val isGlobal = locals.get(occurence.symbol) == null
+      if (isGlobal) {
+        occurence match {
+          // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
+          // local symbols don't need to be indexed globally, by skipping them we should
+          // def isLocalSymbol(sym: String): Boolean =
+          // !sym.endsWith(".") &&
+          //     !sym.endsWith("#") &&
+          //     !sym.endsWith(")")
+          // be able to minimize the size of the global index significantly.
+          //      case s.SymbolOccurrence(_, sym, _) if isLocalSymbol(sym) => // Do nothing, local symbol.
+          case SymbolOccurrence(
+              Some(r),
+              sym,
+              SymbolOccurrence.Role.DEFINITION
+              ) =>
+            symbolIndexer.addDefinition(
+              sym,
+              i.Position(document.uri, input.toIndexRange(r))
+            )
+          case SymbolOccurrence(
+              Some(r),
+              sym,
+              SymbolOccurrence.Role.REFERENCE
+              ) =>
+            symbolIndexer.addReference(
+              Uri(document.uri),
+              input.toIndexRange(r),
+              sym
+            )
+          case _ =>
+        }
+      }
+    }
     Effects.IndexSemanticdb
   }
 

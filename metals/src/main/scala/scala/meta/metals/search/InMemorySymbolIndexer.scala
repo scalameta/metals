@@ -53,6 +53,7 @@ class InMemorySymbolIndexer(
   override def addSymbolInformation(
       info: semanticdb3.SymbolInformation
   ): Unit = updated(info.symbol) { index =>
+    require(!info.kind.isLocal, "Local symbols should not be globally indexed!")
     index.copy(info = Some(info))
   }
 
