@@ -13,6 +13,5 @@ cache:
   - C:\Users\appveyor\.m2
   - C:\Users\appveyor\.ivy2
   - C:\Users\appveyor\.coursier
-  - C:\Users\appveyor\.sbt\0.13
-  - C:\Users\appveyor\.sbt\1.0
+  - C:\Users\appveyor\.sbt
   - C:\Users\appveyor\scoop\cache
