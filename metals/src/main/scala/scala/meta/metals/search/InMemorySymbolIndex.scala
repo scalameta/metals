@@ -192,56 +192,45 @@ class InMemorySymbolIndex(
       case SymbolOccurrence(Some(r), sym, SymbolOccurrence.Role.DEFINITION) =>
         symbolIndexer.addDefinition(
           sym,
-          i.Position(document.uri, Some(input.toIndexRange(r)))
+          i.Position(document.uri, input.toIndexRange(r))
         )
       case SymbolOccurrence(Some(r), sym, SymbolOccurrence.Role.REFERENCE) =>
         symbolIndexer.addReference(
-          document.uri,
+          Uri(document.uri),
           input.toIndexRange(r),
           sym
         )
       case _ =>
     }
-    document.symbols.foreach {
-      case denot: semanticdb3.SymbolInformation =>
-        val isField = denot.properties.hasOneOfFlags(
-          Property.VAL.value | Property.VAR.value
-        )
-        val kind =
-          if (isField) Kind.FIELD
-          else denot.kind
-        symbolIndexer.addDenotation(
-          symbol = denot.symbol,
-          kind = kind.value,
-          name = denot.name,
-          signature = denot.symbol // TODO: blocked by https://github.com/scalameta/scalameta/issues/1479
-        )
-      case _ =>
-    }
+    document.symbols.foreach(symbolIndexer.addSymbolInformation)
     Effects.IndexSemanticdb
   }
 
   override def workspaceSymbols(query: String): List[SymbolInformation] = {
     import scala.meta.metals.ScalametaEnrichments._
-    import scala.meta.semanticdb._
     val result = symbolIndexer.allSymbols.toIterator
       .withFilter { symbol =>
         symbol.definition.isDefined && symbol.definition.get.uri
           .startsWith("file:")
       }
       .collect {
-        case i.SymbolData(sym, Some(pos), _, flags, name, _)
-            if flags.hasOneOfFlags(CLASS | TRAIT | OBJECT) && {
+        case i.SymbolData(sym, Some(pos), _, Some(info))
+            if info.isOneOf(
+              Kind.CLASS,
+              Kind.OBJECT,
+              Kind.TRAIT,
+              Kind.INTERFACE
+            ) && {
               // NOTE(olafur) fuzzy-wuzzy doesn't seem to do a great job
               // for camelcase searches like "DocSymPr" when looking for
               // "DocumentSymbolProvider. We should try and port something
               // like https://blog.forrestthewoods.com/reverse-engineering-sublime-text-s-fuzzy-match-4cffeed33fdb
               // instead.
-              FuzzySearch.partialRatio(query, name) >= 90
+              FuzzySearch.partialRatio(query, info.name) >= 90
             } =>
           SymbolInformation(
-            name,
-            flags.toSymbolKind,
+            info.name,
+            info.toSymbolKind,
             pos.toLocation,
             Some(sym.stripPrefix("_root_."))
           )

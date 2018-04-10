@@ -16,6 +16,7 @@ import org.langmeta.internal.io.FileIO
 import org.langmeta.io.AbsolutePath
 import org.langmeta.internal.semanticdb._
 import scala.meta.internal.semanticdb3.SymbolInformation.Kind
+import scala.meta.internal.semanticdb3.SymbolInformation.Property
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
@@ -117,12 +118,12 @@ object ScalametaEnrichments {
   }
   implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
     def pretty: String =
-      s"${pos.uri.replaceFirst(".*/", "")} [${pos.range.map(_.pretty).getOrElse("")}]"
+      s"${pos.uri.replaceFirst(".*/", "")} [${pos.range.pretty}]"
 
     def toLocation: Location = {
       l.Location(
         pos.uri,
-        pos.range.get.toRange
+        pos.range.toRange
       )
     }
   }
@@ -314,9 +315,9 @@ object ScalametaEnrichments {
       val defPosition = if (withDefinition) data.definition else None
 
       val refPositions = for {
-        (uri, rangeSet) <- data.references
-        range <- rangeSet.ranges
-      } yield i.Position(uri, Some(range))
+        (uri, ranges) <- data.references
+        range <- ranges
+      } yield i.Position(uri.value, range)
 
       (defPosition.toSet ++ refPositions.toSet)
         .filterNot { _.uri.startsWith("jar:file") } // definition may refer to a jar
@@ -331,6 +332,45 @@ object ScalametaEnrichments {
       semanticdb3.TextDocuments(document :: Nil).toDb(None).documents.head
   }
 
+  implicit class XtensionSymbolInformation(
+      val info: semanticdb3.SymbolInformation
+  ) {
+    import Property._
+    def isOneOf(kind: Kind*): Boolean = {
+      kind.contains(info.kind)
+    }
+    def has(prop1: Property, prop2: Property, props: Property*): Boolean =
+      has(prop1) || has(prop2) || props.exists(has)
+    def has(prop: Property): Boolean =
+      info.properties.hasOneOfFlags(prop.value)
+    def toSymbolKind: SymbolKind = info.kind match {
+      case Kind.OBJECT | Kind.PACKAGE_OBJECT =>
+        SymbolKind.Module
+      case Kind.CLASS =>
+        if (has(ENUM)) SymbolKind.Enum
+        else SymbolKind.Class
+      case Kind.PACKAGE =>
+        SymbolKind.Package
+      case Kind.TRAIT | Kind.INTERFACE =>
+        SymbolKind.Interface
+      case Kind.METHOD | Kind.LOCAL =>
+        if (has(VAL)) SymbolKind.Constant
+        else if (has(VAR)) SymbolKind.Variable
+        else SymbolKind.Method
+      case Kind.CONSTRUCTOR =>
+        SymbolKind.Constructor
+      case Kind.FIELD =>
+        SymbolKind.Field
+      case Kind.TYPE =>
+        SymbolKind.Class // ???
+      case Kind.PARAMETER | Kind.SELF_PARAMETER | Kind.TYPE_PARAMETER =>
+        SymbolKind.Variable // ???
+      case kind @ Kind.UNKNOWN_KIND =>
+        throw new IllegalArgumentException(
+          s"Unsupported kind $kind in SymbolInformation: ${info.toProtoString}"
+        )
+    }
+  }
   implicit class XtensionIntAsSymbolKind(val flags: Int) {
     def hasOneOfFlags(flags: Long): Boolean =
       (this.flags & flags) != 0L

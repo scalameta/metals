@@ -48,16 +48,6 @@ object InputEnrichments {
       )
     }
 
-    /** Returns a scala.meta.Position from an index range. */
-    def toPosition(range: i.Range): Position = {
-      toPosition(
-        range.startLine,
-        range.startColumn,
-        range.endLine,
-        range.endColumn
-      )
-    }
-
     def toOffset(pos: lsp.Position): Int =
       toOffset(pos.line, pos.character)
 

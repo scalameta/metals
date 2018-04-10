@@ -6,6 +6,7 @@ import scala.meta.metals.{index => i}
 import scala.{meta => m}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
+import scala.meta.internal.semanticdb3.SymbolOccurrence
 
 object InverseSymbolIndexer {
 
@@ -48,24 +49,34 @@ object InverseSymbolIndexer {
         uri: Uri,
         symbol: String,
         range: i.Range,
-        definition: Boolean
+        role: SymbolOccurrence.Role
     ): Unit = {
       val doc = get(uri)
       val pos = doc.input.toPosition(range)
       val rs =
-        m.ResolvedName(pos, m.Symbol(symbol), isDefinition = definition)
+        m.ResolvedName(pos, m.Symbol(symbol), isDefinition = role.isDefinition)
       val newDoc = doc.copy(names = rs :: doc.names)
       db(doc.input.syntax) = newDoc
     }
     symbols.foreach { symbol =>
       symbol.definition.collect {
-        case i.Position(Uri(uri), Some(range)) =>
-          handleResolvedName(uri, symbol.symbol, range, definition = true)
+        case i.Position(Uri(uri), range) =>
+          handleResolvedName(
+            uri,
+            symbol.symbol,
+            range,
+            SymbolOccurrence.Role.DEFINITION
+          )
       }
       symbol.references.collect {
-        case (Uri(uri), ranges) =>
-          ranges.ranges.foreach { range =>
-            handleResolvedName(uri, symbol.symbol, range, definition = false)
+        case (uri, ranges) =>
+          ranges.foreach { range =>
+            handleResolvedName(
+              uri,
+              symbol.symbol,
+              range,
+              SymbolOccurrence.Role.REFERENCE
+            )
           }
       }
     }

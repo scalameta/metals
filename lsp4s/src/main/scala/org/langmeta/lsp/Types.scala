@@ -14,7 +14,24 @@ import io.circe.generic.JsonCodec
 /**
  * A range in a text document.
  */
-@JsonCodec case class Range(start: Position, end: Position)
+@JsonCodec case class Range(start: Position, end: Position) {
+  def startLine = start.line
+  def startColumn = start.character
+  def endLine = end.line
+  def endColumn = end.character
+}
+
+object Range {
+  def apply(
+      startLine: Int,
+      startColumn: Int,
+      endLine: Int,
+      endColumn: Int
+  ): Range = Range(
+    start = Position(startLine, startColumn),
+    end = Position(endLine, endColumn),
+  )
+}
 
 /**
  * Represents a location inside a resource, such as a line

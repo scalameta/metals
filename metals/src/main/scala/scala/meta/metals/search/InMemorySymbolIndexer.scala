@@ -5,10 +5,11 @@ import java.util.function.UnaryOperator
 import scala.collection.concurrent.TrieMap
 import scala.meta.metals.index.Position
 import scala.meta.metals.index.Range
-import scala.meta.metals.index.Ranges
 import scala.meta.metals.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.semanticdb.Symbol
+import scala.meta.internal.semanticdb3
+import scala.meta.metals.Uri
 
 class InMemorySymbolIndexer(
     // simplest thing I could think of to get something off the ground.
@@ -49,28 +50,32 @@ class InMemorySymbolIndexer(
     index.copy(definition = Some(position))
   }
 
-  override def addDenotation(
-      symbol: String,
-      kind: Int,
-      name: String,
-      signature: String
-  ): Unit = updated(symbol) { index =>
-    index.copy(kind = kind, signature = signature, name = name)
+  override def addSymbolInformation(
+      info: semanticdb3.SymbolInformation
+  ): Unit = updated(info.symbol) { index =>
+    index.copy(info = Some(info))
   }
 
   override def addReference(
-      filename: String, // TODO(olafur) change to java.net.URI?
+      uri: Uri, // TODO(olafur) change to java.net.URI?
       range: Range,
       symbol: String // TODO(olafur) move to first argument?
   ): Unit = updated(symbol) { index =>
-    val ranges = index.references.getOrElse(filename, Ranges())
-    val newRanges = ranges.addRanges(range)
-    val newReferences = index.references + (filename -> newRanges)
+    val ranges = index.references.getOrElse(uri, Nil)
+    val newRanges = range +: ranges
+    val newReferences = index.references.updated(uri, newRanges)
     index.copy(references = newReferences)
   }
 
   private def newValue(symbol: String) =
-    new AtomicReference(SymbolData(symbol = symbol))
+    new AtomicReference(
+      SymbolData(
+        symbol = symbol,
+        definition = None,
+        references = Map.empty,
+        info = None
+      )
+    )
 
   private def updated(symbol: String)(f: SymbolData => SymbolData): Unit = {
     val value = symbols.getOrElseUpdate(symbol, newValue(symbol))

@@ -82,18 +82,21 @@ object Semanticdbs extends LazyLogging {
   implicit private val occurrenceOrdering: Ordering[SymbolOccurrence] =
     new Ordering[semanticdb3.SymbolOccurrence] {
       override def compare(x: SymbolOccurrence, y: SymbolOccurrence): Int = {
-        if (x.range.isEmpty || x.range.isEmpty) 0
+        if (x.range.isEmpty) 0
+        else if (y.range.isEmpty) 0
         else {
+          val a = x.range.get
+          val b = y.range.get
           val byLine = Integer.compare(
-            x.range.get.startLine,
-            y.range.get.startLine
+            a.startLine,
+            b.startLine
           )
           if (byLine != 0) {
             byLine
           } else {
             val byCharacter = Integer.compare(
-              x.range.get.startCharacter,
-              y.range.get.startCharacter
+              a.startCharacter,
+              b.startCharacter
             )
             byCharacter
           }
