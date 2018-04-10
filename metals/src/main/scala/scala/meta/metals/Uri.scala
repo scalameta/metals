@@ -17,7 +17,7 @@ import org.langmeta.io.AbsolutePath
  * - URI supports any scheme while we are only interested in a couple schemes
  * - Both file:///path and file:/path are valid URIs while we only use
  *   file:///path in this project in order to support storing them as strings.
-  *  For context, see https://github.com/scalameta/metals/pull/127#issuecomment-351880150
+ *  For context, see https://github.com/scalameta/metals/pull/127#issuecomment-351880150
  */
 sealed abstract case class Uri(value: String) {
   // Runtime check because wrapping constructor in Option[Uri] is too cumbersome

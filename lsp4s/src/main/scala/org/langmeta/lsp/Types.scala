@@ -29,7 +29,7 @@ object Range {
       endColumn: Int
   ): Range = Range(
     start = Position(startLine, startColumn),
-    end = Position(endLine, endColumn),
+    end = Position(endLine, endColumn)
   )
 }
 

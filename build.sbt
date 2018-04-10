@@ -12,7 +12,6 @@ inThisBuild(
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused-import"
     ),
-    scalafixEnabled := false,
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -127,11 +126,6 @@ lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(ScriptedPlugin)
   .settings(
-    PB.targets.in(Compile) := Seq(
-      scalapb.gen(
-        flatPackage = true // Don't append filename to package
-      ) -> sourceManaged.in(Compile).value./("protobuf")
-    ),
     fork in Test := true, // required for jni interrop with leveldb.
     buildInfoKeys := Seq[BuildInfoKey](
       "testWorkspaceBaseDirectory" ->
@@ -178,7 +172,6 @@ lazy val testWorkspace = project
     scalacOptions += "-Ywarn-unused-import",
     scalacOptions -= "-Xlint"
   )
-  .disablePlugins(ScalafixPlugin)
 
 lazy val metalsRoot = project
   .in(file("."))

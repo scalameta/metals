@@ -23,7 +23,8 @@ class InMemoryDocumentIndex(
 
 class SymbolInformationsBySymbol(infos: util.HashMap[String, SymbolInformation])
     extends Seq[SymbolInformation] {
-  def lookupSymbol(symbol: String): Option[SymbolInformation] = Option(infos.get(symbol))
+  def lookupSymbol(symbol: String): Option[SymbolInformation] =
+    Option(infos.get(symbol))
   import scala.collection.JavaConverters._
   override def length: Int = infos.size()
   override def iterator: Iterator[SymbolInformation] =
