@@ -153,10 +153,15 @@ class InMemorySymbolIndex(
   }
 
   /** Register this Database to symbol indexer. */
-  def indexDatabase(document: TextDocuments): Effects.IndexSemanticdb = {
-    document.documents.foreach { doc =>
-      try indexDocument(doc)
-      catch {
+  def indexDatabase(documents: TextDocuments): Effects.IndexSemanticdb = {
+    documents.documents.foreach { doc =>
+      try {
+        // semanticdb-scalac emits additional empty TextDocument with deprecation warning diagnostics.
+        val isOnlyDiagnostics = doc.diagnostics.nonEmpty && doc.occurrences.isEmpty
+        if (!isOnlyDiagnostics) {
+          indexDocument(doc)
+        }
+      } catch {
         case NonFatal(e) =>
           logger.error(s"Failed to index ${doc.uri}", e)
       }
