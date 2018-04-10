@@ -7,7 +7,6 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Executors
-import java.util.Properties
 import scala.concurrent.duration.FiniteDuration
 import scala.meta.metals.compiler.CompilerConfig
 import scala.meta.metals.compiler.Cursor
@@ -27,7 +26,6 @@ import scala.meta.metals.refactoring.OrganizeImports
 import scala.meta.metals.sbtserver.Sbt
 import scala.meta.metals.sbtserver.SbtServer
 import scala.meta.metals.search.SymbolIndex
-import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
@@ -139,7 +137,7 @@ class MetalsServices(
     logger.info(s"Initialized with $cwd, $params")
     LSPLogger.notifications = Some(client)
     cancelEffects = effects.map(_.subscribe())
-    loadAllRelevantFilesInThisWorkspace()
+    Workspace.initialize(cwd) { onChangedFile(_)(()) }
     val commands = WorkspaceCommand.values.map(_.entryName)
     val capabilities = ServerCapabilities(
       textDocumentSync = Some(
@@ -283,7 +281,7 @@ class MetalsServices(
             Uri(path),
             FileChangeType.Created | FileChangeType.Changed
             ) =>
-          onChangedFile(path.toAbsolutePath) { _ =>
+          onChangedFile(path.toAbsolutePath) {
             logger.warn(s"Unknown file extension for path $path")
           }
 
@@ -413,18 +411,8 @@ class MetalsServices(
       response
     case SbtConnect =>
       Task {
-        val path = cwd.resolve("project").resolve("build.properties")
-        val input = Files.newInputStream(path.toNIO)
-        val sbtVersion: Option[String] =
-          Try {
-            val props = new Properties()
-            props.load(input)
-            Option(props.getProperty("sbt.version"))
-          }.toOption.flatten
-        input.close()
-
-        sbtVersion match {
-          case Some(ver) if ver.startsWith("0.13") || ver.startsWith("1.0") =>
+        SbtServer.readVersion(cwd) match {
+          case Some(ver) if ver.startsWith("0.") || ver.startsWith("1.0") =>
             showMessage.warn(
               s"sbt v${ver} used in this project doesn't have server functionality. " +
                 "Upgrade to sbt v1.1+ to enjoy Metals integration with the sbt server."
@@ -453,7 +441,7 @@ class MetalsServices(
   }
 
   private def connectToSbtServer(): Unit = {
-    sbtServer.foreach(_.runningServer.cancel())
+    sbtServer.foreach(_.disconnect())
     val services = SbtServer.forwardingServices(client, latestConfig)
     SbtServer.connect(cwd, services)(s.sbt).foreach {
       case Left(err) => showMessage.error(err)
@@ -485,24 +473,19 @@ class MetalsServices(
     Cursor(Uri(td.uri), contents, offset)
   }
 
-  private def loadAllRelevantFilesInThisWorkspace(): Unit = {
-    Workspace.initialize(cwd) { path =>
-      onChangedFile(path)(_ => ())
-    }
-  }
-
   private def onChangedFile(
       path: AbsolutePath
-  )(fallback: AbsolutePath => Unit): Unit = {
+  )(fallback: => Unit): Unit = {
     logger.info(s"File $path changed")
     path.toNIO match {
       case Semanticdbs.File() =>
         fileSystemSemanticdbSubscriber.onNext(path)
       case CompilerConfig.File() =>
         compilerConfigSubscriber.onNext(path)
-      case _ if path == SbtServer.activeJson(cwd) =>
+      case SbtServer.ActiveJson() =>
         connectToSbtServer()
-      case _ => fallback(path)
+      case _ =>
+        fallback
     }
   }
 }

@@ -4,6 +4,8 @@ import java.io.IOException
 import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Properties
 import scala.meta.metals.ActiveJson
 import scala.meta.metals.MissingActiveJson
 import scala.meta.metals.SbtInitializeParams
@@ -15,6 +17,7 @@ import monix.eval.Task
 import monix.execution.CancelableFuture
 import monix.execution.Scheduler
 import org.langmeta.io.AbsolutePath
+import org.langmeta.io.RelativePath
 import org.langmeta.jsonrpc.BaseProtocolMessage
 import org.langmeta.jsonrpc.JsonRpcClient
 import org.langmeta.jsonrpc.Services
@@ -30,7 +33,6 @@ import org.scalasbt.ipcsocket.UnixDomainSocket
  * @param client client that can send requests and notifications
  *               to the sbt server.
  * @param runningServer The running client listening for requests from the server.
- *               Use runningServer.cancel() to stop disconnect to this server.
  *               Use runningServer.onComplete to attach callbacks on
  *               disconnect.
  *
@@ -38,10 +40,21 @@ import org.scalasbt.ipcsocket.UnixDomainSocket
 case class SbtServer(
     client: JsonRpcClient,
     runningServer: CancelableFuture[Unit]
-)
+) {
+  def disconnect(): Unit = runningServer.cancel()
+}
 
 object SbtServer extends LazyLogging {
   private def fail(message: String) = Task.now(Left(message))
+
+  def readVersion(cwd: AbsolutePath): Option[String] = {
+    val path = cwd.resolve("project").resolve("build.properties")
+    val input = Files.newInputStream(path.toNIO)
+    val props = new Properties()
+    Try { props.load(input) }
+    input.close()
+    Option(props.getProperty("sbt.version"))
+  }
 
   /**
    * Establish connection with sbt server.
@@ -113,8 +126,18 @@ object SbtServer extends LazyLogging {
   /**
    * Returns path to project/target/active.json from the base directory of an sbt build.
    */
-  def activeJson(cwd: AbsolutePath): AbsolutePath =
-    cwd.resolve("project").resolve("target").resolve("active.json")
+  object ActiveJson {
+    def apply(): RelativePath =
+      RelativePath("project").resolve("target").resolve("active.json")
+
+    def apply(cwd: AbsolutePath): AbsolutePath =
+      cwd.resolve(ActiveJson())
+
+    def unapply(path: Path): Boolean = {
+      path.endsWith(ActiveJson().toNIO) &&
+      path.toFile.isFile
+    }
+  }
 
   /**
    * Establishes a unix domain socket connection with sbt server.
@@ -122,7 +145,7 @@ object SbtServer extends LazyLogging {
   def openSocketConnection(
       cwd: AbsolutePath
   ): Either[Throwable, UnixDomainSocket] = {
-    val active = activeJson(cwd)
+    val active = ActiveJson(cwd)
     for {
       bytes <- {
         if (Files.exists(active.toNIO)) Right(Files.readAllBytes(active.toNIO))
