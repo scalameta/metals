@@ -24,6 +24,7 @@ import scala.meta.internal.semanticdb3
 import scala.meta.internal.semanticdb3.SymbolOccurrence
 import scala.meta.internal.semanticdb3.TextDocument
 import scala.meta.internal.semanticdb3.TextDocuments
+import org.langmeta.{lsp => l}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb.Symbol
@@ -214,7 +215,7 @@ class InMemorySymbolIndex(
               ) =>
             symbolIndexer.addDefinition(
               sym,
-              i.Position(document.uri, input.toIndexRange(r))
+              l.Location(document.uri, input.toIndexRange(r))
             )
           case SymbolOccurrence(
               Some(r),

@@ -3,6 +3,7 @@ package scala.meta.metals.search
 import scala.annotation.tailrec
 import scala.meta._
 import scala.meta.metals.ScalametaEnrichments._
+import org.langmeta.{lsp => l}
 import scala.meta.metals.{index => i}
 import com.typesafe.scalalogging.LazyLogging
 import difflib._
@@ -57,7 +58,7 @@ final class TokenEditDistance private (matching: Array[MatchingToken]) {
   }
 
   private object RevisedRange {
-    def unapply(range: i.Range): Option[i.Range] =
+    def unapply(range: l.Range): Option[l.Range] =
       toRevised(range.startLine, range.startColumn) match {
         case Left(EmptyResult.NoMatch) => None
         case Left(EmptyResult.Unchanged) => Some(range)
@@ -82,14 +83,14 @@ final class TokenEditDistance private (matching: Array[MatchingToken]) {
   /** Convert the definition position to match the revised input. */
   def toRevisedDefinition(data: i.SymbolData): i.SymbolData = {
     data.definition match {
-      case Some(i.Position(uri, range)) if uri == ThisUri.value =>
+      case Some(l.Location(uri, range)) if uri == ThisUri.value =>
         toRevised(range.startLine, range.startColumn) match {
           case Left(EmptyResult.NoMatch) => data.copy(definition = None)
           case Left(EmptyResult.Unchanged) => data
           case Right(newPos) =>
             val newData = data.copy(
               definition = Some(
-                i.Position(
+                l.Location(
                   ThisUri.value,
                   newPos.toIndexRange
                 )

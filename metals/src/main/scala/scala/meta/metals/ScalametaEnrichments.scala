@@ -117,7 +117,7 @@ object ScalametaEnrichments {
       case _ => new String(input.chars)
     }
   }
-  implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
+  implicit class XtensionIndexPosition(val pos: l.Location) extends AnyVal {
     def pretty: String =
       s"${pos.uri.replaceFirst(".*/", "")} [${pos.range.pretty}]"
 
@@ -128,7 +128,7 @@ object ScalametaEnrichments {
       )
     }
   }
-  implicit class XtensionIndexRange(val range: i.Range) extends AnyVal {
+  implicit class XtensionIndexRange(val range: l.Range) extends AnyVal {
     def pretty: String =
       f"${range.startLine}%3d:${range.startColumn}%3d|${range.endLine}%3d:${range.endColumn}%3d"
     def toRange: l.Range = l.Range(
@@ -163,7 +163,7 @@ object ScalametaEnrichments {
         endCharacter = pos.endColumn
       )
     }
-    def toIndexRange: i.Range = i.Range(
+    def toIndexRange: l.Range = l.Range(
       startLine = pos.startLine,
       startColumn = pos.startColumn,
       endLine = pos.endLine,
@@ -312,13 +312,13 @@ object ScalametaEnrichments {
     /** Returns reference positions for the given symbol index data
      * @param withDefinition if set to `true` will include symbol definition location
      */
-    def referencePositions(withDefinition: Boolean): Set[i.Position] = {
+    def referencePositions(withDefinition: Boolean): Set[l.Location] = {
       val defPosition = if (withDefinition) data.definition else None
 
       val refPositions = for {
         (uri, ranges) <- data.references
         range <- ranges
-      } yield i.Position(uri.value, range)
+      } yield l.Location(uri.value, range)
 
       (defPosition.toSet ++ refPositions.toSet)
         .filterNot { _.uri.startsWith("jar:file") } // definition may refer to a jar
@@ -410,6 +410,8 @@ object ScalametaEnrichments {
         if (has(VAL)) SymbolKind.Constant
         else if (has(VAR)) SymbolKind.Variable
         else SymbolKind.Method
+      case Kind.MACRO =>
+        SymbolKind.Method
       case Kind.CONSTRUCTOR =>
         SymbolKind.Constructor
       case Kind.FIELD =>
@@ -418,9 +420,9 @@ object ScalametaEnrichments {
         SymbolKind.Class // ???
       case Kind.PARAMETER | Kind.SELF_PARAMETER | Kind.TYPE_PARAMETER =>
         SymbolKind.Variable // ???
-      case kind @ Kind.UNKNOWN_KIND =>
+      case unknown @ (Kind.UNKNOWN_KIND | Kind.Unrecognized(_)) =>
         throw new IllegalArgumentException(
-          s"Unsupported kind $kind in SymbolInformation: ${info.toProtoString}"
+          s"Unsupported kind $unknown in SymbolInformation: ${info.toProtoString}"
         )
     }
   }

@@ -1,5 +1,7 @@
 package scala.meta.metals.search
 
+import org.langmeta.lsp.Location
+import org.langmeta.lsp.Range
 import scala.meta.metals.index._
 import org.langmeta.semanticdb.Symbol
 import scala.meta.internal.semanticdb3
@@ -48,7 +50,7 @@ trait SymbolIndexer { self =>
    */
   def addDefinition(
       symbol: String,
-      position: Position
+      position: Location
   ): Unit
 
   /**

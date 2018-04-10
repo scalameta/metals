@@ -3,10 +3,10 @@ package scala.meta.metals.search
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.UnaryOperator
 import scala.collection.concurrent.TrieMap
-import scala.meta.metals.index.Position
-import scala.meta.metals.index.Range
 import scala.meta.metals.index.SymbolData
 import com.typesafe.scalalogging.LazyLogging
+import org.langmeta.lsp.Location
+import org.langmeta.lsp.Range
 import org.langmeta.semanticdb.Symbol
 import scala.meta.internal.semanticdb3
 import scala.meta.metals.Uri
@@ -43,7 +43,7 @@ class InMemorySymbolIndexer(
 
   override def addDefinition(
       symbol: String,
-      position: Position
+      position: Location
   ): Unit = updated(symbol) { index =>
     // NOTE(olafur): Here we override the previous definition, in some cases,
     // we should accummulate them, for example non-pure JS/JVM/Native projects.

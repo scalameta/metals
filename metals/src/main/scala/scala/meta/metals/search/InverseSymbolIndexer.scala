@@ -3,6 +3,7 @@ package scala.meta.metals.search
 import scala.collection.mutable
 import scala.meta.metals.Uri
 import scala.meta.metals.{index => i}
+import org.langmeta.{lsp => l}
 import scala.{meta => m}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
@@ -47,7 +48,7 @@ object InverseSymbolIndexer {
     def handleResolvedName(
         uri: Uri,
         symbol: String,
-        range: i.Range,
+        range: l.Range,
         role: SymbolOccurrence.Role
     ): Unit = {
       if (symbol.startsWith("local")) return
@@ -60,7 +61,7 @@ object InverseSymbolIndexer {
     }
     symbols.foreach { symbol =>
       symbol.definition.collect {
-        case i.Position(Uri(uri), range) =>
+        case l.Location(Uri(uri), range) =>
           handleResolvedName(
             uri,
             symbol.symbol,
