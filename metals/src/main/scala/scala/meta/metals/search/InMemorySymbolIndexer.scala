@@ -58,17 +58,22 @@ class InMemorySymbolIndexer(
   }
 
   override def addReference(
-      uri: Uri, // TODO(olafur) change to java.net.URI?
+      uri: Uri,
       range: Range,
-      symbol: String // TODO(olafur) move to first argument?
+      symbol: String
   ): Unit = updated(symbol) { index =>
+    require(
+      !symbol.startsWith("local"),
+      s"Can't index local symbol '$symbol' in uri $uri"
+    )
     val ranges = index.references.getOrElse(uri, Nil)
     val newRanges = range +: ranges
     val newReferences = index.references.updated(uri, newRanges)
     index.copy(references = newReferences)
   }
 
-  private def newValue(symbol: String) =
+  private def newValue(symbol: String) = {
+    require(!symbol.startsWith("local"), symbol)
     new AtomicReference(
       SymbolData(
         symbol = symbol,
@@ -77,6 +82,7 @@ class InMemorySymbolIndexer(
         info = None
       )
     )
+  }
 
   private def updated(symbol: String)(f: SymbolData => SymbolData): Unit = {
     val value = symbols.getOrElseUpdate(symbol, newValue(symbol))

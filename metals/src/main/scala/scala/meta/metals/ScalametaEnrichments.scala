@@ -382,6 +382,13 @@ object ScalametaEnrichments {
       val info: semanticdb3.SymbolInformation
   ) extends AnyVal {
     import Property._
+
+    def isLocal: Boolean = {
+      info.kind.isLocal ||
+      // Workaround for https://github.com/scalameta/scalameta/issues/1486
+      info.symbol.startsWith("local")
+    }
+
     def isOneOf(kind: Kind*): Boolean = {
       kind.contains(info.kind)
     }

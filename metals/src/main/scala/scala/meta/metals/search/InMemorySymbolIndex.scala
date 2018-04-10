@@ -179,7 +179,7 @@ class InMemorySymbolIndex(
     val input = Input.VirtualFile(document.uri, document.text)
     val locals = new util.HashMap[String, semanticdb3.SymbolInformation]()
     document.symbols.foreach { info =>
-      if (info.kind.isLocal) {
+      if (info.isLocal) {
         locals.put(info.symbol, info)
       } else {
         symbolIndexer.addSymbolInformation(info)
@@ -189,7 +189,9 @@ class InMemorySymbolIndex(
       document.copy(symbols = new SymbolInformationsBySymbol(locals))
     documentIndex.putDocument(uri, documentWithOnlyLocalSymbols)
     document.occurrences.foreach { occurence =>
-      val isGlobal = locals.get(occurence.symbol) == null
+      val isGlobal =
+        locals.get(occurence.symbol) == null &&
+          !occurence.symbol.startsWith("local")
       if (isGlobal) {
         occurence match {
           // TODO(olafur) handle local symbols on the fly from a `Document` in go-to-definition
