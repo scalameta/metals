@@ -17,5 +17,5 @@ import org.langmeta.io.AbsolutePath
 @JsonCodec case class SbtExecParams(commandLine: String)
 
 case class MissingActiveJson(path: AbsolutePath)
-    extends Exception(s"sbt-server 1.1.0 is not running, $path does not exist")
+    extends Exception(s"sbt-server 1.1+ is not running, $path does not exist")
 case class SbtServerConnectionError(msg: String) extends Exception(msg)
