@@ -48,11 +48,13 @@ object SbtServer extends LazyLogging {
   private def fail(message: String) = Task.now(Left(message))
 
   def readVersion(cwd: AbsolutePath): Option[String] = {
-    val path = cwd.resolve("project").resolve("build.properties")
-    val input = Files.newInputStream(path.toNIO)
     val props = new Properties()
-    Try { props.load(input) }
-    input.close()
+    val path = cwd.resolve("project").resolve("build.properties")
+    if (path.toFile.exists) {
+      val input = Files.newInputStream(path.toNIO)
+      Try { props.load(input) }
+      input.close()
+    }
     Option(props.getProperty("sbt.version"))
   }
 
