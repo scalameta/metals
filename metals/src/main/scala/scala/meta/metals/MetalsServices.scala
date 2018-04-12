@@ -478,7 +478,7 @@ class MetalsServices(
       path: AbsolutePath
   )(fallback: => Unit): Unit = {
     logger.info(s"File $path changed")
-    path.toNIO match {
+    path.toRelative(cwd) match {
       case Semanticdbs.File() =>
         fileSystemSemanticdbSubscriber.onNext(path)
       case CompilerConfig.File() =>
