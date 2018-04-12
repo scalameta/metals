@@ -47,10 +47,16 @@ case class SbtServer(
 object SbtServer extends LazyLogging {
   private def fail(message: String) = Task.now(Left(message))
 
+  /**
+   * Tries to read sbt version from the `project/build.properties` file.
+   *
+   * @param cwd sbt project root directory.
+   * @return version string value or `None` if anything goes wrong.
+   */
   def readVersion(cwd: AbsolutePath): Option[String] = {
     val props = new Properties()
     val path = cwd.resolve("project").resolve("build.properties")
-    if (path.toFile.exists) {
+    if (path.isFile) {
       val input = Files.newInputStream(path.toNIO)
       Try { props.load(input) }
       input.close()
@@ -129,16 +135,14 @@ object SbtServer extends LazyLogging {
    * Returns path to project/target/active.json from the base directory of an sbt build.
    */
   object ActiveJson {
-    def apply(): RelativePath =
+    private val relativePath: RelativePath =
       RelativePath("project").resolve("target").resolve("active.json")
 
     def apply(cwd: AbsolutePath): AbsolutePath =
-      cwd.resolve(ActiveJson())
+      cwd.resolve(relativePath)
 
-    def unapply(path: Path): Boolean = {
-      path.endsWith(ActiveJson().toNIO) &&
-      path.toFile.isFile
-    }
+    def unapply(path: Path): Boolean =
+      path.endsWith(relativePath.toNIO)
   }
 
   /**
@@ -147,11 +151,11 @@ object SbtServer extends LazyLogging {
   def openSocketConnection(
       cwd: AbsolutePath
   ): Either[Throwable, UnixDomainSocket] = {
-    val active = ActiveJson(cwd)
+    val path = ActiveJson(cwd)
     for {
       bytes <- {
-        if (Files.exists(active.toNIO)) Right(Files.readAllBytes(active.toNIO))
-        else Left(MissingActiveJson(active))
+        if (path.isFile) Right(Files.readAllBytes(path.toNIO))
+        else Left(MissingActiveJson(path))
       }
       parsed <- parseByteBuffer(ByteBuffer.wrap(bytes))
       activeJson <- parsed.as[ActiveJson]

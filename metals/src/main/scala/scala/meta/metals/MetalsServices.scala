@@ -424,9 +424,9 @@ class MetalsServices(
       }
   }
 
-  private def sbtExec(): Unit = sbtServer.foreach { sbt =>
+  private def sbtExec(command: String): Unit = sbtServer.foreach { sbt =>
     Sbt
-      .exec(latestConfig().sbt.command)(sbt.client)
+      .exec(command)(sbt.client)
       .onErrorRecover {
         case NonFatal(err) =>
           // TODO(olafur) figure out why this "broken pipe" is not getting
@@ -439,6 +439,7 @@ class MetalsServices(
       }
       .runAsync
   }
+  private def sbtExec(): Unit = sbtExec(latestConfig().sbt.command)
 
   private def connectToSbtServer(): Unit = {
     sbtServer.foreach(_.disconnect())
@@ -459,7 +460,7 @@ class MetalsServices(
             sbtServer = None
             showMessage.warn("Disconnected from sbt server")
         }
-        sbtExec() // run compile right away.
+        sbtExec() // run configured command right away
     }
   }
 
