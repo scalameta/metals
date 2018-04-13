@@ -137,7 +137,7 @@ class MetalsServices(
     logger.info(s"Initialized with $cwd, $params")
     LSPLogger.notifications = Some(client)
     cancelEffects = effects.map(_.subscribe())
-    loadAllRelevantFilesInThisWorkspace()
+    Workspace.initialize(cwd) { onChangedFile(_)(()) }
     val commands = WorkspaceCommand.values.map(_.entryName)
     val capabilities = ServerCapabilities(
       textDocumentSync = Some(
@@ -281,7 +281,7 @@ class MetalsServices(
             Uri(path),
             FileChangeType.Created | FileChangeType.Changed
             ) =>
-          onChangedFile(path.toAbsolutePath) { _ =>
+          onChangedFile(path.toAbsolutePath) {
             logger.warn(s"Unknown file extension for path $path")
           }
 
@@ -411,14 +411,22 @@ class MetalsServices(
       response
     case SbtConnect =>
       Task {
-        connectToSbtServer()
+        SbtServer.readVersion(cwd) match {
+          case Some(ver) if ver.startsWith("0.") || ver.startsWith("1.0") =>
+            showMessage.warn(
+              s"sbt v${ver} used in this project doesn't have server functionality. " +
+                "Upgrade to sbt v1.1+ to enjoy Metals integration with the sbt server."
+            )
+          case _ =>
+            connectToSbtServer()
+        }
         Right(Json.Null)
       }
   }
 
-  private def sbtExec(): Unit = sbtServer.foreach { sbt =>
+  private def sbtExec(command: String): Unit = sbtServer.foreach { sbt =>
     Sbt
-      .exec(latestConfig().sbt.command)(sbt.client)
+      .exec(command)(sbt.client)
       .onErrorRecover {
         case NonFatal(err) =>
           // TODO(olafur) figure out why this "broken pipe" is not getting
@@ -431,9 +439,10 @@ class MetalsServices(
       }
       .runAsync
   }
+  private def sbtExec(): Unit = sbtExec(latestConfig().sbt.command)
 
   private def connectToSbtServer(): Unit = {
-    sbtServer.foreach(_.runningServer.cancel())
+    sbtServer.foreach(_.disconnect())
     val services = SbtServer.forwardingServices(client, latestConfig)
     SbtServer.connect(cwd, services)(s.sbt).foreach {
       case Left(err) => showMessage.error(err)
@@ -451,7 +460,7 @@ class MetalsServices(
             sbtServer = None
             showMessage.warn("Disconnected from sbt server")
         }
-        sbtExec() // run compile right away.
+        sbtExec() // run configured command right away
     }
   }
 
@@ -465,22 +474,19 @@ class MetalsServices(
     Cursor(Uri(td.uri), contents, offset)
   }
 
-  private def loadAllRelevantFilesInThisWorkspace(): Unit = {
-    Workspace.initialize(cwd) { path =>
-      onChangedFile(path)(_ => ())
-    }
-  }
-
   private def onChangedFile(
       path: AbsolutePath
-  )(fallback: AbsolutePath => Unit): Unit = {
+  )(fallback: => Unit): Unit = {
     logger.info(s"File $path changed")
-    path.toNIO match {
+    path.toRelative(cwd) match {
       case Semanticdbs.File() =>
         fileSystemSemanticdbSubscriber.onNext(path)
       case CompilerConfig.File() =>
         compilerConfigSubscriber.onNext(path)
-      case _ => fallback(path)
+      case SbtServer.ActiveJson() =>
+        connectToSbtServer()
+      case _ =>
+        fallback
     }
   }
 }

@@ -6,9 +6,9 @@ import java.util.Properties
 import scala.tools.nsc.settings.ScalaVersion
 import scala.tools.nsc.settings.SpecificScalaVersion
 import com.typesafe.scalalogging.LazyLogging
-import java.nio.file.Path
 import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
+import org.langmeta.io.RelativePath
 import scala.util.control.NonFatal
 
 /**
@@ -58,12 +58,16 @@ case class CompilerConfig(
 }
 
 object CompilerConfig extends LazyLogging {
-  val Directory: Path = Paths.get(".metals").resolve("buildinfo")
+  private val relativeDir: RelativePath =
+    RelativePath(".metals").resolve("buildinfo")
+
+  def dir(cwd: AbsolutePath): AbsolutePath =
+    cwd.resolve(relativeDir)
+
   object File {
-    def unapply(path: Path): Boolean = {
-      Files.exists(path) &&
-      path.getParent.getParent.endsWith(Directory) &&
-      PathIO.extension(path) == "properties"
+    def unapply(path: RelativePath): Boolean = {
+      path.toNIO.startsWith(relativeDir.toNIO) &&
+      PathIO.extension(path.toNIO) == "properties"
     }
   }
 

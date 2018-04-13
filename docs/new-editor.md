@@ -75,6 +75,9 @@ patterns
   [here](https://github.com/scalameta/scalameta/blob/master/semanticdb/semanticdb3/semanticdb3.md)
   to learn more about SemanticDB. These files are required for goto definition,
   find references, hover and Scalafix to work.
+* `project/target/active.json`: an indicator of the running sbt server.
+  Watching this file allows metals to (re)connect to the sbt server whenever it
+  is (re)started.
 
 See the VS Code plugin
 [clientOptions](https://github.com/scalameta/metals/blob/fb166f1d81eb77ebd9c6b3ee95e65fb58a907eec/vscode-extension/src/extension.ts#L44-L54)
