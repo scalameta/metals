@@ -12,16 +12,17 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
 import scala.{meta => m}
 import com.typesafe.scalalogging.LazyLogging
-import java.nio.file.Path
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
+import org.langmeta.io.RelativePath
 
 object Semanticdbs extends LazyLogging {
 
   object File {
-    def unapply(path: Path): Boolean = PathIO.extension(path) == "semanticdb"
+    def unapply(path: RelativePath): Boolean =
+      PathIO.extension(path.toNIO) == "semanticdb"
   }
 
   def toSemanticdb(
