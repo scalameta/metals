@@ -186,7 +186,7 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |[128..130): m5 <= _root_.Methods#m5(=>A).
       |[146..148): m6 <= _root_.Methods#m6(A*).
       |[162..164): m7 <= _root_.Methods#m7({}).
-      |[184..186): m8 <= _root_.Methods#m8(?).
+      |[184..186): m8 <= _root_.Methods#m8({}).
       |[207..209): m9 <= _root_.Methods#m9().
       |[228..231): m10 <= _root_.Methods#m10(A,B).
       |[249..252): m11 <= _root_.Methods#m11().
@@ -202,7 +202,7 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |_root_.Methods#m5(=>A). => def m5
       |_root_.Methods#m6(A*). => def m6
       |_root_.Methods#m7({}). => def m7
-      |_root_.Methods#m8(?). => def m8
+      |_root_.Methods#m8({}). => def m8
       |_root_.Methods#m9(). => def m9
       |""".stripMargin
   )

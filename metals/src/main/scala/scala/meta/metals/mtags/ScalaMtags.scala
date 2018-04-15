@@ -83,6 +83,7 @@ object ScalaMtags {
       case d: Type.ByName => s"=>${getDisambiguator(d.tpe)}"
       case d: Type.Repeated => getDisambiguator(d.tpe)+"*"
       case d: Type.With => "{}"
+      case d: Type.Refine => "{}"
       case d => "?"
     }
 }
