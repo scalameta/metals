@@ -112,7 +112,7 @@ object ScalaMtags {
       case d: Type.Name => d.value
       case d: Type.Select => d.name.value
       case d: Type.Project => d.name.value
-      case d: Type.Singleton => "type"
+      case d: Type.Singleton => ".type"
       case d: Type.Apply => getDisambiguator(d.tpe)
       case d: Type.Existential => getDisambiguator(d.tpe)
       case d: Type.Annotate => getDisambiguator(d.tpe)

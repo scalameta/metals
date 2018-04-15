@@ -183,7 +183,7 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |[16..23): Methods <= Methods#
       |[32..34): m1 <= Methods#m1(Int,String).
       |[65..67): m2 <= Methods#m2(A).
-      |[91..93): m3 <= Methods#m3(type).
+      |[91..93): m3 <= Methods#m3(.type).
       |[111..113): m4 <= Methods#m4(A).
       |[128..130): m5 <= Methods#m5(=>A).
       |[146..148): m6 <= Methods#m6(A*).
@@ -203,7 +203,7 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |Methods#m12(A). => method m12
       |Methods#m12(A+1). => method m12
       |Methods#m2(A). => method m2
-      |Methods#m3(type). => method m3
+      |Methods#m3(.type). => method m3
       |Methods#m4(A). => method m4
       |Methods#m5(=>A). => method m5
       |Methods#m6(A*). => method m6
