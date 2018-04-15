@@ -19,6 +19,20 @@ object ScalaMtags {
             case _ =>
           }
         }
+        def defTerm(name: Name, paramss: Seq[Seq[Term.Param]]) = {
+          if (paramss.isEmpty)
+            super.method(name, "()", DEF)
+          else
+            for {
+              params <- paramss
+              tpes = params.flatMap(_.decltpe)
+              names = tpes.map(getDisambiguator)
+            } withOwner() {
+              val ps = names.mkString("(", ",", ")")
+              super.method(name, ps, DEF)
+            }
+          stop()
+        }
         tree match {
           case t: Source => continue()
           case t: Template => continue()
@@ -42,8 +56,8 @@ object ScalaMtags {
           case t: Defn.Object => term(t.name, OBJECT); continue()
           case t: Defn.Type => tpe(t.name, TYPE); stop()
           case t: Decl.Type => tpe(t.name, TYPE); stop()
-          case t: Defn.Def => term(t.name, DEF); stop()
-          case t: Decl.Def => term(t.name, DEF); stop()
+          case t: Defn.Def => defTerm(t.name, t.paramss)
+          case t: Decl.Def => defTerm(t.name, t.paramss)
           case t: Defn.Val => pats(t.pats, VAL); stop()
           case t: Decl.Val => pats(t.pats, VAL); stop()
           case t: Defn.Var => pats(t.pats, VAR); stop()
@@ -53,4 +67,31 @@ object ScalaMtags {
       }
     }
   }
+
+  private def getDisambiguator(t: Type): String =
+    t match {
+      case d: Type.Name => d.value
+      case d: Type.Select => d.name.value
+      case d: Type.Project => d.name.value
+      case d: Type.Singleton => "type"
+      case d: Type.Apply => getDisambiguator(d.tpe)
+      case d: Type.Existential => getDisambiguator(d.tpe)
+      case d: Type.Annotate => getDisambiguator(d.tpe)
+      case d: Type.ApplyInfix => getDisambiguator(d.op)
+      case d: Type.Lambda => getDisambiguator(d.tpe)
+      case d: Type.Method =>
+        d.paramss.flatten
+          .flatMap(param => param.decltpe)
+          .map(getDisambiguator)
+          .mkString(",")
+      case d: Type.Function => d.params.map(getDisambiguator).mkString(",")
+      case d: Type.ImplicitFunction =>
+        d.params.map(getDisambiguator).mkString(",")
+      case d: Type.Tuple => d.args.map(getDisambiguator).mkString(",")
+      case d: Type.ByName => s"=>${getDisambiguator(d.tpe)}"
+      case d: Type.Repeated => getDisambiguator(d.tpe) + "*"
+      case d: Type.With => "{}"
+      case d: Type.Refine => "{}"
+      case d => "?"
+    }
 }
