@@ -24,29 +24,29 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |
       |Names:
       |[22..23): D <= a.b.c.D.
-      |[33..34): e <= a.b.c.D.e.
+      |[33..34): e <= a.b.c.D.e().
       |[61..62): f <= a.b.c.D.f.
       |[74..75): g <= a.b.c.D.g.
       |[89..90): H <= a.b.c.D.H#
-      |[97..98): x <= a.b.c.D.H#x.
+      |[97..98): x <= a.b.c.D.H#x().
       |[114..115): I <= a.b.c.D.I#
-      |[127..128): x <= a.b.c.D.I#x.
+      |[127..128): x <= a.b.c.D.I#x().
       |[143..144): y <= a.b.c.D.I#y.
       |[159..160): z <= a.b.c.D.I#z.
       |[181..182): J <= a.b.c.D.J.
-      |[189..190): k <= a.b.c.D.J.k.
+      |[189..190): k <= a.b.c.D.J.k().
       |
       |Symbols:
       |a.b.c.D. => object D
       |a.b.c.D.H# => class H
-      |a.b.c.D.H#x. => method x
+      |a.b.c.D.H#x(). => method x
       |a.b.c.D.I# => trait I
-      |a.b.c.D.I#x. => method x
+      |a.b.c.D.I#x(). => method x
       |a.b.c.D.I#y. => val method y
       |a.b.c.D.I#z. => var method z
       |a.b.c.D.J. => object J
-      |a.b.c.D.J.k. => method k
-      |a.b.c.D.e. => method e
+      |a.b.c.D.J.k(). => method k
+      |a.b.c.D.e(). => method e
       |a.b.c.D.f. => val method f
       |a.b.c.D.g. => var method g
       """.stripMargin
@@ -66,12 +66,12 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |Names:
       |[16..17): K <= K.
       |[16..17): K <= K.package.
-      |[26..27): l <= K.package.l.
+      |[26..27): l <= K.package.l().
       |
       |Symbols:
       |K. => packageobject K
       |K.package. => object package
-      |K.package.l. => method l
+      |K.package.l(). => method l
     """.stripMargin
   )
 
@@ -153,6 +153,57 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |A# => class A
       |A#(a) => param a
       |A#(b) => param b
+      |""".stripMargin
+  )
+
+  check(
+    "methods.scala",
+    """
+      |abstract class Methods {
+      |  def m1(a: Int, b: String): Int
+      |  def m2(a: A[Int]): Unit
+      |  def m3(a: A.type)
+      |  def m4(a: b.A)
+      |  def m5(a: => A)
+      |  def m6(a: A*)
+      |  def m7(a: A with B)
+      |  def m8(a: {def b:B})
+      |  def m9(a: () => A)
+      |  def m10(a: (A, B))
+      |  def m11()
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Scala
+      |
+      |Names:
+      |[16..23): Methods <= Methods#
+      |[32..34): m1 <= Methods#m1(Int,String).
+      |[65..67): m2 <= Methods#m2(A).
+      |[91..93): m3 <= Methods#m3(type).
+      |[111..113): m4 <= Methods#m4(A).
+      |[128..130): m5 <= Methods#m5(=>A).
+      |[146..148): m6 <= Methods#m6(A*).
+      |[162..164): m7 <= Methods#m7({}).
+      |[184..186): m8 <= Methods#m8({}).
+      |[207..209): m9 <= Methods#m9().
+      |[228..231): m10 <= Methods#m10(A,B).
+      |[249..252): m11 <= Methods#m11().
+      |
+      |Symbols:
+      |Methods# => class Methods
+      |Methods#m1(Int,String). => method m1
+      |Methods#m10(A,B). => method m10
+      |Methods#m11(). => method m11
+      |Methods#m2(A). => method m2
+      |Methods#m3(type). => method m3
+      |Methods#m4(A). => method m4
+      |Methods#m5(=>A). => method m5
+      |Methods#m6(A*). => method m6
+      |Methods#m7({}). => method m7
+      |Methods#m8({}). => method m8
+      |Methods#m9(). => method m9
       |""".stripMargin
   )
 }
