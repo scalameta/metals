@@ -19,6 +19,17 @@ object ScalaMtags {
             case _ =>
           }
         }
+        def defTerm(name: Name, paramss: Seq[Seq[Term.Param]]) = {
+          for {
+            params <- paramss
+            tpes = params.flatMap(_.decltpe)
+            names = tpes.map(getDisambiguator)
+          } withOwner() {
+            val params = names.mkString("(", ",", ")")
+            super.method(name, params, DEF)
+          }
+          stop()
+        }
         tree match {
           case t: Source => continue()
           case t: Template => continue()
@@ -42,28 +53,8 @@ object ScalaMtags {
           case t: Defn.Object => term(t.name, OBJECT); continue()
           case t: Defn.Type => tpe(t.name, TYPE); stop()
           case t: Decl.Type => tpe(t.name, TYPE); stop()
-          case t: Defn.Def => 
-            for {
-              params <- t.paramss
-              tpes = params.flatMap(_.decltpe)
-              names = tpes.map{
-                case d: Type.Name => d
-              }
-            } withOwner() {
-              val params = names.mkString("(", ",", ")")
-              super.method(t.name, params, DEF)
-            }
-            stop()
-          case t: Decl.Def => 
-            for {
-              params <- t.paramss
-              tpes = params.flatMap(_.decltpe)
-              names = tpes.map(getDisambiguator)
-            } withOwner() {
-              val params = names.mkString("(", ",", ")")
-              super.method(t.name, params, DEF)
-            }
-            stop()
+          case t: Defn.Def => defTerm(t.name, t.paramss)
+          case t: Decl.Def => defTerm(t.name, t.paramss)
           case t: Defn.Val => pats(t.pats, VAL); stop()
           case t: Decl.Val => pats(t.pats, VAL); stop()
           case t: Defn.Var => pats(t.pats, VAR); stop()
