@@ -58,9 +58,7 @@ object ScalaMtags {
             for {
               params <- t.paramss
               tpes = params.flatMap(_.decltpe)
-              names = tpes.map{
-                case d: Type.Name => d
-              }
+              names = tpes.map(getDisambiguator)
             } withOwner() {
               val params = names.mkString("(", ",", ")")
               super.method(t.name, params, DEF)
@@ -75,4 +73,25 @@ object ScalaMtags {
       }
     }
   }
+
+  private def getDisambiguator(t: Type): String =
+   t match {
+      case d: Type.Name => d.value
+      case d: Type.Select => d.name.value
+      case d: Type.Project => d.name.value
+      case d: Type.Singleton => "type"
+      case d: Type.Apply => getDisambiguator(d.tpe)
+      case d: Type.Existential => getDisambiguator(d.tpe)
+      case d: Type.Annotate => getDisambiguator(d.tpe)
+      case d: Type.ApplyInfix => getDisambiguator(d.op)
+      case d: Type.Lambda => getDisambiguator(d.tpe)
+      case d: Type.Method => d.paramss.flatten.flatMap(param => param.decltpe).map(getDisambiguator).mkString(",")
+      case d: Type.Function => d.params.map(getDisambiguator).mkString(",")
+      case d: Type.ImplicitFunction => d.params.map(getDisambiguator).mkString(",")
+      case d: Type.Tuple => d.args.map(getDisambiguator).mkString(",")
+      case d: Type.ByName => s"=>${getDisambiguator(d.tpe)}"
+      case d: Type.Repeated => getDisambiguator(d.tpe)+"*"
+      case d: Type.With => "{}"
+      case d => "?"
+    }
 }

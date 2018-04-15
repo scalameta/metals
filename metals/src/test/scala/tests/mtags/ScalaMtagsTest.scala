@@ -161,7 +161,16 @@ object ScalaMtagsTest extends BaseMtagsTest {
     """
       |abstract class Methods {
       |  def m1(a: Int, b: String): Int
-      |  def m2(a: Int, b: String): Int = ???
+      |  def m2(a: A[Int]): Unit
+      |  def m3(a: A.type)
+      |  def m4(a: b.A)
+      |  def m5(a: => A)
+      |  def m6(a: A*)
+      |  def m7(a: A with B)
+      |  def m8(a: {def b:B})
+      |  def m9(a: () => A)
+      |  def m10(a: (A, B))
+      |  def m11()
       |}
     """.stripMargin,
     """
@@ -171,12 +180,30 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |Names:
       |[16..23): Methods <= _root_.Methods#
       |[32..34): m1 <= _root_.Methods#m1(Int,String).
-      |[65..67): m2 <= _root_.Methods#m2(Int,String).
+      |[65..67): m2 <= _root_.Methods#m2(A).
+      |[91..93): m3 <= _root_.Methods#m3(type).
+      |[111..113): m4 <= _root_.Methods#m4(A).
+      |[128..130): m5 <= _root_.Methods#m5(=>A).
+      |[146..148): m6 <= _root_.Methods#m6(A*).
+      |[162..164): m7 <= _root_.Methods#m7({}).
+      |[184..186): m8 <= _root_.Methods#m8(?).
+      |[207..209): m9 <= _root_.Methods#m9().
+      |[228..231): m10 <= _root_.Methods#m10(A,B).
+      |[249..252): m11 <= _root_.Methods#m11().
       |
       |Symbols:
       |_root_.Methods# => class Methods
       |_root_.Methods#m1(Int,String). => def m1
-      |_root_.Methods#m2(Int,String). => def m2
+      |_root_.Methods#m10(A,B). => def m10
+      |_root_.Methods#m11(). => def m11
+      |_root_.Methods#m2(A). => def m2
+      |_root_.Methods#m3(type). => def m3
+      |_root_.Methods#m4(A). => def m4
+      |_root_.Methods#m5(=>A). => def m5
+      |_root_.Methods#m6(A*). => def m6
+      |_root_.Methods#m7({}). => def m7
+      |_root_.Methods#m8(?). => def m8
+      |_root_.Methods#m9(). => def m9
       |""".stripMargin
   )
 }
