@@ -4,7 +4,6 @@ import java.io.IOException
 import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.Properties
 import scala.meta.metals.ActiveJson
 import scala.meta.metals.MissingActiveJson
@@ -144,8 +143,8 @@ object SbtServer extends LazyLogging {
     def apply(cwd: AbsolutePath): AbsolutePath =
       cwd.resolve(relativePath)
 
-    def unapply(path: Path): Boolean =
-      path.endsWith(relativePath.toNIO)
+    def unapply(path: RelativePath): Boolean =
+      path == relativePath
   }
 
   /**
