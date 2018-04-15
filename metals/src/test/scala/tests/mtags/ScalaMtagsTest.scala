@@ -156,7 +156,7 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |""".stripMargin
   )
 
-    check(
+  check(
     "methods.scala",
     """
       |abstract class Methods {
