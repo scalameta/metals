@@ -33,6 +33,7 @@ import com.typesafe.scalalogging.LazyLogging
 import io.circe.Json
 import io.github.soc.directories.ProjectDirectories
 import monix.eval.Task
+import monix.eval.Coeval
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
@@ -441,24 +442,18 @@ class MetalsServices(
   }
   private def sbtExec(): Unit = sbtExec(latestConfig().sbt.command)
 
-  // FIXME
-  private lazy val loadPluginClasspath = {
-    val loadPluginVersion = "0.1.0+2-496ac670"
-    import scala.sys.process._
-     Seq(
-      "coursier",
-      "fetch",
-      "--classpath",
-      s"ch.epfl.scala:load-plugin_2.12:${loadPluginVersion}",
-    ).!!
+  private val loadPluginJars: Coeval[List[AbsolutePath]] = Coeval.evalOnce {
+    Jars.fetch("ch.epfl.scala", "load-plugin_2.12", "0.1.0+2-496ac670")
   }
 
   private def sbtExecWithMetalsPlugin(commands: String*): Unit = {
-    val metalsPluginVersion = "0.1.0-M1"
+    val metalsPluginModule =
+      ModuleID("org.scalameta", "sbt-metals", "0.1.0-M1+84-a3ffb91c")
     val metalsPluginRef = "scala.meta.sbt.MetalsPlugin"
+    val loadPluginClasspath = loadPluginJars.value.mkString(":")
     val loadCommands = Seq(
       s"apply -cp ${loadPluginClasspath} ch.epfl.scala.loadplugin.LoadPlugin",
-      s"""if-absent ${metalsPluginRef} "load-plugin org.scalameta:sbt-metals:${metalsPluginVersion} ${metalsPluginRef}"""",
+      s"""if-absent ${metalsPluginRef} "load-plugin ${metalsPluginModule} ${metalsPluginRef}"""",
     )
     sbtExec((loadCommands ++ commands): _*)
   }
