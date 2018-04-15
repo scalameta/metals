@@ -39,8 +39,18 @@ trait MtagsIndexer {
       kind,
       properties
     )
-  def method(name: Name, disambiguator: String, kind: Kind, properties: Int): Unit =
-    addSignature(Signature.Method(name.value, disambiguator), name.pos, kind, properties)
+  def method(
+      name: Name,
+      disambiguator: String,
+      kind: Kind,
+      properties: Int
+  ): Unit =
+    addSignature(
+      Signature.Method(name.value, disambiguator),
+      name.pos,
+      kind,
+      properties
+    )
   def tpe(name: String, pos: m.Position, kind: Kind, properties: Int): Unit =
     addSignature(Signature.Type(name), pos, kind, properties)
   def tpe(name: Name, kind: Kind, properties: Int): Unit =

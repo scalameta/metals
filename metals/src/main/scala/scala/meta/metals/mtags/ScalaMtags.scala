@@ -19,7 +19,10 @@ object ScalaMtags {
         def stop(): Unit = ()
         def pats(ps: List[Pat], kind: Kind, properties: Int): Unit = {
           ps.foreach {
-            case Pat.Var(name) => withOwner() { term(name, kind, properties) }
+            case Pat.Var(name) =>
+              withOwner() {
+                method(name, "()", kind, properties)
+              }
             case _ =>
           }
         }
