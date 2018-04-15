@@ -155,4 +155,28 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |_root_.A#(b) => val param b
       |""".stripMargin
   )
+
+    check(
+    "methods.scala",
+    """
+      |abstract class Methods {
+      |  def m1(a: Int, b: String): Int
+      |  def m2(a: Int, b: String): Int = ???
+      |}
+    """.stripMargin,
+    """
+      |Language:
+      |Scala212
+      |
+      |Names:
+      |[16..23): Methods <= _root_.Methods#
+      |[32..34): m1 <= _root_.Methods#m1(Int,String).
+      |[65..67): m2 <= _root_.Methods#m2(Int,String).
+      |
+      |Symbols:
+      |_root_.Methods# => class Methods
+      |_root_.Methods#m1(Int,String). => def m1
+      |_root_.Methods#m2(Int,String). => def m2
+      |""".stripMargin
+  )
 }

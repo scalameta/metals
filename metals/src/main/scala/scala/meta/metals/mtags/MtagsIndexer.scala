@@ -49,6 +49,9 @@ trait MtagsIndexer {
       pkg(qual)
       currentOwner = symbol(Signature.Term(name))
   }
+  def method(name: Name, disambiguator: String, flags: Long): Unit =
+    addSignature(Signature.Method(name.value, disambiguator), name.pos, flags)
+
   private val names = List.newBuilder[ResolvedName]
   private val symbols = List.newBuilder[ResolvedSymbol]
   private def addSignature(

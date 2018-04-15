@@ -42,8 +42,30 @@ object ScalaMtags {
           case t: Defn.Object => term(t.name, OBJECT); continue()
           case t: Defn.Type => tpe(t.name, TYPE); stop()
           case t: Decl.Type => tpe(t.name, TYPE); stop()
-          case t: Defn.Def => term(t.name, DEF); stop()
-          case t: Decl.Def => term(t.name, DEF); stop()
+          case t: Defn.Def => 
+            for {
+              params <- t.paramss
+              tpes = params.flatMap(_.decltpe)
+              names = tpes.map{
+                case d: Type.Name => d
+              }
+            } withOwner() {
+              val params = names.mkString("(", ",", ")")
+              super.method(t.name, params, DEF)
+            }
+            stop()
+          case t: Decl.Def => 
+            for {
+              params <- t.paramss
+              tpes = params.flatMap(_.decltpe)
+              names = tpes.map{
+                case d: Type.Name => d
+              }
+            } withOwner() {
+              val params = names.mkString("(", ",", ")")
+              super.method(t.name, params, DEF)
+            }
+            stop()
           case t: Defn.Val => pats(t.pats, VAL); stop()
           case t: Decl.Val => pats(t.pats, VAL); stop()
           case t: Defn.Var => pats(t.pats, VAR); stop()
