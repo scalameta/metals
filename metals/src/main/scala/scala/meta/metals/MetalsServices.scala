@@ -424,9 +424,9 @@ class MetalsServices(
       }
   }
 
-  private def sbtExec(command: String): Unit = sbtServer.foreach { sbt =>
+  private def sbtExec(commands: String*): Unit = sbtServer.foreach { sbt =>
     Sbt
-      .exec(command)(sbt.client)
+      .exec(commands.mkString("; ", "; ", ""))(sbt.client)
       .onErrorRecover {
         case NonFatal(err) =>
           // TODO(olafur) figure out why this "broken pipe" is not getting
@@ -440,6 +440,28 @@ class MetalsServices(
       .runAsync
   }
   private def sbtExec(): Unit = sbtExec(latestConfig().sbt.command)
+
+  // FIXME
+  private lazy val loadPluginClasspath = {
+    val loadPluginVersion = "0.1.0+2-496ac670"
+    import scala.sys.process._
+     Seq(
+      "coursier",
+      "fetch",
+      "--classpath",
+      s"ch.epfl.scala:load-plugin_2.12:${loadPluginVersion}",
+    ).!!
+  }
+
+  private def sbtExecWithMetalsPlugin(commands: String*): Unit = {
+    val metalsPluginVersion = "0.1.0-M1"
+    val metalsPluginRef = "scala.meta.sbt.MetalsPlugin"
+    val loadCommands = Seq(
+      s"apply -cp ${loadPluginClasspath} ch.epfl.scala.loadplugin.LoadPlugin",
+      s"""if-absent ${metalsPluginRef} "load-plugin org.scalameta:sbt-metals:${metalsPluginVersion} ${metalsPluginRef}"""",
+    )
+    sbtExec((loadCommands ++ commands): _*)
+  }
 
   private def connectToSbtServer(): Unit = {
     sbtServer.foreach(_.disconnect())
@@ -460,6 +482,7 @@ class MetalsServices(
             sbtServer = None
             showMessage.warn("Disconnected from sbt server")
         }
+        sbtExecWithMetalsPlugin("semanticdbEnable")
         sbtExec() // run configured command right away
     }
   }
