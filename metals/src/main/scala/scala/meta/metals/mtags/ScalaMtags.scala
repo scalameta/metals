@@ -2,6 +2,7 @@ package scala.meta.metals.mtags
 
 import scala.meta._
 import org.langmeta.inputs.Input
+import scala.collection.mutable
 import scala.meta.internal.semanticdb3.SymbolInformation.Kind
 import scala.meta.internal.semanticdb3.Language
 import scala.meta.internal.semanticdb3.SymbolInformation.Property
@@ -22,23 +23,21 @@ object ScalaMtags {
             case _ =>
           }
         }
-        def defTerm(name: Name, paramss: Seq[Seq[Term.Param]]) = {
-          if (paramss.isEmpty)
-            super.method(name, "()", Kind.METHOD, 0)
-          else
-            for {
-              params <- paramss
-              tpes = params.flatMap(_.decltpe)
-              names = tpes.map(getDisambiguator)
-            } withOwner() {
-              val ps = names.mkString("(", ",", ")")
-              super.method(name, ps, Kind.METHOD, 0)
-            }
-          stop()
-        }
         tree match {
           case _: Source => continue()
-          case _: Template => continue()
+          case t: Template =>
+            // In case of conflicting disambiguators, append +N to N-th conflict.
+            // https://github.com/scalameta/scalameta/blob/master/semanticdb/semanticdb3/semanticdb3.md#symbol
+            val disambiguatorConflicts =
+              mutable.Map.empty[Signature.Method, Int]
+            t.stats.foreach {
+              case t: Defn.Def =>
+                defTerm(disambiguatorConflicts, t.name, t.paramss)
+              case t: Decl.Def =>
+                defTerm(disambiguatorConflicts, t.name, t.paramss)
+              case _ =>
+            }
+            continue()
           case t: Pkg => pkg(t.ref); continue()
           case t: Pkg.Object =>
             term(t.name, Kind.PACKAGE_OBJECT, 0);
@@ -61,10 +60,6 @@ object ScalaMtags {
             tpe(t.name, Kind.TYPE, 0); stop()
           case t: Decl.Type =>
             tpe(t.name, Kind.TYPE, 0); stop()
-          case t: Defn.Def =>
-            defTerm(t.name, t.paramss)
-          case t: Decl.Def =>
-            defTerm(t.name, t.paramss)
           case t: Defn.Val =>
             pats(t.pats, Kind.METHOD, Property.VAL.value); stop()
           case t: Decl.Val =>
@@ -76,6 +71,36 @@ object ScalaMtags {
           case _ => stop()
         }
       }
+      def defTerm(
+          overloads: mutable.Map[Signature.Method, Int],
+          name: Name,
+          paramss: Seq[Seq[Term.Param]]
+      ): Unit =
+        withOwner() {
+          if (paramss.isEmpty) {
+            super.method(name, "()", Kind.METHOD, 0)
+          } else {
+            for {
+              params <- paramss
+              tpes = params.flatMap(_.decltpe)
+              names = tpes.map(getDisambiguator)
+            } {
+              val disambiguator = names.mkString(",")
+              val signature = Signature.Method(name.value, disambiguator)
+              val counter = overloads.getOrElseUpdate(signature, 0)
+              overloads(signature) = counter + 1
+              val finalDisambiguator: String =
+                if (counter == 0) disambiguator
+                else disambiguator + "+" + counter
+              super.method(
+                name,
+                "(" + finalDisambiguator + ")",
+                Kind.METHOD,
+                0
+              )
+            }
+          }
+        }
     }
   }
 

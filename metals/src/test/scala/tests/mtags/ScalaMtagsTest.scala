@@ -171,6 +171,8 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |  def m9(a: () => A)
       |  def m10(a: (A, B))
       |  def m11()
+      |  def m12(a: b.A)
+      |  def m12(a: c.A)
       |}
     """.stripMargin,
     """
@@ -190,12 +192,16 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |[207..209): m9 <= Methods#m9().
       |[228..231): m10 <= Methods#m10(A,B).
       |[249..252): m11 <= Methods#m11().
+      |[261..264): m12 <= Methods#m12(A).
+      |[279..282): m12 <= Methods#m12(A+1).
       |
       |Symbols:
       |Methods# => class Methods
       |Methods#m1(Int,String). => method m1
       |Methods#m10(A,B). => method m10
       |Methods#m11(). => method m11
+      |Methods#m12(A). => method m12
+      |Methods#m12(A+1). => method m12
       |Methods#m2(A). => method m2
       |Methods#m3(type). => method m3
       |Methods#m4(A). => method m4
