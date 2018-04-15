@@ -20,14 +20,17 @@ object ScalaMtags {
           }
         }
         def defTerm(name: Name, paramss: Seq[Seq[Term.Param]]) = {
-          for {
-            params <- paramss
-            tpes = params.flatMap(_.decltpe)
-            names = tpes.map(getDisambiguator)
-          } withOwner() {
-            val params = names.mkString("(", ",", ")")
-            super.method(name, params, DEF)
-          }
+          if (paramss.isEmpty)
+            super.method(name, "()", DEF)
+          else
+            for {
+              params <- paramss
+              tpes = params.flatMap(_.decltpe)
+              names = tpes.map(getDisambiguator)
+            } withOwner() {
+              val ps = names.mkString("(", ",", ")")
+              super.method(name, ps, DEF)
+            }
           stop()
         }
         tree match {

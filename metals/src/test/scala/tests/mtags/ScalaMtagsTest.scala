@@ -24,29 +24,29 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |
       |Names:
       |[22..23): D <= _root_.a.b.c.D.
-      |[33..34): e <= _root_.a.b.c.D.e.
+      |[33..34): e <= _root_.a.b.c.D.e().
       |[61..62): f <= _root_.a.b.c.D.f.
       |[74..75): g <= _root_.a.b.c.D.g.
       |[89..90): H <= _root_.a.b.c.D.H#
-      |[97..98): x <= _root_.a.b.c.D.H#x.
+      |[97..98): x <= _root_.a.b.c.D.H#x().
       |[114..115): I <= _root_.a.b.c.D.I#
-      |[127..128): x <= _root_.a.b.c.D.I#x.
+      |[127..128): x <= _root_.a.b.c.D.I#x().
       |[143..144): y <= _root_.a.b.c.D.I#y.
       |[159..160): z <= _root_.a.b.c.D.I#z.
       |[181..182): J <= _root_.a.b.c.D.J.
-      |[189..190): k <= _root_.a.b.c.D.J.k.
+      |[189..190): k <= _root_.a.b.c.D.J.k().
       |
       |Symbols:
       |_root_.a.b.c.D. => object D
       |_root_.a.b.c.D.H# => class H
-      |_root_.a.b.c.D.H#x. => def x
+      |_root_.a.b.c.D.H#x(). => def x
       |_root_.a.b.c.D.I# => trait I
-      |_root_.a.b.c.D.I#x. => def x
+      |_root_.a.b.c.D.I#x(). => def x
       |_root_.a.b.c.D.I#y. => val y
       |_root_.a.b.c.D.I#z. => var z
       |_root_.a.b.c.D.J. => object J
-      |_root_.a.b.c.D.J.k. => def k
-      |_root_.a.b.c.D.e. => def e
+      |_root_.a.b.c.D.J.k(). => def k
+      |_root_.a.b.c.D.e(). => def e
       |_root_.a.b.c.D.f. => val f
       |_root_.a.b.c.D.g. => var g
       """.stripMargin
@@ -66,12 +66,12 @@ object ScalaMtagsTest extends BaseMtagsTest {
       |Names:
       |[16..17): K <= _root_.K.
       |[16..17): K <= _root_.K.package.
-      |[26..27): l <= _root_.K.package.l.
+      |[26..27): l <= _root_.K.package.l().
       |
       |Symbols:
       |_root_.K. => packageobject K
       |_root_.K.package. => object package
-      |_root_.K.package.l. => def l
+      |_root_.K.package.l(). => def l
     """.stripMargin
   )
 
