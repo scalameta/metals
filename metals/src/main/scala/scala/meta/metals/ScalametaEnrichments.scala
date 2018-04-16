@@ -66,6 +66,8 @@ object ScalametaEnrichments {
       case _: Defn.Object => SymbolKind.Module
       case _: Pkg.Object => SymbolKind.Namespace
       case _: Pkg => SymbolKind.Package
+      case _: Type.Param => SymbolKind.TypeParameter
+      case _: Lit.Null => SymbolKind.Null
       // TODO(alexey) are these kinds useful?
       // case ??? => SymbolKind.Enum
       // case ??? => SymbolKind.String
