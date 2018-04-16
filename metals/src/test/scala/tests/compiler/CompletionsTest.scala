@@ -166,6 +166,31 @@ object CompletionsTest extends CompilerSuite {
   )
 
   check(
+    "type parameter",
+    """
+      |trait Hmm[ABC] {
+      |  val a: AB<<>>
+      |}
+    """.stripMargin,
+    label = "ABC",
+    kind = CompletionItemKind.TypeParameter,
+    detail = ""
+  )
+
+  check(
+    "function",
+    """
+      |object a {
+      |  val xyz: Int => String => Boolean = _ => _ => false
+      |  xy<<>>
+      |}
+    """.stripMargin,
+    label = "xyz",
+    kind = CompletionItemKind.Function,
+    detail = ": Int => (String => Boolean)"
+  )
+
+  check(
     "sorting",
     """
       |case class User(name: String, age: Int) {

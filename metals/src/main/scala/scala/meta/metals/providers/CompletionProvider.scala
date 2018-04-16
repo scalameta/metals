@@ -19,14 +19,15 @@ object CompletionProvider extends LazyLogging {
   ): CompletionList = {
     import compiler._
 
+    val functionTraitRegex = """^scala\.Function([0-9]|1[0-9]|2[0-2])$""".r
     def isFunction(symbol: Symbol): Boolean = {
-      val functionTraitRegex = """^scala\.Function([0-9]|1[0-9]|2[0-2])$""".r
       val typeSymbolFullName = symbol.info.finalResultType.typeSymbol.fullName
       functionTraitRegex.findFirstIn(typeSymbolFullName).isDefined
     }
 
     def completionItemKind(r: CompletionResult#M): CompletionItemKind = {
       val symbol = r.sym
+      val symbolIsFunction = isFunction(symbol)
       if (symbol.hasPackageFlag) CompletionItemKind.Module
       else if (symbol.isPackageObject) CompletionItemKind.Module
       else if (symbol.isModuleOrModuleClass) CompletionItemKind.Module
@@ -34,10 +35,10 @@ object CompletionProvider extends LazyLogging {
       else if (symbol.isClass) CompletionItemKind.Class
       else if (symbol.isMethod) CompletionItemKind.Method
       else if (symbol.isCaseAccessor) CompletionItemKind.Field
-      else if (symbol.isVal) CompletionItemKind.Value
-      else if (symbol.isVar) CompletionItemKind.Variable
+      else if (symbol.isVal && !symbolIsFunction) CompletionItemKind.Value
+      else if (symbol.isVar && !symbolIsFunction) CompletionItemKind.Variable
       else if (symbol.isTypeParameterOrSkolem) CompletionItemKind.TypeParameter
-      else if (isFunction(symbol)) CompletionItemKind.Function
+      else if (symbolIsFunction) CompletionItemKind.Function
       else CompletionItemKind.Value
     }
 
