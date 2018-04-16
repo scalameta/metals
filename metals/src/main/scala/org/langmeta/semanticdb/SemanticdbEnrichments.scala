@@ -9,6 +9,8 @@ object SemanticdbEnrichments {
     def toSymbolKind: SymbolKind =
       if (isClass) SymbolKind.Class
       else if (isTrait) SymbolKind.Interface
+      else if (isTypeParam) SymbolKind.TypeParameter
+      else if (isObject) SymbolKind.Object
       else SymbolKind.Module
   }
 }
