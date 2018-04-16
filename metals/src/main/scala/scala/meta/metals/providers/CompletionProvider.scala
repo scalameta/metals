@@ -19,10 +19,10 @@ object CompletionProvider extends LazyLogging {
   ): CompletionList = {
     import compiler._
 
-    val functionTraitRegex = """^scala\.Function([0-9]|1[0-9]|2[0-2])$""".r
     def isFunction(symbol: Symbol): Boolean = {
-      val typeSymbolFullName = symbol.info.finalResultType.typeSymbol.fullName
-      functionTraitRegex.findFirstIn(typeSymbolFullName).isDefined
+      compiler.definitions.isFunctionSymbol(
+        symbol.info.finalResultType.typeSymbol
+      )
     }
 
     def completionItemKind(r: CompletionResult#M): CompletionItemKind = {
