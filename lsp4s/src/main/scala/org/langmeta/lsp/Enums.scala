@@ -39,6 +39,13 @@ case object CompletionItemKind
   case object Color extends CompletionItemKind(16)
   case object File extends CompletionItemKind(17)
   case object Reference extends CompletionItemKind(18)
+  case object Folder extends CompletionItemKind(19)
+  case object EnumMember extends CompletionItemKind(20)
+  case object Constant extends CompletionItemKind(21)
+  case object Struct extends CompletionItemKind(22)
+  case object Event extends CompletionItemKind(23)
+  case object Operator extends CompletionItemKind(24)
+  case object TypeParameter extends CompletionItemKind(25)
 
   val values = findValues
 }
@@ -85,6 +92,14 @@ case object SymbolKind
   case object Number extends SymbolKind(16)
   case object Boolean extends SymbolKind(17)
   case object Array extends SymbolKind(18)
+  case object Object extends SymbolKind(19)
+  case object Key extends SymbolKind(20)
+  case object Null extends SymbolKind(21)
+  case object EnumMember extends SymbolKind(22)
+  case object Struct extends SymbolKind(23)
+  case object Event extends SymbolKind(24)
+  case object Operator extends SymbolKind(25)
+  case object TypeParameter extends SymbolKind(26)
 
   val values = findValues
 }
