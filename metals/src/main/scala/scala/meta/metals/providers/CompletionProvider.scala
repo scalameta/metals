@@ -19,16 +19,26 @@ object CompletionProvider extends LazyLogging {
   ): CompletionList = {
     import compiler._
 
+    def isFunction(symbol: Symbol): Boolean = {
+      compiler.definitions.isFunctionSymbol(
+        symbol.info.finalResultType.typeSymbol
+      )
+    }
+
     def completionItemKind(r: CompletionResult#M): CompletionItemKind = {
-      if (r.sym.hasPackageFlag) CompletionItemKind.Module
-      else if (r.sym.isPackageObject) CompletionItemKind.Module
-      else if (r.sym.isModuleOrModuleClass) CompletionItemKind.Module
-      else if (r.sym.isTraitOrInterface) CompletionItemKind.Interface
-      else if (r.sym.isClass) CompletionItemKind.Class
-      else if (r.sym.isMethod) CompletionItemKind.Method
-      else if (r.sym.isCaseAccessor) CompletionItemKind.Field
-      else if (r.sym.isVal) CompletionItemKind.Value
-      else if (r.sym.isVar) CompletionItemKind.Variable
+      val symbol = r.sym
+      val symbolIsFunction = isFunction(symbol)
+      if (symbol.hasPackageFlag) CompletionItemKind.Module
+      else if (symbol.isPackageObject) CompletionItemKind.Module
+      else if (symbol.isModuleOrModuleClass) CompletionItemKind.Module
+      else if (symbol.isTraitOrInterface) CompletionItemKind.Interface
+      else if (symbol.isClass) CompletionItemKind.Class
+      else if (symbol.isMethod) CompletionItemKind.Method
+      else if (symbol.isCaseAccessor) CompletionItemKind.Field
+      else if (symbol.isVal && !symbolIsFunction) CompletionItemKind.Value
+      else if (symbol.isVar && !symbolIsFunction) CompletionItemKind.Variable
+      else if (symbol.isTypeParameterOrSkolem) CompletionItemKind.TypeParameter
+      else if (symbolIsFunction) CompletionItemKind.Function
       else CompletionItemKind.Value
     }
 
