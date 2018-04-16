@@ -178,10 +178,23 @@ object CompletionsTest extends CompilerSuite {
   )
 
   check(
-    "function",
+    "function val",
     """
       |object a {
       |  val xyz: Int => String => Boolean = _ => _ => false
+      |  xy<<>>
+      |}
+    """.stripMargin,
+    label = "xyz",
+    kind = CompletionItemKind.Function,
+    detail = ": Int => (String => Boolean)"
+  )
+
+  check(
+    "function var",
+    """
+      |object a {
+      |  var xyz: Int => String => Boolean = _ => _ => false
       |  xy<<>>
       |}
     """.stripMargin,
