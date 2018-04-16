@@ -46,7 +46,7 @@ case object CompletionItemKind
   case object Event extends CompletionItemKind(23)
   case object Operator extends CompletionItemKind(24)
   case object TypeParameter extends CompletionItemKind(25)
-  
+
   val values = findValues
 }
 
@@ -92,7 +92,7 @@ case object SymbolKind
   case object Number extends SymbolKind(16)
   case object Boolean extends SymbolKind(17)
   case object Array extends SymbolKind(18)
-	case object Object extends SymbolKind(19)
+  case object Object extends SymbolKind(19)
   case object Key extends SymbolKind(20)
   case object Null extends SymbolKind(21)
   case object EnumMember extends SymbolKind(22)
@@ -100,7 +100,7 @@ case object SymbolKind
   case object Event extends SymbolKind(24)
   case object Operator extends SymbolKind(25)
   case object TypeParameter extends SymbolKind(26)
-  
+
   val values = findValues
 }
 
