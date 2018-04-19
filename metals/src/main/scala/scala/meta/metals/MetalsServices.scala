@@ -448,8 +448,11 @@ class MetalsServices(
   }
 
   private def sbtExecWithMetalsPlugin(commands: String*): Unit = {
-    val metalsPluginModule =
-      ModuleID("org.scalameta", "sbt-metals", "0.1.0-M1+84-a3ffb91c")
+    val metalsPluginModule = ModuleID(
+      "org.scalameta",
+      "sbt-metals",
+      scala.meta.metals.internal.BuildInfo.version
+    )
     val metalsPluginRef = "scala.meta.sbt.MetalsPlugin"
     val loadPluginClasspath = loadPluginJars.value.mkString(File.pathSeparator)
     val loadCommands = Seq(
