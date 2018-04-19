@@ -135,7 +135,8 @@ lazy val metals = project
     fork in Test := true, // required for jni interrop with leveldb.
     buildInfoKeys := Seq[BuildInfoKey](
       "testWorkspaceBaseDirectory" ->
-        baseDirectory.in(testWorkspace).value
+        baseDirectory.in(testWorkspace).value,
+      version,
     ),
     buildInfoPackage := "scala.meta.metals.internal",
     libraryDependencies ++= List(
