@@ -1,6 +1,7 @@
 package scala.meta.metals
 
 import java.io.IOException
+import java.io.File
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -450,7 +451,7 @@ class MetalsServices(
     val metalsPluginModule =
       ModuleID("org.scalameta", "sbt-metals", "0.1.0-M1+84-a3ffb91c")
     val metalsPluginRef = "scala.meta.sbt.MetalsPlugin"
-    val loadPluginClasspath = loadPluginJars.value.mkString(":")
+    val loadPluginClasspath = loadPluginJars.value.mkString(File.pathSeparator)
     val loadCommands = Seq(
       s"apply -cp ${loadPluginClasspath} ch.epfl.scala.loadplugin.LoadPlugin",
       s"""if-absent ${metalsPluginRef} "load-plugin ${metalsPluginModule} ${metalsPluginRef}"""",
