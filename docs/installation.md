@@ -44,7 +44,7 @@ sbt
 
 The command will create the necessary metadata in the `.metals` directory
 (which you should not checkout into version control) and setup the `semanticdb-scalac` compiler
-plugin for the current sbt ession.
+plugin for the current sbt session.
 
 You should not checkout the `.metals` directory into version control. We recommend to add it to your
 project's `.gitignore` or/and to your global `.gitignore`:
@@ -53,8 +53,9 @@ project's `.gitignore` or/and to your global `.gitignore`:
 echo ".metals/" >> .gitignore
 ```
 
-Note that you will need to invoke `metalsSetup` (or `semanticdbEnable`) whenever you close and
-re-open sbt. For a more persistent setup, keep reading.
+Note that in sbt 0.13 you will need to invoke `metalsSetup` (or `semanticdbEnable`) whenever you close and
+re-open sbt. For a more persistent setup, keep reading. In sbt 1 you don't need to do it because Metals will
+automatically invoke `semanticdbEnable` every time it connects to the sbt server.
 
 ## Persisting the semanticdb-scalac compiler plugin
 Some features like definition/references/hover rely on artifacts produced by a compiler plugin
