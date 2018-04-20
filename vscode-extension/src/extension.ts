@@ -12,6 +12,8 @@ import {
 } from "vscode-languageclient";
 import { exec } from "child_process";
 import { writeFile } from 'fs';
+import { dirname } from 'path';
+import open = require('opn');
 
 export async function activate(context: ExtensionContext) {
   // The debug options for the server
@@ -111,7 +113,13 @@ export async function activate(context: ExtensionContext) {
             command: "downloadDebugPayload",
             arguments: [window.activeTextEditor.document.uri.toString()]
           })
-          window.showInformationMessage(`Debug payload saved to ${path}`)
+          const revealInFileExplorerOption = "Reveal in file explorer";
+          const option = await window.showInformationMessage(`Debug payload saved to ${path}`,
+            revealInFileExplorerOption
+          )
+          if (option === revealInFileExplorerOption) {
+            open(dirname(path))
+          }
         } catch (err) {
           window.showErrorMessage(err.message)
         }
