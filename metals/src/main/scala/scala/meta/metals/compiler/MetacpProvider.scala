@@ -26,7 +26,11 @@ class MetacpProvider {
     .process(Settings().withScalaLibrarySynthetics(true), reporter)
     .get
     .shallow
-    .head
+  private val jdk = Metacp
+    .process(settings.withClasspath(ClasspathOps.bootClasspath), reporter)
+    .getOrElse {
+      throw new IllegalArgumentException("Failed to process JDK")
+    }
   private val empty = AbsolutePath(Files.createTempDirectory("metals"))
   private val processEntry = new function.Function[AbsolutePath, AbsolutePath] {
     override def apply(t: AbsolutePath): AbsolutePath = {
@@ -44,61 +48,26 @@ class MetacpProvider {
   }
 
   def process(classpath: Classpath): Classpath = {
-    Classpath(synthetics :: classpath.shallow.map { entry =>
+    val processed = classpath.shallow.map { entry =>
       if (entry.isDirectory) entry
       else classpaths.computeIfAbsent(entry, processEntry)
-    })
+    }
+    Classpath(List(synthetics, jdk.shallow, processed).flatten)
   }
 
 }
 
 object ClasspathOps {
 
-  def bootClasspath: Option[Classpath] = sys.props.collectFirst {
-    case (k, v) if k.endsWith(".boot.class.path") => Classpath(v)
-  }
-
-  val devNull = new PrintStream(new OutputStream {
-    override def write(b: Int): Unit = ()
-  })
-
-  /** Process classpath with metacp to build semanticdbs of global symbols. **/
-  def toMetaClasspath(
-      sclasspath: Classpath,
-      cacheDirectory: Option[AbsolutePath] = None,
-      parallel: Boolean = true,
-      out: PrintStream = devNull
-  ): Option[Classpath] = {
-    val (processed, toProcess) = sclasspath.shallow.partition { path =>
-      path.isDirectory &&
-      path.resolve("META-INF").resolve("semanticdb.semanticidx").isFile
-    }
-    val withJDK = Classpath(
-      bootClasspath.fold(sclasspath.shallow)(_.shallow ::: toProcess)
-    )
-    val default = metacp.Settings()
-    val settings = default
-      .withClasspath(withJDK)
-      .withScalaLibrarySynthetics(true)
-      .withCacheDir(cacheDirectory.getOrElse(default.cacheDir))
-      .withPar(parallel)
-    val reporter = metacp
-      .Reporter()
-      .withOut(devNull) // out prints classpath of proccessed classpath, which is not relevant for scalafix.
-      .withErr(out)
-    val mclasspath = scala.meta.cli.Metacp.process(settings, reporter)
-    mclasspath.map(x => Classpath(x.shallow ++ processed))
-  }
-
-  def newSymbolTable(
-      classpath: Classpath,
-      cacheDirectory: Option[AbsolutePath] = None,
-      parallel: Boolean = true,
-      out: PrintStream = System.out
-  ): Option[SymbolTable] = {
-    toMetaClasspath(classpath, cacheDirectory, parallel, out)
-      .map(new LazySymbolTable(_))
-  }
+  def bootClasspath: Classpath =
+    sys.props
+      .collectFirst {
+        case (k, v) if k.endsWith(".boot.class.path") =>
+          Classpath(
+            Classpath(v).shallow.filter(p => Files.exists(p.toNIO))
+          )
+      }
+      .getOrElse(Classpath(Nil))
 
   def getCurrentClasspath: Classpath = {
     Thread.currentThread.getContextClassLoader match {

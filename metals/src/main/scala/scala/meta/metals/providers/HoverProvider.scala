@@ -59,10 +59,14 @@ object HoverProvider extends LazyLogging {
         info.symbol.stripSuffix(".").parse[Term].get.asInstanceOf[Term.Ref]
       Pkg(ref, Nil)
     } else if (info.kind.isTrait) {
+      // TODO: include type parameters
       Defn.Trait(mods, Type.Name(info.name), Nil, EmptyCtor, EmptyTemplate)
     } else if (info.kind.isClass) {
+      // TODO: include type parameters and primary constructor
       Defn.Class(mods, Type.Name(info.name), Nil, EmptyCtor, EmptyTemplate)
     } else if (info.kind.isLocal || info.symbol.startsWith("local")) {
+      // Workaround for https://github.com/scalameta/scalameta/issues/1503
+      // In the future we should be able to produce `val x: Int` syntax for local symbols.
       PrettyType.toType(info.tpe.get, symtab, QualifyStrategy.Readable).tree
     } else {
       PrettyType.toTree(info, symtab, QualifyStrategy.Readable).tree

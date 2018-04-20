@@ -1,5 +1,7 @@
 package tests.provider
 
+import java.util
+
 object HoverProviderTest extends BaseHoverProviderTest {
 
   check(
@@ -306,5 +308,16 @@ object HoverProviderTest extends BaseHoverProviderTest {
       |sealed trait <<W>>[T]
     """.stripMargin,
     "sealed trait W"
+  )
+
+  check(
+    "jdk",
+    """
+      |object x {
+      |  val <<entry>> =
+      |    new java.util.HashMap[java.lang.Integer, java.lang.String]().entrySet()
+      |}
+    """.stripMargin,
+    "val entry: Set[Map.Entry[Integer, String]]"
   )
 }
