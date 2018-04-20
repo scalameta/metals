@@ -9,8 +9,7 @@ import tests.CompilerSuite
 // This test suite is not supposed to test the actual scalafix implementation,
 // it is only supposed to check that the conversion from scalafix.Patch to
 // languageserver.TextEdit is accurate.
-// Disabled until scalafix 0.6.0
-class RemoveUnusedImportsTest extends CompilerSuite {
+object RemoveUnusedImportsTest extends CompilerSuite {
   def check(name: String, original: String, expectedEdits: String): Unit = {
     test(name) {
       val uri = Uri.file(name)

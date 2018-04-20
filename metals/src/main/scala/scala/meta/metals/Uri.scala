@@ -5,7 +5,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import org.langmeta.lsp.TextDocumentIdentifier
 import org.langmeta.lsp.VersionedTextDocumentIdentifier
-import org.langmeta.lsp.VersionedTextDocumentIdentifier
 import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
 
@@ -37,7 +36,7 @@ sealed abstract case class Uri(value: String) {
 object Uri {
   def apply(uri: String): Uri = Uri(URI.create(uri))
   def file(path: String): Uri = {
-    val slash = if (path.startsWith("/")) "" else "/"
+    val slash = if (path.startsWith("/")) "" else "///"
     Uri(s"file:$slash${path.replace(' ', '-')}")
   }
   def apply(td: TextDocumentIdentifier): Uri = Uri(td.uri)
