@@ -214,7 +214,7 @@ object HoverProviderTest extends BaseHoverProviderTest {
       |  List(1) match { case <<x>> :: Nil => }
       |}
     """.stripMargin,
-    "val x: Int"
+    "Int"
   )
 
   check(
@@ -224,7 +224,7 @@ object HoverProviderTest extends BaseHoverProviderTest {
       |  List(1) match { case List(<<x>>) => }
       |}
     """.stripMargin,
-    "val x: Int"
+    "Int"
   )
 
   check(
@@ -297,6 +297,14 @@ object HoverProviderTest extends BaseHoverProviderTest {
       |  type <<F>>[T] <: Any
       |}
     """.stripMargin,
-    "type F"
+    "type F[T]"
+  )
+
+  check(
+    "mods",
+    """
+      |sealed trait <<W>>[T]
+    """.stripMargin,
+    "sealed trait W"
   )
 }

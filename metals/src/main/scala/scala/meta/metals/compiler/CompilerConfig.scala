@@ -60,6 +60,17 @@ case class CompilerConfig(
 object CompilerConfig extends LazyLogging {
   private val relativeDir: RelativePath =
     RelativePath(".metals").resolve("buildinfo")
+  val empty = CompilerConfig(
+    sources = Nil,
+    unmanagedSourceDirectories = Nil,
+    managedSourceDirectories = Nil,
+    scalacOptions = Nil,
+    classDirectory = AbsolutePath.workingDirectory,
+    dependencyClasspath = Nil,
+    sourceJars = Nil,
+    origin = PathIO.workingDirectory,
+    scalaVersion = ScalaVersion("2.12.4").asInstanceOf[SpecificScalaVersion]
+  )
 
   def dir(cwd: AbsolutePath): AbsolutePath =
     cwd.resolve(relativeDir)

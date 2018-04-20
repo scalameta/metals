@@ -44,11 +44,6 @@ object Uri {
   def apply(td: VersionedTextDocumentIdentifier): Uri = Uri(td.uri)
   def apply(path: AbsolutePath): Uri = Uri(path.toURI)
   def apply(uri: URI): Uri =
-    if (uri.getScheme == "file") {
-      // nio.Path.toUri.toString produces file:/// while LSP expected file:/
-      new Uri(s"file://${uri.getPath}") {}
-    } else {
-      new Uri(uri.toString) {}
-    }
+    new Uri(uri.toString) {}
   def unapply(arg: String): Option[Uri] = Some(Uri(URI.create(arg)))
 }

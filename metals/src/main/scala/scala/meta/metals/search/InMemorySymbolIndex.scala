@@ -193,7 +193,7 @@ class InMemorySymbolIndex(
     }
     val documentWithOnlyLocalSymbols =
       document.copy(symbols = new SymbolInformationsBySymbol(locals))
-    documentIndex.putDocument(uri, documentWithOnlyLocalSymbols)
+    documentIndex.putDocument(uri, document)
     document.occurrences.foreach { occurence =>
       val isGlobal =
         locals.get(occurence.symbol) == null &&
