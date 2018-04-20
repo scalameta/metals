@@ -23,6 +23,11 @@ class DebugPayloadProvider(
     scalacProvider: ScalacProvider,
     buffers: Buffers
 ) extends LazyLogging {
+
+  implicit class XtensionByteArray(val s: String) {
+    def toByteArray: Array[Byte] = s.toCharArray.map(_.toByte)
+  }
+
   private def zipWithFiles(f: Map[String, Array[Byte]]): Array[Byte] = {
     val out = new ByteArrayOutputStream
     val zip = new ZipOutputStream(out)
@@ -45,7 +50,7 @@ class DebugPayloadProvider(
     Either.fromOption(
       currentUri(arguments).map { uri =>
         val logFile = cwd.resolve(".metals").resolve("metals.log").readAllBytes
-        val config = latestConfig().asJson.spaces2.toCharArray.map(_.toByte)
+        val config = latestConfig().asJson.spaces2.toByteArray
         val buildInfoEntry = scalacProvider
           .configBySourceDirectory(uri)
           .map { buildInfo =>
