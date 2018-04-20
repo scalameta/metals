@@ -13,6 +13,7 @@ import cats.syntax.either._
 import scala.meta.metals.Uri
 import scala.meta.metals.Buffers
 import scala.meta.metals.Configuration
+import scala.meta.metals.search.DocumentIndex
 import scala.meta.metals.compiler.ScalacProvider
 import scala.util.control.NonFatal
 import org.langmeta.jsonrpc.Response
@@ -21,7 +22,8 @@ class DebugPayloadProvider(
     cwd: AbsolutePath,
     latestConfig: () => Configuration,
     scalacProvider: ScalacProvider,
-    buffers: Buffers
+    buffers: Buffers,
+    documentIndex: DocumentIndex
 ) extends LazyLogging {
 
   implicit class XtensionByteArray(val s: String) {
@@ -60,14 +62,20 @@ class DebugPayloadProvider(
           }
           .toMap
 
-        val currentBuffer = buffers.read(uri).toCharArray.map(_.toByte)
+        val currentBuffer = buffers.read(uri).toByteArray
+        val semanticdbDocument = documentIndex
+          .getDocument(uri)
+          .map { doc =>
+            uri.toPath.getFileName.toString + ".semanticdb" -> doc.toString.toByteArray
+          }
+          .toMap
 
         zipWithFiles(
           Map(
             "metals.log" -> logFile,
             "configuration.json" -> config,
             uri.toPath.getFileName.toString -> currentBuffer
-          ) ++ buildInfoEntry
+          ) ++ buildInfoEntry ++ semanticdbDocument
         )
       },
       Response.invalidParams(s"Invalid arguments: $arguments")
