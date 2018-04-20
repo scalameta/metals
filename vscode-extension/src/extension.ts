@@ -106,19 +106,15 @@ export async function activate(context: ExtensionContext) {
     const downloadDebugPayloadCommand = commands.registerCommand(
       'metals.downloadDebugPayload',
       async () => {
-        const byteArray = await client.sendRequest(ExecuteCommandRequest.type, {
-          command: "downloadDebugPayload",
-          arguments: [window.activeTextEditor.document.uri.toString()]
-        })
-        const workspaceRoot = workspace.workspaceFolders[0].uri.fsPath
-        const fileName = `${workspaceRoot}/.metals/debug-${Date.now()}.zip`
-        writeFile(fileName, new Buffer(byteArray), (err: Error) => {
-          if (err) {
-            window.showErrorMessage(err.message)
-          } else {
-            window.showInformationMessage(`Debug payload saved as ${fileName}`)
-          }
-        })
+        try {
+          const path = await client.sendRequest(ExecuteCommandRequest.type, {
+            command: "downloadDebugPayload",
+            arguments: [window.activeTextEditor.document.uri.toString()]
+          })
+          window.showInformationMessage(`Debug payload saved to ${path}`)
+        } catch (err) {
+          window.showErrorMessage(err.message)
+        }
       }
     )
     context.subscriptions.push(

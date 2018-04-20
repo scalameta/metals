@@ -3,6 +3,8 @@ package scala.meta.metals.providers
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import java.io.ByteArrayOutputStream
+import java.nio.file.Files
+import java.time.Instant
 import scala.meta.AbsolutePath
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.syntax._
@@ -11,6 +13,7 @@ import cats.syntax.either._
 import scala.meta.metals.Uri
 import scala.meta.metals.Configuration
 import scala.meta.metals.compiler.ScalacProvider
+import scala.util.control.NonFatal
 import org.langmeta.jsonrpc.Response
 
 class DebugPayloadProvider(
@@ -36,7 +39,7 @@ class DebugPayloadProvider(
 
   def generatePayload(
       arguments: Option[Seq[Json]]
-  ): Either[Response.Error, Json] =
+  ): Either[Response.Error, Array[Byte]] =
     Either.fromOption(
       currentUri(arguments).map { uri =>
         val logFile = cwd.resolve(".metals").resolve("metals.log").readAllBytes
@@ -55,8 +58,19 @@ class DebugPayloadProvider(
             "metals.log" -> logFile,
             "configuration.json" -> config,
           ) ++ buildInfoEntry
-        ).asJson
+        )
       },
       Response.invalidParams(s"Invalid arguments: $arguments")
     )
+
+  def writePayloadToDisk(payload: Array[Byte]): Either[Response.Error, Json] =
+    try {
+      val fileName = s"metals-debug-${Instant.now}.zip"
+      val path = cwd.resolve(".metals").resolve(fileName).toNIO
+      Files.write(path, payload)
+      Right(path.toAbsolutePath.toString.asJson)
+    } catch {
+      case NonFatal(e) => Left(Response.internalError(e.getMessage))
+    }
+
 }

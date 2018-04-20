@@ -419,7 +419,12 @@ class MetalsServices(
       }
     case DownloadDebugPayload =>
       Task {
-        debugPayloadProvider.generatePayload(params.arguments).leftMap { err =>
+        val result = for {
+          payload <- debugPayloadProvider.generatePayload(params.arguments)
+          path <- debugPayloadProvider.writePayloadToDisk(payload)
+        } yield path
+
+        result.leftMap { err =>
           logger.warn(err.error.message)
           err
         }
