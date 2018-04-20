@@ -11,6 +11,7 @@ import io.circe.syntax._
 import io.circe.Json
 import cats.syntax.either._
 import scala.meta.metals.Uri
+import scala.meta.metals.Buffers
 import scala.meta.metals.Configuration
 import scala.meta.metals.compiler.ScalacProvider
 import scala.util.control.NonFatal
@@ -19,7 +20,8 @@ import org.langmeta.jsonrpc.Response
 class DebugPayloadProvider(
     cwd: AbsolutePath,
     latestConfig: () => Configuration,
-    scalacProvider: ScalacProvider
+    scalacProvider: ScalacProvider,
+    buffers: Buffers
 ) extends LazyLogging {
   private def zipWithFiles(f: Map[String, Array[Byte]]): Array[Byte] = {
     val out = new ByteArrayOutputStream
@@ -53,10 +55,13 @@ class DebugPayloadProvider(
           }
           .toMap
 
+        val currentBuffer = buffers.read(uri).toCharArray.map(_.toByte)
+
         zipWithFiles(
           Map(
             "metals.log" -> logFile,
             "configuration.json" -> config,
+            uri.toPath.getFileName.toString -> currentBuffer
           ) ++ buildInfoEntry
         )
       },

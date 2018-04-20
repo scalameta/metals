@@ -87,7 +87,7 @@ class MetalsServices(
     new DiagnosticsProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
   val debugPayloadProvider =
-    new DebugPayloadProvider(cwd, latestConfig, scalacProvider)
+    new DebugPayloadProvider(cwd, latestConfig, scalacProvider, buffers)
   val interactiveSemanticdbs: Observable[semanticdb.Database] =
     sourceChangePublisher
       .debounce(FiniteDuration(1, "s"))
