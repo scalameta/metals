@@ -6,6 +6,7 @@ import org.langmeta.lsp.Window._
 import org.langmeta.jsonrpc.JsonRpcClient
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.classic.Level
 import ch.qos.logback.core.AppenderBase
 
 class LSPLogger(@BeanProperty var encoder: PatternLayoutEncoder)
@@ -17,7 +18,12 @@ class LSPLogger(@BeanProperty var encoder: PatternLayoutEncoder)
       if (encoder != null) new String(encoder.encode(event), UTF_8)
       else event.getFormattedMessage
     notifications.foreach { implicit client =>
-      logMessage.log(message)
+      event.getLevel match {
+        case Level.ERROR => logMessage.error(message)
+        case Level.WARN => logMessage.warn(message)
+        case Level.INFO => logMessage.info(message)
+        case _ => logMessage.log(message)
+      }
     }
   }
 }

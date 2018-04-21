@@ -8,7 +8,7 @@ appender("STDOUT", ch.qos.logback.core.ConsoleAppender) {
 
 appender("LSP", scala.meta.metals.LSPLogger) {
   encoder(PatternLayoutEncoder) {
-    pattern = defaultPattern
+    pattern = "%msg%n"
   }
 }
 
