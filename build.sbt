@@ -55,7 +55,7 @@ inThisBuild(
     scmInfo in ThisBuild := Some(
       ScmInfo(
         url("https://github.com/scalameta/metals"),
-        s"scm:git:git@github.com:scalameta/metals.git"
+        s"git@github.com:scalameta/metals.git"
       )
     ),
     releaseEarlyWith := BintrayPublisher,

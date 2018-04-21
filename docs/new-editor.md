@@ -1,4 +1,7 @@
-# Integrating a new editor
+---
+id: new-editor
+title: Integrating a new editor
+---
 
 Before writing a new editor client, first check if someone else has managed to
 integrate metals with your favorite text editor.
@@ -143,7 +146,7 @@ provide passive refactoring hints with scalafix. Currently, only the "removed
 unused import" refactoring is supported but more refactorings may be added in
 the future.
 
-<img src="img/code-actions.png" align="right" width="150px" style="padding-left: 20px"/>
+<img src="assets/code-actions.png" align="right" width="150px" style="padding-left: 20px"/>
 
 The sequence diagram for refactoring hints is quite involved.
 
@@ -160,7 +163,7 @@ In VS Code, code actions are suggested to the user via light bulbs when hovering
 above the "Unused import" warnings and can be triggered with the `CMD` + `.`
 shortcut (on macOS).
 
-![](img/code-actions.gif)
+![](assets/code-actions.gif)
 
 [`textdocument/willsavewaituntil`]: https://microsoft.github.io/language-server-protocol/specification#textDocument_willSaveWaitUntil
 [`textdocument/codeaction`]: https://microsoft.github.io/language-server-protocol/specification#textDocument_codeAction

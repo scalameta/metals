@@ -1,4 +1,7 @@
-# Overview
+---
+id: overview
+title: Overview
+---
 
 This document is an overview of the Metals project. Metals is a community driven
 project with no official funding or dedicated resources.
@@ -23,12 +26,13 @@ Language Server Protocol does not provide utilities to extract metadata from a
 build tool (module source files, dependencies, configuration data), so we are
 still exploring what is the best option.
 
-* [ ] sbt-metals: plugin that provides a `metalsSetup` task to export sbt
-      build metadata.
+* [x] sbt-metals: plugin that provides a `metalsSetup` task to export sbt
+    build metadata.
+
 * [ ] [BSP][]: LSP-inspired protocol to standardize on communication between a
-      language server and build tool. In theory, should enable automatic
-      importing of projects without custom build plugins or manual installation
-      steps.
+  language server and build tool. In theory, should enable automatic
+  importing of projects without custom build plugins or manual installation
+  steps.
 
 ## Correct diagnostics
 
@@ -64,26 +68,43 @@ architecture as [Index-While-Building][] in XCode 9.
 
 * Goto definition (`textDocument/definition`). Requires
   [semanticdb-scalac](#semanticdb-scalac).
-  * [x] project -> project.
-  * [x] project -> Scala dependency. Requires [`metalsSetup`](#metalssetup).
-  * [x] project -> Java dependency. Requires [`metalsSetup`](#metalssetup).
-  * [ ] dependency -> dependency.
+
+  - [x] project -> project.
+
+  - [x] project -> Scala dependency. Requires [`metalsSetup`](#metalssetup).
+
+  - [x] project -> Java dependency. Requires [`metalsSetup`](#metalssetup).
+
+  - [ ] dependency -> dependency.
+
 * [x] Find references (`textDocument/references`). Works the same as goto
       definition.
-  * [x] project references
-  * [ ] Scala dependency references
-  * [ ] Java dependency references
+
+  - [x] project references
+
+  - [ ] Scala dependency references
+
+  - [ ] Java dependency references
+
 * [x] Highlight references to symbol at position
       (`textDocument/documentHighlight`).
+
   * Disabled by default. Can be enabled with configuration option
     `highlight.enabled=true`.
+
 * [x] Goto symbol in file (`textDocument/documentSymbol`)
+
 * [x] Goto symbol in workspace (`workspace/symbol`)
+
 * [x] Symbol outline in the sidebar as you type (`textDocument/documentSymbol`).
+
 * [ ] Goto implementation (`textDocument/implementation`)
+
 * [ ] Goto type definition (`textDocument/typeDefinition`)
+
 * [x] Show type of symbol at position (`textDocument/hover`). Requires
       [semanticdb-scalac](#semanticdb-scalac).
+
 * [ ] Show type of expression at position (`textDocument/hover`).
 
 ## Fast completions
