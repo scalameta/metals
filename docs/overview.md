@@ -82,8 +82,8 @@ architecture as [Index-While-Building][] in XCode 9.
 * [x] Symbol outline in the sidebar as you type (`textDocument/documentSymbol`).
 * [ ] Goto implementation (`textDocument/implementation`)
 * [ ] Goto type definition (`textDocument/typeDefinition`)
-* [x] Show type of symbol at position (`textDocument/hover`). Requires
-      [semanticdb-scalac](#semanticdb-scalac).
+* [x] Show type of symbol at position (`textDocument/hover`).
+      Requires [`metalsSetup`](#metalssetup).
 * [ ] Show type of expression at position (`textDocument/hover`).
 
 ## Fast completions
