@@ -39,7 +39,7 @@ object ScalafixPatchEnrichments {
   }
 
   import scalafix.patch.TokenPatch._
-  // TODO(olafur): make this method public in scalafix API
+  // TODO(olafur): fix https://github.com/scalacenter/scalafix/issues/709 so we can remove this copy-pasta
   private def merge(a: TokenPatch, b: TokenPatch): TokenPatch = (a, b) match {
     case (add1: Add, add2: Add) =>
       Add(

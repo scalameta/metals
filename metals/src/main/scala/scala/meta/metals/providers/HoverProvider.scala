@@ -1,21 +1,22 @@
 package scala.meta.metals.providers
 
-import scala.meta.metals.Uri
+import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.lsp.Hover
 import org.langmeta.lsp.RawMarkedString
-import scala.meta.metals.search.SymbolIndex
-import scala.{meta => m}
-import scala.meta.internal.semanticdb3.SymbolInformation.{Property => p}
-import com.typesafe.scalalogging.LazyLogging
 import scala.meta.Tree
 import scala.meta._
+import scala.meta.internal.semanticdb3.SymbolInformation.Property
+import scala.meta.internal.{semanticdb3 => s}
+import scala.meta.internal.semanticdb3.Scala._
+import scala.meta.metals.Uri
 import scala.meta.metals.compiler.SymtabProvider
+import scala.meta.metals.ScalametaEnrichments._
+import scala.meta.metals.search.SymbolIndex
 import scala.util.control.NonFatal
+import scala.{meta => m}
 import scalafix.internal.util.PrettyType
 import scalafix.internal.util.QualifyStrategy
-import scala.meta.internal.{semanticdb3 => s}
 import scalafix.internal.util.SymbolTable
-import scala.meta.internal.semanticdb3.Scala._
 
 object HoverProvider extends LazyLogging {
   def empty: Hover = Hover(Nil, None)
@@ -30,40 +31,39 @@ object HoverProvider extends LazyLogging {
   private def toTree(
       info: s.SymbolInformation,
       symtab: SymbolTable
-  ): Tree = {
-    def mods = {
-      // TODO: Upstream FINAL OBJECT fix to scalafix,
-      // this method is copy pasted from PrettyType
-      def is(property: s.SymbolInformation.Property): Boolean =
-        (info.properties & property.value) != 0
-      val buf = List.newBuilder[Mod]
-      info.accessibility.foreach { accessibility =>
-        // TODO: private[within]
-        if (accessibility.tag.isPrivate) buf += Mod.Private(Name.Anonymous())
-        if (accessibility.tag.isProtected)
-          buf += Mod.Protected(Name.Anonymous())
-      }
-      if (is(p.SEALED)) buf += Mod.Sealed()
-      if (info.kind.isClass && is(p.ABSTRACT)) buf += Mod.Abstract()
-      if (!info.kind.isObject && is(p.FINAL)) buf += Mod.Final()
-      if (is(p.IMPLICIT)) buf += Mod.Implicit()
-      if (info.kind.isClass && is(p.CASE)) buf += Mod.Case()
-      buf.result()
+  ): Option[Tree] = {
+    try {
+      Some(unsafeToTree(info, symtab))
+    } catch {
+      case NonFatal(e) =>
+        logger.error(
+          s"""Failed to pretty print symbol ${info.symbol}
+             |Classpath=$symtab
+             |${info.toProtoString}
+             """.stripMargin,
+          e
+        )
+        None
     }
-    if (info.kind.isObject) {
-      Defn.Object(mods, Term.Name(info.name), EmptyTemplate)
-    } else if (info.kind.isPackageObject) {
-      Pkg.Object(mods, Term.Name(info.owner.desc.name), EmptyTemplate)
-    } else if (info.kind.isPackage) {
+  }
+
+  private def unsafeToTree(
+      info: s.SymbolInformation,
+      symtab: SymbolTable
+  ): Tree = {
+    if (info.kind.isPackage) {
       val ref =
         info.symbol.stripSuffix(".").parse[Term].get.asInstanceOf[Term.Ref]
       Pkg(ref, Nil)
-    } else if (info.kind.isTrait) {
-      // TODO: include type parameters
-      Defn.Trait(mods, Type.Name(info.name), Nil, EmptyCtor, EmptyTemplate)
-    } else if (info.kind.isClass) {
-      // TODO: include type parameters and primary constructor
-      Defn.Class(mods, Type.Name(info.name), Nil, EmptyCtor, EmptyTemplate)
+    } else if (info.kind.isPackageObject) {
+      // NOTE(olafur) custom handling for name due to https://github.com/scalameta/scalameta/issues/1484
+      Pkg.Object(Nil, Term.Name(info.owner.desc.name), EmptyTemplate)
+    } else if (info.kind.isObject) {
+      // NOTE(olafur) custom handling for object due to https://github.com/scalameta/scalameta/issues/1480
+      val mods = List.newBuilder[Mod]
+      if (info.has(Property.IMPLICIT)) mods += mod"implicit"
+      if (info.has(Property.CASE)) mods += mod"case"
+      Defn.Object(mods.result(), Term.Name(info.name), EmptyTemplate)
     } else if (info.symbol == "scala.Any#asInstanceOf().") {
       // HACK(olafur) to avoid 'java.util.NoSuchElementException: scala.Any.asInstanceOf(A).[A]'
       q"final def asInstanceOf[T]: T"
@@ -74,14 +74,43 @@ object HoverProvider extends LazyLogging {
       // In the future we should be able to produce `val x: Int` syntax for local symbols.
       val tpe = info.tpe match {
         case Some(t) =>
-          if (t.tag.isMethodType) t.methodType.get.returnType.get
-          else t
+          if (t.tag.isMethodType) {
+            t.methodType.get.returnType.get
+          } else {
+            t
+          }
         case _ =>
           throw new IllegalArgumentException(info.toProtoString)
       }
       PrettyType.toType(tpe, symtab, QualifyStrategy.Readable).tree
     } else {
-      PrettyType.toTree(info, symtab, QualifyStrategy.Readable).tree
+      val tpe = info.tpe.get
+      val noDeclarations =
+        if (tpe.tag.isClassInfoType) {
+          val classInfoType = tpe.classInfoType.get
+          // Remove declarations from object/trait/class to reduce noise
+          val declarations =
+            if (info.kind.isClass) {
+              classInfoType.declarations.find { sym =>
+                symtab
+                  .info(sym)
+                  .exists(i => i.kind.isConstructor && i.has(Property.PRIMARY))
+              }.toList
+            } else {
+              Nil
+            }
+          info.copy(
+            tpe = Some(
+              tpe.copy(
+                classInfoType =
+                  Some(classInfoType.withDeclarations(declarations))
+              )
+            )
+          )
+        } else {
+          info
+        }
+      PrettyType.toTree(noDeclarations, symtab, QualifyStrategy.Readable).tree
     }
   }
 
@@ -96,21 +125,7 @@ object HoverProvider extends LazyLogging {
       (symbol, _) <- index.findSymbol(uri, line, column)
       symtab = symtabs.symtab(uri)
       info <- symtab.info(symbol.syntax)
-      tree <- {
-        try {
-          Some(toTree(info, symtab))
-        } catch {
-          case NonFatal(e) =>
-            logger.error(
-              s"""Failed to pretty print symbol $symbol
-                 |Classpath=$symtab
-                 |${info.toProtoString}
-                 |""".stripMargin,
-              e
-            )
-            None
-        }
-      }
+      tree <- toTree(info, symtab)
     } yield {
       val pretty = tree.transform {
         case Type.Apply(op: Type.Name, lhs :: rhs :: Nil)

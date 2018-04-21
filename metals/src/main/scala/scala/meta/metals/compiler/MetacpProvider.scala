@@ -1,8 +1,6 @@
 package scala.meta.metals.compiler
 
 import java.io.File
-import java.io.OutputStream
-import java.io.PrintStream
 import java.nio.file.Files
 import java.util
 import java.util.Collections
@@ -10,11 +8,8 @@ import java.util.function
 import scala.meta.AbsolutePath
 import scala.meta.Classpath
 import scala.meta.cli.Metacp
-import scala.meta.metacp
 import scala.meta.metacp.Reporter
 import scala.meta.metacp.Settings
-import scalafix.internal.util.LazySymbolTable
-import scalafix.internal.util.SymbolTable
 
 class MetacpProvider {
   private val classpaths =

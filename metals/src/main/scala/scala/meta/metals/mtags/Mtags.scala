@@ -42,6 +42,15 @@ import scala.meta.internal.semanticdb3.TextDocument
  */
 object Mtags extends LazyLogging {
 
+  /** Mtags version, used to invalidate caches when mtags is improved.
+   *
+   * We cache mtags artifacts to avoid redundant work, cached artifacts
+   * are keyed by the original jar file path and this version number.
+   * If we update mtags to, for example, fix a bug then we should bump
+   * this version number.
+   */
+  val Version = "1"
+
   /**
    * Build an index from a classpath of -sources.jar
    *

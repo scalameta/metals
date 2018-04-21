@@ -143,9 +143,12 @@ object HoverProviderTest extends BaseHoverProviderTest {
   check(
     "class",
     """
-      |class <<C>>(x: Int, y: String)
+      |class <<C>>(x: Int, y: String) {
+      |  def this(x: Int) = this(x, "") // secondary constructor
+      |  def ignoreme = x
+      |}
     """.stripMargin,
-    "class C"
+    "class C(x: Int, y: String)"
   )
 
   check(
@@ -307,7 +310,7 @@ object HoverProviderTest extends BaseHoverProviderTest {
     """
       |sealed trait <<W>>[T]
     """.stripMargin,
-    "sealed trait W"
+    "sealed trait W[T]"
   )
 
   check(
@@ -383,6 +386,16 @@ object HoverProviderTest extends BaseHoverProviderTest {
       |}
     """.stripMargin,
     "private val x: Int"
+  )
+
+  check(
+    "implicit object",
+    """
+      |object aa {
+      |  implicit case object <<Foo>>
+      |}
+    """.stripMargin,
+    "implicit case object Foo"
   )
 
 }
