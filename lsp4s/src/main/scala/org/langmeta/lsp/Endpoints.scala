@@ -5,6 +5,8 @@ import org.langmeta.jsonrpc.Endpoint
 import org.langmeta.jsonrpc.Endpoint._
 import io.circe.Json
 import org.langmeta.jsonrpc.JsonRpcClient
+import org.langmeta.jsonrpc.Response.Error
+import monix.eval.Task
 
 object Lifecycle extends Lifecycle
 trait Lifecycle {
@@ -82,6 +84,28 @@ trait Window {
     def log(message: String)(implicit client: JsonRpcClient): Unit =
       showMessage.notify(ShowMessageParams(MessageType.Log, message))
   }
+  object showMessageRequest
+      extends Endpoint[ShowMessageRequestParams, Option[MessageActionItem]]("window/showMessageRequest") {
+    def error(message: String)(actionItems: MessageActionItem*)(
+        implicit client: JsonRpcClient): Task[Either[Error, Option[MessageActionItem]]] =
+      showMessageRequest.request(
+        ShowMessageRequestParams(MessageType.Error, message, actionItems)
+      )
+    def warn(message: String)(actionItems: MessageActionItem*)(
+        implicit client: JsonRpcClient): Task[Either[Error, Option[MessageActionItem]]] =
+      showMessageRequest.request(
+        ShowMessageRequestParams(MessageType.Warning, message, actionItems)
+      )
+    def info(message: String)(actionItems: MessageActionItem*)(
+        implicit client: JsonRpcClient): Task[Either[Error, Option[MessageActionItem]]] =
+      showMessageRequest.request(
+        ShowMessageRequestParams(MessageType.Info, message, actionItems)
+      )
+    def log(message: String)(actionItems: MessageActionItem*)(
+        implicit client: JsonRpcClient): Task[Either[Error, Option[MessageActionItem]]] =
+      showMessageRequest.request(
+        ShowMessageRequestParams(MessageType.Log, message, actionItems)
+      )
   }
   object logMessage extends Endpoint[LogMessageParams, Unit]("window/logMessage") {
     def error(message: String)(implicit client: JsonRpcClient): Unit =
