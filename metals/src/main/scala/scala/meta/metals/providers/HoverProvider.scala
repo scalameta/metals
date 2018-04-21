@@ -64,10 +64,22 @@ object HoverProvider extends LazyLogging {
     } else if (info.kind.isClass) {
       // TODO: include type parameters and primary constructor
       Defn.Class(mods, Type.Name(info.name), Nil, EmptyCtor, EmptyTemplate)
-    } else if (info.kind.isLocal || info.symbol.startsWith("local")) {
+    } else if (info.symbol == "scala.Any#asInstanceOf().") {
+      // HACK(olafur) to avoid 'java.util.NoSuchElementException: scala.Any.asInstanceOf(A).[A]'
+      q"final def asInstanceOf[T]: T"
+    } else if (info.kind.isLocal ||
+      info.kind.isParameter ||
+      info.symbol.startsWith("local")) {
       // Workaround for https://github.com/scalameta/scalameta/issues/1503
       // In the future we should be able to produce `val x: Int` syntax for local symbols.
-      PrettyType.toType(info.tpe.get, symtab, QualifyStrategy.Readable).tree
+      val tpe = info.tpe match {
+        case Some(t) =>
+          if (t.tag.isMethodType) t.methodType.get.returnType.get
+          else t
+        case _ =>
+          throw new IllegalArgumentException(info.toProtoString)
+      }
+      PrettyType.toType(tpe, symtab, QualifyStrategy.Readable).tree
     } else {
       PrettyType.toTree(info, symtab, QualifyStrategy.Readable).tree
     }

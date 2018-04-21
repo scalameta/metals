@@ -241,7 +241,7 @@ object HoverProviderTest extends BaseHoverProviderTest {
   )
 
   check(
-    "params",
+    "lambda params",
     """
       |object v {
       |  List(1).foreach(<<x>> => println(x))
@@ -320,4 +320,69 @@ object HoverProviderTest extends BaseHoverProviderTest {
     """.stripMargin,
     "val entry: Set[Map.Entry[Integer, String]]"
   )
+
+  check(
+    "param",
+    """
+      |object y {
+      |  def bar(<<param>>: Map[Int, String]) = param
+      |}
+    """.stripMargin,
+    "Map[Int, String]"
+  )
+
+  check(
+    "Any synthetic",
+    """
+      |object z {
+      |  val <<x>>: Any = 2
+      |}
+    """.stripMargin,
+    "val x: Any"
+  )
+
+  check(
+    "asInstanceOf",
+    """
+      |object z2 {
+      |  val x = 2.<<asInstanceOf>>[Any]
+      |}
+    """.stripMargin,
+    "final def asInstanceOf[T]: T"
+  )
+
+  check(
+    "isInstanceOf",
+    """
+      |object z3 {
+      |  val x = "".<<isInstanceOf>>[String]
+      |}
+    """.stripMargin,
+    "final def isInstanceOf(): Boolean"
+  )
+
+  check(
+    "local",
+    """
+      |object z4 {
+      |  locally {
+      |    val <<x>> = 42
+      |  }
+      |}
+    """.stripMargin,
+    "Int"
+  )
+
+  check(
+    "local2",
+    """
+      |object z5 {
+      |  val x: Serializable = new Serializable {
+      |    val <<x>> = 42
+      |  }
+      |}
+    """.stripMargin,
+    "private val x: Int"
+  )
+
 }
