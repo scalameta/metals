@@ -79,8 +79,17 @@ trait Window {
       showMessage.notify(ShowMessageParams(MessageType.Warning, message))
     def info(message: String)(implicit client: JsonRpcClient): Unit =
       showMessage.notify(ShowMessageParams(MessageType.Info, message))
+    def log(message: String)(implicit client: JsonRpcClient): Unit =
+      showMessage.notify(ShowMessageParams(MessageType.Log, message))
+  }
   }
   object logMessage extends Endpoint[LogMessageParams, Unit]("window/logMessage") {
+    def error(message: String)(implicit client: JsonRpcClient): Unit =
+      super.notify(LogMessageParams(MessageType.Error, message))
+    def warn(message: String)(implicit client: JsonRpcClient): Unit =
+      super.notify(LogMessageParams(MessageType.Warning, message))
+    def info(message: String)(implicit client: JsonRpcClient): Unit =
+      super.notify(LogMessageParams(MessageType.Info, message))
     def log(message: String)(implicit client: JsonRpcClient): Unit =
       super.notify(LogMessageParams(MessageType.Log, message))
   }
