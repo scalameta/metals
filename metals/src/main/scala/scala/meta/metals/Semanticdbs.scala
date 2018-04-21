@@ -1,5 +1,6 @@
 package scala.meta.metals
 
+import com.google.protobuf.InvalidProtocolBufferException
 import java.nio.file.Files
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.metals.compiler.ScalacProvider
@@ -109,7 +110,17 @@ object Semanticdbs extends LazyLogging {
       cwd: AbsolutePath
   ): semanticdb3.TextDocuments = {
     val bytes = Files.readAllBytes(semanticdbPath.toNIO)
-    val sdb = semanticdb3.TextDocuments.parseFrom(bytes)
+    val sdb =
+      try {
+        semanticdb3.TextDocuments.parseFrom(bytes)
+      } catch {
+        case _: InvalidProtocolBufferException =>
+          logger.error(
+            s"Have you upgraded to SemanticDB v3? Error parsing $semanticdbPath"
+          )
+          semanticdb3.TextDocuments()
+      }
+
     val docs = sdb.documents.map { d =>
       val filename = cwd.resolve(d.uri).toURI.toString
       logger.info(s"Loading file $filename")
@@ -120,7 +131,6 @@ object Semanticdbs extends LazyLogging {
           util.Sorting.quickSort(names)
           names
         }
-
     }
     semanticdb3.TextDocuments(docs)
   }
