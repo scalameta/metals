@@ -1,6 +1,7 @@
 package scala.meta.metals
 
 import java.io.IOException
+import java.io.File
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -33,6 +34,7 @@ import com.typesafe.scalalogging.LazyLogging
 import io.circe.Json
 import io.github.soc.directories.ProjectDirectories
 import monix.eval.Task
+import monix.eval.Coeval
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
@@ -424,22 +426,50 @@ class MetalsServices(
       }
   }
 
-  private def sbtExec(command: String): Unit = sbtServer.foreach { sbt =>
-    Sbt
-      .exec(command)(sbt.client)
-      .onErrorRecover {
-        case NonFatal(err) =>
-          // TODO(olafur) figure out why this "broken pipe" is not getting
-          // caught here.
-          logger.error("Failed to send sbt compile", err)
-          showMessage.warn(
-            "Lost connection to sbt server. " +
-              "Restart the sbt session and run the 'Re-connect to sbt server' command"
-          )
-      }
-      .runAsync
+  private def sbtExec(commands: String*): Task[Unit] = {
+    val cmd = commands.mkString("; ", "; ", "")
+    sbtServer match {
+      case None =>
+        logger.warn(
+          s"Trying to execute commands when there is no connected sbt server: ${cmd}"
+        )
+        Task.unit
+      case Some(sbt) =>
+        logger.debug(s"sbt/exec: ${cmd}")
+        Sbt
+          .exec(cmd)(sbt.client)
+          .onErrorRecover {
+            case NonFatal(err) =>
+              // TODO(olafur) figure out why this "broken pipe" is not getting
+              // caught here.
+              logger.error("Failed to send sbt compile", err)
+              showMessage.warn(
+                "Lost connection to sbt server. " +
+                  "Restart the sbt session and run the 'Re-connect to sbt server' command"
+              )
+          }
+    }
   }
-  private def sbtExec(): Unit = sbtExec(latestConfig().sbt.command)
+  private def sbtExec(): Task[Unit] = sbtExec(latestConfig().sbt.command)
+
+  private val loadPluginJars: Coeval[List[AbsolutePath]] = Coeval.evalOnce {
+    Jars.fetch("ch.epfl.scala", "load-plugin_2.12", "0.1.0+2-496ac670")
+  }
+
+  private def sbtExecWithMetalsPlugin(commands: String*): Task[Unit] = {
+    val metalsPluginModule = ModuleID(
+      "org.scalameta",
+      "sbt-metals",
+      scala.meta.metals.internal.BuildInfo.version
+    )
+    val metalsPluginRef = "scala.meta.sbt.MetalsPlugin"
+    val loadPluginClasspath = loadPluginJars.value.mkString(File.pathSeparator)
+    val loadCommands = Seq(
+      s"apply -cp ${loadPluginClasspath} ch.epfl.scala.loadplugin.LoadPlugin",
+      s"""if-absent ${metalsPluginRef} "load-plugin ${metalsPluginModule} ${metalsPluginRef}"""",
+    )
+    sbtExec((loadCommands ++ commands): _*)
+  }
 
   private def connectToSbtServer(): Unit = {
     sbtServer.foreach(_.disconnect())
@@ -460,7 +490,10 @@ class MetalsServices(
             sbtServer = None
             showMessage.warn("Disconnected from sbt server")
         }
-        sbtExec() // run configured command right away
+        sbtExecWithMetalsPlugin("semanticdbEnable").runAsync.foreach { _ =>
+          logger.info("semanticdb-scalac is enabled")
+        }
+        sbtExec().runAsync // run configured command right away
     }
   }
 
