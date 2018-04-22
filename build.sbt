@@ -208,6 +208,7 @@ lazy val `sbt-metals` = project
     },
     publishMavenStyle := false,
     libraryDependencies --= libraryDependencies.in(ThisBuild).value,
+    libraryDependencies += "org.ensime" %% "sbt-ensime" % "2.6.0",
     scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import"),
     scriptedBufferLog := !sys.env.contains("CI"),
     scriptedLaunchOpts ++= Seq(
