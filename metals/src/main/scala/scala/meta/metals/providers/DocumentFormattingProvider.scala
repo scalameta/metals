@@ -7,8 +7,8 @@ import scala.meta.metals.Formatter
 import org.langmeta.lsp.MonixEnrichments._
 import org.langmeta.lsp.Position
 import org.langmeta.lsp.TextEdit
-import org.langmeta.jsonrpc.JsonRpcClient
-import org.langmeta.jsonrpc.Response
+import io.github.lsp4s.jsonrpc.JsonRpcClient
+import io.github.lsp4s.jsonrpc.Response
 import org.langmeta.lsp.Window.showMessage
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging

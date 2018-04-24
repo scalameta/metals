@@ -16,8 +16,8 @@ import scalafix.util.SemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
 import org.langmeta.inputs.Input
-import org.langmeta.jsonrpc.JsonRpcClient
-import org.langmeta.jsonrpc.Response
+import io.github.lsp4s.jsonrpc.JsonRpcClient
+import io.github.lsp4s.jsonrpc.Response
 import org.langmeta.lsp.Window.showMessage
 import cats.syntax.bifunctor._
 import cats.instances.either._

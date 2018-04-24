@@ -20,8 +20,8 @@ import org.langmeta.lsp.{
   _
 }
 import MonixEnrichments._
-import org.langmeta.jsonrpc.Response
-import org.langmeta.jsonrpc.Services
+import io.github.lsp4s.jsonrpc.Response
+import io.github.lsp4s.jsonrpc.Services
 import scala.meta.metals.providers._
 import scala.meta.metals.refactoring.OrganizeImports
 import scala.meta.metals.sbtserver.Sbt

@@ -8,7 +8,7 @@ import io.circe.syntax._
 import monix.eval.Task
 import monix.execution.schedulers.TestScheduler
 import monix.reactive.Observable
-import org.langmeta.jsonrpc._
+import io.github.lsp4s.jsonrpc._
 import tests.MegaSuite
 
 object BaseProtocolMessageTest extends MegaSuite with LazyLogging {

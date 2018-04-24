@@ -3,7 +3,7 @@ package scala.meta.metals
 import java.io.FileOutputStream
 import java.io.PrintStream
 import java.nio.file.Files
-import org.langmeta.jsonrpc.BaseProtocolMessage
+import io.github.lsp4s.jsonrpc.BaseProtocolMessage
 import scala.util.Properties
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
