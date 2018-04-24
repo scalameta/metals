@@ -93,11 +93,6 @@ lazy val noPublish = List(
   skip in publish := true
 )
 
-lazy val benchmarks = project
-  .disablePlugins(ScriptedPlugin)
-  .enablePlugins(JmhPlugin)
-  .dependsOn(metals)
-
 lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(ScriptedPlugin)
@@ -166,7 +161,6 @@ lazy val metalsRoot = project
     crossSbtVersions := Seq("1.0.4", "0.13.17"),
   )
   .aggregate(
-    benchmarks,
     metals,
     integration
   )
