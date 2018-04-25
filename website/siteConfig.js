@@ -13,6 +13,11 @@ const siteConfig = {
   projectName: 'Metals',
   organizationName: 'Scalameta',
 
+  algolia: {
+    "apiKey": "c865f6d974a3072a35d4b53d48ac2307",
+    "indexName": "metals"
+  },
+
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
     {doc: 'installation-contributors', label: 'Docs'},
