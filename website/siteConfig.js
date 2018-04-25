@@ -54,6 +54,7 @@ const siteConfig = {
       "system-ui"
     ]
   },*/
+  customDocsPath: 'website/target/docs',
 
   // This copyright info is used in /core/Footer.js and blog rss/atom feeds.
   copyright:
