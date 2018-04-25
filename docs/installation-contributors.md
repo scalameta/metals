@@ -17,12 +17,10 @@ These steps are required once per machine.
 The server needs to access some metadata about the build configuration. This
 data are produced by an sbt plugin.
 
-You can install the plugin with (replace `<version>` with the latest available version)
-
-[![Download](https://api.bintray.com/packages/scalameta/sbt-plugins/sbt-metals/images/download.svg)](https://bintray.com/scalameta/sbt-plugins/sbt-metals/_latestVersion)
+You can install the plugin with:
 
 ```scala
-addSbtPlugin("org.scalameta" % "sbt-metals" % "<version>")
+addSbtPlugin("org.scalameta" % "sbt-metals" % "@VERSION@")
 ```
 
 You can add the plugin to a specific project (adding it to `project/plugins.sbt`) or globally adding it to:
