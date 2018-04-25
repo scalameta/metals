@@ -12,6 +12,8 @@ if [[ "$(git rev-list --merges HEAD^..HEAD)" || "$TRAVIS_TAG" ]]; then
 
     sbt release
 
+    sbt website/preprocess:preprocess
+
     cd website
     yarn install
     GIT_USER=git CURRENT_BRANCH=master USE_SSH=true yarn publish-gh-pages
