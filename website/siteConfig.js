@@ -1,16 +1,6 @@
 // See https://docusaurus.io/docs/site-config.html for all the possible
 // site configuration options.
 
-/* List of projects/orgs using your project for the users page */
-// const users = [
-//   {
-//     caption: 'User1',
-//     image: '/test-site/img/docusaurus.svg',
-//     infoLink: 'https://www.facebook.com',
-//     pinned: true,
-//   },
-// ];
-
 const repoUrl = 'https://github.com/scalameta/metals';
 
 const siteConfig = {
@@ -43,32 +33,15 @@ const siteConfig = {
     secondaryColor: '#1B555C',
   },
 
-  /* custom fonts for website */
-  /*fonts: {
-    myFont: [
-      "Times New Roman",
-      "Serif"
-    ],
-    myOtherFont: [
-      "-apple-system",
-      "system-ui"
-    ]
-  },*/
   customDocsPath: 'website/target/docs',
 
   // This copyright info is used in /core/Footer.js and blog rss/atom feeds.
-  copyright:
-    'Copyright © ' +
-    new Date().getFullYear() +
-    ' Metals',
+  copyright: `Copyright © ${new Date().getFullYear()} Metals`,
 
   highlight: {
     // Highlight.js theme to use for syntax highlighting in code blocks
     theme: 'github',
   },
-
-  // Add custom scripts here that would be placed in <script> tags
-  // scripts: ['https://buttons.github.io/buttons.js'],
 
   /* On page navigation for the current documentation page */
   onPageNav: 'separate',
