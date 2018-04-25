@@ -104,11 +104,23 @@ client is expected to send a `workspace/didChangeConfiguration` notification
 containing user configuration right after the `initialized` notification.
 
 A full list of server configuration options can be found in
-[Configuration.scala][]. All configuration options have default values. An
+[Configuration.scala][]. An
 example of how the configuration options are used from the VS Code plugin can be
 seen in the
 [package.json](https://github.com/scalameta/metals/blob/master/vscode-extension/package.json)
 manifest.
+
+Here are the default values for all the options:
+
+```tut:passthrough
+{
+  import scala.meta.metals.Configuration
+  import io.circe.syntax._
+  println("```json")
+  println(Configuration().asJson.spaces2)
+  println("```")
+}
+```
 
 Server side configuration options include settings to enable
 experimental/unstable features such as completions with the presentation
