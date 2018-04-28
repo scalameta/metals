@@ -26,9 +26,8 @@ You can add the plugin to a specific project (adding it to `project/plugins.sbt`
 - (sbt 0.13) `~/.sbt/0.13/plugins/plugins.sbt`
 
 ## VSCode extension
-The VSCode extension is [published on the Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals).
-You can open VSCode and search for it or click [here](vscode:extension/scalameta.metals) to install
-it directly.
+
+***N.B.***  This project is still in development - right now you will need to run the VSCode plugin as described in the [contributing guide](../CONTRIBUTING.md#running-a-local-version-of-the-vscode-extension)
 
 # Per-project setup
 
