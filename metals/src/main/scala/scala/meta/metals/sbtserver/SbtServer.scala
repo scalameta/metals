@@ -17,9 +17,9 @@ import monix.execution.CancelableFuture
 import monix.execution.Scheduler
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
-import org.langmeta.jsonrpc.BaseProtocolMessage
-import org.langmeta.jsonrpc.JsonRpcClient
-import org.langmeta.jsonrpc.Services
+import io.github.lsp4s.jsonrpc.BaseProtocolMessage
+import io.github.lsp4s.jsonrpc.JsonRpcClient
+import io.github.lsp4s.jsonrpc.Services
 import org.langmeta.lsp.LanguageClient
 import org.langmeta.lsp.LanguageServer
 import org.langmeta.lsp.TextDocument

@@ -8,7 +8,7 @@ import scala.util.Failure
 import scala.util.Success
 import monix.execution.Scheduler.Implicits.global
 import org.langmeta.internal.io.PathIO
-import org.langmeta.jsonrpc.Services
+import io.github.lsp4s.jsonrpc.Services
 import org.langmeta.lsp.TextDocument
 import org.langmeta.lsp.Window
 import tests.MegaSuite

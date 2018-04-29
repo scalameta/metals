@@ -15,7 +15,7 @@ import org.langmeta.lsp.VersionedTextDocumentIdentifier
 import org.langmeta.lsp.Window.showMessage
 import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
-import org.langmeta.jsonrpc.JsonRpcClient
+import io.github.lsp4s.jsonrpc.JsonRpcClient
 
 /** Responsible for keeping fresh scalac global instances. */
 class ScalacProvider()(implicit client: JsonRpcClient) extends LazyLogging {

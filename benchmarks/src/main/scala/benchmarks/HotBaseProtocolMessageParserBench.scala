@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.Logger
 import io.circe.Json
 import monix.execution.schedulers.TestScheduler
 import monix.reactive.Observable
-import org.langmeta.jsonrpc._
+import io.github.lsp4s.jsonrpc._
 import org.openjdk.jmh.annotations._
 
 /**

@@ -84,6 +84,7 @@ lazy val V = new {
   val circe = "0.9.0"
   val cats = "1.0.1"
   val monix = "3.0.0-RC3"
+  val lsp4s = "0.1.0"
 }
 
 lazy val noPublish = List(
@@ -91,37 +92,6 @@ lazy val noPublish = List(
   publishArtifact := false,
   skip in publish := true
 )
-
-lazy val benchmarks = project
-  .disablePlugins(ScriptedPlugin)
-  .enablePlugins(JmhPlugin)
-  .dependsOn(metals)
-
-lazy val jsonrpc = project
-  .disablePlugins(ScriptedPlugin)
-  .settings(
-    crossScalaVersions := List(V.scala211, V.scala212),
-    libraryDependencies ++= List(
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "com.beachape" %% "enumeratum" % V.enumeratum,
-      "com.beachape" %% "enumeratum-circe" % "1.5.15",
-      "com.lihaoyi" %% "pprint" % "0.5.3",
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
-      "io.circe" %% "circe-core" % V.circe,
-      "io.circe" %% "circe-generic" % V.circe,
-      "io.circe" %% "circe-generic-extras" % V.circe,
-      "io.circe" %% "circe-parser" % V.circe,
-      "io.monix" %% "monix" % "2.3.0",
-      "org.codehaus.groovy" % "groovy" % "2.4.0",
-      "org.slf4j" % "slf4j-api" % "1.7.25",
-      "org.typelevel" %% "cats-core" % V.cats
-    )
-  )
-
-lazy val lsp4s = project
-  .disablePlugins(ScriptedPlugin)
-  .settings(crossScalaVersions := List(V.scala211, V.scala212))
-  .dependsOn(jsonrpc)
 
 lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
@@ -140,6 +110,7 @@ lazy val metals = project
     ),
     buildInfoPackage := "scala.meta.metals.internal",
     libraryDependencies ++= List(
+      "io.github.lsp4s" %% "lsp4s" % V.lsp4s, // for lsp bindings
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0", // for sbt server
       "ch.epfl.scala" % "scalafix-reflect" % V.scalafix cross CrossVersion.full,
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
@@ -154,8 +125,7 @@ lazy val metals = project
     )
   )
   .dependsOn(
-    testWorkspace % "test->test",
-    lsp4s
+    testWorkspace % "test->test"
   )
 
 lazy val integration = project
@@ -191,9 +161,6 @@ lazy val metalsRoot = project
     crossSbtVersions := Seq("1.0.4", "0.13.17"),
   )
   .aggregate(
-    benchmarks,
-    jsonrpc,
-    lsp4s,
     metals,
     integration
   )

@@ -14,10 +14,7 @@ pull requests.
 
 ## Project structure
 
-* `lsp4s` contains a Scala implementation of the
-  [Language Server Protocol specification](https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md)
-* `metals` contains a Scala implementation of a language server based on
-  Scalameta, which uses `lsp4s`
+* `metals` contains a Scala implementation of a language server based on Scalameta
 * `vscode-extension` contains a Visual Studio Code extension, implementing a
   client for the language server
 * `test-workspace` directory for manually testing the plugin locally

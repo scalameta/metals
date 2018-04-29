@@ -11,7 +11,7 @@ import org.langmeta.lsp
 import org.langmeta.lsp.ApplyWorkspaceEditParams
 import org.langmeta.lsp.TextDocumentIdentifier
 import org.langmeta.lsp.WorkspaceEdit
-import org.langmeta.jsonrpc.Response
+import io.github.lsp4s.jsonrpc.Response
 import scalafix.languageserver.ScalafixEnrichments._
 import scalafix.languageserver.ScalafixPatchEnrichments._
 import scalafix.rule.RuleCtx

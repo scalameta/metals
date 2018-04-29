@@ -3,7 +3,7 @@ package scala.meta.metals
 import java.nio.charset.StandardCharsets.UTF_8
 import scala.beans.BeanProperty
 import org.langmeta.lsp.Window._
-import org.langmeta.jsonrpc.JsonRpcClient
+import io.github.lsp4s.jsonrpc.JsonRpcClient
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.Level

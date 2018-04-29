@@ -7,7 +7,7 @@ import scala.{meta => m}
 import scala.meta.metals.ScalametaEnrichments._
 import org.langmeta.lsp.MonixEnrichments._
 import org.langmeta.lsp.PublishDiagnostics
-import org.langmeta.jsonrpc.JsonRpcClient
+import io.github.lsp4s.jsonrpc.JsonRpcClient
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable

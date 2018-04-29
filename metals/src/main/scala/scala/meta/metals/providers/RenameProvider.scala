@@ -7,7 +7,7 @@ import org.langmeta.lsp.RenameParams
 import org.langmeta.lsp.TextEdit
 import org.langmeta.lsp.Window.showMessage
 import org.langmeta.lsp.WorkspaceEdit
-import org.langmeta.jsonrpc.JsonRpcClient
+import io.github.lsp4s.jsonrpc.JsonRpcClient
 import scala.meta.metals.refactoring.Backtick
 import scala.meta.metals.search.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
