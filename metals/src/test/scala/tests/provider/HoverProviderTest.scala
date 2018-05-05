@@ -1,6 +1,6 @@
-package tests.hover
+package tests.provider
 
-object HoverTest extends BaseHoverTest {
+object HoverProviderTest extends BaseHoverProviderTest {
 
   check(
     "val assignment",

@@ -1,28 +1,24 @@
-package tests.compiler
+package tests.provider
 
-import java.io.FileOutputStream
-import java.io.PipedOutputStream
-import java.io.PrintStream
-import java.nio.file.Files
-import java.nio.file.Path
-import scala.meta.internal.inputs._
-import scala.meta.metals.Configuration
-import scala.meta.metals.Linter
-import scala.meta.metals.Semanticdbs
-import org.langmeta.lsp.PublishDiagnostics
-import scala.meta.metals.providers.DiagnosticsProvider
+import java.io.{FileOutputStream, PipedOutputStream, PrintStream}
+import java.nio.file.{Files, Path}
+
+import com.typesafe.scalalogging.LazyLogging
 import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.langmeta.inputs.Input
-import org.langmeta.io.AbsolutePath
-import org.langmeta.io.RelativePath
+import org.langmeta.io.{AbsolutePath, RelativePath}
 import org.langmeta.languageserver.InputEnrichments._
-import org.langmeta.lsp.LanguageClient
-import com.typesafe.scalalogging.LazyLogging
+import org.langmeta.lsp.{LanguageClient, PublishDiagnostics}
+import tests.CompilerSuite
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.meta.internal.inputs._
+import scala.meta.metals.{Configuration, Linter, Semanticdbs}
+import scala.meta.metals.providers.DiagnosticsProvider
 
-object DiagnosticsTest extends CompilerSuite with LazyLogging {
+object DiagnosticsProviderTest extends CompilerSuite with LazyLogging {
   val tmp: Path = Files.createTempDirectory("metals")
   val logFile = tmp.resolve("metals.log").toFile
   val out = new PrintStream(new FileOutputStream(logFile))
