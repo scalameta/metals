@@ -34,16 +34,22 @@ To integrate metals with a new editor, a few things should be kept in mind
 The server can be launched with
 [coursier](https://github.com/coursier/coursier/)
 
-[ ![Download](https://api.bintray.com/packages/scalameta/maven/metals/images/download.svg) ](https://bintray.com/scalameta/maven/metals/_latestVersion)
+The following script will launch the latest published version of the server:
 
 ```
-coursier launch -r bintray:scalameta/maven org.scalameta:metals_2.12:SERVER_VERSION -M scala.meta.metals.Main
+coursier launch -r bintray:scalameta/maven org.scalameta:metals_2.12:@VERSION@ -M scala.meta.metals.Main
 ```
 
-`SERVER_VERSION` can either be a locally published version of the metals server
-via `sbt metals/publishLocal` or an unsupported pre-release published
-automatically to Bintray by our Travis CI. There are no stable or officially
-supported releases of metals.
+Our CI publishes a new version of the server at every merge on master; there are currently no stable
+or officially supported releases of Metals.
+
+You can use a local version of metals by publishing it locally with `sbt publishLocal`, and changing
+the artifact version to `SNAPSHOT`. The following script will launch the locally published version
+of the server:
+
+```
+coursier launch -r bintray:scalameta/maven org.scalameta:metals_2.12:SNAPSHOT -M scala.meta.metals.Main
+```
 
 The following Java options are recommended:
 
@@ -114,10 +120,8 @@ Here are the default values for all the options:
 
 ```tut:passthrough
 {
-  import scala.meta.metals.Configuration
-  import io.circe.syntax._
   println("```json")
-  println(Configuration().asJson.spaces2)
+  println(scala.meta.metals.Configuration.defaultAsJson)
   println("```")
 }
 ```
