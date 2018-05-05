@@ -1,11 +1,12 @@
-package tests.compiler
+package tests.provider
 
-import org.langmeta.lsp.CompletionList
-import scala.meta.metals.providers.CompletionProvider
-import org.langmeta.lsp.CompletionItemKind
 import io.circe.syntax._
+import org.langmeta.lsp.{CompletionItemKind, CompletionList}
+import tests.CompilerSuite
 
-object CompletionsTest extends CompilerSuite {
+import scala.meta.metals.providers.CompletionProvider
+
+object CompletionsProviderTest extends CompilerSuite {
 
   def check(
       filename: String,
