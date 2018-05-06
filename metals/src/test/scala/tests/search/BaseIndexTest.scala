@@ -7,13 +7,14 @@ import scala.meta.metals.Configuration
 import scala.meta.metals.Effects
 import scala.meta.metals.Uri
 import org.langmeta.jsonrpc.JsonRpcClient
+
 import scala.meta.metals.search.SymbolIndex
 import scala.{meta => m}
 import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb._
-import tests.compiler.CompilerSuite
+import tests.CompilerSuite
 
 abstract class BaseIndexTest extends CompilerSuite {
   val buffers = Buffers()

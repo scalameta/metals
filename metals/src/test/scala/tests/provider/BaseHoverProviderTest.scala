@@ -1,13 +1,14 @@
-package tests.hover
+package tests.provider
+
+import io.circe.syntax._
+import org.langmeta.lsp.Hover
+import tests.search.BaseIndexTest
 
 import scala.meta.metals.Uri
-import org.langmeta.lsp.Hover
 import scala.meta.metals.providers.HoverProvider
 import scala.{meta => m}
-import tests.search.BaseIndexTest
-import io.circe.syntax._
 
-abstract class BaseHoverTest extends BaseIndexTest {
+abstract class BaseHoverProviderTest extends BaseIndexTest {
 
   def check(
       filename: String,

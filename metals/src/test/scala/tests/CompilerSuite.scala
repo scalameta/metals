@@ -1,12 +1,11 @@
-package tests.compiler
+package tests
+
+import org.langmeta.semanticdb.Document
 
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.metals.Uri
-import scala.meta.metals.compiler.Cursor
-import scala.meta.metals.compiler.ScalacProvider
+import scala.meta.metals.compiler.{Cursor, ScalacProvider}
 import scala.tools.nsc.interactive.Global
-import org.langmeta.semanticdb.Document
-import tests.MegaSuite
 
 class CompilerSuite extends MegaSuite {
   val compiler: Global = ScalacProvider.newCompiler(
