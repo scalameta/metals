@@ -6,32 +6,9 @@ package scala.meta.sbt {
 
   object MetalsPlugin extends AutoPlugin {
     override def trigger = allRequirements
-    override def requires = sbt.plugins.JvmPlugin
-    object autoImport {
-      def metalsSettings(cs: Configuration*): Seq[Def.Setting[_]] = {
-        val configs = if (cs.nonEmpty) cs else Seq(Compile)
-        configs.flatMap { config =>
-          inConfig(config)(
-            Seq(
-              metalsBuildInfo := metalsBuildInfoTask.value,
-              metalsWriteBuildInfo := metalsWriteBuildInfoTask.value
-            )
-          )
-        } ++ Seq(
-          // without config scope it will aggregate over all project dependencies
-          // and their configurations
-          metalsWriteBuildInfo := Def.taskDyn {
-            IO.delete(buildinfoDir.value / thisProject.value.id)
-            val depsAndConfigs = ScopeFilter(
-              inDependencies(ThisProject),
-              inConfigurations(configs: _*)
-            )
-            metalsWriteBuildInfo.all(depsAndConfigs)
-          }.value
-        )
-      }
-    }
+    override def requires = sbt.plugins.JvmPlugin && org.ensime.EnsimePlugin
 
+    object autoImport
     import autoImport._
 
     def scala211 = "2.11.12"
@@ -42,11 +19,7 @@ package scala.meta.sbt {
 
     def semanticdbVersion = "2.1.7"
 
-    val metalsBuildInfo = taskKey[Map[String, String]](
-      "List of key/value pairs for build information such as classpath/sourceDirectories"
-    )
-
-    val metalsWriteBuildInfo = taskKey[Unit](
+    val metalsWriteBuildInfo = inputKey[Unit](
       "Write build information to .metals/buildinfo/"
     )
 
@@ -57,65 +30,26 @@ package scala.meta.sbt {
       baseDirectory.in(ThisBuild).value / ".metals" / "buildinfo"
     }
 
-    override def projectSettings =
-      metalsSettings(Compile, Test)
-
     override def globalSettings = Seq(
       commands ++= Seq(
         semanticdbEnable,
         metalsSetup
-      ),
-      // without project scope it will aggregate over all projects
-      metalsWriteBuildInfo := {
-        Def.task {
-          metalsWriteBuildInfo.all(ScopeFilter(inAnyProject)).value
-          streams.value.log.info("🤘 Metals is ready, time to rock!")
-        } dependsOn Def.task {
-          IO.delete(buildinfoDir.value)
-        }
-      }.value
+      )
     )
 
-    def metalsBuildInfoTask: Def.Initialize[Task[Map[String, String]]] =
-      Def.task {
-        Map(
-          "sources" -> sources.value.distinct.mkString(File.pathSeparator),
-          "unmanagedSourceDirectories" ->
-            unmanagedSourceDirectories.value.distinct
-              .mkString(File.pathSeparator),
-          "managedSourceDirectories" -> managedSourceDirectories.value.distinct
-            .mkString(File.pathSeparator),
-          "scalacOptions" -> scalacOptions.value.mkString(" "),
-          "classDirectory" -> classDirectory.value.getAbsolutePath,
-          "dependencyClasspath" -> dependencyClasspath.value
-            .map(_.data.toString)
-            .mkString(File.pathSeparator),
-          "scalaVersion" -> scalaVersion.value,
-          "sourceJars" -> {
-            val sourceJars = for {
-              configurationReport <- updateClassifiers.value.configurations
-              moduleReport <- configurationReport.modules
-              (artifact, file) <- moduleReport.artifacts
-              if artifact.classifier.exists(_ == "sources")
-            } yield file
-            sourceJars.mkString(File.pathSeparator)
-          }
-        )
-      }
+    override def projectSettings = Seq(
+      metalsWriteBuildInfo := metalsWriteBuildInfoTask.evaluated,
+      aggregate in metalsWriteBuildInfo := false
+    )
 
-    def metalsWriteBuildInfoTask: Def.Initialize[Task[Unit]] = Def.task {
-      val props = new java.util.Properties()
-      metalsBuildInfoTask.value.foreach {
-        case (k, v) => props.setProperty(k, v)
+    def metalsWriteBuildInfoTask: Def.Initialize[InputTask[Unit]] =
+      Def.inputTask {
+        val config = org.ensime.EnsimePlugin.ensimeConfigTask.evaluated
+
+        // FIXME write out the EnsimeConfig ADT to .property files
+
+        ???
       }
-      val out = new ByteArrayOutputStream()
-      props.store(out, null)
-      val outDir = buildinfoDir.value / thisProject.value.id
-      outDir.mkdirs()
-      val outFile = outDir / s"${configuration.value.name}.properties"
-      IO.write(outFile, out.toString())
-      streams.value.log.info(s"Wrote ${outFile}")
-    }
 
     lazy val metalsSetup = Command.command(
       "metalsSetup",
@@ -124,7 +58,7 @@ package scala.meta.sbt {
           "such as classpath and source directories.",
       detail = ""
     ) { st: State =>
-      "semanticdbEnable" :: "*/metalsWriteBuildInfo" :: st
+      "semanticdbEnable" :: "metalsWriteBuildInfo" :: st
     }
 
     /** sbt 1.0 and 0.13 compatible implementation of partialVersion */
