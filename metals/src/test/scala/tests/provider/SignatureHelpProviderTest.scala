@@ -1,10 +1,12 @@
-package tests.compiler
+package tests.provider
 
-import org.langmeta.lsp.SignatureHelp
-import scala.meta.metals.providers.SignatureHelpProvider
 import io.circe.syntax._
+import org.langmeta.lsp.SignatureHelp
+import tests.CompilerSuite
 
-object SignatureHelpTest extends CompilerSuite {
+import scala.meta.metals.providers.SignatureHelpProvider
+
+object SignatureHelpProviderTest extends CompilerSuite {
 
   def check(
       filename: String,
