@@ -82,3 +82,5 @@ VSCode output panel (selecting Metals on the right).
 
 Finally, since most features currently rely on a successful compilation step,
 make sure you incrementally compile your project by running `~compile` in `sbt`.
+
+[**Troubleshooting tips**](../CONTRIBUTING.md#troubleshooting)
