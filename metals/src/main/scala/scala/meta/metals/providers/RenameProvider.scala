@@ -45,7 +45,7 @@ object RenameProvider extends LazyLogging {
               false
           }
         }
-        position <- reference.referencePositions(true)
+        position <- reference.referencePositions(withDefinition = true)
       } yield {
         TextEdit(position.toLocation.range, newName)
       }

@@ -3,11 +3,13 @@ package scala.meta.metals.search
 import scala.annotation.tailrec
 import scala.meta._
 import scala.meta.metals.ScalametaEnrichments._
+import org.langmeta.{lsp => l}
 import scala.meta.metals.{index => i}
 import com.typesafe.scalalogging.LazyLogging
 import difflib._
 import difflib.myers.Equalizer
 import org.langmeta.languageserver.InputEnrichments._
+import scala.meta.metals.Uri
 
 sealed trait EmptyResult
 object EmptyResult {
@@ -21,9 +23,11 @@ object EmptyResult {
 final class TokenEditDistance private (matching: Array[MatchingToken]) {
   private val isEmpty: Boolean = matching.length == 0
 
-  private val ThisUri: String = originalInput match {
-    case Input.VirtualFile(uri, _) => uri
-    case _ => originalInput.syntax
+  private val ThisUri: Uri = originalInput match {
+    case Input.VirtualFile(uri, _) => Uri(uri)
+    case Input.String(_) => Uri("file:///string")
+    case Input.None => Uri("file:///none")
+    case _ => throw new IllegalArgumentException(originalInput.syntax)
   }
   private def originalInput: Input =
     if (isEmpty) Input.None
@@ -54,7 +58,7 @@ final class TokenEditDistance private (matching: Array[MatchingToken]) {
   }
 
   private object RevisedRange {
-    def unapply(range: i.Range): Option[i.Range] =
+    def unapply(range: l.Range): Option[l.Range] =
       toRevised(range.startLine, range.startColumn) match {
         case Left(EmptyResult.NoMatch) => None
         case Left(EmptyResult.Unchanged) => Some(range)
@@ -65,11 +69,11 @@ final class TokenEditDistance private (matching: Array[MatchingToken]) {
   /** Convert the reference positions to match the revised input. */
   def toRevisedReferences(data: i.SymbolData): i.SymbolData = {
     val referencesAdjusted = data.references.get(ThisUri) match {
-      case Some(i.Ranges(ranges)) =>
-        val newRanges = ranges.collect { case RevisedRange(range) => range }
-        val newData = data.copy(
-          references = data.references + (ThisUri -> i.Ranges(newRanges))
-        )
+      case Some(ranges) =>
+        val newRanges =
+          ranges.collect { case RevisedRange(range) => range }
+        val newData =
+          data.copy(references = data.references + (ThisUri -> newRanges))
         newData
       case _ => data
     }
@@ -79,16 +83,16 @@ final class TokenEditDistance private (matching: Array[MatchingToken]) {
   /** Convert the definition position to match the revised input. */
   def toRevisedDefinition(data: i.SymbolData): i.SymbolData = {
     data.definition match {
-      case Some(i.Position(ThisUri, Some(range))) =>
+      case Some(l.Location(uri, range)) if uri == ThisUri.value =>
         toRevised(range.startLine, range.startColumn) match {
           case Left(EmptyResult.NoMatch) => data.copy(definition = None)
           case Left(EmptyResult.Unchanged) => data
           case Right(newPos) =>
             val newData = data.copy(
               definition = Some(
-                i.Position(
-                  ThisUri,
-                  Some(newPos.toIndexRange)
+                l.Location(
+                  ThisUri.value,
+                  newPos.toIndexRange
                 )
               )
             )

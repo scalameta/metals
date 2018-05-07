@@ -18,12 +18,12 @@ object DocumentHighlightProvider extends LazyLogging {
     logger.info(s"Document highlight in $uri")
     for {
       data <- symbolIndex.findReferences(uri, position.line, position.character)
-      _ = logger.info(s"Highlighting symbol `${data.name}: ${data.signature}`")
+      _ = logger.info(s"Highlighting symbol ${data.symbol}")
       pos <- data.referencePositions(withDefinition = true)
       if pos.uri == uri.value
-      _ = logger.debug(s"Found highlight at [${pos.range.get.pretty}]")
+      _ = logger.debug(s"Found highlight at [${pos.range.pretty}]")
       // TODO(alexey) add DocumentHighlightKind: Text (default), Read, Write
-    } yield DocumentHighlight(pos.range.get.toRange)
+    } yield DocumentHighlight(pos.range.toRange)
   }
 
 }

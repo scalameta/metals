@@ -35,28 +35,37 @@ class ScalacProvider()(implicit client: JsonRpcClient) extends LazyLogging {
       // Looking up by sourceDirectory alone is not enough since
       // in sbt it's possible to `sources += file("blah")`, which would
       // not be respected if we only went by directories.
-      .orElse(compilerBySourceDirectory(uri))
+      .orElse(compilerBySourceDirectory(uri).map {
+        case (_, global) => global
+      })
       .map { compiler =>
         compiler.reporter.reset()
         compiler
       }
   }
 
-  def compilerBySourceDirectory(uri: Uri): Option[Global] = {
+  def compilerBySourceDirectory(uri: Uri): Option[(CompilerConfig, Global)] = {
     val path = uri.toAbsolutePath.toNIO
     compilerByConfigOrigin.values.collectFirst {
       case (config, global)
           if config.sourceDirectories.exists(
             dir => path.startsWith(dir.toNIO)
           ) =>
-        global
+        config -> global
     }
   }
   private val compilerByConfigOrigin =
     mutable.Map.empty[AbsolutePath, (CompilerConfig, Global)]
   private val compilerByPath = mutable.Map.empty[Uri, Global]
+  def configForUri(uri: Uri): Option[CompilerConfig] =
+    compilerBySourceDirectory(uri).map {
+      case (config, _) => config
+    }
+
   def allCompilerConfigs: Iterable[CompilerConfig] =
-    compilerByConfigOrigin.values.map(_._1)
+    compilerByConfigOrigin.values.map {
+      case (config, _) => config
+    }
   def loadNewCompilerGlobals(
       config: CompilerConfig
   ): Effects.InstallPresentationCompiler = {

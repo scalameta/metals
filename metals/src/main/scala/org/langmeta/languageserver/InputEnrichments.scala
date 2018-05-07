@@ -1,9 +1,9 @@
 package org.langmeta.languageserver
 
-import org.langmeta.lsp
+import org.langmeta.{lsp => l}
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
-import scala.meta.metals.{index => i}
+import scala.meta.internal.semanticdb3
 
 object InputEnrichments {
   implicit class XtensionPositionOffset(val pos: Position) extends AnyVal {
@@ -24,13 +24,12 @@ object InputEnrichments {
     }
   }
   implicit class XtensionInputOffset(val input: Input) extends AnyVal {
-    def toIndexRange(start: Int, end: Int): i.Range = {
-      val pos = Position.Range(input, start, end)
-      i.Range(
-        startLine = pos.startLine,
-        startColumn = pos.startColumn,
-        endLine = pos.endLine,
-        endColumn = pos.endColumn
+    def toIndexRange(r: semanticdb3.Range): l.Range = {
+      l.Range(
+        startLine = r.startLine,
+        startColumn = r.startCharacter,
+        endLine = r.endLine,
+        endColumn = r.endCharacter
       )
     }
 
@@ -39,7 +38,7 @@ object InputEnrichments {
       Position.Range(input, offset, offset)
 
     /** Returns a scala.meta.Position from an index range. */
-    def toPosition(range: lsp.Range): Position = {
+    def toPosition(range: l.Range): Position = {
       toPosition(
         range.start.line,
         range.start.character,
@@ -48,17 +47,7 @@ object InputEnrichments {
       )
     }
 
-    /** Returns a scala.meta.Position from an index range. */
-    def toPosition(range: i.Range): Position = {
-      toPosition(
-        range.startLine,
-        range.startColumn,
-        range.endLine,
-        range.endColumn
-      )
-    }
-
-    def toOffset(pos: lsp.Position): Int =
+    def toOffset(pos: l.Position): Int =
       toOffset(pos.line, pos.character)
 
     /** Returns an offset for this input */

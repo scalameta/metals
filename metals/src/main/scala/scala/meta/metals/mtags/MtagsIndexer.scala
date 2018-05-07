@@ -2,29 +2,25 @@ package scala.meta.metals.mtags
 
 import scala.meta.Name
 import scala.meta.Term
-import scala.meta.PACKAGE
 import scala.meta.metals.ScalametaEnrichments._
-import org.langmeta.internal.semanticdb.schema.Denotation
-import org.langmeta.internal.semanticdb.schema.ResolvedName
-import org.langmeta.internal.semanticdb.schema.Position
-import org.langmeta.internal.semanticdb.schema.ResolvedSymbol
 import org.{langmeta => m}
 import org.langmeta.semanticdb.Signature
 import org.langmeta.semanticdb.Symbol
+import scala.meta.internal.semanticdb3.Language
+import scala.meta.internal.{semanticdb3 => s}
+import scala.meta.internal.semanticdb3.SymbolInformation.Kind
 
 trait MtagsIndexer {
-  def language: String
+  def language: Language
   def indexRoot(): Unit
-  def index(): (List[ResolvedName], List[ResolvedSymbol]) = {
+  def index(): (List[s.SymbolOccurrence], List[s.SymbolInformation]) = {
     indexRoot()
     names.result() -> symbols.result()
   }
   private val root: Symbol.Global =
     Symbol.Global(Symbol.None, Signature.Term("_root_"))
   var currentOwner: Symbol.Global = root
-  def owner(isStatic: Boolean): Symbol.Global =
-    if (isStatic) currentOwner.toTerm
-    else currentOwner
+  def owner = currentOwner
   def withOwner[A](owner: Symbol.Global = currentOwner)(thunk: => A): A = {
     val old = currentOwner
     currentOwner = owner
@@ -32,16 +28,33 @@ trait MtagsIndexer {
     currentOwner = old
     result
   }
-  def term(name: String, pos: m.Position, flags: Long): Unit =
-    addSignature(Signature.Term(name), pos, flags)
-  def term(name: Term.Name, flags: Long): Unit =
-    addSignature(Signature.Term(name.value), name.pos, flags)
-  def param(name: Name, flags: Long): Unit =
-    addSignature(Signature.TermParameter(name.value), name.pos, flags)
-  def tpe(name: String, pos: m.Position, flags: Long): Unit =
-    addSignature(Signature.Type(name), pos, flags)
-  def tpe(name: Name, flags: Long): Unit =
-    addSignature(Signature.Type(name.value), name.pos, flags)
+  def term(name: String, pos: m.Position, kind: Kind, properties: Int): Unit =
+    addSignature(Signature.Term(name), pos, kind, properties)
+  def term(name: Term.Name, kind: Kind, properties: Int): Unit =
+    addSignature(Signature.Term(name.value), name.pos, kind, properties)
+  def param(name: Name, kind: Kind, properties: Int): Unit =
+    addSignature(
+      Signature.TermParameter(name.value),
+      name.pos,
+      kind,
+      properties
+    )
+  def method(
+      name: Name,
+      disambiguator: String,
+      kind: Kind,
+      properties: Int
+  ): Unit =
+    addSignature(
+      Signature.Method(name.value, disambiguator),
+      name.pos,
+      kind,
+      properties
+    )
+  def tpe(name: String, pos: m.Position, kind: Kind, properties: Int): Unit =
+    addSignature(Signature.Type(name), pos, kind, properties)
+  def tpe(name: Name, kind: Kind, properties: Int): Unit =
+    addSignature(Signature.Type(name.value), name.pos, kind, properties)
   def pkg(ref: Term): Unit = ref match {
     case Name(name) =>
       currentOwner = symbol(Signature.Term(name))
@@ -49,23 +62,30 @@ trait MtagsIndexer {
       pkg(qual)
       currentOwner = symbol(Signature.Term(name))
   }
-  private val names = List.newBuilder[ResolvedName]
-  private val symbols = List.newBuilder[ResolvedSymbol]
+  private val names = List.newBuilder[s.SymbolOccurrence]
+  private val symbols = List.newBuilder[s.SymbolInformation]
   private def addSignature(
       signature: Signature,
       definition: m.Position,
-      flags: Long
+      kind: s.SymbolInformation.Kind,
+      properties: Int
   ): Unit = {
     currentOwner = symbol(signature)
     val syntax = currentOwner.syntax
-    names += ResolvedName(
-      Some(Position(definition.start, definition.end)),
+    val role =
+      if (kind.isPackage) s.SymbolOccurrence.Role.REFERENCE
+      else s.SymbolOccurrence.Role.DEFINITION
+    names += s.SymbolOccurrence(
+      range = Some(definition.toSchemaRange),
       syntax,
-      isDefinition = (flags & PACKAGE) == 0
+      role
     )
-    symbols += ResolvedSymbol(
-      syntax,
-      Some(Denotation(flags, signature.name, "", Nil))
+    symbols += s.SymbolInformation(
+      symbol = syntax,
+      language = language,
+      kind = kind,
+      properties = properties,
+      name = signature.name
     )
   }
   private def symbol(signature: Signature): Symbol.Global =

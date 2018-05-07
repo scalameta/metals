@@ -8,12 +8,16 @@ import org.langmeta.lsp.Diagnostic
 import org.langmeta.lsp.Location
 import org.langmeta.lsp.Position
 import scala.meta.metals.{index => i}
-import org.langmeta.internal.semanticdb.{schema => s}
+import scala.meta.internal.semanticdb3
 import scala.{meta => m}
 import org.langmeta.lsp.SymbolKind
 import org.langmeta.{lsp => l}
 import org.langmeta.internal.io.FileIO
 import org.langmeta.io.AbsolutePath
+import org.langmeta.internal.semanticdb._
+import scala.meta.internal.semanticdb3.SymbolInformation.Kind
+import scala.meta.internal.semanticdb3.SymbolInformation.Property
+import scala.meta.metals.search.SymbolInformationsBySymbol
 
 // Extension methods for convenient reuse of data conversions between
 // scala.meta._ and language.types._
@@ -35,6 +39,7 @@ object ScalametaEnrichments {
       case m.Severity.Info => l.DiagnosticSeverity.Information
       case m.Severity.Warning => l.DiagnosticSeverity.Warning
       case m.Severity.Error => l.DiagnosticSeverity.Error
+      case m.Severity.Hint => l.DiagnosticSeverity.Hint
     }
   }
 
@@ -50,7 +55,7 @@ object ScalametaEnrichments {
         case d: Defn.Var => d.decltpe
         case _ => None
       }
-      tpeOpt.filter(_.is[Type.Function]).nonEmpty
+      tpeOpt.exists(_.is[Type.Function])
     }
 
     // NOTE: we care only about descendants of Decl, Defn and Pkg[.Object] (see documentSymbols implementation)
@@ -112,18 +117,18 @@ object ScalametaEnrichments {
       case _ => new String(input.chars)
     }
   }
-  implicit class XtensionIndexPosition(val pos: i.Position) extends AnyVal {
+  implicit class XtensionIndexPosition(val pos: l.Location) extends AnyVal {
     def pretty: String =
-      s"${pos.uri.replaceFirst(".*/", "")} [${pos.range.map(_.pretty).getOrElse("")}]"
+      s"${pos.uri.replaceFirst(".*/", "")} [${pos.range.pretty}]"
 
     def toLocation: Location = {
       l.Location(
         pos.uri,
-        pos.range.get.toRange
+        pos.range.toRange
       )
     }
   }
-  implicit class XtensionIndexRange(val range: i.Range) extends AnyVal {
+  implicit class XtensionIndexRange(val range: l.Range) extends AnyVal {
     def pretty: String =
       f"${range.startLine}%3d:${range.startColumn}%3d|${range.endLine}%3d:${range.endColumn}%3d"
     def toRange: l.Range = l.Range(
@@ -150,7 +155,15 @@ object ScalametaEnrichments {
     def toLanguageServerUri: String = "file:" + path.toString()
   }
   implicit class XtensionPositionRangeLSP(val pos: m.Position) extends AnyVal {
-    def toIndexRange: i.Range = i.Range(
+    def toSchemaRange: semanticdb3.Range = {
+      semanticdb3.Range(
+        startLine = pos.startLine,
+        startCharacter = pos.startColumn,
+        endLine = pos.endLine,
+        endCharacter = pos.endColumn
+      )
+    }
+    def toIndexRange: l.Range = l.Range(
       startLine = pos.startLine,
       startColumn = pos.startColumn,
       endLine = pos.endLine,
@@ -228,7 +241,7 @@ object ScalametaEnrichments {
           ) =>
         Symbol.Global(
           Symbol.Global(owner, Signature.Type(signature.name)),
-          param
+          Signature.Method(param.name, "()")
         )
     }
 
@@ -299,24 +312,131 @@ object ScalametaEnrichments {
     /** Returns reference positions for the given symbol index data
      * @param withDefinition if set to `true` will include symbol definition location
      */
-    def referencePositions(withDefinition: Boolean): Set[i.Position] = {
+    def referencePositions(withDefinition: Boolean): Set[l.Location] = {
       val defPosition = if (withDefinition) data.definition else None
 
       val refPositions = for {
-        (uri, rangeSet) <- data.references
-        range <- rangeSet.ranges
-      } yield i.Position(uri, Some(range))
+        (uri, ranges) <- data.references
+        range <- ranges
+      } yield l.Location(uri.value, range)
 
       (defPosition.toSet ++ refPositions.toSet)
         .filterNot { _.uri.startsWith("jar:file") } // definition may refer to a jar
     }
 
   }
-  implicit class XtensionSchemaDocument(val document: s.Document)
+  implicit class XtensionSchemaRange(val r: semanticdb3.Range) {
+    def toLSP: l.Range = l.Range(
+      startLine = r.startLine,
+      startColumn = r.startCharacter,
+      endLine = r.endLine,
+      endColumn = r.endCharacter
+    )
+    def toLocation(uri: String): l.Location = {
+      l.Location(uri, toLSP)
+    }
+  }
+  implicit class XtensionSchemaDocument(val document: semanticdb3.TextDocument)
       extends AnyVal {
+
+    def computeSymbolDataForLocalSymbol(
+        symbol: String
+    ): Option[i.SymbolData] = {
+      info(symbol).map { info =>
+        val uri = Uri(document.uri)
+        var definition: Option[Location] = None
+        val references = List.newBuilder[l.Range]
+        document.occurrences.foreach { o =>
+          if (o.symbol == symbol && o.range.isDefined) {
+            if (o.role.isDefinition) {
+              definition = Some(o.range.get.toLocation(document.uri))
+            } else if (o.role.isReference) {
+              references += o.range.get.toLSP
+            }
+          }
+        }
+        i.SymbolData(
+          symbol = symbol,
+          definition = definition,
+          references = Map(uri -> references.result()),
+          info = Some(info)
+        )
+      }
+    }
+
+    def info(symbol: String): Option[semanticdb3.SymbolInformation] = {
+      document.symbols match {
+        case s: SymbolInformationsBySymbol =>
+          s.lookupSymbol(symbol)
+        case _ =>
+          document.symbols.find(_.symbol == symbol)
+      }
+    }
 
     /** Returns scala.meta.Document from protobuf schema.Document */
     def toMetaDocument: m.Document =
-      s.Database(document :: Nil).toDb(None).documents.head
+      semanticdb3.TextDocuments(document :: Nil).toDb(None).documents.head
   }
+
+  implicit class XtensionSymbolInformation(
+      val info: semanticdb3.SymbolInformation
+  ) extends AnyVal {
+    import Property._
+
+    def isLocal: Boolean = {
+      info.kind.isLocal ||
+      // Workaround for https://github.com/scalameta/scalameta/issues/1486
+      info.symbol.startsWith("local")
+    }
+
+    def isOneOf(kind: Kind*): Boolean = {
+      kind.contains(info.kind)
+    }
+    def has(prop1: Property, prop2: Property, props: Property*): Boolean =
+      has(prop1) || has(prop2) || props.exists(has)
+    def has(prop: Property): Boolean =
+      info.properties.hasOneOfFlags(prop.value)
+    def toSymbolKind: SymbolKind = info.kind match {
+      case Kind.OBJECT | Kind.PACKAGE_OBJECT =>
+        SymbolKind.Module
+      case Kind.CLASS =>
+        if (has(ENUM)) SymbolKind.Enum
+        else SymbolKind.Class
+      case Kind.PACKAGE =>
+        SymbolKind.Package
+      case Kind.TRAIT | Kind.INTERFACE =>
+        SymbolKind.Interface
+      case Kind.METHOD | Kind.LOCAL =>
+        if (has(VAL)) SymbolKind.Constant
+        else if (has(VAR)) SymbolKind.Variable
+        else SymbolKind.Method
+      case Kind.MACRO =>
+        SymbolKind.Method
+      case Kind.CONSTRUCTOR =>
+        SymbolKind.Constructor
+      case Kind.FIELD =>
+        SymbolKind.Field
+      case Kind.TYPE =>
+        SymbolKind.Class // ???
+      case Kind.PARAMETER | Kind.SELF_PARAMETER | Kind.TYPE_PARAMETER =>
+        SymbolKind.Variable // ???
+      case unknown @ (Kind.UNKNOWN_KIND | Kind.Unrecognized(_)) =>
+        throw new IllegalArgumentException(
+          s"Unsupported kind $unknown in SymbolInformation: ${info.toProtoString}"
+        )
+    }
+  }
+
+  implicit class XtensionIntAsSymbolKind(val flags: Int) extends AnyVal {
+    def hasOneOfFlags(flags: Long): Boolean =
+      (this.flags & flags) != 0L
+    def toSymbolKind: SymbolKind =
+      if (hasOneOfFlags(Kind.CLASS.value))
+        SymbolKind.Class
+      else if (hasOneOfFlags(Kind.TRAIT.value | Kind.INTERFACE.value))
+        SymbolKind.Interface
+      else
+        SymbolKind.Module
+  }
+
 }

@@ -12,7 +12,6 @@ inThisBuild(
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused-import"
     ),
-    scalafixEnabled := false,
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -79,7 +78,7 @@ lazy val V = new {
   val scala211 = MetalsPlugin.scala211
   val scala212 = MetalsPlugin.scala212
   val scalameta = MetalsPlugin.semanticdbVersion
-  val scalafix = "0.5.7"
+  val scalafix = "0.6.0-M5"
   val enumeratum = "1.5.12"
   val circe = "0.9.0"
   val cats = "1.0.1"
@@ -127,11 +126,6 @@ lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(ScriptedPlugin)
   .settings(
-    PB.targets.in(Compile) := Seq(
-      scalapb.gen(
-        flatPackage = true // Don't append filename to package
-      ) -> sourceManaged.in(Compile).value./("protobuf")
-    ),
     fork in Test := true, // required for jni interrop with leveldb.
     buildInfoKeys := Seq[BuildInfoKey](
       "testWorkspaceBaseDirectory" ->
@@ -149,7 +143,7 @@ lazy val metals = project
       "io.github.soc" % "directories" % "5", // for cache location
       "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
-      "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
+      "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta % Test
     )
   )
@@ -178,7 +172,6 @@ lazy val testWorkspace = project
     scalacOptions += "-Ywarn-unused-import",
     scalacOptions -= "-Xlint"
   )
-  .disablePlugins(ScalafixPlugin)
 
 lazy val metalsRoot = project
   .in(file("."))

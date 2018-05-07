@@ -1,5 +1,7 @@
 package tests.provider
 
+import java.util
+
 object HoverProviderTest extends BaseHoverProviderTest {
 
   check(
@@ -141,9 +143,12 @@ object HoverProviderTest extends BaseHoverProviderTest {
   check(
     "class",
     """
-      |class <<C>>(x: Int, y: String)
+      |class <<C>>(x: Int, y: String) {
+      |  def this(x: Int) = this(x, "") // secondary constructor
+      |  def ignoreme = x
+      |}
     """.stripMargin,
-    "class C"
+    "class C(x: Int, y: String)"
   )
 
   check(
@@ -214,7 +219,7 @@ object HoverProviderTest extends BaseHoverProviderTest {
       |  List(1) match { case <<x>> :: Nil => }
       |}
     """.stripMargin,
-    "val x: Int"
+    "Int"
   )
 
   check(
@@ -224,7 +229,7 @@ object HoverProviderTest extends BaseHoverProviderTest {
       |  List(1) match { case List(<<x>>) => }
       |}
     """.stripMargin,
-    "val x: Int"
+    "Int"
   )
 
   check(
@@ -239,7 +244,7 @@ object HoverProviderTest extends BaseHoverProviderTest {
   )
 
   check(
-    "params",
+    "lambda params",
     """
       |object v {
       |  List(1).foreach(<<x>> => println(x))
@@ -297,6 +302,100 @@ object HoverProviderTest extends BaseHoverProviderTest {
       |  type <<F>>[T] <: Any
       |}
     """.stripMargin,
-    "type F"
+    "type F[T]"
   )
+
+  check(
+    "mods",
+    """
+      |sealed trait <<W>>[T]
+    """.stripMargin,
+    "sealed trait W[T]"
+  )
+
+  check(
+    "jdk",
+    """
+      |object x {
+      |  val <<entry>> =
+      |    new java.util.HashMap[java.lang.Integer, java.lang.String]().entrySet()
+      |}
+    """.stripMargin,
+    "val entry: Set[Map.Entry[Integer, String]]"
+  )
+
+  check(
+    "param",
+    """
+      |object y {
+      |  def bar(<<param>>: Map[Int, String]) = param
+      |}
+    """.stripMargin,
+    "Map[Int, String]"
+  )
+
+  check(
+    "Any synthetic",
+    """
+      |object z {
+      |  val <<x>>: Any = 2
+      |}
+    """.stripMargin,
+    "val x: Any"
+  )
+
+  check(
+    "asInstanceOf",
+    """
+      |object z2 {
+      |  val x = 2.<<asInstanceOf>>[Any]
+      |}
+    """.stripMargin,
+    "final def asInstanceOf[T]: T"
+  )
+
+  check(
+    "isInstanceOf",
+    """
+      |object z3 {
+      |  val x = "".<<isInstanceOf>>[String]
+      |}
+    """.stripMargin,
+    "final def isInstanceOf(): Boolean"
+  )
+
+  check(
+    "local",
+    """
+      |object z4 {
+      |  locally {
+      |    val <<x>> = 42
+      |  }
+      |}
+    """.stripMargin,
+    "Int"
+  )
+
+  check(
+    "local2",
+    """
+      |object z5 {
+      |  val x: Serializable = new Serializable {
+      |    val <<x>> = 42
+      |  }
+      |}
+    """.stripMargin,
+    "private val x: Int"
+  )
+
+  check(
+    "implicit object",
+    """
+      |object aa {
+      |  implicit case object <<Foo>>
+      |}
+    """.stripMargin,
+    "implicit case object Foo"
+  )
+
 }

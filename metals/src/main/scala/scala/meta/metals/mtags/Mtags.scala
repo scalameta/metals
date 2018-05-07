@@ -25,8 +25,9 @@ import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Fragment
 import org.langmeta.io.RelativePath
-import org.langmeta.internal.semanticdb.schema.Database
-import org.langmeta.internal.semanticdb.schema.Document
+import scala.meta.internal.semanticdb3.Schema
+import scala.meta.internal.semanticdb3.TextDocuments
+import scala.meta.internal.semanticdb3.TextDocument
 
 /**
  * Syntactically build a semanticdb index containing only global symbol definition.
@@ -41,6 +42,15 @@ import org.langmeta.internal.semanticdb.schema.Document
  */
 object Mtags extends LazyLogging {
 
+  /** Mtags version, used to invalidate caches when mtags is improved.
+   *
+   * We cache mtags artifacts to avoid redundant work, cached artifacts
+   * are keyed by the original jar file path and this version number.
+   * If we update mtags to, for example, fix a bug then we should bump
+   * this version number.
+   */
+  val Version = "1"
+
   /**
    * Build an index from a classpath of -sources.jar
    *
@@ -51,7 +61,7 @@ object Mtags extends LazyLogging {
   def index(
       classpath: List[AbsolutePath],
       shouldIndex: RelativePath => Boolean = _ => true
-  )(callback: Document => Unit): Unit = {
+  )(callback: TextDocument => Unit): Unit = {
     val fragments = allClasspathFragments(classpath, shouldIndex)
     val totalIndexedFiles = new AtomicInteger()
     val totalIndexedLines = new AtomicInteger()
@@ -66,10 +76,10 @@ object Mtags extends LazyLogging {
     }
     val decimal = new DecimalFormat("###,###")
     val N = fragments.length
-    def updateTotalLines(doc: Document): Unit = {
+    def updateTotalLines(doc: TextDocument): Unit = {
       // NOTE(olafur) it would be interesting to have separate statistics for
       // Java/Scala lines/s but that would require a more sophisticated setup.
-      totalIndexedLines.addAndGet(countLines(doc.contents))
+      totalIndexedLines.addAndGet(countLines(doc.text))
     }
     def reportProgress(indexedFiles: Int): Unit = {
       if (indexedFiles < 100) return
@@ -105,24 +115,24 @@ object Mtags extends LazyLogging {
     )
   }
 
-  /** Index all documents into a single scala.meta.Database. */
+  /** Index all documents into a single scala.meta.internal.semanticdb3.TextDocuments. */
   def indexDatabase(
       classpath: List[AbsolutePath],
       shouldIndex: RelativePath => Boolean = _ => true
-  ): Database = {
-    val buffer = List.newBuilder[Document]
+  ): TextDocuments = {
+    val buffer = List.newBuilder[TextDocument]
     index(classpath, shouldIndex) { doc =>
       buffer += doc
     }
-    Database(buffer.result())
+    TextDocuments(buffer.result())
   }
 
   /** Index single Scala or Java source file from memory */
-  def index(filename: String, contents: String): Document =
+  def index(filename: String, contents: String): TextDocument =
     index(Input.VirtualFile(filename, contents))
 
   /** Index single Scala or Java from disk or zip file. */
-  def index(fragment: Fragment): Document = {
+  def index(fragment: Fragment): TextDocument = {
     val uri = {
       // Need special handling because https://github.com/scalameta/scalameta/issues/1163
       if (isZip(fragment.base.toNIO.getFileName.toString))
@@ -134,7 +144,7 @@ object Mtags extends LazyLogging {
   }
 
   /** Index single Scala or Java source file from memory */
-  def index(input: Input.VirtualFile): Document = {
+  def index(input: Input.VirtualFile): TextDocument = {
     logger.trace(s"Indexing ${input.path} with length ${input.value.length}")
     val indexer: MtagsIndexer =
       if (isScala(input.path)) ScalaMtags.index(input)
@@ -145,14 +155,15 @@ object Mtags extends LazyLogging {
         )
       }
     val (names, symbols) = indexer.index()
-    Document(
-      filename = input.path,
-      contents = input.value,
+    TextDocument(
+      uri = input.path,
+      text = input.value,
       language = indexer.language,
-      names,
-      Nil,
-      symbols,
-      Nil
+      schema = Schema.SEMANTICDB3,
+      symbols = symbols,
+      occurrences = names,
+      diagnostics = Nil,
+      synthetics = Nil
     )
   }
 

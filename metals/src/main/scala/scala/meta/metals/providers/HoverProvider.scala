@@ -1,203 +1,143 @@
 package scala.meta.metals.providers
 
-import scala.meta.Type
-import scala.meta.metals.Uri
+import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.lsp.Hover
 import org.langmeta.lsp.RawMarkedString
+import scala.meta.Tree
+import scala.meta._
+import scala.meta.internal.semanticdb3.SymbolInformation.Property
+import scala.meta.internal.{semanticdb3 => s}
+import scala.meta.internal.semanticdb3.Scala._
+import scala.meta.metals.Uri
+import scala.meta.metals.compiler.SymtabProvider
+import scala.meta.metals.ScalametaEnrichments._
 import scala.meta.metals.search.SymbolIndex
+import scala.util.control.NonFatal
 import scala.{meta => m}
-import scalafix.internal.util.DenotationOps
-import scalafix.internal.util.TypeSyntax
-import scalafix.rule.RuleCtx
-import scalafix.util.SemanticdbIndex
-import scala.meta.metals.index.SymbolData
-import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.internal.semanticdb.schema
+import scalafix.internal.util.PrettyType
+import scalafix.internal.util.QualifyStrategy
+import scalafix.internal.util.SymbolTable
 
 object HoverProvider extends LazyLogging {
   def empty: Hover = Hover(Nil, None)
   val Template =
     m.Template(Nil, Nil, m.Self(m.Name.Anonymous(), None), Nil)
 
+  private def isSymbolicName(name: String): Boolean =
+    !Character.isJavaIdentifierStart(name.head)
+  val EmptyTemplate = template"{}"
+  val EmptyCtor = q"def this"
+
+  private def toTree(
+      info: s.SymbolInformation,
+      symtab: SymbolTable
+  ): Option[Tree] = {
+    try {
+      Some(unsafeToTree(info, symtab))
+    } catch {
+      case NonFatal(e) =>
+        logger.error(
+          s"""Failed to pretty print symbol ${info.symbol}
+             |Classpath=$symtab
+             |${info.toProtoString}
+             """.stripMargin,
+          e
+        )
+        None
+    }
+  }
+
+  private def unsafeToTree(
+      info: s.SymbolInformation,
+      symtab: SymbolTable
+  ): Tree = {
+    if (info.kind.isPackage) {
+      val ref =
+        info.symbol.stripSuffix(".").parse[Term].get.asInstanceOf[Term.Ref]
+      Pkg(ref, Nil)
+    } else if (info.kind.isPackageObject) {
+      // NOTE(olafur) custom handling for name due to https://github.com/scalameta/scalameta/issues/1484
+      Pkg.Object(Nil, Term.Name(info.owner.desc.name), EmptyTemplate)
+    } else if (info.kind.isObject) {
+      // NOTE(olafur) custom handling for object due to https://github.com/scalameta/scalameta/issues/1480
+      val mods = List.newBuilder[Mod]
+      if (info.has(Property.IMPLICIT)) mods += mod"implicit"
+      if (info.has(Property.CASE)) mods += mod"case"
+      Defn.Object(mods.result(), Term.Name(info.name), EmptyTemplate)
+    } else if (info.symbol == "scala.Any#asInstanceOf().") {
+      // HACK(olafur) to avoid 'java.util.NoSuchElementException: scala.Any.asInstanceOf(A).[A]'
+      q"final def asInstanceOf[T]: T"
+    } else if (info.kind.isLocal ||
+      info.kind.isParameter ||
+      info.symbol.startsWith("local")) {
+      // Workaround for https://github.com/scalameta/scalameta/issues/1503
+      // In the future we should be able to produce `val x: Int` syntax for local symbols.
+      val tpe = info.tpe match {
+        case Some(t) =>
+          if (t.tag.isMethodType) {
+            t.methodType.get.returnType.get
+          } else {
+            t
+          }
+        case _ =>
+          throw new IllegalArgumentException(info.toProtoString)
+      }
+      PrettyType.toType(tpe, symtab, QualifyStrategy.Readable).tree
+    } else {
+      val tpe = info.tpe.get
+      val noDeclarations =
+        if (tpe.tag.isClassInfoType) {
+          val classInfoType = tpe.classInfoType.get
+          // Remove declarations from object/trait/class to reduce noise
+          val declarations =
+            if (info.kind.isClass) {
+              classInfoType.declarations.find { sym =>
+                symtab
+                  .info(sym)
+                  .exists(i => i.kind.isConstructor && i.has(Property.PRIMARY))
+              }.toList
+            } else {
+              Nil
+            }
+          info.copy(
+            tpe = Some(
+              tpe.copy(
+                classInfoType =
+                  Some(classInfoType.withDeclarations(declarations))
+              )
+            )
+          )
+        } else {
+          info
+        }
+      PrettyType.toTree(noDeclarations, symtab, QualifyStrategy.Readable).tree
+    }
+  }
+
   def hover(
       index: SymbolIndex,
+      symtabs: SymtabProvider,
       uri: Uri,
       line: Int,
       column: Int
   ): Hover = {
     val result = for {
       (symbol, _) <- index.findSymbol(uri, line, column)
-      data <- index.data(symbol)
-      tpe <- getPrettyDefinition(symbol, data)
-      document <- index.documentIndex.getDocument(uri)
+      symtab = symtabs.symtab(uri)
+      info <- symtab.info(symbol.syntax)
+      tree <- toTree(info, symtab)
     } yield {
-      val scalafixIndex = SemanticdbIndex.load(
-        schema.Database(document :: Nil).toDb(None),
-        m.Sourcepath(Nil),
-        m.Classpath(Nil)
-      )
-      val prettyTpe = new TypePrinter()(scalafixIndex).apply(tpe)
+      val pretty = tree.transform {
+        case Type.Apply(op: Type.Name, lhs :: rhs :: Nil)
+            if isSymbolicName(op.value) =>
+          Type.ApplyInfix(lhs, op, rhs)
+      }
       Hover(
-        contents = RawMarkedString(language = "scala", value = prettyTpe.syntax) :: Nil,
+        contents = RawMarkedString(language = "scala", value = pretty.syntax) :: Nil,
         range = None
       )
     }
     result.getOrElse(Hover(Nil, None))
   }
 
-  /** Returns a definition tree for this symbol signature */
-  private def getPrettyDefinition(
-      symbol: m.Symbol,
-      data: SymbolData
-  ): Option[m.Tree] = {
-    val denotation = m.Denotation(data.flags, data.name, data.signature, Nil)
-    val input = m.Input.Denotation(denotation.signature, symbol)
-    val mods = getMods(denotation)
-    val name = m.Term.Name(denotation.name)
-    val tname = m.Type.Name(denotation.name)
-    def parsedTpe: Option[Type] =
-      DenotationOps.defaultDialect(input).parse[m.Type].toOption
-    if (denotation.isVal) {
-      parsedTpe.map { tpe =>
-        m.Decl.Val(mods, m.Pat.Var(name) :: Nil, tpe)
-      }
-    } else if (denotation.isVar) {
-
-      parsedTpe.collect {
-        case Type.Method((m.Term.Param(_, _, Some(tpe), _) :: Nil) :: Nil, _) =>
-          m.Decl.Var(
-            mods,
-            // TODO(olafur) fix https://github.com/scalameta/scalameta/issues/1100
-            m.Pat.Var(m.Term.Name(name.value.stripSuffix("_="))) :: Nil,
-            tpe
-          )
-      }
-    } else if (denotation.isDef) {
-      // turn method types into defs
-      // TODO(olafur) handle def macros
-      DenotationOps.defaultDialect(input).parse[m.Type].toOption.map {
-        case m.Type.Lambda(tparams, m.Type.Method(paramss, tpe)) =>
-          m.Decl.Def(mods, name, tparams, paramss, tpe)
-        case m.Type.Lambda(tparams, tpe) =>
-          m.Decl.Def(mods, name, tparams, Nil, tpe)
-        case m.Type.Method(paramss, tpe) =>
-          m.Decl.Def(mods, name, Nil, paramss, tpe)
-        case t => t
-      }
-    } else if (denotation.isPackageObject) {
-      symbol match {
-        case m.Symbol.Global(
-            m.Symbol.Global(_, m.Signature.Term(pkg)),
-            m.Signature.Term("package")
-            ) =>
-          Some(m.Pkg.Object(mods, m.Term.Name(pkg), Template))
-        case _ =>
-          logger.warn(s"Unexpected package object symbol: $symbol")
-          None
-      }
-    } else if (denotation.isType && denotation.isAbstract) {
-      Some(
-        m.Decl.Type(
-          mods.filterNot(_.is[m.Mod.Abstract]),
-          tname,
-          Nil,
-          m.Type.Bounds(None, None)
-        )
-      )
-    } else if (denotation.isType) {
-      parsedTpe.map {
-        case m.Type.Lambda(tparams, tpe) =>
-          m.Defn.Type(mods, tname, tparams, tpe)
-        case tpe =>
-          m.Defn.Type(mods, tname, Nil, tpe)
-      }
-    } else if (denotation.isObject) {
-      Some(m.Defn.Object(mods.filterNot(_.is[m.Mod.Final]), name, Template))
-    } else if (denotation.isClass) {
-      Some(
-        m.Defn.Class(
-          mods,
-          tname,
-          Nil,
-          m.Ctor.Primary(Nil, m.Name.Anonymous(), Nil),
-          Template
-        )
-      )
-    } else if (denotation.isTrait) {
-      Some(
-        m.Defn.Trait(
-          mods,
-          tname,
-          Nil,
-          m.Ctor.Primary(Nil, m.Name.Anonymous(), Nil),
-          Template
-        )
-      )
-    } else if (denotation.isPackage) {
-      Some(m.Pkg(name, Nil))
-    } else if (!denotation.signature.isEmpty) {
-      parsedTpe
-    } else {
-      Some(m.Type.Name(data.name))
-    }
-  }
-
-  private def getMods(denotation: m.Denotation): List[m.Mod] = {
-    import denotation._
-    import scala.meta._
-    val buf = List.newBuilder[m.Mod]
-    if (isPrivate) buf += mod"private"
-    if (isProtected) buf += mod"protected"
-    if (isFinal) buf += mod"final"
-    if (isAbstract) buf += mod"abstract"
-    if (isImplicit) buf += mod"implicit"
-    if (isLazy) buf += mod"lazy"
-    if (isSealed) buf += mod"sealed"
-    buf.result()
-  }
-
-  /** Pretty-prints types in a given tree
-   *
-   * Uses the scalafix TypeSyntax, the same one used by ExplicitResultTypes.
-   * It's quite primitive for now, but the plan is to implement fancy
-   * stuff in the future like scope aware printing taking into
-   * account renames etc.
-   */
-  private class TypePrinter(implicit scalafixIndex: SemanticdbIndex)
-      extends m.Transformer {
-    private def pretty(tpe: m.Type): m.Tree = {
-      val printed =
-        TypeSyntax.prettify(tpe, RuleCtx(m.Lit.Null()), shortenNames = true)._1
-      InfixSymbolicTypes.apply(printed)
-    }
-
-    override def apply(tree: m.Tree): m.Tree = tree match {
-      case tpe: m.Type => {
-        pretty(tpe)
-      }
-      case _ => super.apply(tree)
-    }
-  }
-
-  /** Makes all symbolic type binary operators infix */
-  private object InfixSymbolicTypes extends m.Transformer {
-    private object SymbolicType {
-      def unapply(arg: m.Type): Option[m.Type.Name] = arg match {
-        case nme @ m.Type.Name(name) =>
-          if (!name.isEmpty &&
-            !Character.isJavaIdentifierStart(name.charAt(0))) {
-            Some(nme)
-          } else None
-        case _ => None
-      }
-    }
-    override def apply(tree: m.Tree): m.Tree = {
-      val next = tree match {
-        case m.Type.Apply(SymbolicType(name), lhs :: rhs :: Nil) =>
-          m.Type.ApplyInfix(lhs, name, rhs)
-        case t => t
-      }
-      super.apply(next)
-    }
-  }
 }

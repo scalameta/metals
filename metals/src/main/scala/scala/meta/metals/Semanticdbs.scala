@@ -1,11 +1,12 @@
 package scala.meta.metals
 
+import com.google.protobuf.InvalidProtocolBufferException
 import java.nio.file.Files
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.metals.compiler.ScalacProvider
 import scala.meta.metals.compiler.CompilerEnrichments._
 import scala.meta.parsers.ParseException
-import scala.meta.semanticdb
+import scala.{meta => m}
 import scala.meta.tokenizers.TokenizeException
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.reporters.StoreReporter
@@ -14,9 +15,10 @@ import scala.{meta => m}
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.PathIO
-import org.langmeta.internal.semanticdb.schema.Database
+import scala.meta.internal.semanticdb3
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
+import scala.meta.internal.semanticdb3.SymbolOccurrence
 
 object Semanticdbs extends LazyLogging {
 
@@ -28,7 +30,7 @@ object Semanticdbs extends LazyLogging {
   def toSemanticdb(
       input: Input.VirtualFile,
       scalacProvider: ScalacProvider
-  ): Option[semanticdb.Database] =
+  ): Option[m.Database] =
     for {
       compiler <- scalacProvider.getCompiler(input)
     } yield toSemanticdb(input, compiler)
@@ -36,7 +38,7 @@ object Semanticdbs extends LazyLogging {
   def toSemanticdb(
       input: Input.VirtualFile,
       compiler: Global,
-  ): semanticdb.Database = {
+  ): m.Database = {
     val doc = try {
       InteractiveSemanticdb.toDocument(
         compiler = compiler,
@@ -54,7 +56,7 @@ object Semanticdbs extends LazyLogging {
         }
         toMessageOnlySemanticdb(input, compiler)
     }
-    semanticdb.Database(doc.copy(language = "Scala212") :: Nil)
+    m.Database(doc.copy(language = "Scala212") :: Nil)
   }
 
   def toMessageOnlySemanticdb(
@@ -75,30 +77,62 @@ object Semanticdbs extends LazyLogging {
         }.toList
       case _ => Nil
     }
-    semanticdb.Document(input, "", Nil, messages, Nil, Nil)
+    m.Document(input, "", Nil, messages, Nil, Nil)
   }
+
+  implicit private val occurrenceOrdering: Ordering[SymbolOccurrence] =
+    new Ordering[semanticdb3.SymbolOccurrence] {
+      override def compare(x: SymbolOccurrence, y: SymbolOccurrence): Int = {
+        if (x.range.isEmpty) 0
+        else if (y.range.isEmpty) 0
+        else {
+          val a = x.range.get
+          val b = y.range.get
+          val byLine = Integer.compare(
+            a.startLine,
+            b.startLine
+          )
+          if (byLine != 0) {
+            byLine
+          } else {
+            val byCharacter = Integer.compare(
+              a.startCharacter,
+              b.startCharacter
+            )
+            byCharacter
+          }
+        }
+      }
+    }
 
   def loadFromFile(
       semanticdbPath: AbsolutePath,
       cwd: AbsolutePath
-  ): Database = {
+  ): semanticdb3.TextDocuments = {
     val bytes = Files.readAllBytes(semanticdbPath.toNIO)
-    val sdb = Database.parseFrom(bytes)
-    Database(
-      sdb.documents.map { d =>
-        val filename = s"file:${cwd.resolve(d.filename)}"
-        logger.info(s"Loading file $filename")
-        d.withFilename(filename)
-          .withNames {
-            // This should be done inside semanticdb-scalac.
-            val names = d.names.toArray
-            util.Sorting.quickSort(names)(
-              Ordering.by(_.position.fold(-1)(_.start))
-            )
-            names
-          }
+    val sdb =
+      try {
+        semanticdb3.TextDocuments.parseFrom(bytes)
+      } catch {
+        case _: InvalidProtocolBufferException =>
+          logger.error(
+            s"Have you upgraded to SemanticDB v3? Error parsing $semanticdbPath"
+          )
+          semanticdb3.TextDocuments()
       }
-    )
+
+    val docs = sdb.documents.map { d =>
+      val filename = cwd.resolve(d.uri).toURI.toString
+      logger.info(s"Loading file $filename")
+      d.withUri(filename)
+        .withOccurrences {
+          // This should be done inside semanticdb-scalac.
+          val names = d.occurrences.toArray
+          util.Sorting.quickSort(names)
+          names
+        }
+    }
+    semanticdb3.TextDocuments(docs)
   }
 
 }

@@ -106,7 +106,7 @@ class Linter(configuration: Observable[Configuration], cwd: AbsolutePath)(
             case Parsed.Success(tree) =>
               val ctx = RuleCtx.applyInternal(tree, config)
               val patches = rule.fixWithNameInternal(ctx)
-              Patch.lintMessagesInternal(patches, ctx).map(_.toLSP)
+              Patch.lintMessagesInternal(patches, ctx, index).map(_.toLSP)
           }
 
           // megaCache needs to die, if we forget this we will read stale

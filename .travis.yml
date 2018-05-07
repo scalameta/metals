@@ -18,7 +18,7 @@ jobs:
         - sbt ++2.11.12 jsonrpc/test
     - env: TEST="sbt test"
       script:
-        - sbt startServer metalsSetup test scalafixTest
+        - sbt startServer metalsSetup test
     - env: TEST="sbt-metals"
       script:
         - ./bin/run-scripted.sh

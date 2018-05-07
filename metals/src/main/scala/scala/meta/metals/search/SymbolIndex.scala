@@ -8,12 +8,13 @@ import scala.meta.metals.index.SymbolData
 import org.langmeta.lsp.SymbolInformation
 import org.langmeta.jsonrpc.JsonRpcClient
 import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.internal.semanticdb.{schema => s}
+import scala.meta.internal.semanticdb3
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Symbol
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable
+import scala.meta.metals.ScalametaEnrichments._
 
 trait SymbolIndex extends LazyLogging {
 
@@ -30,7 +31,11 @@ trait SymbolIndex extends LazyLogging {
   def findDefinition(path: Uri, line: Int, column: Int): Option[SymbolData] =
     for {
       (symbol, edit) <- findSymbol(path, line, column)
-      data <- definitionData(symbol)
+      data <- {
+        val result = definitionData(symbol)
+        if (result.isEmpty) localData(path, symbol.syntax)
+        else result
+      }
     } yield edit.toRevisedDefinition(data)
 
   /** Returns symbol data for this exact Symbol */
@@ -42,8 +47,18 @@ trait SymbolIndex extends LazyLogging {
   def findReferences(path: Uri, line: Int, column: Int): List[SymbolData] =
     for {
       (symbol, edit) <- findSymbol(path, line, column).toList
-      data <- referencesData(symbol)
+      data <- {
+        val result = referencesData(symbol)
+        if (result.isEmpty) localData(path, symbol.syntax).toList
+        else result
+      }
     } yield edit.toRevisedReferences(data)
+
+  def localData(path: Uri, symbol: String): Option[SymbolData] =
+    for {
+      doc <- documentIndex.getDocument(path)
+      data <- doc.computeSymbolDataForLocalSymbol(symbol)
+    } yield data
 
   /** Returns symbol definitions in this workspace */
   def workspaceSymbols(query: String): List[SymbolInformation]
@@ -53,7 +68,9 @@ trait SymbolIndex extends LazyLogging {
   ): Task[Effects.IndexSourcesClasspath]
 
   /** Register this Database to symbol indexer. */
-  def indexDatabase(document: s.Database): Effects.IndexSemanticdb
+  def indexDatabase(
+      document: semanticdb3.TextDocuments
+  ): Effects.IndexSemanticdb
 
   /** Remove any persisted files from index returning to a clean start */
   def clearIndex(): Unit

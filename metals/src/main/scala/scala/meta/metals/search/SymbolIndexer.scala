@@ -1,7 +1,11 @@
 package scala.meta.metals.search
 
+import org.langmeta.lsp.Location
+import org.langmeta.lsp.Range
 import scala.meta.metals.index._
 import org.langmeta.semanticdb.Symbol
+import scala.meta.internal.semanticdb3
+import scala.meta.metals.Uri
 
 /**
  * A key/value store with String keys (by symbol syntax) and
@@ -46,33 +50,29 @@ trait SymbolIndexer { self =>
    */
   def addDefinition(
       symbol: String,
-      position: Position
+      position: Location
   ): Unit
 
   /**
    * Register metadata about a symbol.
    *
-   * @param flags the modifiers of this symbol, see org.langmeta.semanticdb.HasFlags
-   * @param name the name of the symbol, example "get" for scala.Option.get
-   * @param signature the type signature of this symbol, example "List[T]" for List.tail
+   * @param info The information about this symbol
+   *             https://github.com/scalameta/scalameta/blob/master/semanticdb/semanticdb3/semanticdb3.md#symbolinformation
    */
-  def addDenotation(
-      symbol: String,
-      flags: Long,
-      name: String,
-      signature: String
+  def addSymbolInformation(
+      info: semanticdb3.SymbolInformation
   ): Unit
 
   /**
    * Reguster a reference/call-site to this symbol.
    *
-   * @param filename must be URI, can either be file on local disk or entry
-   *                 in jar/zip.
+   * @param uri must be URI, can either be file on local disk or entry
+   *            in jar/zip.
    * @param range start/end offset where this symbol is referenced.
    * @param symbol
    */
   def addReference(
-      filename: String,
+      uri: Uri,
       range: Range,
       symbol: String
   ): Unit

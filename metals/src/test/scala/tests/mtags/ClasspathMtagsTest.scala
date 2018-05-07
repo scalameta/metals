@@ -3,8 +3,9 @@ package tests.mtags
 import java.nio.file.Paths
 import scala.meta.metals.Jars
 import scala.meta.metals.mtags.Mtags
-import org.langmeta.internal.semanticdb.schema.Database
 import tests.MegaSuite
+import org.langmeta.internal.semanticdb._
+import scala.meta.internal.semanticdb3.TextDocuments
 
 object ClasspathMtagsTest extends MegaSuite {
 
@@ -31,9 +32,9 @@ object ClasspathMtagsTest extends MegaSuite {
         path.toNIO.endsWith(Predef)
       }
     ) { doc =>
-      val path = Paths.get(doc.filename).getFileName.toString
+      val path = Paths.get(doc.uri).getFileName.toString
       val underline = "-" * path.length
-      val mdoc = Database(doc :: Nil).toDb(None).documents.head.toString()
+      val mdoc = TextDocuments(doc :: Nil).toDb(None).documents.head.toString()
       docs +=
         s"""$path
            |$underline

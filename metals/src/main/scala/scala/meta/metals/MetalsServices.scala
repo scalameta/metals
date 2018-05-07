@@ -44,12 +44,15 @@ import monix.reactive.Observable
 import monix.reactive.Observer
 import monix.reactive.OverflowStrategy
 import org.langmeta.inputs.Input
-import org.langmeta.internal.semanticdb.XtensionDatabase
-import org.langmeta.internal.semanticdb.schema
+import scala.meta.internal.semanticdb3
+import scala.{meta => m}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.lsp.LanguageClient
-import org.langmeta.semanticdb
+import org.langmeta.internal.semanticdb._
+import scala.meta.metals.compiler.MetacpProvider
+import scala.meta.metals.compiler.SymtabProvider
+import scala.meta.metals.mtags.Mtags
 
 class MetalsServices(
     cwd: AbsolutePath,
@@ -87,7 +90,14 @@ class MetalsServices(
   val diagnosticsProvider =
     new DiagnosticsProvider(configurationPublisher, cwd)
   val scalacProvider = new ScalacProvider
-  val interactiveSemanticdbs: Observable[semanticdb.Database] =
+  val metacpProvider = new MetacpProvider
+  val symtabProvider =
+    new SymtabProvider(
+      symbolIndex.documentIndex,
+      scalacProvider,
+      metacpProvider
+    )
+  val interactiveSemanticdbs: Observable[m.Database] =
     sourceChangePublisher
       .debounce(FiniteDuration(1, "s"))
       .flatMap { input =>
@@ -97,9 +107,9 @@ class MetalsServices(
             .executeOn(presentationCompilerScheduler)
         } else Observable.empty
       }
-  val interactiveSchemaSemanticdbs: Observable[schema.Database] =
+  val interactiveSchemaSemanticdbs: Observable[semanticdb3.TextDocuments] =
     interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
-  val metaSemanticdbs: Observable[semanticdb.Database] =
+  val metaSemanticdbs: Observable[m.Database] =
     Observable.merge(
       fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None)),
       interactiveSemanticdbs
@@ -317,6 +327,7 @@ class MetalsServices(
       if (latestConfig().hover.enabled) {
         HoverProvider.hover(
           symbolIndex,
+          symtabProvider,
           Uri(params.textDocument),
           params.position.line,
           params.position.character
@@ -529,7 +540,7 @@ object MetalsServices extends LazyLogging {
     val path = AbsolutePath(
       ProjectDirectories.fromProjectName("metals").projectCacheDir
     )
-    Files.createDirectories(path.toNIO)
+    Files.createDirectories(path.resolve(Mtags.Version).toNIO)
     path
   }
 
@@ -565,7 +576,7 @@ object MetalsServices extends LazyLogging {
 
   def fileSystemSemanticdbStream(cwd: AbsolutePath)(
       implicit scheduler: Scheduler
-  ): (Observer.Sync[AbsolutePath], Observable[schema.Database]) = {
+  ): (Observer.Sync[AbsolutePath], Observable[semanticdb3.TextDocuments]) = {
     val (subscriber, publisher) = multicast[AbsolutePath]()
     val semanticdbPublisher = publisher
       .map(path => Semanticdbs.loadFromFile(semanticdbPath = path, cwd))
