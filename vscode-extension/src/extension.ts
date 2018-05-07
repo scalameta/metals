@@ -1,7 +1,7 @@
 "use strict";
 
 import * as path from "path";
-import * as cp from 'child_process';
+import { spawn } from 'child_process';
 import { workspace, ExtensionContext, window, commands } from "vscode";
 import {
   LanguageClient,
@@ -125,8 +125,8 @@ export async function activate(context: ExtensionContext) {
   });
 
 
-  cp.spawn('java', resolveArgs)
-    .on('exit', function(code) {
+  spawn('java', resolveArgs)
+    .on('exit', code => {
       if (code !== 0) {
         console.error(
           `Could not find Metals server artifact, ensure that metals.serverVersion setting is correct
