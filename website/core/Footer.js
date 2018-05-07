@@ -30,7 +30,7 @@ class Footer extends React.Component {
             </a>
             <a
               href={`
-                ${this.props.config.baseUrl}docs/installation-contributors.html`}
+                ${this.props.config.baseUrl}docs/getting-started-contributors.html`}
             >
               Contributors
             </a>

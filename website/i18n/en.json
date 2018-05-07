@@ -4,6 +4,7 @@
     "next": "Next",
     "previous": "Previous",
     "tagline": "A Language Server for Scala",
+    "getting-started-contributors": "Getting Started",
     "installation-contributors": "Installation",
     "installation-users": "Installation",
     "new-build-tool": "Integrating a new build tool",
