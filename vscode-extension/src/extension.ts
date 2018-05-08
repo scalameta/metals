@@ -128,10 +128,10 @@ export async function activate(context: ExtensionContext) {
   spawn('java', resolveArgs)
     .on('exit', code => {
       if (code !== 0) {
-        console.error(
-          `Could not find Metals server artifact, ensure that metals.serverVersion setting is correct
-           Coursier resolve failed on:${artifact} with exit code:${code}.`
-        );
+        const msg =  `Could not find Metals server artifact, ensure that metals.serverVersion setting is correct.
+                      Coursier resolve failed on:${artifact} with exit code:${code}.`.replace(/^(\s{2})+/gm, '');
+        window.showErrorMessage(msg);
+        console.error(msg);
       } else {
         console.log(`Successfully resolved Metals server artifact: ${artifact}. Starting LanguageClient.`);
         context.subscriptions.push(client.start(), restartServerCommand);
