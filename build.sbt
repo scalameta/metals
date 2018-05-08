@@ -55,7 +55,7 @@ inThisBuild(
     scmInfo in ThisBuild := Some(
       ScmInfo(
         url("https://github.com/scalameta/metals"),
-        s"scm:git:git@github.com:scalameta/metals.git"
+        s"git@github.com:scalameta/metals.git"
       )
     ),
     releaseEarlyWith := BintrayPublisher,
@@ -221,3 +221,16 @@ commands += Command.command("release") { st =>
     "^sbt-metals/releaseEarly" ::
     st
 }
+
+lazy val website = project
+  .enablePlugins(PreprocessPlugin, TutPlugin)
+  .settings(
+    tutSourceDirectory := baseDirectory.value / ".." / "docs",
+    sourceDirectory in Preprocess := tutTargetDirectory.value,
+    target in Preprocess := target.value / "docs",
+    preprocess in Preprocess := (preprocess in Preprocess).dependsOn(tut).value,
+    preprocessVars in Preprocess := Map(
+      "VERSION" -> version.value
+    )
+  )
+  .dependsOn(metals)

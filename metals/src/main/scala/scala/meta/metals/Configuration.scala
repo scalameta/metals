@@ -7,6 +7,7 @@ import io.circe.Encoder
 import io.circe.Decoder
 import io.circe.generic.extras.{ConfiguredJsonCodec => JsonCodec}
 import io.circe.generic.extras.{Configuration => CirceConfiguration}
+import io.circe.syntax._
 
 import Configuration._
 
@@ -24,6 +25,9 @@ import Configuration._
 object Configuration {
   implicit val circeConfiguration: CirceConfiguration =
     CirceConfiguration.default.withDefaults
+
+  /** pretty-printed default configuration */
+  lazy val defaultAsJson: String = Configuration().asJson.spaces2
 
   @JsonCodec case class Enabled(enabled: Boolean)
 

@@ -1,0 +1,50 @@
+/* your custom css */
+
+.imageAlignSide .blockImage {
+  max-width: 700px;
+  flex: 0 1 700px;
+}
+
+.container.paddingTop {
+  padding-top: 40px;
+}
+
+.container.paddingBottom {
+  padding-bottom: 60px;
+}
+
+@media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
+}
+
+@media only screen and (max-width: 960px) {
+  .wrapper {
+    max-width: 700px;
+  }
+  .imageAlignSide.imageAlignLeft {
+    flex-flow: row wrap-reverse;
+  }
+  .imageAlignSide .blockImage {
+    margin-top: 20px;
+  }
+  .imageAlignLeft .blockImage {
+    margin-right: 0;
+  }
+  .imageAlignRight .blockImage {
+    margin-left: 0;
+  }
+}
+
+@media only screen and (min-width: 1024px) {
+}
+
+@media only screen and (max-width: 1023px) {
+}
+
+@media only screen and (min-width: 1400px) {
+}
+
+@media only screen and (min-width: 1500px) {
+  .wrapper {
+    max-width: 1100px;
+  }
+}
