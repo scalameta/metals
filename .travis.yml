@@ -33,6 +33,7 @@ cache:
     - $HOME/.sbt/launchers
     - $HOME/.ivy2/cache
     - $HOME/.coursier
+  yarn: true
 
 before_cache:
   - du -h -d 1 $HOME/.ivy2/cache
@@ -45,6 +46,9 @@ before_install:
   - if [ "$TRAVIS_BUILD_STAGE_NAME" = 'Release'  ]; then
       openssl aes-256-cbc -K $encrypted_df92ba612cfd_key -iv $encrypted_df92ba612cfd_iv -in travis/secrets.tar.enc -out travis/secrets.tar -d;
       tar xv -C travis -f travis/secrets.tar;
+      openssl aes-256-cbc -K $encrypted_df92ba612cfd_key -iv $encrypted_df92ba612cfd_iv -in project/travis-deploy-key.enc -out project/travis-deploy-key -d;
+      curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.6.0;
+      export PATH=$HOME/.yarn/bin:$PATH;
     fi
 
 env:

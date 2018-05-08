@@ -1,0 +1,19 @@
+{
+  "docs": {
+    "Docusaurus": ["overview"],
+    "Overview": [
+      "overview"
+    ],
+    "Contributors": [
+      "getting-started-contributors",
+      "installation-contributors",
+      "troubleshooting",
+      "new-editor",
+      "new-build-tool",
+      "website"
+    ],
+    "Users": [
+      "installation-users"
+    ]
+  }
+}

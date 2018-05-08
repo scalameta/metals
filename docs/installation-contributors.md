@@ -1,4 +1,9 @@
-> ⚠️ This project is very alpha stage. Expect bugs and incomplete documentation.
+---
+id: installation-contributors
+title: Installation
+---
+
+> ⚠ ️ This project is very alpha stage. Expect bugs and incomplete documentation.
 
 The following instructions are intended for contributors who want to try Metals
 and provide feedback. We do not provide support for day-to-day usage of Metals.
@@ -12,12 +17,10 @@ These steps are required once per machine.
 The server needs to access some metadata about the build configuration. This
 data are produced by an sbt plugin.
 
-You can install the plugin with (replace `<version>` with the latest available version)
-
-[![Download](https://api.bintray.com/packages/scalameta/sbt-plugins/sbt-metals/images/download.svg)](https://bintray.com/scalameta/sbt-plugins/sbt-metals/_latestVersion)
+You can install the plugin with:
 
 ```scala
-addSbtPlugin("org.scalameta" % "sbt-metals" % "<version>")
+addSbtPlugin("org.scalameta" % "sbt-metals" % "@VERSION@")
 ```
 
 You can add the plugin to a specific project (adding it to `project/plugins.sbt`) or globally adding it to:
@@ -27,7 +30,8 @@ You can add the plugin to a specific project (adding it to `project/plugins.sbt`
 
 ## VSCode extension
 
-***N.B.***  This project is still in development - right now you will need to run the VSCode plugin as described in the [contributing guide](../CONTRIBUTING.md#running-a-local-version-of-the-vscode-extension)
+> ***N.B.*** This project is still in development - right now you will need to run the VSCode plugin
+> as described [here](getting-started-contributors.html#running-a-local-version-of-the-vscode-extension)
 
 # Per-project setup
 
@@ -82,5 +86,3 @@ VSCode output panel (selecting Metals on the right).
 
 Finally, since most features currently rely on a successful compilation step,
 make sure you incrementally compile your project by running `~compile` in `sbt`.
-
-[**Troubleshooting tips**](../CONTRIBUTING.md#troubleshooting)
