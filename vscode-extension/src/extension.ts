@@ -128,8 +128,10 @@ export async function activate(context: ExtensionContext) {
   spawn('java', resolveArgs)
     .on('exit', code => {
       if (code !== 0) {
-        const msg =  `Could not find Metals server artifact, ensure that metals.serverVersion setting is correct.
-                      Coursier resolve failed on:${artifact} with exit code:${code}.`.replace(/^(\s{2})+/gm, '');
+        const msg = [
+          'Could not find Metals server artifact, ensure that metals.serverVersion setting is correct.',
+          `Coursier resolve failed on:${artifact} with exit code:${code}.`
+        ].join('\n')
         window.showErrorMessage(msg);
         console.error(msg);
       } else {
