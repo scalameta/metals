@@ -30,7 +30,8 @@ You can add the plugin to a specific project (adding it to `project/plugins.sbt`
 
 ## VSCode extension
 
-***N.B.***  This project is still in development - right now you will need to run the VSCode plugin as described in the [contributing guide](../CONTRIBUTING.md#running-a-local-version-of-the-vscode-extension)
+> ***N.B.*** This project is still in development - right now you will need to run the VSCode plugin
+> as described [here](getting-started-contributors.html#running-a-local-version-of-the-vscode-extension)
 
 # Per-project setup
 
@@ -85,5 +86,3 @@ VSCode output panel (selecting Metals on the right).
 
 Finally, since most features currently rely on a successful compilation step,
 make sure you incrementally compile your project by running `~compile` in `sbt`.
-
-[**Troubleshooting tips**](../CONTRIBUTING.md#troubleshooting)
