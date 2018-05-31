@@ -34,7 +34,7 @@
   },
   "homepage": "http://metals.rocks",
   "engines": {
-    "vscode": "^1.17.0"
+    "vscode": "^1.18.0"
   },
   "icon": "images/logo.png",
   "categories": [
