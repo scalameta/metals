@@ -63,7 +63,7 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
   val client = new LanguageClient(stdout, logger)
   val metals = new MetalsServices(cwd, client, mscheduler)
   metals
-    .initialize(InitializeParams(0L, cwd.toString(), ClientCapabilities()))
+    .initialize(InitializeParams(None, cwd.toString(), ClientCapabilities()))
     .runAsync(s)
   while (s.tickOne()) () // Trigger indexing
   val index: SymbolIndex = metals.symbolIndex
