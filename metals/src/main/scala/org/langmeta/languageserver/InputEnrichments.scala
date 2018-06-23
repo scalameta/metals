@@ -1,6 +1,6 @@
 package org.langmeta.languageserver
 
-import org.langmeta.lsp
+import scala.meta.lsp
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
 import scala.meta.metals.{index => i}

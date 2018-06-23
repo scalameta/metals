@@ -1,6 +1,6 @@
 package org.langmeta.semanticdb
 
-import org.langmeta.lsp.SymbolKind
+import scala.meta.lsp.SymbolKind
 
 object SemanticdbEnrichments {
   implicit class XtensionLongAsFlags(val flags: Long) extends HasFlags {

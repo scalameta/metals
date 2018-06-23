@@ -9,7 +9,7 @@ import monix.reactive.Observable
 import org.langmeta.inputs.Input
 import org.langmeta.io.{AbsolutePath, RelativePath}
 import org.langmeta.languageserver.InputEnrichments._
-import org.langmeta.lsp.{LanguageClient, PublishDiagnostics}
+import scala.meta.lsp.{LanguageClient, PublishDiagnostics}
 import tests.CompilerSuite
 
 import scala.concurrent.Await

@@ -8,9 +8,9 @@ import scala.util.Failure
 import scala.util.Success
 import monix.execution.Scheduler.Implicits.global
 import org.langmeta.internal.io.PathIO
-import org.langmeta.jsonrpc.Services
-import org.langmeta.lsp.TextDocument
-import org.langmeta.lsp.Window
+import scala.meta.jsonrpc.Services
+import scala.meta.lsp.TextDocument
+import scala.meta.lsp.Window
 import tests.MegaSuite
 
 case class SbtServerConnectionError(msg: String) extends Exception(msg)

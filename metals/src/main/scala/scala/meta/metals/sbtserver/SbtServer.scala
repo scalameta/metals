@@ -17,13 +17,13 @@ import monix.execution.CancelableFuture
 import monix.execution.Scheduler
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
-import org.langmeta.jsonrpc.BaseProtocolMessage
-import org.langmeta.jsonrpc.JsonRpcClient
-import org.langmeta.jsonrpc.Services
-import org.langmeta.lsp.LanguageClient
-import org.langmeta.lsp.LanguageServer
-import org.langmeta.lsp.TextDocument
-import org.langmeta.lsp.Window
+import scala.meta.jsonrpc.BaseProtocolMessage
+import scala.meta.jsonrpc.JsonRpcClient
+import scala.meta.jsonrpc.Services
+import scala.meta.lsp.LanguageClient
+import scala.meta.lsp.LanguageServer
+import scala.meta.lsp.TextDocument
+import scala.meta.lsp.Window
 import org.scalasbt.ipcsocket.UnixDomainSocket
 
 /**

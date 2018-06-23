@@ -3,9 +3,9 @@ package scala.meta.metals
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
-import org.langmeta.lsp.TextDocumentIdentifier
-import org.langmeta.lsp.VersionedTextDocumentIdentifier
-import org.langmeta.lsp.VersionedTextDocumentIdentifier
+import scala.meta.lsp.TextDocumentIdentifier
+import scala.meta.lsp.VersionedTextDocumentIdentifier
+import scala.meta.lsp.VersionedTextDocumentIdentifier
 import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
 
