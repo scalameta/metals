@@ -2,8 +2,8 @@ package scala.meta.metals.providers
 
 import scala.meta.metals.ScalametaEnrichments._
 import scala.meta.metals.Uri
-import org.langmeta.lsp.Location
-import org.langmeta.lsp.Position
+import scala.meta.lsp.Location
+import scala.meta.lsp.Position
 import scala.meta.metals.search.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath

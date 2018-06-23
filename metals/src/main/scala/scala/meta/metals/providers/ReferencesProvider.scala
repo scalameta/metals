@@ -4,9 +4,9 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.meta.metals.search.SymbolIndex
 import scala.meta.metals.ScalametaEnrichments._
 import scala.meta.metals.Uri
-import org.langmeta.lsp.Location
-import org.langmeta.lsp.Position
-import org.langmeta.lsp.ReferenceContext
+import scala.meta.lsp.Location
+import scala.meta.lsp.Position
+import scala.meta.lsp.ReferenceContext
 
 object ReferencesProvider extends LazyLogging {
 

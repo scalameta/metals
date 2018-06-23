@@ -6,7 +6,7 @@ import scala.meta.metals.Buffers
 import scala.meta.metals.Configuration
 import scala.meta.metals.Effects
 import scala.meta.metals.Uri
-import org.langmeta.jsonrpc.JsonRpcClient
+import scala.meta.jsonrpc.JsonRpcClient
 
 import scala.meta.metals.search.SymbolIndex
 import scala.{meta => m}

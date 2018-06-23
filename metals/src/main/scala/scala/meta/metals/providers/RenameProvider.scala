@@ -3,15 +3,15 @@ package scala.meta.metals.providers
 import scala.meta._
 import scala.meta.metals.ScalametaEnrichments._
 import scala.meta.metals.Uri
-import org.langmeta.lsp.RenameParams
-import org.langmeta.lsp.TextEdit
-import org.langmeta.lsp.Window.showMessage
-import org.langmeta.lsp.WorkspaceEdit
-import org.langmeta.jsonrpc.JsonRpcClient
+import scala.meta.lsp.RenameParams
+import scala.meta.lsp.TextEdit
+import scala.meta.lsp.Window.showMessage
+import scala.meta.lsp.WorkspaceEdit
+import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.metals.refactoring.Backtick
 import scala.meta.metals.search.SymbolIndex
 import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.lsp.WorkspaceEdit
+import scala.meta.lsp.WorkspaceEdit
 
 object RenameProvider extends LazyLogging {
   def rename(params: RenameParams, symbolIndex: SymbolIndex)(

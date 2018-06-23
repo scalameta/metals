@@ -2,8 +2,8 @@ package scala.meta.metals.providers
 
 import scala.meta.Type
 import scala.meta.metals.Uri
-import org.langmeta.lsp.Hover
-import org.langmeta.lsp.RawMarkedString
+import scala.meta.lsp.Hover
+import scala.meta.lsp.RawMarkedString
 import scala.meta.metals.search.SymbolIndex
 import scala.{meta => m}
 import scalafix.internal.util.DenotationOps

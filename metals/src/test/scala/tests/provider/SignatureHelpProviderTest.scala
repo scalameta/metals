@@ -1,7 +1,7 @@
 package tests.provider
 
 import io.circe.syntax._
-import org.langmeta.lsp.SignatureHelp
+import scala.meta.lsp.SignatureHelp
 import tests.CompilerSuite
 
 import scala.meta.metals.providers.SignatureHelpProvider

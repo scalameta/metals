@@ -1,7 +1,7 @@
 package tests.provider
 
 import io.circe.syntax._
-import org.langmeta.lsp.Hover
+import scala.meta.lsp.Hover
 import tests.search.BaseIndexTest
 
 import scala.meta.metals.Uri
