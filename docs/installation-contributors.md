@@ -8,11 +8,18 @@ title: Installation
 The following instructions are intended for contributors who want to try Metals
 and provide feedback. We do not provide support for day-to-day usage of Metals.
 
-# Global setup
+## Requirements
+
+* Scala 2.12.4, down to the exact PATCH version. Note that Scala versions 2.11.x and
+  2.12.6 are not supported.
+* Java 8. Note that Java 9 or higher has not been tested.
+* macOS or Linux. Note that there have been reported issues on Windows.
+
+## Global setup
 
 These steps are required once per machine.
 
-## sbt plugin
+### sbt plugin
 
 The server needs to access some metadata about the build configuration. This
 data are produced by an sbt plugin.
@@ -28,16 +35,16 @@ You can add the plugin to a specific project (adding it to `project/plugins.sbt`
 - (sbt 1) `~/.sbt/1.0/plugins/plugins.sbt`
 - (sbt 0.13) `~/.sbt/0.13/plugins/plugins.sbt`
 
-## VSCode extension
+### VSCode extension
 
 > ***N.B.*** This project is still in development - right now you will need to run the VSCode plugin
 > as described [here](getting-started-contributors.html#running-a-local-version-of-the-vscode-extension)
 
-# Per-project setup
+## Per-project setup
 
 These steps are required on each project.
 
-## Quick-start
+### Quick-start
 The quickest way to get started with Metals is to use the `metalsSetup` command in sbt.
 
 ```
@@ -60,7 +67,7 @@ Note that in sbt 0.13 you will need to invoke `metalsSetup` (or `semanticdbEnabl
 re-open sbt. For a more persistent setup, keep reading. In sbt 1 you don't need to do it because Metals will
 automatically invoke `semanticdbEnable` every time it connects to the sbt server.
 
-## Persisting the semanticdb-scalac compiler plugin
+### Persisting the semanticdb-scalac compiler plugin
 Some features like definition/references/hover rely on artifacts produced by a compiler plugin
 called `semanticdb-scalac`.
 
@@ -73,7 +80,7 @@ addCompilerPlugin(MetalsPlugin.semanticdbScalac)
 scalacOptions += "-Yrangepos"
 ```
 
-## Start editing
+### Start editing
 Open your project in VSCode (`code .` from your terminal) and open a Scala file;
 the server will now start.
 
