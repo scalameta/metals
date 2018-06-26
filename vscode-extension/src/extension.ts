@@ -117,6 +117,14 @@ export async function activate(context: ExtensionContext) {
         });
       }
     );
+    const bspConnectCommand = commands.registerCommand(
+      'metals.bspConnect',
+      async () => {
+        return client.sendRequest(ExecuteCommandRequest.type, {
+          command: "bspConnect"
+        });
+      }
+    );
     context.subscriptions.push(
       clearIndexCacheCommand,
       resetPresentationCompiler,

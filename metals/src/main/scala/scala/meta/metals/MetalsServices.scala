@@ -21,6 +21,8 @@ import scala.meta.metals.providers._
 import scala.meta.metals.refactoring.OrganizeImports
 import scala.meta.metals.sbtserver.Sbt
 import scala.meta.metals.sbtserver.SbtServer
+import scala.meta.metals.bsp.BspServer
+import scala.meta.metals.bsp.BloopBspConnector
 import scala.meta.metals.search.SymbolIndex
 import scala.util.Failure
 import scala.util.Success
@@ -54,6 +56,7 @@ class MetalsServices(
   implicit val scheduler: Scheduler = s.global
   implicit val languageClient: LanguageClient = client
   private var sbtServer: Option[SbtServer] = None
+  private var bspServer: Option[BspServer] = None
   private val tempSourcesDir: AbsolutePath =
     cwd.resolve("target").resolve("sources")
   // Always run the presentation compiler on the same thread
@@ -419,6 +422,11 @@ class MetalsServices(
         }
         Right(Json.Null)
       }
+    case BspConnect =>
+      Task {
+        connectToBspServer()
+        Right(Json.Null)
+      }
   }
 
   private def sbtExec(commands: String*): Task[Unit] = {
@@ -489,6 +497,31 @@ class MetalsServices(
           logger.info("semanticdb-scalac is enabled")
         }
         sbtExec().runAsync // run configured command right away
+    }
+  }
+
+  private def connectToBspServer(): Unit = {
+    bspServer.foreach(_.disconnect())
+    val services = BspServer.forwardingServices(client, latestConfig) //, logger)
+    // FIXME(gabro): here we are hardcoding the selection of Bloop,
+    // but this should be configurable
+    val bspConnection = new BloopBspConnector(services)(s.bsp)
+    BspServer.connect(cwd, bspConnection).foreach {
+      case Left(err) => showMessage.error(err)
+      case Right(server) =>
+        val msg = "Established connection with BSP server 😎"
+        logger.info(msg)
+        showMessage.info(msg)
+        bspServer = Some(server)
+        cancelEffects ::= server.runningServer
+        server.runningServer.onComplete {
+          case Failure(err) =>
+            logger.error(s"Unexpected failure from BSP server connection", err)
+            showMessage.error(err.getMessage)
+          case Success(()) =>
+            bspServer = None
+            showMessage.warn("Disconnected from BSP server")
+        }
     }
   }
 

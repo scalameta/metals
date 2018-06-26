@@ -116,7 +116,9 @@ lazy val metals = project
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
       "org.scalameta" %% "lsp4s" % "0.1.0",
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
-      "org.scalameta" %% "testkit" % V.scalameta % Test
+      "org.scalameta" %% "testkit" % V.scalameta % Test,
+      "ch.epfl.scala" %% "bsp" % "1.0.0-M2",
+      "com.outr" %% "scribe" % "2.5.1",
     )
   )
   .dependsOn(
