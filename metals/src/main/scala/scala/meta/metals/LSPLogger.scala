@@ -2,8 +2,8 @@ package scala.meta.metals
 
 import java.nio.charset.StandardCharsets.UTF_8
 import scala.beans.BeanProperty
-import org.langmeta.lsp.Window._
-import org.langmeta.jsonrpc.JsonRpcClient
+import scala.meta.lsp.Window._
+import scala.meta.jsonrpc.JsonRpcClient
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.Level

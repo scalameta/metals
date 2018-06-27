@@ -1,7 +1,7 @@
 package scala.meta.metals
 
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
-import org.langmeta.lsp.Diagnostic
+import scala.meta.lsp.Diagnostic
 import scala.meta.parsers.Parsed
 import scala.{meta => m}
 import scalafix.internal.config.LazySemanticdbIndex
@@ -16,15 +16,15 @@ import scalafix.util.SemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
 import org.langmeta.inputs.Input
-import org.langmeta.jsonrpc.JsonRpcClient
-import org.langmeta.jsonrpc.Response
-import org.langmeta.lsp.Window.showMessage
+import scala.meta.jsonrpc.JsonRpcClient
+import scala.meta.jsonrpc.Response
+import scala.meta.lsp.Window.showMessage
 import cats.syntax.bifunctor._
 import cats.instances.either._
 import monix.execution.Scheduler
 import monix.reactive.Observable
 import monix.eval.Task
-import org.langmeta.lsp.MonixEnrichments._
+import scala.meta.lsp.MonixEnrichments._
 import java.nio.file.Files
 
 class Linter(configuration: Observable[Configuration], cwd: AbsolutePath)(

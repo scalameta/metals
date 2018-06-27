@@ -4,7 +4,7 @@ import scala.meta.Input
 import org.langmeta.languageserver.InputEnrichments._
 import scala.annotation.tailrec
 import scala.meta.metals.ScalametaEnrichments._
-import org.langmeta.lsp.TextEdit
+import scala.meta.lsp.TextEdit
 
 /** Re-implementation of how TextEdits should be handled by the editor client
  *

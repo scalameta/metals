@@ -3,19 +3,19 @@ package scala.meta.metals.compiler
 import scala.collection.mutable
 import scala.meta.metals.Effects
 import scala.meta.metals.Uri
-import org.langmeta.lsp.TextDocumentIdentifier
-import org.langmeta.lsp.VersionedTextDocumentIdentifier
+import scala.meta.lsp.TextDocumentIdentifier
+import scala.meta.lsp.VersionedTextDocumentIdentifier
 import scala.reflect.io
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
 import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.lsp.VersionedTextDocumentIdentifier
-import org.langmeta.lsp.Window.showMessage
+import scala.meta.lsp.VersionedTextDocumentIdentifier
+import scala.meta.lsp.Window.showMessage
 import org.langmeta.inputs.Input
 import org.langmeta.io.AbsolutePath
-import org.langmeta.jsonrpc.JsonRpcClient
+import scala.meta.jsonrpc.JsonRpcClient
 
 /** Responsible for keeping fresh scalac global instances. */
 class ScalacProvider()(implicit client: JsonRpcClient) extends LazyLogging {

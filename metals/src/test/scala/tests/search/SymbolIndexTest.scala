@@ -8,12 +8,12 @@ import scala.meta.metals.ScalametaEnrichments._
 import scala.meta.metals.MetalsServices
 import scala.meta.metals.Uri
 import scala.meta.metals.internal.BuildInfo
-import org.langmeta.{lsp => l}
-import org.langmeta.lsp.ClientCapabilities
-import org.langmeta.lsp.InitializeParams
-import org.langmeta.lsp.Location
-import org.langmeta.lsp.Position
-import org.langmeta.lsp.Range
+import scala.meta.{lsp => l}
+import scala.meta.lsp.ClientCapabilities
+import scala.meta.lsp.InitializeParams
+import scala.meta.lsp.Location
+import scala.meta.lsp.Position
+import scala.meta.lsp.Range
 import scala.meta.metals.search.InMemorySymbolIndex
 import scala.meta.metals.search.InverseSymbolIndexer
 import scala.meta.metals.search.SymbolIndex
@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.LazyLogging
 import monix.execution.schedulers.TestScheduler
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Classpath
-import org.langmeta.lsp.LanguageClient
+import scala.meta.lsp.LanguageClient
 import org.langmeta.semanticdb.Symbol
 import tests.MegaSuite
 import utest._
@@ -63,7 +63,7 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
   val client = new LanguageClient(stdout, logger)
   val metals = new MetalsServices(cwd, client, mscheduler)
   metals
-    .initialize(InitializeParams(None, cwd.toString(), ClientCapabilities()))
+    .initialize(InitializeParams(0L, cwd.toString(), ClientCapabilities()))
     .runAsync(s)
   while (s.tickOne()) () // Trigger indexing
   val index: SymbolIndex = metals.symbolIndex

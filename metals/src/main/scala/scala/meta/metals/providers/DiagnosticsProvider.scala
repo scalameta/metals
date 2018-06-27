@@ -5,14 +5,14 @@ import scala.meta.metals.Configuration
 import com.typesafe.scalalogging.LazyLogging
 import scala.{meta => m}
 import scala.meta.metals.ScalametaEnrichments._
-import org.langmeta.lsp.MonixEnrichments._
-import org.langmeta.lsp.PublishDiagnostics
-import org.langmeta.jsonrpc.JsonRpcClient
+import scala.meta.lsp.MonixEnrichments._
+import scala.meta.lsp.PublishDiagnostics
+import scala.meta.jsonrpc.JsonRpcClient
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable
 import org.langmeta.AbsolutePath
-import org.langmeta.lsp.Diagnostic
+import scala.meta.lsp.Diagnostic
 
 class DiagnosticsProvider(
     configuration: Observable[Configuration],

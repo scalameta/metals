@@ -1,7 +1,7 @@
 package tests.provider
 
 import io.circe.syntax._
-import org.langmeta.lsp.{CompletionItemKind, CompletionList}
+import scala.meta.lsp.{CompletionItemKind, CompletionList}
 import tests.CompilerSuite
 
 import scala.meta.metals.providers.CompletionProvider
