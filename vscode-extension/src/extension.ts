@@ -14,11 +14,6 @@ import {
 import { exec } from "child_process";
 
 export async function activate(context: ExtensionContext) {
-  // The debug options for the server
-  const debugOptions = [
-    "-Xdebug",
-    "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000,quiet=y"
-  ];
 
   const coursierPath = path.join(context.extensionPath, "./coursier");
 
@@ -52,7 +47,7 @@ export async function activate(context: ExtensionContext) {
 
   const serverOptions: ServerOptions = {
     run: { command: "java", args: launchArgs },
-    debug: { command: "java", args: debugOptions.concat(launchArgs) }
+    debug: { command: "java", args: launchArgs }
   };
 
   const clientOptions: LanguageClientOptions = {
@@ -123,7 +118,6 @@ export async function activate(context: ExtensionContext) {
       sbtConnectCommand
     );
   });
-
 
   spawn('java', resolveArgs)
     .on('exit', code => {
