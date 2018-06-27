@@ -12,16 +12,11 @@ import scala.concurrent.duration.FiniteDuration
 import scala.meta.metals.compiler.CompilerConfig
 import scala.meta.metals.compiler.Cursor
 import scala.meta.metals.compiler.ScalacProvider
-import org.langmeta.lsp.Window.showMessage
-import org.langmeta.lsp.{
-  Lifecycle => lc,
-  TextDocument => td,
-  Workspace => ws,
-  _
-}
+import scala.meta.lsp.Window.showMessage
+import scala.meta.lsp.{Lifecycle => lc, TextDocument => td, Workspace => ws, _}
 import MonixEnrichments._
-import org.langmeta.jsonrpc.Response
-import org.langmeta.jsonrpc.Services
+import scala.meta.jsonrpc.Response
+import scala.meta.jsonrpc.Services
 import scala.meta.metals.providers._
 import scala.meta.metals.refactoring.OrganizeImports
 import scala.meta.metals.sbtserver.Sbt
@@ -48,7 +43,7 @@ import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
-import org.langmeta.lsp.LanguageClient
+import scala.meta.lsp.LanguageClient
 import org.langmeta.semanticdb
 
 class MetalsServices(

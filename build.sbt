@@ -5,6 +5,7 @@ inThisBuild(
       else "SNAPSHOT" // only for local publishng
     },
     scalaVersion := V.scala212,
+    crossScalaVersions := List(V.scala212),
     scalacOptions ++= List(
       "-Yrangepos",
       "-deprecation",
@@ -76,14 +77,9 @@ inThisBuild(
 )
 
 lazy val V = new {
-  val scala211 = MetalsPlugin.scala211
   val scala212 = MetalsPlugin.scala212
   val scalameta = MetalsPlugin.semanticdbVersion
   val scalafix = "0.5.7"
-  val enumeratum = "1.5.12"
-  val circe = "0.9.0"
-  val cats = "1.0.1"
-  val monix = "3.0.0-RC3"
 }
 
 lazy val noPublish = List(
@@ -91,37 +87,6 @@ lazy val noPublish = List(
   publishArtifact := false,
   skip in publish := true
 )
-
-lazy val benchmarks = project
-  .disablePlugins(ScriptedPlugin)
-  .enablePlugins(JmhPlugin)
-  .dependsOn(metals)
-
-lazy val jsonrpc = project
-  .disablePlugins(ScriptedPlugin)
-  .settings(
-    crossScalaVersions := List(V.scala211, V.scala212),
-    libraryDependencies ++= List(
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "com.beachape" %% "enumeratum" % V.enumeratum,
-      "com.beachape" %% "enumeratum-circe" % "1.5.15",
-      "com.lihaoyi" %% "pprint" % "0.5.3",
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
-      "io.circe" %% "circe-core" % V.circe,
-      "io.circe" %% "circe-generic" % V.circe,
-      "io.circe" %% "circe-generic-extras" % V.circe,
-      "io.circe" %% "circe-parser" % V.circe,
-      "io.monix" %% "monix" % "2.3.0",
-      "org.codehaus.groovy" % "groovy" % "2.4.0",
-      "org.slf4j" % "slf4j-api" % "1.7.25",
-      "org.typelevel" %% "cats-core" % V.cats
-    )
-  )
-
-lazy val lsp4s = project
-  .disablePlugins(ScriptedPlugin)
-  .settings(crossScalaVersions := List(V.scala211, V.scala212))
-  .dependsOn(jsonrpc)
 
 lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
@@ -149,13 +114,13 @@ lazy val metals = project
       "io.github.soc" % "directories" % "5", // for cache location
       "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
+      "org.scalameta" %% "lsp4s" % "0.1.0",
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta % Test
     )
   )
   .dependsOn(
-    testWorkspace % "test->test",
-    lsp4s
+    testWorkspace % "test->test"
   )
 
 lazy val integration = project
@@ -191,9 +156,6 @@ lazy val metalsRoot = project
     crossSbtVersions := Seq("1.0.4", "0.13.17"),
   )
   .aggregate(
-    benchmarks,
-    jsonrpc,
-    lsp4s,
     metals,
     integration
   )

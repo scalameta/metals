@@ -7,17 +7,17 @@ import scala.meta.metals.Uri
 import scala.meta.metals.search.SymbolIndex
 import scalafix.internal.rule.RemoveUnusedImports
 import scala.meta.metals.ScalametaEnrichments._
-import org.langmeta.lsp
-import org.langmeta.lsp.ApplyWorkspaceEditParams
-import org.langmeta.lsp.TextDocumentIdentifier
-import org.langmeta.lsp.WorkspaceEdit
-import org.langmeta.jsonrpc.Response
+import scala.meta.lsp
+import scala.meta.lsp.ApplyWorkspaceEditParams
+import scala.meta.lsp.TextDocumentIdentifier
+import scala.meta.lsp.WorkspaceEdit
+import scala.meta.jsonrpc.Response
 import scalafix.languageserver.ScalafixEnrichments._
 import scalafix.languageserver.ScalafixPatchEnrichments._
 import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
 import com.typesafe.scalalogging.LazyLogging
-import org.langmeta.lsp.TextDocumentIdentifier
+import scala.meta.lsp.TextDocumentIdentifier
 import io.circe.Json
 
 object OrganizeImports extends LazyLogging {

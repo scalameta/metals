@@ -2,7 +2,7 @@ package scalafix.languageserver
 
 import scala.collection.immutable.Seq
 import scala.meta.metals.ScalametaEnrichments._
-import org.langmeta.lsp.TextEdit
+import scala.meta.lsp.TextEdit
 import scalafix.SemanticdbIndex
 import scalafix.internal.patch.ImportPatchOps
 import scalafix.internal.patch.ReplaceSymbolOps
