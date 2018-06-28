@@ -63,14 +63,14 @@ class DocumentFormattingProvider(
       }
       .toFunction0()
 
-  private val fullDocumentRange = Range(
-    start = Position(0, 0),
-    end = Position(Int.MaxValue, Int.MaxValue)
-  )
-
   def format(
       input: Input.VirtualFile
   ): Task[Either[Response.Error, List[TextEdit]]] = Task {
+    val pos = scala.meta.Position.Range(input, 0, input.chars.length)
+    val fullDocumentRange = Range(
+      Position(pos.startLine, pos.startColumn),
+      Position(pos.endLine, pos.endColumn)
+    )
     val formatResult = for {
       scalafmt <- formatter()
       scalafmtConf <- config()
