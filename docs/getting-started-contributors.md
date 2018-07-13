@@ -94,7 +94,7 @@ and start a debugging session (`Debug > Start debuggin` or `F5`)
 This will open new VSCode window with the latest version of the plugin installed.
 (If you also have the plugin from the Marketplace installed, you will get a warning. This is normal)
 
-Then open the `test-workspace` directory (<kbd>CMD</kbd> + <kbd>O</kdb> on macOS) and open a Scala
+Then open the `test-workspace` directory (<kbd>CMD</kbd> + <kbd>O</kbd> on macOS) and open a Scala
 file. Metals will now start, and you should see the features working after a few seconds.
 
 Close the window and run F5 again after every `publishLocal` of the server.
