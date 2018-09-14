@@ -1,27 +1,19 @@
 package scala.meta.metals.mtags
 
 import java.io.StringReader
-import scala.meta.CLASS
-import scala.meta.DEF
-import scala.meta.OBJECT
-import scala.meta.PACKAGE
-import scala.meta.TRAIT
-import scala.meta.VAL
-import scala.meta.VAR
+
 import com.thoughtworks.qdox._
-import com.thoughtworks.qdox.model.JavaClass
-import com.thoughtworks.qdox.model.JavaField
-import com.thoughtworks.qdox.model.JavaMember
-import com.thoughtworks.qdox.model.JavaMethod
-import com.thoughtworks.qdox.model.JavaModel
-import org.langmeta.inputs.Input
-import org.langmeta.inputs.Position
+import com.thoughtworks.qdox.model._
+import org.langmeta.inputs.{Input, Position}
 import org.langmeta.languageserver.InputEnrichments._
+
+import scala.meta.{CLASS, DEF, OBJECT, PACKAGE, TRAIT, VAL, VAR}
 
 object JavaMtags {
   private implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
     def lineNumber: Int = m.getLineNumber - 1
   }
+
   def index(input: Input.VirtualFile): MtagsIndexer = {
     val builder = new JavaProjectBuilder()
     new MtagsIndexer { self =>
@@ -55,18 +47,22 @@ object JavaMtags {
        */
       def toRangePosition(line: Int, name: String): Position = {
         val offset = input.toOffset(line, 0)
-        val column = {
+        val columnAndLength = {
           val fromIndex = {
             // HACK(olafur) avoid hitting on substrings of "package".
             if (input.value.startsWith("package", offset)) "package".length
             else offset
           }
           val idx = input.value.indexOf(name, fromIndex)
-          if (idx == -1) 0
-          else idx - offset
+          if (idx == -1) (0, 0)
+          else (idx - offset, name.length)
         }
-        val pos = input.toPosition(line, column, line, column + name.length)
-        pos
+        input.toPosition(
+          line,
+          columnAndLength._1,
+          line,
+          columnAndLength._1 + columnAndLength._2
+        )
       }
 
       def visitFields[T <: JavaMember](fields: java.util.List[T]): Unit =
