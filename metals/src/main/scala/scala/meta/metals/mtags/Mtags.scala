@@ -95,7 +95,7 @@ object Mtags extends LazyLogging {
       } catch {
         case _: ParseException | _: QParseException => // nothing
         case NonFatal(e) =>
-          logger.error(s"Error indexing ${fragment.syntax}", e)
+          logger.error(s"Error indexing ${fragment.name}", e)
       }
     }
     reportProgress(totalIndexedFiles.get)
@@ -124,9 +124,11 @@ object Mtags extends LazyLogging {
   /** Index single Scala or Java from disk or zip file. */
   def index(fragment: Fragment): Document = {
     val uri = {
+      val base = fragment.base.toNIO.getFileName.toString
       // Need special handling because https://github.com/scalameta/scalameta/issues/1163
-      if (isZip(fragment.base.toNIO.getFileName.toString))
-        new URI(s"jar:${fragment.base.toURI.normalize()}!/${fragment.name}")
+      if (isZip(base) || isJar(base))
+        new URI(s"jar:${fragment.base.toURI
+          .normalize()}!/${fragment.name.toString().replace('\\', '/')}")
       else fragment.uri
     }
     val contents = new String(FileIO.readAllBytes(uri), StandardCharsets.UTF_8)
