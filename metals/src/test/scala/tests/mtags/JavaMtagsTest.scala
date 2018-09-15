@@ -160,24 +160,26 @@ object JavaMtagsTest extends BaseMtagsTest {
     val db = Mtags.indexDatabase(jdk :: Nil, shouldIndex = { path =>
       path.toNIO.endsWith(DefaultFileSystem)
     })
+
     val obtained = db
       .toDb(None)
       .syntax
-      .replace(jdk.toString(), "JAVA_HOME")
+      .replaceFirst("jar:file://.+!", "jar:file://JAVA_HOME!")
+      .replaceAll("\\[\\d+\\.\\.\\d+\\)", "[)")
       .replaceAll("-+", "------------------") // consistent across machines.
+
     val expected =
-      """
-        |jar:file://JAVA_HOME!/java/io/DefaultFileSystem.java
+      """jar:file://JAVA_HOME!/java/io/DefaultFileSystem.java
         |------------------
         |Language:
         |Java
         |
         |Names:
-        |[219..223): java => _root_.java.
-        |[224..226): io => _root_.java.io.
-        |[260..277): DefaultFileSystem <= _root_.java.io.DefaultFileSystem.
-        |[260..277): DefaultFileSystem <= _root_.java.io.DefaultFileSystem#
-        |[387..400): getFileSystem <= _root_.java.io.DefaultFileSystem.getFileSystem.
+        |[): java => _root_.java.
+        |[): io => _root_.java.io.
+        |[): DefaultFileSystem <= _root_.java.io.DefaultFileSystem.
+        |[): DefaultFileSystem <= _root_.java.io.DefaultFileSystem#
+        |[): getFileSystem <= _root_.java.io.DefaultFileSystem.getFileSystem.
         |
         |Symbols:
         |_root_.java. => package java
@@ -187,6 +189,23 @@ object JavaMtagsTest extends BaseMtagsTest {
         |_root_.java.io.DefaultFileSystem.getFileSystem. => def getFileSystem
       """.stripMargin
     assertNoDiff(obtained, expected)
+  }
+
+  test("check issue #280 case") {
+    val jdk = CompilerConfig.jdkSources.get
+    val parserConstants =
+      Paths
+        .get("com")
+        .resolve("sun")
+        .resolve("jmx")
+        .resolve("snmp")
+        .resolve("IPAcl")
+        .resolve("ParserConstants.java")
+    val db = Mtags.indexDatabase(jdk :: Nil, shouldIndex = { path =>
+      path.toNIO.endsWith(parserConstants)
+    })
+
+    db.toDb(None).syntax
   }
 
   // Ignored because it's slow
