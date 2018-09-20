@@ -141,7 +141,7 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
         end: (Int, Int)
     ): Location =
       l.Location(
-        s"file:${path.toString}",
+        path.toURI.toString,
         Range(
           Position(start._1, start._2),
           l.Position(end._1, end._2)

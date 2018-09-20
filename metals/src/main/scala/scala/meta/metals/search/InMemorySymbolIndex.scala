@@ -175,7 +175,7 @@ class InMemorySymbolIndex(
    *                 - names must be sorted
    */
   def indexDocument(document: s.Document): Effects.IndexSemanticdb = {
-    val uri = Uri(document.filename)
+    val uri = Uri(document.filename.replace('\\', '/'))
     val input = Input.VirtualFile(document.filename, document.contents)
     documentIndex.putDocument(uri, document)
     document.names.foreach {
