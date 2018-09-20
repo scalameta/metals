@@ -13,6 +13,7 @@ import Configuration._
 
 @JsonCodec case class Configuration(
     sbt: Sbt = Sbt(),
+    bsp: Bsp = Bsp(),
     scalac: Scalac = Scalac(),
     scalafmt: Scalafmt = Scalafmt(),
     scalafix: Scalafix = Scalafix(),
@@ -35,6 +36,11 @@ object Configuration {
       diagnostics: Enabled = Enabled(true),
       command: String = "",
   )
+
+  @JsonCodec case class Bsp(
+      enabled: Enabled = Enabled(true),
+  )
+
   @JsonCodec case class Scalac(
       completions: Enabled = Enabled(false),
       diagnostics: Enabled = Enabled(false),
