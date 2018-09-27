@@ -2,4 +2,4 @@ unmanagedSources.in(Compile) += baseDirectory
   .in(ThisBuild)
   .value
   .getParentFile
-  .getParentFile / "project" / "MetalsPlugin.scala"
+  .getParentFile / "sbt-metals/src/main/scala/scala/meta/sbt/MetalsPlugin.scala"
