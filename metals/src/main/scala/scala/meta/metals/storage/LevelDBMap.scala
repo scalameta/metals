@@ -1,7 +1,7 @@
 package scala.meta.metals.storage
 
 import java.io.File
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import org.fusesource.leveldbjni.JniDBFactory
 import org.iq80.leveldb.DB
 import org.iq80.leveldb.DBException
@@ -13,7 +13,7 @@ import org.iq80.leveldb.Options
  * @param db The leveldb, remember to close it after using. This wrapper will NOT
  *           close the db for you.
  */
-class LevelDBMap(db: DB) extends LazyLogging {
+class LevelDBMap(db: DB) extends MetalsLogger {
 
   /** Returns the value matching key, if any. */
   @throws[DBException]

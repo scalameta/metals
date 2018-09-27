@@ -6,9 +6,9 @@ import scala.meta.metals.Uri
 import scala.meta.lsp
 import scala.meta.lsp.Location
 import scala.meta.lsp.SymbolInformation
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 
-object DocumentSymbolProvider extends LazyLogging {
+object DocumentSymbolProvider extends MetalsLogger {
 
   private class SymbolTraverser(uri: Uri) {
     private val builder = List.newBuilder[SymbolInformation]

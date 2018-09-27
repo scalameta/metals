@@ -2,7 +2,7 @@ package scala.meta.metals.providers
 
 import scala.meta.metals.Linter
 import scala.meta.metals.Configuration
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import scala.{meta => m}
 import scala.meta.metals.ScalametaEnrichments._
 import scala.meta.jsonrpc.MonixEnrichments._
@@ -18,7 +18,7 @@ class DiagnosticsProvider(
     configuration: Observable[Configuration],
     cwd: AbsolutePath
 )(implicit s: Scheduler, client: JsonRpcClient)
-    extends LazyLogging {
+    extends MetalsLogger {
   private def latestConfig = configuration.toFunction0()
   private def scalafixDisabled: Boolean =
     !latestConfig().scalafix.enabled

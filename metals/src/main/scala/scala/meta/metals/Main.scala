@@ -1,24 +1,22 @@
 package scala.meta.metals
 
-import java.io.FileOutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import scala.meta.jsonrpc.BaseProtocolMessage
 import scala.util.Properties
 import scala.util.control.NonFatal
-import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.internal.io.PathIO
 import scala.meta.jsonrpc.LanguageClient
 import scala.meta.jsonrpc.LanguageServer
 
-object Main extends LazyLogging {
+object Main extends MetalsLogger {
   def main(args: Array[String]): Unit = {
     val cwd = PathIO.workingDirectory
     val configDir = cwd.resolve(".metals").toNIO
-    val logFile = configDir.resolve("metals.log").toFile
+    val logPath = configDir.resolve("metals.log")
     Files.createDirectories(configDir)
-    val out = new PrintStream(new FileOutputStream(logFile))
-    val err = new PrintStream(new FileOutputStream(logFile))
+    val out = new PrintStream(Files.newOutputStream(logPath))
+    val err = new PrintStream(Files.newOutputStream(logPath))
     val stdin = System.in
     val stdout = System.out
     val stderr = System.err
@@ -27,25 +25,29 @@ object Main extends LazyLogging {
       // messes up with the client, since stdout is used for the language server protocol
       System.setOut(out)
       System.setErr(err)
-      val scribeLogger = scribe
-        .Logger("metals")
-        .clearHandlers()
-        .withHandler(writer = scribe.writer.FileWriter.simple())
+      val filewriter = scribe.writer.FileWriter().path(_ => logPath)
+      MetalsLogger.setup(logPath)
+      val scribeLogger =
+        scribe
+          .Logger("metals")
+          .orphan()
+          .withHandler(writer = filewriter)
+          .replace(Some("root"))
 
       logger.info(s"Starting server in $cwd")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
       val s = MSchedulers()
-      val client = new LanguageClient(stdout, scribeLogger)
-      val services = new MetalsServices(cwd, client, s, scribeLogger)
+      val client = new LanguageClient(stdout, MetalsLogger.logger)
+      val services = new MetalsServices(cwd, client, s)
       val messages = BaseProtocolMessage
-        .fromInputStream(stdin, scribeLogger)
+        .fromInputStream(stdin, MetalsLogger.logger)
         .executeOn(s.lsp)
       val languageServer = new LanguageServer(
         messages,
         client,
         services.services,
         s.global,
-        scribeLogger
+        MetalsLogger.logger
       )
       languageServer.listen()
     } catch {

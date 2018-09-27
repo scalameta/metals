@@ -1,13 +1,13 @@
 package scala.meta.metals.providers
 
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import scala.meta.metals.Uri
 import scala.meta.metals.search.SymbolIndex
 import scala.meta.metals.ScalametaEnrichments._
 import scala.meta.lsp.DocumentHighlight
 import scala.meta.lsp.Position
 
-object DocumentHighlightProvider extends LazyLogging {
+object DocumentHighlightProvider extends MetalsLogger {
   def empty: List[DocumentHighlight] = Nil
 
   def highlight(

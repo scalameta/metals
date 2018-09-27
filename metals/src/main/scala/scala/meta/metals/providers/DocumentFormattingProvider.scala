@@ -11,7 +11,7 @@ import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.jsonrpc.Response
 import scala.meta.lsp.Window.showMessage
 import scala.util.control.NonFatal
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import cats.syntax.bifunctor._
 import cats.instances.either._
 import scala.meta.lsp.Range
@@ -26,7 +26,7 @@ class DocumentFormattingProvider(
     configuration: Observable[Configuration],
     cwd: AbsolutePath
 )(implicit client: JsonRpcClient, s: Scheduler)
-    extends LazyLogging {
+    extends MetalsLogger {
 
   private val formatter: () => Either[String, Formatter] =
     configuration

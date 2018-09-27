@@ -25,7 +25,6 @@ import scala.meta.metals.search.SymbolIndex
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
-import com.typesafe.scalalogging.LazyLogging
 import io.circe.Json
 import io.github.soc.directories.ProjectDirectories
 import monix.eval.Task
@@ -45,13 +44,13 @@ import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb
 import scala.meta.jsonrpc.LanguageClient
+import MetalsLogger._
 
 class MetalsServices(
     cwd: AbsolutePath,
     client: LanguageClient,
-    s: MSchedulers,
-    scribeLogger: scribe.LoggerSupport
-) extends LazyLogging {
+    s: MSchedulers
+) extends MetalsLogger {
   implicit val scheduler: Scheduler = s.global
   implicit val languageClient: LanguageClient = client
   private var sbtServer: Option[SbtServer] = None
@@ -183,7 +182,7 @@ class MetalsServices(
   }
 
   private val shutdownReceived = Atomic(false)
-  val services: Services = Services.empty(scribeLogger)
+  val services: Services = Services.empty(logger)
     .requestAsync(lc.initialize)(initialize)
     .notification(lc.initialized) { _ =>
       logger.info("Client is initialized")
@@ -469,8 +468,8 @@ class MetalsServices(
 
   private def connectToSbtServer(): Unit = {
     sbtServer.foreach(_.disconnect())
-    val services = SbtServer.forwardingServices(client, latestConfig, scribeLogger)
-    SbtServer.connect(cwd, services, scribeLogger)(s.sbt).foreach {
+    val services = SbtServer.forwardingServices(client, latestConfig)
+    SbtServer.connect(cwd, services)(s.sbt).foreach {
       case Left(err) => showMessage.error(err)
       case Right(server) =>
         val msg = "Established connection with sbt server 😎"
@@ -520,7 +519,7 @@ class MetalsServices(
   }
 }
 
-object MetalsServices extends LazyLogging {
+object MetalsServices extends MetalsLogger {
   lazy val cacheDirectory: AbsolutePath = {
     val path = AbsolutePath(
       ProjectDirectories.fromProjectName("metals").projectCacheDir

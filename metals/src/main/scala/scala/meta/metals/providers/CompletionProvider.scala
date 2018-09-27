@@ -7,10 +7,10 @@ import scala.meta.metals.compiler.CompilerEnrichments._
 import scala.meta.lsp.CompletionItem
 import scala.meta.lsp.CompletionList
 import scala.tools.nsc.interactive.Global
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import scala.meta.lsp.CompletionItemKind
 
-object CompletionProvider extends LazyLogging {
+object CompletionProvider extends MetalsLogger {
   def empty: CompletionList = CompletionList(isIncomplete = false, Nil)
 
   def completions(

@@ -4,11 +4,11 @@ import scala.meta.metals.WorkspaceCommand.ScalafixUnusedImports
 import scala.meta.lsp.CodeActionParams
 import scala.meta.lsp.Command
 import scala.meta.lsp.Diagnostic
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import scala.meta.lsp.Command
 import io.circe.syntax._
 
-object CodeActionProvider extends LazyLogging {
+object CodeActionProvider extends MetalsLogger {
   def codeActions(params: CodeActionParams): List[Command] = {
     params.context.diagnostics.collectFirst {
       case Diagnostic(_, _, _, Some("scalac"), "Unused import") =>

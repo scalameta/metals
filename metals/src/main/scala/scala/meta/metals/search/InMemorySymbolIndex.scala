@@ -15,7 +15,7 @@ import scala.meta.jsonrpc.MonixEnrichments._
 import scala.meta.lsp.SymbolInformation
 import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.metals.{index => i}
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
@@ -39,7 +39,7 @@ class InMemorySymbolIndex(
     configuration: Observable[Configuration],
 )(implicit scheduler: Scheduler, client: JsonRpcClient)
     extends SymbolIndex
-    with LazyLogging {
+    with MetalsLogger {
   private val config = configuration.map(_.search).toFunction0()
   private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()

@@ -10,7 +10,6 @@ import scala.meta.metals.MissingActiveJson
 import scala.meta.metals.SbtInitializeParams
 import scala.meta.metals.Configuration
 import scala.util.Try
-import com.typesafe.scalalogging.LazyLogging
 import io.circe.jawn.parseByteBuffer
 import monix.eval.Task
 import monix.execution.CancelableFuture
@@ -25,6 +24,7 @@ import scala.meta.jsonrpc.LanguageServer
 import scala.meta.lsp.TextDocument
 import scala.meta.lsp.Window
 import org.scalasbt.ipcsocket.UnixDomainSocket
+import scala.meta.metals.MetalsLogger._
 
 /**
  * A wrapper around a connection to an sbt server.
@@ -43,7 +43,7 @@ case class SbtServer(
   def disconnect(): Unit = runningServer.cancel()
 }
 
-object SbtServer extends LazyLogging {
+object SbtServer {
   private def fail(message: String) = Task.now(Left(message))
 
   /**
@@ -84,8 +84,7 @@ object SbtServer extends LazyLogging {
    */
   def connect(
       cwd: AbsolutePath,
-      services: Services,
-      scribeLogger: scribe.LoggerSupport
+      services: Services
   )(
       implicit scheduler: Scheduler
   ): Task[Either[String, SbtServer]] = {
@@ -103,11 +102,11 @@ object SbtServer extends LazyLogging {
         fail(msg + ". Check .metals/metals.log")
       case Right(socket) =>
         val client: LanguageClient =
-          new LanguageClient(socket.getOutputStream, scribeLogger)
+          new LanguageClient(socket.getOutputStream, logger)
         val messages =
-          BaseProtocolMessage.fromInputStream(socket.getInputStream, scribeLogger)
+          BaseProtocolMessage.fromInputStream(socket.getInputStream, logger)
         val server =
-          new LanguageServer(messages, client, services, scheduler, scribeLogger)
+          new LanguageServer(messages, client, services, scheduler, logger)
         val runningServer =
           server.startTask.doOnCancel(Task.eval(socket.close())).runAsync
         val initialize = client.request(Sbt.initialize, SbtInitializeParams())
@@ -125,10 +124,9 @@ object SbtServer extends LazyLogging {
    */
   def forwardingServices(
       editorClient: JsonRpcClient,
-      config: () => Configuration,
-      scribeLogger: scribe.LoggerSupport
+      config: () => Configuration
   ): Services =
-    Services.empty(scribeLogger)
+    Services.empty(logger)
       .notification(Window.logMessage) { msg =>
         editorClient.notify(Window.logMessage, msg)
       }

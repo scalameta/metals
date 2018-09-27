@@ -5,7 +5,7 @@ import java.nio.file.Paths
 import java.util.Properties
 import scala.tools.nsc.settings.ScalaVersion
 import scala.tools.nsc.settings.SpecificScalaVersion
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
@@ -57,7 +57,7 @@ case class CompilerConfig(
     (classDirectory :: dependencyClasspath).mkString(java.io.File.pathSeparator)
 }
 
-object CompilerConfig extends LazyLogging {
+object CompilerConfig extends MetalsLogger {
   private val relativeDir: RelativePath =
     RelativePath(".metals").resolve("buildinfo")
 
