@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.LazyLogging
 import monix.execution.schedulers.TestScheduler
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.Classpath
-import scala.meta.lsp.LanguageClient
+import scala.meta.jsonrpc.LanguageClient
 import org.langmeta.semanticdb.Symbol
 import tests.MegaSuite
 import utest._
@@ -60,10 +60,10 @@ object SymbolIndexTest extends MegaSuite with LazyLogging {
   val mscheduler = new MSchedulers(s, s, s)
   val stdout = new PipedOutputStream()
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
-  val client = new LanguageClient(stdout, logger)
-  val metals = new MetalsServices(cwd, client, mscheduler)
+  val client = new LanguageClient(stdout, scribe.`package`)
+  val metals = new MetalsServices(cwd, client, mscheduler, scribe.`package`)
   metals
-    .initialize(InitializeParams(0L, cwd.toString(), ClientCapabilities()))
+    .initialize(InitializeParams(Some(0L), cwd.toString(), ClientCapabilities()))
     .runAsync(s)
   while (s.tickOne()) () // Trigger indexing
   val index: SymbolIndex = metals.symbolIndex

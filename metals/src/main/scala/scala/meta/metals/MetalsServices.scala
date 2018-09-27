@@ -14,7 +14,7 @@ import scala.meta.metals.compiler.Cursor
 import scala.meta.metals.compiler.ScalacProvider
 import scala.meta.lsp.Window.showMessage
 import scala.meta.lsp.{Lifecycle => lc, TextDocument => td, Workspace => ws, _}
-import MonixEnrichments._
+import scala.meta.jsonrpc.MonixEnrichments._
 import scala.meta.jsonrpc.Response
 import scala.meta.jsonrpc.Services
 import scala.meta.metals.providers._
@@ -43,13 +43,14 @@ import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
-import scala.meta.lsp.LanguageClient
 import org.langmeta.semanticdb
+import scala.meta.jsonrpc.LanguageClient
 
 class MetalsServices(
     cwd: AbsolutePath,
     client: LanguageClient,
     s: MSchedulers,
+    scribeLogger: scribe.LoggerSupport
 ) extends LazyLogging {
   implicit val scheduler: Scheduler = s.global
   implicit val languageClient: LanguageClient = client
@@ -182,7 +183,7 @@ class MetalsServices(
   }
 
   private val shutdownReceived = Atomic(false)
-  val services: Services = Services.empty
+  val services: Services = Services.empty(scribeLogger)
     .requestAsync(lc.initialize)(initialize)
     .notification(lc.initialized) { _ =>
       logger.info("Client is initialized")
@@ -468,8 +469,8 @@ class MetalsServices(
 
   private def connectToSbtServer(): Unit = {
     sbtServer.foreach(_.disconnect())
-    val services = SbtServer.forwardingServices(client, latestConfig)
-    SbtServer.connect(cwd, services)(s.sbt).foreach {
+    val services = SbtServer.forwardingServices(client, latestConfig, scribeLogger)
+    SbtServer.connect(cwd, services, scribeLogger)(s.sbt).foreach {
       case Left(err) => showMessage.error(err)
       case Right(server) =>
         val msg = "Established connection with sbt server 😎"

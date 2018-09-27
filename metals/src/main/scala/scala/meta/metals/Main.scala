@@ -8,8 +8,8 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.internal.io.PathIO
-import scala.meta.lsp.LanguageClient
-import scala.meta.lsp.LanguageServer
+import scala.meta.jsonrpc.LanguageClient
+import scala.meta.jsonrpc.LanguageServer
 
 object Main extends LazyLogging {
   def main(args: Array[String]): Unit = {
@@ -27,20 +27,25 @@ object Main extends LazyLogging {
       // messes up with the client, since stdout is used for the language server protocol
       System.setOut(out)
       System.setErr(err)
+      val scribeLogger = scribe
+        .Logger("metals")
+        .clearHandlers()
+        .withHandler(writer = scribe.writer.FileWriter.simple())
+
       logger.info(s"Starting server in $cwd")
       logger.info(s"Classpath: ${Properties.javaClassPath}")
       val s = MSchedulers()
-      val client = new LanguageClient(stdout, logger)
-      val services = new MetalsServices(cwd, client, s)
+      val client = new LanguageClient(stdout, scribeLogger)
+      val services = new MetalsServices(cwd, client, s, scribeLogger)
       val messages = BaseProtocolMessage
-        .fromInputStream(stdin)
+        .fromInputStream(stdin, scribeLogger)
         .executeOn(s.lsp)
       val languageServer = new LanguageServer(
         messages,
         client,
         services.services,
         s.global,
-        logger
+        scribeLogger
       )
       languageServer.listen()
     } catch {
