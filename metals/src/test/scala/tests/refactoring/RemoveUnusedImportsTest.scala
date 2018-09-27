@@ -4,7 +4,7 @@ import scala.meta.metals.Uri
 import scala.meta.metals.refactoring.OrganizeImports
 import scala.meta.metals.refactoring.TextEdits
 import org.langmeta.inputs.Input
-import tests.compiler.CompilerSuite
+import tests.CompilerSuite
 
 // This test suite is not supposed to test the actual scalafix implementation,
 // it is only supposed to check that the conversion from scalafix.Patch to

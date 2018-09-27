@@ -11,9 +11,9 @@ import scala.meta.metals.compiler.CompilerConfig
 import scala.meta.metals.index.SymbolData
 import scala.meta.metals.mtags.Mtags
 import scala.meta.metals.storage.LevelDBMap
-import org.langmeta.lsp.MonixEnrichments._
-import org.langmeta.lsp.SymbolInformation
-import org.langmeta.jsonrpc.JsonRpcClient
+import scala.meta.lsp.MonixEnrichments._
+import scala.meta.lsp.SymbolInformation
+import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.metals.{index => i}
 import com.typesafe.scalalogging.LazyLogging
 import me.xdrop.fuzzywuzzy.FuzzySearch
@@ -175,7 +175,7 @@ class InMemorySymbolIndex(
    *                 - names must be sorted
    */
   def indexDocument(document: s.Document): Effects.IndexSemanticdb = {
-    val uri = Uri(document.filename)
+    val uri = Uri(document.filename.replace('\\', '/'))
     val input = Input.VirtualFile(document.filename, document.contents)
     documentIndex.putDocument(uri, document)
     document.names.foreach {

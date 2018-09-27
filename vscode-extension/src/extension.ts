@@ -1,6 +1,7 @@
 "use strict";
 
 import * as path from "path";
+import { spawn } from 'child_process';
 import { workspace, ExtensionContext, window, commands } from "vscode";
 import {
   LanguageClient,
@@ -16,32 +17,40 @@ import { dirname } from 'path';
 import open = require('opn');
 
 export async function activate(context: ExtensionContext) {
-  // The debug options for the server
-  const debugOptions = [
-    "-Xdebug",
-    "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000,quiet=y"
-  ];
 
   const coursierPath = path.join(context.extensionPath, "./coursier");
 
   const serverVersion = workspace.getConfiguration("metals").get("serverVersion")
 
-  const coursierArgs = [
+  const javaArgs = [
+    `-XX:+UseG1GC`,
+    `-XX:+UseStringDeduplication`,
+    "-jar", coursierPath
+  ]
+
+  const artifact = `org.scalameta:metals_2.12:${serverVersion}`
+
+  //Validate the serverVersion resolves OK before attempting to launch it
+  const coursierResolveArgs = [
+      "resolve",
+      "-r", "bintray:scalameta/maven",
+      artifact,
+    ];
+
+  const resolveArgs = javaArgs.concat(coursierResolveArgs)
+
+  const coursierLaunchArgs = [
     "launch",
     "-r", "bintray:scalameta/maven",
     `org.scalameta:metals_2.12:${serverVersion}`,
     "-M", "scala.meta.metals.Main"
   ];
 
-  const javaArgs = [
-    `-XX:+UseG1GC`,
-    `-XX:+UseStringDeduplication`,
-    "-jar", coursierPath
-  ].concat(coursierArgs);
+  const launchArgs = javaArgs.concat(coursierLaunchArgs);
 
   const serverOptions: ServerOptions = {
-    run: { command: "java", args: javaArgs },
-    debug: { command: "java", args: debugOptions.concat(javaArgs) }
+    run: { command: "java", args: launchArgs },
+    debug: { command: "java", args: launchArgs }
   };
 
   const clientOptions: LanguageClientOptions = {
@@ -49,7 +58,8 @@ export async function activate(context: ExtensionContext) {
     synchronize: {
       fileEvents: [
         workspace.createFileSystemWatcher("**/*.semanticdb"),
-        workspace.createFileSystemWatcher("**/.metals/buildinfo/**/*.properties")
+        workspace.createFileSystemWatcher("**/.metals/buildinfo/**/*.properties"),
+        workspace.createFileSystemWatcher("**/project/target/active.json")
       ],
       configurationSection: 'metals'
     },
@@ -133,5 +143,19 @@ export async function activate(context: ExtensionContext) {
     );
   });
 
-  context.subscriptions.push(client.start(), restartServerCommand);
+  spawn('java', resolveArgs)
+    .on('exit', code => {
+      if (code !== 0) {
+        const msg = [
+          'Could not find Metals server artifact, ensure that metals.serverVersion setting is correct.',
+          `Coursier resolve failed on:${artifact} with exit code:${code}.`
+        ].join('\n')
+        window.showErrorMessage(msg);
+        console.error(msg);
+      } else {
+        console.log(`Successfully resolved Metals server artifact: ${artifact}. Starting LanguageClient.`);
+        context.subscriptions.push(client.start(), restartServerCommand);
+      }
+    });
+
 }

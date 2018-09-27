@@ -1,6 +1,7 @@
 package scala.meta.metals
 
 import java.io.IOException
+import java.io.File
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -11,16 +12,11 @@ import scala.concurrent.duration.FiniteDuration
 import scala.meta.metals.compiler.CompilerConfig
 import scala.meta.metals.compiler.Cursor
 import scala.meta.metals.compiler.ScalacProvider
-import org.langmeta.lsp.Window.showMessage
-import org.langmeta.lsp.{
-  Lifecycle => lc,
-  TextDocument => td,
-  Workspace => ws,
-  _
-}
+import scala.meta.lsp.Window.showMessage
+import scala.meta.lsp.{Lifecycle => lc, TextDocument => td, Workspace => ws, _}
 import MonixEnrichments._
-import org.langmeta.jsonrpc.Response
-import org.langmeta.jsonrpc.Services
+import scala.meta.jsonrpc.Response
+import scala.meta.jsonrpc.Services
 import scala.meta.metals.providers._
 import scala.meta.metals.refactoring.OrganizeImports
 import scala.meta.metals.sbtserver.Sbt
@@ -34,6 +30,7 @@ import io.circe.Json
 import cats.syntax.either._
 import io.github.soc.directories.ProjectDirectories
 import monix.eval.Task
+import monix.eval.Coeval
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
@@ -47,7 +44,7 @@ import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
-import org.langmeta.lsp.LanguageClient
+import scala.meta.lsp.LanguageClient
 import org.langmeta.semanticdb
 
 class MetalsServices(
@@ -146,7 +143,7 @@ class MetalsServices(
     logger.info(s"Initialized with $cwd, $params")
     LSPLogger.notifications = Some(client)
     cancelEffects = effects.map(_.subscribe())
-    loadAllRelevantFilesInThisWorkspace()
+    Workspace.initialize(cwd) { onChangedFile(_)(()) }
     val commands = WorkspaceCommand.values.map(_.entryName)
     val capabilities = ServerCapabilities(
       textDocumentSync = Some(
@@ -290,7 +287,7 @@ class MetalsServices(
             Uri(path),
             FileChangeType.Created | FileChangeType.Changed
             ) =>
-          onChangedFile(path.toAbsolutePath) { _ =>
+          onChangedFile(path.toAbsolutePath) {
             logger.warn(s"Unknown file extension for path $path")
           }
 
@@ -420,7 +417,15 @@ class MetalsServices(
       response
     case SbtConnect =>
       Task {
-        connectToSbtServer()
+        SbtServer.readVersion(cwd) match {
+          case Some(ver) if ver.startsWith("0.") || ver.startsWith("1.0") =>
+            showMessage.warn(
+              s"sbt v${ver} used in this project doesn't have server functionality. " +
+                "Upgrade to sbt v1.1+ to enjoy Metals integration with the sbt server."
+            )
+          case _ =>
+            connectToSbtServer()
+        }
         Right(Json.Null)
       }
     case DownloadDebugPayload =>
@@ -437,24 +442,53 @@ class MetalsServices(
       }
   }
 
-  private def sbtExec(): Unit = sbtServer.foreach { sbt =>
-    Sbt
-      .exec(latestConfig().sbt.command)(sbt.client)
-      .onErrorRecover {
-        case NonFatal(err) =>
-          // TODO(olafur) figure out why this "broken pipe" is not getting
-          // caught here.
-          logger.error("Failed to send sbt compile", err)
-          showMessage.warn(
-            "Lost connection to sbt server. " +
-              "Restart the sbt session and run the 'Re-connect to sbt server' command"
-          )
-      }
-      .runAsync
+  private def sbtExec(commands: String*): Task[Unit] = {
+    val cmd = commands.mkString("; ", "; ", "")
+    sbtServer match {
+      case None =>
+        logger.warn(
+          s"Trying to execute commands when there is no connected sbt server: ${cmd}"
+        )
+        Task.unit
+      case Some(sbt) =>
+        logger.debug(s"sbt/exec: ${cmd}")
+        Sbt
+          .exec(cmd)(sbt.client)
+          .onErrorRecover {
+            case NonFatal(err) =>
+              // TODO(olafur) figure out why this "broken pipe" is not getting
+              // caught here.
+              logger.error("Failed to send sbt compile", err)
+              showMessage.warn(
+                "Lost connection to sbt server. " +
+                  "Restart the sbt session and run the 'Re-connect to sbt server' command"
+              )
+          }
+    }
+  }
+  private def sbtExec(): Task[Unit] = sbtExec(latestConfig().sbt.command)
+
+  private val loadPluginJars: Coeval[List[AbsolutePath]] = Coeval.evalOnce {
+    Jars.fetch("ch.epfl.scala", "load-plugin_2.12", "0.1.0+2-496ac670")
+  }
+
+  private def sbtExecWithMetalsPlugin(commands: String*): Task[Unit] = {
+    val metalsPluginModule = ModuleID(
+      "org.scalameta",
+      "sbt-metals",
+      scala.meta.metals.internal.BuildInfo.version
+    )
+    val metalsPluginRef = "scala.meta.sbt.MetalsPlugin"
+    val loadPluginClasspath = loadPluginJars.value.mkString(File.pathSeparator)
+    val loadCommands = Seq(
+      s"apply -cp ${loadPluginClasspath} ch.epfl.scala.loadplugin.LoadPlugin",
+      s"""if-absent ${metalsPluginRef} "load-plugin ${metalsPluginModule} ${metalsPluginRef}"""",
+    )
+    sbtExec((loadCommands ++ commands): _*)
   }
 
   private def connectToSbtServer(): Unit = {
-    sbtServer.foreach(_.runningServer.cancel())
+    sbtServer.foreach(_.disconnect())
     val services = SbtServer.forwardingServices(client, latestConfig)
     SbtServer.connect(cwd, services)(s.sbt).foreach {
       case Left(err) => showMessage.error(err)
@@ -472,7 +506,10 @@ class MetalsServices(
             sbtServer = None
             showMessage.warn("Disconnected from sbt server")
         }
-        sbtExec() // run compile right away.
+        sbtExecWithMetalsPlugin("semanticdbEnable").runAsync.foreach { _ =>
+          logger.info("semanticdb-scalac is enabled")
+        }
+        sbtExec().runAsync // run configured command right away
     }
   }
 
@@ -486,22 +523,19 @@ class MetalsServices(
     Cursor(Uri(td.uri), contents, offset)
   }
 
-  private def loadAllRelevantFilesInThisWorkspace(): Unit = {
-    Workspace.initialize(cwd) { path =>
-      onChangedFile(path)(_ => ())
-    }
-  }
-
   private def onChangedFile(
       path: AbsolutePath
-  )(fallback: AbsolutePath => Unit): Unit = {
+  )(fallback: => Unit): Unit = {
     logger.info(s"File $path changed")
-    path.toNIO match {
+    path.toRelative(cwd) match {
       case Semanticdbs.File() =>
         fileSystemSemanticdbSubscriber.onNext(path)
       case CompilerConfig.File() =>
         compilerConfigSubscriber.onNext(path)
-      case _ => fallback(path)
+      case SbtServer.ActiveJson() =>
+        connectToSbtServer()
+      case _ =>
+        fallback
     }
   }
 }

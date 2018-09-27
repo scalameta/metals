@@ -4,8 +4,8 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.meta.metals.Uri
 import scala.meta.metals.search.SymbolIndex
 import scala.meta.metals.ScalametaEnrichments._
-import org.langmeta.lsp.DocumentHighlight
-import org.langmeta.lsp.Position
+import scala.meta.lsp.DocumentHighlight
+import scala.meta.lsp.Position
 
 object DocumentHighlightProvider extends LazyLogging {
   def empty: List[DocumentHighlight] = Nil

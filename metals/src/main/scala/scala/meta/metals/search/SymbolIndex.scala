@@ -5,8 +5,8 @@ import scala.meta.metals.Configuration
 import scala.meta.metals.Effects
 import scala.meta.metals.Uri
 import scala.meta.metals.index.SymbolData
-import org.langmeta.lsp.SymbolInformation
-import org.langmeta.jsonrpc.JsonRpcClient
+import scala.meta.lsp.SymbolInformation
+import scala.meta.jsonrpc.JsonRpcClient
 import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath

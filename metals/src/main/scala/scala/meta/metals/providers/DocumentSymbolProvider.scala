@@ -3,9 +3,9 @@ package scala.meta.metals.providers
 import scala.meta._
 import scala.meta.metals.ScalametaEnrichments._
 import scala.meta.metals.Uri
-import org.langmeta.lsp
-import org.langmeta.lsp.Location
-import org.langmeta.lsp.SymbolInformation
+import scala.meta.lsp
+import scala.meta.lsp.Location
+import scala.meta.lsp.SymbolInformation
 import com.typesafe.scalalogging.LazyLogging
 
 object DocumentSymbolProvider extends LazyLogging {

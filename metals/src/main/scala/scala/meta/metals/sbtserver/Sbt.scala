@@ -6,9 +6,9 @@ import scala.meta.metals.SbtInitializeResult
 import scala.meta.metals.SettingParams
 import scala.meta.metals.SettingResult
 import monix.eval.Task
-import org.langmeta.jsonrpc.Endpoint
-import org.langmeta.jsonrpc.JsonRpcClient
-import org.langmeta.jsonrpc.Response
+import scala.meta.jsonrpc.Endpoint
+import scala.meta.jsonrpc.JsonRpcClient
+import scala.meta.jsonrpc.Response
 
 trait Sbt {
   object initialize

@@ -4,14 +4,14 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
-import org.langmeta.lsp.Diagnostic
-import org.langmeta.lsp.Location
-import org.langmeta.lsp.Position
+import scala.meta.lsp.Diagnostic
+import scala.meta.lsp.Location
+import scala.meta.lsp.Position
 import scala.meta.metals.{index => i}
 import org.langmeta.internal.semanticdb.{schema => s}
 import scala.{meta => m}
-import org.langmeta.lsp.SymbolKind
-import org.langmeta.{lsp => l}
+import scala.meta.lsp.SymbolKind
+import scala.meta.{lsp => l}
 import org.langmeta.internal.io.FileIO
 import org.langmeta.io.AbsolutePath
 
@@ -66,6 +66,8 @@ object ScalametaEnrichments {
       case _: Defn.Object => SymbolKind.Module
       case _: Pkg.Object => SymbolKind.Namespace
       case _: Pkg => SymbolKind.Package
+      case _: Type.Param => SymbolKind.TypeParameter
+      case _: Lit.Null => SymbolKind.Null
       // TODO(alexey) are these kinds useful?
       // case ??? => SymbolKind.Enum
       // case ??? => SymbolKind.String

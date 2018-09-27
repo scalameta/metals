@@ -1,4 +1,7 @@
-# Integrating a new build tool
+---
+id: new-build-tool
+title: Integrating a new build tool
+---
 
 Metals currently supports only sbt through the sbt-metals plugins and
 `metalsSetup` task. However, metals does not require sbt and can be integrated
