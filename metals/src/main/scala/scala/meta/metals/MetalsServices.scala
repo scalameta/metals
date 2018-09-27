@@ -182,7 +182,8 @@ class MetalsServices(
   }
 
   private val shutdownReceived = Atomic(false)
-  val services: Services = Services.empty(logger)
+  val services: Services = Services
+    .empty(logger)
     .requestAsync(lc.initialize)(initialize)
     .notification(lc.initialized) { _ =>
       logger.info("Client is initialized")

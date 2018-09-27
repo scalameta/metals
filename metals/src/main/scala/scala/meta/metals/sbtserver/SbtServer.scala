@@ -126,7 +126,8 @@ object SbtServer {
       editorClient: JsonRpcClient,
       config: () => Configuration
   ): Services =
-    Services.empty(logger)
+    Services
+      .empty(logger)
       .notification(Window.logMessage) { msg =>
         editorClient.notify(Window.logMessage, msg)
       }

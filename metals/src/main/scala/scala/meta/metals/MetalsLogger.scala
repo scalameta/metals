@@ -21,7 +21,8 @@ object MetalsLogger {
   }
 
   def defaultFormat = formatter"$prettyLevel $message$newLine"
-  def debugFormat = formatter"$fileName:$line$newLine $prettyLevel$newLine  $message$newLine"
+  def debugFormat =
+    formatter"$fileName:$line$newLine $prettyLevel$newLine  $message$newLine"
   implicit def AnyLoggable[T]: Loggable[T] = _AnyLoggable
   private val _AnyLoggable = new Loggable[Any] {
     override def apply(value: Any): String =
