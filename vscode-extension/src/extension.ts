@@ -12,6 +12,9 @@ import {
   ExecuteCommandRequest
 } from "vscode-languageclient";
 import { exec } from "child_process";
+import { writeFile } from 'fs';
+import { dirname } from 'path';
+import open = require('opn');
 
 export async function activate(context: ExtensionContext) {
 
@@ -112,10 +115,31 @@ export async function activate(context: ExtensionContext) {
         });
       }
     );
+    const downloadDebugPayloadCommand = commands.registerCommand(
+      'metals.downloadDebugPayload',
+      async () => {
+        try {
+          const path = await client.sendRequest(ExecuteCommandRequest.type, {
+            command: "downloadDebugPayload",
+            arguments: [window.activeTextEditor.document.uri.toString()]
+          })
+          const revealInFileExplorerOption = "Reveal in file explorer";
+          const option = await window.showInformationMessage(`Debug payload saved to ${path}`,
+            revealInFileExplorerOption
+          )
+          if (option === revealInFileExplorerOption) {
+            open(dirname(path))
+          }
+        } catch (err) {
+          window.showErrorMessage(err.message)
+        }
+      }
+    )
     context.subscriptions.push(
       clearIndexCacheCommand,
       resetPresentationCompiler,
-      sbtConnectCommand
+      sbtConnectCommand,
+      downloadDebugPayloadCommand
     );
   });
 

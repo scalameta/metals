@@ -146,6 +146,11 @@
         "command": "metals.resetPresentationCompiler",
         "category": "Metals",
         "title": "Reset presentation compilers"
+      },
+      {
+        "command": "metals.downloadDebugPayload",
+        "category": "Metals",
+        "title": "Download debug payload"
       }
     ]
   },
@@ -163,6 +168,7 @@
   "devDependencies": {
     "@types/mocha": "^2.2.42",
     "@types/node": "^7.0.43",
+    "@types/opn": "^5.1.0",
     "typescript": "^2.5.3",
     "vsce": "^1.37.6"
   },
