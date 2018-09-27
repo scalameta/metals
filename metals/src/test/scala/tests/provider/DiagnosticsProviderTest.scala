@@ -36,7 +36,8 @@ object DiagnosticsProviderTest extends CompilerSuite with MetalsLogger {
     )
   )
   val stdout = new PipedOutputStream()
-  implicit val client: LanguageClient = new LanguageClient(stdout, scribe.`package`)
+  implicit val client: LanguageClient =
+    new LanguageClient(stdout, scribe.`package`)
   val diagnosticsProvider = new DiagnosticsProvider(config, AbsolutePath(tmp))
   Files.write(
     tmp.resolve(scalafixConfPath),

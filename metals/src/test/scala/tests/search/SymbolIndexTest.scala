@@ -62,7 +62,9 @@ object SymbolIndexTest extends MegaSuite {
   val client = new LanguageClient(stdout, logger)
   val metals = new MetalsServices(cwd, client, mscheduler)
   metals
-    .initialize(InitializeParams(Some(0L), cwd.toString(), ClientCapabilities()))
+    .initialize(
+      InitializeParams(Some(0L), cwd.toString(), ClientCapabilities())
+    )
     .runAsync(s)
   while (s.tickOne()) () // Trigger indexing
   val index: SymbolIndex = metals.symbolIndex
