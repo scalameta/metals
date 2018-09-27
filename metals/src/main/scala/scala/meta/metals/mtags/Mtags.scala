@@ -18,7 +18,7 @@ import com.thoughtworks.qdox.parser.{ParseException => QParseException}
 import scala.reflect.ClassTag
 import scala.util.Sorting
 import scala.util.control.NonFatal
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.FileIO
 import org.langmeta.internal.io.PathIO
@@ -39,7 +39,7 @@ import org.langmeta.internal.semanticdb.schema.Document
  * without any build-tool or compiler integration. "Mtags" name comes from
  * mixing "meta" and "ctags".
  */
-object Mtags extends LazyLogging {
+object Mtags extends MetalsLogger {
 
   /**
    * Build an index from a classpath of -sources.jar

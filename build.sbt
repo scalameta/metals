@@ -59,6 +59,7 @@ inThisBuild(
         s"git@github.com:scalameta/metals.git"
       )
     ),
+    resolvers += Resolver.sonatypeRepo("releases"),
     releaseEarlyWith := BintrayPublisher,
     releaseEarlyEnableSyncToMaven := false,
     publishMavenStyle := true,
@@ -107,6 +108,7 @@ lazy val metals = project
     ),
     buildInfoPackage := "scala.meta.metals.internal",
     libraryDependencies ++= List(
+      "com.lihaoyi" %% "pprint" % "0.5.3", // for pretty formatting of log values
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0", // for sbt server
       "ch.epfl.scala" % "scalafix-reflect" % V.scalafix cross CrossVersion.full,
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
@@ -116,7 +118,7 @@ lazy val metals = project
       "io.github.soc" % "directories" % "5", // for cache location
       "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
-      "org.scalameta" %% "lsp4s" % "0.2.0",
+      "org.scalameta" %% "lsp4s" % "0.2.1",
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
       "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
       "io.circe" %% "circe-core" % V.circe,

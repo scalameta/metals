@@ -11,10 +11,10 @@ import scalafix.internal.util.TypeSyntax
 import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
 import scala.meta.metals.index.SymbolData
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import org.langmeta.internal.semanticdb.schema
 
-object HoverProvider extends LazyLogging {
+object HoverProvider extends MetalsLogger {
   def empty: Hover = Hover(Nil, None)
   val Template =
     m.Template(Nil, Nil, m.Self(m.Name.Anonymous(), None), Nil)

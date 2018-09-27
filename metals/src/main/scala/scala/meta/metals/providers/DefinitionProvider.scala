@@ -5,10 +5,10 @@ import scala.meta.metals.Uri
 import scala.meta.lsp.Location
 import scala.meta.lsp.Position
 import scala.meta.metals.search.SymbolIndex
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import org.langmeta.io.AbsolutePath
 
-object DefinitionProvider extends LazyLogging {
+object DefinitionProvider extends MetalsLogger {
 
   def definition(
       symbolIndex: SymbolIndex,

@@ -1,7 +1,6 @@
 package tests
 
 import scala.language.experimental.macros
-
 import scala.reflect.ClassTag
 import utest.TestSuite
 import utest.Tests
@@ -10,9 +9,9 @@ import utest.framework.Formatter
 import utest.framework.TestCallTree
 import utest.framework.Tree
 import utest.ufansi.Str
-
 import io.circe.Json
 import io.circe.Printer
+import scala.meta.metals.MetalsLogger
 
 /**
  * Test suite that supports
@@ -22,7 +21,11 @@ import io.circe.Printer
  * - pretty multiline string diffing
  * - FunSuite-style test("name") { => fun }
  */
-class MegaSuite extends TestSuite {
+class MegaSuite extends TestSuite with MetalsLogger {
+  logger
+    .clearHandlers()
+    .withHandler(formatter = MetalsLogger.defaultFormat)
+    .replace()
   private val jsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()

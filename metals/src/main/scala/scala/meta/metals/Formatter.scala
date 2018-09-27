@@ -3,7 +3,6 @@ package scala.meta.metals
 import scala.language.reflectiveCalls
 
 import scala.reflect.internal.util.ScalaClassLoader.URLClassLoader
-import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
 
 abstract class Formatter {
@@ -16,7 +15,7 @@ abstract class Formatter {
 
 }
 
-object Formatter extends LazyLogging {
+object Formatter extends MetalsLogger {
 
   /** Returns formatter that does nothing */
   lazy val noop: Formatter = new Formatter {

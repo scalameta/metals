@@ -2,10 +2,10 @@ package scala.meta.metals.compiler
 
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import scala.{meta => m}
 
-object CompilerEnrichments extends LazyLogging {
+object CompilerEnrichments extends MetalsLogger {
 
   def safeCompletionsAt[G <: Global](
       global: Global,

@@ -10,7 +10,7 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Response
 import scala.tools.nsc.reporters.StoreReporter
-import com.typesafe.scalalogging.LazyLogging
+import scala.meta.metals.MetalsLogger
 import scala.meta.lsp.VersionedTextDocumentIdentifier
 import scala.meta.lsp.Window.showMessage
 import org.langmeta.inputs.Input
@@ -18,7 +18,7 @@ import org.langmeta.io.AbsolutePath
 import scala.meta.jsonrpc.JsonRpcClient
 
 /** Responsible for keeping fresh scalac global instances. */
-class ScalacProvider()(implicit client: JsonRpcClient) extends LazyLogging {
+class ScalacProvider()(implicit client: JsonRpcClient) extends MetalsLogger {
 
   def getCompiler(input: Input.VirtualFile): Option[Global] =
     getCompiler(Uri(input.path))
