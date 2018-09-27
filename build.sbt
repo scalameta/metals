@@ -120,12 +120,10 @@ lazy val metals = project
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
       "org.scalameta" %% "lsp4s" % "0.2.1",
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
       "io.circe" %% "circe-core" % V.circe,
       "io.circe" %% "circe-generic" % V.circe,
       "io.circe" %% "circe-generic-extras" % V.circe,
       "io.circe" %% "circe-parser" % V.circe,
-      "ch.qos.logback" % "logback-classic" % "1.2.3",
       "com.beachape" %% "enumeratum" % V.enumeratum,
       "com.beachape" %% "enumeratum-circe" % "1.5.15",
       "org.scalameta" %% "testkit" % V.scalameta % Test,

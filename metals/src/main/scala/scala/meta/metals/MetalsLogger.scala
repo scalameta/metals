@@ -12,7 +12,12 @@ object MetalsLogger {
     Logger.root
       .clearModifiers()
       .clearHandlers()
-      .withHandler(writer = filewriter, formatter = defaultFormat)
+      .withHandler(
+        writer = filewriter,
+        formatter = defaultFormat,
+        minimumLevel = Some(Level.Info)
+      )
+      .withHandler(writer = LSPLogger, minimumLevel = Some(Level.Info))
       .replace()
   }
 
