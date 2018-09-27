@@ -211,6 +211,6 @@ object JavaMtagsTest extends BaseMtagsTest {
   // Ignored because it's slow
   ignore("index JDK") {
     val db = Mtags.indexDatabase(CompilerConfig.jdkSources.get :: Nil)
-    pprint.log(db.documents.length)
+//    pprint.log(db.documents.length)
   }
 }

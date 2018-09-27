@@ -5,7 +5,7 @@ import scala.meta.metals.Configuration
 import com.typesafe.scalalogging.LazyLogging
 import scala.{meta => m}
 import scala.meta.metals.ScalametaEnrichments._
-import scala.meta.lsp.MonixEnrichments._
+import scala.meta.jsonrpc.MonixEnrichments._
 import scala.meta.lsp.PublishDiagnostics
 import scala.meta.jsonrpc.JsonRpcClient
 import monix.eval.Task

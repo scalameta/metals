@@ -24,7 +24,7 @@ import cats.instances.either._
 import monix.execution.Scheduler
 import monix.reactive.Observable
 import monix.eval.Task
-import scala.meta.lsp.MonixEnrichments._
+import scala.meta.jsonrpc.MonixEnrichments._
 import java.nio.file.Files
 
 class Linter(configuration: Observable[Configuration], cwd: AbsolutePath)(

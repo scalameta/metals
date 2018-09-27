@@ -9,7 +9,8 @@ import monix.reactive.Observable
 import org.langmeta.inputs.Input
 import org.langmeta.io.{AbsolutePath, RelativePath}
 import org.langmeta.languageserver.InputEnrichments._
-import scala.meta.lsp.{LanguageClient, PublishDiagnostics}
+import scala.meta.jsonrpc.LanguageClient
+import scala.meta.lsp.PublishDiagnostics
 import tests.CompilerSuite
 
 import scala.concurrent.Await
@@ -35,7 +36,7 @@ object DiagnosticsProviderTest extends CompilerSuite with LazyLogging {
     )
   )
   val stdout = new PipedOutputStream()
-  implicit val client: LanguageClient = new LanguageClient(stdout, logger)
+  implicit val client: LanguageClient = new LanguageClient(stdout, scribe.`package`)
   val diagnosticsProvider = new DiagnosticsProvider(config, AbsolutePath(tmp))
   Files.write(
     tmp.resolve(scalafixConfPath),

@@ -80,6 +80,8 @@ lazy val V = new {
   val scala212 = MetalsPlugin.scala212
   val scalameta = MetalsPlugin.semanticdbVersion
   val scalafix = "0.5.7"
+  val circe = "0.9.0"
+  val enumeratum = "1.5.12"
 }
 
 lazy val noPublish = List(
@@ -114,9 +116,17 @@ lazy val metals = project
       "io.github.soc" % "directories" % "5", // for cache location
       "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
-      "org.scalameta" %% "lsp4s" % "0.1.0",
+      "org.scalameta" %% "lsp4s" % "0.2.0",
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
-      "org.scalameta" %% "testkit" % V.scalameta % Test
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
+      "io.circe" %% "circe-core" % V.circe,
+      "io.circe" %% "circe-generic" % V.circe,
+      "io.circe" %% "circe-generic-extras" % V.circe,
+      "io.circe" %% "circe-parser" % V.circe,
+      "ch.qos.logback" % "logback-classic" % "1.2.3",
+      "com.beachape" %% "enumeratum" % V.enumeratum,
+      "com.beachape" %% "enumeratum-circe" % "1.5.15",
+      "org.scalameta" %% "testkit" % V.scalameta % Test,
     )
   )
   .dependsOn(

@@ -11,7 +11,7 @@ import scala.meta.metals.compiler.CompilerConfig
 import scala.meta.metals.index.SymbolData
 import scala.meta.metals.mtags.Mtags
 import scala.meta.metals.storage.LevelDBMap
-import scala.meta.lsp.MonixEnrichments._
+import scala.meta.jsonrpc.MonixEnrichments._
 import scala.meta.lsp.SymbolInformation
 import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.metals.{index => i}

@@ -4,7 +4,7 @@ import java.nio.file.Files
 import scala.meta.metals.Configuration
 import scala.meta.metals.Configuration.Scalafmt
 import scala.meta.metals.Formatter
-import scala.meta.lsp.MonixEnrichments._
+import scala.meta.jsonrpc.MonixEnrichments._
 import scala.meta.lsp.Position
 import scala.meta.lsp.TextEdit
 import scala.meta.jsonrpc.JsonRpcClient

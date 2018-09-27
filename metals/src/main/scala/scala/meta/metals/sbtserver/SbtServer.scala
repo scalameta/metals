@@ -20,8 +20,8 @@ import org.langmeta.io.RelativePath
 import scala.meta.jsonrpc.BaseProtocolMessage
 import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.jsonrpc.Services
-import scala.meta.lsp.LanguageClient
-import scala.meta.lsp.LanguageServer
+import scala.meta.jsonrpc.LanguageClient
+import scala.meta.jsonrpc.LanguageServer
 import scala.meta.lsp.TextDocument
 import scala.meta.lsp.Window
 import org.scalasbt.ipcsocket.UnixDomainSocket
@@ -82,7 +82,11 @@ object SbtServer extends LazyLogging {
    *         user-friendly error message if something went wrong in case of
    *         failure.
    */
-  def connect(cwd: AbsolutePath, services: Services)(
+  def connect(
+      cwd: AbsolutePath,
+      services: Services,
+      scribeLogger: scribe.LoggerSupport
+  )(
       implicit scheduler: Scheduler
   ): Task[Either[String, SbtServer]] = {
     Task(SbtServer.openSocketConnection(cwd)).flatMap {
@@ -99,11 +103,11 @@ object SbtServer extends LazyLogging {
         fail(msg + ". Check .metals/metals.log")
       case Right(socket) =>
         val client: LanguageClient =
-          new LanguageClient(socket.getOutputStream, logger)
+          new LanguageClient(socket.getOutputStream, scribeLogger)
         val messages =
-          BaseProtocolMessage.fromInputStream(socket.getInputStream)
+          BaseProtocolMessage.fromInputStream(socket.getInputStream, scribeLogger)
         val server =
-          new LanguageServer(messages, client, services, scheduler, logger)
+          new LanguageServer(messages, client, services, scheduler, scribeLogger)
         val runningServer =
           server.startTask.doOnCancel(Task.eval(socket.close())).runAsync
         val initialize = client.request(Sbt.initialize, SbtInitializeParams())
@@ -121,9 +125,10 @@ object SbtServer extends LazyLogging {
    */
   def forwardingServices(
       editorClient: JsonRpcClient,
-      config: () => Configuration
+      config: () => Configuration,
+      scribeLogger: scribe.LoggerSupport
   ): Services =
-    Services.empty
+    Services.empty(scribeLogger)
       .notification(Window.logMessage) { msg =>
         editorClient.notify(Window.logMessage, msg)
       }
