@@ -3,7 +3,6 @@ package tests.provider
 import java.io.{FileOutputStream, PipedOutputStream, PrintStream}
 import java.nio.file.{Files, Path}
 
-import scala.meta.metals.MetalsLogger
 import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.langmeta.inputs.Input
@@ -19,7 +18,7 @@ import scala.meta.internal.inputs._
 import scala.meta.metals.{Configuration, Linter, Semanticdbs}
 import scala.meta.metals.providers.DiagnosticsProvider
 
-object DiagnosticsProviderTest extends CompilerSuite with MetalsLogger {
+object DiagnosticsProviderTest extends CompilerSuite {
   val tmp: Path = Files.createTempDirectory("metals")
   val logFile = tmp.resolve("metals.log").toFile
   val out = new PrintStream(new FileOutputStream(logFile))

@@ -5,11 +5,7 @@ import scribe._
 import scribe.format._
 import scribe.writer.FileWriter
 
-trait MetalsLogger {
-  def logger: Logger = scribe.Logger.root
-}
 object MetalsLogger {
-  def logger: Logger = scribe.Logger.root
   def setup(logfile: Path): Unit = {
     val filewriter = FileWriter().path(_ => logfile).autoFlush
     // Example format: "MyProgram.scala:14 trace foo"

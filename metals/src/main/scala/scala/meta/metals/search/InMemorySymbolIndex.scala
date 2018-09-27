@@ -15,7 +15,6 @@ import scala.meta.jsonrpc.MonixEnrichments._
 import scala.meta.lsp.SymbolInformation
 import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.metals.{index => i}
-import scala.meta.metals.MetalsLogger
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import org.langmeta.inputs.Input
 import org.langmeta.inputs.Position
@@ -38,8 +37,7 @@ class InMemorySymbolIndex(
     buffers: Buffers,
     configuration: Observable[Configuration],
 )(implicit scheduler: Scheduler, client: JsonRpcClient)
-    extends SymbolIndex
-    with MetalsLogger {
+    extends SymbolIndex {
   private val config = configuration.map(_.search).toFunction0()
   private val indexedJars: ConcurrentHashMap[AbsolutePath, Unit] =
     new ConcurrentHashMap[AbsolutePath, Unit]()
@@ -50,10 +48,10 @@ class InMemorySymbolIndex(
       line: Int,
       column: Int
   ): Option[(ResolvedName, TokenEditDistance)] = {
-    logger.info(s"resolveName at $uri:$line:$column")
+    scribe.info(s"resolveName at $uri:$line:$column")
     for {
       document <- documentIndex.getDocument(uri)
-      _ = logger.info(s"Found document for $uri")
+      _ = scribe.info(s"Found document for $uri")
       original = Input.VirtualFile(document.filename, document.contents)
       revised = uri.toInput(buffers)
       (originalPosition, edit) <- {
@@ -62,7 +60,7 @@ class InMemorySymbolIndex(
       name <- document.names.collectFirst {
         case name @ ResolvedName(Some(position), symbol, _) if {
               val range = original.toIndexRange(position.start, position.end)
-              logger.trace(
+              scribe.trace(
                 s"${document.filename.replaceFirst(".*/", "")} [${range.pretty}] ${symbol}"
               )
               range.contains(originalPosition)
@@ -81,7 +79,7 @@ class InMemorySymbolIndex(
     for {
       (name, edit) <- resolveName(uri, line, column)
       symbol = Symbol(name.symbol)
-      _ = logger.info(s"Matching symbol ${symbol}")
+      _ = scribe.info(s"Matching symbol ${symbol}")
     } yield symbol -> edit
   }
 
@@ -92,7 +90,7 @@ class InMemorySymbolIndex(
     (symbol :: symbol.definitionAlternative)
       .collectFirst {
         case symbolIndexer(data) if data.definition.nonEmpty =>
-          logger.info(s"Found definition symbol ${data.symbol}")
+          scribe.info(s"Found definition symbol ${data.symbol}")
           data
       }
   }
@@ -108,7 +106,7 @@ class InMemorySymbolIndex(
       .collect {
         case symbolIndexer(data) =>
           if (data.symbol != symbol.syntax)
-            logger.info(s"Adding alternative references ${data.symbol}")
+            scribe.info(s"Adding alternative references ${data.symbol}")
           data
       }
   }
@@ -135,7 +133,7 @@ class InMemorySymbolIndex(
       // Acquire a lock on the leveldb cache only during indexing.
       LevelDBMap.withDB(cacheDirectory.resolve("leveldb").toFile) { db =>
         sourceJarsToIndex.foreach { path =>
-          logger.info(s"Indexing classpath entry $path")
+          scribe.info(s"Indexing classpath entry $path")
           try {
             val database = db.getOrElseUpdate[AbsolutePath, Database](
               path,
@@ -144,7 +142,7 @@ class InMemorySymbolIndex(
             indexDatabase(database)
           } catch {
             case NonFatal(e) =>
-              logger.error(s"Failed to index $path", e)
+              scribe.error(s"Failed to index $path", e)
           }
         }
       }
@@ -158,7 +156,7 @@ class InMemorySymbolIndex(
       try indexDocument(doc)
       catch {
         case NonFatal(e) =>
-          logger.error(s"Failed to index ${doc.filename}", e)
+          scribe.error(s"Failed to index ${doc.filename}", e)
       }
     }
     Effects.IndexSemanticdb

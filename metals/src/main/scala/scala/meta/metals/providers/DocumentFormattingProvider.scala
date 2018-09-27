@@ -11,7 +11,6 @@ import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.jsonrpc.Response
 import scala.meta.lsp.Window.showMessage
 import scala.util.control.NonFatal
-import scala.meta.metals.MetalsLogger
 import cats.syntax.bifunctor._
 import cats.instances.either._
 import scala.meta.lsp.Range
@@ -25,8 +24,7 @@ import org.langmeta.io.AbsolutePath
 class DocumentFormattingProvider(
     configuration: Observable[Configuration],
     cwd: AbsolutePath
-)(implicit client: JsonRpcClient, s: Scheduler)
-    extends MetalsLogger {
+)(implicit client: JsonRpcClient, s: Scheduler) {
 
   private val formatter: () => Either[String, Formatter] =
     configuration

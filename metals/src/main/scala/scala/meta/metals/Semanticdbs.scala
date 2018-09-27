@@ -17,7 +17,7 @@ import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 
-object Semanticdbs extends MetalsLogger {
+object Semanticdbs {
 
   object File {
     def unapply(path: RelativePath): Boolean =
@@ -49,7 +49,7 @@ object Semanticdbs extends MetalsLogger {
           case _: ParseException | _: TokenizeException =>
           // ignore, expected.
           case _ =>
-            logger.error(s"Failed to emit semanticdb for ${input.path}", err)
+            scribe.error(s"Failed to emit semanticdb for ${input.path}", err)
         }
         toMessageOnlySemanticdb(input, compiler)
     }
@@ -86,7 +86,7 @@ object Semanticdbs extends MetalsLogger {
     Database(
       sdb.documents.map { d =>
         val filename = cwd.resolve(d.filename).toURI.toString()
-        logger.info(s"Loading file $filename")
+        scribe.info(s"Loading file $filename")
         d.withFilename(filename)
           .withNames {
             // This should be done inside semanticdb-scalac.

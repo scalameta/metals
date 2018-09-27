@@ -15,7 +15,7 @@ abstract class Formatter {
 
 }
 
-object Formatter extends MetalsLogger {
+object Formatter {
 
   /** Returns formatter that does nothing */
   lazy val noop: Formatter = new Formatter {
@@ -37,7 +37,7 @@ object Formatter extends MetalsLogger {
       .iterator
       .map(_.toURI.toURL)
       .toArray
-    logger.info(s"Classloading scalafmt with ${urls.length} downloaded jars")
+    scribe.info(s"Classloading scalafmt with ${urls.length} downloaded jars")
     type Scalafmt210 = {
       def format(code: String, configFile: String, filename: String): String
       def format(code: String, filename: String): String

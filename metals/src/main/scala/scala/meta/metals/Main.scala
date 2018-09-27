@@ -9,7 +9,7 @@ import org.langmeta.internal.io.PathIO
 import scala.meta.jsonrpc.LanguageClient
 import scala.meta.jsonrpc.LanguageServer
 
-object Main extends MetalsLogger {
+object Main {
   def main(args: Array[String]): Unit = {
     val cwd = PathIO.workingDirectory
     val configDir = cwd.resolve(".metals").toNIO
@@ -25,34 +25,27 @@ object Main extends MetalsLogger {
       // messes up with the client, since stdout is used for the language server protocol
       System.setOut(out)
       System.setErr(err)
-      val filewriter = scribe.writer.FileWriter().path(_ => logPath)
       MetalsLogger.setup(logPath)
-      val scribeLogger =
-        scribe
-          .Logger("metals")
-          .orphan()
-          .withHandler(writer = filewriter)
-          .replace(Some("root"))
 
-      logger.info(s"Starting server in $cwd")
-      logger.info(s"Classpath: ${Properties.javaClassPath}")
+      scribe.info(s"Starting server in $cwd")
+      scribe.info(s"Classpath: ${Properties.javaClassPath}")
       val s = MSchedulers()
-      val client = new LanguageClient(stdout, MetalsLogger.logger)
+      val client = new LanguageClient(stdout, scribe.Logger.root)
       val services = new MetalsServices(cwd, client, s)
       val messages = BaseProtocolMessage
-        .fromInputStream(stdin, MetalsLogger.logger)
+        .fromInputStream(stdin, scribe.Logger.root)
         .executeOn(s.lsp)
       val languageServer = new LanguageServer(
         messages,
         client,
         services.services,
         s.global,
-        MetalsLogger.logger
+        scribe.Logger.root
       )
       languageServer.listen()
     } catch {
       case NonFatal(e) =>
-        logger.error("Uncaught top-level exception", e)
+        scribe.error("Uncaught top-level exception", e)
     } finally {
       System.setOut(stdout)
       System.setErr(stderr)

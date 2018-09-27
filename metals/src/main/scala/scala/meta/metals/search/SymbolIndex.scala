@@ -7,7 +7,6 @@ import scala.meta.metals.Uri
 import scala.meta.metals.index.SymbolData
 import scala.meta.lsp.SymbolInformation
 import scala.meta.jsonrpc.JsonRpcClient
-import scala.meta.metals.MetalsLogger
 import org.langmeta.internal.semanticdb.{schema => s}
 import org.langmeta.io.AbsolutePath
 import org.langmeta.semanticdb.Symbol
@@ -15,7 +14,7 @@ import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Observable
 
-trait SymbolIndex extends MetalsLogger {
+trait SymbolIndex {
 
   /** Returns a symbol at the given location */
   def findSymbol(

@@ -59,7 +59,7 @@ object SymbolIndexTest extends MegaSuite {
   val mscheduler = new MSchedulers(s, s, s)
   val stdout = new PipedOutputStream()
   // TODO(olafur) run this as part of utest.runner.Framework.setup()
-  val client = new LanguageClient(stdout, logger)
+  val client = new LanguageClient(stdout, scribe.Logger.root)
   val metals = new MetalsServices(cwd, client, mscheduler)
   metals
     .initialize(

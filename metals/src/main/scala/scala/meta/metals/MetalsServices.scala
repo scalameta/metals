@@ -44,13 +44,12 @@ import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import org.langmeta.semanticdb
 import scala.meta.jsonrpc.LanguageClient
-import MetalsLogger._
 
 class MetalsServices(
     cwd: AbsolutePath,
     client: LanguageClient,
     s: MSchedulers
-) extends MetalsLogger {
+) {
   implicit val scheduler: Scheduler = s.global
   implicit val languageClient: LanguageClient = client
   private var sbtServer: Option[SbtServer] = None
@@ -131,7 +130,7 @@ class MetalsServices(
   def initialize(
       params: InitializeParams
   ): Task[Either[Response.Error, InitializeResult]] = {
-    logger.info(s"Initialized with $cwd, $params")
+    scribe.info(s"Initialized with $cwd, $params")
     LSPLogger.notifications = Some(client)
     cancelEffects = effects.map(_.subscribe())
     Workspace.initialize(cwd) { onChangedFile(_)(()) }
@@ -177,16 +176,16 @@ class MetalsServices(
 
   // TODO(olafur): make it easier to invoke fluid services from tests
   def shutdown(): Unit = {
-    logger.info("Shutting down...")
+    scribe.info("Shutting down...")
     cancelEffects.foreach(_.cancel())
   }
 
   private val shutdownReceived = Atomic(false)
   val services: Services = Services
-    .empty(logger)
+    .empty(scribe.Logger.root)
     .requestAsync(lc.initialize)(initialize)
     .notification(lc.initialized) { _ =>
-      logger.info("Client is initialized")
+      scribe.info("Client is initialized")
     }
     .request(lc.shutdown) { _ =>
       shutdown()
@@ -198,7 +197,7 @@ class MetalsServices(
       // been received before; otherwise with error code 1
       // -- https://microsoft.github.io/language-server-protocol/specification#exit
       val code = if (shutdownReceived.get) 0 else 1
-      logger.info(s"exit($code)")
+      scribe.info(s"exit($code)")
       sys.exit(code)
     }
     .requestAsync(td.completion) { params =>
@@ -251,7 +250,7 @@ class MetalsServices(
     .requestAsync(td.willSaveWaitUntil) { params =>
       params.reason match {
         case TextDocumentSaveReason.Manual if latestConfig().scalafmt.onSave =>
-          logger.info(s"Formatting on manual save: $params.textDocument")
+          scribe.info(s"Formatting on manual save: $params.textDocument")
           val uri = Uri(params.textDocument)
           documentFormattingProvider.format(uri.toInput(buffers))
         case _ =>
@@ -269,7 +268,7 @@ class MetalsServices(
             ShowMessageParams(MessageType.Error, err.toString)
           )
         case Right(conf) =>
-          logger.info(s"Configuration updated $conf")
+          scribe.info(s"Configuration updated $conf")
           configurationSubscriber.onNext(conf)
       }
     }
@@ -280,11 +279,11 @@ class MetalsServices(
             FileChangeType.Created | FileChangeType.Changed
             ) =>
           onChangedFile(path.toAbsolutePath) {
-            logger.warn(s"Unknown file extension for path $path")
+            scribe.warn(s"Unknown file extension for path $path")
           }
 
         case event =>
-          logger.warn(s"Unhandled file event: $event")
+          scribe.warn(s"Unhandled file event: $event")
           ()
       }
       ()
@@ -343,12 +342,12 @@ class MetalsServices(
       } else SignatureHelpProvider.empty
     }
     .requestAsync(ws.executeCommand) { params =>
-      logger.info(s"executeCommand $params")
+      scribe.info(s"executeCommand $params")
       WorkspaceCommand.withNameOption(params.command) match {
         case None =>
           Task {
             val msg = s"Unknown command ${params.command}"
-            logger.error(msg)
+            scribe.error(msg)
             Left(Response.invalidParams(msg))
           }
         case Some(command) =>
@@ -367,7 +366,7 @@ class MetalsServices(
   ): Task[Either[Response.Error, Json]] = command match {
     case ClearIndexCache =>
       Task {
-        logger.info("Clearing the index cache")
+        scribe.info("Clearing the index cache")
         MetalsServices.clearCacheDirectory()
         symbolIndex.clearIndex()
         scalacProvider.allCompilerConfigs.foreach(
@@ -377,12 +376,12 @@ class MetalsServices(
       }
     case ResetPresentationCompiler =>
       Task {
-        logger.info("Resetting all compiler instances")
+        scribe.info("Resetting all compiler instances")
         scalacProvider.resetCompilers()
         Right(Json.Null)
       }
     case ScalafixUnusedImports =>
-      logger.info("Removing unused imports")
+      scribe.info("Removing unused imports")
       val response = for {
         result <- Task(
           OrganizeImports.removeUnused(params.arguments, symbolIndex)
@@ -394,13 +393,13 @@ class MetalsServices(
       } yield {
         applied match {
           case Left(err) =>
-            logger.warn(s"Failed to apply command $err")
+            scribe.warn(s"Failed to apply command $err")
             Right(Json.Null)
           case Right(edit) =>
             if (edit.applied) {
-              logger.info(s"Successfully applied command $params")
+              scribe.info(s"Successfully applied command $params")
             } else {
-              logger.warn(s"Failed to apply edit for command $params")
+              scribe.warn(s"Failed to apply edit for command $params")
             }
           case _ =>
         }
@@ -426,19 +425,19 @@ class MetalsServices(
     val cmd = commands.mkString("; ", "; ", "")
     sbtServer match {
       case None =>
-        logger.warn(
+        scribe.warn(
           s"Trying to execute commands when there is no connected sbt server: ${cmd}"
         )
         Task.unit
       case Some(sbt) =>
-        logger.debug(s"sbt/exec: ${cmd}")
+        scribe.debug(s"sbt/exec: ${cmd}")
         Sbt
           .exec(cmd)(sbt.client)
           .onErrorRecover {
             case NonFatal(err) =>
               // TODO(olafur) figure out why this "broken pipe" is not getting
               // caught here.
-              logger.error("Failed to send sbt compile", err)
+              scribe.error("Failed to send sbt compile", err)
               showMessage.warn(
                 "Lost connection to sbt server. " +
                   "Restart the sbt session and run the 'Re-connect to sbt server' command"
@@ -474,20 +473,20 @@ class MetalsServices(
       case Left(err) => showMessage.error(err)
       case Right(server) =>
         val msg = "Established connection with sbt server 😎"
-        logger.info(msg)
+        scribe.info(msg)
         showMessage.info(msg)
         sbtServer = Some(server)
         cancelEffects ::= server.runningServer
         server.runningServer.onComplete {
           case Failure(err) =>
-            logger.error(s"Unexpected failure from sbt server connection", err)
+            scribe.error(s"Unexpected failure from sbt server connection", err)
             showMessage.error(err.getMessage)
           case Success(()) =>
             sbtServer = None
             showMessage.warn("Disconnected from sbt server")
         }
         sbtExecWithMetalsPlugin("semanticdbEnable").runAsync.foreach { _ =>
-          logger.info("semanticdb-scalac is enabled")
+          scribe.info("semanticdb-scalac is enabled")
         }
         sbtExec().runAsync // run configured command right away
     }
@@ -506,7 +505,7 @@ class MetalsServices(
   private def onChangedFile(
       path: AbsolutePath
   )(fallback: => Unit): Unit = {
-    logger.info(s"File $path changed")
+    scribe.info(s"File $path changed")
     path.toRelative(cwd) match {
       case Semanticdbs.File() =>
         fileSystemSemanticdbSubscriber.onNext(path)
@@ -520,7 +519,7 @@ class MetalsServices(
   }
 }
 
-object MetalsServices extends MetalsLogger {
+object MetalsServices {
   lazy val cacheDirectory: AbsolutePath = {
     val path = AbsolutePath(
       ProjectDirectories.fromProjectName("metals").projectCacheDir
@@ -585,6 +584,6 @@ object MetalsServices extends MetalsLogger {
   }
 
   def onError(e: Throwable): Unit = {
-    logger.error(e.getMessage, e)
+    scribe.error(e.getMessage, e)
   }
 }
