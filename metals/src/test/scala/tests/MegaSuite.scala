@@ -11,6 +11,7 @@ import utest.framework.Tree
 import utest.ufansi.Str
 import io.circe.Json
 import io.circe.Printer
+import scala.meta.metals.MetalsLogger
 
 /**
  * Test suite that supports
@@ -23,7 +24,10 @@ import io.circe.Printer
 class MegaSuite extends TestSuite {
   scribe.Logger.root
     .clearHandlers()
-    .withHandler(formatter = MetalsLogger.defaultFormat)
+    .withHandler(
+      formatter = MetalsLogger.defaultFormat,
+      minimumLevel = Some(scribe.Level.Info)
+    )
     .replace()
   private val jsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
   def beforeAll(): Unit = ()
