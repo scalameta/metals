@@ -2,17 +2,16 @@ package scala.meta.metals.compiler
 
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
-import scala.meta.metals.MetalsLogger
 import scala.{meta => m}
 
-object CompilerEnrichments extends MetalsLogger {
+object CompilerEnrichments {
 
   def safeCompletionsAt[G <: Global](
       global: Global,
       position: Position
   ): List[global.CompletionResult#M] = {
     def expected(e: Throwable): List[Nothing] = {
-      logger.warn(s"Expected error '${e.getMessage}'")
+      scribe.warn(s"Expected error '${e.getMessage}'")
       Nil
     }
     try {

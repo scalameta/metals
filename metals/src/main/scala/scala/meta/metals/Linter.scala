@@ -29,7 +29,7 @@ import java.nio.file.Files
 class Linter(configuration: Observable[Configuration], cwd: AbsolutePath)(
     implicit client: JsonRpcClient,
     s: Scheduler
-) extends MetalsLogger {
+) {
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(

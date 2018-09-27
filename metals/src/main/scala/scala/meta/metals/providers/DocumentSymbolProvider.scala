@@ -6,9 +6,8 @@ import scala.meta.metals.Uri
 import scala.meta.lsp
 import scala.meta.lsp.Location
 import scala.meta.lsp.SymbolInformation
-import scala.meta.metals.MetalsLogger
 
-object DocumentSymbolProvider extends MetalsLogger {
+object DocumentSymbolProvider {
 
   private class SymbolTraverser(uri: Uri) {
     private val builder = List.newBuilder[SymbolInformation]

@@ -24,7 +24,6 @@ import scala.meta.jsonrpc.LanguageServer
 import scala.meta.lsp.TextDocument
 import scala.meta.lsp.Window
 import org.scalasbt.ipcsocket.UnixDomainSocket
-import scala.meta.metals.MetalsLogger._
 
 /**
  * A wrapper around a connection to an sbt server.
@@ -98,15 +97,24 @@ object SbtServer {
         )
       case Left(err) =>
         val msg = s"Unexpected error opening connection to sbt server"
-        logger.error(msg, err)
+        scribe.error(msg, err)
         fail(msg + ". Check .metals/metals.log")
       case Right(socket) =>
         val client: LanguageClient =
-          new LanguageClient(socket.getOutputStream, logger)
+          new LanguageClient(socket.getOutputStream, scribe.Logger.root)
         val messages =
-          BaseProtocolMessage.fromInputStream(socket.getInputStream, logger)
+          BaseProtocolMessage.fromInputStream(
+            socket.getInputStream,
+            scribe.Logger.root
+          )
         val server =
-          new LanguageServer(messages, client, services, scheduler, logger)
+          new LanguageServer(
+            messages,
+            client,
+            services,
+            scheduler,
+            scribe.Logger.root
+          )
         val runningServer =
           server.startTask.doOnCancel(Task.eval(socket.close())).runAsync
         val initialize = client.request(Sbt.initialize, SbtInitializeParams())
@@ -127,7 +135,7 @@ object SbtServer {
       config: () => Configuration
   ): Services =
     Services
-      .empty(logger)
+      .empty(scribe.Logger.root)
       .notification(Window.logMessage) { msg =>
         editorClient.notify(Window.logMessage, msg)
       }
@@ -168,7 +176,7 @@ object SbtServer {
       uri <- Try(URI.create(activeJson.uri)).toEither
       socket <- uri.getScheme match {
         case "local" =>
-          logger.info(s"Connecting to sbt server socket ${uri.getPath}")
+          scribe.info(s"Connecting to sbt server socket ${uri.getPath}")
           Try(new UnixDomainSocket(uri.getPath)).toEither
         case invalid =>
           Left(new IllegalArgumentException(s"Unsupported scheme $invalid"))

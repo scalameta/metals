@@ -24,9 +24,9 @@ import org.langmeta.inputs.Input
 class Buffers private (
     contents: JMap[Uri, String],
     cwd: AbsolutePath
-) extends MetalsLogger {
+) {
   private def readFromDisk(path: AbsolutePath): String = {
-    logger.info(s"Reading $path from disk")
+    scribe.info(s"Reading $path from disk")
     new String(Files.readAllBytes(path.toNIO), StandardCharsets.UTF_8)
   }
   def changed(input: Input.VirtualFile): Effects.UpdateBuffers = {

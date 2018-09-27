@@ -9,10 +9,9 @@ import scala.meta.lsp.SignatureHelp
 import scala.meta.lsp.SignatureInformation
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.interactive.Global
-import scala.meta.metals.MetalsLogger
 import scala.meta.lsp.SignatureInformation
 
-object SignatureHelpProvider extends MetalsLogger {
+object SignatureHelpProvider {
   def empty: SignatureHelp = SignatureHelp(Nil, None, None)
   def signatureHelp(compiler: Global, cursor: Cursor): SignatureHelp = {
     val unit = ScalacProvider.addCompilationUnit(

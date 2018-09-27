@@ -16,11 +16,10 @@ import scalafix.languageserver.ScalafixEnrichments._
 import scalafix.languageserver.ScalafixPatchEnrichments._
 import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
-import scala.meta.metals.MetalsLogger
 import scala.meta.lsp.TextDocumentIdentifier
 import io.circe.Json
 
-object OrganizeImports extends MetalsLogger {
+object OrganizeImports {
 
   val empty = ApplyWorkspaceEditParams(None, WorkspaceEdit(Map.empty))
 

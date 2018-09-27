@@ -7,7 +7,6 @@ import scala.meta.metals.index.Position
 import scala.meta.metals.index.Range
 import scala.meta.metals.index.Ranges
 import scala.meta.metals.index.SymbolData
-import scala.meta.metals.MetalsLogger
 import org.langmeta.semanticdb.Symbol
 
 class InMemorySymbolIndexer(
@@ -15,8 +14,7 @@ class InMemorySymbolIndexer(
     // we may want to consider using a proper key/value store instead.
     symbols: collection.concurrent.Map[String, AtomicReference[SymbolData]] =
       TrieMap.empty
-) extends SymbolIndexer
-    with MetalsLogger { self =>
+) extends SymbolIndexer { self =>
 
   override def get(symbol: Symbol): Option[SymbolData] = symbol match {
     case Symbol.Multi(ss) => ss.collectFirst { case self(i) => i }

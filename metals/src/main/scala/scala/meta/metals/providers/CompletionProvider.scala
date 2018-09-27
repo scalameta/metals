@@ -7,10 +7,9 @@ import scala.meta.metals.compiler.CompilerEnrichments._
 import scala.meta.lsp.CompletionItem
 import scala.meta.lsp.CompletionList
 import scala.tools.nsc.interactive.Global
-import scala.meta.metals.MetalsLogger
 import scala.meta.lsp.CompletionItemKind
 
-object CompletionProvider extends MetalsLogger {
+object CompletionProvider {
   def empty: CompletionList = CompletionList(isIncomplete = false, Nil)
 
   def completions(
@@ -85,7 +84,7 @@ object CompletionProvider extends MetalsLogger {
     safeCompletionsAt(compiler, position)
       .sortBy {
         case TypeMember(sym, _, true, inherited, viaView) =>
-          // logger.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
+          // scribe.debug(s"Relevance of ${sym.name}: ${computeRelevance(sym, viaView, inherited)}")
           (-computeRelevance(sym, viaView, inherited), sym.nameString)
         case ScopeMember(sym, _, true, _) =>
           (-computeRelevance(sym, NoSymbol, false), sym.nameString)

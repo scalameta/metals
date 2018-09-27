@@ -11,7 +11,6 @@ import utest.framework.Tree
 import utest.ufansi.Str
 import io.circe.Json
 import io.circe.Printer
-import scala.meta.metals.MetalsLogger
 
 /**
  * Test suite that supports
@@ -21,8 +20,8 @@ import scala.meta.metals.MetalsLogger
  * - pretty multiline string diffing
  * - FunSuite-style test("name") { => fun }
  */
-class MegaSuite extends TestSuite with MetalsLogger {
-  logger
+class MegaSuite extends TestSuite {
+  scribe.Logger.root
     .clearHandlers()
     .withHandler(formatter = MetalsLogger.defaultFormat)
     .replace()
