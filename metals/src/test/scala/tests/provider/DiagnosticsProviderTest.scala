@@ -36,7 +36,7 @@ object DiagnosticsProviderTest extends CompilerSuite {
   )
   val stdout = new PipedOutputStream()
   implicit val client: LanguageClient =
-    new LanguageClient(stdout, scribe.`package`)
+    new LanguageClient(stdout, scribe.Logger.root)
   val diagnosticsProvider = new DiagnosticsProvider(config, AbsolutePath(tmp))
   Files.write(
     tmp.resolve(scalafixConfPath),

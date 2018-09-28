@@ -7,9 +7,9 @@ import scribe.LogRecord
 import scribe.writer.Writer
 
 object LSPLogger extends Writer {
-  var notifications: Option[JsonRpcClient] = None
+  var client: Option[JsonRpcClient] = None
   override def write[M](record: LogRecord[M], output: String): Unit = {
-    notifications.foreach { implicit client =>
+    client.foreach { implicit client =>
       record.level match {
         case Level.Error => logMessage.error(record.message)
         case Level.Warn => logMessage.warn(record.message)
