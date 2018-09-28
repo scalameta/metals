@@ -1,15 +1,14 @@
 package scala.meta.metals
 
-import org.langmeta.AbsolutePath
-import org.langmeta.RelativePath
 import scala.util.Try
 import io.circe.Encoder
 import io.circe.Decoder
 import io.circe.generic.extras.{ConfiguredJsonCodec => JsonCodec}
 import io.circe.generic.extras.{Configuration => CirceConfiguration}
 import io.circe.syntax._
-
 import Configuration._
+import java.nio.file.Path
+import java.nio.file.Paths
 
 @JsonCodec case class Configuration(
     sbt: Sbt = Sbt(),
@@ -23,8 +22,6 @@ import Configuration._
 )
 
 object Configuration {
-  implicit val circeConfiguration: CirceConfiguration =
-    CirceConfiguration.default.withDefaults
 
   /** pretty-printed default configuration */
   lazy val defaultAsJson: String = Configuration().asJson.spaces2
@@ -46,30 +43,27 @@ object Configuration {
       enabled: Boolean = true,
       onSave: Boolean = false,
       version: String = "1.4.0",
-      confPath: Option[RelativePath] = Some(Scalafmt.defaultConfPath)
+      confPath: Option[Path] = Some(Scalafmt.defaultConfPath)
   )
   object Scalafmt {
-    lazy val defaultConfPath = RelativePath(".scalafmt.conf")
+    lazy val defaultConfPath = Paths.get(".scalafmt.conf")
   }
   @JsonCodec case class Scalafix(
       enabled: Boolean = true,
-      confPath: Option[RelativePath] = Some(Scalafix.defaultConfPath)
+      confPath: Option[Path] = Some(Scalafix.defaultConfPath)
   )
   object Scalafix {
-    lazy val defaultConfPath = RelativePath(".scalafix.conf")
+    lazy val defaultConfPath = Paths.get(".scalafix.conf")
   }
   @JsonCodec case class Search(
       indexJDK: Boolean = true,
       indexClasspath: Boolean = true
   )
 
-  implicit val absolutePathReads: Decoder[AbsolutePath] =
-    Decoder.decodeString.emapTry(s => Try(AbsolutePath(s)))
-  implicit val absolutePathWrites: Encoder[AbsolutePath] =
+  implicit val pathReads: Decoder[Path] =
+    Decoder.decodeString.emapTry(s => Try(Paths.get(s)))
+  implicit val pathWrites: Encoder[Path] =
     Encoder.encodeString.contramap(_.toString)
-  implicit val relativePathReads: Decoder[RelativePath] =
-    Decoder.decodeString.emapTry(s => Try(RelativePath(s)))
-  implicit val relativePathWrites: Encoder[RelativePath] =
-    Encoder.encodeString.contramap(_.toString)
-
+  implicit val circeConfiguration: CirceConfiguration =
+    CirceConfiguration.default.withDefaults
 }

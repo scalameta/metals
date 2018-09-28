@@ -24,6 +24,7 @@ import monix.execution.Scheduler
 import monix.reactive.Observable
 import monix.eval.Task
 import scala.meta.jsonrpc.MonixEnrichments._
+import scala.meta.RelativePath
 import java.nio.file.Files
 
 class Linter(configuration: Observable[Configuration], cwd: AbsolutePath)(
@@ -71,12 +72,13 @@ class Linter(configuration: Observable[Configuration], cwd: AbsolutePath)(
       .focus(_.scalafix.confPath)
       .map[Either[String, Option[Input]]] {
         case None =>
-          val default = cwd.resolve(Configuration.Scalafix.defaultConfPath)
+          val default =
+            cwd.resolve(RelativePath(Configuration.Scalafix.defaultConfPath))
           if (Files.isRegularFile(default.toNIO))
             Right(Some(Input.File(default)))
           else Right(None)
         case Some(relpath) =>
-          val custom = cwd.resolve(relpath)
+          val custom = cwd.resolve(RelativePath(relpath))
           if (Files.isRegularFile(custom.toNIO))
             Right(Some(Input.File(custom)))
           else if (relpath == Configuration.Scalafix.defaultConfPath)
