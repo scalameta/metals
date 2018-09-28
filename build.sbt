@@ -75,11 +75,7 @@ lazy val legacyScala212 = List(
   crossScalaVersions := List(V.scala212),
 )
 
-lazy val noPublish = List(
-  publishTo := None,
-  publishArtifact := false,
-  skip in publish := true
-)
+skip in publish := true
 
 lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
@@ -118,27 +114,6 @@ lazy val metals = project
     testWorkspace % "test->test"
   )
 
-lazy val integration = project
-  .in(file("tests/integration"))
-  .settings(
-    legacyScala212,
-    noPublish
-  )
-  .dependsOn(metals % "compile->compile;test->test")
-
-lazy val testWorkspace = project
-  .in(file("test-workspace"))
-  .settings(
-    legacyScala212,
-    noPublish,
-    scalacOptions += {
-      // Need to fix source root so it matches the workspace folder.
-      s"-P:semanticdb:sourceroot:${baseDirectory.value}"
-    },
-    scalacOptions += "-Ywarn-unused-import",
-    scalacOptions -= "-Xlint"
-  )
-
 lazy val `sbt-metals` = project
   .settings(
     sbtPlugin := true,
@@ -159,6 +134,27 @@ lazy val `sbt-metals` = project
     ),
   )
   .enablePlugins(ScriptedPlugin)
+
+lazy val integration = project
+  .in(file("tests/integration"))
+  .settings(
+    legacyScala212,
+    skip in publish := true
+  )
+  .dependsOn(metals % "compile->compile;test->test")
+
+lazy val testWorkspace = project
+  .in(file("test-workspace"))
+  .settings(
+    legacyScala212,
+    skip in publish := true,
+    scalacOptions += {
+      // Need to fix source root so it matches the workspace folder.
+      s"-P:semanticdb:sourceroot:${baseDirectory.value}"
+    },
+    scalacOptions += "-Ywarn-unused-import",
+    scalacOptions -= "-Xlint"
+  )
 
 lazy val docs = project
   .in(file("metals-docs"))
