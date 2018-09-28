@@ -1,17 +1,16 @@
 package tests.provider
 
 import java.io.{FileOutputStream, PipedOutputStream, PrintStream}
+import java.nio.file.Paths
 import java.nio.file.{Files, Path}
-
 import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.langmeta.inputs.Input
-import org.langmeta.io.{AbsolutePath, RelativePath}
+import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import scala.meta.jsonrpc.LanguageClient
 import scala.meta.lsp.PublishDiagnostics
 import tests.CompilerSuite
-
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.meta.internal.inputs._
@@ -30,7 +29,7 @@ object DiagnosticsProviderTest extends CompilerSuite {
       ),
       scalafix = Configuration.Scalafix(
         enabled = true,
-        confPath = Some(RelativePath(scalafixConfPath)),
+        confPath = Some(Paths.get(scalafixConfPath))
       )
     )
   )

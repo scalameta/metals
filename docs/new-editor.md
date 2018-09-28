@@ -20,12 +20,12 @@ To integrate metals with a new editor, a few things should be kept in mind
 
 <!-- TOC depthFrom:2 depthTo:2 -->
 
-* [Launching the server](#launching-the-server)
-* [Working directory](#working-directory)
-* [File watching](#file-watching)
-* [Configuration](#configuration)
-* [Commands](#commands)
-* [Code actions](#code-actions)
+- [Launching the server](#launching-the-server)
+- [Working directory](#working-directory)
+- [File watching](#file-watching)
+- [Configuration](#configuration)
+- [Commands](#commands)
+- [Code actions](#code-actions)
 
 <!-- /TOC -->
 
@@ -118,7 +118,7 @@ manifest.
 
 Here are the default values for all the options:
 
-```tut:passthrough
+```scala mdoc:passthrough
 {
   println("```json")
   println(scala.meta.metals.Configuration.defaultAsJson)

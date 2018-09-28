@@ -10,6 +10,7 @@ import scala.meta.lsp.TextEdit
 import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.jsonrpc.Response
 import scala.meta.lsp.Window.showMessage
+import scala.meta.RelativePath
 import scala.util.control.NonFatal
 import cats.syntax.bifunctor._
 import cats.instances.either._
@@ -47,11 +48,11 @@ class DocumentFormattingProvider(
       .focus(_.scalafmt.confPath)
       .map[Either[String, Option[AbsolutePath]]] {
         case None =>
-          val default = cwd.resolve(Scalafmt.defaultConfPath)
+          val default = cwd.resolve(RelativePath(Scalafmt.defaultConfPath))
           if (Files.isRegularFile(default.toNIO)) Right(Some(default))
           else Right(None)
         case Some(relpath) =>
-          val custom = cwd.resolve(relpath)
+          val custom = cwd.resolve(RelativePath(relpath))
           if (Files.isRegularFile(custom.toNIO))
             Right(Some(custom))
           else if (relpath == Configuration.Scalafmt.defaultConfPath)
