@@ -160,6 +160,7 @@ lazy val testWorkspace = project
 lazy val docs = project
   .in(file("metals-docs"))
   .settings(
+    moduleName := "metals-docs",
     sources.in(Compile) += {
       sourceDirectory.in(metals, Compile).value /
         "scala/scala/meta/metals/Configuration.scala"
