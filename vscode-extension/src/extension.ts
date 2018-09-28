@@ -32,6 +32,7 @@ export async function activate(context: ExtensionContext) {
       "resolve",
       "-r", "bintray:scalameta/maven",
       "-r", "sonatype:releases",
+      "-r", "sonatype:snapshots",
       artifact,
     ];
 
@@ -41,6 +42,7 @@ export async function activate(context: ExtensionContext) {
     "launch",
     "-r", "bintray:scalameta/maven",
     "-r", "sonatype:releases",
+    "-r", "sonatype:snapshots",
     `org.scalameta:metals_2.12:${serverVersion}`,
     "-M", "scala.meta.metals.Main"
   ];
