@@ -168,10 +168,13 @@ package scala.meta.sbt {
           .in(p)
           .get(extracted.structure.data)
           .exists(_.exists(_.name == "semanticdb-scalac"))
-        isDisabled = SettingKey[Boolean]("metalsEnabled")
-          .in(p)
-          .get(extracted.structure.data)
-          .contains(false)
+        isDisabled = {
+          val metalsEnabled =
+            SettingKey[Boolean]("metalsEnabled")
+              .in(p)
+              .get(extracted.structure.data)
+          metalsEnabled == Some(false)
+        }
         if !isEnabled && !isDisabled
         setting <- List(
           scalaVersion.in(p) := fullVersion,
