@@ -4,8 +4,6 @@ inThisBuild(
       if (sys.env.contains("CI")) dynVer
       else "SNAPSHOT" // only for local publishng
     },
-    scalaVersion := V.scala212,
-    crossScalaVersions := List(V.scala212),
     scalacOptions ++= List(
       "-Yrangepos",
       "-deprecation",
@@ -13,12 +11,11 @@ inThisBuild(
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused-import"
     ),
-    scalafixEnabled := false,
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
     ),
-    testFrameworks := new TestFramework("utest.runner.Framework") :: Nil,
+    testFrameworks := List(new TestFramework("utest.runner.Framework")),
     libraryDependencies += "com.lihaoyi" %% "utest" % "0.6.0" % Test,
     homepage := Some(url("https://github.com/scalameta/metals")),
     developers := List(
@@ -53,24 +50,10 @@ inThisBuild(
         url("http://delmore.io")
       )
     ),
-    scmInfo in ThisBuild := Some(
-      ScmInfo(
-        url("https://github.com/scalameta/metals"),
-        s"git@github.com:scalameta/metals.git"
-      )
-    ),
     resolvers += Resolver.sonatypeRepo("releases"),
-    releaseEarlyWith := BintrayPublisher,
-    releaseEarlyEnableSyncToMaven := false,
-    publishMavenStyle := true,
-    bintrayOrganization := Some("scalameta"),
-    bintrayReleaseOnPublish := dynverGitDescribeOutput.value.isVersionStable,
-    pgpPublicRing := file("./travis/local.pubring.asc"),
-    pgpSecretRing := file("./travis/local.secring.asc"),
     // faster publishLocal:
     publishArtifact in packageDoc := sys.env.contains("CI"),
     publishArtifact in packageSrc := sys.env.contains("CI"),
-    addCompilerPlugin(MetalsPlugin.semanticdbScalac),
     addCompilerPlugin(
       "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
     )
@@ -78,12 +61,19 @@ inThisBuild(
 )
 
 lazy val V = new {
+  val scala210 = "2.10.7"
   val scala212 = MetalsPlugin.scala212
   val scalameta = MetalsPlugin.semanticdbVersion
   val scalafix = "0.5.7"
   val circe = "0.9.0"
   val enumeratum = "1.5.12"
 }
+
+lazy val legacyScala212 = List(
+  addCompilerPlugin(MetalsPlugin.semanticdbScalac),
+  scalaVersion := V.scala212,
+  crossScalaVersions := List(V.scala212),
+)
 
 lazy val noPublish = List(
   publishTo := None,
@@ -93,13 +83,8 @@ lazy val noPublish = List(
 
 lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
-  .disablePlugins(ScriptedPlugin)
   .settings(
-    PB.targets.in(Compile) := Seq(
-      scalapb.gen(
-        flatPackage = true // Don't append filename to package
-      ) -> sourceManaged.in(Compile).value./("protobuf")
-    ),
+    legacyScala212,
     fork in Test := true, // required for jni interrop with leveldb.
     buildInfoKeys := Seq[BuildInfoKey](
       "testWorkspaceBaseDirectory" ->
@@ -135,16 +120,16 @@ lazy val metals = project
 
 lazy val integration = project
   .in(file("tests/integration"))
-  .disablePlugins(ScriptedPlugin)
   .settings(
+    legacyScala212,
     noPublish
   )
   .dependsOn(metals % "compile->compile;test->test")
 
 lazy val testWorkspace = project
   .in(file("test-workspace"))
-  .disablePlugins(ScriptedPlugin)
   .settings(
+    legacyScala212,
     noPublish,
     scalacOptions += {
       // Need to fix source root so it matches the workspace folder.
@@ -153,30 +138,16 @@ lazy val testWorkspace = project
     scalacOptions += "-Ywarn-unused-import",
     scalacOptions -= "-Xlint"
   )
-  .disablePlugins(ScalafixPlugin)
-
-lazy val metalsRoot = project
-  .in(file("."))
-  .disablePlugins(ScriptedPlugin)
-  .settings(
-    noPublish,
-    // this is used only by the sbt-metals subproject:
-    // we use 1.0 (instead of 1.1) to ensure compatibility with all 1.* versions
-    // also the order is important: first 1.+, then 0.13
-    crossSbtVersions := Seq("1.0.4", "0.13.17"),
-  )
-  .aggregate(
-    metals,
-    integration
-  )
 
 lazy val `sbt-metals` = project
-  .enablePlugins(ScriptedPlugin)
   .settings(
     sbtPlugin := true,
-    scalaVersion := {
-      if (sbtVersion.in(pluginCrossBuild).value.startsWith("0.13")) "2.10.6"
-      else Keys.scalaVersion.value
+    crossScalaVersions := List(V.scala212, V.scala210),
+    sbtVersion in pluginCrossBuild := {
+      scalaBinaryVersion.value match {
+        case "2.10" => "0.13.17"
+        case "2.12" => "1.0.4"
+      }
     },
     publishMavenStyle := false,
     libraryDependencies --= libraryDependencies.in(ThisBuild).value,
@@ -187,22 +158,31 @@ lazy val `sbt-metals` = project
       s"-Dplugin.version=${version.value}",
     ),
   )
+  .enablePlugins(ScriptedPlugin)
 
-commands += Command.command("release") { st =>
-  "+releaseEarly" ::
-    "^sbt-metals/releaseEarly" ::
-    st
-}
-
-lazy val website = project
-  .enablePlugins(PreprocessPlugin, TutPlugin)
+lazy val docs = project
+  .in(file("metals-docs"))
   .settings(
-    tutSourceDirectory := baseDirectory.value / ".." / "docs",
-    sourceDirectory in Preprocess := tutTargetDirectory.value,
-    target in Preprocess := target.value / "docs",
-    preprocess in Preprocess := (preprocess in Preprocess).dependsOn(tut).value,
-    preprocessVars in Preprocess := Map(
-      "VERSION" -> version.value
-    )
+    skip in publish := true,
+    sources.in(Compile) += {
+      sourceDirectory.in(metals, Compile).value /
+        "scala/scala/meta/metals/Configuration.scala"
+    },
+    scalaVersion := "2.12.6",
+    mainClass.in(Compile) := Some("docs.Docs"),
+    libraryDependencies ++= List(
+      "com.geirsson" % "mdoc" % "0.4.5" cross CrossVersion.full,
+      // Dependencies below can be removed after the upgrade to Scalameta v4.0
+      "io.circe" %% "circe-core" % V.circe,
+      "io.circe" %% "circe-generic" % V.circe,
+      "io.circe" %% "circe-generic-extras" % V.circe,
+      "io.circe" %% "circe-parser" % V.circe,
+      "com.beachape" %% "enumeratum" % V.enumeratum,
+      "com.beachape" %% "enumeratum-circe" % "1.5.15"
+    ),
+    buildInfoKeys := Seq[BuildInfoKey](
+      version,
+    ),
+    buildInfoPackage := "docs"
   )
-  .dependsOn(metals)
+  .enablePlugins(DocusaurusPlugin, BuildInfoPlugin)
