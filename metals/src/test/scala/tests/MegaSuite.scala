@@ -1,7 +1,6 @@
 package tests
 
 import scala.language.experimental.macros
-
 import scala.reflect.ClassTag
 import utest.TestSuite
 import utest.Tests
@@ -10,9 +9,9 @@ import utest.framework.Formatter
 import utest.framework.TestCallTree
 import utest.framework.Tree
 import utest.ufansi.Str
-
 import io.circe.Json
 import io.circe.Printer
+import scala.meta.metals.MetalsLogger
 
 /**
  * Test suite that supports
@@ -23,6 +22,13 @@ import io.circe.Printer
  * - FunSuite-style test("name") { => fun }
  */
 class MegaSuite extends TestSuite {
+  scribe.Logger.root
+    .clearHandlers()
+    .withHandler(
+      formatter = MetalsLogger.defaultFormat,
+      minimumLevel = Some(scribe.Level.Info)
+    )
+    .replace()
   private val jsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()

@@ -10,10 +10,9 @@ import scala.meta.lsp.WorkspaceEdit
 import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.metals.refactoring.Backtick
 import scala.meta.metals.search.SymbolIndex
-import com.typesafe.scalalogging.LazyLogging
 import scala.meta.lsp.WorkspaceEdit
 
-object RenameProvider extends LazyLogging {
+object RenameProvider {
   def rename(params: RenameParams, symbolIndex: SymbolIndex)(
       implicit client: JsonRpcClient
   ): WorkspaceEdit = Backtick.backtickWrap(params.newName) match {

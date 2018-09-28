@@ -13,7 +13,6 @@ import scalafix.patch.Patch
 import scalafix.reflect.ScalafixReflect
 import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
-import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.io.AbsolutePath
 import org.langmeta.inputs.Input
 import scala.meta.jsonrpc.JsonRpcClient
@@ -24,13 +23,13 @@ import cats.instances.either._
 import monix.execution.Scheduler
 import monix.reactive.Observable
 import monix.eval.Task
-import scala.meta.lsp.MonixEnrichments._
+import scala.meta.jsonrpc.MonixEnrichments._
 import java.nio.file.Files
 
 class Linter(configuration: Observable[Configuration], cwd: AbsolutePath)(
     implicit client: JsonRpcClient,
     s: Scheduler
-) extends LazyLogging {
+) {
 
   // Simple method to run syntactic scalafix rules on a string.
   def onSyntacticInput(

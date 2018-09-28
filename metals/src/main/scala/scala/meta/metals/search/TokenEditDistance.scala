@@ -4,7 +4,6 @@ import scala.annotation.tailrec
 import scala.meta._
 import scala.meta.metals.ScalametaEnrichments._
 import scala.meta.metals.{index => i}
-import com.typesafe.scalalogging.LazyLogging
 import difflib._
 import difflib.myers.Equalizer
 import org.langmeta.languageserver.InputEnrichments._
@@ -128,7 +127,7 @@ final class TokenEditDistance private (matching: Array[MatchingToken]) {
 
 }
 
-object TokenEditDistance extends LazyLogging {
+object TokenEditDistance {
 
   lazy val empty: TokenEditDistance = new TokenEditDistance(Array.empty)
 

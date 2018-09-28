@@ -11,14 +11,13 @@ import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
 import scala.{meta => m}
-import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.PathIO
 import org.langmeta.internal.semanticdb.schema.Database
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
 
-object Semanticdbs extends LazyLogging {
+object Semanticdbs {
 
   object File {
     def unapply(path: RelativePath): Boolean =
@@ -50,7 +49,7 @@ object Semanticdbs extends LazyLogging {
           case _: ParseException | _: TokenizeException =>
           // ignore, expected.
           case _ =>
-            logger.error(s"Failed to emit semanticdb for ${input.path}", err)
+            scribe.error(s"Failed to emit semanticdb for ${input.path}", err)
         }
         toMessageOnlySemanticdb(input, compiler)
     }
@@ -87,7 +86,7 @@ object Semanticdbs extends LazyLogging {
     Database(
       sdb.documents.map { d =>
         val filename = cwd.resolve(d.filename).toURI.toString()
-        logger.info(s"Loading file $filename")
+        scribe.info(s"Loading file $filename")
         d.withFilename(filename)
           .withNames {
             // This should be done inside semanticdb-scalac.

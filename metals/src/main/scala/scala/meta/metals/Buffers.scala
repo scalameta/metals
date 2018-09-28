@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Map => JMap}
-import com.typesafe.scalalogging.LazyLogging
 import scala.meta.lsp.VersionedTextDocumentIdentifier
 import org.langmeta.io.AbsolutePath
 import scala.meta.Source
@@ -25,9 +24,9 @@ import org.langmeta.inputs.Input
 class Buffers private (
     contents: JMap[Uri, String],
     cwd: AbsolutePath
-) extends LazyLogging {
+) {
   private def readFromDisk(path: AbsolutePath): String = {
-    logger.info(s"Reading $path from disk")
+    scribe.info(s"Reading $path from disk")
     new String(Files.readAllBytes(path.toNIO), StandardCharsets.UTF_8)
   }
   def changed(input: Input.VirtualFile): Effects.UpdateBuffers = {

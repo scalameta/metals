@@ -59,6 +59,7 @@ inThisBuild(
         s"git@github.com:scalameta/metals.git"
       )
     ),
+    resolvers += Resolver.sonatypeRepo("releases"),
     releaseEarlyWith := BintrayPublisher,
     releaseEarlyEnableSyncToMaven := false,
     publishMavenStyle := true,
@@ -80,6 +81,8 @@ lazy val V = new {
   val scala212 = MetalsPlugin.scala212
   val scalameta = MetalsPlugin.semanticdbVersion
   val scalafix = "0.5.7"
+  val circe = "0.9.0"
+  val enumeratum = "1.5.12"
 }
 
 lazy val noPublish = List(
@@ -105,6 +108,7 @@ lazy val metals = project
     ),
     buildInfoPackage := "scala.meta.metals.internal",
     libraryDependencies ++= List(
+      "com.lihaoyi" %% "pprint" % "0.5.3", // for pretty formatting of log values
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0", // for sbt server
       "ch.epfl.scala" % "scalafix-reflect" % V.scalafix cross CrossVersion.full,
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
@@ -114,9 +118,15 @@ lazy val metals = project
       "io.github.soc" % "directories" % "5", // for cache location
       "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
-      "org.scalameta" %% "lsp4s" % "0.1.0",
+      "org.scalameta" %% "lsp4s" % "0.2.1",
       "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
-      "org.scalameta" %% "testkit" % V.scalameta % Test
+      "io.circe" %% "circe-core" % V.circe,
+      "io.circe" %% "circe-generic" % V.circe,
+      "io.circe" %% "circe-generic-extras" % V.circe,
+      "io.circe" %% "circe-parser" % V.circe,
+      "com.beachape" %% "enumeratum" % V.enumeratum,
+      "com.beachape" %% "enumeratum-circe" % "1.5.15",
+      "org.scalameta" %% "testkit" % V.scalameta % Test,
     )
   )
   .dependsOn(
