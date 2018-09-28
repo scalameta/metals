@@ -160,6 +160,7 @@ lazy val testWorkspace = project
 lazy val docs = project
   .in(file("metals-docs"))
   .settings(
+    skip in publish := true, // disabled until Scalameta v4 upgrade
     moduleName := "metals-docs",
     sources.in(Compile) += {
       sourceDirectory.in(metals, Compile).value /
