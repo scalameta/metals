@@ -131,7 +131,7 @@ class MetalsServices(
       params: InitializeParams
   ): Task[Either[Response.Error, InitializeResult]] = {
     scribe.info(s"Initialized with $cwd, $params")
-    LSPLogger.notifications = Some(client)
+    LSPLogger.client = Some(client)
     cancelEffects = effects.map(_.subscribe())
     Workspace.initialize(cwd) { onChangedFile(_)(()) }
     val commands = WorkspaceCommand.values.map(_.entryName)
