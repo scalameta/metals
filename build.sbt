@@ -76,6 +76,7 @@ lazy val legacyScala212 = List(
 )
 
 skip in publish := true
+legacyScala212
 
 lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
