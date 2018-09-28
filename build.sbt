@@ -160,7 +160,6 @@ lazy val testWorkspace = project
 lazy val docs = project
   .in(file("metals-docs"))
   .settings(
-    skip in publish := true,
     sources.in(Compile) += {
       sourceDirectory.in(metals, Compile).value /
         "scala/scala/meta/metals/Configuration.scala"
