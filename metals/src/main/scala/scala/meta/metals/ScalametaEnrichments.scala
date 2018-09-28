@@ -275,7 +275,7 @@ object ScalametaEnrichments {
         uri: URI,
         destination: AbsolutePath
     ): URI = {
-      // logger.info(s"Jumping into uri $uri, writing contents to file in target file")
+      // scribe.info(s"Jumping into uri $uri, writing contents to file in target file")
       val contents =
         new String(FileIO.readAllBytes(uri), StandardCharsets.UTF_8)
       // HACK(olafur) URIs are not typesafe, jar:file://blah.scala will return

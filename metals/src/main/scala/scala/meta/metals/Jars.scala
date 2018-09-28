@@ -2,7 +2,6 @@ package scala.meta.metals
 
 import java.io.OutputStreamWriter
 import java.io.PrintStream
-import com.typesafe.scalalogging.LazyLogging
 import coursier._
 import org.langmeta.io.AbsolutePath
 
@@ -25,7 +24,7 @@ object ModuleID {
       .toList
   }
 }
-object Jars extends LazyLogging {
+object Jars {
   def fetch(
       org: String,
       artifact: String,
@@ -72,7 +71,7 @@ object Jars extends LazyLogging {
       case Left(e) =>
         if (fetchSourceJars) {
           // There is no need to fail fast here if we are fetching source jars.
-          logger.error(e.describe)
+          scribe.error(e.describe)
           Nil
         } else {
           throw new IllegalArgumentException(e.describe)

@@ -5,7 +5,6 @@ import java.nio.file.Paths
 import java.util.Properties
 import scala.tools.nsc.settings.ScalaVersion
 import scala.tools.nsc.settings.SpecificScalaVersion
-import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.internal.io.PathIO
 import org.langmeta.io.AbsolutePath
 import org.langmeta.io.RelativePath
@@ -57,7 +56,7 @@ case class CompilerConfig(
     (classDirectory :: dependencyClasspath).mkString(java.io.File.pathSeparator)
 }
 
-object CompilerConfig extends LazyLogging {
+object CompilerConfig {
   private val relativeDir: RelativePath =
     RelativePath(".metals").resolve("buildinfo")
 
@@ -88,7 +87,7 @@ object CompilerConfig extends LazyLogging {
       fromProperties(props, path)
     } catch {
       case NonFatal(e) =>
-        logger.error(s"Failed to parse $path", e)
+        scribe.error(s"Failed to parse $path", e)
         throw new IllegalArgumentException(path.toString(), e)
     } finally {
       input.close()
@@ -103,7 +102,7 @@ object CompilerConfig extends LazyLogging {
     def getPaths(implicit name: sourcecode.Name): List[AbsolutePath] = {
       Option(props.getProperty(name.value)) match {
         case None =>
-          logger.warn(s"$origin: Missing key '${name.value}'")
+          scribe.warn(s"$origin: Missing key '${name.value}'")
           Nil
         case Some(paths) =>
           paths

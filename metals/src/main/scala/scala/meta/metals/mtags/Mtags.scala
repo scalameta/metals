@@ -18,7 +18,6 @@ import com.thoughtworks.qdox.parser.{ParseException => QParseException}
 import scala.reflect.ClassTag
 import scala.util.Sorting
 import scala.util.control.NonFatal
-import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.inputs.Input
 import org.langmeta.internal.io.FileIO
 import org.langmeta.internal.io.PathIO
@@ -39,7 +38,7 @@ import org.langmeta.internal.semanticdb.schema.Document
  * without any build-tool or compiler integration. "Mtags" name comes from
  * mixing "meta" and "ctags".
  */
-object Mtags extends LazyLogging {
+object Mtags {
 
   /**
    * Build an index from a classpath of -sources.jar
@@ -75,12 +74,12 @@ object Mtags extends LazyLogging {
       if (indexedFiles < 100) return
       val percentage = ((indexedFiles / N.toDouble) * 100).toInt
       val loc = decimal.format(totalIndexedLines.get() / elapsed)
-      logger.info(
+      scribe.info(
         s"Progress $percentage%, ${decimal.format(indexedFiles)} files indexed " +
           s"out of total ${decimal.format(fragments.length)} ($loc loc/s)"
       )
     }
-    logger.info(s"Indexing $N source files")
+    scribe.info(s"Indexing $N source files")
     fragments.foreach { fragment =>
       try {
         val indexedFiles = totalIndexedFiles.incrementAndGet()
@@ -95,11 +94,11 @@ object Mtags extends LazyLogging {
       } catch {
         case _: ParseException | _: QParseException => // nothing
         case NonFatal(e) =>
-          logger.error(s"Error indexing ${fragment.name}", e)
+          scribe.error(s"Error indexing ${fragment.name}", e)
       }
     }
     reportProgress(totalIndexedFiles.get)
-    logger.info(
+    scribe.info(
       s"Completed indexing ${decimal.format(totalIndexedFiles.get)} files with " +
         s"total ${decimal.format(totalIndexedLines.get())} lines of code"
     )
@@ -137,7 +136,7 @@ object Mtags extends LazyLogging {
 
   /** Index single Scala or Java source file from memory */
   def index(input: Input.VirtualFile): Document = {
-    logger.trace(s"Indexing ${input.path} with length ${input.value.length}")
+    scribe.trace(s"Indexing ${input.path} with length ${input.value.length}")
     val indexer: MtagsIndexer =
       if (isScala(input.path)) ScalaMtags.index(input)
       else if (isJava(input.path)) JavaMtags.index(input)
@@ -205,7 +204,7 @@ object Mtags extends LazyLogging {
           } finally zip.close()
         } catch {
           case ex: IOException =>
-            logger.error(ex.getMessage, ex)
+            scribe.error(ex.getMessage, ex)
         } finally {
           stream.close()
         }
@@ -234,7 +233,7 @@ object Mtags extends LazyLogging {
           )
         }
       } else {
-        logger.info(s"Skipping $base")
+        scribe.info(s"Skipping $base")
         // Skip
       }
     }

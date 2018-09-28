@@ -4,14 +4,13 @@ import java.nio.file.Files
 import scala.meta.metals.Configuration
 import scala.meta.metals.Configuration.Scalafmt
 import scala.meta.metals.Formatter
-import scala.meta.lsp.MonixEnrichments._
+import scala.meta.jsonrpc.MonixEnrichments._
 import scala.meta.lsp.Position
 import scala.meta.lsp.TextEdit
 import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.jsonrpc.Response
 import scala.meta.lsp.Window.showMessage
 import scala.util.control.NonFatal
-import com.typesafe.scalalogging.LazyLogging
 import cats.syntax.bifunctor._
 import cats.instances.either._
 import scala.meta.lsp.Range
@@ -25,8 +24,7 @@ import org.langmeta.io.AbsolutePath
 class DocumentFormattingProvider(
     configuration: Observable[Configuration],
     cwd: AbsolutePath
-)(implicit client: JsonRpcClient, s: Scheduler)
-    extends LazyLogging {
+)(implicit client: JsonRpcClient, s: Scheduler) {
 
   private val formatter: () => Either[String, Formatter] =
     configuration

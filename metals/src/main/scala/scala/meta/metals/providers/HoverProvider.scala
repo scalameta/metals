@@ -11,10 +11,9 @@ import scalafix.internal.util.TypeSyntax
 import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
 import scala.meta.metals.index.SymbolData
-import com.typesafe.scalalogging.LazyLogging
 import org.langmeta.internal.semanticdb.schema
 
-object HoverProvider extends LazyLogging {
+object HoverProvider {
   def empty: Hover = Hover(Nil, None)
   val Template =
     m.Template(Nil, Nil, m.Self(m.Name.Anonymous(), None), Nil)
@@ -92,7 +91,7 @@ object HoverProvider extends LazyLogging {
             ) =>
           Some(m.Pkg.Object(mods, m.Term.Name(pkg), Template))
         case _ =>
-          logger.warn(s"Unexpected package object symbol: $symbol")
+          scribe.warn(s"Unexpected package object symbol: $symbol")
           None
       }
     } else if (denotation.isType && denotation.isAbstract) {

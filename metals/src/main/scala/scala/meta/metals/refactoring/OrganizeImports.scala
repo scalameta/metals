@@ -16,11 +16,10 @@ import scalafix.languageserver.ScalafixEnrichments._
 import scalafix.languageserver.ScalafixPatchEnrichments._
 import scalafix.rule.RuleCtx
 import scalafix.util.SemanticdbIndex
-import com.typesafe.scalalogging.LazyLogging
 import scala.meta.lsp.TextDocumentIdentifier
 import io.circe.Json
 
-object OrganizeImports extends LazyLogging {
+object OrganizeImports {
 
   val empty = ApplyWorkspaceEditParams(None, WorkspaceEdit(Map.empty))
 

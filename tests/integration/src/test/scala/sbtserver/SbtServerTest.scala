@@ -18,7 +18,8 @@ case class SbtServerConnectionError(msg: String) extends Exception(msg)
 object SbtServerTest extends MegaSuite {
 
   test("correct sbt 1.1 project establishes successful connection") {
-    val services = Services.empty
+    val services = Services
+      .empty(scribe.Logger.root)
       .notification(Window.logMessage)(msg => ())
       .notification(TextDocument.publishDiagnostics)(msg => ())
     val program = for {

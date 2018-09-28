@@ -31,6 +31,7 @@ export async function activate(context: ExtensionContext) {
   const coursierResolveArgs = [
       "resolve",
       "-r", "bintray:scalameta/maven",
+      "-r", "sonatype:releases",
       artifact,
     ];
 
@@ -39,6 +40,7 @@ export async function activate(context: ExtensionContext) {
   const coursierLaunchArgs = [
     "launch",
     "-r", "bintray:scalameta/maven",
+    "-r", "sonatype:releases",
     `org.scalameta:metals_2.12:${serverVersion}`,
     "-M", "scala.meta.metals.Main"
   ];
