@@ -168,7 +168,11 @@ package scala.meta.sbt {
           .in(p)
           .get(extracted.structure.data)
           .exists(_.exists(_.name == "semanticdb-scalac"))
-        if !isEnabled
+        isDisabled = SettingKey[Boolean]("metalsEnabled")
+          .in(p)
+          .get(extracted.structure.data)
+          .contains(false)
+        if !isEnabled && !isDisabled
         setting <- List(
           scalaVersion.in(p) := fullVersion,
           scalacOptions.in(p) ++= List(
