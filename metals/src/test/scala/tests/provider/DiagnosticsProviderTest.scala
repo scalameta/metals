@@ -6,7 +6,7 @@ import java.nio.file.{Files, Path}
 import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.langmeta.inputs.Input
-import org.langmeta.io.{AbsolutePath, RelativePath}
+import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
 import scala.meta.jsonrpc.LanguageClient
 import scala.meta.lsp.PublishDiagnostics

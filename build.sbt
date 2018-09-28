@@ -165,7 +165,9 @@ lazy val docs = project
         "scala/scala/meta/metals/Configuration.scala"
     },
     scalaVersion := "2.12.6",
+    crossScalaVersions := List("2.12.6"),
     mainClass.in(Compile) := Some("docs.Docs"),
+    SettingKey[Boolean]("metalsEnabled") := false,
     libraryDependencies ++= List(
       "com.geirsson" % "mdoc" % "0.4.5" cross CrossVersion.full,
       // Dependencies below can be removed after the upgrade to Scalameta v4.0
