@@ -6,7 +6,6 @@ import scala.meta.metals.Configuration.Scalafmt
 import scala.meta.metals.Formatter
 import scala.meta.jsonrpc.MonixEnrichments._
 import scala.meta.lsp.Position
-import scala.meta.lsp.TextEdit
 import scala.meta.jsonrpc.JsonRpcClient
 import scala.meta.jsonrpc.Response
 import scala.meta.lsp.Window.showMessage

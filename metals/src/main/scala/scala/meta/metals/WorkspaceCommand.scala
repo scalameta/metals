@@ -9,8 +9,6 @@ sealed trait WorkspaceCommand extends EnumEntry with Uncapitalised
 case object WorkspaceCommand extends Enum[WorkspaceCommand] {
 
   case object ClearIndexCache extends WorkspaceCommand
-  case object ResetPresentationCompiler extends WorkspaceCommand
-  case object ScalafixUnusedImports extends WorkspaceCommand
   case object SbtConnect extends WorkspaceCommand
 
   val values = findValues
