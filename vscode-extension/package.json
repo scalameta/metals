@@ -141,11 +141,6 @@
         "command": "metals.sbtConnect",
         "category": "Metals",
         "title": "Connect to sbt server"
-      },
-      {
-        "command": "metals.resetPresentationCompiler",
-        "category": "Metals",
-        "title": "Reset presentation compilers"
       }
     ]
   },

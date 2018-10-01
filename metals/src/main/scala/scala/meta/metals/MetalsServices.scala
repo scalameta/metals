@@ -1,34 +1,17 @@
 package scala.meta.metals
 
-import java.io.IOException
+import io.circe.Json
+import io.github.soc.directories.ProjectDirectories
 import java.io.File
+import java.io.IOException
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Executors
-import scala.concurrent.duration.FiniteDuration
-import scala.meta.metals.compiler.CompilerConfig
-import scala.meta.metals.compiler.Cursor
-import scala.meta.metals.compiler.ScalacProvider
-import scala.meta.lsp.Window.showMessage
-import scala.meta.lsp.{Lifecycle => lc, TextDocument => td, Workspace => ws, _}
-import scala.meta.jsonrpc.MonixEnrichments._
-import scala.meta.jsonrpc.Response
-import scala.meta.jsonrpc.Services
-import scala.meta.metals.providers._
-import scala.meta.metals.refactoring.OrganizeImports
-import scala.meta.metals.sbtserver.Sbt
-import scala.meta.metals.sbtserver.SbtServer
-import scala.meta.metals.search.SymbolIndex
-import scala.util.Failure
-import scala.util.Success
-import scala.util.control.NonFatal
-import io.circe.Json
-import io.github.soc.directories.ProjectDirectories
-import monix.eval.Task
 import monix.eval.Coeval
+import monix.eval.Task
 import monix.execution.Cancelable
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
@@ -38,12 +21,27 @@ import monix.reactive.Observable
 import monix.reactive.Observer
 import monix.reactive.OverflowStrategy
 import org.langmeta.inputs.Input
-import org.langmeta.internal.semanticdb.XtensionDatabase
 import org.langmeta.internal.semanticdb.schema
 import org.langmeta.io.AbsolutePath
 import org.langmeta.languageserver.InputEnrichments._
-import org.langmeta.semanticdb
 import scala.meta.jsonrpc.LanguageClient
+import scala.meta.jsonrpc.MonixEnrichments._
+import scala.meta.jsonrpc.Response
+import scala.meta.jsonrpc.Services
+import scala.meta.lsp.Window.showMessage
+import scala.meta.lsp.{TextDocument => td}
+import scala.meta.lsp.{Workspace => ws}
+import scala.meta.lsp.{Lifecycle => lc}
+import scala.meta.lsp._
+import scala.meta.metals.compiler.CompilerConfig
+import scala.meta.metals.compiler.Cursor
+import scala.meta.metals.providers._
+import scala.meta.metals.sbtserver.Sbt
+import scala.meta.metals.sbtserver.SbtServer
+import scala.meta.metals.search.SymbolIndex
+import scala.util.Failure
+import scala.util.Success
+import scala.util.control.NonFatal
 
 class MetalsServices(
     cwd: AbsolutePath,
@@ -78,52 +76,19 @@ class MetalsServices(
     SymbolIndex(cwd, buffers, configurationPublisher)
   val documentFormattingProvider =
     new DocumentFormattingProvider(configurationPublisher, cwd)
-  val diagnosticsProvider =
-    new DiagnosticsProvider(configurationPublisher, cwd)
-  val scalacProvider = new ScalacProvider
-  val interactiveSemanticdbs: Observable[semanticdb.Database] =
-    sourceChangePublisher
-      .debounce(FiniteDuration(1, "s"))
-      .flatMap { input =>
-        if (latestConfig().scalac.enabled) {
-          Observable
-            .fromIterable(Semanticdbs.toSemanticdb(input, scalacProvider))
-            .executeOn(presentationCompilerScheduler)
-        } else Observable.empty
-      }
-  val interactiveSchemaSemanticdbs: Observable[schema.Database] =
-    interactiveSemanticdbs.flatMap(db => Observable(db.toSchema(cwd)))
-  val metaSemanticdbs: Observable[semanticdb.Database] =
-    Observable.merge(
-      fileSystemSemanticdbsPublisher.map(_.toDb(sourcepath = None)),
-      interactiveSemanticdbs
-    )
 
   // Effects
   val indexedSemanticdbs: Observable[Effects.IndexSemanticdb] =
-    Observable
-      .merge(fileSystemSemanticdbsPublisher, interactiveSchemaSemanticdbs)
-      .map(symbolIndex.indexDatabase)
+    fileSystemSemanticdbsPublisher.map(symbolIndex.indexDatabase)
   val indexedDependencyClasspath: Observable[Effects.IndexSourcesClasspath] =
     compilerConfigPublisher.mapTask { config =>
       symbolIndex.indexDependencyClasspath(config.sourceJars)
-    }
-  val installedCompilers: Observable[Effects.InstallPresentationCompiler] =
-    compilerConfigPublisher.map(scalacProvider.loadNewCompilerGlobals)
-  val publishDiagnostics: Observable[Effects.PublishDiagnostics] =
-    metaSemanticdbs.mapTask { db =>
-      diagnosticsProvider.diagnostics(db).map { diagnostics =>
-        diagnostics.foreach(td.publishDiagnostics.notify)
-        Effects.PublishDiagnostics
-      }
     }
   private var cancelEffects = List.empty[Cancelable]
   val effects: List[Observable[Effects]] = List(
     configurationPublisher.map(_ => Effects.UpdateBuffers),
     indexedDependencyClasspath,
     indexedSemanticdbs,
-    installedCompilers,
-    publishDiagnostics,
   ).map(_.doOnError(MetalsServices.onError))
 
   // TODO(olafur): make it easier to invoke fluid services from tests
@@ -149,17 +114,6 @@ class MetalsServices(
           )
         )
       ),
-      completionProvider = Some(
-        CompletionOptions(
-          resolveProvider = false,
-          triggerCharacters = "." :: Nil
-        )
-      ),
-      signatureHelpProvider = Some(
-        SignatureHelpOptions(
-          triggerCharacters = "(" :: Nil
-        )
-      ),
       definitionProvider = true,
       referencesProvider = true,
       documentHighlightProvider = true,
@@ -169,7 +123,7 @@ class MetalsServices(
       executeCommandProvider = ExecuteCommandOptions(commands),
       workspaceSymbolProvider = true,
       renameProvider = true,
-      codeActionProvider = true
+      codeActionProvider = false
     )
     Task(Right(InitializeResult(capabilities)))
   }
@@ -199,31 +153,6 @@ class MetalsServices(
       val code = if (shutdownReceived.get) 0 else 1
       scribe.info(s"exit($code)")
       sys.exit(code)
-    }
-    .requestAsync(td.completion) { params =>
-      if (latestConfig().scalac.completions.enabled) {
-        withPC {
-          scalacProvider.getCompiler(params.textDocument) match {
-            case Some(g) =>
-              CompletionProvider.completions(
-                g,
-                toCursor(params.textDocument, params.position)
-              )
-            case None => CompletionProvider.empty
-          }
-        }
-      } else Task.now { Right(CompletionProvider.empty) }
-    }
-    .request(td.definition) { params =>
-      DefinitionProvider.definition(
-        symbolIndex,
-        Uri(params.textDocument.uri),
-        params.position,
-        tempSourcesDir
-      )
-    }
-    .request(td.codeAction) { params =>
-      CodeActionProvider.codeActions(params)
     }
     .notification(td.didClose) { params =>
       buffers.closed(Uri(params.textDocument))
@@ -288,6 +217,25 @@ class MetalsServices(
       }
       ()
     }
+    .request(td.definition) { params =>
+      DefinitionProvider.definition(
+        symbolIndex,
+        Uri(params.textDocument.uri),
+        params.position,
+        tempSourcesDir
+      )
+    }
+    .request(td.references) { params =>
+      ReferencesProvider.references(
+        symbolIndex,
+        Uri(params.textDocument.uri),
+        params.position,
+        params.context
+      )
+    }
+    .request(ws.symbol) { params =>
+      symbolIndex.workspaceSymbols(params.query)
+    }
     .request(td.documentHighlight) { params =>
       if (latestConfig().highlight.enabled) {
         DocumentHighlightProvider.highlight(
@@ -308,38 +256,8 @@ class MetalsServices(
       val uri = Uri(params.textDocument)
       documentFormattingProvider.format(uri.toInput(buffers))
     }
-    .request(td.hover) { params =>
-      if (latestConfig().hover.enabled) {
-        HoverProvider.hover(
-          symbolIndex,
-          Uri(params.textDocument),
-          params.position.line,
-          params.position.character
-        )
-      } else HoverProvider.empty
-    }
-    .request(td.references) { params =>
-      ReferencesProvider.references(
-        symbolIndex,
-        Uri(params.textDocument.uri),
-        params.position,
-        params.context
-      )
-    }
     .request(td.rename) { params =>
       RenameProvider.rename(params, symbolIndex)
-    }
-    .request(td.signatureHelp) { params =>
-      if (latestConfig().scalac.completions.enabled) {
-        scalacProvider.getCompiler(params.textDocument) match {
-          case Some(g) =>
-            SignatureHelpProvider.signatureHelp(
-              g,
-              toCursor(params.textDocument, params.position)
-            )
-          case None => SignatureHelpProvider.empty
-        }
-      } else SignatureHelpProvider.empty
     }
     .requestAsync(ws.executeCommand) { params =>
       scribe.info(s"executeCommand $params")
@@ -354,9 +272,6 @@ class MetalsServices(
           executeCommand(command, params)
       }
     }
-    .request(ws.symbol) { params =>
-      symbolIndex.workspaceSymbols(params.query)
-    }
 
   import WorkspaceCommand._
   val ok = Right(Json.Null)
@@ -369,43 +284,8 @@ class MetalsServices(
         scribe.info("Clearing the index cache")
         MetalsServices.clearCacheDirectory()
         symbolIndex.clearIndex()
-        scalacProvider.allCompilerConfigs.foreach(
-          config => symbolIndex.indexDependencyClasspath(config.sourceJars)
-        )
         Right(Json.Null)
       }
-    case ResetPresentationCompiler =>
-      Task {
-        scribe.info("Resetting all compiler instances")
-        scalacProvider.resetCompilers()
-        Right(Json.Null)
-      }
-    case ScalafixUnusedImports =>
-      scribe.info("Removing unused imports")
-      val response = for {
-        result <- Task(
-          OrganizeImports.removeUnused(params.arguments, symbolIndex)
-        )
-        applied <- result match {
-          case Left(err) => Task.now(Left(err))
-          case Right(workspaceEdit) => ws.applyEdit.request(workspaceEdit)
-        }
-      } yield {
-        applied match {
-          case Left(err) =>
-            scribe.warn(s"Failed to apply command $err")
-            Right(Json.Null)
-          case Right(edit) =>
-            if (edit.applied) {
-              scribe.info(s"Successfully applied command $params")
-            } else {
-              scribe.warn(s"Failed to apply edit for command $params")
-            }
-          case _ =>
-        }
-        applied.right.map(_ => Json.Null)
-      }
-      response
     case SbtConnect =>
       Task {
         SbtServer.readVersion(cwd) match {
@@ -463,7 +343,7 @@ class MetalsServices(
       s"apply -cp ${loadPluginClasspath} ch.epfl.scala.loadplugin.LoadPlugin",
       s"""if-absent ${metalsPluginRef} "load-plugin ${metalsPluginModule} ${metalsPluginRef}"""",
     )
-    sbtExec((loadCommands ++ commands): _*)
+    sbtExec(loadCommands ++ commands: _*)
   }
 
   private def connectToSbtServer(): Unit = {

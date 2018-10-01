@@ -13,10 +13,6 @@ object Effects {
   final val IndexSemanticdb = new IndexSemanticdb
   final class IndexSourcesClasspath extends Effects
   final val IndexSourcesClasspath = new IndexSourcesClasspath
-  final class InstallPresentationCompiler extends Effects
-  final val InstallPresentationCompiler = new InstallPresentationCompiler
-  final class PublishDiagnostics extends Effects
-  final val PublishDiagnostics = new PublishDiagnostics
   final class UpdateBuffers extends Effects
   final val UpdateBuffers = new UpdateBuffers
 }

@@ -19,7 +19,7 @@ jobs:
       script:
         - ./bin/run-scripted.sh
     - stage: release
-      script: sbt ci-release
+      script: sbt ci-release docs/docusaurusPublishGhpages
 
 cache:
   directories:
