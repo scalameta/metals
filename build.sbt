@@ -166,12 +166,12 @@ lazy val docs = project
       sourceDirectory.in(metals, Compile).value /
         "scala/scala/meta/metals/Configuration.scala"
     },
-    scalaVersion := "2.12.6",
+    scalaVersion := "2.12.7",
     crossScalaVersions := List("2.12.6"),
     mainClass.in(Compile) := Some("docs.Docs"),
     SettingKey[Boolean]("metalsEnabled") := false,
     libraryDependencies ++= List(
-      "com.geirsson" % "mdoc" % "0.4.5" cross CrossVersion.full,
+      "com.geirsson" % "mdoc" % "0.5.0" cross CrossVersion.full,
       // Dependencies below can be removed after the upgrade to Scalameta v4.0
       "io.circe" %% "circe-core" % V.circe,
       "io.circe" %% "circe-generic" % V.circe,
