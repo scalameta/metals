@@ -27,12 +27,11 @@ Language Server Protocol does not provide utilities to extract metadata from a
 build tool (source directories, dependencies, compiler flags) so we are still
 exploring what is the best option.
 
-- [x] sbt-metals: plugin that provides a `metalsSetup` task to export sbt build
-      metadata.
-- [ ] [BSP][]: LSP-inspired protocol to standardize on communication between a
-      language server and build tool. In theory, should enable automatic
-      importing of projects without custom build plugins or manual installation
-      steps.
+- sbt-metals: plugin that provides a `metalsSetup` task to export sbt build
+  metadata.
+- [BSP][]: LSP-inspired protocol to standardize on communication between a
+  language server and build tool. In theory, should enable automatic importing
+  of projects without custom build plugins or manual installation steps.
 
 ## Robust navigation
 
@@ -44,42 +43,41 @@ architecture as [Index-While-Building][] in XCode 9.
 
 - Goto definition (`textDocument/definition`). Requires
   [semanticdb-scalac](#semanticdb-scalac).
-  - [x] project -> project.
-  - [x] project -> Scala dependency. Requires [`metalsSetup`](#metalssetup).
-  - [x] project -> Java dependency. Requires [`metalsSetup`](#metalssetup).
-  - [ ] dependency -> dependency.
-- [x] Find references (`textDocument/references`). Works the same as goto
-      definition.
-  - [x] project references
-  - [ ] Scala dependency references
-  - [ ] Java dependency references
-- [x] Highlight references to symbol at position
-      (`textDocument/documentHighlight`).
-  - Disabled by default. Can be enabled with configuration option
-    `highlight.enabled=true`.
-- [x] Goto symbol in file (`textDocument/documentSymbol`)
-- [x] Goto symbol in workspace (`workspace/symbol`)
-- [x] Symbol outline in the sidebar as you type (`textDocument/documentSymbol`).
-- [ ] Goto implementation (`textDocument/implementation`)
-- [ ] Goto type definition (`textDocument/typeDefinition`)
-- [ ] Show type of symbol at position (`textDocument/hover`).
-- [ ] Show type of expression at position (`textDocument/hover`).
+  - project -> project.
+  - project -> Scala dependency. Requires [`metalsSetup`](#metalssetup).
+  - project -> Java dependency. Requires [`metalsSetup`](#metalssetup).
+  - dependency -> dependency.
+- Find references (`textDocument/references`). Works the same as goto
+  definition.
+  - project references
+  - Scala dependency references
+  - Java dependency references
+- Highlight references to symbol at position (`textDocument/documentHighlight`).
+- Disabled by default. Can be enabled with configuration option
+  `highlight.enabled=true`.
+- Goto symbol in file (`textDocument/documentSymbol`)
+- Goto symbol in workspace (`workspace/symbol`)
+- Symbol outline in the sidebar as you type (`textDocument/documentSymbol`).
+- Goto implementation (`textDocument/implementation`)
+- Goto type definition (`textDocument/typeDefinition`)
+- Show type of symbol at position (`textDocument/hover`).
+- Show type of expression at position (`textDocument/hover`).
 
 ## Low CPU and memory usage
 
 Heavy resource usage is one of the most frequent complaints about IDEs. Low CPU
 and memory usage becomes even more important when working in larger codebases.
 
-- [ ] Persistent symbol index: currently Metals stores the navigation index
-      in-memory, which can consume multiple GB of RAM for large projects.
-- [ ] Faster Scala and Java outline indexing. Currently, Metals can index the
-      outlines of Scala sources at ~30-40k loc/s and Java sources at ~450k
-      loc/s. Indexing should be able to process ~500k loc/s.
-- [ ] Throttled background indexing. Currently, all available CPUs are utilized
-      for indexing, which makes the computer slow for a period after running
-      `metalsSetup`.
-- [ ] Faster "open symbol in workspace" (`workspace/symbol`). Currently, uses a
-      naive linear search algorithm that is slow for large projects.
+- Persistent symbol index: currently Metals stores the navigation index
+  in-memory, which can consume multiple GB of RAM for large projects.
+- Faster Scala and Java outline indexing. Currently, Metals can index the
+  outlines of Scala sources at ~30-40k loc/s and Java sources at ~450k loc/s.
+  Indexing should be able to process ~500k loc/s.
+- Throttled background indexing. Currently, all available CPUs are utilized for
+  indexing, which makes the computer slow for a period after running
+  `metalsSetup`.
+- Faster "open symbol in workspace" (`workspace/symbol`). Currently, uses a
+  naive linear search algorithm that is slow for large projects.
 
 ## Glossary
 
