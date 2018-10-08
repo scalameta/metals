@@ -1,4 +1,4 @@
-package scala.meta.metals.mtags
+package scala.meta.internal.mtags
 
 import scala.meta.Name
 import scala.meta.Term
