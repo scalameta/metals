@@ -65,6 +65,15 @@ class IndexBench {
       Mtags.index(input)
     }
   }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def scalaToplevels(): Unit = {
+    val mtags = new Mtags
+    scalaDependencySources.inputs.foreach { input =>
+      mtags.toplevels(input)
+    }
+  }
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def allToplevels(): Unit = {

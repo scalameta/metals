@@ -20,6 +20,7 @@ case class InMemorySymbolIndex(
 ) extends SymbolIndex {
   val mtags = new Mtags
   private val sourceJars = new ClasspathLoader(Classpath(Nil))
+  var indexedSources = 0L
   override def symbol(path: AbsolutePath, range: s.Range): Option[String] = {
     for {
       document <- getDocument(path)
@@ -67,6 +68,7 @@ case class InMemorySymbolIndex(
 
   override def addSourceFile(source: AbsolutePath): Unit = {
     if (source.toLanguage.isScala) {
+      indexedSources += 1
       val path = source.toString()
       val text = FileIO.slurp(source, StandardCharsets.UTF_8)
       val input = Input.VirtualFile(path, text)
