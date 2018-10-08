@@ -36,11 +36,11 @@ package scala.meta.sbt {
 
     def scala211 = "2.11.12"
 
-    def scala212 = "2.12.4"
+    def scala212 = "2.12.7"
 
     def supportedScalaVersions = List(scala212, scala211)
 
-    def semanticdbVersion = "2.1.7"
+    def semanticdbVersion = "4.0.0"
 
     val metalsBuildInfo = taskKey[Map[String, String]](
       "List of key/value pairs for build information such as classpath/sourceDirectories"
