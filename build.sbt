@@ -73,13 +73,16 @@ lazy val V = new {
 
 skip.in(publish) := true
 
+lazy val mtags = project
+ .settings(
+    libraryDependencies ++= List(
+      "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
+      "org.scalameta" %% "scalameta" % V.scalameta
+    )
+  )
+
 lazy val metals = project
-  .enablePlugins(BuildInfoPlugin)
   .settings(
-    buildInfoKeys := Seq[BuildInfoKey](
-      version,
-    ),
-    buildInfoPackage := "scala.meta.metals.internal",
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "com.lihaoyi" %% "pprint" % "0.5.3", // for pretty formatting of log values
@@ -89,6 +92,7 @@ lazy val metals = project
       "org.scalameta" %% "lsp4s" % "0.2.1"
     )
   )
+  .dependsOn(mtags)
 
 lazy val `sbt-metals` = project
   .settings(

@@ -1,4 +1,4 @@
-package scala.meta.metals.mtags
+package scala.meta.internal.mtags
 
 import scala.meta.internal.tokenizers.LegacyToken._
 

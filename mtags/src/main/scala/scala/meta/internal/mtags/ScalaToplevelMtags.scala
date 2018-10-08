@@ -1,4 +1,4 @@
-package scala.meta.metals.mtags
+package scala.meta.internal.mtags
 
 import scala.meta.dialects
 import scala.meta.inputs.Input
