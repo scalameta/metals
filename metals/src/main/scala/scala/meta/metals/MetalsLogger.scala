@@ -6,6 +6,12 @@ import scribe.format._
 import scribe.writer.FileWriter
 
 object MetalsLogger {
+  def updateFormat(): Unit = {
+    Logger.root
+      .clearHandlers()
+      .withHandler(formatter = defaultFormat)
+      .replace()
+  }
   def setup(logfile: Path): Unit = {
     val filewriter = FileWriter().path(_ => logfile).autoFlush
     // Example format: "MyProgram.scala:14 trace foo"
