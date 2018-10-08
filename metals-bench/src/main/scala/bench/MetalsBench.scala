@@ -17,7 +17,7 @@ import scala.meta.internal.mtags.SemanticdbClasspath
 import tests.Library
 
 @State(Scope.Benchmark)
-class IndexBench {
+class MetalsBench {
 
   MetalsLogger.updateFormat()
   val inputs = InputProperties.default()
@@ -69,19 +69,9 @@ class IndexBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalaToplevels(): Unit = {
-    val mtags = new Mtags
     scalaDependencySources.inputs.foreach { input =>
-      mtags.toplevels(input)
+      Mtags.toplevels(input)
     }
-  }
-  @Benchmark
-  @BenchmarkMode(Array(Mode.SingleShotTime))
-  def allToplevels(): Unit = {
-    val index = InMemorySymbolIndex()
-    megaSources.entries.foreach { jar =>
-      index.addSourceJar(jar)
-    }
-    scribe.info(s"scala lines: " + index.mtags.totalLinesOfScala)
   }
 
   @Benchmark
@@ -99,9 +89,4 @@ class IndexBench {
     fullClasspath.entries.foreach(entry => index.addSourceJar(entry))
   }
 
-  @Benchmark
-  @BenchmarkMode(Array(Mode.SingleShotTime))
-  def inflate(): Unit = {
-    Inflated.jars(jdk ++ inputs.dependencySources)
-  }
 }
