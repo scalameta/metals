@@ -9,7 +9,6 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.RelativePath
-import scala.meta.internal.mtags.TextDocumentLookup
 import SymbolOccurrenceOrdering._
 
 object Semanticdbs {

@@ -10,8 +10,10 @@ stages:
 jobs:
   include:
     # default stage is test
-    - env: TEST="scalafmt"
-      script: ./bin/scalafmt --test
+    - env: TEST="scalafmt+scalafix"
+      script:
+        - ./bin/scalafmt --test
+        - sbt scalafixCheck
     - env: TEST="sbt test"
       script:
         - sbt startServer metalsSetup test

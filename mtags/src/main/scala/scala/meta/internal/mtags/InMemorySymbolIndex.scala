@@ -8,12 +8,9 @@ import scala.meta.internal.io.PathIO
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Enrichments._
-import scala.meta.internal.mtags.DefinitionAlternatives
 import scala.meta.internal.io._
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.mtags.Mtags
 
 case class InMemorySymbolIndex(
     toplevels: mutable.Map[String, AbsolutePath] = mutable.Map.empty,

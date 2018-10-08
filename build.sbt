@@ -60,6 +60,9 @@ inThisBuild(
   )
 )
 
+addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
+addCommandAlias("scalafixCheck", "; scalafix --check ; test:scalafix --check")
+
 commands += Command.command("save-expect") { s =>
   "unit/test:runMain tests.SaveExpect" ::
     s
@@ -114,6 +117,7 @@ lazy val `sbt-metals` = project
     ),
   )
   .enablePlugins(ScriptedPlugin)
+  .disablePlugins(ScalafixPlugin)
 
 lazy val input = project
   .in(file("tests/input"))

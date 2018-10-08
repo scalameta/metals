@@ -12,9 +12,7 @@ import utest.ufansi.Str
 import io.circe.Json
 import io.circe.Printer
 import scala.meta.metals.MetalsLogger
-import scala.util.control.NonFatal
 import utest.ufansi.Attrs
-import utest.ufansi.Color
 
 /**
  * Test suite that replace utest DSL with FunSuite-style syntax from ScalaTest.
