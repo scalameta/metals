@@ -3,17 +3,18 @@ id: installation-contributors
 title: Installation
 ---
 
-> ⚠ ️ This project is very alpha stage. Expect bugs and incomplete documentation.
+> ⚠ ️ This project is very alpha stage. Expect bugs and incomplete
+> documentation.
 
 The following instructions are intended for contributors who want to try Metals
 and provide feedback. We do not provide support for day-to-day usage of Metals.
 
 ## Requirements
 
-* Scala 2.12.4, down to the exact PATCH version. Note that Scala versions 2.11.x and
-  2.12.6 are not supported.
-* Java 8. Note that Java 9 or higher has not been tested.
-* macOS or Linux. Note that there have been reported issues on Windows.
+- Scala 2.12.7, down to the exact PATCH version. Note that Scala versions 2.11.x
+  and 2.12.6 are not supported.
+- Java 8. Note that Java 9 or higher has not been tested.
+- macOS or Linux. Note that there have been reported issues on Windows.
 
 ## Global setup
 
@@ -30,50 +31,58 @@ You can install the plugin with:
 addSbtPlugin("org.scalameta" % "sbt-metals" % "@VERSION@")
 ```
 
-You can add the plugin to a specific project (adding it to `project/plugins.sbt`) or globally adding it to:
+You can add the plugin to a specific project (adding it to
+`project/plugins.sbt`) or globally adding it to:
 
 - (sbt 1) `~/.sbt/1.0/plugins/plugins.sbt`
 - (sbt 0.13) `~/.sbt/0.13/plugins/plugins.sbt`
 
 ### VSCode extension
 
-> ***N.B.*** This project is still in development - right now you will need to run the VSCode plugin
-> as described [here](getting-started-contributors.html#running-a-local-version-of-the-vscode-extension)
+> **_N.B._** This project is still in development - right now you will need to
+> run the VSCode plugin as described
+> [here](getting-started-contributors.html#running-a-local-version-of-the-vscode-extension)
 
 ## Per-project setup
 
 These steps are required on each project.
 
 ### Quick-start
-The quickest way to get started with Metals is to use the `metalsSetup` command in sbt.
+
+The quickest way to get started with Metals is to use the `metalsSetup` command
+in sbt.
 
 ```
 sbt
 > metalsSetup
 ```
 
-The command will create the necessary metadata in the `.metals` directory
-(which you should not checkout into version control) and setup the `semanticdb-scalac` compiler
-plugin for the current sbt session.
+The command will create the necessary metadata in the `.metals` directory (which
+you should not checkout into version control) and setup the `semanticdb-scalac`
+compiler plugin for the current sbt session.
 
-You should not checkout the `.metals` directory into version control. We recommend to add it to your
-project's `.gitignore` or/and to your global `.gitignore`:
+You should not checkout the `.metals` directory into version control. We
+recommend to add it to your project's `.gitignore` or/and to your global
+`.gitignore`:
 
 ```
 echo ".metals/" >> .gitignore
 ```
 
-Note that in sbt 0.13 you will need to invoke `metalsSetup` (or `semanticdbEnable`) whenever you close and
-re-open sbt. For a more persistent setup, keep reading. In sbt 1 you don't need to do it because Metals will
-automatically invoke `semanticdbEnable` every time it connects to the sbt server.
+Note that in sbt 0.13 you will need to invoke `metalsSetup` (or
+`semanticdbEnable`) whenever you close and re-open sbt. For a more persistent
+setup, keep reading. In sbt 1 you don't need to do it because Metals will
+automatically invoke `semanticdbEnable` every time it connects to the sbt
+server.
 
 ### Persisting the semanticdb-scalac compiler plugin
-Some features like definition/references/hover rely on artifacts produced by a compiler plugin
-called `semanticdb-scalac`.
 
-`metalsSetup` enables the plugin on the current session (by invoking `semanticdbEnable`), but you
-can choose to enable it permanently on your project by adding these two settings in your sbt build
-definition:
+Some features like definition/references/hover rely on artifacts produced by a
+compiler plugin called `semanticdb-scalac`.
+
+`metalsSetup` enables the plugin on the current session (by invoking
+`semanticdbEnable`), but you can choose to enable it permanently on your project
+by adding these two settings in your sbt build definition:
 
 ```scala
 addCompilerPlugin(MetalsPlugin.semanticdbScalac)
@@ -81,6 +90,7 @@ scalacOptions += "-Yrangepos"
 ```
 
 ### Start editing
+
 Open your project in VSCode (`code .` from your terminal) and open a Scala file;
 the server will now start.
 
