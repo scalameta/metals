@@ -16,7 +16,6 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
 import scala.meta.internal.mtags.Enrichments._
-import scala.meta.internal.inputs._
 
 /**
  * Utility to generate method symbol  disambiguators according to SemanticDB spec.
