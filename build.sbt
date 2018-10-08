@@ -74,7 +74,7 @@ lazy val V = new {
 skip.in(publish) := true
 
 lazy val mtags = project
- .settings(
+  .settings(
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "org.scalameta" %% "scalameta" % V.scalameta

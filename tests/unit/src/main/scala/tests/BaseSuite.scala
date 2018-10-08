@@ -18,8 +18,8 @@ import utest.ufansi.Color
 
 /**
  * Test suite that replace utest DSL with FunSuite-style syntax from ScalaTest.
-  *
-  * Exposes
+ *
+ * Exposes
  *
  */
 class BaseSuite extends TestSuite {

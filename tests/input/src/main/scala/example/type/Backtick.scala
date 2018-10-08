@@ -1,5 +1,3 @@
 package example.`type`
 
-class Backtick {
-
-}
+class Backtick {}

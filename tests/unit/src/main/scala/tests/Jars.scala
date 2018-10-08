@@ -82,7 +82,7 @@ object Jars {
           throw new IllegalArgumentException(e.describe)
         }
       case Right(jar) if jar.getName.endsWith(".jar") =>
-       AbsolutePath(jar) :: Nil
+        AbsolutePath(jar) :: Nil
       case _ => Nil
     }
     term.stop()
