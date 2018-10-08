@@ -152,6 +152,21 @@ lazy val unit = project
   .dependsOn(metals)
   .enablePlugins(BuildInfoPlugin)
 
+lazy val bench = project
+  .in(file("metals-bench"))
+  .settings(
+    fork.in(run) := true,
+    skip.in(publish) := true,
+    moduleName := "metals-bench",
+    libraryDependencies ++= List(
+      // for measuring memory usage
+      "org.spire-math" %% "clouseau" % "0.2.2",
+      "org.openjdk.jol" % "jol-core" % "0.9"
+    ),
+  )
+  .dependsOn(unit)
+  .enablePlugins(JmhPlugin)
+
 lazy val docs = project
   .in(file("metals-docs"))
   .settings(
