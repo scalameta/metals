@@ -1,0 +1,6 @@
+package example
+
+class AnonymousClasses {
+
+
+}
