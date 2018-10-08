@@ -36,15 +36,15 @@ object Enrichments {
     }
     def isToplevel: Boolean = {
       !symbol.isPackage &&
-        symbol.owner.isPackage
+      symbol.owner.isPackage
     }
   }
   implicit class XtensionRange(val range: s.Range) {
     def encloses(other: s.Range): Boolean = {
       range.startLine <= other.startLine &&
-        range.endLine >= other.startLine &&
-        range.startCharacter <= other.startCharacter &&
-        range.endCharacter > other.startCharacter // end character is non-inclusive
+      range.endLine >= other.startLine &&
+      range.startCharacter <= other.startCharacter &&
+      range.endCharacter > other.startCharacter // end character is non-inclusive
     }
   }
   implicit class XtensionPathMetals(file: Path) {
@@ -101,11 +101,11 @@ object Enrichments {
 
     /** Returns a range position for this input */
     def toPosition(
-                    startLine: Int,
-                    startColumn: Int,
-                    endLine: Int,
-                    endColumn: Int
-                  ): Position.Range =
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int
+    ): Position.Range =
       Position.Range(
         input,
         toOffset(startLine, startColumn),

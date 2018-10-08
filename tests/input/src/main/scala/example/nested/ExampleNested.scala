@@ -1,5 +1,3 @@
 package example.nested
 
-class ExampleNested {
-
-}
+class ExampleNested {}

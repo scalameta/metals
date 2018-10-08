@@ -7,8 +7,6 @@ import scala.meta.io.Classpath
 
 object Libraries {
 
-
-
   lazy val suite: List[Library] = {
     val buf = List.newBuilder[Library]
     buf += Library.jdk
@@ -74,8 +72,6 @@ object Library {
       jdkSources = Paths.get(javaHome).getParent.resolve("src.zip")
       if Files.isRegularFile(jdkSources)
     } yield AbsolutePath(jdkSources)
-
-
 
   lazy val jdk: Library = {
     val bootClasspath = Classpath(

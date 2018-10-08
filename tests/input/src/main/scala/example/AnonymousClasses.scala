@@ -1,6 +1,3 @@
 package example
 
-class AnonymousClasses {
-
-
-}
+class AnonymousClasses {}

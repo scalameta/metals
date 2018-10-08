@@ -1,9 +1,5 @@
 package example
 
-abstract class Companion() extends Object() {
+abstract class Companion() extends Object() {}
 
-}
-
-object Companion {
-
-}
+object Companion {}

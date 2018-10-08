@@ -1,6 +1,3 @@
 package example
 
-class AnonymousClasses/*example.AnonymousClasses#*/ {
-
-
-}
+class AnonymousClasses/*example.AnonymousClasses#*/ {}

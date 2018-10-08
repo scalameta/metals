@@ -1,6 +1,5 @@
 package scala.meta.internal.mtags
 
-
 import java.nio.charset.Charset
 import java.nio.file.Files
 import scala.meta.AbsolutePath
@@ -20,11 +19,11 @@ object Semanticdbs {
     finally in.close()
   }
   def loadTextDocument(
-                        scalaPath: AbsolutePath,
-                        scalaRelativePath: RelativePath,
-                        semanticdbPath: AbsolutePath,
-                        charset: Charset
-                      ): TextDocumentLookup = {
+      scalaPath: AbsolutePath,
+      scalaRelativePath: RelativePath,
+      semanticdbPath: AbsolutePath,
+      charset: Charset
+  ): TextDocumentLookup = {
     val reluri = scalaRelativePath.toURI(false).toString
     val sdocs = loadTextDocuments(semanticdbPath)
     sdocs.documents.find(_.uri == reluri) match {
