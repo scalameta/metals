@@ -1,9 +1,12 @@
+import java.io.File
 inThisBuild(
   List(
     version ~= { dynVer =>
       if (sys.env.contains("CI")) dynVer
       else "SNAPSHOT" // only for local publishng
     },
+    scalaVersion := V.scala212,
+    crossScalaVersions := List(V.scala212),
     scalacOptions ++= List(
       "-Yrangepos",
       "-deprecation",
@@ -11,12 +14,11 @@ inThisBuild(
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused-import"
     ),
+    addCompilerPlugin(MetalsPlugin.semanticdbScalac),
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
     ),
-    testFrameworks := List(new TestFramework("utest.runner.Framework")),
-    libraryDependencies += "com.lihaoyi" %% "utest" % "0.6.0" % Test,
     homepage := Some(url("https://github.com/scalameta/metals")),
     developers := List(
       Developer(
@@ -50,69 +52,42 @@ inThisBuild(
         url("http://delmore.io")
       )
     ),
+    testFrameworks := List(),
     resolvers += Resolver.sonatypeRepo("releases"),
     // faster publishLocal:
     publishArtifact in packageDoc := sys.env.contains("CI"),
-    publishArtifact in packageSrc := sys.env.contains("CI"),
-    addCompilerPlugin(
-      "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
-    )
+    publishArtifact in packageSrc := sys.env.contains("CI")
   )
 )
+
+commands += Command.command("save-expect") { s =>
+  "unit/test:runMain tests.SaveExpect" ::
+    s
+}
 
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala212 = MetalsPlugin.scala212
   val scalameta = MetalsPlugin.semanticdbVersion
-  val scalafix = "0.5.7"
-  val circe = "0.9.0"
-  val enumeratum = "1.5.12"
 }
 
-lazy val legacyScala212 = List(
-  addCompilerPlugin(MetalsPlugin.semanticdbScalac),
-  scalaVersion := V.scala212,
-  crossScalaVersions := List(V.scala212),
-)
-
-skip in publish := true
-legacyScala212
+skip.in(publish) := true
 
 lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    legacyScala212,
-    fork in Test := true, // required for jni interrop with leveldb.
     buildInfoKeys := Seq[BuildInfoKey](
-      "testWorkspaceBaseDirectory" ->
-        baseDirectory.in(testWorkspace).value,
       version,
     ),
     buildInfoPackage := "scala.meta.metals.internal",
     libraryDependencies ++= List(
+      "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "com.lihaoyi" %% "pprint" % "0.5.3", // for pretty formatting of log values
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0", // for sbt server
-      "ch.epfl.scala" % "scalafix-reflect" % V.scalafix cross CrossVersion.full,
-      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
-      "com.thoughtworks.qdox" % "qdox" % "2.0-M7", // for java mtags
-      "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
-      "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
-      "io.github.soc" % "directories" % "5", // for cache location
-      "me.xdrop" % "fuzzywuzzy" % "1.1.9", // for workspace/symbol
-      "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8", // for caching classpath index
-      "org.scalameta" %% "lsp4s" % "0.2.1",
-      "org.scalameta" %% "semanticdb-scalac" % V.scalameta cross CrossVersion.full,
-      "io.circe" %% "circe-core" % V.circe,
-      "io.circe" %% "circe-generic" % V.circe,
-      "io.circe" %% "circe-generic-extras" % V.circe,
-      "io.circe" %% "circe-parser" % V.circe,
-      "com.beachape" %% "enumeratum" % V.enumeratum,
-      "com.beachape" %% "enumeratum-circe" % "1.5.15",
-      "org.scalameta" %% "testkit" % V.scalameta % Test,
+      "org.scalameta" %% "scalameta" % V.scalameta,
+      "org.scalameta" %% "symtab" % V.scalameta,
+      "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full,
+      "org.scalameta" %% "lsp4s" % "0.2.1"
     )
-  )
-  .dependsOn(
-    testWorkspace % "test->test"
   )
 
 lazy val `sbt-metals` = project
@@ -136,53 +111,56 @@ lazy val `sbt-metals` = project
   )
   .enablePlugins(ScriptedPlugin)
 
-lazy val integration = project
-  .in(file("tests/integration"))
+lazy val input = project
+  .in(file("tests/input"))
   .settings(
-    legacyScala212,
-    skip in publish := true
+    skip.in(publish) := true,
+    libraryDependencies ++= List(
+      // these projects have macro annotations
+      "org.scalameta" %% "scalameta" % V.scalameta,
+      "io.circe" %% "circe-derivation-annotations" % "0.9.0-M5"
+    ),
+    addCompilerPlugin(
+      "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
+    )
   )
-  .dependsOn(metals % "compile->compile;test->test")
 
-lazy val testWorkspace = project
-  .in(file("test-workspace"))
+lazy val unit = project
+  .in(file("tests/unit"))
   .settings(
-    legacyScala212,
-    skip in publish := true,
-    scalacOptions += {
-      // Need to fix source root so it matches the workspace folder.
-      s"-P:semanticdb:sourceroot:${baseDirectory.value}"
-    },
-    scalacOptions += "-Ywarn-unused-import",
-    scalacOptions -= "-Xlint"
+    skip.in(publish) := true,
+    testFrameworks := List(new TestFramework("utest.runner.Framework")),
+    libraryDependencies ++= List(
+      "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
+      "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
+      "org.scalameta" % "metac" % V.scalameta cross CrossVersion.full,
+      "org.scalameta" %% "testkit" % V.scalameta,
+      "com.lihaoyi" %% "utest" % "0.6.0",
+    ),
+    buildInfoPackage := "tests",
+    resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),
+    compile.in(Compile) :=
+      compile.in(Compile).dependsOn(compile.in(input, Test)).value,
+    buildInfoKeys := Seq[BuildInfoKey](
+      "testResourceDirectory" -> resourceDirectory.in(Test).value
+    )
   )
+  .dependsOn(metals)
+  .enablePlugins(BuildInfoPlugin)
 
 lazy val docs = project
   .in(file("metals-docs"))
   .settings(
-    skip in publish := true, // disabled until Scalameta v4 upgrade
+    skip.in(publish) := true,
     moduleName := "metals-docs",
-    sources.in(Compile) += {
-      sourceDirectory.in(metals, Compile).value /
-        "scala/scala/meta/metals/Configuration.scala"
-    },
-    scalaVersion := "2.12.7",
-    crossScalaVersions := List("2.12.6"),
     mainClass.in(Compile) := Some("docs.Docs"),
-    SettingKey[Boolean]("metalsEnabled") := false,
     libraryDependencies ++= List(
-      "com.geirsson" % "mdoc" % "0.5.0" cross CrossVersion.full,
-      // Dependencies below can be removed after the upgrade to Scalameta v4.0
-      "io.circe" %% "circe-core" % V.circe,
-      "io.circe" %% "circe-generic" % V.circe,
-      "io.circe" %% "circe-generic-extras" % V.circe,
-      "io.circe" %% "circe-parser" % V.circe,
-      "com.beachape" %% "enumeratum" % V.enumeratum,
-      "com.beachape" %% "enumeratum-circe" % "1.5.15"
+      "com.geirsson" % "mdoc" % "0.5.1" cross CrossVersion.full
     ),
     buildInfoKeys := Seq[BuildInfoKey](
       version,
     ),
     buildInfoPackage := "docs"
   )
+  .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin, BuildInfoPlugin)
