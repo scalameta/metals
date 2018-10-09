@@ -1,10 +1,10 @@
 package example
 
-object ImplicitClasses/*ImplicitClasses.semanticdb*/ {
-  implicit class Xtension/*ImplicitClasses.semanticdb*/(number/*ImplicitClasses.semanticdb*/: Int/*Int.scala*/) {
-    def increment/*ImplicitClasses.semanticdb*/: Int/*Int.scala*/ = number/*ImplicitClasses.semanticdb*/ +/*Int.scala*/ 1
+object ImplicitClasses/*ImplicitClasses.scala*/ {
+  implicit class Xtension/*ImplicitClasses.scala*/(number/*ImplicitClasses.scala*/: Int/*Int.scala*/) {
+    def increment/*ImplicitClasses.scala*/: Int/*Int.scala*/ = number/*ImplicitClasses.scala*/ +/*Int.scala*/ 1
   }
-  implicit class XtensionAnyVal/*ImplicitClasses.semanticdb*/(private val number/*ImplicitClasses.semanticdb*/: Int/*Int.scala*/) extends AnyVal/*AnyVal.scala*/ {
-    def double/*ImplicitClasses.semanticdb*/: Int/*Int.scala*/ = number/*ImplicitClasses.semanticdb*/ */*Int.scala*/ 2
+  implicit class XtensionAnyVal/*ImplicitClasses.scala*/(private val number/*ImplicitClasses.scala*/: Int/*Int.scala*/) extends AnyVal/*AnyVal.scala*/ {
+    def double/*ImplicitClasses.scala*/: Int/*Int.scala*/ = number/*ImplicitClasses.scala*/ */*Int.scala*/ 2
   }
 }

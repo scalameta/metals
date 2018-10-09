@@ -1,3 +1,3 @@
 package example
 
-class AnonymousClasses/*AnonymousClasses.semanticdb*/ {}
+class AnonymousClasses/*AnonymousClasses.scala*/ {}

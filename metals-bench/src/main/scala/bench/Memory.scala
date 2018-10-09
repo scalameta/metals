@@ -2,7 +2,7 @@ package bench
 
 import clouseau.Units
 import org.openjdk.jol.info.GraphLayout
-import scala.meta.internal.mtags.InMemorySymbolIndex
+import scala.meta.internal.mtags.OnDemandSymbolIndex
 
 object Memory {
   def printFootprint(iterable: sourcecode.Text[Object]): Unit = {
@@ -13,7 +13,7 @@ object Memory {
     val count: Long = iterable.value match {
       case it: Iterable[_] =>
         it.size
-      case index: InMemorySymbolIndex =>
+      case index: OnDemandSymbolIndex =>
         // 100k loc
         index.mtags.totalLinesOfCode / 100000
       case _ =>

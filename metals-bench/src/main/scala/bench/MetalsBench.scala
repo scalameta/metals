@@ -12,7 +12,7 @@ import scala.meta.metals.MetalsLogger
 import tests.InputProperties
 import tests.Libraries
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.InMemorySymbolIndex
+import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath
 import tests.Library
 
@@ -85,7 +85,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def indexSources(): Unit = {
-    val index = InMemorySymbolIndex()
+    val index = OnDemandSymbolIndex()
     fullClasspath.entries.foreach(entry => index.addSourceJar(entry))
   }
 

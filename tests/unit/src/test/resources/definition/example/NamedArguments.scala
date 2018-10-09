@@ -1,22 +1,22 @@
 package example
 
-case class User/*NamedArguments.semanticdb*/(
-    name/*NamedArguments.semanticdb*/: String/*Predef.scala*/ = {
+case class User/*NamedArguments.scala*/(
+    name/*NamedArguments.scala*/: String/*Predef.scala*/ = {
       // assert default values have occurrences
       Map/*Predef.scala*/.toString/*Object.java*/
     }
 )
-object NamedArguments/*NamedArguments.semanticdb*/ {
-  val susan/*NamedArguments.semanticdb*/ = "Susan"
-  val user1/*NamedArguments.semanticdb*/ =
-    User/*NamedArguments.semanticdb*/
-      .apply/*NamedArguments.semanticdb*/(
-        name/*NamedArguments.semanticdb*/ = "John"
+object NamedArguments/*NamedArguments.scala*/ {
+  val susan/*NamedArguments.scala*/ = "Susan"
+  val user1/*NamedArguments.scala*/ =
+    User/*NamedArguments.scala*/
+      .apply/*NamedArguments.scala*/(
+        name/*NamedArguments.scala*/ = "John"
       )
-  val user2/*NamedArguments.semanticdb*/: User/*NamedArguments.semanticdb*/ =
-    User/*NamedArguments.semanticdb*/(
+  val user2/*NamedArguments.scala*/: User/*NamedArguments.scala*/ =
+    User/*NamedArguments.scala*/(
       // FIXME: https://github.com/scalameta/scalameta/issues/1787
-      name/*<no symbol>*/ = susan/*NamedArguments.semanticdb*/
+      name/*<no symbol>*/ = susan/*NamedArguments.scala*/
     ).copy/*NamedArguments.scala*/(
       name/*NamedArguments.scala*/ = susan/*NamedArguments.scala*/
     )

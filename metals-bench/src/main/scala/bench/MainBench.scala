@@ -2,7 +2,7 @@ package bench
 
 import java.util.concurrent.TimeUnit
 import scala.meta.metals.MetalsLogger
-import scala.meta.internal.mtags.InMemorySymbolIndex
+import scala.meta.internal.mtags.OnDemandSymbolIndex
 import tests.Libraries
 
 object MainBench {
@@ -10,7 +10,7 @@ object MainBench {
     MetalsLogger.updateFormat()
     val classpath = Libraries.suite.map(_.sources()).reduce(_ ++ _)
     val start = System.nanoTime()
-    val index = InMemorySymbolIndex()
+    val index = OnDemandSymbolIndex()
     classpath.entries.foreach(entry => index.addSourceJar(entry))
     val end = System.nanoTime()
     scribe.info(s"elapsed: ${TimeUnit.NANOSECONDS.toMillis(end - start)}ms")

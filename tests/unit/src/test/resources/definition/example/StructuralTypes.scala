@@ -1,19 +1,19 @@
 package example
 
-object StructuralTypes/*StructuralTypes.semanticdb*/ {
-  type User/*StructuralTypes.semanticdb*/ = {
+object StructuralTypes/*StructuralTypes.scala*/ {
+  type User/*StructuralTypes.scala*/ = {
     def name/*StructuralTypes.semanticdb*/: String/*Predef.scala*/
     def age/*StructuralTypes.semanticdb*/: Int/*Int.scala*/
   }
 
-  val user/*StructuralTypes.semanticdb*/ = null.asInstanceOf[User/*StructuralTypes.semanticdb*/]
-  user/*StructuralTypes.semanticdb*/.name/*<no symbol>*/
-  user/*StructuralTypes.semanticdb*/.age/*<no symbol>*/
+  val user/*StructuralTypes.scala*/ = null.asInstanceOf[User/*StructuralTypes.scala*/]
+  user/*StructuralTypes.scala*/.name/*<no symbol>*/
+  user/*StructuralTypes.scala*/.age/*<no symbol>*/
 
-  val V/*StructuralTypes.semanticdb*/: Object/*Object.java*/ {
+  val V/*StructuralTypes.scala*/: Object/*Object.java*/ {
     def scalameta/*StructuralTypes.semanticdb*/: String/*Predef.scala*/
   } = new {
     def scalameta/*StructuralTypes.semanticdb*/ = "4.0"
   }
-  V/*StructuralTypes.semanticdb*/.scalameta/*<no symbol>*/
+  V/*StructuralTypes.scala*/.scalameta/*<no symbol>*/
 }
