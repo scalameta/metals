@@ -12,6 +12,7 @@ example/JavaClass.java -> example/JavaClass#
 example/JavaEnum.java -> example/JavaEnum#
 example/JavaInterface.java -> example/JavaInterface#
 example/JavaOverloading.java -> example/JavaOverloading#
+example/JavaThenScala.scala -> example/JavaThenScala#
 example/Locals.scala -> example/Locals#
 example/MacroAnnotation.scala -> example/MacroAnnotation#
 example/MacroAnnotation.scala -> example/MacroAnnotations.
