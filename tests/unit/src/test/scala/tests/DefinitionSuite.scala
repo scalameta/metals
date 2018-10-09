@@ -2,7 +2,6 @@ package tests
 
 import scala.meta._
 import scala.meta.internal.inputs._
-import scala.meta.internal.io.FileIO
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.mtags.Semanticdbs
@@ -27,7 +26,7 @@ object DefinitionSuite extends DirectoryExpectSuite("definition") {
     val index = OnDemandSymbolIndex()
     // Step 1. Index project sources
     input.allFiles.foreach { source =>
-      index.addSourceFile(source.file)
+      index.addSourceFile(source.file, Some(source.sourceDirectory))
     }
     // Step 2. Index dependency sources
     index.addSourceJar(Library.jdkSources.get)

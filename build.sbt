@@ -56,7 +56,7 @@ inThisBuild(
     resolvers += Resolver.sonatypeRepo("releases"),
     // faster publishLocal:
     publishArtifact in packageDoc := sys.env.contains("CI"),
-    publishArtifact in packageSrc := sys.env.contains("CI"),
+    publishArtifact in packageSrc := sys.env.contains("CI")
   )
 )
 
