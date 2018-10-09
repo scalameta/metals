@@ -26,7 +26,7 @@ object DefinitionSuite extends DirectoryExpectSuite("definition") {
   override def testCases(): List[ExpectTestCase] = {
     val index = OnDemandSymbolIndex()
     // Step 1. Index project sources
-    input.scalaFiles.foreach { source =>
+    input.allFiles.foreach { source =>
       index.addSourceFile(source.file)
     }
     // Step 2. Index dependency sources
