@@ -1,7 +1,7 @@
 package example
 
-class Scalalib/*Scalalib.semanticdb*/ {
-  val lst/*Scalalib.semanticdb*/ = List/*List.scala*/[
+class Scalalib/*Scalalib.scala*/ {
+  val lst/*Scalalib.scala*/ = List/*List.scala*/[
     (
         Nothing,
         Null,
@@ -16,10 +16,10 @@ class Scalalib/*Scalalib.semanticdb*/ {
         Char/*Char.scala*/
     )
   ]()
-  lst/*Scalalib.semanticdb*/.isInstanceOf[Any]
-  lst/*Scalalib.semanticdb*/.asInstanceOf[Any]
-  println/*Predef.scala*/(lst/*Scalalib.semanticdb*/.##/*Object.java*/)
-  lst/*Scalalib.semanticdb*/ ne/*Object.java*/ lst/*Scalalib.semanticdb*/
-  lst/*Scalalib.semanticdb*/ eq/*Object.java*/ lst/*Scalalib.semanticdb*/
-  lst/*Scalalib.semanticdb*/ ==/*Object.java*/ lst/*Scalalib.semanticdb*/
+  lst/*Scalalib.scala*/.isInstanceOf[Any]
+  lst/*Scalalib.scala*/.asInstanceOf[Any]
+  println/*Predef.scala*/(lst/*Scalalib.scala*/.##/*Object.java*/)
+  lst/*Scalalib.scala*/ ne/*Object.java*/ lst/*Scalalib.scala*/
+  lst/*Scalalib.scala*/ eq/*Object.java*/ lst/*Scalalib.scala*/
+  lst/*Scalalib.scala*/ ==/*Object.java*/ lst/*Scalalib.scala*/
 }

@@ -1,8 +1,8 @@
 package example
 
-class PatternMatching/*PatternMatching.semanticdb*/ {
-  val some/*PatternMatching.semanticdb*/ = Some/*Option.scala*/(1)
-  some/*PatternMatching.semanticdb*/ match {
+class PatternMatching/*PatternMatching.scala*/ {
+  val some/*PatternMatching.scala*/ = Some/*Option.scala*/(1)
+  some/*PatternMatching.scala*/ match {
     case Some/*Option.scala*/(number/*PatternMatching.semanticdb*/) =>
       number/*PatternMatching.semanticdb*/
   }

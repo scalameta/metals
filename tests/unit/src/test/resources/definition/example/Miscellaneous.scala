@@ -1,8 +1,8 @@
 package example
 
-class Miscellaneous/*Miscellaneous.semanticdb*/ {
+class Miscellaneous/*Miscellaneous.scala*/ {
   // backtick identifier
-  val `a b`/*Miscellaneous.semanticdb*/ = 42
+  val `a b`/*Miscellaneous.scala*/ = 42
 
   // infix + inferred apply/implicits/tparams
   (List/*List.scala*/(1)

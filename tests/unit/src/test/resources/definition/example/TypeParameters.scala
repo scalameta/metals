@@ -1,8 +1,8 @@
 package example
 
-class TypeParameters/*TypeParameters.semanticdb*/[A/*TypeParameters.semanticdb*/] {
-  def method/*TypeParameters.semanticdb*/[B/*TypeParameters.semanticdb*/] = 42
-  trait TraitParameter/*TypeParameters.semanticdb*/[C/*TypeParameters.semanticdb*/]
-  type AbstractTypeAlias/*TypeParameters.semanticdb*/[D/*TypeParameters.semanticdb*/]
-  type TypeAlias/*TypeParameters.semanticdb*/[E/*TypeParameters.semanticdb*/] = List/*package.scala*/[E/*TypeParameters.semanticdb*/]
+class TypeParameters/*TypeParameters.scala*/[A/*TypeParameters.scala*/] {
+  def method/*TypeParameters.scala*/[B/*TypeParameters.scala*/] = 42
+  trait TraitParameter/*TypeParameters.scala*/[C/*TypeParameters.scala*/]
+  type AbstractTypeAlias/*TypeParameters.scala*/[D/*TypeParameters.scala*/]
+  type TypeAlias/*TypeParameters.scala*/[E/*TypeParameters.scala*/] = List/*package.scala*/[E/*TypeParameters.scala*/]
 }

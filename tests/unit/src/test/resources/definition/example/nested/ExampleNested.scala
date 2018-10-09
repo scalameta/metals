@@ -1,3 +1,3 @@
 package example.nested
 
-class ExampleNested/*ExampleNested.semanticdb*/ {}
+class ExampleNested/*ExampleNested.scala*/ {}

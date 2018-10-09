@@ -1,5 +1,5 @@
 package example
 
-abstract class Companion/*Companion.semanticdb*/() extends Object/*Object.java*/() {}
+abstract class Companion/*Companion.scala*/() extends Object/*Object.java*/() {}
 
-object Companion/*Companion.semanticdb*/ {}
+object Companion/*Companion.scala*/ {}

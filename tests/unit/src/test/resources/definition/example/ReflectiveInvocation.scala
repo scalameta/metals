@@ -1,6 +1,6 @@
 package example
 
-class ReflectiveInvocation/*ReflectiveInvocation.semanticdb*/ {
+class ReflectiveInvocation/*ReflectiveInvocation.scala*/ {
   new Serializable/*Serializable.scala*/ {
     def message/*ReflectiveInvocation.semanticdb*/ = "message"
     // reflective invocation

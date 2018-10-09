@@ -6,7 +6,8 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.mtags.InMemorySymbolIndex
+import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.Enrichments._
 
 /**
  * Assert that every identifier has a definition and every non-identifier has no definition.
@@ -23,22 +24,12 @@ import scala.meta.internal.mtags.InMemorySymbolIndex
  */
 object DefinitionSuite extends DirectoryExpectSuite("definition") {
   override def testCases(): List[ExpectTestCase] = {
-    val index = InMemorySymbolIndex()
+    val index = OnDemandSymbolIndex()
     // Step 1. Index project sources
     input.scalaFiles.foreach { source =>
       index.addSourceFile(source.file)
     }
-    // Step 2. Index project semanticdb
-    input.classpath.entries.foreach { entry =>
-      if (entry.isDirectory) {
-        val root =
-          entry.resolve("META-INF").resolve("semanticdb")
-        FileIO.listAllFilesRecursively(root).foreach { semanticdb =>
-          index.addSemanticdb(semanticdb)
-        }
-      }
-    }
-    // Step 3. Index dependency sources
+    // Step 2. Index dependency sources
     index.addSourceJar(Library.jdkSources.get)
     input.dependencySources.entries.foreach { jar =>
       index.addSourceJar(jar)
@@ -68,7 +59,15 @@ object DefinitionSuite extends DirectoryExpectSuite("definition") {
                   occ.range.get
               }
             }
-            val obtained = index.symbol(semanticdbPath, token.pos.toRange)
+            def symbol(path: AbsolutePath, range: s.Range): Option[String] = {
+              for {
+                document <- Semanticdbs.loadTextDocuments(path).documents
+                occ <- document.occurrences.find(
+                  _.range.exists(_.encloses(range))
+                )
+              } yield occ.symbol
+            }.headOption
+            val obtained = symbol(semanticdbPath, token.pos.toRange)
             def filename(path: AbsolutePath): String = {
               val name = path.toNIO.getFileName.toString
               if (name.endsWith(".semanticdb")) name.replace(".scala", "")

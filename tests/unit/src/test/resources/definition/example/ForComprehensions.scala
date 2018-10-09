@@ -1,6 +1,6 @@
 package example
 
-class ForComprehensions/*ForComprehensions.semanticdb*/ {
+class ForComprehensions/*ForComprehensions.scala*/ {
   for {
     a/*ForComprehensions.semanticdb*/ <- List/*List.scala*/(1)
     b/*ForComprehensions.semanticdb*/ <- List/*List.scala*/(a/*ForComprehensions.semanticdb*/)

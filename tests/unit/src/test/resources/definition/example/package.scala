@@ -1,5 +1,5 @@
-package object example/*package.semanticdb*/ {
+package object example/*package.scala*/ {
 
-  class PackageObjectClass/*package.semanticdb*/
+  class PackageObjectClass/*package.scala*/
 
 }
