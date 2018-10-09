@@ -49,24 +49,30 @@ final case class OnDemandSymbolIndex(
     sourceJars.addEntry(jar)
     FileIO.withJarFileSystem(jar, create = false) { root =>
       FileIO.listAllFilesRecursively(root).foreach { source =>
-        addSourceFile(source)
+        if (source.toLanguage.isScala) {
+          addSourceFile(source, None)
+        }
       }
     }
   }
 
   // Enters nontrivial toplevel symbols for Scala source files.
   // All other symbols can be inferred on the fly.
-  override def addSourceFile(source: AbsolutePath): Unit = {
-    if (source.toLanguage.isScala) {
-      indexedSources += 1
-      val path = source.toString()
-      val text = FileIO.slurp(source, StandardCharsets.UTF_8)
-      val input = Input.VirtualFile(path, text)
-      val sourceToplevels = mtags.toplevels(input)
-      sourceToplevels.foreach { toplevel =>
-        if (!isTrivialToplevelSymbol(path, toplevel)) {
-          toplevels(toplevel) = source
-        }
+  override def addSourceFile(
+      source: AbsolutePath,
+      sourceDirectory: Option[AbsolutePath]
+  ): Unit = {
+    indexedSources += 1
+    val path = sourceDirectory match {
+      case Some(directory) => source.toRelative(directory).toString()
+      case _ => source.toString()
+    }
+    val text = FileIO.slurp(source, StandardCharsets.UTF_8)
+    val input = Input.VirtualFile(path, text)
+    val sourceToplevels = mtags.toplevels(input)
+    sourceToplevels.foreach { toplevel =>
+      if (!isTrivialToplevelSymbol(path, toplevel)) {
+        toplevels(toplevel) = source
       }
     }
   }

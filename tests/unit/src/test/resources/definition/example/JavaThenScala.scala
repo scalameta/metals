@@ -1,5 +1,5 @@
 package example
 
 class JavaThenScala/*JavaThenScala.scala*/ {
-  new JavaClass/*<no file>*/(42)
+  new JavaClass/*JavaClass.java*/(42)
 }

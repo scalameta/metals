@@ -24,8 +24,8 @@ case class InputProperties(
     } yield {
       InputFile(
         file = file,
-        semanticdbRelativePath = file.toRelative(sourceroot),
-        sourceDirectoryRelativePath = file.toRelative(directory)
+        directory,
+        semanticdbRelativePath = file.toRelative(sourceroot)
       )
     }
   }
