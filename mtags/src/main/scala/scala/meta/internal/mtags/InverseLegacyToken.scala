@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import scala.meta.internal.tokenizers.LegacyToken._
 
+/** Utility to print helpful messages for parse errors. */
 object InverseLegacyToken {
   val category: Map[Int, String] = Map[Int, String](
     EMPTY -> "EMPTY",

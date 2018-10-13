@@ -7,7 +7,9 @@ import scala.meta.io.RelativePath
 /**
  * Utility to load relative paths from a classpath.
  *
- * Provides similar functionality as URLClassLoader but does no caching.
+ * Provides similar functionality as URLClassLoader but uses idiomatic
+ * Scala data structures like `AbsolutePath` and `Option[T]` instead of
+ * `java.net.URL` and nulls.
  */
 final class ClasspathLoader(classpath: Classpath) {
   private val loader = new OpenClassLoader

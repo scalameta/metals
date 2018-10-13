@@ -14,7 +14,8 @@ trait GlobalSymbolIndex {
    *
    * Returns the path of the file that defines the symbol but does not include
    * the exact position of the definition. Computing the range position of the
-   * definition is left for the client and can be done using the mtags module.
+   * definition is not handled by this method, it is left for the user and can
+   * be done using the mtags module.
    *
    * @param symbol a global SemanticDB symbol. For comprehensive documentation
    *               of how a symbol is formatted consule the specification:
@@ -42,6 +43,9 @@ trait GlobalSymbolIndex {
    *                        Can be None if file is inside a zip file
    *                        assuming the file path is already relativized
    *                        by that point.
+   * @throws Exception in case of problems processing the source file
+   *                   such as tokenization failure due to an unclosed
+   *                   literal.
    */
   def addSourceFile(
       file: AbsolutePath,
@@ -72,6 +76,9 @@ trait GlobalSymbolIndex {
    * }}}
    *
    * @param jar the path to a single jar or zip file.
+   * @throws Exception in case of problems processing the source file
+   *                   such as tokenization failure due to an unclosed
+   *                   literal.
    */
   def addSourceJar(jar: AbsolutePath): Unit
 

@@ -7,7 +7,7 @@ class ForComprehensions/*ForComprehensions.scala*/ {
     if (
       a/*ForComprehensions.semanticdb*/,
       b/*ForComprehensions.semanticdb*/
-    ) ==/*Object.java*/ (1, 2)
+    ) ==/*Object.java fallback to java.lang.Object#*/ (1, 2)
     (
       c/*ForComprehensions.semanticdb*/,
       d/*ForComprehensions.semanticdb*/
@@ -17,14 +17,14 @@ class ForComprehensions/*ForComprehensions.scala*/ {
       b/*no local definition*/,
       c/*no local definition*/,
       d/*no local definition*/
-    ) ==/*Object.java*/ (1, 2, 3, 4)
+    ) ==/*Object.java fallback to java.lang.Object#*/ (1, 2, 3, 4)
     e/*ForComprehensions.semanticdb*/ = (
       a/*ForComprehensions.semanticdb*/,
       b/*no local definition*/,
       c/*no local definition*/,
       d/*no local definition*/
     )
-    if e/*no local definition*/ ==/*Object.java*/ (1, 2, 3, 4)
+    if e/*no local definition*/ ==/*Object.java fallback to java.lang.Object#*/ (1, 2, 3, 4)
     f/*ForComprehensions.semanticdb*/ <- List/*List.scala*/(e/*no local definition*/)
   } yield {
     (

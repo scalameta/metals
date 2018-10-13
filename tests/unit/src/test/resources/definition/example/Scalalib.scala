@@ -18,8 +18,8 @@ class Scalalib/*Scalalib.scala*/ {
   ]()
   lst/*Scalalib.scala*/.isInstanceOf[Any]
   lst/*Scalalib.scala*/.asInstanceOf[Any]
-  println/*Predef.scala*/(lst/*Scalalib.scala*/.##/*Object.java*/)
-  lst/*Scalalib.scala*/ ne/*Object.java*/ lst/*Scalalib.scala*/
-  lst/*Scalalib.scala*/ eq/*Object.java*/ lst/*Scalalib.scala*/
-  lst/*Scalalib.scala*/ ==/*Object.java*/ lst/*Scalalib.scala*/
+  println/*Predef.scala*/(lst/*Scalalib.scala*/.##/*Object.java fallback to java.lang.Object#*/)
+  lst/*Scalalib.scala*/ ne/*Object.java fallback to java.lang.Object#*/ lst/*Scalalib.scala*/
+  lst/*Scalalib.scala*/ eq/*Object.java fallback to java.lang.Object#*/ lst/*Scalalib.scala*/
+  lst/*Scalalib.scala*/ ==/*Object.java fallback to java.lang.Object#*/ lst/*Scalalib.scala*/
 }

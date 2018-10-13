@@ -11,8 +11,8 @@ and provide feedback. We do not provide support for day-to-day usage of Metals.
 
 ## Requirements
 
-- Scala 2.12.7, down to the exact PATCH version. Note that Scala versions 2.11.x
-  and 2.12.6 are not supported.
+- Scala @SCALA_VERSION@, down to the exact PATCH version. Note that Scala
+  versions 2.11.x and 2.12.6 are not supported.
 - Java 8. Note that Java 9 or higher has not been tested.
 - macOS or Linux. Note that there have been reported issues on Windows.
 

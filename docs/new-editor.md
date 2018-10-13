@@ -6,13 +6,13 @@ title: Integrating a new editor
 Before writing a new editor client, first check if someone else has managed to
 integrate metals with your favorite text editor.
 
-* [Visual Studio Code](https://github.com/scalameta/metals/blob/master/vscode-extension/src/extension.ts),
+- [Visual Studio Code](https://github.com/scalameta/metals/blob/master/vscode-extension/src/extension.ts),
   maintained in this repo
-* [Atom](https://github.com/laughedelic/atom-ide-scala), maintained by
+- [Atom](https://github.com/laughedelic/atom-ide-scala), maintained by
   [@laughedelic](https://github.com/laughedelic)
-* [Emacs](https://github.com/rossabaker/lsp-scala), maintained by
+- [Emacs](https://github.com/rossabaker/lsp-scala), maintained by
   [@rossabaker](https://github.com/rossabaker)
-* Others, see [#217](https://github.com/scalameta/metals/issues/217). Please
+- Others, see [#217](https://github.com/scalameta/metals/issues/217). Please
   open an issue or ask on [gitter](https://gitter.im/scalameta/metals) if you
   want to create a new editor client.
 
@@ -40,12 +40,12 @@ The following script will launch the latest published version of the server:
 coursier launch -r bintray:scalameta/maven org.scalameta:metals_2.12:@VERSION@ -M scala.meta.metals.Main
 ```
 
-Our CI publishes a new version of the server at every merge on master; there are currently no stable
-or officially supported releases of Metals.
+Our CI publishes a new version of the server at every merge on master; there are
+currently no stable or officially supported releases of Metals.
 
-You can use a local version of metals by publishing it locally with `sbt publishLocal`, and changing
-the artifact version to `SNAPSHOT`. The following script will launch the locally published version
-of the server:
+You can use a local version of metals by publishing it locally with
+`sbt publishLocal`, and changing the artifact version to `SNAPSHOT`. The
+following script will launch the locally published version of the server:
 
 ```
 coursier launch -r bintray:scalameta/maven org.scalameta:metals_2.12:SNAPSHOT -M scala.meta.metals.Main
@@ -53,7 +53,7 @@ coursier launch -r bintray:scalameta/maven org.scalameta:metals_2.12:SNAPSHOT -M
 
 The following Java options are recommended:
 
-* `-XX:+UseG1GC -XX:+UseStringDeduplication`: to reduce memory consumption from
+- `-XX:+UseG1GC -XX:+UseStringDeduplication`: to reduce memory consumption from
   navigation indexes. May not be necessary in the future.
 
 Refer to the coursier documentation for how to build a fat jar or configure java
@@ -76,17 +76,17 @@ Metals delegates file watching to the editor client by listening for
 client to send notifications for changes to files matching the following
 patterns
 
-* `.metals/buildinfo/**/*.properties`: build metadata to enable goto definition
+- `.metals/buildinfo/**/*.properties`: build metadata to enable goto definition
   for the classpath, completions with the presentation compiler and refactoring
   with Scalafix.
-* `**/*.semanticdb`: artifacts produced by the semanticdb-scalac compiler plugin
+- `**/*.semanticdb`: artifacts produced by the semanticdb-scalac compiler plugin
   during batch compilation in the build. See
   [here](https://github.com/scalameta/scalameta/blob/master/semanticdb/semanticdb3/semanticdb3.md)
   to learn more about SemanticDB. These files are required for goto definition,
   find references, hover and Scalafix to work.
-* `project/target/active.json`: an indicator of the running sbt server.
-  Watching this file allows metals to (re)connect to the sbt server whenever it
-  is (re)started.
+- `project/target/active.json`: an indicator of the running sbt server. Watching
+  this file allows metals to (re)connect to the sbt server whenever it is
+  (re)started.
 
 See the VS Code plugin
 [clientOptions](https://github.com/scalameta/metals/blob/fb166f1d81eb77ebd9c6b3ee95e65fb58a907eec/vscode-extension/src/extension.ts#L44-L54)
@@ -110,21 +110,20 @@ client is expected to send a `workspace/didChangeConfiguration` notification
 containing user configuration right after the `initialized` notification.
 
 A full list of server configuration options can be found in
-[Configuration.scala][]. An
-example of how the configuration options are used from the VS Code plugin can be
-seen in the
+[Configuration.scala][]. An example of how the configuration options are used
+from the VS Code plugin can be seen in the
 [package.json](https://github.com/scalameta/metals/blob/master/vscode-extension/package.json)
 manifest.
 
 Here are the default values for all the options:
 
-```scala mdoc:passthrough
+````scala mdoc:passthrough
 {
   println("```json")
   println(scala.meta.metals.Configuration.defaultAsJson)
   println("```")
 }
-```
+````
 
 Server side configuration options include settings to enable
 experimental/unstable features such as completions with the presentation
@@ -137,7 +136,7 @@ an empty list of completion suggestions.
 
 Clients are also encouraged to implement this setting:
 
-* `serverVersion: String`: while metals is still under active development, it is
+- `serverVersion: String`: while metals is still under active development, it is
   recommended to allow end-users to easily configure the version of the metals
   server.
 
@@ -181,12 +180,19 @@ shortcut (on macOS).
 
 ![](assets/code-actions.gif)
 
-[`textdocument/willsavewaituntil`]: https://microsoft.github.io/language-server-protocol/specification#textDocument_willSaveWaitUntil
-[`textdocument/codeaction`]: https://microsoft.github.io/language-server-protocol/specification#textDocument_codeAction
-[`workspace/executecommand`]: https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand
-[workspacecommand.scala]: https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/metals/WorkspaceCommand.scala
-[configuration.scala]: https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/metals/Configuration.scala
-[package.json]: https://github.com/scalameta/metals/blob/master/vscode-extension/package.json
-[`workspace/didchangewatchedfiles`]: https://microsoft.github.io/language-server-protocol/specification#workspace_didChangeWatchedFiles
+[`textdocument/willsavewaituntil`]:
+  https://microsoft.github.io/language-server-protocol/specification#textDocument_willSaveWaitUntil
+[`textdocument/codeaction`]:
+  https://microsoft.github.io/language-server-protocol/specification#textDocument_codeAction
+[`workspace/executecommand`]:
+  https://microsoft.github.io/language-server-protocol/specification#workspace_executeCommand
+[workspacecommand.scala]:
+  https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/metals/WorkspaceCommand.scala
+[configuration.scala]:
+  https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/metals/Configuration.scala
+[package.json]:
+  https://github.com/scalameta/metals/blob/master/vscode-extension/package.json
+[`workspace/didchangewatchedfiles`]:
+  https://microsoft.github.io/language-server-protocol/specification#workspace_didChangeWatchedFiles
 [#216]: https://github.com/scalameta/metals/issues/216
 [#255]: https://github.com/scalameta/metals/issues/255

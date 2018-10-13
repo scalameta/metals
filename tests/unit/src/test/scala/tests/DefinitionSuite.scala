@@ -86,7 +86,16 @@ object DefinitionSuite extends DirectoryExpectSuite("definition") {
                     } else {
                       val definition = index.definition(symbol) match {
                         case Some(defn) =>
-                          filename(defn.path)
+                          val fallback =
+                            if (defn.querySymbol == defn.definitionSymbol) ""
+                            else if (defn.querySymbol.stripSuffix(".") ==
+                                defn.definitionSymbol.stripSuffix("#")) {
+                              // Ignore fallback from companion object to class.
+                              ""
+                            } else {
+                              s" fallback to ${defn.definitionSymbol}"
+                            }
+                          filename(defn.path) + fallback
                         case None =>
                           if (shouldHaveDefinition(symbol)) {
                             if (!hasKnownIssues(file)) {

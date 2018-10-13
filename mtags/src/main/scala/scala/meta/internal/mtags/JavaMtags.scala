@@ -9,7 +9,6 @@ import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
 import java.io.StringReader
 import java.util.Comparator
-import scala.collection.mutable
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.semanticdb.Language
@@ -17,27 +16,7 @@ import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
 import scala.meta.internal.mtags.Enrichments._
 
-/**
- * Utility to generate method symbol  disambiguators according to SemanticDB spec.
- *
- * See https://scalameta.org/docs/semanticdb/specification.html#scala-symbol
- */
-final class OverloadDisambiguator(
-    names: mutable.Map[String, Int] = mutable.Map.empty
-) {
-  def disambiguator(name: String): String = {
-    val n = names.getOrElseUpdate(name, 0)
-    names(name) = n + 1
-    if (n == 0) "()"
-    else s"(+$n)"
-  }
-}
-
 object JavaMtags {
-  private implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
-    def lineNumber: Int = m.getLineNumber - 1
-  }
-
   def index(input: Input.VirtualFile): MtagsIndexer = {
     val builder = new JavaProjectBuilder()
     new MtagsIndexer { self =>
@@ -55,14 +34,9 @@ object JavaMtags {
           }
           source.getClasses.forEach(visitClass)
         } catch {
-          case _: ParseException =>
-          case _: NullPointerException => ()
-          // Hitting on this fellow here indexing the JDK
-          // Error indexing file:///Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/src.zip/java/time/temporal/IsoFields.java
-          // java.lang.NullPointerException: null
-          // at com.thoughtworks.qdox.builder.impl.ModelBuilder.createTypeVariable(ModelBuilder.java:503)
-          // at com.thoughtworks.qdox.builder.impl.ModelBuilder.endMethod(ModelBuilder.java:470)
-          // TODO(olafur) report bug to qdox.
+          case _: ParseException | _: NullPointerException =>
+          // Parse errors are ignored because the Java source files we process
+          // are not written by the user so there is nothing they can do about it.
         }
       }
 
@@ -152,7 +126,6 @@ object JavaMtags {
           val line = m match {
             case c: JavaMethod => c.lineNumber
             case c: JavaField => c.lineNumber
-            // TODO(olafur) handle constructos
             case _ => 0
           }
           val pos = toRangePosition(line, name)
@@ -167,6 +140,10 @@ object JavaMtags {
           term(name, pos, kind, 0)
         }
     }
+  }
+
+  private implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
+    def lineNumber: Int = m.getLineNumber - 1
   }
 
 }
