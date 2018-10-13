@@ -6,25 +6,12 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.semanticdb.Language
-import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 
 object Enrichments {
-  implicit class XtensionDescriptorMetals(desc: Descriptor) {
-    def isCaseClassSynthetic: Boolean = {
-      desc.isMethod && {
-        desc.name.value match {
-          case "apply" | "copy" => true
-          case _ => false
-        }
-      }
-    }
-  }
-
   implicit class XtensionSymbolMetals(symbol: String) {
-
     def toplevel: String = {
       if (symbol.isNone) symbol
       else if (symbol.isPackage) symbol
@@ -39,7 +26,7 @@ object Enrichments {
       symbol.owner.isPackage
     }
   }
-  implicit class XtensionRange(val range: s.Range) {
+  implicit class XtensionRange(range: s.Range) {
     def encloses(other: s.Range): Boolean = {
       range.startLine <= other.startLine &&
       range.endLine >= other.startLine &&
@@ -47,12 +34,14 @@ object Enrichments {
       range.endCharacter > other.startCharacter // end character is non-inclusive
     }
   }
+  private def filenameToLanguage(filename: String): Language = {
+    if (filename.endsWith(".java")) Language.JAVA
+    else if (filename.endsWith(".scala")) Language.SCALA
+    else Language.UNKNOWN_LANGUAGE
+  }
   implicit class XtensionPathMetals(file: Path) {
     def toLanguage: Language = {
-      val filename = file.getFileName.toString
-      if (filename.endsWith(".java")) Language.JAVA
-      else if (filename.endsWith(".scala")) Language.SCALA
-      else Language.UNKNOWN_LANGUAGE
+      filenameToLanguage(file.getFileName.toString)
     }
   }
   implicit class XtensionAbsolutePathMetals(file: AbsolutePath) {
@@ -70,9 +59,7 @@ object Enrichments {
   implicit class XtensionInputOffset(input: Input) {
     def toLanguage: Language = input match {
       case Input.VirtualFile(path, _) =>
-        if (path.endsWith(".java")) Language.JAVA
-        else if (path.endsWith(".scala")) Language.SCALA
-        else Language.UNKNOWN_LANGUAGE
+        filenameToLanguage(path)
       case _ =>
         Language.UNKNOWN_LANGUAGE
     }

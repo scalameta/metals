@@ -91,7 +91,6 @@ lazy val metals = project
       "com.lihaoyi" %% "pprint" % "0.5.3", // for pretty formatting of log values
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" %% "symtab" % V.scalameta,
-      "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "lsp4s" % "0.2.1"
     )
   )

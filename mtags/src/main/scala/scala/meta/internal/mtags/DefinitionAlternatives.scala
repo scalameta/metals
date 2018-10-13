@@ -10,7 +10,6 @@ object DefinitionAlternatives {
       caseClassCompanionToType(symbol),
       caseClassApplyOrCopy(symbol),
       caseClassApplyOrCopyParams(symbol),
-      methodToVal(symbol),
       methodOwner(symbol),
     ).flatten
   }
@@ -65,14 +64,19 @@ object DefinitionAlternatives {
         GlobalSymbol(owner, Descriptor.Type(signature.name.value))
     }
 
-  /** Fallback to the val term for a def with multiple params */
-  private def methodToVal(symbol: String): Option[String] =
-    Option(symbol).collect {
-      case GlobalSymbol(owner, Descriptor.Method(name, _)) =>
-        GlobalSymbol(owner, Descriptor.Term(name))
-    }
-
-  /** For methods and vals, fall back to the enclosing class */
+  /**
+   * For methods and vals, fall back to the enclosing class
+   *
+   * This fallback is desirable for cases like
+   * - macro annotation generated members
+   * - `java/lang/Object#==` and friends
+   *
+   * The general idea is that we want goto definition to jump somewhere close to
+   * the definition if we can't jump to the exact symbol. The risk of false
+   * positives is low because if we jump with this fallback method we jump at least
+   * to the source file where that symbol is defined. We can't jump to a totally
+   * unrelated source file.
+   */
   private def methodOwner(symbol: String): Option[String] =
     Option(symbol).flatMap {
       case GlobalSymbol(owner, _: Descriptor.Method | _: Descriptor.Term) =>

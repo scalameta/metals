@@ -10,6 +10,6 @@ class Definitions/*Definitions.scala*/ {
   ](
     xs/*<no symbol>*/ = null
   )
-  MacroAnnotation/*MacroAnnotation.scala*/.decodeMacroAnnotation/*MacroAnnotation.scala*/
-  MacroAnnotation/*MacroAnnotation.scala*/.encodeMacroAnnotation/*MacroAnnotation.scala*/
+  MacroAnnotation/*MacroAnnotation.scala*/.decodeMacroAnnotation/*MacroAnnotation.scala fallback to example.MacroAnnotation#*/
+  MacroAnnotation/*MacroAnnotation.scala*/.encodeMacroAnnotation/*MacroAnnotation.scala fallback to example.MacroAnnotation#*/
 }
