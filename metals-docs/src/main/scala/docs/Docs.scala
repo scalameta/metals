@@ -8,7 +8,12 @@ object Docs {
     // build arguments for mdoc
     val settings = mdoc
       .MainSettings()
-      .withSiteVariables(Map("VERSION" -> BuildInfo.version))
+      .withSiteVariables(
+        Map(
+          "VERSION" -> BuildInfo.version,
+          "SCALA_VERSION" -> scala.util.Properties.versionNumberString
+        )
+      )
       .withOut(out)
       .withArgs(args.toList)
     // generate out/readme.md from working directory
