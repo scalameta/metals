@@ -31,7 +31,7 @@ final class Identifier(val name: String, val pos: Position) {
  * because toplevel symbol indexing is on a critical path when users import
  * a new project.
  */
-class ScalaToplevelMtags(input: Input.VirtualFile) extends MtagsIndexer {
+class ScalaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   private val scanner = new LegacyScanner(input, dialects.Scala212)
   scanner.reader.nextChar()
   def isDone: Boolean = scanner.curr.token == EOF
@@ -74,7 +74,7 @@ class ScalaToplevelMtags(input: Input.VirtualFile) extends MtagsIndexer {
   }
 
   def emitPackage(): Unit = {
-    require(scanner.curr.token == PACKAGE, failMessage("package"))
+    require(scanner.curr.token == PACKAGE, "package")
     val old = currentOwner
     acceptTrivia()
     scanner.curr.token match {
@@ -86,7 +86,7 @@ class ScalaToplevelMtags(input: Input.VirtualFile) extends MtagsIndexer {
       case OBJECT =>
         emitMember(isPackageObject = true)
       case _ =>
-        sys.error(failMessage("package name or package object"))
+        require(isOk = false, "package name or package object")
     }
     if (scanner.curr.token == LBRACE) {
       // Handle sibling packages in the same file
@@ -166,7 +166,7 @@ class ScalaToplevelMtags(input: Input.VirtualFile) extends MtagsIndexer {
 
   /** Consumes the token stream until the matching closing delimiter */
   def acceptBalancedDelimeters(Open: Int, Close: Int): Unit = {
-    require(scanner.curr.token == Open, failMessage("open delimeter { or ("))
+    require(scanner.curr.token == Open, "open delimeter { or (")
     var count = 1
     while (!isDone && count > 0) {
       scanner.nextToken()
@@ -201,11 +201,17 @@ class ScalaToplevelMtags(input: Input.VirtualFile) extends MtagsIndexer {
   def fail(expected: String): Nothing = {
     throw new ParseException(newPosition, failMessage(expected))
   }
+  def currentToken: String =
+    InverseLegacyToken.category(scanner.curr.token).toLowerCase()
   def failMessage(expected: String): String = {
-    val obtained = InverseLegacyToken.category(scanner.curr.token).toLowerCase()
     newPosition.formatMessage(
       "error",
-      s"expected $expected; obtained $obtained"
+      s"expected $expected; obtained $currentToken"
     )
+  }
+  def require(isOk: Boolean, expected: String): Unit = {
+    if (!isOk) {
+      throw new ParseException(newPosition, failMessage(expected))
+    }
   }
 }

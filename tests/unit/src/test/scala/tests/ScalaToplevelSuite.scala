@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.mtags.Enrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Mtags
 
 /**

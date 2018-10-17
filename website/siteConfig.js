@@ -1,17 +1,18 @@
 // See https://docusaurus.io/docs/site-config.html for all the possible
 // site configuration options.
 
-const repoUrl = "https://github.com/scalameta/metals";
+const repoUrl = "https://github.com/olafurpg/metals";
+const baseUrl = "/metals/";
 
 const siteConfig = {
   title: "Metals",
-  tagline: "Work in Progress Language Server for Scala",
+  tagline: "Work-in-progress language server for Scala",
   url: "http://scalameta.org",
-  baseUrl: "/metals/",
+  baseUrl: baseUrl,
 
   // Used for publishing and more
-  projectName: "Metals",
-  organizationName: "Scalameta",
+  projectName: "metals",
+  organizationName: "scalameta",
 
   algolia: {
     apiKey: "c865f6d974a3072a35d4b53d48ac2307",
@@ -20,7 +21,7 @@ const siteConfig = {
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
-    { doc: "getting-started-contributors", label: "Docs" },
+    { doc: "editors/overview", label: "Docs" },
     { href: repoUrl, label: "GitHub", external: true }
   ],
 
@@ -39,6 +40,8 @@ const siteConfig = {
   },
 
   customDocsPath: "website/target/docs",
+
+  stylesheets: [baseUrl + "css/custom.css"],
 
   // This copyright info is used in /core/Footer.js and blog rss/atom feeds.
   copyright: `Copyright © ${new Date().getFullYear()} Metals`,

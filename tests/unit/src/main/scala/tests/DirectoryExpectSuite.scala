@@ -32,7 +32,7 @@ abstract class DirectoryExpectSuite(directoryName: String)
   }
 
   final def saveExpect(): Unit = {
-    RecursivelyDeleteDirectory.run(expectRoot.toNIO)
+    RecursivelyDelete.apply(expectRoot)
     testCases().foreach { testCase =>
       val obtained = testCase.obtained()
       val file = testCase.input.expectPath(directoryName).toNIO

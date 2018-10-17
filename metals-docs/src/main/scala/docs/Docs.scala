@@ -1,6 +1,7 @@
 package docs
 
 import java.nio.file.Paths
+import scala.meta.internal.metals.{BuildInfo => V}
 
 object Docs {
   def main(args: Array[String]): Unit = {
@@ -10,11 +11,19 @@ object Docs {
       .MainSettings()
       .withSiteVariables(
         Map(
-          "VERSION" -> BuildInfo.version,
-          "SCALA_VERSION" -> scala.util.Properties.versionNumberString
+          "VERSION" -> V.metalsVersion,
+          "BLOOP_VERSION" -> V.bloopVersion,
+          "SCALAMETA_VERSION" -> V.scalametaVersion,
+          "SCALA211_VERSION" -> V.scala211,
+          "SCALA_VERSION" -> V.scala212
         )
       )
       .withOut(out)
+      .withStringModifiers(
+        List(
+          new RequirementsModifier
+        )
+      )
       .withArgs(args.toList)
     // generate out/readme.md from working directory
     val exitCode = mdoc.Main.process(settings)

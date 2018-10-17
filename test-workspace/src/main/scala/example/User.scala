@@ -1,12 +1,10 @@
-package a
+package example
+
+import java.nio.file.Paths
 
 case class User(name: String, age: Int)
 
-object a {
-  val x = "ba"
-  val y = List(1, x).length
-  def z = {
-    val localSymbol = "222" // can be renamed
-    localSymbol.length
-  }
+object User {
+  val sum: Int = 432
+  val path = Paths.get("build.sbt")
 }

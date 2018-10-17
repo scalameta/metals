@@ -2,11 +2,12 @@ package tests
 
 import scala.meta._
 import scala.meta.internal.inputs._
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.mtags.Enrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Symbol
 
 /**
@@ -30,7 +31,7 @@ object DefinitionSuite extends DirectoryExpectSuite("definition") {
       index.addSourceFile(source.file, Some(source.sourceDirectory))
     }
     // Step 2. Index dependency sources
-    index.addSourceJar(Library.jdkSources.get)
+    index.addSourceJar(JdkSources().get)
     input.dependencySources.entries.foreach { jar =>
       index.addSourceJar(jar)
     }

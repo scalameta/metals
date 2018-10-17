@@ -1,0 +1,7 @@
+-Xss4m
+-Xms1G
+-Xmx8G
+-XX:ReservedCodeCacheSize=1024m
+-XX:+TieredCompilation
+-XX:+CMSClassUnloadingEnabled
+

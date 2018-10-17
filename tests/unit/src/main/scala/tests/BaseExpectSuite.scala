@@ -25,7 +25,7 @@ abstract class BaseExpectSuite(val suiteName: String) extends BaseSuite {
     )
   }
   final lazy val sourceroot: AbsolutePath =
-    PathIO.workingDirectory
+    AbsolutePath(BuildInfo.sourceroot)
   final lazy val classpath =
     new SemanticdbClasspath(sourceroot, input.classpath)
   def saveExpect(): Unit

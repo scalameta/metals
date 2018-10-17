@@ -5,12 +5,11 @@ import java.nio.charset.StandardCharsets
 import scala.collection.mutable
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.io._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.meta.io.Classpath
-import scala.meta.internal.mtags.Enrichments._
-import scala.meta.internal.io._
-import scala.meta.internal.semanticdb.Scala._
 
 /**
  * An implementation of GlobalSymbolIndex with fast indexing and low memory usage.
@@ -34,24 +33,29 @@ import scala.meta.internal.semanticdb.Scala._
  */
 final case class OnDemandSymbolIndex(
     toplevels: mutable.Map[String, AbsolutePath] = mutable.Map.empty,
-    definitions: mutable.Map[String, AbsolutePath] = mutable.Map.empty
+    definitions: mutable.Map[String, AbsolutePath] = mutable.Map.empty,
+    onError: PartialFunction[Throwable, Unit] = PartialFunction.empty
 ) extends GlobalSymbolIndex {
   val mtags = new Mtags
-  private val sourceJars = new ClasspathLoader(Classpath(Nil))
+  private val sourceJars = new ClasspathLoader()
   var indexedSources = 0L
+  def close(): Unit = sourceJars.close()
+  private val onErrorOption = onError.andThen(_ => None)
 
   override def definition(symbol: Symbol): Option[SymbolDefinition] = {
-    findSymbolDefinition(symbol, symbol)
+    try findSymbolDefinition(symbol, symbol)
+    catch onErrorOption
   }
 
   // Traverses all source files in the given jar file and records
   // all non-trivial toplevel Scala symbols.
-  override def addSourceJar(jar: AbsolutePath): Unit = {
-    sourceJars.addEntry(jar)
-    FileIO.withJarFileSystem(jar, create = false) { root =>
-      FileIO.listAllFilesRecursively(root).foreach { source =>
-        if (source.toLanguage.isScala) {
-          addSourceFile(source, None)
+  override def addSourceJar(jar: AbsolutePath): Unit = tryRun {
+    if (sourceJars.addEntry(jar)) {
+      FileIO.withJarFileSystem(jar, create = false) { root =>
+        ListFiles.foreach(root) { source =>
+          if (source.toLanguage.isScala) {
+            addSourceFile(source, None)
+          }
         }
       }
     }
@@ -62,7 +66,7 @@ final case class OnDemandSymbolIndex(
   override def addSourceFile(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath]
-  ): Unit = {
+  ): Unit = tryRun {
     indexedSources += 1
     val path = sourceDirectory match {
       case Some(directory) => source.toRelative(directory).toString()
@@ -77,6 +81,10 @@ final case class OnDemandSymbolIndex(
       }
     }
   }
+
+  private def tryRun(thunk: => Unit): Unit =
+    try thunk
+    catch onError
 
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala
   // Such symbols are "trivial" because their definition location can be computed
