@@ -7,6 +7,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Enrichments._
+import scala.meta.internal.mtags.Symbol
 
 /**
  * Assert that every identifier has a definition and every non-identifier has no definition.
@@ -52,19 +53,20 @@ object DefinitionSuite extends DirectoryExpectSuite("definition") {
             sb.append(token.syntax)
             val semanticdbPath = classpath.getSemanticdbPath(file.file)
             val textDocument = classpath.textDocument(file.file).get
-            def localDefinition(symbol: String): Option[s.Range] = {
+            def localDefinition(symbol: Symbol): Option[s.Range] = {
               textDocument.occurrences.collectFirst {
-                case occ if occ.symbol == symbol && occ.role.isDefinition =>
+                case occ
+                    if occ.symbol == symbol.value && occ.role.isDefinition =>
                   occ.range.get
               }
             }
-            def symbol(path: AbsolutePath, range: s.Range): Option[String] = {
+            def symbol(path: AbsolutePath, range: s.Range): Option[Symbol] = {
               for {
                 document <- Semanticdbs.loadTextDocuments(path).documents
                 occ <- document.occurrences.find(
                   _.range.exists(_.encloses(range))
                 )
-              } yield occ.symbol
+              } yield Symbol(occ.symbol)
             }.headOption
             val obtained = symbol(semanticdbPath, token.pos.toRange)
             def filename(path: AbsolutePath): String = {
@@ -88,8 +90,8 @@ object DefinitionSuite extends DirectoryExpectSuite("definition") {
                         case Some(defn) =>
                           val fallback =
                             if (defn.querySymbol == defn.definitionSymbol) ""
-                            else if (defn.querySymbol.stripSuffix(".") ==
-                                defn.definitionSymbol.stripSuffix("#")) {
+                            else if (defn.querySymbol.value.stripSuffix(".") ==
+                                defn.definitionSymbol.value.stripSuffix("#")) {
                               // Ignore fallback from companion object to class.
                               ""
                             } else {
@@ -97,7 +99,7 @@ object DefinitionSuite extends DirectoryExpectSuite("definition") {
                             }
                           filename(defn.path) + fallback
                         case None =>
-                          if (shouldHaveDefinition(symbol)) {
+                          if (shouldHaveDefinition(symbol.value)) {
                             if (!hasKnownIssues(file)) {
                               scribe.error(
                                 token.pos.formatMessage(

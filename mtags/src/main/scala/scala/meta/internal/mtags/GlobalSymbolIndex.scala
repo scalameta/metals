@@ -31,7 +31,7 @@ trait GlobalSymbolIndex {
    *  }}}
    * @return the definition of the symbol, if any.
    */
-  def definition(symbol: String): Option[SymbolDefinition]
+  def definition(symbol: Symbol): Option[SymbolDefinition]
 
   /**
    * Add an individual Java or Scala source file to the index.
@@ -85,7 +85,7 @@ trait GlobalSymbolIndex {
 }
 
 case class SymbolDefinition(
-    querySymbol: String,
-    definitionSymbol: String,
+    querySymbol: Symbol,
+    definitionSymbol: Symbol,
     path: AbsolutePath
 )
