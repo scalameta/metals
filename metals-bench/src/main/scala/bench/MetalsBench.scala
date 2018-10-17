@@ -8,7 +8,7 @@ import org.openjdk.jmh.annotations.State
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import scala.meta.metals.MetalsLogger
+import scala.meta.internal.metals.MetalsLogger
 import tests.InputProperties
 import tests.Libraries
 import scala.meta.internal.mtags.Mtags
@@ -19,7 +19,7 @@ import tests.Library
 @State(Scope.Benchmark)
 class MetalsBench {
 
-  MetalsLogger.updateFormat()
+  MetalsLogger.updateDefaultFormat()
   val inputs = InputProperties.default()
   val classpath = new SemanticdbClasspath(inputs.sourceroot, inputs.classpath)
   val documents: List[(AbsolutePath, TextDocument)] =

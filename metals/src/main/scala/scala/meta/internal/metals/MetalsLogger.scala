@@ -2,44 +2,75 @@ package scala.meta.internal.metals
 
 import java.io.PrintStream
 import java.nio.file.Files
-import java.nio.file.Path
+import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
 import scribe._
 import scribe.format._
 import scribe.writer.FileWriter
 
 object MetalsLogger {
-  def updateFormat(): Unit = {
+
+  val workspaceLogPath = RelativePath(".metals").resolve("metals.log")
+
+  def updateDefaultFormat(): Unit = {
     Logger.root
       .clearHandlers()
       .withHandler(formatter = defaultFormat)
       .replace()
   }
-  def redirectSystemOut(logfile: Path): Unit = {
-    Files.createDirectories(logfile.getParent)
-    val logStream = Files.newOutputStream(logfile)
+
+  def redirectSystemOut(logfile: AbsolutePath): Unit = {
+    Files.createDirectories(logfile.toNIO.getParent)
+    val logStream = Files.newOutputStream(logfile.toNIO)
     val out = new PrintStream(logStream)
     System.setOut(out)
     System.setErr(out)
-    setup(logfile)
+    configureRootLogger(logfile)
   }
-  def setup(logfile: Path): Unit = {
-    val filewriter = FileWriter().path(_ => logfile).autoFlush
-    // Example format: "MyProgram.scala:14 trace foo"
+
+  def configureRootLogger(logfile: AbsolutePath): Unit = {
     Logger.root
       .clearModifiers()
       .clearHandlers()
       .withHandler(
-        writer = filewriter,
+        writer = newFileWriter(logfile),
         formatter = defaultFormat,
         minimumLevel = Some(Level.Info)
       )
-      .withHandler(writer = LanguageClientLogger, minimumLevel = Some(Level.Info))
+      .withHandler(
+        writer = LanguageClientLogger,
+        minimumLevel = Some(Level.Info)
+      )
       .replace()
   }
 
+  def setupLspLogger(workspace: AbsolutePath): Unit = {
+    val newLogFile = workspace.resolve(workspaceLogPath)
+    scribe.info(s"logging to file $newLogFile")
+    redirectSystemOut(newLogFile)
+  }
+
+  def newBspLogger(workspace: AbsolutePath): Logger = {
+    val logfile = workspace.resolve(workspaceLogPath)
+    Logger.root
+      .orphan()
+      .clearModifiers()
+      .clearHandlers()
+      .withHandler(
+        writer = newFileWriter(logfile),
+        formatter = bspFormat,
+        minimumLevel = Some(Level.Info)
+      )
+  }
+
+  def newFileWriter(logfile: AbsolutePath): FileWriter =
+    FileWriter().path(_ => logfile.toNIO).autoFlush
+
+  // Example format: "MyProgram.scala:14 trace foo"
   def defaultFormat = formatter"$prettyLevel $message$newLine"
   def debugFormat =
     formatter"$fileName:$line$newLine $prettyLevel$newLine  $message$newLine"
+  def bspFormat = formatter"$prettyLevel [bsp] $message$newLine"
   implicit def AnyLoggable[T]: Loggable[T] = _AnyLoggable
   private val _AnyLoggable = new Loggable[Any] {
     override def apply(value: Any): String =

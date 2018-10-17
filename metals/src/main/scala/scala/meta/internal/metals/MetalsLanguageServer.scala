@@ -11,14 +11,25 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services._
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
+import scala.util.control.NonFatal
 
 class MetalsLanguageServer {
-  private var cwd = PathIO.workingDirectory
+  private var workspace = PathIO.workingDirectory
+  private var bsp = Option.empty[BuildServerConnection]
+  private def connectToBuildServer(): Unit = {
+    try {
+      val connection = BuildServerConnection.connect(workspace)
+      cancelables.addAll(connection.cancelables)
+      bsp = Some(connection)
+    } catch {
+      case NonFatal(e) =>
+        scribe.error("Unable to connect to build server", e)
+    }
+  }
+  private val cancelables = new OpenCancelable
   private def updateWorkingDirectory(params: InitializeParams): Unit = {
-    cwd = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
-    val newLogFile = cwd.resolve(".metals").resolve("metals.log")
-    scribe.info(s"logging to file $newLogFile")
-    MetalsLogger.redirectSystemOut(newLogFile.toNIO)
+    workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
+    MetalsLogger.setupLspLogger(workspace)
   }
   @JsonRequest("initialize")
   def initialize(
@@ -30,13 +41,18 @@ class MetalsLanguageServer {
     CompletableFuture.completedFuture(new InitializeResult(capabilities))
   }
   @JsonNotification("initialized")
-  def initialized(params: InitializedParams): Unit = {}
+  def initialized(params: InitializedParams): Unit = {
+    connectToBuildServer()
+  }
   @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Object] = {
+    cancelables.cancel()
     CompletableFuture.completedFuture(null)
   }
   @JsonNotification("exit")
-  def exit(): Unit = sys.exit(0)
+  def exit(): Unit = {
+    sys.exit(0)
+  }
 
   @JsonNotification("textDocument/didOpen")
   def textDocumentDidOpen(params: DidOpenTextDocumentParams): Unit = ()

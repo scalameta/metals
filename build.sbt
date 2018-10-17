@@ -95,6 +95,7 @@ lazy val metals = project
     },
     libraryDependencies ++= List(
       "io.github.soc" % "directories" % "11",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "com.outr" %% "scribe" % "2.6.0",
       "ch.epfl.scala" % "bsp4j" % "1.0.0+15-f247be2b",
       "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0",

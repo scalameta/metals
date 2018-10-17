@@ -1,13 +1,13 @@
 package bench
 
 import java.util.concurrent.TimeUnit
-import scala.meta.metals.MetalsLogger
+import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import tests.Libraries
 
 object MainBench {
   def main(args: Array[String]): Unit = {
-    MetalsLogger.updateFormat()
+    MetalsLogger.updateDefaultFormat()
     val classpath = Libraries.suite.map(_.sources()).reduce(_ ++ _)
     val start = System.nanoTime()
     val index = OnDemandSymbolIndex()

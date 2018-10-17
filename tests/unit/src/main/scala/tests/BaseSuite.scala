@@ -9,7 +9,7 @@ import utest.framework.Formatter
 import utest.framework.TestCallTree
 import utest.framework.Tree
 import utest.ufansi.Str
-import scala.meta.metals.MetalsLogger
+import scala.meta.internal.metals.MetalsLogger
 import utest.ufansi.Attrs
 
 /**
