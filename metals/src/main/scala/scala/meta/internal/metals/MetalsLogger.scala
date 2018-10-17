@@ -1,5 +1,7 @@
-package scala.meta.metals
+package scala.meta.internal.metals
 
+import java.io.PrintStream
+import java.nio.file.Files
 import java.nio.file.Path
 import scribe._
 import scribe.format._
@@ -12,6 +14,14 @@ object MetalsLogger {
       .withHandler(formatter = defaultFormat)
       .replace()
   }
+  def redirectSystemOut(logfile: Path): Unit = {
+    Files.createDirectories(logfile.getParent)
+    val logStream = Files.newOutputStream(logfile)
+    val out = new PrintStream(logStream)
+    System.setOut(out)
+    System.setErr(out)
+    setup(logfile)
+  }
   def setup(logfile: Path): Unit = {
     val filewriter = FileWriter().path(_ => logfile).autoFlush
     // Example format: "MyProgram.scala:14 trace foo"
@@ -23,7 +33,7 @@ object MetalsLogger {
         formatter = defaultFormat,
         minimumLevel = Some(Level.Info)
       )
-      .withHandler(writer = LSPLogger, minimumLevel = Some(Level.Info))
+      .withHandler(writer = LanguageClientLogger, minimumLevel = Some(Level.Info))
       .replace()
   }
 
