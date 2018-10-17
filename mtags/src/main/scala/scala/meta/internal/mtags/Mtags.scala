@@ -4,9 +4,9 @@ import scala.meta.inputs.Input
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.mtags.Enrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 
-class Mtags {
+final class Mtags {
   def totalLinesOfCode: Long = javaLines + scalaLines
   def totalLinesOfScala: Long = scalaLines
   def totalLinesOfJava: Long = javaLines

@@ -16,7 +16,7 @@ jobs:
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt test"
       script:
-        - sbt startServer metalsSetup test
+        - sbt sbt-metals/publishLocal test
     - env: TEST="sbt-metals"
       script:
         - ./bin/run-scripted.sh

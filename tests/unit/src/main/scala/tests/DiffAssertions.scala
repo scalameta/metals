@@ -13,7 +13,9 @@ object DiffAssertions extends scala.meta.testkit.DiffAssertions {
       assertNoDiff(obtained, expected, hint)
     }
   }
-  def colored[T](thunk: => T): T = {
+  def colored[T](
+      thunk: => T
+  )(implicit filename: sourcecode.File, line: sourcecode.Line): T = {
     try {
       thunk
     } catch {
@@ -25,7 +27,8 @@ object DiffAssertions extends scala.meta.testkit.DiffAssertions {
             else Color.Reset(line)
           }
           .mkString("\n")
-        throw new TestFailedException(message)
+        val location = s"failed assertion at ${filename.value}:${line.value}\n"
+        throw new TestFailedException(location + message)
     }
   }
 }

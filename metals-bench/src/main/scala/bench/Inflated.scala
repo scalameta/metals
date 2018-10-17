@@ -5,7 +5,6 @@ import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import scala.meta.metals.MetalsLogger
 
 case class Inflated(inputs: List[Input.VirtualFile], linesOfCode: Long) {
   def filter(f: Input.VirtualFile => Boolean): Inflated = {
@@ -19,6 +18,7 @@ case class Inflated(inputs: List[Input.VirtualFile], linesOfCode: Long) {
   def +(other: Inflated): Inflated =
     Inflated(other.inputs ++ inputs, other.linesOfCode + linesOfCode)
 }
+
 object Inflated {
 
   def jars(classpath: Classpath): Inflated = {
@@ -33,7 +33,6 @@ object Inflated {
       create = false,
       close = true
     ) { root =>
-      MetalsLogger.updateFormat()
       var lines = 0L
       val buf = List.newBuilder[Input.VirtualFile]
       FileIO.listAllFilesRecursively(root).foreach { file =>

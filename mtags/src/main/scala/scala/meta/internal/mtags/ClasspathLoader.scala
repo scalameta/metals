@@ -11,12 +11,15 @@ import scala.meta.io.RelativePath
  * Scala data structures like `AbsolutePath` and `Option[T]` instead of
  * `java.net.URL` and nulls.
  */
-final class ClasspathLoader(classpath: Classpath) {
-  private val loader = new OpenClassLoader
-  classpath.entries.foreach(loader.addEntry)
+final class ClasspathLoader() {
+  val loader = new OpenClassLoader
+  def close(): Unit = loader.close()
   override def toString: String = loader.getURLs.toList.toString()
 
-  def addEntry(entry: AbsolutePath): Unit = {
+  def addClasspath(classpath: Classpath): Boolean = {
+    classpath.entries.forall(addEntry)
+  }
+  def addEntry(entry: AbsolutePath): Boolean = {
     loader.addEntry(entry)
   }
 

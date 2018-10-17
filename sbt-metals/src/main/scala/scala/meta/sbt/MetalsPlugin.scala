@@ -2,194 +2,73 @@ package scala.meta.sbt {
 
   import sbt._
   import sbt.Keys._
-  import java.io._
 
   object MetalsPlugin extends AutoPlugin {
     override def trigger = allRequirements
     override def requires = sbt.plugins.JvmPlugin
-    object autoImport {
-      def metalsSettings(cs: Configuration*): Seq[Def.Setting[_]] = {
-        val configs = if (cs.nonEmpty) cs else Seq(Compile)
-        configs.flatMap { config =>
-          inConfig(config)(
-            Seq(
-              metalsBuildInfo := metalsBuildInfoTask.value,
-              metalsWriteBuildInfo := metalsWriteBuildInfoTask.value
-            )
-          )
-        } ++ Seq(
-          // without config scope it will aggregate over all project dependencies
-          // and their configurations
-          metalsWriteBuildInfo := Def.taskDyn {
-            IO.delete(buildinfoDir.value / thisProject.value.id)
-            val depsAndConfigs = ScopeFilter(
-              inDependencies(ThisProject),
-              inConfigurations(configs: _*)
-            )
-            metalsWriteBuildInfo.all(depsAndConfigs)
-          }.value
-        )
-      }
-    }
 
-    import autoImport._
-
-    def scala211 = "2.11.12"
-
-    def scala212 = "2.12.7"
-
-    def supportedScalaVersions = List(scala212, scala211)
-
-    def semanticdbVersion = "4.0.0"
-
-    val metalsBuildInfo = taskKey[Map[String, String]](
-      "List of key/value pairs for build information such as classpath/sourceDirectories"
-    )
-
-    val metalsWriteBuildInfo = taskKey[Unit](
-      "Write build information to .metals/buildinfo/"
-    )
-
-    def semanticdbScalac =
+    def semanticdbVersion: String =
+      System.getProperty("scalameta.version", "4.0.0")
+    def semanticdbModule: ModuleID =
       "org.scalameta" % "semanticdb-scalac" % semanticdbVersion cross CrossVersion.full
 
-    def buildinfoDir: Def.Initialize[File] = Def.setting {
-      baseDirectory.in(ThisBuild).value / ".metals" / "buildinfo"
-    }
-
-    override def projectSettings =
-      metalsSettings(Compile, Test)
-
     override def globalSettings = Seq(
-      commands ++= Seq(
-        semanticdbEnable,
-        metalsSetup
-      ),
-      // without project scope it will aggregate over all projects
-      metalsWriteBuildInfo := {
-        Def.task {
-          metalsWriteBuildInfo.all(ScopeFilter(inAnyProject)).value
-          streams.value.log.info("🤘 Metals is ready, time to rock!")
-        } dependsOn Def.task {
-          IO.delete(buildinfoDir.value)
-        }
-      }.value
+      commands ++= Seq(metalsEnable)
     )
 
-    def metalsBuildInfoTask: Def.Initialize[Task[Map[String, String]]] =
-      Def.task {
-        Map(
-          "sources" -> sources.value.distinct.mkString(File.pathSeparator),
-          "unmanagedSourceDirectories" ->
-            unmanagedSourceDirectories.value.distinct
-              .mkString(File.pathSeparator),
-          "managedSourceDirectories" -> managedSourceDirectories.value.distinct
-            .mkString(File.pathSeparator),
-          "scalacOptions" -> scalacOptions.value.mkString(" "),
-          "classDirectory" -> classDirectory.value.getAbsolutePath,
-          "dependencyClasspath" -> dependencyClasspath.value
-            .map(_.data.toString)
-            .mkString(File.pathSeparator),
-          "scalaVersion" -> scalaVersion.value,
-          "sourceJars" -> {
-            val sourceJars = for {
-              configurationReport <- updateClassifiers.value.configurations
-              moduleReport <- configurationReport.modules
-              (artifact, file) <- moduleReport.artifacts
-              if artifact.classifier.exists(_ == "sources")
-            } yield file
-            sourceJars.mkString(File.pathSeparator)
-          }
-        )
-      }
-
-    def metalsWriteBuildInfoTask: Def.Initialize[Task[Unit]] = Def.task {
-      val props = new java.util.Properties()
-      metalsBuildInfoTask.value.foreach {
-        case (k, v) => props.setProperty(k, v)
-      }
-      val out = new ByteArrayOutputStream()
-      props.store(out, null)
-      val outDir = buildinfoDir.value / thisProject.value.id
-      outDir.mkdirs()
-      val outFile = outDir / s"${configuration.value.name}.properties"
-      IO.write(outFile, out.toString())
-      streams.value.log.info(s"Wrote ${outFile}")
-    }
-
-    lazy val metalsSetup = Command.command(
-      "metalsSetup",
-      briefHelp =
-        "Generates .metals/buildinfo/**.properties files containing build metadata " +
-          "such as classpath and source directories.",
-      detail = ""
-    ) { st: State =>
-      "semanticdbEnable" :: "*/metalsWriteBuildInfo" :: st
-    }
-
-    /** sbt 1.0 and 0.13 compatible implementation of partialVersion */
-    private def partialVersion(version: String): Option[(Long, Long)] =
-      CrossVersion.partialVersion(version).map {
-        case (a, b) => (a.toLong, b.toLong)
-      }
-
-    private lazy val partialToFullScalaVersion: Map[(Long, Long), String] =
-      (for {
-        v <- supportedScalaVersions
-        p <- partialVersion(v).toList
-      } yield p -> v).toMap
-
-    private def projectsWithMatchingScalaVersion(
-        state: State
-    ): Seq[(ProjectRef, String)] = {
-      val extracted = Project.extract(state)
-      for {
-        p <- extracted.structure.allProjectRefs
-        version <- scalaVersion.in(p).get(extracted.structure.data).toList
-        partialVersion <- partialVersion(version).toList
-        fullVersion <- partialToFullScalaVersion.get(partialVersion).toList
-      } yield p -> fullVersion
-    }
+    private def isValidScalaBinaryVersion: Set[String] = Set("2.11", "2.12")
 
     /** Command to automatically enable semanticdb-scalac for shell session */
-    lazy val semanticdbEnable = Command.command(
-      "semanticdbEnable",
-      briefHelp =
-        "Configure libraryDependencies, scalaVersion and scalacOptions for scalafix.",
-      detail =
-        """1. enables the semanticdb-scalac compiler plugin
-          |2. sets scalaVersion to latest Scala version supported by scalafix
-          |3. add -Yrangepos to scalacOptions""".stripMargin
+    lazy val metalsEnable = Command.command(
+      "metalsEnable",
+      briefHelp = "Configures the build to be used with Metals.",
+      detail = """1. Enables the semanticdb-scalac compiler plugin
+                 |2. Enables downloading of sources for bloopInstall""".stripMargin
     ) { s =>
       val extracted = Project.extract(s)
       val settings: Seq[Setting[_]] = for {
-        (p, fullVersion) <- projectsWithMatchingScalaVersion(s)
-        isEnabled = libraryDependencies
+        p <- extracted.structure.allProjectRefs
+        projectScalaVersion <- scalaVersion
           .in(p)
           .get(extracted.structure.data)
-          .exists(_.exists(_.name == "semanticdb-scalac"))
-        isDisabled = {
-          val metalsEnabled =
-            SettingKey[Boolean]("metalsEnabled")
-              .in(p)
-              .get(extracted.structure.data)
-          metalsEnabled == Some(false)
-        }
-        if !isEnabled && !isDisabled
+          .toList
+        isSupportedScalaVersion = isValidScalaBinaryVersion.exists(
+          binaryVersion => projectScalaVersion.startsWith(binaryVersion)
+        )
+        if isSupportedScalaVersion
+        isExplicitlyDisabled = Some(true) ==
+          SettingKey[Boolean]("noMetals").in(p).get(extracted.structure.data)
+        if !isExplicitlyDisabled
         setting <- List(
-          scalaVersion.in(p) := fullVersion,
+          scalacOptions.in(p) --= List(
+            // Disable fatal warnings so that SemanticDBs are generated even for unused warnings.
+            // Down the road, metals can even remove unused imports for you if they are reported
+            // as warnings but not if they are errors.
+            "-Xfatal-warning"
+          ),
           scalacOptions.in(p) ++= List(
+            // Don't fail compilation in case of Scalameta crash during SemanticDB generation.
+            s"-P:semanticdb:failures:warning",
+            // The bloop server runs from a different working directory than the scala compiler
+            // from inside an sbt shell session, setting sourceroot ensures paths are
+            // relativized by the base directory of the build regardless.
+            s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
             "-Yrangepos",
             s"-Xplugin-require:semanticdb"
           ),
           libraryDependencies.in(p) += compilerPlugin(
-            "org.scalameta" % "semanticdb-scalac" %
-              semanticdbVersion cross CrossVersion.full
+            "org.scalameta" % s"semanticdb-scalac_$projectScalaVersion" % semanticdbVersion
           )
         )
       } yield setting
-      val semanticdbInstalled = Compat.appendWithSession(extracted, settings, s)
-      s.log.info("👌 semanticdb-scalac is enabled")
+      val sourcesClassifier: Def.Setting[_] =
+        SettingKey[Option[Set[String]]](
+          "bloopExportJarClassifiers"
+        ).in(Global) := Some(Set("sources"))
+      val allSettings = sourcesClassifier +: settings
+      val semanticdbInstalled =
+        Compat.appendWithSession(extracted, allSettings, s)
+      s.log.info("semanticdb-scalac is enabled")
       semanticdbInstalled
     }
   }

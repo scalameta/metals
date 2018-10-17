@@ -1,5 +1,8 @@
 package tests
 
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
 import utest.TestSuite
@@ -9,9 +12,8 @@ import utest.framework.Formatter
 import utest.framework.TestCallTree
 import utest.framework.Tree
 import utest.ufansi.Str
-import io.circe.Json
-import io.circe.Printer
-import scala.meta.metals.MetalsLogger
+import scala.meta.internal.metals.MetalsLogger
+import scala.meta.io.AbsolutePath
 import utest.ufansi.Attrs
 
 /**
@@ -21,18 +23,24 @@ import utest.ufansi.Attrs
  *
  */
 class BaseSuite extends TestSuite {
-  scribe.Logger.root
-    .clearHandlers()
-    .withHandler(
-      formatter = MetalsLogger.defaultFormat,
-      minimumLevel = Some(scribe.Level.Info)
-    )
-    .replace()
-  private val jsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
+  MetalsLogger.updateDefaultFormat()
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
+  def assertContains(string: String, substring: String): Unit = {
+    assert(string.contains(substring))
+  }
+  def assertNotContains(string: String, substring: String): Unit = {
+    assert(!string.contains(substring))
+  }
   def assert(exprs: Boolean*): Unit = macro Asserts.assertProxy
+  def assertNotEquals[T](obtained: T, expected: T, hint: String = ""): Unit = {
+    if (obtained == expected) {
+      val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
+      assertNoDiff(obtained.toString, expected.toString, hint)
+      fail(s"obtained=<$obtained> == expected=<$expected>$hintMsg")
+    }
+  }
   def assertEquals[T](obtained: T, expected: T, hint: String = ""): Unit = {
     if (obtained != expected) {
       val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
@@ -40,20 +48,24 @@ class BaseSuite extends TestSuite {
       fail(s"obtained=<$obtained> != expected=<$expected>$hintMsg")
     }
   }
+  def assertNotFile(path: AbsolutePath): Unit = {
+    if (path.isFile) {
+      fail(s"file exists: $path", stackBump = 1)
+    }
+  }
+  def assertIsFile(path: AbsolutePath): Unit = {
+    if (!path.isFile) {
+      fail(s"no such file: $path", stackBump = 1)
+    }
+  }
   def assertNoDiff(
       obtained: String,
       expected: String,
       title: String = ""
-  ): Unit = {
+  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     DiffAssertions.colored {
       DiffAssertions.assertNoDiffOrPrintExpected(obtained, expected, title)
     }
-  }
-  def assertNoDiff(
-      obtained: Json,
-      expected: String
-  ): Unit = {
-    assertNoDiff(obtained.pretty(jsonPrinter), expected)
   }
   override def utestAfterAll(): Unit = afterAll()
 
@@ -73,31 +85,40 @@ class BaseSuite extends TestSuite {
     override def formatException(x: Throwable, leftIndent: String): Str =
       super.formatException(x, "")
   }
-  private val myTests = IndexedSeq.newBuilder[(String, () => Unit)]
+  case class FlatTest(name: String, thunk: () => Unit)
+  private val myTests = IndexedSeq.newBuilder[FlatTest]
 
   def ignore(name: String)(fun: => Any): Unit = {
-    myTests += (utest.ufansi.Color.LightRed(s"IGNORED - $name").toString() -> (
-        () => ()
-    ))
+    myTests += FlatTest(
+      utest.ufansi.Color.LightRed(s"IGNORED - $name").toString(),
+      () => ()
+    )
   }
   def test(name: String)(fun: => Any): Unit = {
-    myTests += (name -> (() => fun))
+    myTests += FlatTest(name, () => fun)
+  }
+  def testAsync(name: String, maxDuration: Duration = Duration("3min"))(
+      run: => Future[Unit]
+  ): Unit = {
+    test(name) {
+      val fut = run
+      Await.result(fut, maxDuration)
+    }
   }
 
-  def fail(msg: String) = {
+  def fail(msg: String, stackBump: Int = 0): Nothing = {
     val ex = new TestFailedException(msg)
-    ex.setStackTrace(ex.getStackTrace.slice(1, 2))
+    ex.setStackTrace(ex.getStackTrace.slice(1 + stackBump, 2 + stackBump))
     throw ex
   }
 
   override def tests: Tests = {
     val ts = myTests.result()
-    val names = Tree("", ts.map(x => Tree(x._1)): _*)
+    val names = Tree("", ts.map(x => Tree(x.name)): _*)
     val thunks = new TestCallTree({
       this.beforeAll()
-      Right(ts.map(x => new TestCallTree(Left(x._2()))))
+      Right(ts.map(x => new TestCallTree(Left(x.thunk()))))
     })
-    Tests.apply(names, thunks)
+    Tests(names, thunks)
   }
 }
-class TestFailedException(msg: String) extends Exception(msg)
