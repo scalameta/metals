@@ -1,6 +1,6 @@
 ---
 id: overview
-title: Overview
+title: Project Goals
 ---
 
 This document describes the project goals of Metals. This document does not
@@ -25,13 +25,10 @@ before working on other features.
 The first you do with an IDE is boring but critical: import a project. The
 Language Server Protocol does not provide utilities to extract metadata from a
 build tool (source directories, dependencies, compiler flags) so we are still
-exploring what is the best option.
-
-- sbt-metals: plugin that provides a `metalsSetup` task to export sbt build
-  metadata.
-- [BSP][]: LSP-inspired protocol to standardize on communication between a
-  language server and build tool. In theory, should enable automatic importing
-  of projects without custom build plugins or manual installation steps.
+exploring if we can use [BSP][]: LSP-inspired protocol to standardize on
+communication between a language server and build tool. In theory, BSP should
+enable automatic importing of projects without custom build plugins or manual
+installation steps.
 
 ## Robust navigation
 
@@ -41,23 +38,25 @@ about programs in Scala and other languages, to power code navigation. Indexing
 happens with during batch compilation in the build tool, using a similar
 architecture as [Index-While-Building][] in XCode 9.
 
-- Goto definition (`textDocument/definition`). Requires
-  [semanticdb-scalac](#semanticdb-scalac).
+Code navigation is not a single feature, it is a collection of several features
+that help you understand a codebase. Below is a list of features that we label
+under "code navigation"
+
+- Goto definition (`textDocument/definition`).
   - project -> project.
-  - project -> Scala dependency. Requires [`metalsSetup`](#metalssetup).
-  - project -> Java dependency. Requires [`metalsSetup`](#metalssetup).
+  - project -> Scala dependency.
+  - project -> Java dependency.
   - dependency -> dependency.
-- Find references (`textDocument/references`). Works the same as goto
-  definition.
-  - project references
-  - Scala dependency references
-  - Java dependency references
-- Highlight references to symbol at position (`textDocument/documentHighlight`).
-- Disabled by default. Can be enabled with configuration option
-  `highlight.enabled=true`.
+- Find references (`textDocument/references`).
+  - project sources
+  - Scala dependency sources
+  - Java dependency sources
+- Highlight references to a symbol in current buffer
+  (`textDocument/documentHighlight`).
 - Goto symbol in file (`textDocument/documentSymbol`)
 - Goto symbol in workspace (`workspace/symbol`)
-- Symbol outline in the sidebar as you type (`textDocument/documentSymbol`).
+- Symbol outline in the sidebar of current buffer
+  (`textDocument/documentSymbol`).
 - Goto implementation (`textDocument/implementation`)
 - Goto type definition (`textDocument/typeDefinition`)
 - Show type of symbol at position (`textDocument/hover`).
@@ -67,32 +66,8 @@ architecture as [Index-While-Building][] in XCode 9.
 
 Heavy resource usage is one of the most frequent complaints about IDEs. Low CPU
 and memory usage becomes even more important when working in larger codebases.
+Our goal in Metals is to support code navigation with with low CPU and memory
+overhead.
 
-- Persistent symbol index: currently Metals stores the navigation index
-  in-memory, which can consume multiple GB of RAM for large projects.
-- Faster Scala and Java outline indexing. Currently, Metals can index the
-  outlines of Scala sources at ~30-40k loc/s and Java sources at ~450k loc/s.
-  Indexing should be able to process ~500k loc/s.
-- Throttled background indexing. Currently, all available CPUs are utilized for
-  indexing, which makes the computer slow for a period after running
-  `metalsSetup`.
-- Faster "open symbol in workspace" (`workspace/symbol`). Currently, uses a
-  naive linear search algorithm that is slow for large projects.
-
-## Glossary
-
-### metalsSetup
-
-Task in sbt-metals to generate build metadata. Run `metalsSetup` to generate
-metadata for all modules in the build, including main and test sources.
-
-### semanticdb-scalac
-
-Compiler plugin that emits [SemanticDB][] files during batch compilation in the
-build tool. Overhead of the compiler plugin is ~30%, which may improve in the
-future.
-
-[semanticdb]:
-  https://github.com/scalameta/scalameta/blob/master/semanticdb/semanticdb3/semanticdb3.md
-[index-while-building]: https://youtu.be/jGJhnIT-D2M
+[semanticdb]: https://scalameta.org/docs/semanticdb/specification.html
 [bsp]: https://github.com/scalacenter/bsp/blob/master/docs/bsp.md
