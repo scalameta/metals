@@ -95,9 +95,4 @@ future.
 [semanticdb]:
   https://github.com/scalameta/scalameta/blob/master/semanticdb/semanticdb3/semanticdb3.md
 [index-while-building]: https://youtu.be/jGJhnIT-D2M
-[code outline]:
-  https://marketplace.visualstudio.com/items?itemName=patrys.vscode-code-outline
-[atom-ide-ui]: https://atom.io/packages/atom-ide-ui
 [bsp]: https://github.com/scalacenter/bsp/blob/master/docs/bsp.md
-[scalafmt]: http://scalafmt.org/
-[scalafix]: https://scalacenter.github.io/scalafix/
