@@ -5,25 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-const React = require('react');
+const React = require("react");
 
-const CompLibrary = require('../../core/CompLibrary.js');
-const MarkdownBlock = CompLibrary.MarkdownBlock; /* Used to read markdown */
+const CompLibrary = require("../../core/CompLibrary.js");
 const Container = CompLibrary.Container;
 const GridBlock = CompLibrary.GridBlock;
 
-const siteConfig = require(process.cwd() + '/siteConfig.js');
+const siteConfig = require(process.cwd() + "/siteConfig.js");
 
 function imgUrl(img) {
-  return siteConfig.baseUrl + 'img/' + img;
+  return siteConfig.baseUrl + "img/" + img;
 }
 
 function docUrl(doc, language) {
-  return siteConfig.baseUrl + 'docs/' + (language ? language + '/' : '') + doc;
-}
-
-function pageUrl(page, language) {
-  return siteConfig.baseUrl + (language ? language + '/' : '') + page;
+  return siteConfig.baseUrl + "docs/" + (language ? language + "/" : "") + doc;
 }
 
 class Button extends React.Component {
@@ -39,7 +34,7 @@ class Button extends React.Component {
 }
 
 Button.defaultProps = {
-  target: '_self',
+  target: "_self"
 };
 
 const SplashContainer = props => (
@@ -47,12 +42,6 @@ const SplashContainer = props => (
     <div className="homeSplashFade">
       <div className="wrapper homeWrapper">{props.children}</div>
     </div>
-  </div>
-);
-
-const Logo = props => (
-  <div className="projectLogo">
-    <img src={props.img_src} />
   </div>
 );
 
@@ -73,15 +62,15 @@ const PromoSection = props => (
 
 class HomeSplash extends React.Component {
   render() {
-    let language = this.props.language || '';
+    let language = this.props.language || "";
     return (
       <SplashContainer>
-        {/* <Logo img_src={imgUrl('scalameta-logo.png')} /> */}
         <div className="inner">
           <ProjectTitle />
           <PromoSection>
-            <Button href={docUrl('getting-started-contributors.html', language)}>Documentation</Button>
-            <Button href={siteConfig.repoUrl} target="_blank">View on GitHub</Button>
+            <Button href={docUrl("overview.html", language)}>
+              Project Goals
+            </Button>
           </PromoSection>
         </div>
       </SplashContainer>
@@ -91,9 +80,10 @@ class HomeSplash extends React.Component {
 
 const Block = props => (
   <Container
-    padding={['bottom', 'top']}
+    padding={["bottom", "top"]}
     id={props.id}
-    background={props.background}>
+    background={props.background}
+  >
     <GridBlock align="left" contents={props.children} layout={props.layout} />
   </Container>
 );
@@ -101,45 +91,38 @@ const Block = props => (
 const Features = props => {
   const features = [
     {
-      title: 'Jump to definition',
-      content: 'Jump to source files in either your project or your dependencies',
-      image: imgUrl('jump-to-definition.gif'),
-      imageAlign: 'left',
+      title: "Goto definition",
+      content:
+        "Jump to symbol definitions in your project and dependency sources",
+      image: imgUrl("jump-to-definition.gif"),
+      imageAlign: "left"
     },
     {
-      title: 'Information on hover',
-      content: 'Display signature information on hover',
-      image: imgUrl('hover.gif'),
-      imageAlign: 'right'
-    },
-    {
-      title: 'Scalafix diagnostics',
-      content: 'Use Scalafix as a linter and highlight issues with your code',
-      image: imgUrl('scalafix-diagnostics.png'),
-      imageAlign: 'left',
-    },
-  ]
+      title: "Information on hover",
+      content: "Display signature information on hover",
+      image: imgUrl("hover.gif"),
+      imageAlign: "right"
+    }
+  ];
   return (
     <div
       className="productShowcaseSection paddingBottom"
-      style={{textAlign: 'center'}}
+      style={{ textAlign: "center" }}
     >
       <h2>Features</h2>
-      {features.map(feature => <Block key={feature.title}>{[feature]}</Block>)}
+      {features.map(feature => (
+        <Block key={feature.title}>{[feature]}</Block>
+      ))}
     </div>
   );
 };
-
 class Index extends React.Component {
   render() {
-    let language = this.props.language || '';
+    let language = this.props.language || "";
 
     return (
       <div>
         <HomeSplash language={language} />
-        <div className="mainContainer">
-          <Features />
-        </div>
       </div>
     );
   }
