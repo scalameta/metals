@@ -73,7 +73,12 @@ Then open the project
 code .
 ```
 
-and start a debugging session (`Debug > Start debuggin` or `F5`).
+Next, install the Scala syntax package
+[`scala-lang.scala`](https://marketplace.visualstudio.com/items?itemName=scala-lang.scala).
+This plugin is required to start the extension.
+
+Now you can start the plugin debugging mode via `Debug > Start debuggin` or
+pressing `F5`.
 
 > ⚠ It is normal that the plugin fails to start because it tries to start the
 > Metals language server, which does not exist at this moment.
