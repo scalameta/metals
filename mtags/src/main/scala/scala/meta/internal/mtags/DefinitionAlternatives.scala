@@ -5,7 +5,7 @@ import scala.meta.internal.semanticdb.Scala._
 object DefinitionAlternatives {
 
   /** Returns a list of fallback symbols that can act instead of given symbol. */
-  def apply(symbol: String): List[String] = {
+  def apply(symbol: Symbol): List[Symbol] = {
     List(
       caseClassCompanionToType(symbol),
       caseClassApplyOrCopy(symbol),
@@ -15,16 +15,16 @@ object DefinitionAlternatives {
   }
 
   private object GlobalSymbol {
-    def apply(owner: String, desc: Descriptor): String =
-      Symbols.Global(owner, desc)
-    def unapply(sym: String): Option[(String, Descriptor)] =
-      Some(sym.owner -> sym.desc)
+    def apply(owner: Symbol, desc: Descriptor): Symbol =
+      Symbol(Symbols.Global(owner.value, desc))
+    def unapply(sym: Symbol): Option[(Symbol, Descriptor)] =
+      Some(sym.owner -> sym.value.desc)
   }
 
   /** If `case class A(a: Int)` and there is no companion object, resolve
    * `A` in `A(1)` to the class definition.
    */
-  private def caseClassCompanionToType(symbol: String): Option[String] =
+  private def caseClassCompanionToType(symbol: Symbol): Option[Symbol] =
     Option(symbol).collect {
       case GlobalSymbol(owner, Descriptor.Term(name)) =>
         GlobalSymbol(owner, Descriptor.Type(name))
@@ -35,7 +35,7 @@ object DefinitionAlternatives {
    * `a` in `Foo(1).copy(a = 2)`
    * to the `Foo.a` primary constructor definition.
    */
-  private def caseClassApplyOrCopyParams(symbol: String): Option[String] =
+  private def caseClassApplyOrCopyParams(symbol: Symbol): Option[Symbol] =
     Option(symbol).collect {
       case GlobalSymbol(
           GlobalSymbol(
@@ -55,7 +55,7 @@ object DefinitionAlternatives {
    * `copy` in `Foo(1).copy(a = 2)`
    * to the `Foo` class definition.
    */
-  private def caseClassApplyOrCopy(symbol: String): Option[String] =
+  private def caseClassApplyOrCopy(symbol: Symbol): Option[Symbol] =
     Option(symbol).collect {
       case GlobalSymbol(
           GlobalSymbol(owner, signature),
@@ -77,7 +77,7 @@ object DefinitionAlternatives {
    * to the source file where that symbol is defined. We can't jump to a totally
    * unrelated source file.
    */
-  private def methodOwner(symbol: String): Option[String] =
+  private def methodOwner(symbol: Symbol): Option[Symbol] =
     Option(symbol).flatMap {
       case GlobalSymbol(owner, _: Descriptor.Method | _: Descriptor.Term) =>
         Some(owner)

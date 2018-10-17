@@ -66,7 +66,7 @@ object Mtags {
     document.occurrences.iterator
       .filter { occ =>
         occ.role.isDefinition &&
-        occ.symbol.isToplevel
+        Symbol(occ.symbol).isToplevel
       }
       .map(_.symbol)
       .toList

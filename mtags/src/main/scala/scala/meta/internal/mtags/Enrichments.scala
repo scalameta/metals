@@ -7,25 +7,9 @@ import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.semanticdb.Language
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 
 object Enrichments {
-  implicit class XtensionSymbolMetals(symbol: String) {
-    def toplevel: String = {
-      if (symbol.isNone) symbol
-      else if (symbol.isPackage) symbol
-      else {
-        val owner = symbol.owner
-        if (owner.isPackage) symbol
-        else owner.toplevel
-      }
-    }
-    def isToplevel: Boolean = {
-      !symbol.isPackage &&
-      symbol.owner.isPackage
-    }
-  }
   implicit class XtensionRange(range: s.Range) {
     def encloses(other: s.Range): Boolean = {
       range.startLine <= other.startLine &&

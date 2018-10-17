@@ -17,7 +17,8 @@ import scala.meta.internal.semanticdb.Scala._
  *
  * Fast indexing is enabled by ScalaToplevelMtags, a custom parser that extracts
  * only toplevel symbols from a Scala source file. Java source files don't need indexing
- * because their file location can be inferred from the symbol itself.
+ * because their file location can be inferred from the symbol with the limitation
+ * that it doesn't work for Java source files with multiple package-private top-level classes.
  *
  * Low memory usage is enabled by only storing "non-trivial toplevel" symbols.
  * A symbol is "toplevel" when its owner is a package. A symbol is "non-trivial"
@@ -39,7 +40,7 @@ final case class OnDemandSymbolIndex(
   private val sourceJars = new ClasspathLoader(Classpath(Nil))
   var indexedSources = 0L
 
-  override def definition(symbol: String): Option[SymbolDefinition] = {
+  override def definition(symbol: Symbol): Option[SymbolDefinition] = {
     findSymbolDefinition(symbol, symbol)
   }
 
@@ -134,26 +135,26 @@ final case class OnDemandSymbolIndex(
    * @return
    */
   private def findSymbolDefinition(
-      querySymbol: String,
-      symbol: String
+      querySymbol: Symbol,
+      symbol: Symbol
   ): Option[SymbolDefinition] = {
-    if (!definitions.contains(symbol)) {
+    if (!definitions.contains(symbol.value)) {
       // Fallback 1: enter the toplevel symbol definition
       val toplevel = symbol.toplevel
-      toplevels.get(toplevel) match {
+      toplevels.get(toplevel.value) match {
         case Some(file) =>
           addMtagsSourceFile(file)
         case _ =>
           loadFromSourceJars(trivialPaths(toplevel)).foreach(addMtagsSourceFile)
       }
     }
-    if (!definitions.contains(symbol)) {
+    if (!definitions.contains(symbol.value)) {
       // Fallback 2: guess related symbols from the enclosing class.
       DefinitionAlternatives(symbol)
         .flatMap(alternative => findSymbolDefinition(querySymbol, alternative))
         .headOption
     } else {
-      definitions.get(symbol).map { path =>
+      definitions.get(symbol.value).map { path =>
         SymbolDefinition(
           querySymbol = querySymbol,
           definitionSymbol = symbol,
@@ -179,8 +180,8 @@ final case class OnDemandSymbolIndex(
   // Input:  scala/collection/immutable/List#
   // Output: scala/collection/immutable/List.scala
   //         scala/collection/immutable/List.java
-  private def trivialPaths(toplevel: String): List[String] = {
-    val noExtension = toplevel.stripSuffix(".").stripSuffix("#")
+  private def trivialPaths(toplevel: Symbol): List[String] = {
+    val noExtension = toplevel.value.stripSuffix(".").stripSuffix("#")
     List(
       noExtension + ".scala",
       noExtension + ".java"
