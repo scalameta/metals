@@ -93,8 +93,11 @@ lazy val metals = project
       // force javac to fork by setting javaHome to workaround https://github.com/sbt/zinc/issues/520
       Some(file(sys.props("java.home")).getParentFile)
     },
+    resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
     libraryDependencies ++= List(
-      "ch.epfl.scala" % "nailgun-server" % "0c8b937b", // for bloop
+      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
+      "ch.epfl.scala" %% "bloop-frontend" % "1.0.0", // FIXME: remove after https://github.com/scalacenter/bloop/pull/685
       "io.github.soc" % "directories" % "11",
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "com.outr" %% "scribe" % "2.6.0",

@@ -8,6 +8,11 @@ sealed abstract class TextDocumentLookup {
       extends Exception(s"missing SemanticDB: $file")
   case class StaleSemanticdb(file: AbsolutePath)
       extends Exception(s"stale SemanticDB: $file")
+  final def toOption: Option[s.TextDocument] = this match {
+    case TextDocumentLookup.Success(document) =>
+      Some(document)
+    case _ => None
+  }
   final def get: s.TextDocument = this match {
     case TextDocumentLookup.Success(document) =>
       document

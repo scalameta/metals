@@ -5,7 +5,6 @@ import java.util.concurrent.Executors
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.services.LanguageClient
 import org.scalasbt.ipcsocket.UnixDomainSocket
-import scala.language.reflectiveCalls
 import scala.meta.io.AbsolutePath
 import scala.sys.process.Process
 import scala.sys.process.ProcessLogger
@@ -84,16 +83,37 @@ object BloopServer {
           Cancelable(() => bspProcess.destroy())
         )
       } else {
-        ???
+        val thread = new Thread {
+          override def run(): Unit = {
+            callBloop(workspace, args: _*)
+          }
+        }
+        thread.start()
+        List(
+          Cancelable(() => thread.interrupt())
+        )
       }
     waitForFileToBeCreated(socket, retryDelayMillis = 100, maxRetries = 40)
     (socket, result)
   }
 
+  private def callBloop(workspace: AbsolutePath, args: String*): Unit = {
+    val ps = System.out
+    val common = bloop.cli.CommonOptions(
+      workingDirectory = workspace.toString,
+      out = ps,
+      err = ps,
+      ngout = ps,
+      ngerr = ps
+    )
+    val action = bloop.Cli.parse(args.toArray, common)
+    bloop.Cli.run(action, bloop.engine.NoPool, args.toArray)
+  }
+
   private def bloopIsInstalled(workspace: AbsolutePath): Boolean = {
     try {
-      val output = Process(List("bloop", "help"), cwd = workspace.toFile).!!
-      pprint.log(output)
+      val output = Process(List("bloop", "help"), cwd = workspace.toFile)
+        .!!(ProcessLogger(_ => ()))
       output.contains("Usage: bloop")
     } catch {
       case NonFatal(_) =>
@@ -113,7 +133,7 @@ object BloopServer {
         waitForFileToBeCreated(socket, retryDelayMillis, maxRetries - 1)
       }
     } else {
-      sys.error(s"unable to establish connection with bloop, no file: $socket")
+      sys.error(s"is bloop installed? Unable to establish connection")
     }
   }
 

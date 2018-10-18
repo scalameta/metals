@@ -21,6 +21,7 @@ object GlobalLogging {
     val traceFilename = s"${protocolName.toLowerCase}.tracemessages.json"
     val tracemessages = globalDataDir.resolve(traceFilename)
     if (tracemessages.isFile) {
+      scribe.info(s"Tracing is enabled, see $tracemessages")
       val fos = Files.newOutputStream(
         tracemessages.toNIO,
         StandardOpenOption.CREATE,

@@ -8,6 +8,16 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
 import scala.meta.internal.metals.BuildTool._
 import scala.meta.io.AbsolutePath
+import ProtocolConverters._
+import ch.epfl.scala.bsp4j.CompileParams
+import ch.epfl.scala.bsp4j.DependencySourcesParams
+import com.google.gson.JsonArray
+import java.net.URI
+import java.nio.file.Paths
+import java.util.concurrent.TimeUnit
+import org.eclipse.lsp4j.MessageActionItem
+import org.eclipse.lsp4j.ShowMessageRequestParams
+import scala.collection.JavaConverters._
 
 case class BuildServerConnection(
     client: MetalsBuildClient,
@@ -22,8 +32,26 @@ case class BuildServerConnection(
           new BuildClientCapabilities(Collections.singletonList("scala"), false)
         )
       )
-      .get()
+      .get(10L, TimeUnit.SECONDS)
     server.onBuildInitialized()
+  }
+  def allDependencySources(): List[AbsolutePath] = {
+    val ids = server.workspaceBuildTargets().get().getTargets.map(_.getId)
+    ids.forEach(id => id.setUri(URI.create(id.getUri).toString))
+    val compileParams = new CompileParams(ids)
+    compileParams.setArguments(new JsonArray)
+    val compile = server.buildTargetCompile(compileParams).get()
+    pprint.log(compile)
+    val sources = server
+      .buildTargetDependencySources(new DependencySourcesParams(ids))
+      .get()
+    val items = sources.getItems.asScala
+    pprint.log(items)
+    items.iterator
+      .filter(_.getSources != null)
+      .flatMap(_.getSources.asScala)
+      .map(uri => AbsolutePath(Paths.get(URI.create(uri))))
+      .toList
   }
   override def cancel(): Unit = Cancelable.cancelAll(cancelables)
 }
@@ -37,7 +65,23 @@ object BuildServerConnection {
   ): Option[BuildServerConnection] = {
     BuildTool.autoDetect(workspace) match {
       case Bloop | Sbt =>
-        BloopServer.connect(workspace, languageClient, buildClient)
+        scribe.info("requesting to import project")
+        val params = new ShowMessageRequestParams()
+        params.setMessage(
+          "sbt build detected, would you like to import the project via bloop?"
+        )
+        params.setType(MessageType.Info)
+        params.setActions(
+          List(
+            new MessageActionItem("Import project via bloop")
+          ).asJava
+        )
+        val response = languageClient.showMessageRequest(params).get()
+        if (response != null) {
+          BloopServer.connect(workspace, languageClient, buildClient)
+        } else {
+          None
+        }
       case Unknown =>
         languageClient.showMessage(
           new MessageParams(

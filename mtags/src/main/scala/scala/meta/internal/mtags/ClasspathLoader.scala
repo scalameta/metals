@@ -12,7 +12,7 @@ import scala.meta.io.RelativePath
  * `java.net.URL` and nulls.
  */
 final class ClasspathLoader(classpath: Classpath) {
-  private val loader = new OpenClassLoader
+  val loader = new OpenClassLoader
   classpath.entries.foreach(loader.addEntry)
   override def toString: String = loader.getURLs.toList.toString()
 

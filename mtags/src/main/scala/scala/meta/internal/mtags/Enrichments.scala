@@ -13,9 +13,9 @@ object Enrichments {
   implicit class XtensionRange(range: s.Range) {
     def encloses(other: s.Range): Boolean = {
       range.startLine <= other.startLine &&
-      range.endLine >= other.startLine &&
+      range.endLine >= other.endLine &&
       range.startCharacter <= other.startCharacter &&
-      range.endCharacter > other.startCharacter // end character is non-inclusive
+      range.endCharacter > other.endCharacter // end character is non-inclusive
     }
   }
   private def filenameToLanguage(filename: String): Language = {
@@ -29,6 +29,10 @@ object Enrichments {
     }
   }
   implicit class XtensionAbsolutePathMetals(file: AbsolutePath) {
+    def isScalaOrJava: Boolean = {
+      val language = toLanguage
+      language.isScala || language.isJava
+    }
     def toLanguage: Language = {
       file.toNIO.toLanguage
     }

@@ -7,12 +7,12 @@ import scala.meta.io.RelativePath
 import scala.meta.Classpath
 import scala.meta.internal.mtags.Enrichments._
 
-class SemanticdbClasspath(
+case class SemanticdbClasspath(
     sourceroot: AbsolutePath,
-    classpath: Classpath,
+    classpath: Classpath = Classpath(Nil),
     charset: Charset = StandardCharsets.UTF_8
 ) {
-  private val loader = new ClasspathLoader(classpath)
+  val loader = new ClasspathLoader(classpath)
   def getSemanticdbPath(scalaPath: AbsolutePath): AbsolutePath = {
     semanticdbPath(scalaPath).getOrElse(
       throw new NoSuchElementException(scalaPath.toString())
