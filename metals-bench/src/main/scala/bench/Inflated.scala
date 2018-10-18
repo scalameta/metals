@@ -18,6 +18,7 @@ case class Inflated(inputs: List[Input.VirtualFile], linesOfCode: Long) {
   def +(other: Inflated): Inflated =
     Inflated(other.inputs ++ inputs, other.linesOfCode + linesOfCode)
 }
+
 object Inflated {
 
   def jars(classpath: Classpath): Inflated = {

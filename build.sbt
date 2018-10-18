@@ -94,6 +94,7 @@ lazy val metals = project
       Some(file(sys.props("java.home")).getParentFile)
     },
     libraryDependencies ++= List(
+      "ch.epfl.scala" % "nailgun-server" % "0c8b937b", // for bloop
       "io.github.soc" % "directories" % "11",
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "com.outr" %% "scribe" % "2.6.0",
@@ -148,6 +149,7 @@ lazy val unit = project
     skip.in(publish) := true,
     testFrameworks := List(new TestFramework("utest.runner.Framework")),
     libraryDependencies ++= List(
+      "com.geirsson" %% "coursier-small" % "1.1.0", // needed due to bincompat with jvm-directories
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "org.scalameta" %% "symtab" % V.scalameta,

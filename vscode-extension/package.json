@@ -119,6 +119,11 @@
           "default": true,
           "description": "Enable renaming symbols"
         },
+        "metals.bloopVersion": {
+          "type": "string",
+          "default": "1.0.0",
+          "description": "The version of the bloop server."
+        },
         "metals.serverVersion": {
           "type": "string",
           "default": "0.1.0",

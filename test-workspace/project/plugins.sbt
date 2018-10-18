@@ -3,3 +3,5 @@ unmanagedSources.in(Compile) += baseDirectory
   .value
   .getParentFile
   .getParentFile / "sbt-metals/src/main/scala/scala/meta/sbt/MetalsPlugin.scala"
+
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "1.0.0")

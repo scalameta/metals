@@ -7,7 +7,6 @@ import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
-  TransportKind,
   RevealOutputChannelOn,
   ExecuteCommandRequest
 } from "vscode-languageclient";
@@ -18,6 +17,7 @@ export async function activate(context: ExtensionContext) {
   const coursierPath = path.join(context.extensionPath, "./coursier");
 
   const serverVersion = workspace.getConfiguration("metals").get("serverVersion")
+  const bloopVersion = workspace.getConfiguration("metals").get("bloopVersion")
 
   const javaArgs = [
     `-XX:+UseG1GC`,
@@ -40,10 +40,10 @@ export async function activate(context: ExtensionContext) {
 
   const coursierLaunchArgs = [
     "launch",
-    "-r", "bintray:scalameta/maven",
     "-r", "sonatype:releases",
     "-r", "sonatype:snapshots",
     `org.scalameta:metals_2.12:${serverVersion}`,
+    `ch.epfl.scala:bloop-frontend_2.12:${bloopVersion}`,
     "-M", "scala.meta.metals.Main"
   ];
 
