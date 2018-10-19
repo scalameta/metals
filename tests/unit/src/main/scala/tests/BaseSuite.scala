@@ -30,6 +30,13 @@ class BaseSuite extends TestSuite {
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
   def assert(exprs: Boolean*): Unit = macro Asserts.assertProxy
+  def assertNotEquals[T](obtained: T, expected: T, hint: String = ""): Unit = {
+    if (obtained == expected) {
+      val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
+      assertNoDiff(obtained.toString, expected.toString, hint)
+      fail(s"obtained=<$obtained> == expected=<$expected>$hintMsg")
+    }
+  }
   def assertEquals[T](obtained: T, expected: T, hint: String = ""): Unit = {
     if (obtained != expected) {
       val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"

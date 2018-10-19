@@ -17,11 +17,26 @@ object SbtChecksumSuite extends BaseSuite {
           assertNoDiff(x, y)
           Files.write(
             root.resolve("build.sbt").toNIO,
-            "// this is a comment\n".getBytes(StandardCharsets.UTF_8),
+            "\n// this is a comment\n".getBytes(StandardCharsets.UTF_8),
             StandardOpenOption.APPEND
           )
           val obtained2 = SbtChecksum.digest(root)
-          assert(obtained2 == obtained)
+          assertEquals(
+            obtained2,
+            obtained,
+            "comments and whitespace did impact checksum"
+          )
+          Files.write(
+            root.resolve("build.sbt").toNIO,
+            "\nlazy val anotherProject = x\n".getBytes(StandardCharsets.UTF_8),
+            StandardOpenOption.APPEND
+          )
+          val obtained3 = SbtChecksum.digest(root)
+          assertNotEquals(
+            obtained3,
+            obtained,
+            "significant tokens did not impact checksum"
+          )
         case (None, Some(y)) =>
           fail(s"expected checksum $y but did not obtain a checksum")
         case (Some(x), None) =>
