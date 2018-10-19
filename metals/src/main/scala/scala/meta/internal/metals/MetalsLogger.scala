@@ -39,6 +39,7 @@ object MetalsLogger {
       )
       .withHandler(
         writer = LanguageClientLogger,
+        formatter = debugFormat,
         minimumLevel = Some(Level.Info)
       )
       .replace()

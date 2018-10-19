@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.meta.internal.inputs._
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
@@ -273,8 +274,9 @@ class MetalsLanguageServer(ec: ExecutionContext) {
                 scribe.info(s"occurrence: ${occ.symbol}")
                 val isLocal =
                   occ.symbol.isLocal ||
-                    doc.occurrences.exists { occ =>
-                      occ.role.isDefinition && occ.symbol == occ.symbol
+                    doc.occurrences.exists { localOccurrence =>
+                      localOccurrence.role.isDefinition &&
+                      localOccurrence.symbol == occ.symbol
                     }
                 val ddoc
                   : Option[(TextDocument, TokenEditDistance, String, String)] =
@@ -291,18 +293,19 @@ class MetalsLanguageServer(ec: ExecutionContext) {
                     for {
                       defn <- index.definition(Symbol(occ.symbol))
                       _ = scribe.info(s"defn: ${defn.path}")
-                      defnDoc = {
-                        semanticdbs.textDocument(defn.path) match {
-                          case TextDocumentLookup.Success(d) => d
-                          case TextDocumentLookup.Stale(_, _, d) => d
-                          case _ =>
-                            // read file from disk instead of buffers
-                            val defnRevisedInput = defn.path.toInput
-                            mtags.index(
-                              defn.path.toLanguage,
-                              defnRevisedInput
-                            )
-                        }
+                      defnDoc = semanticdbs.textDocument(defn.path) match {
+                        case TextDocumentLookup.Success(d) =>
+                          scribe.info("success")
+                          d
+                        case TextDocumentLookup.Stale(_, _, d) =>
+                          scribe.info("stale")
+                          d
+                        case _ =>
+                          scribe.info("mtags")
+                          // read file from disk instead of buffers because text on disk is more
+                          // likely to parse successfully.
+                          val defnRevisedInput = defn.path.toInput
+                          mtags.index(defn.path.toLanguage, defnRevisedInput)
                       }
                       defnOriginalInput = defnDoc.toInput
                       defnUri = defn.path.toDiskURI(workspace)
@@ -319,11 +322,19 @@ class MetalsLanguageServer(ec: ExecutionContext) {
                       )
                   }
                 for {
-                  (defnDoc, editDistance, symbol, uri) <- ddoc
+                  (defnDoc, distance, symbol, uri) <- ddoc
+                  _ = scribe.info(distance.toString)
+                  _ = scribe.info(symbol)
+                  _ = scribe.info(uri)
+                  _ = scribe.info(defnDoc.toProtoString)
                   location <- defnDoc.definition(uri, symbol)
-                  revisedPosition = editDistance.toRevised(
+                  _ = scribe.info(location.toString)
+                  revisedPosition = distance.toRevised(
                     location.getRange.getStart.getLine,
                     location.getRange.getStart.getCharacter
+                  )
+                  _ = scribe.info(
+                    revisedPosition.map(_.formatMessage("", "")).toString
                   )
                   result <- revisedPosition.foldResult(
                     pos => {

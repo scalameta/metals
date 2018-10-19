@@ -31,7 +31,7 @@ final class Identifier(val name: String, val pos: Position) {
  * because toplevel symbol indexing is on a critical path when users import
  * a new project.
  */
-class ScalaToplevelMtags(input: Input.VirtualFile) extends MtagsIndexer {
+class ScalaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   private val scanner = new LegacyScanner(input, dialects.Scala212)
   scanner.reader.nextChar()
   def isDone: Boolean = scanner.curr.token == EOF

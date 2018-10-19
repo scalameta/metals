@@ -28,6 +28,13 @@ final class TokenEditDistance private (
 ) {
   private val isUnchanged: Boolean = empty.contains(EmptyResult.Unchanged)
   private val isNoMatch: Boolean = empty.contains(EmptyResult.NoMatch)
+  override def toString: String = {
+    val value =
+      if (isUnchanged) "unchanged"
+      else if (isNoMatch) "no-match"
+      else s"${matching.length} tokens"
+    s"TokenEditDistance($value)"
+  }
 
   private def originalInput: Input =
     if (empty.isDefined) Input.None
