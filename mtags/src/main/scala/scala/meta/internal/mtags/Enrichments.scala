@@ -1,7 +1,11 @@
 package scala.meta.internal.mtags
 
+import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
@@ -29,6 +33,17 @@ object Enrichments {
     }
   }
   implicit class XtensionAbsolutePathMetals(file: AbsolutePath) {
+    def toDiskURI(workspace: AbsolutePath): URI = {
+      val uri = file.toURI
+      if (uri.getScheme == "file") uri
+      else {
+        val scratchpad = workspace.resolve(".metals").resolve("scratchpad")
+        Files.createDirectories(scratchpad.toNIO)
+        val out = scratchpad.toNIO.resolve(file.toNIO.getFileName)
+        Files.copy(file.toNIO, out, StandardCopyOption.REPLACE_EXISTING)
+        out.toUri
+      }
+    }
     def isScalaOrJava: Boolean = {
       val language = toLanguage
       language.isScala || language.isJava

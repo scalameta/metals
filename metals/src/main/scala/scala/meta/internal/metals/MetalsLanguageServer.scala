@@ -1,10 +1,16 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.bsp4j.BuildTargetTextDocumentsParams
 import ch.epfl.scala.bsp4j.DependencySourcesParams
 import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
@@ -19,31 +25,48 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.ProtocolConverters._
 import scala.meta.internal.mtags.Enrichments._
+import scala.meta.internal.mtags.FingerprintProvider
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 
 case class Fingerprint(text: String, md5: String)
 
-class MetalsLanguageServer(ec: ExecutionContext) {
-  implicit val executionContext = ec
+case class Buffers(map: TrieMap[AbsolutePath, String] = TrieMap.empty) {
+  def put(key: AbsolutePath, value: String): Unit = map.put(key, value)
+  def get(key: AbsolutePath): Option[String] = map.get(key)
+  def remove(key: AbsolutePath): Unit = map.remove(key)
+}
 
-  implicit val buffers = TrieMap.empty[AbsolutePath, String]
-  implicit val fingerprints =
+class MetalsLanguageServer(ec: ExecutionContext) {
+  private implicit val executionContext = ec
+
+  val buffers = Buffers()
+  private val fingerprints =
     TrieMap.empty[AbsolutePath, ConcurrentLinkedQueue[Fingerprint]]
+  private val fingerprintProvider = new FingerprintProvider {
+    override def lookup(path: AbsolutePath, md5: String): Option[String] = {
+      fingerprints.get(path).flatMap { prints =>
+        prints.asScala.find(_.md5 == md5).map(_.text)
+      }
+    }
+  }
 
   private val mtags = new Mtags
   private var workspace = PathIO.workingDirectory
-  private var semanticdbs: SemanticdbClasspath = SemanticdbClasspath(workspace)
+  private var semanticdbs: SemanticdbClasspath =
+    SemanticdbClasspath(workspace, fingerprints = fingerprintProvider)
   private var index = OnDemandSymbolIndex()
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
@@ -84,17 +107,39 @@ class MetalsLanguageServer(ec: ExecutionContext) {
   }
 
   def indexSourcesInProject(): Unit = Future {
-    FileIO
-      .listAllFilesRecursively(workspace)
-      .iterator
-      .filter(_.isScalaOrJava)
-      .foreach { file =>
-        index.addSourceFile(file, None)
+    // Visit every file and directory in the workspace and register:
+    // 1. scala/java source files, index their toplevel definitions.
+    // 2. class directories that may contain SemanticDB files.
+    Files.walkFileTree(
+      workspace.toNIO,
+      new SimpleFileVisitor[Path] {
+        override def visitFile(
+            file: Path,
+            attrs: BasicFileAttributes
+        ): FileVisitResult = {
+          val path = AbsolutePath(file)
+          if (path.isScalaOrJava) {
+            index.addSourceFile(path, None)
+          }
+          super.visitFile(file, attrs)
+        }
+        override def preVisitDirectory(
+            dir: Path,
+            attrs: BasicFileAttributes
+        ): FileVisitResult = {
+          val path = AbsolutePath(dir)
+          if (path.resolve("META-INF").isDirectory) {
+            semanticdbs.loader.addEntry(path)
+            FileVisitResult.SKIP_SUBTREE
+          } else {
+            super.preVisitDirectory(dir, attrs)
+          }
+        }
       }
+    )
   }
 
   def indexWorkspace(): Unit = bsp.foreach { build =>
-    index = OnDemandSymbolIndex()
     for {
       buildTargets <- build.server.workspaceBuildTargets().toScala
       ids = buildTargets.getTargets.map(_.getId)
@@ -103,7 +148,7 @@ class MetalsLanguageServer(ec: ExecutionContext) {
         .toScala
     } {
       scalacOptions.getItems.asScala.foreach { item =>
-        semanticdbs.loader.addEntry(AbsolutePath(item.getClassDirectory))
+        semanticdbs.loader.addEntry(item.getClassDirectory.toAbsolutePath)
       }
       for {
         sources <- build.server
@@ -170,7 +215,18 @@ class MetalsLanguageServer(ec: ExecutionContext) {
     buffers.remove(params.getTextDocument.getUri.toAbsolutePath)
   }
   @JsonNotification("textDocument/didSave")
-  def textDocumentDidSave(params: DidSaveTextDocumentParams): Unit = {}
+  def textDocumentDidSave(params: DidSaveTextDocumentParams): Unit = {
+    bsp.foreach { build =>
+      val ids = build.allWorkspaceIds()
+      for {
+        sources <- build.server
+          .buildTargetTextDocuments(new BuildTargetTextDocumentsParams(ids))
+          .toScala
+      } {
+        sources.getTextDocuments
+      }
+    }
+  }
 
   @JsonNotification("workspace/didChangeConfiguration")
   def workspaceDidChangeConfiguration(
@@ -190,27 +246,102 @@ class MetalsLanguageServer(ec: ExecutionContext) {
   ): CompletableFuture[util.List[Location]] =
     CompletableFutures.computeAsync { token =>
       val path = position.getTextDocument.getUri.toAbsolutePath
+      pprint.log(path)
+      pprint.log(semanticdbs.sourceroot)
       pprint.log(semanticdbs.loader.loader.getURLs)
+      pprint.log(semanticdbs.semanticdbPath(path))
       semanticdbs.textDocument(path).toOption match {
         case Some(doc) =>
           val uri = position.getTextDocument.getUri
-          val location: Option[Location] = doc.occurrences
-            .find(_.encloses(position.getPosition))
-            .flatMap { occ =>
-              scribe.info(s"occurrence: ${occ.symbol}")
-              if (occ.symbol.isLocal) {
-                doc.definition(uri, occ.symbol)
-              } else {
+          val bufferInput = path.toInputFromBuffers(buffers)
+          val editDistance = TokenEditDistance(doc.toInput, bufferInput)
+          val originalPosition = editDistance.toOriginal(
+            position.getPosition.getLine,
+            position.getPosition.getCharacter
+          )
+          val queryPosition0 = originalPosition.foldResult(
+            onPosition = pos => {
+              position.getPosition.setLine(pos.startLine)
+              position.getPosition.setCharacter(pos.startColumn)
+              Some(position.getPosition)
+            },
+            onUnchanged = () => Some(position.getPosition),
+            onNoMatch = () => None
+          )
+          val result = for {
+            queryPosition <- queryPosition0
+          } yield {
+            val location: Option[Location] = doc.occurrences
+              .find(_.encloses(queryPosition))
+              .flatMap { occ =>
+                scribe.info(s"occurrence: ${occ.symbol}")
+                val ddoc: Option[
+                  (
+                      TextDocument,
+                      TokenEditDistance,
+                      String,
+                      String
+                  )
+                ] = if (occ.symbol.isLocal) {
+                  Some(
+                    (
+                      doc,
+                      editDistance,
+                      occ.symbol,
+                      position.getTextDocument.getUri
+                    )
+                  )
+                } else {
+                  for {
+                    defn <- index.definition(Symbol(occ.symbol))
+                    _ = scribe.info(s"defn: ${defn.path}")
+                    defnRevisedInput = defn.path.toInputFromBuffers(buffers)
+                    defnDoc = mtags.index(
+                      defn.path.toLanguage,
+                      defnRevisedInput
+                    )
+                    defnOriginalInput = defnDoc.toInput
+                    defnUri = defn.path.toDiskURI(workspace)
+                    defnEditDistance = TokenEditDistance(
+                      defnOriginalInput,
+                      defnRevisedInput
+                    )
+                  } yield
+                    (
+                      defnDoc,
+                      defnEditDistance,
+                      defn.definitionSymbol.value,
+                      defnUri.toString
+                    )
+                }
                 for {
-                  defn <- index.definition(Symbol(occ.symbol))
-                  _ = scribe.info(s"defn: ${defn.path}")
-                  input = defn.path.toInput
-                  defnDoc = mtags.index(defn.path.toLanguage, input)
-                  location <- defnDoc.definition(uri, occ.symbol)
-                } yield location
+                  (defnDoc, editDistance, symbol, uri) <- ddoc
+                  location <- defnDoc.definition(uri, symbol)
+                  revisedPosition = editDistance.toRevised(
+                    location.getRange.getStart.getLine,
+                    location.getRange.getStart.getCharacter
+                  )
+                  result <- revisedPosition.foldResult(
+                    pos => {
+                      val start = location.getRange.getStart
+                      start.setLine(pos.startLine)
+                      start.setCharacter(pos.startColumn)
+                      val end = location.getRange.getEnd
+                      end.setLine(pos.endLine)
+                      end.setCharacter(pos.endColumn)
+                      Some(location)
+                    },
+                    () => Some(location),
+                    () => None
+                  )
+                } yield result
               }
-            }
-          location.toList.asJava
+            location
+          }
+          result match {
+            case Some(location) => location.toList.asJava
+            case None => Collections.emptyList()
+          }
         case None =>
           scribe.info(s"no hit for $position")
           Collections.emptyList()

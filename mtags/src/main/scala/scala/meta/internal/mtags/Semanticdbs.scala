@@ -21,7 +21,8 @@ object Semanticdbs {
       scalaPath: AbsolutePath,
       scalaRelativePath: RelativePath,
       semanticdbPath: AbsolutePath,
-      charset: Charset
+      charset: Charset,
+      fingerprints: FingerprintProvider = FingerprintProvider.empty
   ): TextDocumentLookup = {
     val reluri = scalaRelativePath.toURI(false).toString
     val sdocs = loadTextDocuments(semanticdbPath)
@@ -31,7 +32,12 @@ object Semanticdbs {
         val text = FileIO.slurp(scalaPath, charset)
         val md5 = MD5.compute(text)
         if (sdoc.md5 != md5) {
-          TextDocumentLookup.Stale(scalaPath, md5, sdoc)
+          fingerprints.lookup(scalaPath, sdoc.md5) match {
+            case Some(oldText) =>
+              TextDocumentLookup.Success(sdoc.withText(oldText))
+            case None =>
+              TextDocumentLookup.Stale(scalaPath, md5, sdoc)
+          }
         } else {
           TextDocumentLookup.Success(sdoc.withText(text))
         }

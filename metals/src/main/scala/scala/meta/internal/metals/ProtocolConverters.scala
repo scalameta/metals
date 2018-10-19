@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.{meta => m}
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
 import com.google.gson.JsonElement
@@ -7,8 +8,10 @@ import java.net.URI
 import java.nio.file.Paths
 import java.util
 import org.eclipse.{lsp4j => l}
+import scala.meta.inputs.Input
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.mtags.Enrichments._
 
 object ProtocolConverters {
   private val gson = new Gson()
@@ -19,6 +22,18 @@ object ProtocolConverters {
         buildTarget.getData.asInstanceOf[JsonElement],
         classOf[b.ScalaBuildTarget]
       )
+    }
+  }
+
+  implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {
+    def foldResult[B](
+        onPosition: m.Position => B,
+        onUnchanged: () => B,
+        onNoMatch: () => B
+    ): B = result match {
+      case Right(pos) => onPosition(pos)
+      case Left(EmptyResult.Unchanged) => onUnchanged()
+      case Left(EmptyResult.NoMatch) => onNoMatch()
     }
   }
 
@@ -33,11 +48,20 @@ object ProtocolConverters {
     }
   }
 
+  implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
+    def toInputFromBuffers(buffers: Buffers): Input.VirtualFile = {
+      buffers.get(path) match {
+        case Some(text) => Input.VirtualFile(path.toString(), text)
+        case None => path.toInput
+      }
+    }
+  }
   implicit class XtensionStringUriProtocol(uri: String) {
     def toAbsolutePath: AbsolutePath =
       AbsolutePath(Paths.get(URI.create(uri)))
   }
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
+    def toInput: Input = Input.VirtualFile(textDocument.uri, textDocument.text)
     def definition(uri: String, symbol: String): Option[l.Location] = {
       textDocument.occurrences
         .find(o => o.role.isDefinition && o.symbol == symbol)

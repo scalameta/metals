@@ -9,6 +9,7 @@ object a {
   def z = {
     val localSymbol = "222" // can be renamed
     localSymbol.length
+    x.length
     callMe
   }
 }

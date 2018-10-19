@@ -10,7 +10,8 @@ import scala.meta.internal.mtags.Enrichments._
 case class SemanticdbClasspath(
     sourceroot: AbsolutePath,
     classpath: Classpath = Classpath(Nil),
-    charset: Charset = StandardCharsets.UTF_8
+    charset: Charset = StandardCharsets.UTF_8,
+    fingerprints: FingerprintProvider = FingerprintProvider.empty
 ) {
   val loader = new ClasspathLoader(classpath)
   def getSemanticdbPath(scalaPath: AbsolutePath): AbsolutePath = {
@@ -19,11 +20,13 @@ case class SemanticdbClasspath(
     )
   }
   def semanticdbPath(scalaPath: AbsolutePath): Option[AbsolutePath] = {
-    loader.load(fromScala(scalaPath.toRelative(sourceroot)))
+    val resourcePath = fromScala(scalaPath.toRelative(sourceroot))
+    loader.load(resourcePath)
   }
   def textDocument(scalaPath: AbsolutePath): TextDocumentLookup = {
     val scalaRelativePath = scalaPath.toRelative(sourceroot)
     val semanticdbRelativePath = fromScala(scalaRelativePath)
+    pprint.log(semanticdbRelativePath)
     loader.load(semanticdbRelativePath) match {
       case None =>
         TextDocumentLookup.NotFound(scalaPath)
@@ -32,7 +35,8 @@ case class SemanticdbClasspath(
           scalaPath,
           scalaRelativePath,
           semanticdbPath,
-          charset
+          charset,
+          fingerprints
         )
     }
   }

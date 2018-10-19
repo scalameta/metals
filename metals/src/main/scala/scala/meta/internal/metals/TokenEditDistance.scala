@@ -22,15 +22,19 @@ case class MatchingToken(original: Token, revised: Token) {
 }
 
 /** Helper to map between position between two similar strings. */
-final class TokenEditDistance private (matching: Array[MatchingToken]) {
-  private val isEmpty: Boolean = matching.length == 0
+final class TokenEditDistance private (
+    matching: Array[MatchingToken],
+    empty: Option[EmptyResult]
+) {
+  private val isUnchanged: Boolean = empty.contains(EmptyResult.Unchanged)
+  private val isNoMatch: Boolean = empty.contains(EmptyResult.NoMatch)
 
   private def originalInput: Input =
-    if (isEmpty) Input.None
+    if (empty.isDefined) Input.None
     else matching(0).original.input
 
   private def revisedInput: Input =
-    if (isEmpty) Input.None
+    if (empty.isDefined) Input.None
     else matching(0).revised.input
 
   def toRevised(
@@ -42,7 +46,8 @@ final class TokenEditDistance private (matching: Array[MatchingToken]) {
 
   /** Convert from offset in original string to offset in revised string */
   def toRevised(originalOffset: Int): Either[EmptyResult, Position] = {
-    if (isEmpty) EmptyResult.unchanged
+    if (isUnchanged) EmptyResult.unchanged
+    else if (isNoMatch) EmptyResult.noMatch
     else {
       BinarySearch
         .array[MatchingToken](
@@ -62,7 +67,8 @@ final class TokenEditDistance private (matching: Array[MatchingToken]) {
 
   /** Convert from offset in revised string to offset in original string */
   def toOriginal(revisedOffset: Int): Either[EmptyResult, Position] = {
-    if (isEmpty) EmptyResult.unchanged
+    if (isUnchanged) EmptyResult.unchanged
+    else if (isNoMatch) EmptyResult.noMatch
     else {
       BinarySearch
         .array[MatchingToken](
@@ -94,7 +100,10 @@ final class TokenEditDistance private (matching: Array[MatchingToken]) {
 
 object TokenEditDistance {
 
-  lazy val empty: TokenEditDistance = new TokenEditDistance(Array.empty)
+  lazy val unchanged: TokenEditDistance =
+    new TokenEditDistance(Array.empty, empty = Some(EmptyResult.Unchanged))
+  lazy val noMatch: TokenEditDistance =
+    new TokenEditDistance(Array.empty, empty = Some(EmptyResult.NoMatch))
 
   /**
    * Build utility to map offsets between two slightly different strings.
@@ -147,23 +156,24 @@ object TokenEditDistance {
         .toList
     }
     loop(0, 0, deltas)
-    new TokenEditDistance(buffer.result())
+    new TokenEditDistance(buffer.result(), empty = None)
   }
 
   def apply(
       originalInput: Input,
       revisedInput: Input
-  ): Option[TokenEditDistance] = {
-    for {
+  ): TokenEditDistance = {
+    val result = for {
       revised <- revisedInput.tokenize.toOption
       original <- {
         if (originalInput == revisedInput) Some(revised)
         else originalInput.tokenize.toOption
       }
     } yield apply(original, revised)
+    result.getOrElse(noMatch)
   }
 
-  def apply(original: String, revised: String): Option[TokenEditDistance] =
+  def apply(original: String, revised: String): TokenEditDistance =
     apply(Input.String(original), Input.String(revised))
 
   /** Compare tokens only by their text and token category. */

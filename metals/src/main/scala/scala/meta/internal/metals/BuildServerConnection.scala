@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.util
 import ch.epfl.scala.bsp4j.BuildClientCapabilities
 import ch.epfl.scala.bsp4j.InitializeBuildParams
 import java.util.Collections
@@ -9,6 +10,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import scala.meta.internal.metals.BuildTool._
 import scala.meta.io.AbsolutePath
 import ProtocolConverters._
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.DependencySourcesParams
 import com.google.gson.JsonArray
@@ -35,8 +37,11 @@ case class BuildServerConnection(
       .get(10L, TimeUnit.SECONDS)
     server.onBuildInitialized()
   }
+  def allWorkspaceIds(): util.List[BuildTargetIdentifier] = {
+    server.workspaceBuildTargets().get().getTargets.map(_.getId)
+  }
   def allDependencySources(): List[AbsolutePath] = {
-    val ids = server.workspaceBuildTargets().get().getTargets.map(_.getId)
+    val ids = allWorkspaceIds()
     ids.forEach(id => id.setUri(URI.create(id.getUri).toString))
     val compileParams = new CompileParams(ids)
     compileParams.setArguments(new JsonArray)
@@ -64,7 +69,9 @@ object BuildServerConnection {
       buildClient: MetalsBuildClient
   ): Option[BuildServerConnection] = {
     BuildTool.autoDetect(workspace) match {
-      case Bloop | Sbt =>
+      case Bloop =>
+        BloopServer.connect(workspace, languageClient, buildClient)
+      case Sbt =>
         scribe.info("requesting to import project")
         val params = new ShowMessageRequestParams()
         params.setMessage(
