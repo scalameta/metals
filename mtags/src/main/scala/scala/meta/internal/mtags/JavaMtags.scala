@@ -18,9 +18,11 @@ import scala.meta.internal.mtags.Enrichments._
 
 object JavaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer = {
+    val virtualFile = input
     val builder = new JavaProjectBuilder()
     new MtagsIndexer { self =>
       override def language: Language = Language.JAVA
+      override def input: Input.VirtualFile = virtualFile
       override def indexRoot(): Unit = {
         try {
           val source = builder.addSource(new StringReader(input.value))

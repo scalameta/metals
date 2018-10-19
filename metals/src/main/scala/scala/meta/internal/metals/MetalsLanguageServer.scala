@@ -36,6 +36,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
@@ -246,13 +247,8 @@ class MetalsLanguageServer(ec: ExecutionContext) {
   ): CompletableFuture[util.List[Location]] =
     CompletableFutures.computeAsync { token =>
       val path = position.getTextDocument.getUri.toAbsolutePath
-      pprint.log(path)
-      pprint.log(semanticdbs.sourceroot)
-      pprint.log(semanticdbs.loader.loader.getURLs)
-      pprint.log(semanticdbs.semanticdbPath(path))
       semanticdbs.textDocument(path).toOption match {
         case Some(doc) =>
-          val uri = position.getTextDocument.getUri
           val bufferInput = path.toInputFromBuffers(buffers)
           val editDistance = TokenEditDistance(doc.toInput, bufferInput)
           val originalPosition = editDistance.toOriginal(
@@ -275,45 +271,53 @@ class MetalsLanguageServer(ec: ExecutionContext) {
               .find(_.encloses(queryPosition))
               .flatMap { occ =>
                 scribe.info(s"occurrence: ${occ.symbol}")
-                val ddoc: Option[
-                  (
-                      TextDocument,
-                      TokenEditDistance,
-                      String,
-                      String
-                  )
-                ] = if (occ.symbol.isLocal) {
-                  Some(
-                    (
-                      doc,
-                      editDistance,
-                      occ.symbol,
-                      position.getTextDocument.getUri
+                val isLocal =
+                  occ.symbol.isLocal ||
+                    doc.occurrences.exists { occ =>
+                      occ.role.isDefinition && occ.symbol == occ.symbol
+                    }
+                val ddoc
+                  : Option[(TextDocument, TokenEditDistance, String, String)] =
+                  if (isLocal) {
+                    Some(
+                      (
+                        doc,
+                        editDistance,
+                        occ.symbol,
+                        position.getTextDocument.getUri
+                      )
                     )
-                  )
-                } else {
-                  for {
-                    defn <- index.definition(Symbol(occ.symbol))
-                    _ = scribe.info(s"defn: ${defn.path}")
-                    defnRevisedInput = defn.path.toInputFromBuffers(buffers)
-                    defnDoc = mtags.index(
-                      defn.path.toLanguage,
-                      defnRevisedInput
-                    )
-                    defnOriginalInput = defnDoc.toInput
-                    defnUri = defn.path.toDiskURI(workspace)
-                    defnEditDistance = TokenEditDistance(
-                      defnOriginalInput,
-                      defnRevisedInput
-                    )
-                  } yield
-                    (
-                      defnDoc,
-                      defnEditDistance,
-                      defn.definitionSymbol.value,
-                      defnUri.toString
-                    )
-                }
+                  } else {
+                    for {
+                      defn <- index.definition(Symbol(occ.symbol))
+                      _ = scribe.info(s"defn: ${defn.path}")
+                      defnDoc = {
+                        semanticdbs.textDocument(defn.path) match {
+                          case TextDocumentLookup.Success(d) => d
+                          case TextDocumentLookup.Stale(_, _, d) => d
+                          case _ =>
+                            // read file from disk instead of buffers
+                            val defnRevisedInput = defn.path.toInput
+                            mtags.index(
+                              defn.path.toLanguage,
+                              defnRevisedInput
+                            )
+                        }
+                      }
+                      defnOriginalInput = defnDoc.toInput
+                      defnUri = defn.path.toDiskURI(workspace)
+                      defnEditDistance = TokenEditDistance(
+                        defnOriginalInput,
+                        defnDoc.toInput
+                      )
+                    } yield
+                      (
+                        defnDoc,
+                        defnEditDistance,
+                        defn.definitionSymbol.value,
+                        defnUri.toString
+                      )
+                  }
                 for {
                   (defnDoc, editDistance, symbol, uri) <- ddoc
                   location <- defnDoc.definition(uri, symbol)
