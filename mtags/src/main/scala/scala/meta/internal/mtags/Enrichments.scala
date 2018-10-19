@@ -14,11 +14,17 @@ import scala.meta.internal.{semanticdb => s}
 
 object Enrichments {
   implicit class XtensionRange(range: s.Range) {
+    def isPoint: Boolean = {
+      range.startLine == range.endLine &&
+      range.startCharacter == range.endCharacter
+    }
     def encloses(other: s.Range): Boolean = {
       range.startLine <= other.startLine &&
       range.endLine >= other.endLine &&
-      range.startCharacter <= other.startCharacter &&
-      range.endCharacter > other.endCharacter // end character is non-inclusive
+      range.startCharacter <= other.startCharacter && {
+        range.endCharacter > other.endCharacter ||
+        other == range
+      }
     }
   }
   private def filenameToLanguage(filename: String): Language = {
