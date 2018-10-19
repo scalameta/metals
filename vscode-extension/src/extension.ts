@@ -56,7 +56,9 @@ export async function activate(context: ExtensionContext) {
   const clientOptions: LanguageClientOptions = {
     documentSelector: ["scala"],
     synchronize: {
-      fileEvents: [ ],
+      fileEvents: [
+        workspace.createFileSystemWatcher("**/*.{scala,sbt}")
+       ],
       configurationSection: 'metals'
     },
     revealOutputChannelOn: RevealOutputChannelOn.Never

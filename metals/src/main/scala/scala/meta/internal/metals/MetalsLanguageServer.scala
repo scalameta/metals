@@ -160,7 +160,6 @@ class MetalsLanguageServer(ec: ExecutionContext) {
           Option(item.getSources).toList
             .flatMap(_.asScala)
             .foreach { soureUri =>
-              scribe.info(soureUri)
               index.addSourceJar(AbsolutePath(Paths.get(URI.create(soureUri))))
             }
         }
@@ -270,7 +269,6 @@ class MetalsLanguageServer(ec: ExecutionContext) {
             val location: Option[Location] = doc.occurrences
               .find(_.encloses(queryPosition))
               .flatMap { occ =>
-                scribe.info(s"occurrence: ${occ.symbol}")
                 val isLocal =
                   occ.symbol.isLocal ||
                     doc.occurrences.exists { localOccurrence =>
@@ -291,16 +289,10 @@ class MetalsLanguageServer(ec: ExecutionContext) {
                   } else {
                     for {
                       defn <- index.definition(Symbol(occ.symbol))
-                      _ = scribe.info(s"defn: ${defn.path}")
                       defnDoc = semanticdbs.textDocument(defn.path) match {
-                        case TextDocumentLookup.Success(d) =>
-                          scribe.info("success")
-                          d
-                        case TextDocumentLookup.Stale(_, _, d) =>
-                          scribe.info("stale")
-                          d
+                        case TextDocumentLookup.Success(d) => d
+                        case TextDocumentLookup.Stale(_, _, d) => d
                         case _ =>
-                          scribe.info("mtags")
                           // read file from disk instead of buffers because text on disk is more
                           // likely to parse successfully.
                           val defnRevisedInput = defn.path.toInput
@@ -322,18 +314,10 @@ class MetalsLanguageServer(ec: ExecutionContext) {
                   }
                 for {
                   (defnDoc, distance, symbol, uri) <- ddoc
-                  _ = scribe.info(distance.toString)
-                  _ = scribe.info(symbol)
-                  _ = scribe.info(uri)
-//                  _ = scribe.info(defnDoc.toProtoString)
                   location <- defnDoc.definition(uri, symbol)
-                  _ = scribe.info(location.toString)
                   revisedPosition = distance.toRevised(
                     location.getRange.getStart.getLine,
                     location.getRange.getStart.getCharacter
-                  )
-                  _ = scribe.info(
-                    revisedPosition.map(_.formatMessage("", "")).toString
                   )
                   result <- revisedPosition.foldResult(
                     pos => {
