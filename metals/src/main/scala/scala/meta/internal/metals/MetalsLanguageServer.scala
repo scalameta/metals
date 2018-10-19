@@ -5,6 +5,7 @@ import ch.epfl.scala.bsp4j.DependencySourcesParams
 import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileSystems
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -107,6 +108,32 @@ class MetalsLanguageServer(ec: ExecutionContext) {
     }
   }
 
+  def checksumBuildSources(): Unit = {
+    SbtChecksum.digest(workspace).foreach { checksum =>
+      val out = workspace.resolve(".metals").resolve("sbt.md5")
+      val shouldReimport =
+        !out.isFile || {
+          val old = FileIO.slurp(out, StandardCharsets.UTF_8)
+          old != checksum
+        }
+      if (shouldReimport) {
+        val params = new ShowMessageRequestParams()
+        params.setMessage("Would you like to import the project?")
+        params.setType(MessageType.Info)
+        params.setActions(
+          List(
+            new MessageActionItem("Yes")
+          ).asJava
+        )
+        val response = languageClient.showMessageRequest(params).get()
+        if (response != null) {
+          cancelables.add(
+            BloopInstall.run(workspace, languageClient, executionContext)
+          )
+        }
+      }
+    }
+  }
   def indexSourcesInProject(): Unit = Future {
     // Visit every file and directory in the workspace and register:
     // 1. scala/java source files, index their toplevel definitions.
@@ -181,6 +208,7 @@ class MetalsLanguageServer(ec: ExecutionContext) {
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): Unit =
     Future {
+      checksumBuildSources()
       indexSourcesInProject()
       connectToBuildServer()
     }(ec)
@@ -238,7 +266,24 @@ class MetalsLanguageServer(ec: ExecutionContext) {
   @JsonNotification("workspace/didChangeWatchedFiles")
   def workspaceDidChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
-  ): Unit = ()
+  ): Unit = {
+    scribe.info(s"didChangeWatchedFiles: $params")
+    params.getChanges.forEach { change =>
+      val path = change.getUri.toAbsolutePath
+      val project = workspace.resolve("project").toNIO
+      val parent = path.toNIO.getParent
+      val isBuildFile = parent == workspace.toNIO || parent == project
+      val isSbtOrScala = path.isSbtOrScala
+      scribe.info(path.toString())
+      scribe.info(isBuildFile.toString)
+      scribe.info(isSbtOrScala.toString)
+      if (isBuildFile && isSbtOrScala) {
+        checksumBuildSources()
+      }
+    }
+  }
+
+  val sbtOrScala = FileSystems.getDefault.getPathMatcher("glob:*.{sbt,scala}")
 
   @JsonRequest("textDocument/definition")
   def textDocumentDefinition(

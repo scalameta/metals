@@ -49,6 +49,11 @@ object ProtocolConverters {
   }
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
+    def isSbtOrScala: Boolean = {
+      val filename = path.toNIO.getFileName.toString
+      filename.endsWith(".sbt") ||
+      filename.endsWith(".scala")
+    }
     def toInputFromBuffers(buffers: Buffers): Input.VirtualFile = {
       buffers.get(path) match {
         case Some(text) => Input.VirtualFile(path.toString(), text)

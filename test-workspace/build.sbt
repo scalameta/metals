@@ -5,5 +5,6 @@ scalacOptions ++= List(
   "-P:semanticdb:sourceroot:" + baseDirectory.in(ThisBuild).value,
   "-Yrangepos"
 )
-libraryDependencies += "com.lihaoyi" %% "ujson" % "0.6.6"
-// This is a comment
+
+libraryDependencies += 
+  "com.lihaoyi" %% "ujson" % "0.6.6"
