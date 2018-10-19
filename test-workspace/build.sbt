@@ -6,3 +6,4 @@ scalacOptions ++= List(
   "-Yrangepos"
 )
 libraryDependencies += "com.lihaoyi" %% "ujson" % "0.6.6"
+// This is a comment

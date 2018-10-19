@@ -26,7 +26,6 @@ case class SemanticdbClasspath(
   def textDocument(scalaPath: AbsolutePath): TextDocumentLookup = {
     val scalaRelativePath = scalaPath.toRelative(sourceroot)
     val semanticdbRelativePath = fromScala(scalaRelativePath)
-    pprint.log(semanticdbRelativePath)
     loader.load(semanticdbRelativePath) match {
       case None =>
         TextDocumentLookup.NotFound(scalaPath)

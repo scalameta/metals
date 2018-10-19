@@ -165,6 +165,7 @@ lazy val unit = project
     compile.in(Compile) :=
       compile.in(Compile).dependsOn(compile.in(input, Test)).value,
     buildInfoKeys := Seq[BuildInfoKey](
+      "sourceroot" -> baseDirectory.in(ThisBuild).value,
       "testResourceDirectory" -> resourceDirectory.in(Test).value
     )
   )

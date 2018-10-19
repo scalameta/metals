@@ -14,7 +14,7 @@ object MD5 {
     bytesToHex(md.digest())
   }
   private val hexArray = "0123456789ABCDEF".toCharArray
-  private def bytesToHex(bytes: Array[Byte]): String = {
+  def bytesToHex(bytes: Array[Byte]): String = {
     val hexChars = new Array[Char](bytes.length * 2)
     var j = 0
     while (j < bytes.length) {
