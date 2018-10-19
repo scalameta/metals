@@ -26,7 +26,6 @@ import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.inputs._
-import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.ProtocolConverters._
@@ -311,7 +310,7 @@ class MetalsLanguageServer(ec: ExecutionContext) {
                       defnUri = defn.path.toDiskURI(workspace)
                       defnEditDistance = TokenEditDistance(
                         defnOriginalInput,
-                        defnDoc.toInput
+                        defn.path.toInputFromBuffers(buffers)
                       )
                     } yield
                       (
@@ -326,7 +325,7 @@ class MetalsLanguageServer(ec: ExecutionContext) {
                   _ = scribe.info(distance.toString)
                   _ = scribe.info(symbol)
                   _ = scribe.info(uri)
-                  _ = scribe.info(defnDoc.toProtoString)
+//                  _ = scribe.info(defnDoc.toProtoString)
                   location <- defnDoc.definition(uri, symbol)
                   _ = scribe.info(location.toString)
                   revisedPosition = distance.toRevised(
