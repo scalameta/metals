@@ -1,16 +1,13 @@
 package scala.meta.internal.metals
 
-import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.security.MessageDigest
-import scala.meta.dialects
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.Enrichments._
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.tokenizers.LegacyScanner
-import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.io.AbsolutePath
+import scala.meta.tokens.Token
 import scala.util.control.NonFatal
 
 object SbtChecksum {
@@ -61,31 +58,20 @@ object SbtChecksum {
   ): Boolean = {
     try {
       val input = file.toInput
-      val scanner = new LegacyScanner(input, dialects.Scala212)
-      scanner.foreach { data =>
-        data.token match {
-          case WHITESPACE | COMMENT | EOF => ()
-          case _ =>
-            val start = data.offset
-            val end = data.token match {
-              case IDENTIFIER | BACKQUOTED_IDENT | STRINGLIT | STRINGPART |
-                  LONGLIT | CHARLIT | DOUBLELIT | FLOATLIT | INTLIT |
-                  SYMBOLLIT | XMLLIT | ARROW | LARROW | ELLIPSIS | UNQUOTE =>
-                data.endOffset + 1
-              case _ =>
-                data.endOffset
-            }
-            val length = end - start
-            val chars = CharBuffer.wrap(input.chars, start, length)
-            val bytes = StandardCharsets.UTF_8.encode(CharBuffer.wrap(chars))
-            digest.update(data.token.toByte)
-            digest.update(bytes)
-        }
+      val tokens = input.tokenize.get
+      tokens.foreach {
+        case _: Token.Space | _: Token.Tab | _: Token.CR | _: Token.LF |
+            _: Token.LFLF | _: Token.FF | _: Token.Comment | _: Token.BOF |
+            _: Token.EOF => // Do nothing
+        case token =>
+          val bytes = StandardCharsets.UTF_8.encode(token.pos.text)
+          digest.update(token.productPrefix.getBytes())
+          digest.update(bytes)
       }
       true
     } catch {
       case NonFatal(e) =>
-        scribe.error(s"failed to checksum path $file", e)
+        scribe.error(s"sbt checksum error: $file", e)
         false
     }
   }

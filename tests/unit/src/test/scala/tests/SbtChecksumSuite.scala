@@ -45,7 +45,7 @@ object SbtChecksumSuite extends BaseSuite {
     }
   }
 
-  val solo = "1C6D9CC0F064B0C6D7E205177F43AFC9"
+  val solo = "62E46F71242E515912BE6814C9356D63"
   check(
     "solo build.sbt",
     """
@@ -65,7 +65,7 @@ object SbtChecksumSuite extends BaseSuite {
     Some(solo)
   )
 
-  val project = "EA4CAAD6FEDEFCDA686DE401F4241E72"
+  val project = "08E20CE98E81FAB7388686CCADFC2F64"
   check(
     "metabuild",
     """

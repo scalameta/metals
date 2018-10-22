@@ -24,9 +24,8 @@ import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.compat.java8.FutureConverters._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.Future
-import scala.meta.internal.inputs._
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.ProtocolConverters._
@@ -51,7 +50,7 @@ case class Buffers(map: TrieMap[AbsolutePath, String] = TrieMap.empty) {
   def remove(key: AbsolutePath): Unit = map.remove(key)
 }
 
-class MetalsLanguageServer(ec: ExecutionContext) {
+class MetalsLanguageServer(ec: ExecutionContextExecutor) {
   private implicit val executionContext = ec
 
   val buffers = Buffers()

@@ -101,7 +101,7 @@ lazy val metals = project
       "io.github.soc" % "directories" % "11",
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "com.outr" %% "scribe" % "2.6.0",
-      "ch.epfl.scala" % "bsp4j" % "1.0.0+15-f247be2b",
+      "ch.epfl.scala" % "bsp4j" % "1.1.0",
       "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0",
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "com.lihaoyi" %% "pprint" % "0.5.3", // for pretty formatting of log values
