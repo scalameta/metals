@@ -53,9 +53,14 @@ final class FileEvents(
   def start(): Unit = {
     activeWatcher.foreach(_.close())
     val paths = new java.util.ArrayList[Path]()
-    paths.add(workspace.resolve("build.sbt").toNIO)
     paths.add(workspace.resolve("project").toNIO)
     buildTargets.sourceDirectories.foreach(dir => paths.add(dir.toNIO))
+    paths.forEach { path =>
+      if (!Files.exists(path)) {
+        Files.createDirectories(path)
+      }
+    }
+    paths.add(workspace.resolve("build.sbt").toNIO)
     val watcher = DirectoryWatcher
       .builder()
       .paths(paths)

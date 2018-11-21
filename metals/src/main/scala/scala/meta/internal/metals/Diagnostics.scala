@@ -1,10 +1,7 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j
-import ch.epfl.scala.bsp4j.CompileReport
 import java.util
-import java.util.Collections
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.PublishDiagnosticsParams

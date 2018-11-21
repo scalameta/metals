@@ -1,6 +1,5 @@
 package tests
 
-import scala.meta.internal.io.PathIO
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags.SemanticdbClasspath

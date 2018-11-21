@@ -10,13 +10,9 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
-import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.ExecuteCommandParams
-import scala.meta.internal.mtags.MtagsEnrichments._
-import org.eclipse.lsp4j.FileChangeType
-import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
@@ -33,7 +29,6 @@ import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.{
   Buffers,
   MetalsLanguageClient,
