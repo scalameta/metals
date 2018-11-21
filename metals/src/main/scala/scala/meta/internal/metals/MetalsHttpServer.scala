@@ -21,10 +21,8 @@ import scala.meta.internal.io.InputStreamIO
 import MetalsEnrichments._
 import io.undertow.util.StatusCodes
 import java.io.IOException
-import java.net.BindException
 import java.net.InetSocketAddress
 import java.net.ServerSocket
-import java.net.SocketException
 import scala.util.control.NonFatal
 
 /**

@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
-import scribe.Level
 import scribe.LogRecord
 import scribe.writer.Writer
 

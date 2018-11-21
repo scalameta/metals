@@ -8,7 +8,7 @@ environment:
 build_script:
   - sbt version # dummy step, a build_script step is required by appveyor.
 test_script:
-  - sbt compile
+  - sbt unit/test
 cache:
   - C:\Users\appveyor\.ivy2
   - C:\Users\appveyor\.coursier

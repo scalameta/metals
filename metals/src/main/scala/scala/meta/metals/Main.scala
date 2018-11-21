@@ -7,7 +7,6 @@ import org.eclipse.lsp4j.services.LanguageClient
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.GlobalTrace
-import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig

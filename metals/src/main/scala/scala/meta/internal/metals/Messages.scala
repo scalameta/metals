@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.util.Collections
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
