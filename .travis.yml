@@ -2,6 +2,7 @@ jdk:
   - oraclejdk8
 os:
   - linux
+language: scala
 
 stages:
   - name: test
@@ -20,6 +21,8 @@ jobs:
         - sbt sbt-metals/publishLocal test
     - env: TEST="sbt test"
       os: windows
+      language:
+        - node_js # Scala is not supported
       pre_install:
         - choco config set choco-cache
         - choco install jdk8
