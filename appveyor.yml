@@ -8,6 +8,7 @@ install:
   - cmd: SET SBT_OPTS=-XX:MaxPermSize=2g -Xmx4g
 environment:
   APPVEYOR_CACHE_ENTRY_ZIP_ARGS: "-t7z -m0=lzma -mx=9"
+  JAVA_OPTS: -Djna.nosys=true
 build_script:
   - sbt version # dummy step, a build_script step is required by appveyor.
 test_script:
