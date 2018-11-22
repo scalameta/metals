@@ -1,4 +1,3 @@
-language: scala
 jdk:
   - oraclejdk8
 os:
@@ -21,6 +20,12 @@ jobs:
         - sbt sbt-metals/publishLocal test
     - env: TEST="sbt test"
       os: windows
+      pre_install:
+        - choco config set choco-cache
+        - choco install jdk8
+        - export PATH=$PATH:"/c/Program Files/Java/jdk1.8.0_191/bin"
+        - java -version
+        - choco install sbt
       script:
         - sbt sbt-metals/publishLocal test
     - stage: release
@@ -35,6 +40,7 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.cache/coursier
     - $HOME/.coursier
+    - choco-cache
   yarn: true
 
 before_cache:
