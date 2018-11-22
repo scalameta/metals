@@ -46,6 +46,9 @@ object SbtChecksum {
     )
   }
 
+  def foreach(workspace: AbsolutePath)(fn: String => Unit): Unit = {
+    current(workspace).foreach(fn)
+  }
   def current(workspace: AbsolutePath): Option[String] = {
     if (!workspace.isDirectory) None
     else {

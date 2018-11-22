@@ -143,7 +143,8 @@ final class DefinitionProvider(
   private object DefinitionDestination {
     def bestTextDocument(symbolDefinition: SymbolDefinition): TextDocument = {
       val defnRevisedInput = symbolDefinition.path.toInput
-      // Read text file from disk instead of editor buffers.
+      // Read text file from disk instead of editor buffers because the file
+      // on disk is more likely to parse.
       val parsed =
         mtags.index(symbolDefinition.path.toLanguage, defnRevisedInput)
       if (parsed.occurrences.isEmpty) {

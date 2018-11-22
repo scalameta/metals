@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.metals.BloopProtocol
 
 object TcpSlowSuite extends BaseSlowSuite("tcp") {
-  override def protocol: BloopProtocol = BloopProtocol.Tcp
+  override def protocol: BloopProtocol = BloopProtocol.tcp
   testAsync("tcp") {
     for {
       _ <- server.initialize(

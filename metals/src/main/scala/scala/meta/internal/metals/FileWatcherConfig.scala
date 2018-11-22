@@ -1,20 +1,15 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.metals.FileWatcherConfig._
-
-sealed abstract class FileWatcherConfig {
-  def isCustom: Boolean = this == custom
-  def isAuto: Boolean = this == auto
-  def isNone: Boolean = this == none
+final case class FileWatcherConfig(value: String) {
+  def isAuto: Boolean = value == "auto"
+  def isCustom: Boolean = value == "custom"
+  def isNone: Boolean = value == "none"
 }
+
 object FileWatcherConfig {
-  case object auto extends FileWatcherConfig
-  case object custom extends FileWatcherConfig
-  case object none extends FileWatcherConfig
-  def default: FileWatcherConfig =
-    System.getProperty("metals.file-watcher", "none") match {
-      case "auto" => auto
-      case "custom" => custom
-      case _ => none
-    }
+  def auto = new FileWatcherConfig("auto")
+  def custom = new FileWatcherConfig("custom")
+  def none = new FileWatcherConfig("none")
+  def default =
+    new FileWatcherConfig(System.getProperty("metals.file-watcher", "auto"))
 }

@@ -1,12 +1,14 @@
 package scala.meta.internal.metals
 
 import com.geirsson.coursiersmall
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketException
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
@@ -16,6 +18,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.scalasbt.ipcsocket.UnixDomainSocket
+import org.scalasbt.ipcsocket.Win32NamedPipeSocket
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -52,6 +55,14 @@ final class BloopServers(
     icons: Icons
 )(implicit ec: ExecutionContextExecutorService, statusBar: StatusBar) {
 
+  lazy val bloopPy: AbsolutePath = {
+    val embeddedBloopClient = this.getClass.getResourceAsStream("/bloop.py")
+    val out = Files.createTempDirectory("metals").resolve("bloop.py")
+    out.toFile.deleteOnExit()
+    Files.copy(embeddedBloopClient, out)
+    AbsolutePath(out)
+  }
+
   def newServer(): Future[BuildServerConnection] = {
     for {
       (protocol, cancelable) <- callBSP()
@@ -85,44 +96,100 @@ final class BloopServers(
     port
   }
 
-  sealed abstract class Protocol extends Cancelable {
-    import Protocol._
+  sealed trait Connection extends Cancelable {
+    import Connection._
     def input: InputStream = this match {
       case Unix(socket) => socket.getInputStream
-      case Tcp(socket) => socket.getInputStream
-    }
-    def output: OutputStream = this match {
-      case Unix(socket) => socket.getOutputStream
+      case NamedPipe(socket) => socket.getInputStream
       case Tcp(socket) =>
-        new OutputStream {
-          override def write(b: Int): Unit = {
-            socket.getOutputStream.write(b)
-            socket.getOutputStream.flush()
+        new InputStream {
+          override def read(): Int = {
+            try socket.getInputStream.read()
+            catch {
+              case e: SocketException =>
+                scribe.debug("tcp input socket closed", e)
+                -1
+            }
           }
         }
     }
+    def output: OutputStream = this match {
+      case Unix(socket) => socket.getOutputStream
+      case NamedPipe(socket) => socket.getOutputStream
+      case Tcp(socket) =>
+        new OutputStream {
+          private var isClosed = false
+          override def write(b: Int): Unit = {
+            try {
+              if (!isClosed) {
+                socket.getOutputStream.write(b)
+              }
+            } catch {
+              case e: SocketException =>
+                scribe.debug("tcp output socket closed", e)
+                isClosed = true
+            }
+          }
+        }
+    }
+    import Connection._
     override def cancel(): Unit = this match {
+      case NamedPipe(socket) =>
+        socket.close()
       case Unix(socket) =>
         if (!socket.isInputShutdown) socket.shutdownInput()
         if (!socket.isOutputShutdown) socket.shutdownOutput()
         socket.close()
       case Tcp(socket) =>
-        if (socket.isClosed) {
+        if (!socket.isClosed) {
           socket.close()
         }
     }
   }
-  object Protocol {
-    case class Unix(socket: UnixDomainSocket) extends Protocol
-    case class Tcp(socket: Socket) extends Protocol
+  object Connection {
+    case class Unix(socket: UnixDomainSocket) extends Connection
+    case class Tcp(socket: Socket) extends Connection
+    case class NamedPipe(socket: Socket) extends Connection
   }
 
-  private def callBSP(): Future[(Protocol, Cancelable)] = {
-    if (config.bloopProtocol.isTcp) callTcpBsp()
+  private def callBSP(): Future[(Connection, Cancelable)] = {
+    if (config.bloopProtocol.isNamedPipe) callNamedPipeBsp()
+    if (config.bloopProtocol.isTcp) callTcpBspWithBackoff()
     else callUnixBsp()
   }
 
-  private def callTcpBsp(): Future[(Protocol, Cancelable)] = {
+  private def callNamedPipeBsp(): Future[(Connection, Cancelable)] = {
+    val pipeName = "\\\\.\\pipe\\metals" + Random.nextInt()
+    val args = Array(
+      "bsp",
+      "--protocol",
+      "local",
+      "--pipe-name",
+      pipeName
+    )
+    callBloopMain(
+      args,
+      isOk = { () =>
+        Thread.sleep(1000)
+        true
+      },
+      onSuccess = { () =>
+        val connection = new Win32NamedPipeSocket(pipeName)
+        Connection.NamedPipe(connection)
+      }
+    )
+  }
+
+  private def callTcpBspWithBackoff(
+      maxRetries: Int = 5
+  ): Future[(Connection, Cancelable)] = {
+    callTcpBspUnsafe().recoverWith {
+      case _: IOException if maxRetries > 0 =>
+        // It can take a really long time to establish a connection on Windows.
+        callTcpBspWithBackoff(maxRetries - 1)
+    }
+  }
+  private def callTcpBspUnsafe(): Future[(Connection, Cancelable)] = {
     val host = "127.0.0.1"
     val port = randomPort(host)
     val args = Array(
@@ -134,30 +201,20 @@ final class BloopServers(
       "--port",
       port.toString
     )
-    scribe.info(s"running '${args.mkString(" ")}'")
-    val cancelable = callBloopMain(args)
-    var connection: Socket = null
-    for {
-      confirmation <- waitUntilSuccess(() => {
-        try {
-          connection = new Socket(host, port)
-          true
-        } catch {
-          case NonFatal(_) =>
-            false
-        }
-      })
-    } yield {
-      if (confirmation.isYes) {
-        (Protocol.Tcp(connection), cancelable)
-      } else {
-        cancelable.cancel()
-        throw NoResponse
+    callBloopMain(
+      args,
+      isOk = { () =>
+        Thread.sleep(1000)
+        true
+      },
+      onSuccess = { () =>
+        val socket = new Socket(host, port)
+        Connection.Tcp(socket)
       }
-    }
+    )
   }
 
-  private def callUnixBsp(): Future[(Protocol, Cancelable)] = {
+  private def callUnixBsp(): Future[(Connection, Cancelable)] = {
     val socket = BloopServers.newSocketFile()
     val args = Array(
       "bsp",
@@ -166,13 +223,26 @@ final class BloopServers(
       "--socket",
       socket.toString
     )
+    callBloopMain(
+      args,
+      isOk = { () =>
+        Files.exists(socket.toNIO)
+      },
+      onSuccess = { () =>
+        Connection.Unix(new UnixDomainSocket(socket.toFile.getCanonicalPath))
+      }
+    )
+  }
+
+  private def callBloopMain(
+      args: Array[String],
+      isOk: () => Boolean,
+      onSuccess: () => Connection
+  ): Future[(Connection, Cancelable)] = {
     val cancelable = callBloopMain(args)
-    for {
-      confirmation <- waitUntilSuccess(() => Files.exists(socket.toNIO))
-    } yield {
+    waitUntilSuccess(isOk).map { confirmation =>
       if (confirmation.isYes) {
-        val connection = new UnixDomainSocket(socket.toFile.getCanonicalPath)
-        (Protocol.Unix(connection), cancelable)
+        (onSuccess(), cancelable)
       } else {
         cancelable.cancel()
         throw NoResponse
@@ -181,10 +251,11 @@ final class BloopServers(
   }
 
   private def callBloopMain(args: Array[String]): Cancelable = {
+    scribe.info(s"running 'bloop ${args.mkString(" ")}'")
     val logger = MetalsLogger.newBspLogger(workspace)
     if (bloopCommandLineIsInstalled(workspace)) {
       val bspProcess = Process(
-        "bloop" +: args,
+        Array("python", bloopPy.toString()) ++ args,
         cwd = workspace.toFile
       ).run(
         ProcessLogger(
@@ -199,7 +270,7 @@ final class BloopServers(
           val cancelMain = Promise[java.lang.Boolean]()
           val job = ec.submit(new Runnable {
             override def run(): Unit = {
-              callBloopReflectiveMain(
+              callBloopReflectMain(
                 classloaders,
                 args,
                 cancelMain.future.asJava
@@ -218,7 +289,7 @@ final class BloopServers(
   /**
    * Uses runtime reflection to invoke the `reflectiveMain` function in bloop.
    */
-  private def callBloopReflectiveMain(
+  private def callBloopReflectMain(
       classLoader: ClassLoader,
       args: Array[String],
       cancelMain: CompletableFuture[java.lang.Boolean]
@@ -250,8 +321,10 @@ final class BloopServers(
 
   private def bloopCommandLineIsInstalled(workspace: AbsolutePath): Boolean = {
     try {
-      val output = Process(List("bloop", "help"), cwd = workspace.toFile)
-        .!!(ProcessLogger(_ => ()))
+      val output = Process(
+        List("python", bloopPy.toString(), "help"),
+        cwd = workspace.toFile
+      ).!!(ProcessLogger(_ => ()))
       // NOTE: our BSP integration requires bloop 1.1 or higher so we ensure
       // users are on an older version.
       val isOldVersion =
@@ -288,7 +361,11 @@ final class BloopServers(
       TimeUnit.MILLISECONDS
     )
     promise.future.onComplete(_ => tick.cancel(true))
-    promise.future
+    promise.future.recover {
+      case NonFatal(e) =>
+        scribe.error("Unexpected error using backup", e)
+        Confirmation.No
+    }
   }
 
   lazy val bloopJars: Option[ClassLoader] = {

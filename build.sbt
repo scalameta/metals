@@ -125,7 +125,7 @@ lazy val metals = project
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "io.github.soc" % "directories" % "11",
       // Scala dependencies
-      "com.geirsson" %% "coursier-small" % "1.1.0", // needed due to bincompat with jvm-directories
+      "com.geirsson" %% "coursier-small" % "1.2.0", // needed due to bincompat with jvm-directories
       "org.scala-lang.modules" %% "scala-xml" % "1.1.1", // required to avoid classpath problems via coursier-small
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       "com.outr" %% "scribe" % "2.6.0",

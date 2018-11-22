@@ -16,7 +16,7 @@ object ToplevelSuite extends SingleFileExpectSuite("toplevels.expect") {
       ls.files.foreach { relpath =>
         val text =
           FileIO.slurp(ls.root.resolve(relpath), StandardCharsets.UTF_8)
-        val input = Input.VirtualFile(relpath.toString(), text)
+        val input = Input.VirtualFile(relpath.toURI(false).toString, text)
         val reluri = relpath.toURI(isDirectory = false).toString
         Mtags.toplevels(input).foreach { toplevel =>
           if (symtab.info(toplevel).isEmpty) {
@@ -27,7 +27,7 @@ object ToplevelSuite extends SingleFileExpectSuite("toplevels.expect") {
       }
     }
     if (missingSymbols.nonEmpty) {
-      fail(s"unknown symbols:\n${missingSymbols.mkString("\n")}")
+      fail(s"missing symbols:\n${missingSymbols.mkString("\n")}")
     }
     toplevels.sorted.mkString("\n")
   }
