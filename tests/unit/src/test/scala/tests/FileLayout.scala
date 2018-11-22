@@ -13,16 +13,18 @@ object FileLayout {
       charset: Charset = StandardCharsets.UTF_8
   ): AbsolutePath = {
     if (!layout.trim.isEmpty) {
-      layout.split("(?=\n/)").foreach { row =>
+      val lines = layout.replaceAllLiterally("\r\n", "\n")
+      lines.split("(?=\n/)").foreach { row =>
         row.stripPrefix("\n").split("\n", 2).toList match {
           case path :: contents :: Nil =>
             val file =
               path.stripPrefix("/").split("/").foldLeft(root)(_ resolve _)
-            val parent = file.toNIO.getParent.toFile
-            parent.mkdirs()
+            val parent = file.toNIO.getParent
+            Files.createDirectories(parent)
             Files.write(
               file.toNIO,
               contents.getBytes(charset),
+              StandardOpenOption.WRITE,
               StandardOpenOption.CREATE
             )
           case els =>

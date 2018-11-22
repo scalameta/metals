@@ -58,7 +58,19 @@ inThisBuild(
     resolvers += Resolver.sonatypeRepo("releases"),
     // faster publishLocal:
     publishArtifact.in(packageDoc) := sys.env.contains("CI"),
-    publishArtifact.in(packageSrc) := sys.env.contains("CI")
+    publishArtifact.in(packageSrc) := sys.env.contains("CI"),
+    // forking options
+    javaOptions += {
+      import scala.collection.JavaConverters._
+      val props = System.getProperties
+      props
+        .stringPropertyNames()
+        .asScala
+        .map { configKey =>
+          s"-D$configKey=${props.getProperty(configKey)}"
+        }
+        .mkString(" ")
+    }
   )
 )
 
@@ -103,7 +115,9 @@ lazy val metals = project
       "io.methvin" % "directory-watcher" % "0.8.0",
       "org.flywaydb" % "flyway-core" % "5.2.1",
       "com.h2database" % "h2" % "1.4.197",
-      "com.zaxxer" % "nuprocess" % "1.2.3",
+      "com.zaxxer" % "nuprocess" % "1.2.4",
+      "net.java.dev.jna" % "jna" % "4.5.1",
+      "net.java.dev.jna" % "jna-platform" % "4.5.1",
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,

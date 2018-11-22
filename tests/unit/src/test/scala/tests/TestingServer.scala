@@ -80,7 +80,7 @@ final class TestingServer(
       expectError: Boolean = false
   ): Future[Unit] = {
     Debug.printEnclosing()
-    cleanUnmanagedFiles()
+//    cleanUnmanagedFiles()
     write(layout)
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()

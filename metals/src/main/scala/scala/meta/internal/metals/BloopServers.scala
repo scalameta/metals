@@ -4,6 +4,7 @@ import com.geirsson.coursiersmall
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintStream
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLClassLoader
@@ -76,8 +77,9 @@ final class BloopServers(
     }
   }
 
-  private def randomPort(): Int = {
-    val s = new ServerSocket(0)
+  private def randomPort(host: String): Int = {
+    val s = new ServerSocket()
+    s.bind(new InetSocketAddress(host, 0))
     val port = s.getLocalPort
     s.close()
     port
@@ -91,7 +93,13 @@ final class BloopServers(
     }
     def output: OutputStream = this match {
       case Unix(socket) => socket.getOutputStream
-      case Tcp(socket) => socket.getOutputStream
+      case Tcp(socket) =>
+        new OutputStream {
+          override def write(b: Int): Unit = {
+            socket.getOutputStream.write(b)
+            socket.getOutputStream.flush()
+          }
+        }
     }
     override def cancel(): Unit = this match {
       case Unix(socket) =>
@@ -115,8 +123,8 @@ final class BloopServers(
   }
 
   private def callTcpBsp(): Future[(Protocol, Cancelable)] = {
-    val host = "localhost"
-    val port = randomPort()
+    val host = "127.0.0.1"
+    val port = randomPort(host)
     val args = Array(
       "bsp",
       "--protocol",
@@ -126,6 +134,7 @@ final class BloopServers(
       "--port",
       port.toString
     )
+    scribe.info(s"running '${args.mkString(" ")}'")
     val cancelable = callBloopMain(args)
     var connection: Socket = null
     for {

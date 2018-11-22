@@ -19,11 +19,11 @@ object GlobalTrace {
     setupTracePrinter(protocolName)
   }
 
-  def globalLog: AbsolutePath = globalLoggingDirectory.resolve("global.log")
+  def globalLog: AbsolutePath = globalDirectory.resolve("global.log")
 
   def protocolTracePath(protocolName: String): AbsolutePath = {
     val traceFilename = s"${protocolName.toLowerCase}.trace.json"
-    globalLoggingDirectory.resolve(traceFilename)
+    globalDirectory.resolve(traceFilename)
   }
 
   def setupTracePrinter(protocolName: String): PrintWriter = {
@@ -46,7 +46,7 @@ object GlobalTrace {
     }
   }
 
-  private def globalLoggingDirectory: AbsolutePath = {
+  def globalDirectory: AbsolutePath = {
     try {
       val projectDirectories =
         ProjectDirectories.from("org", "scalameta", "metals")
