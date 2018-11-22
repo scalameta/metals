@@ -15,9 +15,14 @@ class RequirementsModifier extends StringModifier {
     s"""
        |## Requirements
        |
-       |* Java 8. Metals does not yet work with Java 11, see [scalameta/scalameta#1779](https://github.com/scalameta/scalameta/issues/1779)
-       |* macOS, Linux or Windows. Metals is not developed on Windows but CI runs tests on Windows so
-       |  please report issues if you encounter problems.
-     """.stripMargin
+       |**Java 8**. Metals does not yet work with Java 11, see
+       |[scalameta/scalameta#1779](https://github.com/scalameta/scalameta/issues/1779)
+       |
+       |**macOS, Linux or Windows**. Metals is developed on macOS and every PR is tested on Ubuntu+Windows.
+       |
+       |**Scala 2.12.7 and 2.11.12**. Metals works only with the latest Scala 2.12 and 2.11 versions.
+       |See [scalameta/scalameta#1695](https://github.com/scalameta/scalameta/issues/1695) for updates on
+       |adding support for Scala 2.13 once it's out.
+       |""".stripMargin
   }
 }

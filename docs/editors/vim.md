@@ -66,6 +66,7 @@ and map `gd` to run "Goto definition".
 au BufRead,BufNewFile *.sbt set filetype=scala
 
 " vim-lsc
+let g:lsc_enable_autocomplete = v:false
 let g:lsc_server_commands = {
   \ 'scala': 'metals-vim'
   \}
@@ -111,6 +112,14 @@ sources with "Goto definition" by pressing `gd` in normal mode.
 
 Some tips on how to effectively use Metals with vim.
 
+### Learn more about vim-lsc
+
+For comprehensive documentation about vim-lsc, run the following command.
+
+```vim
+:help lsc
+```
+
 ### Customize goto definition
 
 Configure `~/.vimrc` to use a different command than `gd` for triggering "goto
@@ -129,7 +138,7 @@ To list all compilation errors and warnings in the workspace, run the following
 command.
 
 ```vim
-:call lsc#diagnostics#showInQuickFix()
+:LSClientAllDiagnostics
 ```
 
 This is helpful to see compilation errors in different files from your current
@@ -151,7 +160,7 @@ This command is helpful when navigating in library dependency sources in the
 The Metals server is shutdown when you exit vim as usual.
 
 ```vim
-:q
+:wq
 ```
 
 This step clean ups resources that are used by the server.
@@ -175,7 +184,7 @@ the command below. This command works only at the moment if there is a `.bloop/`
 directory containing JSON files.
 
 ```vim
-:call lsc#server#call(&filetype, 'workspace/executeCommand', { 'command': 'build.import' }, function('abs'))
+:call lsc#server#call(&filetype, 'workspace/executeCommand', { 'command': 'build.connect' }, function('abs'))
 ```
 
 The callback `function('abs')` can be replaced with any function that does

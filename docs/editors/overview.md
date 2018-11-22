@@ -86,9 +86,12 @@ focused text file.
 
 ![Diagnostics](https://user-images.githubusercontent.com/1408093/48774587-f4d5c780-ecca-11e8-8087-acca5a05ca78.png)
 
-> Compilation is handled by the build tool, meaning diagnostics may take a while
-> to publish for large projects. The batch compilation mode used by build tools
-> is slower than the interactive compiler used by IntelliJ as you type.
+### Known limitations
+
+- Slow feedback. Compilation is handled by the build tool, meaning diagnostics
+  may take a while to publish for large projects. The batch compilation mode
+  used by build tools is slower than the interactive compiler used by IntelliJ
+  as you type.
 
 ## Goto definition
 
@@ -101,9 +104,19 @@ buffer.
 
 ![Goto Definition](https://user-images.githubusercontent.com/1408093/48776422-1f764f00-ecd0-11e8-96d1-170f2354d50e.gif)
 
-> Navigation does not work for identifiers that have just been typed in unsaved
-> editor buffers. An identifiers must compile successfully at least once in
-> order to resolve to a definition.
+### Known limitations
+
+- Navigation does not work for identifiers that have just been typed in unsaved
+  editor buffer. An identifier must compile successfully at least once in order
+  to resolve to a definition.
+- Navigation does not work for buffers that do not tokenize, for example due to
+  unclosed string literals.
+- [scalameta/scalameta#1780](https://github.com/scalameta/scalameta/issues/1780)
+  extension methods sometimes resolve to the implicit conversion method instead
+  of the extension method.
+- [scalameta/scalameta#1802](https://github.com/scalameta/scalameta/issues/1802)
+  reflective invocations (methods calls on structural types) do not resolve to a
+  definition.
 
 ## Metals Extensions
 
@@ -118,7 +131,7 @@ buffer.
 The Metals language server supports custom extensions that are not part of the
 Language Server Protocol (LSP). These extensions are not necessary for Metals to
 function but they improve the user experience. To learn more about Metals
-extensions, see [integrating a new editor](editor.md).
+extensions, see [integrating a new editor](new-editor.html).
 
 ## Unsupported features
 

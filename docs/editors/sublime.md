@@ -40,7 +40,7 @@ Text LSP client.
 adapt the `-o` flag like this:
 
 ```diff
--  -o metals-vim -f
+-  -o metals-sublime -f
 +  -o /usr/local/bin/metals-sublime -f
 ```
 
