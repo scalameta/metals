@@ -60,6 +60,7 @@ final class BloopInstall(
   override def toString: String = s"BloopInstall($workspace)"
 
   def runUnconditionally(sbt: Sbt): Future[BloopInstallResult] = {
+    System.setProperty("jna.nosys", "true")
     BloopInstall.writeGlobalPluginFile(sbt)
     BloopInstall.workAroundIssue4395()
     val elapsed = new Timer(time)
