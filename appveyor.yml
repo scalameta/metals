@@ -6,6 +6,7 @@ install:
 environment:
   APPVEYOR_CACHE_ENTRY_ZIP_ARGS: "-t7z -m0=lzma -mx=9"
 build_script:
+  - rm -r /C:/Users/appveyor/.sbt/preloaded
   - sbt version # dummy step, a build_script step is required by appveyor.
 test_script:
   - sbt unit/test
