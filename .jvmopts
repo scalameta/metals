@@ -1,3 +1,4 @@
+-Djna.nosys=true
 -Xss4m
 -Xms1G
 -Xmx8G
