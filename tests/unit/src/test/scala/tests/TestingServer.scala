@@ -29,22 +29,19 @@ import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.{
-  Buffers,
-  MetalsLanguageClient,
-  MetalsLanguageServer
-}
-import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.io.AbsolutePath
-import scala.meta.io.RelativePath
-import scala.meta.testkit.StringFS
-import scala.meta.tokens.Token
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsLanguageServer
+import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.{semanticdb => s}
+import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
+import scala.meta.tokens.Token
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -75,7 +72,7 @@ final class TestingServer(
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
 
   private def write(layout: String): Unit = {
-    StringFS.fromString(layout, root = workspace)
+    FileLayout.fromString(layout, root = workspace)
   }
 
   def initialize(
