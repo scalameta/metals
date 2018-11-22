@@ -23,8 +23,7 @@ object FileLayout {
             Files.write(
               file.toNIO,
               contents.getBytes(charset),
-              StandardOpenOption.CREATE,
-              StandardOpenOption.TRUNCATE_EXISTING
+              StandardOpenOption.CREATE
             )
           case els =>
             throw new IllegalArgumentException(
