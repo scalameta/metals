@@ -1,7 +1,6 @@
 package tests
 
 import scala.meta.internal.metals.SbtVersion
-import scala.meta.testkit.StringFS
 
 object SbtVersionSuite extends BaseSuite {
   def check(
@@ -9,7 +8,7 @@ object SbtVersionSuite extends BaseSuite {
       expected: String
   ): Unit = {
     test(expected) {
-      val root = StringFS.fromString(layout)
+      val root = FileLayout.fromString(layout)
       val obtained = SbtVersion(root).version
       assertNoDiff(obtained, expected)
     }

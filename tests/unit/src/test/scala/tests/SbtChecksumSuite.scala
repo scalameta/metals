@@ -4,17 +4,16 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import scala.meta.internal.metals.SbtChecksum
-import scala.meta.testkit.StringFS
 
 object SbtChecksumSuite extends BaseSuite {
   def checksum(layout: String): Option[String] = {
-    val root = StringFS.fromString(layout)
+    val root = FileLayout.fromString(layout)
     val obtained = SbtChecksum.current(root)
     obtained
   }
   def check(name: String, layout: String, expected: Option[String]): Unit = {
     test(name) {
-      val root = StringFS.fromString(layout)
+      val root = FileLayout.fromString(layout)
       val obtained = SbtChecksum.current(root)
       (obtained, expected) match {
         case (None, None) => ()
