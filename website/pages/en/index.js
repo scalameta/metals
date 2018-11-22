@@ -116,7 +116,6 @@ const Features = props => {
       className="productShowcaseSection paddingBottom"
       style={{ textAlign: "left" }}
     >
-      <h2>Planned features</h2>
       {features.map(feature => (
         <Block key={feature.title}>{[feature]}</Block>
       ))}

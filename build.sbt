@@ -3,7 +3,7 @@ inThisBuild(
   List(
     version ~= { dynVer =>
       if (sys.env.contains("CI")) dynVer
-      else "SNAPSHOT" // only for local publishng
+      else "0.2.0-SNAPSHOT" // only for local publishng
     },
     scalaVersion := V.scala212,
     crossScalaVersions := List(V.scala212),
@@ -147,14 +147,8 @@ lazy val `sbt-metals` = project
     },
     publishMavenStyle := false,
     libraryDependencies --= libraryDependencies.in(ThisBuild).value,
-    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import"),
-    scriptedBufferLog := !sys.env.contains("CI"),
-    scriptedLaunchOpts ++= Seq(
-      "-Xmx1024M",
-      s"-Dplugin.version=${version.value}"
-    )
+    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
   )
-  .enablePlugins(ScriptedPlugin)
   .disablePlugins(ScalafixPlugin)
 
 lazy val input = project

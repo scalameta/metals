@@ -1,6 +1,8 @@
 language: scala
 jdk:
   - oraclejdk8
+os:
+  - linux
 
 stages:
   - name: test
@@ -15,6 +17,10 @@ jobs:
         - ./bin/scalafmt --test
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt test"
+      script:
+        - sbt sbt-metals/publishLocal test
+    - env: TEST="sbt test"
+      os: windows
       script:
         - sbt sbt-metals/publishLocal test
     - stage: release
