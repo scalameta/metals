@@ -19,18 +19,6 @@ jobs:
     - env: TEST="sbt test"
       script:
         - sbt sbt-metals/publishLocal test
-    - env: TEST="sbt test"
-      os: windows
-      language:
-        - node_js # Scala is not supported
-      pre_install:
-        - choco config set choco-cache
-        - choco install jdk8
-        - export PATH=$PATH:"/c/Program Files/Java/jdk1.8.0_191/bin"
-        - java -version
-        - choco install sbt
-      script:
-        - sbt sbt-metals/publishLocal test
     - stage: release
       script: sbt ci-release docs/docusaurusPublishGhpages
 
