@@ -69,7 +69,8 @@ final case class OnDemandSymbolIndex(
   ): Unit = tryRun {
     indexedSources += 1
     val path = sourceDirectory match {
-      case Some(directory) => source.toRelative(directory).toString()
+      case Some(directory) =>
+        source.toRelative(directory).toURI(false).toString()
       case _ => source.toString()
     }
     val text = FileIO.slurp(source, StandardCharsets.UTF_8)

@@ -32,10 +32,15 @@ export async function activate(context: ExtensionContext) {
     .getConfiguration("metals")
     .get("serverVersion");
 
-  const javaArgs = [
+  const serverProperties: string[] = workspace
+    .getConfiguration("metals")
+    .get("serverProperties")
+    .toString()
+    .split(" ")
+    .filter(e => e.length > 0);
+
+  const javaArgs = serverProperties.concat([
     `-Dmetals.extensions=true`,
-    // HTTP server is not needed for VS Code.
-    // `-Dmetals.http=true`,
     `-Dmetals.icons=octicons`,
     `-Xss4m`,
     `-Xms1G`,
@@ -44,7 +49,7 @@ export async function activate(context: ExtensionContext) {
     `-XX:+UseStringDeduplication`,
     "-jar",
     coursierPath
-  ];
+  ]);
 
   const coursierLaunchArgs = [
     "launch",

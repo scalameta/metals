@@ -1,20 +1,19 @@
 package scala.meta.internal.metals
 
 case class MetalsServerConfig(
-    bloopProtocol: BloopProtocol = BloopProtocol.Auto,
+    bloopProtocol: BloopProtocol = BloopProtocol.default,
     isExtensionsEnabled: Boolean =
       System.getProperty("metals.extensions") == "true",
     fileWatcher: FileWatcherConfig = FileWatcherConfig.default,
-    isLogStatusBar: Boolean =
-      System.getProperty("metals.log-status") == "true",
+    statusBar: StatusBarConfig = StatusBarConfig.default,
+    slowTask: SlowTaskConfig = SlowTaskConfig.default,
+    showMessage: ShowMessageConfig = ShowMessageConfig.default,
+    showMessageRequest: ShowMessageRequestConfig =
+      ShowMessageRequestConfig.default,
     isNoInitialized: Boolean =
       System.getProperty("metals.no-initialized") == "true",
     isHttpEnabled: Boolean =
-      System.getProperty("metals.http") == "true",
-    isLogShowMessageRequest: Boolean =
-      System.getProperty("metals.log-show-message-request") == "true",
-    isLogShowMessage: Boolean =
-      System.getProperty("metals.log-show-message") == "true",
+      System.getProperty("metals.http") == "on",
     icons: Icons = Icons.default
 ) {
   override def toString: String =
@@ -27,12 +26,11 @@ case class MetalsServerConfig(
 }
 object MetalsServerConfig {
   def default: MetalsServerConfig = {
-    System.getProperty("metals.client", "unknown") match {
+    System.getProperty("metals.client", "default") match {
       case "vim-lsc" =>
         MetalsServerConfig().copy(
           isExtensionsEnabled = false,
           fileWatcher = FileWatcherConfig.auto,
-          isLogStatusBar = true,
           isNoInitialized = true,
           // Not strictly needed, but helpful while this integration matures.
           isHttpEnabled = true,
@@ -42,13 +40,10 @@ object MetalsServerConfig {
         MetalsServerConfig().copy(
           isExtensionsEnabled = false,
           fileWatcher = FileWatcherConfig.auto,
-          isLogStatusBar = false,
           isNoInitialized = true,
           isHttpEnabled = true,
           // Sublime text opens an invasive alert dialogue for window/showMessage
           // and window/showMessageRequest.
-          isLogShowMessage = true,
-          isLogShowMessageRequest = true,
           icons = Icons.unicode
         )
       case _ =>

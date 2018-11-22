@@ -10,5 +10,4 @@ object Confirmation {
     if (isYes) Yes else No
   case object Yes extends Confirmation
   case object No extends Confirmation
-  case object DontShowAgain extends Confirmation
 }

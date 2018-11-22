@@ -13,7 +13,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
-import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -25,6 +24,7 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -92,7 +92,7 @@ class MetalsLanguageServer(
   }
 
   def setupForwardingLogger(): Unit = {
-    if (!config.isLogStatusBar) {
+    if (!config.statusBar.isLogMessage) {
       scribe.Logger.root
         .withHandler(
           writer = LanguageClientLogger,
@@ -167,12 +167,6 @@ class MetalsLanguageServer(
       initializeParams = Option(params)
       updateWorkspaceDirectory(params)
       val capabilities = new ServerCapabilities()
-      capabilities.setCompletionProvider(
-        new CompletionOptions(false, Collections.emptyList())
-      )
-      capabilities.setCompletionProvider(
-        new CompletionOptions(false, Collections.emptyList())
-      )
       capabilities.setDefinitionProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       if (config.isNoInitialized) {
@@ -434,35 +428,54 @@ class MetalsLanguageServer(
   private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
-    if (!buildTools.isSbt) {
-      scribe.warn(s"Skipping build import for unsupport build tool $buildTools")
-      Future.successful(BuildChange.None)
-    } else {
-      for {
-        result <- bloopInstall.reimportIfChanged(forceImport)
-        change <- {
-          if (result.isInstalled) quickConnectToBuildServer()
-          else if (result.isFailed) {
-            if (buildTools.isBloop) {
-              // TODO(olafur) try to connect but gracefully error
-              languageClient.showMessage(messages.ImportProjectPartiallyFailed)
-              // Connect nevertheless, many build import failures are caused
-              // by resolution errors in one weird module while other modules
-              // exported successfully.
-              quickConnectToBuildServer()
-            } else {
-              languageClient.showMessage(messages.ImportProjectFailed)
-              Future.successful(BuildChange.Failed)
-            }
-          } else {
+    buildTools.asSbt match {
+      case None =>
+        scribe.warn(
+          s"Skipping build import for unsupport build tool $buildTools"
+        )
+        Future.successful(BuildChange.None)
+      case Some(sbt) =>
+        SbtChecksum.current(workspace) match {
+          case None =>
+            scribe.warn(s"Skipping build import, no checksum.")
             Future.successful(BuildChange.None)
-          }
+          case Some(current) =>
+            slowConnectToBuildServer(forceImport, sbt, current)
         }
-      } yield {
-        change
-      }
     }
   }
+
+  private def slowConnectToBuildServer(
+      forceImport: Boolean,
+      sbt: Sbt,
+      checksum: String
+  ): Future[BuildChange] =
+    for {
+      result <- {
+        if (forceImport) bloopInstall.runUnconditionally(sbt)
+        else bloopInstall.runIfApproved(sbt, checksum)
+      }
+      change <- {
+        if (result.isInstalled) quickConnectToBuildServer()
+        else if (result.isFailed) {
+          if (buildTools.isBloop) {
+            // TODO(olafur) try to connect but gracefully error
+            languageClient.showMessage(
+              messages.ImportProjectPartiallyFailed
+            )
+            // Connect nevertheless, many build import failures are caused
+            // by resolution errors in one weird module while other modules
+            // exported successfully.
+            quickConnectToBuildServer()
+          } else {
+            languageClient.showMessage(messages.ImportProjectFailed)
+            Future.successful(BuildChange.Failed)
+          }
+        } else {
+          Future.successful(BuildChange.None)
+        }
+      }
+    } yield change
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     if (!buildTools.isBloop) {
@@ -493,6 +506,8 @@ class MetalsLanguageServer(
       val message =
         "Failed to connect with build server, no functionality will work."
       val details = " See logs for more details."
+      buildServer.foreach(_.shutdown())
+      buildServer = None
       scribe.error(message, e)
       languageClient.showMessage(
         new MessageParams(MessageType.Error, message + details)

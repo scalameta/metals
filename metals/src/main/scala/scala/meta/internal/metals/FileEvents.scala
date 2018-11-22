@@ -15,6 +15,7 @@ import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+import scala.util.Properties
 
 final class FileEvents(
     workspace: AbsolutePath,
@@ -60,7 +61,10 @@ final class FileEvents(
         Files.createDirectories(path)
       }
     }
-    paths.add(workspace.resolve("build.sbt").toNIO)
+    val buildSbt = workspace.resolve("build.sbt").toNIO
+    if (!Properties.isWin && Files.isRegularFile(buildSbt)) {
+      paths.add(buildSbt)
+    }
     val watcher = DirectoryWatcher
       .builder()
       .paths(paths)

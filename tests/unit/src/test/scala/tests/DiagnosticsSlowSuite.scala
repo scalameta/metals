@@ -3,6 +3,7 @@ package tests
 object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
 
   testAsync("diagnostics") {
+    cleanCompileCache("diagnostics")
     for {
       _ <- server.initialize(
         """|/project/build.properties

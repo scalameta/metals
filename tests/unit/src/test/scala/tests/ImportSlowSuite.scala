@@ -8,19 +8,19 @@ import scala.meta.internal.metals.ServerCommands
 
 object ImportSlowSuite extends BaseSlowSuite("import") {
 
-  def currentChecksum: String =
+  def currentChecksum(): String =
     SbtChecksum.current(workspace).getOrElse {
       fail("no sbt checksum for workspace")
     }
   def assertNoStatus(): Unit =
-    server.server.tables.sbtChecksums.getStatus(currentChecksum) match {
+    server.server.tables.sbtChecksums.getStatus(currentChecksum()) match {
       case Some(value) =>
         fail(s"expected no status. obtained $value", stackBump = 1)
       case None =>
         () // OK
     }
   def assertStatus(fn: SbtChecksum.Status => Boolean): Unit = {
-    val checksum = currentChecksum
+    val checksum = currentChecksum()
     server.server.tables.sbtChecksums.getStatus(checksum) match {
       case Some(status) =>
         assert(fn(status))
@@ -155,7 +155,7 @@ object ImportSlowSuite extends BaseSlowSuite("import") {
       _ = client.slowTaskHandler = _ => None
       _ <- server.didSave("build.sbt")(identity)
       _ = assertNoDiff(client.workspaceShowMessages, "")
-      _ = assertStatus(_.isInstalled)
+      _ = assertStatus(_.isCancelled)
     } yield ()
   }
 

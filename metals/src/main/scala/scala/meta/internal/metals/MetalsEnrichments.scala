@@ -26,6 +26,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.util.Properties
 import scala.util.Try
 import scala.{meta => m}
 
@@ -182,13 +183,16 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
         val readonly = workspace.resolve(Directories.readonly)
         val out = readonly.resolveZipPath(path.toNIO).toNIO
         Files.createDirectories(out.getParent)
-        if (Files.exists(out)) {
-          // Can't REPLACE_EXISTING for readonly files.
-          Files.delete(out)
+        if (!Properties.isWin && Files.isRegularFile(out)) {
+          out.toFile.setWritable(true)
         }
         try {
           Files.copy(path.toNIO, out, StandardCopyOption.REPLACE_EXISTING)
-          out.toFile.setReadOnly()
+          // Don't use readOnly files on Windows, makes it impossible to walk
+          // the entire directory later on.
+          if (!Properties.isWin) {
+            out.toFile.setReadOnly()
+          }
         } catch {
           case _: FileAlreadyExistsException =>
             () // ignore

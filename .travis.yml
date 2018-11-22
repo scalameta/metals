@@ -31,7 +31,6 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.cache/coursier
     - $HOME/.coursier
-    - choco-cache
   yarn: true
 
 before_cache:

@@ -14,7 +14,7 @@ import scala.meta.io.AbsolutePath
  * Full end to end integration tests against a full metals language server.
  */
 abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
-  def protocol: BloopProtocol = BloopProtocol.Auto
+  def protocol: BloopProtocol = BloopProtocol.auto
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   var server: TestingServer = _
@@ -52,7 +52,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     RecursivelyDelete(workspace.resolve(".metals").resolve("metals.h2.db"))
   }
   def cleanWorkspace(): Unit = {
-    RecursivelyDelete(workspace.resolve(".metals"))
-    RecursivelyDelete(workspace.resolve(".bloop"))
+    RecursivelyDelete(workspace)
+    Files.createDirectories(workspace.toNIO)
   }
 }

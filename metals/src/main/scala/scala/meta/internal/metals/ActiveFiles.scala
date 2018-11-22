@@ -4,8 +4,16 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.meta.io.AbsolutePath
 import MetalsEnrichments._
 
-class ActiveFiles(time: Time) {
+/**
+ * Keeps track of files that have been "recently active"
+ *
+ * Used to ignore file watching events that follow right after
+ * textDocument/didSave events.
+ */
+final class ActiveFiles(time: Time) {
   private case class Event(timer: Timer, path: AbsolutePath) {
+    def isActive: Boolean =
+      !isStale
     def isStale: Boolean =
       timer.elapsedSeconds > 2
   }
@@ -15,6 +23,7 @@ class ActiveFiles(time: Time) {
     paths.add(Event(new Timer(time), path))
   }
 
-  def isRecentlyActive(path: AbsolutePath): Boolean =
-    paths.asScala.exists(_.path == path)
+  def isRecentlyActive(path: AbsolutePath): Boolean = {
+    paths.asScala.exists(p => p.isActive && p.path == path)
+  }
 }

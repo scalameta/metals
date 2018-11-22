@@ -1,6 +1,9 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.bsp4j.TaskFinishParams
+import ch.epfl.scala.bsp4j.TaskStartParams
 import ch.epfl.scala.{bsp4j => b}
+import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.{lsp4j => l}
 
@@ -41,4 +44,10 @@ final class ForwardingMetalsBuildClient(
   def onConnect(server: b.BuildServer): Unit = {
     this.buildServer = Some(server)
   }
+
+  // We ignore task{Start,Finish} notifications for now.
+  @JsonNotification("build/taskStart")
+  def buildTaskStart(params: TaskStartParams): Unit = {}
+  @JsonNotification("build/taskFinish")
+  def buildTaskEnd(params: TaskFinishParams): Unit = {}
 }

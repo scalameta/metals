@@ -3,7 +3,6 @@ inThisBuild(Vector(
   scalacOptions ++= List(
     "-Yrangepos",
     "-Ywarn-unused"
-    "-Ywarn-unused"
   ),
 ))
 
