@@ -8,10 +8,24 @@ import scala.meta.io.AbsolutePath
  */
 object JdkSources {
   def apply(): Option[AbsolutePath] = {
+    candidates.find(_.isFile)
+  }
+
+  def candidates: List[AbsolutePath] = {
     for {
-      javaHome <- sys.props.get("java.home")
-      jdkSources = Paths.get(javaHome).getParent.resolve("src.zip")
-      if Files.isRegularFile(jdkSources)
-    } yield AbsolutePath(jdkSources)
+      javaHomeString <- Option(System.getProperty("java.home")).toList
+      javaHome = Paths.get(javaHomeString)
+      src <- List(
+        javaHome.getParent.resolve("src.zip"),
+        javaHome.resolve("src.zip")
+      )
+    } yield AbsolutePath(src)
+  }
+  def getOrThrow(): AbsolutePath = {
+    val list = candidates
+    list.headOption.getOrElse {
+      val tried = list.mkString("\n")
+      throw new NoSuchElementException(s"JDK src.zip. Tried\n:$tried")
+    }
   }
 }

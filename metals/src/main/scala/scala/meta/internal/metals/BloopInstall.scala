@@ -46,6 +46,17 @@ final class BloopInstall(
     cancelables.cancel()
   }
 
+  lazy val sbtLauncher: AbsolutePath = {
+    // NOTE(olafur) Use embedded sbt-launch.jar instead of user `sbt` command because
+    // we can't rely on `sbt` resolving correctly when using system processes, at least
+    // it failed on Windows when I tried it.
+    val embeddedLauncher = this.getClass.getResourceAsStream("/sbt-launch.jar")
+    val out = Files.createTempDirectory("metals").resolve("sbt-launch.jar")
+    out.toFile.deleteOnExit()
+    Files.copy(embeddedLauncher, out)
+    AbsolutePath(out)
+  }
+
   override def toString: String = s"BloopInstall($workspace)"
 
   def runUnconditionally(sbt: Sbt): Future[BloopInstallResult] = {
@@ -53,22 +64,28 @@ final class BloopInstall(
     BloopInstall.workAroundIssue4395()
     val elapsed = new Timer(time)
     val handler = new BloopInstall.ProcessHandler()
-    val args = List(
-      s"""sbt""",
+    val javaArgs = List[String](
+      "java",
+      "-jar",
+      sbtLauncher.toString(),
       s"""-Dscalameta.version=4.0.0-163560a8""",
       s"""-Djline.terminal=jline.UnsupportedTerminal""",
       s"""-Dsbt.log.noformat=true""",
-      s"""-Dfile.encoding=UTF-8""",
+      s"""-Dfile.encoding=UTF-8"""
+    )
+    val sbtArgs = List[String](
       s"""metalsEnable""",
       s"""bloopInstall"""
     )
-    val pb = new NuProcessBuilder(handler, args.asJava)
+    val allArgs = javaArgs ++ sbtArgs
+    val pb = new NuProcessBuilder(handler, allArgs.asJava)
+    pprint.log(workspace)
     pb.setCwd(workspace.toNIO)
     pb.environment().put("COURSIER_PROGRESS", "disable")
     pb.environment().put("METALS_ENABLED", "true")
     val runningProcess = pb.start()
-    val prettyArgs = args.mkString(" ").replace("; ", "")
-    scribe.info(s"running $prettyArgs")
+    val prettyArgs = ("sbt" :: sbtArgs).mkString(" ")
+    scribe.info(s"running '$prettyArgs'")
     // NOTE(olafur): older versions of VS Code don't respect cancellation of
     // window/showMessageRequest, meaning the "cancel build import" button
     // stays forever in view even after successful build import. In newer
@@ -111,7 +128,7 @@ final class BloopInstall(
       }
       current <- SbtChecksum.current(workspace)
       if forceImport || (tables.sbtChecksums.getStatus(current) match {
-        case Some(status) if !status.isCancelled =>
+        case Some(status) if !status.isCancelled && !status.isFailed =>
           scribe.info(s"skipping build import with status '$status'")
           false
         case _ =>

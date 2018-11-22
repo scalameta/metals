@@ -52,7 +52,7 @@ class MetalsLanguageServer(
   private val sh = Executors.newSingleThreadScheduledExecutor()
   private val fingerprints = new MutableMd5Fingerprints
   private val mtags = new Mtags
-  private var workspace = PathIO.workingDirectory
+  var workspace: AbsolutePath = _
   private val index = newSymbolIndex()
   var buildServer = Option.empty[BuildServerConnection]
   private val openTextDocument = new AtomicReference[AbsolutePath]()
