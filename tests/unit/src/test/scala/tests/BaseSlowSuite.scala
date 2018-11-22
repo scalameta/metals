@@ -9,7 +9,6 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FileWatcherConfig
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.io.AbsolutePath
-import scala.util.Properties
 
 /**
  * Full end to end integration tests against a full metals language server.

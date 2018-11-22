@@ -1,5 +1,4 @@
 package scala.meta.internal.metals
-import java.nio.file.Files
 import java.nio.file.Paths
 import scala.meta.io.AbsolutePath
 
