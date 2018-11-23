@@ -7,6 +7,9 @@ final case class StatusBarConfig(value: String) {
 }
 
 object StatusBarConfig {
+  def off = new StatusBarConfig("off")
+  def on = new StatusBarConfig("on")
+  def logMessage = new StatusBarConfig("log-message")
   def default = new StatusBarConfig(
     System.getProperty("metals.status-bar", "off")
   )

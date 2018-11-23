@@ -181,7 +181,7 @@ final class BloopServers(
   }
 
   private def callTcpBspWithBackoff(
-      maxRetries: Int = 5
+      maxRetries: Int = 10
   ): Future[(Connection, Cancelable)] = {
     callTcpBspUnsafe().recoverWith {
       case _: IOException if maxRetries > 0 =>

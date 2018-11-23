@@ -40,8 +40,7 @@ export async function activate(context: ExtensionContext) {
     .filter(e => e.length > 0);
 
   const javaArgs = serverProperties.concat([
-    `-Dmetals.extensions=true`,
-    `-Dmetals.icons=octicons`,
+    `-Dmetals.client=vscode`,
     `-Xss4m`,
     `-Xms1G`,
     `-Xmx4G`,

@@ -34,10 +34,10 @@ final class SbtChecksums(conn: Connection, time: Time) {
       }
       .headOption
 
-  def getStatus(md5Digest: String): Option[SbtChecksum.Status] =
+  def byDigest(md5Digest: String): List[(Status, Timestamp)] =
     conn
       .query(
-        "select status from sbt_fingerprint_event f where md5_digest = ? order by f.when_happened desc limit 1;"
+        "select status, when_happened from sbt_fingerprint_event where md5_digest = ?;"
       )(
         _.setString(1, md5Digest)
       ) { rs =>
@@ -45,9 +45,19 @@ final class SbtChecksums(conn: Connection, time: Time) {
         val status = SbtChecksum.Status.all
           .find(_.value == n)
           .getOrElse(SbtChecksum.Status.Unknown(n))
-        SbtChecksum(md5Digest, status)
+        val timestamp = rs.getTimestamp(2)
+        (status, timestamp)
       }
-      .headOption
-      .map(_.status)
+
+  def getStatus(md5Digest: String): Option[SbtChecksum.Status] = {
+    val all = byDigest(md5Digest)
+    if (all.isEmpty) None
+    else {
+      val (status, _) = all.maxBy {
+        case (_, timestamp) => timestamp.getTime
+      }
+      Some(status)
+    }
+  }
 
 }

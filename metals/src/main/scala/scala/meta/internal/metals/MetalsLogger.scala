@@ -43,6 +43,12 @@ object MetalsLogger {
         minimumLevel = Some(Level.Info),
         modifiers = List(MetalsFilter)
       )
+      .withHandler(
+        writer = LanguageClientLogger,
+        formatter = MetalsLogger.defaultFormat,
+        minimumLevel = Some(Level.Info),
+        modifiers = List(MetalsLogger.MetalsFilter)
+      )
       .replace()
   }
 
