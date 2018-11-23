@@ -60,7 +60,6 @@ class MetalsLanguageServer(
 
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = cancelables.cancel()
-  override def close(): Unit = cancel()
 
   // These can't be instantiated until we know the workspace root directory.
   private var languageClient: MetalsLanguageClient = _
@@ -123,7 +122,9 @@ class MetalsLanguageServer(
         config
       )
     )
-    bloopServers = new BloopServers(sh, workspace, buildClient, config, icons)
+    bloopServers = register(
+      new BloopServers(sh, workspace, buildClient, config, icons)
+    )
     semanticdbs = AggregateSemanticdbs(
       List(
         fileSystemSemanticdbs,
@@ -138,11 +139,6 @@ class MetalsLanguageServer(
       semanticdbs,
       icons
     )
-
-    cancelables
-      .add(interactiveSemanticdbs)
-      .add(bloopInstall)
-      .add(tables)
   }
 
   @JsonRequest("initialize")

@@ -53,7 +53,11 @@ final class BloopServers(
     client: MetalsBuildClient,
     config: MetalsServerConfig,
     icons: Icons
-)(implicit ec: ExecutionContextExecutorService, statusBar: StatusBar) {
+)(implicit ec: ExecutionContextExecutorService, statusBar: StatusBar)
+    extends Cancelable {
+  override def cancel(): Unit = {
+    bloopJars.foreach(_.close())
+  }
 
   lazy val bloopPy: AbsolutePath = {
     val embeddedBloopClient = this.getClass.getResourceAsStream("/bloop.py")
@@ -368,7 +372,7 @@ final class BloopServers(
     }
   }
 
-  lazy val bloopJars: Option[ClassLoader] = {
+  lazy val bloopJars: Option[URLClassLoader] = {
     val promise = Promise[Unit]()
     promise.future.trackInStatusBar(s"${icons.sync}Downloading Bloop")
     try {
@@ -385,7 +389,7 @@ final class BloopServers(
 }
 
 object BloopServers {
-  private def newBloopClassloader(): ClassLoader = {
+  private def newBloopClassloader(): URLClassLoader = {
     val settings = new coursiersmall.Settings()
       .withTtl(Some(Duration.Inf))
       .withDependencies(
