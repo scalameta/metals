@@ -3,10 +3,8 @@ package scala.meta.internal.metals
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
-trait Cancelable extends AutoCloseable {
+trait Cancelable {
   def cancel(): Unit
-
-  override def close(): Unit = cancel()
 }
 
 object Cancelable {
