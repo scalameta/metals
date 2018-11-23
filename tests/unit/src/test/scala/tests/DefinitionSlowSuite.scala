@@ -1,8 +1,23 @@
 package tests
 
+import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.Messages.Only212Navigation
 
 object DefinitionSlowSuite extends BaseSlowSuite("definition") {
+
+  override def testAsync(
+      name: String,
+      maxDuration: Duration = Duration("3min")
+  )(run: => Future[Unit]): Unit = {
+    if (isAppveyor) {
+      // src.zip is missing on Appveyor which breaks definition tests.
+      ignore(name) {}
+    } else {
+      super.testAsync(name, maxDuration)(run)
+    }
+  }
+
   testAsync("definition") {
     for {
       _ <- server.initialize(

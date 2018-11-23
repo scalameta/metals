@@ -24,6 +24,7 @@ import utest.ufansi.Attrs
  */
 class BaseSuite extends TestSuite {
   MetalsLogger.updateDefaultFormat()
+  def isAppveyor: Boolean = "True" == System.getenv("APPVEYOR")
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
