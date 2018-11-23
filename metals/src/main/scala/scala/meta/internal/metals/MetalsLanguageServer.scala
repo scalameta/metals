@@ -210,8 +210,7 @@ class MetalsLanguageServer(
           buildTargets,
           params => didChangeWatchedFiles(params)
         )
-        fileEvents = Some(watcher)
-        cancelables.add(watcher)
+        fileEvents = Some(register(watcher))
       } else {
         scribe.warn(
           s"File watching is disabled, expect partial functionality. To fix this warning, either pass the " +
