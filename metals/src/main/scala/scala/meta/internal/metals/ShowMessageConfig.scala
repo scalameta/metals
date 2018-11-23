@@ -7,6 +7,9 @@ final case class ShowMessageConfig(value: String) {
 }
 
 object ShowMessageConfig {
+  def on = new ShowMessageConfig("on")
+  def off = new ShowMessageConfig("off")
+  def logMessage = new ShowMessageConfig("log-message")
   def default = new ShowMessageConfig(
     System.getProperty("metals.show-message", "on")
   )

@@ -18,9 +18,10 @@ object Main {
     val systemOut = System.out
     val tracePrinter = GlobalTrace.setup("LSP")
     val exec = Executors.newCachedThreadPool()
+    val ec = ExecutionContext.fromExecutorService(exec)
     val config = MetalsServerConfig.default
     val server = new MetalsLanguageServer(
-      ExecutionContext.fromExecutorService(exec),
+      ec,
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,
       config = config
@@ -39,7 +40,7 @@ object Main {
         s"starting server in working directory ${PathIO.workingDirectory}"
       )
       val underlyingClient = launcher.getRemoteProxy
-      val client = new ConfiguredLanguageClient(underlyingClient, config)
+      val client = new ConfiguredLanguageClient(underlyingClient, config)(ec)
       server.connectToLanguageClient(client)
       launcher.startListening().get()
     } catch {

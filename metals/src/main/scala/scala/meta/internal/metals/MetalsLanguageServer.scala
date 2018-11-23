@@ -34,7 +34,6 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.util.control.NonFatal
-import scribe.Level
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -46,7 +45,7 @@ class MetalsLanguageServer(
     progressTicks: ProgressTicks = ProgressTicks.braille
 ) extends Cancelable {
 
-  def icons = config.icons
+  private def icons: Icons = config.icons
   private implicit val executionContext: ExecutionContextExecutorService = ec
   private val sh = Executors.newSingleThreadScheduledExecutor()
   private val fingerprints = new MutableMd5Fingerprints
@@ -91,22 +90,9 @@ class MetalsLanguageServer(
     cancelable
   }
 
-  def setupForwardingLogger(): Unit = {
-    if (!config.statusBar.isLogMessage) {
-      scribe.Logger.root
-        .withHandler(
-          writer = LanguageClientLogger,
-          formatter = MetalsLogger.defaultFormat,
-          minimumLevel = Some(Level.Info),
-          modifiers = List(MetalsLogger.MetalsFilter)
-        )
-        .replace()
-    }
-  }
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
-    setupForwardingLogger()
     startHttpServer()
     tables = register(Tables.forWorkspace(workspace, time))
     buildTools = new BuildTools(workspace)
@@ -170,7 +156,15 @@ class MetalsLanguageServer(
       capabilities.setDefinitionProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       if (config.isNoInitialized) {
-        initialized(new InitializedParams).asScala
+        sh.schedule(
+          new Runnable {
+            override def run(): Unit = {
+              initialized(new InitializedParams)
+            }
+          },
+          1,
+          TimeUnit.SECONDS
+        )
       }
       new InitializeResult(capabilities)
     }.logError("initialize")

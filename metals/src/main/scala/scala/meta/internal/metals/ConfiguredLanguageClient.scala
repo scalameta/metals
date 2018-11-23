@@ -1,11 +1,14 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import scala.concurrent.ExecutionContext
+import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
  * An implementation of MetalsLanguageClient that ignores custom Metals extension like `metals/status`.
@@ -13,11 +16,12 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 class ConfiguredLanguageClient(
     underlying: MetalsLanguageClient,
     config: MetalsServerConfig
-) extends MetalsLanguageClient {
+)(implicit ec: ExecutionContext)
+    extends MetalsLanguageClient {
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     if (config.statusBar.isOn) {
       underlying.metalsStatus(params)
-    } else if (config.statusBar.isLogMessage) {
+    } else if (config.statusBar.isLogMessage && !pendingShowMessage.get()) {
       if (params.text.nonEmpty) {
         logMessage(new MessageParams(MessageType.Info, params.text))
       }
@@ -48,11 +52,16 @@ class ConfiguredLanguageClient(
       logMessage(params)
     }
   }
+
+  private val pendingShowMessage = new AtomicBoolean(false)
   override def showMessageRequest(
       params: ShowMessageRequestParams
   ): CompletableFuture[MessageActionItem] = {
     if (config.showMessageRequest.isOn) {
-      underlying.showMessageRequest(params)
+      pendingShowMessage.set(true)
+      val result = underlying.showMessageRequest(params)
+      result.asScala.onComplete(_ => pendingShowMessage.set(false))
+      result
     } else {
       if (config.showMessageRequest.isLogMessage) {
         logMessage(params)
@@ -61,6 +70,13 @@ class ConfiguredLanguageClient(
     }
   }
 
-  override def logMessage(message: MessageParams): Unit =
-    underlying.logMessage(message)
+  override def logMessage(message: MessageParams): Unit = {
+    if (config.statusBar.isLogMessage && message.getType == MessageType.Log) {
+      // window/logMessage is reserved for the status bar so we don't publish
+      // scribe.{info,warn,error} logs here. Users should look at .metals/metals.log instead.
+      ()
+    } else {
+      underlying.logMessage(message)
+    }
+  }
 }

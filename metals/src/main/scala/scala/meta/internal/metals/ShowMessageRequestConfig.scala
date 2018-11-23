@@ -7,6 +7,9 @@ final case class ShowMessageRequestConfig(value: String) {
 }
 
 object ShowMessageRequestConfig {
+  def on = new ShowMessageRequestConfig("on")
+  def off = new ShowMessageRequestConfig("off")
+  def logMessage = new ShowMessageRequestConfig("log-message")
   def default = new ShowMessageRequestConfig(
     System.getProperty("metals.show-message-request", "on")
   )

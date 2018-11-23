@@ -96,6 +96,7 @@ final class BloopInstall(
       scribe.info(s"time: Ran 'sbt bloopInstall' in $elapsed")
       result
     }
+    processFuture.trackInStatusBar("Running sbt bloopInstall")
     taskResponse.asScala.foreach { item =>
       if (item.cancel) {
         scribe.info("User cancelled build import")
@@ -104,9 +105,6 @@ final class BloopInstall(
         )
         BloopInstall.destroyProcess(runningProcess)
       }
-    }
-    if (!config.isExtensionsEnabled) {
-      processFuture.trackInStatusBar("Running sbt bloopInstall")
     }
     cancelables
       .add(() => BloopInstall.destroyProcess(runningProcess))
@@ -204,7 +202,11 @@ object BloopInstall {
     val bytes = globalMetalsSbt.getBytes(StandardCharsets.UTF_8)
     val destination = plugins.resolve("metals.sbt")
     if (destination.isFile && destination.readAllBytes.sameElements(bytes)) {
-      () // do nothing
+      // Do nothing if the file is unchanged. If we write to the file unconditionally
+      // we risk triggering sbt re-compilation og global plugins that slows down
+      // build import greatly. If somebody validates it doesn't affect load times
+      // then feel free to remove this guard.
+      ()
     } else {
       Files.write(destination.toNIO, bytes)
     }

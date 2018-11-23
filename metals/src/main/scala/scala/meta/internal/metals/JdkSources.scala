@@ -24,23 +24,25 @@ object JdkSources {
           // In case java.home points to the JRE instead of the JDK, try
           // to pick a sibling directory that starts with jdk*.
           val ls = Files.list(javaHome.getParent)
-          val jdk =
-            try {
-              ls.iterator()
-                .asScala
-                .filter(_.getFileName.toString.startsWith("jdk"))
-                .toArray
-                .sortBy(_.getFileName.toString)
-                .lastOption
-                .toList
-            } finally ls.close()
-          jdk.map(_.resolve("src.zip"))
+          try {
+            ls.iterator()
+              .asScala
+              .filter(_.getFileName.toString.startsWith("jdk"))
+              .toArray
+              .sortBy(_.getFileName.toString)
+              .toList
+          } finally ls.close()
         }
       }
       src <- jdkHome ++ List(
-        javaHome.getParent.resolve("src.zip"),
-        javaHome.resolve("src.zip")
-      )
+        javaHome.getParent,
+        javaHome
+      ).flatMap { dir =>
+        List(
+          dir.resolve("src.zip"),
+          dir.resolve("lib").resolve("src.zip")
+        )
+      }
     } yield AbsolutePath(src)
   }
   def getOrThrow(): AbsolutePath = {
