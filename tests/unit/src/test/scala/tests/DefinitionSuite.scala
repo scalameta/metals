@@ -25,6 +25,7 @@ import scala.meta.internal.mtags.Symbol
  */
 object DefinitionSuite extends DirectoryExpectSuite("definition") {
   override def testCases(): List[ExpectTestCase] = {
+    if (isAppveyor) return Nil // No JDK src.zip
     val index = OnDemandSymbolIndex()
     // Step 1. Index project sources
     input.allFiles.foreach { source =>
