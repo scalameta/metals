@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.metals.SbtChecksum.Status
+import scala.meta.internal.metals.SbtDigest.Status
 
 sealed abstract class BloopInstallResult extends Product with Serializable {
   import BloopInstallResult._
@@ -19,7 +19,7 @@ sealed abstract class BloopInstallResult extends Product with Serializable {
 }
 object BloopInstallResult {
   case object Dismissed extends BloopInstallResult
-  case class Duplicate(status: SbtChecksum.Status) extends BloopInstallResult
+  case class Duplicate(status: SbtDigest.Status) extends BloopInstallResult
   case object Rejected extends BloopInstallResult
   case object Unchanged extends BloopInstallResult
   case object Installed extends BloopInstallResult

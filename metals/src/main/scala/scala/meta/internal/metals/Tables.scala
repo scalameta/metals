@@ -7,7 +7,7 @@ import org.flywaydb.core.Flyway
 import scala.meta.io.AbsolutePath
 
 final class Tables(connection: Connection, time: Time) extends Cancelable {
-  val sbtChecksums = new SbtChecksums(connection, time)
+  val sbtDigests = new SbtDigests(connection, time)
   val dependencySources = new DependencySources(connection)
   val dismissedNotifications = new DismissedNotifications(connection, time)
   def cancel(): Unit = connection.close()

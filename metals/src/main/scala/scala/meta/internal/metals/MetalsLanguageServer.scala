@@ -435,12 +435,12 @@ class MetalsLanguageServer(
         )
         Future.successful(BuildChange.None)
       case Some(sbt) =>
-        SbtChecksum.current(workspace) match {
+        SbtDigest.current(workspace) match {
           case None =>
             scribe.warn(s"Skipping build import, no checksum.")
             Future.successful(BuildChange.None)
-          case Some(current) =>
-            slowConnectToBuildServer(forceImport, sbt, current)
+          case Some(digest) =>
+            slowConnectToBuildServer(forceImport, sbt, digest)
         }
     }
   }

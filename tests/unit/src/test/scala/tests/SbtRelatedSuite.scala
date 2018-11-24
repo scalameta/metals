@@ -1,23 +1,9 @@
 package tests
 
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.SbtChecksums
-import scala.meta.internal.metals.SbtChecksum.Status._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.SbtChecksum
 
-object SbtChecksumsSuite extends BaseTablesSuite {
-  def sbtChecksums: SbtChecksums = tables.sbtChecksums
-  test("basic") {
-    assertEquals(sbtChecksums.setStatus("a", Requested), 1)
-    assertEquals(sbtChecksums.last().get, SbtChecksum("a", Requested))
-    time.elapseSeconds(1)
-    assertEquals(sbtChecksums.getStatus("a").get, Requested)
-    assertEquals(sbtChecksums.setStatus("a", Installed), 1)
-    assertEquals(sbtChecksums.last().get, SbtChecksum("a", Installed))
-    time.elapseSeconds(1)
-    assertEquals(sbtChecksums.getStatus("a").get, Installed)
-  }
+object SbtRelatedSuite extends BaseSuite {
   def checkIsNotSbtRelated(relpath: String): Unit = {
     checkIsSbtRelated(relpath, isTrue = false)
   }

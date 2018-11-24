@@ -15,7 +15,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.SbtChecksum.Status
+import scala.meta.internal.metals.SbtDigest.Status
 import scala.meta.io.AbsolutePath
 import scala.util.Success
 
@@ -107,25 +107,25 @@ final class BloopInstall(
 
   private val notification = tables.dismissedNotifications.ImportChanges
 
-  private def oldInstallResult(current: String): Option[BloopInstallResult] = {
+  private def oldInstallResult(digest: String): Option[BloopInstallResult] = {
     if (notification.isDismissed) {
       Some(BloopInstallResult.Dismissed)
     } else {
-      tables.sbtChecksums.last().collect {
-        case SbtChecksum(md5Digest, status) if md5Digest == current =>
+      tables.sbtDigests.last().collect {
+        case SbtDigest(md5, status, _) if md5 == digest =>
           BloopInstallResult.Duplicate(status)
       }
     }
   }
 
-  def runIfApproved(sbt: Sbt, current: String): Future[BloopInstallResult] = {
-    oldInstallResult(current) match {
+  def runIfApproved(sbt: Sbt, digest: String): Future[BloopInstallResult] = {
+    oldInstallResult(digest) match {
       case Some(result) =>
         scribe.info(s"Skipping build import with status '${result.name}'")
         Future.successful(result)
       case None =>
         for {
-          userResponse <- requestImport(buildTools, languageClient, current)
+          userResponse <- requestImport(buildTools, languageClient, digest)
           installResult <- {
             if (userResponse.isYes) {
               runUnconditionally(sbt)
@@ -140,17 +140,17 @@ final class BloopInstall(
   }
 
   private def persistChecksumStatus(status: Status): Unit = {
-    SbtChecksum.foreach(workspace) { checksum =>
-      tables.sbtChecksums.setStatus(checksum, status)
+    SbtDigest.foreach(workspace) { checksum =>
+      tables.sbtDigests.setStatus(checksum, status)
     }
   }
 
   private def requestImport(
       buildTools: BuildTools,
       languageClient: MetalsLanguageClient,
-      current: String
+      digest: String
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
-    tables.sbtChecksums.setStatus(current, Status.Requested)
+    tables.sbtDigests.setStatus(digest, Status.Requested)
     if (buildTools.isBloop) {
       languageClient
         .showMessageRequest(ReimportSbtProject.params)
