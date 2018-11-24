@@ -3,6 +3,11 @@ package scala.meta.internal.metals
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
+/**
+ * A copy of `java.io.Closeable` that is not auto closeable.
+ *
+ * Gives us fine-grained control over when resources are cleaned up.
+ */
 trait Cancelable {
   def cancel(): Unit
 }

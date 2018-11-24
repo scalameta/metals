@@ -35,24 +35,15 @@ final class BloopInstall(
     time: Time,
     tables: Tables,
     messages: Messages,
-    config: MetalsServerConfig
-)(implicit ec: ExecutionContext, statusBar: StatusBar)
+    config: MetalsServerConfig,
+    embedded: Embedded,
+    statusBar: StatusBar
+)(implicit ec: ExecutionContext)
     extends Cancelable {
   import messages._
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = {
     cancelables.cancel()
-  }
-
-  lazy val sbtLauncher: AbsolutePath = {
-    // NOTE(olafur) Use embedded sbt-launch.jar instead of user `sbt` command because
-    // we can't rely on `sbt` resolving correctly when using system processes, at least
-    // it failed on Windows when I tried it.
-    val embeddedLauncher = this.getClass.getResourceAsStream("/sbt-launch.jar")
-    val out = Files.createTempDirectory("metals").resolve("sbt-launch.jar")
-    out.toFile.deleteOnExit()
-    Files.copy(embeddedLauncher, out)
-    AbsolutePath(out)
   }
 
   override def toString: String = s"BloopInstall($workspace)"
@@ -66,7 +57,7 @@ final class BloopInstall(
     val javaArgs = List[String](
       "java",
       "-jar",
-      sbtLauncher.toString(),
+      embedded.sbtLauncher.toString(),
       "-Dscalameta.version=4.0.0-163560a8",
       "-Djline.terminal=jline.UnsupportedTerminal",
       "-Dsbt.log.noformat=true",
@@ -96,7 +87,7 @@ final class BloopInstall(
       scribe.info(s"time: Ran 'sbt bloopInstall' in $elapsed")
       result
     }
-    processFuture.trackInStatusBar("Running sbt bloopInstall")
+    statusBar.trackFuture("Running sbt bloopInstall", processFuture)
     taskResponse.asScala.foreach { item =>
       if (item.cancel) {
         scribe.info("User cancelled build import")

@@ -27,13 +27,14 @@ final class StatusBar(
     progressTicks: ProgressTicks = ProgressTicks.braille
 ) extends Cancelable {
 
-  def addFuture(
+  def trackFuture[T](
       message: String,
-      value: Future[_],
-      maxDots: Int = Int.MaxValue
-  ): Unit = {
-    items.add(Progress(message, value, maxDots))
+      value: Future[T],
+      showTimer: Boolean = false
+  ): Future[T] = {
+    items.add(Progress(message, value, showTimer))
     tickIfHidden()
+    value
   }
 
   def addMessage(params: MetalsStatusParams): Unit = {
@@ -105,9 +106,9 @@ final class StatusBar(
     private val dots = new AtomicInteger()
     def formattedMessage: String = this match {
       case Message(value) => value.text
-      case Progress(message, _, maxSeconds) =>
-        val seconds = timer.elapsedSeconds
-        if (seconds > maxSeconds) {
+      case Progress(message, _, showTimer) =>
+        if (showTimer) {
+          val seconds = timer.elapsedSeconds
           if (seconds == 0) s"$message   "
           else s"$message ${Timer.readableSeconds(seconds)}"
         } else {
@@ -123,8 +124,11 @@ final class StatusBar(
     }
   }
   private case class Message(params: MetalsStatusParams) extends Item
-  private case class Progress(message: String, job: Future[_], maxTicks: Int)
-      extends Item
+  private case class Progress(
+      message: String,
+      job: Future[_],
+      showTimer: Boolean
+  ) extends Item
 
   private var isHidden: Boolean = true
   private def tickIfHidden(): Unit = {

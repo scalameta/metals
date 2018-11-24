@@ -27,7 +27,7 @@ object Main {
       config = config
     )
     try {
-      scribe.info(s"Server config $config")
+      scribe.info(s"Starting Metals server with configuration: $config")
       val launcher = new Launcher.Builder[MetalsLanguageClient]()
         .traceMessages(tracePrinter)
         .setExecutorService(exec)
@@ -36,9 +36,6 @@ object Main {
         .setRemoteInterface(classOf[MetalsLanguageClient])
         .setLocalService(server)
         .create()
-      scribe.info(
-        s"starting server in working directory ${PathIO.workingDirectory}"
-      )
       val underlyingClient = launcher.getRemoteProxy
       val client = new ConfiguredLanguageClient(underlyingClient, config)(ec)
       server.connectToLanguageClient(client)

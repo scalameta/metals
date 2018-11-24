@@ -35,8 +35,9 @@ final class DefinitionProvider(
     buffers: Buffers,
     index: GlobalSymbolIndex,
     semanticdbs: Semanticdbs,
-    icons: Icons
-)(implicit statusBar: StatusBar) {
+    icons: Icons,
+    statusBar: StatusBar
+) {
 
   def definition(
       path: AbsolutePath,

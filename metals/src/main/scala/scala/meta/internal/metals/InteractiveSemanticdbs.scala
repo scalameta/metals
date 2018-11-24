@@ -40,8 +40,9 @@ final class InteractiveSemanticdbs(
     charset: Charset,
     client: MetalsLanguageClient,
     tables: Tables,
-    messages: Messages
-)(implicit statusBar: StatusBar, ec: ExecutionContext)
+    messages: Messages,
+    statusBar: StatusBar
+)(implicit ec: ExecutionContext)
     extends Cancelable
     with Semanticdbs {
   import messages._

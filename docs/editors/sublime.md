@@ -28,7 +28,7 @@ coursier bootstrap \
   --java-opt -Xms1G \
   --java-opt -Xmx4G  \
   --java-opt -Dmetals.client=sublime \
-  org.scalameta:metals_2.12:SNAPSHOT \
+  org.scalameta:metals_2.12:@VERSION@ \
   -r bintray:scalacenter/releases \
   -o metals-sublime -f
 ```

@@ -17,6 +17,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.BloopServers
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -47,15 +48,19 @@ object BspCli {
         implicit val ec = ExecutionContext.fromExecutorService(ex)
         val workspace = AbsolutePath(directory)
         val config = MetalsServerConfig.default
+        val icons = Icons.none
         val time = Time.system
-        implicit val statusBar: StatusBar =
+        val statusBar: StatusBar =
           new StatusBar(() => loggingLangaugeClient, time, ProgressTicks.none)
+        val embedded = new Embedded(icons, statusBar)
         val server = new BloopServers(
           sh,
           workspace,
           loggingBuildClient,
           config,
-          Icons.none
+          icons,
+          embedded,
+          statusBar
         )
         try {
           val future = compile(server, targets)
