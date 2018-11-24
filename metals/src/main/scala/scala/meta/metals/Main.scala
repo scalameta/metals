@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer

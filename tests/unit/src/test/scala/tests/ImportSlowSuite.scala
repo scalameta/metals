@@ -3,25 +3,25 @@ package tests
 import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsSlowTaskResult
-import scala.meta.internal.metals.SbtChecksum
+import scala.meta.internal.metals.SbtDigest
 import scala.meta.internal.metals.ServerCommands
 
 object ImportSlowSuite extends BaseSlowSuite("import") {
 
   def currentChecksum(): String =
-    SbtChecksum.current(workspace).getOrElse {
+    SbtDigest.current(workspace).getOrElse {
       fail("no sbt checksum for workspace")
     }
   def assertNoStatus(): Unit =
-    server.server.tables.sbtChecksums.getStatus(currentChecksum()) match {
+    server.server.tables.sbtDigests.getStatus(currentChecksum()) match {
       case Some(value) =>
         fail(s"expected no status. obtained $value", stackBump = 1)
       case None =>
         () // OK
     }
-  def assertStatus(fn: SbtChecksum.Status => Boolean): Unit = {
+  def assertStatus(fn: SbtDigest.Status => Boolean): Unit = {
     val checksum = currentChecksum()
-    server.server.tables.sbtChecksums.getStatus(checksum) match {
+    server.server.tables.sbtDigests.getStatus(checksum) match {
       case Some(status) =>
         assert(fn(status))
       case None =>

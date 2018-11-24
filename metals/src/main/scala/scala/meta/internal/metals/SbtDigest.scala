@@ -4,19 +4,20 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.security.MessageDigest
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.SbtChecksum.Status
+import scala.meta.internal.metals.SbtDigest.Status
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 import scala.meta.tokens.Token
 import scala.util.control.NonFatal
 
-case class SbtChecksum(
-    md5Digest: String,
-    status: Status
+case class SbtDigest(
+    md5: String,
+    status: Status,
+    millis: Long
 )
 
-object SbtChecksum {
+object SbtDigest {
   sealed abstract class Status(val value: Int)
       extends Product
       with Serializable {

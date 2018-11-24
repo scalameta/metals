@@ -3,18 +3,18 @@ package tests
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
-import scala.meta.internal.metals.SbtChecksum
+import scala.meta.internal.metals.SbtDigest
 
-object SbtChecksumSuite extends BaseSuite {
-  def checksum(layout: String): Option[String] = {
+object SbtDigestSuite extends BaseSuite {
+  def digest(layout: String): Option[String] = {
     val root = FileLayout.fromString(layout)
-    val obtained = SbtChecksum.current(root)
+    val obtained = SbtDigest.current(root)
     obtained
   }
   def check(name: String, layout: String, expected: Option[String]): Unit = {
     test(name) {
       val root = FileLayout.fromString(layout)
-      val obtained = SbtChecksum.current(root)
+      val obtained = SbtDigest.current(root)
       (obtained, expected) match {
         case (None, None) => ()
         case (Some(x), Some(y)) =>
@@ -24,27 +24,27 @@ object SbtChecksumSuite extends BaseSuite {
             "\n// this is a comment\n".getBytes(StandardCharsets.UTF_8),
             StandardOpenOption.APPEND
           )
-          val obtained2 = SbtChecksum.current(root)
+          val obtained2 = SbtDigest.current(root)
           assertEquals(
             obtained2,
             obtained,
-            "comments and whitespace did impact checksum"
+            "comments and whitespace did impact digest"
           )
           Files.write(
             root.resolve("build.sbt").toNIO,
             "\nlazy val anotherProject = x\n".getBytes(StandardCharsets.UTF_8),
             StandardOpenOption.APPEND
           )
-          val obtained3 = SbtChecksum.current(root)
+          val obtained3 = SbtDigest.current(root)
           assertNotEquals(
             obtained3,
             obtained,
-            "significant tokens did not impact checksum"
+            "significant tokens did not impact digest"
           )
         case (None, Some(y)) =>
-          fail(s"expected checksum $y but did not obtain a checksum")
+          fail(s"expected digest $y but did not obtain a digest")
         case (Some(x), None) =>
-          fail(s"expected no checksum but did obtained checksum $x")
+          fail(s"expected no digest but did obtained digest $x")
       }
     }
   }
@@ -99,7 +99,7 @@ object SbtChecksumSuite extends BaseSuite {
   )
 
   test("build.properties") {
-    val v1 = checksum(
+    val v1 = digest(
       """
         |/build.sbt
         |lazy val x = 2
@@ -107,7 +107,7 @@ object SbtChecksumSuite extends BaseSuite {
         |sbt.version=1.0
         |""".stripMargin
     ).get
-    val v2 = checksum(
+    val v2 = digest(
       """
         |/build.sbt
         |lazy val x = 2
@@ -115,8 +115,8 @@ object SbtChecksumSuite extends BaseSuite {
         |sbt.version=2.0
         |""".stripMargin
     ).get
-    assertNotEquals(v1, solo, "build.properties should affect checksum")
-    assertNotEquals(v1, v2, "build.properties should affect checksum")
+    assertNotEquals(v1, solo, "build.properties should affect digest")
+    assertNotEquals(v1, v2, "build.properties should affect digest")
   }
 
 }
