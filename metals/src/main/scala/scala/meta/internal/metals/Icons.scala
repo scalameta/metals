@@ -28,21 +28,21 @@ object Icons {
       case _ => none
     }
   }
-  object unicode extends Icons {
+  case object unicode extends Icons {
     override def rocket: String = "🚀"
     override def sync: String = "🔄"
     override def alert: String = "⚠️"
     override def info: String = "ℹ️"
     override def check: String = "✅"
   }
-  object none extends Icons {
+  case object none extends Icons {
     override def rocket: String = ""
     override def sync: String = ""
     override def alert: String = ""
     override def info: String = ""
     override def check: String = ""
   }
-  object octicons extends Icons {
+  case object octicons extends Icons {
     override def rocket: String = "$(rocket) "
     override def sync: String = "$(sync) "
     override def alert: String = "$(alert) "

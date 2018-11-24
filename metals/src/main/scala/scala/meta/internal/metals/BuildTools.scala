@@ -4,6 +4,14 @@ import java.nio.file.Files
 import scala.meta.io.AbsolutePath
 import MetalsEnrichments._
 
+/**
+ * Detects what build tool is used in this workspace.
+ *
+ * Although we only support a limited set of build tools, knowing
+ * what build tool is used in the workspace helps to produce better error
+ * for people using unsupported build tools. For example: "Gradle is not supported"
+ * instead of "Unsupported build tool".
+ */
 final class BuildTools(workspace: AbsolutePath) {
   // Naive implementations to detect which build tool is being used,
   // but can be improved with any custom logic.

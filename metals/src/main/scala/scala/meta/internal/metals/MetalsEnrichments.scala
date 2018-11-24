@@ -93,20 +93,6 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
     def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
       future.ignoreValue.asJava
 
-    /**
-     * Registers this future to be tracked by the client status bar.
-     */
-    def trackInStatusBar(
-        message: String,
-        showDots: Boolean = true
-    )(implicit statusBar: StatusBar): Future[A] = {
-      statusBar.addFuture(
-        message,
-        future,
-        maxDots = if (showDots) Int.MaxValue else -1
-      )
-      future
-    }
     def ignoreValue(implicit ec: ExecutionContext): Future[Unit] =
       future.map(_ => ())
     def logErrorAndContinue(

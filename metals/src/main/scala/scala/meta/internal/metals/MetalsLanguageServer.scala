@@ -75,12 +75,14 @@ class MetalsLanguageServer(
   private var definitionProvider: DefinitionProvider = _
   private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
-  private implicit var statusBar: StatusBar = _
+  private var statusBar: StatusBar = _
+  private var embedded: Embedded = _
   private var fileEvents: Option[FileEvents] = None
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient = client
     statusBar = new StatusBar(() => languageClient, time, progressTicks)
+    embedded = register(new Embedded(icons, statusBar))
     LanguageClientLogger.languageClient = Some(client)
   }
 
@@ -105,7 +107,8 @@ class MetalsLanguageServer(
         charset,
         languageClient,
         tables,
-        messages
+        messages,
+        statusBar
       )
     )
     diagnostics = new Diagnostics(buildTargets, languageClient)
@@ -119,11 +122,19 @@ class MetalsLanguageServer(
         time,
         tables,
         messages,
-        config
+        config,
+        embedded,
+        statusBar
       )
     )
-    bloopServers = register(
-      new BloopServers(sh, workspace, buildClient, config, icons)
+    bloopServers = new BloopServers(
+      sh,
+      workspace,
+      buildClient,
+      config,
+      icons,
+      embedded,
+      statusBar
     )
     semanticdbs = AggregateSemanticdbs(
       List(
@@ -137,7 +148,8 @@ class MetalsLanguageServer(
       buffers,
       index,
       semanticdbs,
-      icons
+      icons,
+      statusBar
     )
   }
 
@@ -256,7 +268,6 @@ class MetalsLanguageServer(
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
     statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
-    scribe.info(config.toString)
     registerFileWatchers()
     Future
       .sequence(
@@ -485,7 +496,7 @@ class MetalsLanguageServer(
       } yield ()
 
       for {
-        _ <- importingBuild.trackInStatusBar("Importing build")
+        _ <- statusBar.trackFuture("Importing build", importingBuild)
         _ = statusBar.addMessage(s"${icons.rocket}Imported build!")
         _ <- compileSourceFiles(buffers.open.toSeq)
       } yield BuildChange.Reconnected
@@ -666,8 +677,12 @@ class MetalsLanguageServer(
               s"compiled$name",
               reportStatus = true
             ) {
-              build.compile(params).asScala
-            }.trackInStatusBar(s"${icons.sync}Compiling$name", showDots = false)
+              statusBar.trackFuture(
+                s"${icons.sync}Compiling$name",
+                build.compile(params).asScala,
+                showTimer = true
+              )
+            }
           } yield {
             status.getStatusCode match {
               case StatusCode.OK =>

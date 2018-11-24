@@ -12,7 +12,7 @@ const siteConfig = {
 
   // Used for publishing and more
   projectName: "metals",
-  organizationName: "scalameta",
+  organizationName: "olafurpg",
 
   algolia: {
     apiKey: "c865f6d974a3072a35d4b53d48ac2307",

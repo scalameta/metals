@@ -39,7 +39,7 @@ object StatusBarSuite extends BaseSuite {
 
   test("future") {
     val promise = Promise[Unit]()
-    status.addFuture("tick", promise.future, 5)
+    status.trackFuture("tick", promise.future)
     1.to(7).foreach { _ =>
       tickSecond()
     }
@@ -54,8 +54,8 @@ object StatusBarSuite extends BaseSuite {
          |tick...
          |tick
          |tick.
-         |tick 6s
-         |tick 7s
+         |tick..
+         |tick...
          |<hide>
          |""".stripMargin
     )
@@ -64,9 +64,9 @@ object StatusBarSuite extends BaseSuite {
   test("race") {
     val promise1 = Promise[Unit]()
     val promise2 = Promise[Unit]()
-    status.addFuture("a", promise1.future, -1)
+    status.trackFuture("a", promise1.future, showTimer = true)
     tickSecond()
-    status.addFuture("b", promise2.future, -1)
+    status.trackFuture("b", promise2.future, showTimer = true)
     1.to(2).foreach { _ =>
       tickSecond()
     }

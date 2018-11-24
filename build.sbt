@@ -108,29 +108,49 @@ lazy val metals = project
   .settings(
     fork.in(Compile, run) := true,
     resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
+    // As a general rule of thumb, we try to keep Scala dependencies to a minimum.
     libraryDependencies ++= List(
+      // =================
+      // Java dependencies
+      // =================
+      // for file watching
       "io.methvin" % "directory-watcher" % "0.8.0",
+      // for http client
       "io.undertow" % "undertow-core" % "2.0.13.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.6.5.Final",
-      "io.methvin" % "directory-watcher" % "0.8.0",
+      // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "5.2.1",
       "com.h2database" % "h2" % "1.4.197",
+      // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "1.2.4",
       "net.java.dev.jna" % "jna" % "4.5.1",
       "net.java.dev.jna" % "jna-platform" % "4.5.1",
-      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0", // for edit-distance
+      // for token edit-distance used by goto definition
+      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
+      // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
+      // for LSP
       "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0",
-      "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
+      // for producing SemanticDB from Java source files
+      "com.thoughtworks.qdox" % "qdox" % "2.0-M9",
+      // for finding paths of global log/cache directories
       "io.github.soc" % "directories" % "11",
+      // ==================
       // Scala dependencies
-      "com.geirsson" %% "coursier-small" % "1.2.0", // needed due to bincompat with jvm-directories
-      "org.scala-lang.modules" %% "scala-xml" % "1.1.1", // required to avoid classpath problems via coursier-small
+      // ==================
+      // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
+      "com.geirsson" %% "coursier-small" % "1.2.0",
+      // undeclared transitive dependency of coursier-small
+      "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
+      // for handling Java futures
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
+      // for logging
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
-      "com.lihaoyi" %% "pprint" % "0.5.3", // for pretty formatting of log values
+      // for debugging purposes, not strictly needed but nice for productivity
+      "com.lihaoyi" %% "pprint" % "0.5.3",
+      // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full
     ),

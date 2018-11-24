@@ -11,13 +11,18 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
- * An implementation of MetalsLanguageClient that ignores custom Metals extension like `metals/status`.
+ * Delegates requests/notifications to the underlying language client according to the user configuration.
+ *
+ * This wrapper class manages differences in how editors interpret LSP endpoints slightly differently,
+ * especially the window/{logMessage,showMessage} notifications. For example, with vim-lsc the messages
+ * from window/logMessage are always visible in the UI while in VS Code the logs are hidden by default.
  */
-class ConfiguredLanguageClient(
+final class ConfiguredLanguageClient(
     underlying: MetalsLanguageClient,
     config: MetalsServerConfig
 )(implicit ec: ExecutionContext)
     extends MetalsLanguageClient {
+
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     if (config.statusBar.isOn) {
       underlying.metalsStatus(params)
