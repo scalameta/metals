@@ -194,7 +194,7 @@ object BloopInstall {
     val destination = plugins.resolve("metals.sbt")
     if (destination.isFile && destination.readAllBytes.sameElements(bytes)) {
       // Do nothing if the file is unchanged. If we write to the file unconditionally
-      // we risk triggering sbt re-compilation og global plugins that slows down
+      // we risk triggering sbt re-compilation of global plugins that slows down
       // build import greatly. If somebody validates it doesn't affect load times
       // then feel free to remove this guard.
       ()

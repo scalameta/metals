@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util.Collections
+import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -70,11 +71,7 @@ final class DefinitionProvider(
     // Step 2: find matching symbol occurrence in SemanticDB snapshot
     val occurrence = for {
       queryPosition <- snapshotPosition.foldResult(
-        onPosition = pos => {
-          dirtyPosition.getPosition.setLine(pos.startLine)
-          dirtyPosition.getPosition.setCharacter(pos.startColumn)
-          Some(dirtyPosition.getPosition)
-        },
+        onPosition = pos => Some(new l.Position(pos.startLine, pos.startColumn)),
         onUnchanged = () => Some(dirtyPosition.getPosition),
         onNoMatch = () => None
       )
@@ -119,15 +116,16 @@ final class DefinitionProvider(
           location.getRange.getStart.getCharacter
         )
         result <- revisedPosition.foldResult(
-          pos => {
-            val start = location.getRange.getStart
-            start.setLine(pos.startLine)
-            start.setCharacter(pos.startColumn)
-            val end = location.getRange.getEnd
-            end.setLine(pos.endLine)
-            end.setCharacter(pos.endColumn)
-            Some(location)
-          },
+          pos =>
+            Some(
+              new l.Location(
+                location.getUri,
+                new l.Range(
+                  new l.Position(pos.startLine, pos.startColumn),
+                  new l.Position(pos.endLine, pos.endColumn)
+                )
+              )
+          ),
           () => Some(location),
           () => None
         )
@@ -152,10 +150,8 @@ final class DefinitionProvider(
         // Fall back to SemanticDB on disk, if any
         semanticdbs
           .textDocument(symbolDefinition.path)
-          .documentIncludingStale match {
-          case Some(d) => d
-          case _ => parsed
-        }
+          .documentIncludingStale
+          .getOrElse(parsed)
       } else {
         parsed
       }
