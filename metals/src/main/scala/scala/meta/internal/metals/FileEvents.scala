@@ -63,6 +63,7 @@ final class FileEvents(
     }
     val buildSbt = workspace.resolve("build.sbt").toNIO
     if (!Properties.isWin && Files.isRegularFile(buildSbt)) {
+      // Don't add individual files on Windows because it crashes.
       paths.add(buildSbt)
     }
     val watcher = DirectoryWatcher
