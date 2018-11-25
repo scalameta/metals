@@ -45,7 +45,6 @@ class MetalsLanguageServer(
     progressTicks: ProgressTicks = ProgressTicks.braille
 ) extends Cancelable {
 
-  private def icons: Icons = config.icons
   private implicit val executionContext: ExecutionContextExecutorService = ec
   private val sh = Executors.newSingleThreadScheduledExecutor()
   private val fingerprints = new MutableMd5Fingerprints
@@ -56,7 +55,7 @@ class MetalsLanguageServer(
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
-  private val messages = new Messages(icons)
+  private val messages = new Messages(config.icons)
 
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = cancelables.cancel()
@@ -82,7 +81,7 @@ class MetalsLanguageServer(
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient = client
     statusBar = new StatusBar(() => languageClient, time, progressTicks)
-    embedded = register(new Embedded(icons, statusBar))
+    embedded = register(new Embedded(config.icons, statusBar))
     LanguageClientLogger.languageClient = Some(client)
   }
 
@@ -132,7 +131,7 @@ class MetalsLanguageServer(
       workspace,
       buildClient,
       config,
-      icons,
+      config.icons,
       embedded,
       statusBar
     )
@@ -148,7 +147,7 @@ class MetalsLanguageServer(
       buffers,
       index,
       semanticdbs,
-      icons,
+      config.icons,
       statusBar
     )
   }
@@ -165,11 +164,7 @@ class MetalsLanguageServer(
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       if (config.isNoInitialized) {
         sh.schedule(
-          new Runnable {
-            override def run(): Unit = {
-              initialized(new InitializedParams)
-            }
-          },
+          () => initialized(new InitializedParams),
           1,
           TimeUnit.SECONDS
         )
@@ -252,7 +247,7 @@ class MetalsLanguageServer(
         languageClient,
         () => server.reload(),
         charset,
-        icons,
+        config.icons,
         time,
         sh
       )
@@ -497,7 +492,7 @@ class MetalsLanguageServer(
 
       for {
         _ <- statusBar.trackFuture("Importing build", importingBuild)
-        _ = statusBar.addMessage(s"${icons.rocket}Imported build!")
+        _ = statusBar.addMessage(s"${config.icons.rocket}Imported build!")
         _ <- compileSourceFiles(buffers.open.toSeq)
       } yield BuildChange.Reconnected
     }
@@ -522,36 +517,25 @@ class MetalsLanguageServer(
   private def indexSourceDirectory(
       sourceDirectory: AbsolutePath
   ): Future[Unit] = Future {
-    Files.walkFileTree(
-      sourceDirectory.toNIO,
-      new SimpleFileVisitor[Path] {
-        override def visitFile(
-            file: Path,
-            attrs: BasicFileAttributes
-        ): FileVisitResult = {
-          val path = AbsolutePath(file)
-          path.toLanguage match {
-            case Language.SCALA | Language.JAVA =>
-              index.addSourceFile(path, Some(sourceDirectory))
-            case _ =>
-          }
-          super.visitFile(file, attrs)
-        }
-        override def preVisitDirectory(
-            dir: Path,
-            attrs: BasicFileAttributes
-        ): FileVisitResult = {
-          val path = AbsolutePath(dir)
-          if (path.resolve("META-INF").isDirectory) {
-            FileVisitResult.SKIP_SUBTREE
-          } else if (dir.endsWith(".bloop") || dir.endsWith(".metals")) {
-            FileVisitResult.SKIP_SUBTREE
-          } else {
-            super.preVisitDirectory(dir, attrs)
+    if (sourceDirectory.isDirectory) {
+      Files.walkFileTree(
+        sourceDirectory.toNIO,
+        new SimpleFileVisitor[Path] {
+          override def visitFile(
+              file: Path,
+              attrs: BasicFileAttributes
+          ): FileVisitResult = {
+            val path = AbsolutePath(file)
+            path.toLanguage match {
+              case Language.SCALA | Language.JAVA =>
+                index.addSourceFile(path, Some(sourceDirectory))
+              case _ =>
+            }
+            super.visitFile(file, attrs)
           }
         }
-      }
-    )
+      )
+    }
   }
   private def timed[T](didWhat: String, reportStatus: Boolean = false)(
       thunk: => Future[T]
@@ -678,7 +662,7 @@ class MetalsLanguageServer(
               reportStatus = true
             ) {
               statusBar.trackFuture(
-                s"${icons.sync}Compiling$name",
+                s"${config.icons.sync}Compiling$name",
                 build.compile(params).asScala,
                 showTimer = true
               )
@@ -686,7 +670,9 @@ class MetalsLanguageServer(
           } yield {
             status.getStatusCode match {
               case StatusCode.OK =>
-                statusBar.addMessage(s"${icons.check}Compiled$name in $elapsed")
+                statusBar.addMessage(
+                  s"${config.icons.check}Compiled$name in $elapsed"
+                )
               case StatusCode.ERROR =>
               case StatusCode.CANCELLED =>
             }
@@ -706,13 +692,11 @@ class MetalsLanguageServer(
       paths: Seq[AbsolutePath]
   ): Future[BuildChange] = {
     val isBuildChange = paths.exists(_.isSbtRelated(workspace))
-    val result: Future[BuildChange] =
-      if (isBuildChange) {
-        slowConnectToBuildServer(forceImport = false)
-      } else {
-        Future.successful(BuildChange.None)
-      }
-    result
+    if (isBuildChange) {
+      slowConnectToBuildServer(forceImport = false)
+    } else {
+      Future.successful(BuildChange.None)
+    }
   }
 
   /**
@@ -726,6 +710,8 @@ class MetalsLanguageServer(
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.toLanguage.isScala) {
       val result = definitionProvider.definition(source, position)
+      // Record what build target this dependency source (if any) was jumped from,
+      // needed to know what classpath to compile the dependency source with.
       interactiveSemanticdbs.didDefinition(source, result)
       result
     } else {

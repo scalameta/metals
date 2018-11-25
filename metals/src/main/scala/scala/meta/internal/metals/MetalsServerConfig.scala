@@ -4,7 +4,7 @@ package scala.meta.internal.metals
  * Configuration parameters for the Metals language server.
  *
  * @param bloopProtocol the protocol to communicate with Bloop.
- * @param fileWatcher whether to start a embedded file watcher in case the editor
+ * @param fileWatcher whether to start an embedded file watcher in case the editor
  *                    does not support file watching.
  * @param statusBar how to handle metals/status notifications.
  * @param slowTask how to handle metals/slowTask requests.
