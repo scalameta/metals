@@ -101,6 +101,7 @@ final class InteractiveSemanticdbs(
     }
   }
 
+  /** Persist relationship between this dependency source and its enclosing build target */
   def didDefinition(source: AbsolutePath, result: DefinitionResult): Unit = {
     for {
       destination <- result.definition
