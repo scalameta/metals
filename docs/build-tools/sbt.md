@@ -20,7 +20,7 @@ First, install the Bloop and Metals plugins globally
 //   ~/.sbt/0.13/plugins/plugins.sbt
 //   ~/.sbt/1.0/plugins/plugins.sbt
 addSbtPlugin("org.scalameta" % "sbt-metals" % "@VERSION@")
-addSbtPlugin("org.scalameta" % "sbt-bloop" % "@BLOOP_VERSION@")
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "@BLOOP_VERSION@")
 ```
 
 Next, run `sbt metalsEnable bloopInstall` to generate the Bloop JSON

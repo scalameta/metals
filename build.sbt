@@ -247,12 +247,8 @@ lazy val docs = project
     moduleName := "metals-docs",
     mainClass.in(Compile) := Some("docs.Docs"),
     libraryDependencies ++= List(
-      "com.geirsson" % "mdoc" % "0.5.3" cross CrossVersion.full
-    ),
-    buildInfoKeys := Seq[BuildInfoKey](
-      version
-    ),
-    buildInfoPackage := "docs"
+      "com.geirsson" % "mdoc" % "0.6.0" cross CrossVersion.full
+    )
   )
   .dependsOn(metals)
-  .enablePlugins(DocusaurusPlugin, BuildInfoPlugin)
+  .enablePlugins(DocusaurusPlugin)

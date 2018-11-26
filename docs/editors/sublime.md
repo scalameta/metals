@@ -17,32 +17,12 @@ Metals has experimental support for Sublime Text 3 thanks to
 First, install the LSP plugin:
 `Command Palette (Cmd + Shift + P) > Install package > LSP`
 
-Next, build a `metals-sublime` binary using the
-[Coursier](https://github.com/coursier/coursier) command-line interface.
+```scala mdoc:bootstrap:metals-sublime sublime
 
-```sh
-coursier bootstrap \
-  --java-opt -XX:+UseG1GC \
-  --java-opt -XX:+UseStringDeduplication  \
-  --java-opt -Xss4m \
-  --java-opt -Xms1G \
-  --java-opt -Xmx4G  \
-  --java-opt -Dmetals.client=sublime \
-  org.scalameta:metals_2.12:@VERSION@ \
-  -r bintray:scalacenter/releases \
-  -o metals-sublime -f
 ```
 
 The `-Dmetals.client=sublime` flag configures Metals for usage with the Sublime
 Text LSP client.
-
-(optional) Feel free to place this binary anywhere on your `$PATH`, for example
-adapt the `-o` flag like this:
-
-```diff
--  -o metals-sublime -f
-+  -o /usr/local/bin/metals-sublime -f
-```
 
 Next, update the LSP plugin settings to run `metals-sublime` for Scala sources:
 `Command Palette (Cmd + Shift + P) > LSP Settings`. Update the JSON file to

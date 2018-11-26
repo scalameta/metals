@@ -29,32 +29,12 @@ Plug 'derekwyatt/vim-scala'
 Plug 'natebosch/vim-lsc'
 ```
 
-Next, build a `metals-vim` binary using the
-[Coursier](https://github.com/coursier/coursier) command-line interface.
+```scala mdoc:bootstrap:metals-vim vim-lsc
 
-```sh
-coursier bootstrap \
-  --java-opt -XX:+UseG1GC \
-  --java-opt -XX:+UseStringDeduplication  \
-  --java-opt -Xss4m \
-  --java-opt -Xms1G \
-  --java-opt -Xmx4G  \
-  --java-opt -Dmetals.client=vim-lsc \
-  org.scalameta:metals_2.12:@VERSION@ \
-  -r bintray:scalacenter/releases \
-  -o metals-vim -f
 ```
 
 The `-Dmetals.client=vim-lsc` flag configures Metals for usage with the
 `vim-lsc` client.
-
-(optional) Feel free to place this binary anywhere on your `$PATH`, for example
-adapt the `-o` flag like this:
-
-```diff
--  -o metals-vim -f
-+  -o /usr/local/bin/metals-vim -f
-```
 
 Next, update `~/.vimrc` to tell `vim-lsc` to use `metals-vim` for Scala sources
 and map `gd` to run "Goto definition".
