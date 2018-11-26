@@ -12,7 +12,7 @@ environment:
 build_script:
   - sbt publishLocal
 test_script:
-  - sbt unit/test
+  - sbt test
 cache:
   - C:\sbt\
   - C:\Users\appveyor\.ivy2
