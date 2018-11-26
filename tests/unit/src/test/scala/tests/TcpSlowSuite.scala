@@ -8,12 +8,15 @@ object TcpSlowSuite extends BaseSlowSuite("tcp") {
     for {
       _ <- server.initialize(
         """
-          |/project/build.properties
-          |sbt.version=1.2.3
-          |/build.sbt
-          |scalaVersion := "2.12.7"
+          |/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/A.scala
+          |object A
         """.stripMargin
       )
+      _ <- server.didOpen("a/src/main/scala/A.scala")
       _ = assertNoDiff(client.workspaceErrorShowMessages, "")
     } yield ()
   }

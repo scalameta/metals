@@ -14,14 +14,14 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Position
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.MetalsStatusParams
+import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.io.AbsolutePath
 
 /**
@@ -81,7 +81,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     pathDiagnostics(toPath(filename))
   }
   def pathDiagnostics(path: AbsolutePath): String = {
-    val diags = diagnostics(path)
+    val diags = diagnostics.getOrElse(path, Nil)
     val relpath =
       path.toRelative(workspace).toURI(isDirectory = false).toString
     val input =

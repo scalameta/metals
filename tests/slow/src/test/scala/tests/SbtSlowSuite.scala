@@ -6,7 +6,7 @@ import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.SbtDigest
 import scala.meta.internal.metals.ServerCommands
 
-object ImportSlowSuite extends BaseSlowSuite("import") {
+object SbtSlowSuite extends BaseSlowSuite("import") {
 
   def currentChecksum(): String =
     SbtDigest.current(workspace).getOrElse {

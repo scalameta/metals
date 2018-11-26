@@ -22,19 +22,22 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
     for {
       _ <- server.initialize(
         """|
-           |/project/build.properties
-           |sbt.version=1.2.6
-           |/build.sbt
-           |scalaVersion := "2.12.7"
-           |libraryDependencies ++= List(
-           |  "org.scalatest" %% "scalatest" % "3.0.5" % Test
-           |)
-           |/src/main/java/a/Message.java
+           |/metals.json
+           |{
+           |  "a": { },
+           |  "b": {
+           |    "libraryDependencies": [
+           |      "org.scalatest::scalatest:3.0.5"
+           |    ],
+           |    "dependsOn": [ "a" ]
+           |  }
+           |}
+           |/a/src/main/java/a/Message.java
            |package a;
            |public class Message {
            |  public static String message = "Hello world!";
            |}
-           |/src/main/scala/a/Main.scala
+           |/a/src/main/scala/a/Main.scala
            |package a
            |import java.util.concurrent.Future // unused
            |import scala.util.Failure // unused
@@ -43,7 +46,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |  new java.io.PrintStream(new java.io.ByteArrayOutputStream())
            |  println(message)
            |}
-           |/src/test/scala/a/MainSuite.scala
+           |/b/src/main/scala/a/MainSuite.scala
            |package a
            |import java.util.concurrent.Future // unused
            |import scala.util.Failure // unused
@@ -57,12 +60,13 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |""".stripMargin
       )
       _ = assertNoDiff(server.workspaceDefinitions, "")
-      _ <- server.didOpen("src/main/scala/a/Main.scala")
-      _ <- server.didOpen("src/test/scala/a/MainSuite.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("b/src/main/scala/a/MainSuite.scala")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = assertNoDiff(
         server.workspaceDefinitions,
         """|
-           |/src/main/scala/a/Main.scala
+           |/a/src/main/scala/a/Main.scala
            |package a
            |import java.util.concurrent.Future/*Future.java:95*/ // unused
            |import scala.util.Failure/*Try.scala:213*/ // unused
@@ -71,7 +75,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |  new java.io.PrintStream/*PrintStream.java:56*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java:44*/())
            |  println/*Predef.scala:392*/(message/*L4*/)
            |}
-           |/src/test/scala/a/MainSuite.scala
+           |/b/src/main/scala/a/MainSuite.scala
            |package a
            |import java.util.concurrent.Future/*Future.java:95*/ // unused
            |import scala.util.Failure/*Try.scala:213*/ // unused
@@ -84,10 +88,10 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |}
            |""".stripMargin
       )
-      _ <- server.didChange("src/test/scala/a/MainSuite.scala") { text =>
+      _ <- server.didChange("b/src/main/scala/a/MainSuite.scala") { text =>
         ">>>>>>>\n\n" + text.replaceFirst("\"a\"", "testName")
       }
-      _ <- server.didChange("src/main/scala/a/Main.scala") { text =>
+      _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
         ">>>>>>>\n\n" + text.replaceFirst("message", "helloMessage")
       }
       _ = assertNoDiff(
@@ -98,7 +102,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
         // - new references to like `testName` don't resolve
         server.workspaceDefinitions,
         """|
-           |/src/main/scala/a/Main.scala
+           |/a/src/main/scala/a/Main.scala
            |>>>>>>>/*<no symbol>*/
            |
            |package a
@@ -109,7 +113,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |  new java.io.PrintStream/*PrintStream.java:56*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java:44*/())
            |  println/*Predef.scala:392*/(message/*<no symbol>*/)
            |}
-           |/src/test/scala/a/MainSuite.scala
+           |/b/src/main/scala/a/MainSuite.scala
            |>>>>>>>/*<no symbol>*/
            |
            |package a
@@ -136,14 +140,15 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
     for {
       _ <- server.initialize(
         """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |scalaVersion := "2.12.7"
-          |libraryDependencies ++= List(
-          |  "org.typelevel" %% "cats-core" % "1.4.0"
-          |)
-          |/src/main/scala/a/Main.scala
+          |/metals.json
+          |{
+          |  "a": {
+          |    "libraryDependencies": [
+          |      "org.typelevel::cats-core:1.4.0"
+          |    ]
+          |  }
+          |}
+          |/a/src/main/scala/a/Main.scala
           |import cats._
           |import cats.implicits._
           |object Main {
@@ -151,7 +156,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ = server.workspaceDefinitions // trigger definition
       _ <- server.didOpen("cats/Contravariant.scala")
       _ = assertNoDiff(
@@ -187,7 +192,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |    }
            |}
            |
-           |/src/main/scala/a/Main.scala
+           |/a/src/main/scala/a/Main.scala
            |import cats._
            |import cats.implicits/*implicits.scala:2*/._
            |object Main/*L2*/ {
@@ -220,7 +225,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |                                                            ^
            |""".stripMargin
       )
-      _ <- server.didFocus("src/main/scala/a/Main.scala")
+      _ <- server.didFocus("a/src/main/scala/a/Main.scala")
       // dependency diagnostics are unpublished.
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
@@ -231,18 +236,20 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
     for {
       _ <- server.initialize(
         """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |scalaVersion := "2.11.12"
-          |/src/main/scala/a/Main.scala
+          |/metals.json
+          |{
+          |  "a": {
+          |    "scalaVersion": "2.11.12"
+          |  }
+          |}
+          |/a/src/main/scala/a/Main.scala
           |object Main {
           |  println("hello!")
           |}
           |""".stripMargin
       )
       _ = client.messageRequests.clear()
-      _ <- server.didOpen("src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ = server.workspaceDefinitions // trigger definition
       _ <- server.didOpen("scala/Predef.scala")
       _ = assertNoDiff(
@@ -257,34 +264,34 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
     for {
       _ <- server.initialize(
         """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |scalaVersion := "2.12.7"
-          |/src/main/scala/a/Main.scala
+          |/metals.json
+          |{
+          |  "a": { }
+          |}
+          |/a/src/main/scala/a/Main.scala
           |object Main {
           |  val x: Int = math.max(1, 2)
           |}
           |""".stripMargin
       )
       _ = client.messageRequests.clear()
-      _ <- server.didOpen("src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ = println(server.workspaceDefinitions)
       _ = assertNoDiff(
         server.workspaceDefinitions,
         """
-          |/src/main/scala/a/Main.scala
+          |/a/src/main/scala/a/Main.scala
           |object Main/*L0*/ {
           |  val x/*L1*/: Int/*Int.scala:21*/ = math.max/*package.scala:191*/(1, 2)
           |}
         """.stripMargin
       )
-      _ <- server.didSave("src/main/scala/a/Main.scala")(
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")(
         _.replaceAllLiterally("max(1, 2)", "max")
       )
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        """|/src/main/scala/a/Main.scala
+        """|/a/src/main/scala/a/Main.scala
            |object Main/*L0*/ {
            |  val x/*L1*/: Int/*Int.scala:21*/ = math.max/*package.scala:191*/
            |}
@@ -293,24 +300,27 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
     } yield ()
   }
 
-  testAsync("macros") {
+  testAsync("annotations") {
     for {
       _ <- server.initialize(
         """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |scalaVersion := "2.12.7"
-          |addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
-          |libraryDependencies ++= List(
-          |  "io.circe" %% "circe-core" % "0.9.0",
-          |  "io.circe" %% "circe-derivation" % "0.9.0-M4",
-          |)
-          |/src/main/scala/a/User.scala
+          |/metals.json
+          |{
+          |  "a": {
+          |    "compilerPlugins": [
+          |      "org.scalamacros:::paradise:2.1.1"
+          |    ],
+          |    "libraryDependencies": [
+          |      "io.circe::circe-core:0.9.0",
+          |      "io.circe::circe-derivation:0.9.0-M4"
+          |    ]
+          |  }
+          |}
+          |/a/src/main/scala/a/User.scala
           |package a
           |import io.circe.derivation.JsonCodec
           |@JsonCodec case class User(name: String)
-          |/src/main/scala/a/Main.scala
+          |/a/src/main/scala/a/Main.scala
           |package a
           |object Main {
           |  val user = User("John")
@@ -319,12 +329,12 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = assertNoDiff(
         server.workspaceDefinitions,
         """
-          |/src/main/scala/a/Main.scala
+          |/a/src/main/scala/a/Main.scala
           |package a
           |object Main/*L1*/ {
           |  val user/*L2*/ = User/*User.scala:2*/("John")

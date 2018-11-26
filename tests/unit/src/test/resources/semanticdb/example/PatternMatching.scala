@@ -14,7 +14,7 @@ class PatternMatching/*example.PatternMatching#*/ {
   // val deconstruction
   val Some/*scala.Some.*/(number1/*local3*/) =
     some/*example.PatternMatching#some.*/
-  number1/*example.PatternMatching#number1.*/
+  println/*scala.Predef.println(+1).*/(number1/*example.PatternMatching#number1.*/)
 
   def localDeconstruction/*example.PatternMatching#localDeconstruction().*/ = {
     val Some/*scala.Some.*/(number2/*local5*/) =
