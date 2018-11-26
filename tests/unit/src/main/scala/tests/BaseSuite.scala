@@ -98,7 +98,7 @@ class BaseSuite extends TestSuite {
   def test(name: String)(fun: => Any): Unit = {
     myTests += FlatTest(name, () => fun)
   }
-  def testAsync(name: String, maxDuration: Duration = Duration("3min"))(
+  def testAsync(name: String, maxDuration: Duration = Duration("10min"))(
       run: => Future[Unit]
   ): Unit = {
     test(name) {
