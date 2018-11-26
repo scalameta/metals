@@ -19,11 +19,6 @@ object Docs {
         )
       )
       .withOut(out)
-      .withStringModifiers(
-        List(
-          new RequirementsModifier
-        )
-      )
       .withArgs(args.toList)
     // generate out/readme.md from working directory
     val exitCode = mdoc.Main.process(settings)
