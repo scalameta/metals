@@ -62,7 +62,7 @@ final class BloopServers(
   }
 
   private def defaultRetries: Int =
-    if (scala.util.Properties.isWin) {
+    if (config.bloopProtocol.isTcp) {
       // NOTE(olafur) The TCP socket establishment is quite fragile on
       // on Windows and retries seem to help. Maybe named pipes will help
       // improve stability, or somebody who is more versed with I/O on Windows
@@ -157,7 +157,11 @@ final class BloopServers(
     callBloopMain(
       args,
       isOk = { () =>
-        Thread.sleep(1000)
+        // On macos/linux we can retry `new Socket(host, post)` until it stops throwing an exception
+        // but on windows this approach will spoil the socket somehow resulting in timeouts for
+        // the `build/initialize` handshake. Until Bloop `--protocol local` implements support
+        // for communicating a safe moment to establish the client socket we Thread.sleep blindly.
+        Thread.sleep(3000)
         true
       },
       onSuccess = { () =>
