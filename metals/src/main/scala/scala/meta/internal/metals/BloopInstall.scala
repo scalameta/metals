@@ -50,7 +50,6 @@ final class BloopInstall(
 
   def runUnconditionally(sbt: Sbt): Future[BloopInstallResult] = {
     persistChecksumStatus(Status.Started)
-    System.setProperty("jna.nosys", "true")
     BloopInstall.writeGlobalPluginFile(sbt)
     val elapsed = new Timer(time)
     val handler = new BloopInstall.ProcessHandler()

@@ -157,6 +157,7 @@ class MetalsLanguageServer(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] = {
     Future {
+      System.setProperty("jna.nosys", "true")
       initializeParams = Option(params)
       updateWorkspaceDirectory(params)
       val capabilities = new ServerCapabilities()
