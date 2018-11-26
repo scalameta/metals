@@ -7,7 +7,6 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Collections
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -48,10 +47,14 @@ final class InteractiveSemanticdbs(
     with Semanticdbs {
   import messages._
   private val activeDocument = new AtomicReference[Option[String]](None)
-  private val globalCache =
-    new ConcurrentHashMap[BuildTargetIdentifier, Global]()
-  private val textDocumentCache =
-    new ConcurrentHashMap[AbsolutePath, s.TextDocument]()
+  // Not ConcurrentHashMap since it can hit on deadlocks inside computeIfAbsent
+  // when the "if absent" function is slow.
+  private val globalCache = Collections.synchronizedMap(
+    new java.util.HashMap[BuildTargetIdentifier, Global]()
+  )
+  private val textDocumentCache = Collections.synchronizedMap(
+    new java.util.HashMap[AbsolutePath, s.TextDocument]()
+  )
 
   def reset(): Unit = {
     textDocumentCache.clear()
