@@ -141,7 +141,7 @@ lazy val metals = project
       // Scala dependencies
       // ==================
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "com.geirsson" %% "coursier-small" % "1.2.0+3-f1fa68e5-SNAPSHOT",
+      "com.geirsson" %% "coursier-small" % "1.3.1",
       // undeclared transitive dependency of coursier-small
       "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
       // for handling Java futures
