@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.io.IOException
 import java.io.InputStream
 import java.io.PrintStream
 import java.net.InetSocketAddress
@@ -52,7 +51,28 @@ final class BloopServers(
     statusBar: StatusBar
 )(implicit ec: ExecutionContextExecutorService) {
 
-  def newServer(): Future[BuildServerConnection] = {
+  def newServer(
+      maxRetries: Int = defaultRetries
+  ): Future[BuildServerConnection] = {
+    newServerUnsafe().recoverWith {
+      case NonFatal(_) if maxRetries > 0 =>
+        scribe.warn(s"BSP retry ${defaultRetries - maxRetries + 1}")
+        newServer(maxRetries - 1)
+    }
+  }
+
+  private def defaultRetries: Int =
+    if (scala.util.Properties.isWin) {
+      // NOTE(olafur) The TCP socket establishment is quite fragile on
+      // on Windows and retries seem to help. Maybe named pipes will help
+      // improve stability, or somebody who is more versed with I/O on Windows
+      // and can fix my crappy socket code.
+      10
+    } else {
+      0
+    }
+
+  private def newServerUnsafe(): Future[BuildServerConnection] = {
     for {
       (protocol, cancelable) <- callBSP()
     } yield {
@@ -96,7 +116,7 @@ final class BloopServers(
 
   private def callBSP(): Future[(BloopSocket, Cancelable)] = {
     if (config.bloopProtocol.isNamedPipe) callNamedPipeBsp()
-    if (config.bloopProtocol.isTcp) callTcpBspWithBackoff()
+    if (config.bloopProtocol.isTcp) callTcpBsp()
     else callUnixBsp()
   }
 
@@ -122,16 +142,7 @@ final class BloopServers(
     )
   }
 
-  private def callTcpBspWithBackoff(
-      maxRetries: Int = 10
-  ): Future[(BloopSocket, Cancelable)] = {
-    callTcpBspUnsafe().recoverWith {
-      case _: IOException if maxRetries > 0 =>
-        // It can take a really long time to establish a connection on Windows.
-        callTcpBspWithBackoff(maxRetries - 1)
-    }
-  }
-  private def callTcpBspUnsafe(): Future[(BloopSocket, Cancelable)] = {
+  private def callTcpBsp(): Future[(BloopSocket, Cancelable)] = {
     val host = "127.0.0.1"
     val port = randomPort(host)
     val args = Array(

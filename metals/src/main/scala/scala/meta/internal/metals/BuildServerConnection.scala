@@ -8,11 +8,11 @@ import ch.epfl.scala.bsp4j.InitializeBuildResult
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import scala.util.control.NonFatal
 
 /**
  * An actively running and initialized BSP connection.
@@ -74,8 +74,8 @@ object BuildServerConnection {
       try {
         initializeResult.get(5, TimeUnit.SECONDS)
       } catch {
-        case NonFatal(e) =>
-          scribe.error("No response sending 'build/initialize'", e)
+        case e: TimeoutException =>
+          scribe.error("Timeout waiting for 'build/initialize' response")
           throw e
       }
     server.onBuildInitialized()
