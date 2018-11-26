@@ -73,7 +73,15 @@ final class BloopServers(
         cancelable,
         Cancelable(() => listening.cancel(true))
       )
-      BuildServerConnection(workspace, client, remoteServer, cancelables)
+      val initializeResult =
+        BuildServerConnection.initialize(workspace, remoteServer)
+      BuildServerConnection(
+        workspace,
+        client,
+        remoteServer,
+        cancelables,
+        initializeResult
+      )
     }
   }
 

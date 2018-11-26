@@ -486,7 +486,6 @@ class MetalsLanguageServer(
           cancelables.add(build)
           buildServer = Some(build)
         }
-        _ <- build.initialize()
         _ <- installWorkspaceBuildTargets(build)
       } yield ()
 

@@ -119,7 +119,6 @@ object BspCli {
   )(implicit ec: ExecutionContextExecutorService): Future[Unit] = {
     for {
       bloop <- bloopServers.newServer()
-      _ <- bloop.initialize()
       buildTargets <- bloop.server.workspaceBuildTargets().asScala
       ids = buildTargets.getTargets.asScala
         .filter(target => targets.contains(target.getDisplayName))
