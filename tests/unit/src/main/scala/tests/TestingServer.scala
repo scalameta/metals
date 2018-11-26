@@ -27,14 +27,14 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.ProgressTicks
-import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
@@ -80,8 +80,8 @@ final class TestingServer(
       expectError: Boolean = false
   ): Future[Unit] = {
     Debug.printEnclosing()
-//    cleanUnmanagedFiles()
     write(layout)
+    QuickBuild.bloopInstall(workspace)
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities

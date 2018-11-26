@@ -21,6 +21,7 @@ object FileLayout {
               path.stripPrefix("/").split("/").foldLeft(root)(_ resolve _)
             val parent = file.toNIO.getParent
             Files.createDirectories(parent)
+            Files.deleteIfExists(file.toNIO)
             Files.write(
               file.toNIO,
               contents.getBytes(charset),

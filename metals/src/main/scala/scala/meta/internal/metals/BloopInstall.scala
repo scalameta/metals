@@ -58,7 +58,7 @@ final class BloopInstall(
       "java",
       "-jar",
       embedded.sbtLauncher.toString(),
-      "-Dscalameta.version=4.0.0-163560a8",
+      s"-Dscalameta.version=${BuildInfo.semanticdbVersion}",
       "-Djline.terminal=jline.UnsupportedTerminal",
       "-Dsbt.log.noformat=true",
       "-Dfile.encoding=UTF-8"

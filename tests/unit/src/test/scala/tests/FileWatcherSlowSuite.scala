@@ -11,15 +11,12 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
     for {
       _ <- server.initialize(
         """
-          |/project/build.properties
-          |sbt.version=1.2.3
-          |/build.sbt
-          |inThisBuild(List(
-          |  scalaVersion := "2.12.7"
-          |))
-          |lazy val a = project
-          |lazy val b = project
-          |lazy val c = project.dependsOn(a)
+          |/metals.json
+          |{
+          |  "a": { },
+          |  "b": { },
+          |  "c": { "dependsOn": [ "a" ] }
+          |}
           |/a/src/main/scala/A.scala
           |package a
           |object A

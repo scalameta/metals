@@ -14,7 +14,7 @@ class PatternMatching/*example.PatternMatching#*/ {
   // val deconstruction
   val Some(number1/*example.PatternMatching#number1.*/) =
     some
-  number1
+  println(number1)
 
   def localDeconstruction/*example.PatternMatching#localDeconstruction().*/ = {
     val Some(number2) =

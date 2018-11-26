@@ -89,6 +89,7 @@ lazy val V = new {
   val scala211 = "2.11.12"
   val scala212 = "2.12.7"
   val scalameta = "4.0.0"
+  val semanticdb = "4.0.0-163560a8"
   val bsp = "2.0.0-M1"
   val sbtBloop = "121807cc"
   val bloop = "1.0.0+369-a2222610"
@@ -140,7 +141,7 @@ lazy val metals = project
       // Scala dependencies
       // ==================
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "com.geirsson" %% "coursier-small" % "1.2.0",
+      "com.geirsson" %% "coursier-small" % "1.2.0+3-f1fa68e5-SNAPSHOT",
       // undeclared transitive dependency of coursier-small
       "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
       // for handling Java futures
@@ -161,6 +162,7 @@ lazy val metals = project
       "bloopVersion" -> V.bloop,
       "sbtBloopVersion" -> V.sbtBloop,
       "scalametaVersion" -> V.scalameta,
+      "semanticdbVersion" -> V.semanticdb,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212
     )
@@ -199,18 +201,23 @@ lazy val input = project
     )
   )
 
+lazy val testSettings: Seq[Def.Setting[_]] = List(
+  skip.in(publish) := true,
+  fork := true,
+  testFrameworks := List(new TestFramework("utest.runner.Framework"))
+)
+
 lazy val unit = project
   .in(file("tests/unit"))
   .settings(
-    skip.in(publish) := true,
-    fork := true,
-    testFrameworks := List(new TestFramework("utest.runner.Framework")),
+    testSettings,
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
       "org.scalameta" %% "symtab" % V.scalameta,
       "org.scalameta" % "metac" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta,
+      "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "com.lihaoyi" %% "utest" % "0.6.0"
     ),
     buildInfoPackage := "tests",
@@ -224,6 +231,12 @@ lazy val unit = project
   )
   .dependsOn(metals)
   .enablePlugins(BuildInfoPlugin)
+lazy val slow = project
+  .in(file("tests/slow"))
+  .settings(
+    testSettings
+  )
+  .dependsOn(unit)
 
 lazy val bench = project
   .in(file("metals-bench"))

@@ -91,8 +91,10 @@ object Embedded {
         )
       )
     val jars = coursiersmall.CoursierSmall.fetch(settings)
+    // Don't make Bloop classloader a child or our classloader.
+    val parent: ClassLoader = null
     val classloader =
-      new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, null)
+      new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, parent)
     classloader
   }
 }

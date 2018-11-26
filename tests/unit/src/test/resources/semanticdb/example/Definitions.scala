@@ -10,6 +10,6 @@ class Definitions/*example.Definitions#*/ {
   ](
     xs = null
   )
-  MacroAnnotation/*example.MacroAnnotation.*/.decodeMacroAnnotation/*example.MacroAnnotation.decodeMacroAnnotation.*/
-  MacroAnnotation/*example.MacroAnnotation.*/.encodeMacroAnnotation/*example.MacroAnnotation.encodeMacroAnnotation.*/
+  println/*scala.Predef.println(+1).*/(MacroAnnotation/*example.MacroAnnotation.*/.decodeMacroAnnotation/*example.MacroAnnotation.decodeMacroAnnotation.*/)
+  println/*scala.Predef.println(+1).*/(MacroAnnotation/*example.MacroAnnotation.*/.encodeMacroAnnotation/*example.MacroAnnotation.encodeMacroAnnotation.*/)
 }

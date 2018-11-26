@@ -10,6 +10,6 @@ class Definitions/*example.Definitions#*/ {
   ](
     xs = null
   )
-  MacroAnnotation.decodeMacroAnnotation
-  MacroAnnotation.encodeMacroAnnotation
+  println(MacroAnnotation.decodeMacroAnnotation)
+  println(MacroAnnotation.encodeMacroAnnotation)
 }
