@@ -446,9 +446,11 @@ class MetalsLanguageServer(
   ): Future[BuildChange] = {
     buildTools.asSbt match {
       case None =>
-        scribe.warn(
-          s"Skipping build import for unsupport build tool $buildTools"
-        )
+        if (!buildTools.isBloop) {
+          scribe.warn(
+            s"Skipping build import for unsupport build tool $buildTools"
+          )
+        }
         Future.successful(BuildChange.None)
       case Some(sbt) =>
         SbtDigest.current(workspace) match {
