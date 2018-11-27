@@ -151,11 +151,14 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
           |""".stripMargin,
         expectError = true
       )
-      _ = assertStatus(_.isCancelled)
+      _ = assertStatus(!_.isInstalled)
       _ = client.slowTaskHandler = _ => None
-      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.didSave("build.sbt")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceShowMessages, "")
-      _ = assertStatus(_.isCancelled)
+      _ = assertStatus(!_.isInstalled)
+      _ <- server.didSave("build.sbt")(_ => "version := \"1.1\" ")
+      _ = assertNoDiff(client.workspaceShowMessages, "")
+      _ = assertStatus(_.isInstalled)
     } yield ()
   }
 
