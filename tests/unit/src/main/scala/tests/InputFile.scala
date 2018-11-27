@@ -6,7 +6,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
-import scala.meta.internal.mtags.Enrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 case class InputFile(
     file: AbsolutePath,

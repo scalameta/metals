@@ -8,7 +8,7 @@
     "language server",
     "scalameta"
   ],
-  "version": "0.1.0",
+  "version": "0.2.0-M1",
   "publisher": "scalameta",
   "contributors": [
     {
@@ -49,80 +49,15 @@
     "configuration": {
       "title": "Metals",
       "properties": {
-        "metals.sbt.diagnostics.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable diagnostics from the sbt server. Requires a running sbt 1.1+ instance."
-        },
-        "metals.sbt.command": {
-          "type": "string",
-          "default": "",
-          "description": "Which sbt command to run on file save. Requires a running sbt 1.1+ instance."
-        },
-        "metals.scalac.completions.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "EXPERIMENTAL. Enable completions as you type with the Scala Presentation Compiler."
-        },
-        "metals.scalac.diagnostics.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "EXPERIMENTAL. Enable diagnostics as you type with the Scala Presentation Compiler."
-        },
-        "metals.scalafmt.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable formatting with scalafmt"
-        },
-        "metals.scalafmt.version": {
-          "type": "string",
-          "default": "1.4.0",
-          "description": "Version of scalafmt to use, default to latest stable release."
-        },
-        "metals.scalafmt.confPath": {
-          "type": "string",
-          "default": ".scalafmt.conf",
-          "description": "Path to the Scalafmt configuration, relative to the workspace path"
-        },
-        "metals.scalafix.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable Scalafix diagnostics"
-        },
-        "metals.scalafix.confPath": {
-          "type": "string",
-          "default": ".scalafix.conf",
-          "description": "Path to the Scalafix configuration, relative to the workspace path"
-        },
-        "metals.search.indexClasspath": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable indexing of the classpath"
-        },
-        "metals.search.indexJDK": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable indexing of the JDK"
-        },
-        "metals.hover.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable tooltips on hover"
-        },
-        "metals.highlight.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "EXPERIMENTAL. Enable highlighting references to symbol on hover"
-        },
-        "metals.rename.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable renaming symbols"
-        },
         "metals.serverVersion": {
           "type": "string",
-          "default": "0.1.0",
-          "description": "The version of the server artifact. Requires reloading the window. Change only if you know what you're doing"
+          "default": "0.2.0-SNAPSHOT",
+          "description": "The version of the Metals server artifact. Requires reloading the window. Change only if you know what you're doing"
+        },
+        "metals.serverProperties": {
+          "type": "string",
+          "default": "",
+          "description": "Optional space separated system properties to pass along to the Metals server, for example -Dmetals.bloop-protocol=tcp"
         }
       }
     },
@@ -133,14 +68,19 @@
         "title": "Restart server"
       },
       {
-        "command": "metals.clearIndexCache",
+        "command": "metals.workspace.sources.scan",
         "category": "Metals",
-        "title": "Clear index cache"
+        "title": "Rescan sources"
       },
       {
-        "command": "metals.sbtConnect",
+        "command": "metals.build.connect",
         "category": "Metals",
-        "title": "Connect to sbt server"
+        "title": "Connect to build server"
+      },
+      {
+        "command": "metals.build.import",
+        "category": "Metals",
+        "title": "Import build"
       }
     ]
   },

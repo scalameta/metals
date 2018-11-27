@@ -8,9 +8,9 @@ object InputProperties extends AutoPlugin {
     Def.taskDyn {
       file.synchronized {
         file match {
-          case Some(value) =>
+          case Some(value) if value.isFile =>
             Def.task(List(value))
-          case None =>
+          case _ =>
             resourceGeneratorImpl(input)
         }
       }

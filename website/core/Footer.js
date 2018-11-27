@@ -4,11 +4,12 @@ const siteConfig = require(process.cwd() + "/siteConfig.js");
 
 class Footer extends React.Component {
   render() {
-    const currentYear = new Date().getFullYear();
     const {
+      baseUrl,
       copyright,
       colors: { secondaryColor }
     } = this.props.config;
+    const docsUrl = `${baseUrl}docs/`;
     return (
       <footer
         className="nav-footer"
@@ -30,18 +31,12 @@ class Footer extends React.Component {
           )}
           <div>
             <h5>Docs</h5>
-            <a
-              href={`
-                ${this.props.config.baseUrl}docs/overview.html`}
-            >
+            <a href={`${docsUrl}editors/overview.html`}>Text Editors</a>
+            <a href={`${docsUrl}build-tools/overview.html`}>Build Tools</a>
+            <a href={`${docsUrl}contributors/project-goals.html`}>
               Project Goals
             </a>
-            <a
-              href={`
-                ${
-                  this.props.config.baseUrl
-                }docs/getting-started-contributors.html`}
-            >
+            <a href={` ${docsUrl}contributors/getting-started.html`}>
               Contributing
             </a>
           </div>

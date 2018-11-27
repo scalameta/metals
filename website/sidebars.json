@@ -1,8 +1,23 @@
 {
   "docs": {
-    "Docusaurus": ["overview"],
-    "Overview": ["overview"],
-    "Contributors": ["getting-started-contributors", "website"],
-    "Users": ["installation-users"]
+    "Text Editors": [
+      "editors/overview",
+      "editors/vscode",
+      "editors/atom",
+      "editors/vim",
+      "editors/sublime",
+      "editors/new-editor"
+    ],
+    "Build Tools": [
+      "build-tools/overview",
+      "build-tools/sbt",
+      "build-tools/bloop",
+      "build-tools/new-build-tool"
+    ],
+    "Contributing": [
+      "contributors/project-goals",
+      "contributors/getting-started",
+      "contributors/updating-website"
+    ]
   }
 }
