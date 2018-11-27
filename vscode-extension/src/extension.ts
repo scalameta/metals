@@ -26,6 +26,19 @@ export async function activate(context: ExtensionContext) {
   // Make editing Scala docstrings slightly nicer.
   enableScaladocIndentation();
 
+  const userJavaHome = workspace.getConfiguration("metals").get("javaHome");
+  if (typeof userJavaHome === "string" && userJavaHome !== "") {
+    startServer(context, userJavaHome);
+  } else {
+    require("find-java-home")((err, javaHome) => {
+      if (err) window.showErrorMessage("Unable to find Java home.");
+      startServer(context, javaHome);
+    });
+  }
+}
+
+function startServer(context: ExtensionContext, javaHome: string) {
+  const javaPath = path.join(javaHome, "bin", "java");
   const coursierPath = path.join(context.extensionPath, "./coursier");
 
   const serverVersion = workspace
@@ -66,8 +79,8 @@ export async function activate(context: ExtensionContext) {
   const launchArgs = javaArgs.concat(coursierLaunchArgs);
 
   const serverOptions: ServerOptions = {
-    run: { command: "java", args: launchArgs },
-    debug: { command: "java", args: launchArgs }
+    run: { command: javaPath, args: launchArgs },
+    debug: { command: javaPath, args: launchArgs }
   };
 
   const clientOptions: LanguageClientOptions = {

@@ -9,13 +9,19 @@ import MetalsEnrichments._
  * Locates zip file on disk that contains the source code for the JDK.
  */
 object JdkSources {
-  def apply(): Option[AbsolutePath] = {
-    candidates.find(_.isFile)
+  def apply(userJavaHome: Option[String] = None): Option[AbsolutePath] = {
+    candidates(userJavaHome).find(_.isFile)
   }
 
-  def candidates: List[AbsolutePath] = {
+  def defaultJavaHome: Option[String] = {
+    Option(System.getProperty("JAVA_HOME")).orElse(
+      Option(System.getProperty("java.home"))
+    )
+  }
+
+  def candidates(userJavaHome: Option[String]): List[AbsolutePath] = {
     for {
-      javaHomeString <- Option(System.getProperty("java.home")).toList
+      javaHomeString <- userJavaHome.orElse(defaultJavaHome).toList
       javaHome = Paths.get(javaHomeString)
       jdkHome = {
         if (javaHome.getFileName.toString.startsWith("jdk")) {
@@ -45,8 +51,9 @@ object JdkSources {
       }
     } yield AbsolutePath(src)
   }
+
   def getOrThrow(): AbsolutePath = {
-    val list = candidates
+    val list = candidates(None)
     list.find(_.isFile).getOrElse {
       val tried = list.mkString("\n")
       throw new NoSuchElementException(s"JDK src.zip. Tried\n:$tried")
