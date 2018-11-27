@@ -276,7 +276,6 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
       )
       _ = client.messageRequests.clear()
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ = println(server.workspaceDefinitions)
       _ = assertNoDiff(
         server.workspaceDefinitions,
         """
