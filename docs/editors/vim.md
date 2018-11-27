@@ -29,6 +29,9 @@ Plug 'derekwyatt/vim-scala'
 Plug 'natebosch/vim-lsc'
 ```
 
+Run `:PlugInstall` to install the plugin. If you already have `vim-lsc`
+installed, be sure to update to the latest version with `:PlugUpdate`.
+
 ```scala mdoc:bootstrap:metals-vim vim-lsc
 
 ```

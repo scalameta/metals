@@ -30,7 +30,7 @@ object GlobalTrace {
     val tracePath = protocolTracePath(protocolName)
     val path = tracePath.toString()
     if (tracePath.isFile) {
-      scribe.info(s"Tracing is enabled: $path")
+      scribe.info(s"tracing is enabled: $path")
       val fos = Files.newOutputStream(
         tracePath.toNIO,
         StandardOpenOption.CREATE,
@@ -39,7 +39,7 @@ object GlobalTrace {
       new PrintWriter(fos)
     } else {
       scribe.info(
-        s"Tracing is disabled for protocol $protocolName, to enable tracing of incoming " +
+        s"tracing is disabled for protocol $protocolName, to enable tracing of incoming " +
           s"and outgoing JSON messages create an empty file at $path"
       )
       null
