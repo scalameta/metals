@@ -1,8 +1,6 @@
 package tests
 
-import java.nio.file.Files
-import java.nio.file.Paths
-import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.JdkSources
 import scala.meta.io.Classpath
 
 object Libraries {
@@ -66,13 +64,6 @@ object Library {
     )
   }
 
-  def jdkSources: Option[AbsolutePath] =
-    for {
-      javaHome <- sys.props.get("java.home")
-      jdkSources = Paths.get(javaHome).getParent.resolve("src.zip")
-      if Files.isRegularFile(jdkSources)
-    } yield AbsolutePath(jdkSources)
-
   lazy val jdk: Library = {
     val bootClasspath = Classpath(
       sys.props
@@ -82,7 +73,7 @@ object Library {
     Library(
       "JDK",
       () => Classpath(bootClasspath),
-      () => Classpath(jdkSources.toList)
+      () => Classpath(JdkSources().toList)
     )
   }
   lazy val scalaLibrary: Library = Library(

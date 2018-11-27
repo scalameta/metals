@@ -1514,8 +1514,9 @@ vinyl@^2.0.1, vinyl@^2.0.2:
     replace-ext "^1.0.0"
 
 vsce@^1.51.6:
-  version "1.51.1"
-  resolved "https://registry.yarnpkg.com/vsce/-/vsce-1.51.1.tgz#b44fd194b1cf985a32957bf50dfee88f5d4d95c6"
+  version "1.53.0"
+  resolved "https://registry.yarnpkg.com/vsce/-/vsce-1.53.0.tgz#a460535737b362071a4ab99376df506a5bfcd3af"
+  integrity sha512-okap3jGyz6JeUNJon09MJbjsyAq3zeEJj3YpbYGjslDNn+0g5HikK1VGykNcpVTy5imYdwBAuIDubsm3xPFTEA==
   dependencies:
     cheerio "^1.0.0-rc.1"
     commander "^2.8.1"

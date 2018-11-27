@@ -3,8 +3,61 @@
   "localized-strings": {
     "next": "Next",
     "previous": "Previous",
-    "tagline": "Work in Progress Language Server for Scala",
+    "tagline": "Work-in-progress language server for Scala",
     "docs": {
+      "build-tools/bloop": {
+        "title": "Bloop"
+      },
+      "build-tools/gradle": {
+        "title": "Gradle"
+      },
+      "build-tools/maven": {
+        "title": "Maven"
+      },
+      "build-tools/new-build-tool": {
+        "title": "Integrating a new build tool"
+      },
+      "build-tools/overview": {
+        "title": "Build Tools Overview",
+        "sidebar_label": "Overview"
+      },
+      "build-tools/sbt": {
+        "title": "sbt"
+      },
+      "contributors/getting-started": {
+        "title": "Contributing to Metals"
+      },
+      "contributors/new-build-tool": {
+        "title": "Integrating a new build tool"
+      },
+      "contributors/new-editor": {
+        "title": "Integrating a new editor"
+      },
+      "contributors/project-goals": {
+        "title": "Project Goals"
+      },
+      "contributors/updating-website": {
+        "title": "Contributing to the website"
+      },
+      "editors/atom": {
+        "title": "Atom"
+      },
+      "editors/new-editor": {
+        "title": "Integrating a new editor"
+      },
+      "editors/overview": {
+        "title": "Text Editors",
+        "sidebar_label": "Overview"
+      },
+      "editors/sublime": {
+        "title": "Sublime Text"
+      },
+      "editors/vim": {
+        "title": "Vim"
+      },
+      "editors/vscode": {
+        "title": "Visual Studio Code"
+      },
       "getting-started-contributors": {
         "title": "Contributing to Metals"
       },
@@ -23,8 +76,17 @@
       "overview": {
         "title": "Project Goals"
       },
+      "project-goals": {
+        "title": "Project Goals"
+      },
       "troubleshooting": {
         "title": "Troubleshooting"
+      },
+      "users/import-build": {
+        "title": "Importing a build"
+      },
+      "users/installation": {
+        "title": "Installation"
       },
       "website": {
         "title": "Contributing to the website"
@@ -35,10 +97,9 @@
       "GitHub": "GitHub"
     },
     "categories": {
-      "Docusaurus": "Docusaurus",
-      "Overview": "Overview",
-      "Contributors": "Contributors",
-      "Users": "Users"
+      "Text Editors": "Text Editors",
+      "Build Tools": "Build Tools",
+      "Contributing": "Contributing"
     }
   },
   "pages-strings": {

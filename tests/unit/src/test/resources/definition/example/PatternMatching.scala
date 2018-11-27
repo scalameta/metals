@@ -14,7 +14,7 @@ class PatternMatching/*PatternMatching.scala*/ {
   // val deconstruction
   val Some/*Option.scala*/(number1/*PatternMatching.semanticdb*/) =
     some/*PatternMatching.scala*/
-  number1/*PatternMatching.scala*/
+  println/*Predef.scala*/(number1/*PatternMatching.scala*/)
 
   def localDeconstruction/*PatternMatching.scala*/ = {
     val Some/*Option.scala*/(number2/*PatternMatching.semanticdb*/) =

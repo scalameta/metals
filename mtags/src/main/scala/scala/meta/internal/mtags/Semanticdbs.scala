@@ -11,17 +11,51 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.RelativePath
 import SymbolOccurrenceOrdering._
 
+trait Semanticdbs {
+  def textDocument(path: AbsolutePath): TextDocumentLookup
+}
+
 object Semanticdbs {
   def loadTextDocuments(path: AbsolutePath): s.TextDocuments = {
     val in = Files.newInputStream(path.toNIO)
     try s.TextDocuments.parseFrom(in)
     finally in.close()
   }
+
   def loadTextDocument(
+      scalaPath: AbsolutePath,
+      sourceroot: AbsolutePath,
+      charset: Charset,
+      fingerprints: Md5Fingerprints,
+      loader: RelativePath => Option[AbsolutePath]
+  ): TextDocumentLookup = {
+    if (scalaPath.toNIO.getFileSystem != sourceroot.toNIO.getFileSystem) {
+      TextDocumentLookup.NotFound(scalaPath)
+    } else {
+      val scalaRelativePath = scalaPath.toRelative(sourceroot)
+      val semanticdbRelativePath =
+        SemanticdbClasspath.fromScala(scalaRelativePath)
+      loader(semanticdbRelativePath) match {
+        case None =>
+          TextDocumentLookup.NotFound(scalaPath)
+        case Some(semanticdbPath) =>
+          loadResolvedTextDocument(
+            scalaPath,
+            scalaRelativePath,
+            semanticdbPath,
+            charset,
+            fingerprints
+          )
+      }
+    }
+  }
+
+  private def loadResolvedTextDocument(
       scalaPath: AbsolutePath,
       scalaRelativePath: RelativePath,
       semanticdbPath: AbsolutePath,
-      charset: Charset
+      charset: Charset,
+      fingerprints: Md5Fingerprints = Md5Fingerprints.empty
   ): TextDocumentLookup = {
     val reluri = scalaRelativePath.toURI(false).toString
     val sdocs = loadTextDocuments(semanticdbPath)
@@ -31,7 +65,12 @@ object Semanticdbs {
         val text = FileIO.slurp(scalaPath, charset)
         val md5 = MD5.compute(text)
         if (sdoc.md5 != md5) {
-          TextDocumentLookup.Stale(scalaPath, md5, sdoc)
+          fingerprints.lookupText(scalaPath, sdoc.md5) match {
+            case Some(oldText) =>
+              TextDocumentLookup.Stale(scalaPath, md5, sdoc.withText(oldText))
+            case None =>
+              TextDocumentLookup.Stale(scalaPath, md5, sdoc)
+          }
         } else {
           TextDocumentLookup.Success(sdoc.withText(text))
         }

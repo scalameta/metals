@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.mtags.Enrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.inputs._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs

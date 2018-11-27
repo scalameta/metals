@@ -68,8 +68,8 @@ class HomeSplash extends React.Component {
         <div className="inner">
           <ProjectTitle />
           <PromoSection>
-            <Button href={docUrl("overview.html", language)}>
-              Project Goals
+            <Button href={docUrl("editors/overview.html", language)}>
+              Get Started
             </Button>
           </PromoSection>
         </div>
@@ -91,25 +91,31 @@ const Block = props => (
 const Features = props => {
   const features = [
     {
-      title: "Goto definition",
-      content:
-        "Jump to symbol definitions in your project and dependency sources",
-      image: imgUrl("jump-to-definition.gif"),
+      title: "Simple installation",
+      content: "Open a directory, import your build and start coding.",
+      image: imgUrl("simple-installation.png"),
       imageAlign: "left"
     },
     {
-      title: "Information on hover",
-      content: "Display signature information on hover",
-      image: imgUrl("hover.gif"),
+      title: "Accurate diagnostics",
+      content:
+        "Compile on file save and see errors from the build tool, no more spurious red squiggles or switching focus to the console.",
+      image: imgUrl("accurate-diagnostics.png"),
       imageAlign: "right"
+    },
+    {
+      title: "Goto definition",
+      content:
+        "Jump to symbol definitions in your project sources and Scala/Java library dependencies.",
+      image: imgUrl("goto-definition.gif"),
+      imageAlign: "left"
     }
   ];
   return (
     <div
       className="productShowcaseSection paddingBottom"
-      style={{ textAlign: "center" }}
+      style={{ textAlign: "left" }}
     >
-      <h2>Features</h2>
       {features.map(feature => (
         <Block key={feature.title}>{[feature]}</Block>
       ))}
@@ -123,6 +129,7 @@ class Index extends React.Component {
     return (
       <div>
         <HomeSplash language={language} />
+        <Features />
       </div>
     );
   }

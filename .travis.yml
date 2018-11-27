@@ -1,6 +1,8 @@
-language: scala
 jdk:
   - oraclejdk8
+os:
+  - linux
+language: scala
 
 stages:
   - name: test
@@ -16,10 +18,7 @@ jobs:
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt test"
       script:
-        - sbt startServer metalsSetup test
-    - env: TEST="sbt-metals"
-      script:
-        - ./bin/run-scripted.sh
+        - sbt sbt-metals/publishLocal test
     - stage: release
       script: sbt ci-release docs/docusaurusPublishGhpages
 

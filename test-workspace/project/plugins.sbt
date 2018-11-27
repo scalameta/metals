@@ -1,5 +1,3 @@
-unmanagedSources.in(Compile) += baseDirectory
-  .in(ThisBuild)
-  .value
-  .getParentFile
-  .getParentFile / "sbt-metals/src/main/scala/scala/meta/sbt/MetalsPlugin.scala"
+addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "0.6.0")
+
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.25")

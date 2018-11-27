@@ -11,11 +11,16 @@ import scala.meta.internal.semanticdb.Scala._
 // TODO, emit correct method overload symbols https://github.com/scalameta/metals/issues/282
 object ScalaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer = {
-    val root: Source = input.parse[Source].get
+    val root: Option[Source] = input.parse[Source].toOption
+    val virtualFile = input
     new Traverser with MtagsIndexer {
       override def language: Language = Language.SCALA
+      override def input: Input.VirtualFile = virtualFile
       override def indexRoot(): Unit = {
-        apply(root)
+        root match {
+          case Some(tree) => apply(tree)
+          case _ => // do nothing in case of parse error
+        }
 
         // :facepalm: https://github.com/scalameta/scalameta/issues/1068
         PlatformTokenizerCache.megaCache.clear()

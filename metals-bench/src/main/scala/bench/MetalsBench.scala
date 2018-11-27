@@ -5,21 +5,21 @@ import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import scala.meta.metals.MetalsLogger
+import scala.meta.internal.metals.MetalsLogger
 import tests.InputProperties
 import tests.Libraries
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath
-import tests.Library
 
 @State(Scope.Benchmark)
 class MetalsBench {
 
-  MetalsLogger.updateFormat()
+  MetalsLogger.updateDefaultFormat()
   val inputs = InputProperties.default()
   val classpath = new SemanticdbClasspath(inputs.sourceroot, inputs.classpath)
   val documents: List[(AbsolutePath, TextDocument)] =
@@ -35,7 +35,7 @@ class MetalsBench {
       )
     }
 
-  val jdk = Classpath(Library.jdkSources.toList)
+  val jdk = Classpath(JdkSources().toList)
   val fullClasspath = jdk ++ inputs.dependencySources
 
   val inflated = Inflated.jars(fullClasspath)

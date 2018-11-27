@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import scala.meta.Name
 import scala.meta.Term
+import scala.meta.inputs.Input
 import scala.{meta => m}
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.{semanticdb => s}
@@ -12,9 +13,12 @@ import scala.meta.internal.inputs._
 trait MtagsIndexer {
   def language: Language
   def indexRoot(): Unit
+  def input: Input.VirtualFile
   def index(): s.TextDocument = {
     indexRoot()
     s.TextDocument(
+      uri = input.path,
+      text = input.text,
       language = language,
       occurrences = names.result(),
       symbols = symbols.result()

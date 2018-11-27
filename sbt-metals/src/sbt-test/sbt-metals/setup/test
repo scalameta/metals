@@ -1,4 +1,0 @@
-$ absent .metals/buildinfo/
-> metalsSetup
-$ exists .metals/buildinfo/setup/compile.properties
-$ exists .metals/buildinfo/setup/test.properties

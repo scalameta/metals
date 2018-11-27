@@ -2,11 +2,12 @@ package tests
 
 import scala.meta._
 import scala.meta.internal.inputs._
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.mtags.Enrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Symbol
 
 /**
@@ -24,13 +25,17 @@ import scala.meta.internal.mtags.Symbol
  */
 object DefinitionSuite extends DirectoryExpectSuite("definition") {
   override def testCases(): List[ExpectTestCase] = {
+    if (isAppveyor) {
+      ignore("definition") {}
+      return Nil
+    }
     val index = OnDemandSymbolIndex()
     // Step 1. Index project sources
     input.allFiles.foreach { source =>
       index.addSourceFile(source.file, Some(source.sourceDirectory))
     }
     // Step 2. Index dependency sources
-    index.addSourceJar(Library.jdkSources.get)
+    index.addSourceJar(JdkSources().get)
     input.dependencySources.entries.foreach { jar =>
       index.addSourceJar(jar)
     }
