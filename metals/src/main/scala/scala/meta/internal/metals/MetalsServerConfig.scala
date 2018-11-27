@@ -45,16 +45,18 @@ final case class MetalsServerConfig(
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
+  def base: MetalsServerConfig = MetalsServerConfig()
   def default: MetalsServerConfig = {
     System.getProperty("metals.client", "default") match {
       case "vscode" =>
-        MetalsServerConfig().copy(
+        scribe.info(base.bloopProtocol.toString)
+        base.copy(
           statusBar = StatusBarConfig.on,
           slowTask = SlowTaskConfig.on,
           icons = Icons.octicons
         )
       case "vim-lsc" =>
-        MetalsServerConfig().copy(
+        base.copy(
           fileWatcher = FileWatcherConfig.auto,
           // window/logMessage output is always visible and non-invasive in vim-lsc
           statusBar = StatusBarConfig.logMessage,
@@ -63,7 +65,7 @@ object MetalsServerConfig {
           icons = Icons.unicode
         )
       case "sublime" =>
-        MetalsServerConfig().copy(
+        base.copy(
           fileWatcher = FileWatcherConfig.auto,
           isNoInitialized = true,
           isHttpEnabled = true,
@@ -74,7 +76,7 @@ object MetalsServerConfig {
           icons = Icons.unicode
         )
       case _ =>
-        MetalsServerConfig()
+        base
     }
   }
 }

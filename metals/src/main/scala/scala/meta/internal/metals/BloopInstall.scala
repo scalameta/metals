@@ -120,7 +120,7 @@ final class BloopInstall(
   def runIfApproved(sbt: Sbt, digest: String): Future[BloopInstallResult] = {
     oldInstallResult(digest) match {
       case Some(result) =>
-        scribe.info(s"Skipping build import with status '${result.name}'")
+        scribe.info(s"skipping build import with status '${result.name}'")
         Future.successful(result)
       case None =>
         for {

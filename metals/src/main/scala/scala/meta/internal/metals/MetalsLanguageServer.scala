@@ -305,11 +305,15 @@ class MetalsLanguageServer(
             slowConnectToBuildServer(forceImport = false).ignoreValue
           )
         )
-        .asJavaUnit
+        .ignoreValue
     } else {
-      CompletableFuture.completedFuture(())
+      scribe.warn("Ignoring duplicate 'initialized' notification.")
+      Future.successful(())
     }
-  }
+  }.recover {
+    case NonFatal(e) =>
+      scribe.error("Unexpected error initializing server", e)
+  }.asJava
 
   @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Unit] = {
@@ -521,6 +525,7 @@ class MetalsLanguageServer(
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     if (!buildTools.isBloop) {
+      scribe.warn("Unable to automatically connect to build server.")
       Future.successful(BuildChange.None)
     } else if (isUnsupportedJavaVersion) {
       Future.successful(BuildChange.None)
@@ -626,7 +631,6 @@ class MetalsLanguageServer(
       _ = {
         buildTargets.addScalacOptions(scalacOptions)
         JdkSources(userConfig.javaHome).foreach { zip =>
-          scribe.info(zip.toString())
           index.addSourceJar(zip)
         }
       }

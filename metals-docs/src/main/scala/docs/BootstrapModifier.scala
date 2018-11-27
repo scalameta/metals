@@ -3,11 +3,10 @@ package docs
 import mdoc.Reporter
 import mdoc.StringModifier
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.BuildInfo
 
 class BootstrapModifier extends StringModifier {
   override val name: String = "bootstrap"
-
+  val snapshot = Snapshot.latest()
   override def process(
       info: String,
       code: Input,
@@ -20,17 +19,20 @@ class BootstrapModifier extends StringModifier {
            |[Coursier](https://github.com/coursier/coursier) (v1.1+) command-line interface.
            |
            |```sh
+           |# Build bootstrap binary with coursier
            |curl -L -o coursier https://git.io/coursier &&
            |    chmod +x coursier &&
            |./coursier bootstrap \\
+           |  --standalone \\
            |  --java-opt -XX:+UseG1GC \\
            |  --java-opt -XX:+UseStringDeduplication  \\
            |  --java-opt -Xss4m \\
            |  --java-opt -Xms1G \\
            |  --java-opt -Xmx4G  \\
            |  --java-opt -Dmetals.client=$client \\
-           |  org.scalameta:metals_2.12:${BuildInfo.metalsVersion} \\
+           |  org.scalameta:metals_2.12:${snapshot.version} \\
            |  -r bintray:scalacenter/releases \\
+           |  -r sonatype:snapshots \\
            |  -o $binary -f
            |```
            |
