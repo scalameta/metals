@@ -58,6 +58,11 @@
           "type": "string",
           "default": "",
           "description": "Optional space separated system properties to pass along to the Metals server, for example -Dmetals.bloop-protocol=tcp"
+        },
+        "metals.javaHome": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to the Java home. Defaults to the environment variable JAVA_HOME with fallback to the system property 'java.home'"
         }
       }
     },
@@ -102,6 +107,7 @@
     "vsce": "^1.51.6"
   },
   "dependencies": {
+    "find-java-home": "0.2.0",
     "vscode": "^1.1.21",
     "vscode-languageclient": "^5.1.0"
   },

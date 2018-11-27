@@ -2,11 +2,15 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
+import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.UnregistrationParams
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
 
@@ -22,6 +26,24 @@ final class ConfiguredLanguageClient(
     config: MetalsServerConfig
 )(implicit ec: ExecutionContext)
     extends MetalsLanguageClient {
+
+  override def registerCapability(
+      params: RegistrationParams
+  ): CompletableFuture[Void] = {
+    underlying.registerCapability(params)
+  }
+
+  override def unregisterCapability(
+      params: UnregistrationParams
+  ): CompletableFuture[Void] = {
+    underlying.unregisterCapability(params)
+  }
+
+  override def applyEdit(
+      params: ApplyWorkspaceEditParams
+  ): CompletableFuture[ApplyWorkspaceEditResponse] = {
+    underlying.applyEdit(params)
+  }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     if (config.statusBar.isOn) {

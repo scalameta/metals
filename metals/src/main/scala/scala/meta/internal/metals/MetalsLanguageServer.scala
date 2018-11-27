@@ -6,6 +6,7 @@ import ch.epfl.scala.bsp4j.DependencySourcesParams
 import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import ch.epfl.scala.bsp4j.SourcesParams
 import ch.epfl.scala.bsp4j.StatusCode
+import com.google.gson.JsonElement
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.Charset
@@ -57,6 +58,7 @@ class MetalsLanguageServer(
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
+  private var userConfig = UserConfiguration()
 
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = cancelables.cancel()
@@ -169,6 +171,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[InitializeResult] = {
     Future {
       setupJna()
+      warnUnsupportedJavaVersion()
       initializeParams = Option(params)
       updateWorkspaceDirectory(params)
       val capabilities = new ServerCapabilities()
@@ -188,6 +191,19 @@ class MetalsLanguageServer(
         e
       })
       .asJava
+  }
+
+  def isUnsupportedJavaVersion: Boolean =
+    scala.util.Properties.isJavaAtLeast("9")
+  def warnUnsupportedJavaVersion(): Unit = {
+    if (isUnsupportedJavaVersion) {
+      val javaVersion = System.getProperty("java.version")
+      val message =
+        s"Unsupported Java version $javaVersion, no functionality will work. " +
+          s"To fix this problem, restart the server using Java 8."
+      languageClient.showMessage(new MessageParams(MessageType.Error, message))
+      scribe.error(message)
+    }
   }
 
   def fileWatcherGlobs: DidChangeWatchedFilesRegistrationOptions =
@@ -385,7 +401,15 @@ class MetalsLanguageServer(
 
   @JsonNotification("workspace/didChangeConfiguration")
   def didChangeConfiguration(params: DidChangeConfigurationParams): Unit = {
-    // TODO(olafur): Handle notification changes.
+    val json = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
+    UserConfiguration.fromJson(userConfig, json) match {
+      case Left(errors) =>
+        errors.foreach { error =>
+          scribe.error(s"config error: $error")
+        }
+      case Right(value) =>
+        userConfig = value
+    }
   }
 
   @JsonNotification("workspace/didChangeWatchedFiles")
@@ -498,6 +522,8 @@ class MetalsLanguageServer(
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     if (!buildTools.isBloop) {
       Future.successful(BuildChange.None)
+    } else if (isUnsupportedJavaVersion) {
+      Future.successful(BuildChange.None)
     } else {
       val importingBuild = for {
         _ <- buildServer match {
@@ -599,7 +625,10 @@ class MetalsLanguageServer(
         .asScala
       _ = {
         buildTargets.addScalacOptions(scalacOptions)
-        JdkSources().foreach(zip => index.addSourceJar(zip))
+        JdkSources(userConfig.javaHome).foreach { zip =>
+          scribe.info(zip.toString())
+          index.addSourceJar(zip)
+        }
       }
       _ <- registerSourceDirectories(build, ids)
       dependencySources <- build.server
