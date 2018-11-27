@@ -16,6 +16,7 @@ import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
@@ -271,18 +272,27 @@ class MetalsLanguageServer(
     }
   }
 
+  val isInitialized = new AtomicBoolean(false)
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
-    statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
-    registerFileWatchers()
-    Future
-      .sequence(
-        List[Future[Unit]](
-          quickConnectToBuildServer().ignoreValue,
-          slowConnectToBuildServer(forceImport = false).ignoreValue
+    // Avoid duplicate `initialized` notifications. During the transition
+    // for https://github.com/natebosch/vim-lsc/issues/113 to get fixed,
+    // we may have users on a fixed vim-lsc version but with -Dmetals.no-initialized=true
+    // enabled.
+    if (isInitialized.compareAndSet(false, true)) {
+      statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
+      registerFileWatchers()
+      Future
+        .sequence(
+          List[Future[Unit]](
+            quickConnectToBuildServer().ignoreValue,
+            slowConnectToBuildServer(forceImport = false).ignoreValue
+          )
         )
-      )
-      .asJavaUnit
+        .asJavaUnit
+    } else {
+      CompletableFuture.completedFuture(())
+    }
   }
 
   @JsonRequest("shutdown")

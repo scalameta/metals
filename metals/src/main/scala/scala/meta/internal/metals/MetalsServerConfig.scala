@@ -58,7 +58,6 @@ object MetalsServerConfig {
           fileWatcher = FileWatcherConfig.auto,
           // window/logMessage output is always visible and non-invasive in vim-lsc
           statusBar = StatusBarConfig.logMessage,
-          isNoInitialized = true,
           // Not strictly needed, but helpful while this integration matures.
           isHttpEnabled = true,
           icons = Icons.unicode
