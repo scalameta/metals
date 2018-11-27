@@ -4,7 +4,7 @@ title: Build Tools Overview
 sidebar_label: Overview
 ---
 
-Metals works with the following text editors with varying degree of
+Metals works with the following build tools with varying degree of
 functionality.
 
 | Build tool | Installation | Goto library dependencies |
