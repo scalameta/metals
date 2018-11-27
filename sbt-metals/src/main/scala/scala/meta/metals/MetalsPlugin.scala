@@ -1,4 +1,4 @@
-package scala.meta.sbt {
+package scala.meta.metals {
 
   import sbt._
   import sbt.Keys._
