@@ -60,3 +60,32 @@ To manually trigger a build import, execute the "Import build" command by
 opening the "Command palette" (`Cmd + Shift + P`) and search for "import build".
 
 ![Import build command](assets/vscode-import-build.png)
+
+## Configure Java version
+
+The VS Code plugin uses by default the `JAVA_HOME` environment variable (via
+[`find-java-home`](https://www.npmjs.com/package/find-java-home)) to find the
+`java` executable. Metals only works with Java 8 so this executable cannot point
+to another version such as Java 11.
+
+To override the default Java home location, update the "Java Home" variable to
+in the settings menu.
+
+![Java Home setting](assets/vscode-java-home.png)
+
+If defined, the VS Code plugin uses this path instead of the `JAVA_HOME`
+environment variable.
+
+### macOS
+
+On macOS, run the following command to copy the Java 8 home path to your
+clipboard.
+
+```sh
+/usr/libexec/java_home -v 1.8 | pbcopy
+```
+
+To avoid overriding the "Java Home" setting through the VS Code interface, see
+[this Stackoverflow answer](https://stackoverflow.com/questions/135688/setting-environment-variables-on-os-x)
+for instructions on how to permanently set the `JAVA_HOME` environment variable
+for your machine so that it is automatically picked up by all GUI applications.
