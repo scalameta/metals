@@ -184,7 +184,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         client.workspaceShowMessages,
         ImportProjectFailed.getMessage
       )
-      _ = assertStatus(_.isFailed)
+      _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
       _ <- server.didSave("build.sbt") { _ =>
         """scalaVersion := "2.12.7" """
@@ -196,6 +196,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
           BloopInstallProgress.message
         ).mkString("\n")
       )
+      _ = assertStatus(_.isInstalled)
     } yield ()
   }
 
