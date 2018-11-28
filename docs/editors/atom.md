@@ -3,10 +3,7 @@ id: atom
 title: Atom
 ---
 
-The [`ide-scala`](https://atom.io/packages/ide-scala) Atom plugin has
-experimental support for Metals. Please follow the installation instructions of
-the `ide-scala` plugin to setup Metals.
-
-```scala mdoc:requirements
-
-```
+Metals will soon work with Atom thanks to the
+[`ide-scala`](https://atom.io/packages/ide-scala) plugin. The `ide-scala` plugin
+is currently in the process of adding support for latest Metals version. Stay
+tuned for more updates.
