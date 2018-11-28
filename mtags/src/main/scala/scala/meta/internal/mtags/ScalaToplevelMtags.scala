@@ -194,10 +194,6 @@ class ScalaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   // Utility
   // =======
 
-  def debug(message: String = ""): Unit = {
-    val pos = newPosition
-    pprint.log(pos.formatMessage("info", message))
-  }
   def fail(expected: String): Nothing = {
     throw new ParseException(newPosition, failMessage(expected))
   }

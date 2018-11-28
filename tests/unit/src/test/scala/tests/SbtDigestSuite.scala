@@ -49,7 +49,7 @@ object SbtDigestSuite extends BaseSuite {
     }
   }
 
-  val solo = "62E46F71242E515912BE6814C9356D63"
+  val solo = "5727878FADFA3FB9EBA4B97CA92440ED"
   check(
     "solo build.sbt",
     """
@@ -69,7 +69,7 @@ object SbtDigestSuite extends BaseSuite {
     Some(solo)
   )
 
-  val project = "08E20CE98E81FAB7388686CCADFC2F64"
+  val project = "7BDAC1318CFF8DFE816EDEFF5C06F561"
   check(
     "metabuild",
     """
