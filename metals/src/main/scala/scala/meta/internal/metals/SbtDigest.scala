@@ -18,6 +18,12 @@ case class SbtDigest(
 )
 
 object SbtDigest {
+
+  /**
+   * Bump up this version if parameters outside of the sbt sources themselves require
+   * re-running `bloopInstall`. For example a SemanticDB or Bloop version upgrade.
+   */
+  val version: String = "v2"
   sealed abstract class Status(val value: Int)
       extends Product
       with Serializable {
@@ -54,6 +60,7 @@ object SbtDigest {
     if (!workspace.isDirectory) None
     else {
       val digest = MessageDigest.getInstance("MD5")
+      digest.update(version.getBytes(StandardCharsets.UTF_8))
       val project = workspace.resolve("project")
       val isSuccess =
         digestDirectory(workspace, digest) &&
