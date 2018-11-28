@@ -1,7 +1,7 @@
 // See https://docusaurus.io/docs/site-config.html for all the possible
 // site configuration options.
 
-const repoUrl = "https://github.com/olafurpg/metals";
+const repoUrl = "https://github.com/scalameta/metals";
 const baseUrl = "/metals/";
 
 const siteConfig = {
