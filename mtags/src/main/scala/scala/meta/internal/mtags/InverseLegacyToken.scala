@@ -97,7 +97,7 @@ object InverseLegacyToken {
     WHITESPACE -> "WHITESPACE",
     COMMENT -> "COMMENT",
     UNQUOTE -> "UNQUOTE",
-    ELLIPSIS -> "ELLIPSIS",
+    ELLIPSIS -> "ELLIPSIS"
   )
 
 }
