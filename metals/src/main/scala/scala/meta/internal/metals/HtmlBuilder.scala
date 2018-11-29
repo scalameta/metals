@@ -18,7 +18,7 @@ final class HtmlBuilder() {
 
   def submitButton(query: String, title: String): HtmlBuilder =
     element("form", s"action='/complete?$query' method='post'")(
-      _.element("button", "type='submit'")(_.text(title))
+      _.element("button", "type='submit' class='btn'")(_.text(title))
     )
 
   def unorderedList[T](
