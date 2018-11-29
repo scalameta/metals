@@ -25,6 +25,7 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -315,30 +316,43 @@ class MetalsLanguageServer(
       scribe.error("Unexpected error initializing server", e)
   }.asJava
 
+  lazy val shutdownPromise = new AtomicReference[Promise[Unit]](null)
   @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Unit] = {
-    LanguageClientLogger.languageClient = None
-    scribe.info("Shutting down...")
-    try {
-      cancelables.cancel()
-    } catch {
-      case NonFatal(e) =>
-        scribe.error("cancellation error", e)
-    }
-    sh.shutdownNow()
-    buildServer match {
-      case Some(value) =>
-        value
-          .shutdown()
-          .logErrorAndContinue("shutting down build server")
-          .asJava
-      case None => Future.successful(()).asJava
+    val promise = Promise[Unit]()
+    if (shutdownPromise.compareAndSet(null, promise)) {
+      try {
+        LanguageClientLogger.languageClient = None
+        scribe.info("Shutting down...")
+        try {
+          cancelables.cancel()
+        } catch {
+          case NonFatal(e) =>
+            scribe.error("cancellation error", e)
+        }
+        sh.shutdownNow()
+        buildServer match {
+          case Some(value) =>
+            value
+              .shutdown()
+              .logErrorAndContinue("shutting down build server")
+              .asJava
+          case None => Future.successful(()).asJava
+        }
+      } finally {
+        promise.trySuccess(())
+      }
+    } else {
+      Future.successful(()).asJava
     }
   }
 
   @JsonNotification("exit")
   def exit(): Unit = {
-    System.exit(0)
+    shutdown()
+    shutdownPromise.get().future.onComplete { _ =>
+      System.exit(0)
+    }
   }
 
   @JsonNotification("textDocument/didOpen")
