@@ -53,11 +53,10 @@ object MetalsServerConfig {
   def default: MetalsServerConfig = {
     System.getProperty("metals.client", "default") match {
       case "vscode" =>
-        scribe.info(base.bloopProtocol.toString)
         base.copy(
           statusBar = StatusBarConfig.on,
           slowTask = SlowTaskConfig.on,
-          icons = Icons.octicons
+          icons = Icons.vscode
         )
       case "vim-lsc" =>
         base.copy(

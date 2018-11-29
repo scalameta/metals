@@ -32,6 +32,9 @@ coursier bootstrap \
   org.scalameta:metals_2.12:@VERSION@ -o metals -f
 ```
 
+See [Metals server properties](#metals-server-properties) for additional system
+properties that are supported by the server.
+
 JSON-RPC communication takes place over standard input/output so the Metals
 server does not print anything to the console when it starts. Instead, before
 establishing a connection with the client, Metals logs notifications to a global
@@ -149,7 +152,7 @@ outside of the editor such as during `git checkout`.
 
 ### `workspace/executeCommands`
 
-Used to respond to trigger the Metals server to run one of the
+Used to trigger the Metals server to run one of the
 [server commands](#metals-server-commands).
 
 ### `window/logMessage`
@@ -289,11 +292,14 @@ Code logs are hidden by default.
 
 Possible values:
 
-- `auto` (default): use editor file watcher if supported, otherwise use Metals
-  built-in file watcher.
+- `auto` (default): use editor file watcher if it is supported, otherwise use
+  Metals built-in file watcher. The editor declares whether it supports file
+  watching by setting
+  `InitializeParams.capabilities.workspace.didChangeWatchedFiles=true` during
+  the `initialize` hand-shake.
 - `custom`: the client will send `workspace/didChangeWatchedFiles` notifications
-  even if the editor doesn't declare in the `initialize` hand-shake that it
-  supports file watching.
+  even if `capabilities.workspace.didChangeWatchedFiles=false` during the
+  `initialize` hand-shake.
 
 ### `-Dmetals.status-bar`
 
@@ -346,8 +352,12 @@ Possible values:
 Possible values:
 
 - `none` (default): don't display icons in messages.
-- `octicons`: use [Octicons](https://octicons.github.com) such as `$(rocket)`
-  for status bar messages, as supported by VS Code and Atom status bars.
+- `vscode`: use [Octicons](https://octicons.github.com) such as `$(rocket)` for
+  status bar messages, as supported by th
+  [VS Code status bar](https://code.visualstudio.com/docs/extensionAPI/vscode-api#StatusBarItem).
+- `atom`: use HTML-formatted [Octicons](https://octicons.github.com) such as
+  `<span class='icon icon-rocket'></span>` for status bar messages, as supported
+  by the Atom status bar.
 - `unicode`: use unicode emojis like 🚀 for status bar messages.
 
 ### `-Dmetals.bloop-protocol`

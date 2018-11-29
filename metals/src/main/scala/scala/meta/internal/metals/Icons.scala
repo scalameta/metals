@@ -23,8 +23,9 @@ object Icons {
   }.getOrElse(message)
   def default: Icons = {
     System.getProperty("metals.icons") match {
-      case "octicons" => octicons
+      case "octicons" | "vscode" => vscode
       case "unicode" => unicode
+      case "atom" => atom
       case _ => none
     }
   }
@@ -42,11 +43,19 @@ object Icons {
     override def info: String = ""
     override def check: String = ""
   }
-  case object octicons extends Icons {
+  case object vscode extends Icons {
     override def rocket: String = "$(rocket) "
     override def sync: String = "$(sync) "
     override def alert: String = "$(alert) "
     override def info: String = "$(info) "
     override def check: String = "$(check) "
+  }
+  case object atom extends Icons {
+    private def span(id: String) = s"<span class='icon icon-$id'></span>"
+    override def rocket: String = span("rocket")
+    override def sync: String = span("sync")
+    override def alert: String = span("alert")
+    override def info: String = span("info")
+    override def check: String = span("check")
   }
 }
