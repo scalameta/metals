@@ -117,14 +117,12 @@ function startServer(context: ExtensionContext, javaHome: string) {
   context.subscriptions.push(client.start());
 
   client.onReady().then(_ => {
-    ["build.import", "build.connect", "workspace.sources.scan"].forEach(
-      command => {
-        const cancel = commands.registerCommand("metals." + command, async () =>
-          client.sendRequest(ExecuteCommandRequest.type, { command: command })
-        );
-        context.subscriptions.push(cancel);
-      }
-    );
+    ["build-import", "build-connect", "sources-scan"].forEach(command => {
+      const cancel = commands.registerCommand("metals." + command, async () =>
+        client.sendRequest(ExecuteCommandRequest.type, { command: command })
+      );
+      context.subscriptions.push(cancel);
+    });
 
     // Open or close the extension output channel. The user may have to trigger
     // this command twice in case the channel has been focused through another

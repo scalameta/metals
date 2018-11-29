@@ -66,7 +66,7 @@ class Messages(icons: Icons) {
     "$(info) Partial navigation",
     tooltip =
       "To fix this problem, update your build settings to use the same compiler plugins and compiler settings as the external library.",
-    command = ClientCommands.FocusDiagnostics
+    command = ClientCommands.FocusDiagnostics.id
   )
 
   object IncompatibleSbtVersion {
