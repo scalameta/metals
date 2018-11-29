@@ -13,6 +13,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+import scala.util.Try
 
 /**
  * An actively running and initialized BSP connection.
@@ -39,7 +40,7 @@ case class BuildServerConnection(
   }
 
   private def register[T](e: CompletableFuture[T]): CompletableFuture[T] = {
-    ongoingRequests.add(Cancelable(() => e.cancel(true)))
+    ongoingRequests.add(Cancelable(() => Try(e.cancel(true))))
     e
   }
 
