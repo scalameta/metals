@@ -176,6 +176,11 @@ class MetalsLanguageServer(
       initializeParams = Option(params)
       updateWorkspaceDirectory(params)
       val capabilities = new ServerCapabilities()
+      capabilities.setExecuteCommandProvider(
+        new ExecuteCommandOptions(
+          ServerCommands.all.map(_.id).asJava
+        )
+      )
       capabilities.setDefinitionProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       if (config.isNoInitialized) {
