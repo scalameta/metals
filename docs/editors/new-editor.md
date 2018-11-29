@@ -32,6 +32,9 @@ coursier bootstrap \
   org.scalameta:metals_2.12:@VERSION@ -o metals -f
 ```
 
+See [Metals server properties](#metals-server-properties) for additional system
+properties that are supported by the server.
+
 JSON-RPC communication takes place over standard input/output so the Metals
 server does not print anything to the console when it starts. Instead, before
 establishing a connection with the client, Metals logs notifications to a global
@@ -56,115 +59,130 @@ Metals supports two kinds of JSON-RPC endpoints:
 - [Language Server Protocol](#language-server-protocol): for the main
   functionality of the server, including editor text synchronization and
   semantic features such as goto definition.
-- [Metals extensions](#metals-extensions): for additional functionality that is
-  missing in LSP but improves the user experience.
+- [Metals extensions](#metals-lsp-extensions): for additional functionality that
+  is missing in LSP but improves the user experience.
 
-## Language Server Protocol
+## Metals server properties
 
-Consult the
-[LSP specification](https://microsoft.github.io/language-server-protocol/specification)
-to learn more more how LSP works. Metals uses the following endpoints from the
-specification.
+The Metals language server is configured through JVM system properties. A system
+property is passed to the server like this:
 
-### `initialize`
+```sh
+# with `java` binary
+java -Dmetals.file-watcher=auto ...
+# with `coursier bootstrap`
+coursier bootstrap --java-opt -Dmetals.file-watcher=auto ...
+```
 
-- the `rootUri` field is used to configure Metals for that workspace directory.
-  The working directory for where server is started has no significant meaning.
-- at this point, Metals uses only full text synchronization. In the future, it
-  will be able to use incremental text synchronization.
-- `didChangeWatchedFiles` client capability is used to determine whether to
-  register file watchers.
+The system properties control how Metals handles certain LSP endpoints. For
+example, in vim-lsc the `window/logMessage` notification is always displayed in
+the UI so `-Dmetals.status-bar=log-message` can be configured to direct
+higher-priority messages to the logs.
 
-### `initialized`
+### `-Dmetals.file-watcher`
 
-Triggers build server initialization and workspace indexing. The `initialized`
-notification is critical for any Metals functionality to work.
+Possible values:
 
-### `shutdown`
+- `auto` (default): use editor file watcher if it is supported, otherwise use
+  Metals built-in file watcher. The editor declares whether it supports file
+  watching by setting
+  `InitializeParams.capabilities.workspace.didChangeWatchedFiles=true` during
+  the `initialize` hand-shake.
+- `custom`: the client will send `workspace/didChangeWatchedFiles` notifications
+  even if `capabilities.workspace.didChangeWatchedFiles=false` during the
+  `initialize` hand-shake.
 
-It is very important that the client sends a shutdown request in order for
-Metals to clean up open resources.
+### `-Dmetals.status-bar`
 
-- persists incremental compilation analysis files. Without a `shutdown` hook,
-  Metals will need to re-compile the entire workspace on next startup.
-- stops ongoing processes such as `sbt bloopInstall`
-- closes database connections
+Possible values:
 
-### `exit`
+- `off` (default): the `metals/status` notification is not supported.
+- `on`: the `metals/status` notification is supported.
+- `log-message`: translate `metals/status` notifications to `window/logMessage`
+  notifications. Used by vim-lsc at the moment.
 
-Kills the process using `System.exit`.
+### `-Dmetals.slow-task`
 
-### `$/cancelRequest`
+Possible values:
 
-Used by `metals/slowTask` to notify when a long-running process has finished.
+- `off` (default): the `metals/slowTask` request is not supported.
+- `on`: the `metals/slowTask` request is fully supported.
+- `status-bar`: the `metals/slowTask` request is not supported, but send updates
+  about slow tasks via `metals/status`.
 
-### `client/registerCapability`
+### `-Dmetals.show-message`
 
-If the client declares the `workspace.didChangeWatchedFiles` capability during
-the `initialize` request, then Metals follows up with a
-`client/registerCapability` request to register file watchers for certain glob
-patterns.
+Possible values:
 
-### `textDocument/didOpen`
+- `on` (default): send `window/showMessage` notifications like usual
+- `off`: don't send any `window/showMessage` notifications
+- `log-message`: send `window/showMessage` notifications as `window/logMessage`
+  instead. Useful when editor client responds to `window/showMessage`
+  notification with an intrusive alert.
 
-Triggers compilation in the build server for the build target containing the
-opened document. Related, see `metals/didFocus`.
+### `-Dmetals.show-message-request`
 
-### `textDocument/didChange`
+Possible values:
 
-Required to know the text contents of the current unsaved buffer.
+- `on` (default): send `window/showMessageRequest` requests like usual
+- `off`: don't send any `window/showMessageRequest` requests
+- `log-message`: send `window/showMessageRequest` requests as
+  `window/logMessage` instead.
 
-### `textDocument/didClose`
+### `-Dmetals.http`
 
-Cleans up resources.
+Possible values:
 
-### `textDocument/didSave`
+- `off` (default): don't start a server with the Metals HTTP client.
+- `on`: start a server with the [Metals HTTP client] to interact with the server
+  through a basic web UI. This option is needed for editor clients like Sublime
+  Text that don't support necessary requests such as
+  `window/showMessageRequest`.
 
-Triggers compilation in the build server and analyses if the build needs to be
-re-imported.
+### `-Dmetals.icons`
 
-### `textDocument/publishDiagnostics`
+Possible values:
 
-Metals forwards diagnostics from the build server to the editor client.
-Additionally, Metals publishes `Information` diagnostics for unexpected
-compilation errors when navigating external library sources.
+- `none` (default): don't display icons in messages.
+- `vscode`: use [Octicons](https://octicons.github.com) such as `$(rocket)` for
+  status bar messages, as supported by th
+  [VS Code status bar](https://code.visualstudio.com/docs/extensionAPI/vscode-api#StatusBarItem).
+- `atom`: use HTML-formatted [Octicons](https://octicons.github.com) such as
+  `<span class='icon icon-rocket'></span>` for status bar messages, as supported
+  by the Atom status bar.
+- `unicode`: use unicode emojis like 🚀 for status bar messages.
 
-### `textDocument/definition`
+### `-Dmetals.bloop-protocol`
 
-Metals supports goto definition for workspace sources in addition to external
-library sources.
+Possible values:
 
-- Library sources live under the directory `.metals/readonly` and they are
-  marked as read-only to prevent the user from editing them.
-- The destination location can either be a Scala or Java source file. It is
-  recommended to have a Java language server installed to navigate Java sources.
+- `auto` (default): use local unix domain sockets on macOS/Linux and TPC sockets
+  on Windows for communicating with the Bloop build server.
+- `tcp`: use TCP sockets for communicating with the Bloop build server.
 
-### `workspace/didChangeWatchedFiles`
+## Metals server commands
 
-Same as `didSave`, triggers compilation and analyses if the build needs to be
-re-imported. File watching notifications are optional, the Metals server should
-function normally without file watching notifications. However, file watching
-notifications improve the user experience especially when file contents change
-outside of the editor such as during `git checkout`.
+The client can trigger one of the following commands through the
+`workspace/executeCommand` request.
 
-### `window/logMessage`
+```scala mdoc:commands
 
-Used to log non-critical and non-actionable information. The user is only
-expected to use the logs for troubleshooting or finding metrics for how long
-certain events take.
+```
 
-### `window/showMessage`
+## Metals HTTP client
 
-Used to send critical but non-actionable notifications to the user. For
-non-critical notifications, see `metals/status`.
+Metals has an optional web interface that can be used to trigger server commands
+and respond to server requests. This interface is not intended for regular
+users, it exists only to help editor plugin authors integrate with Metals.
 
-### `window/showMessageRequest`
+![Metals http client](assets/metals-http-client.png)
 
-Used to send critical and actionable notifications to the user. To notify the
-user about long running tasks that can be cancelled, the extension
-`metals/slowTask` is used instead.
+The server is enabled by passing the `-Dmetals.http=on` system property. The
+server runs by default at [`http://localhost:5031`](http://localhost:5031/).
+When the port 5031 is taken the next free increment is chosen instead (5032,
+5033, ...).
 
-## Metals extensions
+## Metals LSP extensions
 
 Editor clients can opt into receiving Metals-specific JSON-RPC requests and
 notifications. Metals extensions are not defined in LSP and are not strictly
@@ -253,7 +271,7 @@ interface MetalsStatusParams {
 }
 ```
 
-### `metals/didFocus`
+### `metals/didFocusTextDocument`
 
 The Metals did focus notification is sent from the client to the server when the
 editor changes focus to a new text document. Unlike `textDocument/didOpen`, the
@@ -269,5 +287,114 @@ focus back to `UserTest.scala` that depends on APIs defined in `User.scala`.
 
 _Notification_:
 
-- method: `metals/didFocus`
+- method: `metals/didFocusTextDocument`
 - params: `string`, the URI of the document where the focused was moved to.
+
+## Language Server Protocol
+
+Consult the
+[LSP specification](https://microsoft.github.io/language-server-protocol/specification)
+to learn more more how LSP works. Metals uses the following endpoints from the
+specification.
+
+### `initialize`
+
+- the `rootUri` field is used to configure Metals for that workspace directory.
+  The working directory for where server is started has no significant meaning.
+- at this point, Metals uses only full text synchronization. In the future, it
+  will be able to use incremental text synchronization.
+- `didChangeWatchedFiles` client capability is used to determine whether to
+  register file watchers.
+
+### `initialized`
+
+Triggers build server initialization and workspace indexing. The `initialized`
+notification is critical for any Metals functionality to work.
+
+### `shutdown`
+
+It is very important that the client sends a shutdown request in order for
+Metals to clean up open resources.
+
+- persists incremental compilation analysis files. Without a `shutdown` hook,
+  Metals will need to re-compile the entire workspace on next startup.
+- stops ongoing processes such as `sbt bloopInstall`
+- closes database connections
+
+### `exit`
+
+Kills the process using `System.exit`.
+
+### `$/cancelRequest`
+
+Used by `metals/slowTask` to notify when a long-running process has finished.
+
+### `client/registerCapability`
+
+If the client declares the `workspace.didChangeWatchedFiles` capability during
+the `initialize` request, then Metals follows up with a
+`client/registerCapability` request to register file watchers for certain glob
+patterns.
+
+### `textDocument/didOpen`
+
+Triggers compilation in the build server for the build target containing the
+opened document. Related, see `metals/didFocusTextDocument`.
+
+### `textDocument/didChange`
+
+Required to know the text contents of the current unsaved buffer.
+
+### `textDocument/didClose`
+
+Cleans up resources.
+
+### `textDocument/didSave`
+
+Triggers compilation in the build server and analyses if the build needs to be
+re-imported.
+
+### `textDocument/publishDiagnostics`
+
+Metals forwards diagnostics from the build server to the editor client.
+Additionally, Metals publishes `Information` diagnostics for unexpected
+compilation errors when navigating external library sources.
+
+### `textDocument/definition`
+
+Metals supports goto definition for workspace sources in addition to external
+library sources.
+
+- Library sources live under the directory `.metals/readonly` and they are
+  marked as read-only to prevent the user from editing them.
+- The destination location can either be a Scala or Java source file. It is
+  recommended to have a Java language server installed to navigate Java sources.
+
+### `workspace/didChangeWatchedFiles`
+
+Same as `didSave`, triggers compilation and analyses if the build needs to be
+re-imported. File watching notifications are optional, the Metals server should
+function normally without file watching notifications. However, file watching
+notifications improve the user experience especially when file contents change
+outside of the editor such as during `git checkout`.
+
+### `workspace/executeCommands`
+
+Used to trigger a [Metals server command](#metals-server-commands).
+
+### `window/logMessage`
+
+Used to log non-critical and non-actionable information. The user is only
+expected to use the logs for troubleshooting or finding metrics for how long
+certain events take.
+
+### `window/showMessage`
+
+Used to send critical but non-actionable notifications to the user. For
+non-critical notifications, see `metals/status`.
+
+### `window/showMessageRequest`
+
+Used to send critical and actionable notifications to the user. To notify the
+user about long running tasks that can be cancelled, the extension
+`metals/slowTask` is used instead.

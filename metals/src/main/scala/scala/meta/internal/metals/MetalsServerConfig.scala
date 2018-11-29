@@ -26,9 +26,8 @@ final case class MetalsServerConfig(
     showMessageRequest: ShowMessageRequestConfig =
       ShowMessageRequestConfig.default,
     isNoInitialized: Boolean =
-      System.getProperty("metals.no-initialized") == "true",
-    isHttpEnabled: Boolean =
-      System.getProperty("metals.http") == "true",
+      MetalsServerConfig.binaryOption("metals.no-initialized"),
+    isHttpEnabled: Boolean = MetalsServerConfig.binaryOption("metals.http"),
     icons: Icons = Icons.default
 ) {
   override def toString: String =
@@ -45,15 +44,19 @@ final case class MetalsServerConfig(
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
+  private def binaryOption(key: String): Boolean =
+    Set("true", "on").contains(
+      System.getProperty(key)
+    )
+
   def base: MetalsServerConfig = MetalsServerConfig()
   def default: MetalsServerConfig = {
     System.getProperty("metals.client", "default") match {
       case "vscode" =>
-        scribe.info(base.bloopProtocol.toString)
         base.copy(
           statusBar = StatusBarConfig.on,
           slowTask = SlowTaskConfig.on,
-          icons = Icons.octicons
+          icons = Icons.vscode
         )
       case "vim-lsc" =>
         base.copy(
