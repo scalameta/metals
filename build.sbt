@@ -174,6 +174,7 @@ lazy val metals = project
 lazy val `sbt-metals` = project
   .settings(
     sbtPlugin := true,
+    publishMavenStyle := true,
     crossScalaVersions := List(V.scala212, V.scala210),
     addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % V.sbtBloop),
     sbtVersion in pluginCrossBuild := {
