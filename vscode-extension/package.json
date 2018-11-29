@@ -1,14 +1,14 @@
 {
   "name": "metals",
   "displayName": "Metals",
-  "description": "EXPERIMENTAL Language Server for Scala based on Scalameta",
+  "description": "Work in progress language server for Scala",
   "keywords": [
     "scala",
     "lsp",
     "language server",
     "scalameta"
   ],
-  "version": "0.2.0-M1",
+  "version": "0.2.1",
   "publisher": "scalameta",
   "contributors": [
     {
@@ -51,7 +51,7 @@
       "properties": {
         "metals.serverVersion": {
           "type": "string",
-          "default": "0.2.0-SNAPSHOT",
+          "default": "0.2.1",
           "description": "The version of the Metals server artifact. Requires reloading the window. Change only if you know what you're doing"
         },
         "metals.serverProperties": {
