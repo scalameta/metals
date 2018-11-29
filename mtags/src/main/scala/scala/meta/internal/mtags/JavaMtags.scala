@@ -15,6 +15,7 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.collection.JavaConverters._
 
 object JavaMtags {
   def index(input: Input.VirtualFile): MtagsIndexer = {
@@ -34,7 +35,7 @@ object JavaMtags {
               )
             }
           }
-          source.getClasses.forEach(visitClass)
+          source.getClasses.asScala.foreach(visitClass)
         } catch {
           case _: ParseException | _: NullPointerException =>
           // Parse errors are ignored because the Java source files we process
@@ -72,11 +73,11 @@ object JavaMtags {
 
       def visitMembers[T <: JavaMember](fields: java.util.List[T]): Unit =
         if (fields == null) ()
-        else fields.forEach(visitMember)
+        else fields.asScala.foreach(visitMember)
 
       def visitClasses(classes: java.util.List[JavaClass]): Unit =
         if (classes == null) ()
-        else classes.forEach(visitClass)
+        else classes.asScala.foreach(visitClass)
 
       def visitClass(cls: JavaClass): Unit =
         withOwner(owner) {
@@ -96,7 +97,7 @@ object JavaMtags {
 
       def visitConstructors(cls: JavaClass): Unit = {
         val overloads = new OverloadDisambiguator()
-        cls.getConstructors.forEach { ctor =>
+        cls.getConstructors.asScala.foreach { ctor =>
           val name = cls.getName
           val disambiguator = overloads.disambiguator(name)
           val pos = toRangePosition(ctor.lineNumber, name)
@@ -113,7 +114,7 @@ object JavaMtags {
             java.lang.Boolean.compare(o1.isStatic, o2.isStatic)
           }
         })
-        methods.forEach { method =>
+        methods.asScala.foreach { method =>
           val name = method.getName
           val disambiguator = overloads.disambiguator(name)
           val pos = toRangePosition(method.lineNumber, name)
