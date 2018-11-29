@@ -205,7 +205,7 @@ final class MetalsHttpClient(
           )(
             _.text(what)
               .text(": ")
-              .element("button", "type='submit'")(_.text("Execute"))
+              .element("button", "type='submit' class='btn'")(_.text("Execute"))
           )
         )
     }
@@ -215,6 +215,18 @@ final class MetalsHttpClient(
   private val ids = new AtomicInteger()
   private def nextId(): String = ids.getAndIncrement().toString
 
+  private def renderSection(
+      html: HtmlBuilder
+  )(title: String, content: HtmlBuilder => Unit): HtmlBuilder = {
+    html.element(
+      "section",
+      "class='container with-title' style='margin-bottom: 1rem'"
+    )(
+      _.element("h2", "class='title'")(_.text(title))
+        .element("div")(content)
+    )
+  }
+
   def renderHtml: String =
     new HtmlBuilder()
       .element("html")(
@@ -222,35 +234,46 @@ final class MetalsHttpClient(
           _.element("title")(_.text("Metals"))
             .raw("""<meta charset="UTF-8">""")
             .raw(s"""<script src="$url/livereload.js"></script>""")
-        ).element("body")(
-          _.element("h2")(_.text("metals/status"))
-            .element("p")(_.text("Status: ").raw(statusFormatted))
-            .element("h2")(_.text("metals/slowTask"))
-            .element("p")(slowTasksFormatted)
-            .element("h2")(_.text("workspace/executeCommand"))
-            .element("p")(serverCommands)
-            .element("h2")(_.text("window/showMessageRequests"))
-            .element("p")(showMessageRequestsFormatted)
-            .element("h2")(_.text("window/showMessage"))
-            .element("p")(showMessagesFormatted)
-            .element("h2")(_.text("window/logMessage"))
-            .element("p")(
-              _.text("Path: ").path(workspace.resolve(Directories.log))
+            .raw(
+              s"""<link href="https://unpkg.com/nes.css@0.0.2/css/nes.min.css" rel="stylesheet" />"""
             )
-            .element("pre", "style='overflow:auto;height:200px;'")(
-              logsFormatted
-            )
-            .element("h2")(_.text("Log files"))
-            .element("p")(
-              _.text("Global log: ").path(globalLog)
-            )
-            .element("p")(
-              _.text(s"LSP trace (enabled=$isLspTraceEnabled):").path(lspTrace)
-            )
-            .element("p")(
-              _.text(s"BSP trace (enabled=$isBspTraceEnabled):").path(bspTrace)
-            )
-        )
+        ).element("body", "style='padding: 2rem'") { html =>
+          html.element("header", "style='margin-bottom: 1rem'")(
+            _.element("h1")(_.text("Metals"))
+          )
+          val section = renderSection(html) _
+          section(
+            "metals/status",
+            _.element("p")(_.text("Status: ").raw(statusFormatted))
+          )
+          section("metals/slowTask", slowTasksFormatted)
+          section("workspace/executeCommand", serverCommands)
+          section("window/showMessageRequests", showMessageRequestsFormatted)
+          section("window/showMessage", showMessagesFormatted)
+          section(
+            "window/logMessage",
+            _.text("Path: ")
+              .path(workspace.resolve(Directories.log))
+              .element("section", "class='container is-dark'")(
+                _.element(
+                  "pre",
+                  "style='overflow:auto;height:200px;color:white;'"
+                )(logsFormatted)
+              )
+          )
+          section(
+            "Log files",
+            _.element("p")(_.text("Global log: ").path(globalLog))
+              .element("p")(
+                _.text(s"LSP trace (enabled=$isLspTraceEnabled):")
+                  .path(lspTrace)
+              )
+              .element("p")(
+                _.text(s"BSP trace (enabled=$isBspTraceEnabled):")
+                  .path(bspTrace)
+              )
+          )
+        }
       )
       .render
 
