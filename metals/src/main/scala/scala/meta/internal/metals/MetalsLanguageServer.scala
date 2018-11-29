@@ -558,13 +558,13 @@ class MetalsLanguageServer(
   @JsonRequest("workspace/executeCommand")
   def executeCommand(params: ExecuteCommandParams): CompletableFuture[Unit] =
     params.getCommand match {
-      case ServerCommands.ScanWorkspaceSources =>
+      case ServerCommands.ScanWorkspaceSources() =>
         Future {
           buildTargets.sourceDirectories.foreach(indexSourceDirectory)
         }.asJavaUnit
-      case ServerCommands.ImportBuild =>
+      case ServerCommands.ImportBuild() =>
         slowConnectToBuildServer(forceImport = true).asJavaUnit
-      case ServerCommands.ConnectBuildServer =>
+      case ServerCommands.ConnectBuildServer() =>
         quickConnectToBuildServer().asJavaUnit
       case ServerCommands.OpenBrowser(url) =>
         CompletableFuture.completedFuture(Urls.openBrowser(url))
