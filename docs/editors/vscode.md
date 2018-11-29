@@ -89,3 +89,10 @@ To avoid overriding the "Java Home" setting through the VS Code interface, see
 [this Stackoverflow answer](https://stackoverflow.com/questions/135688/setting-environment-variables-on-os-x)
 for instructions on how to permanently set the `JAVA_HOME` environment variable
 for your machine so that it is automatically picked up by all GUI applications.
+
+## Run doctor
+
+Execute the "Run Doctor" from the command palette to troubleshoot potential
+configuration problems in your workspace.
+
+![VS Code Run Doctor command](assets/vscode-run-doctor.png)

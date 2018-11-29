@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
 import javax.annotation.Nullable
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
@@ -28,6 +29,9 @@ trait MetalsLanguageClient extends LanguageClient {
   def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult]
+
+  @JsonNotification("metals/executeClientCommand")
+  def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
 
   def shutdown(): Unit = {}
 

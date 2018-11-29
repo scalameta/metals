@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
@@ -27,4 +28,6 @@ object NoopLanguageClient extends MetalsLanguageClient {
   ): CompletableFuture[MessageActionItem] =
     new CompletableFuture[MessageActionItem]()
   override def logMessage(message: MessageParams): Unit = ()
+  override def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit =
+    ()
 }

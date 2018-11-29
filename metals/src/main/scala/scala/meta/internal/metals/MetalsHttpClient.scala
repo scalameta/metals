@@ -8,6 +8,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
@@ -40,7 +41,7 @@ import scala.util.Try
  */
 final class MetalsHttpClient(
     workspace: AbsolutePath,
-    url: String,
+    url: () => String,
     underlying: MetalsLanguageClient,
     triggerReload: () => Unit,
     charset: Charset,
@@ -49,6 +50,9 @@ final class MetalsHttpClient(
     sh: ScheduledExecutorService
 )(implicit ec: ExecutionContext)
     extends MetalsLanguageClient {
+  override def metalsExecuteClientCommand(
+      params: ExecuteCommandParams
+  ): Unit = {}
 
   override def telemetryEvent(value: Any): Unit =
     underlying.telemetryEvent(value)
@@ -213,64 +217,44 @@ final class MetalsHttpClient(
   private val ids = new AtomicInteger()
   private def nextId(): String = ids.getAndIncrement().toString
 
-  private def renderSection(
-      html: HtmlBuilder
-  )(title: String, content: HtmlBuilder => Unit): HtmlBuilder = {
-    html.element(
-      "section",
-      "class='container with-title' style='margin-bottom: .75rem'"
-    )(
-      _.element("h2", "class='title'")(_.text(title))
-        .element("div")(content)
-    )
-  }
-
-  def renderHtml: String =
-    new HtmlBuilder()
-      .element("html")(
-        _.element("head")(
-          _.element("title")(_.text("Metals"))
-            .raw("""<meta charset="UTF-8">""")
-            .raw(s"""<script src="$url/livereload.js"></script>""")
-            .raw(
-              s"""<link href="https://unpkg.com/nes.css@0.0.2/css/nes.min.css" rel="stylesheet" />"""
+  def renderHtml: String = {
+    val head = s"""<script src="${url()}/livereload.js"></script>"""
+    val result = new HtmlBuilder().page("Metals", head) { html =>
+      html
+        .section(
+          "metals/status",
+          _.element("p")(_.text("Status: ").raw(statusFormatted))
+        )
+        .section("metals/slowTask", slowTasksFormatted)
+        .section("workspace/executeCommand", serverCommands)
+        .section("window/showMessageRequests", showMessageRequestsFormatted)
+        .section("window/showMessage", showMessagesFormatted)
+        .section(
+          "window/logMessage",
+          _.text("Path: ")
+            .path(workspace.resolve(Directories.log))
+            .element("section", "class='container is-dark'")(
+              _.element(
+                "pre",
+                "style='overflow:auto;max-height:400px;min-height:100px;color:white;'"
+              )(logsFormatted)
             )
-        ).element("body", "style='padding: .75rem; font-size: 10px'") { html =>
-          val section = renderSection(html) _
-          section(
-            "metals/status",
-            _.element("p")(_.text("Status: ").raw(statusFormatted))
-          )
-          section("metals/slowTask", slowTasksFormatted)
-          section("workspace/executeCommand", serverCommands)
-          section("window/showMessageRequests", showMessageRequestsFormatted)
-          section("window/showMessage", showMessagesFormatted)
-          section(
-            "window/logMessage",
-            _.text("Path: ")
-              .path(workspace.resolve(Directories.log))
-              .element("section", "class='container is-dark'")(
-                _.element(
-                  "pre",
-                  "style='overflow:auto;max-height:400px;min-height:100px;color:white;'"
-                )(logsFormatted)
-              )
-          )
-          section(
-            "Log files",
-            _.element("p")(_.text("Global log: ").path(globalLog))
-              .element("p")(
-                _.text(s"LSP trace (enabled=$isLspTraceEnabled):")
-                  .path(lspTrace)
-              )
-              .element("p")(
-                _.text(s"BSP trace (enabled=$isBspTraceEnabled):")
-                  .path(bspTrace)
-              )
-          )
-        }
-      )
-      .render
+        )
+        .section(
+          "Log files",
+          _.element("p")(_.text("Global log: ").path(globalLog))
+            .element("p")(
+              _.text(s"LSP trace (enabled=$isLspTraceEnabled):")
+                .path(lspTrace)
+            )
+            .element("p")(
+              _.text(s"BSP trace (enabled=$isBspTraceEnabled):")
+                .path(bspTrace)
+            )
+        )
+    }
+    result.render
+  }
 
   def complete(exchange: HttpServerExchange): Unit = {
     val id = exchange.getQuery("id").getOrElse("<unknown>")

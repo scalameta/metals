@@ -9,7 +9,9 @@ import {
   StatusBarAlignment,
   ProgressLocation,
   IndentAction,
-  languages
+  languages,
+  WebviewPanel,
+  ViewColumn
 } from "vscode";
 import {
   LanguageClient,
@@ -20,7 +22,13 @@ import {
 } from "vscode-languageclient";
 import { exec } from "child_process";
 import { Commands } from "./commands";
-import { MetalsSlowTask, MetalsStatus, MetalsDidFocus } from "./protocol";
+import {
+  MetalsSlowTask,
+  MetalsStatus,
+  MetalsDidFocus,
+  ExecuteClientCommand
+} from "./protocol";
+import { type } from "os";
 
 export async function activate(context: ExtensionContext) {
   // Make editing Scala docstrings slightly nicer.
@@ -117,12 +125,29 @@ function startServer(context: ExtensionContext, javaHome: string) {
   context.subscriptions.push(client.start());
 
   client.onReady().then(_ => {
-    ["build-import", "build-connect", "sources-scan"].forEach(command => {
-      const cancel = commands.registerCommand("metals." + command, async () =>
-        client.sendRequest(ExecuteCommandRequest.type, { command: command })
-      );
-      context.subscriptions.push(cancel);
-    });
+    var doctor: WebviewPanel;
+    function getDoctorPanel(): WebviewPanel {
+      if (!doctor) {
+        doctor = window.createWebviewPanel(
+          "metals-doctor",
+          "Metals Doctor",
+          ViewColumn.Active
+        );
+        context.subscriptions.push(doctor);
+        doctor.onDidDispose(() => {
+          doctor = undefined;
+        });
+      }
+      return doctor;
+    }
+    ["build-import", "build-connect", "sources-scan", "doctor-open"].forEach(
+      command => {
+        const cancel = commands.registerCommand("metals." + command, async () =>
+          client.sendRequest(ExecuteCommandRequest.type, { command: command })
+        );
+        context.subscriptions.push(cancel);
+      }
+    );
 
     // Open or close the extension output channel. The user may have to trigger
     // this command twice in case the channel has been focused through another
@@ -140,6 +165,16 @@ function startServer(context: ExtensionContext, javaHome: string) {
 
     commands.registerCommand(Commands.FOCUS_DIAGNOSTICS, () => {
       commands.executeCommand("workbench.action.problems.focus");
+    });
+
+    client.onNotification(ExecuteClientCommand.type, params => {
+      if (params.command == "metals-run-doctor") {
+        const html = params.arguments[0];
+        if (typeof html === "string") {
+          const panel = getDoctorPanel();
+          panel.webview.html = html;
+        }
+      }
     });
 
     // The server updates the client with a brief text message about what
