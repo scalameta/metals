@@ -73,19 +73,19 @@
         "title": "Restart server"
       },
       {
-        "command": "metals.workspace.sources.scan",
+        "command": "metals.build-import",
         "category": "Metals",
-        "title": "Rescan sources"
+        "title": "Import build"
       },
       {
-        "command": "metals.build.connect",
+        "command": "metals.build-connect",
         "category": "Metals",
         "title": "Connect to build server"
       },
       {
-        "command": "metals.build.import",
+        "command": "metals.sources-scan",
         "category": "Metals",
-        "title": "Import build"
+        "title": "Rescan sources"
       }
     ]
   },

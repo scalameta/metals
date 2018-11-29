@@ -108,7 +108,7 @@ patterns.
 ### `textDocument/didOpen`
 
 Triggers compilation in the build server for the build target containing the
-opened document. Related, see `metals/didFocus`.
+opened document. Related, see `metals/didFocusTextDocument`.
 
 ### `textDocument/didChange`
 
@@ -146,6 +146,11 @@ re-imported. File watching notifications are optional, the Metals server should
 function normally without file watching notifications. However, file watching
 notifications improve the user experience especially when file contents change
 outside of the editor such as during `git checkout`.
+
+### `workspace/executeCommands`
+
+Used to respond to trigger the Metals server to run one of the
+[server commands](#metals-server-commands).
 
 ### `window/logMessage`
 
@@ -253,7 +258,7 @@ interface MetalsStatusParams {
 }
 ```
 
-### `metals/didFocus`
+### `metals/didFocusTextDocument`
 
 The Metals did focus notification is sent from the client to the server when the
 editor changes focus to a new text document. Unlike `textDocument/didOpen`, the
@@ -269,5 +274,95 @@ focus back to `UserTest.scala` that depends on APIs defined in `User.scala`.
 
 _Notification_:
 
-- method: `metals/didFocus`
+- method: `metals/didFocusTextDocument`
 - params: `string`, the URI of the document where the focused was moved to.
+
+## Metals server properties
+
+The Metals language server is configured through JVM system properties.
+Configuration options are added to allow customization for particular clients
+since editors interpret LSP functionality slightly differently. For example, in
+Vim the `window/logMessage` notification is always visible in the UI while in VS
+Code logs are hidden by default.
+
+### `-Dmetals.file-watcher`
+
+Possible values:
+
+- `auto` (default): use editor file watcher if supported, otherwise use Metals
+  built-in file watcher.
+- `custom`: the client will send `workspace/didChangeWatchedFiles` notifications
+  even if the editor doesn't declare in the `initialize` hand-shake that it
+  supports file watching.
+
+### `-Dmetals.status-bar`
+
+Possible values:
+
+- `off` (default): the `metals/status` notification is not supported.
+- `on`: the `metals/status` notification is supported.
+- `log-message`: translate `metals/status` notifications to `window/logMessage`
+  notifications. Used by vim-lsc at the moment.
+
+### `-Dmetals.slow-task`
+
+Possible values:
+
+- `off` (default): the `metals/slowTask` request is not supported.
+- `on`: the `metals/slowTask` request is fully supported.
+- `status-bar`: the `metals/slowTask` request is not supported, but send updates
+  about slow tasks via `metals/status`.
+
+### `-Dmetals.show-message`
+
+Possible values:
+
+- `on` (default): send `window/showMessage` notifications like usual
+- `off`: don't send any `window/showMessage` notifications
+- `log-message`: send `window/showMessage` notifications as `window/logMessage`
+  instead. Useful when editor client responds to `window/showMessage`
+  notification with an intrusive alert.
+
+### `-Dmetals.show-message-request`
+
+Possible values:
+
+- `on` (default): send `window/showMessageRequest` requests like usual
+- `off`: don't send any `window/showMessageRequest` requests
+- `log-message`: send `window/showMessageRequest` requests as
+  `window/logMessage` instead.
+
+### `-Dmetals.http`
+
+Possible values:
+
+- `off` (default): don't start Metals HTTP server.
+- `on`: start Metals HTTP server to interact with the server through a basic web
+  UI. This option is needed for editor clients like Sublime Text that don't
+  support necessary requests such as `window/showMessageRequest`.
+
+### `-Dmetals.icons`
+
+Possible values:
+
+- `none` (default): don't display icons in messages.
+- `octicons`: use [Octicons](https://octicons.github.com) such as `$(rocket)`
+  for status bar messages, as supported by VS Code and Atom status bars.
+- `unicode`: use unicode emojis like 🚀 for status bar messages.
+
+### `-Dmetals.bloop-protocol`
+
+Possible values:
+
+- `auto` (default): use local unix domain sockets on macOS/Linux and TPC sockets
+  on Windows for communicating with the Bloop build server.
+- `tcp`: use TCP sockets for communicating with the Bloop build server.
+
+## Metals server commands
+
+The client can trigger one of the following commands through the
+`workspace/executeCommand` request.
+
+```scala mdoc:commands
+
+```

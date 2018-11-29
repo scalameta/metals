@@ -154,7 +154,7 @@ To manually start the `sbt bloopInstall` step, call the following command below.
 This command works only for sbt builds at the moment.
 
 ```vim
-:call lsc#server#call(&filetype, 'workspace/executeCommand', { 'command': 'build.import' }, function('abs'))
+:call lsc#server#call(&filetype, 'workspace/executeCommand', { 'command': 'build-import' }, function('abs'))
 ```
 
 The callback `function('abs')` can be replaced with any function that does
@@ -167,7 +167,7 @@ the command below. This command works only at the moment if there is a `.bloop/`
 directory containing JSON files.
 
 ```vim
-:call lsc#server#call(&filetype, 'workspace/executeCommand', { 'command': 'build.connect' }, function('abs'))
+:call lsc#server#call(&filetype, 'workspace/executeCommand', { 'command': 'build-connect' }, function('abs'))
 ```
 
 The callback `function('abs')` can be replaced with any function that does
