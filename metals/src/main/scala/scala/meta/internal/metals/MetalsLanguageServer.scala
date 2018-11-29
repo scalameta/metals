@@ -451,6 +451,110 @@ class MetalsLanguageServer(
       definitionResult(position).locations
     }
 
+  @JsonRequest("textDocument/typeDefinition")
+  def typeDefinition(
+      position: TextDocumentPositionParams
+  ): CompletableFuture[util.List[Location]] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/typeDefinition is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/implementation")
+  def implementation(
+      position: TextDocumentPositionParams
+  ): CompletableFuture[util.List[Location]] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/implementation is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/hover")
+  def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/hover is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/documentHighlight")
+  def documentHighlights(
+      params: TextDocumentPositionParams
+  ): CompletableFuture[Hover] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/documentHighlight is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/documentSymbol")
+  def documentSymbol(
+      params: DocumentSymbolParams
+  ): CompletableFuture[util.List[DocumentSymbol]] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/documentSymbol is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/formatting")
+  def documentSymbol(
+      params: DocumentFormattingParams
+  ): CompletableFuture[util.List[TextEdit]] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/formatting is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/rename")
+  def documentSymbol(
+      params: RenameParams
+  ): CompletableFuture[WorkspaceEdit] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/rename is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/references")
+  def references(
+      position: ReferenceParams
+  ): CompletableFuture[util.List[Location]] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/references is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/completion")
+  def completion(params: CompletionParams): CompletableFuture[CompletionList] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/completion is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/signatureHelp")
+  def completion(
+      params: TextDocumentPositionParams
+  ): CompletableFuture[SignatureHelp] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/signatureHelp is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/codeAction")
+  def codeAction(
+      params: CodeActionParams
+  ): CompletableFuture[util.List[CodeAction]] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/codeAction is not supported.")
+      null
+    }
+
+  @JsonRequest("textDocument/codeLens")
+  def codeAction(
+      params: CodeLensParams
+  ): CompletableFuture[util.List[CodeLens]] =
+    CompletableFutures.computeAsync { _ =>
+      scribe.warn("textDocument/codeLens is not supported.")
+      null
+    }
+
   @JsonRequest("workspace/executeCommand")
   def executeCommand(params: ExecuteCommandParams): CompletableFuture[Unit] =
     params.getCommand match {
