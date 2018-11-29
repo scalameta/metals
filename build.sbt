@@ -15,7 +15,7 @@ inThisBuild(
       "-Ywarn-unused-import"
     ),
     addCompilerPlugin(
-      "org.scalameta" % "semanticdb-scalac" % "4.0.0" cross CrossVersion.full
+      "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
     ),
     organization := "org.scalameta",
     licenses := Seq(
@@ -183,8 +183,14 @@ lazy val `sbt-metals` = project
       }
     },
     libraryDependencies --= libraryDependencies.in(ThisBuild).value,
-    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
+    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import"),
+    buildInfoPackage := "scala.meta.internal.sbtmetals",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "metalsVersion" -> version.value,
+      "scalametaVersion" -> V.scalameta
+    )
   )
+  .enablePlugins(BuildInfoPlugin)
   .disablePlugins(ScalafixPlugin)
 
 lazy val input = project
