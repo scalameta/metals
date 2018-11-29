@@ -2,13 +2,14 @@ package scala.meta.metals {
 
   import sbt._
   import sbt.Keys._
+  import scala.meta.internal.sbtmetals.BuildInfo
 
   object MetalsPlugin extends AutoPlugin {
     override def trigger = allRequirements
     override def requires = sbt.plugins.JvmPlugin
 
     def semanticdbVersion: String =
-      System.getProperty("scalameta.version", "4.0.0")
+      System.getProperty("scalameta.version", BuildInfo.scalametaVersion)
     def semanticdbModule: ModuleID =
       "org.scalameta" % "semanticdb-scalac" % semanticdbVersion cross CrossVersion.full
 
