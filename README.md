@@ -16,11 +16,11 @@ instructions are primarily intended for project contributors.
 
 ## Contributing
 
-See the [contributing guide](https://scalameta.org/metals/docs/getting-started-contributors.html).
+See the [contributing guide](https://scalameta.org/metals/docs/contributors/getting-started.html).
 
 ## Overview
 
-See [here](https://scalameta.org/metals/docs/overview.html) for an overview of a what features are supported or
+See [here](https://scalameta.org/metals/docs/editors/overview.html) for an overview of a what features are supported or
 not supported by Metals.
 
 ### Team
