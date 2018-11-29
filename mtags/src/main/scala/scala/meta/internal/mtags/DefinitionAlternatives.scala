@@ -10,7 +10,7 @@ object DefinitionAlternatives {
       caseClassCompanionToType(symbol),
       caseClassApplyOrCopy(symbol),
       caseClassApplyOrCopyParams(symbol),
-      methodOwner(symbol),
+      methodOwner(symbol)
     ).flatten
   }
 
