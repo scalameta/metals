@@ -1,6 +1,7 @@
 package example
 
 class Scalalib/*example.Scalalib#*/ {
+  val nil/*example.Scalalib#nil.*/ = List/*scala.collection.immutable.Nil.*/()
   val lst/*example.Scalalib#lst.*/ = List/*scala.collection.immutable.List.*/[
     (
         Nothing/*scala.Nothing#*/,
@@ -15,7 +16,7 @@ class Scalalib/*example.Scalalib#*/ {
         Float/*scala.Float#*/,
         Char/*scala.Char#*/
     )
-  ]()
+  ](null)
   lst/*example.Scalalib#lst.*/.isInstanceOf/*scala.Any#isInstanceOf().*/[Any/*scala.Any#*/]
   lst/*example.Scalalib#lst.*/.asInstanceOf/*scala.Any#asInstanceOf().*/[Any/*scala.Any#*/]
   println/*scala.Predef.println(+1).*/(lst/*example.Scalalib#lst.*/.##/*java.lang.Object#`##`().*/)
