@@ -1,6 +1,7 @@
 package example
 
 class Scalalib {
+  val nil = List()
   val lst = List[
     (
         Nothing,
@@ -15,7 +16,7 @@ class Scalalib {
         Float,
         Char
     )
-  ]()
+  ](null)
   lst.isInstanceOf[Any]
   lst.asInstanceOf[Any]
   println(lst.##)
