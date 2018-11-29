@@ -117,6 +117,7 @@ final class TestingServer(
         new ExecuteCommandParams(command, Collections.emptyList())
       )
       .asScala
+      .ignoreValue
   }
   def didFocus(filename: String): Future[Unit] = {
     server.didFocus(toPath(filename).toURI.toString).asScala

@@ -117,6 +117,16 @@ Possible values:
 - `status-bar`: the `metals/slowTask` request is not supported, but send updates
   about slow tasks via `metals/status`.
 
+### `-Dmetals.execute-client-command`
+
+Possible values:
+
+- `off` (default): the `metals/executeClientCommand` notification is not
+  supported. Client commands can still be handled by enabling
+  `-Dmetals.http=true`.
+- `on`: the `metals/executeClientCommand` notification is supported and all
+  [Metals client commands](#metals-client-commands) are handled.
+
 ### `-Dmetals.show-message`
 
 Possible values:
@@ -172,7 +182,16 @@ Possible values:
 The client can trigger one of the following commands through the
 `workspace/executeCommand` request.
 
-```scala mdoc:commands
+```scala mdoc:commands:server
+
+```
+
+## Metals client commands
+
+The Metals server can send one of the following client commands if the client
+supports the `metals/executeClientCommand` notification,
+
+```scala mdoc:commands:client
 
 ```
 
@@ -296,6 +315,22 @@ _Notification_:
 
 - method: `metals/didFocusTextDocument`
 - params: `string`, the URI of the document where the focused was moved to.
+
+### `metals/executeClientCommand`
+
+The Metals execute client command is sent from the server to the client to
+trigger an action inside the editor. This notification is a copy of the
+`workspace/executeCommand` except
+
+- execute client command is a notification, not a request
+- execute client command is initiated from the server, not the client
+
+See [Metals client command] for the list of supported client commands.
+
+_Notification_:
+
+- method: `metals/executeClientCommand`
+- params: `ExecuteCommandParams`, as defined in LSP.
 
 ## Language Server Protocol
 

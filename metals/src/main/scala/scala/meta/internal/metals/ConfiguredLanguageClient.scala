@@ -4,6 +4,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -108,6 +109,14 @@ final class ConfiguredLanguageClient(
       ()
     } else {
       underlying.logMessage(message)
+    }
+  }
+
+  override def metalsExecuteClientCommand(
+      params: ExecuteCommandParams
+  ): Unit = {
+    if (config.executeClientCommand.isOn) {
+      underlying.metalsExecuteClientCommand(params)
     }
   }
 }

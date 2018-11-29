@@ -1,8 +1,7 @@
 inThisBuild(Vector(
   scalaVersion := "2.12.7",
   scalacOptions ++= List(
-    "-Yrangepos",
-    "-Ywarn-unused"
+    "-Yrangepos", "-Ywarn-unused"
   ),
 ))
 
@@ -13,3 +12,13 @@ libraryDependencies ++= List(
   "com.lihaoyi" %% "sourcecode" % "0.1.4",
   "org.scalatest" %% "scalatest" % "3.0.5"
 )
+
+// Outdated Scala version
+lazy val myPlugin = project.settings(scalaVersion := "2.10.7")
+
+
+
+
+
+
+

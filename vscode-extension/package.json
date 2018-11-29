@@ -86,6 +86,11 @@
         "command": "metals.sources-scan",
         "category": "Metals",
         "title": "Rescan sources"
+      },
+      {
+        "command": "metals.doctor-open",
+        "category": "Metals",
+        "title": "Run Doctor"
       }
     ]
   },

@@ -41,6 +41,13 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val RunDoctor = Command(
+    "doctor-run",
+    "Run doctor",
+    """|Open the Metals doctor to troubleshoot potential problems.
+       |""".stripMargin
+  )
+
   /**
    * Open the browser at the given url.
    */
@@ -50,7 +57,8 @@ object ServerCommands {
   def all: List[Command] = List(
     ImportBuild,
     ConnectBuildServer,
-    ScanWorkspaceSources
+    ScanWorkspaceSources,
+    RunDoctor
   )
 
 }

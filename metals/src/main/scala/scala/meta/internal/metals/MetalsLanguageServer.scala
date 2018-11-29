@@ -81,6 +81,8 @@ class MetalsLanguageServer(
   private var statusBar: StatusBar = _
   private var embedded: Embedded = _
   private var fileEvents: Option[FileEvents] = None
+  private var doctor: Doctor = _
+  var httpServer: Option[MetalsHttpServer] = None
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient = client
@@ -158,6 +160,13 @@ class MetalsLanguageServer(
       semanticdbs,
       config.icons,
       statusBar
+    )
+    doctor = new Doctor(
+      buildTargets,
+      config,
+      languageClient,
+      () => httpServer,
+      tables
     )
   }
 
@@ -265,7 +274,7 @@ class MetalsLanguageServer(
     if (config.isHttpEnabled) {
       val host = "localhost"
       val port = 5031
-      val url = s"http://$host:$port"
+      var url = s"http://$host:$port"
       var render: () => String = () => ""
       var complete: HttpServerExchange => Unit = e => ()
       val server = register(
@@ -274,12 +283,14 @@ class MetalsLanguageServer(
           port,
           this,
           () => render(),
-          e => complete(e)
+          e => complete(e),
+          () => doctor.problemsHtmlPage
         )
       )
+      httpServer = Some(server)
       val newClient = new MetalsHttpClient(
         workspace,
-        url,
+        () => url,
         languageClient,
         () => server.reload(),
         charset,
@@ -292,6 +303,7 @@ class MetalsLanguageServer(
       languageClient = newClient
       LanguageClientLogger.languageClient = Some(newClient)
       server.start()
+      url = server.address
     }
   }
 
@@ -571,21 +583,25 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("workspace/executeCommand")
-  def executeCommand(params: ExecuteCommandParams): CompletableFuture[Unit] =
+  def executeCommand(params: ExecuteCommandParams): CompletableFuture[Object] =
     params.getCommand match {
       case ServerCommands.ScanWorkspaceSources() =>
         Future {
           buildTargets.sourceDirectories.foreach(indexSourceDirectory)
-        }.asJavaUnit
+        }.asJavaObject
       case ServerCommands.ImportBuild() =>
-        slowConnectToBuildServer(forceImport = true).asJavaUnit
+        slowConnectToBuildServer(forceImport = true).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
-        quickConnectToBuildServer().asJavaUnit
+        quickConnectToBuildServer().asJavaObject
+      case ServerCommands.RunDoctor() =>
+        Future {
+          doctor.executeRunDoctor()
+        }.asJavaObject
       case ServerCommands.OpenBrowser(url) =>
-        CompletableFuture.completedFuture(Urls.openBrowser(url))
+        Future.successful(Urls.openBrowser(url)).asJavaObject
       case els =>
         scribe.error(s"Unknown command '$els'")
-        CompletableFuture.completedFuture(())
+        Future.successful(()).asJavaObject
     }
 
   private def slowConnectToBuildServer(
@@ -752,6 +768,7 @@ class MetalsLanguageServer(
         JdkSources(userConfig.javaHome).foreach { zip =>
           index.addSourceJar(zip)
         }
+        doctor.check()
       }
       _ <- registerSourceDirectories(build, ids)
       dependencySources <- build.server

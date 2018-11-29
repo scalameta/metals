@@ -148,6 +148,18 @@ The Metals server is shutdown when you exit vim as usual.
 
 This step clean ups resources that are used by the server.
 
+### Run doctor
+
+To troubleshoot problems with your build workspace execute the following
+command.
+
+```vim
+:call lsc#server#call(&filetype, 'workspace/executeCommand', { 'command': 'doctor-run' }, function('abs'))
+```
+
+The callback `function('abs')` can be replaced with any function that does
+nothing.
+
 ### Manually start build import
 
 To manually start the `sbt bloopInstall` step, call the following command below.

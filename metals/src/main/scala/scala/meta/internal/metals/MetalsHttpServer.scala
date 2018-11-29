@@ -76,7 +76,8 @@ object MetalsHttpServer {
       preferredPort: Int,
       languageServer: MetalsLanguageServer,
       render: () => String,
-      complete: HttpServerExchange => Unit
+      complete: HttpServerExchange => Unit,
+      doctor: () => String
   ): MetalsHttpServer = {
     val port = freePort(host, preferredPort)
     scribe.info(s"Selected port $port")
@@ -126,21 +127,21 @@ object MetalsHttpServer {
           "/livereload",
           websocket(new LiveReloadConnectionCallback(openChannels))
         )
-        .addExactPath(
-          "/",
-          new HttpHandler {
-            override def handleRequest(exchange: HttpServerExchange): Unit = {
-              val html = render()
-              exchange.getResponseHeaders.put(Headers.CONTENT_TYPE, "text/html")
-              exchange.getResponseSender.send(html)
-            }
-          }
-        )
+        .addExactPath("/", textHtmlHandler(render))
+        .addExactPath("/doctor", textHtmlHandler(doctor))
     val httpServer = Undertow.builder
       .addHttpListener(port, host)
       .setHandler(baseHandler)
       .build()
     new MetalsHttpServer(languageServer, httpServer, openChannels)
+  }
+
+  def textHtmlHandler(render: () => String): HttpHandler = new HttpHandler {
+    override def handleRequest(exchange: HttpServerExchange): Unit = {
+      val html = render()
+      exchange.getResponseHeaders.put(Headers.CONTENT_TYPE, "text/html")
+      exchange.getResponseSender.send(html)
+    }
   }
 
   final def freePort(host: String, port: Int, maxRetries: Int = 20): Int = {

@@ -69,6 +69,25 @@ class Messages(icons: Icons) {
     command = ClientCommands.FocusDiagnostics.id
   )
 
+  object CheckDoctor {
+    def runDoctor: MessageActionItem =
+      new MessageActionItem("Run doctor to fix this problem")
+    def dismissForever: MessageActionItem =
+      new MessageActionItem("Don't show again")
+    def params(problem: String): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(problem)
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          runDoctor,
+          dismissForever
+        ).asJava
+      )
+      params
+    }
+  }
+
   object IncompatibleSbtVersion {
     def statusBar(sbt: Sbt) = MetalsStatusParams(
       s"$$(alert) Manual build import required",

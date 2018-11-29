@@ -17,7 +17,7 @@ package scala.meta.metals {
       commands ++= Seq(metalsEnable)
     )
 
-    private def isValidScalaBinaryVersion: Set[String] = Set("2.11", "2.12")
+    lazy val isSupportedScalaVersion = BuildInfo.supportedScalaVersions.toSet
 
     /** Command to automatically enable semanticdb-scalac for shell session */
     lazy val metalsEnable = Command.command(
@@ -33,10 +33,8 @@ package scala.meta.metals {
           .in(p)
           .get(extracted.structure.data)
           .toList
-        isSupportedScalaVersion = isValidScalaBinaryVersion.exists(
-          binaryVersion => projectScalaVersion.startsWith(binaryVersion)
-        )
-        if isSupportedScalaVersion
+        // Only enable SemanticDB for supported Scala versions.
+        if isSupportedScalaVersion(projectScalaVersion)
         isExplicitlyDisabled = Some(true) ==
           SettingKey[Boolean]("noMetals").in(p).get(extracted.structure.data)
         if !isExplicitlyDisabled

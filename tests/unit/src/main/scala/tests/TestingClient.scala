@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -42,6 +43,10 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     _: MetalsSlowTaskParams =>
       None
   }
+
+  override def metalsExecuteClientCommand(
+      params: ExecuteCommandParams
+  ): Unit = {}
 
   def statusBarHistory: String = {
     statusParams.asScala
