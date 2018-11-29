@@ -205,11 +205,25 @@ object BloopInstall {
   /**
    * Contents of metals.sbt file that is installed globally.
    */
-  private def globalMetalsSbt: String =
+  private def globalMetalsSbt: String = {
+    val resolvers =
+      if (BuildInfo.metalsVersion.endsWith("-SNAPSHOT")) {
+        """|resolvers ++= {
+           |  if (System.getenv("METALS_ENABLED") == "true") {
+           |    List(Resolver.sonatypeRepo("snapshots"))
+           |  } else {
+           |    List()
+           |  }
+           |}
+           |""".stripMargin
+      } else {
+        ""
+      }
     s"""|// DO NOT EDIT! This file is auto-generated.
         |// By default, this file does not do anything.
         |// If the environment variable METALS_ENABLED has the value 'true',
         |// then this file enables sbt-metals and sbt-bloop.
+        |$resolvers
         |libraryDependencies := {
         |  import Defaults.sbtPluginExtra
         |  val oldDependencies = libraryDependencies.value
@@ -229,6 +243,7 @@ object BloopInstall {
         |  }
         |}
         |""".stripMargin
+  }
 
   /**
    * First tries to destroy the process gracefully, with fallback to forcefully.
