@@ -198,15 +198,18 @@ final class MetalsHttpClient(
       "Scan workspace sources" -> ServerCommands.ScanWorkspaceSources
     ).foreach {
       case (what, id) =>
-        html.element("p")(
-          _.element(
-            "form",
-            s"action='/execute-command?command=$id' method='post'"
-          )(
-            _.text(what)
-              .text(": ")
-              .element("button", "type='submit' class='btn'")(_.text("Execute"))
-          )
+        html.element(
+          "form",
+          s"action='/execute-command?command=$id' method='post'"
+        )(
+          _.text(what)
+            .text(": ")
+            .element(
+              "button",
+              "type='submit' class='btn' style='padding:0.4em'"
+            )(
+              _.text("Execute")
+            )
         )
     }
     html
@@ -220,7 +223,7 @@ final class MetalsHttpClient(
   )(title: String, content: HtmlBuilder => Unit): HtmlBuilder = {
     html.element(
       "section",
-      "class='container with-title' style='margin-bottom: 1rem'"
+      "class='container with-title' style='margin-bottom: .75rem'"
     )(
       _.element("h2", "class='title'")(_.text(title))
         .element("div")(content)
@@ -237,10 +240,7 @@ final class MetalsHttpClient(
             .raw(
               s"""<link href="https://unpkg.com/nes.css@0.0.2/css/nes.min.css" rel="stylesheet" />"""
             )
-        ).element("body", "style='padding: 2rem'") { html =>
-          html.element("header", "style='margin-bottom: 1rem'")(
-            _.element("h1")(_.text("Metals"))
-          )
+        ).element("body", "style='padding: .75rem; font-size: 10px'") { html =>
           val section = renderSection(html) _
           section(
             "metals/status",
@@ -257,7 +257,7 @@ final class MetalsHttpClient(
               .element("section", "class='container is-dark'")(
                 _.element(
                   "pre",
-                  "style='overflow:auto;height:200px;color:white;'"
+                  "style='overflow:auto;max-height:400px;min-height:100px;color:white;'"
                 )(logsFormatted)
               )
           )
