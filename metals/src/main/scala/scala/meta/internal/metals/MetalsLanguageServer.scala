@@ -456,7 +456,7 @@ class MetalsLanguageServer(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Goto type definition is not supported.")
+      scribe.warn("textDocument/typeDefinition is not supported.")
       null
     }
 
@@ -465,14 +465,14 @@ class MetalsLanguageServer(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Goto implementation is not supported.")
+      scribe.warn("textDocument/implementation is not supported.")
       null
     }
 
   @JsonRequest("textDocument/hover")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Hover is not supported.")
+      scribe.warn("textDocument/hover is not supported.")
       null
     }
 
@@ -481,7 +481,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[Hover] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Document highlights is not supported.")
+      scribe.warn("textDocument/documentHighlight is not supported.")
       null
     }
 
@@ -490,7 +490,7 @@ class MetalsLanguageServer(
       params: DocumentSymbolParams
   ): CompletableFuture[util.List[DocumentSymbol]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Document symbols is not supported.")
+      scribe.warn("textDocument/documentSymbol is not supported.")
       null
     }
 
@@ -499,7 +499,7 @@ class MetalsLanguageServer(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Code formatting is not supported.")
+      scribe.warn("textDocument/formatting is not supported.")
       null
     }
 
@@ -508,7 +508,7 @@ class MetalsLanguageServer(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Rename symbol is not supported.")
+      scribe.warn("textDocument/rename is not supported.")
       null
     }
 
@@ -517,14 +517,14 @@ class MetalsLanguageServer(
       position: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Find references is not supported.")
+      scribe.warn("textDocument/references is not supported.")
       null
     }
 
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Completions are not supported.")
+      scribe.warn("textDocument/completion is not supported.")
       null
     }
 
@@ -533,7 +533,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Signature help is not supported.")
+      scribe.warn("textDocument/signatureHelp is not supported.")
       null
     }
 
@@ -542,7 +542,7 @@ class MetalsLanguageServer(
       params: CodeActionParams
   ): CompletableFuture[util.List[CodeAction]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Code actions are not supported.")
+      scribe.warn("textDocument/codeAction is not supported.")
       null
     }
 
@@ -551,7 +551,7 @@ class MetalsLanguageServer(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("Code lens is not supported.")
+      scribe.warn("textDocument/codeLens is not supported.")
       null
     }
 
