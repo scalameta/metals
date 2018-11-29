@@ -174,7 +174,6 @@ lazy val metals = project
 lazy val `sbt-metals` = project
   .settings(
     sbtPlugin := true,
-    publishMavenStyle := true,
     crossScalaVersions := List(V.scala212, V.scala210),
     addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % V.sbtBloop),
     sbtVersion in pluginCrossBuild := {
@@ -183,7 +182,6 @@ lazy val `sbt-metals` = project
         case "2.12" => "1.0.4"
       }
     },
-    publishMavenStyle := false,
     libraryDependencies --= libraryDependencies.in(ThisBuild).value,
     scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import")
   )
