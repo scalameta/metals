@@ -204,7 +204,12 @@ final class MetalsHttpClient(
         )(
           _.text(what)
             .text(": ")
-            .element("button", "type='submit' class='btn'")(_.text("Execute"))
+            .element(
+              "button",
+              "type='submit' class='btn' style='padding:0.4em'"
+            )(
+              _.text("Execute")
+            )
         )
     }
     html
