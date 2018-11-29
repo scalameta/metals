@@ -10,7 +10,7 @@ import scala.meta.internal.metals.BuildTool.Sbt
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
  */
-object Messages extends Messages(Icons.octicons)
+object Messages extends Messages(Icons.vscode)
 
 class Messages(icons: Icons) {
   val BloopInstallProgress = MetalsSlowTaskParams("sbt bloopInstall")
