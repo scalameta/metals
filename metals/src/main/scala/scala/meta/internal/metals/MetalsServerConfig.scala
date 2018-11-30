@@ -28,6 +28,7 @@ final case class MetalsServerConfig(
     isNoInitialized: Boolean =
       MetalsServerConfig.binaryOption("metals.no-initialized"),
     isHttpEnabled: Boolean = MetalsServerConfig.binaryOption("metals.http"),
+    isVerbose: Boolean = MetalsServerConfig.binaryOption("metals.verbose"),
     icons: Icons = Icons.default
 ) {
   override def toString: String =
