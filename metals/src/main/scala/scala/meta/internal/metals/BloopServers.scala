@@ -114,6 +114,11 @@ final class BloopServers(
     port
   }
 
+  private def bspCommand: Array[String] = {
+    if (config.isVerbose) Array("bsp", "--verbose")
+    else Array("bsp")
+  }
+
   private def callBSP(): Future[(BloopSocket, Cancelable)] = {
     if (config.bloopProtocol.isNamedPipe) callNamedPipeBsp()
     if (config.bloopProtocol.isTcp) callTcpBsp()
@@ -122,8 +127,7 @@ final class BloopServers(
 
   private def callNamedPipeBsp(): Future[(BloopSocket, Cancelable)] = {
     val pipeName = "\\\\.\\pipe\\metals" + Random.nextInt()
-    val args = Array(
-      "bsp",
+    val args = bspCommand ++ Array(
       "--protocol",
       "local",
       "--pipe-name",
@@ -145,8 +149,7 @@ final class BloopServers(
   private def callTcpBsp(): Future[(BloopSocket, Cancelable)] = {
     val host = "127.0.0.1"
     val port = randomPort(host)
-    val args = Array(
-      "bsp",
+    val args = bspCommand ++ Array(
       "--protocol",
       "tcp",
       "--host",
@@ -173,9 +176,7 @@ final class BloopServers(
 
   private def callUnixBsp(): Future[(BloopSocket, Cancelable)] = {
     val socket = BloopServers.newSocketFile()
-    val args = Array(
-      "bsp",
-      "--verbose",
+    val args = bspCommand ++ Array(
       "--protocol",
       "local",
       "--socket",
