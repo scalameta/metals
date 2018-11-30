@@ -48,6 +48,9 @@ class MetalsLanguageServer(
     progressTicks: ProgressTicks = ProgressTicks.braille
 ) extends Cancelable {
 
+  private val cancelables = new MutableCancelable()
+  override def cancel(): Unit = cancelables.cancel()
+
   private implicit val executionContext: ExecutionContextExecutorService = ec
   private val sh = Executors.newSingleThreadScheduledExecutor()
   private val fingerprints = new MutableMd5Fingerprints
@@ -60,9 +63,6 @@ class MetalsLanguageServer(
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
   private var userConfig = UserConfiguration()
-
-  private val cancelables = new MutableCancelable()
-  override def cancel(): Unit = cancelables.cancel()
 
   // These can't be instantiated until we know the workspace root directory.
   private var languageClient: MetalsLanguageClient = _
@@ -87,6 +87,11 @@ class MetalsLanguageServer(
     statusBar = new StatusBar(() => languageClient, time, progressTicks)
     embedded = register(new Embedded(config.icons, statusBar))
     LanguageClientLogger.languageClient = Some(client)
+    cancelables
+      .add(() => languageClient.shutdown())
+      .add(() => {
+        LanguageClientLogger.languageClient = None
+      })
   }
 
   def register[T <: Cancelable](cancelable: T): T = {
@@ -191,12 +196,7 @@ class MetalsLanguageServer(
         )
       }
       new InitializeResult(capabilities)
-    }.logError("initialize")
-      .transform(identity, e => {
-        cancel()
-        e
-      })
-      .asJava
+    }.logError("initialize").asJava
   }
 
   def isUnsupportedJavaVersion: Boolean =
@@ -268,12 +268,14 @@ class MetalsLanguageServer(
       val url = s"http://$host:$port"
       var render: () => String = () => ""
       var complete: HttpServerExchange => Unit = e => ()
-      val server = MetalsHttpServer(
-        host,
-        port,
-        this,
-        () => render(),
-        e => complete(e)
+      val server = register(
+        MetalsHttpServer(
+          host,
+          port,
+          this,
+          () => render(),
+          e => complete(e)
+        )
       )
       val newClient = new MetalsHttpClient(
         workspace,
@@ -290,7 +292,6 @@ class MetalsLanguageServer(
       languageClient = newClient
       LanguageClientLogger.languageClient = Some(newClient)
       server.start()
-      cancelables.add(Cancelable(() => server.stop()))
     }
   }
 
@@ -325,28 +326,19 @@ class MetalsLanguageServer(
   @JsonRequest("shutdown")
   def shutdown(): CompletableFuture[Unit] = {
     val promise = Promise[Unit]()
+    // Ensure we only run `shutdown` at most once and that `exit` waits for the
+    // `shutdown` promise to complete.
     if (shutdownPromise.compareAndSet(null, promise)) {
+      scribe.info("shutting down Metals")
       try {
-        LanguageClientLogger.languageClient = None
-        scribe.info("Shutting down...")
-        try {
-          cancelables.cancel()
-        } catch {
-          case NonFatal(e) =>
-            scribe.error("cancellation error", e)
-        }
-        sh.shutdownNow()
-        buildServer match {
-          case Some(value) =>
-            value
-              .shutdown()
-              .logErrorAndContinue("shutting down build server")
-              .asJava
-          case None => Future.successful(()).asJava
-        }
+        cancelables.cancel()
+      } catch {
+        case NonFatal(e) =>
+          scribe.error("cancellation error", e)
       } finally {
-        promise.trySuccess(())
+        promise.success(())
       }
+      promise.future.asJava
     } else {
       Future.successful(()).asJava
     }
@@ -355,6 +347,9 @@ class MetalsLanguageServer(
   @JsonNotification("exit")
   def exit(): Unit = {
     shutdown()
+    // Ensure that `shutdown` has completed before killing the process.
+    // Some clients may send `exit` immediately after `shutdown` causing
+    // the build server to get killed before it can clean up resources.
     shutdownPromise.get().future.onComplete { _ =>
       System.exit(0)
     }
