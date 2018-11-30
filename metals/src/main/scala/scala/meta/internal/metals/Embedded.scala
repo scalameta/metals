@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import com.geirsson.coursiersmall
 import java.net.URLClassLoader
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.meta.io.AbsolutePath
@@ -18,7 +19,9 @@ import scala.util.control.NonFatal
 final class Embedded(icons: Icons, statusBar: StatusBar) extends Cancelable {
 
   override def cancel(): Unit = {
-    bloopJars.foreach(_.close())
+    if (isBloopJars.get()) {
+      bloopJars.foreach(_.close())
+    }
   }
 
   /**
@@ -39,7 +42,9 @@ final class Embedded(icons: Icons, statusBar: StatusBar) extends Cancelable {
   /**
    * Fetches jars for bloop-frontend and creates a new orphan classloader.
    */
+  val isBloopJars = new AtomicBoolean(false)
   lazy val bloopJars: Option[URLClassLoader] = {
+    isBloopJars.set(true)
     val promise = Promise[Unit]()
     statusBar.trackFuture(s"${icons.sync}Downloading Bloop", promise.future)
     try {

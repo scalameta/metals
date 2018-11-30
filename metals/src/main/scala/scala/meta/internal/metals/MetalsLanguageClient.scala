@@ -29,6 +29,8 @@ trait MetalsLanguageClient extends LanguageClient {
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult]
 
+  def shutdown(): Unit = {}
+
 }
 
 /**
