@@ -1,10 +1,12 @@
 package tests
 
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -34,7 +36,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     extends MetalsLanguageClient {
   val diagnostics = TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
   val diagnosticsCount = TrieMap.empty[AbsolutePath, AtomicInteger]
-  val messageRequests = new ConcurrentLinkedQueue[String]()
+  val messageRequests = new ConcurrentLinkedDeque[String]()
   val showMessages = new ConcurrentLinkedQueue[MessageParams]()
   val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
   val logMessages = new ConcurrentLinkedQueue[MessageParams]()
@@ -42,6 +44,10 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     _: MetalsSlowTaskParams =>
       None
   }
+
+  override def metalsExecuteClientCommand(
+      params: ExecuteCommandParams
+  ): Unit = {}
 
   def statusBarHistory: String = {
     statusParams.asScala
@@ -145,13 +151,15 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       params: ShowMessageRequestParams
   ): CompletableFuture[MessageActionItem] =
     CompletableFuture.completedFuture {
-      messageRequests.add(params.getMessage)
+      messageRequests.addLast(params.getMessage)
       if (params == ReimportSbtProject.params) {
         ReimportSbtProject.yes
       } else if (params == ImportBuildViaBloop.params) {
         ImportBuildViaBloop.yes
       } else if (params == Only212Navigation.params("2.11.12")) {
         Only212Navigation.dismissForever
+      } else if (CheckDoctor.isDoctor(params)) {
+        null
       } else {
         throw new IllegalArgumentException(params.toString)
       }
@@ -163,7 +171,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {
     CompletableFuture.completedFuture {
-      messageRequests.add(params.message)
+      messageRequests.addLast(params.message)
       slowTaskHandler(params) match {
         case Some(result) =>
           result

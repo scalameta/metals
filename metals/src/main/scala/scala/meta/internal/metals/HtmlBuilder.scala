@@ -16,6 +16,30 @@ final class HtmlBuilder() {
   def render: String = sb.toString
   override def toString: String = render
 
+  def section(title: String, content: HtmlBuilder => Unit): HtmlBuilder = {
+    element(
+      "section",
+      "class='container with-title' style='margin-bottom: .75rem'"
+    )(
+      _.element("h2", "class='title'")(_.text(title))
+        .element("div")(content)
+    )
+  }
+  def page(title: String, raw: String = "")(
+      body: HtmlBuilder => Unit
+  ): HtmlBuilder = {
+    element("html")(
+      _.element("head")(
+        _.element("title")(_.text(title))
+          .raw("""<meta charset="UTF-8">""")
+          .raw(raw)
+          .raw(
+            s"""<link href="https://unpkg.com/nes.css@0.0.2/css/nes.min.css" rel="stylesheet" />"""
+          )
+      ).element("body", "style='padding: .75rem; font-size: 10px'")(body)
+    )
+  }
+
   def submitButton(query: String, title: String): HtmlBuilder =
     element("form", s"action='/complete?$query' method='post'")(
       _.element("button", "type='submit' class='btn'")(_.text(title))
@@ -44,6 +68,12 @@ final class HtmlBuilder() {
   def path(p: AbsolutePath): HtmlBuilder = {
     raw("</br>").text(p.toString())
   }
+
+  def call(fn: HtmlBuilder => Unit): HtmlBuilder = {
+    fn(this)
+    this
+  }
+
   def append(params: MessageParams): HtmlBuilder = {
     element("font", s"color='${color(params.getType)}'")(
       _.text(params.getType.toString.toLowerCase())

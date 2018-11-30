@@ -3,7 +3,7 @@ inThisBuild(
   List(
     version ~= { dynVer =>
       if (sys.env.contains("CI")) dynVer
-      else "0.2.0-SNAPSHOT" // only for local publishng
+      else "0.2.3-SNAPSHOT" // only for local publishng
     },
     scalaVersion := V.scala212,
     crossScalaVersions := List(V.scala212),
@@ -93,6 +93,12 @@ lazy val V = new {
   val bsp = "2.0.0-M1"
   val sbtBloop = "121807cc"
   val bloop = "1.0.0+369-a2222610"
+  // List of supported Scala versions in SemanticDB. Needs to be manually updated
+  // for every SemanticDB upgrade.
+  def supportedScalaVersions = Seq(
+    "2.12.7", "2.12.6", "2.12.5", "2.12.4", "2.11.12", "2.11.11", "2.11.10",
+    "2.11.9"
+  )
 }
 
 skip.in(publish) := true
@@ -164,6 +170,7 @@ lazy val metals = project
       "sbtBloopVersion" -> V.sbtBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
+      "supportedScalaVersions" -> V.supportedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212
     )
@@ -187,6 +194,7 @@ lazy val `sbt-metals` = project
     buildInfoPackage := "scala.meta.internal.sbtmetals",
     buildInfoKeys := Seq[BuildInfoKey](
       "metalsVersion" -> version.value,
+      "supportedScalaVersions" -> V.supportedScalaVersions,
       "scalametaVersion" -> V.scalameta
     )
   )

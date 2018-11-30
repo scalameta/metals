@@ -22,6 +22,8 @@ final case class MetalsServerConfig(
     fileWatcher: FileWatcherConfig = FileWatcherConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
     slowTask: SlowTaskConfig = SlowTaskConfig.default,
+    executeClientCommand: ExecuteClientCommandConfig =
+      ExecuteClientCommandConfig.default,
     showMessage: ShowMessageConfig = ShowMessageConfig.default,
     showMessageRequest: ShowMessageRequestConfig =
       ShowMessageRequestConfig.default,
@@ -37,6 +39,7 @@ final case class MetalsServerConfig(
       s"file-watcher=$fileWatcher",
       s"status-bar=$statusBar",
       s"slow-task=$slowTask",
+      s"execute-client-command=$executeClientCommand",
       s"show-message=$showMessage",
       s"show-message-request=$showMessageRequest",
       s"no-initialized=$isNoInitialized",
@@ -57,7 +60,8 @@ object MetalsServerConfig {
         base.copy(
           statusBar = StatusBarConfig.on,
           slowTask = SlowTaskConfig.on,
-          icons = Icons.vscode
+          icons = Icons.vscode,
+          executeClientCommand = ExecuteClientCommandConfig.on
         )
       case "vim-lsc" =>
         base.copy(
