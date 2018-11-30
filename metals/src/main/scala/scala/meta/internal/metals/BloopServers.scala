@@ -175,6 +175,7 @@ final class BloopServers(
     val socket = BloopServers.newSocketFile()
     val args = Array(
       "bsp",
+      "--verbose",
       "--protocol",
       "local",
       "--socket",
@@ -208,9 +209,9 @@ final class BloopServers(
   }
 
   private def callBloopMain(args: Array[String]): Cancelable = {
-    scribe.info(s"running 'bloop ${args.mkString(" ")}'")
     val logger = MetalsLogger.newBspLogger(workspace)
     if (bloopCommandLineIsInstalled(workspace)) {
+      scribe.info(s"running installed 'bloop ${args.mkString(" ")}'")
       val bspProcess = Process(
         Array("python", embedded.bloopPy.toString()) ++ args,
         cwd = workspace.toFile
@@ -222,6 +223,7 @@ final class BloopServers(
       )
       Cancelable(() => bspProcess.destroy())
     } else {
+      scribe.info(s"running embedded 'bloop ${args.mkString(" ")}'")
       embedded.bloopJars match {
         case Some(classloaders) =>
           val cancelMain = Promise[java.lang.Boolean]()
@@ -262,14 +264,16 @@ final class BloopServers(
       classOf[Properties],
       classOf[CompletableFuture[java.lang.Boolean]]
     )
-    val ps = System.out
+    // both use err. out is reserved to metals.
+    val outStream = System.err
+    val errStream = System.err
     val exitCode = reflectiveMain.invoke(
       null, // static method has no caller object.
       args,
       workspace.toNIO,
       new InputStream { override def read(): Int = -1 },
-      ps,
-      ps,
+      outStream,
+      errStream,
       new Properties(),
       cancelMain
     )
