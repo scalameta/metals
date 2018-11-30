@@ -192,25 +192,20 @@ final class MetalsHttpClient(
   private val globalLog = GlobalTrace.globalLog
 
   private def serverCommands(html: HtmlBuilder): HtmlBuilder = {
-    List(
-      "Import build" -> ServerCommands.ImportBuild,
-      "Connect to build server" -> ServerCommands.ConnectBuildServer,
-      "Scan workspace sources" -> ServerCommands.ScanWorkspaceSources
-    ).foreach {
-      case (what, id) =>
-        html.element(
-          "form",
-          s"action='/execute-command?command=$id' method='post'"
-        )(
-          _.text(what)
-            .text(": ")
-            .element(
-              "button",
-              "type='submit' class='btn' style='padding:0.4em'"
-            )(
-              _.text("Execute")
-            )
-        )
+    ServerCommands.all.foreach { command =>
+      html.element(
+        "form",
+        s"action='/execute-command?command=${command.id}' method='post'"
+      )(
+        _.text(command.title)
+          .text(": ")
+          .element(
+            "button",
+            "type='submit' class='btn' style='padding:0.4em'"
+          )(
+            _.text("Execute")
+          )
+      )
     }
     html
   }
