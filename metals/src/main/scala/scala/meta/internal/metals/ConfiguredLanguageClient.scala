@@ -28,7 +28,7 @@ final class ConfiguredLanguageClient(
     extends MetalsLanguageClient {
 
   override def shutdown(): Unit = {
-    underlying = SilentLanguageClient
+    underlying = NoopLanguageClient
   }
 
   override def registerCapability(
