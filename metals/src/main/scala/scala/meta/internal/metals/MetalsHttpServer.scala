@@ -32,7 +32,8 @@ final class MetalsHttpServer private (
     languageServer: MetalsLanguageServer,
     server: Undertow,
     openChannels: mutable.Set[WebSocketChannel]
-) {
+) extends Cancelable {
+  override def cancel(): Unit = stop()
   def address: String =
     server.getListenerInfo.asScala.headOption match {
       case Some(listener) =>
