@@ -209,9 +209,9 @@ final class BloopServers(
   }
 
   private def callBloopMain(args: Array[String]): Cancelable = {
-    scribe.info(s"running 'bloop ${args.mkString(" ")}'")
     val logger = MetalsLogger.newBspLogger(workspace)
     if (bloopCommandLineIsInstalled(workspace)) {
+      scribe.info(s"running installed 'bloop ${args.mkString(" ")}'")
       val bspProcess = Process(
         Array("python", embedded.bloopPy.toString()) ++ args,
         cwd = workspace.toFile
@@ -223,6 +223,7 @@ final class BloopServers(
       )
       Cancelable(() => bspProcess.destroy())
     } else {
+      scribe.info(s"running embedded 'bloop ${args.mkString(" ")}'")
       embedded.bloopJars match {
         case Some(classloaders) =>
           val cancelMain = Promise[java.lang.Boolean]()
