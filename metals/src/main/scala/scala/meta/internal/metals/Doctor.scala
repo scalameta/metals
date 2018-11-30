@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.util.concurrent.TimeUnit
 import org.eclipse.lsp4j.ExecuteCommandParams
 import scala.concurrent.ExecutionContext
+import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
@@ -110,18 +111,12 @@ final class Doctor(
     if (isMissingSemanticdb.isEmpty) {
       None
     } else if (isAllProjects) {
-      Some(
-        "SemanticDB is not configured for this build, navigation will work anywhere."
-      )
+      Some(CheckDoctor.allProjectsMisconfigured)
     } else if (count == 1) {
       val name = isMissingSemanticdb.head.info.getDisplayName
-      Some(
-        s"Navigation will not work in project '$name' since SemanticDB is not configured."
-      )
+      Some(CheckDoctor.singleMisconfiguredProject(name))
     } else {
-      Some(
-        s"SemanticDB is not configured for $count projects for which navigation will not work."
-      )
+      Some(CheckDoctor.multipleMisconfiguredProjects(count))
     }
   }
 

@@ -202,6 +202,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
   }
 
   testAsync("supported-scala") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """
@@ -233,6 +234,10 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         expectError = true
       )
       _ = assertStatus(_.isInstalled)
+      _ = assertNoDiff(
+        client.messageRequests.peekLast(),
+        CheckDoctor.multipleMisconfiguredProjects(6)
+      )
       _ <- Future.sequence(
         ('a' to 'e')
           .map(project => s"$project/src/main/scala/a/A.scala")
