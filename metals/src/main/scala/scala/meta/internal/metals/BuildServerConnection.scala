@@ -9,6 +9,7 @@ import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -35,6 +36,7 @@ case class BuildServerConnection(
       _ <- server.buildShutdown().asScala
     } yield {
       server.onBuildExit()
+      // Cancel pending compilations on our side, this is not needed for Bloop.
       cancel()
     }
   }
@@ -48,7 +50,12 @@ case class BuildServerConnection(
     register(server.buildTargetCompile(params))
   }
 
-  override def cancel(): Unit = ongoingRequests.cancel()
+  private val cancelled = new AtomicBoolean(false)
+  override def cancel(): Unit = {
+    if (cancelled.compareAndSet(false, true)) {
+      ongoingRequests.cancel()
+    }
+  }
 }
 
 object BuildServerConnection {
