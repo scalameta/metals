@@ -30,11 +30,11 @@ object Icons {
     }
   }
   case object unicode extends Icons {
-    override def rocket: String = "🚀"
-    override def sync: String = "🔄"
-    override def alert: String = "⚠️"
-    override def info: String = "ℹ️"
-    override def check: String = "✅"
+    override def rocket: String = "🚀 "
+    override def sync: String = "🔄 "
+    override def alert: String = "⚠️ "
+    override def info: String = "ℹ️ "
+    override def check: String = "✅ "
   }
   case object none extends Icons {
     override def rocket: String = ""
@@ -51,7 +51,7 @@ object Icons {
     override def check: String = "$(check) "
   }
   case object atom extends Icons {
-    private def span(id: String) = s"<span class='icon icon-$id'></span>"
+    private def span(id: String) = s"<span class='icon icon-$id'></span> "
     override def rocket: String = span("rocket")
     override def sync: String = span("sync")
     override def alert: String = span("alert")
