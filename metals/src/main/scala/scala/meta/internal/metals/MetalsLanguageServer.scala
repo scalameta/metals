@@ -845,9 +845,15 @@ class MetalsLanguageServer(
             status.getStatusCode match {
               case StatusCode.OK =>
                 statusBar.addMessage(
-                  s"${config.icons.check}Compiled$name in $elapsed"
+                  s"${config.icons.check}Compiled$name ($elapsed)"
                 )
               case StatusCode.ERROR =>
+                statusBar.addMessage(
+                  MetalsStatusParams(
+                    s"${config.icons.alert}Compile error ($elapsed)",
+                    command = ClientCommands.FocusDiagnostics.id
+                  )
+                )
               case StatusCode.CANCELLED =>
             }
           }
