@@ -88,7 +88,7 @@
         "title": "Rescan sources"
       },
       {
-        "command": "metals.doctor-open",
+        "command": "metals.doctor-run",
         "category": "Metals",
         "title": "Run Doctor"
       }
