@@ -12,13 +12,3 @@ libraryDependencies ++= List(
   "com.lihaoyi" %% "sourcecode" % "0.1.4",
   "org.scalatest" %% "scalatest" % "3.0.5"
 )
-
-// Outdated Scala version
-lazy val myPlugin = project.settings(scalaVersion := "2.10.7")
-
-
-
-
-
-
-

@@ -140,7 +140,7 @@ function startServer(context: ExtensionContext, javaHome: string) {
       }
       return doctor;
     }
-    ["build-import", "build-connect", "sources-scan", "doctor-open"].forEach(
+    ["build-import", "build-connect", "sources-scan", "doctor-run"].forEach(
       command => {
         const cancel = commands.registerCommand("metals." + command, async () =>
           client.sendRequest(ExecuteCommandRequest.type, { command: command })
@@ -167,6 +167,7 @@ function startServer(context: ExtensionContext, javaHome: string) {
       commands.executeCommand("workbench.action.problems.focus");
     });
 
+    // Handle the metals/executeClientCommand extension notification.
     client.onNotification(ExecuteClientCommand.type, params => {
       if (params.command == "metals-run-doctor") {
         const html = params.arguments[0];
@@ -175,6 +176,7 @@ function startServer(context: ExtensionContext, javaHome: string) {
           panel.webview.html = html;
         }
       }
+      // Ignore other commands since they are less important.
     });
 
     // The server updates the client with a brief text message about what

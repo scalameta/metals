@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 final case class ExecuteClientCommandConfig(value: String) {
   def isOff: Boolean = value == "off"
   def isOn: Boolean = value == "on"
-  def isLogMessage: Boolean = value == "log-message"
 }
 object ExecuteClientCommandConfig {
   def on = new ExecuteClientCommandConfig("on")
