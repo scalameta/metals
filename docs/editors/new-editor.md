@@ -79,6 +79,13 @@ example, in vim-lsc the `window/logMessage` notification is always displayed in
 the UI so `-Dmetals.status-bar=log-message` can be configured to direct
 higher-priority messages to the logs.
 
+### `-Dmetals.verbose`
+
+Possible values:
+
+- `off` (default): don't log unnecessary details.
+- `on`: emit very detailed logs, should only be used when debugging problems.
+
 ### `-Dmetals.file-watcher`
 
 Possible values:
