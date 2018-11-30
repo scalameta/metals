@@ -175,6 +175,7 @@ final class BloopServers(
     val socket = BloopServers.newSocketFile()
     val args = Array(
       "bsp",
+      "--verbose",
       "--protocol",
       "local",
       "--socket",
@@ -262,14 +263,16 @@ final class BloopServers(
       classOf[Properties],
       classOf[CompletableFuture[java.lang.Boolean]]
     )
-    val ps = System.out
+    // both use err. out is reserved to metals.
+    val outStream = System.err
+    val errStream = System.err
     val exitCode = reflectiveMain.invoke(
       null, // static method has no caller object.
       args,
       workspace.toNIO,
       new InputStream { override def read(): Int = -1 },
-      ps,
-      ps,
+      outStream,
+      errStream,
       new Properties(),
       cancelMain
     )
