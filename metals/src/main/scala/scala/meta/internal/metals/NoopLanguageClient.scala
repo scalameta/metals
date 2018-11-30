@@ -12,7 +12,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  * Used during shutdown procedure to ensure no status bar updates
  * or log messages are published during shutdown.
  */
-object SilentLanguageClient extends MetalsLanguageClient {
+object NoopLanguageClient extends MetalsLanguageClient {
   override def metalsStatus(params: MetalsStatusParams): Unit = ()
   override def metalsSlowTask(
       params: MetalsSlowTaskParams

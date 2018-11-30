@@ -340,12 +340,13 @@ class MetalsLanguageServer(
       }
       promise.future.asJava
     } else {
-      Future.successful(()).asJava
+      shutdownPromise.get().future.asJava
     }
   }
 
   @JsonNotification("exit")
   def exit(): Unit = {
+    // `shutdown` is idempotent, we can trigger it as often as we like.
     shutdown()
     // Ensure that `shutdown` has completed before killing the process.
     // Some clients may send `exit` immediately after `shutdown` causing

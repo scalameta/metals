@@ -32,11 +32,12 @@ case class BuildServerConnection(
 
   /** Run build/shutdown procedure */
   def shutdown(): Future[Unit] = {
-    cancel()
     for {
       _ <- server.buildShutdown().asScala
     } yield {
       server.onBuildExit()
+      // Cancel pending compilations on our side, this is not needed for Bloop.
+      cancel()
     }
   }
 
