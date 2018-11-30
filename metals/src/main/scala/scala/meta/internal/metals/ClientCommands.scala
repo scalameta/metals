@@ -5,6 +5,14 @@ package scala.meta.internal.metals
  */
 object ClientCommands {
 
+  val RunDoctor = Command(
+    "metals-run-doctor",
+    "Run Doctor",
+    """Focus on a window displaying troubleshooting help from the Metals doctor.""".stripMargin,
+    arguments =
+      """`string`, the HTML to display in the focused window.""".stripMargin
+  )
+
   val ToggleLogs = Command(
     "metals-logs-toggle",
     "Toggle logs",
@@ -23,4 +31,9 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  def all: List[Command] = List(
+    RunDoctor,
+    ToggleLogs,
+    FocusDiagnostics
+  )
 }

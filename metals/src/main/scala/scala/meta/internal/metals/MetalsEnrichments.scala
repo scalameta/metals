@@ -90,6 +90,8 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   implicit class XtensionScalaFuture[A](future: Future[A]) {
     def asJava: CompletableFuture[A] =
       FutureConverters.toJava(future).toCompletableFuture
+    def asJavaObject: CompletableFuture[Object] =
+      future.asJava.asInstanceOf[CompletableFuture[Object]]
     def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
       future.ignoreValue.asJava
 

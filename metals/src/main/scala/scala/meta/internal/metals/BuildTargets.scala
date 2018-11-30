@@ -31,6 +31,12 @@ final class BuildTargets() {
   def sourceDirectories: Iterable[AbsolutePath] =
     sourceDirectoriesToBuildTarget.keys
 
+  def all: List[ScalaTarget] =
+    for {
+      (id, target) <- buildTargetInfo.toList
+      scalac <- scalacTargetInfo.get(id)
+    } yield ScalaTarget(target, scalac)
+
   def addSourceDirectory(
       directory: AbsolutePath,
       buildTarget: BuildTargetIdentifier

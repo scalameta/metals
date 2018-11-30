@@ -8,6 +8,7 @@ import ch.epfl.scala.bsp4j.PublishDiagnosticsParams
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import org.eclipse.lsp4j
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
@@ -79,6 +80,9 @@ object BspCli {
   }
   private def loggingLangaugeClient: MetalsLanguageClient =
     new MetalsLanguageClient {
+      override def metalsExecuteClientCommand(
+          params: ExecuteCommandParams
+      ): Unit = {}
       override def metalsStatus(params: MetalsStatusParams): Unit = ()
       override def metalsSlowTask(
           params: MetalsSlowTaskParams

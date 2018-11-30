@@ -1,4 +1,5 @@
 import { RequestType, NotificationType } from "vscode-jsonrpc";
+import { ExecuteCommandParams } from "vscode-languageclient";
 
 "use strict";
 
@@ -15,6 +16,11 @@ export interface MetalsSlowTaskParams {
 }
 export interface MetalsSlowTaskResult {
   cancel: boolean;
+}
+export namespace ExecuteClientCommand {
+  export const type = new NotificationType<ExecuteCommandParams, void>(
+    "metals/executeClientCommand"
+  );
 }
 
 export namespace MetalsStatus {
