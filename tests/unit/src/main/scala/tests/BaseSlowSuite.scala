@@ -6,6 +6,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopProtocol
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.FileWatcherConfig
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.io.AbsolutePath
@@ -39,8 +40,11 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       .resolve(name.replace(' ', '-'))
     Files.createDirectories(workspace.toNIO)
     val buffers = Buffers()
-    val config = MetalsServerConfig.default
-      .copy(bloopProtocol = protocol, fileWatcher = FileWatcherConfig.auto)
+    val config = MetalsServerConfig.default.copy(
+      bloopProtocol = protocol,
+      fileWatcher = FileWatcherConfig.auto,
+      executeClientCommand = ExecuteClientCommandConfig.on
+    )
     client = new TestingClient(workspace, buffers)
     server = new TestingServer(workspace, client, buffers, config)(ex)
   }
