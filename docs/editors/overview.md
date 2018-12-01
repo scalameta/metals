@@ -21,7 +21,7 @@ functionality.
 <tbody>
 <tr>
   <td>Visual Studio Code</td>
-  <td align=center>Compile from source</td>
+  <td align=center>Single click</td>
   <td align=center>Built-in</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -60,14 +60,14 @@ functionality.
 
 ## Installation
 
-**Compile from source**: installing Metals requires building an editor plugin
-from source.
-
 **Single click**: Metals is easy to install and requires minimal configuration
 out-of-the-box.
 
 **Few steps**: installing Metals requires a few custom steps and minimal
 configuration to work.
+
+**Compile from source**: installing Metals requires building an editor plugin
+from source.
 
 ## Build import
 
