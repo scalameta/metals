@@ -24,29 +24,41 @@ object SbtDetectionSuite extends BaseSuite {
   )
 
   checkSbt(
-    "sbt.version",
-    """|/project/build.properties
-       |sbt.version = 0.13
-       |/build.sbt
-       |lazy val a = project
-       |""".stripMargin
-  )
-
-  checkSbt(
     "build.scala",
     """|/project/build.properties
        |sbt.version = 0.13
-       |/project/Build.scala
+       |/project/build.scala
        |import sbt._
        |""".stripMargin
   )
 
   checkSbt(
-    "gradle-property",
+    "sbt.version",
     """|/project/build.properties
-       |gradle.version = 0.13
-       |/build.sbt
-       |lazy val a = project
+       |sbt.version = 0.13
+       |""".stripMargin
+  )
+
+  checkNotSbt(
+    "no-properties",
+    """|/project/build.scala
+       |import sbt._
+       |/project/plugins.sbt
+       |addSbtPlugin(plugin)
+       |""".stripMargin
+  )
+
+  checkNotSbt(
+    "mill",
+    """|/mill.sc
+       |import mill._
+       |""".stripMargin
+  )
+
+  checkNotSbt(
+    "gradle",
+    """|/build.gradle
+       |import gradle._
        |""".stripMargin
   )
 
