@@ -8,7 +8,7 @@
     "language server",
     "scalameta"
   ],
-  "version": "0.2.1",
+  "version": "0.2.5",
   "publisher": "scalameta",
   "contributors": [
     {
@@ -51,7 +51,7 @@
       "properties": {
         "metals.serverVersion": {
           "type": "string",
-          "default": "0.2.1",
+          "default": "0.2.5",
           "description": "The version of the Metals server artifact. Requires reloading the window. Change only if you know what you're doing"
         },
         "metals.serverProperties": {
@@ -62,7 +62,7 @@
         "metals.javaHome": {
           "type": "string",
           "default": "",
-          "description": "Optional path to the Java home. Defaults to the environment variable JAVA_HOME with fallback to the system property 'java.home'"
+          "description": "Optional path to the Java home directory. Defaults to the environment variable JAVA_HOME computed by the `find-java-home` npm package."
         }
       }
     },
