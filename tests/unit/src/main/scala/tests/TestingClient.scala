@@ -40,6 +40,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   val showMessages = new ConcurrentLinkedQueue[MessageParams]()
   val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
   val logMessages = new ConcurrentLinkedQueue[MessageParams]()
+  val clientCommands = new ConcurrentLinkedDeque[ExecuteCommandParams]()
   var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
     _: MetalsSlowTaskParams =>
       None
@@ -47,8 +48,12 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
-  ): Unit = {}
-
+  ): Unit = {
+    clientCommands.addLast(params)
+  }
+  def workspaceClientCommands: String = {
+    clientCommands.asScala.map(_.getCommand).mkString("\n")
+  }
   def statusBarHistory: String = {
     statusParams.asScala
       .map { params =>
@@ -159,7 +164,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       } else if (params == Only212Navigation.params("2.11.12")) {
         Only212Navigation.dismissForever
       } else if (CheckDoctor.isDoctor(params)) {
-        null
+        CheckDoctor.moreInformation
       } else {
         throw new IllegalArgumentException(params.toString)
       }

@@ -59,7 +59,7 @@ final class Doctor(
           import scala.meta.internal.metals.Messages.CheckDoctor
           val params = CheckDoctor.params(problem)
           languageClient.showMessageRequest(params).asScala.foreach { item =>
-            if (item == CheckDoctor.runDoctor) {
+            if (item == CheckDoctor.moreInformation) {
               executeRunDoctor()
             } else if (item == CheckDoctor.dismissForever) {
               notification.dismissForever()
@@ -90,12 +90,14 @@ final class Doctor(
   ): String = {
     if (!isSemanticdbEnabled) {
       if (isSupportedScalaVersion(scalaVersion)) {
-        s"Enable the SemanticDB compiler plugin."
+        s"Run 'Build import' to enable code navigation."
       } else if (isSupportedScalaBinaryVersion(scalaVersion)) {
-        s"Upgrade to Scala ${recommendedVersion(scalaVersion)}."
+        s"Upgrade to Scala ${recommendedVersion(scalaVersion)} and " +
+          s"run 'Build import' to enable code navigation."
       } else {
-        s"This compiler version is not supported. Consider upgrading to " +
-          s"either Scala ${BuildInfo.scala212} or ${BuildInfo.scala211}."
+        s"Code navigation is not supported for this compiler version, upgrade to " +
+          s"Scala ${BuildInfo.scala212} or ${BuildInfo.scala211} and " +
+          s"run 'Build import' to enable code navigation."
       }
     } else if (!isLatestScalaVersion(scalaVersion)) {
       s"Upgrade to Scala ${recommendedVersion(scalaVersion)} to enjoy the latest compiler improvements."
@@ -128,16 +130,25 @@ final class Doctor(
   }
 
   private def buildTargetsTable(html: HtmlBuilder): Unit = {
-    html.element("table")(
-      _.element("thead")(
-        _.element("tr")(
-          _.element("td")(_.text("Build target"))
-            .element("td")(_.text("Scala"))
-            .element("td")(_.text("SemanticDB"))
-            .element("td")(_.text("Recommendation"))
+    html
+      .element("p")(
+        _.text(
+          "These are the installed build targets for this workspace. " +
+            "One build target corresponds to one classpath. For example, normally one sbt project maps to " +
+            "two build targets: main and test."
         )
-      ).element("tbody")(buildTargetRows)
-    )
+      )
+      .element("table")(
+        _.element("thead")(
+          _.element("tr")(
+            _.element("th")(_.text("Build target"))
+              .element("th")(_.text("Scala"))
+              .element("th")(_.text("Diagnostics"))
+              .element("th")(_.text("Goto definition"))
+              .element("th")(_.text("Recommendation"))
+          )
+        ).element("tbody")(buildTargetRows)
+      )
   }
 
   private def buildTargetRows(html: HtmlBuilder): Unit = {
@@ -146,16 +157,18 @@ final class Doctor(
       val scalaVersion =
         scala.fold("<unknown>")(_.getScalaVersion)
       val isSemanticdbEnabled = target.isSemanticdbEnabled
-      val semanticdb: String =
+      val navigation: String =
         if (isSemanticdbEnabled) {
-          s"${Icons.unicode.check}"
+          Icons.unicode.check
         } else {
-          s"${Icons.unicode.alert} Not enabled."
+          Icons.unicode.alert
         }
+      val center = "style='text-align: center'"
       html.element("tr")(
         _.element("td")(_.text(target.info.getDisplayName))
           .element("td")(_.text(scalaVersion))
-          .element("td")(_.text(semanticdb))
+          .element("td", center)(_.text(Icons.unicode.check))
+          .element("td", center)(_.text(navigation))
           .element("td")(
             _.text(recommendation(scalaVersion, isSemanticdbEnabled))
           )
