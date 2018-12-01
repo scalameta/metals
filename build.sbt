@@ -70,7 +70,8 @@ inThisBuild(
           s"-D$configKey=${props.getProperty(configKey)}"
         }
         .mkString(" ")
-    }
+    },
+    resolvers += Resolver.bintrayRepo("scalacenter", "releases")
   )
 )
 
@@ -90,9 +91,9 @@ lazy val V = new {
   val scala212 = "2.12.7"
   val scalameta = "4.1.0"
   val semanticdb = "4.1.0"
-  val bsp = "2.0.0-M1"
+  val bsp = "2.0.0-M2"
   val sbtBloop = "121807cc"
-  val bloop = "1.0.0+369-a2222610"
+  val bloop = "1.0.0+417-35327239"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions = Seq(
@@ -115,7 +116,6 @@ lazy val mtags = project
 lazy val metals = project
   .settings(
     fork.in(Compile, run) := true,
-    resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
     // As a general rule of thumb, we try to keep Scala dependencies to a minimum.
     libraryDependencies ++= List(
       // =================
