@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import scala.meta.io.AbsolutePath
 import MetalsEnrichments._
+import java.util.Properties
 
 /**
  * Detects what build tool is used in this workspace.
@@ -24,15 +25,17 @@ final class BuildTools(workspace: AbsolutePath) {
       hasJsonFile
     }
   }
+  // Returns true if there's a build.sbt file or project/build.properties with sbt.version
   def isSbt: Boolean = {
     workspace.resolve("build.sbt").isFile || {
-      workspace.resolve("project").isDirectory &&
-      workspace.resolve("project").resolve("build.properties").isFile && {
-        val ls = Files.list(workspace.resolve("project").toNIO)
-        val hasSbtFile =
-          ls.iterator().asScala.exists(_.getFileName.toString.endsWith(".sbt"))
-        ls.close()
-        hasSbtFile
+      val buildProperties =
+        workspace.resolve("project").resolve("build.properties")
+      buildProperties.isFile && {
+        val props = new Properties()
+        val in = Files.newInputStream(buildProperties.toNIO)
+        try props.load(in)
+        finally in.close()
+        props.getProperty("sbt.version") != null
       }
     }
   }
