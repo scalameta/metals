@@ -75,11 +75,12 @@ class Messages(icons: Icons) {
     def singleMisconfiguredProject(name: String): String =
       s"Navigation will not work in project '$name' since SemanticDB is not configured."
     def multipleMisconfiguredProjects(count: Int): String =
-      s"SemanticDB is not configured for $count projects for which navigation will not work."
+      s"Code navigation will not work for $count build targets in this workspace. " +
+        s"Select 'More information' to learn how to fix this problem."
     def isDoctor(params: ShowMessageRequestParams): Boolean =
-      params.getActions.asScala.contains(runDoctor)
-    def runDoctor: MessageActionItem =
-      new MessageActionItem("Run doctor to fix this problem")
+      params.getActions.asScala.contains(moreInformation)
+    def moreInformation: MessageActionItem =
+      new MessageActionItem("More information")
     def dismissForever: MessageActionItem =
       new MessageActionItem("Don't show again")
     def params(problem: String): ShowMessageRequestParams = {
@@ -88,7 +89,7 @@ class Messages(icons: Icons) {
       params.setType(MessageType.Warning)
       params.setActions(
         List(
-          runDoctor,
+          moreInformation,
           dismissForever
         ).asJava
       )
