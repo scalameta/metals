@@ -185,7 +185,8 @@ case class QuickBuild(
       sbt = None,
       test = None,
       platform = Some(C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None)),
-      resolution = Some(C.Resolution(resolution))
+      resolution = Some(C.Resolution(resolution)),
+      resources = None
     )
   }
 }
