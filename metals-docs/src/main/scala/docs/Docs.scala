@@ -11,6 +11,7 @@ object Docs {
       .withSiteVariables(
         Map(
           "VERSION" -> V.metalsVersion,
+          "LOCAL_VERSION" -> V.localSnapshotVersion,
           "BLOOP_VERSION" -> V.bloopVersion,
           "SCALAMETA_VERSION" -> V.scalametaVersion,
           "SCALA211_VERSION" -> V.scala211,

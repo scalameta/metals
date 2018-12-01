@@ -1,9 +1,10 @@
 import java.io.File
+def localSnapshotVersion = "0.2.3-SNAPSHOT"
 inThisBuild(
   List(
     version ~= { dynVer =>
       if (sys.env.contains("CI")) dynVer
-      else "0.2.3-SNAPSHOT" // only for local publishng
+      else localSnapshotVersion // only for local publishng
     },
     scalaVersion := V.scala212,
     crossScalaVersions := List(V.scala212),
@@ -164,6 +165,7 @@ lazy val metals = project
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
+      "localSnapshotVersion" -> localSnapshotVersion,
       "metalsVersion" -> version.value,
       "bspVersion" -> V.bsp,
       "bloopVersion" -> V.bloop,
