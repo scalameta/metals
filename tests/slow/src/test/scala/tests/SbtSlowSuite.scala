@@ -2,6 +2,7 @@ package tests
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.SbtDigest
@@ -263,6 +264,10 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
           |package a/*<no symbol>*/
           |object A/*<no symbol>*/ // 2.10.7
           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceClientCommands,
+        ClientCommands.RunDoctor.id
       )
     } yield ()
   }
