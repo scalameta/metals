@@ -25,15 +25,18 @@ final class BuildTools(workspace: AbsolutePath) {
       hasJsonFile
     }
   }
+  // Returns true if there's a build.sbt file or project/build.properties with sbt.version
   def isSbt: Boolean = {
-    val buildProperties =
-      workspace.resolve("project").resolve("build.properties")
-    buildProperties.isFile && {
-      val props = new Properties()
-      val in = Files.newInputStream(buildProperties.toNIO)
-      try props.load(in)
-      finally in.close()
-      props.getProperty("sbt.version") != null
+    workspace.resolve("build.sbt").isFile || {
+      val buildProperties =
+        workspace.resolve("project").resolve("build.properties")
+      buildProperties.isFile && {
+        val props = new Properties()
+        val in = Files.newInputStream(buildProperties.toNIO)
+        try props.load(in)
+        finally in.close()
+        props.getProperty("sbt.version") != null
+      }
     }
   }
   def isMill: Boolean = workspace.resolve("build.sc").isFile
