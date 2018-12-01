@@ -16,7 +16,7 @@ object SbtDetectionSuite extends BaseSuite {
     }
   }
 
-  checkNotSbt(
+  checkSbt(
     "build.sbt",
     """|/build.sbt
        |lazy val a = project
@@ -41,7 +41,7 @@ object SbtDetectionSuite extends BaseSuite {
        |""".stripMargin
   )
 
-  checkNotSbt(
+  checkSbt(
     "gradle-property",
     """|/project/build.properties
        |gradle.version = 0.13
