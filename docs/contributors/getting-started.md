@@ -63,37 +63,22 @@ Some functionality is best to manually test through an editor. A common workflow
 while iterating on a new feature is to run `publishLocal` and then open an
 editor in a small demo build.
 
-Use `tail -f` to watch logs from a running Metals server.
-
-```sh
-tail -f .metals/metals.log
-```
-
 ### Visual Studio Code
 
-First build the VS Code extension from source
+Install the Metals extension from the Marketplace, search for "Metals".
 
-```sh
-git clone https://github.com/scalameta/metals-vscode.git
-cd metals-vscode
-npm install
-code .
-```
+[Click here to install the Metals VS Code plugin](vscode:extension/scalameta.metals)
 
-Next, install the Scala syntax package
-[`scala-lang.scala`](https://marketplace.visualstudio.com/items?itemName=scala-lang.scala).
-This plugin is required to start the extension.
+Next, update the "Server version" setting under preferences to point to the
+version you published locally via `sbt publishLocal`.
 
-Now you can start the plugin debugging mode via `Debug > Start debugging` or
-pressing `F5`. Open the a small demo project (for example `test-workspace` in
-the Metals repo) and try to edit some file like `*.scala` files.
+![Metals server version setting](../assets/vscode-server-version.png)
 
-To see the LSP logs to the user open "Output" (macOS `Shift + Cmd + U`) and
-select the "Metals" channel.
+When you make changes in the Metals Scala codebase
 
-When you make changes in the Metals Scala codebase, re-run `publishLocal` in the
-Metals sbt build, quit VS Code in the extension host and restart the extension
-with `F5` (or `Debug > Start debugging`).
+- run `sbt publishLocal`
+- execute the "Metals: Restart server" command in Visual Studio Code (via
+  command palette)
 
 ### Vim
 
@@ -119,3 +104,40 @@ new-metals-vim && vim build.sbt
 
 When you make changes in the Metals Scala codebase, quit vim and re-run
 `new-metals-vim && vim build.sbt`.
+
+### Workspace logs
+
+Metals logs workspace-specific information to the
+`$WORKSPACE/.metals/metals.log` file.
+
+```sh
+tail -f .metals/metals.log
+```
+
+These logs contain information that may be relevant for regular users.
+
+### JSON-RPC trace
+
+To see trace of incoming/outgoing JSON communication with the text editor or
+build server, create empty files in your machine cache directory.
+
+```sh
+# macOS
+touch -f ~/Library/Caches/org.scalameta.metals/lsp.trace.json # text editor
+touch -f ~/Library/Caches/org.scalameta.metals/bsp.trace.json # build server
+# Linux
+touch ~/.cache/metals/lsp.trace.json # text editor
+touch ~/.cache/metals/bsp.trace.json # build server
+```
+
+Next when you start Metals, watch the logs with `tail -f`.
+
+```sh
+# macOS
+tail -f ~/Library/Caches/org.scalameta.metals/lsp.trace.json
+# Linux
+tail -f ~/.cache/metals/lsp.trace.json
+```
+
+The traces are very verbose so it is recommended to delete the files if you are
+not interested in debugging the JSON communication.
