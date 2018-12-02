@@ -6,7 +6,7 @@ package scala.meta.internal.metals
 object ClientCommands {
 
   val RunDoctor = Command(
-    "metals-run-doctor",
+    "metals-doctor-run",
     "Run Doctor",
     """Focus on a window displaying troubleshooting help from the Metals doctor.""".stripMargin,
     arguments =
