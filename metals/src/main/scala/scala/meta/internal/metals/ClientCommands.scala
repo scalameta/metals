@@ -7,7 +7,7 @@ object ClientCommands {
 
   val RunDoctor = Command(
     "metals-doctor-run",
-    "Run Doctor",
+    "Run doctor",
     """Focus on a window displaying troubleshooting help from the Metals doctor.""".stripMargin,
     arguments =
       """`string`, the HTML to display in the focused window.""".stripMargin
