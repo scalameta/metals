@@ -17,9 +17,10 @@ You will need the following applications installed:
 
 ## Project structure
 
-- `metals` contains a Scala implementation of a language server based on
-  Scalameta.
-- `mtags` source file indexer for Java and Scala.
+- `metals` the main project with sources of the Metals language server.
+- `mtags` source file indexer for Java and Scala, it's a dependency of the
+  `metals` project but kept in a separate module so it can be used by other
+  projects like [Metabrowse](https://github.com/scalameta/metabrowse).
 - `tests/input` example Scala code that is used as testing data for unit tests.
 - `tests/unit` moderately fast-running unit tests.
 - `tests/slow` slow integration tests.
@@ -30,6 +31,8 @@ You will need the following applications installed:
 The improvement you are looking to contribute may belong in a separate
 repository:
 
+- [scalameta/metals-vscode](https://github.com/scalameta/metals-vscode/): the
+  Visual Studio Code extension for Metals.
 - [scalameta/scalameta](https://github.com/scalameta/scalameta/): SemanticDB,
   parsing, tokenization.
 - [scalacenter/bloop](https://github.com/scalacenter/bloop/): build server for
@@ -102,8 +105,8 @@ cd test-workspace # any directory you want to manually test Metals
 new-metals-vim && vim build.sbt
 ```
 
-When you make changes in the Metals Scala codebase, quit vim and re-run
-`new-metals-vim && vim build.sbt`.
+When you make changes in the Metals Scala codebase, run `sbt publishLocal`, quit
+vim and re-run `new-metals-vim && vim build.sbt`.
 
 ### Workspace logs
 
