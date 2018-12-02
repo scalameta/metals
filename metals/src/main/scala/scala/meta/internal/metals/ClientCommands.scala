@@ -6,8 +6,8 @@ package scala.meta.internal.metals
 object ClientCommands {
 
   val RunDoctor = Command(
-    "metals-run-doctor",
-    "Run Doctor",
+    "metals-doctor-run",
+    "Run doctor",
     """Focus on a window displaying troubleshooting help from the Metals doctor.""".stripMargin,
     arguments =
       """`string`, the HTML to display in the focused window.""".stripMargin
