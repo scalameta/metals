@@ -18,7 +18,7 @@ First, install the following plugins
 
 - [`natebosch/vim-lsc`](https://github.com/natebosch/vim-lsc/): Language Server
   Protocol client to communicate with the Metals language server.
-- [`derekqyatt/vim-scala`](https://github.com/derekwyatt/vim-scala): for syntax
+- [`derekwyatt/vim-scala`](https://github.com/derekwyatt/vim-scala): for syntax
   highlighting Scala and sbt source files.
 
 If you use [`vim-plug`](https://github.com/junegunn/vim-plug)
