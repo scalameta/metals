@@ -43,14 +43,14 @@ class TextEditorModifier extends StringModifier {
        |Click "Import changes" and that will restart the `sbt bloopInstall` step. Select
        |"Don't show again" if you prefer to manually trigger build import.
        |
-       |To manually trigger a build import, execute the "Import build" command by
-       |opening the "Command palette" (`Cmd + Shift + P`) and search for "import build".
+       |To manually trigger a build import, execute the "Import build" command through
+       |the command palette (`Cmd + Shift + P`).
        |
        |![Import build command](assets/$editor-import-build-command.png)
        |
        |## Run doctor
        |
-       |Execute the "Run Doctor" from the command palette to troubleshoot potential
+       |Execute the "Run Doctor" through the command palette to troubleshoot potential
        |configuration problems in your workspace.
        |
        |![Run doctor command](assets/$editor-run-doctor.png)

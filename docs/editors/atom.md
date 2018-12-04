@@ -3,7 +3,7 @@ id: atom
 title: Atom
 ---
 
-Metals work with Atom thanks to the
+Metals works with Atom thanks to the
 [`ide-scala`](https://atom.io/packages/ide-scala) package.
 
 ![Atom demo](assets/atom-demo.gif)
@@ -19,6 +19,8 @@ Install the package by searching for "ide-scala" or run the following command.
 ```sh
 apm install ide-scala
 ```
+
+[![Install Metals package](https://img.shields.io/badge/install-metals-blue.png)](atom://settings-view/show-package?package=ide-scala)
 
 ```scala mdoc:editor:atom
 
