@@ -64,7 +64,8 @@ Go to the root directory of an sbt build, open `build.sbt` and navigate to any
 `*.scala` source file.
 
 When Metals encounters a new sbt build it will prompt you to "Import build via
-Bloop". Select `1` and press enter.
+Bloop". Select `1` and press enter. You don't need Bloop installed on your
+machine to run this step.
 
 ![Import via Bloop](../assets/vim-import-via-bloop.gif)
 
