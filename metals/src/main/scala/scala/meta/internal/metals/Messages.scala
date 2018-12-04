@@ -70,13 +70,14 @@ class Messages(icons: Icons) {
   )
 
   object CheckDoctor {
-    val allProjectsMisconfigured =
-      "SemanticDB is not configured for this build, navigation will work anywhere."
+    def moreInfo: String =
+      " Select 'More information' to learn how to fix this problem.."
+    def allProjectsMisconfigured: String =
+      "Navigation will not work for this build due to mis-configuration." + moreInfo
     def singleMisconfiguredProject(name: String): String =
-      s"Navigation will not work in project '$name' since SemanticDB is not configured."
+      s"Navigation will not work in project '$name' due to mis-configuration." + moreInfo
     def multipleMisconfiguredProjects(count: Int): String =
-      s"Code navigation will not work for $count build targets in this workspace. " +
-        s"Select 'More information' to learn how to fix this problem."
+      s"Code navigation will not work for $count build targets in this workspace due to mis-configuration. " + moreInfo
     def isDoctor(params: ShowMessageRequestParams): Boolean =
       params.getActions.asScala.contains(moreInformation)
     def moreInformation: MessageActionItem =
