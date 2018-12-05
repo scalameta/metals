@@ -3,8 +3,6 @@ package scala.meta.internal.metals
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.MessageType
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
