@@ -218,8 +218,8 @@ final class MetalsHttpClient(
   private def nextId(): String = ids.getAndIncrement().toString
 
   def renderHtml: String = {
-    val head = s"""<script src="${url()}/livereload.js"></script>"""
-    val result = new HtmlBuilder().page("Metals", head) { html =>
+    val livereload = Urls.livereload(url())
+    val result = new HtmlBuilder().page("Metals", livereload) { html =>
       html
         .section(
           "metals/status",

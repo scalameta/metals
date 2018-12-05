@@ -13,6 +13,14 @@ object ClientCommands {
       """`string`, the HTML to display in the focused window.""".stripMargin
   )
 
+  val ReloadDoctor = Command(
+    "metals-doctor-reload",
+    "Reload doctor",
+    """Reload the HTML contents of an open Doctor window, if any. Should be ignored if there is no open doctor window.""".stripMargin,
+    arguments =
+      """`string`, the HTML to display in the focused window.""".stripMargin
+  )
+
   val ToggleLogs = Command(
     "metals-logs-toggle",
     "Toggle logs",

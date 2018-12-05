@@ -265,10 +265,28 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
           |object A/*<no symbol>*/ // 2.10.7
           |""".stripMargin
       )
-      _ = assertNoDiff(
-        client.workspaceClientCommands,
-        ClientCommands.RunDoctor.id
-      )
+      _ = {
+        assertNoDiff(
+          client.workspaceClientCommands,
+          List(
+            ClientCommands.ReloadDoctor.id,
+            ClientCommands.RunDoctor.id
+          ).mkString("\n")
+        )
+        client.showMessages.clear()
+        client.clientCommands.clear()
+      }
+      _ <- server.didSave("build.sbt")(_ => """scalaVersion := "2.12.7" """)
+      _ = {
+        assertNoDiff(
+          client.workspaceClientCommands,
+          ClientCommands.ReloadDoctor.id
+        )
+        assertNoDiff(
+          client.workspaceShowMessages,
+          CheckDoctor.problemsFixed.getMessage
+        )
+      }
     } yield ()
   }
 
