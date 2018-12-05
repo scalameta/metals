@@ -70,6 +70,11 @@ class Messages(icons: Icons) {
   )
 
   object CheckDoctor {
+    def problemsFixed: MessageParams =
+      new MessageParams(
+        MessageType.Info,
+        "Build is correctly configured now, navigation will work for all build targets."
+      )
     def moreInfo: String =
       " Select 'More information' to learn how to fix this problem.."
     def allProjectsMisconfigured: String =

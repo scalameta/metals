@@ -284,7 +284,7 @@ class MetalsLanguageServer(
           this,
           () => render(),
           e => complete(e),
-          () => doctor.problemsHtmlPage
+          () => doctor.problemsHtmlPage(url)
         )
       )
       httpServer = Some(server)
