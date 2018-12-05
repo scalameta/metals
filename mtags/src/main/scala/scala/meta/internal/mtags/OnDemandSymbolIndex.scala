@@ -10,6 +10,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.util.control.NonFatal
 
 /**
  * An implementation of GlobalSymbolIndex with fast indexing and low memory usage.
@@ -54,7 +55,12 @@ final case class OnDemandSymbolIndex(
       FileIO.withJarFileSystem(jar, create = false) { root =>
         ListFiles.foreach(root) { source =>
           if (source.toLanguage.isScala) {
-            addSourceFile(source, None)
+            try {
+              addSourceFile(source, None)
+            } catch {
+              case NonFatal(e) =>
+                onError(IndexError(source, e))
+            }
           }
         }
       }
