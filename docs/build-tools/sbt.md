@@ -6,7 +6,26 @@ title: sbt
 sbt is most commonly used build tool in the Scala community works with Metals
 out-of-the-box.
 
+## Automatic installation
+
+Metals is able to automatically import sbt builds. When you open Metals in a new
+directory it will ask you to "Install via Bloop".
+
+![Import build](../assets/vscode-import-via-bloop.png)
+
+## Install without Bloop
+
+sbt does not implement the Metals uses the
+[Build Server Protocol (BSP)](https://github.com/scalacenter/bsp/blob/master/docs/bsp.md)
+that Metals uses to learn the directory structure of your project and its
+library dependencies. sbt does not implement BSP so Metals is not able to import
+sbt builds without Bloop.
+
 ## Manual installation
+
+> It's recommended to use automatic installation over manual installation since
+> manual installation requires several independent steps that makes it harder to
+> stay up-to-date with the latest Metals version.
 
 Instead of using automatic build import, you can manually install sbt-metals and
 generate the Bloop JSON files directly from your sbt shell. This approach may
