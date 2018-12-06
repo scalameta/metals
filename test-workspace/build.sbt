@@ -12,3 +12,4 @@ libraryDependencies ++= List(
   "com.lihaoyi" %% "sourcecode" % "0.1.4",
   "org.scalatest" %% "scalatest" % "3.0.5"
 )
+

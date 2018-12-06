@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.ExecuteCommandParams
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Messages.CheckDoctor
@@ -18,11 +19,13 @@ final class Doctor(
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables
 )(implicit ec: ExecutionContext) {
+  private val hasProblems = new AtomicBoolean(false)
 
   /** Returns a full HTML page for the HTTP client. */
-  def problemsHtmlPage: String = {
+  def problemsHtmlPage(url: String): String = {
+    val livereload = Urls.livereload(url)
     new HtmlBuilder()
-      .page("Metals Doctor") { html =>
+      .page("Metals Doctor", livereload) { html =>
         html.section("Build targets", buildTargetsTable)
       }
       .render
@@ -30,17 +33,38 @@ final class Doctor(
 
   /** Executes the "Run doctor" server command. */
   def executeRunDoctor(): Unit = {
+    executeDoctor(ClientCommands.RunDoctor, server => {
+      Urls.openBrowser(server.address + "/doctor")
+    })
+  }
+
+  /** Executes the "Reload doctor" server command. */
+  private def executeReloadDoctor(summary: Option[String]): Unit = {
+    val hasProblemsNow = summary.isDefined
+    if (hasProblems.get() && !hasProblemsNow) {
+      hasProblems.set(false)
+      languageClient.showMessage(CheckDoctor.problemsFixed)
+    }
+    executeDoctor(ClientCommands.ReloadDoctor, server => {
+      server.reload()
+    })
+  }
+
+  private def executeDoctor(
+      clientCommand: Command,
+      onServer: MetalsHttpServer => Unit
+  ): Unit = {
     if (config.executeClientCommand.isOn) {
       val html = buildTargetsHtml()
       val params = new ExecuteCommandParams(
-        ClientCommands.RunDoctor.id,
+        clientCommand.id,
         List(html: AnyRef).asJava
       )
       languageClient.metalsExecuteClientCommand(params)
     } else {
       httpServer() match {
         case Some(server) =>
-          Urls.openBrowser(server.address + "/doctor")
+          onServer(server)
         case None =>
           scribe.warn(
             "Unable to run doctor. To fix this problem enable -Dmetals.http=true"
@@ -51,13 +75,16 @@ final class Doctor(
 
   /** Checks if there are any potential problems and if any, notifies the user. */
   def check(): Unit = {
-    problemSummary match {
+    val summary = problemSummary
+    executeReloadDoctor(summary)
+    summary match {
       case Some(problem) =>
         val notification = tables.dismissedNotifications.DoctorWarning
         if (!notification.isDismissed) {
           notification.dismiss(2, TimeUnit.MINUTES)
           import scala.meta.internal.metals.Messages.CheckDoctor
           val params = CheckDoctor.params(problem)
+          hasProblems.set(true)
           languageClient.showMessageRequest(params).asScala.foreach { item =>
             if (item == CheckDoctor.moreInformation) {
               executeRunDoctor()
