@@ -20,7 +20,7 @@ Install the package by searching for "ide-scala" or run the following command.
 apm install ide-scala
 ```
 
-[![Install Metals package](https://img.shields.io/badge/install-metals-blue.png)](atom://settings-view/show-package?package=ide-scala)
+[![Install Metals package](https://img.shields.io/badge/metals-atom-brightgreen.png)](atom://settings-view/show-package?package=ide-scala)
 
 ```scala mdoc:editor:atom
 
