@@ -15,7 +15,7 @@ directory it will ask you to "Install via Bloop".
 
 ## Install without Bloop
 
-sbt does not implement the Metals uses the
+sbt does not implement the
 [Build Server Protocol (BSP)](https://github.com/scalacenter/bsp/blob/master/docs/bsp.md)
 that Metals uses to learn the directory structure of your project and its
 library dependencies. sbt does not implement BSP so Metals is not able to import
