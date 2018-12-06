@@ -48,7 +48,8 @@ class Messages(icons: Icons) {
     def params: ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        "sbt build detected, would you like to import via Bloop?"
+        "sbt build detected, would you like to import via Bloop? " +
+          "You don't need Bloop installed on your machine to run this step."
       )
       params.setType(MessageType.Info)
       params.setActions(
