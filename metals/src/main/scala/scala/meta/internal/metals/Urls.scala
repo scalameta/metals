@@ -11,6 +11,9 @@ object Urls {
   def docs(page: String): String =
     s"https://scalameta.org/metals/docs/$page.html"
 
+  def livereload(baseUrl: String): String =
+    s"""<script src="$baseUrl/livereload.js"></script>"""
+
   /**
    * Opens the user's default browser at the provided URL.
    */
