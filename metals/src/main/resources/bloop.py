@@ -1038,10 +1038,21 @@ def main():
             java_cmd = ["java"] + cmd_args + ["-jar", server_location]
             check_call(java_cmd)
         except CalledProcessError as e:
-            print("Bloop server in %s failed to run." % server_location)
-            print("Command: %s" % e.cmd)
-            print("Return code: %d" % e.returncode)
-            sys.exit(e.returncode)
+            # The binary may be executable directly under certain package managers such as Nix
+            # Try running it without `java` and ignore previous error if so
+            try:
+                if cmd_args:
+                    print("Java arguments are ignored, " + server_location + " deemed to be a binary instead of a jar.")
+                check_call([server_location])
+            except CallProcessError as e2:
+                print("Bloop server in %s failed to run." % server_location)
+                print("First invocation attempt: %s" % e.cmd)
+                print("-> Return code: %d" % e.returncode)
+                print("Second invocation attempt: %s" % e2.cmd)
+                print("-> Return code: %d" % e2.returncode)
+
+                # Only use the return code of the first attempt
+                sys.exit(e.returncode)
         except KeyboardInterrupt as e:
             sys.exit(0)
 

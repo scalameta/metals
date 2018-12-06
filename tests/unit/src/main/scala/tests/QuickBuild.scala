@@ -67,7 +67,7 @@ case class QuickBuild(
   def withId(id: String): QuickBuild =
     QuickBuild(
       id,
-      if (scalaVersion == null) Properties.versionNumberString
+      if (scalaVersion == null) V.scala212
       else scalaVersion,
       orEmpty(libraryDependencies),
       orEmpty(compilerPlugins),
