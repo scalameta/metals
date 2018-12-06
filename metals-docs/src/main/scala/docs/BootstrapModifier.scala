@@ -16,12 +16,12 @@ class BootstrapModifier extends StringModifier {
       case Array(binary, client) =>
         s"""
            |Next, build a `$binary` binary using the
-           |[Coursier](https://github.com/coursier/coursier) (v1.1+) command-line interface.
+           |[Coursier](https://github.com/coursier/coursier) command-line interface.
            |
            |```sh
-           |# Build bootstrap binary with coursier
-           |curl -L -o coursier https://git.io/coursier &&
-           |    chmod +x coursier &&
+           |# Make sure to use coursier v1.1.0-M9 or newer.
+           |curl -L -o coursier https://git.io/coursier
+           |chmod +x coursier
            |./coursier bootstrap \\
            |  --java-opt -XX:+UseG1GC \\
            |  --java-opt -XX:+UseStringDeduplication  \\
