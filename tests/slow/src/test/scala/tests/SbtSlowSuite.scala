@@ -7,6 +7,7 @@ import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.SbtDigest
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.{BuildInfo => V}
 
 object SbtSlowSuite extends BaseSlowSuite("import") {
 
@@ -206,32 +207,36 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |scalaVersion := "2.12.7"
-          |lazy val a = project.settings(scalaVersion := "2.12.4")
-          |lazy val b = project.settings(scalaVersion := "2.12.3")
-          |lazy val c = project.settings(scalaVersion := "2.11.12")
-          |lazy val d = project.settings(scalaVersion := "2.11.8")
-          |lazy val e = project.settings(scalaVersion := "2.10.7")
-          |/a/src/main/scala/a/A.scala
-          |package a
-          |object A // 2.12.4
-          |/b/src/main/scala/a/A.scala
-          |package a // 2.12.3
-          |object A
-          |/c/src/main/scala/a/A.scala
-          |package a
-          |object A // 2.11.12
-          |/d/src/main/scala/a/A.scala
-          |package a
-          |object A // 2.11.8
-          |/e/src/main/scala/a/A.scala
-          |package a
-          |object A // 2.10.7
-          |""".stripMargin,
+        s"""
+           |/project/build.properties
+           |sbt.version=1.2.6
+           |/build.sbt
+           |scalaVersion := "2.12.7"
+           |lazy val a = project.settings(scalaVersion := "2.12.4")
+           |lazy val b = project.settings(scalaVersion := "2.12.3")
+           |lazy val c = project.settings(scalaVersion := "2.11.12")
+           |lazy val d = project.settings(scalaVersion := "2.11.8")
+           |lazy val e = project.settings(scalaVersion := "2.10.7")
+           |lazy val f = project.settings(scalaVersion := "${V.scala212}")
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |object A // 2.12.4
+           |/b/src/main/scala/a/A.scala
+           |package a // 2.12.3
+           |object A
+           |/c/src/main/scala/a/A.scala
+           |package a
+           |object A // 2.11.12
+           |/d/src/main/scala/a/A.scala
+           |package a
+           |object A // 2.11.8
+           |/e/src/main/scala/a/A.scala
+           |package a
+           |object A // 2.10.7
+           |/f/src/main/scala/a/A.scala
+           |package a
+           |object A // ${V.scala212}
+           |""".stripMargin,
         expectError = true
       )
       _ = assertStatus(_.isInstalled)
@@ -240,30 +245,33 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         CheckDoctor.multipleMisconfiguredProjects(6)
       )
       _ <- Future.sequence(
-        ('a' to 'e')
+        ('a' to 'f')
           .map(project => s"$project/src/main/scala/a/A.scala")
           .map(file => server.didOpen(file))
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        """
-          |/a/src/main/scala/a/A.scala
-          |package a
-          |object A/*L1*/ // 2.12.4
-          |/b/src/main/scala/a/A.scala
-          |package a/*<no symbol>*/ // 2.12.3
-          |object A/*<no symbol>*/
-          |/c/src/main/scala/a/A.scala
-          |package a
-          |object A/*L1*/ // 2.11.12
-          |/d/src/main/scala/a/A.scala
-          |package a/*<no symbol>*/
-          |object A/*<no symbol>*/ // 2.11.8
-          |/e/src/main/scala/a/A.scala
-          |package a/*<no symbol>*/
-          |object A/*<no symbol>*/ // 2.10.7
-          |""".stripMargin
+        s"""
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |object A/*L1*/ // 2.12.4
+           |/b/src/main/scala/a/A.scala
+           |package a/*<no symbol>*/ // 2.12.3
+           |object A/*<no symbol>*/
+           |/c/src/main/scala/a/A.scala
+           |package a
+           |object A/*L1*/ // 2.11.12
+           |/d/src/main/scala/a/A.scala
+           |package a/*<no symbol>*/
+           |object A/*<no symbol>*/ // 2.11.8
+           |/e/src/main/scala/a/A.scala
+           |package a/*<no symbol>*/
+           |object A/*<no symbol>*/ // 2.10.7
+           |/f/src/main/scala/a/A.scala
+           |package a
+           |object A/*L1*/ // ${V.scala212}
+           |""".stripMargin
       )
       _ = {
         assertNoDiff(
