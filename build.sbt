@@ -93,8 +93,8 @@ lazy val V = new {
   val scalameta = "4.1.0"
   val semanticdb = "4.1.0"
   val bsp = "2.0.0-M2"
-  val sbtBloop = "121807cc"
-  val bloop = "1.0.0+417-35327239"
+  val sbtBloop = "1.1.1"
+  val bloop = "1.1.1"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions = Seq(
@@ -277,7 +277,7 @@ lazy val docs = project
     mainClass.in(Compile) := Some("docs.Docs"),
     libraryDependencies ++= List(
       "org.jsoup" % "jsoup" % "1.11.3",
-      "com.geirsson" % "mdoc" % "0.6.0" cross CrossVersion.full
+      "com.geirsson" % "mdoc" % "0.6.1" cross CrossVersion.full
     )
   )
   .dependsOn(metals)

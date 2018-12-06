@@ -13,7 +13,7 @@ title: Visual Studio Code
 
 Install the Metals extension from the Marketplace, search for "Metals".
 
-[![Install Metals extension](https://img.shields.io/badge/install-metals-blue.png)](vscode:extension/scalameta.metals)
+[![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals)
 
 Next, open a directory containing a `build.sbt` file. The extension activates
 when a `*.scala` or `*.sbt` file is opened.
