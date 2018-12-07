@@ -26,16 +26,19 @@ class Messages(icons: Icons) {
 
   def dontShowAgain: MessageActionItem =
     new MessageActionItem("Don't show again")
-  object ReimportSbtProject {
+  def notNow: MessageActionItem =
+    new MessageActionItem("Not now")
+  object ImportBuildChanges {
     def yes: MessageActionItem =
       new MessageActionItem("Import changes")
     def params: ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
-      params.setMessage("sbt projects need to be imported")
+      params.setMessage("sbt build needs to be re-imported")
       params.setType(MessageType.Info)
       params.setActions(
         List(
           yes,
+          notNow,
           dontShowAgain
         ).asJava
       )
@@ -43,18 +46,18 @@ class Messages(icons: Icons) {
     }
   }
 
-  object ImportBuildViaBloop {
-    def yes = new MessageActionItem("Import build via Bloop")
+  object ImportBuild {
+    def yes = new MessageActionItem("Import build")
     def params: ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        "sbt build detected, would you like to import via Bloop? " +
-          "You don't need Bloop installed on your machine to run this step."
+        "New sbt workspace detected, would you like to import the build?"
       )
       params.setType(MessageType.Info)
       params.setActions(
         List(
           yes,
+          notNow,
           dontShowAgain
         ).asJava
       )

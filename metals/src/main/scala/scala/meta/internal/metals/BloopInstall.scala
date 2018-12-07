@@ -152,23 +152,23 @@ final class BloopInstall(
     tables.sbtDigests.setStatus(digest, Status.Requested)
     if (buildTools.isBloop) {
       languageClient
-        .showMessageRequest(ReimportSbtProject.params)
+        .showMessageRequest(ImportBuildChanges.params)
         .asScala
         .map { item =>
           if (item == dontShowAgain) {
             notification.dismissForever()
           }
-          Confirmation.fromBoolean(item == ReimportSbtProject.yes)
+          Confirmation.fromBoolean(item == ImportBuildChanges.yes)
         }
     } else {
       languageClient
-        .showMessageRequest(ImportBuildViaBloop.params)
+        .showMessageRequest(ImportBuild.params)
         .asScala
         .map { item =>
           if (item == dontShowAgain) {
             notification.dismissForever()
           }
-          Confirmation.fromBoolean(item == ImportBuildViaBloop.yes)
+          Confirmation.fromBoolean(item == ImportBuild.yes)
         }
     }
   }

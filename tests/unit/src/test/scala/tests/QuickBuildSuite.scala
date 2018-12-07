@@ -52,25 +52,24 @@ object QuickBuildSuite extends BaseSlowSuite("quick-build") {
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        """
-          |/a/src/main/scala/a/A.scala
-          |package a
-          |import com.geirsson.coursiersmall._
-          |import scala.util.Success/*Try.scala:239*/
-          |object A/*L3*/ {
-          |  val settings/*L4*/ = new Settings/*Settings.scala:16*/()
-          |}
-          |/b/src/main/scala/b/B.scala
-          |package b
-          |import a._
-          |import scala.util.Success/*Try.scala:239*/
-          |import org.scalatest._
-          |class B/*L4*/ extends FunSuite/*FunSuite.scala:1559*/ {
-          |  test/*FunSuiteLike.scala:119*/("") {
-          |    println/*Predef.scala:392*/(A/*A.scala:3*/.settings/*A.scala:4*/)
-          |  }
-          |}
-        """.stripMargin
+        """|/a/src/main/scala/a/A.scala
+           |package a
+           |import com.geirsson.coursiersmall._
+           |import scala.util.Success/*Try.scala*/
+           |object A/*L3*/ {
+           |  val settings/*L4*/ = new Settings/*Settings.scala*/()
+           |}
+           |/b/src/main/scala/b/B.scala
+           |package b
+           |import a._
+           |import scala.util.Success/*Try.scala*/
+           |import org.scalatest._
+           |class B/*L4*/ extends FunSuite/*FunSuite.scala*/ {
+           |  test/*FunSuiteLike.scala*/("") {
+           |    println/*Predef.scala*/(A/*A.scala:3*/.settings/*A.scala:4*/)
+           |  }
+           |}
+           |""".stripMargin
       )
     } yield ()
   }
