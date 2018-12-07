@@ -121,6 +121,8 @@ lazy val metals = project
       // =================
       // Java dependencies
       // =================
+      // for measuring memory footprint
+      "org.openjdk.jol" % "jol-core" % "0.9",
       // for file watching
       "io.methvin" % "directory-watcher" % "0.8.0",
       // for http client
@@ -262,7 +264,6 @@ lazy val bench = project
     libraryDependencies ++= List(
       // for measuring memory usage
       "org.spire-math" %% "clouseau" % "0.2.2",
-      "org.openjdk.jol" % "jol-core" % "0.9"
     )
   )
   .dependsOn(unit)

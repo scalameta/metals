@@ -1,4 +1,5 @@
 package scala.meta.internal.metals
+
 import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
 
@@ -28,9 +29,15 @@ object Timer {
     val seconds = TimeUnit.NANOSECONDS.toSeconds(nanos)
     if (seconds > 5) readableSeconds(seconds)
     else {
-      val ms = TimeUnit.NANOSECONDS.toMillis(nanos).toDouble
-      val partialSeconds = ms / 1000
-      new DecimalFormat("#.##s").format(partialSeconds)
+      val ms = TimeUnit.NANOSECONDS.toMillis(nanos)
+      if (ms < 1) {
+        s"${nanos}ns"
+      } else if (ms < 50) {
+        s"${ms}ms"
+      } else {
+        val partialSeconds = ms.toDouble / 1000
+        new DecimalFormat("#.##s").format(partialSeconds)
+      }
     }
   }
   def readableSeconds(n: Long): String = {
