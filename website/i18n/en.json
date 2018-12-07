@@ -88,6 +88,9 @@
       "users/installation": {
         "title": "Installation"
       },
+      "v0.3.0": {
+        "title": "v0.3.0"
+      },
       "website": {
         "title": "Contributing to the website"
       }
