@@ -190,8 +190,10 @@ final class TestingServer(
         if (isSameFile) {
           s"L${location.getRange.getStart.getLine}"
         } else {
-          val filename = location.getUri.toAbsolutePath.toNIO.getFileName
-          s"$filename:${location.getRange.getStart.getLine}"
+          val path = location.getUri.toAbsolutePath
+          val filename = path.toNIO.getFileName
+          if (path.isDependencySource(workspace)) filename.toString
+          else s"$filename:${location.getRange.getStart.getLine}"
         }
       }
       val occurrence = token match {

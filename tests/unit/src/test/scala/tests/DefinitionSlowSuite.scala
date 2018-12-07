@@ -65,25 +65,24 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        """|
-           |/a/src/main/scala/a/Main.scala
+        """|/a/src/main/scala/a/Main.scala
            |package a
-           |import java.util.concurrent.Future/*Future.java:95*/ // unused
-           |import scala.util.Failure/*Try.scala:213*/ // unused
-           |object Main/*L3*/ extends App/*App.scala:38*/ {
+           |import java.util.concurrent.Future/*Future.java*/ // unused
+           |import scala.util.Failure/*Try.scala*/ // unused
+           |object Main/*L3*/ extends App/*App.scala*/ {
            |  val message/*L4*/ = Message/*Message.java:1*/.message/*Message.java:2*/
-           |  new java.io.PrintStream/*PrintStream.java:56*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java:44*/())
-           |  println/*Predef.scala:396*/(message/*L4*/)
+           |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
+           |  println/*Predef.scala*/(message/*L4*/)
            |}
            |/b/src/main/scala/a/MainSuite.scala
            |package a
-           |import java.util.concurrent.Future/*Future.java:95*/ // unused
-           |import scala.util.Failure/*Try.scala:213*/ // unused
-           |import org.scalatest.FunSuite/*FunSuite.scala:1559*/
-           |object MainSuite/*L4*/ extends FunSuite/*FunSuite.scala:1559*/ {
-           |  test/*FunSuiteLike.scala:119*/("a") {
-           |    val condition/*L6*/ = Main/*Main.scala:3*/.message/*Main.scala:4*/.contains/*String.java:2131*/("Hello")
-           |    assert/*Assertions.scala:414*/(condition/*L6*/)
+           |import java.util.concurrent.Future/*Future.java*/ // unused
+           |import scala.util.Failure/*Try.scala*/ // unused
+           |import org.scalatest.FunSuite/*FunSuite.scala*/
+           |object MainSuite/*L4*/ extends FunSuite/*FunSuite.scala*/ {
+           |  test/*FunSuiteLike.scala*/("a") {
+           |    val condition/*L6*/ = Main/*Main.scala:3*/.message/*Main.scala:4*/.contains/*String.java*/("Hello")
+           |    assert/*Assertions.scala*/(condition/*L6*/)
            |  }
            |}
            |""".stripMargin
@@ -101,29 +100,28 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
         // - old references to `message` don't resolve because it has been renamed to `helloMessage`
         // - new references to like `testName` don't resolve
         server.workspaceDefinitions,
-        """|
-           |/a/src/main/scala/a/Main.scala
+        """|/a/src/main/scala/a/Main.scala
            |>>>>>>>/*<no symbol>*/
            |
            |package a
-           |import java.util.concurrent.Future/*Future.java:95*/ // unused
-           |import scala.util.Failure/*Try.scala:213*/ // unused
-           |object Main/*L5*/ extends App/*App.scala:38*/ {
+           |import java.util.concurrent.Future/*Future.java*/ // unused
+           |import scala.util.Failure/*Try.scala*/ // unused
+           |object Main/*L5*/ extends App/*App.scala*/ {
            |  val helloMessage/*<no symbol>*/ = Message/*Message.java:1*/.message/*Message.java:2*/
-           |  new java.io.PrintStream/*PrintStream.java:56*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java:44*/())
-           |  println/*Predef.scala:396*/(message/*<no symbol>*/)
+           |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
+           |  println/*Predef.scala*/(message/*<no symbol>*/)
            |}
            |/b/src/main/scala/a/MainSuite.scala
            |>>>>>>>/*<no symbol>*/
            |
            |package a
-           |import java.util.concurrent.Future/*Future.java:95*/ // unused
-           |import scala.util.Failure/*Try.scala:213*/ // unused
-           |import org.scalatest.FunSuite/*FunSuite.scala:1559*/
-           |object MainSuite/*L6*/ extends FunSuite/*FunSuite.scala:1559*/ {
-           |  test/*FunSuiteLike.scala:119*/(testName/*<no symbol>*/) {
-           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java:2131*/("Hello")
-           |    assert/*Assertions.scala:414*/(condition/*L8*/)
+           |import java.util.concurrent.Future/*Future.java*/ // unused
+           |import scala.util.Failure/*Try.scala*/ // unused
+           |import org.scalatest.FunSuite/*FunSuite.scala*/
+           |object MainSuite/*L6*/ extends FunSuite/*FunSuite.scala*/ {
+           |  test/*FunSuiteLike.scala*/(testName/*<no symbol>*/) {
+           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java*/("Hello")
+           |    assert/*Assertions.scala*/(condition/*L8*/)
            |  }
            |}
            |""".stripMargin
@@ -167,12 +165,12 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |/**
            | * Must obey the laws defined in cats.laws.ContravariantLaws.
            | */
-           |@typeclass/*<no symbol>*/ trait Contravariant/*L5*/[F/*L5*/[_]] extends Invariant/*Invariant.scala:7*/[F/*L5*/] { self/*L5*/ =>
+           |@typeclass/*<no symbol>*/ trait Contravariant/*L5*/[F/*L5*/[_]] extends Invariant/*Invariant.scala*/[F/*L5*/] { self/*L5*/ =>
            |  def contramap/*L6*/[A/*L6*/, B/*L6*/](fa/*L6*/: F/*L5*/[A/*L6*/])(f/*L6*/: B/*L6*/ => A/*L6*/): F/*L5*/[B/*L6*/]
            |  override def imap/*L7*/[A/*L7*/, B/*L7*/](fa/*L7*/: F/*L5*/[A/*L7*/])(f/*L7*/: A/*L7*/ => B/*L7*/)(fi/*L7*/: B/*L7*/ => A/*L7*/): F/*L5*/[B/*L7*/] = contramap/*L6*/(fa/*L7*/)(fi/*L7*/)
            |
-           |  def compose/*L9*/[G/*L9*/[_]: Contravariant/*L5*/]: Functor/*Functor.scala:11*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
-           |    new ComposedContravariant/*Composed.scala:107*/[F/*L5*/, G/*L9*/] {
+           |  def compose/*L9*/[G/*L9*/[_]: Contravariant/*L5*/]: Functor/*Functor.scala*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
+           |    new ComposedContravariant/*Composed.scala*/[F/*L5*/, G/*L9*/] {
            |      val F/*L11*/ = self/*L5*/
            |      val G/*L12*/ = Contravariant/*<no symbol>*/[G/*L9*/]
            |    }
@@ -185,18 +183,18 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |
            |  def liftContravariant/*L21*/[A/*L21*/, B/*L21*/](f/*L21*/: A/*L21*/ => B/*L21*/): F/*L5*/[B/*L21*/] => F/*L5*/[A/*L21*/] = contramap/*L6*/(_: F/*L5*/[B/*L21*/])(f/*L21*/)
            |
-           |  override def composeFunctor/*L23*/[G/*L23*/[_]: Functor/*Functor.scala:11*/]: Contravariant/*L5*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
-           |    new ComposedContravariantCovariant/*Composed.scala:115*/[F/*L5*/, G/*L23*/] {
+           |  override def composeFunctor/*L23*/[G/*L23*/[_]: Functor/*Functor.scala*/]: Contravariant/*L5*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
+           |    new ComposedContravariantCovariant/*Composed.scala*/[F/*L5*/, G/*L23*/] {
            |      val F/*L25*/ = self/*L5*/
-           |      val G/*L26*/ = Functor/*Functor.scala:11*/[G/*L23*/]
+           |      val G/*L26*/ = Functor/*Functor.scala*/[G/*L23*/]
            |    }
            |}
            |
            |/a/src/main/scala/a/Main.scala
            |import cats._
-           |import cats.implicits/*implicits.scala:2*/._
+           |import cats.implicits/*implicits.scala*/._
            |object Main/*L2*/ {
-           |  println/*Predef.scala:396*/(Contravariant/*Contravariant.scala:5*/[Show/*Show.scala:9*/])
+           |  println/*Predef.scala*/(Contravariant/*Contravariant.scala*/[Show/*Show.scala*/])
            |}
           """.stripMargin
       )
@@ -278,11 +276,10 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        """
-          |/a/src/main/scala/a/Main.scala
-          |object Main/*L0*/ {
-          |  val x/*L1*/: Int/*Int.scala:21*/ = math.max/*package.scala:191*/(1, 2)
-          |}
+        """|/a/src/main/scala/a/Main.scala
+           |object Main/*L0*/ {
+           |  val x/*L1*/: Int/*Int.scala*/ = math.max/*package.scala*/(1, 2)
+           |}
         """.stripMargin
       )
       _ <- server.didSave("a/src/main/scala/a/Main.scala")(
@@ -292,7 +289,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
         server.workspaceDefinitions,
         """|/a/src/main/scala/a/Main.scala
            |object Main/*L0*/ {
-           |  val x/*L1*/: Int/*Int.scala:21*/ = math.max/*package.scala:191*/
+           |  val x/*L1*/: Int/*Int.scala*/ = math.max/*package.scala*/
            |}
            |""".stripMargin
       )
