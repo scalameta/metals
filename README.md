@@ -10,10 +10,6 @@ Scala using [Scalameta](http://scalameta.org/) projects such as
 [Scalafix](https://scalacenter.github.io/scalafix/) and
 [SemanticDB](https://github.com/scalameta/scalameta/blob/master/semanticdb/semanticdb3/semanticdb3.md).
 
-:warning: This project is under development and is not intended to be used for
-day-to-day coding. Expect bugs and incomplete documentation. Installation
-instructions are primarily intended for project contributors.
-
 ## Contributing
 
 See the [contributing guide](https://scalameta.org/metals/docs/contributors/getting-started.html).
