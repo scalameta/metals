@@ -157,10 +157,10 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   ): CompletableFuture[MessageActionItem] =
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.getMessage)
-      if (params == ReimportSbtProject.params) {
-        ReimportSbtProject.yes
-      } else if (params == ImportBuildViaBloop.params) {
-        ImportBuildViaBloop.yes
+      if (params == ImportBuildChanges.params) {
+        ImportBuildChanges.yes
+      } else if (params == ImportBuild.params) {
+        ImportBuild.yes
       } else if (params == Only212Navigation.params("2.11.12")) {
         Only212Navigation.dismissForever
       } else if (CheckDoctor.isDoctor(params)) {

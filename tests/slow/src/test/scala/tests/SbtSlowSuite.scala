@@ -46,7 +46,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuildViaBloop.params.getMessage,
+          ImportBuild.params.getMessage,
           BloopInstallProgress.message
         ).mkString("\n")
       )
@@ -67,7 +67,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         client.workspaceMessageRequests,
         List(
           // Project has .bloop directory so user is asked to "re-import project"
-          ReimportSbtProject.params.getMessage,
+          ImportBuildChanges.params.getMessage,
           BloopInstallProgress.message
         ).mkString("\n")
       )
@@ -88,7 +88,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuildViaBloop.params.getMessage,
+          ImportBuild.params.getMessage,
           BloopInstallProgress.message
         ).mkString("\n")
       )
@@ -179,7 +179,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuildViaBloop.params.getMessage,
+          ImportBuild.params.getMessage,
           BloopInstallProgress.message
         ).mkString("\n")
       )
@@ -195,7 +195,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuildViaBloop.params.getMessage,
+          ImportBuild.params.getMessage,
           BloopInstallProgress.message
         ).mkString("\n")
       )

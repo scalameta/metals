@@ -1,5 +1,5 @@
 inThisBuild(Vector(
-  scalaVersion := "2.12.7",
+  scalaVersion := "2.12.8",
   scalacOptions ++= List(
     "-Yrangepos", "-Ywarn-unused"
   ),
@@ -12,4 +12,3 @@ libraryDependencies ++= List(
   "com.lihaoyi" %% "sourcecode" % "0.1.4",
   "org.scalatest" %% "scalatest" % "3.0.5"
 )
-
