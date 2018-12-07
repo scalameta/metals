@@ -3,9 +3,14 @@ package docs
 import mdoc.Reporter
 import mdoc.StringModifier
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.BuildInfo
 
 class RequirementsModifier extends StringModifier {
   override val name: String = "requirements"
+
+  def supportedScalaVersions =
+    BuildInfo.supportedScalaVersions.dropRight(1).mkString(", ") +
+      s" and ${BuildInfo.supportedScalaVersions.last}"
 
   override def process(
       info: String,
@@ -21,8 +26,7 @@ class RequirementsModifier extends StringModifier {
        |**macOS, Linux or Windows**. Metals is developed on macOS and every PR is
        |tested on Ubuntu+Windows.
        |
-       |**Scala 2.12 and 2.11**. Metals works only with Scala versions
-       |2.12.{7,6,5,4} and 2.11.{12,11,10,9}.
+       |**Scala 2.12 and 2.11**. Metals works only with Scala versions $supportedScalaVersions.
        |Note that 2.10.x and 2.13.0-M5 are not supported.
        |""".stripMargin
   }

@@ -19,12 +19,6 @@ To manually tell Metals to connect with Bloop, run the "Connect to build server"
 To compile, test and run from your terminal install the `bloop` command-line
 interface with the instructions here: https://scalacenter.github.io/bloop/setup
 
-## Customizing build import
+```scala mdoc:custom-bloop
 
-Consult the Bloop docs for customizing build import for sbt:
-https://scalacenter.github.io/bloop/docs/build-tools/sbt
-
-- Enable `IntegrationTest` and other custom configurations
-- Speed up build import
-- Enable sbt project references (source dependencies)
-- Export main class
+```
