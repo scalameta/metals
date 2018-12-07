@@ -63,8 +63,8 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
           |/c/src/main/scala/C.scala
           |package c
           |object C/*L1*/ {
-          |  println/*Predef.scala:392*/(a.ScalaFileEvent/*A.scala:3*/)
-          |  println/*Predef.scala:392*/(new a.JavaFileEvent/*JavaFileEvent.java:2*/)
+          |  println/*Predef.scala:396*/(a.ScalaFileEvent/*A.scala:3*/)
+          |  println/*Predef.scala:396*/(new a.JavaFileEvent/*JavaFileEvent.java:2*/)
           |}
           |""".stripMargin
       )
