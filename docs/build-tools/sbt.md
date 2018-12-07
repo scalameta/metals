@@ -8,14 +8,16 @@ out-of-the-box.
 
 ## Automatic installation
 
-Metals is able to automatically import sbt builds. When you open Metals in a new
-directory it will ask you to "Install via Bloop".
+The first time you open Metals in a new workspace it prompts you to import the
+build. Select "Import build" to start automatic installation.
 
-![Import build](../assets/vscode-import-via-bloop.png)
+![Import build](../assets/vscode-import-build.png)
 
 ## Install without Bloop
 
-sbt does not implement the
+Automatic build import for sbt happens through
+[Bloop](https://scalacenter.github.io/bloop/), a compile server for Scala. Bloop
+implements the
 [Build Server Protocol (BSP)](https://github.com/scalacenter/bsp/blob/master/docs/bsp.md)
 that Metals uses to learn the directory structure of your project and its
 library dependencies. sbt does not implement BSP so Metals is not able to import
@@ -85,15 +87,8 @@ Now, you can run `sbt bloopInstall` without the `metalsEnable` step.
 **Pro tip**: With semanticdb-scalac enabled in your sbt build can also use
 [Scalafix](https://scalacenter.github.io/scalafix).
 
-## Using source dependencies
+```scala mdoc:custom-bloop
 
-As
-[documented in Bloop](https://scalacenter.github.io/bloop/docs/installation/#generate-configuration-files-for-your-project),
-add the following global setting to your `build.sbt`
-
-```scala
-// build.sbt
-bloopAggregateSourceDependencies in Global := true
 ```
 
 ## Troubleshooting
