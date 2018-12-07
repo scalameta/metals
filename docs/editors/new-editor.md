@@ -177,6 +177,18 @@ Possible values:
   on Windows for communicating with the Bloop build server.
 - `tcp`: use TCP sockets for communicating with the Bloop build server.
 
+### `-Dmetals.statistics`
+
+By default, Metals logs only the most relevant metrics like time it takes to run
+sbt and import a workspace. The enable further metrics, update this property
+with a comma separated list of the following supported values:
+
+- `memory`: print memory usage of the navigation index after build import.
+- `definition`: print total time to respond to `textDocument/definition`
+  requests.
+
+Set the value to `-Dmetals.statistics=all` to enable all statistics.
+
 ```scala mdoc:user-config:system-property
 
 ```

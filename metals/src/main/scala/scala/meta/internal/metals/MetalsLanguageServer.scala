@@ -678,7 +678,12 @@ class MetalsLanguageServer(
 
       for {
         _ <- statusBar.trackFuture("Importing build", importingBuild)
-        _ = statusBar.addMessage(s"${config.icons.rocket}Imported build!")
+        _ = {
+          statusBar.addMessage(s"${config.icons.rocket}Imported build!")
+          if (config.statistics.isMemory) {
+            scribe.info(s"memory: ${Memory.footprint(index)}")
+          }
+        }
         _ <- compileSourceFiles(buffers.open.toSeq)
       } yield BuildChange.Reconnected
     }
@@ -724,12 +729,22 @@ class MetalsLanguageServer(
     }
   }
 
-  private def timed[T](didWhat: String, reportStatus: Boolean = false)(
-      thunk: => Future[T]
-  ): Future[T] = {
+  private def timed[T](
+      didWhat: String,
+      reportStatus: Boolean = false
+  )(thunk: => Future[T]): Future[T] = {
     withTimer(didWhat, reportStatus)(thunk).map {
       case (_, value) => value
     }
+  }
+
+  def timedThunk[T](didWhat: String, onlyIf: Boolean)(thunk: => T): T = {
+    val elapsed = new Timer(time)
+    val result = thunk
+    if (onlyIf) {
+      scribe.info(s"time: $didWhat in $elapsed")
+    }
+    result
   }
 
   private def withTimer[T](didWhat: String, reportStatus: Boolean = false)(
@@ -739,7 +754,7 @@ class MetalsLanguageServer(
     val result = thunk
     result.map { value =>
       if (elapsed.isLogWorthy) {
-        scribe.info(s"time: $didWhat in $elapsed ")
+        scribe.info(s"time: $didWhat in $elapsed")
       }
       (elapsed, value)
     }
@@ -905,7 +920,9 @@ class MetalsLanguageServer(
   ): DefinitionResult = {
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.toLanguage.isScala) {
-      val result = definitionProvider.definition(source, position)
+      val result = timedThunk("definition", config.statistics.isDefinition)(
+        definitionProvider.definition(source, position)
+      )
       // Record what build target this dependency source (if any) was jumped from,
       // needed to know what classpath to compile the dependency source with.
       interactiveSemanticdbs.didDefinition(source, result)

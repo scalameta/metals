@@ -111,13 +111,13 @@ final class BloopInstall(
     handler.response = Some(taskResponse)
     val processFuture = handler.completeProcess.future.map { result =>
       taskResponse.cancel(true)
-      scribe.info(s"time: Ran 'sbt bloopInstall' in $elapsed")
+      scribe.info(s"time: ran 'sbt bloopInstall' in $elapsed")
       result
     }
     statusBar.trackFuture("Running sbt bloopInstall", processFuture)
     taskResponse.asScala.foreach { item =>
       if (item.cancel) {
-        scribe.info("User cancelled build import")
+        scribe.info("user cancelled build import")
         handler.completeProcess.complete(
           Success(BloopInstallResult.Cancelled)
         )
