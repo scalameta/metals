@@ -275,8 +275,7 @@ lazy val docs = project
     moduleName := "metals-docs",
     mainClass.in(Compile) := Some("docs.Docs"),
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.11.3",
-      "com.geirsson" % "mdoc" % "0.6.1" cross CrossVersion.full
+      "org.jsoup" % "jsoup" % "1.11.3"
     )
   )
   .dependsOn(metals)
