@@ -8,7 +8,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Collections
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.PublishDiagnosticsParams
@@ -165,22 +164,18 @@ final class InteractiveSemanticdbs(
     } yield newGlobal(scalacOptions)
   }
 
-  val pendingNotification = new AtomicBoolean(false)
   private def reportUnsupportedScalaVersion(scalaVersion: String): Unit = {
     statusBar.addMessage(Only212Navigation.statusBar(scalaVersion))
     val notification = tables.dismissedNotifications.Only212Navigation
-    if (!notification.isDismissed &&
-      pendingNotification.compareAndSet(false, true)) {
+    if (!notification.isDismissed) {
+      notification.dismiss(2, TimeUnit.MINUTES)
       client
         .showMessageRequest(Only212Navigation.params(scalaVersion))
         .asScala
         .foreach { item =>
           if (item == Only212Navigation.dismissForever) {
             notification.dismissForever()
-          } else if (item == Only212Navigation.ok) {
-            notification.dismiss(1, TimeUnit.DAYS)
           }
-          pendingNotification.set(false)
         }
     }
   }
