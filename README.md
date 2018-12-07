@@ -3,35 +3,24 @@
 [![Join the chat at https://gitter.im/scalameta/metals](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/scalameta/metals)
 [![](https://travis-ci.org/scalameta/metals.svg?branch=master)](https://travis-ci.org/scalameta/metals)
 
-This project is an experiment to implement a
-[Language Server](https://github.com/Microsoft/language-server-protocol) for
-Scala using [Scalameta](http://scalameta.org/) projects such as
-[Scalafmt](http://scalameta.org/scalafmt/),
-[Scalafix](https://scalacenter.github.io/scalafix/) and
-[SemanticDB](https://github.com/scalameta/scalameta/blob/master/semanticdb/semanticdb3/semanticdb3.md).
+## Documentation
 
-:warning: This project is under development and is not intended to be used for
-day-to-day coding. Expect bugs and incomplete documentation. Installation
-instructions are primarily intended for project contributors.
+See the website: https://scalameta.org/metals/
 
 ## Contributing
 
-See the [contributing guide](https://scalameta.org/metals/docs/contributors/getting-started.html).
-
-## Overview
-
-See [here](https://scalameta.org/metals/docs/editors/overview.html) for an overview of a what features are supported or
-not supported by Metals.
+See the contributing guide:
+https://scalameta.org/metals/docs/contributors/getting-started.html
 
 ### Team
 
 The current maintainers (people who can merge pull requests) are:
 
-* Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
-* Gabriele Petronella - [`@gabro`](https://github.com/gabro)
-* Jorge Vicente Cantero - [`@jvican`](https://github.com/jvican)
-* Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
-* Shane Delmore - [`@ShaneDelmore`](https://github.com/ShaneDelmore)
+- Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
+- Gabriele Petronella - [`@gabro`](https://github.com/gabro)
+- Jorge Vicente Cantero - [`@jvican`](https://github.com/jvican)
+- Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
+- Shane Delmore - [`@ShaneDelmore`](https://github.com/ShaneDelmore)
 
 ## Acknowledgement
 
@@ -43,12 +32,12 @@ case classes remain.
 
 ## Alternatives
 
-* [IntelliJ IDEA](https://www.jetbrains.com/help/idea/discover-intellij-idea-for-scala.html):
+- [IntelliJ IDEA](https://www.jetbrains.com/help/idea/discover-intellij-idea-for-scala.html):
   the most widely used IDE for Scala using a re-implementation of the Scala
   typechecker.
-* [ENSIME](http://ensime.org): brings Scala and Java IDE-like features to
+- [ENSIME](http://ensime.org): brings Scala and Java IDE-like features to
   editors like Emacs and Sublime Text using the Scala Presentation Compiler.
-* [Scala IDE](http://scala-ide.org/): Eclipse-based IDE using the Scala
+- [Scala IDE](http://scala-ide.org/): Eclipse-based IDE using the Scala
   Presentation Compiler.
 
 ## Why Metals?
