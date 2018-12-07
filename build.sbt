@@ -1,5 +1,4 @@
-import java.io.File
-def localSnapshotVersion = "0.2.3-SNAPSHOT"
+def localSnapshotVersion = "0.4.0-SNAPSHOT"
 inThisBuild(
   List(
     version ~= { dynVer =>
@@ -89,7 +88,7 @@ commands += Command.command("save-expect") { s =>
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val scala212 = "2.12.7"
+  val scala212 = "2.12.8"
   val scalameta = "4.1.0"
   val semanticdb = "4.1.0"
   val bsp = "2.0.0-M2"
@@ -98,8 +97,8 @@ lazy val V = new {
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions = Seq(
-    "2.12.7", "2.12.6", "2.12.5", "2.12.4", "2.11.12", "2.11.11", "2.11.10",
-    "2.11.9"
+    "2.12.8", "2.12.7", "2.12.6", "2.12.5", "2.12.4", "2.11.12", "2.11.11",
+    "2.11.10", "2.11.9"
   )
 }
 
@@ -276,8 +275,7 @@ lazy val docs = project
     moduleName := "metals-docs",
     mainClass.in(Compile) := Some("docs.Docs"),
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.11.3",
-      "com.geirsson" % "mdoc" % "0.6.1" cross CrossVersion.full
+      "org.jsoup" % "jsoup" % "1.11.3"
     )
   )
   .dependsOn(metals)

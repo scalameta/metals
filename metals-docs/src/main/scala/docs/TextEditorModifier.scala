@@ -14,34 +14,42 @@ class TextEditorModifier extends StringModifier {
     s"""
        |## Importing a build
        |
-       |The first time you open Metals in a new sbt build it prompts you to "Import
-       |build via Bloop". Click "Import build via Bloop" to start the `sbt bloopInstall`
-       |import step.
+       |The first time you open Metals in a new workspace it prompts you to import the build.
+       |Click "Import build" to start the installation step.
        |
-       |![Import build](../assets/$editor-import-via-bloop.png)
+       |![Import build](../assets/$editor-import-build.png)
        |
-       |- you don't need Bloop installed on your machine to run this step.
-       |- this step is required for compile errors and goto definition to work.
-       |
-       |The `sbt bloopInstall` step can take a long time, especially the first time you
-       |run it in a new build. The exact time depends on the complexity of the build and
-       |if library dependencies are cached or need to be downloaded. For example, this
-       |step can take everything from 10 seconds in small cached builds up to 10-15
-       |minutes in large uncached builds.
+       |- "Not now" disables this prompt for 2 minutes.
+       |- "Don't show again" disables this prompt forever, use `rm -rf .metals/` to re-enable
+       |  the prompt.
+       |- Behind the scenese, Metals uses [Bloop](https://scalacenter.github.io/bloop/) to
+       |  import sbt builds, but you don't need Bloop installed on your machine to run this step.
        |
        |Once the import step completes, compilation starts for your open `*.scala`
        |files.
        |
        |Once the sources have compiled successfully, you can navigate the codebase with
-       |"goto definition" by `Cmd+Click` or `Cmd+Shift+Enter`.
+       |"goto definition" with `Cmd+Click`.
+       |
+       |### Speeding up import
+       |
+       |The "Import build" step can take a long time, especially the first time you
+       |run it in a new build. The exact time depends on the complexity of the build and
+       |if library dependencies need to be downloaded. For example, this step can take
+       |everything from 10 seconds in small cached builds up to 10-15 minutes in large
+       |uncached builds.
+       |
+       |Consult the [Bloop documentation](https://scalacenter.github.io/bloop/docs/build-tools/sbt#speeding-up-build-export)
+       |to learn how to speed up build import.
+       |
+       |### Importing changes
        |
        |When you change `build.sbt` or sources under `project/`, you will be prompted to
        |re-import the build.
        |
        |![Import sbt changes](assets/$editor-import-changes.png)
        |
-       |Click "Import changes" and that will restart the `sbt bloopInstall` step. Select
-       |"Don't show again" if you prefer to manually trigger build import.
+       |### Manually trigger build import
        |
        |To manually trigger a build import, execute the "Import build" command through
        |the command palette (`Cmd + Shift + P`).
