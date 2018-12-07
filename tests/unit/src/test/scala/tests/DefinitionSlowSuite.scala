@@ -73,7 +73,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |object Main/*L3*/ extends App/*App.scala:38*/ {
            |  val message/*L4*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java:56*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java:44*/())
-           |  println/*Predef.scala:392*/(message/*L4*/)
+           |  println/*Predef.scala:396*/(message/*L4*/)
            |}
            |/b/src/main/scala/a/MainSuite.scala
            |package a
@@ -111,7 +111,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |object Main/*L5*/ extends App/*App.scala:38*/ {
            |  val helloMessage/*<no symbol>*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java:56*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java:44*/())
-           |  println/*Predef.scala:392*/(message/*<no symbol>*/)
+           |  println/*Predef.scala:396*/(message/*<no symbol>*/)
            |}
            |/b/src/main/scala/a/MainSuite.scala
            |>>>>>>>/*<no symbol>*/
@@ -196,7 +196,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |import cats._
            |import cats.implicits/*implicits.scala:2*/._
            |object Main/*L2*/ {
-           |  println/*Predef.scala:392*/(Contravariant/*Contravariant.scala:5*/[Show/*Show.scala:9*/])
+           |  println/*Predef.scala:396*/(Contravariant/*Contravariant.scala:5*/[Show/*Show.scala:9*/])
            |}
           """.stripMargin
       )
