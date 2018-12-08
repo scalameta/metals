@@ -41,7 +41,7 @@ object LegacyMetalsEnrichments {
 
 object DocumentSymbolProvider {
 
-  private class SymbolTraverser(uri: String) {
+  private class SymbolTraverser() {
     private val builder = List.newBuilder[DocumentSymbol]
 
     val traverser = new Traverser {
@@ -91,10 +91,9 @@ object DocumentSymbolProvider {
   def empty: List[DocumentSymbol] = Nil
 
   def documentSymbols(
-      uri: String,
       source: Source
   ): List[DocumentSymbol] =
-    new SymbolTraverser(uri).apply(source)
+    new SymbolTraverser().apply(source)
 
     // TODO(alexey) function inside a block/if/for/etc.?
   def isFunction(tree: Tree): Boolean = {
