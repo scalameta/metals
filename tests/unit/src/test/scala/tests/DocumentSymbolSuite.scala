@@ -12,10 +12,9 @@ object DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
     input.scalaFiles.filter(_.file.toString.endsWith("AnonymousClasses.scala")).map { file =>
       ExpectTestCase(
         file, { () =>
-          val uri = file.file.toString
           val source = file.input.parse[Source].get
           val sb = new StringBuilder
-          val documentSymbols = DocumentSymbolProvider.documentSymbols(uri, source)
+          val documentSymbols = DocumentSymbolProvider.documentSymbols(source)
 
           def printDocumentSymbols(symbols: List[DocumentSymbol]): Unit = {
             if (symbols.nonEmpty) {

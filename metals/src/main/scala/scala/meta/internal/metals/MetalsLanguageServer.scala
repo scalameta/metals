@@ -204,6 +204,7 @@ class MetalsLanguageServer(
         )
       )
       capabilities.setDefinitionProvider(true)
+      capabilities.setDocumentSymbolProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       if (config.isNoInitialized) {
         sh.schedule(
@@ -529,8 +530,7 @@ class MetalsLanguageServer(
       params: DocumentSymbolParams
   ): CompletableFuture[util.List[DocumentSymbol]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/documentSymbol is not supported.")
-      null
+      documentSymbolResult(params)
     }
 
   @JsonRequest("textDocument/formatting")
@@ -959,6 +959,20 @@ class MetalsLanguageServer(
       // Ignore non-scala files.
       DefinitionResult.empty
     }
+  }
+
+  def documentSymbolResult(
+    params: DocumentSymbolParams
+  ): util.List[DocumentSymbol] = {
+    import scala.meta._
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val result = for {
+      buffer <- buffers.get(path)
+      source <- buffer.parse[Source].toOption
+    } yield {
+      DocumentSymbolProvider.documentSymbols(source)
+    }
+    result.getOrElse(Nil).asJava
   }
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
