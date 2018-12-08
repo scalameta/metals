@@ -298,4 +298,30 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
     } yield ()
   }
 
+  testAsync("sbtopts") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/project/build.properties
+          |sbt.version=1.2.6
+          |/build.sbt
+          |scalaVersion := "2.12.7"
+          |libraryDependencies +=
+          |  // dependency won't resolve without the `bintray:scalacenter/releases` resolver
+          |  // that is defined in the `custom-repositories` file.
+          |  "ch.epfl.scala" %% "bloop-config" % "1.0.0-RC1+4-c5e24b66"
+          |/.sbtopts
+          |-Dsbt.repository.config=custom-repositories
+          |/custom-repositories
+          |[repositories]
+          |  local
+          |  maven: https://repo1.maven.org/maven2/
+          |  scalacenter-releases: https://dl.bintray.com/scalacenter/releases
+          |""".stripMargin
+      )
+      _ = assertStatus(_.isInstalled)
+    } yield ()
+  }
+
 }

@@ -16,12 +16,22 @@ import scala.util.control.NonFatal
  * - bloop.py
  * - ch.epfl.scala:bloop-frontend
  */
-final class Embedded(icons: Icons, statusBar: StatusBar) extends Cancelable {
+final class Embedded(
+    icons: Icons,
+    statusBar: StatusBar,
+    userConfig: () => UserConfiguration
+) extends Cancelable {
 
   override def cancel(): Unit = {
     if (isBloopJars.get()) {
       bloopJars.foreach(_.close())
     }
+  }
+
+  def sbtLauncher: AbsolutePath = {
+    userConfig().sbtLauncher
+      .map(AbsolutePath(_))
+      .getOrElse(embeddedSbtLauncher)
   }
 
   /**
@@ -31,7 +41,7 @@ final class Embedded(icons: Icons, statusBar: StatusBar) extends Cancelable {
    * we can't rely on `sbt` resolving correctly when using system processes, at least
    * it failed on Windows when I tried it.
    */
-  lazy val sbtLauncher: AbsolutePath = {
+  private lazy val embeddedSbtLauncher: AbsolutePath = {
     val embeddedLauncher = this.getClass.getResourceAsStream("/sbt-launch.jar")
     val out = Files.createTempDirectory("metals").resolve("sbt-launch.jar")
     out.toFile.deleteOnExit()

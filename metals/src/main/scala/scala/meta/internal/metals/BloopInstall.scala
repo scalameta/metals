@@ -37,7 +37,8 @@ final class BloopInstall(
     messages: Messages,
     config: MetalsServerConfig,
     embedded: Embedded,
-    statusBar: StatusBar
+    statusBar: StatusBar,
+    userConfig: () => UserConfiguration
 )(implicit ec: ExecutionContext)
     extends Cancelable {
   import messages._
@@ -54,7 +55,7 @@ final class BloopInstall(
     val elapsed = new Timer(time)
     val handler = new BloopInstall.ProcessHandler()
     val javaArgs = List[String](
-      "java",
+      JavaBinary(userConfig().javaHome),
       "-jar",
       embedded.sbtLauncher.toString(),
       s"-Dscalameta.version=${BuildInfo.semanticdbVersion}",
@@ -66,7 +67,13 @@ final class BloopInstall(
       "metalsEnable",
       "bloopInstall"
     )
-    val allArgs = javaArgs ++ sbtArgs
+    val allArgs: List[String] = List(
+      javaArgs,
+      SbtOpts.loadFrom(workspace),
+      JvmOpts.loadFrom(workspace),
+      userConfig().sbtOpts,
+      sbtArgs
+    ).flatten
     val pb = new NuProcessBuilder(handler, allArgs.asJava)
     pb.setCwd(workspace.toNIO)
     pb.environment().put("COURSIER_PROGRESS", "disable")
