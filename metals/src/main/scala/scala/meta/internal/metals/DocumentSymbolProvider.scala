@@ -1,8 +1,9 @@
 package scala.meta.internal.metals
 
 import scala.meta._
-import org.eclipse.lsp4j.DocumentSymbol
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.SymbolKind
+import org.eclipse.lsp4j.SymbolInformation
 import MetalsEnrichments._
 
 object LegacyMetalsEnrichments {
@@ -41,8 +42,8 @@ object LegacyMetalsEnrichments {
 
 object DocumentSymbolProvider {
 
-  private class SymbolTraverser() {
-    private val builder = List.newBuilder[DocumentSymbol]
+  private class SymbolTraverser(uri: String) {
+    private val builder = List.newBuilder[SymbolInformation]
 
     val traverser = new Traverser {
       var currentRoot: Option[Tree] = None
@@ -55,11 +56,11 @@ object DocumentSymbolProvider {
         }
 
         def addName(name: String): Unit = {
-          builder += new DocumentSymbol(
+          builder += new SymbolInformation(
             name,
             symbolKind(currentNode),
-            currentNode.pos.toLSP,
-            currentNode.pos.toLSP
+            new Location(uri, currentNode.pos.toLSP),
+            currentRoot.map(LegacyMetalsEnrichments.names(_).head).getOrElse("")
           )
         }
 
@@ -82,18 +83,19 @@ object DocumentSymbolProvider {
       }
     }
 
-    def apply(tree: Tree): List[DocumentSymbol] = {
+    def apply(tree: Tree): List[SymbolInformation] = {
       traverser.apply(tree)
       builder.result()
     }
   }
 
-  def empty: List[DocumentSymbol] = Nil
+  def empty: List[SymbolInformation] = Nil
 
   def documentSymbols(
-      source: Source
-  ): List[DocumentSymbol] =
-    new SymbolTraverser().apply(source)
+      source: Source,
+      uri: String
+  ): List[SymbolInformation] =
+    new SymbolTraverser(uri).apply(source)
 
     // TODO(alexey) function inside a block/if/for/etc.?
   def isFunction(tree: Tree): Boolean = {

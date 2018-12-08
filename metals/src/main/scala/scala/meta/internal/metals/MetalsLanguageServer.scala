@@ -528,7 +528,7 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
       params: DocumentSymbolParams
-  ): CompletableFuture[util.List[DocumentSymbol]] =
+  ): CompletableFuture[util.List[SymbolInformation]] =
     CompletableFutures.computeAsync { _ =>
       documentSymbolResult(params)
     }
@@ -961,16 +961,23 @@ class MetalsLanguageServer(
     }
   }
 
+  /**
+   * Returns textDocument/documentSymbol
+   *
+   * Note: the LSP specification allows to return list of either SymbolInformation or
+   * DocumentSymbol, but clients like vim-lsc don't handle DocumentSymbol correctly,
+   * so we choose to return SymbolInformation
+   */
   def documentSymbolResult(
     params: DocumentSymbolParams
-  ): util.List[DocumentSymbol] = {
+  ): util.List[SymbolInformation] = {
     import scala.meta._
     val path = params.getTextDocument.getUri.toAbsolutePath
     val result = for {
       buffer <- buffers.get(path)
       source <- buffer.parse[Source].toOption
     } yield {
-      DocumentSymbolProvider.documentSymbols(source)
+      DocumentSymbolProvider.documentSymbols(source, path.toString)
     }
     result.getOrElse(Nil).asJava
   }
