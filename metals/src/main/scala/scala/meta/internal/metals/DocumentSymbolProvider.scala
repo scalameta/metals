@@ -1,10 +1,10 @@
 package scala.meta.internal.metals
 
 import scala.meta._
-import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.SymbolKind
-import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.DocumentSymbol
 import MetalsEnrichments._
+import scala.collection.concurrent.TrieMap
 
 object LegacyMetalsEnrichments {
 
@@ -40,10 +40,12 @@ object LegacyMetalsEnrichments {
 
 }
 
-object DocumentSymbolProvider {
+class DocumentSymbolProvider(buffers: Buffers) {
 
+  private val lastDocumentSymbolResult
+    : TrieMap[AbsolutePath, List[DocumentSymbol]] = TrieMap.empty
   private class SymbolTraverser(uri: String) {
-    private val builder = List.newBuilder[SymbolInformation]
+    private val builder = List.newBuilder[DocumentSymbol]
 
     val traverser = new Traverser {
       var currentRoot: Option[Tree] = None
@@ -56,11 +58,12 @@ object DocumentSymbolProvider {
         }
 
         def addName(name: String): Unit = {
-          builder += new SymbolInformation(
+          builder += new DocumentSymbol(
             name,
             symbolKind(currentNode),
-            new Location(uri, currentNode.pos.toLSP),
-            currentRoot.map(LegacyMetalsEnrichments.names(_).head).getOrElse("")
+            currentNode.pos.toLSP,
+            currentNode.pos.toLSP,
+            // currentRoot.map(LegacyMetalsEnrichments.names(_).head).getOrElse("")
           )
         }
 
@@ -83,21 +86,31 @@ object DocumentSymbolProvider {
       }
     }
 
-    def apply(tree: Tree): List[SymbolInformation] = {
+    def apply(tree: Tree): List[DocumentSymbol] = {
       traverser.apply(tree)
       builder.result()
     }
   }
 
-  def empty: List[SymbolInformation] = Nil
+  def empty: List[DocumentSymbol] = Nil
 
   def documentSymbols(
-      source: Source,
-      uri: String
-  ): List[SymbolInformation] =
-    new SymbolTraverser(uri).apply(source)
+      path: AbsolutePath
+  ): List[DocumentSymbol] = {
+    path
+      .toInputFromBuffers(buffers)
+      .parse[Source]
+      .toOption
+      .map { source =>
+        val result = new SymbolTraverser(path.toString).apply(source)
+        lastDocumentSymbolResult.put(path, result)
+        result
+      }
+      .orElse(lastDocumentSymbolResult.get(path))
+      .getOrElse(empty)
+  }
 
-    // TODO(alexey) function inside a block/if/for/etc.?
+  // TODO(alexey) function inside a block/if/for/etc.?
   def isFunction(tree: Tree): Boolean = {
     val tpeOpt: Option[Type] = tree match {
       case d: Decl.Val => Some(d.decltpe)
@@ -109,27 +122,27 @@ object DocumentSymbolProvider {
     tpeOpt.filter(_.is[Type.Function]).nonEmpty
   }
 
-    // NOTE: we care only about descendants of Decl, Defn and Pkg[.Object] (see documentSymbols implementation)
-    def symbolKind(tree: Tree): SymbolKind = tree match {
-      case f if isFunction(f) => SymbolKind.Function
-      case _: Decl.Var | _: Defn.Var => SymbolKind.Variable
-      case _: Decl.Val | _: Defn.Val => SymbolKind.Constant
-      case _: Decl.Def | _: Defn.Def => SymbolKind.Method
-      case _: Decl.Type | _: Defn.Type => SymbolKind.Field
-      case _: Defn.Macro => SymbolKind.Constructor
-      case _: Defn.Class => SymbolKind.Class
-      case _: Defn.Trait => SymbolKind.Interface
-      case _: Defn.Object => SymbolKind.Module
-      case _: Pkg.Object => SymbolKind.Namespace
-      case _: Pkg => SymbolKind.Package
-      case _: Type.Param => SymbolKind.TypeParameter
-      case _: Lit.Null => SymbolKind.Null
-      // TODO(alexey) are these kinds useful?
-      // case ??? => SymbolKind.Enum
-      // case ??? => SymbolKind.String
-      // case ??? => SymbolKind.Number
-      // case ??? => SymbolKind.Boolean
-      // case ??? => SymbolKind.Array
-      case _ => SymbolKind.Field
-    }
+  // NOTE: we care only about descendants of Decl, Defn and Pkg[.Object] (see documentSymbols implementation)
+  def symbolKind(tree: Tree): SymbolKind = tree match {
+    case f if isFunction(f) => SymbolKind.Function
+    case _: Decl.Var | _: Defn.Var => SymbolKind.Variable
+    case _: Decl.Val | _: Defn.Val => SymbolKind.Constant
+    case _: Decl.Def | _: Defn.Def => SymbolKind.Method
+    case _: Decl.Type | _: Defn.Type => SymbolKind.Field
+    case _: Defn.Macro => SymbolKind.Constructor
+    case _: Defn.Class => SymbolKind.Class
+    case _: Defn.Trait => SymbolKind.Interface
+    case _: Defn.Object => SymbolKind.Module
+    case _: Pkg.Object => SymbolKind.Namespace
+    case _: Pkg => SymbolKind.Package
+    case _: Type.Param => SymbolKind.TypeParameter
+    case _: Lit.Null => SymbolKind.Null
+    // TODO(alexey) are these kinds useful?
+    // case ??? => SymbolKind.Enum
+    // case ??? => SymbolKind.String
+    // case ??? => SymbolKind.Number
+    // case ??? => SymbolKind.Boolean
+    // case ??? => SymbolKind.Array
+    case _ => SymbolKind.Field
+  }
 }
