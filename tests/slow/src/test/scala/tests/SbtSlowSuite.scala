@@ -1,5 +1,7 @@
 package tests
 
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
 import scala.meta.internal.metals.ClientCommands
@@ -336,13 +338,10 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
           |""".stripMargin,
         expectError = true,
         preInitialized = () => {
-          server.didChangeConfiguration(
-            s"""
-               |{
-               |  "sbt-script": "${workspace.resolve("does-not-exist")}"
-               |}
-            """.stripMargin
-          )
+          val doesNotExist = workspace.resolve("does-not-exist")
+          val config = new JsonObject
+          config.add("sbt-script", new JsonPrimitive(doesNotExist.toString()))
+          server.didChangeConfiguration(config.toString)
         }
       )
       _ = assertStatus(!_.isInstalled)
