@@ -80,6 +80,7 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
+  private var documentSymbolProvider: DocumentSymbolProvider = _
   private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
   private var statusBar: StatusBar = _
@@ -169,6 +170,7 @@ class MetalsLanguageServer(
       config.icons,
       statusBar
     )
+    documentSymbolProvider = new DocumentSymbolProvider(buffers)
     doctor = new Doctor(
       buildTargets,
       config,
@@ -528,9 +530,9 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
       params: DocumentSymbolParams
-  ): CompletableFuture[util.List[SymbolInformation]] =
+  ): CompletableFuture[util.List[DocumentSymbol]] =
     CompletableFutures.computeAsync { _ =>
-      documentSymbolResult(params)
+      documentSymbolProvider.documentSymbols(params.getTextDocument.getUri.toAbsolutePath).asJava
     }
 
   @JsonRequest("textDocument/formatting")
@@ -961,26 +963,6 @@ class MetalsLanguageServer(
     }
   }
 
-  /**
-   * Returns textDocument/documentSymbol
-   *
-   * Note: the LSP specification allows to return list of either SymbolInformation or
-   * DocumentSymbol, but clients like vim-lsc don't handle DocumentSymbol correctly,
-   * so we choose to return SymbolInformation
-   */
-  def documentSymbolResult(
-    params: DocumentSymbolParams
-  ): util.List[SymbolInformation] = {
-    import scala.meta._
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    val result = for {
-      buffer <- buffers.get(path)
-      source <- buffer.parse[Source].toOption
-    } yield {
-      DocumentSymbolProvider.documentSymbols(source, path.toString)
-    }
-    result.getOrElse(Nil).asJava
-  }
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
     OnDemandSymbolIndex(onError = {
