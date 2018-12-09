@@ -65,13 +65,20 @@ object UserConfigurationSuite extends BaseSuite {
   }
 
   checkOK(
-    "empty",
+    "empty-object",
     "{}"
   ) { obtained =>
     assert(obtained.javaHome.isEmpty)
     assert(obtained.sbtLauncher.isEmpty)
     assert(obtained.sbtOpts.isEmpty)
     assert(obtained.sbtScript.isEmpty)
+  }
+
+  checkOK(
+    "empty-string",
+    "{'java-home':''}"
+  ) { obtained =>
+    assert(obtained.javaHome.isEmpty)
   }
 
   checkOK(
