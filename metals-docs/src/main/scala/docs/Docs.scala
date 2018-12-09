@@ -6,20 +6,46 @@ import scala.meta.internal.metals.{BuildInfo => V}
 object Docs {
   lazy val snapshot = Snapshot.latest("snapshots")
   lazy val release = Snapshot.latest("releases")
-  def releasesResolverTable: String =
-    s"""
-       || Version              | Published        | Resolver                |
-       || ---                  | ---              | ---                     |
-       ||  ${release.version}  | ${release.date}  | `-r sonatype:releases`  |
-       ||  ${snapshot.version} | ${snapshot.date} | `-r sonatype:snapshots` |
-       |""".stripMargin
-  def releasesTable: String =
-    s"""
-       || Version              | Published        |
-       || ---                  | ---              |
-       ||  ${release.version}  | ${release.date}  |
-       ||  ${snapshot.version} | ${snapshot.date} |
-       |""".stripMargin
+  def releasesResolverTable: String = {
+    <table>
+      <thead>
+        <th>Version</th>
+        <th>Published</th>
+        <th>Resolver</th>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{release.version}</td>
+          <td>{release.date}</td>
+          <td><code>-r sonatype:releases</code></td>
+        </tr>
+        <tr>
+          <td>{snapshot.version}</td>
+          <td>{snapshot.date}</td>
+          <td><code>-r sonatype:snapshots</code></td>
+        </tr>
+      </tbody>
+    </table>
+  }.toString
+
+  def releasesTable: String = {
+    <table>
+      <thead>
+        <th>Version</th>
+        <th>Published</th>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{release.version}</td>
+          <td>{release.date}</td>
+        </tr>
+        <tr>
+          <td>{snapshot.version}</td>
+          <td>{snapshot.date}</td>
+        </tr>
+      </tbody>
+    </table>
+  }.toString
 
   lazy val stableVersion = V.metalsVersion.replaceFirst("\\+.*", "")
   def main(args: Array[String]): Unit = {

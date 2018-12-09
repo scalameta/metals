@@ -21,9 +21,9 @@ First, install the following plugins
 - [`derekwyatt/vim-scala`](https://github.com/derekwyatt/vim-scala): for syntax
   highlighting Scala and sbt source files.
 
-Assuming [`vim-plug`](https://github.com/junegunn/vim-plug) is used for
-installing plugin (another plugin manager like vundle works too), update
-`~/.vimrc` to include the following settings.
+Assuming [`vim-plug`](https://github.com/junegunn/vim-plug) is used (another
+plugin manager like vundle works too), update `~/.vimrc` to include the
+following settings.
 
 ```vim
 " ~/.vimrc
