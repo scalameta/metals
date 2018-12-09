@@ -15,6 +15,15 @@ Install the Metals extension from the Marketplace, search for "Metals".
 
 [![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals)
 
+> Make sure to disable the extensions
+> [Scala Language Server](https://marketplace.visualstudio.com/items?itemName=dragos.scala-lsp)
+> and
+> [Scala (sbt)](https://marketplace.visualstudio.com/items?itemName=lightbend.vscode-sbt-scala)
+> if they are installed. The
+> [Dotty Language Server](https://marketplace.visualstudio.com/items?itemName=lampepfl.dotty)
+> does **not** need to be disabled because the Metals and Dotty extensions don't
+> conflict with each other.
+
 Next, open a directory containing a `build.sbt` file. The extension activates
 when a `*.scala` or `*.sbt` file is opened.
 
