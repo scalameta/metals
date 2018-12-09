@@ -41,10 +41,8 @@ class UserConfigurationModifier extends StringModifier {
                |**Example**:
                |```json
                |{
-               |  "settings": {
-               |    "metals": {
-               |      "${option.key}": "${option.example}"
-               |    }
+               |  "metals": {
+               |    "${option.key}": "${option.example}"
                |  }
                |}
                |```
