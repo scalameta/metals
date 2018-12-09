@@ -9,10 +9,10 @@ import scala.collection.concurrent.TrieMap
 object LegacyMetalsEnrichments {
 
   /** All names within the node.
-    * - if it's a package, it will have its qualified name: `package foo.bar.buh`
-    * - if it's a val/var, it may contain several names in the pattern: `val (x, y, z) = ...`
-    * - for everything else it's just its normal name (if it has one)
-    */
+   * - if it's a package, it will have its qualified name: `package foo.bar.buh`
+   * - if it's a val/var, it may contain several names in the pattern: `val (x, y, z) = ...`
+   * - for everything else it's just its normal name (if it has one)
+   */
   private def patternNames(pats: List[Pat]): Seq[String] =
     pats.flatMap { _.collect { case Pat.Var(name) => name.value } }
 
