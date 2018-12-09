@@ -1,5 +1,6 @@
 package tests
 
+import com.google.gson.JsonParser
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
@@ -9,6 +10,7 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
@@ -35,6 +37,7 @@ import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
@@ -77,7 +80,8 @@ final class TestingServer(
 
   def initialize(
       layout: String,
-      expectError: Boolean = false
+      expectError: Boolean = false,
+      preInitialized: () => Future[Unit] = () => Future.successful(())
   ): Future[Unit] = {
     Debug.printEnclosing()
     write(layout)
@@ -95,6 +99,7 @@ final class TestingServer(
     params.setRootUri(workspace.toURI.toString)
     for {
       _ <- server.initialize(params).asScala
+      _ <- preInitialized()
       _ <- server.initialized(new InitializedParams).asScala
     } yield {
       if (!expectError) {
@@ -168,6 +173,13 @@ final class TestingServer(
         )
       )
       .asScala
+  }
+  def didChangeConfiguration(config: String): Future[Unit] = {
+    Future {
+      val wrapped = UserConfiguration.toWrappedJson(config)
+      val json = new JsonParser().parse(wrapped)
+      server.didChangeConfiguration(new DidChangeConfigurationParams(json))
+    }
   }
 
   private def toSemanticdbTextDocument(path: AbsolutePath): s.TextDocument = {
