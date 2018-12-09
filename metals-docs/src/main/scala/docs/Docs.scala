@@ -6,6 +6,21 @@ import scala.meta.internal.metals.{BuildInfo => V}
 object Docs {
   lazy val snapshot = Snapshot.latest("snapshots")
   lazy val release = Snapshot.latest("releases")
+  def releasesResolverTable: String =
+    s"""
+       || Version              | Published        | Resolver                |
+       || ---                  | ---              | ---                     |
+       ||  ${release.version}  | ${release.date}  | `-r sonatype:releases`  |
+       ||  ${snapshot.version} | ${snapshot.date} | `-r sonatype:snapshots` |
+       |""".stripMargin
+  def releasesTable: String =
+    s"""
+       || Version              | Published        |
+       || ---                  | ---              |
+       ||  ${release.version}  | ${release.date}  |
+       ||  ${snapshot.version} | ${snapshot.date} |
+       |""".stripMargin
+
   lazy val stableVersion = V.metalsVersion.replaceFirst("\\+.*", "")
   def main(args: Array[String]): Unit = {
     val out = Paths.get("website", "target", "docs")

@@ -17,10 +17,7 @@ class BootstrapModifier extends StringModifier {
            |Next, build a `$binary` binary for the latest Metals release using the
            |[Coursier](https://github.com/coursier/coursier) command-line interface.
            |
-           || Version                   | Published             | Resolver                |
-           || ---                       | ---                   | ---                     |
-           ||  ${Docs.release.version}  | ${Docs.release.date}  | `-r sonatype:releases`  |
-           ||  ${Docs.snapshot.version} | ${Docs.snapshot.date} | `-r sonatype:snapshots` |
+           |${Docs.releasesResolverTable}
            |
            |```sh
            |# Make sure to use coursier v1.1.0-M9 or newer.
