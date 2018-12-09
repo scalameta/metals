@@ -67,8 +67,7 @@ object UserConfiguration {
     val errors = ListBuffer.empty[String]
     val base: JsonObject =
       (for {
-        settings <- Option(json.getAsJsonObject("settings"))
-        metals <- Option(settings.getAsJsonObject("metals"))
+        metals <- Option(json.getAsJsonObject("metals"))
       } yield metals).getOrElse(new JsonObject)
 
     def getKey(key: String): Option[String] = {
@@ -117,5 +116,5 @@ object UserConfiguration {
   }
 
   def toWrappedJson(config: String): String =
-    s"""{"settings":{"metals": $config}}"""
+    s"""{"metals": $config}"""
 }
