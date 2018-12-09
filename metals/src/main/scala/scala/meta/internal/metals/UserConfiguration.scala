@@ -14,7 +14,8 @@ import scala.util.Try
 case class UserConfiguration(
     javaHome: Option[String] = None,
     sbtLauncher: Option[String] = None,
-    sbtOpts: List[String] = Nil
+    sbtOpts: List[String] = Nil,
+    sbtScript: Option[String] = None
 )
 
 object UserConfiguration {
@@ -43,6 +44,19 @@ object UserConfiguration {
         |it's recommended to use those instead of customizing this setting. The benefit of `.jvmopts` and `.sbtopts`
         |is that it's respected by other tools such as IntelliJ.
         |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "sbt-script",
+      """empty string `""`.""",
+      "/usr/local/bin/sbt",
+      "sbt script",
+      """Custom `sbt` executable to use for running `sbt bloopInstall`, overrides
+        |`sbt-options` and `sbt-launcher` options.
+        |
+        |By default, Metals uses `java -jar sbt-launch.jar` to launch sbt while respecting
+        |`.jvmopts` and `.sbtopts`. In case this option is defined, then Metals
+        |executes the configured sbt script instead.
+        |""".stripMargin
     )
   )
 
@@ -51,12 +65,17 @@ object UserConfiguration {
       properties: Properties = System.getProperties
   ): Either[List[String], UserConfiguration] = {
     val errors = ListBuffer.empty[String]
+    val base: JsonObject =
+      (for {
+        settings <- Option(json.getAsJsonObject("settings"))
+        metals <- Option(settings.getAsJsonObject("metals"))
+      } yield metals).getOrElse(new JsonObject)
 
     def getKey(key: String): Option[String] = {
       def option[T](fn: String => T): Option[T] =
         Option(fn(key)).orElse(Option(fn(StringCase.kebabToCamel(key))))
       for {
-        value <- option(json.get)
+        value <- option(base.get)
           .orElse(
             option(k => properties.getProperty(s"metals.$k"))
               .map(new JsonPrimitive(_))
@@ -80,17 +99,23 @@ object UserConfiguration {
         case Some(value) => value.split(" ").toList
         case None => Nil
       }
+    val sbtScript =
+      getKey("sbt-script")
 
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
           javaHome,
           sbtLauncher,
-          sbtOpts
+          sbtOpts,
+          sbtScript
         )
       )
     } else {
       Left(errors.toList)
     }
   }
+
+  def toWrappedJson(config: String): String =
+    s"""{"settings":{"metals": $config}}"""
 }

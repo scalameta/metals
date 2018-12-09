@@ -12,7 +12,8 @@ object UserConfigurationSuite extends BaseSuite {
       props: Map[String, String] = Map.empty
   )(fn: Either[List[String], UserConfiguration] => Unit): Unit = {
     test(name) {
-      val json = new JsonParser().parse(original).getAsJsonObject
+      val wrapped = UserConfiguration.toWrappedJson(original)
+      val json = new JsonParser().parse(wrapped).getAsJsonObject
       val jprops = new Properties()
       jprops.putAll(props.asJava)
       val obtained = UserConfiguration.fromJson(json, jprops)
@@ -52,13 +53,15 @@ object UserConfigurationSuite extends BaseSuite {
       |{
       | "sbt-launcher": "launch",
       | "java-home": "home",
-      | "sbt-options": "a b"
+      | "sbt-options": "a b",
+      | "sbt-script": "script"
       |}
     """.stripMargin
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
     assert(obtained.sbtLauncher == Some("launch"))
     assert(obtained.sbtOpts == List("a", "b"))
+    assert(obtained.sbtScript == Some("script"))
   }
 
   checkOK(
@@ -68,6 +71,7 @@ object UserConfigurationSuite extends BaseSuite {
     assert(obtained.javaHome.isEmpty)
     assert(obtained.sbtLauncher.isEmpty)
     assert(obtained.sbtOpts.isEmpty)
+    assert(obtained.sbtScript.isEmpty)
   }
 
   checkOK(
@@ -79,12 +83,14 @@ object UserConfigurationSuite extends BaseSuite {
     Map(
       "metals.sbt-launcher" -> "launch",
       "metals.java-home" -> "home",
-      "metals.sbt-options" -> "a b"
+      "metals.sbt-options" -> "a b",
+      "metals.sbt-script" -> "script"
     )
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
     assert(obtained.sbtLauncher == Some("launch"))
     assert(obtained.sbtOpts == List("a", "b"))
+    assert(obtained.sbtScript == Some("script"))
   }
 
   // we support camel case to not break existing clients using `javaHome`.

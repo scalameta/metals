@@ -22,9 +22,9 @@ class UserConfigurationModifier extends StringModifier {
                |
                |${option.description}
                |
-               |Default: ${option.default}
+               |**Default**: ${option.default}
                |
-               |See also [user configuration `"${option.key}"`](#${option.key}).
+               |**Note**: this property can also be defined as user configuration option [${option.title}](#${option.headerID}).
                |""".stripMargin
           }
           .mkString("\n")
@@ -32,7 +32,7 @@ class UserConfigurationModifier extends StringModifier {
         UserConfiguration.options
           .map { option =>
             s"""
-               |### `"${option.key}"`
+               |### ${option.title}
                |
                |${option.description}
                |
@@ -41,7 +41,11 @@ class UserConfigurationModifier extends StringModifier {
                |**Example**:
                |```json
                |{
-               |  "${option.key}": "${option.example}"
+               |  "settings": {
+               |    "metals": {
+               |      "${option.key}": "${option.example}"
+               |    }
+               |  }
                |}
                |```
                |""".stripMargin

@@ -324,4 +324,28 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
     } yield ()
   }
 
+  testAsync("sbt-script") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/project/build.properties
+          |sbt.version=1.2.6
+          |/build.sbt
+          |scalaVersion := "2.12.7"
+          |""".stripMargin,
+        expectError = true,
+        preInitialized = () => {
+          server.didChangeConfiguration(
+            s"""
+               |{
+               |  "sbt-script": "${workspace.resolve("does-not-exist")}"
+               |}
+            """.stripMargin
+          )
+        }
+      )
+      _ = assertStatus(!_.isInstalled)
+    } yield ()
+  }
 }

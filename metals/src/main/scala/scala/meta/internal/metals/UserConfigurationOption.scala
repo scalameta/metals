@@ -11,4 +11,8 @@ case class UserConfigurationOption(
     example: String,
     title: String,
     description: String
-)
+) {
+  def headerID: String = {
+    title.toLowerCase().replace(' ', '-')
+  }
+}
