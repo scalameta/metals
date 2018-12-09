@@ -69,3 +69,7 @@ features.
 
 Run the "Reload Window" command after updating the setting for the new version
 to take effect.
+
+```scala mdoc:generic
+
+```

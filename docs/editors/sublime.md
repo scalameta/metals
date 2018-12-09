@@ -98,3 +98,7 @@ sources with "Goto definition" by pressing `F12`.
   it necessary to import the build via the browser instead of inside the editor.
 - The Sublime Text client uses an invasive alert window for
   `window/showMessage`, so Metals uses `window/logMessage` instead.
+
+```scala mdoc:generic
+
+```
