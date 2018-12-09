@@ -66,9 +66,7 @@ object UserConfiguration {
   ): Either[List[String], UserConfiguration] = {
     val errors = ListBuffer.empty[String]
     val base: JsonObject =
-      (for {
-        metals <- Option(json.getAsJsonObject("metals"))
-      } yield metals).getOrElse(new JsonObject)
+      Option(json.getAsJsonObject("metals")).getOrElse(new JsonObject)
 
     def getKey(key: String): Option[String] = {
       def option[T](fn: String => T): Option[T] =
