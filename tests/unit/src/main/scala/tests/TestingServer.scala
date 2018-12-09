@@ -14,6 +14,7 @@ import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
+import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
@@ -243,6 +244,14 @@ final class TestingServer(
         s"/$relpath\n$printedTextDocument"
       }
       .mkString("\n")
+  }
+
+  def documentSymbols(uri: String): String = {
+    val path = toPath(uri)
+    val identifier = path.toTextDocumentIdentifier
+    val params = new DocumentSymbolParams(identifier)
+    println(buffers.get(path))
+    server.documentSymbolResult(params).mkString
   }
 
   def cancel(): Unit = {
