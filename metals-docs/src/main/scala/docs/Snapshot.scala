@@ -7,13 +7,18 @@ import scala.collection.JavaConverters._
 import scala.meta.internal.metals.BuildInfo
 import scala.util.control.NonFatal
 
-case class Snapshot(version: String, lastModified: Date)
+case class Snapshot(version: String, lastModified: Date) {
+  def date: String = {
+    val pattern = new SimpleDateFormat("dd MMM yyyy HH:mm")
+    pattern.format(lastModified)
+  }
+}
 
 object Snapshot {
-  def latest(): Snapshot = {
+  def latest(repo: String): Snapshot = {
     if (System.getenv("CI") != null) {
       try {
-        fetchLatest()
+        fetchLatest(repo)
       } catch {
         case NonFatal(e) =>
           scribe.error("unexpected error fetching SNAPSHOT version", e)
@@ -27,12 +32,12 @@ object Snapshot {
   private def current: Snapshot = Snapshot(BuildInfo.metalsVersion, new Date())
 
   /** Returns the latest published snapshot release, or the current release if. */
-  private def fetchLatest(): Snapshot = {
+  private def fetchLatest(repo: String): Snapshot = {
     // maven-metadata.xml is consistently outdated so we scrape the "Last modified" column
     // of the HTML page that lists all snapshot releases instead.
     val doc = Jsoup
       .connect(
-        "https://oss.sonatype.org/content/repositories/snapshots/org/scalameta/metals_2.12/"
+        s"https://oss.sonatype.org/content/repositories/$repo/org/scalameta/metals_2.12/"
       )
       .get
     val dateTime = new SimpleDateFormat("EEE MMM d H:m:s z yyyy")

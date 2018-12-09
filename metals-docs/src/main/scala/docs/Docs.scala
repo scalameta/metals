@@ -4,13 +4,19 @@ import java.nio.file.Paths
 import scala.meta.internal.metals.{BuildInfo => V}
 
 object Docs {
+  lazy val snapshot = Snapshot.latest("snapshots")
+  lazy val release = Snapshot.latest("releases")
+  lazy val stableVersion = V.metalsVersion.replaceFirst("\\+.*", "")
   def main(args: Array[String]): Unit = {
     val out = Paths.get("website", "target", "docs")
     val settings = mdoc
       .MainSettings()
       .withSiteVariables(
-        Map(
+        Map[String, String](
           "VERSION" -> V.metalsVersion,
+          "STABLE_VERSION" -> stableVersion,
+          "SNAPSHOT_VERSION" -> snapshot.version,
+          "SNAPSHOT_DATE" -> snapshot.lastModified.toString,
           "LOCAL_VERSION" -> V.localSnapshotVersion,
           "BLOOP_VERSION" -> V.bloopVersion,
           "SCALAMETA_VERSION" -> V.scalametaVersion,
