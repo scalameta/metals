@@ -78,12 +78,13 @@ object UserConfiguration {
               .map(new JsonPrimitive(_))
           )
         string <- Try(value.getAsString).fold(
-          e => {
+          _ => {
             errors += s"json error: key '$key' should have value of type string but obtained $value"
             None
           },
           Some(_)
         )
+        if string.nonEmpty
       } yield string
     }
 
