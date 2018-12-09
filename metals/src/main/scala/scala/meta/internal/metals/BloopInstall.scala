@@ -50,37 +50,55 @@ final class BloopInstall(
   override def toString: String = s"BloopInstall($workspace)"
 
   def runUnconditionally(sbt: Sbt): Future[BloopInstallResult] = {
-    persistChecksumStatus(Status.Started)
-    BloopInstall.writeGlobalPluginFile(sbt)
-    val elapsed = new Timer(time)
-    val handler = new BloopInstall.ProcessHandler()
-    val javaArgs = List[String](
-      JavaBinary(userConfig().javaHome),
-      "-jar",
-      embedded.sbtLauncher.toString(),
-      s"-Dscalameta.version=${BuildInfo.semanticdbVersion}",
-      "-Djline.terminal=jline.UnsupportedTerminal",
-      "-Dsbt.log.noformat=true",
-      "-Dfile.encoding=UTF-8"
-    )
     val sbtArgs = List[String](
       "metalsEnable",
       "bloopInstall"
     )
-    val allArgs: List[String] = List(
-      javaArgs,
-      SbtOpts.loadFrom(workspace),
-      JvmOpts.loadFrom(workspace),
-      userConfig().sbtOpts,
-      sbtArgs
-    ).flatten
-    val pb = new NuProcessBuilder(handler, allArgs.asJava)
+    val args: List[String] = userConfig().sbtScript match {
+      case Some(script) =>
+        script :: sbtArgs
+      case None =>
+        val javaArgs = List[String](
+          JavaBinary(userConfig().javaHome),
+          "-jar",
+          embedded.sbtLauncher.toString(),
+          "-Djline.terminal=jline.UnsupportedTerminal",
+          "-Dsbt.log.noformat=true",
+          "-Dfile.encoding=UTF-8"
+        )
+        List(
+          javaArgs,
+          SbtOpts.loadFrom(workspace),
+          JvmOpts.loadFrom(workspace),
+          userConfig().sbtOpts,
+          sbtArgs
+        ).flatten
+    }
+    scribe.info(s"running 'sbt ${sbtArgs.mkString(" ")}'")
+    val result = runArgumentsUnconditionally(sbt, args)
+    result.foreach { e =>
+      if (e.isFailed) {
+        // Record the exact command that failed to help troubleshooting.
+        scribe.error(s"sbt command failed: ${args.mkString(" ")}")
+      }
+    }
+    result
+  }
+
+  private def runArgumentsUnconditionally(
+      sbt: Sbt,
+      args: List[String]
+  ): Future[BloopInstallResult] = {
+    persistChecksumStatus(Status.Started)
+    BloopInstall.writeGlobalPluginFile(sbt)
+    val elapsed = new Timer(time)
+    val handler = new BloopInstall.ProcessHandler()
+    val pb = new NuProcessBuilder(handler, args.asJava)
     pb.setCwd(workspace.toNIO)
     pb.environment().put("COURSIER_PROGRESS", "disable")
     pb.environment().put("METALS_ENABLED", "true")
+    pb.environment().put("SCALAMETA_VERSION", BuildInfo.semanticdbVersion)
     val runningProcess = pb.start()
-    val prettyArgs = ("sbt" :: sbtArgs).mkString(" ")
-    scribe.info(s"running '$prettyArgs'")
     // NOTE(olafur): older versions of VS Code don't respect cancellation of
     // window/showMessageRequest, meaning the "cancel build import" button
     // stays forever in view even after successful build import. In newer

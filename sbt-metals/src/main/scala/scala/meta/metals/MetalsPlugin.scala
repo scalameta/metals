@@ -9,7 +9,8 @@ package scala.meta.metals {
     override def requires = sbt.plugins.JvmPlugin
 
     def semanticdbVersion: String =
-      System.getProperty("scalameta.version", BuildInfo.scalametaVersion)
+      Option(System.getenv("SCALAMETA_VERSION"))
+        .getOrElse(BuildInfo.scalametaVersion)
     def semanticdbModule: ModuleID =
       "org.scalameta" % "semanticdb-scalac" % semanticdbVersion cross CrossVersion.full
 
