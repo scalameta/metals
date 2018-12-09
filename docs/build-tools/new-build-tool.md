@@ -25,14 +25,18 @@ There are two options for integrating Metals with a new build tool:
 Consult the
 [Bloop configuration format](https://scalacenter.github.io/bloop/docs/configuration-format/)
 to learn how to emit Bloop JSON files. Once the JSON files have been generated,
-use "[Connect to build server](../users/import-build.md#bloop)" command in
-Metals to establish a connection with Bloop.
+use "[Connect to build server](../editors/new-editor.html#import-build)" server
+command in Metals to establish a connection with Bloop.
 
 ## Custom build server
 
 Consult the
 [BSP specification](https://github.com/scalacenter/bsp/blob/master/docs/bsp.md)
-to learn how to implement a build server. There are two available libraries:
+to learn about the protocol in detail.
+
+### Library bindings
+
+There are two available libraries for building a BSP server:
 
 - `ch.epfl.scala:bsp4s`: A Scala library built with Monix `Task`/`Observable`
   for async primitives and Circe for JSON for serialization. This module is used
@@ -41,25 +45,28 @@ to learn how to implement a build server. There are two available libraries:
   async primitives and GSON for JSON serialization. This module is used by
   Metals and the IntelliJ Scala plugin.
 
+### SemanticDB
+
+As a build server, you are responsible for enabling the
+[SemanticDB](https://scalameta.org/docs/semanticdb/guide.html) compiler plugin
+so that code navigation works in Metals. Features like Goto Definition will not
+work unless the SemanticDB compiler plugin is enabled. The only feature that
+works fine without the SemanticDB compiler plugin is compile diagnostics.
+
+### BSP endpoints
+
 Metals requires the following BSP endpoints to be implemented by the build
 server.
 
-### `workspace/buildTargets`
+- `workspace/buildTargets`: To list all the build targets in the workspace.
+- `buildTarget/scalacOptions`: To know the classpath and compiler options used
+  to compile the project sources.
+- `buildTarget/sources`: To know what source files map to which build targets.
+- `buildTarget/dependencySources`: To support "Goto definition" for external
+  libraries.
+- `buildTarget/compile`: To trigger compilation in a build target.
 
-To list all the build targets in the workspace.
+Additionally, Metals expects the server to send the following notifications:
 
-### `buildTarget/scalacOptions`
-
-To know the classpath and compiler options used to compile the project sources.
-
-### `buildTarget/sources`
-
-To know what source files map to which build targets.
-
-### `buildTarget/dependencySources`
-
-To support "Goto definition" for external libraries.
-
-### `buildTarget/compile`
-
-To trigger compilation in a build target.
+- `buildTarget/publishDiagnostics`: To report compile errors and warnings in the
+  editor buffer.
