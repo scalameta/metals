@@ -203,3 +203,7 @@ client for the following reasons:
 - Installation is more complicated compared to vim-lsc
 - `LanguageClient-neovim` does not implement `window/showMessageRequest`
 - `LanguageClient-neovim` does not implement `window/logMessage`
+
+```scala mdoc:generic
+
+```
