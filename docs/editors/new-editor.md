@@ -177,6 +177,27 @@ Possible values:
   on Windows for communicating with the Bloop build server.
 - `tcp`: use TCP sockets for communicating with the Bloop build server.
 
+```scala mdoc:user-config:system-property
+
+```
+
+## Metals user configuration
+
+Users can customize the Metals server through the LSP
+`workspace/didChangeConfiguration` notification. Unlike server properties, it is
+normal for regular Metals users to configure these options.
+
+User configuration options can optionally be provided via server properties
+using the `-Dmetals.` prefix. System properties may be helpful for editor
+clients that don't support `workspace/didChangeConfiguration`. In case user
+configuration is defined both via system properties and
+`workspace/didChangeConfiguration`, then `workspace/didChangeConfiguration`
+takes precedence.
+
+```scala mdoc:user-config:lsp-config
+
+```
+
 ## Metals server commands
 
 The client can trigger one of the following commands through the
@@ -423,6 +444,10 @@ outside of the editor such as during `git checkout`.
 ### `workspace/executeCommands`
 
 Used to trigger a [Metals server command](#metals-server-commands).
+
+### `workspace/didChangeConfiguration`
+
+Used to update [Metals user configuration](#metals-user-configuration).
 
 ### `window/logMessage`
 

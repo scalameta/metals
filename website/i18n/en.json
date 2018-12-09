@@ -8,12 +8,6 @@
       "build-tools/bloop": {
         "title": "Bloop"
       },
-      "build-tools/gradle": {
-        "title": "Gradle"
-      },
-      "build-tools/maven": {
-        "title": "Maven"
-      },
       "build-tools/new-build-tool": {
         "title": "Integrating a new build tool"
       },
@@ -26,12 +20,6 @@
       },
       "contributors/getting-started": {
         "title": "Contributing to Metals"
-      },
-      "contributors/new-build-tool": {
-        "title": "Integrating a new build tool"
-      },
-      "contributors/new-editor": {
-        "title": "Integrating a new editor"
       },
       "contributors/project-goals": {
         "title": "Project Goals"
@@ -57,42 +45,6 @@
       },
       "editors/vscode": {
         "title": "Visual Studio Code"
-      },
-      "getting-started-contributors": {
-        "title": "Contributing to Metals"
-      },
-      "installation-contributors": {
-        "title": "Installation"
-      },
-      "installation-users": {
-        "title": "Installation"
-      },
-      "new-build-tool": {
-        "title": "Integrating a new build tool"
-      },
-      "new-editor": {
-        "title": "Integrating a new editor"
-      },
-      "overview": {
-        "title": "Project Goals"
-      },
-      "project-goals": {
-        "title": "Project Goals"
-      },
-      "troubleshooting": {
-        "title": "Troubleshooting"
-      },
-      "users/import-build": {
-        "title": "Importing a build"
-      },
-      "users/installation": {
-        "title": "Installation"
-      },
-      "v0.3.0": {
-        "title": "v0.3.0"
-      },
-      "website": {
-        "title": "Contributing to the website"
       }
     },
     "links": {

@@ -30,6 +30,7 @@ import scala.meta.internal.metals.MetalsStatusParams
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 object BspCli {
@@ -53,7 +54,7 @@ object BspCli {
         val time = Time.system
         val statusBar: StatusBar =
           new StatusBar(() => loggingLangaugeClient, time, ProgressTicks.none)
-        val embedded = new Embedded(icons, statusBar)
+        val embedded = new Embedded(icons, statusBar, () => UserConfiguration())
         val server = new BloopServers(
           sh,
           workspace,

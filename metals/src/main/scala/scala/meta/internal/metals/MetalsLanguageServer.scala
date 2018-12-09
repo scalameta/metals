@@ -87,7 +87,7 @@ class MetalsLanguageServer(
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient = client
     statusBar = new StatusBar(() => languageClient, time, progressTicks)
-    embedded = register(new Embedded(config.icons, statusBar))
+    embedded = register(new Embedded(config.icons, statusBar, () => userConfig))
     LanguageClientLogger.languageClient = Some(client)
     cancelables
       .add(() => languageClient.shutdown())
@@ -134,7 +134,8 @@ class MetalsLanguageServer(
         messages,
         config,
         embedded,
-        statusBar
+        statusBar,
+        () => userConfig
       )
     )
     bloopServers = new BloopServers(
@@ -433,7 +434,7 @@ class MetalsLanguageServer(
   @JsonNotification("workspace/didChangeConfiguration")
   def didChangeConfiguration(params: DidChangeConfigurationParams): Unit = {
     val json = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
-    UserConfiguration.fromJson(userConfig, json) match {
+    UserConfiguration.fromJson(json) match {
       case Left(errors) =>
         errors.foreach { error =>
           scribe.error(s"config error: $error")
