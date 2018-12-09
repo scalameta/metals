@@ -532,9 +532,7 @@ class MetalsLanguageServer(
       params: DocumentSymbolParams
   ): CompletableFuture[util.List[DocumentSymbol]] =
     CompletableFutures.computeAsync { _ =>
-      documentSymbolProvider
-        .documentSymbols(params.getTextDocument.getUri.toAbsolutePath)
-        .asJava
+      documentSymbolResult(params).asJava
     }
 
   @JsonRequest("textDocument/formatting")
@@ -963,6 +961,11 @@ class MetalsLanguageServer(
       // Ignore non-scala files.
       DefinitionResult.empty
     }
+  }
+
+  def documentSymbolResult(params: DocumentSymbolParams): List[DocumentSymbol] = {
+    documentSymbolProvider
+      .documentSymbols(params.getTextDocument.getUri.toAbsolutePath)
   }
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
