@@ -186,13 +186,10 @@ directory containing JSON files.
 The callback `function('abs')` can be replaced with any function that does
 nothing.
 
-## Known issues
+## Issues
 
-- [#113](https://github.com/natebosch/vim-lsc/issues/113) vim-lsc does not send
-  an `initialized` notifications following an `initialize` response.
-- [#114](https://github.com/natebosch/vim-lsc/issues/114) vim-lsc does not send
-  `didSave` notifications. This may cause Goto definition to fail for recently
-  edited sources.
+Please report any issues you may find with Metals [here](https://github.com/scalameta/metals/issues).
+If you find any issues related to vim-lsc please report them [here](https://github.com/natebosch/vim-lsc/issues).
 
 ## LanguageClient-neovim
 
