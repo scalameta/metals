@@ -39,7 +39,7 @@ functionality.
   <td>Vim</td>
   <td align=center>Few steps</td>
   <td align=center>Built-in</td>
-  <td align=center>✅</td>
+  <td align=center>Escaped newlines</td>
   <td align=center>✅</td>
   <td align=center>Status bar</td>
 </tr>
@@ -50,6 +50,14 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center></td>
+</tr>
+<tr>
+  <td>Emacs</td>
+  <td align=center>Few steps</td>
+  <td align=center>Built-in</td>
+  <td align=center>Single buffer</td>
+  <td align=center>✅</td>
+  <td align=center>Status bar</td>
 </tr>
 </tbody>
 </table>
@@ -79,6 +87,14 @@ browser using a localhost server. It is not possible to import a build within
 the editor.
 
 ## Diagnostics
+
+**✅**: Diagnostics are correctly published on compile.
+
+**Escaped newlines**: Multi-line diagnostic are slightly difficult to read since
+newlines are escaped into `^@` characters.
+
+**Single buffer**: Diagnostics are only published for the current buffer so
+compile errors are lost for unopened files.
 
 Compile errors are reported as red squiggles in the editor. Compilation is
 triggered on file save for the build target (project/module) containing the
