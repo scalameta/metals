@@ -523,7 +523,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/formatting")
-  def documentSymbol(
+  def formatting(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CompletableFutures.computeAsync { _ =>
@@ -532,7 +532,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/rename")
-  def documentSymbol(
+  def rename(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
     CompletableFutures.computeAsync { _ =>
@@ -557,7 +557,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/signatureHelp")
-  def completion(
+  def signatureHelp(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
     CompletableFutures.computeAsync { _ =>
@@ -575,7 +575,7 @@ class MetalsLanguageServer(
     }
 
   @JsonRequest("textDocument/codeLens")
-  def codeAction(
+  def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CompletableFutures.computeAsync { _ =>
