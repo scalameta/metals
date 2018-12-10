@@ -123,7 +123,7 @@ object BspCli {
       targets: List[String]
   )(implicit ec: ExecutionContextExecutorService): Future[Unit] = {
     for {
-      bloop <- bloopServers.newServer()
+      bloop <- bloopServers.newServer().map(_.get)
       buildTargets <- bloop.server.workspaceBuildTargets().asScala
       ids = buildTargets.getTargets.asScala
         .filter(target => targets.contains(target.getDisplayName))

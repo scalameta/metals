@@ -12,13 +12,27 @@ import java.util.Properties
  * what build tool is used in the workspace helps to produce better error
  * for people using unsupported build tools. For example: "Gradle is not supported"
  * instead of "Unsupported build tool".
+ *
+ * @param bspGlobalDirectories Directories for user and system installed BSP connection
+ *                            details according to BSP spec:
+ *                            https://github.com/scalacenter/bsp/blob/master/docs/bsp.md#default-locations-for-bsp-connection-files
  */
-final class BuildTools(workspace: AbsolutePath) {
-  // Naive implementations to detect which build tool is being used,
-  // but can be improved with any custom logic.
+final class BuildTools(
+    workspace: AbsolutePath,
+    bspGlobalDirectories: List[AbsolutePath]
+) {
+  def isAutoConnectable: Boolean =
+    isBloop || isBsp
   def isBloop: Boolean = {
-    workspace.resolve(".bloop").isDirectory && {
-      val ls = Files.list(workspace.resolve(".bloop").toNIO)
+    hasJsonFile(workspace.resolve(".bloop"))
+  }
+  def isBsp: Boolean = {
+    hasJsonFile(workspace.resolve(".bsp")) ||
+    bspGlobalDirectories.exists(hasJsonFile)
+  }
+  private def hasJsonFile(dir: AbsolutePath): Boolean = {
+    dir.isDirectory && {
+      val ls = Files.list(dir.toNIO)
       val hasJsonFile =
         ls.iterator().asScala.exists(_.getFileName.toString.endsWith(".json"))
       ls.close()

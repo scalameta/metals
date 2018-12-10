@@ -1,10 +1,12 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.bsp4j.BspConnectionDetails
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.meta.internal.metals.BuildTool.Sbt
 
 /**
@@ -162,4 +164,60 @@ class Messages(icons: Icons) {
     }
   }
 
+  object SelectBspServer {
+    case class Request(
+        params: ShowMessageRequestParams,
+        details: Map[String, BspConnectionDetails]
+    )
+    def message: String =
+      "Multiple build servers detected, which one do you want to use?"
+    def isSelectBspServer(params: ShowMessageRequestParams): Boolean =
+      params.getMessage == message
+    def request(
+        candidates: List[BspConnectionDetails]
+    ): Request = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(message)
+      params.setType(MessageType.Warning)
+      val details = mutable.Map.empty[String, BspConnectionDetails]
+      val items = candidates.map { candidate =>
+        val nameConflicts = candidates.count(_.getName == candidate.getName)
+        val title: String = if (nameConflicts < 2) {
+          candidate.getName
+        } else {
+          val versionConflicts = candidates.count { c =>
+            c.getName == candidate.getName &&
+            c.getVersion == candidate.getVersion
+          }
+          if (versionConflicts < 2) {
+            s"${candidate.getName} v${candidate.getVersion}"
+          } else {
+            val stream = Stream.from(0).map { i =>
+              val ch = ('a'.toInt + i).toChar
+              s"${candidate.getName} v${candidate.getVersion} ($ch)"
+            }
+            stream.find(!details.contains(_)).get
+          }
+        }
+        details(title) = candidate
+        new MessageActionItem(title)
+      }
+      params.setActions(items.asJava)
+      Request(params, details.toMap)
+    }
+  }
+
+  object BspSwitch {
+    def noInstalledServer: MessageParams =
+      new MessageParams(
+        MessageType.Error,
+        "Unable to switch build server since there are no installed build servers on this computer. " +
+          "To fix this problem, install a build server first."
+      )
+    def onlyOneServer(name: String): MessageParams =
+      new MessageParams(
+        MessageType.Warning,
+        s"Unable to switch build server since there is only one installed build server '$name' on this computer."
+      )
+  }
 }

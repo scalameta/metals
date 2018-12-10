@@ -34,37 +34,80 @@ Consult the
 [BSP specification](https://github.com/scalacenter/bsp/blob/master/docs/bsp.md)
 to learn about the protocol in detail.
 
+### Server discovery
+
+Metals automatically connects to a BSP server if the workspace root directory
+contains a `.bsp/$name.json` file. For example, a build tool named "Bill" will
+have a `.bsp/bill.json` file with the following information.
+
+```json
+{
+  "name": "Bill",
+  "version": "1.0.0",
+  "bspVersion": "2.0.0",
+  "languages": ["scala"],
+  "argv": ["bill", "bsp"]
+}
+```
+
+When Metals detects a `.bsp/bill.json` file in the workspace:
+
+- it starts a new process `bill bsp`, the command is derived from the `argv`
+  field in `bill.json`.
+- the working directory of the process is the workspace directory.
+- communication between Metals and the build server happens through standard
+  input/output.
+
+For a plug-and-play example of a build server, see `Bill.scala` in the Metals
+repository. Bill is a basic build server that is used for testing and
+demonstration purposes only.
+
 ### Library bindings
 
-There are two available libraries for building a BSP server:
+There are two available libraries to implement a BSP server:
 
-- `ch.epfl.scala:bsp4s`: A Scala library built with Monix `Task`/`Observable`
-  for async primitives and Circe for JSON for serialization. This module is used
-  by the Bloop build server.
 - `ch.epfl.scala:bsp4j`: A Java library built with Java `CompletableFuture` for
   async primitives and GSON for JSON serialization. This module is used by
   Metals and the IntelliJ Scala plugin.
+- `ch.epfl.scala:bsp4s`: A Scala library built with Monix `Task`/`Observable`
+  for async primitives and Circe for JSON for serialization. This module is used
+  by the Bloop build server.
+
+Both libraries are compatible with each other. For example, it's OK to implement
+a server with bsp4j and a client in bsp4s.
+
+### Testing
+
+The Metals repository has infrastructure for running end-to-end integration
+tests with build servers. To test your build server integration, you can to
+clone the repository and write custom tests.
+
+If there is interest, we can publish a Metals `testkit` module to make it
+possible to write tests outside the Metals repository.
 
 ### SemanticDB
 
 As a build server, you are responsible for enabling the
-[SemanticDB](https://scalameta.org/docs/semanticdb/guide.html) compiler plugin
-so that code navigation works in Metals. Features like Goto Definition will not
-work unless the SemanticDB compiler plugin is enabled. The only feature that
-works fine without the SemanticDB compiler plugin is compile diagnostics.
+[SemanticDB](https://scalameta.org/docs/semanticdb/guide.html) compiler plugin.
+The SemanticDB plugin is required for features like Goto Definition to work.
+Diagnostics work fine without SemanticDB enabled.
+
+Users get a warning from Metals when the build server does not enable the
+SemanticDB compiler plugin. Users have an option to suppress this warning by
+selecting a "Don't show again" button.
 
 ### BSP endpoints
 
 Metals requires the following BSP endpoints to be implemented by the build
 server.
 
-- `workspace/buildTargets`: To list all the build targets in the workspace.
-- `buildTarget/scalacOptions`: To know the classpath and compiler options used
+- `workspace/buildTargets`: to list all the build targets in the workspace.
+- `buildTarget/scalacOptions`: to know the classpath and compiler options used
   to compile the project sources.
-- `buildTarget/sources`: To know what source files map to which build targets.
-- `buildTarget/dependencySources`: To support "Goto definition" for external
+- `buildTarget/sources`: to know what source files map to which build targets.
+- `buildTarget/dependencySources`: to support "Goto definition" for external
   libraries.
-- `buildTarget/compile`: To trigger compilation in a build target.
+- `buildTarget/compile`: to trigger compilation in a build target.
 
 Additionally, Metals expects the server to send the following notifications:
 

@@ -45,6 +45,11 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     _: MetalsSlowTaskParams =>
       None
   }
+  var showMessageRequestHandler
+    : ShowMessageRequestParams => Option[MessageActionItem] = {
+    _: ShowMessageRequestParams =>
+      None
+  }
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
@@ -157,16 +162,20 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   ): CompletableFuture[MessageActionItem] =
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.getMessage)
-      if (params == ImportBuildChanges.params) {
-        ImportBuildChanges.yes
-      } else if (params == ImportBuild.params) {
-        ImportBuild.yes
-      } else if (params == Only212Navigation.params("2.11.12")) {
-        Only212Navigation.dismissForever
-      } else if (CheckDoctor.isDoctor(params)) {
-        CheckDoctor.moreInformation
-      } else {
-        throw new IllegalArgumentException(params.toString)
+      showMessageRequestHandler(params).getOrElse {
+        if (params == ImportBuildChanges.params) {
+          ImportBuildChanges.yes
+        } else if (params == ImportBuild.params) {
+          ImportBuild.yes
+        } else if (params == Only212Navigation.params("2.11.12")) {
+          Only212Navigation.dismissForever
+        } else if (CheckDoctor.isDoctor(params)) {
+          CheckDoctor.moreInformation
+        } else if (SelectBspServer.isSelectBspServer(params)) {
+          params.getActions.asScala.find(_.getTitle == "Bob").get
+        } else {
+          throw new IllegalArgumentException(params.toString)
+        }
       }
     }
   override def logMessage(params: MessageParams): Unit = {

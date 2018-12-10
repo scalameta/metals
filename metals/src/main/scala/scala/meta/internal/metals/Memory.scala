@@ -30,6 +30,7 @@ object Memory {
 
   def footprint(iterable: sourcecode.Text[Object]): Footprint = {
     val layout = GraphLayout.parseInstance(iterable.value)
+
     val size = layout.totalSize()
     val linesOfCode: Option[Long] = iterable.value match {
       case index: OnDemandSymbolIndex =>
