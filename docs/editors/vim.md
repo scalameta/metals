@@ -58,45 +58,11 @@ exist yet.
 The `-Dmetals.client=vim-lsc` flag is important since it configures Metals for
 usage with the `vim-lsc` client.
 
-## Importing a build
-
-Go to the root directory of an sbt build, open `build.sbt` and navigate to any
-`*.scala` source file.
-
-When Metals encounters a new sbt build it will prompt you to "Import build via
-Bloop". Select `1` and press enter. You don't need Bloop installed on your
-machine to run this step.
-
-![Import via Bloop](../assets/vim-import-via-bloop.gif)
-
-While the `sbt bloopInstall` step is running, no Metals functionality will work.
-
-This step can take a long time, especially the first time you run it in a new
-workspace. The exact time depends on the complexity of the build and if library
-dependencies are cached or need to be downloaded. For example, this step can
-take everything from 10 seconds in small cached builds up to 10-15 minutes in
-large uncached builds.
-
-For more detailed information about what is happening behind the scenes during
-`sbt bloopInstall`:
+```scala mdoc:editor:vim
 
 ```
-tail -f .metals/metals.log
-```
 
-Once the `sbt bloopInstall` step is completed, you will see "Imported build!"
-
-![Import build](../assets/vim-imported-build.png)
-
-Once the import step completes, compilation starts for your open `*.scala`
-files. Once the sources have compiled successfully, you can navigate the the
-sources with "Goto definition" by pressing `gd` in normal mode.
-
-## How to
-
-Some tips on how to effectively use Metals with vim.
-
-### Learn more about vim-lsc
+## Learn more about vim-lsc
 
 For comprehensive documentation about vim-lsc, run the following command.
 
@@ -104,7 +70,7 @@ For comprehensive documentation about vim-lsc, run the following command.
 :help lsc
 ```
 
-### Customize goto definition
+## Customize goto definition
 
 Configure `~/.vimrc` to use a different command than `gd` for triggering "goto
 definition".
@@ -116,7 +82,7 @@ let g:lsc_auto_map = {
     \}
 ```
 
-### List all workspace compile errors
+## List all workspace compile errors
 
 To list all compilation errors and warnings in the workspace, run the following
 command.
@@ -128,7 +94,7 @@ command.
 This is helpful to see compilation errors in different files from your current
 open buffer.
 
-### Close buffer without exiting
+## Close buffer without exiting
 
 To close a buffer and return to the previous buffer, run the following command.
 
@@ -139,7 +105,7 @@ To close a buffer and return to the previous buffer, run the following command.
 This command is helpful when navigating in library dependency sources in the
 `.metals/readonly` directory.
 
-### Shut down the language server
+## Shut down the language server
 
 The Metals server is shutdown when you exit vim as usual.
 
@@ -149,7 +115,7 @@ The Metals server is shutdown when you exit vim as usual.
 
 This step clean ups resources that are used by the server.
 
-### Run doctor
+## Run doctor
 
 To troubleshoot problems with your build workspace execute the following
 command.
@@ -158,10 +124,14 @@ command.
 :call lsc#server#call(&filetype, 'workspace/executeCommand', { 'command': 'doctor-run' }, function('abs'))
 ```
 
+This command opens your browser with a table like this.
+
+![Run Doctor](assets/http-run-doctor.png)
+
 The callback `function('abs')` can be replaced with any function that does
 nothing.
 
-### Manually start build import
+## Manually start build import
 
 To manually start the `sbt bloopInstall` step, call the following command below.
 This command works only for sbt builds at the moment.
@@ -173,7 +143,7 @@ This command works only for sbt builds at the moment.
 The callback `function('abs')` can be replaced with any function that does
 nothing.
 
-### Manually connect with build server
+## Manually connect with build server
 
 To manually tell Metals to establish a connection with the build server, call
 the command below. This command works only at the moment if there is a `.bloop/`
@@ -186,10 +156,10 @@ directory containing JSON files.
 The callback `function('abs')` can be replaced with any function that does
 nothing.
 
-## Issues
+## Known issues
 
-Please report any issues you may find with Metals [here](https://github.com/scalameta/metals/issues).
-If you find any issues related to vim-lsc please report them [here](https://github.com/natebosch/vim-lsc/issues).
+- [vim-lsc#123](https://github.com/natebosch/vim-lsc/issues/123): newlines in
+  compile errors are escaped with `^@`.
 
 ## LanguageClient-neovim
 

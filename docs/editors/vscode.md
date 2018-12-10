@@ -31,6 +31,10 @@ when a `*.scala` or `*.sbt` file is opened.
 
 ```
 
+```scala mdoc:command-palette:vscode
+
+```
+
 ## Configure Java version
 
 The VS Code plugin uses by default the `JAVA_HOME` environment variable (via
