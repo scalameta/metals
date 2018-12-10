@@ -6,6 +6,7 @@
       "editors/atom",
       "editors/vim",
       "editors/sublime",
+      "editors/emacs",
       "editors/new-editor"
     ],
     "Build Tools": [

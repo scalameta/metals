@@ -104,7 +104,6 @@ class MetalsLanguageServer(
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
-    startHttpServer()
     tables = register(Tables.forWorkspace(workspace, time))
     buildTools = new BuildTools(workspace)
     buildTargets = new BuildTargets()
@@ -185,7 +184,7 @@ class MetalsLanguageServer(
   def initialize(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] = {
-    Future {
+    val result = Future {
       setupJna()
       warnUnsupportedJavaVersion()
       initializeParams = Option(params)
@@ -206,7 +205,8 @@ class MetalsLanguageServer(
         )
       }
       new InitializeResult(capabilities)
-    }.logError("initialize").asJava
+    }.logError("initialize")
+    timed("initialize")(result).asJava
   }
 
   def isUnsupportedJavaVersion: Boolean =
@@ -317,12 +317,14 @@ class MetalsLanguageServer(
     // enabled.
     if (isInitialized.compareAndSet(false, true)) {
       statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
+      tables.start()
       registerFileWatchers()
       Future
         .sequence(
           List[Future[Unit]](
             quickConnectToBuildServer().ignoreValue,
-            slowConnectToBuildServer(forceImport = false).ignoreValue
+            slowConnectToBuildServer(forceImport = false).ignoreValue,
+            Future(startHttpServer())
           )
         )
         .ignoreValue
@@ -726,6 +728,14 @@ class MetalsLanguageServer(
       )
     }
   }
+
+  private def timedThunk[T](didWhat: String)(thunk: => T): T = {
+    val timer = new Timer(time)
+    val result = thunk
+    scribe.info(s"$didWhat in $timer")
+    result
+  }
+
   private def timed[T](didWhat: String, reportStatus: Boolean = false)(
       thunk: => Future[T]
   ): Future[T] = {

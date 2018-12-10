@@ -49,19 +49,6 @@ class TextEditorModifier extends StringModifier {
        |
        |![Import sbt changes](assets/$editor-import-changes.png)
        |
-       |### Manually trigger build import
-       |
-       |To manually trigger a build import, execute the "Import build" command through
-       |the command palette (`Cmd + Shift + P`).
-       |
-       |![Import build command](assets/$editor-import-build-command.png)
-       |
-       |## Run doctor
-       |
-       |Execute the "Run Doctor" through the command palette to troubleshoot potential
-       |configuration problems in your workspace.
-       |
-       |![Run doctor command](assets/$editor-run-doctor.png)
     """.stripMargin
   }
 }
