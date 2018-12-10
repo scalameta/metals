@@ -25,3 +25,19 @@ apm install ide-scala
 ```scala mdoc:editor:atom
 
 ```
+
+## Using latest Metals SNAPSHOT
+
+Update the "Metals version" setting to try out the latest pending Metals
+features.
+
+```scala mdoc:releases
+
+```
+
+Run the "Reload Window" command after updating the setting for the new version
+to take effect.
+
+```scala mdoc:generic
+
+```
