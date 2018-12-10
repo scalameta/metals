@@ -8,6 +8,10 @@ Metals works in Emacs thanks to the the
 
 ![Emacs demo](../assets/emacs-demo.gif)
 
+> The Emacs LSP client has [several known issues](#known-issues). Most
+> critically, diagnostics are not published for unopened buffers meaning compile
+> errors can get lost.
+
 ```scala mdoc:requirements
 
 ```
@@ -55,6 +59,9 @@ dependencies
 (add-hook 'scala-mode-hook #'lsp-scala-enable)
 ```
 
+> You may need to disable other packages like `ensime` or sbt server to prevent
+> conflicts with Metals.
+
 If you start Emacs now then it will fail since the `metals-emacs` binary does
 not exist yet.
 
@@ -82,7 +89,7 @@ in your build.
 
 ![Run doctor command](assets/http-run-doctor.png)
 
-## Issues
+## Known issues
 
 - `lsp-mode` blocks the UI during the `initialize` handshake so you may notice
   that opening `*.scala` file gets slower. Metals does as much as possible to
@@ -105,6 +112,12 @@ in your build.
 - `flycheck` does not explicitly support Windows so diagnostics may not report
   correctly on Windows:
   http://www.flycheck.org/en/latest/user/installation.html#windows-support
+
+### eglot
+
+There is an alternative LSP client called
+[eglot](https://github.com/joaotavora/eglot) that might be worth trying out to
+see if it addresses the issues of lsp-mode.
 
 ```scala mdoc:generic
 
