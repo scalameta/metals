@@ -184,7 +184,7 @@ class MetalsLanguageServer(
   def initialize(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] = {
-    val result = Future {
+    timed("initialize")(Future {
       setupJna()
       warnUnsupportedJavaVersion()
       initializeParams = Option(params)
@@ -205,8 +205,7 @@ class MetalsLanguageServer(
         )
       }
       new InitializeResult(capabilities)
-    }.logError("initialize")
-    timed("initialize")(result).asJava
+    }).asJava
   }
 
   def isUnsupportedJavaVersion: Boolean =
@@ -727,13 +726,6 @@ class MetalsLanguageServer(
         }
       )
     }
-  }
-
-  private def timedThunk[T](didWhat: String)(thunk: => T): T = {
-    val timer = new Timer(time)
-    val result = thunk
-    scribe.info(s"$didWhat in $timer")
-    result
   }
 
   private def timed[T](didWhat: String, reportStatus: Boolean = false)(
