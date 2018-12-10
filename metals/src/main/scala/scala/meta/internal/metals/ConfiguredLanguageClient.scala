@@ -119,4 +119,8 @@ final class ConfiguredLanguageClient(
       underlying.metalsExecuteClientCommand(params)
     }
   }
+
+  override def updateUnderlying(newUnderlying: MetalsLanguageClient): Unit = {
+    this.underlying = newUnderlying
+  }
 }

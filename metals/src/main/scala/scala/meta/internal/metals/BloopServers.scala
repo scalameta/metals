@@ -241,6 +241,9 @@ final class BloopServers(
             .add(Cancelable(() => job.cancel(true)))
             .add(Cancelable(() => cancelMain.trySuccess(true)))
         case None =>
+          scribe.error(
+            "not found: bloop classloader. To fix this problem, try installing Bloop from https://scalacenter.github.io/bloop/setup"
+          )
           Cancelable.empty
       }
     }

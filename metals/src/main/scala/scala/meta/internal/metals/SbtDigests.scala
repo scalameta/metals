@@ -8,10 +8,10 @@ import scala.meta.internal.metals.SbtDigest.Status
 /**
  * Wrapper around the sbt_digest sql table.
  */
-final class SbtDigests(conn: Connection, time: Time) {
+final class SbtDigests(conn: () => Connection, time: Time) {
 
   def setStatus(md5Digest: String, status: Status): Int =
-    conn.update(
+    conn().update(
       s"insert into sbt_digest values (?, ?, ?);"
     ) { stmt =>
       val timestamp = new Timestamp(time.millis())
@@ -21,7 +21,7 @@ final class SbtDigests(conn: Connection, time: Time) {
     }
 
   def last(): Option[SbtDigest] =
-    conn
+    conn()
       .query(
         "select md5, status, when_recorded from sbt_digest d order by d.when_recorded desc limit 1;"
       )(_ => ()) { rs =>
@@ -36,7 +36,7 @@ final class SbtDigests(conn: Connection, time: Time) {
       .headOption
 
   def byDigest(md5: String): List[SbtDigest] =
-    conn
+    conn()
       .query(
         "select status, when_recorded from sbt_digest where md5 = ?;"
       )(

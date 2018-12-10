@@ -5,12 +5,12 @@ import java.sql.Connection
 import scala.meta.io.AbsolutePath
 import JdbcEnrichments._
 
-final class DependencySources(conn: Connection) {
+final class DependencySources(conn: () => Connection) {
   def setBuildTarget(
       dependencySource: AbsolutePath,
       buildTarget: BuildTargetIdentifier
   ): Int = {
-    conn.update(
+    conn().update(
       "merge into dependency_source key(text_document_uri) values (?, ?);"
     ) { stmt =>
       stmt.setString(1, dependencySource.toURI.toString)
@@ -20,7 +20,7 @@ final class DependencySources(conn: Connection) {
   def getBuildTarget(
       dependencySource: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
-    conn.query(
+    conn().query(
       "select build_target_uri from dependency_source where text_document_uri = ?;"
     ) { stmt =>
       stmt.setString(1, dependencySource.toURI.toString)

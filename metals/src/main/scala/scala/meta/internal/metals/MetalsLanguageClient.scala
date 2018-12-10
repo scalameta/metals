@@ -35,6 +35,8 @@ trait MetalsLanguageClient extends LanguageClient {
 
   def shutdown(): Unit = {}
 
+  def updateUnderlying(underlying: MetalsLanguageClient): Unit = {}
+
 }
 
 /**

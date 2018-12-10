@@ -26,6 +26,10 @@ apm install ide-scala
 
 ```
 
+```scala mdoc:command-palette:vscode
+
+```
+
 ## Using latest Metals SNAPSHOT
 
 Update the "Metals version" setting to try out the latest pending Metals

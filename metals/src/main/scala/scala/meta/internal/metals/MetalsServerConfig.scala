@@ -83,6 +83,12 @@ object MetalsServerConfig {
           showMessageRequest = ShowMessageRequestConfig.logMessage,
           icons = Icons.unicode
         )
+      case "emacs" =>
+        base.copy(
+          isHttpEnabled = true,
+          // `logMessage` is always visible in the UI.
+          statusBar = StatusBarConfig.logMessage
+        )
       case _ =>
         base
     }
