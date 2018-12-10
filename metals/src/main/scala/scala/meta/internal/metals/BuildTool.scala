@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 sealed abstract class BuildTool extends Product with Serializable
 
 object BuildTool {
+  case object Bsp extends BuildTool
   case object Bazel extends BuildTool
   case object Bloop extends BuildTool
   case object Gradle extends BuildTool

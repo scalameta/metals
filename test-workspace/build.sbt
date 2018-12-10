@@ -1,7 +1,7 @@
 inThisBuild(Vector(
   scalaVersion := "2.12.8",
   scalacOptions ++= List(
-    "-Yrangepos", "-Ywarn-unused"
+    "-Ywarn-unused"
   ),
 ))
 

@@ -18,6 +18,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   def protocol: BloopProtocol = BloopProtocol.auto
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
+  def bspGlobalDirectories: List[AbsolutePath] = Nil
   var server: TestingServer = _
   var client: TestingClient = _
   var workspace: AbsolutePath = _
@@ -26,6 +27,12 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       server.cancel()
     }
     ex.shutdown()
+  }
+  def assertConnectedToBuildServer(
+      expectedName: String
+  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+    val obtained = server.server.buildServer.get.name
+    assertNoDiff(obtained, expectedName)
   }
   override def utestBeforeEach(path: Seq[String]): Unit = {
     if (server != null) {
@@ -46,7 +53,13 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       executeClientCommand = ExecuteClientCommandConfig.on
     )
     client = new TestingClient(workspace, buffers)
-    server = new TestingServer(workspace, client, buffers, config)(ex)
+    server = new TestingServer(
+      workspace,
+      client,
+      buffers,
+      config,
+      bspGlobalDirectories
+    )(ex)
   }
 
   def cleanCompileCache(project: String): Unit = {

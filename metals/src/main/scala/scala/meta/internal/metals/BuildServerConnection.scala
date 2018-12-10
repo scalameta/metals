@@ -5,12 +5,16 @@ import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.CompileResult
 import ch.epfl.scala.bsp4j.InitializeBuildParams
 import ch.epfl.scala.bsp4j.InitializeBuildResult
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
@@ -24,7 +28,8 @@ case class BuildServerConnection(
     client: MetalsBuildClient,
     server: MetalsBuildServer,
     cancelables: List[Cancelable],
-    initializeResult: InitializeBuildResult
+    initializeResult: InitializeBuildResult,
+    name: String
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -59,6 +64,39 @@ case class BuildServerConnection(
 }
 
 object BuildServerConnection {
+
+  def fromStreams(
+      workspace: AbsolutePath,
+      localClient: MetalsBuildClient,
+      output: OutputStream,
+      input: InputStream,
+      cancelables: List[Cancelable],
+      name: String
+  )(implicit ec: ExecutionContextExecutorService): BuildServerConnection = {
+    val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
+    val launcher = new Launcher.Builder[MetalsBuildServer]()
+      .traceMessages(tracePrinter)
+      .setOutput(output)
+      .setInput(input)
+      .setLocalService(localClient)
+      .setRemoteInterface(classOf[MetalsBuildServer])
+      .setExecutorService(ec)
+      .create()
+    val listening = launcher.startListening()
+    val server = launcher.getRemoteProxy
+    localClient.onConnect(server)
+    val result = BuildServerConnection.initialize(workspace, server)
+    val stopListening =
+      Cancelable(() => listening.cancel(true))
+    BuildServerConnection(
+      workspace,
+      localClient,
+      server,
+      stopListening :: cancelables,
+      result,
+      name
+    )
+  }
 
   /** Run build/initialize handshake */
   def initialize(

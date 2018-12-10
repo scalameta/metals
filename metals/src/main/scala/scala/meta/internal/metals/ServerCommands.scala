@@ -48,6 +48,17 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val BspSwitch = Command(
+    "bsp-switch",
+    "Switch build server",
+    """|Prompt the user to select a new build server to connect to.
+       |
+       |This command does nothing in case there are less than two installed build
+       |servers on the computer. In case the user has multiple BSP servers installed
+       |then Metals will prompt the user to select which server to use.
+       |""".stripMargin
+  )
+
   /**
    * Open the browser at the given url.
    */

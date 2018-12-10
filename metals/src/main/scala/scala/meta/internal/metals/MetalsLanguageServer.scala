@@ -45,7 +45,9 @@ class MetalsLanguageServer(
     charset: Charset = StandardCharsets.UTF_8,
     time: Time = Time.system,
     config: MetalsServerConfig = MetalsServerConfig.default,
-    progressTicks: ProgressTicks = ProgressTicks.braille
+    progressTicks: ProgressTicks = ProgressTicks.braille,
+    bspGlobalDirectories: List[AbsolutePath] =
+      BspServers.globalInstallDirectories
 ) extends Cancelable {
 
   private val cancelables = new MutableCancelable()
@@ -76,6 +78,7 @@ class MetalsLanguageServer(
   private var semanticdbs: Semanticdbs = _
   private var buildClient: MetalsBuildClient = _
   private var bloopServers: BloopServers = _
+  private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
   private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
@@ -102,7 +105,7 @@ class MetalsLanguageServer(
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
     tables = register(Tables.forWorkspace(workspace, time))
-    buildTools = new BuildTools(workspace)
+    buildTools = new BuildTools(workspace, bspGlobalDirectories)
     buildTargets = new BuildTargets()
     fileSystemSemanticdbs =
       new FileSystemSemanticdbs(buildTargets, charset, workspace, fingerprints)
@@ -142,6 +145,14 @@ class MetalsLanguageServer(
       config.icons,
       embedded,
       statusBar
+    )
+    bspServers = new BspServers(
+      workspace,
+      charset,
+      languageClient,
+      buildClient,
+      tables,
+      bspGlobalDirectories
     )
     semanticdbs = AggregateSemanticdbs(
       List(
@@ -595,6 +606,14 @@ class MetalsLanguageServer(
         Future {
           doctor.executeRunDoctor()
         }.asJavaObject
+      case ServerCommands.BspSwitch() =>
+        (for {
+          isSwitched <- bspServers.switchBuildServer()
+          _ <- {
+            if (isSwitched) quickConnectToBuildServer()
+            else Future.successful(())
+          }
+        } yield ()).asJavaObject
       case ServerCommands.OpenBrowser(url) =>
         Future.successful(Urls.openBrowser(url)).asJavaObject
       case els =>
@@ -607,7 +626,7 @@ class MetalsLanguageServer(
   ): Future[BuildChange] = {
     buildTools.asSbt match {
       case None =>
-        if (!buildTools.isBloop) {
+        if (!buildTools.isAutoConnectable) {
           scribe.warn(
             s"Skipping build import for unsupport build tool $buildTools"
           )
@@ -637,7 +656,7 @@ class MetalsLanguageServer(
       change <- {
         if (result.isInstalled) quickConnectToBuildServer()
         else if (result.isFailed) {
-          if (buildTools.isBloop) {
+          if (buildTools.isAutoConnectable) {
             // TODO(olafur) try to connect but gracefully error
             languageClient.showMessage(
               messages.ImportProjectPartiallyFailed
@@ -657,7 +676,8 @@ class MetalsLanguageServer(
     } yield change
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
-    if (!buildTools.isBloop) {
+    Debug.printEnclosing()
+    if (!buildTools.isAutoConnectable) {
       scribe.warn("Unable to automatically connect to build server.")
       Future.successful(BuildChange.None)
     } else if (isUnsupportedJavaVersion) {
@@ -668,12 +688,18 @@ class MetalsLanguageServer(
           case Some(old) => old.shutdown()
           case None => Future.successful(())
         }
-        build <- timed("connected to build server")(bloopServers.newServer())
-        _ = {
-          cancelables.add(build)
-          buildServer = Some(build)
+        maybeBuild <- timed("connected to build server") {
+          if (buildTools.isBloop) bloopServers.newServer()
+          else bspServers.newServer()
         }
-        _ <- installWorkspaceBuildTargets(build)
+        _ <- maybeBuild match {
+          case Some(build) =>
+            cancelables.add(build)
+            buildServer = Some(build)
+            installWorkspaceBuildTargets(build)
+          case None =>
+            Future.successful(())
+        }
       } yield ()
 
       for {

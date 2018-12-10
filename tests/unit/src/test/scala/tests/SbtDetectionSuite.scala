@@ -10,7 +10,7 @@ object SbtDetectionSuite extends BaseSuite {
     test(name) {
       val workspace = FileLayout.fromString(layout)
       workspace.toFile.deleteOnExit()
-      val isSbt = new BuildTools(workspace).isSbt
+      val isSbt = new BuildTools(workspace, Nil).isSbt
       if (isTrue) assert(isSbt)
       else assert(!isSbt)
     }
