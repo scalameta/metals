@@ -12,6 +12,7 @@ abstract class BaseTablesSuite extends BaseSuite {
     workspace = AbsolutePath(Files.createTempDirectory("metals"))
     time.reset()
     tables = Tables.forWorkspace(workspace, time)
+    tables.start()
   }
   override def utestAfterEach(path: Seq[String]): Unit = {
     tables.cancel()

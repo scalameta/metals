@@ -326,6 +326,57 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
     } yield ()
   }
 
+  testAsync("jvmopts") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/project/build.properties
+          |sbt.version=1.2.6
+          |/build.sbt
+          |scalaVersion := "2.12.7"
+          |/.jvmopts
+          |-Xms1536M
+          |-Xmx1536M
+          |-Xss6M
+          |""".stripMargin
+      )
+      // assert that a `.jvmopts` file doesn't break "Import build"
+      _ = assertStatus(_.isInstalled)
+    } yield ()
+  }
+
+  testAsync("fatal-warnings") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/project/build.properties
+          |sbt.version=1.2.6
+          |/build.sbt
+          |scalaVersion := "2.12.7"
+          |scalacOptions ++= List(
+          |  "-Xfatal-warnings",
+          |  "-Ywarn-unused"
+          |)
+          |/src/main/scala/warning/Warning.scala
+          |import scala.concurrent.Future // unused
+          |object Warning
+          |""".stripMargin
+      )
+      _ = assertStatus(_.isInstalled)
+      _ <- server.didOpen("src/main/scala/warning/Warning.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """
+          |src/main/scala/warning/Warning.scala:1:25: warning: Unused import
+          |import scala.concurrent.Future // unused
+          |                        ^^^^^^
+        """.stripMargin
+      )
+    } yield ()
+  }
+
   testAsync("sbt-script") {
     cleanWorkspace()
     for {

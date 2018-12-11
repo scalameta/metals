@@ -119,4 +119,5 @@ final class ConfiguredLanguageClient(
       underlying.metalsExecuteClientCommand(params)
     }
   }
+
 }

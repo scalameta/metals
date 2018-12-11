@@ -30,6 +30,9 @@
       "editors/atom": {
         "title": "Atom"
       },
+      "editors/emacs": {
+        "title": "Emacs"
+      },
       "editors/new-editor": {
         "title": "Integrating a new editor"
       },

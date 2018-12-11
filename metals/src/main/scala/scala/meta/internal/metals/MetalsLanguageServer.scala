@@ -62,10 +62,11 @@ class MetalsLanguageServer(
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
+  private val languageClient =
+    new DelegatingLanguageClient(NoopLanguageClient, config)
   private var userConfig = UserConfiguration()
 
   // These can't be instantiated until we know the workspace root directory.
-  private var languageClient: MetalsLanguageClient = _
   private var bloopInstall: BloopInstall = _
   private var diagnostics: Diagnostics = _
   private var buildTargets: BuildTargets = _
@@ -85,15 +86,11 @@ class MetalsLanguageServer(
   var httpServer: Option[MetalsHttpServer] = None
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
-    languageClient = client
+    languageClient.underlying = client
     statusBar = new StatusBar(() => languageClient, time, progressTicks)
     embedded = register(new Embedded(config.icons, statusBar, () => userConfig))
-    LanguageClientLogger.languageClient = Some(client)
-    cancelables
-      .add(() => languageClient.shutdown())
-      .add(() => {
-        LanguageClientLogger.languageClient = None
-      })
+    LanguageClientLogger.languageClient = Some(languageClient)
+    cancelables.add(() => languageClient.shutdown())
   }
 
   def register[T <: Cancelable](cancelable: T): T = {
@@ -104,7 +101,6 @@ class MetalsLanguageServer(
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
-    startHttpServer()
     tables = register(Tables.forWorkspace(workspace, time))
     buildTools = new BuildTools(workspace)
     buildTargets = new BuildTargets()
@@ -185,7 +181,7 @@ class MetalsLanguageServer(
   def initialize(
       params: InitializeParams
   ): CompletableFuture[InitializeResult] = {
-    Future {
+    timed("initialize")(Future {
       setupJna()
       warnUnsupportedJavaVersion()
       initializeParams = Option(params)
@@ -206,7 +202,7 @@ class MetalsLanguageServer(
         )
       }
       new InitializeResult(capabilities)
-    }.logError("initialize").asJava
+    }).asJava
   }
 
   def isUnsupportedJavaVersion: Boolean =
@@ -277,14 +273,14 @@ class MetalsLanguageServer(
       val port = 5031
       var url = s"http://$host:$port"
       var render: () => String = () => ""
-      var complete: HttpServerExchange => Unit = e => ()
+      var completeCommand: HttpServerExchange => Unit = e => ()
       val server = register(
         MetalsHttpServer(
           host,
           port,
           this,
           () => render(),
-          e => complete(e),
+          e => completeCommand(e),
           () => doctor.problemsHtmlPage(url)
         )
       )
@@ -292,7 +288,7 @@ class MetalsLanguageServer(
       val newClient = new MetalsHttpClient(
         workspace,
         () => url,
-        languageClient,
+        languageClient.underlying,
         () => server.reload(),
         charset,
         config.icons,
@@ -300,9 +296,8 @@ class MetalsLanguageServer(
         sh
       )
       render = () => newClient.renderHtml
-      complete = e => newClient.complete(e)
-      languageClient = newClient
-      LanguageClientLogger.languageClient = Some(newClient)
+      completeCommand = e => newClient.completeCommand(e)
+      languageClient.underlying = newClient
       server.start()
       url = server.address
     }
@@ -317,12 +312,14 @@ class MetalsLanguageServer(
     // enabled.
     if (isInitialized.compareAndSet(false, true)) {
       statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
+      tables.start()
       registerFileWatchers()
       Future
         .sequence(
           List[Future[Unit]](
             quickConnectToBuildServer().ignoreValue,
-            slowConnectToBuildServer(forceImport = false).ignoreValue
+            slowConnectToBuildServer(forceImport = false).ignoreValue,
+            Future(startHttpServer())
           )
         )
         .ignoreValue
@@ -726,6 +723,7 @@ class MetalsLanguageServer(
       )
     }
   }
+
   private def timed[T](didWhat: String, reportStatus: Boolean = false)(
       thunk: => Future[T]
   ): Future[T] = {
