@@ -256,7 +256,7 @@ final class MetalsHttpClient(
     result.render
   }
 
-  def complete(exchange: HttpServerExchange): Unit = {
+  def completeCommand(exchange: HttpServerExchange): Unit = {
     val id = exchange.getQuery("id").getOrElse("<unknown>")
     showMessages.removeIf(_.id == id)
     slowTasks.forEach { task =>
