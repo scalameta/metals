@@ -60,17 +60,20 @@ final class BloopInstall(
       case None =>
         val javaArgs = List[String](
           JavaBinary(userConfig().javaHome),
-          "-jar",
-          embedded.sbtLauncher.toString(),
           "-Djline.terminal=jline.UnsupportedTerminal",
           "-Dsbt.log.noformat=true",
           "-Dfile.encoding=UTF-8"
+        )
+        val jarArgs = List(
+          "-jar",
+          embedded.sbtLauncher.toString()
         )
         List(
           javaArgs,
           SbtOpts.loadFrom(workspace),
           JvmOpts.loadFrom(workspace),
           userConfig().sbtOpts,
+          jarArgs,
           sbtArgs
         ).flatten
     }

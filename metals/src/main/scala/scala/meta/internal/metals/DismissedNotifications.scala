@@ -5,7 +5,7 @@ import JdbcEnrichments._
 import java.sql.Timestamp
 import java.util.concurrent.TimeUnit
 
-final class DismissedNotifications(conn: Connection, time: Time) {
+final class DismissedNotifications(conn: () => Connection, time: Time) {
 
   val Only212Navigation = new Notification(1)
   val IncompatibleSbt = new Notification(2)
@@ -16,7 +16,7 @@ final class DismissedNotifications(conn: Connection, time: Time) {
     override def toString: String = s"Notification(${name.value}, $id)"
     def isDismissed: Boolean = {
       val now = new Timestamp(time.millis())
-      conn.query {
+      conn().query {
         "select * from dismissed_notification where id = ? and when_expires > ? limit 1;"
       } { stmt =>
         stmt.setInt(1, id)
@@ -35,7 +35,7 @@ final class DismissedNotifications(conn: Connection, time: Time) {
     }
     def dismiss(whenExpire: Timestamp): Unit = {
       val now = new Timestamp(time.millis())
-      conn.update {
+      conn().update {
         "insert into dismissed_notification values (?, ?, ?);"
       } { stmt =>
         stmt.setInt(1, id)

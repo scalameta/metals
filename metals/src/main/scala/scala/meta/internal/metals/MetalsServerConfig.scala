@@ -83,6 +83,10 @@ object MetalsServerConfig {
           showMessageRequest = ShowMessageRequestConfig.logMessage,
           icons = Icons.unicode
         )
+      case "emacs" =>
+        base.copy(
+          isHttpEnabled = true
+        )
       case _ =>
         base
     }

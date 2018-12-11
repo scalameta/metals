@@ -44,7 +44,7 @@ package scala.meta.metals {
             // Disable fatal warnings so that SemanticDBs are generated even for unused warnings.
             // Down the road, metals can even remove unused imports for you if they are reported
             // as warnings but not if they are errors.
-            "-Xfatal-warning"
+            "-Xfatal-warnings"
           ),
           scalacOptions.in(p) ++= List(
             // Don't fail compilation in case of Scalameta crash during SemanticDB generation.

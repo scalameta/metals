@@ -7,23 +7,27 @@ import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
 import scala.meta.io.AbsolutePath
 
-final class Tables(connection: Connection, time: Time) extends Cancelable {
-  val sbtDigests = new SbtDigests(connection, time)
-  val dependencySources = new DependencySources(connection)
-  val dismissedNotifications = new DismissedNotifications(connection, time)
-  def cancel(): Unit = connection.close()
-}
-
-object Tables {
-  def forWorkspace(workspace: AbsolutePath, time: Time): Tables = {
+final class Tables(workspace: AbsolutePath, time: Time) extends Cancelable {
+  var connection: Connection = _
+  def start(): Unit = {
     val dbfile = workspace.resolve(".metals").resolve("metals")
     Files.createDirectories(dbfile.toNIO.getParent)
     val url = s"jdbc:h2:file:$dbfile;MV_STORE=false;AUTO_SERVER=true"
     val user = "sa"
     val flyway = Flyway.configure.dataSource(url, user, null).load
-    migrateOrRestart(flyway, dbfile.resolveSibling(_ + ".h2.db"))
-    val conn = DriverManager.getConnection(url, user, null)
-    new Tables(conn, time)
+    Tables.migrateOrRestart(flyway, dbfile.resolveSibling(_ + ".h2.db"))
+    this.connection = DriverManager.getConnection(url, user, null)
+  }
+  val sbtDigests = new SbtDigests(() => connection, time)
+  val dependencySources = new DependencySources(() => connection)
+  val dismissedNotifications =
+    new DismissedNotifications(() => connection, time)
+  def cancel(): Unit = connection.close()
+}
+
+object Tables {
+  def forWorkspace(workspace: AbsolutePath, time: Time): Tables = {
+    new Tables(workspace, time)
   }
 
   private def migrateOrRestart(flyway: Flyway, path: AbsolutePath): Unit = {
