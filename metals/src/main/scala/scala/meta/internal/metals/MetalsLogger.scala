@@ -94,17 +94,5 @@ object MetalsLogger {
     FileWriter().path(_ => logfile.toNIO).autoFlush
 
   def defaultFormat = formatter"$levelPaddedRight $message$newLine"
-  implicit def AnyLoggable[T]: Loggable[T] = _AnyLoggable
-  private val _AnyLoggable = new Loggable[Any] {
-    override def apply(value: Any): String =
-      value match {
-        case s: String =>
-          s
-        case e: Throwable =>
-          Loggable.ThrowableLoggable(e)
-        case _ =>
-          pprint.PPrinter.Color.tokenize(value).mkString
-      }
-  }
 
 }
