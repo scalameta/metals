@@ -85,9 +85,7 @@ object MetalsServerConfig {
         )
       case "emacs" =>
         base.copy(
-          isHttpEnabled = true,
-          // `logMessage` is always visible in the UI.
-          statusBar = StatusBarConfig.logMessage
+          isHttpEnabled = true
         )
       case _ =>
         base
