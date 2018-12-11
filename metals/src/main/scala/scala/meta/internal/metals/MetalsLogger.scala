@@ -93,37 +93,6 @@ object MetalsLogger {
   def newFileWriter(logfile: AbsolutePath): FileWriter =
     FileWriter().path(_ => logfile.toNIO).autoFlush
 
-  // Example format: "MyProgram.scala:14 trace foo"
-  def defaultFormat =
-    formatter"$prettyLevel $message$newLine"
-  def debugFormat =
-    formatter"$prettyLevel $fileName:$line$newLine$prettyLevel $message$newLine"
-  implicit def AnyLoggable[T]: Loggable[T] = _AnyLoggable
-  private val _AnyLoggable = new Loggable[Any] {
-    override def apply(value: Any): String =
-      value match {
-        case s: String =>
-          s
-        case e: Throwable =>
-          Loggable.ThrowableLoggable(e)
-        case _ =>
-          pprint.PPrinter.Color.tokenize(value).mkString
-      }
-  }
-
-  private object prettyLevel extends FormatBlock {
-    import scribe.Level._
-    override def format[M](record: LogRecord[M]): String = {
-      val color = record.level match {
-        case Trace => Console.MAGENTA
-        case Debug => Console.GREEN
-        case Info => Console.BLUE
-        case Warn => Console.YELLOW
-        case Error => Console.RED
-        case _ => ""
-      }
-      color + record.level.namePaddedRight.toLowerCase + Console.RESET
-    }
-  }
+  def defaultFormat = formatter"$levelPaddedRight $message$newLine"
 
 }
