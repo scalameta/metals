@@ -201,7 +201,7 @@ include the text of the original license below:
 
 ```
 
-# License notice for closeau
+# License notice for clouseau
 
 Metals contains parts which are derived from
 [the closeau project](https://github.com/non/clouseau). The license for clouseau
