@@ -41,7 +41,7 @@ There are some hard constraints:
 
 - we must answer quickly, normal requests should respond within 100-200ms.
 - memory usage should not exceed 10-100Mb since we also need memory to implement
-  other features we're sharing the computer with other applications.
+  other features and we're sharing the computer with other applications.
 - computing an index should not take more than ~10 seconds after importing the
   build, even for large projects with millions of lines of source code
   (including dependencies).
@@ -57,6 +57,8 @@ read("scala/Option.scala")
 // "sealed abstract class Option { ... }; class Some extends Option { ... }"
 ```
 
+### Java
+
 For Java, the challenge is not so difficult since the compiler enforces that
 each source file contains a single public class with matching filename.
 
@@ -70,10 +72,17 @@ public class Files {
 }
 ```
 
-To navigate to the `Files.readAllBytes()` method we take the enclosing toplevel
-class `java.nio.file.Files` and read the corresponding file
-`java/nio/File/Files.java`. This approach is fast (almost instant!) and it also
-requires no index sucking up memory.
+To respond to a Goto Definition request for the `Files.readAllBytes()` method,
+we
+
+- take the enclosing toplevel class `java.nio.file.Files`
+- read the corresponding file `java/nio/File/Files.java`
+- parse `Files.java` to find the exact position of `readAllFiles()`
+
+This approach is fast (parsing one file is cheap) and it also requires no index
+(0Mb memory!).
+
+### Scala
 
 For Scala, the problem is trickier because the compiler allows multiple toplevel
 classes in the same source file.
@@ -116,21 +125,25 @@ val index = Map[Symbol, Path](
 )
 ```
 
-Our challenge is to build this index as fast as possible.
+With this index, we can lookup which file defines `scala.Some` and then parse
+`Option.scala` on-demand (like we do for Java) to find the position where
+`def isEmpty: Boolean` is defined. The challenge is to efficiently build the
+index.
 
 ## Initial solution
 
-The first implementation of the Metals indexer used the
-[Scalameta](https://scalameta.org/) parser. This parser does not desugar the
-original code making it useful for refactoring and code-formatting tools like
+One approach to build the index is to use the
+[Scalameta](https://scalameta.org/) parser to extract the toplevel classes of
+each source file. This parser does not desugar the original code making it
+useful for refactoring and code-formatting tools like
 [Scalafix](http://scalacenter.github.io/scalafix/)/[Scalafmt](http://scalameta.org/scalafmt).
 I'm also familiar with Scalameta parser API so it was fast to get a working
 implementation. However, is the parser fast enough to parse millions of lines of
 code on every server startup?
 
-According to JMH benchmarks, parsing a sizable corpus of Scala code, the
-Scalameta parser handles ~92k lines/second. The benchmarks use the "single-shot"
-mode of JMH, for which the documentation says:
+According to JMH benchmarks, the Scalameta parser handles ~92k lines/second
+measured against a sizable corpus of Scala code. The benchmarks use the
+"single-shot" mode of JMH, for which the documentation says:
 
 > "This mode is useful to estimate the "cold" performance when you don't want to
 > hide the warmup invocations."
@@ -151,18 +164,18 @@ information we need from a source file. For example, the Scalameta parser
 extracts method implementations that are irrelevant for our indexer. Our indexer
 needs to know the toplevel classes and nothing more.
 
-The algorithm for this custom parser that only extracts toplevel classes goes
-roughly like this.
+The simplified algorithm for this custom parser goes something like this:
 
 - tokenize source file
+- on consecutive `package object` keywords, record package object
 - on `package` keyword, record package name
 - on `class` and `trait` and `object` keywords, record toplevel class
 - on `(` and `[` and `{` delimiters, skip tokens until we find matching closing
   delimiter
 
-Using an existing tokenizer, the implementation for this custom parser ended up
-being ~200 lines of code that took an afternoon to write and test (less time
-than it took to write this blog post!).
+There are a few more cases to handle, but the implementation ended up being ~200
+lines of code that took an afternoon to write and test (less time than it took
+to write this blog post!).
 
 Benchmarks show that the custom parser is almost 10x faster compared to the
 initial solution.
