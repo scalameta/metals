@@ -1,6 +1,7 @@
 package bench
 
 import java.util.concurrent.TimeUnit
+import scala.meta.internal.metals.Memory
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import tests.Libraries
@@ -17,5 +18,7 @@ object MainBench {
     scribe.info(s"java lines: ${index.mtags.totalLinesOfJava}")
     scribe.info(s"scala lines: ${index.mtags.totalLinesOfScala}")
     Memory.printFootprint(index)
+    val bench = new MetalsBench
+    bench.scalacTokenize()
   }
 }

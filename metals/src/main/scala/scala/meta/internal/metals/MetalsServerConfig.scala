@@ -31,7 +31,8 @@ final case class MetalsServerConfig(
       MetalsServerConfig.binaryOption("metals.no-initialized"),
     isHttpEnabled: Boolean = MetalsServerConfig.binaryOption("metals.http"),
     isVerbose: Boolean = MetalsServerConfig.binaryOption("metals.verbose"),
-    icons: Icons = Icons.default
+    icons: Icons = Icons.default,
+    statistics: StatisticsConfig = StatisticsConfig.default
 ) {
   override def toString: String =
     List[String](
@@ -44,7 +45,8 @@ final case class MetalsServerConfig(
       s"show-message-request=$showMessageRequest",
       s"no-initialized=$isNoInitialized",
       s"http=$isHttpEnabled",
-      s"icons=$icons"
+      s"icons=$icons",
+      s"statistics=$statistics"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

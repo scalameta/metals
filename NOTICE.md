@@ -1,8 +1,8 @@
 # License notice for the IntelliJ Scala plugin
 
 Metals contains parts which are derived from
-[the IntelliJ Scala project](https://github.com/JetBrains/intellij-scala).
-We include the text of the original license below:
+[the IntelliJ Scala project](https://github.com/JetBrains/intellij-scala). We
+include the text of the original license below:
 
 ```
 
@@ -198,6 +198,11 @@ We include the text of the original license below:
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-   
+
 ```
 
+# License notice for clouseau
+
+Metals contains parts which are derived from
+[the closeau project](https://github.com/non/clouseau). The license for clouseau
+is available here: http://www.apache.org/licenses/LICENSE-2.0.txt
