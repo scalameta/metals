@@ -5,6 +5,7 @@ import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State
+import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
@@ -15,6 +16,10 @@ import tests.Libraries
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.tokenizers.LegacyScanner
+import scala.meta.internal.tokenizers.LegacyToken
+import scala.reflect.internal.util.BatchSourceFile
+import scala.reflect.io.VirtualFile
 
 @State(Scope.Benchmark)
 class MetalsBench {
@@ -60,7 +65,7 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def scalaMtags(): Unit = {
+  def mtagsScalaIndex(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
       Mtags.index(input)
     }
@@ -68,7 +73,7 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def scalaToplevels(): Unit = {
+  def toplevelsScalaIndex(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
       Mtags.toplevels(input)
     }
@@ -76,7 +81,63 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def javaMtags(): Unit = {
+  def scalaTokenize(): Unit = {
+    scalaDependencySources.inputs.foreach { input =>
+      val scanner = new LegacyScanner(input, meta.dialects.Scala212)
+      var i = 0
+      scanner.foreach(_ => i += 1)
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def scalacTokenize(): Unit = {
+    val g = global
+    scalaDependencySources.inputs.foreach { input =>
+      val unit = new g.CompilationUnit(
+        new BatchSourceFile(new VirtualFile(input.path), input.chars)
+      )
+      val scanner = g.newUnitScanner(unit)
+      scanner.init()
+      while (scanner.token != LegacyToken.EOF) {
+        scanner.nextToken()
+      }
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def scalametaParse(): Unit = {
+    scalaDependencySources.inputs.foreach { input =>
+      import scala.meta._
+      val tree = input.parse[Source].get
+    }
+  }
+
+  lazy val global = InteractiveSemanticdb.newCompiler()
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def scalacParse(): Unit = {
+    val g = global
+    scalaDependencySources.inputs.foreach { input =>
+      val unit = new g.CompilationUnit(
+        new BatchSourceFile(new VirtualFile(input.path), input.chars)
+      )
+      val tree = g.newUnitParser(unit).parse()
+      var i = 0
+      new g.Traverser {
+        override def apply[T <: g.Tree](tree: T): T = {
+          i += 1
+          super.apply(tree)
+        }
+      }.traverse(tree)
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def mtagsJavaParse(): Unit = {
     javaDependencySources.inputs.foreach { input =>
       Mtags.index(input)
     }
