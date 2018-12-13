@@ -22,7 +22,7 @@ import scala.util.Try
  *
  * See https://github.com/scalacenter/bsp/blob/master/docs/bsp.md#bsp-connection-protocol
  */
-class BspServers(
+final class BspServers(
     workspace: AbsolutePath,
     charset: Charset,
     client: MetalsLanguageClient,
@@ -33,6 +33,21 @@ class BspServers(
 
   def newServer(): Future[Option[BuildServerConnection]] = {
     findServer().map(_.map(newServer))
+  }
+
+  /** Runs "Switch build server" command, returns true if build server was changed */
+  def switchBuildServer(): Future[Boolean] = {
+    findAvailableServers() match {
+      case Nil =>
+        client.showMessage(BspSwitch.noInstalledServer)
+        Future.successful(false)
+      case head :: Nil =>
+        client.showMessage(BspSwitch.onlyOneServer(head.getName))
+        Future.successful(false)
+      case availableServers =>
+        val md5 = digestServerDetails(availableServers)
+        askUser(md5, availableServers).map(_ => true)
+    }
   }
 
   private def newServer(
@@ -63,7 +78,7 @@ class BspServers(
     )
   }
 
-  def findServer(): Future[Option[BspConnectionDetails]] = {
+  private def findServer(): Future[Option[BspConnectionDetails]] = {
     findAvailableServers() match {
       case Nil =>
         Future.successful(None)
@@ -87,21 +102,27 @@ class BspServers(
     }
   }
 
-  def switchBuildServer(): Future[Boolean] = {
-    findAvailableServers() match {
-      case Nil =>
-        client.showMessage(BspSwitch.noInstalledServer)
-        Future.successful(false)
-      case head :: Nil =>
-        client.showMessage(BspSwitch.onlyOneServer(head.getName))
-        Future.successful(false)
-      case availableServers =>
-        val md5 = digestServerDetails(availableServers)
-        askUser(md5, availableServers).map(_ => true)
+  private def findAvailableServers(): List[BspConnectionDetails] = {
+    val jsonFiles = findJsonFiles()
+    val gson = new Gson()
+    for {
+      candidate <- jsonFiles
+      text = FileIO.slurp(candidate, charset)
+      details <- Try(gson.fromJson(text, classOf[BspConnectionDetails])).fold(
+        e => {
+          scribe.error(s"parse error: $candidate", e)
+          List()
+        },
+        details => {
+          List(details)
+        }
+      )
+    } yield {
+      details
     }
   }
 
-  def findJsonFiles(): List[AbsolutePath] = {
+  private def findJsonFiles(): List[AbsolutePath] = {
     val buf = List.newBuilder[AbsolutePath]
     def visit(dir: AbsolutePath): Unit =
       if (dir.isDirectory) {
@@ -114,26 +135,6 @@ class BspServers(
     visit(workspace.resolve(".bsp"))
     bspGlobalInstallDirectories.foreach(visit)
     buf.result()
-  }
-
-  private def findAvailableServers(): List[BspConnectionDetails] = {
-    val jsonFiles = findJsonFiles()
-    val gson = new Gson()
-    for {
-      candidate <- jsonFiles
-      text = FileIO.slurp(candidate, charset)
-      details <- Try(gson.fromJson(text, classOf[BspConnectionDetails])).fold(
-        e => {
-          scribe.error(s"parse error: $jsonFiles", e)
-          List()
-        },
-        details => {
-          List(details)
-        }
-      )
-    } yield {
-      details
-    }
   }
 
   private def askUser(

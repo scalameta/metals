@@ -65,12 +65,19 @@ case class BuildServerConnection(
 
 object BuildServerConnection {
 
+  /**
+   * Establishes a new build server connection with the given input/output streams.
+   *
+   * This method is blocking, doesn't return Future[], because if the `initialize` handshake
+   * doesn't complete within a few seconds then something is wrong. We want to fail fast
+   * when initialization is not successful.
+   */
   def fromStreams(
       workspace: AbsolutePath,
       localClient: MetalsBuildClient,
       output: OutputStream,
       input: InputStream,
-      cancelables: List[Cancelable],
+      onShutdown: List[Cancelable],
       name: String
   )(implicit ec: ExecutionContextExecutorService): BuildServerConnection = {
     val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
@@ -92,14 +99,14 @@ object BuildServerConnection {
       workspace,
       localClient,
       server,
-      stopListening :: cancelables,
+      stopListening :: onShutdown,
       result,
       name
     )
   }
 
   /** Run build/initialize handshake */
-  def initialize(
+  private def initialize(
       workspace: AbsolutePath,
       server: MetalsBuildServer
   ): InitializeBuildResult = {

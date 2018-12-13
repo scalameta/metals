@@ -114,8 +114,6 @@ object BspCli {
     ): Unit = pprint.log(params)
     override def onBuildTargetCompileReport(params: CompileReport): Unit =
       pprint.log(params)
-    override def onConnect(remoteServer: BuildServer): Unit =
-      pprint.log(remoteServer)
   }
 
   private def compile(
