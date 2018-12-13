@@ -29,6 +29,4 @@ trait MetalsBuildClient {
   @JsonNotification("buildTarget/compileReport")
   def onBuildTargetCompileReport(params: b.CompileReport): Unit
 
-  def onConnect(remoteServer: BuildServer): Unit
-
 }

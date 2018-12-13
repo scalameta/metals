@@ -676,7 +676,6 @@ class MetalsLanguageServer(
     } yield change
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
-    Debug.printEnclosing()
     if (!buildTools.isAutoConnectable) {
       scribe.warn("Unable to automatically connect to build server.")
       Future.successful(BuildChange.None)

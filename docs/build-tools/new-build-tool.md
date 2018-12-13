@@ -76,11 +76,29 @@ There are two available libraries to implement a BSP server:
 Both libraries are compatible with each other. For example, it's OK to implement
 a server with bsp4j and a client in bsp4s.
 
-### Testing
+### Manual tests
+
+You can manually test your build server integration by running Metals with your
+editor of choice.
+
+Create the following trace files to spy on incoming/outgoing JSON communication
+between Metals and your build tool.
+
+```
+# macOS
+touch ~/Library/Caches/org.scalameta.metals/bsp.trace.json
+# Linux
+touch ~/.cache/metals/bsp.trace.json
+```
+
+Metals must re-start to pick up the trace file.
+
+### Automated tests
 
 The Metals repository has infrastructure for running end-to-end integration
 tests with build servers. To test your build server integration, you can to
-clone the repository and write custom tests.
+clone the repository and write custom tests under
+`tests/unit/src/test/scala/tests`.
 
 If there is interest, we can publish a Metals `testkit` module to make it
 possible to write tests outside the Metals repository.

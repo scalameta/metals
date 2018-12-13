@@ -40,8 +40,6 @@ final class ForwardingMetalsBuildClient(
 
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}
 
-  def onConnect(server: b.BuildServer): Unit = {}
-
   // We ignore task{Start,Finish} notifications for now.
   @JsonNotification("build/taskStart")
   def buildTaskStart(params: TaskStartParams): Unit = {}

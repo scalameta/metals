@@ -180,6 +180,13 @@ class Messages(icons: Icons) {
       params.setMessage(message)
       params.setType(MessageType.Warning)
       val details = mutable.Map.empty[String, BspConnectionDetails]
+      // The logic for choosing item names is a bit tricky because we want
+      // the following characteristics:
+      // - all options must be unique, we get a title string back from the
+      //   editor for which server the user chose.
+      // - happy path: title is build server name without noisy version number.
+      // - name conflicts: disambiguate conflicting names by version number
+      // - name+version conflicts: append random characters to the title.
       val items = candidates.map { candidate =>
         val nameConflicts = candidates.count(_.getName == candidate.getName)
         val title: String = if (nameConflicts < 2) {
