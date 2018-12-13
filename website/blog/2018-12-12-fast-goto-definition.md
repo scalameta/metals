@@ -72,12 +72,11 @@ public class Files {
 }
 ```
 
-To respond to a Goto Definition request for the `Files.readAllBytes()` method,
-we
+To respond to a Goto Definition request for the `Files.readAllBytes` method, we
 
 - take the enclosing toplevel class `java.nio.file.Files`
 - read the corresponding file `java/nio/File/Files.java`
-- parse `Files.java` to find the exact position of `readAllFiles()`
+- parse `Files.java` to find the exact position of `readAllBytes`
 
 This approach is fast (parsing one file is cheap) and it also requires no index
 (0Mb memory!).
@@ -125,10 +124,14 @@ val index = Map[Symbol, Path](
 )
 ```
 
-With this index, we can lookup which file defines `scala.Some` and then parse
-`Option.scala` on-demand (like we do for Java) to find the position where
-`def isEmpty: Boolean` is defined. The challenge is to efficiently build the
-index.
+With this index, we find the definition of `Some.isEmpty` using the same steps
+as for `Files.readAllBytes` in Java:
+
+- take the enclosing toplevel class `scala.Some`
+- query index to know that `scala.Some` is defined in `scala/Option.scala`
+- parse `scala/Option.scala` to find exact position of `isEmpty` method.
+
+The challenge is to efficiently build the index.
 
 ## Initial solution
 
@@ -300,4 +303,6 @@ dumping sbt build structure and compiling the sources.
 
 Try out Goto Definition with Metals today using VS Code, Atom, Vim, Sublime Text
 or Emacs using the installation instructions here:
-https://scalameta.org/metals/docs/editors/overview.html.
+https://scalameta.org/metals/docs/editors/overview.html. The indexer is working
+when you see "Importing build" in the status bar
+![imageedit_3_3576623823](https://user-images.githubusercontent.com/1408093/49924982-f5234600-feb7-11e8-9edd-715388bb546f.gif)
