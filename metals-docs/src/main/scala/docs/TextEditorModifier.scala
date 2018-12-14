@@ -14,7 +14,7 @@ class TextEditorModifier extends StringModifier {
     val sections = code.text.split("---+").lift.andThen(_.filterNot(_.isEmpty))
     val sbtLauncher = sections(0).getOrElse(
       """
-        |Update the server property `-Dmetals.sbt-launcher=/path/to/sbt` to
+        |Update the server property `-Dmetals.sbt-script=/path/to/sbt` to
         |use a custom sbt script instead of the embedded launcher.
       """.stripMargin
     )
