@@ -91,7 +91,6 @@ object BuildServerConnection {
       .create()
     val listening = launcher.startListening()
     val server = launcher.getRemoteProxy
-    localClient.onConnect(server)
     val result = BuildServerConnection.initialize(workspace, server)
     val stopListening =
       Cancelable(() => listening.cancel(true))
