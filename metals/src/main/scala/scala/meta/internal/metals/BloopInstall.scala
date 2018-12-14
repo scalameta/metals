@@ -71,9 +71,7 @@ final class BloopInstall(
         List(
           javaArgs,
           SbtOpts.fromWorkspace(workspace),
-          SbtOpts.fromEnvironment,
           JvmOpts.fromWorkspace(workspace),
-          JvmOpts.fromEnvironment,
           userConfig().sbtOpts,
           jarArgs,
           sbtArgs
