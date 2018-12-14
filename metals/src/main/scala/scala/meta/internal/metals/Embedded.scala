@@ -28,12 +28,6 @@ final class Embedded(
     }
   }
 
-  def sbtLauncher: AbsolutePath = {
-    userConfig().sbtLauncher
-      .map(AbsolutePath(_))
-      .getOrElse(embeddedSbtLauncher)
-  }
-
   /**
    * Returns path to a local copy of sbt-launch.jar.
    *
@@ -41,7 +35,7 @@ final class Embedded(
    * we can't rely on `sbt` resolving correctly when using system processes, at least
    * it failed on Windows when I tried it.
    */
-  private lazy val embeddedSbtLauncher: AbsolutePath = {
+  lazy val embeddedSbtLauncher: AbsolutePath = {
     val embeddedLauncher = this.getClass.getResourceAsStream("/sbt-launch.jar")
     val out = Files.createTempDirectory("metals").resolve("sbt-launch.jar")
     out.toFile.deleteOnExit()

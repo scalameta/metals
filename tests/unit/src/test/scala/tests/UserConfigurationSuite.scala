@@ -51,16 +51,12 @@ object UserConfigurationSuite extends BaseSuite {
     "basic",
     """
       |{
-      | "sbt-launcher": "launch",
       | "java-home": "home",
-      | "sbt-options": "a b",
       | "sbt-script": "script"
       |}
     """.stripMargin
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
-    assert(obtained.sbtLauncher == Some("launch"))
-    assert(obtained.sbtOpts == List("a", "b"))
     assert(obtained.sbtScript == Some("script"))
   }
 
@@ -69,8 +65,6 @@ object UserConfigurationSuite extends BaseSuite {
     "{}"
   ) { obtained =>
     assert(obtained.javaHome.isEmpty)
-    assert(obtained.sbtLauncher.isEmpty)
-    assert(obtained.sbtOpts.isEmpty)
     assert(obtained.sbtScript.isEmpty)
   }
 
@@ -88,15 +82,11 @@ object UserConfigurationSuite extends BaseSuite {
       |}
     """.stripMargin,
     Map(
-      "metals.sbt-launcher" -> "launch",
       "metals.java-home" -> "home",
-      "metals.sbt-options" -> "a b",
       "metals.sbt-script" -> "script"
     )
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
-    assert(obtained.sbtLauncher == Some("launch"))
-    assert(obtained.sbtOpts == List("a", "b"))
     assert(obtained.sbtScript == Some("script"))
   }
 
@@ -130,11 +120,11 @@ object UserConfigurationSuite extends BaseSuite {
     "type-mismatch",
     """
       |{
-      | "sbt-launcher": []
+      | "sbt-script": []
       |}
     """.stripMargin,
     """
-      |json error: key 'sbt-launcher' should have value of type string but obtained []
+      |json error: key 'sbt-script' should have value of type string but obtained []
     """.stripMargin
   )
 }

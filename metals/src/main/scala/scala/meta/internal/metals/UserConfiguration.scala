@@ -13,8 +13,6 @@ import scala.util.Try
  */
 case class UserConfiguration(
     javaHome: Option[String] = None,
-    sbtLauncher: Option[String] = None,
-    sbtOpts: List[String] = Nil,
     sbtScript: Option[String] = None
 )
 
@@ -28,34 +26,14 @@ object UserConfiguration {
       "The Java Home directory used for indexing JDK sources and locating the `java` binary."
     ),
     UserConfigurationOption(
-      "sbt-launcher",
-      "Metals embedded sbt-launch.jar.",
-      "/usr/local/Cellar/sbt/1.2.6/libexec/bin/sbt-launch.jar",
-      "sbt launcher jar",
-      "Optional sbt-launch.jar launcher to use when running `sbt bloopInstall`."
-    ),
-    UserConfigurationOption(
-      "sbt-options",
-      """empty string `""`.""",
-      "-Dsbt.override.build.repos=true -Divy.home=/home/ivy-cache",
-      "sbt JVM options",
-      """Additional space separated JVM options used for the `sbt bloopInstall` step.
-        |By default, Metals respects custom options in `.jvmopts` and `.sbtopts` of the workspace root directory,
-        |it's recommended to use those instead of customizing this setting. The benefit of `.jvmopts` and `.sbtopts`
-        |is that it's respected by other tools such as IntelliJ.
-        |""".stripMargin
-    ),
-    UserConfigurationOption(
       "sbt-script",
       """empty string `""`.""",
       "/usr/local/bin/sbt",
       "sbt script",
-      """Custom `sbt` executable to use for running `sbt bloopInstall`, overrides
-        |`sbt-options` and `sbt-launcher` options.
-        |
-        |By default, Metals uses `java -jar sbt-launch.jar` to launch sbt while respecting
-        |`.jvmopts` and `.sbtopts`. In case this option is defined, then Metals
-        |executes the configured sbt script instead.
+      """Optional absolute path to an `sbt` executable to use for running `sbt bloopInstall`.
+        |By default, Metals uses `java -jar sbt-launch.jar` with an embedded launcher while respecting
+        |`.jvmopts` and `.sbtopts`. Update this setting if your `sbt` script requires more customizations
+        |like using environment variables.
         |""".stripMargin
     )
   )
@@ -90,13 +68,6 @@ object UserConfiguration {
 
     val javaHome =
       getKey("java-home")
-    val sbtLauncher =
-      getKey("sbt-launcher")
-    val sbtOpts =
-      getKey("sbt-options") match {
-        case Some(value) => value.split(" ").toList
-        case None => Nil
-      }
     val sbtScript =
       getKey("sbt-script")
 
@@ -104,8 +75,6 @@ object UserConfiguration {
       Right(
         UserConfiguration(
           javaHome,
-          sbtLauncher,
-          sbtOpts,
           sbtScript
         )
       )
