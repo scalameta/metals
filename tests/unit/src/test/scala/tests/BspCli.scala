@@ -1,6 +1,5 @@
 package tests
 
-import ch.epfl.scala.bsp4j.BuildServer
 import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.DidChangeBuildTarget
