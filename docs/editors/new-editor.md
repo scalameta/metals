@@ -169,6 +169,19 @@ Possible values:
   by the Atom status bar.
 - `unicode`: use unicode emojis like 🚀 for status bar messages.
 
+### `-Dmetals.exit-on-shutdown`
+
+Possible values:
+
+- `off` (default): run `System.exit` only on the `exit` notification, as
+  required by the LSP specification.
+- `on`: run `System.exit` after the `shutdown` request, going against the LSP
+  specification. This option is enabled by default for Sublime Text to prevent
+  the Metals process from staying alive after Sublime Text is quit with `Cmd+Q`.
+  It's not possible for Sublime Text packages to register a callback when the
+  editor is quit. See [LSP#410](https://github.com/tomv564/LSP/issues/410) for
+  more details.
+
 ### `-Dmetals.bloop-protocol`
 
 Possible values:
