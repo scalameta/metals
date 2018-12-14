@@ -9,6 +9,15 @@ import scala.meta.io.AbsolutePath
 
 final class Tables(workspace: AbsolutePath, time: Time) extends Cancelable {
   var connection: Connection = _
+  val sbtDigests =
+    new SbtDigests(() => connection, time)
+  val dependencySources =
+    new DependencySources(() => connection)
+  val dismissedNotifications =
+    new DismissedNotifications(() => connection, time)
+  val buildServers =
+    new ChosenBuildServers(() => connection, time)
+
   def start(): Unit = {
     val dbfile = workspace.resolve(".metals").resolve("metals")
     Files.createDirectories(dbfile.toNIO.getParent)
@@ -18,10 +27,7 @@ final class Tables(workspace: AbsolutePath, time: Time) extends Cancelable {
     Tables.migrateOrRestart(flyway, dbfile.resolveSibling(_ + ".h2.db"))
     this.connection = DriverManager.getConnection(url, user, null)
   }
-  val sbtDigests = new SbtDigests(() => connection, time)
-  val dependencySources = new DependencySources(() => connection)
-  val dismissedNotifications =
-    new DismissedNotifications(() => connection, time)
+
   def cancel(): Unit = connection.close()
 }
 

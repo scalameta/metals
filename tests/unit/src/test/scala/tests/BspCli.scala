@@ -1,6 +1,5 @@
 package tests
 
-import ch.epfl.scala.bsp4j.BuildServer
 import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.DidChangeBuildTarget
@@ -114,8 +113,6 @@ object BspCli {
     ): Unit = pprint.log(params)
     override def onBuildTargetCompileReport(params: CompileReport): Unit =
       pprint.log(params)
-    override def onConnect(remoteServer: BuildServer): Unit =
-      pprint.log(remoteServer)
   }
 
   private def compile(
@@ -123,7 +120,7 @@ object BspCli {
       targets: List[String]
   )(implicit ec: ExecutionContextExecutorService): Future[Unit] = {
     for {
-      bloop <- bloopServers.newServer()
+      bloop <- bloopServers.newServer().map(_.get)
       buildTargets <- bloop.server.workspaceBuildTargets().asScala
       ids = buildTargets.getTargets.asScala
         .filter(target => targets.contains(target.getDisplayName))

@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BuildServer
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.{lsp4j => l}
@@ -28,7 +27,5 @@ trait MetalsBuildClient {
 
   @JsonNotification("buildTarget/compileReport")
   def onBuildTargetCompileReport(params: b.CompileReport): Unit
-
-  def onConnect(remoteServer: BuildServer): Unit
 
 }

@@ -278,6 +278,14 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   }
 
   implicit class XtensionRangeBsp(range: b.Range) {
+    def toMeta(input: m.Input): m.Position =
+      m.Position.Range(
+        input,
+        range.getStart.getLine,
+        range.getStart.getCharacter,
+        range.getEnd.getLine,
+        range.getEnd.getCharacter
+      )
     def toLSP: l.Range =
       new l.Range(range.getStart.toLSP, range.getEnd.toLSP)
   }
