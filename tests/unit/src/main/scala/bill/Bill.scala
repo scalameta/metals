@@ -39,8 +39,8 @@ import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.io.AbsolutePath
-import tests.RecursivelyDelete
 
 /**
  * Bill is a basic build tool that implements BSP server discovery for testing purposes.
