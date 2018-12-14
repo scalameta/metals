@@ -28,9 +28,13 @@ final case class MetalsServerConfig(
     showMessageRequest: ShowMessageRequestConfig =
       ShowMessageRequestConfig.default,
     isNoInitialized: Boolean =
-      MetalsServerConfig.binaryOption("metals.no-initialized"),
-    isHttpEnabled: Boolean = MetalsServerConfig.binaryOption("metals.http"),
-    isVerbose: Boolean = MetalsServerConfig.binaryOption("metals.verbose"),
+      MetalsServerConfig.binaryOption("metals.no-initialized", default = false),
+    isHttpEnabled: Boolean =
+      MetalsServerConfig.binaryOption("metals.http", default = false),
+    isVerbose: Boolean =
+      MetalsServerConfig.binaryOption("metals.verbose", default = false),
+    isAutoServer: Boolean =
+      MetalsServerConfig.binaryOption("metals.h2.auto-server", default = true),
     icons: Icons = Icons.default,
     statistics: StatisticsConfig = StatisticsConfig.default
 ) {
@@ -50,10 +54,12 @@ final case class MetalsServerConfig(
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
-  private def binaryOption(key: String): Boolean =
-    Set("true", "on").contains(
-      System.getProperty(key)
-    )
+  private def binaryOption(key: String, default: Boolean): Boolean =
+    System.getProperty(key) match {
+      case "true" | "on" => true
+      case "false" | "off" => false
+      case _ => default
+    }
 
   def base: MetalsServerConfig = MetalsServerConfig()
   def default: MetalsServerConfig = {
