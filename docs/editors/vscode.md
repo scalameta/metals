@@ -28,7 +28,9 @@ Next, open a directory containing a `build.sbt` file. The extension activates
 when a `*.scala` or `*.sbt` file is opened.
 
 ```scala mdoc:editor:vscode
+Update the "Sbt Launcher" setting to use a custom `sbt` script instead of the embedded launcher.
 
+![Sbt Launcher](assets/vscode-sbt-launcher.png)
 ```
 
 ```scala mdoc:command-palette:vscode

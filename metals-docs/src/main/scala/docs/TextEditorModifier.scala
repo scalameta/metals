@@ -11,6 +11,13 @@ class TextEditorModifier extends StringModifier {
       code: Input,
       reporter: Reporter
   ): String = {
+    val sections = code.text.split("---+").lift.andThen(_.filterNot(_.isEmpty))
+    val sbtLauncher = sections(0).getOrElse(
+      """
+        |Update the server property `-Dmetals.sbt-launcher=/path/to/sbt` to
+        |use a custom sbt script instead of the embedded launcher.
+      """.stripMargin
+    )
     s"""
        |## Importing a build
        |
@@ -22,7 +29,7 @@ class TextEditorModifier extends StringModifier {
        |- "Not now" disables this prompt for 2 minutes.
        |- "Don't show again" disables this prompt forever, use `rm -rf .metals/` to re-enable
        |  the prompt.
-       |- Behind the scenese, Metals uses [Bloop](https://scalacenter.github.io/bloop/) to
+       |- Behind the scenes, Metals uses [Bloop](https://scalacenter.github.io/bloop/) to
        |  import sbt builds, but you don't need Bloop installed on your machine to run this step.
        |
        |Once the import step completes, compilation starts for your open `*.scala`
@@ -30,6 +37,14 @@ class TextEditorModifier extends StringModifier {
        |
        |Once the sources have compiled successfully, you can navigate the codebase with
        |"goto definition" with `Cmd+Click`.
+       |
+       |### Custom sbt launcher
+       |
+       |By default, Metals runs an embedded `sbt-launch.jar` launcher that respects `.sbtopts` and `.jvmopts`.
+       |The environment variables `SBT_OPTS` and `JAVA_OPTS` are also respected, but may not available to the Metals
+       |process in case it's started from a GUI application.
+       |
+       |$sbtLauncher
        |
        |### Speeding up import
        |
