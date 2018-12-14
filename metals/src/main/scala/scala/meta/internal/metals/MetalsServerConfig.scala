@@ -27,14 +27,26 @@ final case class MetalsServerConfig(
     showMessage: ShowMessageConfig = ShowMessageConfig.default,
     showMessageRequest: ShowMessageRequestConfig =
       ShowMessageRequestConfig.default,
-    isNoInitialized: Boolean =
-      MetalsServerConfig.binaryOption("metals.no-initialized", default = false),
-    isHttpEnabled: Boolean =
-      MetalsServerConfig.binaryOption("metals.http", default = false),
-    isVerbose: Boolean =
-      MetalsServerConfig.binaryOption("metals.verbose", default = false),
-    isAutoServer: Boolean =
-      MetalsServerConfig.binaryOption("metals.h2.auto-server", default = true),
+    isNoInitialized: Boolean = MetalsServerConfig.binaryOption(
+      "metals.no-initialized",
+      default = false
+    ),
+    isExitOnShutdown: Boolean = MetalsServerConfig.binaryOption(
+      "metals.exit-on-shutdown",
+      default = false
+    ),
+    isHttpEnabled: Boolean = MetalsServerConfig.binaryOption(
+      "metals.http",
+      default = false
+    ),
+    isVerbose: Boolean = MetalsServerConfig.binaryOption(
+      "metals.verbose",
+      default = false
+    ),
+    isAutoServer: Boolean = MetalsServerConfig.binaryOption(
+      "metals.h2.auto-server",
+      default = true
+    ),
     icons: Icons = Icons.default,
     statistics: StatisticsConfig = StatisticsConfig.default
 ) {
@@ -83,13 +95,13 @@ object MetalsServerConfig {
       case "sublime" =>
         base.copy(
           fileWatcher = FileWatcherConfig.auto,
-          isNoInitialized = true,
           isHttpEnabled = true,
           // Sublime text opens an invasive alert dialogue for window/showMessage
           // and window/showMessageRequest.
           showMessage = ShowMessageConfig.logMessage,
           showMessageRequest = ShowMessageRequestConfig.logMessage,
-          icons = Icons.unicode
+          icons = Icons.unicode,
+          isExitOnShutdown = true
         )
       case "emacs" =>
         base.copy(

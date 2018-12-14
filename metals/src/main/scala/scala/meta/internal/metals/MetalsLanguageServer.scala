@@ -359,6 +359,9 @@ class MetalsLanguageServer(
       } finally {
         promise.success(())
       }
+      if (config.isExitOnShutdown) {
+        System.exit(0)
+      }
       promise.future.asJava
     } else {
       shutdownPromise.get().future.asJava
