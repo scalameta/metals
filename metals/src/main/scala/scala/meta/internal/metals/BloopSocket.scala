@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
-import java.net.SocketException
 import org.scalasbt.ipcsocket.UnixDomainSocket
 
 /**
@@ -21,35 +20,19 @@ sealed trait BloopSocket extends Cancelable {
     case Unix(socket) => socket.getInputStream
     case NamedPipe(socket) => socket.getInputStream
     case Tcp(socket) =>
-      new InputStream {
-        override def read(): Int = {
-          try socket.getInputStream.read()
-          catch {
-            case e: SocketException =>
-              scribe.debug("tcp input socket closed", e)
-              -1
-          }
-        }
-      }
+      new QuietInputStream(
+        socket.getInputStream,
+        "bloop tcp input socket"
+      )
   }
   def output: OutputStream = this match {
     case Unix(socket) => socket.getOutputStream
     case NamedPipe(socket) => socket.getOutputStream
     case Tcp(socket) =>
-      new OutputStream {
-        private var isClosed = false
-        override def write(b: Int): Unit = {
-          try {
-            if (!isClosed) {
-              socket.getOutputStream.write(b)
-            }
-          } catch {
-            case e: SocketException =>
-              scribe.debug("tcp output socket closed", e)
-              isClosed = true
-          }
-        }
-      }
+      new QuietOutputStream(
+        socket.getOutputStream,
+        "bloop tcp output socket"
+      )
   }
   import BloopSocket._
   override def cancel(): Unit = this match {

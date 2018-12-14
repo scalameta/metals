@@ -9,9 +9,12 @@ import java.nio.file.attribute.BasicFileAttributes
 import scala.meta.io.AbsolutePath
 
 object RecursivelyDelete {
-  def apply(root: AbsolutePath): Unit = {
-    if (root.isFile) Files.delete(root.toNIO)
-    else if (root.isDirectory) {
+  def apply(root: AbsolutePath): Int = {
+    if (root.isFile) {
+      Files.delete(root.toNIO)
+      1
+    } else if (root.isDirectory) {
+      var count = 0
       Files.walkFileTree(
         root.toNIO,
         new SimpleFileVisitor[Path] {
@@ -19,6 +22,7 @@ object RecursivelyDelete {
               file: Path,
               attrs: BasicFileAttributes
           ): FileVisitResult = {
+            count += 1
             Files.delete(file)
             super.visitFile(file, attrs)
           }
@@ -35,6 +39,9 @@ object RecursivelyDelete {
           }
         }
       )
+      count
+    } else {
+      0
     }
   }
 }

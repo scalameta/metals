@@ -15,7 +15,6 @@ final class ForwardingMetalsBuildClient(
     diagnostics: Diagnostics
 ) extends MetalsBuildClient {
 
-  private var buildServer: Option[b.BuildServer] = None
   def onBuildShowMessage(params: l.MessageParams): Unit =
     languageClient.showMessage(params)
 
@@ -40,10 +39,6 @@ final class ForwardingMetalsBuildClient(
   }
 
   def onBuildTargetCompileReport(params: b.CompileReport): Unit = {}
-
-  def onConnect(server: b.BuildServer): Unit = {
-    this.buildServer = Some(server)
-  }
 
   // We ignore task{Start,Finish} notifications for now.
   @JsonNotification("build/taskStart")

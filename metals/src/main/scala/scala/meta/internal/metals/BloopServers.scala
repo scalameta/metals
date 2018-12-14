@@ -11,7 +11,6 @@ import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.scalasbt.ipcsocket.UnixDomainSocket
 import org.scalasbt.ipcsocket.Win32NamedPipeSocket
 import scala.concurrent.ExecutionContextExecutorService
@@ -53,8 +52,8 @@ final class BloopServers(
 
   def newServer(
       maxRetries: Int = defaultRetries
-  ): Future[BuildServerConnection] = {
-    newServerUnsafe().recoverWith {
+  ): Future[Option[BuildServerConnection]] = {
+    newServerUnsafe().map(Option(_)).recoverWith {
       case NonFatal(_) if maxRetries > 0 =>
         scribe.warn(s"BSP retry ${defaultRetries - maxRetries + 1}")
         newServer(maxRetries - 1)
@@ -76,31 +75,16 @@ final class BloopServers(
     for {
       (protocol, cancelable) <- callBSP()
     } yield {
-      val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
-      val launcher = new Launcher.Builder[MetalsBuildServer]()
-        .traceMessages(tracePrinter)
-        .setRemoteInterface(classOf[MetalsBuildServer])
-        .setExecutorService(ec)
-        .setInput(protocol.input)
-        .setOutput(protocol.output)
-        .setLocalService(client)
-        .create()
-      val listening = launcher.startListening()
-      val remoteServer = launcher.getRemoteProxy
-      client.onConnect(remoteServer)
-      val cancelables = List(
-        Cancelable(() => protocol.cancel()),
-        cancelable,
-        Cancelable(() => listening.cancel(true))
-      )
-      val initializeResult =
-        BuildServerConnection.initialize(workspace, remoteServer)
-      BuildServerConnection(
+      BuildServerConnection.fromStreams(
         workspace,
         client,
-        remoteServer,
-        cancelables,
-        initializeResult
+        protocol.output,
+        protocol.input,
+        List(
+          Cancelable(() => protocol.cancel()),
+          cancelable
+        ),
+        "Bloop"
       )
     }
   }

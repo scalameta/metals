@@ -62,14 +62,16 @@ final class TestingServer(
     workspace: AbsolutePath,
     client: MetalsLanguageClient,
     buffers: Buffers,
-    config: MetalsServerConfig
+    config: MetalsServerConfig,
+    bspGlobalDirectories: List[AbsolutePath]
 )(implicit ex: ExecutionContextExecutorService) {
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,
     redirectSystemOut = false,
     config = config,
-    progressTicks = ProgressTicks.none
+    progressTicks = ProgressTicks.none,
+    bspGlobalDirectories = bspGlobalDirectories
   )
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
