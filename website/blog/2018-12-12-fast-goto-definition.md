@@ -289,7 +289,7 @@ The Java+Scala source indexers used by Metals are available in a standalone
 library called mtags.
 
 ```scala
-libraryDependecies += "org.scalameta" %% "mtags" % "0.3.1"
+libraryDependencies += "org.scalameta" %% "mtags" % "0.3.1"
 ```
 
 The mtags library is already being used by the
