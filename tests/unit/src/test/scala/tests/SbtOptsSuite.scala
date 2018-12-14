@@ -8,8 +8,8 @@ object SbtOptsSuite extends BaseSuite {
     test(name) {
       val root = FileLayout.fromString(original)
       val obtained =
-        SbtOpts.loadFrom(root).mkString("\n") ++
-          JvmOpts.loadFrom(root).mkString("\n")
+        SbtOpts.fromWorkspace(root).mkString("\n") ++
+          JvmOpts.fromWorkspace(root).mkString("\n")
       assertNoDiff(obtained, expected)
     }
   }
