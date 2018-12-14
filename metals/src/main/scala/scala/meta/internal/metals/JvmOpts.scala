@@ -13,13 +13,20 @@ import scala.meta.io.AbsolutePath
  */
 object JvmOpts {
 
-  def loadFrom(workspace: AbsolutePath): List[String] = {
+  def fromWorkspace(workspace: AbsolutePath): List[String] = {
     val jvmOpts = workspace.resolve(".jvmopts")
     if (jvmOpts.isFile && Files.isReadable(jvmOpts.toNIO)) {
       val text = FileIO.slurp(jvmOpts, StandardCharsets.UTF_8)
       text.lines.map(_.trim).filter(_.startsWith("-")).toList
     } else {
       Nil
+    }
+  }
+
+  def fromEnvironment: List[String] = {
+    Option(System.getenv("JVM_OPTS")) match {
+      case Some(value) => value.split(" ").toList
+      case None => Nil
     }
   }
 

@@ -13,13 +13,20 @@ import scala.meta.io.AbsolutePath
  */
 object SbtOpts {
 
-  def loadFrom(workspace: AbsolutePath): List[String] = {
+  def fromWorkspace(workspace: AbsolutePath): List[String] = {
     val sbtOpts = workspace.resolve(".sbtopts")
     if (sbtOpts.isFile && Files.isReadable(sbtOpts.toNIO)) {
       val text = FileIO.slurp(sbtOpts, StandardCharsets.UTF_8)
       process(text.lines.map(_.trim).toList)
     } else {
       Nil
+    }
+  }
+
+  def fromEnvironment: List[String] = {
+    Option(System.getenv("SBT_OPTS")) match {
+      case Some(value) => process(value.split(" ").toList)
+      case None => Nil
     }
   }
 

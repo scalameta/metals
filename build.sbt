@@ -263,7 +263,7 @@ lazy val bench = project
     moduleName := "metals-bench",
     libraryDependencies ++= List(
       // for measuring memory usage
-      "org.spire-math" %% "clouseau" % "0.2.2",
+      "org.spire-math" %% "clouseau" % "0.2.2"
     )
   )
   .dependsOn(unit)
