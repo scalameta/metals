@@ -1,4 +1,4 @@
-package tests
+package scala.meta.internal.metals
 
 import java.io.IOException
 import java.nio.file.FileVisitResult

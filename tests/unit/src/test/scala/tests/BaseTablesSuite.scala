@@ -1,6 +1,8 @@
 package tests
 
 import java.nio.file.Files
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Tables
 import scala.meta.io.AbsolutePath
 
@@ -11,8 +13,8 @@ abstract class BaseTablesSuite extends BaseSuite {
   override def utestBeforeEach(path: Seq[String]): Unit = {
     workspace = AbsolutePath(Files.createTempDirectory("metals"))
     time.reset()
-    tables = Tables.forWorkspace(workspace, time)
-    tables.start()
+    tables = new Tables(workspace, time, MetalsServerConfig())
+    tables.connect()
   }
   override def utestAfterEach(path: Seq[String]): Unit = {
     tables.cancel()

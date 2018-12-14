@@ -189,6 +189,24 @@ with a comma separated list of the following supported values:
 
 Set the value to `-Dmetals.statistics=all` to enable all statistics.
 
+### `-Dmetals.h2.auto-server`
+
+Possible values:
+
+- `on` (default): use
+  [H2 `AUTO_SERVER=TRUE` mode](http://www.h2database.com/html/features.html#auto_mixed_mode)
+  to support multiple concurrent Metals servers in the same workspace. If this
+  option is enabled, the Metals H2 database communicate to other concurrently
+  running Metals servers via TCP through a free port. In case of failure to
+  establish a `AUTO_SERVER=TRUE` connection, Metals falls back to
+  `AUTO_SERVER=FALSE`.
+- `off`: do not use use `AUTO_SERVER=TRUE`. By disabling this option, it's not
+  possible to run concurrent Metals servers in the same workspace directory. For
+  example, it's not possible to have both VS Code and Vim installed with Metals
+  running in the same directory. In case there are multiple Metals servers
+  running in the same workspace directory, Metals falls back to using an
+  in-memory database resulting in a degraded user experience.
+
 ```scala mdoc:user-config:system-property
 
 ```
