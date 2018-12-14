@@ -104,7 +104,7 @@ class MetalsLanguageServer(
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
-    tables = register(Tables.forWorkspace(workspace, time))
+    tables = register(new Tables(workspace, time, config))
     buildTools = new BuildTools(workspace, bspGlobalDirectories)
     buildTargets = new BuildTargets()
     fileSystemSemanticdbs =
@@ -323,7 +323,7 @@ class MetalsLanguageServer(
     // enabled.
     if (isInitialized.compareAndSet(false, true)) {
       statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
-      tables.start()
+      tables.connect()
       registerFileWatchers()
       Future
         .sequence(

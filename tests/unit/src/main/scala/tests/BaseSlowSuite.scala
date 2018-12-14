@@ -9,6 +9,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.FileWatcherConfig
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.io.AbsolutePath
 
 /**
