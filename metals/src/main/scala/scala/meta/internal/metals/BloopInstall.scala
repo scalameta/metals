@@ -66,13 +66,12 @@ final class BloopInstall(
         )
         val jarArgs = List(
           "-jar",
-          embedded.sbtLauncher.toString()
+          embedded.embeddedSbtLauncher.toString()
         )
         List(
           javaArgs,
           SbtOpts.fromWorkspace(workspace),
           JvmOpts.fromWorkspace(workspace),
-          userConfig().sbtOpts,
           jarArgs,
           sbtArgs
         ).flatten
