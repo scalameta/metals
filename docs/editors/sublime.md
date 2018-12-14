@@ -88,16 +88,11 @@ sources with "Goto definition" by pressing `F12`.
 
 ## Known issues
 
-- [#410](https://github.com/tomv564/LSP/issues/410#issuecomment-439985624) The
-  Sublime Text client does not shut down the Metals server. Every time you quit
-  Sublime text ensure to kill the background process with the following command
-  ```sh
-  jps | grep metals-sublime | awk '{ print $1 }'  | xargs kill
-  ```
 - The Sublime Text client does not implement `window/showMessageRequest` making
   it necessary to import the build via the browser instead of inside the editor.
-- The Sublime Text client uses an invasive alert window for
-  `window/showMessage`, so Metals uses `window/logMessage` instead.
+  See [LSP#474](https://github.com/tomv564/LSP/pull/474) for a pending fix.
+- The Sublime Text client uses an alert window for `window/showMessage` that
+  prevents you from editing code so Metals uses `window/logMessage` instead.
 
 ```scala mdoc:generic
 
