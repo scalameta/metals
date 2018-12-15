@@ -28,8 +28,16 @@
   - Run `./bin/test-release.sh $VERSION` to ensure that all artifacts have
     successfully been released.
 - Upgrade downstream projects:
-  - https://github.com/scalameta/metals-vscode: tag a new release and publish to
-    Marketplace.
+  - https://github.com/scalameta/metals-vscode:
+    - generate metals website with `sbt docs/run`
+    - open `website/target/docs/editor/vscode.md` and copy everything from
+      "Requirements" over to the scalameta/metals-vscode README
+      - remove "Using latest SNAPSHOT" section, this table is only up-to-date on the website
+      - copy new images over too: `cp -r metals/docs/assets/vscode-* ../metals-vscode/assets`
+    - open a PR, feel free to merge after CI is green
+    - tag a new release and publish to Marketplace
+  - https://github.com/NixOS/nixpkgs/pull/51988
+    - update the version number and `outputHash`
 - Publish the release on GitHub:
   - https://github.com/scalameta/metals/releases
   - Copy-paste the release from the website blog
