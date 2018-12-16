@@ -215,7 +215,12 @@ object BloopInstall {
     val plugins =
       if (sbt.version.startsWith("0.13")) pluginsDirectory("0.13")
       else pluginsDirectory("1.0")
-    Files.createDirectories(plugins.toNIO)
+    val isSymlink = Files.isSymbolicLink(plugins.toNIO) &&
+      Files.isDirectory(Files.readSymbolicLink(plugins.toNIO))
+    // createDirectories checks whether the directory exists, but it doesn't follow symlinks
+    if (!isSymlink) {
+      Files.createDirectories(plugins.toNIO)
+    }
     val bytes = globalMetalsSbt.getBytes(StandardCharsets.UTF_8)
     val destination = plugins.resolve("metals.sbt")
     if (destination.isFile && destination.readAllBytes.sameElements(bytes)) {
