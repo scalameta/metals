@@ -221,6 +221,24 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
         case None => path.toInput
       }
     }
+
+    /**
+     * Symlink-aware version of Files#createDirectory
+     *
+     * Files#createDirectory checks whether the directory exists before
+     * attempting to create it, but it throws an exception if the target
+     * is a symlink pointing to an existing directory
+     */
+    def createDirectory(): Unit = {
+      val nioPath = path.toNIO
+      val isSymlink = Files.isSymbolicLink(nioPath) &&
+        Files.isDirectory(Files.readSymbolicLink(nioPath))
+      // createDirectories checks whether the directory exists,
+      // but it doesn't follow symlinks
+      if (!isSymlink) {
+        Files.createDirectory(nioPath)
+      }
+    }
   }
 
   implicit class XtensionStringUriProtocol(value: String) {
