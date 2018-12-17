@@ -11,7 +11,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
-import java.nio.file.FileSystemException
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -30,7 +29,6 @@ import scala.meta.io.AbsolutePath
 import scala.util.Properties
 import scala.util.Try
 import scala.{meta => m}
-import scala.annotation.tailrec
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -224,10 +222,15 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       }
     }
 
-    def createDirectories(): Unit = {
-      if (!Files.isSymbolicLink(path.toNIO)) {
-        Files.createDirectories(path.toNIO)
+    def dealias: AbsolutePath =
+      if (Files.isSymbolicLink(path.toNIO)) {
+        AbsolutePath(Files.readSymbolicLink(path.toNIO))
+      } else {
+        path
       }
+
+    def createDirectories(): AbsolutePath = {
+      AbsolutePath(Files.createDirectories(dealias.toNIO))
     }
 
   }
