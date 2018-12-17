@@ -60,7 +60,7 @@ dependencies
   :pin melpa-stable
   :hook (lsp-mode . lsp-ui-mode))
 
-(use-package 'lsp-scala
+(use-package lsp-scala
   :load-path "~/path/to/lsp-scala"
   :hook (scala-mode . lsp-scala-enable))
 ```
