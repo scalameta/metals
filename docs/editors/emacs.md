@@ -51,19 +51,18 @@ dependencies
 
 ;; Enable nice rendering of diagnostics like compile errors.
 (use-package flycheck
-  :ensure t
   :init (global-flycheck-mode))
-(use-package lsp-ui)
-(require 'lsp-ui)
 
-(use-package lsp-mode)
-(add-hook 'lsp-mode-hook 'lsp-ui-mode )
-(require 'lsp-mode)
-(require 'sbt-mode)
+(use-package lsp-mode
+  :pin melpa-stable)
 
-(add-to-list 'load-path "~/path/to/lsp-scala")
-(require 'lsp-scala)
-(add-hook 'scala-mode-hook #'lsp-scala-enable)
+(use-package lsp-ui
+  :pin melpa-stable
+  :hook (lsp-mode . lsp-ui-mode))
+
+(use-package 'lsp-scala
+  :load-path "~/path/to/lsp-scala"
+  :hook (scala-mode . lsp-scala-enable))
 ```
 
 > You may need to disable other packages like `ensime` or sbt server to prevent
