@@ -37,8 +37,8 @@ dependencies
 
 ;; Enable scala-mode and sbt-mode
 (use-package scala-mode
-  :interpreter
-  ("scala" . scala-mode))
+  :mode "\\.s\\(cala\\|bt\\)$")
+
 (use-package sbt-mode
   :commands sbt-start sbt-command
   :config
