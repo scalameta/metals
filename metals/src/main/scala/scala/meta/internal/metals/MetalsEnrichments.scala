@@ -221,6 +221,18 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
         case None => path.toInput
       }
     }
+
+    def dealias: AbsolutePath =
+      if (Files.isSymbolicLink(path.toNIO)) {
+        AbsolutePath(Files.readSymbolicLink(path.toNIO))
+      } else {
+        path
+      }
+
+    def createDirectories(): AbsolutePath = {
+      AbsolutePath(Files.createDirectories(dealias.toNIO))
+    }
+
   }
 
   implicit class XtensionStringUriProtocol(value: String) {
