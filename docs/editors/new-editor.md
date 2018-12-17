@@ -69,9 +69,9 @@ property is passed to the server like this:
 
 ```sh
 # with `java` binary
-java -Dmetals.file-watcher=auto ...
+java -Dmetals.statistics=all ...
 # with `coursier bootstrap`
-coursier bootstrap --java-opt -Dmetals.file-watcher=auto ...
+coursier bootstrap --java-opt -Dmetals.statistics=all ...
 ```
 
 The system properties control how Metals handles certain LSP endpoints. For
@@ -88,16 +88,23 @@ Possible values:
 
 ### `-Dmetals.file-watcher`
 
+This option is no longer used by Metals.
+
+### `-Dmetals.directory-glob`
+
+Controls the glob syntax for registering file watchers on absolute directories.
+Registration happens via `client/registerCapability` for the
+[`workspace/didChangeWatchedFiles`](#workspacedidchangewatchedfiles) method, if
+the editor client supports it.
+
 Possible values:
 
-- `auto` (default): use editor file watcher if it is supported, otherwise use
-  Metals built-in file watcher. The editor declares whether it supports file
-  watching by setting
-  `InitializeParams.capabilities.workspace.didChangeWatchedFiles=true` during
-  the `initialize` hand-shake.
-- `custom`: the client will send `workspace/didChangeWatchedFiles` notifications
-  even if `capabilities.workspace.didChangeWatchedFiles=false` during the
-  `initialize` hand-shake.
+- `uri` (default): URI-encoded file paths, with forward slash `/` for file
+  separators regardless of the operating system. Includes `file://` prefix.
+- `vscode`: use regular Path.toString for the absolute directory parts (`/` on
+  macOS+Linux and `\` on Windows) and forward slashes `/` for relative parts.
+  For example, `C:\Users\IEUser\workspace\project/*.{scala,sbt,properties}`.
+  This mode is used by the VS Code client.
 
 ### `-Dmetals.status-bar`
 
@@ -494,11 +501,22 @@ Returns `DocumentSymbol[]` by default and `SymbolInformation[]` when
 
 ### `workspace/didChangeWatchedFiles`
 
-Same as `didSave`, triggers compilation and analyses if the build needs to be
-re-imported. File watching notifications are optional, the Metals server should
-function normally without file watching notifications. However, file watching
-notifications improve the user experience especially when file contents change
-outside of the editor such as during `git checkout`.
+Optional. Metals uses a built-in file watcher for critical functionality such as
+Goto Definition so it is OK if an editor does not send
+`workspace/didChangeWatchedFiles` notifications.
+
+Metals listens to `workspace/didChangeWatchedFiles` notifications from the
+editor for nice-to-have but non-critical file watching events. Metals
+automatically registers for the following glob patterns if the editor supports
+dynamic registration for file watching.
+
+```scala mdoc:file-watcher
+
+```
+
+The editor is responsible for manually watching these file patterns if the
+editor does not support dynamic file watching registration but can still send
+`workspace/didChangeWatchedFiles` notifications.
 
 ### `workspace/executeCommands`
 
