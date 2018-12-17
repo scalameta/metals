@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.meta.internal.metals.Configs._
+
 /**
  * Configuration parameters for the Metals language server.
  *
@@ -19,7 +21,7 @@ package scala.meta.internal.metals
  */
 final case class MetalsServerConfig(
     bloopProtocol: BloopProtocol = BloopProtocol.default,
-    fileWatcher: FileWatcherConfig = FileWatcherConfig.default,
+    directoryGlob: DirectoryGlobConfig = DirectoryGlobConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
     slowTask: SlowTaskConfig = SlowTaskConfig.default,
     executeClientCommand: ExecuteClientCommandConfig =
@@ -54,7 +56,7 @@ final case class MetalsServerConfig(
   override def toString: String =
     List[String](
       s"bloop-protocol=$bloopProtocol",
-      s"file-watcher=$fileWatcher",
+      s"directory-glob=$directoryGlob",
       s"status-bar=$statusBar",
       s"slow-task=$slowTask",
       s"execute-client-command=$executeClientCommand",
@@ -83,11 +85,11 @@ object MetalsServerConfig {
           statusBar = StatusBarConfig.on,
           slowTask = SlowTaskConfig.on,
           icons = Icons.vscode,
-          executeClientCommand = ExecuteClientCommandConfig.on
+          executeClientCommand = ExecuteClientCommandConfig.on,
+          directoryGlob = DirectoryGlobConfig.vscode
         )
       case "vim-lsc" =>
         base.copy(
-          fileWatcher = FileWatcherConfig.auto,
           // window/logMessage output is always visible and non-invasive in vim-lsc
           statusBar = StatusBarConfig.logMessage,
           documentSymbol = DocumentSymbolConfig.symbolInformation,
@@ -97,7 +99,6 @@ object MetalsServerConfig {
         )
       case "sublime" =>
         base.copy(
-          fileWatcher = FileWatcherConfig.auto,
           isHttpEnabled = true,
           // Sublime text opens an invasive alert dialogue for window/showMessage
           // and window/showMessageRequest.

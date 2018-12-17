@@ -7,6 +7,7 @@ import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import ch.epfl.scala.bsp4j.SourcesParams
 import ch.epfl.scala.bsp4j.StatusCode
 import com.google.gson.JsonElement
+import io.methvin.watcher.DirectoryChangeEvent
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.Charset
@@ -68,11 +69,17 @@ class MetalsLanguageServer(
   private val languageClient =
     new DelegatingLanguageClient(NoopLanguageClient, config)
   private var userConfig = UserConfiguration()
+  private val buildTargets: BuildTargets = new BuildTargets()
+  private val fileEvents = register(
+    new FileEvents(
+      buildTargets,
+      params => didChangeWatchedFiles(params)
+    )
+  )
 
   // These can't be instantiated until we know the workspace root directory.
   private var bloopInstall: BloopInstall = _
   private var diagnostics: Diagnostics = _
-  private var buildTargets: BuildTargets = _
   private var fileSystemSemanticdbs: FileSystemSemanticdbs = _
   private var interactiveSemanticdbs: InteractiveSemanticdbs = _
   private var buildTools: BuildTools = _
@@ -87,7 +94,6 @@ class MetalsLanguageServer(
   var tables: Tables = _
   private var statusBar: StatusBar = _
   private var embedded: Embedded = _
-  private var fileEvents: Option[FileEvents] = None
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
 
@@ -109,7 +115,6 @@ class MetalsLanguageServer(
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
     tables = register(new Tables(workspace, time, config))
     buildTools = new BuildTools(workspace, bspGlobalDirectories)
-    buildTargets = new BuildTargets()
     fileSystemSemanticdbs =
       new FileSystemSemanticdbs(buildTargets, charset, workspace, fingerprints)
     interactiveSemanticdbs = register(
@@ -233,16 +238,8 @@ class MetalsLanguageServer(
     }
   }
 
-  def fileWatcherGlobs: DidChangeWatchedFilesRegistrationOptions =
-    new DidChangeWatchedFilesRegistrationOptions(
-      List(
-        new FileSystemWatcher("**/*.{scala,sbt,java}"),
-        new FileSystemWatcher("**/project/build.properties")
-      ).asJava
-    )
-
-  private def registerFileWatchers(): Unit = {
-    val registration = for {
+  private def registerNiceToHaveFilePatterns(): Unit = {
+    for {
       params <- initializeParams
       capabilities <- Option(params.getCapabilities)
       workspace <- Option(capabilities.getWorkspace)
@@ -255,30 +252,11 @@ class MetalsLanguageServer(
             new Registration(
               "1",
               "workspace/didChangeWatchedFiles",
-              fileWatcherGlobs
+              config.directoryGlob.registrationOptions(this.workspace)
             )
           ).asJava
         )
       )
-    }
-    if (registration.isEmpty) {
-      if (config.fileWatcher.isCustom) {
-        () // Do nothing, client has custom file watcher.
-      } else if (config.fileWatcher.isAuto) {
-        scribe.info("Starting Metals file watcher...")
-        val watcher = new FileEvents(
-          workspace,
-          fileWatcherGlobs,
-          buildTargets,
-          params => didChangeWatchedFiles(params)
-        )
-        fileEvents = Some(register(watcher))
-      } else {
-        scribe.warn(
-          s"File watching is disabled, expect partial functionality. To fix this warning, either pass the " +
-            s"system property -Dmetals.file-watcher=auto during startup or use an editor with file watching support."
-        )
-      }
     }
   }
 
@@ -328,7 +306,7 @@ class MetalsLanguageServer(
     if (isInitialized.compareAndSet(false, true)) {
       statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
       tables.connect()
-      registerFileWatchers()
+      registerNiceToHaveFilePatterns()
       Future
         .sequence(
           List[Future[Unit]](
@@ -469,6 +447,17 @@ class MetalsLanguageServer(
       .filterNot(savedFiles.isRecentlyActive) // de-duplicate didSave events.
       .toSeq
     onChange(paths)
+  }
+
+  def didChangeWatchedFiles(
+      event: DirectoryChangeEvent
+  ): CompletableFuture[Unit] = {
+    val path = AbsolutePath(event.path())
+    if (!savedFiles.isRecentlyActive(path) && path.isScalaOrJava) {
+      onChange(List(path))
+    } else {
+      CompletableFuture.completedFuture(())
+    }
   }
 
   private def onChange(paths: Seq[AbsolutePath]): CompletableFuture[Unit] = {
@@ -850,7 +839,6 @@ class MetalsLanguageServer(
             scribe.error(s"error processing $sourceUri", e)
         }
       }
-      fileEvents.foreach(_.start())
     }
   }
 
@@ -870,6 +858,7 @@ class MetalsLanguageServer(
         buildTargets.addSourceDirectory(directory, item.getTarget)
         indexSourceDirectory(directory)
       }
+      fileEvents.restart()
     }
 
   private def reindexSources(
