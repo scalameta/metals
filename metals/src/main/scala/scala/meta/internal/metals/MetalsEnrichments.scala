@@ -234,7 +234,7 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
           parent.relativize(nioPath).iterator.asScala.foldLeft(parent) {
             (parent, dirName) =>
               val dirPath = parent.resolve(dirName)
-              // This checks guards against symlinks
+              // This check guards against symlinks
               // isDirectory follows symlinks but the check inside `createDirectory` doesn't
               if (!Files.isDirectory(dirPath)) {
                 Files.createDirectory(dirPath)
