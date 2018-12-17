@@ -28,6 +28,9 @@ Next, update your Emacs configuration to load `lsp-scala` along with its
 dependencies
 
 ```el
+;; Add melpa-stable to your packages repositories
+(add-to-list 'package-archives '("melpa-stable" . "http://stable.melpa.org/packages/") t)
+
 ;; Enable scala-mode and sbt-mode
 (use-package scala-mode
   :interpreter
