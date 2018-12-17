@@ -14,8 +14,9 @@ class TextEditorModifier extends StringModifier {
     val sections = code.text.split("---+").lift.andThen(_.filterNot(_.isEmpty))
     val sbtLauncher = sections(0).getOrElse(
       """
-        |Update the server property `-Dmetals.sbt-script=/path/to/sbt` to
-        |use a custom sbt script instead of the embedded launcher.
+        |Update the server property `-Dmetals.sbt-script=/path/to/sbt` to use a custom
+        |`sbt` script instead of the default Metals launcher if you need further
+        |customizations like reading environment variables.
       """.stripMargin
     )
     s"""
@@ -36,13 +37,12 @@ class TextEditorModifier extends StringModifier {
        |files.
        |
        |Once the sources have compiled successfully, you can navigate the codebase with
-       |"goto definition" with `Cmd+Click`.
+       |goto definition.
        |
        |### Custom sbt launcher
        |
        |By default, Metals runs an embedded `sbt-launch.jar` launcher that respects `.sbtopts` and `.jvmopts`.
-       |The environment variables `SBT_OPTS` and `JAVA_OPTS` are also respected, but may not available to the Metals
-       |process in case it's started from a GUI application.
+       |However, the environment variables `SBT_OPTS` and `JAVA_OPTS` are not respected.
        |
        |$sbtLauncher
        |

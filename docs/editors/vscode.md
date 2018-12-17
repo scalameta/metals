@@ -28,7 +28,9 @@ Next, open a directory containing a `build.sbt` file. The extension activates
 when a `*.scala` or `*.sbt` file is opened.
 
 ```scala mdoc:editor:vscode
-Update the "Sbt Script" setting to use a custom `sbt` script instead of the embedded launcher.
+Update the "Sbt Script" setting to use a custom `sbt` script instead of the
+default Metals launcher if you need further customizations like reading environment
+variables.
 
 ![Sbt Launcher](assets/vscode-sbt-script.png)
 ```
