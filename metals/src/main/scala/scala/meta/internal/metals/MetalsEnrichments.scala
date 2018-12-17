@@ -11,6 +11,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.FileSystemException
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -29,6 +30,7 @@ import scala.meta.io.AbsolutePath
 import scala.util.Properties
 import scala.util.Try
 import scala.{meta => m}
+import scala.annotation.tailrec
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -223,20 +225,37 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
     }
 
     /**
-     * Symlink-aware version of Files#createDirectory
-     *
-     * Files#createDirectory checks whether the directory exists before
-     * attempting to create it, but it throws an exception if the target
-     * is a symlink pointing to an existing directory
+     * Symlink-aware version of Files.createDirectories()
      */
-    def createDirectory(): Unit = {
+    def createDirectories(): AbsolutePath = {
       val nioPath = path.toNIO
-      val isSymlink = Files.isSymbolicLink(nioPath) &&
-        Files.isDirectory(Files.readSymbolicLink(nioPath))
-      // createDirectories checks whether the directory exists,
-      // but it doesn't follow symlinks
-      if (!isSymlink) {
-        Files.createDirectory(nioPath)
+      findExistingParent(nioPath) match {
+        case Some(parent) =>
+          parent.relativize(nioPath).iterator.asScala.foldLeft(parent) {
+            (parent, dirName) =>
+              val dirPath = parent.resolve(dirName)
+              // This checks guards against symlinks
+              // isDirectory follows symlinks but the check inside `createDirectory` doesn't
+              if (!Files.isDirectory(dirPath)) {
+                Files.createDirectory(dirPath)
+              }
+              dirPath
+          }
+        // we couldn't find a parent
+        case None => throw new FileSystemException(path.toString)
+      }
+      path
+    }
+
+    @tailrec
+    private def findExistingParent(path: Path): Option[Path] = {
+      val parent = path.getParent()
+      if (parent == null) {
+        None
+      } else if (Files.isDirectory(parent)) {
+        Some(parent)
+      } else {
+        findExistingParent(parent)
       }
     }
   }
