@@ -224,40 +224,12 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       }
     }
 
-    /**
-     * Symlink-aware version of Files.createDirectories()
-     */
-    def createDirectories(): AbsolutePath = {
-      val nioPath = path.toNIO
-      findExistingParent(nioPath) match {
-        case Some(parent) =>
-          parent.relativize(nioPath).iterator.asScala.foldLeft(parent) {
-            (parent, dirName) =>
-              val dirPath = parent.resolve(dirName)
-              // This check guards against symlinks
-              // isDirectory follows symlinks but the check inside `createDirectory` doesn't
-              if (!Files.isDirectory(dirPath)) {
-                Files.createDirectory(dirPath)
-              }
-              dirPath
-          }
-        // we couldn't find a parent
-        case None => throw new FileSystemException(path.toString)
+    def createDirectories(): Unit = {
+      if (!Files.isSymbolicLink(path.toNIO)) {
+        Files.createDirectories(path.toNIO)
       }
-      path
     }
 
-    @tailrec
-    private def findExistingParent(path: Path): Option[Path] = {
-      val parent = path.getParent()
-      if (parent == null) {
-        None
-      } else if (Files.isDirectory(parent)) {
-        Some(parent)
-      } else {
-        findExistingParent(parent)
-      }
-    }
   }
 
   implicit class XtensionStringUriProtocol(value: String) {
