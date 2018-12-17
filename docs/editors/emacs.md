@@ -31,6 +31,10 @@ dependencies
 ;; Add melpa-stable to your packages repositories
 (add-to-list 'package-archives '("melpa-stable" . "http://stable.melpa.org/packages/") t)
 
+;; Enable defer and ensure by default for use-package
+(setq use-package-always-defer t
+      use-package-always-ensure t)
+
 ;; Enable scala-mode and sbt-mode
 (use-package scala-mode
   :interpreter
