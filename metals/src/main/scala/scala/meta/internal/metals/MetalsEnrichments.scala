@@ -361,4 +361,19 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
 
   }
 
+  implicit class XtensionDocumentSymbol(documentSymbol: l.DocumentSymbol) {
+    def toSymbolOccurrence: s.SymbolOccurrence = s.SymbolOccurrence(
+      range = Some(
+        new s.Range(
+          documentSymbol.getRange.getStart.getLine,
+          documentSymbol.getRange.getStart.getCharacter,
+          documentSymbol.getRange.getStart.getLine,
+          documentSymbol.getRange.getStart.getCharacter
+        )
+      ),
+      symbol = documentSymbol.getName,
+      role = s.SymbolOccurrence.Role.DEFINITION
+    )
+  }
+
 }

@@ -7,14 +7,14 @@ import MetalsEnrichments._
 import java.util.concurrent.LinkedBlockingQueue
 
 /**
-  *  Retrieves all the symbols defined in a document
-  *
-  *  If the document doesn't parse, we fall back to the latest
-  *  known snapshot of the document, if present
-  *
-  *  To avoid the snapshots to grow undefinitely, we only store
-  *  the ones for the most recently requested documents
-  */
+ *  Retrieves all the symbols defined in a document
+ *
+ *  If the document doesn't parse, we fall back to the latest
+ *  known snapshot of the document, if present
+ *
+ *  To avoid the snapshots to grow undefinitely, we only store
+ *  the ones for the most recently requested documents
+ */
 class DocumentSymbolProvider(buffers: Buffers) {
 
   def empty: List[DocumentSymbol] = Nil
@@ -31,9 +31,14 @@ class DocumentSymbolProvider(buffers: Buffers) {
         lastDocumentSymbolResult.put((path, result))
         result
       }
-      .orElse(lastDocumentSymbolResult.iterator.asScala.collect {
-        case (p, symbols) if p == path => symbols
-      }.toList.headOption)
+      .orElse(
+        lastDocumentSymbolResult.iterator.asScala
+          .collect {
+            case (p, symbols) if p == path => symbols
+          }
+          .toList
+          .headOption
+      )
       .getOrElse(empty)
   }
 
@@ -114,7 +119,9 @@ class DocumentSymbolProvider(buffers: Buffers) {
   private def qualifiedName(tree: Tree): Option[String] = tree match {
     case Term.Name(name) => Some(name)
     case Term.Select(qual, name) =>
-      qualifiedName(qual).map { prefix => s"$prefix.$name" }
+      qualifiedName(qual).map { prefix =>
+        s"$prefix.$name"
+      }
     case Pkg(sel: Term.Select, _) => qualifiedName(sel)
     case m: Member => Some(m.name.value)
     case _ => None

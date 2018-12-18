@@ -963,7 +963,9 @@ class MetalsLanguageServer(
     }
   }
 
-  def documentSymbolResult(params: DocumentSymbolParams): List[DocumentSymbol] = {
+  def documentSymbolResult(
+      params: DocumentSymbolParams
+  ): List[DocumentSymbol] = {
     documentSymbolProvider
       .documentSymbols(params.getTextDocument.getUri.toAbsolutePath)
   }

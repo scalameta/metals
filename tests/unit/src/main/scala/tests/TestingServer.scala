@@ -248,10 +248,17 @@ final class TestingServer(
 
   def documentSymbols(uri: String): String = {
     val path = toPath(uri)
+    val input = path.toInputFromBuffers(buffers)
     val identifier = path.toTextDocumentIdentifier
     val params = new DocumentSymbolParams(identifier)
-    println(buffers.get(path))
-    server.documentSymbolResult(params).mkString
+    val symbols = server.documentSymbolResult(params)
+    val textDocument = s.TextDocument(
+      schema = s.Schema.SEMANTICDB4,
+      language = s.Language.SCALA,
+      text = input.text,
+      occurrences = symbols.map(_.toSymbolOccurrence)
+    )
+    Semanticdbs.printTextDocument(textDocument)
   }
 
   def cancel(): Unit = {
