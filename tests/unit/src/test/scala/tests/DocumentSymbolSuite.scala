@@ -4,7 +4,6 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.DocumentSymbolProvider
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.{semanticdb => s}
-import org.eclipse.lsp4j.DocumentSymbol
 import MetalsTestEnrichments._
 
 /**
