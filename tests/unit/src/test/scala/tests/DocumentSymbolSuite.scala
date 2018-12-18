@@ -16,7 +16,6 @@ object DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
     input.scalaFiles.map { file =>
       ExpectTestCase(
         file, { () =>
-          // val sb = new StringBuilder
           val documentSymbols =
             documentSymbolProvider.documentSymbols(file.file)
 
