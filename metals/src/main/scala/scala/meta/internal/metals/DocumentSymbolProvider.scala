@@ -4,9 +4,7 @@ import scala.meta._
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.DocumentSymbol
 import MetalsEnrichments._
-import java.util.LinkedHashMap
-import java.util.Map
-import java.util.Collections
+import scala.collection.concurrent.TrieMap
 
 /**
  *  Retrieves all the symbols defined in a document
@@ -33,17 +31,14 @@ class DocumentSymbolProvider(buffers: Buffers) {
         snapshots.put(path, result)
         result
       }
-      .orElse(Option(snapshots.get(path)))
+      .orElse(snapshots.get(path))
       .getOrElse(empty)
   }
 
-  private val snapshots = Collections.synchronizedMap(
-    new LinkedHashMap[AbsolutePath, List[DocumentSymbol]]() {
-      override def removeEldestEntry(
-          eldest: Map.Entry[AbsolutePath, List[DocumentSymbol]]
-      ): Boolean = size > 10
-    }
-  )
+  def discardSnapshot(path: AbsolutePath): Unit =
+    snapshots.remove(path)
+
+  private val snapshots = new TrieMap[AbsolutePath, List[DocumentSymbol]]()
 
   private class SymbolTraverser(uri: String) {
 

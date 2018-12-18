@@ -435,6 +435,7 @@ class MetalsLanguageServer(
   def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     buffers.remove(path)
+    documentSymbolProvider.discardSnapshot(path)
   }
 
   @JsonNotification("textDocument/didSave")

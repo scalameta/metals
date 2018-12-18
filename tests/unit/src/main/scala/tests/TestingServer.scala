@@ -13,6 +13,7 @@ import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -177,6 +178,23 @@ final class TestingServer(
       )
       .asScala
   }
+
+  def didClose(filename: String): Future[Unit] = {
+    Debug.printEnclosing()
+    val abspath = toPath(filename)
+    val uri = abspath.toURI.toString
+    val extension = PathIO.extension(abspath.toNIO)
+    val text = abspath.readText
+    Future.successful {
+      server
+        .didClose(
+          new DidCloseTextDocumentParams(
+            new TextDocumentIdentifier(uri)
+          )
+        )
+    }
+  }
+
   def didChangeConfiguration(config: String): Future[Unit] = {
     Future {
       val wrapped = UserConfiguration.toWrappedJson(config)
