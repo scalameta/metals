@@ -153,7 +153,7 @@ final class TestingServer(
   def didChange(filename: String)(fn: String => String): Future[Unit] = {
     Debug.printEnclosing()
     val abspath = toPath(filename)
-    val oldText = abspath.readText
+    val oldText = abspath.toInputFromBuffers(buffers).text
     val newText = fn(oldText)
     server
       .didChange(

@@ -43,7 +43,12 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
            |}""".stripMargin
       )
       // make the code unparseable again
-      _ <- server.didChange("a/src/main/scala/a/Main.scala")(text => text)
+      _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
+        """|} // <- parse error
+           |object Outer {
+           |  class Inner
+           |}""".stripMargin
+      }
       // check that the document symbols haven't changed (fallback to the last snapshot),
       // because the code is unparseable again
       _ = assertNoDiff(
