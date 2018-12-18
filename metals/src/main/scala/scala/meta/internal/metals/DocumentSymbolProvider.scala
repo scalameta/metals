@@ -17,6 +17,9 @@ import scala.collection.concurrent.TrieMap
  */
 class DocumentSymbolProvider(buffers: Buffers) {
 
+  private val snapshots: TrieMap[AbsolutePath, List[DocumentSymbol]] =
+    TrieMap.empty
+
   def empty: List[DocumentSymbol] = Nil
 
   def documentSymbols(
@@ -27,7 +30,7 @@ class DocumentSymbolProvider(buffers: Buffers) {
       .parse[Source]
       .toOption
       .map { source =>
-        val result = new SymbolTraverser(path.toString).apply(source)
+        val result = new SymbolTraverser().apply(source)
         snapshots.put(path, result)
         result
       }
@@ -38,9 +41,7 @@ class DocumentSymbolProvider(buffers: Buffers) {
   def discardSnapshot(path: AbsolutePath): Unit =
     snapshots.remove(path)
 
-  private val snapshots = new TrieMap[AbsolutePath, List[DocumentSymbol]]()
-
-  private class SymbolTraverser(uri: String) {
+  private class SymbolTraverser() {
 
     def apply(tree: Tree): List[DocumentSymbol] = {
       traverser.apply(tree)

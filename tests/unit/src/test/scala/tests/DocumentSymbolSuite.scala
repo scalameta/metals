@@ -12,6 +12,7 @@ import org.eclipse.lsp4j.DocumentSymbol
  */
 object DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
   val documentSymbolProvider = new DocumentSymbolProvider(new Buffers())
+
   override def testCases(): List[ExpectTestCase] = {
     input.scalaFiles.map { file =>
       ExpectTestCase(

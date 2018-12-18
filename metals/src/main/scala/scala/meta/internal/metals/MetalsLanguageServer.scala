@@ -80,7 +80,8 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
-  private var documentSymbolProvider: DocumentSymbolProvider = _
+  private val documentSymbolProvider: DocumentSymbolProvider =
+    new DocumentSymbolProvider(buffers)
   private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
   private var statusBar: StatusBar = _
@@ -170,7 +171,6 @@ class MetalsLanguageServer(
       config.icons,
       statusBar
     )
-    documentSymbolProvider = new DocumentSymbolProvider(buffers)
     doctor = new Doctor(
       buildTargets,
       config,

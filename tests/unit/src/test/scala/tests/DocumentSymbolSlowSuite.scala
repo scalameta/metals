@@ -2,7 +2,7 @@ package tests
 
 object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
 
-  testAsync("documentSymbol") {
+  testAsync("parse-error") {
     for {
       // start with code that does not parse (notice the first char in Main.scala)
       _ <- server.initialize(
@@ -12,13 +12,9 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
            |  "a": { }
            |}
            |/a/src/main/scala/a/Main.scala
-           |}package a
-           |import java.util.concurrent.Future // unused
-           |import scala.util.Failure // unused
-           |object Main extends App {
-           |  val message = 42
-           |  new java.io.PrintStream(new java.io.ByteArrayOutputStream())
-           |  println(message)
+           |} // <- parse error
+           |object Outer {
+           |  class Inner
            |}
            |""".stripMargin
       )
@@ -26,15 +22,10 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
       // check that no document symbols have been found for the unparseable code
       _ = assertNoDiff(
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
-        """
-          |}package a
-          |import java.util.concurrent.Future // unused
-          |import scala.util.Failure // unused
-          |object Main extends App {
-          |  val message = 42
-          |  new java.io.PrintStream(new java.io.ByteArrayOutputStream())
-          |  println(message)
-          |}""".stripMargin
+        """|} // <- parse error
+           |object Outer {
+           |  class Inner
+           |}""".stripMargin
       )
       // fix the code to make it parse
       _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
@@ -43,48 +34,31 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
       // check that all document symbols have been found
       _ = assertNoDiff(
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
-        """
-          |/*a*/package a
-          |import java.util.concurrent.Future // unused
-          |import scala.util.Failure // unused
-          |/*Main*/object Main extends App {
-          |  /*message*/val message = 42
-          |  new java.io.PrintStream(new java.io.ByteArrayOutputStream())
-          |  println(message)
-          |}""".stripMargin
+        """| // <- parse error
+           |/*Outer*/object Outer {
+           |  /*Inner*/class Inner
+           |}""".stripMargin
       )
       // make the code unparseable again
-      _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
-        "woops " + text
-      }
-      // check that the document symbols haven't changed (fallback to the previous result,
-      // because the code is unparseable
+      _ <- server.didChange("a/src/main/scala/a/Main.scala")(text => text)
+      // check that the document symbols haven't changed (fallback to the last snapshot),
+      // because the code is unparseable again
       _ = assertNoDiff(
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
-        """
-          |/*a*/woops }package a
-          |import java.util.concurrent.Future // unused
-          |import scala.util.Failure // unused
-          |/*Main*/object Main extends App {
-          |  /*message*/val message = 42
-          |  new java.io.PrintStream(new java.io.ByteArrayOutputStream())
-          |  println(message)
-          |}""".stripMargin
+        """|} // <- parse error
+           |/*Outer*/object Outer {
+           |  /*Inner*/class Inner
+           |}""".stripMargin
       )
       // check that when closing the buffer, the snapshot is lost, and no symbols
       // are found for unparseable code
       _ <- server.didClose("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
-        """
-          |}package a
-          |import java.util.concurrent.Future // unused
-          |import scala.util.Failure // unused
-          |object Main extends App {
-          |  val message = 42
-          |  new java.io.PrintStream(new java.io.ByteArrayOutputStream())
-          |  println(message)
-          |}""".stripMargin
+        """|} // <- parse error
+           |object Outer {
+           |  class Inner
+           |}""".stripMargin
       )
     } yield ()
   }
