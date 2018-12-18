@@ -29,14 +29,17 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
       )
       // fix the code to make it parse
       _ <- server.didChange("a/src/main/scala/a/Main.scala") { text =>
-        text.replaceFirst("}", "")
+        """|
+           |object Outer {
+           |  class Inner
+           |}""".stripMargin
       }
       // check that all document symbols have been found
       _ = assertNoDiff(
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
-        """| // <- parse error
-           |/*Outer:3*/object Outer {
-           |  /*Inner:2*/class Inner
+        """|
+           |/*Outer(Module):4*/object Outer {
+           |  /*Inner(Class):3*/class Inner
            |}""".stripMargin
       )
       // make the code unparseable again
@@ -46,8 +49,8 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
       _ = assertNoDiff(
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
         """|} // <- parse error
-           |/*Outer:3*/object Outer {
-           |  /*Inner:2*/class Inner
+           |/*Outer(Module):4*/object Outer {
+           |  /*Inner(Class):3*/class Inner
            |}""".stripMargin
       )
       // check that when closing the buffer, the snapshot is lost, and no symbols
