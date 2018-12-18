@@ -71,6 +71,21 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
           |  println(message)
           |}""".stripMargin
       )
+      // check that when closing the buffer, the snapshot is lost, and no symbols
+      // are found for unparseable code
+      _ <- server.didClose("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiff(
+        server.documentSymbols("a/src/main/scala/a/Main.scala"),
+        """
+          |}package a
+          |import java.util.concurrent.Future // unused
+          |import scala.util.Failure // unused
+          |object Main extends App {
+          |  val message = 42
+          |  new java.io.PrintStream(new java.io.ByteArrayOutputStream())
+          |  println(message)
+          |}""".stripMargin
+      )
     } yield ()
   }
 
