@@ -1,16 +1,16 @@
-/*example:18*/package example
+/*example:19*/package example
 
-/*StructuralTypes:18*/object StructuralTypes {
-  /*User:6*/type User = {
+/*StructuralTypes:19*/object StructuralTypes {
+  /*User:7*/type User = {
     def name: String
     def age: Int
   }
 
-  /*user:8*/val user = null.asInstanceOf[User]
+  /*user:9*/val user = null.asInstanceOf[User]
   user.name
   user.age
 
-  /*V:16*/val V: Object {
+  /*V:17*/val V: Object {
     def scalameta: String
   } = new {
     def scalameta = "4.0"

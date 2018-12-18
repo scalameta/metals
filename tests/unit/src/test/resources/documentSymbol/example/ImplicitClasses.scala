@@ -1,10 +1,10 @@
-/*example:9*/package example
+/*example:10*/package example
 
-/*ImplicitClasses:9*/object ImplicitClasses {
-  /*Xtension:5*/implicit class Xtension(number: Int) {
-    /*increment:4*/def increment: Int = number + 1
+/*ImplicitClasses:10*/object ImplicitClasses {
+  /*Xtension:6*/implicit class Xtension(number: Int) {
+    /*increment:5*/def increment: Int = number + 1
   }
-  /*XtensionAnyVal:8*/implicit class XtensionAnyVal(private val number: Int) extends AnyVal {
-    /*double:7*/def double: Int = number * 2
+  /*XtensionAnyVal:9*/implicit class XtensionAnyVal(private val number: Int) extends AnyVal {
+    /*double:8*/def double: Int = number * 2
   }
 }

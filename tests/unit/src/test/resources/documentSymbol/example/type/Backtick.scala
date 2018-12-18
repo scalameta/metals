@@ -1,3 +1,3 @@
-/*example.`type`:2*/package example.`type`
+/*example.`type`:3*/package example.`type`
 
-/*Backtick:2*/class Backtick {}
+/*Backtick:3*/class Backtick {}

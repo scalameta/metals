@@ -1,5 +1,5 @@
-/*example:4*/package example
+/*example:5*/package example
 
-/*ExampleSuite:4*/object ExampleSuite {
+/*ExampleSuite:5*/object ExampleSuite {
   println(NamedArguments.user2)
 }

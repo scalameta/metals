@@ -35,8 +35,8 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
       _ = assertNoDiff(
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
         """| // <- parse error
-           |/*Outer*/object Outer {
-           |  /*Inner*/class Inner
+           |/*Outer:3*/object Outer {
+           |  /*Inner:2*/class Inner
            |}""".stripMargin
       )
       // make the code unparseable again
@@ -46,8 +46,8 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
       _ = assertNoDiff(
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
         """|} // <- parse error
-           |/*Outer*/object Outer {
-           |  /*Inner*/class Inner
+           |/*Outer:3*/object Outer {
+           |  /*Inner:2*/class Inner
            |}""".stripMargin
       )
       // check that when closing the buffer, the snapshot is lost, and no symbols

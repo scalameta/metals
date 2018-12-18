@@ -1,9 +1,9 @@
-/*example:8*/package example
+/*example:9*/package example
 
-/*nested:6*/package object nested {
+/*nested:7*/package object nested {
 
-  /*PackageObjectNestedClass:4*/class PackageObjectNestedClass
+  /*PackageObjectNestedClass:5*/class PackageObjectNestedClass
 
 }
 
-/*PackageObjectSibling:8*/class PackageObjectSibling
+/*PackageObjectSibling:9*/class PackageObjectSibling

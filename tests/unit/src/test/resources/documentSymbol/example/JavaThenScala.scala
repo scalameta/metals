@@ -1,5 +1,5 @@
-/*example:4*/package example
+/*example:5*/package example
 
-/*JavaThenScala:4*/class JavaThenScala {
+/*JavaThenScala:5*/class JavaThenScala {
   new JavaClass(42)
 }

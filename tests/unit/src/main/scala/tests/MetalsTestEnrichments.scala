@@ -23,7 +23,7 @@ object MetalsTestEnrichments {
         )
       ),
       // include end line for testing purposes
-      symbol = s"documentSymbol.getName:${endRange.getLine + 1}",
+      symbol = s"${documentSymbol.getName}:${endRange.getLine + 1}",
       role = s.SymbolOccurrence.Role.DEFINITION
     )
     }
