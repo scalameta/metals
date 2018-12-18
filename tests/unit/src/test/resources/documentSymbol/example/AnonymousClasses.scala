@@ -1,3 +1,3 @@
-/*Package  */package example
+/*example*/package example
 
-/*Class    */class AnonymousClasses {}
+/*AnonymousClasses*/class AnonymousClasses {}
