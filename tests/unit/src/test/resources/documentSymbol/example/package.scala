@@ -1,5 +1,5 @@
-/*example*/package object example {
+/*example:4*/package object example {
 
-  /*PackageObjectClass*/class PackageObjectClass
+  /*PackageObjectClass:2*/class PackageObjectClass
 
 }

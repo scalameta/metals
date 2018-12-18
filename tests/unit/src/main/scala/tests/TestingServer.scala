@@ -47,6 +47,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.meta.tokens.Token
+import MetalsTestEnrichments._
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
