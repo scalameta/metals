@@ -4,7 +4,9 @@ import scala.meta._
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.DocumentSymbol
 import MetalsEnrichments._
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.LinkedHashMap
+import java.util.Map
+import java.util.Collections
 
 /**
  *  Retrieves all the symbols defined in a document
@@ -28,24 +30,20 @@ class DocumentSymbolProvider(buffers: Buffers) {
       .toOption
       .map { source =>
         val result = new SymbolTraverser(path.toString).apply(source)
-        lastDocumentSymbolResult.put((path, result))
+        snapshots.put(path, result)
         result
       }
-      .orElse(
-        lastDocumentSymbolResult.iterator.asScala
-          .collect {
-            case (p, symbols) if p == path => symbols
-          }
-          .toList
-          .headOption
-      )
+      .orElse(Option(snapshots.get(path)))
       .getOrElse(empty)
   }
 
-  // FIXME(gabro): use a more sensible data structure
-  private var lastDocumentSymbolResult
-    : LinkedBlockingQueue[(AbsolutePath, List[DocumentSymbol])] =
-    new LinkedBlockingQueue(10)
+  private val snapshots = Collections.synchronizedMap(
+    new LinkedHashMap[AbsolutePath, List[DocumentSymbol]]() {
+      override def removeEldestEntry(
+          eldest: Map.Entry[AbsolutePath, List[DocumentSymbol]]
+      ): Boolean = size > 10
+    }
+  )
 
   private class SymbolTraverser(uri: String) {
 
