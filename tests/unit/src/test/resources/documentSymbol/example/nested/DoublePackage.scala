@@ -1,9 +1,9 @@
-/*example:9*/package example
+/*example(Package):9*/package example
 
-/*nested.x:5*/package nested.x {
-  /*DoublePackage:4*/class DoublePackage {}
+/*nested.x(Package):5*/package nested.x {
+  /*DoublePackage(Class):4*/class DoublePackage {}
 }
 
-/*nested2.y:9*/package nested2.y {
-  /*DoublePackage:8*/class DoublePackage {}
+/*nested2.y(Package):9*/package nested2.y {
+  /*DoublePackage(Class):8*/class DoublePackage {}
 }

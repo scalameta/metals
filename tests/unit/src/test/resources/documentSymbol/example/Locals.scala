@@ -1,6 +1,6 @@
-/*example:8*/package example
+/*example(Package):8*/package example
 
-/*Locals:8*/class Locals {
+/*Locals(Class):8*/class Locals {
   {
     val x = 2
     x + 2

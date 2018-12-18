@@ -20,18 +20,14 @@ object DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
           val documentSymbols =
             documentSymbolProvider.documentSymbols(file.file)
 
-          def toTextDocument(
-              symbols: List[DocumentSymbol]
-          ): s.TextDocument = {
-            s.TextDocument(
-              schema = s.Schema.SEMANTICDB4,
-              language = s.Language.SCALA,
-              text = file.input.text,
-              occurrences = symbols.map(_.toSymbolOccurrence)
-            )
-          }
+          val textDocument = s.TextDocument(
+            schema = s.Schema.SEMANTICDB4,
+            language = s.Language.SCALA,
+            text = file.input.text,
+            occurrences = documentSymbols.map(_.toSymbolOccurrence)
+          )
 
-          Semanticdbs.printTextDocument(toTextDocument(documentSymbols))
+          Semanticdbs.printTextDocument(textDocument)
         }
       )
     }

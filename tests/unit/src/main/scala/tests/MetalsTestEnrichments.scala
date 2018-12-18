@@ -14,18 +14,19 @@ object MetalsTestEnrichments {
       val startRange = documentSymbol.getRange.getStart
       val endRange = documentSymbol.getRange.getEnd
       s.SymbolOccurrence(
-      range = Some(
-        new s.Range(
-          startRange.getLine,
-          startRange.getCharacter,
-          startRange.getLine,
-          startRange.getCharacter
-        )
-      ),
-      // include end line for testing purposes
-      symbol = s"${documentSymbol.getName}:${endRange.getLine + 1}",
-      role = s.SymbolOccurrence.Role.DEFINITION
-    )
+        range = Some(
+          new s.Range(
+            startRange.getLine,
+            startRange.getCharacter,
+            startRange.getLine,
+            startRange.getCharacter
+          )
+        ),
+        // include end line for testing purposes
+        symbol =
+          s"${documentSymbol.getName}(${documentSymbol.getKind}):${endRange.getLine + 1}",
+        role = s.SymbolOccurrence.Role.DEFINITION
+      )
     }
   }
 
