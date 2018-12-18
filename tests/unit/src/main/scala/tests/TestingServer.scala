@@ -183,8 +183,6 @@ final class TestingServer(
     Debug.printEnclosing()
     val abspath = toPath(filename)
     val uri = abspath.toURI.toString
-    val extension = PathIO.extension(abspath.toNIO)
-    val text = abspath.readText
     Future.successful {
       server
         .didClose(
