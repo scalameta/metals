@@ -1,5 +1,5 @@
-/*example:4*/package example
+/*example:5*/package example
 
-/*Companion:2*/abstract class Companion() extends Object() {}
+/*Companion:3*/abstract class Companion() extends Object() {}
 
-/*Companion:4*/object Companion {}
+/*Companion:5*/object Companion {}

@@ -1,3 +1,3 @@
-/*example.nested:2*/package example.nested
+/*example.nested:3*/package example.nested
 
-/*ExampleNested:2*/class ExampleNested {}
+/*ExampleNested:3*/class ExampleNested {}

@@ -1,6 +1,6 @@
-/*example:8*/package example
+/*example:9*/package example
 
-/*ReflectiveInvocation:8*/class ReflectiveInvocation {
+/*ReflectiveInvocation:9*/class ReflectiveInvocation {
   new Serializable {
     def message = "message"
     // reflective invocation

@@ -1,8 +1,8 @@
-/*example:25*/package example
+/*example:26*/package example
 
-/*Scalalib:25*/class Scalalib {
-  /*nil:3*/val nil = List()
-  /*lst:18*/val lst = List[
+/*Scalalib:26*/class Scalalib {
+  /*nil:4*/val nil = List()
+  /*lst:19*/val lst = List[
     (
         Nothing,
         Null,
