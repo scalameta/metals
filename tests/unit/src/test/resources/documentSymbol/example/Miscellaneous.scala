@@ -1,8 +1,8 @@
-/*example*/package example
+/*example:11*/package example
 
-/*Miscellaneous*/class Miscellaneous {
+/*Miscellaneous:11*/class Miscellaneous {
   // backtick identifier
-  /*a b*/val `a b` = 42
+  /*a b:4*/val `a b` = 42
 
   // infix + inferred apply/implicits/tparams
   (List(1)

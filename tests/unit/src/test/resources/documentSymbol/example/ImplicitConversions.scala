@@ -1,13 +1,13 @@
-/*example*/package example
+/*example:27*/package example
 
-/*ImplicitConversions*/class ImplicitConversions {
-  /*string2Number*/implicit def string2Number(
+/*ImplicitConversions:27*/class ImplicitConversions {
+  /*string2Number:5*/implicit def string2Number(
       string: String
   ): Int = 42
-  /*message*/val message = ""
-  /*number*/val number = 42
-  /*tuple*/val tuple = (1, 2)
-  /*char*/val char: Char = 'a'
+  /*message:6*/val message = ""
+  /*number:7*/val number = 42
+  /*tuple:8*/val tuple = (1, 2)
+  /*char:9*/val char: Char = 'a'
 
   // extension methods
   message
@@ -15,7 +15,7 @@
   tuple + "Hello"
 
   // implicit conversions
-  /*x*/val x: Int = message
+  /*x:17*/val x: Int = message
 
   // interpolators
   s"Hello $message $number"
@@ -23,6 +23,6 @@
      |$message
      |$number""".stripMargin
 
-  /*a*/val a: Int = char
-  /*b*/val b: Long = char
+  /*a:25*/val a: Int = char
+  /*b:26*/val b: Long = char
 }
