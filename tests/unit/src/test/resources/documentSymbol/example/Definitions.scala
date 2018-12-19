@@ -1,6 +1,6 @@
 /*example(Package):15*/package example
 
-/*Definitions(Class):15*/class Definitions {
+/*example.Definitions(Class):15*/class Definitions {
   Predef.any2stringadd(1)
   List[
     java.util.Map.Entry[

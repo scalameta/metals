@@ -24,6 +24,8 @@ import scala.concurrent.Future
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.Properties
@@ -148,16 +150,31 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
 
     def toSymbolInformation(uri: String): List[l.SymbolInformation] = {
       val buf = List.newBuilder[l.SymbolInformation]
-      def loop(s: l.DocumentSymbol): Unit = {
+      def loop(s: l.DocumentSymbol, owner: String): Unit = {
         buf += new l.SymbolInformation(
           s.getName,
           s.getKind,
           new l.Location(uri, s.getRange),
-          s.getDetail
+          if (owner == Symbols.RootPackage) "" else owner
         )
-        s.getChildren.forEach(loop)
+        val newOwner: String = s.getKind match {
+          case l.SymbolKind.Package =>
+            s.getName.split("\\.").foldLeft(owner) {
+              case (accum, name) =>
+                Symbols.Global(accum, Descriptor.Package(name))
+            }
+          case l.SymbolKind.Class | l.SymbolKind.Interface =>
+            Symbols.Global(owner, Descriptor.Type(s.getName))
+          case _ =>
+            Symbols.Global(owner, Descriptor.Term(s.getName))
+        }
+        s.getChildren.forEach { child =>
+          loop(child, newOwner)
+        }
       }
-      symbol.foreach(loop)
+      symbol.foreach { s =>
+        loop(s, Symbols.RootPackage)
+      }
       buf.result()
     }
   }

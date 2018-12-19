@@ -1,6 +1,6 @@
 /*example(Package):40*/package example
 
-/*ForComprehensions(Class):40*/class ForComprehensions {
+/*example.ForComprehensions(Class):40*/class ForComprehensions {
   for {
     a <- List(1)
     b <- List(a)
