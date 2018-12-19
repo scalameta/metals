@@ -12,8 +12,10 @@ import java.util.Collections
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
+import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
@@ -45,6 +47,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.meta.tokens.Token
+import tests.MetalsTestEnrichments._
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -150,7 +153,7 @@ final class TestingServer(
   def didChange(filename: String)(fn: String => String): Future[Unit] = {
     Debug.printEnclosing()
     val abspath = toPath(filename)
-    val oldText = abspath.readText
+    val oldText = abspath.toInputFromBuffers(buffers).text
     val newText = fn(oldText)
     server
       .didChange(
@@ -176,6 +179,21 @@ final class TestingServer(
       )
       .asScala
   }
+
+  def didClose(filename: String): Future[Unit] = {
+    Debug.printEnclosing()
+    val abspath = toPath(filename)
+    val uri = abspath.toURI.toString
+    Future.successful {
+      server
+        .didClose(
+          new DidCloseTextDocumentParams(
+            new TextDocumentIdentifier(uri)
+          )
+        )
+    }
+  }
+
   def didChangeConfiguration(config: String): Future[Unit] = {
     Future {
       val wrapped = UserConfiguration.toWrappedJson(config)
@@ -243,6 +261,22 @@ final class TestingServer(
         s"/$relpath\n$printedTextDocument"
       }
       .mkString("\n")
+  }
+
+  def documentSymbols(uri: String): String = {
+    val path = toPath(uri)
+    val input = path.toInputFromBuffers(buffers)
+    val identifier = path.toTextDocumentIdentifier
+    val params = new DocumentSymbolParams(identifier)
+    val documentSymbols = server.documentSymbolResult(params).asScala
+    val symbols = documentSymbols.toSymbolInformation(uri)
+    val textDocument = s.TextDocument(
+      schema = s.Schema.SEMANTICDB4,
+      language = s.Language.SCALA,
+      text = input.text,
+      occurrences = symbols.map(_.toSymbolOccurrence)
+    )
+    Semanticdbs.printTextDocument(textDocument)
   }
 
   def cancel(): Unit = {
