@@ -144,6 +144,24 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
     }
   }
 
+  implicit class XtensionDocumentSymbol(symbol: Seq[l.DocumentSymbol]) {
+
+    def toSymbolInformation(uri: String): List[l.SymbolInformation] = {
+      val buf = List.newBuilder[l.SymbolInformation]
+      def loop(s: l.DocumentSymbol): Unit = {
+        buf += new l.SymbolInformation(
+          s.getName,
+          s.getKind,
+          new l.Location(uri, s.getRange),
+          s.getDetail
+        )
+        s.getChildren.forEach(loop)
+      }
+      symbol.foreach(loop)
+      buf.result()
+    }
+  }
+
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
     /**

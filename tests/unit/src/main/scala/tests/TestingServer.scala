@@ -12,8 +12,8 @@ import java.util.Collections
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
-import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
+import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -47,7 +47,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.meta.tokens.Token
-import MetalsTestEnrichments._
+import tests.MetalsTestEnrichments._
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -268,7 +268,8 @@ final class TestingServer(
     val input = path.toInputFromBuffers(buffers)
     val identifier = path.toTextDocumentIdentifier
     val params = new DocumentSymbolParams(identifier)
-    val symbols = server.documentSymbolResult(params)
+    val documentSymbols = server.documentSymbolResult(params).asScala
+    val symbols = documentSymbols.toSymbolInformation(uri)
     val textDocument = s.TextDocument(
       schema = s.Schema.SEMANTICDB4,
       language = s.Language.SCALA,
