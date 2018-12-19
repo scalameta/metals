@@ -7,7 +7,6 @@ import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopProtocol
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ExecuteClientCommandConfig
-import scala.meta.internal.metals.FileWatcherConfig
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.io.AbsolutePath
@@ -50,7 +49,6 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     val buffers = Buffers()
     val config = MetalsServerConfig.default.copy(
       bloopProtocol = protocol,
-      fileWatcher = FileWatcherConfig.auto,
       executeClientCommand = ExecuteClientCommandConfig.on
     )
     client = new TestingClient(workspace, buffers)
