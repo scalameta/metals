@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
@@ -80,6 +81,8 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
+  private val documentSymbolProvider: DocumentSymbolProvider =
+    new DocumentSymbolProvider(buffers)
   private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
   private var statusBar: StatusBar = _
@@ -204,6 +207,7 @@ class MetalsLanguageServer(
         )
       )
       capabilities.setDefinitionProvider(true)
+      capabilities.setDocumentSymbolProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       if (config.isNoInitialized) {
         sh.schedule(
@@ -432,6 +436,7 @@ class MetalsLanguageServer(
   def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     buffers.remove(path)
+    documentSymbolProvider.discardSnapshot(path)
   }
 
   @JsonNotification("textDocument/didSave")
@@ -527,10 +532,19 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
       params: DocumentSymbolParams
-  ): CompletableFuture[util.List[DocumentSymbol]] =
+  ): CompletableFuture[
+    JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
+  ] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/documentSymbol is not supported.")
-      null
+      val result = documentSymbolResult(params)
+      if (config.documentSymbol.isSymbolInformation) {
+        val infos = result.asScala
+          .toSymbolInformation(params.getTextDocument.getUri)
+          .asJava
+        JEither.forRight(infos)
+      } else {
+        JEither.forLeft(result)
+      }
     }
 
   @JsonRequest("textDocument/formatting")
@@ -959,6 +973,13 @@ class MetalsLanguageServer(
       // Ignore non-scala files.
       DefinitionResult.empty
     }
+  }
+
+  def documentSymbolResult(
+      params: DocumentSymbolParams
+  ): util.List[DocumentSymbol] = {
+    documentSymbolProvider
+      .documentSymbols(params.getTextDocument.getUri.toAbsolutePath)
   }
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
