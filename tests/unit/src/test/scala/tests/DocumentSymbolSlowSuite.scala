@@ -39,7 +39,7 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
         """|
            |/*Outer(Module):4*/object Outer {
-           |  /*Inner(Class):3*/class Inner
+           |  /*Outer.Inner(Class):3*/class Inner
            |}""".stripMargin
       )
       // make the code unparseable again
@@ -55,7 +55,7 @@ object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
         server.documentSymbols("a/src/main/scala/a/Main.scala"),
         """|} // <- parse error
            |/*Outer(Module):4*/object Outer {
-           |  /*Inner(Class):3*/class Inner
+           |  /*Outer.Inner(Class):3*/class Inner
            |}""".stripMargin
       )
       // check that when closing the buffer, the snapshot is lost, and no symbols
