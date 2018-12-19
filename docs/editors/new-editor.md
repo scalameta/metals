@@ -90,7 +90,7 @@ Possible values:
 
 This option is no longer used by Metals.
 
-### `-Dmetals.directory-glob`
+### `-Dmetals.glob-syntax`
 
 Controls the glob syntax for registering file watchers on absolute directories.
 Registration happens via `client/registerCapability` for the

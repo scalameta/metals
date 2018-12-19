@@ -252,7 +252,7 @@ class MetalsLanguageServer(
             new Registration(
               "1",
               "workspace/didChangeWatchedFiles",
-              config.directoryGlob.registrationOptions(this.workspace)
+              config.globSyntax.registrationOptions(this.workspace)
             )
           ).asJava
         )

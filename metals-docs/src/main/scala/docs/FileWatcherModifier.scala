@@ -5,7 +5,7 @@ import mdoc.Reporter
 import mdoc.StringModifier
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.Configs.DirectoryGlobConfig
+import scala.meta.internal.metals.Configs.GlobSyntaxConfig
 import scala.meta.io.AbsolutePath
 
 class FileWatcherModifier extends StringModifier {
@@ -20,7 +20,7 @@ class FileWatcherModifier extends StringModifier {
       .resolve("to")
       .resolve("workspace")
     val options =
-      DirectoryGlobConfig.default.registrationOptions(AbsolutePath(workspace))
+      GlobSyntaxConfig.default.registrationOptions(AbsolutePath(workspace))
     val json = new GsonBuilder().setPrettyPrinting().create().toJson(options)
     s"""
        |```json

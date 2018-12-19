@@ -7,8 +7,8 @@ import scala.collection.JavaConverters._
 
 object Configs {
 
-  final case class DirectoryGlobConfig(value: String) {
-    import DirectoryGlobConfig._
+  final case class GlobSyntaxConfig(value: String) {
+    import GlobSyntaxConfig._
     def isUri: Boolean = this == uri
     def isVscode: Boolean = this == vscode
     def registrationOptions(
@@ -27,11 +27,11 @@ object Configs {
     }
   }
 
-  object DirectoryGlobConfig {
-    def uri = new DirectoryGlobConfig("uri")
-    def vscode = new DirectoryGlobConfig("vscode")
-    def default = new DirectoryGlobConfig(
-      System.getProperty("metals.directory-glob", uri.value)
+  object GlobSyntaxConfig {
+    def uri = new GlobSyntaxConfig("uri")
+    def vscode = new GlobSyntaxConfig("vscode")
+    def default = new GlobSyntaxConfig(
+      System.getProperty("metals.glob-syntax", uri.value)
     )
   }
 
