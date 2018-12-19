@@ -8,6 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.util
 import java.util.Collections
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeConfigurationParams
@@ -16,7 +17,9 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
@@ -24,6 +27,7 @@ import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import scala.collection.concurrent.TrieMap
@@ -200,6 +204,18 @@ final class TestingServer(
       val json = new JsonParser().parse(wrapped)
       server.didChangeConfiguration(new DidChangeConfigurationParams(json))
     }
+  }
+
+  def formatting(filename: String): Future[util.List[TextEdit]] = {
+    val abspath = toPath(filename)
+    server
+      .formatting(
+        new DocumentFormattingParams(
+          new TextDocumentIdentifier(abspath.toURI.toString),
+          new FormattingOptions
+        )
+      )
+      .asScala
   }
 
   private def toSemanticdbTextDocument(path: AbsolutePath): s.TextDocument = {

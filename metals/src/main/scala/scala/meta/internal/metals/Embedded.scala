@@ -26,6 +26,9 @@ final class Embedded(
     if (isBloopJars.get()) {
       bloopJars.foreach(_.close())
     }
+    if (isScalafmtJars.get()) {
+      scalafmtJars.foreach(_.close())
+    }
   }
 
   /**
@@ -76,6 +79,30 @@ final class Embedded(
     Files.copy(embeddedBloopClient, out)
     AbsolutePath(out)
   }
+
+  val isScalafmtJars = new AtomicBoolean(false)
+  lazy val scalafmtJars: Option[URLClassLoader] = {
+    isScalafmtJars.set(true)
+    val promise = Promise[Unit]()
+    statusBar.trackFuture(s"${icons.sync}Downloading Scalafmt", promise.future)
+    try {
+      Some(
+        Embedded.newScalafmtClassloader(
+          userConfig().scalafmtVersion.getOrElse("1.5.1")
+        )
+      )
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(
+          "Failed to classload Scalafmt, formatting will not work",
+          e
+        )
+        None
+    } finally {
+      promise.trySuccess(())
+    }
+  }
+
 }
 
 object Embedded {
@@ -101,6 +128,26 @@ object Embedded {
       )
     val jars = coursiersmall.CoursierSmall.fetch(settings)
     // Don't make Bloop classloader a child or our classloader.
+    val parent: ClassLoader = null
+    val classloader =
+      new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, parent)
+    classloader
+  }
+
+  private def newScalafmtClassloader(version: String): URLClassLoader = {
+    val settings = new coursiersmall.Settings()
+      .withTtl(Some(Duration.Inf))
+      .withDependencies(
+        List(
+          new coursiersmall.Dependency(
+            "com.geirsson",
+            "scalafmt-cli_2.12",
+            version
+          )
+        )
+      )
+    val jars = coursiersmall.CoursierSmall.fetch(settings)
+    // Don't make Scalafmt classloader a child or our classloader.
     val parent: ClassLoader = null
     val classloader =
       new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, parent)
