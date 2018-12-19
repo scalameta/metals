@@ -21,7 +21,7 @@ import scala.meta.internal.metals.Configs._
  */
 final case class MetalsServerConfig(
     bloopProtocol: BloopProtocol = BloopProtocol.default,
-    directoryGlob: DirectoryGlobConfig = DirectoryGlobConfig.default,
+    globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
     slowTask: SlowTaskConfig = SlowTaskConfig.default,
     executeClientCommand: ExecuteClientCommandConfig =
@@ -56,7 +56,7 @@ final case class MetalsServerConfig(
   override def toString: String =
     List[String](
       s"bloop-protocol=$bloopProtocol",
-      s"directory-glob=$directoryGlob",
+      s"glob-syntax=$globSyntax",
       s"status-bar=$statusBar",
       s"slow-task=$slowTask",
       s"execute-client-command=$executeClientCommand",
@@ -86,7 +86,7 @@ object MetalsServerConfig {
           slowTask = SlowTaskConfig.on,
           icons = Icons.vscode,
           executeClientCommand = ExecuteClientCommandConfig.on,
-          directoryGlob = DirectoryGlobConfig.vscode
+          globSyntax = GlobSyntaxConfig.vscode
         )
       case "vim-lsc" =>
         base.copy(
