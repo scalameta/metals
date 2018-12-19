@@ -156,6 +156,12 @@ directory containing JSON files.
 The callback `function('abs')` can be replaced with any function that does
 nothing.
 
+## Show document symbols
+
+Run `:LSClientDocumentSymbol` to show a symbol outline for the current file.
+
+![Document Symbols](assets/vim-document-symbols.png)
+
 ## Known issues
 
 - [vim-lsc#123](https://github.com/natebosch/vim-lsc/issues/123): newlines in

@@ -146,6 +146,17 @@ Possible values:
 - `log-message`: send `window/showMessageRequest` requests as
   `window/logMessage` instead.
 
+### `-Dmetals.document-symbol`
+
+Possible values:
+
+- `document-symbol` (default): return `DocumentSymbol[]` for
+  `textDocument/documentSymbol` requests.
+- `symbol-information`: return `SymbolInformation[]` for
+  `textDocument/documentSymbol` requests. This option is used by editor clients
+  like vim-lsc that don't yet support the new hierarchical `DocumentSymbol` data
+  structure.
+
 ### `-Dmetals.http`
 
 Possible values:
@@ -475,6 +486,11 @@ library sources.
   marked as read-only to prevent the user from editing them.
 - The destination location can either be a Scala or Java source file. It is
   recommended to have a Java language server installed to navigate Java sources.
+
+### `textDocument/documentSymbol`
+
+Returns `DocumentSymbol[]` by default and `SymbolInformation[]` when
+`-Dmetals.document-symbol=symbol-information`.
 
 ### `workspace/didChangeWatchedFiles`
 

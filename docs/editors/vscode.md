@@ -81,3 +81,13 @@ to take effect.
 ```scala mdoc:generic
 
 ```
+
+## Show document symbols
+
+Run the "Explorer: Focus on Outline View" command to open the symbol outline for
+the current file in the sidebar.
+
+![Document Symbols Outline](../assets/vscode-document-symbol.gif)
+
+As you type, the symbol outline is also visible at the top of the file.
+![Document Symbols Outline](../assets/vscode-document-symbol.png)

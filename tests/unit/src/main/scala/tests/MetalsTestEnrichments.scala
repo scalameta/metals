@@ -9,10 +9,12 @@ import scala.meta.internal.{semanticdb => s}
  */
 object MetalsTestEnrichments {
 
-  implicit class XtensionDocumentSymbol(documentSymbol: l.DocumentSymbol) {
+  implicit class XtensionDocumentSymbolOccurrence(
+      documentSymbol: l.SymbolInformation
+  ) {
     def toSymbolOccurrence: s.SymbolOccurrence = {
-      val startRange = documentSymbol.getRange.getStart
-      val endRange = documentSymbol.getRange.getEnd
+      val startRange = documentSymbol.getLocation.getRange.getStart
+      val endRange = documentSymbol.getLocation.getRange.getEnd
       s.SymbolOccurrence(
         range = Some(
           new s.Range(

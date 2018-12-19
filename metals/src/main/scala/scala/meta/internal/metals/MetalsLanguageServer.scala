@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
@@ -531,9 +532,19 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
       params: DocumentSymbolParams
-  ): CompletableFuture[util.List[DocumentSymbol]] =
+  ): CompletableFuture[
+    JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
+  ] =
     CompletableFutures.computeAsync { _ =>
-      documentSymbolResult(params).asJava
+      val result = documentSymbolResult(params)
+      if (config.documentSymbol.isSymbolInformation) {
+        val infos = result.asScala
+          .toSymbolInformation(params.getTextDocument.getUri)
+          .asJava
+        JEither.forRight(infos)
+      } else {
+        JEither.forLeft(result)
+      }
     }
 
   @JsonRequest("textDocument/formatting")
@@ -966,7 +977,7 @@ class MetalsLanguageServer(
 
   def documentSymbolResult(
       params: DocumentSymbolParams
-  ): List[DocumentSymbol] = {
+  ): util.List[DocumentSymbol] = {
     documentSymbolProvider
       .documentSymbols(params.getTextDocument.getUri.toAbsolutePath)
   }
