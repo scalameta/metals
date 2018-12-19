@@ -83,6 +83,7 @@ class MetalsLanguageServer(
   private var definitionProvider: DefinitionProvider = _
   private val documentSymbolProvider: DocumentSymbolProvider =
     new DocumentSymbolProvider(buffers)
+  private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
   private var statusBar: StatusBar = _
@@ -172,6 +173,12 @@ class MetalsLanguageServer(
       config.icons,
       statusBar
     )
+    formattingProvider = new FormattingProvider(
+      workspace,
+      buffers,
+      embedded,
+      () => userConfig
+    )
     doctor = new Doctor(
       buildTargets,
       config,
@@ -208,6 +215,7 @@ class MetalsLanguageServer(
       )
       capabilities.setDefinitionProvider(true)
       capabilities.setDocumentSymbolProvider(true)
+      capabilities.setDocumentFormattingProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       if (config.isNoInitialized) {
         sh.schedule(
@@ -552,8 +560,7 @@ class MetalsLanguageServer(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/formatting is not supported.")
-      null
+      formattingProvider.format(params.getTextDocument.getUri.toAbsolutePath)
     }
 
   @JsonRequest("textDocument/rename")
