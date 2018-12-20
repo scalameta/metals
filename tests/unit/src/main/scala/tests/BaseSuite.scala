@@ -4,6 +4,8 @@ import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.language.experimental.macros
+import scala.meta.internal.metals.MetalsLogger
+import scala.meta.io.AbsolutePath
 import scala.reflect.ClassTag
 import utest.TestSuite
 import utest.Tests
@@ -11,10 +13,8 @@ import utest.asserts.Asserts
 import utest.framework.Formatter
 import utest.framework.TestCallTree
 import utest.framework.Tree
-import utest.ufansi.Str
-import scala.meta.internal.metals.MetalsLogger
-import scala.meta.io.AbsolutePath
 import utest.ufansi.Attrs
+import utest.ufansi.Str
 
 /**
  * Test suite that replace utest DSL with FunSuite-style syntax from ScalaTest.
@@ -28,6 +28,20 @@ class BaseSuite extends TestSuite {
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
+  def assertNotEmpty(string: String): Unit = {
+    if (string.isEmpty) {
+      fail(
+        s"expected non-empty string, obtained empty string."
+      )
+    }
+  }
+  def assertEmpty(string: String): Unit = {
+    if (!string.isEmpty) {
+      fail(
+        s"expected empty string, obtained: $string"
+      )
+    }
+  }
   def assertContains(string: String, substring: String): Unit = {
     assert(string.contains(substring))
   }

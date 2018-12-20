@@ -5,7 +5,6 @@ import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.DependencySourcesParams
 import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import ch.epfl.scala.bsp4j.SourcesParams
-import ch.epfl.scala.bsp4j.StatusCode
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
 import io.undertow.server.HttpServerExchange
@@ -69,7 +68,7 @@ class MetalsLanguageServer(
   private val messages = new Messages(config.icons)
   private val languageClient =
     new DelegatingLanguageClient(NoopLanguageClient, config)
-  private var userConfig = UserConfiguration()
+  var userConfig = UserConfiguration()
   private val buildTargets: BuildTargets = new BuildTargets()
   private val fileEvents = register(
     new FileEvents(
@@ -85,7 +84,7 @@ class MetalsLanguageServer(
   private var interactiveSemanticdbs: InteractiveSemanticdbs = _
   private var buildTools: BuildTools = _
   private var semanticdbs: Semanticdbs = _
-  private var buildClient: MetalsBuildClient = _
+  private var buildClient: ForwardingMetalsBuildClient = _
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
@@ -94,7 +93,7 @@ class MetalsLanguageServer(
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
-  private var statusBar: StatusBar = _
+  var statusBar: StatusBar = _
   private var embedded: Embedded = _
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
@@ -131,7 +130,14 @@ class MetalsLanguageServer(
       )
     )
     diagnostics = new Diagnostics(buildTargets, languageClient)
-    buildClient = new ForwardingMetalsBuildClient(languageClient, diagnostics)
+    buildClient = new ForwardingMetalsBuildClient(
+      languageClient,
+      diagnostics,
+      buildTargets,
+      config,
+      statusBar,
+      time
+    )
     bloopInstall = register(
       new BloopInstall(
         workspace,
@@ -401,7 +407,9 @@ class MetalsLanguageServer(
     val path = uri.toAbsolutePath
     // unpublish diagnostic for dependencies
     interactiveSemanticdbs.didFocus(path)
-    if (openedFiles.isRecentlyActive(path)) {
+    // Don't trigger compilation on didFocus events under cascade compilation
+    // because save events already trigger compile in inverse dependencies.
+    if (userConfig.isCascadeCompile || openedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(())
     } else {
       compileSourceFiles(List(path)).asJava
@@ -833,6 +841,7 @@ class MetalsLanguageServer(
       _ = {
         buildTargets.reset()
         interactiveSemanticdbs.reset()
+        buildClient.reset()
         buildTargets.addWorkspaceBuildTargets(workspaceBuildTargets)
       }
       ids = workspaceBuildTargets.getTargets.map(_.getId)
@@ -917,39 +926,14 @@ class MetalsLanguageServer(
           scribe.warn(s"no build target: ${scalaPaths.mkString("\n  ")}")
           Future.successful(())
         } else {
-          val params = new CompileParams(targets.asJava)
-          val name =
-            targets.headOption
-              .flatMap(buildTargets.info)
-              .map(info => " " + info.getDisplayName)
-              .getOrElse("")
-          for {
-            (elapsed, status) <- withTimer(
-              s"compiled$name",
-              reportStatus = true
-            ) {
-              statusBar.trackFuture(
-                s"${config.icons.sync}Compiling$name",
-                build.compile(params).asScala,
-                showTimer = true
-              )
+          val allTargets =
+            if (userConfig.isCascadeCompile) {
+              targets.flatMap(buildTargets.inverseDependencies).distinct
+            } else {
+              targets
             }
-          } yield {
-            status.getStatusCode match {
-              case StatusCode.OK =>
-                statusBar.addMessage(
-                  s"${config.icons.check}Compiled$name ($elapsed)"
-                )
-              case StatusCode.ERROR =>
-                statusBar.addMessage(
-                  MetalsStatusParams(
-                    s"${config.icons.alert}Compile error ($elapsed)",
-                    command = ClientCommands.FocusDiagnostics.id
-                  )
-                )
-              case StatusCode.CANCELLED =>
-            }
-          }
+          val params = new CompileParams(allTargets.asJava)
+          build.compile(params).asScala.ignoreValue
         }
       case _ =>
         Future.successful(())
