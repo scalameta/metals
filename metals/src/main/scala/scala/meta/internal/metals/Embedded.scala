@@ -27,9 +27,7 @@ final class Embedded(
     if (isBloopJars.get()) {
       bloopJars.foreach(_.close())
     }
-    if (isScalafmtJars.get()) {
-      scalafmtJarsCache.values.foreach(_.close())
-    }
+    scalafmtJarsCache.values.foreach(_.close())
   }
 
   /**
@@ -81,10 +79,8 @@ final class Embedded(
     AbsolutePath(out)
   }
 
-  val isScalafmtJars = new AtomicBoolean(false)
   private val scalafmtJarsCache = TrieMap.empty[String, URLClassLoader]
   def scalafmtJars(version: String): Option[URLClassLoader] = {
-    isScalafmtJars.set(true)
     scalafmtJarsCache.get(version).orElse {
       val promise = Promise[Unit]()
       statusBar
@@ -94,11 +90,7 @@ final class Embedded(
         scalafmtJarsCache.put(version, classloader)
         Some(classloader)
       } catch {
-        case NonFatal(e) =>
-          scribe.error(
-            s"Failed to classload Scalafmt v${version}, formatting will not work",
-            e
-          )
+        case NonFatal(_) =>
           None
       } finally {
         promise.trySuccess(())
@@ -148,6 +140,7 @@ object Embedded {
             version
           ),
           new coursiersmall.Dependency(
+            // We need reflect because https://github.com/scalameta/scalafmt/issues/1252
             "org.scala-lang",
             "scala-reflect",
             BuildInfo.scala212

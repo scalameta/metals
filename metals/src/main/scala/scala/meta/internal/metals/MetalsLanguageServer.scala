@@ -177,7 +177,10 @@ class MetalsLanguageServer(
       workspace,
       buffers,
       embedded,
-      () => userConfig
+      () => userConfig,
+      languageClient,
+      statusBar,
+      config.icons
     )
     doctor = new Doctor(
       buildTargets,

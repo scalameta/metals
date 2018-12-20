@@ -8,6 +8,8 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.metals.BuildTool.Sbt
+import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
 
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
@@ -226,5 +228,52 @@ class Messages(icons: Icons) {
         MessageType.Warning,
         s"Unable to switch build server since there is only one installed build server '$name' on this computer."
       )
+  }
+
+  object MissingScalafmtConf {
+    def createFile = new MessageActionItem("Create .scalafmt.conf")
+    def fixedParams: MessageParams =
+      new MessageParams(
+        MessageType.Info,
+        "Created a .scalafmt.conf, formatting should work now. "
+      )
+    def configParseError(
+        path: RelativePath,
+        message: String
+    ): MessageParams =
+      new MessageParams(
+        MessageType.Error,
+        s"Failed to parse config $path with error message '$message'"
+      )
+    def formatError(e: Throwable): MessageParams = {
+      new MessageParams(
+        MessageType.Error,
+        s"Scalafmt error: ${e.getMessage}"
+      )
+    }
+    def downloadError(version: String): MessageParams = {
+      new MessageParams(
+        MessageType.Error,
+        s"Failed to download Scalafmt v$version. " +
+          "Make sure you have a working internet connection and this version exists on Maven Central."
+      )
+    }
+    def isCreateScalafmtConf(params: ShowMessageRequestParams): Boolean =
+      params.getMessage == createScalafmtConfMessage
+    def createScalafmtConfMessage: String =
+      s"Unable to format since this workspace has no .scalafmt.conf file. " +
+        s"To fix this problem, create an empty .scalafmt.conf and try again."
+    def params(path: AbsolutePath): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(createScalafmtConfMessage)
+      params.setType(MessageType.Error)
+      params.setActions(
+        List(
+          createFile,
+          notNow
+        ).asJava
+      )
+      params
+    }
   }
 }
