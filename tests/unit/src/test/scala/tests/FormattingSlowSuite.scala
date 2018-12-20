@@ -17,10 +17,10 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
         expectError = true
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      textEdits <- server.formatting("a/src/main/scala/a/Main.scala")
+      _ <- server.formatting("a/src/main/scala/a/Main.scala")
       // check that the file has been formatted
       _ = assertNoDiff(
-        textEdits.get(0).getNewText,
+        server.bufferContent("a/src/main/scala/a/Main.scala").get,
         """|object FormatMe {
            |  val x = 1
            |}""".stripMargin
@@ -38,9 +38,14 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
         expectError = true
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      textEdits <- server.formatting("a/src/main/scala/a/Main.scala")
+      _ <- server.formatting("a/src/main/scala/a/Main.scala")
       // check that the formatting request has been ignored
-      _ = assert(textEdits.isEmpty)
+      _ = assertNoDiff(
+        server.bufferContent("a/src/main/scala/a/Main.scala").get,
+        """|object FormatMe {
+           | val x = 1  }
+           |""".stripMargin
+      )
     } yield ()
   }
 
@@ -64,10 +69,9 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
         )
         server.didChangeConfiguration(config.toString)
       }
-      textEdits <- server.formatting("a/src/main/scala/a/Main.scala")
-      // check that the file has been formatted
+      _ <- server.formatting("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(
-        textEdits.get(0).getNewText,
+        server.bufferContent("a/src/main/scala/a/Main.scala").get,
         """|object FormatMe {
            |  val x = 1
            |}""".stripMargin
@@ -90,10 +94,10 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
         expectError = true
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      textEdits <- server.formatting("a/src/main/scala/a/Main.scala")
+      _ <- server.formatting("a/src/main/scala/a/Main.scala")
       // check that the file has been formatted respecting the trailing comma config (new in 1.6.0)
       _ = assertNoDiff(
-        textEdits.get(0).getNewText,
+        server.bufferContent("a/src/main/scala/a/Main.scala").get,
         """|case class User(
            |    name: String,
            |    age: Int
