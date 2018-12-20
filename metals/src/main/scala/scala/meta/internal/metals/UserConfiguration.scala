@@ -17,15 +17,39 @@ case class UserConfiguration(
     javaHome: Option[String] = None,
     sbtScript: Option[String] = None,
     scalafmtConfigPath: RelativePath =
-      UserConfiguration.default.scalafmtConfigPath
-)
-
+      UserConfiguration.default.scalafmtConfigPath,
+    compileOnSave: String = UserConfiguration.default.compileOnSave
+) {
+  def isCascadeCompile: Boolean =
+    compileOnSave == UserConfiguration.CascadeCompile
+  def isCurrentProject: Boolean =
+    compileOnSave == UserConfiguration.CurrentProjectCompile
+}
 object UserConfiguration {
+  val CascadeCompile = "cascade"
+  val CurrentProjectCompile = "current-project"
+  def allCompile: List[String] =
+    List(CascadeCompile, CurrentProjectCompile)
+
   object default {
     val scalafmtConfigPath = RelativePath(".scalafmt.conf")
+    val compileOnSave = CurrentProjectCompile
   }
 
   def options: List[UserConfigurationOption] = List(
+    UserConfigurationOption(
+      "compile-on-save",
+      s""" `"${default.compileOnSave}"` """,
+      CascadeCompile,
+      "Compile on save",
+      """What compilation mode to use for file save events.
+        |Possible values:
+        |
+        |- `"cascade"` (default): compile the build target that contains the saved file
+        |  along other build targets that depend on that build target.
+        |- `"current-project"`: compile only the build target that contains the saved file.
+      """.stripMargin
+    ),
     UserConfigurationOption(
       "java-home",
       "`JAVA_HOME` environment variable with fallback to `user.home` system property.",
@@ -91,19 +115,30 @@ object UserConfiguration {
 
     val javaHome =
       getStringKey("java-home")
-    val sbtScript =
-      getStringKey("sbt-script")
     val scalafmtConfigPath =
       getStringKey("scalafmt-config-path")
         .map(RelativePath(_))
         .getOrElse(default.scalafmtConfigPath)
+    val sbtScript =
+      getStringKey("sbt-script")
+    val cascadeCompile = getStringKey("compile-on-save") match {
+      case None => default.compileOnSave
+      case Some(value) =>
+        value match {
+          case CascadeCompile | CurrentProjectCompile => value
+          case unknown =>
+            errors += s"unknown compile-on-save: '$unknown'. Expected one of: ${allCompile.mkString(", ")}."
+            default.compileOnSave
+        }
+    }
 
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
           javaHome,
           sbtScript,
-          scalafmtConfigPath
+          scalafmtConfigPath,
+          cascadeCompile
         )
       )
     } else {
@@ -113,4 +148,5 @@ object UserConfiguration {
 
   def toWrappedJson(config: String): String =
     s"""{"metals": $config}"""
+
 }
