@@ -51,6 +51,8 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.meta.tokens.Token
+import scala.meta.Input
+import scala.meta.internal.mtags.MtagsEnrichments._
 import tests.MetalsTestEnrichments._
 
 /**
@@ -206,16 +208,33 @@ final class TestingServer(
     }
   }
 
-  def formatting(filename: String): Future[util.List[TextEdit]] = {
-    val abspath = toPath(filename)
+  def formatting(filename: String): Future[Unit] = {
+    val path = toPath(filename)
     server
       .formatting(
         new DocumentFormattingParams(
-          new TextDocumentIdentifier(abspath.toURI.toString),
+          new TextDocumentIdentifier(path.toURI.toString),
           new FormattingOptions
         )
       )
       .asScala
+      .map(textEdits => applyTextEdits(path, textEdits))
+  }
+
+  private def applyTextEdits(path: AbsolutePath, textEdits: util.List[TextEdit]): Unit = {
+    for {
+      buffer <- buffers.get(path)
+    } yield {
+      val input = Input.String(buffer)
+      val newBuffer = textEdits.asScala.foldLeft(buffer) { case (buf, edit) =>
+        val startPosition = edit.getRange.getStart
+        val endPosition = edit.getRange.getEnd
+        val startOffset = input.toOffset(startPosition.getLine, startPosition.getCharacter)
+        val endOffset = input.toOffset(endPosition.getLine, endPosition.getCharacter)
+        buf.patch(startOffset, edit.getNewText, endOffset)
+      }
+      buffers.put(path, newBuffer)
+    }
   }
 
   private def toSemanticdbTextDocument(path: AbsolutePath): s.TextDocument = {
@@ -294,6 +313,9 @@ final class TestingServer(
     )
     Semanticdbs.printTextDocument(textDocument)
   }
+
+  def bufferContent(filename: String): Option[String] =
+    buffers.get(toPath(filename))
 
   def cancel(): Unit = {
     server.cancel()
