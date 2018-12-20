@@ -221,17 +221,23 @@ final class TestingServer(
       .map(textEdits => applyTextEdits(path, textEdits))
   }
 
-  private def applyTextEdits(path: AbsolutePath, textEdits: util.List[TextEdit]): Unit = {
+  private def applyTextEdits(
+      path: AbsolutePath,
+      textEdits: util.List[TextEdit]
+  ): Unit = {
     for {
       buffer <- buffers.get(path)
     } yield {
       val input = Input.String(buffer)
-      val newBuffer = textEdits.asScala.foldLeft(buffer) { case (buf, edit) =>
-        val startPosition = edit.getRange.getStart
-        val endPosition = edit.getRange.getEnd
-        val startOffset = input.toOffset(startPosition.getLine, startPosition.getCharacter)
-        val endOffset = input.toOffset(endPosition.getLine, endPosition.getCharacter)
-        buf.patch(startOffset, edit.getNewText, endOffset)
+      val newBuffer = textEdits.asScala.foldLeft(buffer) {
+        case (buf, edit) =>
+          val startPosition = edit.getRange.getStart
+          val endPosition = edit.getRange.getEnd
+          val startOffset =
+            input.toOffset(startPosition.getLine, startPosition.getCharacter)
+          val endOffset =
+            input.toOffset(endPosition.getLine, endPosition.getCharacter)
+          buf.patch(startOffset, edit.getNewText, endOffset)
       }
       buffers.put(path, newBuffer)
     }
@@ -314,8 +320,10 @@ final class TestingServer(
     Semanticdbs.printTextDocument(textDocument)
   }
 
-  def bufferContent(filename: String): Option[String] =
-    buffers.get(toPath(filename))
+  def bufferContent(filename: String): String =
+    buffers
+      .get(toPath(filename))
+      .getOrElse(throw new NoSuchElementException(filename))
 
   def cancel(): Unit = {
     server.cancel()
