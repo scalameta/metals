@@ -7,6 +7,7 @@ import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopProtocol
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ExecuteClientCommandConfig
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.io.AbsolutePath
@@ -16,6 +17,7 @@ import scala.meta.io.AbsolutePath
  */
 abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   def protocol: BloopProtocol = BloopProtocol.auto
+  def icons: Icons = Icons.default
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   def bspGlobalDirectories: List[AbsolutePath] = Nil
@@ -49,7 +51,8 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     val buffers = Buffers()
     val config = MetalsServerConfig.default.copy(
       bloopProtocol = protocol,
-      executeClientCommand = ExecuteClientCommandConfig.on
+      executeClientCommand = ExecuteClientCommandConfig.on,
+      icons = this.icons
     )
     client = new TestingClient(workspace, buffers)
     server = new TestingServer(

@@ -52,12 +52,14 @@ object UserConfigurationSuite extends BaseSuite {
     """
       |{
       | "java-home": "home",
+      | "compile-on-save": "current-project",
       | "sbt-script": "script"
       |}
     """.stripMargin
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
     assert(obtained.sbtScript == Some("script"))
+    assert(obtained.isCurrentProject)
   }
 
   checkOK(
@@ -66,6 +68,7 @@ object UserConfigurationSuite extends BaseSuite {
   ) { obtained =>
     assert(obtained.javaHome.isEmpty)
     assert(obtained.sbtScript.isEmpty)
+    assert(obtained.isCascadeCompile)
   }
 
   checkOK(
@@ -125,6 +128,18 @@ object UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
     """
       |json error: key 'sbt-script' should have value of type string but obtained []
+    """.stripMargin
+  )
+
+  checkError(
+    "cascade",
+    """
+      |{
+      | "compile-on-save": "foobar"
+      |}
+    """.stripMargin,
+    """
+      |unknown compile-on-save: 'foobar'. Expected one of: cascade, current-project.
     """.stripMargin
   )
 }

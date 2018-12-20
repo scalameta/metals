@@ -13,11 +13,34 @@ import scala.util.Try
  */
 case class UserConfiguration(
     javaHome: Option[String] = None,
-    sbtScript: Option[String] = None
-)
+    sbtScript: Option[String] = None,
+    compileOnSave: String = UserConfiguration.CascadeCompile
+) {
+  def isCascadeCompile: Boolean =
+    compileOnSave == UserConfiguration.CascadeCompile
+  def isCurrentProject: Boolean =
+    compileOnSave == UserConfiguration.CurrentProjectCompile
+}
 
 object UserConfiguration {
+  val CascadeCompile = "cascade"
+  val CurrentProjectCompile = "current-project"
+  def allCompile: List[String] =
+    List(CascadeCompile, CurrentProjectCompile)
   def options: List[UserConfigurationOption] = List(
+    UserConfigurationOption(
+      "compile-on-save",
+      s""" `"$CascadeCompile"` """,
+      CurrentProjectCompile,
+      "Compile on save",
+      """What compilation mode to use for file save events.
+        |Possible values:
+        |
+        |- `"cascade"` (default): compile the build target that contains the saved file
+        |  along other build targets that depend on that build target.
+        |- `"current-project"`: compile only the build target that contains the saved file.
+      """.stripMargin
+    ),
     UserConfigurationOption(
       "java-home",
       "`JAVA_HOME` environment variable with fallback to `user.home` system property.",
@@ -70,12 +93,23 @@ object UserConfiguration {
       getKey("java-home")
     val sbtScript =
       getKey("sbt-script")
+    val cascadeCompile = getKey("compile-on-save") match {
+      case None => CascadeCompile
+      case Some(value) =>
+        value match {
+          case CascadeCompile | CurrentProjectCompile => value
+          case unknown =>
+            errors += s"unknown compile-on-save: '$unknown'. Expected one of: ${allCompile.mkString(", ")}."
+            CascadeCompile
+        }
+    }
 
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
           javaHome,
-          sbtScript
+          sbtScript,
+          cascadeCompile
         )
       )
     } else {
@@ -85,4 +119,5 @@ object UserConfiguration {
 
   def toWrappedJson(config: String): String =
     s"""{"metals": $config}"""
+
 }
