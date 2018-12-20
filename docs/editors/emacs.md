@@ -125,6 +125,26 @@ There is an alternative LSP client called
 [eglot](https://github.com/joaotavora/eglot) that might be worth trying out to
 see if it addresses the issues of lsp-mode.
 
+You can remove `lsp-mode`, `lsp-ui`, `lsp-scala` sections from config above
+and instead add this:
+
+```el
+;; Eglot
+(use-package eglot
+  :pin melpa-stable)
+(add-to-list 'eglot-server-programs '(scala-mode . ("metals-emacs")))
+;; It enables autostart for Scala files.
+;; Also is possible to launch it manually via `M-x` `eglot`.
+(add-hook 'scala-mode-hook 'eglot-ensure)
+```
+as result your expirience should looks like this:
+
+![Emacs eglot demo](../assets/emacs-eglot-demo.gif)
+
+When you will try to use `M-.` (`xref-find-definition`) for the first time,
+the editor will freeze for some time to generate the required files
+at `<project>/.metals/` directory.
+
 ```scala mdoc:generic
 
 ```
