@@ -146,6 +146,8 @@ lazy val metals = project
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9",
       // for finding paths of global log/cache directories
       "io.github.soc" % "directories" % "11",
+      // for reading Scalafmt conf
+      "com.typesafe" % "config" % "1.3.2",
       // ==================
       // Scala dependencies
       // ==================

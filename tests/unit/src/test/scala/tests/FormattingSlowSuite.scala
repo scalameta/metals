@@ -8,17 +8,13 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
   testAsync("basic") {
     for {
       _ <- server.initialize(
-        """|
-           |/metals.json
-           |{
-           |  "a": { }
-           |}
-           |/.scalafmt.conf
+        """|/.scalafmt.conf
            |maxColumn = 100
            |/a/src/main/scala/a/Main.scala
            |object FormatMe {
            | val x = 1  }
-           |""".stripMargin
+           |""".stripMargin,
+        expectError = true
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       textEdits <- server.formatting("a/src/main/scala/a/Main.scala")
@@ -32,18 +28,14 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
     } yield ()
   }
 
-  testAsync("require-config-true") {
+  testAsync("require-config") {
     for {
       _ <- server.initialize(
-        """|
-           |/metals.json
-           |{
-           |  "a": { }
-           |}
-           |/a/src/main/scala/a/Main.scala
+        """|/a/src/main/scala/a/Main.scala
            |object FormatMe {
            | val x = 1  }
-           |""".stripMargin
+           |""".stripMargin,
+        expectError = true
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       textEdits <- server.formatting("a/src/main/scala/a/Main.scala")
@@ -52,57 +44,23 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
     } yield ()
   }
 
-  testAsync("require-config-false") {
-    for {
-      _ <- server.initialize(
-        """|
-           |/metals.json
-           |{
-           |  "a": { }
-           |}
-           |/a/src/main/scala/a/Main.scala
-           |object FormatMe {
-           | val x = 1  }
-           |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ <- {
-        val config = new JsonObject
-        config.add("scalafmt-require-config-file", new JsonPrimitive(false))
-        server.didChangeConfiguration(config.toString)
-      }
-      textEdits <- server.formatting("a/src/main/scala/a/Main.scala")
-      // check that the file has been formatted
-      _ = assertNoDiff(
-        textEdits.get(0).getNewText,
-        """|object FormatMe {
-           |  val x = 1
-           |}""".stripMargin
-      )
-    } yield ()
-  }
-
   testAsync("custom-config-path") {
     for {
       _ <- server.initialize(
-        """|
-           |/metals.json
-           |{
-           |  "a": { }
-           |}
-           |/customconfig.conf
+        """|/project/.scalafmt.conf
            |maxColumn=100
            |/a/src/main/scala/a/Main.scala
            |object FormatMe {
            | val x = 1  }
-           |""".stripMargin
+           |""".stripMargin,
+        expectError = true
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ <- {
         val config = new JsonObject
         config.add(
           "scalafmt-config-path",
-          new JsonPrimitive("customconfig.conf")
+          new JsonPrimitive("project/.scalafmt.conf")
         )
         server.didChangeConfiguration(config.toString)
       }
@@ -113,6 +71,33 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
         """|object FormatMe {
            |  val x = 1
            |}""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("version") {
+    for {
+      _ <- server.initialize(
+        """|.scalafmt.conf
+           |version=1.6.0-RC4
+           |maxColumn=30
+           |trailingCommas=never
+           |/a/src/main/scala/a/Main.scala
+           |case class User(
+           |  name: String,
+           |  age: Int,
+           |)""".stripMargin,
+        expectError = true
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      textEdits <- server.formatting("a/src/main/scala/a/Main.scala")
+      // check that the file has been formatted respecting the trailing comma config (new in 1.6.0)
+      _ = assertNoDiff(
+        textEdits.get(0).getNewText,
+        """|case class User(
+           |    name: String,
+           |    age: Int
+           |)""".stripMargin
       )
     } yield ()
   }

@@ -8,6 +8,7 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+import scala.collection.concurrent.TrieMap
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -27,7 +28,7 @@ final class Embedded(
       bloopJars.foreach(_.close())
     }
     if (isScalafmtJars.get()) {
-      scalafmtJars.foreach(_.close())
+      scalafmtJarsCache.values.foreach(_.close())
     }
   }
 
@@ -81,25 +82,27 @@ final class Embedded(
   }
 
   val isScalafmtJars = new AtomicBoolean(false)
-  lazy val scalafmtJars: Option[URLClassLoader] = {
+  private val scalafmtJarsCache = TrieMap.empty[String, URLClassLoader]
+  def scalafmtJars(version: String): Option[URLClassLoader] = {
     isScalafmtJars.set(true)
-    val promise = Promise[Unit]()
-    statusBar.trackFuture(s"${icons.sync}Downloading Scalafmt", promise.future)
-    try {
-      Some(
-        Embedded.newScalafmtClassloader(
-          userConfig().scalafmtVersion.getOrElse("1.5.1")
-        )
-      )
-    } catch {
-      case NonFatal(e) =>
-        scribe.error(
-          "Failed to classload Scalafmt, formatting will not work",
-          e
-        )
-        None
-    } finally {
-      promise.trySuccess(())
+    scalafmtJarsCache.get(version).orElse {
+      val promise = Promise[Unit]()
+      statusBar
+        .trackFuture(s"${icons.sync}Downloading Scalafmt", promise.future)
+      try {
+        val classloader = Embedded.newScalafmtClassloader(version)
+        scalafmtJarsCache.put(version, classloader)
+        Some(classloader)
+      } catch {
+        case NonFatal(e) =>
+          scribe.error(
+            s"Failed to classload Scalafmt v${version}, formatting will not work",
+            e
+          )
+          None
+      } finally {
+        promise.trySuccess(())
+      }
     }
   }
 
@@ -143,6 +146,11 @@ object Embedded {
             "com.geirsson",
             "scalafmt-cli_2.12",
             version
+          ),
+          new coursiersmall.Dependency(
+            "org.scala-lang",
+            "scala-reflect",
+            BuildInfo.scala212
           )
         )
       )
