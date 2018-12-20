@@ -49,7 +49,10 @@ object UserConfiguration {
       default.scalafmtConfigPath.toString,
       "project/.scalafmt.conf",
       "Scalafmt config path",
-      "Optional Scalafmt config file path, relative to the workspace root"
+      """Optional custom path to the .scalafmt.conf file.
+        |Should be relative to the workspace root directory and use forward slashes / for file
+        |separators (even on Windows).
+        |""".stripMargin
     )
   )
 
