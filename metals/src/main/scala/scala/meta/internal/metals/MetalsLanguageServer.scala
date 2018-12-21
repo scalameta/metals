@@ -39,6 +39,7 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.util.control.NonFatal
+import scala.util.Try
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -638,6 +639,12 @@ class MetalsLanguageServer(
           )
         }
         Future.successful(BuildChange.None)
+      case Some(sbt) if !isCompatibleSbtVersion(sbt.version) =>
+        scribe.warn(
+          s"Skipping build import for unsupported sbt version ${sbt.version}"
+        )
+        languageClient.showMessage(messages.IncompatibleSbtVersion.params(sbt))
+        Future.successful(BuildChange.None)
       case Some(sbt) =>
         SbtDigest.current(workspace) match {
           case None =>
@@ -646,6 +653,16 @@ class MetalsLanguageServer(
           case Some(digest) =>
             slowConnectToBuildServer(forceImport, sbt, digest)
         }
+    }
+  }
+
+  private def isCompatibleSbtVersion(version: String): Boolean = {
+    version.split('.') match {
+      case Array("1", _, _) => true
+      case Array("0", "13", patch)
+          if Try(patch.toInt).filter(_ >= 17).isSuccess =>
+        true
+      case _ => false
     }
   }
 
