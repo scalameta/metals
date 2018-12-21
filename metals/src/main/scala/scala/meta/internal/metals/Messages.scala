@@ -230,13 +230,7 @@ class Messages(icons: Icons) {
       )
   }
 
-  object MissingScalafmtConf {
-    def createFile = new MessageActionItem("Create .scalafmt.conf")
-    def fixedParams: MessageParams =
-      new MessageParams(
-        MessageType.Info,
-        "Created a .scalafmt.conf, formatting should work now. "
-      )
+  object ScalafmtError {
     def configParseError(
         path: RelativePath,
         message: String
@@ -258,6 +252,15 @@ class Messages(icons: Icons) {
           "Make sure you have a working internet connection and this version exists on Maven Central."
       )
     }
+  }
+
+  object MissingScalafmtConf {
+    def createFile = new MessageActionItem("Create .scalafmt.conf")
+    def fixedParams: MessageParams =
+      new MessageParams(
+        MessageType.Info,
+        "Created a .scalafmt.conf, formatting should work now. "
+      )
     def isCreateScalafmtConf(params: ShowMessageRequestParams): Boolean =
       params.getMessage == createScalafmtConfMessage
     def createScalafmtConfMessage: String =

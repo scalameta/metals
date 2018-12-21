@@ -17,6 +17,7 @@ import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
+import scala.meta.internal.metals.Messages.ScalafmtError
 import scala.util.control.NonFatal
 
 /**
@@ -70,7 +71,7 @@ final class FormattingProvider(
         .fold(
           e => {
             scribe.error(s"scalafmt error: ${e.getMessage}")
-            client.showMessage(MissingScalafmtConf.formatError(e))
+            client.showMessage(ScalafmtError.formatError(e))
             None
           },
           Some(_)
@@ -126,7 +127,7 @@ final class FormattingProvider(
       case _ =>
         e.getMessage
     }
-    val params = MissingScalafmtConf.configParseError(
+    val params = ScalafmtError.configParseError(
       path.toRelative(workspace),
       message
     )
@@ -134,7 +135,7 @@ final class FormattingProvider(
   }
 
   def handleMissingFile(path: AbsolutePath): Unit = {
-    val params = Messages.MissingScalafmtConf.params(path)
+    val params = MissingScalafmtConf.params(path)
     client.showMessageRequest(params).asScala.foreach { item =>
       if (item == MissingScalafmtConf.createFile) {
         val text =
@@ -189,7 +190,7 @@ final class FormattingProvider(
         })
       case None =>
         val params =
-          MissingScalafmtConf.downloadError(version)
+          ScalafmtError.downloadError(version)
         client.showMessage(params)
         None
     }

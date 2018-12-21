@@ -3,6 +3,7 @@ package tests
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
+import scala.meta.internal.metals.Messages.ScalafmtError
 
 object FormattingSlowSuite extends BaseSlowSuite("formatting") {
 
@@ -124,7 +125,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ <- server.formatting("Main.scala")
       _ = assertNoDiff(
         client.workspaceShowMessages,
-        MissingScalafmtConf.downloadError("does-not-exist").getMessage
+        ScalafmtError.downloadError("does-not-exist").getMessage
       )
     } yield ()
   }
