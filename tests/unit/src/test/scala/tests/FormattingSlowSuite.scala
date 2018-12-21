@@ -154,4 +154,48 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
     } yield ()
   }
 
+  testAsync("filters") {
+    for {
+      _ <- server.initialize(
+        """|/.scalafmt.conf
+           |project.includeFilters = [
+           |  ".*Spec\\.scala$"
+           |]
+           |project.excludeFilters = [
+           |  "UserSpec\\.scala$"
+           |]
+           |/Main.scala
+           |  object   Main
+           |/UserSpec.scala
+           |  object   UserSpec
+           |/ResourceSpec.scala
+           |object ResourceSpec
+           |""".stripMargin,
+        expectError = true
+      )
+      _ <- server.didOpen("Main.scala")
+      _ <- server.formatting("Main.scala")
+      // check Main.scala has been ignored (doesn't match includeFilters)
+      _ = assertNoDiff(
+        server.bufferContent("Main.scala"),
+        "  object   Main"
+      )
+      _ <- server.didOpen("UserSpec.scala")
+      _ <- server.formatting("UserSpec.scala")
+      // check UserSpec.scala has been ignored (matches excludeFilters)
+      _ = assertNoDiff(
+        server.bufferContent("UserSpec.scala"),
+        "  object   UserSpec"
+      )
+      _ <- server.didOpen("ResourceSpec.scala")
+      _ <- server.formatting("ResourceSpec.scala")
+      // check ResourceSpec.scala has been formatted
+      _ = assertNoDiff(
+        server.bufferContent("ResourceSpec.scala"),
+        "object ResourceSpec"
+      )
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+    } yield ()
+  }
+
 }
