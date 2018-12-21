@@ -60,7 +60,7 @@ final class FormattingProvider(
         val includeFilters =
           if (config.hasPath("project.includeFilters"))
             config.getStringList("project.includeFilters").asScala
-          else Nil
+          else List(".*\\.scala$", ".*\\.sbt$", ".*\\.sc$")
         (includeFilters, excludeFilters)
       }
       if FilterMatcher(includeFilters, excludeFilters).matches(path.toString)

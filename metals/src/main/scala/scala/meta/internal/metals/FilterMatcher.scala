@@ -14,9 +14,9 @@ case class FilterMatcher(include: Regex, exclude: Regex) {
 }
 
 object FilterMatcher {
-  private def mkRegexp(filters: Seq[String], ifEmpty: String): Regex =
+  private def mkRegexp(filters: Seq[String]): Regex =
     filters match {
-      case Nil => ifEmpty.r
+      case Nil => "$a".r // will never match anything
       case head :: Nil => head.r
       case _ => filters.mkString("(", "|", ")").r
     }
@@ -27,6 +27,6 @@ object FilterMatcher {
   def apply(includeFilters: Seq[String], excludeFilters: Seq[String]): FilterMatcher = {
     val includes = includeFilters.map(fixSeparatorsInPathPattern)
     val excludes = excludeFilters.map(fixSeparatorsInPathPattern)
-    new FilterMatcher(mkRegexp(includes, ".*"), mkRegexp(excludes, "$a"))
+    new FilterMatcher(mkRegexp(includes), mkRegexp(excludes))
   }
 }
