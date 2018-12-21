@@ -51,6 +51,18 @@ final class FormattingProvider(
         if (config.hasPath("version")) config.getString("version")
         else defaultScalafmtVersion
       }
+      (includeFilters, excludeFilters) = {
+        val excludeFilters =
+          if (config.hasPath("project.excludeFilters"))
+            config.getStringList("project.excludeFilters").asScala
+          else Nil
+        val includeFilters =
+          if (config.hasPath("project.includeFilters"))
+            config.getStringList("project.includeFilters").asScala
+          else Nil
+        (includeFilters, excludeFilters)
+      }
+      if FilterMatcher(includeFilters, excludeFilters).matches(path.toString)
       scalafmt <- classloadScalafmt(version)
       formatted <- scalafmt
         .format(input.text, scalafmtConf.toString(), input.path)
