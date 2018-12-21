@@ -635,7 +635,7 @@ class MetalsLanguageServer(
       case None =>
         if (!buildTools.isAutoConnectable) {
           scribe.warn(
-            s"Skipping build import for unsupport build tool $buildTools"
+            s"Skipping build import for unsupported build tool $buildTools"
           )
         }
         Future.successful(BuildChange.None)
