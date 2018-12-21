@@ -116,7 +116,7 @@ class Messages(icons: Icons) {
       command = ServerCommands.OpenBrowser(learnMoreUrl)
     )
     def toFixMessage =
-      "To fix this problem, upgrade to sbt v1.2.1+ or manually import the build."
+      "To fix this problem, upgrade to sbt v0.13.17+ or v1.2.1+ or manually import the build."
     def dismissForever: MessageActionItem =
       new MessageActionItem("Don't show again")
     def learnMore: MessageActionItem =
