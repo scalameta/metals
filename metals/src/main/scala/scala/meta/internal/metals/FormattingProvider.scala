@@ -32,7 +32,8 @@ final class FormattingProvider(
     icons: Icons
 )(implicit ec: ExecutionContext) {
 
-  private def defaultScalafmtVersion = "1.5.1"
+  private val defaultScalafmtVersion = "1.5.1"
+
   def format(path: AbsolutePath): util.List[l.TextEdit] = {
     val input = path.toInputFromBuffers(buffers)
     val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
