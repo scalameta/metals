@@ -199,4 +199,24 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
     } yield ()
   }
 
+  testAsync(".sbt") {
+    for {
+      _ <- server.initialize(
+        """|/.scalafmt.conf
+           |
+           |/project/plugins.sbt
+           |  object   Plugins
+           |""".stripMargin,
+        expectError = true
+      )
+      _ <- server.didOpen("project/plugins.sbt")
+      _ <- server.formatting("project/plugins.sbt")
+      // check plugins.sbt has been formatted
+      _ = assertNoDiff(
+        server.bufferContent("project/plugins.sbt"),
+        "object Plugins"
+      )
+    } yield ()
+  }
+
 }
