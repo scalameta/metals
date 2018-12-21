@@ -24,7 +24,10 @@ object FilterMatcher {
   private def fixSeparatorsInPathPattern(unixSpecificPattern: String): String =
     unixSpecificPattern.replace('/', File.separatorChar)
 
-  def apply(includeFilters: Seq[String], excludeFilters: Seq[String]): FilterMatcher = {
+  def apply(
+      includeFilters: Seq[String],
+      excludeFilters: Seq[String]
+  ): FilterMatcher = {
     val includes = includeFilters.map(fixSeparatorsInPathPattern)
     val excludes = excludeFilters.map(fixSeparatorsInPathPattern)
     new FilterMatcher(mkRegexp(includes), mkRegexp(excludes))
