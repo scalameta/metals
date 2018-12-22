@@ -10,6 +10,7 @@ import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.SbtDigest
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildTool.Sbt
 
 object SbtSlowSuite extends BaseSlowSuite("import") {
 
@@ -396,6 +397,22 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         }
       )
       _ = assertStatus(!_.isInstalled)
+    } yield ()
+  }
+
+  testAsync("sbt-version") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|/project/build.properties
+           |sbt.version=0.13.15
+           |""".stripMargin,
+        expectError = true
+      )
+      _ = assertNoDiff(
+        client.workspaceShowMessages,
+        IncompatibleSbtVersion.params(Sbt("0.13.15")).getMessage
+      )
     } yield ()
   }
 }
