@@ -639,19 +639,23 @@ class MetalsLanguageServer(
           )
         }
         Future.successful(BuildChange.None)
-      case Some(sbt) if !isCompatibleSbtVersion(sbt.version) =>
-        scribe.warn(
-          s"Skipping build import for unsupported sbt version ${sbt.version}"
-        )
-        languageClient.showMessage(messages.IncompatibleSbtVersion.params(sbt))
-        Future.successful(BuildChange.None)
       case Some(sbt) =>
-        SbtDigest.current(workspace) match {
-          case None =>
-            scribe.warn(s"Skipping build import, no checksum.")
-            Future.successful(BuildChange.None)
-          case Some(digest) =>
-            slowConnectToBuildServer(forceImport, sbt, digest)
+        if (!isCompatibleSbtVersion(sbt.version)) {
+          scribe.warn(
+            s"Skipping build import for unsupported sbt version ${sbt.version}"
+          )
+          languageClient.showMessage(
+            messages.IncompatibleSbtVersion.params(sbt)
+          )
+          Future.successful(BuildChange.None)
+        } else {
+          SbtDigest.current(workspace) match {
+            case None =>
+              scribe.warn(s"Skipping build import, no checksum.")
+              Future.successful(BuildChange.None)
+            case Some(digest) =>
+              slowConnectToBuildServer(forceImport, sbt, digest)
+          }
         }
     }
   }
