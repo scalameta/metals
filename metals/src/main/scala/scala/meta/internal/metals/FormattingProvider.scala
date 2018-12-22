@@ -64,16 +64,16 @@ final class FormattingProvider(
         else Nil
       }
       if {
-        val shouldSkip =
+        val shouldFormat =
           FilterMatcher(includeFilters, excludeFilters).matches(path.toString)
-        if (shouldSkip) {
+        if (!shouldFormat) {
           scribe.info(
             s"skipping format request for ${path.toRelative(workspace)}. " +
               "To fix this, update project.excludeFilters or project.includeFilters in " +
               confPath.toRelative(workspace)
           )
         }
-        shouldSkip
+        shouldFormat
       }
       scalafmt <- classloadScalafmt(version)
       formatted <- scalafmt
