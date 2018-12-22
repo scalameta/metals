@@ -33,7 +33,7 @@ final class FormattingProvider(
     icons: Icons
 )(implicit ec: ExecutionContext) {
 
-  private val defaultScalafmtVersion = "1.5.1"
+  private def defaultScalafmtVersion = "1.5.1"
 
   def format(path: AbsolutePath): util.List[l.TextEdit] = {
     val input = path.toInputFromBuffers(buffers)
@@ -53,16 +53,15 @@ final class FormattingProvider(
         if (config.hasPath("version")) config.getString("version")
         else defaultScalafmtVersion
       }
-      (includeFilters, excludeFilters) = {
-        val excludeFilters =
-          if (config.hasPath("project.excludeFilters"))
-            config.getStringList("project.excludeFilters").asScala
-          else Nil
-        val includeFilters =
-          if (config.hasPath("project.includeFilters"))
-            config.getStringList("project.includeFilters").asScala
-          else List(".*\\.scala$", ".*\\.sbt$", ".*\\.sc$")
-        (includeFilters, excludeFilters)
+      includeFilters = {
+        if (config.hasPath("project.includeFilters"))
+          config.getStringList("project.includeFilters").asScala
+        else List(".*\\.scala$", ".*\\.sbt$", ".*\\.sc$")
+      }
+      excludeFilters = {
+        if (config.hasPath("project.excludeFilters"))
+          config.getStringList("project.excludeFilters").asScala
+        else Nil
       }
       if FilterMatcher(includeFilters, excludeFilters).matches(path.toString)
       scalafmt <- classloadScalafmt(version)
