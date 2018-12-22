@@ -8,6 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.util
 import java.util.Collections
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeConfigurationParams
@@ -16,7 +17,9 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
@@ -24,6 +27,7 @@ import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import scala.collection.concurrent.TrieMap
@@ -47,6 +51,8 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.meta.tokens.Token
+import scala.meta.Input
+import scala.meta.internal.mtags.MtagsEnrichments._
 import tests.MetalsTestEnrichments._
 
 /**
@@ -202,6 +208,41 @@ final class TestingServer(
     }
   }
 
+  def formatting(filename: String): Future[Unit] = {
+    val path = toPath(filename)
+    server
+      .formatting(
+        new DocumentFormattingParams(
+          new TextDocumentIdentifier(path.toURI.toString),
+          new FormattingOptions
+        )
+      )
+      .asScala
+      .map(textEdits => applyTextEdits(path, textEdits))
+  }
+
+  private def applyTextEdits(
+      path: AbsolutePath,
+      textEdits: util.List[TextEdit]
+  ): Unit = {
+    for {
+      buffer <- buffers.get(path)
+    } yield {
+      val input = Input.String(buffer)
+      val newBuffer = textEdits.asScala.foldLeft(buffer) {
+        case (buf, edit) =>
+          val startPosition = edit.getRange.getStart
+          val endPosition = edit.getRange.getEnd
+          val startOffset =
+            input.toOffset(startPosition.getLine, startPosition.getCharacter)
+          val endOffset =
+            input.toOffset(endPosition.getLine, endPosition.getCharacter)
+          buf.patch(startOffset, edit.getNewText, endOffset)
+      }
+      buffers.put(path, newBuffer)
+    }
+  }
+
   private def toSemanticdbTextDocument(path: AbsolutePath): s.TextDocument = {
     val input = path.toInputFromBuffers(buffers)
     val identifier = path.toTextDocumentIdentifier
@@ -278,6 +319,11 @@ final class TestingServer(
     )
     Semanticdbs.printTextDocument(textDocument)
   }
+
+  def bufferContent(filename: String): String =
+    buffers
+      .get(toPath(filename))
+      .getOrElse(throw new NoSuchElementException(filename))
 
   def cancel(): Unit = {
     server.cancel()

@@ -173,6 +173,8 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
           CheckDoctor.moreInformation
         } else if (SelectBspServer.isSelectBspServer(params)) {
           params.getActions.asScala.find(_.getTitle == "Bob").get
+        } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
+          null
         } else {
           throw new IllegalArgumentException(params.toString)
         }
