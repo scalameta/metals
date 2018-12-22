@@ -125,7 +125,7 @@ final class DefinitionProvider(
                   new l.Position(pos.endLine, pos.endColumn)
                 )
               )
-          ),
+            ),
           () => Some(location),
           () => None
         )

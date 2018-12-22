@@ -11,7 +11,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 case class InputFile(
     file: AbsolutePath,
     sourceDirectory: AbsolutePath,
-    semanticdbRelativePath: RelativePath,
+    semanticdbRelativePath: RelativePath
 ) {
   def sourceDirectoryRelativePath: RelativePath =
     file.toRelative(sourceDirectory)
