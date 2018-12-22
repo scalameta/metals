@@ -68,8 +68,9 @@ final class FormattingProvider(
           FilterMatcher(includeFilters, excludeFilters).matches(path.toString)
         if (shouldSkip) {
           scribe.info(
-            s"skipping format request for ${path.toRelative(workspace)}. To fix this, update project.excludeFilters or project.includeFilters in ${confPath
-              .toRelative(workspace)}"
+            s"skipping format request for ${path.toRelative(workspace)}. " +
+              "To fix this, update project.excludeFilters or project.includeFilters in " +
+              confPath.toRelative(workspace)
           )
         }
         shouldSkip
