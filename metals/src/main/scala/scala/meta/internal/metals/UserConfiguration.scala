@@ -1,7 +1,9 @@
 package scala.meta.internal.metals
 
+import scala.meta.RelativePath
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
+import com.google.gson.JsonElement
 import java.util.Properties
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -13,10 +15,16 @@ import scala.util.Try
  */
 case class UserConfiguration(
     javaHome: Option[String] = None,
-    sbtScript: Option[String] = None
+    sbtScript: Option[String] = None,
+    scalafmtConfigPath: RelativePath =
+      UserConfiguration.default.scalafmtConfigPath
 )
 
 object UserConfiguration {
+  object default {
+    val scalafmtConfigPath = RelativePath(".scalafmt.conf")
+  }
+
   def options: List[UserConfigurationOption] = List(
     UserConfigurationOption(
       "java-home",
@@ -35,6 +43,16 @@ object UserConfiguration {
         |`.jvmopts` and `.sbtopts`. Update this setting if your `sbt` script requires more customizations
         |like using environment variables.
         |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "scalafmt-config-path",
+      default.scalafmtConfigPath.toString,
+      "project/.scalafmt.conf",
+      "Scalafmt config path",
+      """Optional custom path to the .scalafmt.conf file.
+        |Should be relative to the workspace root directory and use forward slashes / for file
+        |separators (even on Windows).
+        |""".stripMargin
     )
   )
 
@@ -46,36 +64,46 @@ object UserConfiguration {
     val base: JsonObject =
       Option(json.getAsJsonObject("metals")).getOrElse(new JsonObject)
 
-    def getKey(key: String): Option[String] = {
+    def getKey[A](key: String, f: JsonElement => Option[A]): Option[A] = {
       def option[T](fn: String => T): Option[T] =
         Option(fn(key)).orElse(Option(fn(StringCase.kebabToCamel(key))))
       for {
-        value <- option(base.get)
+        jsonValue <- option(base.get)
           .orElse(
             option(k => properties.getProperty(s"metals.$k"))
               .map(new JsonPrimitive(_))
           )
-        string <- Try(value.getAsString).fold(
-          _ => {
-            errors += s"json error: key '$key' should have value of type string but obtained $value"
-            None
-          },
-          Some(_)
-        )
-        if string.nonEmpty
-      } yield string
+        value <- f(jsonValue)
+      } yield value
     }
 
+    def getStringKey(key: String): Option[String] =
+      getKey(
+        key,
+        value =>
+          Try(value.getAsString)
+            .fold(_ => {
+              errors += s"json error: key '$key' should have value of type string but obtained $value"
+              None
+            }, Some(_))
+            .filter(_.nonEmpty)
+      )
+
     val javaHome =
-      getKey("java-home")
+      getStringKey("java-home")
     val sbtScript =
-      getKey("sbt-script")
+      getStringKey("sbt-script")
+    val scalafmtConfigPath =
+      getStringKey("scalafmt-config-path")
+        .map(RelativePath(_))
+        .getOrElse(default.scalafmtConfigPath)
 
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
           javaHome,
-          sbtScript
+          sbtScript,
+          scalafmtConfigPath
         )
       )
     } else {
