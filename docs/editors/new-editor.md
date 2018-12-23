@@ -153,17 +153,6 @@ Possible values:
 - `log-message`: send `window/showMessageRequest` requests as
   `window/logMessage` instead.
 
-### `-Dmetals.document-symbol`
-
-Possible values:
-
-- `document-symbol` (default): return `DocumentSymbol[]` for
-  `textDocument/documentSymbol` requests.
-- `symbol-information`: return `SymbolInformation[]` for
-  `textDocument/documentSymbol` requests. This option is used by editor clients
-  like vim-lsc that don't yet support the new hierarchical `DocumentSymbol` data
-  structure.
-
 ### `-Dmetals.http`
 
 Possible values:
@@ -496,8 +485,8 @@ library sources.
 
 ### `textDocument/documentSymbol`
 
-Returns `DocumentSymbol[]` by default and `SymbolInformation[]` when
-`-Dmetals.document-symbol=symbol-information`.
+Returns `DocumentSymbol[]` if the client declares support for hierarchical
+document symbol or `SymbolInformation[]` otherwise.
 
 ### `workspace/didChangeWatchedFiles`
 
