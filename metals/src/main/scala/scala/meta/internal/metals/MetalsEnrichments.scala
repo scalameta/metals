@@ -396,4 +396,20 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
 
   }
 
+  implicit class XtensionClientCapabilities(
+      initializeParams: Option[l.InitializeParams]
+  ) {
+    val supportsHierarchicalDocumentSymbols =
+      (for {
+        params <- initializeParams
+        capabilities <- Option(params.getCapabilities)
+        textDocument <- Option(capabilities.getTextDocument)
+        documentSymbol <- Option(textDocument.getDocumentSymbol)
+        hierarchicalDocumentSymbolSupport <- Option(
+          documentSymbol.getHierarchicalDocumentSymbolSupport
+        )
+      } yield hierarchicalDocumentSymbolSupport.booleanValue).getOrElse(false)
+
+  }
+
 }

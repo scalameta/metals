@@ -538,13 +538,13 @@ class MetalsLanguageServer(
   ] =
     CompletableFutures.computeAsync { _ =>
       val result = documentSymbolResult(params)
-      if (config.documentSymbol.isSymbolInformation) {
+      if (initializeParams.supportsHierarchicalDocumentSymbols) {
+        JEither.forLeft(result)
+      } else {
         val infos = result.asScala
           .toSymbolInformation(params.getTextDocument.getUri)
           .asJava
         JEither.forRight(infos)
-      } else {
-        JEither.forLeft(result)
       }
     }
 
