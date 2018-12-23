@@ -29,7 +29,6 @@ final case class MetalsServerConfig(
     showMessage: ShowMessageConfig = ShowMessageConfig.default,
     showMessageRequest: ShowMessageRequestConfig =
       ShowMessageRequestConfig.default,
-    documentSymbol: DocumentSymbolConfig = DocumentSymbolConfig.default,
     isNoInitialized: Boolean = MetalsServerConfig.binaryOption(
       "metals.no-initialized",
       default = false
@@ -62,7 +61,6 @@ final case class MetalsServerConfig(
       s"execute-client-command=$executeClientCommand",
       s"show-message=$showMessage",
       s"show-message-request=$showMessageRequest",
-      s"document-symbol=$documentSymbol",
       s"no-initialized=$isNoInitialized",
       s"http=$isHttpEnabled",
       s"icons=$icons",
@@ -92,7 +90,6 @@ object MetalsServerConfig {
         base.copy(
           // window/logMessage output is always visible and non-invasive in vim-lsc
           statusBar = StatusBarConfig.logMessage,
-          documentSymbol = DocumentSymbolConfig.symbolInformation,
           // Not strictly needed, but helpful while this integration matures.
           isHttpEnabled = true,
           icons = Icons.unicode
