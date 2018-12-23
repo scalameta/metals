@@ -15,6 +15,8 @@ functionality.
   <td align=center>Build import</td>
   <td align=center>Diagnostics</td>
   <td align=center>Goto definition</td>
+  <td align=center>Document symbols</td>
+  <td align=center>Formatting</td>
   <td align=center>Metals Extensions</td>
 </tr>
 </thead>
@@ -26,11 +28,15 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
 </tr>
 <tr>
   <td>Atom</td>
   <td align=center>Single click</td>
   <td align=center>Built-in</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center></td>
@@ -41,6 +47,8 @@ functionality.
   <td align=center>Built-in</td>
   <td align=center>Escaped newlines</td>
   <td align=center>✅</td>
+  <td align=center>Flat</td>
+  <td align=center></td>
   <td align=center>Status bar</td>
 </tr>
 <tr>
@@ -49,6 +57,8 @@ functionality.
   <td align=center>Requires browser</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
+  <td align=center>Flat</td>
+  <td align=center>✅</td>
   <td align=center></td>
 </tr>
 <tr>
@@ -56,6 +66,8 @@ functionality.
   <td align=center>Few steps</td>
   <td align=center>Built-in</td>
   <td align=center>Single buffer</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>Status bar</td>
 </tr>
@@ -134,6 +146,24 @@ buffer.
   reflective invocations (methods calls on structural types) do not resolve to a
   definition.
 
+## Document symbols
+
+**✅**: Document symbols are displayed in a hierarchical outline.
+
+**Flat**: Document symbols are displayed in a flat outline.
+
+![Document Symbols](https://user-images.githubusercontent.com/691940/50374341-e130c000-05ec-11e9-82cd-0231f85f0fa0.gif)
+
+## Formatting
+
+Metals uses Scalafmt to respond to formatting requests from the editor,
+according to the configuration defined in `.scalafmt.conf`.
+
+Learn how to configure Scalafmt at
+https://scalameta.org/scalafmt/docs/configuration.html.
+
+![Formatting](https://user-images.githubusercontent.com/691940/50386646-6bf7e480-06eb-11e9-8231-115176c37954.gif)
+
 ## Metals Extensions
 
 **Status bar**: Editor client implements the `metals/status` notification.
@@ -158,5 +188,4 @@ Metals does not support the following features:
 - Show symbol docstring
 - Rename symbol
 - Remove unused imports
-- Formatting with Scalafmt
 - Refactoring with Scalafix
