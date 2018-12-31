@@ -59,15 +59,8 @@ Server in project" command.
 
 ![Enable Language Server for this project](../assets/sublime-enable-lsp.gif)
 
-This starts the Metal language server but no functionality will work because the
-build has not been imported. It is currently not possible to import the build
-inside Sublime Text so you will need to visit
-[http://localhost:5031](http://localhost:5031/) in your web browser.
-
-![Execute Build Import step](../assets/http-client-import-build.png)
-
-Click on "Import build" to start the `sbt bloopInstall` step. While the
-`sbt bloopInstall` step is running, no Metals functionality will work.
+This starts the Metal language server but no functionality will work because the build has not been imported. 
+The first time you enable Language Server in a project, it prompts you to "Import changes". This step is required for compile errors and goto definition to work and while it is running, no Metals functionality will work.
 
 This step can take a long time, especially the first time you run it in a new
 workspace. The exact time depends on the complexity of the build and if library
@@ -88,9 +81,6 @@ sources with "Goto definition" by pressing `F12`.
 
 ## Known issues
 
-- The Sublime Text client does not implement `window/showMessageRequest` making
-  it necessary to import the build via the browser instead of inside the editor.
-  See [LSP#474](https://github.com/tomv564/LSP/pull/474) for a pending fix.
 - The Sublime Text client uses an alert window for `window/showMessage` that
   prevents you from editing code so Metals uses `window/logMessage` instead.
 
