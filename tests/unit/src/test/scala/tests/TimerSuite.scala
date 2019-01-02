@@ -13,6 +13,17 @@ object TimerSuite extends BaseSuite {
       assertNoDiff(obtained, expected)
     }
   }
+
+  // Decimal separator of the default locale of the machine.
+  val decimalPointSeparator = {
+    import java.text.DecimalFormatSymbols
+    import java.util.Locale
+    new DecimalFormatSymbols(Locale.getDefault).getDecimalSeparator()
+  }
+  
+  // Replaces the ('.') with the current decimal separator
+  def fixDPS(s: String) = s.replace('.', decimalPointSeparator)
+
   checkMillis(0, "0ns")
   checkNanos(100, "100ns")
   checkNanos(500, "500ns")
@@ -20,10 +31,10 @@ object TimerSuite extends BaseSuite {
   checkMillis(1, "1ms")
   checkMillis(10, "10ms")
   checkMillis(42, "42ms")
-  checkMillis(60, "0.06s")
-  checkMillis(429, "0.43s")
-  checkMillis(425, "0.42s")
-  checkMillis(1429, "1.43s")
+  checkMillis(60, fixDPS("0.06s"))
+  checkMillis(429, fixDPS("0.43s"))
+  checkMillis(425, fixDPS("0.42s"))
+  checkMillis(1429, fixDPS("1.43s"))
   checkMillis(10000, "10s")
-  checkMillis(900, "0.9s")
+  checkMillis(900, fixDPS("0.9s"))
 }
