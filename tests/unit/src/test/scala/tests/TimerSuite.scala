@@ -20,7 +20,7 @@ object TimerSuite extends BaseSuite {
     import java.util.Locale
     new DecimalFormatSymbols(Locale.getDefault).getDecimalSeparator()
   }
-  
+
   // Replaces the ('.') with the current decimal separator
   def fixDPS(s: String) = s.replace('.', decimalPointSeparator)
 
