@@ -18,6 +18,5 @@ test_script:
 cache:
   - C:\sbt\
   - C:\Users\appveyor\.ivy2
-  - C:\Users\appveyor\.coursier
-  - C:\Users\appveyor\.cache
+  - '%LOCALAPPDATA%\Coursier\Cache'
   - C:\Users\appveyor\.sbt
