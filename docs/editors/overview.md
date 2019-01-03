@@ -152,7 +152,7 @@ buffer.
 
 **Flat**: Document symbols are displayed in a flat outline.
 
-![Document Symbols](https://user-images.githubusercontent.com/691940/50374341-e130c000-05ec-11e9-82cd-0231f85f0fa0.gif)
+![Document Symbols](https://user-images.githubusercontent.com/1408093/50635569-014c7180-0f53-11e9-8898-62803898781c.gif)
 
 ## Formatting
 
@@ -162,7 +162,7 @@ according to the configuration defined in `.scalafmt.conf`.
 Learn how to configure Scalafmt at
 https://scalameta.org/scalafmt/docs/configuration.html.
 
-![Formatting](https://user-images.githubusercontent.com/691940/50386646-6bf7e480-06eb-11e9-8231-115176c37954.gif)
+![Formatting](https://user-images.githubusercontent.com/1408093/50635748-b0894880-0f53-11e9-913b-acfd5f505351.gif)
 
 ## Metals Extensions
 
