@@ -125,6 +125,18 @@ There is an alternative LSP client called
 [eglot](https://github.com/joaotavora/eglot) that might be worth trying out to
 see if it addresses the issues of lsp-mode.
 
+To configure Eglot with Metals, replace the `lsp-mode`, `lsp-ui`, `lsp-scala`
+sections from the config above with the settings below.
+
+```el
+;; Eglot
+(use-package eglot
+  :pin melpa-stable)
+;; (optional) Automatically start Metals for Scala files.
+(add-to-list 'eglot-server-programs '(scala-mode . ("metals-emacs")))
+(add-hook 'scala-mode-hook 'eglot-ensure)
+```
+
 ```scala mdoc:generic
 
 ```
