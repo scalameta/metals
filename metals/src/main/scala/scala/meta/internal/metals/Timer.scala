@@ -1,6 +1,8 @@
 package scala.meta.internal.metals
 
 import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class Timer(time: Time) {
@@ -36,7 +38,8 @@ object Timer {
         s"${ms}ms"
       } else {
         val partialSeconds = ms.toDouble / 1000
-        new DecimalFormat("#.##s").format(partialSeconds)
+        new DecimalFormat("#.##s", new DecimalFormatSymbols(Locale.US))
+          .format(partialSeconds)
       }
     }
   }

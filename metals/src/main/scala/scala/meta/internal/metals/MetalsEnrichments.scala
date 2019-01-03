@@ -369,7 +369,7 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
     def toLSP: l.Diagnostic =
       new l.Diagnostic(
         diag.getRange.toLSP,
-        diag.getMessage,
+        fansi.Str(diag.getMessage).plainText,
         diag.getSeverity.toLSP,
         diag.getSource,
         diag.getCode

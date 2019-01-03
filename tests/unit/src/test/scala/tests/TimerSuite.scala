@@ -13,6 +13,7 @@ object TimerSuite extends BaseSuite {
       assertNoDiff(obtained, expected)
     }
   }
+
   checkMillis(0, "0ns")
   checkNanos(100, "100ns")
   checkNanos(500, "500ns")
