@@ -6,6 +6,8 @@ install:
   - cmd: choco install sbt -ia "INSTALLDIR=""C:\sbt"""
   - cmd: SET PATH=C:\sbt\bin;%JAVA_HOME%\bin;%PATH%
   - cmd: SET SBT_OPTS=-XX:MaxPermSize=2g -Xmx4g
+  - cmd: sbt version & exit 0
+  - cmd: sbt version & exit 0
 environment:
   APPVEYOR_CACHE_ENTRY_ZIP_ARGS: "-t7z -m0=lzma -mx=9"
   JAVA_OPTS: -Djna.nosys=true
