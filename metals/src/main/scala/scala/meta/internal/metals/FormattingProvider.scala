@@ -1,24 +1,20 @@
 package scala.meta.internal.metals
 
-import scala.meta._
-import org.eclipse.{lsp4j => l}
-import MetalsEnrichments._
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
-import scala.language.reflectiveCalls
-import java.util
-import java.nio.file.Files
-import scala.util.Try
-import scala.meta.internal.tokenizers.PlatformTokenizerCache
-import com.typesafe.config.ConfigFactory
+import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util
 import java.util.Collections
 import org.eclipse.{lsp4j => l}
-import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.scalafmt.interfaces.PositionException
+import org.scalafmt.interfaces.Scalafmt
+import org.scalafmt.interfaces.ScalafmtReporter
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Promise
+import scala.meta._
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
-import scala.meta.internal.metals.Messages.ScalafmtError
-import scala.util.control.NonFatal
+import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
  * Implement text formatting using Scalafmt
@@ -31,119 +27,101 @@ final class FormattingProvider(
     client: MetalsLanguageClient,
     statusBar: StatusBar,
     icons: Icons
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext)
+    extends Cancelable {
+  override def cancel(): Unit = {
+    scalafmt.clear()
+  }
 
-  private def defaultScalafmtVersion = "1.5.1"
+  private def scalafmtConf: AbsolutePath =
+    workspace.resolve(userConfig().scalafmtConfigPath)
+  private val reporter: ScalafmtReporter = new ScalafmtReporter {
+    private var downloadingScalafmt = Promise[Unit]()
+    override def error(file: Path, message: String): Unit = {
+      scribe.error(s"scalafmt: $file: $message")
+      if (file == scalafmtConf.toNIO) {
+        downloadingScalafmt.trySuccess(())
+        val input = scalafmtConf.toInputFromBuffers(buffers)
+        val pos = Position.Range(input, 0, input.chars.length)
+        client.publishDiagnostics(
+          new l.PublishDiagnosticsParams(
+            file.toUri.toString,
+            Collections.singletonList(
+              new l.Diagnostic(
+                new l.Range(
+                  new l.Position(0, 0),
+                  new l.Position(pos.endLine, pos.endColumn)
+                ),
+                message,
+                l.DiagnosticSeverity.Error,
+                "scalafmt"
+              )
+            )
+          )
+        )
+      }
+    }
+
+    override def error(file: Path, e: Throwable): Unit = {
+      downloadingScalafmt.trySuccess(())
+      e match {
+        case p: PositionException =>
+          statusBar.addMessage(
+            s"${icons.alert}line ${p.startLine() + 1}: ${p.shortMessage()}"
+          )
+          scribe.error(s"scalafmt: ${p.longMessage()}")
+        case _ =>
+          scribe.error(s"scalafmt: $file", e)
+      }
+    }
+    override def excluded(file: Path): Unit = {
+      scribe.info(
+        s"scalafmt: excluded $file (to format this file, update `project.excludeFilters` in .scalafmt.conf)"
+      )
+    }
+
+    override def parsedConfig(config: Path, scalafmtVersion: String): Unit = {
+      downloadingScalafmt.trySuccess(())
+      client.publishDiagnostics(
+        new l.PublishDiagnosticsParams(
+          config.toUri.toString,
+          Collections.emptyList()
+        )
+      )
+    }
+    override def downloadWriter(): PrintWriter = {
+      downloadingScalafmt.trySuccess(())
+      downloadingScalafmt = Promise()
+      statusBar.trackFuture(
+        s"${icons.sync}Downloading Scalafmt",
+        downloadingScalafmt.future
+      )
+      new PrintWriter(System.out)
+    }
+  }
+
+  private val scalafmt = Scalafmt
+    .create(this.getClass.getClassLoader)
+    .withReporter(reporter)
 
   def format(path: AbsolutePath): util.List[l.TextEdit] = {
     val input = path.toInputFromBuffers(buffers)
     val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
-    val scalafmtConf = workspace.resolve(userConfig().scalafmtConfigPath)
-    val edits = for {
-      confPath <- {
-        if (scalafmtConf.isFile) {
-          Some(scalafmtConf)
-        } else {
-          handleMissingFile(scalafmtConf)
-          None
-        }
+    if (!scalafmtConf.isFile) {
+      handleMissingFile(scalafmtConf)
+      Collections.emptyList()
+    } else {
+      val formatted =
+        scalafmt.format(scalafmtConf.toNIO, path.toNIO, input.text)
+      if (formatted != input.text) {
+        List(new l.TextEdit(fullDocumentRange, formatted)).asJava
+      } else {
+        Collections.emptyList()
       }
-      config <- parseConfig(confPath)
-      version = {
-        if (config.hasPath("version")) config.getString("version")
-        else defaultScalafmtVersion
-      }
-      includeFilters = {
-        if (config.hasPath("project.includeFilters"))
-          config.getStringList("project.includeFilters").asScala
-        else List(".*\\.scala$", ".*\\.sbt$", ".*\\.sc$")
-      }
-      excludeFilters = {
-        if (config.hasPath("project.excludeFilters"))
-          config.getStringList("project.excludeFilters").asScala
-        else Nil
-      }
-      if {
-        val shouldFormat =
-          FilterMatcher(includeFilters, excludeFilters).matches(path.toString)
-        if (!shouldFormat) {
-          scribe.info(
-            s"skipping format request for ${path.toRelative(workspace)}. " +
-              "To fix this, update project.excludeFilters or project.includeFilters in " +
-              confPath.toRelative(workspace)
-          )
-        }
-        shouldFormat
-      }
-      scalafmt <- classloadScalafmt(version)
-      formatted <- scalafmt
-        .format(input.text, scalafmtConf.toString(), input.path)
-        .fold(
-          e => {
-            scribe.error(s"scalafmt error: ${e.getMessage}")
-            client.showMessage(ScalafmtError.formatError(e))
-            None
-          },
-          Some(_)
-        )
-    } yield List(new l.TextEdit(fullDocumentRange, formatted))
-    edits.getOrElse(Nil).asJava
-  }
-
-  def parseConfig(path: AbsolutePath): Option[Config] = {
-    try {
-      val result = ConfigFactory.parseFile(path.toFile)
-      client.publishDiagnostics(
-        new PublishDiagnosticsParams(
-          path.toURI.toString,
-          Collections.emptyList()
-        )
-      )
-      Some(result)
-    } catch {
-      case e: ConfigException =>
-        handleConfigError(path, e)
-        None
     }
   }
 
-  def handleConfigError(path: AbsolutePath, e: ConfigException): Unit = {
-    val message = e match {
-      case e: ConfigException.Parse if e.origin().lineNumber() >= 0 =>
-        val line = e.origin().lineNumber() - 1
-        val message = e.getMessage.stripPrefix(s"$path: ${line + 1}: ")
-        val diagnostic = new l.Diagnostic(
-          new l.Range(
-            new l.Position(line, 0),
-            new l.Position(line, 0)
-          ),
-          message,
-          l.DiagnosticSeverity.Error,
-          "hocon"
-        )
-        client.publishDiagnostics(
-          new PublishDiagnosticsParams(
-            path.toURI.toString,
-            Collections.singletonList(diagnostic)
-          )
-        )
-        statusBar.addMessage(
-          MetalsStatusParams(
-            s"${icons.alert}.scalafmt.conf parse error",
-            command = ClientCommands.FocusDiagnostics.id
-          )
-        )
-        message
-      case _ =>
-        e.getMessage
-    }
-    val params = ScalafmtError.configParseError(
-      path.toRelative(workspace),
-      message
-    )
-    client.showMessage(params)
-  }
-
+  private def defaultScalafmtVersion = "1.5.1"
   def handleMissingFile(path: AbsolutePath): Unit = {
     val params = MissingScalafmtConf.params(path)
     client.showMessageRequest(params).asScala.foreach { item =>
@@ -158,56 +136,4 @@ final class FormattingProvider(
       }
     }
   }
-
-  private def classloadScalafmt(version: String): Option[Scalafmt] = {
-    embedded.scalafmtJars(version) match {
-      case Some(classloader) =>
-        type Scalafmt210 = {
-          def format(code: String, configFile: String, filename: String): String
-        }
-        val scalafmt210 = classloader
-          .loadClass("org.scalafmt.cli.Scalafmt210")
-          .newInstance()
-          .asInstanceOf[Scalafmt210]
-        // See https://github.com/scalameta/scalameta/issues/1068
-        def clearMegaCache(): Unit = {
-          try {
-            val cls =
-              classloader.loadClass(PlatformTokenizerCache.getClass.getName)
-            val module = cls.getField("MODULE$")
-            module.setAccessible(true)
-            val megacache = cls.getMethod("megaCache")
-            megacache.setAccessible(true)
-            val instance = module.get(null)
-            val map =
-              megacache.invoke(instance).asInstanceOf[java.util.Map[_, _]]
-            map.clear()
-          } catch {
-            case NonFatal(e) =>
-              scribe.error("megaCache error", e)
-          }
-        }
-        Some(new Scalafmt {
-          def format(
-              code: String,
-              configFile: String,
-              filename: String
-          ): Try[String] = {
-            val r = Try(scalafmt210.format(code, configFile, filename))
-            clearMegaCache()
-            r
-          }
-        })
-      case None =>
-        val params =
-          ScalafmtError.downloadError(version)
-        client.showMessage(params)
-        None
-    }
-  }
-
-}
-
-private trait Scalafmt {
-  def format(code: String, configFile: String, filename: String): Try[String]
 }
