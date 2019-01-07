@@ -5,16 +5,32 @@ install:
   - cmd: SET PATH=%JAVA_HOME%\bin;%PATH%
   - cmd: choco install sbt -ia "INSTALLDIR=""C:\sbt"""
   - cmd: SET PATH=C:\sbt\bin;%JAVA_HOME%\bin;%PATH%
-  - cmd: SET SBT_OPTS=-XX:MaxPermSize=2g -Xmx4g
+  # disable dynVer
+  - ps: Remove-Item Env:\CI
   - cmd: sbt version & exit 0
-  - cmd: sbt version & exit 0
+
 environment:
   APPVEYOR_CACHE_ENTRY_ZIP_ARGS: "-t7z -m0=lzma -mx=9"
-  JAVA_OPTS: -Djna.nosys=true
+  JAVA_OPTS: -Xss2m -Xmx1024m -XX:-TieredCompilation -XX:ReservedCodeCacheSize=48m -Dfile.encoding=UTF-8 -Djna.nosys=true
+before_build:
+  - ps: |
+      @"
+      -Xss2m
+      -Xmx1024m
+      -XX:ReservedCodeCacheSize=48m
+      -XX:-TieredCompilation
+      -Dfile.encoding=UTF-8
+      "@ > ".jvmopts"
 build_script:
   - sbt publishLocal
 test_script:
   - sbt test
+after_test:
+  - ps: |
+      Get-ChildItem C:\Users\appveyor\.ivy2\* -Include "ivydata-*.properties" -Recurse | Remove-Item
+      Remove-Item C:\Users\appveyor\.ivy2\.sbt.ivy.lock -Force
+      Remove-Item C:\Users\appveyor\.ivy2\local -Recurse
+      Get-ChildItem C:\Users\appveyor\.sbt\* -Include "*.lock" -Recurse | Remove-Item -Force
 cache:
   - C:\sbt\
   - C:\Users\appveyor\.ivy2
