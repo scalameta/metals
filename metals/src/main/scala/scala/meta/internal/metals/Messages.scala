@@ -225,30 +225,6 @@ class Messages(icons: Icons) {
       )
   }
 
-  object ScalafmtError {
-    def configParseError(
-        path: RelativePath,
-        message: String
-    ): MessageParams =
-      new MessageParams(
-        MessageType.Error,
-        s"Failed to parse config $path with error message '$message'"
-      )
-    def formatError(e: Throwable): MessageParams = {
-      new MessageParams(
-        MessageType.Error,
-        s"Scalafmt error: ${e.getMessage}"
-      )
-    }
-    def downloadError(version: String): MessageParams = {
-      new MessageParams(
-        MessageType.Error,
-        s"Failed to download Scalafmt v$version. " +
-          "Make sure you have a working internet connection and this version exists on Maven Central."
-      )
-    }
-  }
-
   object MissingScalafmtConf {
     def createFile = new MessageActionItem("Create .scalafmt.conf")
     def fixedParams: MessageParams =

@@ -3,7 +3,6 @@ package tests
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
-import scala.meta.internal.metals.Messages.ScalafmtError
 
 object FormattingSlowSuite extends BaseSlowSuite("formatting") {
 
@@ -12,6 +11,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ <- server.initialize(
         """|/.scalafmt.conf
            |maxColumn = 100
+           |version=1.5.1
            |/a/src/main/scala/a/Main.scala
            |object FormatMe {
            | val x = 1  }
@@ -60,6 +60,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ <- server.initialize(
         """|/project/.scalafmt.conf
            |maxColumn=100
+           |version=1.5.1
            |/a/src/main/scala/a/Main.scala
            |object FormatMe {
            | val x = 1  }
@@ -124,8 +125,12 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       )
       _ <- server.formatting("Main.scala")
       _ = assertNoDiff(
-        client.workspaceShowMessages,
-        ScalafmtError.downloadError("does-not-exist").getMessage
+        client.workspaceDiagnostics,
+        """
+          |.scalafmt.conf:1:1: error: failed to resolve Scalafmt version 'does-not-exist'
+          |version="does-not-exist"
+          |^^^^^^^^^^^^^^^^^^^^^^^^
+        """.stripMargin
       )
     } yield ()
   }
@@ -134,9 +139,8 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
     for {
       _ <- server.initialize(
         """|.scalafmt.conf
-           |align=none
-           |version=
-           |maxColumn=80
+           |version=1.5.1
+           |align=does-not-exist
            |/Main.scala
            |object  Main
            |""".stripMargin,
@@ -146,10 +150,11 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ <- server.formatting("Main.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """
-          |.scalafmt.conf:3:1: error: Expecting end of input or a comma, got '=' (if you intended '=' to be part of a key or string value, try enclosing the key or value in double quotes, or you may be able to rename the file .properties rather than .conf)
-          |maxColumn=80
-          |^
+        """|.scalafmt.conf:1:1: error: Type mismatch;
+           |  found    : String (value: "does-not-exist")
+           |  expected : Align
+           |> version=1.5.1
+           |> align=does-not-exist
         """.stripMargin
       )
     } yield ()
@@ -159,6 +164,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
     for {
       _ <- server.initialize(
         """|/.scalafmt.conf
+           |version=1.5.1
            |project.includeFilters = [
            |  ".*Spec\\.scala$"
            |]
@@ -199,11 +205,11 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
     } yield ()
   }
 
-  testAsync(".sbt") {
+  testAsync("sbt") {
     for {
       _ <- server.initialize(
         """|/.scalafmt.conf
-           |
+           |version=1.5.1
            |/project/plugins.sbt
            |  object   Plugins
            |""".stripMargin,
