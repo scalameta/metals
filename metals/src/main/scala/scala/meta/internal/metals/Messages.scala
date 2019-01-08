@@ -9,7 +9,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.io.AbsolutePath
-import scala.meta.io.RelativePath
 
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
