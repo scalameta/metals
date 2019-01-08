@@ -20,6 +20,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   def protocol: BloopProtocol = BloopProtocol.auto
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration = UserConfiguration()
+  def serverConfig: MetalsServerConfig = MetalsServerConfig.default
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   def bspGlobalDirectories: List[AbsolutePath] = Nil
@@ -51,7 +52,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       .resolve(name.replace(' ', '-'))
     Files.createDirectories(workspace.toNIO)
     val buffers = Buffers()
-    val config = MetalsServerConfig.default.copy(
+    val config = serverConfig.copy(
       bloopProtocol = protocol,
       executeClientCommand = ExecuteClientCommandConfig.on,
       icons = this.icons

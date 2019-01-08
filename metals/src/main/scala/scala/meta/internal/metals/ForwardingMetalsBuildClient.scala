@@ -4,6 +4,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.TaskDataKind
 import ch.epfl.scala.bsp4j.TaskFinishParams
+import ch.epfl.scala.bsp4j.TaskProgressParams
 import ch.epfl.scala.bsp4j.TaskStartParams
 import ch.epfl.scala.{bsp4j => b}
 import java.util.Collections
@@ -80,6 +81,7 @@ final class ForwardingMetalsBuildClient(
           task <- params.asCompileTask
           info <- buildTargets.info(task.getTarget)
         } {
+          diagnostics.onStartCompileBuildTarget(task.getTarget)
           // cancel ongoing compilation for the current target, if any.
           compilations.get(task.getTarget).foreach(_.promise.cancel())
 
@@ -99,13 +101,14 @@ final class ForwardingMetalsBuildClient(
   }
 
   @JsonNotification("build/taskFinish")
-  def buildTaskEnd(params: TaskFinishParams): Unit = {
+  def buildTaskFinish(params: TaskFinishParams): Unit = {
     params.getDataKind match {
       case TaskDataKind.COMPILE_REPORT =>
         for {
           report <- params.asCompileReport
           compilation <- compilations.get(report.getTarget)
         } {
+          diagnostics.onFinishCompileBuildTarget(report.getTarget)
           val target = report.getTarget
           compilation.promise.trySuccess(report)
           val name = buildTargets.info(report.getTarget) match {
@@ -134,4 +137,7 @@ final class ForwardingMetalsBuildClient(
       case _ =>
     }
   }
+
+  @JsonNotification("build/taskProgress")
+  def buildTaskProgress(params: TaskProgressParams): Unit = {}
 }

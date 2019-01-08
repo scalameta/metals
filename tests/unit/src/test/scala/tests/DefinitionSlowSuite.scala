@@ -3,8 +3,12 @@ package tests
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.Messages.Only212Navigation
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.StatisticsConfig
 
 object DefinitionSlowSuite extends BaseSlowSuite("definition") {
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(statistics = new StatisticsConfig("diagnostics"))
 
   override def testAsync(
       name: String,

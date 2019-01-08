@@ -33,7 +33,12 @@ object Timer {
     else {
       val ms = TimeUnit.NANOSECONDS.toMillis(nanos)
       if (ms < 1) {
-        s"${nanos}ns"
+        val micros = TimeUnit.NANOSECONDS.toMicros(nanos)
+        if (micros < 1) {
+          s"${nanos}ns"
+        } else {
+          s"${micros}μs"
+        }
       } else if (ms < 50) {
         s"${ms}ms"
       } else {

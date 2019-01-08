@@ -1,9 +1,11 @@
-inThisBuild(Vector(
-  scalaVersion := "2.12.8",
-  scalacOptions ++= List(
-    "-Ywarn-unused"
-  ),
-))
+inThisBuild(
+  Vector(
+    scalaVersion := "2.12.8",
+    scalacOptions ++= List(
+      "-Ywarn-unused"
+    )
+  )
+)
 
 libraryDependencies ++= List(
   "org.typelevel" %% "cats-core" % "1.5.0",

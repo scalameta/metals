@@ -109,6 +109,7 @@ class BaseSuite extends TestSuite {
       () => ()
     )
   }
+
   def test(name: String)(fun: => Any): Unit = {
     myTests += FlatTest(name, () => fun)
   }
