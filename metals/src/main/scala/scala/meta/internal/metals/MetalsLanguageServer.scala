@@ -37,6 +37,7 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Language
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
+import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Try
 
@@ -80,6 +81,8 @@ class MetalsLanguageServer(
   // These can't be instantiated until we know the workspace root directory.
   private var bloopInstall: BloopInstall = _
   private var diagnostics: Diagnostics = _
+  private var trees: Trees = _
+  private var documentSymbolProvider: DocumentSymbolProvider = _
   private var fileSystemSemanticdbs: FileSystemSemanticdbs = _
   private var interactiveSemanticdbs: InteractiveSemanticdbs = _
   private var buildTools: BuildTools = _
@@ -88,8 +91,6 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
-  private val documentSymbolProvider: DocumentSymbolProvider =
-    new DocumentSymbolProvider(buffers)
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   var tables: Tables = _
@@ -129,7 +130,13 @@ class MetalsLanguageServer(
         statusBar
       )
     )
-    diagnostics = new Diagnostics(buildTargets, languageClient)
+    diagnostics = new Diagnostics(
+      buildTargets,
+      buffers,
+      languageClient,
+      config.statistics,
+      () => userConfig
+    )
     buildClient = new ForwardingMetalsBuildClient(
       languageClient,
       diagnostics,
@@ -138,6 +145,8 @@ class MetalsLanguageServer(
       statusBar,
       time
     )
+    trees = new Trees(buffers, diagnostics)
+    documentSymbolProvider = new DocumentSymbolProvider(trees)
     bloopInstall = register(
       new BloopInstall(
         workspace,
@@ -390,6 +399,7 @@ class MetalsLanguageServer(
     fingerprints.add(path, FileIO.slurp(path, charset))
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
+    trees.didChange(path)
     if (path.isDependencySource(workspace)) {
       CompletableFutures.computeAsync { _ =>
         // trigger compilation in preparation for definition requests
@@ -423,10 +433,10 @@ class MetalsLanguageServer(
   ): CompletableFuture[Unit] = {
     CompletableFuture.completedFuture {
       params.getContentChanges.asScala.headOption.foreach { change =>
-        buffers.put(
-          params.getTextDocument.getUri.toAbsolutePath,
-          change.getText
-        )
+        val path = params.getTextDocument.getUri.toAbsolutePath
+        buffers.put(path, change.getText)
+        trees.didChange(path)
+        diagnostics.didChange(path)
       }
     }
   }
@@ -435,14 +445,16 @@ class MetalsLanguageServer(
   def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     buffers.remove(path)
-    documentSymbolProvider.discardSnapshot(path)
+    trees.didClose(path)
   }
 
   @JsonNotification("textDocument/didSave")
   def didSave(params: DidSaveTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     savedFiles.add(path)
+    // read file from disk, we only remove files from buffers on didClose.
     buffers.put(path, path.toInput.text)
+    trees.didChange(path)
     onChange(List(path))
   }
 
@@ -992,7 +1004,7 @@ class MetalsLanguageServer(
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
     OnDemandSymbolIndex(onError = {
-      case e: ParseException =>
+      case e @ (_: ParseException | _: TokenizeException) =>
         scribe.error(e.toString())
       case NonFatal(e) =>
         scribe.error("unexpected error during source scanning", e)

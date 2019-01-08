@@ -1,25 +1,13 @@
 package scala.meta.internal.metals
 
-import scala.annotation.tailrec
-import scala.meta._
 import difflib._
 import difflib.myers.Equalizer
+import org.eclipse.{lsp4j => l}
+import scala.annotation.tailrec
 import scala.meta.Token
+import scala.meta._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MtagsEnrichments._
-
-sealed trait EmptyResult
-object EmptyResult {
-  case object Unchanged extends EmptyResult
-  case object NoMatch extends EmptyResult
-  def unchanged: Either[EmptyResult, Position] = Left(Unchanged)
-  def noMatch: Either[EmptyResult, Position] = Left(NoMatch)
-}
-
-/** A pair of tokens that align with each other across two different files */
-case class MatchingToken(original: Token, revised: Token) {
-  override def toString: String =
-    s"${original.structure} <-> ${revised.structure}"
-}
 
 /** Helper to map between position between two similar strings. */
 final class TokenEditDistance private (
@@ -46,6 +34,108 @@ final class TokenEditDistance private (
     if (empty.isDefined) Input.None
     else matching(0).revised.input
 
+  /**
+   * Converts a range position in the original document to a range position in the revised document.
+   *
+   * This method behaves differently from the other `toRevised` in a few ways:
+   * - it should only return `None` in the case when the sources don't tokenize.
+   *   When the original token is removed in the revised document, we find instead the
+   *   nearest token in the original document instead.
+   */
+  def toRevised(range: l.Range): Option[l.Range] = {
+    if (isUnchanged) Some(range)
+    else if (isNoMatch) None
+    else {
+      val pos = range.toMeta(originalInput)
+      val matchingTokens = matching.lift
+
+      // Perform two binary searches to find the revised start/end positions.
+      // NOTE. I tried abstracting over the two searches since they are so similar
+      // but it resulted in less maintainable code.
+
+      var startFallback = false
+      val startMatch = BinarySearch.array(
+        matching,
+        (mt: MatchingToken, i) => {
+          val result = compare(mt.original.pos, pos.start)
+          result match {
+            case BinarySearch.Smaller =>
+              matchingTokens(i + 1) match {
+                case Some(next) =>
+                  compare(next.original.pos, pos.start) match {
+                    case BinarySearch.Greater =>
+                      startFallback = true
+                      // The original token is not available in the revised document
+                      // so we use the nearest token instead.
+                      BinarySearch.Equal
+                    case _ =>
+                      result
+                  }
+                case None =>
+                  startFallback = true
+                  BinarySearch.Equal
+              }
+            case _ =>
+              result
+          }
+        }
+      )
+
+      var endFallback = false
+      val endMatch = BinarySearch.array(
+        matching,
+        (mt: MatchingToken, i) => {
+          // End offsets are non-inclusive so we decrement by one.
+          val offset = math.max(pos.start, pos.end - 1)
+          val result = compare(mt.original.pos, offset)
+          result match {
+            case BinarySearch.Greater =>
+              matchingTokens(i - 1) match {
+                case Some(next) =>
+                  compare(next.original.pos, offset) match {
+                    case BinarySearch.Smaller =>
+                      endFallback = true
+                      BinarySearch.Equal
+                    case _ =>
+                      result
+                  }
+                case None =>
+                  endFallback = true
+                  BinarySearch.Equal
+              }
+            case _ =>
+              result
+          }
+        }
+      )
+
+      (startMatch, endMatch) match {
+        case (Some(start), Some(end)) =>
+          val revised =
+            if (startFallback && endFallback) {
+              val offset = end.revised.start
+              Position.Range(revisedInput, offset - 1, offset)
+            } else if (start.revised == end.revised) {
+              start.revised.pos
+            } else {
+              val endOffset = end.revised match {
+                case t @ Token.LF() => t.start
+                case t => t.end
+              }
+              Position.Range(revisedInput, start.revised.start, endOffset)
+            }
+          Some(revised.toLSP)
+        case (start, end) =>
+          scribe.warn(s"stale range: $start $end")
+          None
+      }
+    }
+  }
+
+  def toRevised(pos: l.Position): Either[EmptyResult, Position] = {
+    toRevised(pos.getLine, pos.getCharacter)
+  }
+
   def toRevised(
       originalLine: Int,
       originalColumn: Int
@@ -63,7 +153,7 @@ final class TokenEditDistance private (
       BinarySearch
         .array[MatchingToken](
           matching,
-          mt => compare(mt.original.pos, originalOffset)
+          (mt, _) => compare(mt.original.pos, originalOffset)
         )
         .fold(EmptyResult.noMatch)(m => Right(m.revised.pos))
     }
@@ -86,7 +176,7 @@ final class TokenEditDistance private (
       BinarySearch
         .array[MatchingToken](
           matching,
-          mt => compare(mt.revised.pos, revisedOffset)
+          (mt, _) => compare(mt.revised.pos, revisedOffset)
         )
         .fold(EmptyResult.noMatch)(m => Right(m.original.pos))
     }
@@ -126,7 +216,10 @@ object TokenEditDistance {
    * @param revised The current snapshot of a string, for example open buffer
    *                in an editor.
    */
-  def apply(original: Tokens, revised: Tokens): TokenEditDistance = {
+  def fromTokens(
+      original: Tokens,
+      revised: Tokens
+  ): TokenEditDistance = {
     val buffer = Array.newBuilder[MatchingToken]
     buffer.sizeHint(math.max(original.length, revised.length))
     @tailrec
@@ -143,7 +236,7 @@ object TokenEditDistance {
         val o = original(i)
         val r = revised(j)
         if (TokenEqualizer.equals(o, r)) {
-          buffer += MatchingToken(o, r)
+          buffer += new MatchingToken(o, r)
           loop(i + 1, j + 1, ds)
         } else {
           ds match {
@@ -174,7 +267,8 @@ object TokenEditDistance {
 
   def apply(
       originalInput: Input.VirtualFile,
-      revisedInput: Input.VirtualFile
+      revisedInput: Input.VirtualFile,
+      doNothingWhenUnchanged: Boolean = true
   ): TokenEditDistance = {
     val isScala =
       originalInput.path.endsWith(".scala") &&
@@ -190,8 +284,8 @@ object TokenEditDistance {
           else originalInput.tokenize.toOption
         }
       } yield {
-        if (revised == original) unchanged
-        else TokenEditDistance(original, revised)
+        if (doNothingWhenUnchanged && revised == original) unchanged
+        else TokenEditDistance.fromTokens(original, revised)
       }
       result.getOrElse(noMatch)
     }

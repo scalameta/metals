@@ -1,48 +1,31 @@
 package scala.meta.internal.metals
 
-import scala.meta._
-import org.eclipse.{lsp4j => l}
-import org.eclipse.lsp4j.SymbolKind
-import org.eclipse.lsp4j.DocumentSymbol
-import MetalsEnrichments._
 import java.util
-import scala.collection.concurrent.TrieMap
+import org.eclipse.lsp4j.DocumentSymbol
+import org.eclipse.lsp4j.SymbolKind
+import org.eclipse.{lsp4j => l}
+import scala.meta._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.transversers.SimpleTraverser
 
 /**
  *  Retrieves all the symbols defined in a document
  *
  *  If the document doesn't parse, we fall back to the latest
- *  known snapshot of the document, if present
- *
- *  To avoid the snapshots to grow undefinitely, we only store
- *  the ones for the most recently requested documents
+ *  known snapshot of the document, if present.
  */
-class DocumentSymbolProvider(buffers: Buffers) {
-
-  private val snapshots: TrieMap[AbsolutePath, util.List[DocumentSymbol]] =
-    TrieMap.empty
-
-  def empty: util.List[DocumentSymbol] = Nil.asJava
+class DocumentSymbolProvider(trees: Trees) {
 
   def documentSymbols(
       path: AbsolutePath
   ): util.List[DocumentSymbol] = {
-    path
-      .toInputFromBuffers(buffers)
-      .parse[Source]
-      .toOption
-      .map { source =>
-        val result = new SymbolTraverser().symbols(source)
-        snapshots.put(path, result)
-        result
-      }
-      .orElse(snapshots.get(path))
-      .getOrElse(empty)
+    trees.get(path) match {
+      case Some(tree) =>
+        new SymbolTraverser().symbols(tree)
+      case None =>
+        List().asJava
+    }
   }
-
-  def discardSnapshot(path: AbsolutePath): Unit =
-    snapshots.remove(path)
 
   private class SymbolTraverser() extends SimpleTraverser {
     var owner: DocumentSymbol = new DocumentSymbol(

@@ -43,7 +43,8 @@ object PositionSyntax {
       s"${pos.startLine + 1}:${pos.startColumn + 1}..${pos.endLine + 1}:${pos.endColumn + 1}"
 
     def rangeText: String = pos match {
-      case Position.None => ""
+      case Position.None =>
+        ""
       case _ =>
         if (pos.startLine != pos.endLine) multilines
         else lineTextAndCaret
@@ -83,9 +84,13 @@ object PositionSyntax {
         ""
       case _ =>
         val caret =
-          if (pos.start == pos.end) "^"
-          else if (pos.startLine == pos.endLine) "^" * (pos.end - pos.start)
-          else "^"
+          if (pos.start == pos.end) {
+            "^"
+          } else if (pos.startLine == pos.endLine) {
+            "^" * math.max(1, pos.end - pos.start)
+          } else {
+            "^"
+          }
         (" " * pos.startColumn) + caret
     }
 

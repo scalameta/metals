@@ -117,6 +117,10 @@ case class QuickBuild(
     )
     val pluginJars = QuickBuild.fetchDependencies(pluginDependencies)
     val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
+    val cache =
+      if (scalaVersion == V.scala212)
+        List("-Ycache-plugin-class-loader:last-modified")
+      else List()
     val allScalacOptions = List(
       List(
         "-Yrangepos",
@@ -126,6 +130,7 @@ case class QuickBuild(
         s"-P:semanticdb:targetroot:$classDirectory"
       ),
       plugins,
+      cache,
       scalacOptions.toList
     ).flatten
     val resolution = dependencySources.map { jar =>

@@ -1,6 +1,5 @@
 package tests
 
-import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.DocumentSymbolProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
@@ -11,7 +10,7 @@ import tests.MetalsTestEnrichments._
  * Checks the positions of document symbols inside a document
  */
 object DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
-  val documentSymbolProvider = new DocumentSymbolProvider(new Buffers())
+  val documentSymbolProvider = new DocumentSymbolProvider(TestingTrees())
 
   override def testCases(): List[ExpectTestCase] = {
     input.scalaFiles.map { file =>

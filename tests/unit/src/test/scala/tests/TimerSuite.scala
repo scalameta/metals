@@ -17,7 +17,7 @@ object TimerSuite extends BaseSuite {
   checkMillis(0, "0ns")
   checkNanos(100, "100ns")
   checkNanos(500, "500ns")
-  checkNanos(5000, "5000ns")
+  checkNanos(5000, "5μs")
   checkMillis(1, "1ms")
   checkMillis(10, "10ms")
   checkMillis(42, "42ms")
