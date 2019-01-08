@@ -129,7 +129,27 @@ To configure Eglot with Metals, replace the `lsp-mode`, `lsp-ui`, `lsp-scala`
 sections from the config above with the settings below.
 
 ```el
-;; Eglot
+;; Add melpa-stable to your packages repositories
+(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+
+;; Enable defer and ensure by default for use-package
+(setq use-package-always-defer t
+      use-package-always-ensure t)
+
+;; Enable scala-mode and sbt-mode
+(use-package scala-mode
+  :mode "\\.s\\(cala\\|bt\\)$")
+
+(use-package sbt-mode
+  :commands sbt-start sbt-command
+  :config
+  ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
+  ;; allows using SPACE when in the minibuffer
+  (substitute-key-definition
+   'minibuffer-complete-word
+   'self-insert-command
+   minibuffer-local-completion-map))
+
 (use-package eglot
   :pin melpa-stable)
 ;; (optional) Automatically start Metals for Scala files.
