@@ -151,10 +151,11 @@ sections from the config above with the settings below.
    minibuffer-local-completion-map))
 
 (use-package eglot
-  :pin melpa-stable)
-;; (optional) Automatically start Metals for Scala files.
-(add-to-list 'eglot-server-programs '(scala-mode . ("metals-emacs")))
-(add-hook 'scala-mode-hook 'eglot-ensure)
+  :pin melpa-stable
+  ;; (optional) Automatically start metals for Scala files.
+  :config
+  (add-to-list 'eglot-server-programs '(scala-mode . ("metals-emacs")))
+  :hook (scala-mode . eglot-ensure))
 ```
 
 ```scala mdoc:generic
