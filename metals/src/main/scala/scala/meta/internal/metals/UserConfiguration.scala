@@ -38,19 +38,6 @@ object UserConfiguration {
 
   def options: List[UserConfigurationOption] = List(
     UserConfigurationOption(
-      "compile-on-save",
-      s""" `"${default.compileOnSave}"` """,
-      CascadeCompile,
-      "Compile on save",
-      """What compilation mode to use for file save events.
-        |Possible values:
-        |
-        |- `"cascade"` (default): compile the build target that contains the saved file
-        |  along other build targets that depend on that build target.
-        |- `"current-project"`: compile only the build target that contains the saved file.
-      """.stripMargin
-    ),
-    UserConfigurationOption(
       "java-home",
       "`JAVA_HOME` environment variable with fallback to `user.home` system property.",
       "/Library/Java/JavaVirtualMachines/jdk1.8.0_192.jdk/Contents/Home",
@@ -121,16 +108,10 @@ object UserConfiguration {
         .getOrElse(default.scalafmtConfigPath)
     val sbtScript =
       getStringKey("sbt-script")
-    val cascadeCompile = getStringKey("compile-on-save") match {
-      case None => default.compileOnSave
-      case Some(value) =>
-        value match {
-          case CascadeCompile | CurrentProjectCompile => value
-          case unknown =>
-            errors += s"unknown compile-on-save: '$unknown'. Expected one of: ${allCompile.mkString(", ")}."
-            default.compileOnSave
-        }
-    }
+    // NOTE(olafur) Not configurable because we should not expose configuration options for
+    // experimental features. I was tempted to remove the cascade implementation but
+    // decided to keep it instead because I suspect we will need it soon for rename/references.
+    val cascadeCompile = default.compileOnSave
 
     if (errors.isEmpty) {
       Right(
