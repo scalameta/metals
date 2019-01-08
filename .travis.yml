@@ -17,7 +17,10 @@ jobs:
         - ./bin/scalafmt --test
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt test"
+      before_install:
+        - curl -L https://github.com/scalacenter/bloop/releases/download/v1.2.1/install.py | python
       script:
+        - $HOME/.bloop/bloop server &
         - sbt sbt-metals/publishLocal test
     - stage: release
       script: sbt ci-release docs/docusaurusPublishGhpages
