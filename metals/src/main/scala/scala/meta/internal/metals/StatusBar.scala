@@ -136,6 +136,7 @@ final class StatusBar(
   }
 
   private val items = new ConcurrentLinkedQueue[Item]()
+  def pendingItems: Iterable[String] = items.asScala.map(_.formattedMessage)
   private def garbageCollect(): Unit = {
     items.removeIf(_.isStale)
   }

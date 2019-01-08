@@ -17,12 +17,23 @@ case class UserConfiguration(
     javaHome: Option[String] = None,
     sbtScript: Option[String] = None,
     scalafmtConfigPath: RelativePath =
-      UserConfiguration.default.scalafmtConfigPath
-)
-
+      UserConfiguration.default.scalafmtConfigPath,
+    compileOnSave: String = UserConfiguration.default.compileOnSave
+) {
+  def isCascadeCompile: Boolean =
+    compileOnSave == UserConfiguration.CascadeCompile
+  def isCurrentProject: Boolean =
+    compileOnSave == UserConfiguration.CurrentProjectCompile
+}
 object UserConfiguration {
+  val CascadeCompile = "cascade"
+  val CurrentProjectCompile = "current-project"
+  def allCompile: List[String] =
+    List(CascadeCompile, CurrentProjectCompile)
+
   object default {
     val scalafmtConfigPath = RelativePath(".scalafmt.conf")
+    val compileOnSave = CurrentProjectCompile
   }
 
   def options: List[UserConfigurationOption] = List(
@@ -91,19 +102,24 @@ object UserConfiguration {
 
     val javaHome =
       getStringKey("java-home")
-    val sbtScript =
-      getStringKey("sbt-script")
     val scalafmtConfigPath =
       getStringKey("scalafmt-config-path")
         .map(RelativePath(_))
         .getOrElse(default.scalafmtConfigPath)
+    val sbtScript =
+      getStringKey("sbt-script")
+    // NOTE(olafur) Not configurable because we should not expose configuration options for
+    // experimental features. I was tempted to remove the cascade implementation but
+    // decided to keep it instead because I suspect we will need it soon for rename/references.
+    val cascadeCompile = default.compileOnSave
 
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
           javaHome,
           sbtScript,
-          scalafmtConfigPath
+          scalafmtConfigPath,
+          cascadeCompile
         )
       )
     } else {
@@ -113,4 +129,5 @@ object UserConfiguration {
 
   def toWrappedJson(config: String): String =
     s"""{"metals": $config}"""
+
 }
