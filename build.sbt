@@ -276,7 +276,7 @@ lazy val docs = project
   .settings(
     skip.in(publish) := true,
     moduleName := "metals-docs",
-    mainClass.in(Compile) := Some("docs.Docs"),
+    mdoc := run.in(Compile).evaluated,
     libraryDependencies ++= List(
       "org.jsoup" % "jsoup" % "1.11.3"
     )

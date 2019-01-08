@@ -85,7 +85,7 @@ When you make changes in the Metals Scala codebase
 
 ### Vim
 
-First, follow the [`vim` installation instruction](../editors/vim.html).
+First, follow the [`vim` installation instruction](../editors/vim.md).
 
 Next, write a `new-metals-vim` script that builds a new `metals-vim` bootstrap
 script using the locally published version.

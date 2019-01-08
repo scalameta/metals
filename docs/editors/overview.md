@@ -177,7 +177,7 @@ https://scalameta.org/scalafmt/docs/configuration.html.
 The Metals language server supports custom extensions that are not part of the
 Language Server Protocol (LSP). These extensions are not necessary for Metals to
 function but they improve the user experience. To learn more about Metals
-extensions, see [integrating a new editor](new-editor.html).
+extensions, see [integrating a new editor](new-editor.md).
 
 ## Unsupported features
 
