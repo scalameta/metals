@@ -52,12 +52,14 @@ object UserConfigurationSuite extends BaseSuite {
     """
       |{
       | "java-home": "home",
+      | "compile-on-save": "current-project",
       | "sbt-script": "script"
       |}
     """.stripMargin
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
     assert(obtained.sbtScript == Some("script"))
+    assert(obtained.isCurrentProject)
   }
 
   checkOK(
@@ -66,6 +68,14 @@ object UserConfigurationSuite extends BaseSuite {
   ) { obtained =>
     assert(obtained.javaHome.isEmpty)
     assert(obtained.sbtScript.isEmpty)
+    assert(
+      obtained.scalafmtConfigPath ==
+        UserConfiguration.default.scalafmtConfigPath
+    )
+    assert(
+      obtained.compileOnSave ==
+        UserConfiguration.default.compileOnSave
+    )
   }
 
   checkOK(
@@ -127,4 +137,5 @@ object UserConfigurationSuite extends BaseSuite {
       |json error: key 'sbt-script' should have value of type string but obtained []
     """.stripMargin
   )
+
 }

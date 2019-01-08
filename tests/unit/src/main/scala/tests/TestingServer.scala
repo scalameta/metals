@@ -39,7 +39,6 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
@@ -69,7 +68,7 @@ import tests.MetalsTestEnrichments._
  */
 final class TestingServer(
     workspace: AbsolutePath,
-    client: MetalsLanguageClient,
+    client: TestingClient,
     buffers: Buffers,
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath]
@@ -84,6 +83,14 @@ final class TestingServer(
   )
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
+  def statusBarHistory: String = {
+    // collect both published items in the client and pending items from the server.
+    val all = List(
+      server.statusBar.pendingItems,
+      client.statusParams.asScala.map(_.text)
+    ).flatten
+    all.distinct.mkString("\n")
+  }
 
   private def write(layout: String): Unit = {
     FileLayout.fromString(layout, root = workspace)
