@@ -138,15 +138,4 @@ object UserConfigurationSuite extends BaseSuite {
     """.stripMargin
   )
 
-  checkError(
-    "cascade",
-    """
-      |{
-      | "compile-on-save": "foobar"
-      |}
-    """.stripMargin,
-    """
-      |unknown compile-on-save: 'foobar'. Expected one of: cascade, current-project.
-    """.stripMargin
-  )
 }
