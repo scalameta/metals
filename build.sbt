@@ -94,6 +94,7 @@ lazy val V = new {
   val bsp = "2.0.0-M2"
   val sbtBloop = "1.1.2"
   val bloop = "1.1.2"
+  val scalafmt = "2.0.0-RC4"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions = Seq(
@@ -146,13 +147,11 @@ lazy val metals = project
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9",
       // for finding paths of global log/cache directories
       "io.github.soc" % "directories" % "11",
-      // for reading Scalafmt conf
-      "com.typesafe" % "config" % "1.3.2",
       // ==================
       // Scala dependencies
       // ==================
+      "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "org.scalameta" %% "scalafmt-dynamic" % "2.0.0-RC4",
       "com.geirsson" %% "coursier-small" % "1.3.1",
       // undeclared transitive dependency of coursier-small
       "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
@@ -176,6 +175,7 @@ lazy val metals = project
       "sbtBloopVersion" -> V.sbtBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
+      "scalafmtVersion" -> V.scalafmt,
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212

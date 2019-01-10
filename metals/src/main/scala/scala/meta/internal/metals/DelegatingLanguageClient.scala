@@ -78,4 +78,10 @@ class DelegatingLanguageClient(
     underlying.metalsExecuteClientCommand(params)
   }
 
+  override def metalsInputBox(
+      params: MetalsInputBoxParams
+  ): CompletableFuture[MetalsInputBoxResult] = {
+    underlying.metalsInputBox(params)
+  }
+
 }
