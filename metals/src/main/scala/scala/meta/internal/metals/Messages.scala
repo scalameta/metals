@@ -224,6 +224,43 @@ class Messages(icons: Icons) {
       )
   }
 
+  object MissingScalafmtVersion {
+    def failedToResolve(message: String): MessageParams = {
+      new MessageParams(MessageType.Error, message)
+    }
+    def fixedVersion: MessageParams =
+      new MessageParams(
+        MessageType.Info,
+        "Updated .scalafmt.conf, try formatting again. "
+      )
+    def isMissingScalafmtVersion(params: ShowMessageRequestParams): Boolean =
+      params.getMessage == messageRequestMessage
+    def inputBox(): MetalsInputBoxParams = MetalsInputBoxParams(
+      prompt =
+        "No Scalafmt version is configured for this workspace, what version would you like to use?",
+      value = BuildInfo.scalafmtVersion
+    )
+    def messageRequestMessage: String =
+      s"No Scalafmt version is configured for this workspace. " +
+        s"To fix this problem, update .scalafmt.conf to include 'version=${BuildInfo.scalafmtVersion}'."
+    def changeVersion: MessageActionItem =
+      new MessageActionItem(
+        s"Update .scalafmt.conf to use v${BuildInfo.scalafmtVersion}"
+      )
+    def messageRequest(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(messageRequestMessage)
+      params.setType(MessageType.Error)
+      params.setActions(
+        List(
+          changeVersion,
+          notNow
+        ).asJava
+      )
+      params
+    }
+  }
+
   object MissingScalafmtConf {
     def createFile = new MessageActionItem("Create .scalafmt.conf")
     def fixedParams: MessageParams =

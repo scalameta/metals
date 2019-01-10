@@ -19,6 +19,8 @@ import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsInputBoxParams
+import scala.meta.internal.metals.MetalsInputBoxResult
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MetalsSlowTaskResult
@@ -199,5 +201,11 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     statusParams.add(params)
+  }
+
+  override def metalsInputBox(
+      params: MetalsInputBoxParams
+  ): CompletableFuture[MetalsInputBoxResult] = {
+    CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
   }
 }

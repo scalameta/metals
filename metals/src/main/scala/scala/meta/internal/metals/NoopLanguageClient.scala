@@ -30,4 +30,9 @@ object NoopLanguageClient extends MetalsLanguageClient {
   override def logMessage(message: MessageParams): Unit = ()
   override def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit =
     ()
+  override def metalsInputBox(
+      params: MetalsInputBoxParams
+  ): CompletableFuture[MetalsInputBoxResult] = {
+    CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
+  }
 }

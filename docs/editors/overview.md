@@ -172,6 +172,8 @@ https://scalameta.org/scalafmt/docs/configuration.html.
 
 **Slow task**: Editor client implements the `metals/slowTask` request.
 
+**Input box**: Editor client implements the `metals/inputBox` request.
+
 **✅**: Editor implements all Metals extension endpoints.
 
 The Metals language server supports custom extensions that are not part of the
