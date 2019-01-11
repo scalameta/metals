@@ -124,6 +124,14 @@ Possible values:
 - `status-bar`: the `metals/slowTask` request is not supported, but send updates
   about slow tasks via `metals/status`.
 
+### `-Dmetals.input-box`
+
+Possible values:
+
+- `off` (default): the `metals/inputBox` request is not supported. In this case,
+  Metals tries to fallback to `window/showMessageRequest` when possible.
+- `on`: the `metals/inputBox` request is fully supported.
+
 ### `-Dmetals.execute-client-command`
 
 Possible values:
@@ -403,6 +411,54 @@ _Notification_:
 - method: `metals/executeClientCommand`
 - params: `ExecuteCommandParams`, as defined in LSP.
 
+### `metals/inputBox`
+
+The Metals input box request is sent from the server to the client to let the
+user provide a string value for a given prompt. Unlike
+`window/showMessageRequest`, the `metals/inputBox` request allows the user to
+provide a custom response instead of picking a pre-selected value.
+
+_Request_:
+
+- method: `metals/inputBox`
+- params: `MetalsInputBoxParams` defined as follows. Note, matches
+  [`InputBoxOptions`](https://code.visualstudio.com/api/references/vscode-api#InputBoxOptions)
+  in the Visual Studio Code API:
+
+```ts
+export interface MetalsInputBoxParams {
+  /**
+   * The value to prefill in the input box.
+   */
+  value?: string;
+  /**
+   * The text to display underneath the input box.
+   */
+  prompt?: string;
+  /**
+   * An optional string to show as place holder in the input box to guide the user what to type.
+   */
+  placeHolder?: string;
+  /**
+   * Set to `true` to show a password prompt that will not show the typed value.
+   */
+  password?: boolean;
+  /**
+   * Set to `true` to keep the input box open when focus moves to another part of the editor or to another window.
+   */
+  ignoreFocusOut?: boolean;
+}
+```
+
+- result: `MetalsInputBoxResult` defined as follows:
+
+```ts
+export interface MetalsInputBoxResult {
+  value?: string;
+  cancelled?: boolean;
+}
+```
+
 ## Language Server Protocol
 
 Consult the
@@ -487,6 +543,22 @@ library sources.
 
 Returns `DocumentSymbol[]` if the client declares support for hierarchical
 document symbol or `SymbolInformation[]` otherwise.
+
+### `textDocument/formatting`
+
+Formats the sources with the [Scalafmt](https://scalameta.org/scalafmt/) version
+that is declared in `.scalafmt.conf`.
+
+- when `.scalafmt.conf` is missing, Metals sends a `window/showMessageRequest`
+  to create the file.
+- when `.scalafmt.conf` exists but doesn't declare a `version` setting, Metals
+  sends a `metals/inputBox` when supported (with fallback to
+  `window/showMessageRequest` when unsupported) to prepend `version=$VERSION` to
+  the `.scalafmt.conf` file.
+- the first format request is usually slow because Metals needs to download
+  Scalafmt artifacts from Maven Central. While the download happens, Metals adds
+  a message in the status bar via `metals/status` and detailed download progress
+  information is logged to `.metals/metals.log`.
 
 ### `workspace/didChangeWatchedFiles`
 

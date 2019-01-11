@@ -21,6 +21,8 @@ import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsInputBoxParams
+import scala.meta.internal.metals.MetalsInputBoxResult
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MetalsSlowTaskParams
@@ -80,6 +82,13 @@ object BspCli {
   }
   private def loggingLangaugeClient: MetalsLanguageClient =
     new MetalsLanguageClient {
+      override def metalsInputBox(
+          params: MetalsInputBoxParams
+      ): CompletableFuture[MetalsInputBoxResult] = {
+        CompletableFuture.completedFuture(
+          MetalsInputBoxResult(cancelled = true)
+        )
+      }
       override def metalsExecuteClientCommand(
           params: ExecuteCommandParams
       ): Unit = {}

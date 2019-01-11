@@ -9,7 +9,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.io.AbsolutePath
-import scala.meta.io.RelativePath
 
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
@@ -225,27 +224,40 @@ class Messages(icons: Icons) {
       )
   }
 
-  object ScalafmtError {
-    def configParseError(
-        path: RelativePath,
-        message: String
-    ): MessageParams =
-      new MessageParams(
-        MessageType.Error,
-        s"Failed to parse config $path with error message '$message'"
-      )
-    def formatError(e: Throwable): MessageParams = {
-      new MessageParams(
-        MessageType.Error,
-        s"Scalafmt error: ${e.getMessage}"
-      )
+  object MissingScalafmtVersion {
+    def failedToResolve(message: String): MessageParams = {
+      new MessageParams(MessageType.Error, message)
     }
-    def downloadError(version: String): MessageParams = {
+    def fixedVersion: MessageParams =
       new MessageParams(
-        MessageType.Error,
-        s"Failed to download Scalafmt v$version. " +
-          "Make sure you have a working internet connection and this version exists on Maven Central."
+        MessageType.Info,
+        "Updated .scalafmt.conf, try formatting again. "
       )
+    def isMissingScalafmtVersion(params: ShowMessageRequestParams): Boolean =
+      params.getMessage == messageRequestMessage
+    def inputBox(): MetalsInputBoxParams = MetalsInputBoxParams(
+      prompt =
+        "No Scalafmt version is configured for this workspace, what version would you like to use?",
+      value = BuildInfo.scalafmtVersion
+    )
+    def messageRequestMessage: String =
+      s"No Scalafmt version is configured for this workspace. " +
+        s"To fix this problem, update .scalafmt.conf to include 'version=${BuildInfo.scalafmtVersion}'."
+    def changeVersion: MessageActionItem =
+      new MessageActionItem(
+        s"Update .scalafmt.conf to use v${BuildInfo.scalafmtVersion}"
+      )
+    def messageRequest(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(messageRequestMessage)
+      params.setType(MessageType.Error)
+      params.setActions(
+        List(
+          changeVersion,
+          notNow
+        ).asJava
+      )
+      params
     }
   }
 

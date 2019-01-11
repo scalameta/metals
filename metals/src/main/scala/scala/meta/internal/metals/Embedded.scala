@@ -8,7 +8,6 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
-import scala.collection.concurrent.TrieMap
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -27,7 +26,6 @@ final class Embedded(
     if (isBloopJars.get()) {
       bloopJars.foreach(_.close())
     }
-    scalafmtJarsCache.values.foreach(_.close())
   }
 
   /**
@@ -79,25 +77,6 @@ final class Embedded(
     AbsolutePath(out)
   }
 
-  private val scalafmtJarsCache = TrieMap.empty[String, URLClassLoader]
-  def scalafmtJars(version: String): Option[URLClassLoader] = {
-    scalafmtJarsCache.get(version).orElse {
-      val promise = Promise[Unit]()
-      statusBar
-        .trackFuture(s"${icons.sync}Downloading Scalafmt", promise.future)
-      try {
-        val classloader = Embedded.newScalafmtClassloader(version)
-        scalafmtJarsCache.put(version, classloader)
-        Some(classloader)
-      } catch {
-        case NonFatal(_) =>
-          None
-      } finally {
-        promise.trySuccess(())
-      }
-    }
-  }
-
 }
 
 object Embedded {
@@ -123,32 +102,6 @@ object Embedded {
       )
     val jars = coursiersmall.CoursierSmall.fetch(settings)
     // Don't make Bloop classloader a child or our classloader.
-    val parent: ClassLoader = null
-    val classloader =
-      new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, parent)
-    classloader
-  }
-
-  private def newScalafmtClassloader(version: String): URLClassLoader = {
-    val settings = new coursiersmall.Settings()
-      .withTtl(Some(Duration.Inf))
-      .withDependencies(
-        List(
-          new coursiersmall.Dependency(
-            "com.geirsson",
-            "scalafmt-cli_2.12",
-            version
-          ),
-          new coursiersmall.Dependency(
-            // We need reflect because https://github.com/scalameta/scalafmt/issues/1252
-            "org.scala-lang",
-            "scala-reflect",
-            BuildInfo.scala212
-          )
-        )
-      )
-    val jars = coursiersmall.CoursierSmall.fetch(settings)
-    // Don't make Scalafmt classloader a child or our classloader.
     val parent: ClassLoader = null
     val classloader =
       new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, parent)

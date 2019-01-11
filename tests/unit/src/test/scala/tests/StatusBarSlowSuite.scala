@@ -4,6 +4,7 @@ import scala.meta.internal.metals.Icons
 object StatusBarSlowSuite extends BaseSlowSuite("status-bar") {
   override def icons: Icons = Icons.vscode
   testAsync("compile-success") {
+    cleanCompileCache("a")
     for {
       _ <- server.initialize(
         """
