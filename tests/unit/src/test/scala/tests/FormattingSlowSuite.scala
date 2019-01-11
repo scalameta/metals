@@ -257,7 +257,6 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
         client.workspaceShowMessages,
         MissingScalafmtVersion.fixedVersion.getMessage
       )
-      _ = assertNoDiff(client.workspaceDiagnostics, "")
       // check file was not formatted because version was missing.
       _ = assertNoDiff(
         server.bufferContent("Main.scala"),
@@ -275,6 +274,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
             |maxColumn=40
             |""".stripMargin
       )
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
 
