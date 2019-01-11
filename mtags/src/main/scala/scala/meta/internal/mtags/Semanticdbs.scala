@@ -6,10 +6,10 @@ import scala.meta.AbsolutePath
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.mtags.SymbolOccurrenceOrdering._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.RelativePath
-import SymbolOccurrenceOrdering._
 
 trait Semanticdbs {
   def textDocument(path: AbsolutePath): TextDocumentLookup

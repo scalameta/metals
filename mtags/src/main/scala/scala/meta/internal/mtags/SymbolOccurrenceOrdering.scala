@@ -1,4 +1,5 @@
 package scala.meta.internal.mtags
+
 import scala.meta.internal.semanticdb.SymbolOccurrence
 
 object SymbolOccurrenceOrdering {
