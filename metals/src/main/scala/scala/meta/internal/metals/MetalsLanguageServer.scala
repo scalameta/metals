@@ -573,12 +573,16 @@ class MetalsLanguageServer(
   def formatting(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CompletableFutures.computeAsync { token =>
-      formattingProvider.format(
-        params.getTextDocument.getUri.toAbsolutePath,
-        token
-      )
-    }
+    CompletableFutures
+      .computeAsync(t => t)
+      .asScala
+      .flatMap { token =>
+        formattingProvider.format(
+          params.getTextDocument.getUri.toAbsolutePath,
+          token
+        )
+      }
+      .asJava
 
   @JsonRequest("textDocument/rename")
   def rename(

@@ -228,10 +228,10 @@ class Messages(icons: Icons) {
     def failedToResolve(message: String): MessageParams = {
       new MessageParams(MessageType.Error, message)
     }
-    def fixedVersion: MessageParams =
+    def fixedVersion(isAgain: Boolean): MessageParams =
       new MessageParams(
         MessageType.Info,
-        "Updated .scalafmt.conf, try formatting again. "
+        s"Updated .scalafmt.conf${MissingScalafmtConf.tryAgain(isAgain)}."
       )
     def isMissingScalafmtVersion(params: ShowMessageRequestParams): Boolean =
       params.getMessage == messageRequestMessage
@@ -262,11 +262,14 @@ class Messages(icons: Icons) {
   }
 
   object MissingScalafmtConf {
+    def tryAgain(isAgain: Boolean): String =
+      if (isAgain) ", try formatting again"
+      else ""
     def createFile = new MessageActionItem("Create .scalafmt.conf")
-    def fixedParams: MessageParams =
+    def fixedParams(isAgain: Boolean): MessageParams =
       new MessageParams(
         MessageType.Info,
-        "Created a .scalafmt.conf, formatting should work now. "
+        s"Created .scalafmt.conf${tryAgain(isAgain)}."
       )
     def isCreateScalafmtConf(params: ShowMessageRequestParams): Boolean =
       params.getMessage == createScalafmtConfMessage
