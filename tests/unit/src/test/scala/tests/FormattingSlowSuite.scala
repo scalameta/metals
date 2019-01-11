@@ -6,6 +6,7 @@ import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.collection.JavaConverters._
+import scala.meta.internal.metals.Messages
 
 object FormattingSlowSuite extends BaseSlowSuite("formatting") {
 
@@ -269,6 +270,55 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
           s"""|version = "${V.scalafmtVersion}"
               |maxColumn=40
               |""".stripMargin
+        )
+      }
+    } yield ()
+  }
+
+  testAsync("version-not-now") {
+    cleanWorkspace()
+    client.showMessageRequestHandler = { params =>
+      if (MissingScalafmtVersion.isMissingScalafmtVersion(params)) {
+        params.getActions.asScala.find(_ == Messages.notNow)
+      } else {
+        None
+      }
+    }
+    for {
+      _ <- server.initialize(
+        """|/.scalafmt.conf
+           |maxColumn=40
+           |/Main.scala
+           |object   Main
+           |""".stripMargin,
+        expectError = true
+      )
+      _ <- server.didOpen("Main.scala")
+      _ <- server.formatting("Main.scala")
+      _ = {
+        assertNoDiff(
+          client.workspaceMessageRequests,
+          MissingScalafmtVersion.messageRequestMessage
+        )
+        assertNoDiff(
+          client.workspaceShowMessages,
+          ""
+        )
+        // check file was not formatted because version is still missing.
+        assertNoDiff(
+          server.bufferContent("Main.scala"),
+          "object   Main"
+        )
+        assertNoDiff(
+          server.textContents(".scalafmt.conf"),
+          "maxColumn=40"
+        )
+        assertNoDiff(
+          client.workspaceDiagnostics,
+          """|.scalafmt.conf:1:1: error: missing setting 'version'. To fix this problem, add the following line to .scalafmt.conf: 'version=2.0.0-RC4'.
+             |maxColumn=40
+             |^^^^^^^^^^^^
+             |""".stripMargin
         )
       }
     } yield ()
