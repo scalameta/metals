@@ -249,32 +249,28 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       )
       _ <- server.didOpen("Main.scala")
       _ <- server.formatting("Main.scala")
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        MissingScalafmtVersion.messageRequestMessage
-      )
-      _ = assertNoDiff(
-        client.workspaceShowMessages,
-        MissingScalafmtVersion.fixedVersion.getMessage
-      )
-      // check file was not formatted because version was missing.
-      _ = assertNoDiff(
-        server.bufferContent("Main.scala"),
-        "object   Main"
-      )
-      _ <- server.formatting("Main.scala")
-      // check file was formatted now that version has been added.
-      _ = assertNoDiff(
-        server.bufferContent("Main.scala"),
-        "object Main\n"
-      )
-      _ = assertNoDiff(
-        server.textContents(".scalafmt.conf"),
-        s"""|version = "${V.scalafmtVersion}"
-            |maxColumn=40
-            |""".stripMargin
-      )
-      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ = {
+        assertNoDiff(
+          client.workspaceMessageRequests,
+          MissingScalafmtVersion.messageRequestMessage
+        )
+        assertNoDiff(
+          client.workspaceShowMessages,
+          MissingScalafmtVersion.fixedVersion(isAgain = false).getMessage
+        )
+        assertNoDiff(client.workspaceDiagnostics, "")
+        // check file was formatted after version was inserted.
+        assertNoDiff(
+          server.bufferContent("Main.scala"),
+          "object Main\n"
+        )
+        assertNoDiff(
+          server.textContents(".scalafmt.conf"),
+          s"""|version = "${V.scalafmtVersion}"
+              |maxColumn=40
+              |""".stripMargin
+        )
+      }
     } yield ()
   }
 

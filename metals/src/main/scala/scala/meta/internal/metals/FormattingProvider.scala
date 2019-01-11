@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import org.scalafmt.interfaces.PositionException
@@ -93,7 +94,9 @@ final class FormattingProvider(
     }
 
     override def missingVersion(config: Path, defaultVersion: String): Unit = {
-      handleMissingVersion(AbsolutePath(config))
+      val promise = Promise[Boolean]()
+      reporterPromise.set(Some(promise))
+      promise.completeWith(handleMissingVersion(AbsolutePath(config)))
       super.missingVersion(config, defaultVersion)
     }
 
@@ -120,34 +123,62 @@ final class FormattingProvider(
     .create(this.getClass.getClassLoader)
     .withReporter(reporter)
     .withDefaultVersion(BuildInfo.scalafmtVersion)
+  private val reporterPromise =
+    new AtomicReference[Option[Promise[Boolean]]](None)
+  private val cancelToken = new AtomicReference[Option[CancelChecker]](None)
+  private def isCancelled: Boolean = cancelToken.get().exists(_.isCancelled)
+  private def reset(token: CancelChecker): Unit = {
+    reporterPromise.get().foreach(_.trySuccess(false))
+    reporterPromise.set(None)
+    cancelToken.set(Some(token))
+  }
 
   def format(
       path: AbsolutePath,
       token: CancelChecker
-  ): util.List[l.TextEdit] = {
+  ): Future[util.List[l.TextEdit]] = {
+    reset(token)
     val input = path.toInputFromBuffers(buffers)
-    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
     if (!scalafmtConf.isFile) {
-      handleMissingFile(scalafmtConf)
-      Collections.emptyList()
+      handleMissingFile(scalafmtConf).map {
+        case true =>
+          runFormat(path, input).asJava
+        case false =>
+          Collections.emptyList[l.TextEdit]()
+      }
     } else {
-      val formatted =
-        scalafmt.format(scalafmtConf.toNIO, path.toNIO, input.text)
+      val result = runFormat(path, input)
       if (token.isCancelled) {
         statusBar.addMessage(
           s"${icons.info}Scalafmt cancelled by editor, try saving file again"
         )
       }
-      if (formatted != input.text) {
-        List(new l.TextEdit(fullDocumentRange, formatted)).asJava
-      } else {
-        Collections.emptyList()
+      reporterPromise.get() match {
+        case Some(promise) =>
+          // Wait until "update .scalafmt.conf" dialogue has completed
+          // before returning future.
+          promise.future.map {
+            case true if !token.isCancelled => runFormat(path, input).asJava
+            case _ => result.asJava
+          }
+        case None =>
+          Future.successful(result.asJava)
       }
     }
   }
 
-  def handleMissingVersion(config: AbsolutePath): Unit = {
-    askScalafmtVersion().foreach {
+  private def runFormat(path: AbsolutePath, input: Input): List[l.TextEdit] = {
+    val fullDocumentRange = Position.Range(input, 0, input.chars.length).toLSP
+    val formatted = scalafmt.format(scalafmtConf.toNIO, path.toNIO, input.text)
+    if (formatted != input.text) {
+      List(new l.TextEdit(fullDocumentRange, formatted))
+    } else {
+      Nil
+    }
+  }
+
+  def handleMissingVersion(config: AbsolutePath): Future[Boolean] = {
+    askScalafmtVersion().map {
       case Some(version) =>
         val text = config.toInputFromBuffers(buffers).text
         val newText =
@@ -155,9 +186,13 @@ final class FormattingProvider(
              |""".stripMargin + text
         Files.write(config.toNIO, newText.getBytes(StandardCharsets.UTF_8))
         clearDiagnostics(config)
-        client.showMessage(MissingScalafmtVersion.fixedVersion)
+        client.showMessage(
+          MissingScalafmtVersion.fixedVersion(isCancelled)
+        )
+        true
       case None =>
         scribe.info("scalafmt: no version provided for .scalafmt.conf")
+        false
     }
   }
 
@@ -181,16 +216,19 @@ final class FormattingProvider(
     }
   }
 
-  def handleMissingFile(path: AbsolutePath): Unit = {
+  def handleMissingFile(path: AbsolutePath): Future[Boolean] = {
     val params = MissingScalafmtConf.params(path)
-    client.showMessageRequest(params).asScala.foreach { item =>
+    client.showMessageRequest(params).asScala.map { item =>
       if (item == MissingScalafmtConf.createFile) {
         val text =
           s"""version = "${BuildInfo.scalafmtVersion}"
              |""".stripMargin
         Files.createDirectories(path.toNIO.getParent)
         Files.write(path.toNIO, text.getBytes(StandardCharsets.UTF_8))
-        client.showMessage(MissingScalafmtConf.fixedParams)
+        client.showMessage(MissingScalafmtConf.fixedParams(isCancelled))
+        true
+      } else {
+        false
       }
     }
   }
