@@ -89,12 +89,7 @@ final class FormattingProvider(
 
     override def parsedConfig(config: Path, scalafmtVersion: String): Unit = {
       downloadingScalafmt.trySuccess(())
-      client.publishDiagnostics(
-        new l.PublishDiagnosticsParams(
-          config.toUri.toString,
-          Collections.emptyList()
-        )
-      )
+      clearDiagnostics(AbsolutePath(config))
     }
 
     override def missingVersion(config: Path, defaultVersion: String): Unit = {
@@ -112,10 +107,19 @@ final class FormattingProvider(
       new PrintWriter(System.out)
     }
   }
+  private def clearDiagnostics(config: AbsolutePath): Unit = {
+    client.publishDiagnostics(
+      new l.PublishDiagnosticsParams(
+        config.toURI.toString,
+        Collections.emptyList()
+      )
+    )
+  }
 
   private val scalafmt = Scalafmt
     .create(this.getClass.getClassLoader)
     .withReporter(reporter)
+    .withDefaultVersion(BuildInfo.scalafmtVersion)
 
   def format(
       path: AbsolutePath,
@@ -142,14 +146,15 @@ final class FormattingProvider(
     }
   }
 
-  def handleMissingVersion(path: AbsolutePath): Unit = {
+  def handleMissingVersion(config: AbsolutePath): Unit = {
     askScalafmtVersion().foreach {
       case Some(version) =>
-        val text = path.toInputFromBuffers(buffers).text
+        val text = config.toInputFromBuffers(buffers).text
         val newText =
           s"""version = "$version"
              |""".stripMargin + text
-        Files.write(path.toNIO, newText.getBytes(StandardCharsets.UTF_8))
+        Files.write(config.toNIO, newText.getBytes(StandardCharsets.UTF_8))
+        clearDiagnostics(config)
         client.showMessage(MissingScalafmtVersion.fixedVersion)
       case None =>
         scribe.info("scalafmt: no version provided for .scalafmt.conf")

@@ -3,6 +3,7 @@ package tests
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
+import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 
 object FormattingSlowSuite extends BaseSlowSuite("formatting") {
 
@@ -221,6 +222,42 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ = assertNoDiff(
         server.bufferContent("project/plugins.sbt"),
         "object Plugins"
+      )
+    } yield ()
+  }
+
+  testAsync("missing-version") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|/.scalafmt.conf
+           |maxColumn=40
+           |/Main.scala
+           |object   Main
+           |""".stripMargin,
+        expectError = true
+      )
+      _ <- server.didOpen("Main.scala")
+      _ <- server.formatting("Main.scala")
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        MissingScalafmtVersion.messageRequestMessage
+      )
+      _ = assertNoDiff(
+        client.workspaceShowMessages,
+        MissingScalafmtVersion.fixedVersion.getMessage
+      )
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      // check file was not formatted because version was missing.
+      _ = assertNoDiff(
+        server.bufferContent("Main.scala"),
+        "object   Main"
+      )
+      _ <- server.formatting("Main.scala")
+      // check file was formatted now that version has been added.
+      _ = assertNoDiff(
+        server.bufferContent("Main.scala"),
+        "object Main\n"
       )
     } yield ()
   }
