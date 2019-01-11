@@ -18,15 +18,12 @@ case class UserConfiguration(
     sbtScript: Option[String] = None,
     scalafmtConfigPath: RelativePath =
       UserConfiguration.default.scalafmtConfigPath,
-    compileOnSave: String = UserConfiguration.default.compileOnSave,
-    syntaxErrors: String = UserConfiguration.default.syntaxErrors
+    compileOnSave: String = UserConfiguration.default.compileOnSave
 ) {
   val isCascadeCompile: Boolean =
     compileOnSave == UserConfiguration.CascadeCompile
   val isCurrentProject: Boolean =
     compileOnSave == UserConfiguration.CurrentProjectCompile
-  val isSyntaxErrorsOnType: Boolean =
-    syntaxErrors == UserConfiguration.SyntaxOnType
 }
 object UserConfiguration {
   def CascadeCompile = "cascade"
@@ -40,7 +37,6 @@ object UserConfiguration {
   object default {
     def scalafmtConfigPath = RelativePath(".scalafmt.conf")
     def compileOnSave = CurrentProjectCompile
-    def syntaxErrors = SyntaxOnType
   }
 
   def options: List[UserConfigurationOption] = List(
@@ -71,25 +67,6 @@ object UserConfiguration {
         |Should be relative to the workspace root directory and use forward slashes / for file
         |separators (even on Windows).
         |""".stripMargin
-    ),
-    UserConfigurationOption(
-      "syntax-errors",
-      default.syntaxErrors,
-      SyntaxOnCompile,
-      "Syntax errors",
-      s"""Whether to publish syntax errors as you type on only during compile.
-         |Syntax errors include problems like missing closing parentheses or unclosed
-         |string literals but they do not include errors like "type mismatch" or "missing implicit".
-         |Possible values:
-         |
-         |- `"$SyntaxOnType"` (default): publish syntax errors as you type on every keystroke.
-         |  The benefit of this option is that it enables fast feedback as you type for easy-to-fix errors.
-         |  The downside of this option is that parse errors can be distracting since you are in the middle
-         |  of typing an incomplete program.
-         |- `"$SyntaxOnCompile"`: publish syntax errors as part of compilation.
-         |  The benefit of this option is that the syntax errors are less distracting but at the cost of slower 
-         |  feedback.
-         |""".stripMargin
     )
   )
 
@@ -134,18 +111,6 @@ object UserConfiguration {
         .getOrElse(default.scalafmtConfigPath)
     val sbtScript =
       getStringKey("sbt-script")
-    val syntaxErrors =
-      getStringKey("syntax-errors") match {
-        case Some(value) =>
-          value match {
-            case SyntaxOnType | SyntaxOnCompile => value
-            case _ =>
-              errors += s"unknown 'syntax-errors': $value"
-              default.syntaxErrors
-          }
-        case _ =>
-          default.syntaxErrors
-      }
     // NOTE(olafur) Not configurable because we should not expose configuration options for
     // experimental features. I was tempted to remove the cascade implementation but
     // decided to keep it instead because I suspect we will need it soon for rename/references.
@@ -157,8 +122,7 @@ object UserConfiguration {
           javaHome,
           sbtScript,
           scalafmtConfigPath,
-          cascadeCompile,
-          syntaxErrors
+          cascadeCompile
         )
       )
     } else {

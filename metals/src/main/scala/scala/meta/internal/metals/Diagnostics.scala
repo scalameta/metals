@@ -64,7 +64,6 @@ final class Diagnostics(
   }
 
   def onNoSyntaxError(path: AbsolutePath): Unit = {
-    if (!config().isSyntaxErrorsOnType) return
     syntaxError.remove(path) match {
       case Some(_) =>
         publishDiagnostics(path) // Remove old syntax error.
@@ -78,7 +77,6 @@ final class Diagnostics(
       pos: m.Position,
       shortMessage: String
   ): Unit = {
-    if (!config().isSyntaxErrorsOnType) return
     syntaxError(path) = new Diagnostic(
       pos.toLSP,
       shortMessage,
@@ -187,28 +185,24 @@ final class Diagnostics(
       d: Diagnostic,
       snapshot: Input
   ): Option[Diagnostic] = {
-    if (config().isSyntaxErrorsOnType) {
-      val result = edit.toRevised(d.getRange).map { range =>
-        new l.Diagnostic(
-          range,
-          d.getMessage,
-          d.getSeverity,
-          d.getSource,
-          d.getCode
-        )
-      }
-      if (result.isEmpty) {
-        val pos = d.getRange.toMeta(snapshot)
-        val message = pos.formatMessage(
-          s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
-          d.getMessage
-        )
-        scribe.info(message)
-      }
-      result
-    } else {
-      Some(d)
+    val result = edit.toRevised(d.getRange).map { range =>
+      new l.Diagnostic(
+        range,
+        d.getMessage,
+        d.getSeverity,
+        d.getSource,
+        d.getCode
+      )
     }
+    if (result.isEmpty) {
+      val pos = d.getRange.toMeta(snapshot)
+      val message = pos.formatMessage(
+        s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
+        d.getMessage
+      )
+      scribe.info(message)
+    }
+    result
   }
 
   private def clearDiagnosticsBuffer(): Iterable[AbsolutePath] = {
