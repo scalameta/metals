@@ -1,9 +1,10 @@
 package scala.meta.internal.metals
 
 final case class StatisticsConfig(value: String) {
-  def isAll: Boolean = value == "all"
-  def isMemory: Boolean = isAll || value.contains("memory")
-  def isDefinition: Boolean = isAll || value.contains("definition")
+  val isAll: Boolean = value == "all"
+  val isMemory: Boolean = isAll || value.contains("memory")
+  val isDefinition: Boolean = isAll || value.contains("definition")
+  val isDiagnostics: Boolean = isAll || value.contains("diagnostics")
 }
 
 object StatisticsConfig {

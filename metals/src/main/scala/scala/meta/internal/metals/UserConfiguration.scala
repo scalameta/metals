@@ -20,20 +20,23 @@ case class UserConfiguration(
       UserConfiguration.default.scalafmtConfigPath,
     compileOnSave: String = UserConfiguration.default.compileOnSave
 ) {
-  def isCascadeCompile: Boolean =
+  val isCascadeCompile: Boolean =
     compileOnSave == UserConfiguration.CascadeCompile
-  def isCurrentProject: Boolean =
+  val isCurrentProject: Boolean =
     compileOnSave == UserConfiguration.CurrentProjectCompile
 }
 object UserConfiguration {
-  val CascadeCompile = "cascade"
-  val CurrentProjectCompile = "current-project"
+  def CascadeCompile = "cascade"
+  def CurrentProjectCompile = "current-project"
   def allCompile: List[String] =
     List(CascadeCompile, CurrentProjectCompile)
 
+  val SyntaxOnCompile = "on-compile"
+  val SyntaxOnType = "on-type"
+
   object default {
-    val scalafmtConfigPath = RelativePath(".scalafmt.conf")
-    val compileOnSave = CurrentProjectCompile
+    def scalafmtConfigPath = RelativePath(".scalafmt.conf")
+    def compileOnSave = CurrentProjectCompile
   }
 
   def options: List[UserConfigurationOption] = List(

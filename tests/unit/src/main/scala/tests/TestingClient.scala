@@ -15,6 +15,7 @@ import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import scala.collection.concurrent.TrieMap
+import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Messages._
@@ -27,6 +28,7 @@ import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.MetalsStatusParams
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.io.AbsolutePath
+import tests.TestOrderings._
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -99,13 +101,21 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     pathDiagnostics(toPath(filename))
   }
   def pathDiagnostics(path: AbsolutePath): String = {
-    val diags = diagnostics.getOrElse(path, Nil)
+    val diags = diagnostics.getOrElse(path, Nil).sortBy(_.getRange)
     val relpath =
       path.toRelative(workspace).toURI(isDirectory = false).toString
     val input =
       path.toInputFromBuffers(buffers).copy(path = relpath)
     val sb = new StringBuilder
     diags.foreach { diag =>
+      val message = formatMessage(diag, input)
+      sb.append(message).append("\n")
+    }
+    sb.toString()
+  }
+
+  private def formatMessage(diag: Diagnostic, input: Input): String =
+    try {
       val start = diag.getRange.getStart
       val end = diag.getRange.getEnd
       val pos = Position.Range(
@@ -119,9 +129,21 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
         diag.getSeverity.toString.toLowerCase(),
         diag.getMessage
       )
-      sb.append(message).append("\n")
+      message
+    } catch {
+      case e: IllegalArgumentException =>
+        val message =
+          s"${diag.getRange.getStart.getLine}:${diag.getRange.getStart.getCharacter} ${diag.getMessage}"
+        scribe.error(message, e)
+        message
     }
-    sb.toString()
+  def workspaceDiagnosticsCount: String = {
+    val paths = diagnosticsCount.keys.toList.sortBy(_.toURI.toString)
+    paths
+      .map { path =>
+        s"${path.toRelative(workspace).toURI(false)}: ${diagnosticsCount(path)}"
+      }
+      .mkString("\n")
   }
   def workspaceDiagnostics: String = {
     val paths = diagnostics.keys.toList.sortBy(_.toURI.toString)

@@ -331,6 +331,12 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
     }
   }
 
+  implicit class XtensionDiagnosticLSP(d: l.Diagnostic) {
+    def formatMessage(uri: String, hint: String): String = {
+      val severity = d.getSeverity.toString.toLowerCase()
+      s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessage}"
+    }
+  }
   implicit class XtensionSeverityBsp(sev: b.DiagnosticSeverity) {
     def toLSP: l.DiagnosticSeverity =
       l.DiagnosticSeverity.forValue(sev.getValue)
@@ -354,6 +360,18 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       new l.Range(range.getStart.toLSP, range.getEnd.toLSP)
   }
 
+  implicit class XtensionLspRange(range: l.Range) {
+    def isOffset: Boolean =
+      range.getStart == range.getEnd
+    def toMeta(input: m.Input): m.Position =
+      m.Position.Range(
+        input,
+        range.getStart.getLine,
+        range.getStart.getCharacter,
+        range.getEnd.getLine,
+        range.getEnd.getCharacter
+      )
+  }
   implicit class XtensionRangeBuildProtocol(range: s.Range) {
     def toLSP: l.Range = {
       val start = new l.Position(range.startLine, range.startCharacter)
@@ -388,7 +406,7 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
         diag.getRange.toLSP,
         fansi.Str(diag.getMessage).plainText,
         diag.getSeverity.toLSP,
-        diag.getSource,
+        if (diag.getSource == null) "scalac" else diag.getSource,
         diag.getCode
       )
   }
