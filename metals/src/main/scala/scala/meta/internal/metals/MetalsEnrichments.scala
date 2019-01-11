@@ -16,6 +16,7 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.convert.DecorateAsJava
 import scala.collection.convert.DecorateAsScala
@@ -431,5 +432,15 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   implicit class XtensionPromise[T](promise: Promise[T]) {
     def cancel(): Unit =
       promise.tryFailure(new CancellationException())
+  }
+  implicit class XtensionCancelChecker(token: CancelChecker) {
+    def isCancelled: Boolean =
+      try {
+        token.checkCanceled()
+        false
+      } catch {
+        case _: CancellationException =>
+          true
+      }
   }
 }

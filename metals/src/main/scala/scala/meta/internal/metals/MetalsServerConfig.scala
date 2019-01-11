@@ -41,6 +41,10 @@ final case class MetalsServerConfig(
       "metals.http",
       default = false
     ),
+    isInputBoxEnabled: Boolean = MetalsServerConfig.binaryOption(
+      "metals.input-box",
+      default = false
+    ),
     isVerbose: Boolean = MetalsServerConfig.binaryOption(
       "metals.verbose",
       default = false
@@ -63,6 +67,7 @@ final case class MetalsServerConfig(
       s"show-message-request=$showMessageRequest",
       s"no-initialized=$isNoInitialized",
       s"http=$isHttpEnabled",
+      s"input-box=$isInputBoxEnabled",
       s"icons=$icons",
       s"statistics=$statistics"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
@@ -84,7 +89,8 @@ object MetalsServerConfig {
           slowTask = SlowTaskConfig.on,
           icons = Icons.vscode,
           executeClientCommand = ExecuteClientCommandConfig.on,
-          globSyntax = GlobSyntaxConfig.vscode
+          globSyntax = GlobSyntaxConfig.vscode,
+          isInputBoxEnabled = true
         )
       case "vim-lsc" =>
         base.copy(

@@ -50,6 +50,13 @@ final class MetalsHttpClient(
     sh: ScheduledExecutorService
 )(implicit ec: ExecutionContext)
     extends MetalsLanguageClient {
+
+  override def metalsInputBox(
+      params: MetalsInputBoxParams
+  ): CompletableFuture[MetalsInputBoxResult] = {
+    CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
+  }
+
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {}

@@ -33,6 +33,17 @@ trait MetalsLanguageClient extends LanguageClient {
   @JsonNotification("metals/executeClientCommand")
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
 
+  /**
+   * Opens an input box to ask the user for input.
+   *
+   * @return the user provided input. The future can be cancelled, meaning
+   *         the input box should be dismissed in the editor.
+   */
+  @JsonRequest("metals/inputBox")
+  def metalsInputBox(
+      params: MetalsInputBoxParams
+  ): CompletableFuture[MetalsInputBoxResult]
+
   def shutdown(): Unit = {}
 
 }
@@ -57,3 +68,24 @@ case class MetalsStatusParams(
 
 case class MetalsSlowTaskParams(message: String)
 case class MetalsSlowTaskResult(cancel: Boolean)
+
+case class MetalsInputBoxParams(
+    // The value to prefill in the input box
+    @Nullable value: String = null,
+    // The text to display underneath the input box.
+    @Nullable prompt: String = null,
+    // An optional string to show as place holder in the input box to guide the user what to type.
+    @Nullable placeholder: String = null,
+    // Set to `true` to show a password prompt that will not show the typed value.
+    @Nullable password: java.lang.Boolean = null,
+    // Set to `true` to keep the input box open when focus moves to another
+    // part of the editor or to another window.
+    @Nullable ignoreFocusOut: java.lang.Boolean = null,
+    @Nullable valueSelection: Array[Int] = null
+)
+
+case class MetalsInputBoxResult(
+    // value=null when cancelled=true
+    @Nullable value: String = null,
+    @Nullable cancelled: java.lang.Boolean = null
+)
