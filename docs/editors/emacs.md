@@ -125,8 +125,7 @@ There is an alternative LSP client called
 [eglot](https://github.com/joaotavora/eglot) that might be worth trying out to
 see if it addresses the issues of lsp-mode.
 
-To configure Eglot with Metals, replace the `lsp-mode`, `lsp-ui`, `lsp-scala`
-sections from the config above with the settings below.
+To configure Eglot with Metals:
 
 ```el
 ;; Add melpa-stable to your packages repositories
