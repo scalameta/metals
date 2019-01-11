@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsSlowTaskResult
@@ -32,6 +33,19 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         assert(fn(status))
       case None =>
         fail(s"missing persisted checksum $checksum", stackBump = 1)
+    }
+  }
+
+  override def testAsync(
+      name: String,
+      maxDuration: Duration
+  )(run: => Future[Unit]): Unit = {
+    if (isAppveyor) {
+      // Skip SbtSlowSuite on Windows because they're flaky due to likely the small
+      // available memory on Appveyor CI machines.
+      ignore(name)(())
+    } else {
+      super.testAsync(name, maxDuration)(run)
     }
   }
 
