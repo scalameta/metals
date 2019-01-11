@@ -327,6 +327,8 @@ final class TestingServer(
     Semanticdbs.printTextDocument(textDocument)
   }
 
+  def textContents(filename: String): String =
+    toPath(filename).toInputFromBuffers(buffers).text
   def bufferContent(filename: String): String =
     buffers
       .get(toPath(filename))

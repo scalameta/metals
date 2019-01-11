@@ -4,6 +4,8 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
+import scala.meta.internal.metals.{BuildInfo => V}
+import scala.collection.JavaConverters._
 
 object FormattingSlowSuite extends BaseSlowSuite("formatting") {
 
@@ -228,6 +230,14 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
 
   testAsync("missing-version") {
     cleanWorkspace()
+    client.showMessageRequestHandler = { params =>
+      if (MissingScalafmtVersion.isMissingScalafmtVersion(params)) {
+        params.getActions.asScala
+          .find(_ == MissingScalafmtVersion.changeVersion)
+      } else {
+        None
+      }
+    }
     for {
       _ <- server.initialize(
         """|/.scalafmt.conf
@@ -258,6 +268,12 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ = assertNoDiff(
         server.bufferContent("Main.scala"),
         "object Main\n"
+      )
+      _ = assertNoDiff(
+        server.textContents(".scalafmt.conf"),
+        s"""|version = "${V.scalafmtVersion}"
+            |maxColumn=40
+            |""".stripMargin
       )
     } yield ()
   }

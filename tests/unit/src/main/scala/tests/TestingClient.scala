@@ -177,8 +177,6 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
           params.getActions.asScala.find(_.getTitle == "Bob").get
         } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
           null
-        } else if (MissingScalafmtVersion.isMissingScalafmtVersion(params)) {
-          params.getActions.get(0)
         } else {
           throw new IllegalArgumentException(params.toString)
         }
