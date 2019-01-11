@@ -35,9 +35,4 @@ object Configs {
     )
   }
 
-  final case class SyntaxErrors(value: String) {
-    def isOnType: Boolean = value == "on-type"
-    def isCompile: Boolean = value == "on-compile"
-  }
-
 }
