@@ -102,7 +102,7 @@ class MetalsLanguageServer(
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = client
     statusBar = new StatusBar(() => languageClient, time, progressTicks)
-    embedded = register(new Embedded(config.icons, statusBar, () => userConfig))
+    embedded = new Embedded(config.icons, statusBar, () => userConfig)
     LanguageClientLogger.languageClient = Some(languageClient)
     cancelables.add(() => languageClient.shutdown())
   }
@@ -169,7 +169,8 @@ class MetalsLanguageServer(
       config,
       config.icons,
       embedded,
-      statusBar
+      statusBar,
+      () => userConfig
     )
     bspServers = new BspServers(
       workspace,

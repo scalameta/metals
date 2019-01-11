@@ -255,7 +255,7 @@ object BloopInstall {
         |  import Defaults.sbtPluginExtra
         |  val oldDependencies = libraryDependencies.value
         |  if (System.getenv("METALS_ENABLED") == "true") {
-        |    val bloopModule = "ch.epfl.scala" % "sbt-bloop" % "${BuildInfo.sbtBloopVersion}"
+        |    val bloopModule = "ch.epfl.scala" % "sbt-bloop" % "${BuildInfo.bloopVersion}"
         |    val metalsModule = "org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"
         |    val sbtVersion = Keys.sbtBinaryVersion.in(pluginCrossBuild).value
         |    val scalaVersion = Keys.scalaBinaryVersion.in(update).value

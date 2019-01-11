@@ -1,13 +1,8 @@
 package scala.meta.internal.metals
 
-import com.geirsson.coursiersmall
-import java.net.URLClassLoader
 import java.nio.file.Files
-import java.util.concurrent.atomic.AtomicBoolean
-import scala.concurrent.Promise
-import scala.concurrent.duration.Duration
+import java.nio.file.Path
 import scala.meta.io.AbsolutePath
-import scala.util.control.NonFatal
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -20,12 +15,19 @@ final class Embedded(
     icons: Icons,
     statusBar: StatusBar,
     userConfig: () => UserConfiguration
-) extends Cancelable {
+) {
 
-  override def cancel(): Unit = {
-    if (isBloopJars.get()) {
-      bloopJars.foreach(_.close())
-    }
+  private lazy val tmp: Path = {
+    val dir = Files.createTempDirectory("metals")
+    dir.toFile.deleteOnExit()
+    dir
+  }
+
+  private def copyResource(name: String): AbsolutePath = {
+    val in = this.getClass.getResourceAsStream(s"/$name")
+    val out = tmp.resolve(name)
+    Files.copy(in, out)
+    AbsolutePath(out)
   }
 
   /**
@@ -35,32 +37,8 @@ final class Embedded(
    * we can't rely on `sbt` resolving correctly when using system processes, at least
    * it failed on Windows when I tried it.
    */
-  lazy val embeddedSbtLauncher: AbsolutePath = {
-    val embeddedLauncher = this.getClass.getResourceAsStream("/sbt-launch.jar")
-    val out = Files.createTempDirectory("metals").resolve("sbt-launch.jar")
-    out.toFile.deleteOnExit()
-    Files.copy(embeddedLauncher, out)
-    AbsolutePath(out)
-  }
-
-  /**
-   * Fetches jars for bloop-frontend and creates a new orphan classloader.
-   */
-  val isBloopJars = new AtomicBoolean(false)
-  lazy val bloopJars: Option[URLClassLoader] = {
-    isBloopJars.set(true)
-    val promise = Promise[Unit]()
-    statusBar.trackFuture(s"${icons.sync}Downloading Bloop", promise.future)
-    try {
-      Some(Embedded.newBloopClassloader())
-    } catch {
-      case NonFatal(e) =>
-        scribe.error("Failed to classload bloop, compilation will not work", e)
-        None
-    } finally {
-      promise.trySuccess(())
-    }
-  }
+  lazy val embeddedSbtLauncher: AbsolutePath =
+    copyResource("sbt-launch.jar")
 
   /**
    * Returns local path to a `bloop.py` script that we can call as `python bloop.py`.
@@ -69,42 +47,13 @@ final class Embedded(
    * available on the PATH of the forked process and that didn't work while testing
    * on Windows (even if `bloop` worked fine in the git bash).
    */
-  lazy val bloopPy: AbsolutePath = {
-    val embeddedBloopClient = this.getClass.getResourceAsStream("/bloop.py")
-    val out = Files.createTempDirectory("metals").resolve("bloop.py")
-    out.toFile.deleteOnExit()
-    Files.copy(embeddedBloopClient, out)
-    AbsolutePath(out)
-  }
+  lazy val bloopPy: AbsolutePath =
+    copyResource("bloop.py")
 
-}
+  /**
+   * The Bloop launcher bootstrap script: https://scalacenter.github.io/bloop/docs/launcher-reference
+   */
+  lazy val embeddedBloopLauncher: AbsolutePath =
+    copyResource("bloop-launch.jar")
 
-object Embedded {
-  private def newBloopClassloader(): URLClassLoader = {
-    val settings = new coursiersmall.Settings()
-      .withTtl(Some(Duration.Inf))
-      .withDependencies(
-        List(
-          new coursiersmall.Dependency(
-            "ch.epfl.scala",
-            "bloop-frontend_2.12",
-            BuildInfo.bloopVersion
-          )
-        )
-      )
-      .addRepositories(
-        List(
-          coursiersmall.Repository.SonatypeReleases,
-          new coursiersmall.Repository.Maven(
-            "https://dl.bintray.com/scalacenter/releases"
-          )
-        )
-      )
-    val jars = coursiersmall.CoursierSmall.fetch(settings)
-    // Don't make Bloop classloader a child or our classloader.
-    val parent: ClassLoader = null
-    val classloader =
-      new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, parent)
-    classloader
-  }
 }

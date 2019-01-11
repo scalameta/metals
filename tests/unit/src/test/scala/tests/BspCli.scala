@@ -63,7 +63,8 @@ object BspCli {
           config,
           icons,
           embedded,
-          statusBar
+          statusBar,
+          () => UserConfiguration()
         )
         try {
           val future = compile(server, targets)

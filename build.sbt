@@ -92,8 +92,7 @@ lazy val V = new {
   val scalameta = "4.1.0"
   val semanticdb = "4.1.0"
   val bsp = "2.0.0-M2"
-  val sbtBloop = "1.1.2"
-  val bloop = "1.1.2"
+  val bloop = "1.2.1"
   val scalafmt = "2.0.0-RC4"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -151,10 +150,6 @@ lazy val metals = project
       // Scala dependencies
       // ==================
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
-      // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "com.geirsson" %% "coursier-small" % "1.3.1",
-      // undeclared transitive dependency of coursier-small
-      "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
       // for handling Java futures
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       // for logging
@@ -172,7 +167,6 @@ lazy val metals = project
       "metalsVersion" -> version.value,
       "bspVersion" -> V.bsp,
       "bloopVersion" -> V.bloop,
-      "sbtBloopVersion" -> V.sbtBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,
@@ -188,7 +182,7 @@ lazy val `sbt-metals` = project
   .settings(
     sbtPlugin := true,
     crossScalaVersions := List(V.scala212, V.scala210),
-    addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % V.sbtBloop),
+    addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % V.bloop),
     sbtVersion in pluginCrossBuild := {
       scalaBinaryVersion.value match {
         case "2.10" => "0.13.17"
@@ -232,8 +226,7 @@ lazy val unit = project
   .settings(
     testSettings,
     libraryDependencies ++= List(
-      "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
-      "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
+      "com.geirsson" %% "coursier-small" % "1.3.1",
       "org.scalameta" %% "symtab" % V.scalameta,
       "org.scalameta" % "metac" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta,
