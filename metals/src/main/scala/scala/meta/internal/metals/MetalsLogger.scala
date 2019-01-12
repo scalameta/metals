@@ -95,4 +95,11 @@ object MetalsLogger {
 
   def defaultFormat = formatter"$levelPaddedRight $message$newLine"
 
+  def silent: LoggerSupport = new LoggerSupport {
+    override def log[M](record: LogRecord[M]): Unit = ()
+  }
+  def default: LoggerSupport = scribe.Logger.root
+  def silentInTests: LoggerSupport =
+    if (MetalsServerConfig.isTesting) silent
+    else default
 }

@@ -20,6 +20,32 @@ There are two options for integrating Metals with a new build tool:
   environment as your current workflow. The downside of this approach is that it
   most likely requires more effort compared to emitting Bloop JSON files.
 
+## Enable SemanticDB
+
+Regardless if you use the Bloop build server or implement a custom build server,
+the [SemanticDB](https://scalameta.org/docs/semanticdb/guide.html) compiler
+plugin is required for Metals code navigation to work. Only limited Metals
+features like diagnostics and code formatting work without the SemanticDB
+compiler plugin enabled.
+
+Make sure to declare the compiler option `"-P:semanticdb:sourceroot:$WORKSPACE"`
+where `$WORKSPACE` is the absolute path to the workspace root directory. By
+default, the sourceroot is inferred from the working directory of the compiler
+process but it's better to explicitly declare it. If the sourceroot is
+misconfigured, then Metals is unable to find the SemanticDB files created by the
+compiler plugin.
+
+## Recommended compiler options
+
+We recommend you update the following compiler options when using Metals:
+
+- `-Xlint`: these warnings are helpful in the editor even if you don't have them
+  enabled in your main build. Consult `scalac -Xlint:help` for a full list of
+  available warnings.
+- `-Xfatal-warnings`: disable this setting even if you have it enabled in your
+  main build. Fatal warnings prevent code navigation from working when there are
+  warnings like 'unused import'.
+
 ## Bloop build server
 
 Consult the

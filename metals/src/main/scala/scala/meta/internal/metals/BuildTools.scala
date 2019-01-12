@@ -73,6 +73,9 @@ final class BuildTools(
     if (isBazel) buf += Bazel
     buf.result()
   }
+  def isEmpty: Boolean = {
+    all.isEmpty
+  }
   override def toString: String = {
     val names = all.mkString("+")
     if (names.isEmpty) "<no build tool>"
