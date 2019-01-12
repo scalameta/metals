@@ -37,7 +37,8 @@ final class DefinitionProvider(
     index: GlobalSymbolIndex,
     semanticdbs: Semanticdbs,
     icons: Icons,
-    statusBar: StatusBar
+    statusBar: StatusBar,
+    warnings: Warnings
 ) {
 
   def definition(
@@ -49,7 +50,7 @@ final class DefinitionProvider(
       case Some(doc) =>
         definitionFromSnapshot(path, params, doc)
       case _ =>
-        statusBar.addMessage(s"${icons.alert} No SemanticDB")
+        warnings.noSemanticdb(path)
         DefinitionResult.empty
     }
   }
