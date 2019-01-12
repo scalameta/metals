@@ -1,10 +1,6 @@
 package tests
-import scala.meta.internal.metals.UserConfiguration
 
 object CurrentProjectCompileSlowSuite extends BaseSlowSuite("current-project") {
-  override def userConfig: UserConfiguration = super.userConfig.copy(
-    compileOnSave = UserConfiguration.CurrentProjectCompile
-  )
   testAsync("basic") {
     for {
       _ <- server.initialize(
