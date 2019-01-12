@@ -87,7 +87,10 @@ object ServerCommands {
     ImportBuild,
     ConnectBuildServer,
     ScanWorkspaceSources,
-    RunDoctor
+    RunDoctor,
+    CascadeCompile,
+    CancelCompile,
+    BspSwitch
   )
 
 }
