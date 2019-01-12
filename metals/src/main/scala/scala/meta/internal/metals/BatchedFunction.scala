@@ -39,9 +39,17 @@ final class BatchedFunction[A, B](
   }
 
   def cancelCurrentRequest(): Unit = {
-    cancelable.get().cancel()
+    current.get().cancelable.cancel()
   }
-  private val cancelable = new AtomicReference(Cancelable.empty)
+  def currentFuture(): Future[B] = {
+    current.get().future
+  }
+  private val current = new AtomicReference(
+    CancelableFuture[B](
+      Future.failed(new NoSuchElementException("BatchedFunction")),
+      Cancelable.empty
+    )
+  )
 
   private val queue = new ConcurrentLinkedQueue[Request]()
   private case class Request(arguments: Seq[A], result: Promise[B])
@@ -80,9 +88,9 @@ final class BatchedFunction[A, B](
       clearQueue(requests)
       if (requests.nonEmpty) {
         val args = requests.flatMap(_.arguments)
-        val CancelableFuture(future, cancelable) = fn(args)
-        this.cancelable.set(cancelable)
-        future.onComplete { response =>
+        val result = fn(args)
+        this.current.set(result)
+        result.future.onComplete { response =>
           unlock()
           requests.foreach(_.result.complete(response))
         }
