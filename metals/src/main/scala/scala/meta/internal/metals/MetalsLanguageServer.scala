@@ -24,6 +24,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -81,6 +82,7 @@ class MetalsLanguageServer(
   // These can't be instantiated until we know the workspace root directory.
   private var bloopInstall: BloopInstall = _
   private var diagnostics: Diagnostics = _
+  private var warnings: Warnings = _
   private var trees: Trees = _
   private var documentSymbolProvider: DocumentSymbolProvider = _
   private var fileSystemSemanticdbs: FileSystemSemanticdbs = _
@@ -129,6 +131,14 @@ class MetalsLanguageServer(
         messages,
         statusBar
       )
+    )
+    warnings = new Warnings(
+      workspace,
+      buildTargets,
+      statusBar,
+      config.icons,
+      buildTools,
+      isCompiling
     )
     diagnostics = new Diagnostics(
       buildTargets,
@@ -192,7 +202,8 @@ class MetalsLanguageServer(
       index,
       semanticdbs,
       config.icons,
-      statusBar
+      statusBar,
+      warnings
     )
     formattingProvider = new FormattingProvider(
       workspace,
@@ -205,6 +216,7 @@ class MetalsLanguageServer(
       config.icons
     )
     doctor = new Doctor(
+      workspace,
       buildTargets,
       config,
       languageClient,
@@ -672,9 +684,7 @@ class MetalsLanguageServer(
     buildTools.asSbt match {
       case None =>
         if (!buildTools.isAutoConnectable) {
-          scribe.warn(
-            s"Skipping build import for unsupported build tool $buildTools"
-          )
+          warnings.noBuildTool()
         }
         Future.successful(BuildChange.None)
       case Some(sbt) =>
@@ -742,7 +752,6 @@ class MetalsLanguageServer(
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     if (!buildTools.isAutoConnectable) {
-      scribe.warn("Unable to automatically connect to build server.")
       Future.successful(BuildChange.None)
     } else if (isUnsupportedJavaVersion) {
       Future.successful(BuildChange.None)
@@ -933,6 +942,7 @@ class MetalsLanguageServer(
       index.addSourceFile(path, Some(dir))
     }
   }
+  private val isCompiling = TrieMap.empty[BuildTargetIdentifier, Boolean]
   private val compileSourceFiles =
     new BatchedFunction[AbsolutePath, Unit](compileSourceFilesUnbatched)
   private def compileSourceFilesUnbatched(
@@ -953,7 +963,12 @@ class MetalsLanguageServer(
               targets
             }
           val params = new CompileParams(allTargets.asJava)
-          build.compile(params).asScala.ignoreValue
+          targets.foreach(target => isCompiling(target) = true)
+          build
+            .compile(params)
+            .asScala
+            .map(_ => isCompiling.clear())
+            .ignoreValue
         }
       case _ =>
         Future.successful(())

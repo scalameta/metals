@@ -24,6 +24,7 @@ import utest.ufansi.Str
  */
 class BaseSuite extends TestSuite {
   MetalsLogger.updateDefaultFormat()
+  System.setProperty("metals.testing", "true")
   def isAppveyor: Boolean = "True" == System.getenv("APPVEYOR")
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
