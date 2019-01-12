@@ -37,6 +37,7 @@ final class BloopServers(
     val bloopLauncher = embedded.embeddedBloopLauncher
     val args = List[String](
       JavaBinary(userConfig().javaHome),
+      "-Djna.nosys=true",
       "-jar",
       bloopLauncher.toString(),
       BuildInfo.bloopVersion
