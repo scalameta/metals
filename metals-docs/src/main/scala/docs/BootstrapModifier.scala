@@ -27,8 +27,7 @@ class BootstrapModifier extends StringModifier {
            |  --java-opt -XX:+UseG1GC \\
            |  --java-opt -XX:+UseStringDeduplication  \\
            |  --java-opt -Xss4m \\
-           |  --java-opt -Xms1G \\
-           |  --java-opt -Xmx4G  \\
+           |  --java-opt -Xms100m \\
            |  --java-opt -Dmetals.client=$client \\
            |  org.scalameta:metals_2.12:${Docs.release.version} \\
            |  -r bintray:scalacenter/releases \\
