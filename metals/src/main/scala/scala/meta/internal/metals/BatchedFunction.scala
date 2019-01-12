@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -16,7 +17,7 @@ import scala.util.control.NonFatal
  *           aggregated requests with the aggregated response.
  */
 final class BatchedFunction[A, B](
-    fn: Seq[A] => Future[B]
+    fn: Seq[A] => CancelableFuture[B]
 )(implicit ec: ExecutionContext)
     extends (Seq[A] => Future[B]) {
 
@@ -36,6 +37,11 @@ final class BatchedFunction[A, B](
     runAcquire()
     promise.future
   }
+
+  def cancelCurrentRequest(): Unit = {
+    cancelable.get().cancel()
+  }
+  private val cancelable = new AtomicReference(Cancelable.empty)
 
   private val queue = new ConcurrentLinkedQueue[Request]()
   private case class Request(arguments: Seq[A], result: Promise[B])
@@ -74,7 +80,9 @@ final class BatchedFunction[A, B](
       clearQueue(requests)
       if (requests.nonEmpty) {
         val args = requests.flatMap(_.arguments)
-        fn(args).onComplete { response =>
+        val CancelableFuture(future, cancelable) = fn(args)
+        this.cancelable.set(cancelable)
+        future.onComplete { response =>
           unlock()
           requests.foreach(_.result.complete(response))
         }
@@ -88,4 +96,12 @@ final class BatchedFunction[A, B](
         scribe.error(s"Unexpected error releasing buffered job", e)
     }
   }
+}
+
+object BatchedFunction {
+  def fromFuture[A, B](fn: Seq[A] => Future[B])(
+      implicit ec: ExecutionContext,
+      dummy: DummyImplicit
+  ): BatchedFunction[A, B] =
+    new BatchedFunction(fn.andThen(CancelableFuture(_)))
 }
