@@ -3,9 +3,12 @@ package scala.meta.internal.metals
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.ExecuteCommandParams
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersions._
+import scala.meta.io.AbsolutePath
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -13,6 +16,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
  * At the moment, the doctor only validates that SemanticDB is enabled for all projects.
  */
 final class Doctor(
+    workspace: AbsolutePath,
     buildTargets: BuildTargets,
     config: MetalsServerConfig,
     languageClient: MetalsLanguageClient,
@@ -97,23 +101,11 @@ final class Doctor(
         () // All OK.
     }
   }
-  private val isSupportedScalaVersion = BuildInfo.supportedScalaVersions.toSet
-  private def isSupportedScalaBinaryVersion(scalaVersion: String): Boolean =
-    Set("2.12", "2.11").exists { binaryVersion =>
-      scalaVersion.startsWith(binaryVersion)
-    }
-
-  private val isLatestScalaVersion: Set[String] =
-    Set(BuildInfo.scala212, BuildInfo.scala211)
-
-  private def recommendedVersion(scalaVersion: String): String = {
-    if (scalaVersion.startsWith("2.11")) BuildInfo.scala211
-    else BuildInfo.scala212
-  }
 
   private def recommendation(
       scalaVersion: String,
-      isSemanticdbEnabled: Boolean
+      isSemanticdbEnabled: Boolean,
+      scala: ScalaTarget
   ): String = {
     if (!isSemanticdbEnabled) {
       if (isSupportedScalaVersion(scalaVersion)) {
@@ -126,10 +118,21 @@ final class Doctor(
           s"Scala ${BuildInfo.scala212} or ${BuildInfo.scala211} and " +
           s"run 'Build import' to enable code navigation."
       }
-    } else if (!isLatestScalaVersion(scalaVersion)) {
-      s"Upgrade to Scala ${recommendedVersion(scalaVersion)} to enjoy the latest compiler improvements."
     } else {
-      ""
+      val messages = ListBuffer.empty[String]
+      if (!isLatestScalaVersion(scalaVersion)) {
+        messages += s"Upgrade to Scala ${recommendedVersion(scalaVersion)} to enjoy the latest compiler improvements."
+      }
+      if (!scala.scalac.isSourcerootDeclared) {
+        messages += s"Add the compiler option ${workspace.sourcerootOption} to ensure code navigation works."
+      }
+      messages.toList match {
+        case Nil => ""
+        case head :: Nil => head
+        case _ =>
+          val html = new HtmlBuilder()
+          html.unorderedList(messages)(html.text).toString
+      }
     }
   }
 
@@ -197,7 +200,7 @@ final class Doctor(
           .element("td", center)(_.text(Icons.unicode.check))
           .element("td", center)(_.text(navigation))
           .element("td")(
-            _.text(recommendation(scalaVersion, isSemanticdbEnabled))
+            _.text(recommendation(scalaVersion, isSemanticdbEnabled, target))
           )
       )
     }

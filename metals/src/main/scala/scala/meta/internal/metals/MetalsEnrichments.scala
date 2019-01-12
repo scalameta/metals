@@ -198,6 +198,8 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
+    def sourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
+
     /**
      * Resolve each path segment individually to prevent jjkjjk
      */
@@ -416,6 +418,16 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
   implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
+    def isSemanticdbEnabled: Boolean =
+      item.getOptions.asScala.exists { opt =>
+        opt.startsWith("-Xplugin:") && opt
+          .contains("semanticdb-scalac")
+      }
+    def isSourcerootDeclared: Boolean = {
+      item.getOptions.asScala.exists { option =>
+        option.startsWith("-P:semanticdb:sourceroot")
+      }
+    }
     def isJVM: Boolean = {
       // FIXME: https://github.com/scalacenter/bloop/issues/700
       !item.getOptions.asScala.exists(_.isNonJVMPlatformOption)
