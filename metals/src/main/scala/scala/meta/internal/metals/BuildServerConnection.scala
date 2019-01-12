@@ -9,6 +9,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -78,7 +79,8 @@ object BuildServerConnection {
       output: OutputStream,
       input: InputStream,
       onShutdown: List[Cancelable],
-      name: String
+      name: String,
+      sh: ScheduledExecutorService
   )(implicit ec: ExecutionContextExecutorService): BuildServerConnection = {
     val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
     val launcher = new Launcher.Builder[MetalsBuildServer]()
@@ -91,7 +93,7 @@ object BuildServerConnection {
       .create()
     val listening = launcher.startListening()
     val server = launcher.getRemoteProxy
-    val result = BuildServerConnection.initialize(workspace, server)
+    val result = BuildServerConnection.initialize(workspace, server, name, sh)
     val stopListening =
       Cancelable(() => listening.cancel(true))
     BuildServerConnection(
@@ -107,7 +109,9 @@ object BuildServerConnection {
   /** Run build/initialize handshake */
   private def initialize(
       workspace: AbsolutePath,
-      server: MetalsBuildServer
+      server: MetalsBuildServer,
+      name: String,
+      sh: ScheduledExecutorService
   ): InitializeBuildResult = {
     val initializeResult = server.buildInitialize(
       new InitializeBuildParams(
@@ -120,15 +124,23 @@ object BuildServerConnection {
         )
       )
     )
+    val timer = new Timer(Time.system)
+    val waiting = sh.scheduleAtFixedRate({ () =>
+      scribe.info(
+        s"waiting for build server $name to respond to initialize handshake ($timer)"
+      )
+    }, 10, 5, TimeUnit.SECONDS)
     // Block on the `build/initialize` request because it should respond instantly
     // and we want to fail fast if the connection is not
     val result =
       try {
-        initializeResult.get(15, TimeUnit.SECONDS)
+        initializeResult.get(1, TimeUnit.MINUTES)
       } catch {
         case e: TimeoutException =>
           scribe.error("Timeout waiting for 'build/initialize' response")
           throw e
+      } finally {
+        waiting.cancel(true)
       }
     server.onBuildInitialized()
     result

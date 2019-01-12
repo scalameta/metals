@@ -61,7 +61,8 @@ final class BloopServers(
       new QuietOutputStream(process.getOutputStream, "bloop-launch.jar"),
       process.getInputStream,
       List(Cancelable(() => process.destroy())),
-      "Bloop"
+      "Bloop",
+      sh
     )
     Some(server)
   }

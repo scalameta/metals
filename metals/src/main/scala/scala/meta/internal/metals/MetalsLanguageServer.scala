@@ -178,7 +178,8 @@ class MetalsLanguageServer(
       languageClient,
       buildClient,
       tables,
-      bspGlobalDirectories
+      bspGlobalDirectories,
+      sh
     )
     semanticdbs = AggregateSemanticdbs(
       List(

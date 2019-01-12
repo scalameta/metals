@@ -7,6 +7,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.security.MessageDigest
+import java.util.concurrent.ScheduledExecutorService
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.internal.io.FileIO
@@ -28,7 +29,8 @@ final class BspServers(
     client: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
     tables: Tables,
-    bspGlobalInstallDirectories: List[AbsolutePath]
+    bspGlobalInstallDirectories: List[AbsolutePath],
+    sh: ScheduledExecutorService
 )(implicit ec: ExecutionContextExecutorService) {
 
   def newServer(): Future[Option[BuildServerConnection]] = {
@@ -74,7 +76,8 @@ final class BspServers(
       List(
         Cancelable(() => process.destroy())
       ),
-      details.getName
+      details.getName,
+      sh
     )
   }
 
