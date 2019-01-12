@@ -63,10 +63,7 @@ object ServerCommands {
   val CancelCompile = Command(
     "compile-cancel",
     "Cancel compilation",
-    """|Cancel any ongoing compilation.
-       |
-       |This command
-       |""".stripMargin
+    """Cancel the currently ongoing compilation, if any."""
   )
 
   val BspSwitch = Command(
