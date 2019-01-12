@@ -22,7 +22,7 @@ before_build:
       -Dfile.encoding=UTF-8
       "@ > ".jvmopts"
 build_script:
-  - metals\src\main\resources\bloop-launch.jar --skip-bsp-connection 1.2.1
+  - java -jar metals\src\main\resources\bloop-launch.jar --skip-bsp-connection 1.2.1
   - sbt publishLocal
 test_script:
   - sbt test
