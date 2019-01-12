@@ -18,7 +18,6 @@ jobs:
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt test"
       script:
-        - ./metals/src/main/resources/bloop-launch.jar --skip-bsp-connection 1.2.1
         - sbt sbt-metals/publishLocal test
     - stage: release
       script: sbt ci-release docs/docusaurusPublishGhpages

@@ -124,7 +124,7 @@ object BuildServerConnection {
     // and we want to fail fast if the connection is not
     val result =
       try {
-        initializeResult.get(30, TimeUnit.SECONDS)
+        initializeResult.get(15, TimeUnit.SECONDS)
       } catch {
         case e: TimeoutException =>
           scribe.error("Timeout waiting for 'build/initialize' response")
