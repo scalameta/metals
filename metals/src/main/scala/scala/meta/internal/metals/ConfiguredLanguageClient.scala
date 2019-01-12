@@ -54,9 +54,7 @@ final class ConfiguredLanguageClient(
     if (config.statusBar.isOn) {
       underlying.metalsStatus(params)
     } else if (config.statusBar.isLogMessage && !pendingShowMessage.get()) {
-      if (params.text.nonEmpty) {
-        logMessage(new MessageParams(MessageType.Info, params.text))
-      }
+      underlying.logMessage(new MessageParams(MessageType.Log, params.text))
     } else {
       ()
     }
