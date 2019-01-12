@@ -679,6 +679,7 @@ class MetalsLanguageServer(
         Future {
           compileSourceFiles.cancelCurrentRequest()
           cascadeCompileSourceFiles.cancelCurrentRequest()
+          scribe.info("compilation cancelled")
         }.asJavaObject
       case els =>
         scribe.error(s"Unknown command '$els'")
@@ -950,11 +951,11 @@ class MetalsLanguageServer(
     }
   }
   private val isCompiling = TrieMap.empty[BuildTargetIdentifier, Boolean]
-  private val cascadeCompileSourceFiles =
+  val cascadeCompileSourceFiles =
     new BatchedFunction[AbsolutePath, Unit](
       paths => compileSourceFilesUnbatched(paths, isCascade = true)
     )
-  private val compileSourceFiles =
+  val compileSourceFiles =
     new BatchedFunction[AbsolutePath, Unit](
       paths => compileSourceFilesUnbatched(paths, isCascade = false)
     )
