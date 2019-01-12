@@ -137,6 +137,7 @@ class MetalsLanguageServer(
       buildTargets,
       statusBar,
       config.icons,
+      buildTools,
       isCompiling
     )
     diagnostics = new Diagnostics(
@@ -683,9 +684,7 @@ class MetalsLanguageServer(
     buildTools.asSbt match {
       case None =>
         if (!buildTools.isAutoConnectable) {
-          scribe.warn(
-            s"Skipping build import for unsupported build tool $buildTools"
-          )
+          warnings.noBuildTool()
         }
         Future.successful(BuildChange.None)
       case Some(sbt) =>
@@ -753,7 +752,6 @@ class MetalsLanguageServer(
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     if (!buildTools.isAutoConnectable) {
-      scribe.warn("Unable to automatically connect to build server.")
       Future.successful(BuildChange.None)
     } else if (isUnsupportedJavaVersion) {
       Future.successful(BuildChange.None)

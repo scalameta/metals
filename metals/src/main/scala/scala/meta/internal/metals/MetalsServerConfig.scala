@@ -53,6 +53,10 @@ final case class MetalsServerConfig(
       "metals.h2.auto-server",
       default = true
     ),
+    isWarningsEnabled: Boolean = MetalsServerConfig.binaryOption(
+      "metals.warnings",
+      default = true
+    ),
     icons: Icons = Icons.default,
     statistics: StatisticsConfig = StatisticsConfig.default
 ) {
@@ -73,6 +77,7 @@ final case class MetalsServerConfig(
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
+  def isTesting: Boolean = "true" == System.getProperty("metals.testing")
   private def binaryOption(key: String, default: Boolean): Boolean =
     System.getProperty(key) match {
       case "true" | "on" => true
