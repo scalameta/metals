@@ -38,11 +38,14 @@ au BufRead,BufNewFile *.sbt set filetype=scala
 " Configuration for vim-lsc
 let g:lsc_enable_autocomplete = v:false
 let g:lsc_server_commands = {
-  \ 'scala': 'metals-vim'
+  \  'scala': {
+  \    'command': 'metals-vim',
+  \    'log_level': 'Log'
+  \  }
   \}
 let g:lsc_auto_map = {
-    \ 'GoToDefinition': 'gd',
-    \}
+  \  'GoToDefinition': 'gd',
+  \}
 ```
 
 Run `:PlugInstall` to install the plugin. If you already have `vim-lsc`
