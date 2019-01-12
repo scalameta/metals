@@ -138,7 +138,7 @@ class MetalsLanguageServer(
       statusBar,
       config.icons,
       buildTools,
-      isCompiling
+      isCompiling.contains
     )
     diagnostics = new Diagnostics(
       buildTargets,
@@ -432,7 +432,7 @@ class MetalsLanguageServer(
     interactiveSemanticdbs.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
-    if (userConfig.isCascadeCompile || openedFiles.isRecentlyActive(path)) {
+    if (openedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(())
     } else {
       compileSourceFiles(List(path)).asJava
@@ -673,6 +673,14 @@ class MetalsLanguageServer(
         } yield ()).asJavaObject
       case ServerCommands.OpenBrowser(url) =>
         Future.successful(Urls.openBrowser(url)).asJavaObject
+      case ServerCommands.CascadeCompile() =>
+        cascadeCompileSourceFiles(buffers.open.toSeq).asJavaObject
+      case ServerCommands.CancelCompile() =>
+        Future {
+          compileSourceFiles.cancelCurrentRequest()
+          cascadeCompileSourceFiles.cancelCurrentRequest()
+          scribe.info("compilation cancelled")
+        }.asJavaObject
       case els =>
         scribe.error(s"Unknown command '$els'")
         Future.successful(()).asJavaObject
@@ -783,7 +791,7 @@ class MetalsLanguageServer(
             scribe.info(s"memory: ${Memory.footprint(index)}")
           }
         }
-        _ <- compileSourceFiles(buffers.open.toSeq)
+        _ <- cascadeCompileSourceFiles(buffers.open.toSeq)
       } yield BuildChange.Reconnected
     }
   }.recover {
@@ -943,35 +951,44 @@ class MetalsLanguageServer(
     }
   }
   private val isCompiling = TrieMap.empty[BuildTargetIdentifier, Boolean]
-  private val compileSourceFiles =
-    new BatchedFunction[AbsolutePath, Unit](compileSourceFilesUnbatched)
+  val cascadeCompileSourceFiles =
+    new BatchedFunction[AbsolutePath, Unit](
+      paths => compileSourceFilesUnbatched(paths, isCascade = true)
+    )
+  val compileSourceFiles =
+    new BatchedFunction[AbsolutePath, Unit](
+      paths => compileSourceFilesUnbatched(paths, isCascade = false)
+    )
   private def compileSourceFilesUnbatched(
-      paths: Seq[AbsolutePath]
-  ): Future[Unit] = {
+      paths: Seq[AbsolutePath],
+      isCascade: Boolean
+  ): CancelableFuture[Unit] = {
     val scalaPaths = paths.filter(_.isScalaOrJava)
     buildServer match {
       case Some(build) if scalaPaths.nonEmpty =>
         val targets = scalaPaths.flatMap(buildTargets.inverseSources).distinct
         if (targets.isEmpty) {
           scribe.warn(s"no build target: ${scalaPaths.mkString("\n  ")}")
-          Future.successful(())
+          Future.successful(()).asCancelable
         } else {
           val allTargets =
-            if (userConfig.isCascadeCompile) {
+            if (isCascade) {
               targets.flatMap(buildTargets.inverseDependencies).distinct
             } else {
               targets
             }
           val params = new CompileParams(allTargets.asJava)
           targets.foreach(target => isCompiling(target) = true)
-          build
-            .compile(params)
-            .asScala
-            .map(_ => isCompiling.clear())
-            .ignoreValue
+          val completableFuture = build.compile(params)
+          CancelableFuture(
+            completableFuture.asScala
+              .map(_ => isCompiling.clear())
+              .ignoreValue,
+            Cancelable(() => completableFuture.cancel(true))
+          )
         }
       case _ =>
-        Future.successful(())
+        Future.successful(()).asCancelable
     }
   }
 
@@ -979,7 +996,9 @@ class MetalsLanguageServer(
    * Re-imports the sbt build if build files have changed.
    */
   private val onSbtBuildChanged =
-    new BatchedFunction[AbsolutePath, BuildChange](onSbtBuildChangedUnbatched)
+    BatchedFunction.fromFuture[AbsolutePath, BuildChange](
+      onSbtBuildChangedUnbatched
+    )
   private def onSbtBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[BuildChange] = {

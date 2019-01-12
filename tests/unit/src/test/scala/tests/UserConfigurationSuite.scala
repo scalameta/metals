@@ -59,7 +59,6 @@ object UserConfigurationSuite extends BaseSuite {
   ) { obtained =>
     assert(obtained.javaHome == Some("home"))
     assert(obtained.sbtScript == Some("script"))
-    assert(obtained.isCurrentProject)
   }
 
   checkOK(
@@ -71,10 +70,6 @@ object UserConfigurationSuite extends BaseSuite {
     assert(
       obtained.scalafmtConfigPath ==
         UserConfiguration.default.scalafmtConfigPath
-    )
-    assert(
-      obtained.compileOnSave ==
-        UserConfiguration.default.compileOnSave
     )
   }
 
