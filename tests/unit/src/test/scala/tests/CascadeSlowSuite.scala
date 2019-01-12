@@ -1,11 +1,8 @@
 package tests
 
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.ServerCommands
 
 object CascadeSlowSuite extends BaseSlowSuite("cascade") {
-  override def userConfig: UserConfiguration = super.userConfig.copy(
-    compileOnSave = UserConfiguration.CascadeCompile
-  )
   testAsync("basic") {
     for {
       _ <- server.initialize(
@@ -34,7 +31,9 @@ object CascadeSlowSuite extends BaseSlowSuite("cascade") {
         """.stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      // Check that opening file A.scala triggers compile in dependent project "b"
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ <- server.executeCommand(ServerCommands.CascadeCompile.id)
+      // Check that cascade compile triggers compile in dependent project "b"
       // but not independent project "c".
       _ = assertNoDiff(
         client.workspaceDiagnostics,

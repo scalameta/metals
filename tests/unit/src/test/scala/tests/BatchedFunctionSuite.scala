@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object BatchedFunctionSuite extends BaseSuite {
   testAsync("batch") {
     val lock = new Object
-    val mkString = new BatchedFunction[String, String]({ numbers =>
+    val mkString = BatchedFunction.fromFuture[String, String]({ numbers =>
       Future {
         lock.synchronized {
           numbers.mkString

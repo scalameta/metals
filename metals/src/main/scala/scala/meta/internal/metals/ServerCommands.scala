@@ -48,6 +48,24 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val CascadeCompile = Command(
+    "compile-cascade",
+    "Cascade compile",
+    """|Compile the current file along with all build targets in this workspace that depend on it.
+       |
+       |By default, Metals compiles only the current build target and its dependencies when saving a file.
+       |Run the cascade compile task to additionally compile the inverse dependencies of the current build target.
+       |For example, if you change the API in main sources and run cascade compile then it will also compile the
+       |test sources that depend on main.
+       |""".stripMargin
+  )
+
+  val CancelCompile = Command(
+    "compile-cancel",
+    "Cancel compilation",
+    """Cancel the currently ongoing compilation, if any."""
+  )
+
   val BspSwitch = Command(
     "bsp-switch",
     "Switch build server",
@@ -69,7 +87,10 @@ object ServerCommands {
     ImportBuild,
     ConnectBuildServer,
     ScanWorkspaceSources,
-    RunDoctor
+    RunDoctor,
+    CascadeCompile,
+    CancelCompile,
+    BspSwitch
   )
 
 }

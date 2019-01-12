@@ -17,14 +17,8 @@ case class UserConfiguration(
     javaHome: Option[String] = None,
     sbtScript: Option[String] = None,
     scalafmtConfigPath: RelativePath =
-      UserConfiguration.default.scalafmtConfigPath,
-    compileOnSave: String = UserConfiguration.default.compileOnSave
-) {
-  val isCascadeCompile: Boolean =
-    compileOnSave == UserConfiguration.CascadeCompile
-  val isCurrentProject: Boolean =
-    compileOnSave == UserConfiguration.CurrentProjectCompile
-}
+      UserConfiguration.default.scalafmtConfigPath
+)
 object UserConfiguration {
   def CascadeCompile = "cascade"
   def CurrentProjectCompile = "current-project"
@@ -111,18 +105,13 @@ object UserConfiguration {
         .getOrElse(default.scalafmtConfigPath)
     val sbtScript =
       getStringKey("sbt-script")
-    // NOTE(olafur) Not configurable because we should not expose configuration options for
-    // experimental features. I was tempted to remove the cascade implementation but
-    // decided to keep it instead because I suspect we will need it soon for rename/references.
-    val cascadeCompile = default.compileOnSave
 
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
           javaHome,
           sbtScript,
-          scalafmtConfigPath,
-          cascadeCompile
+          scalafmtConfigPath
         )
       )
     } else {
