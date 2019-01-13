@@ -47,6 +47,8 @@ package scala.meta.metals {
             "-Xfatal-warnings"
           ),
           scalacOptions.in(p) ++= List(
+            // Needed for "find references" on implicits and `apply` methods.
+            s"-P:semanticdb:synthetics:on",
             // Don't fail compilation in case of Scalameta crash during SemanticDB generation.
             s"-P:semanticdb:failures:warning",
             // The bloop server runs from a different working directory than the scala compiler

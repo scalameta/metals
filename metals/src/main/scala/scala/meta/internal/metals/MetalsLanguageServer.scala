@@ -7,6 +7,7 @@ import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import ch.epfl.scala.bsp4j.SourcesParams
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
+import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.Charset
@@ -71,7 +72,7 @@ class MetalsLanguageServer(
   private val languageClient =
     new DelegatingLanguageClient(NoopLanguageClient, config)
   var userConfig = UserConfiguration()
-  private val buildTargets: BuildTargets = new BuildTargets()
+  val buildTargets: BuildTargets = new BuildTargets()
   private val fileEvents = register(
     new FileEvents(
       buildTargets,
@@ -95,6 +96,7 @@ class MetalsLanguageServer(
   private var definitionProvider: DefinitionProvider = _
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
+  private var referencesProvider: ReferenceProvider = _
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _
@@ -215,6 +217,12 @@ class MetalsLanguageServer(
       statusBar,
       config.icons
     )
+    referencesProvider = new ReferenceProvider(
+      workspace,
+      semanticdbs,
+      buffers,
+      definitionProvider
+    )
     doctor = new Doctor(
       workspace,
       buildTargets,
@@ -251,6 +259,7 @@ class MetalsLanguageServer(
         )
       )
       capabilities.setDefinitionProvider(true)
+      capabilities.setReferencesProvider(true)
       capabilities.setDocumentSymbolProvider(true)
       capabilities.setDocumentFormattingProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
@@ -500,6 +509,17 @@ class MetalsLanguageServer(
     val path = AbsolutePath(event.path())
     if (!savedFiles.isRecentlyActive(path) && path.isScalaOrJava) {
       onChange(List(path))
+    } else if (path.isSemanticdb) {
+      CompletableFuture.completedFuture {
+        event.eventType() match {
+          case EventType.DELETE =>
+            referencesProvider.onDelete(event.path())
+          case EventType.CREATE | EventType.MODIFY =>
+            referencesProvider.onChange(event.path())
+          case EventType.OVERFLOW =>
+            referencesProvider.onChange(event.path())
+        }
+      }
     } else {
       CompletableFuture.completedFuture(())
     }
@@ -607,12 +627,67 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/references")
   def references(
-      position: ReferenceParams
+      params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/references is not supported.")
-      null
+      timedThunk("references", config.statistics.isReferences) {
+        val result = referencesResult(params)
+        if (result.symbol.nonEmpty) {
+          compileAndLookForNewReferfences(params, result)
+        }
+        result.locations.asJava
+      }
     }
+
+  // Triggers a cascade compilation and tries to find new references to a given symbol.
+  // It's not possible to stream reference results so if we find new symbols we notify the
+  // user to run references again to see updated results.
+  private def compileAndLookForNewReferfences(
+      params: ReferenceParams,
+      result: ReferencesResult
+  ): Unit = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val old = path.toInputFromBuffers(buffers)
+    cascadeCompileSourceFiles(Seq(path)).foreach { _ =>
+      val newBuffer = path.toInputFromBuffers(buffers)
+      val newParams: Option[ReferenceParams] =
+        if (newBuffer.text == old.text) Some(params)
+        else {
+          val edit = TokenEditDistance(old, newBuffer)
+          edit
+            .toRevised(
+              params.getPosition.getLine,
+              params.getPosition.getCharacter
+            )
+            .foldResult(
+              pos => {
+                params.getPosition.setLine(pos.startLine)
+                params.getPosition.setCharacter(pos.startColumn)
+                Some(params)
+              },
+              () => Some(params),
+              () => None
+            )
+        }
+      newParams match {
+        case None =>
+        case Some(p) =>
+          val newResult = referencesResult(p)
+          val diff = newResult.locations.length - result.locations.length
+          val isSameSymbol = newResult.symbol == result.symbol
+          if (isSameSymbol && diff > 0) {
+            import scala.meta.internal.semanticdb.Scala._
+            val name = newResult.symbol.desc.name.value
+            val message =
+              s"Found new symbol references for '$name', try running again."
+            scribe.info(message)
+            statusBar.addMessage(config.icons.info + message)
+          }
+      }
+    }
+  }
+  def referencesResult(params: ReferenceParams): ReferencesResult =
+    referencesProvider.references(params)
 
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
@@ -788,7 +863,13 @@ class MetalsLanguageServer(
         _ = {
           statusBar.addMessage(s"${config.icons.rocket}Imported build!")
           if (config.statistics.isMemory) {
-            scribe.info(s"memory: ${Memory.footprint(index)}")
+            val definition =
+              Memory.footprint("definition index", index)
+            val referenceIndex = ReferenceIndex(referencesProvider.index)
+            val references =
+              Memory.footprint("references index", referenceIndex)
+            scribe.info(s"memory: $definition")
+            scribe.info(s"memory: $references")
           }
         }
         _ <- cascadeCompileSourceFiles(buffers.open.toSeq)
@@ -890,6 +971,7 @@ class MetalsLanguageServer(
         JdkSources(userConfig.javaHome).foreach { zip =>
           index.addSourceJar(zip)
         }
+        referencesProvider.onScalacOptions(scalacOptions)
         doctor.check()
       }
       _ <- registerSourceDirectories(build, ids)

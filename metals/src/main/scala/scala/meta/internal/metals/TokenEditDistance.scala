@@ -291,6 +291,16 @@ object TokenEditDistance {
     }
   }
 
+  def fromBuffer(
+      source: AbsolutePath,
+      snapshot: String,
+      buffers: Buffers
+  ): TokenEditDistance = {
+    val bufferInput = source.toInputFromBuffers(buffers)
+    val snapshotInput = Input.VirtualFile(bufferInput.path, snapshot)
+    TokenEditDistance(snapshotInput, bufferInput)
+  }
+
   /** Compare tokens only by their text and token category. */
   private object TokenEqualizer extends Equalizer[Token] {
     override def equals(original: Token, revised: Token): Boolean =

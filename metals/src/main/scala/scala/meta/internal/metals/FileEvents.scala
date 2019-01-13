@@ -9,6 +9,7 @@ import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
 
 /**
  * Handles file watching of interesting files in this build.
@@ -48,11 +49,15 @@ final class FileEvents(
 
   def restart(): Unit = {
     val paths = new util.ArrayList[Path]()
-    buildTargets.sourceDirectories.foreach { dir =>
+    def addDirectory(dir: AbsolutePath): Unit = {
       if (!dir.isDirectory) {
         dir.createDirectories()
       }
       paths.add(dir.toNIO)
+    }
+    buildTargets.sourceDirectories.foreach(addDirectory)
+    buildTargets.scalacOptions.foreach { item =>
+      addDirectory(item.targetroot.resolve(Directories.semanticdb))
     }
     startWatching(paths)
   }

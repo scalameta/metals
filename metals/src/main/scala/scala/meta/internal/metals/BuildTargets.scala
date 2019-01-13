@@ -34,6 +34,8 @@ final class BuildTargets() {
   }
   def sourceDirectories: Iterable[AbsolutePath] =
     sourceDirectoriesToBuildTarget.keys
+  def scalacOptions: Iterable[ScalacOptionsItem] =
+    scalacTargetInfo.values
 
   def all: List[ScalaTarget] =
     for {
