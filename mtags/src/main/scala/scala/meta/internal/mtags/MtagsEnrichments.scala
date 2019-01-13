@@ -42,6 +42,9 @@ object MtagsEnrichments {
         case _ => false
       }
     }
+    def isSemanticdb: Boolean = {
+      file.toNIO.getFileName.toString.endsWith(".semanticdb")
+    }
     def toLanguage: Language = {
       file.toNIO.toLanguage
     }

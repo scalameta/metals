@@ -126,6 +126,7 @@ case class QuickBuild(
         "-Yrangepos",
         s"-Xplugin-require:semanticdb",
         s"-P:semanticdb:failures:warning",
+        s"-P:semanticdb:synthetics:on",
         s"-P:semanticdb:sourceroot:$workspace",
         s"-P:semanticdb:targetroot:$classDirectory"
       ),

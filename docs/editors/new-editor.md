@@ -538,6 +538,18 @@ library sources.
 - The destination location can either be a Scala or Java source file. It is
   recommended to have a Java language server installed to navigate Java sources.
 
+### `textDocument/references`
+
+Metals supports find references workspace sources.
+
+LSP does not support streaming references so in case project sources have not
+been compiled at the point of a request, Metals returns immediately with
+potentially incomplete results and triggers a background cascade compilation in
+hope to find new symbol references. If new symbol references are discovered
+after the background compilation completes, Metals sends a notification via
+`metals/status` and `window/logMessage` asking the user to run "find references"
+again.
+
 ### `textDocument/documentSymbol`
 
 Returns `DocumentSymbol[]` if the client declares support for hierarchical

@@ -91,6 +91,28 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   }
 
   implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {
+    def toPosition(dirty: l.Position): Option[l.Position] =
+      foldResult(
+        onPosition = pos => Some(new l.Position(pos.startLine, pos.startColumn)),
+        onUnchanged = () => Some(dirty),
+        onNoMatch = () => None
+      )
+    def toLocation(dirty: l.Location): Option[l.Location] =
+      foldResult(
+        pos => {
+          Some(
+            new l.Location(
+              dirty.getUri,
+              new l.Range(
+                new l.Position(pos.startLine, pos.startColumn),
+                new l.Position(pos.endLine, pos.endColumn)
+              )
+            )
+          )
+        },
+        () => Some(dirty),
+        () => None
+      )
     def foldResult[B](
         onPosition: m.Position => B,
         onUnchanged: () => B,
@@ -198,6 +220,10 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
     }
   }
 
+  implicit class XtensionPath(path: Path) {
+    def isSemanticdb: Boolean =
+      path.getFileName.toString.endsWith(".semanticdb")
+  }
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
     def sourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
@@ -377,6 +403,9 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       )
   }
   implicit class XtensionRangeBuildProtocol(range: s.Range) {
+    def toLocation(uri: String): l.Location = {
+      new l.Location(uri, range.toLSP)
+    }
     def toLSP: l.Range = {
       val start = new l.Position(range.startLine, range.startCharacter)
       val end = new l.Position(range.endLine, range.endCharacter)
@@ -396,8 +425,7 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
 
   implicit class XtensionSymbolOccurrenceProtocol(occ: s.SymbolOccurrence) {
     def toLocation(uri: String): l.Location = {
-      val range = occ.range.getOrElse(s.Range(0, 0, 0, 0)).toLSP
-      new l.Location(uri, range)
+      occ.range.getOrElse(s.Range(0, 0, 0, 0)).toLocation(uri)
     }
     def encloses(pos: l.Position): Boolean =
       occ.range.isDefined &&
@@ -420,6 +448,11 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
   implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
+    def targetroot: AbsolutePath = {
+      semanticdbFlag("targetroot")
+        .map(AbsolutePath(_))
+        .getOrElse(item.getClassDirectory.toAbsolutePath)
+    }
     def isSemanticdbEnabled: Boolean =
       item.getOptions.asScala.exists { opt =>
         opt.startsWith("-Xplugin:") && opt

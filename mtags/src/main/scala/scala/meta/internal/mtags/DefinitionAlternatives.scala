@@ -14,7 +14,7 @@ object DefinitionAlternatives {
     ).flatten
   }
 
-  private object GlobalSymbol {
+  object GlobalSymbol {
     def apply(owner: Symbol, desc: Descriptor): Symbol =
       Symbol(Symbols.Global(owner.value, desc))
     def unapply(sym: Symbol): Option[(Symbol, Descriptor)] =
