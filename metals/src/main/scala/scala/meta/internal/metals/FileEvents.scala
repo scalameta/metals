@@ -48,18 +48,20 @@ final class FileEvents(
   }
 
   def restart(): Unit = {
-    val paths = new util.ArrayList[Path]()
-    def addDirectory(dir: AbsolutePath): Unit = {
+    val directoriesToWatch = new util.ArrayList[Path]()
+    def watch(dir: AbsolutePath): Unit = {
       if (!dir.isDirectory) {
         dir.createDirectories()
       }
-      paths.add(dir.toNIO)
+      directoriesToWatch.add(dir.toNIO)
     }
-    buildTargets.sourceDirectories.foreach(addDirectory)
+    // Watch source directories for "goto definition" index.
+    buildTargets.sourceDirectories.foreach(watch)
     buildTargets.scalacOptions.foreach { item =>
-      addDirectory(item.targetroot.resolve(Directories.semanticdb))
+      // Watch META-INF/semanticdb directories for "find references" index.
+      watch(item.targetroot.resolve(Directories.semanticdb))
     }
-    startWatching(paths)
+    startWatching(directoriesToWatch)
   }
 
   private def startWatching(paths: util.List[Path]): Unit = {

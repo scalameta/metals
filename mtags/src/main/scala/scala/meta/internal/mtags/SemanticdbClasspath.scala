@@ -2,14 +2,11 @@ package scala.meta.internal.mtags
 
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
-import java.nio.file.Path
-import java.nio.file.Paths
-import scala.annotation.tailrec
 import scala.meta.AbsolutePath
-import scala.meta.io.RelativePath
 import scala.meta.Classpath
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.io.RelativePath
 
 final case class SemanticdbClasspath(
     sourceroot: AbsolutePath,
@@ -51,21 +48,11 @@ object SemanticdbClasspath {
       semanticdb.toNIO.getFileName.toString.endsWith(".semanticdb"),
       semanticdb
     )
-    val end = Paths.get("META-INF").resolve("semanticdb")
-    @tailrec def root(path: Path): Option[AbsolutePath] = {
-      if (path.endsWith(end)) Some(AbsolutePath(path))
-      else {
-        Option(path.getParent) match {
-          case Some(parent) => root(parent)
-          case _ => None
-        }
-      }
-    }
-    root(semanticdb.toNIO).map { root =>
+    semanticdb.toNIO.semanticdbRoot.map { root =>
       workspace.resolve(
         semanticdb
           .resolveSibling(_.stripSuffix(".semanticdb"))
-          .toRelative(root)
+          .toRelative(AbsolutePath(root))
       )
     }
   }

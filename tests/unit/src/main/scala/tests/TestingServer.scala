@@ -10,7 +10,6 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
-import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
@@ -33,18 +32,17 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.{lsp4j => l}
 import org.scalactic.source.Position
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
-import scala.{meta => m}
 import scala.meta.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.CodeBuilder
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -59,8 +57,8 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+import scala.{meta => m}
 import tests.MetalsTestEnrichments._
-import tests.TestOrderings._
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -117,8 +115,8 @@ final class TestingServer(
     assert(compare.definition.nonEmpty)
     assert(compare.references.nonEmpty)
     DiffAssertions.assertNoDiff(
-      compare.references,
-      compare.definition,
+      compare.referencesFormat,
+      compare.definitionFormat,
       "references",
       "definition"
     )
@@ -126,25 +124,14 @@ final class TestingServer(
   def assertReferenceDefinitionDiff(
       expectedDiff: String
   )(implicit pos: Position): Unit = {
-    val diff = workspaceReferences().toString
     DiffAssertions.assertNoDiffOrPrintObtained(
-      diff,
+      workspaceReferences().diff,
       expectedDiff,
       "references",
-      "obtained"
+      "definition"
     )
   }
-  case class StringCompare(references: String, definition: String) {
-    override def toString: String =
-      DiffAssertions.unifiedDiff(
-        references,
-        definition,
-        "references",
-        "definition"
-      )
-  }
-  def workspaceReferences(): StringCompare = {
-    case class SymbolReference(symbol: String, location: Location)
+  def workspaceReferences(): WorkspaceSymbolReferences = {
     val inverse =
       mutable.Map.empty[SymbolReference, mutable.ListBuffer[Location]]
     val inputsCache = mutable.Map.empty[String, Input]
@@ -158,6 +145,8 @@ final class TestingServer(
         }
       )
     }
+    def newRef(symbol: String, loc: Location): SymbolReference =
+      SymbolReference(symbol, loc, loc.getRange.toMeta(readInput(loc.getUri)))
     for {
       source <- workspaceSources
       input = source.toInputFromBuffers(buffers)
@@ -171,46 +160,28 @@ final class TestingServer(
       location <- definition.locations.asScala
     } {
       val buf = inverse.getOrElseUpdate(
-        SymbolReference(definition.symbol, location),
+        newRef(definition.symbol, location),
         mutable.ListBuffer.empty
       )
       buf += new Location(source.toURI.toString, token.pos.toLSP)
     }
-    val expected = new CodeBuilder()
-    val obtained = new CodeBuilder()
+    val definition = Seq.newBuilder[SymbolReference]
+    val references = Seq.newBuilder[SymbolReference]
     for {
-      (SymbolReference(symbol, location), expectedLocations) <- {
-        inverse.toSeq.sortBy(_._1.symbol)
-      }
+      (ref, expectedLocations) <- inverse.toSeq.sortBy(_._1.symbol)
     } {
       val params = new ReferenceParams(new ReferenceContext(true))
-      params.setPosition(location.getRange.getStart)
-      params.setTextDocument(new TextDocumentIdentifier(location.getUri))
+      params.setPosition(ref.location.getRange.getStart)
+      params.setTextDocument(new TextDocumentIdentifier(ref.location.getUri))
       val obtainedLocations = server.referencesResult(params)
-      def format(locations: Seq[Location]): String =
-        locations
-          .sortBy(l => (l.getUri, l.getRange))
-          .map(l => l.getRange.formatMessage("", symbol, readInput(l.getUri)))
-          .mkString("\n")
-      val header = "=" * (symbol.length + 2)
-      def append(code: CodeBuilder, formatted: String, sym: String): Unit =
-        code
-          .println(header)
-          .println("= " + sym)
-          .println(header)
-          .println(formatted)
-      append(
-        obtained,
-        format(obtainedLocations.locations),
-        obtainedLocations.symbol
+      references ++= obtainedLocations.locations.map(
+        l => newRef(obtainedLocations.symbol, l)
       )
-      append(
-        expected,
-        format(expectedLocations),
-        symbol
+      definition ++= expectedLocations.map(
+        l => newRef(ref.symbol, l)
       )
     }
-    StringCompare(obtained.toString(), expected.toString())
+    WorkspaceSymbolReferences(references.result(), definition.result())
   }
 
   def initialize(
