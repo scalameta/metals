@@ -16,24 +16,31 @@ import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
-import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.DocumentFormattingParams
+import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.ReferenceContext
+import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
-import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.{lsp4j => l}
+import org.scalactic.source.Position
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.meta.Input
+import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Debug
@@ -43,15 +50,14 @@ import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
-import scala.meta.tokens.Token
-import scala.meta.Input
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.{meta => m}
 import tests.MetalsTestEnrichments._
 
 /**
@@ -94,6 +100,88 @@ final class TestingServer(
 
   private def write(layout: String): Unit = {
     FileLayout.fromString(layout, root = workspace)
+  }
+
+  def workspaceSources: Seq[AbsolutePath] = {
+    for {
+      sourceDirectory <- server.buildTargets.sourceDirectories.toSeq
+      if sourceDirectory.isDirectory
+      source <- FileIO.listAllFilesRecursively(sourceDirectory)
+    } yield source
+  }
+
+  def assertReferenceDefinitionBijection(): Unit = {
+    val compare = workspaceReferences()
+    assert(compare.definition.nonEmpty)
+    assert(compare.references.nonEmpty)
+    DiffAssertions.assertNoDiff(
+      compare.referencesFormat,
+      compare.definitionFormat,
+      "references",
+      "definition"
+    )
+  }
+  def assertReferenceDefinitionDiff(
+      expectedDiff: String
+  )(implicit pos: Position): Unit = {
+    DiffAssertions.assertNoDiffOrPrintObtained(
+      workspaceReferences().diff,
+      expectedDiff,
+      "references",
+      "definition"
+    )
+  }
+  def workspaceReferences(): WorkspaceSymbolReferences = {
+    val inverse =
+      mutable.Map.empty[SymbolReference, mutable.ListBuffer[Location]]
+    val inputsCache = mutable.Map.empty[String, Input]
+    def readInput(uri: String): Input = {
+      inputsCache.getOrElseUpdate(
+        uri, {
+          val path = uri.toAbsolutePath
+          path
+            .toInputFromBuffers(buffers)
+            .copy(path = path.toRelative(workspace).toURI(false).toString)
+        }
+      )
+    }
+    def newRef(symbol: String, loc: Location): SymbolReference =
+      SymbolReference(symbol, loc, loc.getRange.toMeta(readInput(loc.getUri)))
+    for {
+      source <- workspaceSources
+      input = source.toInputFromBuffers(buffers)
+      identifier = source.toTextDocumentIdentifier
+      token <- input.tokenize.get
+      if token.isIdentifier
+      params = token.toPositionParams(identifier)
+      definition = server.definitionResult(params)
+      if !definition.symbol.isPackage
+      if !definition.definition.exists(_.isDependencySource(workspace))
+      location <- definition.locations.asScala
+    } {
+      val buf = inverse.getOrElseUpdate(
+        newRef(definition.symbol, location),
+        mutable.ListBuffer.empty
+      )
+      buf += new Location(source.toURI.toString, token.pos.toLSP)
+    }
+    val definition = Seq.newBuilder[SymbolReference]
+    val references = Seq.newBuilder[SymbolReference]
+    for {
+      (ref, expectedLocations) <- inverse.toSeq.sortBy(_._1.symbol)
+    } {
+      val params = new ReferenceParams(new ReferenceContext(true))
+      params.setPosition(ref.location.getRange.getStart)
+      params.setTextDocument(new TextDocumentIdentifier(ref.location.getUri))
+      val obtainedLocations = server.referencesResult(params)
+      references ++= obtainedLocations.locations.map(
+        l => newRef(obtainedLocations.symbol, l)
+      )
+      definition ++= expectedLocations.map(
+        l => newRef(ref.symbol, l)
+      )
+    }
+    WorkspaceSymbolReferences(references.result(), definition.result())
   }
 
   def initialize(
@@ -215,6 +303,25 @@ final class TestingServer(
     }
   }
 
+  def references(
+      filename: String,
+      substring: String
+  ): Future[Seq[Location]] = {
+    val path = toPath(filename)
+    val input = path.toInputFromBuffers(buffers)
+    val index = input.text.lastIndexOf(substring)
+    if (index < 0) {
+      throw new IllegalArgumentException(
+        s"the string '$substring' is not a substring of text '${input.text}'"
+      )
+    }
+    val params = new ReferenceParams(new ReferenceContext(true))
+    params.setTextDocument(path.toTextDocumentIdentifier)
+    val offset = index + substring.length - 1
+    val pos = m.Position.Range(input, offset, offset + 1)
+    params.setPosition(new l.Position(pos.startLine, pos.startColumn))
+    server.references(params).asScala.map(_.asScala)
+  }
   def formatting(filename: String): Future[Unit] = {
     val path = toPath(filename)
     server
@@ -255,9 +362,7 @@ final class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     input.tokenize.get.foreach { token =>
-      val range = token.pos.toLSP
-      val start = range.getStart
-      val params = new TextDocumentPositionParams(identifier, start)
+      val params = token.toPositionParams(identifier)
       val definition = server.definitionResult(params)
       definition.definition.foreach { path =>
         if (path.isDependencySource(workspace)) {
@@ -276,14 +381,13 @@ final class TestingServer(
           else s"$filename:${location.getRange.getStart.getLine}"
         }
       }
-      val occurrence = token match {
-        case _: Token.Ident | _: Token.Interpolation.Id =>
-          if (definition.symbol.isPackage) None // ignore packages
-          else if (symbols.isEmpty) Some("<no symbol>")
-          else Some(Symbols.Multi(symbols))
-        case _ =>
-          if (symbols.isEmpty) None // OK, expected
-          else Some(s"unexpected: ${Symbols.Multi(symbols)}")
+      val occurrence = if (token.isIdentifier) {
+        if (definition.symbol.isPackage) None // ignore packages
+        else if (symbols.isEmpty) Some("<no symbol>")
+        else Some(Symbols.Multi(symbols))
+      } else {
+        if (symbols.isEmpty) None // OK, expected
+        else Some(s"unexpected: ${Symbols.Multi(symbols)}")
       }
       occurrences ++= occurrence.map { symbol =>
         s.SymbolOccurrence(Some(token.pos.toSemanticdb), symbol)

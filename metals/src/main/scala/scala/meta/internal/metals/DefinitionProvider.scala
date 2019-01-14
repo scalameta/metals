@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.util.Collections
-import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -55,31 +54,35 @@ final class DefinitionProvider(
     }
   }
 
-  private def definitionFromSnapshot(
+  def positionOccurrence(
       source: AbsolutePath,
       dirtyPosition: TextDocumentPositionParams,
       snapshot: TextDocument
-  ): DefinitionResult = {
-    // Step 1: convert dirty buffer position to snapshot position in "source"
-    val bufferInput = source.toInputFromBuffers(buffers)
-    val snapshotInput = Input.VirtualFile(bufferInput.path, snapshot.text)
-    val sourceDistance = TokenEditDistance(snapshotInput, bufferInput)
+  ): ResolvedSymbolOccurrence = {
+    // Convert dirty buffer position to snapshot position in "source"
+    val sourceDistance =
+      TokenEditDistance.fromBuffer(source, snapshot.text, buffers)
     val snapshotPosition = sourceDistance.toOriginal(
       dirtyPosition.getPosition.getLine,
       dirtyPosition.getPosition.getCharacter
     )
 
-    // Step 2: find matching symbol occurrence in SemanticDB snapshot
+    // Find matching symbol occurrence in SemanticDB snapshot
     val occurrence = for {
-      queryPosition <- snapshotPosition.foldResult(
-        onPosition = pos => Some(new l.Position(pos.startLine, pos.startColumn)),
-        onUnchanged = () => Some(dirtyPosition.getPosition),
-        onNoMatch = () => None
-      )
+      queryPosition <- snapshotPosition.toPosition(dirtyPosition.getPosition)
       occurrence <- snapshot.occurrences.find(_.encloses(queryPosition))
     } yield occurrence
+    ResolvedSymbolOccurrence(sourceDistance, occurrence)
+  }
 
-    // Step 3: find symbol definition
+  def definitionFromSnapshot(
+      source: AbsolutePath,
+      dirtyPosition: TextDocumentPositionParams,
+      snapshot: TextDocument
+  ): DefinitionResult = {
+    val ResolvedSymbolOccurrence(sourceDistance, occurrence) =
+      positionOccurrence(source, dirtyPosition, snapshot)
+    // Find symbol definition location.
     val result: Option[DefinitionResult] = occurrence.flatMap { occ =>
       val isLocal = occ.symbol.isLocal || snapshot.definesSymbol(occ.symbol)
       if (isLocal) {
@@ -116,20 +119,7 @@ final class DefinitionProvider(
           location.getRange.getStart.getLine,
           location.getRange.getStart.getCharacter
         )
-        result <- revisedPosition.foldResult(
-          pos =>
-            Some(
-              new l.Location(
-                location.getUri,
-                new l.Range(
-                  new l.Position(pos.startLine, pos.startColumn),
-                  new l.Position(pos.endLine, pos.endColumn)
-                )
-              )
-            ),
-          () => Some(location),
-          () => None
-        )
+        result <- revisedPosition.toLocation(location)
       } yield {
         DefinitionResult(
           Collections.singletonList(result),

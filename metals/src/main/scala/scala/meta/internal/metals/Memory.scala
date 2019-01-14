@@ -1,10 +1,15 @@
 package scala.meta.internal.metals
 
+import com.google.common.hash.BloomFilter
+import java.nio.file.Path
 import java.text.DecimalFormat
 import org.openjdk.jol.info.GraphLayout
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 
 object Memory {
+  case class ReferenceIndex(
+      blooms: collection.Map[Path, BloomFilter[CharSequence]]
+  )
   // Adapted from https://github.com/non/clouseau
   val si: List[String] = List("B", "K", "M", "G", "T", "P", "E", "Z", "Y")
 
@@ -15,29 +20,28 @@ object Memory {
     loop(bytes.toDouble, si)
   }
 
-  case class Footprint(
-      name: String,
-      total: String,
-      linesScala: Option[Long]
-  ) {
-    override def toString: String = {
-      val suffix = linesScala.fold("") { lines =>
-        s" (${new DecimalFormat("#,###").format(lines)} lines Scala)"
-      }
-      s"$name using $total$suffix"
-    }
+  def footprint(iterable: sourcecode.Text[Object]): String = {
+    footprint(iterable.source, iterable.value)
   }
 
-  def footprint(iterable: sourcecode.Text[Object]): Footprint = {
-    val layout = GraphLayout.parseInstance(iterable.value)
+  def format(n: Long): String =
+    new DecimalFormat("#,###").format(n)
+
+  def footprint(source: String, value: Object): String = {
+    val layout = GraphLayout.parseInstance(value)
     val size = layout.totalSize()
-    val linesOfCode: Option[Long] = iterable.value match {
+    val suffix: String = value match {
       case index: OnDemandSymbolIndex =>
-        Some(index.mtags.totalLinesOfScala)
+        val n = index.mtags.totalLinesOfScala
+        s" (${format(n)} lines Scala)"
+      case ReferenceIndex(blooms) =>
+        val n =
+          blooms.valuesIterator.foldLeft(0L)(_ + _.approximateElementCount())
+        s" (${format(n)} referenced symbols)"
       case _ =>
-        None
+        ""
     }
-    Footprint(iterable.source, approx(size), linesOfCode)
+    s"$source using ${approx(size)}$suffix"
   }
 
   def printFootprint(iterable: sourcecode.Text[Object]): Unit = {

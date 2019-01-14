@@ -15,8 +15,6 @@ import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import scala.collection.concurrent.TrieMap
-import scala.meta.inputs.Input
-import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -26,8 +24,8 @@ import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.MetalsStatusParams
-import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.io.AbsolutePath
+import tests.MetalsTestEnrichments._
 import tests.TestOrderings._
 
 /**
@@ -108,35 +106,12 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       path.toInputFromBuffers(buffers).copy(path = relpath)
     val sb = new StringBuilder
     diags.foreach { diag =>
-      val message = formatMessage(diag, input)
+      val message = diag.formatMessage(input)
       sb.append(message).append("\n")
     }
     sb.toString()
   }
 
-  private def formatMessage(diag: Diagnostic, input: Input): String =
-    try {
-      val start = diag.getRange.getStart
-      val end = diag.getRange.getEnd
-      val pos = Position.Range(
-        input,
-        start.getLine,
-        start.getCharacter,
-        end.getLine,
-        end.getCharacter
-      )
-      val message = pos.formatMessage(
-        diag.getSeverity.toString.toLowerCase(),
-        diag.getMessage
-      )
-      message
-    } catch {
-      case e: IllegalArgumentException =>
-        val message =
-          s"${diag.getRange.getStart.getLine}:${diag.getRange.getStart.getCharacter} ${diag.getMessage}"
-        scribe.error(message, e)
-        message
-    }
   def workspaceDiagnosticsCount: String = {
     val paths = diagnosticsCount.keys.toList.sortBy(_.toURI.toString)
     paths

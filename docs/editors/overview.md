@@ -15,6 +15,7 @@ functionality.
   <td align=center>Build import</td>
   <td align=center>Diagnostics</td>
   <td align=center>Goto definition</td>
+  <td align=center>Find references</td>
   <td align=center>Document symbols</td>
   <td align=center>Formatting</td>
   <td align=center>Metals Extensions</td>
@@ -30,11 +31,13 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
+  <td align=center>✅</td>
 </tr>
 <tr>
   <td>Atom</td>
   <td align=center>Single click</td>
   <td align=center>Built-in</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -47,6 +50,7 @@ functionality.
   <td align=center>Built-in</td>
   <td align=center>Escaped newlines</td>
   <td align=center>✅</td>
+  <td align=center>✅</td>
   <td align=center>Flat</td>
   <td align=center></td>
   <td align=center>Status bar</td>
@@ -55,6 +59,7 @@ functionality.
   <td>Sublime Text 3</td>
   <td align=center>Few steps</td>
   <td align=center>Requires browser</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>Flat</td>
@@ -66,6 +71,7 @@ functionality.
   <td align=center>Few steps</td>
   <td align=center>Built-in</td>
   <td align=center>Single buffer</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -145,6 +151,17 @@ buffer.
 - [scalameta/scalameta#1802](https://github.com/scalameta/scalameta/issues/1802)
   reflective invocations (methods calls on structural types) do not resolve to a
   definition.
+
+## Find references
+
+Find symbol references in project sources. References include implicits,
+inferred `.apply`, desugared `.flatMap` from for comprehensions and other
+symbols that may not be explicitly written in source, making it possible to
+discover usages of difficult-to-grep symbols. The Metals navigation index is
+low-overhead and should only require a few megabytes of memory even for large
+projects.
+
+![Find references](https://user-images.githubusercontent.com/1408093/51089190-75fc8880-1769-11e9-819c-95262205e95c.png)
 
 ## Document symbols
 
