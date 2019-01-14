@@ -3,10 +3,10 @@ package scala.meta.internal.mtags
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import scala.meta.AbsolutePath
-import scala.meta.io.RelativePath
 import scala.meta.Classpath
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.io.RelativePath
 
 final case class SemanticdbClasspath(
     sourceroot: AbsolutePath,
@@ -40,6 +40,22 @@ final case class SemanticdbClasspath(
 }
 
 object SemanticdbClasspath {
+  def toScala(
+      workspace: AbsolutePath,
+      semanticdb: AbsolutePath
+  ): Option[AbsolutePath] = {
+    require(
+      semanticdb.toNIO.getFileName.toString.endsWith(".semanticdb"),
+      semanticdb
+    )
+    semanticdb.toNIO.semanticdbRoot.map { root =>
+      workspace.resolve(
+        semanticdb
+          .resolveSibling(_.stripSuffix(".semanticdb"))
+          .toRelative(AbsolutePath(root))
+      )
+    }
+  }
   def fromScala(path: RelativePath): RelativePath = {
     require(path.toNIO.toLanguage.isScala, path.toString)
     val semanticdbSibling = path.resolveSibling(_ + ".semanticdb")

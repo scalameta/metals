@@ -68,6 +68,10 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     server.server.userConfig = this.userConfig
   }
 
+  def assertNoDiagnostics(): Unit = {
+    assertNoDiff(client.workspaceDiagnostics, "")
+  }
+
   def cleanCompileCache(project: String): Unit = {
     RecursivelyDelete(workspace.resolve(".bloop").resolve(project))
   }

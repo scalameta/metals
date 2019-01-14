@@ -2,6 +2,8 @@ package scala.meta.internal.mtags
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.nio.file.Paths
+import scala.annotation.tailrec
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
@@ -33,6 +35,19 @@ object MtagsEnrichments {
     def toLanguage: Language = {
       filenameToLanguage(file.getFileName.toString)
     }
+    def semanticdbRoot: Option[Path] = {
+      val end = Paths.get("META-INF").resolve("semanticdb")
+      @tailrec def root(path: Path): Option[Path] = {
+        if (path.endsWith(end)) Some(path)
+        else {
+          Option(path.getParent) match {
+            case Some(parent) => root(parent)
+            case _ => None
+          }
+        }
+      }
+      root(file)
+    }
   }
   implicit class XtensionAbsolutePathMetals(file: AbsolutePath) {
 
@@ -41,6 +56,9 @@ object MtagsEnrichments {
         case Language.SCALA | Language.JAVA => true
         case _ => false
       }
+    }
+    def isSemanticdb: Boolean = {
+      file.toNIO.getFileName.toString.endsWith(".semanticdb")
     }
     def toLanguage: Language = {
       file.toNIO.toLanguage

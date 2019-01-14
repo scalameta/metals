@@ -8,4 +8,6 @@ object Directories {
     RelativePath(".metals").resolve("readonly")
   def log: RelativePath =
     RelativePath(".metals").resolve("metals.log")
+  def semanticdb: RelativePath =
+    RelativePath("META-INF").resolve("semanticdb")
 }

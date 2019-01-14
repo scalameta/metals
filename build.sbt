@@ -122,6 +122,8 @@ lazy val metals = project
       // =================
       // Java dependencies
       // =================
+      // for bloom filters
+      "com.google.guava" % "guava" % "27.0.1-jre",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.9",
       // for file watching
