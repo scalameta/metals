@@ -154,11 +154,12 @@ buffer.
 
 ## Find references
 
-Navigate to symbol usages in project sources. References include implicits,
-`.apply`, desugared `.flatMap` from for comprehensions and other symbols that
-may not be explicitly written in source, making it possible to explore
-difficult-to-grep symbols. The Metals navigation index is low-overhead and
-should only require a few megabytes of memory even for large projects.
+Find symbol references in project sources. References include implicits,
+inferred `.apply`, desugared `.flatMap` from for comprehensions and other
+symbols that may not be explicitly written in source, making it possible to
+discover usages of difficult-to-grep symbols. The Metals navigation index is
+low-overhead and should only require a few megabytes of memory even for large
+projects.
 
 ![Find references](https://user-images.githubusercontent.com/1408093/51089190-75fc8880-1769-11e9-819c-95262205e95c.png)
 

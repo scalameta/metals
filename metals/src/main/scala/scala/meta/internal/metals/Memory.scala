@@ -1,10 +1,15 @@
 package scala.meta.internal.metals
 
+import com.google.common.hash.BloomFilter
+import java.nio.file.Path
 import java.text.DecimalFormat
 import org.openjdk.jol.info.GraphLayout
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 
 object Memory {
+  case class ReferenceIndex(
+      blooms: collection.Map[Path, BloomFilter[CharSequence]]
+  )
   // Adapted from https://github.com/non/clouseau
   val si: List[String] = List("B", "K", "M", "G", "T", "P", "E", "Z", "Y")
 
@@ -18,6 +23,7 @@ object Memory {
   def footprint(iterable: sourcecode.Text[Object]): String = {
     footprint(iterable.source, iterable.value)
   }
+
   def format(n: Long): String =
     new DecimalFormat("#,###").format(n)
 

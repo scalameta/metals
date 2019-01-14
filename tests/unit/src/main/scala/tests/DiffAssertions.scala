@@ -5,7 +5,12 @@ import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 import utest.ufansi.Color
 
-/** Bridge for scalameta testkit DiffAssertions and utest assertions */
+/**
+ * Bridge for scalameta testkit DiffAssertions and utest assertions.
+ *
+ * A bit of logic is duplicated between here and Scalameta testkit because
+ * we want to customize a bit of the output.
+ */
 object DiffAssertions extends scala.meta.testkit.DiffAssertions {
   def assertNoDiffOrPrintObtained(
       obtained: String,

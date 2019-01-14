@@ -119,12 +119,54 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
       _ = client.statusParams.clear()
       locations <- server.references("a/src/main/scala/a/A.scala", "class A")
       _ = Predef.assert(locations.nonEmpty, s"found no references to class A")
-      _ <- server.executeCommand(ServerCommands.CascadeCompile.id)
+      cascade = server.executeCommand(ServerCommands.CascadeCompile.id)
+      // make sure that "found new references" takes buffer changes into account.
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(t => "\n\n" + t)
+      _ <- cascade
       _ = assertNoDiagnostics()
       _ = assertContains(
         server.statusBarHistory,
         "Found new symbol references for 'A', try running again."
       )
+    } yield ()
+  }
+
+  testAsync("edit-distance") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {},
+          |  "b": {"dependsOn": ["a"]}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |class A {
+          |  def bar(a: Int): Int = a
+          |  def foo = bar(1)
+          |}
+          |/b/src/main/scala/b/B.scala
+          |package b
+          |object B {
+          |  val b = new a.A().bar(2)
+          |}
+          |""".stripMargin,
+        preInitialized = { () =>
+          server.didOpen("a/src/main/scala/a/A.scala")
+        }
+      )
+      _ = assertNoDiagnostics()
+      // Assert that goto definition and reference are still bijective after buffer changes
+      // in both the definition source and reference sources.
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
+        _.replaceAllLiterally("a: Int", "\n")
+      )
+      _ <- server.didChange("b/src/main/scala/b/B.scala")(
+        _.replaceAllLiterally("val b", "\n  val number")
+      )
+      _ = server.assertReferenceDefinitionBijection()
     } yield ()
   }
 }

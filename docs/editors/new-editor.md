@@ -540,15 +540,15 @@ library sources.
 
 ### `textDocument/references`
 
-Metals supports find references workspace sources.
+Metals finds symbol references for workspace sources but not external library
+dependencies.
 
-LSP does not support streaming references so in case project sources have not
-been compiled at the point of a request, Metals returns immediately with
-potentially incomplete results and triggers a background cascade compilation in
-hope to find new symbol references. If new symbol references are discovered
-after the background compilation completes, Metals sends a notification via
-`metals/status` and `window/logMessage` asking the user to run "find references"
-again.
+LSP does not support streaming references so when project sources have not been
+compiled at the point of a request, Metals returns immediately with potentially
+incomplete results and triggers a background cascade compilation to find new
+symbol references. If new symbol references are discovered after the background
+compilation completes, Metals sends a notification via `metals/status` and
+`window/logMessage` asking the user to run "find references" again.
 
 ### `textDocument/documentSymbol`
 

@@ -13,6 +13,7 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs
@@ -20,7 +21,6 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
@@ -44,6 +44,20 @@ final class ReferenceProvider(
   }
   def onDelete(file: Path): Unit = {
     index.remove(file)
+  }
+
+  /**
+   * Handle EventType.OVERFLOW, meaning we lost file events for a given path.
+   *
+   * We walk up the file tree to the parent `META-INF/semanticdb` parent directory
+   * and re-index all of its `*.semanticdb` children.
+   */
+  def onOverflow(path: Path): Unit = {
+    path.semanticdbRoot match {
+      case Some(root) =>
+        onChangeDirectory(root)
+      case None =>
+    }
   }
   def onChangeDirectory(dir: Path): Unit = {
     if (Files.isDirectory(dir)) {
@@ -75,8 +89,9 @@ final class ReferenceProvider(
       td.documents.foreach { d =>
         d.occurrences.foreach(o => bloom.put(o.symbol))
         d.synthetics.foreach { synthetic =>
-          foreach(synthetic) { sym =>
+          Synthetics.foreachSymbol(synthetic) { sym =>
             bloom.put(sym)
+            Synthetics.Continue
           }
         }
       }
@@ -273,36 +288,11 @@ final class ReferenceProvider(
 
     for {
       synthetic <- snapshot.synthetics
-      if matchesSynthetic(synthetic, isSymbol)
+      if Synthetics.existsSymbol(synthetic)(isSymbol)
       range <- synthetic.range.toList
     } add(range)
 
     buf.result()
   }
 
-  def matchesSynthetic(synthetic: Synthetic, isMatch: Set[String]): Boolean = {
-    foreach(synthetic)(isMatch)
-  }
-  def foreach(synthetic: Synthetic)(fn: String => Boolean): Boolean = {
-    import scala.meta.internal.semanticdb._
-    def loop(t: Tree): Boolean = t match {
-      case ApplyTree(function, arguments) =>
-        loop(function) || arguments.exists(loop)
-      case SelectTree(qualifier, id) =>
-        id.exists(loop) || loop(qualifier)
-      case IdTree(symbol) =>
-        fn(symbol)
-      case TypeApplyTree(function, _) =>
-        loop(function)
-      case FunctionTree(_, body) =>
-        loop(body)
-      case LiteralTree(_) =>
-        false
-      case MacroExpansionTree(beforeExpansion, tpe) =>
-        false
-      case OriginalTree(range) => false
-      case Tree.Empty => false
-    }
-    loop(synthetic.tree)
-  }
 }

@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j._
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import scala.collection.concurrent.TrieMap
@@ -31,6 +31,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTool.Sbt
+import scala.meta.internal.metals.Memory.ReferenceIndex
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -40,8 +41,8 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.tokenizers.TokenizeException
-import scala.util.control.NonFatal
 import scala.util.Try
+import scala.util.control.NonFatal
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -517,7 +518,7 @@ class MetalsLanguageServer(
           case EventType.CREATE | EventType.MODIFY =>
             referencesProvider.onChange(event.path())
           case EventType.OVERFLOW =>
-            referencesProvider.onChange(event.path())
+            referencesProvider.onOverflow(event.path())
         }
       }
     } else {
