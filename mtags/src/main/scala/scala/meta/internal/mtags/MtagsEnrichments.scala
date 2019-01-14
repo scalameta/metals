@@ -1,5 +1,6 @@
 package scala.meta.internal.mtags
 
+import com.thoughtworks.qdox.model.JavaModel
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -7,6 +8,7 @@ import scala.annotation.tailrec
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.io.PathIO
 import scala.meta.internal.semanticdb.Language
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.{semanticdb => s}
@@ -60,6 +62,7 @@ object MtagsEnrichments {
     def isSemanticdb: Boolean = {
       file.toNIO.getFileName.toString.endsWith(".semanticdb")
     }
+    def extension: String = PathIO.extension(file.toNIO)
     def toLanguage: Language = {
       file.toNIO.toLanguage
     }
@@ -113,5 +116,8 @@ object MtagsEnrichments {
         toOffset(startLine, startColumn),
         toOffset(endLine, endColumn)
       )
+  }
+  implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
+    def lineNumber: Int = m.getLineNumber - 1
   }
 }

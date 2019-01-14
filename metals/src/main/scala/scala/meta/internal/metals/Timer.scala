@@ -39,7 +39,7 @@ object Timer {
         } else {
           s"${micros}μs"
         }
-      } else if (ms < 50) {
+      } else if (ms < 100) {
         s"${ms}ms"
       } else {
         val partialSeconds = ms.toDouble / 1000

@@ -9,7 +9,8 @@ import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.inputs._
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.parsers.ParseException
+import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
+import scala.meta.tokenizers.TokenizeException
 
 final class Identifier(val name: String, val pos: Position) {
   override def toString: String = pos.formatMessage("info", name)
@@ -30,8 +31,13 @@ final class Identifier(val name: String, val pos: Position) {
  * the same functionality but it is much slower. Performance is important
  * because toplevel symbol indexing is on a critical path when users import
  * a new project.
+ *
+ * @param includeInnerClasses if true, emits occurrences for inner class/object/trait.
  */
-class ScalaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
+class ScalaToplevelMtags(
+    val input: Input.VirtualFile,
+    includeInnerClasses: Boolean
+) extends MtagsIndexer {
   private val scanner = new LegacyScanner(input, dialects.Scala212)
   scanner.reader.nextChar()
   def isDone: Boolean = scanner.curr.token == EOF
@@ -78,7 +84,7 @@ class ScalaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     val old = currentOwner
     acceptTrivia()
     scanner.curr.token match {
-      case IDENTIFIER =>
+      case IDENTIFIER | BACKQUOTED_IDENT =>
         val paths = parsePath()
         paths.foreach { path =>
           pkg(path.name, path.pos)
@@ -168,14 +174,39 @@ class ScalaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   def acceptBalancedDelimeters(Open: Int, Close: Int): Unit = {
     require(scanner.curr.token == Open, "open delimeter { or (")
     var count = 1
+    val old = currentOwner
+    currentOwner = lastCurrentOwner
+    case class Owner(symbol: String, depth: Int)
+    var ownerChain = Owner(currentOwner, 0) :: Nil
     while (!isDone && count > 0) {
       scanner.nextToken()
       scanner.curr.token match {
-        case Open => count += 1
-        case Close => count -= 1
+        case Open =>
+          count += 1
+        case Close =>
+          count -= 1
+        case CLASS | TRAIT | OBJECT if includeInnerClasses =>
+          val token = scanner.curr.token
+          acceptTrivia()
+          val name = newIdentifier
+          ownerChain match {
+            case Nil =>
+            case head :: tail =>
+              if (head.depth == count) {
+                ownerChain = tail
+                currentOwner = tail.head.symbol
+              }
+          }
+          token match {
+            case CLASS => tpe(name.name, name.pos, k.CLASS, 0)
+            case TRAIT => tpe(name.name, name.pos, k.TRAIT, 0)
+            case OBJECT => term(name.name, name.pos, k.OBJECT, 0)
+          }
+          ownerChain = Owner(currentOwner, count) :: ownerChain
         case _ =>
       }
     }
+    currentOwner = old
   }
 
   /** Consumes the token stream until the next non-trivia token */
@@ -195,7 +226,7 @@ class ScalaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   // =======
 
   def fail(expected: String): Nothing = {
-    throw new ParseException(newPosition, failMessage(expected))
+    throw new TokenizeException(newPosition, failMessage(expected))
   }
   def currentToken: String =
     InverseLegacyToken.category(scanner.curr.token).toLowerCase()
@@ -207,7 +238,7 @@ class ScalaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   }
   def require(isOk: Boolean, expected: String): Unit = {
     if (!isOk) {
-      throw new ParseException(newPosition, failMessage(expected))
+      throw new TokenizeException(newPosition, failMessage(expected))
     }
   }
 }

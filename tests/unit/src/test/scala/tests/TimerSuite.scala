@@ -21,7 +21,7 @@ object TimerSuite extends BaseSuite {
   checkMillis(1, "1ms")
   checkMillis(10, "10ms")
   checkMillis(42, "42ms")
-  checkMillis(60, "0.06s")
+  checkMillis(60, "60ms")
   checkMillis(429, "0.43s")
   checkMillis(425, "0.42s")
   checkMillis(1429, "1.43s")

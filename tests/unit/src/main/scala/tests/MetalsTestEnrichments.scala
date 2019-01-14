@@ -1,18 +1,63 @@
 package tests
 
+import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.BuildTargetCapabilities
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import ch.epfl.scala.bsp4j.ScalacOptionsResult
+import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
+import java.nio.file.Files
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.{semanticdb => s}
-import scala.{meta => m}
+import scala.meta.internal.metals.Memory
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.WorkspaceSymbolProvider
+import scala.meta.internal.{semanticdb => s}
+import scala.meta.io.Classpath
+import scala.{meta => m}
 
 /**
  *  Equivalent to scala.meta.internal.metals.MetalsEnrichments
  *  but only for tests
  */
 object MetalsTestEnrichments {
+  implicit class XtensionTestClasspath(classpath: Classpath) {
+    def bytesSize: String = {
+      val bytes = classpath.entries.foldLeft(0L) {
+        case (a, b) =>
+          a + Files.size(b.toNIO)
+      }
+      Memory.approx(bytes)
+    }
+  }
+  implicit class XtensionTestBuildTargets(wsp: WorkspaceSymbolProvider) {
+    def indexLibraries(libraries: Seq[Library]): Unit = {
+      libraries.foreach(
+        _.sources().entries.foreach(s => wsp.index.addSourceJar(s))
+      )
+      val bti = new BuildTargetIdentifier("workspace")
+      val buildTarget = new BuildTarget(
+        bti,
+        Nil.asJava,
+        Nil.asJava,
+        Nil.asJava,
+        new BuildTargetCapabilities(true, true, true)
+      )
+      val result = new WorkspaceBuildTargetsResult(List(buildTarget).asJava)
+      wsp.buildTargets.addWorkspaceBuildTargets(result)
+      val item = new ScalacOptionsItem(
+        bti,
+        Nil.asJava,
+        libraries.flatMap(_.classpath().entries).map(_.toURI.toString).asJava,
+        ""
+      )
+      wsp.buildTargets.addScalacOptions(
+        new ScalacOptionsResult(List(item).asJava)
+      )
+    }
+  }
   implicit class XtensionTestLspRange(range: l.Range) {
     def formatMessage(
         severity: String,
@@ -65,6 +110,7 @@ object MetalsTestEnrichments {
   }
 
   implicit class XtensionDocumentSymbolOccurrence(info: l.SymbolInformation) {
+    def fullPath: String = s"${info.getContainerName}${info.getName}"
     def toSymbolOccurrence: s.SymbolOccurrence = {
       val startRange = info.getLocation.getRange.getStart
       val endRange = info.getLocation.getRange.getEnd

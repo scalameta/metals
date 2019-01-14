@@ -33,6 +33,7 @@ final class ReferenceProvider(
     buffers: Buffers,
     definition: DefinitionProvider
 ) {
+  val referencedPackages = BloomFilters.create(1000)
   val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
   def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
     for {
@@ -87,7 +88,12 @@ final class ReferenceProvider(
       )
       index(file) = bloom
       td.documents.foreach { d =>
-        d.occurrences.foreach(o => bloom.put(o.symbol))
+        d.occurrences.foreach { o =>
+          if (o.symbol.endsWith("/")) {
+            referencedPackages.put(o.symbol)
+          }
+          bloom.put(o.symbol)
+        }
         d.synthetics.foreach { synthetic =>
           Synthetics.foreachSymbol(synthetic) { sym =>
             bloom.put(sym)
