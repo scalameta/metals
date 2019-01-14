@@ -31,7 +31,6 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTool.Sbt
-import scala.meta.internal.metals.Memory.ReferenceIndex
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -64,7 +63,7 @@ class MetalsLanguageServer(
   private val fingerprints = new MutableMd5Fingerprints
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
-  private val index = newSymbolIndex()
+  private val definitionIndex = newSymbolIndex()
   var buildServer = Option.empty[BuildServerConnection]
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
@@ -98,6 +97,7 @@ class MetalsLanguageServer(
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
+  private var workspaceSymbols: WorkspaceSymbolProvider = _
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _
@@ -202,7 +202,7 @@ class MetalsLanguageServer(
       workspace,
       mtags,
       buffers,
-      index,
+      definitionIndex,
       semanticdbs,
       config.icons,
       statusBar,
@@ -223,6 +223,13 @@ class MetalsLanguageServer(
       semanticdbs,
       buffers,
       definitionProvider
+    )
+    workspaceSymbols = new WorkspaceSymbolProvider(
+      workspace,
+      config.statistics,
+      buildTargets,
+      definitionIndex,
+      pkg => referencesProvider.referencedPackages.mightContain(pkg)
     )
     doctor = new Doctor(
       workspace,
@@ -261,6 +268,7 @@ class MetalsLanguageServer(
       )
       capabilities.setDefinitionProvider(true)
       capabilities.setReferencesProvider(true)
+      capabilities.setWorkspaceSymbolProvider(true)
       capabilities.setDocumentSymbolProvider(true)
       capabilities.setDocumentFormattingProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
@@ -362,7 +370,8 @@ class MetalsLanguageServer(
           List[Future[Unit]](
             quickConnectToBuildServer().ignoreValue,
             slowConnectToBuildServer(forceImport = false).ignoreValue,
-            Future(startHttpServer())
+            Future(startHttpServer()),
+            workspaceSymbols.searchFuture("", () => ()).ignoreValue
           )
         )
         .ignoreValue
@@ -724,6 +733,19 @@ class MetalsLanguageServer(
       null
     }
 
+  @JsonRequest("workspace/symbol")
+  def workspaceSymbol(
+      params: WorkspaceSymbolParams
+  ): CompletableFuture[util.List[SymbolInformation]] = {
+    for {
+      token <- CompletableFutures.computeAsync(t => t).asScala
+      result <- workspaceSymbols.searchFuture(params.getQuery, token)
+    } yield result.asJava
+  }.asJava
+  def workspaceSymbol(query: String): Seq[SymbolInformation] = {
+    workspaceSymbols.search(query)
+  }
+
   @JsonRequest("workspace/executeCommand")
   def executeCommand(params: ExecuteCommandParams): CompletableFuture[Object] =
     params.getCommand match {
@@ -865,10 +887,9 @@ class MetalsLanguageServer(
           statusBar.addMessage(s"${config.icons.rocket}Imported build!")
           if (config.statistics.isMemory) {
             val definition =
-              Memory.footprint("definition index", index)
-            val referenceIndex = ReferenceIndex(referencesProvider.index)
+              Memory.footprint("definition index", definitionIndex)
             val references =
-              Memory.footprint("references index", referenceIndex)
+              Memory.footprint("references index", referencesProvider.index)
             scribe.info(s"memory: $definition")
             scribe.info(s"memory: $references")
           }
@@ -908,7 +929,7 @@ class MetalsLanguageServer(
             val path = AbsolutePath(file)
             path.toLanguage match {
               case Language.SCALA | Language.JAVA =>
-                index.addSourceFile(path, Some(sourceDirectory))
+                definitionIndex.addSourceFile(path, Some(sourceDirectory))
               case _ =>
             }
             super.visitFile(file, attrs)
@@ -969,8 +990,9 @@ class MetalsLanguageServer(
         .asScala
       _ = {
         buildTargets.addScalacOptions(scalacOptions)
+        workspaceSymbols.onBuildTargetsUpdate()
         JdkSources(userConfig.javaHome).foreach { zip =>
-          index.addSourceJar(zip)
+          definitionIndex.addSourceJar(zip)
         }
         referencesProvider.onScalacOptions(scalacOptions)
         doctor.check()
@@ -990,7 +1012,7 @@ class MetalsLanguageServer(
             // NOTE(olafur): here we rely on an implementation detail of the bloop BSP server,
             // once we upgrade to BSP v2 we can use buildTarget/sources instead of
             // buildTarget/dependencySources.
-            index.addSourceJar(path)
+            definitionIndex.addSourceJar(path)
           } else {
             scribe.warn(s"unexpected dependency directory: $path")
           }
@@ -1027,10 +1049,11 @@ class MetalsLanguageServer(
     for {
       path <- paths
       if path.isScalaOrJava
+      _ = workspaceSymbols.didChange(path)
       dir <- buildTargets.sourceDirectories
       if path.toNIO.startsWith(dir.toNIO)
     } {
-      index.addSourceFile(path, Some(dir))
+      definitionIndex.addSourceFile(path, Some(dir))
     }
   }
   private val isCompiling = TrieMap.empty[BuildTargetIdentifier, Boolean]

@@ -1,10 +1,10 @@
 package scala.meta.internal.mtags
 
 import scala.meta.inputs.Input
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.mtags.MtagsEnrichments._
 
 final class Mtags {
   def totalLinesOfCode: Long = javaLines + scalaLines
@@ -22,7 +22,7 @@ final class Mtags {
       List(toplevelClass)
     } else if (language.isScala) {
       addLines(language, input.text)
-      new ScalaToplevelMtags(input)
+      new ScalaToplevelMtags(input, includeInnerClasses = false)
         .index()
         .occurrences
         .iterator
@@ -72,7 +72,18 @@ object Mtags {
       .toList
   }
 
+  def allToplevels(input: Input.VirtualFile): TextDocument = {
+    input.toLanguage match {
+      case Language.JAVA =>
+        new JavaMtags(input).index()
+      case Language.SCALA =>
+        new ScalaToplevelMtags(input, includeInnerClasses = true).index()
+      case _ =>
+        TextDocument()
+    }
+  }
   def toplevels(input: Input.VirtualFile): List[String] = {
     new Mtags().toplevels(input)
   }
+
 }

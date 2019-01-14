@@ -92,45 +92,6 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
     } yield ()
   }
 
-  testAsync("found-new") {
-    cleanWorkspace()
-    for {
-      _ <- server.initialize(
-        """
-          |/metals.json
-          |{
-          |  "a": {},
-          |  "b": {"dependsOn": ["a"]}
-          |}
-          |/a/src/main/scala/a/A.scala
-          |package a
-          |class A {
-          |  val x = 1
-          |}
-          |/b/src/main/scala/b/B.scala
-          |package b
-          |object B {
-          |  val b = new a.A()
-          |}
-          |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ = assertNoDiagnostics()
-      _ = client.statusParams.clear()
-      locations <- server.references("a/src/main/scala/a/A.scala", "class A")
-      _ = Predef.assert(locations.nonEmpty, s"found no references to class A")
-      cascade = server.executeCommand(ServerCommands.CascadeCompile.id)
-      // make sure that "found new references" takes buffer changes into account.
-      _ <- server.didChange("a/src/main/scala/a/A.scala")(t => "\n\n" + t)
-      _ <- cascade
-      _ = assertNoDiagnostics()
-      _ = assertContains(
-        server.statusBarHistory,
-        "Found new symbol references for 'A', try running again."
-      )
-    } yield ()
-  }
-
   testAsync("edit-distance") {
     cleanWorkspace()
     for {

@@ -1,15 +1,12 @@
 package scala.meta.internal.metals
 
 import com.google.common.hash.BloomFilter
-import java.nio.file.Path
 import java.text.DecimalFormat
 import org.openjdk.jol.info.GraphLayout
+import scala.collection.concurrent.TrieMap
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 
 object Memory {
-  case class ReferenceIndex(
-      blooms: collection.Map[Path, BloomFilter[CharSequence]]
-  )
   // Adapted from https://github.com/non/clouseau
   val si: List[String] = List("B", "K", "M", "G", "T", "P", "E", "Z", "Y")
 
@@ -34,10 +31,12 @@ object Memory {
       case index: OnDemandSymbolIndex =>
         val n = index.mtags.totalLinesOfScala
         s" (${format(n)} lines Scala)"
-      case ReferenceIndex(blooms) =>
-        val n =
-          blooms.valuesIterator.foldLeft(0L)(_ + _.approximateElementCount())
-        s" (${format(n)} referenced symbols)"
+      case i: TrieMap[_, _] =>
+        val elements = i.values.foldLeft(0L) {
+          case (n, b: BloomFilter[_]) => n + b.approximateElementCount()
+          case (n, _) => n + 1
+        }
+        s" (${format(elements)} elements)"
       case _ =>
         ""
     }

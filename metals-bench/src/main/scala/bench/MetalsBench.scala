@@ -7,19 +7,19 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.io.AbsolutePath
-import scala.meta.io.Classpath
 import scala.meta.internal.metals.MetalsLogger
-import tests.InputProperties
-import tests.Libraries
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken
+import scala.meta.io.AbsolutePath
+import scala.meta.io.Classpath
 import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.io.VirtualFile
+import tests.InputProperties
+import tests.Libraries
 
 @State(Scope.Benchmark)
 class MetalsBench {
@@ -62,7 +62,6 @@ class MetalsBench {
       .flatMap(_.sources().entries)
       .filter(_.toNIO.getFileName.toString.endsWith(".jar"))
   )
-
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def mtagsScalaIndex(): Unit = {
