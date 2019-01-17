@@ -1,7 +1,5 @@
 package tests
 
-import scala.meta.internal.metals.ServerCommands
-
 object ReferenceSlowSuite extends BaseSlowSuite("reference") {
   testAsync("case-class") {
     for {

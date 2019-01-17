@@ -33,7 +33,6 @@ import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.meta.io.Classpath
 import scala.util.Properties
 import scala.util.control.NonFatal
 import scala.{meta => m}

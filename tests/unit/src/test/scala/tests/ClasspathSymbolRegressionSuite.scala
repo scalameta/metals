@@ -1,7 +1,6 @@
 package tests
 
 import java.nio.file.Files
-import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.io.AbsolutePath
