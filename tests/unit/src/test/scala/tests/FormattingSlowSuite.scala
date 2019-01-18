@@ -117,7 +117,8 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
     } yield ()
   }
 
-  testAsync("download-error") {
+  // Ignored because it's very slow, takes ~15s because of HTTP retries.
+  ignore("download-error") {
     for {
       _ <- server.initialize(
         """|.scalafmt.conf

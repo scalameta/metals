@@ -33,6 +33,7 @@ final class ReferenceProvider(
     buffers: Buffers,
     definition: DefinitionProvider
 ) {
+  var referencedPackages = BloomFilters.create(10000)
   val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
   def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
     for {
@@ -87,7 +88,12 @@ final class ReferenceProvider(
       )
       index(file) = bloom
       td.documents.foreach { d =>
-        d.occurrences.foreach(o => bloom.put(o.symbol))
+        d.occurrences.foreach { o =>
+          if (o.symbol.endsWith("/")) {
+            referencedPackages.put(o.symbol)
+          }
+          bloom.put(o.symbol)
+        }
         d.synthetics.foreach { synthetic =>
           Synthetics.foreachSymbol(synthetic) { sym =>
             bloom.put(sym)
@@ -95,6 +101,7 @@ final class ReferenceProvider(
           }
         }
       }
+      resizeReferencedPackages()
     } else {
       scribe.warn(s"not semanticdb file: $file")
     }
@@ -293,6 +300,14 @@ final class ReferenceProvider(
     } add(range)
 
     buf.result()
+  }
+
+  private def resizeReferencedPackages(): Unit = {
+    // Increase the size of the set of referenced packages if the false positive ratio is too high.
+    if (referencedPackages.expectedFpp() > 0.05) {
+      referencedPackages =
+        BloomFilters.create(referencedPackages.approximateElementCount() * 2)
+    }
   }
 
 }

@@ -7,7 +7,8 @@ object SaveExpect {
       SemanticdbSuite,
       MtagsSuite,
       ToplevelSuite,
-      DocumentSymbolSuite
+      DocumentSymbolSuite,
+      WorkspaceSymbolExpectSuite
     ).foreach { suite =>
       val header = suite.suiteName.length + 2
       println("=" * header)

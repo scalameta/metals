@@ -6,6 +6,7 @@ import com.google.gson.JsonElement
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -18,6 +19,7 @@ import java.util.concurrent.CompletionStage
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
+import scala.collection.AbstractIterator
 import scala.collection.convert.DecorateAsJava
 import scala.collection.convert.DecorateAsScala
 import scala.compat.java8.FutureConverters
@@ -221,6 +223,11 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   }
 
   implicit class XtensionPath(path: Path) {
+    def toUriInput: Input.VirtualFile = {
+      val uri = path.toUri.toString
+      val text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
+      Input.VirtualFile(uri, text)
+    }
     def isSemanticdb: Boolean =
       path.getFileName.toString.endsWith(".semanticdb")
   }
@@ -448,6 +455,11 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       Option(exchange.getQueryParameters.get(key)).flatMap(_.asScala.headOption)
   }
   implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {
+    def classpath: Iterator[AbsolutePath] = {
+      item.getClasspath.asScala.iterator
+        .map(uri => AbsolutePath(Paths.get(URI.create(uri))))
+        .filter(p => Files.exists(p.toNIO))
+    }
     def targetroot: AbsolutePath = {
       semanticdbFlag("targetroot")
         .map(AbsolutePath(_))
@@ -481,7 +493,7 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   implicit class XtensionClientCapabilities(
       initializeParams: Option[l.InitializeParams]
   ) {
-    val supportsHierarchicalDocumentSymbols =
+    def supportsHierarchicalDocumentSymbols: Boolean =
       (for {
         params <- initializeParams
         capabilities <- Option(params.getCapabilities)
@@ -508,4 +520,38 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
           true
       }
   }
+
+  implicit class XtensionSymbolInformation(kind: s.SymbolInformation.Kind) {
+    def toLSP: l.SymbolKind = kind match {
+      case k.LOCAL => l.SymbolKind.Variable
+      case k.FIELD => l.SymbolKind.Field
+      case k.METHOD => l.SymbolKind.Method
+      case k.CONSTRUCTOR => l.SymbolKind.Constructor
+      case k.MACRO => l.SymbolKind.Method
+      case k.TYPE => l.SymbolKind.Class
+      case k.PARAMETER => l.SymbolKind.Variable
+      case k.SELF_PARAMETER => l.SymbolKind.Variable
+      case k.TYPE_PARAMETER => l.SymbolKind.TypeParameter
+      case k.OBJECT => l.SymbolKind.Object
+      case k.PACKAGE => l.SymbolKind.Module
+      case k.PACKAGE_OBJECT => l.SymbolKind.Module
+      case k.CLASS => l.SymbolKind.Class
+      case k.TRAIT => l.SymbolKind.Interface
+      case k.INTERFACE => l.SymbolKind.Interface
+      case _ => l.SymbolKind.Class
+    }
+  }
+
+  implicit class XtensionJavaPriorityQueue[A](q: util.PriorityQueue[A]) {
+
+    /**
+     * Returns iterator that consumes the priority queue in-order using `poll()`.
+     */
+    def pollingIterator: Iterator[A] = new AbstractIterator[A] {
+      override def hasNext: Boolean = !q.isEmpty
+      override def next(): A = q.poll()
+    }
+
+  }
+
 }

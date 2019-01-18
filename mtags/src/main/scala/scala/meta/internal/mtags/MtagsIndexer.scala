@@ -24,10 +24,25 @@ trait MtagsIndexer {
       symbols = symbols.result()
     )
   }
+  // This method is intentionally non-final to allow accessing this stream directly without building a s.TextDocument.
+  def visitOccurrence(
+      occ: s.SymbolOccurrence,
+      info: s.SymbolInformation,
+      owner: String
+  ): Unit = {
+    names += occ
+    symbols += info
+  }
+  private val names = List.newBuilder[s.SymbolOccurrence]
+  private val symbols = List.newBuilder[s.SymbolInformation]
+
   private val root: String =
     Symbols.RootPackage
   var currentOwner: String = root
-  def owner = currentOwner
+  private var myLastCurrentOwner: String = currentOwner
+  def lastCurrentOwner: String = myLastCurrentOwner
+
+  def owner: String = currentOwner
   def withOwner[A](owner: String = currentOwner)(thunk: => A): A = {
     val old = currentOwner
     currentOwner = owner
@@ -107,31 +122,32 @@ trait MtagsIndexer {
       pkg(qual)
       currentOwner = symbol(Descriptor.Package(name))
   }
-  private val names = List.newBuilder[s.SymbolOccurrence]
-  private val symbols = List.newBuilder[s.SymbolInformation]
   private def addSignature(
       signature: Descriptor,
       definition: m.Position,
       kind: s.SymbolInformation.Kind,
       properties: Int
   ): Unit = {
+    val previousOwner = currentOwner
     currentOwner = symbol(signature)
+    myLastCurrentOwner = currentOwner
     val syntax = currentOwner
     val role =
       if (kind.isPackage) s.SymbolOccurrence.Role.REFERENCE
       else s.SymbolOccurrence.Role.DEFINITION
-    names += s.SymbolOccurrence(
+    val occ = s.SymbolOccurrence(
       range = Some(definition.toRange),
       syntax,
       role
     )
-    symbols += s.SymbolInformation(
+    val info = s.SymbolInformation(
       symbol = syntax,
       language = language,
       kind = kind,
       properties = properties,
       displayName = signature.name.value
     )
+    visitOccurrence(occ, info, previousOwner)
   }
   def symbol(signature: Descriptor): String =
     Symbols.Global(currentOwner, signature)
