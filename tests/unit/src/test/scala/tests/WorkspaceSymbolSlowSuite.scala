@@ -97,4 +97,29 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
     } yield ()
   }
 
+  testAsync("duplicate") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {},
+          |  "b": {"dependsOn":["a"]}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |case class User(name: String, age: Int)
+          |object User
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiff(
+        server.workspaceSymbol("User", includeKind = true),
+        """a.User Class
+          |a.User Object
+          |""".stripMargin
+      )
+    } yield ()
+  }
 }

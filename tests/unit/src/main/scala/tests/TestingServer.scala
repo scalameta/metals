@@ -102,9 +102,16 @@ final class TestingServer(
     FileLayout.fromString(layout, root = workspace)
   }
 
-  def workspaceSymbol(query: String): String = {
+  def workspaceSymbol(query: String, includeKind: Boolean = false): String = {
     val infos = server.workspaceSymbol(query)
-    infos.map(info => s"${info.getContainerName}${info.getName}").mkString("\n")
+    infos
+      .map { info =>
+        val kind =
+          if (includeKind) s" ${info.getKind}"
+          else ""
+        s"${info.getContainerName}${info.getName}$kind"
+      }
+      .mkString("\n")
   }
   def workspaceSources: Seq[AbsolutePath] = {
     for {

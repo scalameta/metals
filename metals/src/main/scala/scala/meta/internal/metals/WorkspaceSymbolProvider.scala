@@ -128,6 +128,7 @@ final class WorkspaceSymbolProvider(
     for {
       target <- buildTargets.all
       classpathEntry <- target.scalac.classpath
+      if classpathEntry.extension == "jar"
     } {
       packages.visit(classpathEntry)
     }
