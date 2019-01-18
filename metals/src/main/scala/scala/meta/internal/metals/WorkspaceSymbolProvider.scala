@@ -9,7 +9,6 @@ import java.util.Comparator
 import java.util.PriorityQueue
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicReference
-import org.eclipse.lsp4j
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
@@ -18,25 +17,13 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.meta.inputs.Input
-import scala.meta.internal.classpath.ClasspathIndex
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.ListFiles
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.mtags.ScalaToplevelMtags
-import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.semanticdb.Language
-import scala.meta.internal.semanticdb.Scala.Descriptor
-import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
-import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.meta.io.Classpath
-import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 
 /**
@@ -51,13 +38,7 @@ final class WorkspaceSymbolProvider(
 )(implicit ec: ExecutionContext) {
   private val files = new WorkspaceSources(workspace)
   private val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
-  case class DependencyPackage(
-      name: String,
-      bloom: BloomFilter[CharSequence],
-      members: Array[String]
-  )
-  private val inDependencies =
-    TrieMap.empty[String, (BloomFilter[CharSequence], Array[Byte])]
+  private val inDependencies = TrieMap.empty[String, CompressedPackageIndex]
 
   var maxNonExactMatches = 10
 
@@ -95,21 +76,25 @@ final class WorkspaceSymbolProvider(
   }
 
   def onBuildTargetsUpdate(): Unit = {
-    indexSourceDirectories()
-    val timer = new Timer(Time.system)
-    indexClasspath()
-    if (statistics.isWorkspaceSymbol) {
-      scribe.info(
-        s"workspace-symbol: index ${inDependencies.size} classpath packages in $timer"
-      )
-    }
-    if (statistics.isMemory) {
-      val footprint =
-        Memory.footprint("workspace-symbol classpath index", inDependencies)
-      scribe.info(s"memory: ${footprint}")
+    try {
+      indexSourceDirectories()
+      val timer = new Timer(Time.system)
+      indexClasspath()
+      if (statistics.isWorkspaceSymbol) {
+        scribe.info(
+          s"workspace-symbol: index ${inDependencies.size} classpath packages in $timer"
+        )
+      }
+      if (statistics.isMemory) {
+        val footprint =
+          Memory.footprint("workspace-symbol classpath index", inDependencies)
+        scribe.info(s"memory: ${footprint}")
+      }
+    } catch {
+      case NonFatal(e) =>
+        scribe.error("failed to build workspace/symbol index", e)
     }
   }
-
   def didChange(path: AbsolutePath): Unit = {
     indexSource(path)
   }
@@ -139,32 +124,31 @@ final class WorkspaceSymbolProvider(
   }
   private def indexClasspath(): Unit = {
     inDependencies.clear()
-    val classpath = mutable.Set.empty[AbsolutePath]
-    buildTargets.all.foreach { target =>
-      classpath ++= target.scalac.classpath
-    }
-    val classpathIndex =
-      ClasspathIndex(Classpath(classpath.toList), includeJdk = true)
+    val packages = new PackageIndex()
     for {
-      (pkg, classdir) <- classpathIndex.dirs
+      target <- buildTargets.all
+      classpathEntry <- target.scalac.classpath
+    } {
+      packages.visit(classpathEntry)
+    }
+    for {
+      (pkg, members) <- packages.packages.asScala
       if !isExcludedPackage(pkg)
     } {
-      val buf = Fuzzy.bloomFilterSymbolStrings(classdir.members.keys)
+      val buf = Fuzzy.bloomFilterSymbolStrings(members.asScala)
       buf ++= Fuzzy.bloomFilterSymbolStrings(List(pkg), buf)
       val bloom = BloomFilters.create(buf.size)
       buf.foreach { key =>
         bloom.put(key)
       }
-      val members =
-        classdir.members.keys.iterator.filter(_.endsWith(".class")).toArray
       // Sort members for deterministic order for deterministic results.
-      util.Arrays.sort(members, String.CASE_INSENSITIVE_ORDER)
+      members.sort(String.CASE_INSENSITIVE_ORDER)
       // Compress members because they make up the bulk of memory usage in the classpath index.
       // For a 140mb classpath with spark/linkerd/akka/.. the members take up 12mb uncompressed
       // and ~900kb compressed. We are accummulating a lot of different custom indexes in Metals
       // so we should try to keep each of them as small as possible.
-      val compressedMembers = Compression.compress(members)
-      inDependencies(pkg) = (bloom, compressedMembers)
+      val compressedMembers = Compression.compress(members.asScala)
+      inDependencies(pkg) = CompressedPackageIndex(bloom, compressedMembers)
     }
   }
 
@@ -209,8 +193,8 @@ final class WorkspaceSymbolProvider(
   private def indexSourceUnsafe(source: AbsolutePath): Unit = {
     val input = source.toInput
     val symbols = ArrayBuffer.empty[String]
-    foreachSymbol(input) {
-      case SymbolDefinition(info, _, _) =>
+    SemanticdbDefinition.foreach(input) {
+      case SemanticdbDefinition(info, _, _) =>
         if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
           symbols += info.symbol
         }
@@ -227,67 +211,13 @@ final class WorkspaceSymbolProvider(
     }
   }
 
-  case class SymbolDefinition(
-      info: SymbolInformation,
-      occ: SymbolOccurrence,
-      owner: String
-  ) {
-    def toInfo(uri: String): l.SymbolInformation = {
-      new l.SymbolInformation(
-        info.displayName,
-        info.kind.toLSP,
-        new l.Location(uri, occ.range.get.toLSP),
-        owner.replace('/', '.')
-      )
-    }
-  }
-  private def foreachSymbol(input: Input.VirtualFile)(
-      fn: SymbolDefinition => Unit
-  ): Unit = {
-    input.toLanguage match {
-      case Language.SCALA =>
-        val mtags = new ScalaToplevelMtags(input, true) {
-          override def visitOccurrence(
-              occ: s.SymbolOccurrence,
-              info: s.SymbolInformation,
-              owner: String
-          ): Unit = {
-            fn(SymbolDefinition(info, occ, owner))
-          }
-        }
-        try mtags.indexRoot()
-        catch {
-          case _: TokenizeException =>
-            () // ignore because we don't need to index untokenizable files.
-        }
-      case Language.JAVA =>
-        val mtags = new JavaMtags(input) {
-          override def visitOccurrence(
-              occ: s.SymbolOccurrence,
-              info: s.SymbolInformation,
-              owner: String
-          ): Unit = {
-            fn(SymbolDefinition(info, occ, owner))
-          }
-        }
-        try mtags.indexRoot()
-        catch {
-          case NonFatal(e) =>
-        }
-      case _ =>
-    }
-  }
-
-  private def newPriorityQueue(): PriorityQueue[lsp4j.SymbolInformation] =
-    new PriorityQueue[l.SymbolInformation](
-      (o1, o2) => -Integer.compare(o1.getName.length, o2.getName.length)
-    )
-
   private def searchUnsafe(
       textQuery: String,
       token: CancelChecker
   ): Seq[l.SymbolInformation] = {
-    val result = newPriorityQueue()
+    val result = new PriorityQueue[l.SymbolInformation](
+      (o1, o2) => -Integer.compare(o1.getName.length, o2.getName.length)
+    )
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
     def matches(info: s.SymbolInformation): Boolean = {
       WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
@@ -305,10 +235,10 @@ final class WorkspaceSymbolProvider(
         visitsCount += 1
         var isFalsePositive = true
         val input = path.toUriInput
-        foreachSymbol(input) { defn =>
+        SemanticdbDefinition.foreach(input) { defn =>
           if (matches(defn.info)) {
             isFalsePositive = false
-            result.add(defn.toInfo(input.path))
+            result.add(defn.toLSP(input.path))
           }
         }
         if (isFalsePositive) {
@@ -326,59 +256,43 @@ final class WorkspaceSymbolProvider(
     }
     def searchDependencySymbols(): Unit = {
       val timer = new Timer(Time.system)
-      case class Hit(pkg: String, name: String) {
-        def isExact: Boolean = desc.value == query.query
-        def desc: Descriptor = {
-          val dollar = name.indexOf('$')
-          val symname =
-            if (dollar < 0) name.stripSuffix(".class")
-            else name.substring(0, dollar)
-          Descriptor.Type(symname)
-        }
-        def toplevel: String = {
-          Symbols.Global(pkg, desc)
-        }
-      }
-      val buf = new PriorityQueue[Hit](
-        (a, b) => Integer.compare(a.name.length, b.name.length)
+      val classfiles = new PriorityQueue[Classfile](
+        (a, b) => Integer.compare(a.filename.length, b.filename.length)
       )
-
       val packages = packagesSortedByReferences()
       for {
         pkg <- packages.iterator
-        (bloom, memberBytes) = inDependencies(pkg)
+        compressed = inDependencies(pkg)
         _ = token.checkCanceled()
-        if query.matches(bloom)
-        members = Compression.decompress(memberBytes)
-        member <- members
+        if query.matches(compressed.bloom)
+        member <- compressed.members
         if member.endsWith(".class")
         name = member.subSequence(0, member.length - ".class".length)
-        if name.charAt(name.length - 1) != '$'
         symbol = new ConcatSequence(pkg, name)
         isMatch = query.matches(symbol)
         if isMatch
       } {
-        buf.add(Hit(pkg, member))
+        classfiles.add(Classfile(pkg, member))
       }
       val classpathEntries = ArrayBuffer.empty[l.SymbolInformation]
       val isVisited = mutable.Set.empty[AbsolutePath]
       var nonExactMatches = 0
       for {
-        hit <- buf.pollingIterator
+        hit <- classfiles.pollingIterator
         _ = token.checkCanceled()
-        if nonExactMatches < maxNonExactMatches || hit.isExact
-        defn <- index.definition(Symbol(hit.toplevel))
+        if nonExactMatches < maxNonExactMatches || hit.isExact(query)
+        defn <- hit.definition(index)
         if !isVisited(defn.path)
       } {
         isVisited += defn.path
-        if (!hit.isExact) {
+        if (!hit.isExact(query)) {
           nonExactMatches += 1
         }
         val input = defn.path.toInput
         lazy val uri = defn.path.toFileOnDisk(workspace).toURI.toString
-        foreachSymbol(input) { defn =>
+        SemanticdbDefinition.foreach(input) { defn =>
           if (matches(defn.info)) {
-            classpathEntries += defn.toInfo(uri)
+            classpathEntries += defn.toLSP(uri)
           }
         }
       }
@@ -387,7 +301,7 @@ final class WorkspaceSymbolProvider(
       }
       if (statistics.isWorkspaceSymbol) {
         scribe.info(
-          s"workspace-symbol: query '${query.query}' returned ${buf.size} results from classpath in $timer"
+          s"workspace-symbol: query '${query.query}' returned ${classfiles.size} results from classpath in $timer"
         )
       }
     }
