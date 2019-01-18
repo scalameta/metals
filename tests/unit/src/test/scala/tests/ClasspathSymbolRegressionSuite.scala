@@ -28,7 +28,6 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |com.google.common.collect.Maps#FilteredEntrySortedMap Class
        |com.google.common.collect.Maps#UnmodifiableEntrySet Class
        |com.twitter.util.tunable.TunableMap.Entry Class
-       |io.netty.util.collection.IntObjectMap#PrimitiveEntry Interface
        |jersey.repackaged.com.google.common.collect.Maps#EntryFunction Class
        |jersey.repackaged.com.google.common.collect.Maps#EntrySet Class
        |jersey.repackaged.com.google.common.collect.Maps#EntryTransformer Interface
@@ -38,6 +37,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |jersey.repackaged.com.google.common.collect.Maps#FilteredEntryNavigableMap Class
        |jersey.repackaged.com.google.common.collect.Maps#FilteredEntrySortedMap Class
        |jersey.repackaged.com.google.common.collect.Maps#UnmodifiableEntrySet Class
+       |org.apache.commons.collections.BeanMap#MyMapEntry Class
        |org.apache.commons.collections.map.Flat3Map#EntrySet Class
        |org.apache.commons.collections.map.Flat3Map#EntrySetIterator Class
        |org.apache.commons.lang.IntHashMap#Entry Class
@@ -73,7 +73,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |io.buoyant.config.types.FileDeserializer Class
        |io.buoyant.config.types.FileSerializer Class
        |org.apache.commons.compress.archivers.zip.ZipFile Class
-       |org.apache.commons.net.ftp.FTPFile Class
+       |org.apache.hadoop.io.SetFile Class
        |org.apache.hadoop.io.file.tfile.BCFile Class
        |org.apache.hadoop.io.file.tfile.TFile Class
        |org.apache.hadoop.io.file.tfile.TFile#TFileIndex Class

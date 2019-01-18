@@ -19,7 +19,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.inputs.Input
-import scala.meta.internal.classpath.ClasspathIndex
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.ListFiles
@@ -35,7 +34,6 @@ import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.meta.io.Classpath
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 
@@ -95,21 +93,25 @@ final class WorkspaceSymbolProvider(
   }
 
   def onBuildTargetsUpdate(): Unit = {
-    indexSourceDirectories()
-    val timer = new Timer(Time.system)
-    indexClasspath()
-    if (statistics.isWorkspaceSymbol) {
-      scribe.info(
-        s"workspace-symbol: index ${inDependencies.size} classpath packages in $timer"
-      )
-    }
-    if (statistics.isMemory) {
-      val footprint =
-        Memory.footprint("workspace-symbol classpath index", inDependencies)
-      scribe.info(s"memory: ${footprint}")
+    try {
+      indexSourceDirectories()
+      val timer = new Timer(Time.system)
+      indexClasspath()
+      if (statistics.isWorkspaceSymbol) {
+        scribe.info(
+          s"workspace-symbol: index ${inDependencies.size} classpath packages in $timer"
+        )
+      }
+      if (statistics.isMemory) {
+        val footprint =
+          Memory.footprint("workspace-symbol classpath index", inDependencies)
+        scribe.info(s"memory: ${footprint}")
+      }
+    } catch {
+      case NonFatal(e) =>
+        scribe.error("failed to build workspace/symbol index", e)
     }
   }
-
   def didChange(path: AbsolutePath): Unit = {
     indexSource(path)
   }
@@ -139,31 +141,30 @@ final class WorkspaceSymbolProvider(
   }
   private def indexClasspath(): Unit = {
     inDependencies.clear()
-    val classpath = mutable.Set.empty[AbsolutePath]
-    buildTargets.all.foreach { target =>
-      classpath ++= target.scalac.classpath
-    }
-    val classpathIndex =
-      ClasspathIndex(Classpath(classpath.toList), includeJdk = true)
+    val packages = new PackageIndex()
     for {
-      (pkg, classdir) <- classpathIndex.dirs
+      target <- buildTargets.all
+      classpathEntry <- target.scalac.classpath
+    } {
+      packages.visit(classpathEntry)
+    }
+    for {
+      (pkg, members) <- packages.packages.asScala
       if !isExcludedPackage(pkg)
     } {
-      val buf = Fuzzy.bloomFilterSymbolStrings(classdir.members.keys)
+      val buf = Fuzzy.bloomFilterSymbolStrings(members.asScala)
       buf ++= Fuzzy.bloomFilterSymbolStrings(List(pkg), buf)
       val bloom = BloomFilters.create(buf.size)
       buf.foreach { key =>
         bloom.put(key)
       }
-      val members =
-        classdir.members.keys.iterator.filter(_.endsWith(".class")).toArray
       // Sort members for deterministic order for deterministic results.
-      util.Arrays.sort(members, String.CASE_INSENSITIVE_ORDER)
+      members.sort(String.CASE_INSENSITIVE_ORDER)
       // Compress members because they make up the bulk of memory usage in the classpath index.
       // For a 140mb classpath with spark/linkerd/akka/.. the members take up 12mb uncompressed
       // and ~900kb compressed. We are accummulating a lot of different custom indexes in Metals
       // so we should try to keep each of them as small as possible.
-      val compressedMembers = Compression.compress(members)
+      val compressedMembers = Compression.compress(members.asScala)
       inDependencies(pkg) = (bloom, compressedMembers)
     }
   }

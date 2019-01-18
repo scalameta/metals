@@ -12,7 +12,7 @@ object Compression {
   /**
    * Returns a GZIP deflated sequence of strings.
    */
-  def compress(strings: Array[String]): Array[Byte] = {
+  def compress(strings: Seq[String]): Array[Byte] = {
     val baos = new ByteArrayOutputStream()
     val out = CodedOutputStream.newInstance(baos)
     strings.foreach { member =>
