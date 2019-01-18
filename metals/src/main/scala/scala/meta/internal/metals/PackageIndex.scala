@@ -7,16 +7,18 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.jar.JarFile
-import scala.collection.mutable
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.util.control.NonFatal
 
+/**
+ * An index to lookup classfiles contained in a given classpath.
+ */
 class PackageIndex {
   val packages = new util.HashMap[String, util.ArrayList[String]]()
-  val isVisited = new util.HashSet[AbsolutePath]()
+  private val isVisited = new util.HashSet[AbsolutePath]()
   private val enterPackage =
     new util.function.Function[String, util.ArrayList[String]] {
       override def apply(t: String): util.ArrayList[String] = {
@@ -40,8 +42,16 @@ class PackageIndex {
   }
 
   def addMember(pkg: String, member: String): Unit = {
-    val members = packages.computeIfAbsent(pkg, enterPackage)
-    members.add(member)
+    val isSyntheticClassfile = member.endsWith("$.class")
+    if (!isSyntheticClassfile) {
+      val members = packages.computeIfAbsent(pkg, enterPackage)
+      members.add(member)
+    } else {
+      // Ignore synthetic classfiles that end with `$.class`, they
+      // usually come from Scala objects and have an accompanying non-synthetic
+      // file without a `$.class` suffix.
+      ()
+    }
   }
 
   private def visitDirectoryEntry(dir: AbsolutePath): Unit = {
@@ -77,7 +87,9 @@ class PackageIndex {
       val entries = jar.entries()
       while (entries.hasMoreElements) {
         val element = entries.nextElement()
-        if (!element.isDirectory && !element.getName.startsWith("META-INF")) {
+        if (!element.isDirectory &&
+          !element.getName.startsWith("META-INF") &&
+          element.getName.endsWith(".class")) {
           val pkg = PathIO.dirname(element.getName)
           val member = PathIO.basename(element.getName)
           addMember(pkg, member)
