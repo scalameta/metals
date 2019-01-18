@@ -288,7 +288,7 @@ final class WorkspaceSymbolProvider(
       token: CancelChecker
   ): Seq[l.SymbolInformation] = {
     val result = newPriorityQueue()
-    val query = SymbolQuery.fromTextQuery(textQuery)
+    val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
     def matches(info: s.SymbolInformation): Boolean = {
       WorkspaceSymbolProvider.isRelevantKind(info.kind) &&
       query.matches(info.symbol)

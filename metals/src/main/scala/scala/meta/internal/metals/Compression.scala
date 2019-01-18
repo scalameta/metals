@@ -9,10 +9,13 @@ import java.util.zip.GZIPOutputStream
 
 object Compression {
 
-  def compress(members: Array[String]): Array[Byte] = {
+  /**
+   * Returns a GZIP deflated sequence of strings.
+   */
+  def compress(strings: Array[String]): Array[Byte] = {
     val baos = new ByteArrayOutputStream()
     val out = CodedOutputStream.newInstance(baos)
-    members.foreach { member =>
+    strings.foreach { member =>
       out.writeString(1, member)
     }
     out.flush()
@@ -27,6 +30,9 @@ object Compression {
     }
   }
 
+  /**
+   * Returns a GZIP inflated sequence of strings.
+   */
   def decompress(members: Array[Byte]): Array[String] = {
     if (members.isEmpty) Array.empty
     else {
@@ -48,4 +54,5 @@ object Compression {
       out.result()
     }
   }
+
 }

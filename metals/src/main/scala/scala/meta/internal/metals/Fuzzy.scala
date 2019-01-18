@@ -69,6 +69,10 @@ object Fuzzy {
     }
     // Loops through all names in the query/symbol strings in reverse order (last names first)
     // and returns true if all query names match their corresponding symbol name.
+    // For the query "col.imm.Li" and symbol "scala/collection/immutable/List" we do the following loops.
+    // Loop 1: compareNames("Li", "List")
+    // Loop 2: compareNames("imm", "immutable")
+    // Loop 3: compareNames("col", "collection")
     @tailrec
     def loopDelimiters(qb: Int, sb: Int): Boolean = {
       val (isEndOfQuery, qa) = lastDelimiter(query, qb)
@@ -101,11 +105,17 @@ object Fuzzy {
       sa: Int,
       sb: Int
   ): Boolean = {
-    /*
-     * @param ql the last index in query at which qa.isUpper && charAt(qa) == charAt(sa)
-     * @param ll the last index in symbol at which qa.isUpper && charAt(qa) == charAt(sa)
-     * @return
-     */
+    // @param ql the last index in query at which qa.isUpper && charAt(qa) == charAt(sa)
+    // @param sl the last index in symbol at which qa.isUpper && charAt(qa) == charAt(sa)
+    // For the query "Stop" and symbol "MStartStop" we do the following iterations:
+    // Loop 1: 'S' 'M'       , no match, increment symbol start index
+    // Loop 2: 'S' 'S' (1st) , match, increment both indexes, update ql and sl
+    // Loop 3: 't' 't'       , match, increment both indexes, but don't update ql and sl
+    // Loop 4: 'o' 'a'       , no match, backtrack to ql and sl + 1
+    // Loop 5: 'S' 'S' (2nd) , match, increment both indexes, update ql and sl
+    // Loop 6: 't' 't'       , match, increment both indexes but don't update ql and sl
+    // Loop 7: 'o' 'o'       , match, ...
+    // Loop 8: 'p' 'p'       , match, ...
     @tailrec
     def loop(qa: Int, ql: Int, sa: Int, sl: Int): Boolean = {
       if (qa >= qb) {
@@ -134,6 +144,24 @@ object Fuzzy {
     loop(qa, -1, sa, -1)
   }
 
+  /**
+   * Returns the set of strings to insert into a bloom filter index of a single package or file.
+   *
+   * Given a query and set of symbols where there exists at least one symbol where `Fuzzy.matches(query, symbol)`,
+   * this method must meet the following constraints:
+   *   predicate `symbols.exists(symbol => Fuzzy.matches(query, symbol))`
+   *   implies `bloomFilterQueryStrings(query).forall(bloom.mightContain)`
+   *   where `bloom = BloomFilter(bloomFilterSymbolStrings)`
+   *
+   * What this method roughly tries to achieve is extract the substrings of the symbols that can appear in queries.
+   * For example, given the symbol `InputFileChunkedStream` we insert the following substrings:
+   *
+   * - All prefixes of the individual names `Input`, `File`, `Chunked` and `Stream`,
+   *   example: "I", "In", "Inp", ..., "Strea", "Stream".
+   * - All trigrams of uppercase characters, example: "IFC", "IFS", "FCS".
+   *
+   * @param symbols all symbols in a source file or a package.
+   */
   def bloomFilterSymbolStrings(
       symbols: Iterable[String],
       result: mutable.Set[CharSequence] = mutable.Set.empty
@@ -152,7 +180,8 @@ object Fuzzy {
               delimiter = i
               upper.append(ch)
             }
-            result.add(symbol.subSequence(delimiter, i + 1))
+            val namePrefix = symbol.subSequence(delimiter, i + 1)
+            result.add(namePrefix)
         }
         i += 1
       }
@@ -162,6 +191,9 @@ object Fuzzy {
     result
   }
 
+  /**
+   * Companion to `bloomFilterSymbolStrings`.
+   */
   def bloomFilterQueryStrings(
       query: String,
       includeTrigrams: Boolean = true
@@ -179,7 +211,8 @@ object Fuzzy {
         case _ =>
           if (ch.isUpper) {
             if (border != i) {
-              result.add(query.subSequence(border, i))
+              val exactName = query.subSequence(border, i)
+              result.add(exactName)
             }
             upper.append(ch)
             border = i

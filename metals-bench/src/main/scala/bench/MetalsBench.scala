@@ -19,7 +19,7 @@ import scala.meta.io.Classpath
 import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.io.VirtualFile
 import tests.InputProperties
-import tests.Libraries
+import tests.Library
 
 @State(Scope.Benchmark)
 class MetalsBench {
@@ -58,8 +58,8 @@ class MetalsBench {
   }
 
   val megaSources = Classpath(
-    Libraries.suite
-      .flatMap(_.sources().entries)
+    Library.all
+      .flatMap(_.sources.entries)
       .filter(_.toNIO.getFileName.toString.endsWith(".jar"))
   )
   @Benchmark

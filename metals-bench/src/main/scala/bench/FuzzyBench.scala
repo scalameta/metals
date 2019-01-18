@@ -13,10 +13,9 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
-import tests.Libraries
+import tests.Library
 import tests.MetalsTestEnrichments._
 import tests.TestingWorkspaceSymbolProvider
 
@@ -26,10 +25,7 @@ class WorkspaceFuzzBench {
 
   @Setup
   def setup(): Unit = {
-    symbols = TestingWorkspaceSymbolProvider(
-      AkkaSources.download(),
-      statistics = StatisticsConfig.default
-    )
+    symbols = TestingWorkspaceSymbolProvider(AkkaSources.download())
     symbols.indexWorkspace()
   }
 
@@ -57,7 +53,7 @@ class ClasspathFuzzBench {
   def setup(): Unit = {
     tmp = AbsolutePath(Files.createTempDirectory("metals"))
     symbols = TestingWorkspaceSymbolProvider(tmp)
-    symbols.indexLibraries(Libraries.suite)
+    symbols.indexLibraries(Library.all)
     symbols.onBuildTargetsUpdate()
   }
 

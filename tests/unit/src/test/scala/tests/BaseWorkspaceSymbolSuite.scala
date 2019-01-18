@@ -7,7 +7,7 @@ import tests.MetalsTestEnrichments._
 
 abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def workspace: AbsolutePath
-  def statistics = StatisticsConfig.default
+  def statistics: StatisticsConfig = StatisticsConfig.default
   def libraries: List[Library] = Nil
   lazy val symbols: WorkspaceSymbolProvider = {
     val p = TestingWorkspaceSymbolProvider(workspace, statistics = statistics)

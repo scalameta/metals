@@ -5,10 +5,10 @@ import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 
 object BloomFilters {
-  def create(size: Int): BloomFilter[CharSequence] = {
+  def create(size: Long): BloomFilter[CharSequence] = {
     BloomFilter.create(
       Funnels.stringFunnel(StandardCharsets.UTF_8),
-      Integer.valueOf(size),
+      java.lang.Long.valueOf(size),
       0.01
     )
   }

@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
@@ -611,20 +612,25 @@ class MetalsLanguageServer(
       }
     }
 
+  private def cancelableFuture[T](fn: CancelChecker => Future[T]): Future[T] = {
+    CompletableFutures.computeAsync(t => t).asScala.flatMap(fn)
+  }
+  private def cancelableJavaFuture[T](
+      fn: CancelChecker => Future[T]
+  ): CompletableFuture[T] = {
+    cancelableFuture(fn).asJava
+  }
+
   @JsonRequest("textDocument/formatting")
   def formatting(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CompletableFutures
-      .computeAsync(t => t)
-      .asScala
-      .flatMap { token =>
-        formattingProvider.format(
-          params.getTextDocument.getUri.toAbsolutePath,
-          token
-        )
-      }
-      .asJava
+    cancelableJavaFuture { token =>
+      formattingProvider.format(
+        params.getTextDocument.getUri.toAbsolutePath,
+        token
+      )
+    }
 
   @JsonRequest("textDocument/rename")
   def rename(
@@ -736,12 +742,13 @@ class MetalsLanguageServer(
   @JsonRequest("workspace/symbol")
   def workspaceSymbol(
       params: WorkspaceSymbolParams
-  ): CompletableFuture[util.List[SymbolInformation]] = {
-    for {
-      token <- CompletableFutures.computeAsync(t => t).asScala
-      result <- workspaceSymbols.searchFuture(params.getQuery, token)
-    } yield result.asJava
-  }.asJava
+  ): CompletableFuture[util.List[SymbolInformation]] =
+    cancelableJavaFuture { token =>
+      workspaceSymbols
+        .searchFuture(params.getQuery, token)
+        .map(_.asJava)
+    }
+
   def workspaceSymbol(query: String): Seq[SymbolInformation] = {
     workspaceSymbols.search(query)
   }

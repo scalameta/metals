@@ -2,13 +2,11 @@ package tests
 
 import java.nio.file.Files
 import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.io.AbsolutePath
 
 object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
-  override def statistics: StatisticsConfig = StatisticsConfig.all
   var tmp = AbsolutePath(Files.createTempDirectory("metals"))
-  override def libraries: List[Library] = Libraries.suite
+  override def libraries: List[Library] = Library.all
   def workspace: AbsolutePath = tmp
   override def afterAll(): Unit = {
     RecursivelyDelete(tmp)
