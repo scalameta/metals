@@ -34,7 +34,8 @@ final class WorkspaceSymbolProvider(
     statistics: StatisticsConfig,
     val buildTargets: BuildTargets,
     val index: OnDemandSymbolIndex,
-    isReferencedPackage: String => Boolean
+    isReferencedPackage: String => Boolean,
+    fileOnDisk: AbsolutePath => AbsolutePath
 )(implicit ec: ExecutionContext) {
   private val files = new WorkspaceSources(workspace)
   private val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
@@ -290,7 +291,7 @@ final class WorkspaceSymbolProvider(
           nonExactMatches += 1
         }
         val input = defn.path.toInput
-        lazy val uri = defn.path.toFileOnDisk(workspace).toURI.toString
+        lazy val uri = fileOnDisk(defn.path).toURI.toString
         SemanticdbDefinition.foreach(input) { defn =>
           if (matches(defn.info)) {
             classpathEntries += defn.toLSP(uri)

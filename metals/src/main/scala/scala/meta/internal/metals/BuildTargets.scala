@@ -24,6 +24,8 @@ final class BuildTargets() {
     TrieMap.empty[BuildTargetIdentifier, ScalacOptionsItem]
   private val inverseDependencies =
     TrieMap.empty[BuildTargetIdentifier, ListBuffer[BuildTargetIdentifier]]
+  private val inverseDependencySources =
+    TrieMap.empty[AbsolutePath, BuildTargetIdentifier]
 
   def reset(): Unit = {
     sourceDirectoriesToBuildTarget.values.foreach(_.clear())
@@ -31,15 +33,16 @@ final class BuildTargets() {
     buildTargetInfo.clear()
     scalacTargetInfo.clear()
     inverseDependencies.clear()
+    inverseDependencySources.clear()
   }
   def sourceDirectories: Iterable[AbsolutePath] =
     sourceDirectoriesToBuildTarget.keys
   def scalacOptions: Iterable[ScalacOptionsItem] =
     scalacTargetInfo.values
 
-  def all: List[ScalaTarget] =
+  def all: Iterator[ScalaTarget] =
     for {
-      (id, target) <- buildTargetInfo.toList
+      (id, target) <- buildTargetInfo.iterator
       scalac <- scalacTargetInfo.get(id)
     } yield ScalaTarget(target, scalac)
 
@@ -103,6 +106,19 @@ final class BuildTargets() {
       target: BuildTargetIdentifier
   ): Iterable[BuildTargetIdentifier] = {
     BuildTargets.inverseDependencies(target, inverseDependencies.get)
+  }
+
+  def addDependencySource(
+      sourcesJar: AbsolutePath,
+      target: BuildTargetIdentifier
+  ): Unit = {
+    inverseDependencySources(sourcesJar) = target
+  }
+
+  def inverseDependencySource(
+      sourceJar: AbsolutePath
+  ): Option[BuildTargetIdentifier] = {
+    inverseDependencySources.get(sourceJar)
   }
 
 }

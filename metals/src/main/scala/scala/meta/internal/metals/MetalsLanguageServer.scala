@@ -230,7 +230,8 @@ class MetalsLanguageServer(
       config.statistics,
       buildTargets,
       definitionIndex,
-      pkg => referencesProvider.referencedPackages.mightContain(pkg)
+      pkg => referencesProvider.referencedPackages.mightContain(pkg),
+      interactiveSemanticdbs.toFileOnDisk
     )
     doctor = new Doctor(
       workspace,
@@ -241,7 +242,6 @@ class MetalsLanguageServer(
       tables
     )
   }
-
   def setupJna(): Unit = {
     // This is required to avoid the following error:
     //   java.lang.NoClassDefFoundError: Could not initialize class com.sun.jna.platform.win32.Kernel32
@@ -1015,6 +1015,7 @@ class MetalsLanguageServer(
       } {
         try {
           val path = sourceUri.toAbsolutePath
+          buildTargets.addDependencySource(path, item.getTarget)
           if (path.isJar) {
             // NOTE(olafur): here we rely on an implementation detail of the bloop BSP server,
             // once we upgrade to BSP v2 we can use buildTarget/sources instead of
@@ -1076,7 +1077,10 @@ class MetalsLanguageServer(
       paths: Seq[AbsolutePath],
       isCascade: Boolean
   ): CancelableFuture[Unit] = {
-    val scalaPaths = paths.filter(_.isScalaOrJava)
+    val scalaPaths = paths.filter { path =>
+      path.isScalaOrJava &&
+      !path.isDependencySource(workspace)
+    }
     buildServer match {
       case Some(build) if scalaPaths.nonEmpty =>
         val targets = scalaPaths.flatMap(buildTargets.inverseSources).distinct
