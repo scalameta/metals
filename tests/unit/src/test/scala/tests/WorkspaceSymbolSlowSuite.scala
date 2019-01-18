@@ -122,4 +122,36 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
       )
     } yield ()
   }
+
+  testAsync("dependencies") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |object User {
+          |  val x: Option[Int] = None
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = server.workspaceSymbol("scala.None")
+      option = ".metals/readonly/scala/Option.scala"
+      _ <- server.didOpen(option)
+      references <- server.references(option, "object None")
+      _ = assertNoDiff(
+        references,
+        """|a/src/main/scala/a/A.scala:4:24: info: reference
+           |  val x: Option[Int] = None
+           |                       ^^^^
+           |""".stripMargin
+      )
+    } yield ()
+  }
 }

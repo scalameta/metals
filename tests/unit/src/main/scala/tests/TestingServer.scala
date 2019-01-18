@@ -11,6 +11,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import org.eclipse.lsp4j.ClientCapabilities
+import scala.meta.internal.metals.PositionSyntax._
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
@@ -317,7 +318,7 @@ final class TestingServer(
   def references(
       filename: String,
       substring: String
-  ): Future[Seq[Location]] = {
+  ): Future[String] = {
     val path = toPath(filename)
     val input = path.toInputFromBuffers(buffers)
     val index = input.text.lastIndexOf(substring)
@@ -331,7 +332,18 @@ final class TestingServer(
     val offset = index + substring.length - 1
     val pos = m.Position.Range(input, offset, offset + 1)
     params.setPosition(new l.Position(pos.startLine, pos.startColumn))
-    server.references(params).asScala.map(_.asScala)
+    server.references(params).asScala.map { r =>
+      r.asScala
+        .map { l =>
+          val path = l.getUri.toAbsolutePath
+          val input = path
+            .toInputFromBuffers(buffers)
+            .copy(path = path.toRelative(workspace).toURI(false).toString)
+          val pos = l.getRange.toMeta(input)
+          pos.formatMessage("info", "reference")
+        }
+        .mkString("\n")
+    }
   }
   def formatting(filename: String): Future[Unit] = {
     val path = toPath(filename)

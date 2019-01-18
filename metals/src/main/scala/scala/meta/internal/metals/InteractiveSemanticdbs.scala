@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.{lsp4j => l}
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.io.FileIO
@@ -54,6 +55,17 @@ final class InteractiveSemanticdbs(
   private val textDocumentCache = Collections.synchronizedMap(
     new java.util.HashMap[AbsolutePath, s.TextDocument]()
   )
+  // keys are created files in .metals/readonly/ and values are the original paths
+  // in *-sources.jar files.
+  private val readonlyToSource = TrieMap.empty[AbsolutePath, AbsolutePath]
+
+  def toFileOnDisk(path: AbsolutePath): AbsolutePath = {
+    val disk = path.toFileOnDisk(workspace)
+    if (disk != path) {
+      readonlyToSource(disk) = path
+    }
+    disk
+  }
 
   def reset(): Unit = {
     textDocumentCache.clear()
@@ -73,33 +85,6 @@ final class InteractiveSemanticdbs(
       val result =
         textDocumentCache.computeIfAbsent(source, path => compile(path).orNull)
       TextDocumentLookup.fromOption(source, Option(result))
-    }
-  }
-
-  private def compile(source: AbsolutePath): Option[s.TextDocument] = {
-    for {
-      buildTarget <- tables.dependencySources.getBuildTarget(source)
-      global <- Option(
-        globalCache.computeIfAbsent(buildTarget, x => newGlobal(x).orNull)
-      )
-    } yield {
-      val text = FileIO.slurp(source, charset)
-      val uri = source.toURI.toString
-      val textDocument = InteractiveSemanticdb
-        .toTextDocument(
-          global,
-          code = text,
-          filename = uri,
-          timeout = TimeUnit.SECONDS.toMillis(15),
-          options = List(
-            "-P:semanticdb:symbols:none",
-            "-P:semanticdb:text:on"
-          )
-        )
-        .withUri(uri) // semanticdb-scalac does weird URI encoding
-      textDocumentCache.put(source, textDocument)
-      PlatformTokenizerCache.megaCache.clear() // :facepalm:
-      textDocument
     }
   }
 
@@ -150,6 +135,55 @@ final class InteractiveSemanticdbs(
       activeDocument.set(None)
     }
   }
+
+  private def compile(source: AbsolutePath): Option[s.TextDocument] = {
+    for {
+      buildTarget <- getBuildTarget(source)
+      global <- Option(
+        globalCache.computeIfAbsent(buildTarget, x => newGlobal(x).orNull)
+      )
+    } yield {
+      val text = FileIO.slurp(source, charset)
+      val uri = source.toURI.toString
+      val textDocument = InteractiveSemanticdb
+        .toTextDocument(
+          global,
+          code = text,
+          filename = uri,
+          timeout = TimeUnit.SECONDS.toMillis(15),
+          options = List(
+            "-P:semanticdb:symbols:none",
+            "-P:semanticdb:text:on"
+          )
+        )
+        .withUri(uri) // semanticdb-scalac does weird URI encoding
+      textDocumentCache.put(source, textDocument)
+      PlatformTokenizerCache.megaCache.clear() // :facepalm:
+      textDocument
+    }
+  }
+
+  private def getBuildTarget(
+      source: AbsolutePath
+  ): Option[BuildTargetIdentifier] = {
+    val fromDatabase = tables.dependencySources.getBuildTarget(source)
+    fromDatabase.orElse(inferBuildTarget(source))
+  }
+
+  private def inferBuildTarget(
+      source: AbsolutePath
+  ): Option[BuildTargetIdentifier] = {
+    for {
+      sourcesJarElement <- readonlyToSource.get(source).iterator
+      elementUri = sourcesJarElement.toURI.toString
+      uri = elementUri.stripPrefix("jar:").replaceFirst("!/.*", "")
+      sourcesJar = AbsolutePath(Paths.get(URI.create(uri)))
+      id <- buildTargets.inverseDependencySource(sourcesJar)
+    } yield {
+      tables.dependencySources.setBuildTarget(source, id)
+      id
+    }
+  }.take(1).toList.headOption
 
   private def newGlobal(buildTarget: BuildTargetIdentifier): Option[Global] = {
     for {

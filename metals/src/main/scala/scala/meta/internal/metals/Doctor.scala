@@ -137,9 +137,10 @@ final class Doctor(
   }
 
   private def problemSummary: Option[String] = {
-    val isMissingSemanticdb = buildTargets.all.filter(!_.isSemanticdbEnabled)
+    val targets = buildTargets.all.toList
+    val isMissingSemanticdb = targets.filter(!_.isSemanticdbEnabled)
     val count = isMissingSemanticdb.length
-    val isAllProjects = count == buildTargets.all.size
+    val isAllProjects = count == targets.size
     if (isMissingSemanticdb.isEmpty) {
       None
     } else if (isAllProjects) {
@@ -182,7 +183,7 @@ final class Doctor(
   }
 
   private def buildTargetRows(html: HtmlBuilder): Unit = {
-    buildTargets.all.sortBy(_.info.getBaseDirectory).foreach { target =>
+    buildTargets.all.toList.sortBy(_.info.getBaseDirectory).foreach { target =>
       val scala = target.info.asScalaBuildTarget
       val scalaVersion =
         scala.fold("<unknown>")(_.getScalaVersion)
