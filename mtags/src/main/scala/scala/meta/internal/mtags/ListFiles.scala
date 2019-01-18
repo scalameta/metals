@@ -10,25 +10,31 @@ import scala.meta.io.AbsolutePath
 
 object ListFiles {
   def foreach(root: AbsolutePath)(fn: AbsolutePath => Unit): Unit = {
-    if (root.isFile) fn(root)
-    else if (root.isDirectory) {
-      try {
-        Files.walkFileTree(
-          root.toNIO,
-          new SimpleFileVisitor[Path] {
-            override def visitFile(
-                file: Path,
-                attrs: BasicFileAttributes
-            ): FileVisitResult = {
-              fn(AbsolutePath(file))
-              super.visitFile(file, attrs)
-            }
+    ListFiles(root).foreach(fn)
+  }
+  def apply(root: AbsolutePath): Traversable[AbsolutePath] =
+    new Traversable[AbsolutePath] {
+      override def foreach[U](fn: AbsolutePath => U): Unit = {
+        if (root.isFile) fn(root)
+        else if (root.isDirectory) {
+          try {
+            Files.walkFileTree(
+              root.toNIO,
+              new SimpleFileVisitor[Path] {
+                override def visitFile(
+                    file: Path,
+                    attrs: BasicFileAttributes
+                ): FileVisitResult = {
+                  fn(AbsolutePath(file))
+                  super.visitFile(file, attrs)
+                }
+              }
+            )
+          } catch {
+            case _: NoSuchFileException =>
+              () // error is reported by the JDK
           }
-        )
-      } catch {
-        case _: NoSuchFileException =>
-          () // error is reported by the JDK
+        }
       }
     }
-  }
 }

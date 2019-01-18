@@ -102,6 +102,10 @@ final class TestingServer(
     FileLayout.fromString(layout, root = workspace)
   }
 
+  def workspaceSymbol(query: String): String = {
+    val infos = server.workspaceSymbol(query)
+    infos.map(info => s"${info.getContainerName}${info.getName}").mkString("\n")
+  }
   def workspaceSources: Seq[AbsolutePath] = {
     for {
       sourceDirectory <- server.buildTargets.sourceDirectories.toSeq

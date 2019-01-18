@@ -16,6 +16,10 @@ trait Semanticdbs {
 }
 
 object Semanticdbs {
+  def empty: Semanticdbs = new Semanticdbs {
+    override def textDocument(path: AbsolutePath): TextDocumentLookup =
+      TextDocumentLookup.NotFound(path)
+  }
   def loadTextDocuments(path: AbsolutePath): s.TextDocuments = {
     val in = Files.newInputStream(path.toNIO)
     try s.TextDocuments.parseFrom(in)

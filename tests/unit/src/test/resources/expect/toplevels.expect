@@ -28,6 +28,7 @@ example/TypeParameters.scala -> example/TypeParameters#
 example/nested/DoublePackage.scala -> example/nested/x/DoublePackage#
 example/nested/DoublePackage.scala -> example/nested2/y/DoublePackage#
 example/nested/ExampleNested.scala -> example/nested/ExampleNested#
+example/nested/LocalClass.scala -> example/nested/LocalClass#
 example/nested/package.scala -> example/PackageObjectSibling#
 example/nested/package.scala -> example/nested/package.
 example/package.scala -> example/package.

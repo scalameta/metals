@@ -153,8 +153,10 @@ lazy val metals = project
       // Scala dependencies
       // ==================
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
+      // For reading classpaths.
+      "org.scalameta" %% "symtab" % V.scalameta,
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "com.geirsson" %% "coursier-small" % "1.3.1",
+      "com.geirsson" %% "coursier-small" % "1.3.3",
       // undeclared transitive dependency of coursier-small
       "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
       // for handling Java futures
@@ -236,7 +238,6 @@ lazy val unit = project
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
-      "org.scalameta" %% "symtab" % V.scalameta,
       "org.scalameta" % "metac" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
@@ -248,6 +249,7 @@ lazy val unit = project
       compile.in(Compile).dependsOn(compile.in(input, Test)).value,
     buildInfoKeys := Seq[BuildInfoKey](
       "sourceroot" -> baseDirectory.in(ThisBuild).value,
+      "targetDirectory" -> target.in(Test).value,
       "testResourceDirectory" -> resourceDirectory.in(Test).value
     )
   )

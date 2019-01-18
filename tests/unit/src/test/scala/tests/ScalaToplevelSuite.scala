@@ -8,7 +8,7 @@ import scala.meta.internal.mtags.Mtags
  * Assert the symbols emitted by ScalaToplevelMtags is a subset of ScalaMtags
  */
 class ScalaToplevelSuite extends BaseSuite {
-  val testClasspath = Libraries.suite.flatMap(_.sources().entries)
+  val testClasspath = Library.all.flatMap(_.sources.entries)
   testClasspath.foreach { entry =>
     test(entry.toNIO.getFileName.toString) {
       FileIO.withJarFileSystem(entry, create = false) { root =>
