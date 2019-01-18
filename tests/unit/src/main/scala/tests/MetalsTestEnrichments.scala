@@ -35,7 +35,7 @@ object MetalsTestEnrichments {
   implicit class XtensionTestBuildTargets(wsp: WorkspaceSymbolProvider) {
     def indexLibraries(libraries: Seq[Library]): Unit = {
       libraries.foreach(
-        _.sources().entries.foreach(s => wsp.index.addSourceJar(s))
+        _.sources.entries.foreach(s => wsp.index.addSourceJar(s))
       )
       val bti = new BuildTargetIdentifier("workspace")
       val buildTarget = new BuildTarget(
@@ -50,7 +50,7 @@ object MetalsTestEnrichments {
       val item = new ScalacOptionsItem(
         bti,
         Nil.asJava,
-        libraries.flatMap(_.classpath().entries).map(_.toURI.toString).asJava,
+        libraries.flatMap(_.classpath.entries).map(_.toURI.toString).asJava,
         ""
       )
       wsp.buildTargets.addScalacOptions(

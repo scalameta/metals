@@ -1,5 +1,11 @@
 package scala.meta.internal.metals
 
+/**
+ * A CharSequence which is the concatenation of two strings.
+ *
+ * This class is the equivalent of doing `string1 + string2` but in constant time
+ * and with no copying.
+ */
 class ConcatSequence(val a: CharSequence, val b: CharSequence)
     extends CharSequence {
   override def length(): Int = a.length + b.length

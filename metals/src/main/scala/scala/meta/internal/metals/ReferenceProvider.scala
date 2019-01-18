@@ -33,7 +33,7 @@ final class ReferenceProvider(
     buffers: Buffers,
     definition: DefinitionProvider
 ) {
-  val referencedPackages = BloomFilters.create(1000)
+  var referencedPackages = BloomFilters.create(10000)
   val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
   def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
     for {
@@ -101,6 +101,7 @@ final class ReferenceProvider(
           }
         }
       }
+      resizeReferencedPackages()
     } else {
       scribe.warn(s"not semanticdb file: $file")
     }
@@ -299,6 +300,14 @@ final class ReferenceProvider(
     } add(range)
 
     buf.result()
+  }
+
+  private def resizeReferencedPackages(): Unit = {
+    // Increase the size of the set of referenced packages if the false positive ratio is too high.
+    if (referencedPackages.expectedFpp() > 0.05) {
+      referencedPackages =
+        BloomFilters.create(referencedPackages.approximateElementCount() * 2)
+    }
   }
 
 }

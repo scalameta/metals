@@ -543,10 +543,15 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
   }
 
   implicit class XtensionJavaPriorityQueue[A](q: util.PriorityQueue[A]) {
+
+    /**
+     * Returns iterator that consumes the priority queue in-order using `poll()`.
+     */
     def pollingIterator: Iterator[A] = new AbstractIterator[A] {
       override def hasNext: Boolean = !q.isEmpty
       override def next(): A = q.poll()
     }
+
   }
 
 }
