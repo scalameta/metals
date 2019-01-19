@@ -8,6 +8,5 @@ case class User(
 )
 
 object User {
-  val x: Int = 42
   val path = Paths.get("build.sbt")
 }
