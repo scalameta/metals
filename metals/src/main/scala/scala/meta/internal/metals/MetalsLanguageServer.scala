@@ -61,6 +61,9 @@ class MetalsLanguageServer(
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
   private val sh = Executors.newSingleThreadScheduledExecutor()
+  cancelables
+    .add(() => sh.shutdown())
+    .add(() => ec.shutdown())
   private val fingerprints = new MutableMd5Fingerprints
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
