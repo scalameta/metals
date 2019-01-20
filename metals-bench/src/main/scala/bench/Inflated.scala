@@ -11,7 +11,7 @@ case class Inflated(inputs: List[Input.VirtualFile], linesOfCode: Long) {
     val newInputs = inputs.filter(input => f(input))
     val newLinesOfCode = newInputs.foldLeft(0) {
       case (accum, input) =>
-        accum + input.text.lines.length
+        accum + input.text.linesIterator.length
     }
     Inflated(newInputs, newLinesOfCode)
   }
@@ -38,7 +38,7 @@ object Inflated {
       FileIO.listAllFilesRecursively(root).foreach { file =>
         val path = file.toString()
         val text = FileIO.slurp(file, StandardCharsets.UTF_8)
-        lines += text.lines.length
+        lines += text.linesIterator.length
         buf += Input.VirtualFile(path, text)
       }
       val inputs = buf.result()
