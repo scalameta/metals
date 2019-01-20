@@ -89,7 +89,7 @@ object DiffAssertions extends scala.meta.testkit.DiffAssertions {
       thunk
     } catch {
       case NonFatal(e) =>
-        val message = e.getMessage.lines
+        val message = e.getMessage.linesIterator
           .map { line =>
             if (line.startsWith("+")) Color.Green(line)
             else if (line.startsWith("-")) Color.LightRed(line)

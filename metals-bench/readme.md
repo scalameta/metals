@@ -44,3 +44,48 @@ Date: 2018 October 8th, commit 59bda2ac81a497fa168677499bd1a9df60fec5ab
 [info] WorkspaceFuzzBench.upper                fsmfunctionbuilder    ss   30  138.449 ± 1.792  ms/op
 [info] WorkspaceFuzzBench.upper  abcdefghijklmnopqrstabcdefghijkl    ss   30  256.068 ± 1.610  ms/op
 ```
+
+## Flamegraphs
+
+Required steps before running.
+
+```
+git clone https://github.com/prisma/prisma.git
+# (optional) open prisma/server directory with Metals, import build and compile everything
+git clone https://github.com/brendangregg/FlameGraph
+cd FlameGraph
+git checkout 2bf846ebc632c4c1bea9ed31a4c452aa4f311fe0
+cd ..
+git clone https://github.com/chrishantha/jfr-flame-graph
+cd jrf-flame-graph
+./gradlew installDist
+cd ..
+
+export WORKSPACE=$(pwd)/prisma/server
+export JFR_FLAME_GRAPH_DIR=$(pwd)/jfr-frame-graph
+export FLAME_GRAPH_DIR=$(pwd)/FlameGraph
+export PATH=$PATH:$JFR_FLAME_GRAPH_DIR/build/install/jfr-flame-graph/bin
+```
+
+Next, run JMH benchmark with the JFR profiler.
+
+```
+sbt
+> bench/jmh:run -prof jmh.extras.JFR:dir=/tmp/profile-jfr2;flameGraphOpts=--minwidth,2;verbose=true -i 3 -wi 3 -f1 -t1 -p=workspace=/path/to/workspace .*ServerInitializeBench
+```
+
+If all went well you should see an output like this in the end.
+```
+[info] Secondary result "bench.ServerInitializeBench.run:JFR":
+[info] /tmp/profile-jfr2/profile.jfr
+[info] /tmp/profile-jfr2/jfr-collapsed-cpu.txt
+[info] /tmp/profile-jfr2/flame-graph-cpu.svg
+[info] /tmp/profile-jfr2/flame-graph-cpu-reverse.svg
+[info] /tmp/profile-jfr2/jfr-collapsed-cpu.txt
+[info] /tmp/profile-jfr2/flame-graph-allocation-tlab.svg
+[info] /tmp/profile-jfr2/flame-graph-allocation-tlab-reverse.svg
+[info] Benchmark                                            (workspace)  Mode  Cnt   Score    Error  Units
+[info] ServerInitializeBench.run      /Users/olafurpg/dev/prisma/server    ss    3  13.903 ± 43.178   s/op
+```
+
+Open the `*.svg` files in your browser to see the graphs.

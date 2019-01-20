@@ -17,6 +17,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -53,17 +54,15 @@ class MetalsLanguageServer(
     config: MetalsServerConfig = MetalsServerConfig.default,
     progressTicks: ProgressTicks = ProgressTicks.braille,
     bspGlobalDirectories: List[AbsolutePath] =
-      BspServers.globalInstallDirectories
+      BspServers.globalInstallDirectories,
+    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
 ) extends Cancelable {
 
   private val cancelables = new MutableCancelable()
   override def cancel(): Unit = cancelables.cancel()
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
-  private val sh = Executors.newSingleThreadScheduledExecutor()
-  cancelables
-    .add(() => sh.shutdown())
-    .add(() => ec.shutdown())
+
   private val fingerprints = new MutableMd5Fingerprints
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
@@ -1167,6 +1166,12 @@ class MetalsLanguageServer(
       case NonFatal(e) =>
         scribe.error("unexpected error during source scanning", e)
     })
+  }
+
+  def shutdownExecutors(): Unit = {
+    cancelables
+      .add(() => sh.shutdown())
+      .add(() => ec.shutdown())
   }
 
 }
