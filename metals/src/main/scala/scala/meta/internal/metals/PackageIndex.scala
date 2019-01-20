@@ -28,6 +28,7 @@ class PackageIndex {
   def visit(entry: AbsolutePath): Unit = {
     if (isVisited.contains(entry)) ()
     else {
+      isVisited.add(entry)
       try {
         if (entry.isDirectory) {
           visitDirectoryEntry(entry)
