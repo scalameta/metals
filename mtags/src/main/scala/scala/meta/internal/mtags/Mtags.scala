@@ -51,9 +51,9 @@ final class Mtags {
   private var scalaLines: Long = 0L
   private def addLines(language: Language, text: String): Unit = {
     if (language.isJava) {
-      javaLines += text.lines.length
+      javaLines += text.linesIterator.length
     } else if (language.isScala) {
-      scalaLines += text.lines.length
+      scalaLines += text.linesIterator.length
     }
   }
 }
