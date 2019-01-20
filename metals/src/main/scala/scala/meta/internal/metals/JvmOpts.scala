@@ -17,7 +17,7 @@ object JvmOpts {
     val jvmOpts = workspace.resolve(".jvmopts")
     if (jvmOpts.isFile && Files.isReadable(jvmOpts.toNIO)) {
       val text = FileIO.slurp(jvmOpts, StandardCharsets.UTF_8)
-      text.lines.map(_.trim).filter(_.startsWith("-")).toList
+      text.linesIterator.map(_.trim).filter(_.startsWith("-")).toList
     } else {
       Nil
     }

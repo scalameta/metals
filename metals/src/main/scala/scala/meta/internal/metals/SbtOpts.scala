@@ -17,7 +17,7 @@ object SbtOpts {
     val sbtOpts = workspace.resolve(".sbtopts")
     if (sbtOpts.isFile && Files.isReadable(sbtOpts.toNIO)) {
       val text = FileIO.slurp(sbtOpts, StandardCharsets.UTF_8)
-      process(text.lines.map(_.trim).toList)
+      process(text.linesIterator.map(_.trim).toList)
     } else {
       Nil
     }
