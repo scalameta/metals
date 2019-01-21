@@ -32,7 +32,7 @@ import scala.meta.io.AbsolutePath
  * we would have to watch the workspace directory, resulting in a LOT of redundant file events.
  * Editors are free to send `workspace/didChangedWatchedFiles` notifications for these directories.
  */
-final class FileEvents(
+final class FileWatcher(
     buildTargets: BuildTargets,
     didChangeWatchedFiles: DirectoryChangeEvent => Unit
 ) extends Cancelable {

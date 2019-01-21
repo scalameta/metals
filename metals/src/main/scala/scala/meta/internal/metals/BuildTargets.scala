@@ -102,6 +102,9 @@ final class BuildTargets() {
     } yield target
   }
 
+  def inverseSourceDirectory(source: AbsolutePath): Option[AbsolutePath] =
+    sourceDirectories.find(dir => source.toNIO.startsWith(dir.toNIO))
+
   def inverseDependencies(
       target: BuildTargetIdentifier
   ): Iterable[BuildTargetIdentifier] = {

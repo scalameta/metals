@@ -112,13 +112,14 @@ class PackageIndex {
       jar.close()
     }
   }
+
   def expandJdkClasspath(): Unit = {
     sys.props
       .collectFirst {
         case (k, v) if k.endsWith(".boot.class.path") =>
           Classpath(v).entries
             .filter(_.isFile)
-            .foreach(visitJarEntry)
+            .foreach(jar => visitJarEntry(jar))
       }
   }
 

@@ -74,18 +74,22 @@ final case class OnDemandSymbolIndex(
       sourceDirectory: Option[AbsolutePath]
   ): Unit = tryRun {
     indexedSources += 1
-    val path = sourceDirectory match {
-      case Some(directory) =>
-        source.toRelative(directory).toURI(false).toString
-      case _ => source.toString()
-    }
+    val path = source.toIdeallyRelativeURI(sourceDirectory)
     val text = FileIO.slurp(source, StandardCharsets.UTF_8)
     val input = Input.VirtualFile(path, text)
     val sourceToplevels = mtags.toplevels(input)
     sourceToplevels.foreach { toplevel =>
-      if (!isTrivialToplevelSymbol(path, toplevel)) {
-        toplevels(toplevel) = source
-      }
+      addToplevelSymbol(path, source, toplevel)
+    }
+  }
+
+  def addToplevelSymbol(
+      path: String,
+      source: AbsolutePath,
+      toplevel: String
+  ): Unit = {
+    if (!isTrivialToplevelSymbol(path, toplevel)) {
+      toplevels(toplevel) = source
     }
   }
 

@@ -13,7 +13,7 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
     val p = TestingWorkspaceSymbolProvider(workspace, statistics = statistics)
     p.indexWorkspace()
     p.indexLibraries(libraries)
-    p.onBuildTargetsUpdate()
+    p.indexClasspath()
     p
   }
   def check(query: String, expected: String): Unit = {

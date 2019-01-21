@@ -109,15 +109,15 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
           |/a/src/main/scala/a/A.scala
           |package a
           |
-          |case class User(name: String, age: Int)
-          |object User
+          |case class UserBaxx(name: String, age: Int)
+          |object UserBaxx
           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
-        server.workspaceSymbol("User", includeKind = true),
-        """a.User Class
-          |a.User Object
+        server.workspaceSymbol("UserBax", includeKind = true),
+        """a.UserBaxx Class
+          |a.UserBaxx Object
           |""".stripMargin
       )
     } yield ()
