@@ -61,6 +61,9 @@ case class BuildServerConnection(
       ongoingRequests.cancel()
     }
   }
+
+  def isBloop: Boolean =
+    initializeResult.getDisplayName.compareToIgnoreCase("Bloop") == 0
 }
 
 object BuildServerConnection {

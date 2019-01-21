@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.util.control.NonFatal
 
 /**
  * Manages sending metals/status notifications to the editor client.
@@ -30,9 +31,10 @@ final class StatusBar(
   def trackFuture[T](
       message: String,
       value: Future[T],
-      showTimer: Boolean = false
+      showTimer: Boolean = false,
+      progress: Option[TaskProgress] = None
   ): Future[T] = {
-    items.add(Progress(message, value, showTimer))
+    items.add(Progress(message, value, showTimer, progress))
     tickIfHidden()
     value
   }
@@ -58,6 +60,13 @@ final class StatusBar(
   }
 
   def tick(): Unit = {
+    try tickUnsafe()
+    catch {
+      case NonFatal(e) =>
+        scribe.error("status bar tick failed", e)
+    }
+  }
+  private def tickUnsafe(): Unit = {
     garbageCollect()
     mostRelevant() match {
       case Some(value) =>
@@ -106,11 +115,19 @@ final class StatusBar(
     private val dots = new AtomicInteger()
     def formattedMessage: String = this match {
       case Message(value) => value.text
-      case Progress(message, _, showTimer) =>
+      case Progress(message, _, showTimer, maybeProgress) =>
         if (showTimer) {
           val seconds = timer.elapsedSeconds
-          if (seconds == 0) s"$message   "
-          else s"$message ${Timer.readableSeconds(seconds)}"
+          if (seconds == 0) {
+            s"$message   "
+          } else {
+            maybeProgress match {
+              case Some(TaskProgress(percentage)) if seconds > 5 =>
+                s"$message ${Timer.readableSeconds(seconds)} ($percentage%)"
+              case _ =>
+                s"$message ${Timer.readableSeconds(seconds)}"
+            }
+          }
         } else {
           message + progressTicks.format(dots.getAndIncrement())
         }
@@ -120,14 +137,15 @@ final class StatusBar(
         firstShow.exists(_.elapsedSeconds > 5)
     def isStale: Boolean = this match {
       case Message(_) => (firstShow.isDefined && !isRecent) || isOutdated
-      case Progress(_, job, _) => job.isCompleted
+      case Progress(_, job, _, _) => job.isCompleted
     }
   }
   private case class Message(params: MetalsStatusParams) extends Item
   private case class Progress(
       message: String,
       job: Future[_],
-      showTimer: Boolean
+      showTimer: Boolean,
+      taskProgress: Option[TaskProgress]
   ) extends Item
 
   private var isHidden: Boolean = true

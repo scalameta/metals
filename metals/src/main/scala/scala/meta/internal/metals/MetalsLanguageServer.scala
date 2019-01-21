@@ -1167,12 +1167,15 @@ class MetalsLanguageServer(
           Future.successful(()).asCancelable
         } else {
           val allTargets =
-            if (isCascade) {
+            if (isCascade && !build.isBloop) {
               targets.flatMap(buildTargets.inverseDependencies).distinct
             } else {
               targets
             }
           val params = new CompileParams(allTargets.asJava)
+          if (isCascade && build.isBloop) {
+            params.setArguments(List("--cascade").asJava)
+          }
           targets.foreach(target => isCompiling(target) = true)
           val completableFuture = build.compile(params)
           CancelableFuture(

@@ -7,6 +7,7 @@ import ch.epfl.scala.bsp4j.TaskFinishParams
 import ch.epfl.scala.bsp4j.TaskProgressParams
 import ch.epfl.scala.bsp4j.TaskStartParams
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonObject
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
@@ -31,7 +32,8 @@ final class ForwardingMetalsBuildClient(
 
   private case class Compilation(
       timer: Timer,
-      promise: Promise[CompileReport]
+      promise: Promise[CompileReport],
+      progress: TaskProgress = TaskProgress.empty
   )
 
   private val compilations = TrieMap.empty[BuildTargetIdentifier, Compilation]
@@ -93,7 +95,8 @@ final class ForwardingMetalsBuildClient(
           statusBar.trackFuture(
             s"Compiling $name",
             promise.future,
-            showTimer = true
+            showTimer = true,
+            progress = Some(compilation.progress)
           )
         }
       case _ =>
@@ -139,5 +142,26 @@ final class ForwardingMetalsBuildClient(
   }
 
   @JsonNotification("build/taskProgress")
-  def buildTaskProgress(params: TaskProgressParams): Unit = {}
+  def buildTaskProgress(params: TaskProgressParams): Unit = {
+    params.getDataKind match {
+      case "bloop-progress" =>
+        for {
+          data <- Option(params.getData).collect {
+            case o: JsonObject => o
+          }
+          targetElement <- Option(data.get("target"))
+          if targetElement.isJsonObject
+          target = targetElement.getAsJsonObject
+          uriElement <- Option(target.get("uri"))
+          if uriElement.isJsonPrimitive
+          uri = uriElement.getAsJsonPrimitive
+          if uri.isString
+          buildTarget = new BuildTargetIdentifier(uri.getAsString)
+          report <- compilations.get(buildTarget)
+        } yield {
+          report.progress.update(params.getProgress, params.getTotal)
+        }
+      case _ =>
+    }
+  }
 }
