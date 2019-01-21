@@ -29,7 +29,7 @@ class Timer(time: Time) {
 object Timer {
   def readableNanos(nanos: Long): String = {
     val seconds = TimeUnit.NANOSECONDS.toSeconds(nanos)
-    if (seconds > 5) readableSeconds(seconds)
+    if (seconds > 9) readableSeconds(seconds)
     else {
       val ms = TimeUnit.NANOSECONDS.toMillis(nanos)
       if (ms < 1) {

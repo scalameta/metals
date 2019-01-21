@@ -8,17 +8,13 @@ import java.util
 import java.util.Comparator
 import java.util.PriorityQueue
 import java.util.concurrent.CancellationException
-import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.ListFiles
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
@@ -30,18 +26,19 @@ import scala.util.control.NonFatal
  * Implements workspace/symbol for both workspace sources and dependency classpath.
  */
 final class WorkspaceSymbolProvider(
-    workspace: AbsolutePath,
+    val workspace: AbsolutePath,
     statistics: StatisticsConfig,
     val buildTargets: BuildTargets,
     val index: OnDemandSymbolIndex,
     isReferencedPackage: String => Boolean,
     fileOnDisk: AbsolutePath => AbsolutePath
 )(implicit ec: ExecutionContext) {
-  private val files = new WorkspaceSources(workspace)
-  private val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
-  private val inDependencies = TrieMap.empty[String, CompressedPackageIndex]
-
-  var maxNonExactMatches = 10
+  val inWorkspace = TrieMap.empty[Path, BloomFilter[CharSequence]]
+  val inDependencies = TrieMap.empty[String, CompressedPackageIndex]
+  // The maximum number of non-exact matches that we return for classpath queries.
+  // Generic queries like "Str" can returns several thousand results, so we need
+  // to limit it at some arbitrary point. Exact matches are always included.
+  private val maxNonExactMatches = 10
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
@@ -57,64 +54,32 @@ final class WorkspaceSymbolProvider(
     }
   }
 
-  private val indexJob = new AtomicReference[Promise[Unit]]()
-  def searchFuture(
-      query: String,
-      token: CancelChecker
-  ): Future[Seq[l.SymbolInformation]] = {
-    val promise = Promise[Unit]()
-    if (indexJob.compareAndSet(null, promise)) {
-      try indexWorkspace()
-      finally promise.success(())
-    }
-    indexJob.get().future.map { _ =>
-      // Wait until indexing is complete before returning results. The user can send
-      // multiple parallel requests during initialization and we want to avoid the situation
-      // where the results are returned from a partial index. Indexing should not take more than
-      // 2-5 seconds (depending on hot/cold JVM) even for large repos like akka/akka.
-      search(query, token)
-    }
-  }
-
-  def onBuildTargetsUpdate(): Unit = {
+  def indexClasspath(): Unit = {
     try {
-      indexSourceDirectories()
-      val timer = new Timer(Time.system)
-      indexClasspath()
-      if (statistics.isWorkspaceSymbol) {
-        scribe.info(
-          s"workspace-symbol: index ${inDependencies.size} classpath packages in $timer"
-        )
-      }
-      if (statistics.isMemory) {
-        val footprint =
-          Memory.footprint("workspace-symbol classpath index", inDependencies)
-        scribe.info(s"memory: ${footprint}")
-      }
+      indexClasspathUnsafe()
     } catch {
       case NonFatal(e) =>
-        scribe.error("failed to build workspace/symbol index", e)
+        scribe.error("failed to index classpath for workspace/symbol", e)
     }
-  }
-  def didChange(path: AbsolutePath): Unit = {
-    indexSource(path)
   }
 
   def didRemove(path: AbsolutePath): Unit = {
     inWorkspace.remove(path.toNIO)
   }
 
-  def indexWorkspace(): Unit = {
-    val timer = new Timer(Time.system)
-    files.all.foreach(indexSource)
-    if (statistics.isWorkspaceSymbol) {
-      scribe.info(
-        s"workspace-symbol: index ${inWorkspace.size} files in $timer"
-      )
-    }
-    if (statistics.isMemory) {
-      val footprint = Memory.footprint("workspace-symbol index", inWorkspace)
-      scribe.info(s"memory: $footprint")
+  def didChange(
+      source: AbsolutePath,
+      symbols: Seq[String]
+  ): Unit = {
+    val bloomFilterStrings = Fuzzy.bloomFilterSymbolStrings(symbols)
+    val bloom = BloomFilter.create[CharSequence](
+      Funnels.stringFunnel(StandardCharsets.UTF_8),
+      Integer.valueOf(bloomFilterStrings.size),
+      0.01
+    )
+    inWorkspace(source.toNIO) = bloom
+    bloomFilterStrings.foreach { c =>
+      bloom.put(c)
     }
   }
 
@@ -123,9 +88,10 @@ final class WorkspaceSymbolProvider(
     pkg.startsWith("com/sun/") ||
     pkg.startsWith("com/apple/")
   }
-  private def indexClasspath(): Unit = {
+  private def indexClasspathUnsafe(): Unit = {
     inDependencies.clear()
     val packages = new PackageIndex()
+    packages.expandJdkClasspath()
     for {
       target <- buildTargets.all
       classpathEntry <- target.scalac.classpath
@@ -169,48 +135,6 @@ final class WorkspaceSymbolProvider(
     val packages = inDependencies.keys.toArray
     util.Arrays.sort(packages, byReferenceThenAlphabeticalComparator)
     packages
-  }
-  private def indexSourceDirectories(): Unit = {
-    for {
-      dir <- buildTargets.sourceDirectories
-      source <- ListFiles(dir)
-      if source.isScalaOrJava && !inWorkspace.contains(source.toNIO)
-    } {
-      indexSource(source)
-    }
-  }
-
-  private def indexSource(source: AbsolutePath): Unit = {
-    val language = source.toLanguage
-    if (language.isScala || language.isJava) {
-      try {
-        indexSourceUnsafe(source)
-      } catch {
-        case NonFatal(e) =>
-          scribe.warn(source.toString(), e)
-      }
-    }
-  }
-
-  private def indexSourceUnsafe(source: AbsolutePath): Unit = {
-    val input = source.toInput
-    val symbols = ArrayBuffer.empty[String]
-    SemanticdbDefinition.foreach(input) {
-      case SemanticdbDefinition(info, _, _) =>
-        if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-          symbols += info.symbol
-        }
-    }
-    val bloomFilterStrings = Fuzzy.bloomFilterSymbolStrings(symbols)
-    val bloom = BloomFilter.create[CharSequence](
-      Funnels.stringFunnel(StandardCharsets.UTF_8),
-      Integer.valueOf(bloomFilterStrings.size),
-      0.01
-    )
-    inWorkspace(source.toNIO) = bloom
-    bloomFilterStrings.foreach { c =>
-      bloom.put(c)
-    }
   }
 
   private def searchUnsafe(
@@ -311,7 +235,6 @@ final class WorkspaceSymbolProvider(
     searchDependencySymbols()
     result.asScala.toSeq.sortBy(_.getName.length)
   }
-
 }
 
 object WorkspaceSymbolProvider {

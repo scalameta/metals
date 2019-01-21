@@ -52,7 +52,13 @@ object MtagsEnrichments {
     }
   }
   implicit class XtensionAbsolutePathMetals(file: AbsolutePath) {
-
+    def toIdeallyRelativeURI(directory: Option[AbsolutePath]): String =
+      directory match {
+        case Some(dir) =>
+          file.toRelative(dir).toURI(false).toString
+        case None =>
+          file.toURI.toString
+      }
     def isScalaOrJava: Boolean = {
       toLanguage match {
         case Language.SCALA | Language.JAVA => true
