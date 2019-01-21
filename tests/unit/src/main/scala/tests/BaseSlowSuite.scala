@@ -3,6 +3,7 @@ import java.nio.file.Files
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
+import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopProtocol
 import scala.meta.internal.metals.Buffers
@@ -12,6 +13,7 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
+import scala.util.control.NonFatal
 
 /**
  * Full end to end integration tests against a full metals language server.
@@ -81,5 +83,20 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   def cleanWorkspace(): Unit = {
     RecursivelyDelete(workspace)
     Files.createDirectories(workspace.toNIO)
+  }
+
+  def flakyTest(name: String, maxRetries: Int = 3)(
+      run: => Future[Unit]
+  ): Unit = {
+    testAsync(name) {
+      def loop(n: Int): Future[Unit] = {
+        run.recoverWith {
+          case NonFatal(_) if n > 0 =>
+            scribe.info(s"test retry: $name")
+            loop(n - 1)
+        }
+      }
+      loop(maxRetries)
+    }
   }
 }

@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.DependencySourcesParams
+import ch.epfl.scala.bsp4j.DependencySourcesResult
 import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import ch.epfl.scala.bsp4j.SourcesParams
 import com.google.gson.JsonElement
@@ -11,9 +12,9 @@ import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.Charset
+import scala.meta.internal.semanticdb.Scala._
 import java.nio.charset.StandardCharsets
 import java.nio.file._
-import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
@@ -28,17 +29,18 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.ListFiles
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.Language
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.tokenizers.TokenizeException
@@ -76,8 +78,8 @@ class MetalsLanguageServer(
     new DelegatingLanguageClient(NoopLanguageClient, config)
   var userConfig = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
-  private val fileEvents = register(
-    new FileEvents(
+  private val fileWatcher = register(
+    new FileWatcher(
       buildTargets,
       params => didChangeWatchedFiles(params)
     )
@@ -358,6 +360,7 @@ class MetalsLanguageServer(
   }
 
   val isInitialized = new AtomicBoolean(false)
+  val initializedPromise = Promise[Unit]()
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
     // Avoid duplicate `initialized` notifications. During the transition
@@ -368,16 +371,17 @@ class MetalsLanguageServer(
       statusBar.start(sh, 0, 1, TimeUnit.SECONDS)
       tables.connect()
       registerNiceToHaveFilePatterns()
-      Future
+      val result = Future
         .sequence(
           List[Future[Unit]](
             quickConnectToBuildServer().ignoreValue,
             slowConnectToBuildServer(forceImport = false).ignoreValue,
-            Future(startHttpServer()),
-            workspaceSymbols.searchFuture("", () => ()).ignoreValue
+            Future(startHttpServer())
           )
         )
         .ignoreValue
+      initializedPromise.completeWith(result)
+      result
     } else {
       scribe.warn("Ignoring duplicate 'initialized' notification.")
       Future.successful(())
@@ -545,7 +549,7 @@ class MetalsLanguageServer(
     Future
       .sequence(
         List(
-          reindexSources(paths),
+          Future(reindexWorkspaceSources(paths)),
           compileSourceFiles(paths).ignoreValue,
           onSbtBuildChanged(paths).ignoreValue
         )
@@ -746,9 +750,9 @@ class MetalsLanguageServer(
       params: WorkspaceSymbolParams
   ): CompletableFuture[util.List[SymbolInformation]] =
     cancelableJavaFuture { token =>
-      workspaceSymbols
-        .searchFuture(params.getQuery, token)
-        .map(_.asJava)
+      initializedPromise.future.map { _ =>
+        workspaceSymbols.search(params.getQuery, token).asJava
+      }
     }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] = {
@@ -760,7 +764,7 @@ class MetalsLanguageServer(
     params.getCommand match {
       case ServerCommands.ScanWorkspaceSources() =>
         Future {
-          buildTargets.sourceDirectories.foreach(indexSourceDirectory)
+          indexWorkspaceSources()
         }.asJavaObject
       case ServerCommands.ImportBuild() =>
         slowConnectToBuildServer(forceImport = true).asJavaObject
@@ -871,41 +875,27 @@ class MetalsLanguageServer(
     } else if (isUnsupportedJavaVersion) {
       Future.successful(BuildChange.None)
     } else {
-      val importingBuild = for {
-        _ <- buildServer match {
-          case Some(old) => old.shutdown()
-          case None => Future.successful(())
-        }
-        maybeBuild <- timed("connected to build server") {
-          if (buildTools.isBloop) bloopServers.newServer()
-          else bspServers.newServer()
-        }
-        _ <- maybeBuild match {
-          case Some(build) =>
-            cancelables.add(build)
-            buildServer = Some(build)
-            installWorkspaceBuildTargets(build)
-          case None =>
-            Future.successful(())
-        }
-      } yield ()
-
-      for {
-        _ <- statusBar.trackFuture("Importing build", importingBuild)
-        _ = {
-          statusBar.addMessage(s"${config.icons.rocket}Imported build!")
-          if (config.statistics.isMemory) {
-            val definition =
-              Memory.footprint("definition index", definitionIndex)
-            val references =
-              Memory.footprint("references index", referencesProvider.index)
-            scribe.info(s"memory: $definition")
-            scribe.info(s"memory: $references")
-          }
-        }
-        _ <- cascadeCompileSourceFiles(buffers.open.toSeq)
-      } yield BuildChange.Reconnected
+      autoConnectToBuildServer()
     }
+  }
+
+  private def autoConnectToBuildServer(): Future[BuildChange] = {
+    for {
+      _ <- buildServer match {
+        case Some(old) => old.shutdown()
+        case None => Future.successful(())
+      }
+      maybeBuild <- timed("connected to build server") {
+        if (buildTools.isBloop) bloopServers.newServer()
+        else bspServers.newServer()
+      }
+      result <- maybeBuild match {
+        case Some(build) =>
+          connectToNewBuildServer(build)
+        case None =>
+          Future.successful(BuildChange.None)
+      }
+    } yield result
   }.recover {
     case NonFatal(e) =>
       val message =
@@ -920,31 +910,89 @@ class MetalsLanguageServer(
       BuildChange.Failed
   }
 
-  /**
-   * Visit every file and directory in the workspace and register
-   * toplevel definitions for scala source files.
-   */
-  private def indexSourceDirectory(
-      sourceDirectory: AbsolutePath
-  ): Future[Unit] = Future {
-    if (sourceDirectory.isDirectory) {
-      Files.walkFileTree(
-        sourceDirectory.toNIO,
-        new SimpleFileVisitor[Path] {
-          override def visitFile(
-              file: Path,
-              attrs: BasicFileAttributes
-          ): FileVisitResult = {
-            val path = AbsolutePath(file)
-            path.toLanguage match {
-              case Language.SCALA | Language.JAVA =>
-                definitionIndex.addSourceFile(path, Some(sourceDirectory))
-              case _ =>
-            }
-            super.visitFile(file, attrs)
+  private def connectToNewBuildServer(
+      build: BuildServerConnection
+  ): Future[BuildChange] = {
+    cancelables.add(build)
+    buildServer = Some(build)
+    val importedBuild = timed("imported build") {
+      for {
+        workspaceBuildTargets <- build.server.workspaceBuildTargets().asScala
+        ids = workspaceBuildTargets.getTargets.map(_.getId)
+        scalacOptions <- build.server
+          .buildTargetScalacOptions(new ScalacOptionsParams(ids))
+          .asScala
+        sources <- build.server
+          .buildTargetSources(new SourcesParams(ids))
+          .asScala
+        dependencySources <- build.server
+          .buildTargetDependencySources(new DependencySourcesParams(ids))
+          .asScala
+      } yield {
+        ImportedBuild(
+          workspaceBuildTargets,
+          scalacOptions,
+          sources,
+          dependencySources
+        )
+      }
+    }
+    for {
+      i <- statusBar.trackFuture("Importing build", importedBuild)
+      _ <- profiledIndexWorkspace { () =>
+        indexWorkspace(i)
+      }
+      _ <- cascadeCompileSourceFiles(buffers.open.toSeq)
+    } yield {
+      BuildChange.Reconnected
+    }
+  }
+
+  private def indexWorkspaceSources(): Unit = {
+    for {
+      sourceDirectory <- buildTargets.sourceDirectories
+      if sourceDirectory.isDirectory
+      source <- ListFiles(sourceDirectory)
+      if source.isScalaOrJava
+    } {
+      indexSourceFile(source, Some(sourceDirectory))
+    }
+  }
+
+  private def reindexWorkspaceSources(
+      paths: Seq[AbsolutePath]
+  ): Unit = {
+    for {
+      path <- paths
+      if path.isScalaOrJava
+    } {
+      indexSourceFile(path, buildTargets.inverseSourceDirectory(path))
+    }
+  }
+
+  private def indexSourceFile(
+      source: AbsolutePath,
+      sourceDirectory: Option[AbsolutePath]
+  ): Unit = {
+    try {
+      val reluri = source.toIdeallyRelativeURI(sourceDirectory)
+      val input = source.toInput
+      val symbols = ArrayBuffer.empty[String]
+      SemanticdbDefinition.foreach(input) {
+        case SemanticdbDefinition(info, _, owner) =>
+          if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
+            symbols += info.symbol
           }
-        }
-      )
+          if (sourceDirectory.isDefined &&
+            !info.symbol.isPackage &&
+            owner.isPackage) {
+            definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
+          }
+      }
+      workspaceSymbols.didChange(source, symbols)
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(source.toString(), e)
     }
   }
 
@@ -979,93 +1027,121 @@ class MetalsLanguageServer(
     }
   }
 
-  /**
-   * Index all build targets in the workspace.
-   */
-  private def installWorkspaceBuildTargets(
-      build: BuildServerConnection
-  ): Future[Unit] = timed("imported workspace") {
-    for {
-      workspaceBuildTargets <- build.server.workspaceBuildTargets().asScala
-      _ = {
-        buildTargets.reset()
-        interactiveSemanticdbs.reset()
-        buildClient.reset()
-        buildTargets.addWorkspaceBuildTargets(workspaceBuildTargets)
-      }
-      ids = workspaceBuildTargets.getTargets.map(_.getId)
-      scalacOptions <- build.server
-        .buildTargetScalacOptions(new ScalacOptionsParams(ids))
-        .asScala
-      _ = {
-        buildTargets.addScalacOptions(scalacOptions)
-        workspaceSymbols.onBuildTargetsUpdate()
-        JdkSources(userConfig.javaHome).foreach { zip =>
-          definitionIndex.addSourceJar(zip)
-        }
-        referencesProvider.onScalacOptions(scalacOptions)
-        doctor.check()
-      }
-      _ <- registerSourceDirectories(build, ids)
-      dependencySources <- build.server
-        .buildTargetDependencySources(new DependencySourcesParams(ids))
-        .asScala
-    } yield {
-      for {
-        item <- dependencySources.getItems.asScala
-        sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
-      } {
-        try {
-          val path = sourceUri.toAbsolutePath
-          buildTargets.addDependencySource(path, item.getTarget)
-          if (path.isJar) {
-            // NOTE(olafur): here we rely on an implementation detail of the bloop BSP server,
-            // once we upgrade to BSP v2 we can use buildTarget/sources instead of
-            // buildTarget/dependencySources.
-            definitionIndex.addSourceJar(path)
-          } else {
-            scribe.warn(s"unexpected dependency directory: $path")
+  def profiledIndexWorkspace(
+      thunk: () => Unit
+  ): Future[Unit] = {
+    val tracked = statusBar.trackFuture(
+      s"Indexing",
+      Future {
+        timedThunk("indexed workspace", onlyIf = true) {
+          try thunk()
+          catch {
+            case NonFatal(e) =>
+              scribe.error("unexpected error indexing workspace", e)
           }
-        } catch {
-          case NonFatal(e) =>
-            scribe.error(s"error processing $sourceUri", e)
         }
+      }
+    )
+    tracked.foreach { _ =>
+      statusBar.addMessage(s"${config.icons.rocket}Indexing complete!")
+      if (config.statistics.isMemory) {
+        logMemory(
+          "definition index",
+          definitionIndex
+        )
+        logMemory(
+          "references index",
+          referencesProvider.index
+        )
+        logMemory(
+          "workspace symbol index",
+          workspaceSymbols.inWorkspace
+        )
+        logMemory(
+          "classpath symbol index",
+          workspaceSymbols.inDependencies
+        )
       }
     }
+    tracked
   }
 
-  private def registerSourceDirectories(
-      build: BuildServerConnection,
-      ids: util.List[BuildTargetIdentifier]
-  ): Future[Unit] =
-    for {
-      sources <- build.server.buildTargetSources(new SourcesParams(ids)).asScala
-    } yield {
+  private def logMemory(name: String, index: Object): Unit = {
+    val footprint = Memory.footprint(name, index)
+    scribe.info(s"memory: $footprint")
+  }
+
+  def indexWorkspace(i: ImportedBuild): Unit = {
+    timedThunk("updated build targets", config.statistics.isIndex) {
+      buildTargets.reset()
+      interactiveSemanticdbs.reset()
+      buildClient.reset()
+      buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
+      buildTargets.addScalacOptions(i.scalacOptions)
       for {
-        item <- sources.getItems.asScala
+        item <- i.sources.getItems.asScala
         source <- item.getSources.asScala
         if source.getUri.endsWith("/")
       } {
         val directory = source.getUri.toAbsolutePath
         buildTargets.addSourceDirectory(directory, item.getTarget)
-        indexSourceDirectory(directory)
       }
-      fileEvents.restart()
+      doctor.check()
     }
-
-  private def reindexSources(
-      paths: Seq[AbsolutePath]
-  ): Future[Unit] = Future {
-    for {
-      path <- paths
-      if path.isScalaOrJava
-      _ = workspaceSymbols.didChange(path)
-      dir <- buildTargets.sourceDirectories
-      if path.toNIO.startsWith(dir.toNIO)
-    } {
-      definitionIndex.addSourceFile(path, Some(dir))
+    timedThunk("started file watcher", config.statistics.isIndex) {
+      fileWatcher.restart()
+    }
+    timedThunk(
+      "indexed library classpath for workspace/symbol",
+      config.statistics.isIndex
+    ) {
+      workspaceSymbols.indexClasspath()
+    }
+    timedThunk(
+      "indexed workspace SemanticDBs for textDocument/references",
+      config.statistics.isIndex
+    ) {
+      referencesProvider.onScalacOptions(i.scalacOptions)
+    }
+    timedThunk(
+      "indexed workspace sources for textDocument/definition and workspace/symbol",
+      config.statistics.isIndex
+    ) {
+      indexWorkspaceSources()
+    }
+    timedThunk(
+      "indexed library sources for textDocument/definition",
+      config.statistics.isIndex
+    ) {
+      indexDependencySources(i.dependencySources)
     }
   }
+
+  private def indexDependencySources(
+      dependencySources: DependencySourcesResult
+  ): Unit = {
+    JdkSources(userConfig.javaHome).foreach { zip =>
+      definitionIndex.addSourceJar(zip)
+    }
+    for {
+      item <- dependencySources.getItems.asScala
+      sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
+    } {
+      try {
+        val path = sourceUri.toAbsolutePath
+        buildTargets.addDependencySource(path, item.getTarget)
+        if (path.isJar) {
+          definitionIndex.addSourceJar(path)
+        } else {
+          scribe.warn(s"unexpected dependency directory: $path")
+        }
+      } catch {
+        case NonFatal(e) =>
+          scribe.error(s"error processing $sourceUri", e)
+      }
+    }
+  }
+
   private val isCompiling = TrieMap.empty[BuildTargetIdentifier, Boolean]
   val cascadeCompileSourceFiles =
     new BatchedFunction[AbsolutePath, Unit](
@@ -1162,7 +1238,7 @@ class MetalsLanguageServer(
   private def newSymbolIndex(): OnDemandSymbolIndex = {
     OnDemandSymbolIndex(onError = {
       case e @ (_: ParseException | _: TokenizeException) =>
-        scribe.error(e.toString())
+        scribe.error(e.toString)
       case NonFatal(e) =>
         scribe.error("unexpected error during source scanning", e)
     })
