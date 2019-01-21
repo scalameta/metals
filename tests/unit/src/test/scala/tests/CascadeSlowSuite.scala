@@ -37,11 +37,11 @@ object CascadeSlowSuite extends BaseSlowSuite("cascade") {
       // but not independent project "c".
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|b/src/main/scala/b/B.scala:3:23: error: type mismatch;
+        """|b/src/main/scala/b/B.scala:3:19: error: type mismatch;
            | found   : Int
            | required: String
            |  val n: String = a.A.n
-           |                      ^
+           |                  ^^^^^
           """.stripMargin
       )
     } yield ()
