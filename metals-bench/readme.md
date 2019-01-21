@@ -71,7 +71,7 @@ Next, run JMH benchmark with the JFR profiler.
 
 ```
 sbt
-> bench/jmh:run -prof jmh.extras.JFR:dir=/tmp/profile-jfr2;flameGraphOpts=--minwidth,2;verbose=true -i 3 -wi 3 -f1 -t1 -p=workspace=/path/to/workspace .*ServerInitializeBench
+> bench/jmh:run -prof jmh.extras.JFR:dir=/tmp/profile-jfr2;flameGraphOpts=--minwidth,2;verbose=true -i 3 -wi 3 -f1 -t1 -p workspace=/path/to/workspace .*ServerInitializeBench
 ```
 
 If all went well you should see an output like this in the end.

@@ -7,6 +7,7 @@ final case class StatisticsConfig(value: String) {
   val isDiagnostics: Boolean = isAll || value.contains("diagnostics")
   val isReferences: Boolean = isAll || value.contains("references")
   val isWorkspaceSymbol: Boolean = isAll || value.contains("workspace-symbol")
+  val isIndex: Boolean = isAll || value.contains("index")
 }
 
 object StatisticsConfig {

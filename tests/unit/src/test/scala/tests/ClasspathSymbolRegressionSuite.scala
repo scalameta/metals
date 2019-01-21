@@ -18,10 +18,8 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   )
   check(
     "Map.Entry",
-    """|com.esotericsoftware.kryo.util.IdentityMap#Entry Class
-       |com.esotericsoftware.kryo.util.IntMap#Entry Class
+    """|com.esotericsoftware.kryo.util.IntMap#Entry Class
        |com.esotericsoftware.kryo.util.ObjectMap#Entry Class
-       |com.google.common.collect.HashBiMap#BiEntry Class
        |com.google.common.collect.Maps#EntryFunction Class
        |com.google.common.collect.Maps#EntrySet Class
        |com.google.common.collect.Maps#EntryTransformer Interface
@@ -32,6 +30,22 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |com.google.common.collect.Maps#FilteredEntrySortedMap Class
        |com.google.common.collect.Maps#UnmodifiableEntrySet Class
        |com.twitter.util.tunable.TunableMap.Entry Class
+       |java.util.EnumMap#EntryIterator Class
+       |java.util.EnumMap#EntrySet Class
+       |java.util.HashMap#EntryIterator Class
+       |java.util.HashMap#EntrySet Class
+       |java.util.HashMap#EntrySpliterator Class
+       |java.util.Map#Entry Interface
+       |java.util.TreeMap#AscendingSubMap#AscendingEntrySetView Class
+       |java.util.TreeMap#DescendingSubMap#DescendingEntrySetView Class
+       |java.util.TreeMap#Entry Class
+       |java.util.TreeMap#EntryIterator Class
+       |java.util.TreeMap#EntrySet Class
+       |java.util.TreeMap#EntrySpliterator Class
+       |java.util.TreeMap#NavigableSubMap#DescendingSubMapEntryIterator Class
+       |java.util.TreeMap#NavigableSubMap#EntrySetView Class
+       |java.util.TreeMap#NavigableSubMap#SubMapEntryIterator Class
+       |java.util.TreeMap#PrivateEntryIterator Class
        |jersey.repackaged.com.google.common.collect.Maps#EntryFunction Class
        |jersey.repackaged.com.google.common.collect.Maps#EntrySet Class
        |jersey.repackaged.com.google.common.collect.Maps#EntryTransformer Interface
@@ -41,21 +55,18 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |jersey.repackaged.com.google.common.collect.Maps#FilteredEntryNavigableMap Class
        |jersey.repackaged.com.google.common.collect.Maps#FilteredEntrySortedMap Class
        |jersey.repackaged.com.google.common.collect.Maps#UnmodifiableEntrySet Class
-       |org.apache.commons.collections.BeanMap#MyMapEntry Class
-       |org.apache.commons.collections.map.Flat3Map#EntrySet Class
-       |org.apache.commons.collections.map.Flat3Map#EntrySetIterator Class
        |org.apache.commons.lang.IntHashMap#Entry Class
        |""".stripMargin
   )
 
   check(
     "FileStream",
-    """|com.ning.compress.lzf.util.LZFFileInputStream Class
+    """|java.io.FileInputStream Class
+       |java.io.FileOutputStream Class
        |org.antlr.v4.runtime.ANTLRFileStream Class
        |org.apache.avro.file.DataFileStream Class
        |org.apache.hadoop.mapred.IFileInputStream Class
        |org.apache.hadoop.mapred.IFileOutputStream Class
-       |org.apache.kafka.common.record.FileLogInputStream Class
        |org.apache.spark.sql.execution.streaming.FileStreamOptions Class
        |org.apache.spark.sql.execution.streaming.FileStreamSink Class
        |org.apache.spark.sql.execution.streaming.FileStreamSink Object
@@ -75,7 +86,10 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |io.buoyant.config.types.File Class
        |io.buoyant.config.types.FileDeserializer Class
        |io.buoyant.config.types.FileSerializer Class
-       |org.apache.hadoop.io.file.tfile.BCFile Class
+       |java.io.File Class
+       |java.nio.file.Files Class
+       |java.nio.file.Files#FileTypeDetectors Class
+       |javax.annotation.processing.Filer Interface
        |org.apache.hadoop.io.file.tfile.TFile Class
        |org.apache.hadoop.io.file.tfile.TFile#TFileIndex Class
        |org.apache.hadoop.io.file.tfile.TFile#TFileIndexEntry Class
@@ -85,12 +99,6 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.jute.compiler.JFile Class
        |org.apache.parquet.Files Class
        |org.langmeta.internal.io.FileIO Object
-       |scala.reflect.internal.util.BatchSourceFile Class
-       |scala.reflect.internal.util.NoFile Object
-       |scala.reflect.internal.util.NoSourceFile Object
-       |scala.reflect.internal.util.ScriptSourceFile Class
-       |scala.reflect.internal.util.ScriptSourceFile Object
-       |scala.reflect.internal.util.SourceFile Class
        |scala.reflect.io.File Class
        |scala.reflect.io.File Object
        |sourcecode.File Class
@@ -102,6 +110,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     """|com.google.common.io.Files Class
        |com.google.common.io.MoreFiles Class
        |com.twitter.io.Files Object
+       |java.nio.file.Files Class
        |org.apache.hadoop.mapred.MROutputFiles Class
        |org.apache.hadoop.mapred.YarnOutputFiles Class
        |org.apache.hadoop.mapreduce.JobSubmissionFiles Class
