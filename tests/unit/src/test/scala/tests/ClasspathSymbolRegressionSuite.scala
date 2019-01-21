@@ -12,6 +12,15 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     RecursivelyDelete(tmp)
   }
 
+  override def check(query: String, expected: String): Unit = {
+    if (isAppveyor) {
+      // Ignored on Appveyor because the JDK classpath is different.
+      ignore(query)(())
+    } else {
+      super.check(query, expected)
+    }
+  }
+
   check(
     "scala.None",
     "scala.None Object"
