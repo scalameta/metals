@@ -44,7 +44,7 @@ object Main {
         e.printStackTrace(systemOut)
         sys.exit(1)
     } finally {
-      exec.shutdown()
+      server.cancelAll()
     }
   }
 

@@ -10,6 +10,7 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
+import java.util.concurrent.ScheduledExecutorService
 import org.eclipse.lsp4j.ClientCapabilities
 import scala.meta.internal.metals.PositionSyntax._
 import org.eclipse.lsp4j.DidChangeConfigurationParams
@@ -78,7 +79,8 @@ final class TestingServer(
     client: TestingClient,
     buffers: Buffers,
     config: MetalsServerConfig,
-    bspGlobalDirectories: List[AbsolutePath]
+    bspGlobalDirectories: List[AbsolutePath],
+    sh: ScheduledExecutorService
 )(implicit ex: ExecutionContextExecutorService) {
   val server = new MetalsLanguageServer(
     ex,
@@ -86,7 +88,8 @@ final class TestingServer(
     redirectSystemOut = false,
     config = config,
     progressTicks = ProgressTicks.none,
-    bspGlobalDirectories = bspGlobalDirectories
+    bspGlobalDirectories = bspGlobalDirectories,
+    sh = sh
   )
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
@@ -460,10 +463,6 @@ final class TestingServer(
     buffers
       .get(toPath(filename))
       .getOrElse(throw new NoSuchElementException(filename))
-
-  def cancel(): Unit = {
-    server.cancel()
-  }
 
   def cleanUnmanagedFiles(): Unit = {
     Files.walkFileTree(
