@@ -7,6 +7,7 @@ import ch.epfl.scala.bsp4j.TaskFinishParams
 import ch.epfl.scala.bsp4j.TaskProgressParams
 import ch.epfl.scala.bsp4j.TaskStartParams
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonObject
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
@@ -31,7 +32,9 @@ final class ForwardingMetalsBuildClient(
 
   private case class Compilation(
       timer: Timer,
-      promise: Promise[CompileReport]
+      promise: Promise[CompileReport],
+      isNoOp: Boolean,
+      progress: TaskProgress = TaskProgress.empty
   )
 
   private val compilations = TrieMap.empty[BuildTargetIdentifier, Compilation]
@@ -77,6 +80,9 @@ final class ForwardingMetalsBuildClient(
   def buildTaskStart(params: TaskStartParams): Unit = {
     params.getDataKind match {
       case TaskDataKind.COMPILE_TASK =>
+        if (params.getMessage.startsWith("Compiling")) {
+          scribe.info(params.getMessage.toLowerCase())
+        }
         for {
           task <- params.asCompileTask
           info <- buildTargets.info(task.getTarget)
@@ -87,13 +93,15 @@ final class ForwardingMetalsBuildClient(
 
           val name = info.getDisplayName
           val promise = Promise[CompileReport]()
-          val compilation = Compilation(new Timer(time), promise)
+          val isNoOp = params.getMessage.startsWith("Start no-op compilation")
+          val compilation = Compilation(new Timer(time), promise, isNoOp)
 
           compilations(task.getTarget) = compilation
           statusBar.trackFuture(
             s"Compiling $name",
             promise.future,
-            showTimer = true
+            showTimer = true,
+            progress = Some(compilation.progress)
           )
         }
       case _ =>
@@ -118,6 +126,9 @@ final class ForwardingMetalsBuildClient(
           val isSuccess = report.getErrors == 0
           val icon = if (isSuccess) config.icons.check else config.icons.alert
           val message = s"${icon}Compiled $name (${compilation.timer})"
+          if (!compilation.isNoOp) {
+            scribe.info(s"time: compiled $name in ${compilation.timer}")
+          }
           if (isSuccess) {
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
@@ -139,5 +150,26 @@ final class ForwardingMetalsBuildClient(
   }
 
   @JsonNotification("build/taskProgress")
-  def buildTaskProgress(params: TaskProgressParams): Unit = {}
+  def buildTaskProgress(params: TaskProgressParams): Unit = {
+    params.getDataKind match {
+      case "bloop-progress" =>
+        for {
+          data <- Option(params.getData).collect {
+            case o: JsonObject => o
+          }
+          targetElement <- Option(data.get("target"))
+          if targetElement.isJsonObject
+          target = targetElement.getAsJsonObject
+          uriElement <- Option(target.get("uri"))
+          if uriElement.isJsonPrimitive
+          uri = uriElement.getAsJsonPrimitive
+          if uri.isString
+          buildTarget = new BuildTargetIdentifier(uri.getAsString)
+          report <- compilations.get(buildTarget)
+        } yield {
+          report.progress.update(params.getProgress, params.getTotal)
+        }
+      case _ =>
+    }
+  }
 }

@@ -61,7 +61,27 @@ class MetalsLanguageServer(
 ) extends Cancelable {
 
   private val cancelables = new MutableCancelable()
-  override def cancel(): Unit = cancelables.cancel()
+  val isCancelled = new AtomicBoolean(false)
+  override def cancel(): Unit = {
+    if (isCancelled.compareAndSet(false, true)) {
+      Cancelable.cancelAll(
+        List(
+          Cancelable(() => buildServer.foreach(_.shutdown())),
+          cancelables
+        )
+      )
+    }
+  }
+
+  def cancelAll(): Unit = {
+    cancel()
+    Cancelable.cancelAll(
+      List(
+        Cancelable(() => ec.shutdown()),
+        Cancelable(() => sh.shutdown())
+      )
+    )
+  }
 
   private implicit val executionContext: ExecutionContextExecutorService = ec
 
@@ -400,7 +420,7 @@ class MetalsLanguageServer(
     if (shutdownPromise.compareAndSet(null, promise)) {
       scribe.info("shutting down Metals")
       try {
-        cancelables.cancel()
+        cancel()
       } catch {
         case NonFatal(e) =>
           scribe.error("cancellation error", e)
@@ -1167,12 +1187,15 @@ class MetalsLanguageServer(
           Future.successful(()).asCancelable
         } else {
           val allTargets =
-            if (isCascade) {
+            if (isCascade && !build.isBloop) {
               targets.flatMap(buildTargets.inverseDependencies).distinct
             } else {
               targets
             }
           val params = new CompileParams(allTargets.asJava)
+          if (isCascade && build.isBloop) {
+            params.setArguments(List("--cascade").asJava)
+          }
           targets.foreach(target => isCompiling(target) = true)
           val completableFuture = build.compile(params)
           CancelableFuture(
@@ -1242,12 +1265,6 @@ class MetalsLanguageServer(
       case NonFatal(e) =>
         scribe.error("unexpected error during source scanning", e)
     })
-  }
-
-  def shutdownExecutors(): Unit = {
-    cancelables
-      .add(() => sh.shutdown())
-      .add(() => ec.shutdown())
   }
 
 }

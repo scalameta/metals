@@ -43,10 +43,9 @@ object QuickBuildSuite extends BaseSlowSuite("quick-build") {
       _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """
-          |b/src/main/scala/b/B.scala:3:19: warning: Unused import
-          |import scala.util.Success
-          |                  ^^^^^^^
+        """|b/src/main/scala/b/B.scala:3:1: warning: Unused import
+           |import scala.util.Success
+           |^^^^^^^^^^^^^^^^^^^^^^^^^
         """.stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")

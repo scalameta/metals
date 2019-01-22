@@ -48,22 +48,21 @@ object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       exampleDiagnostics = {
-        """
-          |a/src/main/scala/a/Example.scala:2:29: warning: Unused import
-          |import java.util.concurrent.Future // unused
-          |                            ^^^^^^
-          |a/src/main/scala/a/Example.scala:3:19: warning: Unused import
-          |import scala.util.Failure // unused
-          |                  ^^^^^^^
-          |""".stripMargin
+        """|a/src/main/scala/a/Example.scala:2:1: warning: Unused import
+           |import java.util.concurrent.Future // unused
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |a/src/main/scala/a/Example.scala:3:1: warning: Unused import
+           |import scala.util.Failure // unused
+           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin
       }
       mainDiagnostics = {
-        """|a/src/main/scala/a/Main.scala:2:29: warning: Unused import
+        """|a/src/main/scala/a/Main.scala:2:1: warning: Unused import
            |import java.util.concurrent.Future // unused
-           |                            ^^^^^^
-           |a/src/main/scala/a/Main.scala:3:19: warning: Unused import
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |a/src/main/scala/a/Main.scala:3:1: warning: Unused import
            |import scala.util.Failure // unused
-           |                  ^^^^^^^
+           |^^^^^^^^^^^^^^^^^^^^^^^^^
            |""".stripMargin
       }
       _ = assertNoDiff(
@@ -72,14 +71,13 @@ object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
       )
       _ <- server.didOpen("b/src/main/scala/a/MainSuite.scala")
       testDiagnostics = {
-        """
-          |b/src/main/scala/a/MainSuite.scala:2:29: warning: Unused import
-          |import java.util.concurrent.Future // unused
-          |                            ^^^^^^
-          |b/src/main/scala/a/MainSuite.scala:3:19: warning: Unused import
-          |import scala.util.Failure // unused
-          |                  ^^^^^^^
-        """.stripMargin
+        """|b/src/main/scala/a/MainSuite.scala:2:1: warning: Unused import
+           |import java.util.concurrent.Future // unused
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |b/src/main/scala/a/MainSuite.scala:3:1: warning: Unused import
+           |import scala.util.Failure // unused
+           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin
       }
       _ = assertNoDiff(
         client.pathDiagnostics("b/src/main/scala/a/MainSuite.scala"),
@@ -155,11 +153,10 @@ object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
       _ <- server.didOpen("a/src/main/scala/a/Post.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """
-          |a/src/main/scala/a/Post.scala:5:8: error: object creation impossible, since method post in trait Post of type => Int is not defined
-          |object Post extends Post
-          |       ^^^^^^^^^^^^^^^^^
-          |""".stripMargin
+        """|a/src/main/scala/a/Post.scala:5:1: error: object creation impossible, since method post in trait Post of type => Int is not defined
+           |object Post extends Post
+           |^^^^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin
       )
     } yield ()
   }

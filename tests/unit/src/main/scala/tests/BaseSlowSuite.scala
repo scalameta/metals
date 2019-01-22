@@ -25,15 +25,15 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
+  private val sh = Executors.newSingleThreadScheduledExecutor()
   def bspGlobalDirectories: List[AbsolutePath] = Nil
   var server: TestingServer = _
   var client: TestingClient = _
   var workspace: AbsolutePath = _
   override def afterAll(): Unit = {
     if (server != null) {
-      server.cancel()
+      server.server.cancelAll()
     }
-    ex.shutdown()
   }
   def assertConnectedToBuildServer(
       expectedName: String
@@ -43,7 +43,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   }
   override def utestBeforeEach(path: Seq[String]): Unit = {
     if (server != null) {
-      server.cancel()
+      server.server.cancel()
     }
     val name = path.last
     if (utest.ufansi.Str(name).plainText.contains("IGNORED")) return
@@ -65,7 +65,8 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       client,
       buffers,
       config,
-      bspGlobalDirectories
+      bspGlobalDirectories,
+      sh
     )(ex)
     server.server.userConfig = this.userConfig
   }
