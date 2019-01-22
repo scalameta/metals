@@ -101,7 +101,6 @@ final class Diagnostics(
       new ConcurrentLinkedQueue[Diagnostic]()
     )
     if (params.getReset) {
-      logStatistics(path, "diagnostics-clear", params.getTextDocument.getUri)
       queue.clear()
       snapshots.remove(path)
     }

@@ -152,6 +152,7 @@ final class InteractiveSemanticdbs(
           filename = uri,
           timeout = TimeUnit.SECONDS.toMillis(15),
           options = List(
+            "-P:semanticdb:synthetics:on",
             "-P:semanticdb:symbols:none",
             "-P:semanticdb:text:on"
           )

@@ -23,7 +23,7 @@ object SbtDigest {
    * Bump up this version if parameters outside of the sbt sources themselves require
    * re-running `bloopInstall`. For example a SemanticDB or Bloop version upgrade.
    */
-  val version: String = "v2"
+  val version: String = "v3"
   sealed abstract class Status(val value: Int)
       extends Product
       with Serializable {
