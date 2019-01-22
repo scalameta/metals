@@ -33,6 +33,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.TimeoutException
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -64,12 +65,18 @@ class MetalsLanguageServer(
   val isCancelled = new AtomicBoolean(false)
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
-      Cancelable.cancelAll(
-        List(
-          Cancelable(() => buildServer.foreach(_.shutdown())),
-          cancelables
-        )
-      )
+      val buildShutdown = buildServer match {
+        case Some(build) => build.shutdown()
+        case None => Future.successful(())
+      }
+      try cancelables.cancel()
+      catch {
+        case NonFatal(_) =>
+      }
+      try buildShutdown.asJava.get(100, TimeUnit.MILLISECONDS)
+      catch {
+        case _: TimeoutException =>
+      }
     }
   }
 
@@ -104,6 +111,7 @@ class MetalsLanguageServer(
       params => didChangeWatchedFiles(params)
     )
   )
+  private val indexingPromise = Promise[Unit]()
 
   // These can't be instantiated until we know the workspace root directory.
   private var bloopInstall: BloopInstall = _
@@ -380,7 +388,6 @@ class MetalsLanguageServer(
   }
 
   val isInitialized = new AtomicBoolean(false)
-  val initializedPromise = Promise[Unit]()
   @JsonNotification("initialized")
   def initialized(params: InitializedParams): CompletableFuture[Unit] = {
     // Avoid duplicate `initialized` notifications. During the transition
@@ -400,7 +407,6 @@ class MetalsLanguageServer(
           )
         )
         .ignoreValue
-      initializedPromise.completeWith(result)
       result
     } else {
       scribe.warn("Ignoring duplicate 'initialized' notification.")
@@ -672,13 +678,21 @@ class MetalsLanguageServer(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CompletableFutures.computeAsync { _ =>
-      timedThunk("references", config.statistics.isReferences) {
-        val result = referencesResult(params)
-        if (result.symbol.nonEmpty) {
-          compileAndLookForNewReferfences(params, result)
+      val timer = new Timer(time)
+      val result = referencesResult(params)
+      if (config.statistics.isReferences) {
+        if (result.symbol.isEmpty) {
+          scribe.info(s"time: found 0 references in $timer")
+        } else {
+          scribe.info(
+            s"time: found ${result.locations.length} references to symbol '${result.symbol}' in $timer"
+          )
         }
-        result.locations.asJava
       }
+      if (result.symbol.nonEmpty) {
+        compileAndLookForNewReferfences(params, result)
+      }
+      result.locations.asJava
     }
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
@@ -770,8 +784,15 @@ class MetalsLanguageServer(
       params: WorkspaceSymbolParams
   ): CompletableFuture[util.List[SymbolInformation]] =
     cancelableJavaFuture { token =>
-      initializedPromise.future.map { _ =>
-        workspaceSymbols.search(params.getQuery, token).asJava
+      indexingPromise.future.map { _ =>
+        val timer = new Timer(time)
+        val result = workspaceSymbols.search(params.getQuery, token).asJava
+        if (config.statistics.isWorkspaceSymbol) {
+          scribe.info(
+            s"time: found ${result.size()} results for query '${params.getQuery}' in $timer"
+          )
+        }
+        result
       }
     }
 
@@ -962,6 +983,7 @@ class MetalsLanguageServer(
       _ <- profiledIndexWorkspace { () =>
         indexWorkspace(i)
       }
+      _ = indexingPromise.trySuccess(())
       _ <- cascadeCompileSourceFiles(buffers.open.toSeq)
     } yield {
       BuildChange.Reconnected
@@ -1112,25 +1134,25 @@ class MetalsLanguageServer(
       fileWatcher.restart()
     }
     timedThunk(
-      "indexed library classpath for workspace/symbol",
+      "indexed library classpath",
       config.statistics.isIndex
     ) {
       workspaceSymbols.indexClasspath()
     }
     timedThunk(
-      "indexed workspace SemanticDBs for textDocument/references",
+      "indexed workspace SemanticDBs",
       config.statistics.isIndex
     ) {
       referencesProvider.onScalacOptions(i.scalacOptions)
     }
     timedThunk(
-      "indexed workspace sources for textDocument/definition and workspace/symbol",
+      "indexed workspace sources",
       config.statistics.isIndex
     ) {
       indexWorkspaceSources()
     }
     timedThunk(
-      "indexed library sources for textDocument/definition",
+      "indexed library sources",
       config.statistics.isIndex
     ) {
       indexDependencySources(i.dependencySources)
@@ -1187,15 +1209,12 @@ class MetalsLanguageServer(
           Future.successful(()).asCancelable
         } else {
           val allTargets =
-            if (isCascade && !build.isBloop) {
+            if (isCascade) {
               targets.flatMap(buildTargets.inverseDependencies).distinct
             } else {
               targets
             }
           val params = new CompileParams(allTargets.asJava)
-          if (isCascade && build.isBloop) {
-            params.setArguments(List("--cascade").asJava)
-          }
           targets.foreach(target => isCompiling(target) = true)
           val completableFuture = build.compile(params)
           CancelableFuture(

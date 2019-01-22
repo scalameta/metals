@@ -94,8 +94,7 @@ object MetalsServerConfig {
           slowTask = SlowTaskConfig.on,
           icons = Icons.vscode,
           executeClientCommand = ExecuteClientCommandConfig.on,
-          globSyntax = GlobSyntaxConfig.vscode,
-          isInputBoxEnabled = true
+          globSyntax = GlobSyntaxConfig.vscode
         )
       case "vim-lsc" =>
         base.copy(

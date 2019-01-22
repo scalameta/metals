@@ -33,8 +33,12 @@ object Memory {
         s" (${format(n)} lines Scala)"
       case i: TrieMap[_, _] =>
         val elements = i.values.foldLeft(0L) {
-          case (n, b: BloomFilter[_]) => n + b.approximateElementCount()
-          case (n, _) => n + 1
+          case (n, b: BloomFilter[_]) =>
+            n + b.approximateElementCount()
+          case (n, c: CompressedPackageIndex) =>
+            n + c.bloom.approximateElementCount()
+          case (n, _) =>
+            n + 1
         }
         s" (${format(elements)} elements)"
       case _ =>
