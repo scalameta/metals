@@ -1,5 +1,6 @@
 package tests
 
+import org.scalactic.source.Position
 import scala.concurrent.Future
 
 object SyntaxErrorSlowSuite extends BaseSlowSuite("syntax-error") {
@@ -9,7 +10,7 @@ object SyntaxErrorSlowSuite extends BaseSlowSuite("syntax-error") {
       name: String,
       code: String,
       asserts: Assert*
-  ): Unit = {
+  )(implicit pos: Position): Unit = {
     testAsync(name) {
       def runAsserts(as: List[Assert]): Future[Unit] = as match {
         case Nil => Future.successful(())
@@ -252,10 +253,10 @@ object SyntaxErrorSlowSuite extends BaseSlowSuite("syntax-error") {
        |""".stripMargin,
     Assert(
       _.replaceAllLiterally("object A", "object B"),
-      """|a/src/main/scala/A.scala:2:19: error: not enough arguments for method lengthCompare: (len: Int)Int.
+      """|a/src/main/scala/A.scala:2:3: error: not enough arguments for method lengthCompare: (len: Int)Int.
          |Unspecified value parameter len.
          |  "".lengthCompare()
-         |                  ^^
+         |  ^^^^^^^^^^^^^^^^^^
          |""".stripMargin
     )
   )
@@ -285,11 +286,11 @@ object SyntaxErrorSlowSuite extends BaseSlowSuite("syntax-error") {
        |""".stripMargin,
     Assert(
       _.replaceAllLiterally("\"b\"", "\"c\""),
-      """|a/src/main/scala/A.scala:2:20: error: type mismatch;
+      """|a/src/main/scala/A.scala:2:16: error: type mismatch;
          | found   : String("ab")
          | required: Int
          |  val x: Int = "a" + "c"
-         |                   ^^^^^
+         |               ^^^^^^^^^
          |""".stripMargin
     )
   )
