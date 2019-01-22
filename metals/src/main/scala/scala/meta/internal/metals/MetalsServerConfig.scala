@@ -111,7 +111,7 @@ object MetalsServerConfig {
           // Sublime text opens an invasive alert dialogue for window/showMessage
           // and window/showMessageRequest.
           showMessage = ShowMessageConfig.logMessage,
-          showMessageRequest = ShowMessageRequestConfig.logMessage,
+          showMessageRequest = ShowMessageRequestConfig.on,
           icons = Icons.unicode,
           isExitOnShutdown = true
         )
