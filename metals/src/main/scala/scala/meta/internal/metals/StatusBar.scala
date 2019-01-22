@@ -122,7 +122,7 @@ final class StatusBar(
             s"$message   "
           } else {
             maybeProgress match {
-              case Some(TaskProgress(percentage)) if seconds > 5 =>
+              case Some(TaskProgress(percentage)) if seconds > 3 =>
                 s"$message ${Timer.readableSeconds(seconds)} ($percentage%)"
               case _ =>
                 s"$message ${Timer.readableSeconds(seconds)}"

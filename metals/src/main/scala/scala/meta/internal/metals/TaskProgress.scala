@@ -1,5 +1,11 @@
 package scala.meta.internal.metals
 
+/**
+ * Denotes how much of a task has been completed.
+ *
+ * @param progress must be greater or equal to 0 and smaller than total.
+ * @param total the task is complete when progress == total.
+ */
 class TaskProgress(
     var progress: Long,
     var total: Long
@@ -12,6 +18,7 @@ class TaskProgress(
     if (total == 0) 0
     else ((progress.toDouble / total) * 100).toInt
   }
+  override def toString: String = s"TaskProgress($progress, $total)"
 }
 
 object TaskProgress {
