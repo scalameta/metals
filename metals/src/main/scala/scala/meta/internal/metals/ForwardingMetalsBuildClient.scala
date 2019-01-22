@@ -33,6 +33,7 @@ final class ForwardingMetalsBuildClient(
   private case class Compilation(
       timer: Timer,
       promise: Promise[CompileReport],
+      isNoOp: Boolean,
       progress: TaskProgress = TaskProgress.empty
   )
 
@@ -79,6 +80,9 @@ final class ForwardingMetalsBuildClient(
   def buildTaskStart(params: TaskStartParams): Unit = {
     params.getDataKind match {
       case TaskDataKind.COMPILE_TASK =>
+        if (params.getMessage.startsWith("Compiling")) {
+          scribe.info(params.getMessage.toLowerCase())
+        }
         for {
           task <- params.asCompileTask
           info <- buildTargets.info(task.getTarget)
@@ -89,7 +93,8 @@ final class ForwardingMetalsBuildClient(
 
           val name = info.getDisplayName
           val promise = Promise[CompileReport]()
-          val compilation = Compilation(new Timer(time), promise)
+          val isNoOp = params.getMessage.startsWith("Start no-op compilation")
+          val compilation = Compilation(new Timer(time), promise, isNoOp)
 
           compilations(task.getTarget) = compilation
           statusBar.trackFuture(
@@ -121,6 +126,9 @@ final class ForwardingMetalsBuildClient(
           val isSuccess = report.getErrors == 0
           val icon = if (isSuccess) config.icons.check else config.icons.alert
           val message = s"${icon}Compiled $name (${compilation.timer})"
+          if (!compilation.isNoOp) {
+            scribe.info(s"time: compiled $name in ${compilation.timer}")
+          }
           if (isSuccess) {
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.

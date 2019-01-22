@@ -384,9 +384,9 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """
-          |src/main/scala/warning/Warning.scala:1:25: warning: Unused import
+          |src/main/scala/warning/Warning.scala:1:1: warning: Unused import
           |import scala.concurrent.Future // unused
-          |                        ^^^^^^
+          |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         """.stripMargin
       )
     } yield ()
