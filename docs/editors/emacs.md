@@ -60,7 +60,10 @@ dependencies
 
 (use-package lsp-scala
   :load-path "~/path/to/lsp-scala"
-  :hook (scala-mode . lsp-scala-enable))
+  :after scala-mode
+  :demand t
+  ;; Optional - enable lsp-scala automatically in scala files
+  :hook (scala-mode . lsp))
 ```
 
 > You may need to disable other packages like `ensime` or sbt server to prevent
