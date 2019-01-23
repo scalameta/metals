@@ -28,8 +28,8 @@ Next, update your Emacs configuration to load `lsp-scala` along with its
 dependencies
 
 ```el
-;; Add melpa-stable to your packages repositories
-(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+;; Add melpa to your packages repositories
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
 ;; Enable defer and ensure by default for use-package
 (setq use-package-always-defer t
@@ -53,16 +53,17 @@ dependencies
 (use-package flycheck
   :init (global-flycheck-mode))
 
-(use-package lsp-mode
-  :pin melpa-stable)
+(use-package lsp-mode)
 
 (use-package lsp-ui
-  :pin melpa-stable
   :hook (lsp-mode . lsp-ui-mode))
 
 (use-package lsp-scala
   :load-path "~/path/to/lsp-scala"
-  :hook (scala-mode . lsp-scala-enable))
+  :after scala-mode
+  :demand t
+  ;; Optional - enable lsp-scala automatically in scala files
+  :hook (scala-mode . lsp))
 ```
 
 > You may need to disable other packages like `ensime` or sbt server to prevent
