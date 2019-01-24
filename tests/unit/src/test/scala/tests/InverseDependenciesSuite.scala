@@ -23,7 +23,7 @@ object InverseDependenciesSuite extends BaseSuite {
   ): Unit = {
     test(name) {
       val obtained = BuildTargets.inverseDependencies(
-        new BuildTargetIdentifier(original.root), { key =>
+        List(new BuildTargetIdentifier(original.root)), { key =>
           original.inverseDependencies
             .get(key.getUri)
             .map(_.map(new BuildTargetIdentifier(_)))

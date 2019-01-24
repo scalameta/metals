@@ -478,16 +478,29 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("metals/didFocusTextDocument")
-  def didFocus(uri: String): CompletableFuture[Unit] = {
+  def didFocus(uri: String): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
     // unpublish diagnostic for dependencies
     interactiveSemanticdbs.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (openedFiles.isRecentlyActive(path)) {
-      CompletableFuture.completedFuture(())
+      CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
-      compileSourceFiles(List(path)).asJava
+      buildTargets.inverseSources(path) match {
+        case Some(target) =>
+          val needsCompile = !lastCompile(target) &&
+            buildTargets.isInverseDependency(target, lastCompile.toList)
+          if (needsCompile) {
+            compileSourceFiles(List(path))
+              .map(_ => DidFocusResult.Compiled)
+              .asJava
+          } else {
+            CompletableFuture.completedFuture(DidFocusResult.AlreadyCompiled)
+          }
+        case None =>
+          CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
+      }
     }
   }
 
@@ -1185,6 +1198,7 @@ class MetalsLanguageServer(
   }
 
   private val isCompiling = TrieMap.empty[BuildTargetIdentifier, Boolean]
+  private var lastCompile: collection.Set[BuildTargetIdentifier] = Set.empty
   val cascadeCompileSourceFiles =
     new BatchedFunction[AbsolutePath, Unit](
       paths => compileSourceFilesUnbatched(paths, isCascade = true)
@@ -1218,9 +1232,10 @@ class MetalsLanguageServer(
           targets.foreach(target => isCompiling(target) = true)
           val completableFuture = build.compile(params)
           CancelableFuture(
-            completableFuture.asScala
-              .map(_ => isCompiling.clear())
-              .ignoreValue,
+            completableFuture.asScala.map { _ =>
+              lastCompile = isCompiling.keySet
+              isCompiling.clear()
+            }.ignoreValue,
             Cancelable(() => completableFuture.cancel(true))
           )
         }
