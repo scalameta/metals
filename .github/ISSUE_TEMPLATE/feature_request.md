@@ -1,6 +1,6 @@
 ---
 name: 🚀 Feature request
-about: Suggest an idea for this project
+about: This issue tracker is not for feature requests. Please suggest your idea here https://github.com/scalameta/metals-feature-requests
 title: DO NOT OPEN FEATURE REQUEST HERE
 labels: ''
 assignees: ''
