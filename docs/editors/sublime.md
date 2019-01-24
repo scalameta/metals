@@ -95,6 +95,11 @@ The command then can be called via the pallet.
 
 Optionally you can register a key binding for the command.
 
+## Find symbol references
+Default key binding is `shift+F12`
+
+![Find references](assets/sublime-document-symbol.gif)
+
 ## Known issues
 
 - The Sublime Text client uses an alert window for `window/showMessage` that
