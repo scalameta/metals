@@ -95,7 +95,6 @@ The command then can be called via the pallet.
 
 Optionally you can register a key binding for the command.
 
-
 ## Known issues
 
 - The Sublime Text client uses an alert window for `window/showMessage` that
