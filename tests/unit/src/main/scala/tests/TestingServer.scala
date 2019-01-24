@@ -46,11 +46,13 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Debug
+import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
@@ -80,7 +82,8 @@ final class TestingServer(
     buffers: Buffers,
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
-    sh: ScheduledExecutorService
+    sh: ScheduledExecutorService,
+    time: Time
 )(implicit ex: ExecutionContextExecutorService) {
   val server = new MetalsLanguageServer(
     ex,
@@ -89,7 +92,8 @@ final class TestingServer(
     config = config,
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
-    sh = sh
+    sh = sh,
+    time = time
   )
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
@@ -245,7 +249,7 @@ final class TestingServer(
       .asScala
       .ignoreValue
   }
-  def didFocus(filename: String): Future[Unit] = {
+  def didFocus(filename: String): Future[DidFocusResult.Value] = {
     server.didFocus(toPath(filename).toURI.toString).asScala
   }
   def didSave(filename: String)(fn: String => String): Future[Unit] = {
