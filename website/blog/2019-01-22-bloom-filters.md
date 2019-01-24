@@ -34,7 +34,7 @@ blockquote {
 ## Bloom filters
 
 [Bloom filters](https://en.wikipedia.org/wiki/Bloom_filter) are a probabilistic
-data structure that implement space-efficient sets. The difference between a
+data structure that implements space-efficient sets. The difference between a
 bloom filter and a regular set such as `HashSet` is that bloom filters have the
 following limitations:
 
@@ -42,11 +42,10 @@ following limitations:
   occasionally return true even when the element is not a member of the set.
 - when creating a bloom filter, you must provide an estimate for how many
   elements will be added to the set. A large estimate results in lower false
-  positive rates for the `contains(element)` method at cost of higher space
+  positive rates for the `contains(element)` method at the cost of higher space
   usage. Conversely, a low estimate results in lower memory usage at the cost of
   higher false positives for the `contains(element)` method.
-- you can't iterate through the elements of a bloom filter. Once inserted, an
-  element cannot be recovered from the bloom filter.
+- you can't iterate through the elements of a bloom filter.
 
 In exchange for these limitations, bloom filters are able to compress a large
 number of elements into a small number of bits. Due to their space-efficiency,
@@ -79,7 +78,8 @@ bloom filter is guaranteed not to contain a reference to that symbol. False
 positive results from the bloom filter are not a problem because they only slow
 down the response but don't compromise the correctness of the final result.
 
-Concretely, Metals keeps an in-memory map where keys are paths in the workspace.
+Concretely, Metals keeps an in-memory map where keys are paths to source files
+in the workspace.
 
 ```scala
 val references: Map[Path, BloomFilter[Symbol]]
@@ -101,14 +101,14 @@ val query = // ...
 for {
   (path, bloom) <- references
   if bloom.mightContain(query)
-  symbolOccurrence <- readSemanticdbOccurrences(path)
+  symbolOccurrence <- readSemanticdbOccurrences(path) // read from disk
   if isSameSymbol(query, symbolOccurrence)
 } yield symbolOccurrence
 ```
 
 In the actual Metals implementation, we additionally take care of adjusting
 positions of the results in case the source file contents have changed since the
-SemanticDB snapshot was produced.
+SemanticDB file was created.
 
 ## Fuzzy symbol search
 
@@ -120,7 +120,7 @@ in the workspace sources or library dependencies by typing the symbol's name.
 The search is fuzzy, meaning the query doesn't have to be an exact match or a
 substring match with the target symbol. For example, we want the query `ReaSer`
 to match the symbol `ReactDOMServer`. Additionally, all-lowercase queries are
-case-insensitive so that searching for `nelis` matches the symbol
+treated as case-insensitive so that searching for `nelis` matches the symbol
 `NonEmptyList`.
 
 Like with find symbol references, the challenge when implementing fuzzy symbol
@@ -140,8 +140,8 @@ The first index is a map keyed by source files in the workspace.
 val inWorkspace: Map[Path, BloomFilter[String]]
 ```
 
-The values of the index is the set of all possible sub-queries that match
-symbols defined in that source file. For example, consider the code below.
+The values of the map is the set of all possible sub-queries that match symbols
+defined in that source file. For example, consider the code below.
 
 ```scala
 package data
@@ -149,7 +149,7 @@ class NonEmptyListSpec { ... }
 object Props { ... }
 ```
 
-For this source file, we insert the following strings into the index.
+For this source file, we insert the following sub-queries into the index.
 
 ```txt
 d
@@ -179,23 +179,24 @@ Props
 
 When searching for a query like `NoLi`, we split the query into the words `No`
 and `Li` and visit only files whose bloom filter contains all of those exact
-words. We include trigrams of the uppercase characters to further reduce the
-search state for queries like `NELS` that have few lowercase character.
+sub-queries. We include trigrams of the uppercase characters to further reduce
+the search state for queries like `NELS` that have few lowercase character.
 
-For all-lowercase queries, we return the union of multiple capitalization
-combinations in order to support case-insensitive searches. For example, the
-query `nels` returns all results matching any of the following queries.
+For all-lowercase queries, we return the union of results from multiple
+capitalization combinations in order to support case-insensitive searches. For
+example, the query `neli` returns all results matching any of the following
+queries.
 
 ```txt
-nels
-Nels
-NEls
-NeLs
-NelS
-NELs
-NElS
-NeLS
-NELS
+neli
+Neli
+NEli
+NeLi
+NelI
+NELi
+NElI
+NeLI
+NELI
 ```
 
 To implement the search, we iterate through all entries of the in-memory map and
@@ -229,7 +230,7 @@ val inClasspath: Map[Symbol, (BloomFilter[String], Seq[Symbol])]
 
 Unlike the workspace sources index, the library classpath index does not need to
 be incrementally updated when files re-compile. The bloom filters in the values
-of the map use the same word-splitting technique as the bloom filters in the
+of the map use the same sub-query technique as the bloom filters in the
 workspace sources index. For each bloom filter, we additionally store a listing
 of all members of that package. If a query matches a given bloom filter, we test
 the fuzzy search against all members of the package.
@@ -313,12 +314,12 @@ time: found 1002 results for query 'actor' in 0.54s
 time: found 3974 results for query 'S' in 1.98s
 ```
 
-Response times range from 13ms up to 2s depending on the query. Queries with
-typos like `ConfigSEr` have 0 results and respond instantly, while generic
-queries like `S` have ~4k results and take 2 seconds to respond. Observe that
-all-lowercase queries like `actorref` are slower than capitalized queries like
-`ActorRef`, which is expected because we test multiple capitalization
-combinations for case-insensitive searches.
+Response times range from 13ms up to 2s depending on the query and number of
+results. Queries with typos like `ConfigSEr` have 0 results and respond
+instantly, while generic queries like `S` have ~4k results and take 2 seconds to
+respond. Observe that all-lowercase queries like `actorref` are slower than
+capitalized queries like `ActorRef`, which is expected because we test multiple
+capitalization combinations for case-insensitive searches.
 
 ### Memory usage
 
@@ -388,9 +389,9 @@ dependencies compared to Akka.
 > Click on image to interactively explore the flamegraph.
 
 Computing the bloom filter indexes for find symbol references and fuzzy symbol
-search takes proportionally even less time in the Prisma project compared to
-Akka. The Prisma project is a good representation for projects with less than
-100k lines of code but a large number of library dependencies.
+search takes proportionally even less time in Prisma compared to Akka. The
+Prisma project is a good representation for projects with less than 100k lines
+of code and a large number of library dependencies.
 
 ## Conclusion
 
@@ -419,7 +420,7 @@ for the user query. False positive results slow down response times but don't
 compromise the correctness of the final result.
 
 Try out Metals today with VS Code, Atom, Vim, Sublime Text or Emacs using the
-installation instructions here:
+installation instructions here
 https://scalameta.org/metals/docs/editors/overview.html.
 
 The indexer is working when the status bar says `Indexing⠋`
