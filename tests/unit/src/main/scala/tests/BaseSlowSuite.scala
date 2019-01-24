@@ -11,6 +11,7 @@ import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
@@ -23,6 +24,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration = UserConfiguration()
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default
+  def time: Time = Time.system
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   private val sh = Executors.newSingleThreadScheduledExecutor()
@@ -66,7 +68,8 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       buffers,
       config,
       bspGlobalDirectories,
-      sh
+      sh,
+      time
     )(ex)
     server.server.userConfig = this.userConfig
   }

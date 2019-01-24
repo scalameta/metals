@@ -6,6 +6,7 @@ import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import java.util.concurrent.ConcurrentLinkedQueue
+import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -105,10 +106,16 @@ final class BuildTargets() {
   def inverseSourceDirectory(source: AbsolutePath): Option[AbsolutePath] =
     sourceDirectories.find(dir => source.toNIO.startsWith(dir.toNIO))
 
+  def isInverseDependency(
+      query: BuildTargetIdentifier,
+      roots: List[BuildTargetIdentifier]
+  ): Boolean = {
+    BuildTargets.isInverseDependency(query, roots, inverseDependencies.get)
+  }
   def inverseDependencies(
       target: BuildTargetIdentifier
-  ): Iterable[BuildTargetIdentifier] = {
-    BuildTargets.inverseDependencies(target, inverseDependencies.get)
+  ): collection.Set[BuildTargetIdentifier] = {
+    BuildTargets.inverseDependencies(List(target), inverseDependencies.get)
   }
 
   def addDependencySource(
@@ -127,6 +134,30 @@ final class BuildTargets() {
 }
 
 object BuildTargets {
+  def isInverseDependency(
+      query: BuildTargetIdentifier,
+      roots: List[BuildTargetIdentifier],
+      inverseDeps: BuildTargetIdentifier => Option[Seq[BuildTargetIdentifier]]
+  ): Boolean = {
+    val isVisited = mutable.Set.empty[BuildTargetIdentifier]
+    @tailrec
+    def loop(toVisit: List[BuildTargetIdentifier]): Boolean = toVisit match {
+      case Nil => false
+      case head :: tail =>
+        if (head == query) true
+        else if (isVisited(head)) false
+        else {
+          isVisited += head
+          inverseDeps(head) match {
+            case Some(next) =>
+              loop(next.toList ++ tail)
+            case None =>
+              loop(tail)
+          }
+        }
+    }
+    loop(roots)
+  }
 
   /**
    * Given an acyclic graph and a root target, returns the leaf nodes that depend on the root target.
@@ -142,9 +173,9 @@ object BuildTargets {
    * }}}
    */
   def inverseDependencies(
-      root: BuildTargetIdentifier,
+      root: List[BuildTargetIdentifier],
       inverseDeps: BuildTargetIdentifier => Option[Seq[BuildTargetIdentifier]]
-  ): Iterable[BuildTargetIdentifier] = {
+  ): collection.Set[BuildTargetIdentifier] = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     val result = mutable.Set.empty[BuildTargetIdentifier]
     def loop(toVisit: List[BuildTargetIdentifier]): Unit = toVisit match {
@@ -164,7 +195,7 @@ object BuildTargets {
           loop(tail)
         }
     }
-    loop(root :: Nil)
+    loop(root)
     result
   }
 
