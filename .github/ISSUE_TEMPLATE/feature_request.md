@@ -7,6 +7,6 @@ assignees: ''
 
 ---
 
-Please report feature requests here https://github.com/scalameta/metals-feature-requests
+Please open feature requests here https://github.com/scalameta/metals-feature-requests
 
 The main issue tracker is reserved for bug reports and issues with an assigned milestone.
