@@ -171,14 +171,6 @@ final class WorkspaceSymbolProvider(
           falsePositives += 1
         }
       }
-      if (statistics.isWorkspaceSymbol) {
-        val falsePositiveRatio =
-          ((falsePositives.toDouble / visitsCount) * 100).toInt
-        scribe.info(
-          s"workspace-symbol: query '${query.query}' returned ${result.size()} results in $timer from workspace, " +
-            s"visited ${visitsCount} files (${falsePositiveRatio}% false positives)"
-        )
-      }
     }
     def searchDependencySymbols(): Unit = {
       val timer = new Timer(Time.system)
@@ -224,11 +216,6 @@ final class WorkspaceSymbolProvider(
       }
       classpathEntries.foreach { s =>
         result.add(s)
-      }
-      if (statistics.isWorkspaceSymbol) {
-        scribe.info(
-          s"workspace-symbol: query '${query.query}' returned ${classfiles.size} results from classpath in $timer"
-        )
       }
     }
     searchWorkspaceSymbols()
