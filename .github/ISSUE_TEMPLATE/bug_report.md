@@ -24,9 +24,9 @@ Steps to reproduce the behavior:
 <!-- If applicable, add screenshots to help explain your problem. -->
 
 **Installation:**
-- Operating system: for example macOS
-- Editor: for example Visual Studio Code
-- Metals version: for example v0.4.0
+- Operating system: macOS/Windows/Linux
+- Editor: Visual Studio Code/Atom/Vim/Sublime/Emacs
+- Metals version: v0.4.0
 
 **Additional context**
 <!-- Add any other context about the problem here. -->
