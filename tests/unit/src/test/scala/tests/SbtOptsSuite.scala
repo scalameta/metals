@@ -35,11 +35,12 @@ object SbtOptsSuite extends BaseSuite {
     "jvmopts",
     """
       |/.jvmopts
-      |-Xmx2G
+      |-Xmx2G -Xms4g
       |-Dhoodlump=bloom
     """.stripMargin,
     """
       |-Xmx2G
+      |-Xms4g
       |-Dhoodlump=bloom
     """.stripMargin
   )
