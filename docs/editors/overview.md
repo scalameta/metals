@@ -17,6 +17,7 @@ functionality.
   <td align=center>Goto definition</td>
   <td align=center>Find references</td>
   <td align=center>Document symbols</td>
+  <td align=center>Workspace symbols</td>
   <td align=center>Formatting</td>
   <td align=center>Metals Extensions</td>
 </tr>
@@ -25,7 +26,8 @@ functionality.
 <tr>
   <td>Visual Studio Code</td>
   <td align=center>Single click</td>
-  <td align=center>Built-in</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -42,6 +44,7 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
+  <td align=center>✅</td>
   <td align=center></td>
 </tr>
 <tr>
@@ -52,6 +55,7 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>Flat</td>
+  <td align=center>✅</td>
   <td align=center></td>
   <td align=center>Status bar</td>
 </tr>
@@ -63,6 +67,7 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>Flat</td>
+  <td align=center></td>
   <td align=center>✅</td>
   <td align=center></td>
 </tr>
@@ -71,6 +76,7 @@ functionality.
   <td align=center>Few steps</td>
   <td align=center>Built-in</td>
   <td align=center>Single buffer</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -97,8 +103,8 @@ from source.
 
 ## Build import
 
-**Built-in**: it is possible to import a build such as an sbt project directly
-from the editor.
+**✅**: it is possible to import a build such as an sbt project directly from
+the editor.
 
 **Requires browser**: importing a build requires additional steps in a web
 browser using a localhost server. It is not possible to import a build within
@@ -176,6 +182,13 @@ projects.
 **Flat**: Document symbols are displayed in a flat outline.
 
 ![Document Symbols](https://user-images.githubusercontent.com/1408093/50635569-014c7180-0f53-11e9-8898-62803898781c.gif)
+
+## Workspace symbols
+
+Fuzzy search a symbol in the workspace of library dependencies by its name.
+All-lowercase queries are treated as case-insensitive searches.
+
+![Fuzzy symbol search example](https://user-images.githubusercontent.com/1408093/51537603-44fa1300-1e4f-11e9-84f2-eb7d4c6fc7ef.gif)
 
 ## Formatting
 

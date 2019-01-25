@@ -87,12 +87,12 @@ to take effect.
 Run the "Explorer: Focus on Outline View" command to open the symbol outline for
 the current file in the sidebar.
 
-![Document Symbols Outline](../assets/vscode-document-symbol.gif)
+![Document Symbols Outline](https://i.imgur.com/T0kVJsr.gif)
 
 Run the "Open Symbol in File" command to search for a symbol in the current file
 without opening the sidebar.
 
-![Document Symbols Command](../assets/vscode-document-symbol-command.gif)
+![Document Symbols Command](https://i.imgur.com/0PJ4brd.png)
 
 As you type, the symbol outline is also visible at the top of the file.
-![Document Symbols Outline](../assets/vscode-document-symbol.png)
+![Document Symbols Outline](https://i.imgur.com/L217n4q.png)
