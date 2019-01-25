@@ -67,16 +67,16 @@ such as "rename symbol".
 
 The challenge when implementing find references is that large projects have many
 symbol references. Iterating through all symbol references for every source file
-on every request is too slow. Most symbols only appear only in a few source
-files so we need some way to reduce the search space.
+on every request is too slow. Most symbols appear only in a few source files so
+we need some way to reduce the search space.
 
 Metals uses bloom filters to reduce the number of files we search when looking
 for a symbol reference. For every file on disk, we keep an in-memory bloom
 filter which contains the set of all referenced symbols in that file. When
 looking for references to a given symbol, we skip files when their accompanying
-bloom filter is guaranteed not to contain a reference to that symbol. False
-positive results from the bloom filter are not a problem because they only slow
-down the response but don't compromise the correctness of the final result.
+bloom filter does not contain a reference to that symbol. False positive results
+from the bloom filter are not a problem because they only slow down the response
+but don't compromise the correctness of the final result.
 
 Concretely, Metals keeps an in-memory map where keys are paths to source files
 in the workspace.
@@ -200,8 +200,8 @@ NELI
 ```
 
 To implement the search, we iterate through all entries of the in-memory map and
-only visit the source files on disk whose bloom filter might contain a match for
-the query.
+only visit the source files on disk whose bloom filter contain a match for the
+query.
 
 ```scala
 val query = ...
