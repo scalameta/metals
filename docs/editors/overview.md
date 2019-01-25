@@ -163,6 +163,12 @@ projects.
 
 ![Find references](https://user-images.githubusercontent.com/1408093/51089190-75fc8880-1769-11e9-819c-95262205e95c.png)
 
+### Known limitations
+
+- References to overridden methods are not included in the results. For example,
+  if you run "find references" on the method `Dog.name()` then it won't include
+  references to the super method `Animal.name()`.
+
 ## Document symbols
 
 **✅**: Document symbols are displayed in a hierarchical outline.
