@@ -58,7 +58,7 @@ functionality.
 <tr>
   <td>Sublime Text 3</td>
   <td align=center>Few steps</td>
-  <td align=center>Requires browser</td>
+  <td align=center>Built-in</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
