@@ -23,6 +23,11 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   check(
     "scala.None",
     """|scala.None Object
+       |scala.meta.inputs.Input.None Object
+       |scala.meta.inputs.Position.None Object
+       |scala.meta.internal.semanticdb.Scala.Descriptor.None Object
+       |scala.meta.internal.trees.Origin.None Object
+       |scala.meta.prettyprinters.Show.None Object
        |scala.reflect.macros.NonemptyAttachments Class
        |""".stripMargin
   )
@@ -144,11 +149,12 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |kafka.utils.Implicits Object
        |org.apache.spark.sql.LowPrioritySQLImplicits Interface
        |org.apache.spark.sql.SQLImplicits Class
-       |org.json4s.DynamicJValueImplicits Interface
        |org.json4s.Implicits Interface
        |scala.LowPriorityImplicits Class
        |scala.collection.convert.ToJavaImplicits Interface
        |scala.collection.convert.ToScalaImplicits Interface
+       |scala.math.Fractional.ExtraImplicits Interface
+       |scala.math.Fractional.Implicits Object
        |scala.math.Integral.ExtraImplicits Interface
        |scala.math.Integral.Implicits Object
        |scala.math.LowPriorityOrderingImplicits Interface
@@ -184,6 +190,12 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     """|scala.meta.inputs.Position.None Object
        |scala.meta.inputs.Position.Range Class
        |scala.meta.inputs.Position.Range Object
+       |""".stripMargin
+  )
+
+  check(
+    "Input.None",
+    """|scala.meta.inputs.Input.None Object
        |""".stripMargin
   )
 
