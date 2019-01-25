@@ -48,7 +48,10 @@ definition.
 ```json
 [
   // ...
-  { "keys": ["f12"], "command": "lsp_symbol_definition" }
+  {
+    "keys": ["f12"],
+    "command": "lsp_symbol_definition"
+  }
 ]
 ```
 
@@ -59,8 +62,11 @@ Server in project" command.
 
 ![Enable Language Server for this project](../assets/sublime-enable-lsp.gif)
 
-This starts the Metal language server but no functionality will work because the build has not been imported. 
-The first time you enable Language Server in a project, it prompts you to "Import changes". This step is required for compile errors and goto definition to work and while it is running, no Metals functionality will work.
+This starts the Metal language server but no functionality will work because the
+build has not been imported. The first time you enable Language Server in a
+project, it prompts you to "Import changes". This step is required for compile
+errors and goto definition to work and while it is running, no Metals
+functionality will work.
 
 This step can take a long time, especially the first time you run it in a new
 workspace. The exact time depends on the complexity of the build and if library
@@ -79,21 +85,48 @@ Once the import step completes, compilation starts for your open `*.scala`
 files. Once the sources have compiled successfully, you can navigate the the
 sources with "Goto definition" by pressing `F12`.
 
+## Find symbol references
+
+The default key binding is `shift+F12`. If you use vim-binding, you need to be
+in insert-mode.
+
+![Find references](https://i.imgur.com/BJDkczD.gif)
+
 ## Manually trigger build import
-When you change build.sbt or sources under project/ you you will need to 
-to manually trigger a build import, for this you can register a custom sublime command.More about command pallet [here](http://docs.sublimetext.info/en/latest/reference/command_palette.html).
+
+You can configure a custom command "Metals: Import Build" to manually trigger
+build import when changing `build.sbt`. To learn about Sublime Text commands see
+[here](http://docs.sublimetext.info/en/latest/reference/command_palette.html).
+
+Update the contents of your `*.sublime-commands` file to include the following
+command.
 
 ```json
 [
-    ///
-    { "caption": "Metals: Build Import", "command": "lsp_execute", "args":{"command_name": "build-import"} }
+  // ...
+  {
+    "caption": "Metals: Import Build",
+    "command": "lsp_execute",
+    "args": { "command_name": "build-import" }
+  }
 ]
 ```
-The command then can be called via the pallet. 
 
-![Import build command](assets/sublime-import-build-command.png)
+If you don't have a existing `.sublime-commands` file, you can create a new one
+in this location.
 
-Optionally you can register a key binding for the command.
+```sh
+# macOS
+~/Library/Application\ Support/Sublime\ Text\ 3/Packages/Metals.sublime-commands
+# Ubuntu
+~/.config/sublime-text-3/Packages/Metals.sublime-commands
+```
+
+Once configured, the command can be called from the command pallette.
+
+![Import build command](https://i.imgur.com/LViPc95.png)
+
+You can optionally register a key binding for the command.
 
 ## Known issues
 
