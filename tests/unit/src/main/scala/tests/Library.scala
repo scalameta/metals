@@ -20,12 +20,7 @@ object Library {
           new Dependency(
             "org.scalameta",
             "scalameta_2.12",
-            "3.2.0"
-          ),
-          new Dependency(
-            "org.scalameta",
-            "scalameta_2.12",
-            "3.2.0"
+            "4.1.0"
           ),
           new Dependency(
             "com.typesafe.akka",

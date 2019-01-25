@@ -11,7 +11,6 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   override def afterAll(): Unit = {
     RecursivelyDelete(tmp)
   }
-
   override def check(query: String, expected: String): Unit = {
     if (isAppveyor) {
       // Ignored on Appveyor because the JDK classpath is different.
@@ -110,7 +109,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.hadoop.record.compiler.JFile Class
        |org.apache.jute.compiler.JFile Class
        |org.apache.parquet.Files Class
-       |org.langmeta.internal.io.FileIO Object
+       |scala.meta.internal.io.FileIO Object
        |scala.reflect.io.File Class
        |scala.reflect.io.File Object
        |sourcecode.File Class
@@ -132,7 +131,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.spark.sql.execution.command.ListFilesCommand Class
        |org.apache.spark.sql.execution.streaming.FileStreamSource.SeenFilesMap Class
        |org.glassfish.jersey.server.internal.scanning.FilesScanner Class
-       |org.langmeta.internal.io.ListFiles Class
+       |scala.meta.internal.io.ListFiles Class
        |""".stripMargin
   )
 
@@ -157,6 +156,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.math.Numeric.Implicits Object
        |scala.math.Ordering.ExtraImplicits Interface
        |scala.math.Ordering.Implicits Object
+       |scala.meta.internal.fastparse.core.Implicits Object
        |scala.sys.process.ProcessImplicits Interface
        |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits1 Interface
        |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits2 Interface
@@ -176,6 +176,14 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.collection.parallel.mutable.ParTrieMap Object
        |scala.collection.parallel.mutable.ParTrieMapCombiner Interface
        |scala.collection.parallel.mutable.ParTrieMapSplitter Class
+       |""".stripMargin
+  )
+
+  check(
+    "inputs.Position.",
+    """|scala.meta.inputs.Position.None Object
+       |scala.meta.inputs.Position.Range Class
+       |scala.meta.inputs.Position.Range Object
        |""".stripMargin
   )
 
