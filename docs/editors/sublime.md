@@ -94,10 +94,12 @@ in insert-mode.
 
 ## Manually trigger build import
 
-When you change build.sbt or sources under project/ you you will need to to
-manually trigger a build import, for this you can register a custom sublime
-command. Learn more about the command pallet
+You can configure a custom command "Metals: Import Build" to manually trigger
+build import when changing `build.sbt`. To learn about Sublime Text commands see
 [here](http://docs.sublimetext.info/en/latest/reference/command_palette.html).
+
+Update the contents of your `*.sublime-commands` file to include the following
+command.
 
 ```json
 [
@@ -120,11 +122,11 @@ in this location.
 ~/.config/sublime-text-3/Packages/Metals.sublime-commands
 ```
 
-The command then can be called from the command pallete.
+Once configured, the command can be called from the command pallette.
 
 ![Import build command](https://i.imgur.com/LViPc95.png)
 
-Optionally you can register a key binding for the command.
+You can optionally register a key binding for the command.
 
 ## Known issues
 
