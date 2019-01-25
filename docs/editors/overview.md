@@ -12,7 +12,6 @@ functionality.
 <tr>
   <td>Editor</td>
   <td align=center>Installation</td>
-  <td align=center>Build import</td>
   <td align=center>Diagnostics</td>
   <td align=center>Goto definition</td>
   <td align=center>Find references</td>
@@ -25,7 +24,6 @@ functionality.
 <tr>
   <td>Visual Studio Code</td>
   <td align=center>Single click</td>
-  <td align=center>Built-in</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -36,7 +34,6 @@ functionality.
 <tr>
   <td>Atom</td>
   <td align=center>Single click</td>
-  <td align=center>Built-in</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -47,7 +44,6 @@ functionality.
 <tr>
   <td>Vim</td>
   <td align=center>Few steps</td>
-  <td align=center>Built-in</td>
   <td align=center>Escaped newlines</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -58,7 +54,6 @@ functionality.
 <tr>
   <td>Sublime Text 3</td>
   <td align=center>Few steps</td>
-  <td align=center>Built-in</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -69,7 +64,6 @@ functionality.
 <tr>
   <td>Emacs</td>
   <td align=center>Few steps</td>
-  <td align=center>Built-in</td>
   <td align=center>Single buffer</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -94,15 +88,6 @@ configuration to work.
 
 **Compile from source**: installing Metals requires building an editor plugin
 from source.
-
-## Build import
-
-**Built-in**: it is possible to import a build such as an sbt project directly
-from the editor.
-
-**Requires browser**: importing a build requires additional steps in a web
-browser using a localhost server. It is not possible to import a build within
-the editor.
 
 ## Diagnostics
 
