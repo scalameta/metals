@@ -38,7 +38,7 @@ functionality.
 <tr>
   <td>Atom</td>
   <td align=center>Single click</td>
-  <td align=center>Built-in</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -50,7 +50,7 @@ functionality.
 <tr>
   <td>Vim</td>
   <td align=center>Few steps</td>
-  <td align=center>Built-in</td>
+  <td align=center>✅</td>
   <td align=center>Escaped newlines</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -62,7 +62,7 @@ functionality.
 <tr>
   <td>Sublime Text 3</td>
   <td align=center>Few steps</td>
-  <td align=center>Built-in</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -74,7 +74,7 @@ functionality.
 <tr>
   <td>Emacs</td>
   <td align=center>Few steps</td>
-  <td align=center>Built-in</td>
+  <td align=center>✅</td>
   <td align=center>Single buffer</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -186,7 +186,9 @@ projects.
 ## Workspace symbols
 
 Fuzzy search a symbol in the workspace of library dependencies by its name.
-All-lowercase queries are treated as case-insensitive searches.
+
+- All-lowercase queries are treated as case-insensitive searches.
+- Queries ending with a dot `.` list nested symbols.
 
 ![Fuzzy symbol search example](https://user-images.githubusercontent.com/1408093/51537603-44fa1300-1e4f-11e9-84f2-eb7d4c6fc7ef.gif)
 
