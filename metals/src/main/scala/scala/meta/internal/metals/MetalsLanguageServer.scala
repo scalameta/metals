@@ -489,8 +489,12 @@ class MetalsLanguageServer(
     } else {
       buildTargets.inverseSources(path) match {
         case Some(target) =>
-          val needsCompile = !lastCompile(target) &&
-            buildTargets.isInverseDependency(target, lastCompile.toList)
+          val isAffectedByCurrentCompilation =
+            buildTargets.isInverseDependency(target, isCompiling.keys.toList)
+          def isAffectedByLastCompilation: Boolean =
+            !lastCompile(target) &&
+              buildTargets.isInverseDependency(target, lastCompile.toList)
+          val needsCompile = isAffectedByCurrentCompilation || isAffectedByLastCompilation
           if (needsCompile) {
             compileSourceFiles(List(path))
               .map(_ => DidFocusResult.Compiled)
