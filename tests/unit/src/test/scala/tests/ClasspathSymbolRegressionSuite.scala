@@ -23,7 +23,9 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
 
   check(
     "scala.None",
-    "scala.None Object"
+    """|scala.None Object
+       |scala.reflect.macros.NonemptyAttachments Class
+       |""".stripMargin
   )
   check(
     "Map.Entry",
@@ -40,6 +42,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |com.google.common.collect.Maps#UnmodifiableEntrySet Class
        |com.twitter.util.tunable.TunableMap.Entry Class
        |java.util.EnumMap#EntryIterator Class
+       |java.util.EnumMap#EntryIterator#Entry Class
        |java.util.EnumMap#EntrySet Class
        |java.util.HashMap#EntryIterator Class
        |java.util.HashMap#EntrySet Class
@@ -159,6 +162,20 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits2 Interface
        |scala.tools.nsc.typechecker.Implicits Interface
        |scala.tools.nsc.typechecker.ImplicitsStats Object
+       |""".stripMargin
+  )
+
+  check(
+    "collection.TrieMap",
+    """|scala.collection.concurrent.TrieMap Class
+       |scala.collection.concurrent.TrieMap Object
+       |scala.collection.concurrent.TrieMapIterator Class
+       |scala.collection.concurrent.TrieMapSerializationEnd Object
+       |scala.collection.immutable.HashMap.HashTrieMap Class
+       |scala.collection.parallel.mutable.ParTrieMap Class
+       |scala.collection.parallel.mutable.ParTrieMap Object
+       |scala.collection.parallel.mutable.ParTrieMapCombiner Interface
+       |scala.collection.parallel.mutable.ParTrieMapSplitter Class
        |""".stripMargin
   )
 
