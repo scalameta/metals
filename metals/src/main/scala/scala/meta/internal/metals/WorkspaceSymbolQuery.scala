@@ -14,19 +14,25 @@ import scala.meta.internal.metals.WorkspaceSymbolQuery.AlternativeQuery
  */
 case class WorkspaceSymbolQuery(
     query: String,
-    alternatives: Array[AlternativeQuery]
+    alternatives: Array[AlternativeQuery],
+    isTrailingDot: Boolean
 ) {
   def matches(bloom: BloomFilter[CharSequence]): Boolean =
     alternatives.exists(_.matches(bloom))
   def matches(symbol: CharSequence): Boolean =
-    alternatives.exists(_.matches(symbol))
+    alternatives.exists(_.matches(symbol, isTrailingDot))
 }
 
 object WorkspaceSymbolQuery {
   def fromTextQuery(query: String): WorkspaceSymbolQuery = {
+    val isTrailingDot = query.endsWith(".")
+    val actualQuery =
+      if (isTrailingDot) query.stripSuffix(".")
+      else query
     WorkspaceSymbolQuery(
-      query,
-      AlternativeQuery.all(query)
+      actualQuery,
+      AlternativeQuery.all(actualQuery),
+      isTrailingDot
     )
   }
 
@@ -36,8 +42,8 @@ object WorkspaceSymbolQuery {
   ) {
     def matches(bloom: BloomFilter[CharSequence]): Boolean =
       bloomFilterQueries.forall(bloom.mightContain)
-    def matches(symbol: CharSequence): Boolean =
-      Fuzzy.matches(query, symbol)
+    def matches(symbol: CharSequence, isTrailingDot: Boolean): Boolean =
+      Fuzzy.matches(query, symbol, if (isTrailingDot) 1 else 0)
   }
 
   object AlternativeQuery {
