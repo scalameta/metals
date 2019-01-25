@@ -36,12 +36,17 @@ import java.lang.StringBuilder
  * - delimiter, one of the characters '.' or '/' or '#' that separate package/class/object/trait names
  *   in SemanticDB symbols, or '$' that separates inner classes in classfile names.
  * - name, characters between delimiters like "io" in "java/io/InputStream".
+ * - main name, the last name in the query or symbol. For example, "Pos" is the main name in "s.m.Pos".
  * - qa, the start index in the query string.
  * - qb, the end index in the query string.
  * - sa, the start index in the symbol string.
  * - sb, the end index in the symbol string.
  */
 object Fuzzy {
+  private class Delimiter(
+      val isFinished: Boolean,
+      val idx: Int
+  )
 
   /**
    * Returns true if the query matches the given symbol.
@@ -53,7 +58,7 @@ object Fuzzy {
     def lastDelimiter(
         string: CharSequence,
         fromIndex: Int
-    ): (Boolean, Int) = {
+    ): Delimiter = {
       var curr = fromIndex - 2
       var continue = true
       while (curr >= 0 && continue) {
@@ -64,8 +69,8 @@ object Fuzzy {
             curr -= 1
         }
       }
-      if (curr < 0) (true, 0)
-      else (false, curr + 1)
+      if (curr < 0) new Delimiter(true, 0)
+      else new Delimiter(false, curr + 1)
     }
     // Loops through all names in the query/symbol strings in reverse order (last names first)
     // and returns true if all query names match their corresponding symbol name.
@@ -74,25 +79,31 @@ object Fuzzy {
     // Loop 2: compareNames("imm", "immutable")
     // Loop 3: compareNames("col", "collection")
     @tailrec
-    def loopDelimiters(qb: Int, sb: Int): Boolean = {
-      val (isEndOfQuery, qa) = lastDelimiter(query, qb)
-      val (isEndOfSymbol, sa) = lastDelimiter(symbol, sb)
-      val isMatch = matchesName(query, qa, qb, symbol, sa, sb)
-      if (!isMatch) {
-        false
-      } else if (isEndOfQuery) {
-        true
-      } else if (isEndOfSymbol) {
-        false
+    def loopDelimiters(qb: Int, sb: Int, depth: Int): Boolean = {
+      val qd = lastDelimiter(query, qb)
+      val sd = lastDelimiter(symbol, sb)
+      val isMatch = matchesName(query, qd.idx, qb, symbol, sd.idx, sb)
+      if (isMatch) {
+        if (qd.isFinished) {
+          true
+        } else if (sd.isFinished) {
+          false
+        } else {
+          loopDelimiters(qd.idx - 1, sd.idx - 1, depth + 1)
+        }
+      } else if (depth > 0 && !sd.isFinished) {
+        // Hop over the symbol name if the main query/symbol names match, this allows
+        // the query "m.Pos" to match the symbol "scala/meta/inputs/Position".
+        loopDelimiters(qb, sd.idx - 1, depth)
       } else {
-        loopDelimiters(qa - 1, sa - 1)
+        false
       }
     }
     val endOfSymbolDelimiter = symbol.charAt(symbol.length - 1) match {
       case '.' | '/' | '#' | '$' => 1
       case _ => 0
     }
-    loopDelimiters(query.length, symbol.length - endOfSymbolDelimiter)
+    loopDelimiters(query.length, symbol.length - endOfSymbolDelimiter, 0)
   }
 
   // Compares two names like query "InStr" and "InputFileStream".

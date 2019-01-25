@@ -31,7 +31,7 @@ object FuzzySuite extends BaseSuite {
   checkOK("Maven", "ch/epfl/MavenPluginIntegration.")
   checkOK("imm.List", "scala/collection/immutable/List#")
   checkNO("mm.List", "scala/collection/List#")
-  checkNO("s.i.Li", "scala/collection/immutable/List#")
+  checkOK("s.i.Li", "scala/collection/immutable/List#")
   checkOK("s.c.i.Li", "scala/collection/immutable/List#")
   checkOK("Week.Mon", "scala/Weekday.Monday")
   checkNO("Week.Mon", "scala/Monday")
@@ -40,6 +40,7 @@ object FuzzySuite extends BaseSuite {
   checkOK("FooxBar", "a/FooxBar#")
   checkNO("FooxBr", "a/FooxBar#")
   checkNO("Files", "a/FileStream#")
+  checkOK("coll.TrieMap", "scala/collection/concurrent/TrieMap.")
 
   def checkWords(in: String, expected: String): Unit = {
     val name = in.replaceAll("[^a-zA-Z0-9]", " ").trim
