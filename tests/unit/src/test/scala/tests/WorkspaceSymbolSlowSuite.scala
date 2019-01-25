@@ -42,10 +42,6 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
         server.workspaceSymbol("a.b.PazQux"),
         "a.b.PazQux"
       )
-      _ = assertNoDiff(
-        server.workspaceSymbol("a.PazQux"),
-        ""
-      )
       _ <- server.didSave("a/src/main/scala/a/B.scala")(
         _.replaceAllLiterally("class B", "  class HaddockBax")
       )
