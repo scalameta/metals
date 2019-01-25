@@ -26,7 +26,7 @@ functionality.
 <tr>
   <td>Visual Studio Code</td>
   <td align=center>Single click</td>
-  <td align=center>Built-in</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -103,8 +103,8 @@ from source.
 
 ## Build import
 
-**Built-in**: it is possible to import a build such as an sbt project directly
-from the editor.
+**✅**: it is possible to import a build such as an sbt project directly from
+the editor.
 
 **Requires browser**: importing a build requires additional steps in a web
 browser using a localhost server. It is not possible to import a build within
