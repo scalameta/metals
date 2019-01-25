@@ -79,6 +79,22 @@ Once the import step completes, compilation starts for your open `*.scala`
 files. Once the sources have compiled successfully, you can navigate the the
 sources with "Goto definition" by pressing `F12`.
 
+## Manually trigger build import
+When you change build.sbt or sources under project/ you you will need to 
+to manually trigger a build import, for this you can register a custom sublime command.More about command pallet [here](http://docs.sublimetext.info/en/latest/reference/command_palette.html).
+
+```json
+[
+    ///
+    { "caption": "Metals: Build Import", "command": "lsp_execute", "args":{"command_name": "build-import"} }
+]
+```
+The command then can be called via the pallet. 
+
+![Import build command](assets/sublime-import-build-command.png)
+
+Optionally you can register a key binding for the command.
+
 ## Known issues
 
 - The Sublime Text client uses an alert window for `window/showMessage` that
