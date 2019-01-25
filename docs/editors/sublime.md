@@ -111,10 +111,13 @@ command. Learn more about the command pallet
 ```
 
 If you don't have a existing `.sublime-commands` file, you can create a new one
-on macOS in this location.
+in this location.
 
-```
+```sh
+# macOS
 ~/Library/Application\ Support/Sublime\ Text\ 3/Packages/Metals.sublime-commands
+# Ubuntu
+~/.config/sublime-text-3/Packages/Metals.sublime-commands
 ```
 
 The command then can be called from the command pallete.
