@@ -50,10 +50,16 @@ object Fuzzy {
 
   /**
    * Returns true if the query matches the given symbol.
+   *
+   * @param query the search query like "m.Pos"
+   * @param symbol the symbol to test the query against like "scala/meta/inputs/Position#"
+   * @param skipNames the number of names in the symbol to jump over. For regular search,
+   *                  use 0. Use 1 to let the query "m.Pos" match "scala/meta/Position#Range."
    */
   def matches(
       query: CharSequence,
-      symbol: CharSequence
+      symbol: CharSequence,
+      skipNames: Int
   ): Boolean = {
     def lastDelimiter(
         string: CharSequence,
@@ -79,31 +85,40 @@ object Fuzzy {
     // Loop 2: compareNames("imm", "immutable")
     // Loop 3: compareNames("col", "collection")
     @tailrec
-    def loopDelimiters(qb: Int, sb: Int, depth: Int): Boolean = {
+    def loopDelimiters(qb: Int, sb: Int, depth: Int, skip: Int): Boolean = {
       val qd = lastDelimiter(query, qb)
       val sd = lastDelimiter(symbol, sb)
-      val isMatch = matchesName(query, qd.idx, qb, symbol, sd.idx, sb)
-      if (isMatch) {
-        if (qd.isFinished) {
-          true
-        } else if (sd.isFinished) {
-          false
-        } else {
-          loopDelimiters(qd.idx - 1, sd.idx - 1, depth + 1)
-        }
-      } else if (depth > 0 && !sd.isFinished) {
-        // Hop over the symbol name if the main query/symbol names match, this allows
-        // the query "m.Pos" to match the symbol "scala/meta/inputs/Position".
-        loopDelimiters(qb, sd.idx - 1, depth)
+      if (skip > 0) {
+        loopDelimiters(qb, sd.idx - 1, depth, skip - 1)
       } else {
-        false
+        val isMatch = matchesName(query, qd.idx, qb, symbol, sd.idx, sb)
+        if (isMatch) {
+          if (qd.isFinished) {
+            true
+          } else if (sd.isFinished) {
+            false
+          } else {
+            loopDelimiters(qd.idx - 1, sd.idx - 1, depth + 1, skip - 1)
+          }
+        } else if (depth > 0 && !sd.isFinished) {
+          // Hop over the symbol name if the main query/symbol names match, this allows
+          // the query "m.Pos" to match the symbol "scala/meta/inputs/Position".
+          loopDelimiters(qb, sd.idx - 1, depth, skip - 1)
+        } else {
+          false
+        }
       }
     }
     val endOfSymbolDelimiter = symbol.charAt(symbol.length - 1) match {
       case '.' | '/' | '#' | '$' => 1
       case _ => 0
     }
-    loopDelimiters(query.length, symbol.length - endOfSymbolDelimiter, 0)
+    loopDelimiters(
+      query.length,
+      symbol.length - endOfSymbolDelimiter,
+      0,
+      skipNames
+    )
   }
 
   // Compares two names like query "InStr" and "InputFileStream".

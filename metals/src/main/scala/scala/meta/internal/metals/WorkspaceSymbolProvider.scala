@@ -150,7 +150,6 @@ final class WorkspaceSymbolProvider(
       query.matches(info.symbol)
     }
     def searchWorkspaceSymbols(): Unit = {
-      val timer = new Timer(Time.system)
       var visitsCount = 0
       var falsePositives = 0
       for {
@@ -173,7 +172,6 @@ final class WorkspaceSymbolProvider(
       }
     }
     def searchDependencySymbols(): Unit = {
-      val timer = new Timer(Time.system)
       val classfiles = new PriorityQueue[Classfile](
         (a, b) => Integer.compare(a.filename.length, b.filename.length)
       )
