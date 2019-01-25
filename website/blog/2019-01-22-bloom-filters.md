@@ -49,7 +49,7 @@ following limitations:
 
 In exchange for these limitations, bloom filters are able to compress a large
 number of elements into a small number of bits. Due to their space-efficiency,
-bloom filters are used in a many applications ranging from browsers, CDNs and
+bloom filters are used in many applications ranging from browsers, CDNs and
 cryptocurrencies. In the next sections, we'll explore how bloom filters can also
 be used in the context of a language server like Metals.
 
@@ -68,7 +68,7 @@ such as "rename symbol".
 The challenge when implementing find references is that large projects have many
 symbol references. Iterating through all symbol references for every source file
 on every request is too slow. Most symbols only appear only in a few source
-files so we need some way to reduce the search state.
+files so we need some way to reduce the search space.
 
 Metals uses bloom filters to reduce the number of files we search when looking
 for a symbol reference. For every file on disk, we keep an in-memory bloom
@@ -89,12 +89,12 @@ The values represent the set of
 [SemanticDB symbols](https://scalameta.org/docs/semanticdb/specification.html)
 referenced in that file. A nice property of keying the map by file paths is that
 we can incrementally update the map as files change. When a file is re-compiled
-producing a new SemanticDB file, we throw out the old bloom filter a compute a
+producing a new SemanticDB file, we throw out the old bloom filter and compute a
 new one from scratch.
 
 To implement the search, we iterate through all entries of the map and only read
-SemanticDB files from disk when their accompanying bloom filter is likely to
-contain the query symbol.
+SemanticDB files from disk when their accompanying bloom filter contains the
+query symbol (recap: false positives are OK).
 
 ```scala
 val query = // ...
@@ -128,7 +128,7 @@ search is that we have little time to respond and a lot of symbols to search.
 Testing the search query against every source file the workspace and every entry
 in the library classpath is too slow.
 
-Metals uses bloom filters to reduce the search state so that we only look at
+Metals uses bloom filters to reduce the search space so that we only look at
 places that are likely to contain matches for the query. We have two different
 indexes, one for workspace sources and another one for the library classpath.
 
@@ -180,7 +180,7 @@ Props
 When searching for a query like `NoLi`, we split the query into the words `No`
 and `Li` and visit only files whose bloom filter contains all of those exact
 sub-queries. We include trigrams of the uppercase characters to further reduce
-the search state for queries like `NELS` that have few lowercase character.
+the search space for queries like `NELS` that have few lowercase character.
 
 For all-lowercase queries, we return the union of results from multiple
 capitalization combinations in order to support case-insensitive searches. For
@@ -414,10 +414,10 @@ The indexes are in-memory maps where the keys are file paths and values are
 bloom filters. When files change, we can incrementally update the indexes by
 computing a new bloom filter for the updated source file.
 
-The bloom filter indexes are only used to narrow down the search state by
-eliminating files and packages that are guaranteed not to have relevant results
-for the user query. False positive results slow down response times but don't
-compromise the correctness of the final result.
+The bloom filter indexes are only used to narrow down the search space by
+eliminating files and packages that don't contain relevant results for the user
+query. False positive results slow down response times but don't compromise the
+correctness of the final result.
 
 Try out Metals today with VS Code, Atom, Vim, Sublime Text or Emacs using the
 installation instructions here
