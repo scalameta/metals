@@ -1,11 +1,12 @@
 package tests
 
 import scala.meta.internal.metals.Fuzzy
+import scala.meta.internal.metals.WorkspaceSymbolQuery
 
 object FuzzySuite extends BaseSuite {
   def checkOK(query: String, symbol: String): Unit = {
     test(query) {
-      val obtained = Fuzzy.matches(query, symbol)
+      val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
       Predef.assert(
         obtained,
         s"query '$query' is not substring of symbol '$symbol'"
@@ -15,7 +16,7 @@ object FuzzySuite extends BaseSuite {
 
   def checkNO(query: String, symbol: String): Unit = {
     test(query) {
-      val obtained = Fuzzy.matches(query, symbol)
+      val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
       Predef.assert(
         !obtained,
         s"query '$query' was a substring of symbol '$symbol'"
@@ -31,7 +32,7 @@ object FuzzySuite extends BaseSuite {
   checkOK("Maven", "ch/epfl/MavenPluginIntegration.")
   checkOK("imm.List", "scala/collection/immutable/List#")
   checkNO("mm.List", "scala/collection/List#")
-  checkNO("s.i.Li", "scala/collection/immutable/List#")
+  checkOK("s.i.Li", "scala/collection/immutable/List#")
   checkOK("s.c.i.Li", "scala/collection/immutable/List#")
   checkOK("Week.Mon", "scala/Weekday.Monday")
   checkNO("Week.Mon", "scala/Monday")
@@ -40,6 +41,9 @@ object FuzzySuite extends BaseSuite {
   checkOK("FooxBar", "a/FooxBar#")
   checkNO("FooxBr", "a/FooxBar#")
   checkNO("Files", "a/FileStream#")
+  checkOK("coll.TrieMap", "scala/collection/concurrent/TrieMap.")
+  checkOK("m.Pos.", "scala/meta/Position.Range#")
+  checkNO("m.Posi.", "scala/meta/Position.")
 
   def checkWords(in: String, expected: String): Unit = {
     val name = in.replaceAll("[^a-zA-Z0-9]", " ").trim

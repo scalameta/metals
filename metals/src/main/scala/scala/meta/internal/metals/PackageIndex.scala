@@ -43,16 +43,8 @@ class PackageIndex {
   }
 
   def addMember(pkg: String, member: String): Unit = {
-    val isSyntheticClassfile = member.endsWith("$.class")
-    if (!isSyntheticClassfile) {
-      val members = packages.computeIfAbsent(pkg, enterPackage)
-      members.add(member)
-    } else {
-      // Ignore synthetic classfiles that end with `$.class`, they
-      // usually come from Scala objects and have an accompanying non-synthetic
-      // file without a `$.class` suffix.
-      ()
-    }
+    val members = packages.computeIfAbsent(pkg, enterPackage)
+    members.add(member)
   }
 
   private def visitDirectoryEntry(dir: AbsolutePath): Unit = {

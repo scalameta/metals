@@ -11,7 +11,6 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   override def afterAll(): Unit = {
     RecursivelyDelete(tmp)
   }
-
   override def check(query: String, expected: String): Unit = {
     if (isAppveyor) {
       // Ignored on Appveyor because the JDK classpath is different.
@@ -23,7 +22,14 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
 
   check(
     "scala.None",
-    "scala.None Object"
+    """|scala.None Object
+       |scala.meta.inputs.Input.None Object
+       |scala.meta.inputs.Position.None Object
+       |scala.meta.internal.semanticdb.Scala.Descriptor.None Object
+       |scala.meta.internal.trees.Origin.None Object
+       |scala.meta.prettyprinters.Show.None Object
+       |scala.reflect.macros.NonemptyAttachments Class
+       |""".stripMargin
   )
   check(
     "Map.Entry",
@@ -40,6 +46,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |com.google.common.collect.Maps#UnmodifiableEntrySet Class
        |com.twitter.util.tunable.TunableMap.Entry Class
        |java.util.EnumMap#EntryIterator Class
+       |java.util.EnumMap#EntryIterator#Entry Class
        |java.util.EnumMap#EntrySet Class
        |java.util.HashMap#EntryIterator Class
        |java.util.HashMap#EntrySet Class
@@ -107,7 +114,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.hadoop.record.compiler.JFile Class
        |org.apache.jute.compiler.JFile Class
        |org.apache.parquet.Files Class
-       |org.langmeta.internal.io.FileIO Object
+       |scala.meta.internal.io.FileIO Object
        |scala.reflect.io.File Class
        |scala.reflect.io.File Object
        |sourcecode.File Class
@@ -129,7 +136,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.spark.sql.execution.command.ListFilesCommand Class
        |org.apache.spark.sql.execution.streaming.FileStreamSource.SeenFilesMap Class
        |org.glassfish.jersey.server.internal.scanning.FilesScanner Class
-       |org.langmeta.internal.io.ListFiles Class
+       |scala.meta.internal.io.ListFiles Class
        |""".stripMargin
   )
 
@@ -142,11 +149,12 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |kafka.utils.Implicits Object
        |org.apache.spark.sql.LowPrioritySQLImplicits Interface
        |org.apache.spark.sql.SQLImplicits Class
-       |org.json4s.DynamicJValueImplicits Interface
        |org.json4s.Implicits Interface
        |scala.LowPriorityImplicits Class
        |scala.collection.convert.ToJavaImplicits Interface
        |scala.collection.convert.ToScalaImplicits Interface
+       |scala.math.Fractional.ExtraImplicits Interface
+       |scala.math.Fractional.Implicits Object
        |scala.math.Integral.ExtraImplicits Interface
        |scala.math.Integral.Implicits Object
        |scala.math.LowPriorityOrderingImplicits Interface
@@ -154,11 +162,40 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.math.Numeric.Implicits Object
        |scala.math.Ordering.ExtraImplicits Interface
        |scala.math.Ordering.Implicits Object
+       |scala.meta.internal.fastparse.core.Implicits Object
        |scala.sys.process.ProcessImplicits Interface
        |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits1 Interface
        |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits2 Interface
        |scala.tools.nsc.typechecker.Implicits Interface
        |scala.tools.nsc.typechecker.ImplicitsStats Object
+       |""".stripMargin
+  )
+
+  check(
+    "collection.TrieMap",
+    """|scala.collection.concurrent.TrieMap Class
+       |scala.collection.concurrent.TrieMap Object
+       |scala.collection.concurrent.TrieMapIterator Class
+       |scala.collection.concurrent.TrieMapSerializationEnd Object
+       |scala.collection.immutable.HashMap.HashTrieMap Class
+       |scala.collection.parallel.mutable.ParTrieMap Class
+       |scala.collection.parallel.mutable.ParTrieMap Object
+       |scala.collection.parallel.mutable.ParTrieMapCombiner Interface
+       |scala.collection.parallel.mutable.ParTrieMapSplitter Class
+       |""".stripMargin
+  )
+
+  check(
+    "inputs.Position.",
+    """|scala.meta.inputs.Position.None Object
+       |scala.meta.inputs.Position.Range Class
+       |scala.meta.inputs.Position.Range Object
+       |""".stripMargin
+  )
+
+  check(
+    "Input.None",
+    """|scala.meta.inputs.Input.None Object
        |""".stripMargin
   )
 
