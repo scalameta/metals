@@ -6,7 +6,7 @@ object CompressionSuite extends BaseSuite {
   def checkRoundtrip(a: String): Unit = {
     val nonempty = a.trim.linesIterator.map(_.trim).filterNot(_.isEmpty).toArray
     test(nonempty.headOption.getOrElse("<empty>")) {
-      val compressed = Compression.compress(nonempty)
+      val compressed = Compression.compress(nonempty.iterator)
       val decompressed = Compression.decompress(compressed)
       assertNoDiff(decompressed.mkString("\n"), nonempty.mkString("\n"))
     }

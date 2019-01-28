@@ -54,9 +54,9 @@ object FuzzySuite extends BaseSuite {
         .toSeq
         .map(_.toString)
         .sorted
-      val isPrefix = Fuzzy.bloomFilterSymbolStrings(Seq(in))
+      val isPrefix = Fuzzy.bloomFilterSymbolStrings(Seq(in)).map(_.toString)
       assertNoDiff(obtained.mkString("\n"), expected)
-      val allWords = Fuzzy.bloomFilterQueryStrings(in)
+      val allWords = Fuzzy.bloomFilterQueryStrings(in).map(_.toString)
       val isNotPrefix = allWords.filterNot(isPrefix)
       assert(isNotPrefix.isEmpty)
     }

@@ -53,8 +53,12 @@ object BspCli {
         val config = MetalsServerConfig.default
         val icons = Icons.none
         val time = Time.system
-        val statusBar: StatusBar =
-          new StatusBar(() => loggingLangaugeClient, time, ProgressTicks.none)
+        val statusBar = new StatusBar(
+          () => loggingLangaugeClient,
+          time,
+          ProgressTicks.none,
+          icons
+        )
         val embedded = new Embedded(icons, statusBar, () => UserConfiguration())
         val server = new BloopServers(
           sh,

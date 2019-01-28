@@ -3,6 +3,8 @@ package tests
 import com.geirsson.coursiersmall.CoursierSmall
 import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
+import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.PackageIndex
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
@@ -13,6 +15,12 @@ case class Library(
 )
 
 object Library {
+  def jdk: Library =
+    Library(
+      "JDK",
+      Classpath(PackageIndex.bootClasspath),
+      Classpath(JdkSources().get :: Nil)
+    )
   def all: List[Library] = {
     val settings = new Settings()
       .withDependencies(
@@ -25,6 +33,11 @@ object Library {
           new Dependency(
             "com.typesafe.akka",
             "akka-testkit_2.12",
+            "2.5.9"
+          ),
+          new Dependency(
+            "com.typesafe.akka",
+            "akka-stream_2.12",
             "2.5.9"
           ),
           new Dependency(

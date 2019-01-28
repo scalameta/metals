@@ -11,6 +11,7 @@ object DidFocusSlowSuite extends BaseSlowSuite("did-focus") {
     super.utestBeforeEach(path)
   }
   testAsync("is-compiled") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """

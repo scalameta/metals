@@ -9,6 +9,7 @@ import scala.meta.internal.metals.BloopProtocol
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
+import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Time
@@ -20,6 +21,7 @@ import scala.util.control.NonFatal
  * Full end to end integration tests against a full metals language server.
  */
 abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
+  MetalsLogger.updateDefaultFormat()
   def protocol: BloopProtocol = BloopProtocol.auto
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration = UserConfiguration()

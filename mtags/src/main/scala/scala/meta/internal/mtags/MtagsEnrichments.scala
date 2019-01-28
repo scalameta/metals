@@ -4,7 +4,9 @@ import com.thoughtworks.qdox.model.JavaModel
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util
 import scala.annotation.tailrec
+import scala.collection.AbstractIterator
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
@@ -125,5 +127,16 @@ object MtagsEnrichments {
   }
   implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
     def lineNumber: Int = m.getLineNumber - 1
+  }
+  implicit class XtensionJavaPriorityQueue[A](q: util.PriorityQueue[A]) {
+
+    /**
+     * Returns iterator that consumes the priority queue in-order using `poll()`.
+     */
+    def pollingIterator: Iterator[A] = new AbstractIterator[A] {
+      override def hasNext: Boolean = !q.isEmpty
+      override def next(): A = q.poll()
+    }
+
   }
 }

@@ -1,8 +1,9 @@
 def localSnapshotVersion = "0.5.0-SNAPSHOT"
+def isCI = System.getProperty("CI") != null
 inThisBuild(
   List(
     version ~= { dynVer =>
-      if (sys.env.contains("CI")) dynVer
+      if (isCI) dynVer
       else localSnapshotVersion // only for local publishng
     },
     scalaVersion := V.scala212,
@@ -82,6 +83,7 @@ inThisBuild(
 )
 
 cancelable.in(Global) := true
+crossScalaVersions := Nil
 
 addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
 addCommandAlias("scalafixCheck", "; scalafix --check ; test:scalafix --check")
@@ -111,8 +113,36 @@ lazy val V = new {
 
 skip.in(publish) := true
 
+lazy val interfaces = project
+  .in(file("pc/interfaces"))
+  .settings(
+    moduleName := "pc-interfaces",
+    autoScalaLibrary := false,
+    libraryDependencies ++= List(
+      "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0"
+    ),
+    crossVersion := CrossVersion.disabled
+  )
+lazy val pc = project
+  .in(file("pc/core"))
+  .settings(
+    moduleName := "pc",
+    crossVersion := CrossVersion.full,
+    crossScalaVersions := List(V.scala212, V.scala211),
+    libraryDependencies ++= {
+      if (isCI) Nil
+      else List("com.lihaoyi" %% "pprint" % "0.5.3")
+    },
+    libraryDependencies ++= List(
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value,
+      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
+    )
+  )
+  .dependsOn(interfaces, mtags)
+
 lazy val mtags = project
   .settings(
+    moduleName := "mtags",
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
@@ -191,7 +221,7 @@ lazy val metals = project
       "scala212" -> V.scala212
     )
   )
-  .dependsOn(mtags)
+  .dependsOn(pc, mtags)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
@@ -229,6 +259,7 @@ lazy val input = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "io.circe" %% "circe-derivation-annotations" % "0.9.0-M5"
     ),
+    scalacOptions += "-P:semanticdb:synthetics:on",
     addCompilerPlugin(
       "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
     )
@@ -240,6 +271,32 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   testFrameworks := List(new TestFramework("utest.runner.Framework"))
 )
 
+lazy val mtest = project
+  .in(file("tests/mtest"))
+  .settings(
+    skip.in(publish) := true,
+    crossScalaVersions := List(V.scala212, V.scala211),
+    libraryDependencies ++= List(
+      "com.geirsson" %% "coursier-small" % "1.3.3",
+      "org.scalameta" %% "testkit" % V.scalameta,
+      "com.lihaoyi" %% "utest" % "0.6.0"
+    ),
+    buildInfoPackage := "tests",
+    buildInfoObject := "BuildInfoVersions",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "scala211" -> V.scala211,
+      "scala212" -> V.scala212
+    )
+  )
+  .enablePlugins(BuildInfoPlugin)
+
+lazy val cross = project
+  .in(file("tests/cross"))
+  .settings(
+    testSettings,
+    crossScalaVersions := V.supportedScalaVersions
+  )
+  .dependsOn(mtest, pc)
 lazy val unit = project
   .in(file("tests/unit"))
   .settings(
@@ -262,7 +319,7 @@ lazy val unit = project
       "testResourceDirectory" -> resourceDirectory.in(Test).value
     )
   )
-  .dependsOn(metals)
+  .dependsOn(mtest, metals, pc)
   .enablePlugins(BuildInfoPlugin)
 lazy val slow = project
   .in(file("tests/slow"))

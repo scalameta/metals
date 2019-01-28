@@ -1,9 +1,9 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Files
+import scala.collection.JavaConverters._
 import java.nio.file.Paths
 import scala.meta.io.AbsolutePath
-import MetalsEnrichments._
 
 /**
  * Locates zip file on disk that contains the source code for the JDK.

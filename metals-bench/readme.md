@@ -45,6 +45,21 @@ Date: 2018 October 8th, commit 59bda2ac81a497fa168677499bd1a9df60fec5ab
 [info] WorkspaceFuzzBench.upper  abcdefghijklmnopqrstabcdefghijkl    ss   30  202.464 ± 1.423  ms/op
 ```
 
+## textDocument/completions
+
+First results show that loading a global instance of every request is too expensive.
+
+Commit: 65a2baea48637e44dc619dce46a164dc0aa055f9
+```
+[info] Benchmark                                        (completion)  Mode  Cnt    Score     Error  Units
+[info] CachedSearchAndCompilerCompletionBench.complete     scopeOpen    ss   30   20.760 ±   1.387  ms/op
+[info] CachedSearchAndCompilerCompletionBench.complete     scopeDeep    ss   30   61.732 ±  13.112  ms/op
+[info] CachedSearchAndCompilerCompletionBench.complete    memberDeep    ss   30   62.284 ±  64.132  ms/op
+[info] CachedSearchCompletionBench.complete                scopeOpen    ss   30  156.566 ± 178.618  ms/op
+[info] CachedSearchCompletionBench.complete                scopeDeep    ss   30  233.977 ± 222.032  ms/op
+[info] CachedSearchCompletionBench.complete               memberDeep    ss   30  154.681 ± 198.653  ms/op
+```
+
 ## Flamegraphs
 
 Required steps before running.

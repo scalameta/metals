@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import scala.annotation.tailrec
 import scala.collection.mutable
-import java.lang.StringBuilder
 
 /**
  * Metals fuzzy search for strings.
@@ -59,25 +58,8 @@ object Fuzzy {
   def matches(
       query: CharSequence,
       symbol: CharSequence,
-      skipNames: Int
+      skipNames: Int = 0
   ): Boolean = {
-    def lastDelimiter(
-        string: CharSequence,
-        fromIndex: Int
-    ): Delimiter = {
-      var curr = fromIndex - 2
-      var continue = true
-      while (curr >= 0 && continue) {
-        string.charAt(curr) match {
-          case '.' | '/' | '#' | '$' =>
-            continue = false
-          case _ =>
-            curr -= 1
-        }
-      }
-      if (curr < 0) new Delimiter(true, 0)
-      else new Delimiter(false, curr + 1)
-    }
     // Loops through all names in the query/symbol strings in reverse order (last names first)
     // and returns true if all query names match their corresponding symbol name.
     // For the query "col.imm.Li" and symbol "scala/collection/immutable/List" we do the following loops.
@@ -109,16 +91,76 @@ object Fuzzy {
         }
       }
     }
-    val endOfSymbolDelimiter = symbol.charAt(symbol.length - 1) match {
-      case '.' | '/' | '#' | '$' => 1
-      case _ => 0
-    }
     loopDelimiters(
       query.length,
-      symbol.length - endOfSymbolDelimiter,
+      lastIndex(symbol),
       0,
       skipNames
     )
+  }
+
+  private def lastIndex(symbol: CharSequence): Int = {
+    var end = symbol.length() - (if (endsWith(symbol, ".class"))
+                                   ".class".length
+                                 else 1)
+    while (end >= 0 && isDelimiter(symbol.charAt(end))) {
+      end -= 1
+    }
+    end + 1
+  }
+
+  def isDelimiter(ch: Char): Boolean = ch match {
+    case '.' | '/' | '#' | '$' => true
+    case _ => false
+  }
+
+  /**
+   * Returns the length of the last name in this symbol.
+   *
+   * Example: scala/Option$Some.class returns length of "Some"
+   */
+  def nameLength(symbol: CharSequence): Int = {
+    val end = lastIndex(symbol) - 1
+    var start = end
+    while (start >= 0 && !isDelimiter(symbol.charAt(start))) {
+      start -= 1
+    }
+    if (start < 0) end + 1
+    else end - start
+  }
+
+  def endsWith(cs: CharSequence, string: String): Boolean = {
+    val a = cs.length() - 1
+    val b = string.length() - 1
+    if (b > a) false
+    else if (b == 0) false
+    else {
+      var i = 0
+      while (i <= a && i <= b) {
+        if (cs.charAt(a - i) !=
+            string.charAt(b - i)) return false
+        i += 1
+      }
+      true
+    }
+  }
+
+  private def lastDelimiter(
+      string: CharSequence,
+      fromIndex: Int
+  ): Delimiter = {
+    var curr = fromIndex - 2
+    var continue = true
+    while (curr >= 0 && continue) {
+      string.charAt(curr) match {
+        case '.' | '/' | '#' | '$' =>
+          continue = false
+        case _ =>
+          curr -= 1
+      }
+    }
+    if (curr < 0) new Delimiter(true, 0)
+    else new Delimiter(false, curr + 1)
   }
 
   // Compares two names like query "InStr" and "InputFileStream".
@@ -189,6 +231,7 @@ object Fuzzy {
    * @param symbols all symbols in a source file or a package.
    */
   def bloomFilterSymbolStrings(
+      // TODO: can be iterator
       symbols: Iterable[String],
       result: mutable.Set[CharSequence] = mutable.Set.empty
   ): mutable.Set[CharSequence] = {
@@ -232,12 +275,12 @@ object Fuzzy {
       val ch = query.charAt(i)
       ch match {
         case '.' | '/' | '#' | '$' =>
-          result.add(query.subSequence(border, i))
+          result.add(new ZeroCopySubSequence(query, border, i))
           border = i + 1
         case _ =>
           if (ch.isUpper) {
             if (border != i) {
-              val exactName = query.subSequence(border, i)
+              val exactName = new ZeroCopySubSequence(query, border, i)
               result.add(exactName)
             }
             upper.append(ch)
@@ -249,7 +292,7 @@ object Fuzzy {
     query.last match {
       case '.' | '/' | '#' | '$' =>
       case _ =>
-        result.add(query.subSequence(border, query.length))
+        result.add(new ZeroCopySubSequence(query, border, query.length))
     }
     if (includeTrigrams) {
       result ++= new TrigramSubstrings(upper.toString)

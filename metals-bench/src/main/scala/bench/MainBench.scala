@@ -1,21 +1,13 @@
 package bench
 
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.Timer
-
 object MainBench {
   def main(args: Array[String]): Unit = {
-    val bench = new ClasspathFuzzBench
+    val bench = new OnDemandCompletionBench
     bench.setup()
-    val symbols = bench.symbols
-    1.to(10).foreach { i =>
-      val timer = new Timer(Time.system)
-      val result = symbols.search("File")
-      if (i == 1) {
-        pprint.log(result.map(_.getName))
-      }
-      pprint.log(result.length)
-      scribe.info(s"time: $timer")
-    }
+    bench.completion = "memberDeep"
+    val result = bench.complete()
+//    result.getItems.asScala.foreach { item =>
+//      pprint.log(item.getLabel)
+//    }
   }
 }

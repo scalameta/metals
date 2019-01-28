@@ -11,6 +11,7 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.{lsp4j => l}
 import scala.collection.mutable.ArrayBuffer
+import scala.meta.internal.metals.CachedSymbolInformation
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Memory
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -45,11 +46,11 @@ object MetalsTestEnrichments {
         if source.isScalaOrJava
       } {
         val input = source.toInput
-        val symbols = ArrayBuffer.empty[String]
+        val symbols = ArrayBuffer.empty[CachedSymbolInformation]
         SemanticdbDefinition.foreach(input) {
-          case SemanticdbDefinition(info, _, _) =>
+          case defn @ SemanticdbDefinition(info, _, _) =>
             if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-              symbols += info.symbol
+              symbols += defn.toCached
             }
         }
         wsp.didChange(source, symbols)

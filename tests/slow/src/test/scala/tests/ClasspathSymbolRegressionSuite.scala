@@ -33,24 +33,11 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   )
   check(
     "Map.Entry",
-    """|com.esotericsoftware.kryo.util.IntMap#Entry Class
+    """|com.esotericsoftware.kryo.util.IdentityMap#Entry Class
+       |com.esotericsoftware.kryo.util.IntMap#Entry Class
        |com.esotericsoftware.kryo.util.ObjectMap#Entry Class
-       |com.google.common.collect.Maps#EntryFunction Class
-       |com.google.common.collect.Maps#EntrySet Class
-       |com.google.common.collect.Maps#EntryTransformer Interface
-       |com.google.common.collect.Maps#FilteredEntryBiMap Class
-       |com.google.common.collect.Maps#FilteredEntryMap Class
-       |com.google.common.collect.Maps#FilteredEntryMap#EntrySet Class
-       |com.google.common.collect.Maps#FilteredEntryNavigableMap Class
-       |com.google.common.collect.Maps#FilteredEntrySortedMap Class
-       |com.google.common.collect.Maps#UnmodifiableEntrySet Class
        |com.twitter.util.tunable.TunableMap.Entry Class
-       |java.util.EnumMap#EntryIterator Class
-       |java.util.EnumMap#EntryIterator#Entry Class
-       |java.util.EnumMap#EntrySet Class
-       |java.util.HashMap#EntryIterator Class
-       |java.util.HashMap#EntrySet Class
-       |java.util.HashMap#EntrySpliterator Class
+       |io.netty.util.collection.IntObjectMap#PrimitiveEntry Interface
        |java.util.Map#Entry Interface
        |java.util.TreeMap#AscendingSubMap#AscendingEntrySetView Class
        |java.util.TreeMap#DescendingSubMap#DescendingEntrySetView Class
@@ -62,15 +49,12 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |java.util.TreeMap#NavigableSubMap#EntrySetView Class
        |java.util.TreeMap#NavigableSubMap#SubMapEntryIterator Class
        |java.util.TreeMap#PrivateEntryIterator Class
-       |jersey.repackaged.com.google.common.collect.Maps#EntryFunction Class
-       |jersey.repackaged.com.google.common.collect.Maps#EntrySet Class
-       |jersey.repackaged.com.google.common.collect.Maps#EntryTransformer Interface
-       |jersey.repackaged.com.google.common.collect.Maps#FilteredEntryBiMap Class
-       |jersey.repackaged.com.google.common.collect.Maps#FilteredEntryMap Class
-       |jersey.repackaged.com.google.common.collect.Maps#FilteredEntryMap#EntrySet Class
-       |jersey.repackaged.com.google.common.collect.Maps#FilteredEntryNavigableMap Class
-       |jersey.repackaged.com.google.common.collect.Maps#FilteredEntrySortedMap Class
-       |jersey.repackaged.com.google.common.collect.Maps#UnmodifiableEntrySet Class
+       |java.util.WeakHashMap#Entry Class
+       |java.util.WeakHashMap#EntryIterator Class
+       |java.util.WeakHashMap#EntrySet Class
+       |java.util.WeakHashMap#EntrySpliterator Class
+       |org.apache.commons.collections.ReferenceMap#Entry Class
+       |org.apache.commons.collections.ReferenceMap#EntryIterator Class
        |org.apache.commons.lang.IntHashMap#Entry Class
        |""".stripMargin
   )
@@ -98,6 +82,11 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |com.google.common.io.Files#FileByteSink Class
        |com.google.common.io.Files#FileByteSource Class
        |com.google.common.io.Files#FilePredicate Class
+       |com.google.protobuf.compiler.PluginProtos#CodeGeneratorResponse#File Class
+       |com.google.protobuf.compiler.PluginProtos#CodeGeneratorResponse#FileOrBuilder Interface
+       |com.google.protobuf.compiler.plugin.CodeGeneratorResponse.File Class
+       |com.google.protobuf.compiler.plugin.CodeGeneratorResponse.File Object
+       |com.google.protobuf.compiler.plugin.CodeGeneratorResponse.File.FileLens Class
        |com.twitter.io.Files Object
        |io.buoyant.config.types.File Class
        |io.buoyant.config.types.FileDeserializer Class
@@ -105,16 +94,13 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |java.io.File Class
        |java.nio.file.Files Class
        |java.nio.file.Files#FileTypeDetectors Class
-       |javax.annotation.processing.Filer Interface
-       |org.apache.hadoop.io.file.tfile.TFile Class
-       |org.apache.hadoop.io.file.tfile.TFile#TFileIndex Class
-       |org.apache.hadoop.io.file.tfile.TFile#TFileIndexEntry Class
-       |org.apache.hadoop.io.file.tfile.TFile#TFileMeta Class
        |org.apache.hadoop.mapred.IFile Class
        |org.apache.hadoop.record.compiler.JFile Class
        |org.apache.jute.compiler.JFile Class
        |org.apache.parquet.Files Class
-       |scala.meta.internal.io.FileIO Object
+       |scala.meta.inputs.Input.Stream.SerializationProxy#File Class
+       |scala.meta.inputs.Input.Stream.SerializationProxy#File Object
+       |scala.meta.inputs.Input.Stream.SerializationProxy#File.SerializationProxy#VirtualFile Class
        |scala.reflect.io.File Class
        |scala.reflect.io.File Object
        |sourcecode.File Class
@@ -129,7 +115,6 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |java.nio.file.Files Class
        |org.apache.hadoop.mapred.MROutputFiles Class
        |org.apache.hadoop.mapred.YarnOutputFiles Class
-       |org.apache.hadoop.mapreduce.JobSubmissionFiles Class
        |org.apache.ivy.ant.IvyCacheFileset Class
        |org.apache.parquet.Files Class
        |org.apache.spark.SparkFiles Object
@@ -137,22 +122,24 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |org.apache.spark.sql.execution.streaming.FileStreamSource.SeenFilesMap Class
        |org.glassfish.jersey.server.internal.scanning.FilesScanner Class
        |scala.meta.internal.io.ListFiles Class
+       |scala.tools.nsc.interactive.CompilerControl#FilesDeletedItem Class
        |""".stripMargin
   )
 
   check(
     "Implicits",
-    """|com.fasterxml.jackson.module.scala.util.Implicits Object
+    """|akka.stream.extra.Implicits Object
+       |akka.stream.scaladsl.GraphDSL.Implicits Object
+       |com.fasterxml.jackson.module.scala.util.Implicits Object
        |fastparse.core.Implicits Object
        |kafka.javaapi.Implicits Object
-       |kafka.javaapi.MetadataListImplicits Object
        |kafka.utils.Implicits Object
        |org.apache.spark.sql.LowPrioritySQLImplicits Interface
        |org.apache.spark.sql.SQLImplicits Class
        |org.json4s.Implicits Interface
-       |scala.LowPriorityImplicits Class
        |scala.collection.convert.ToJavaImplicits Interface
        |scala.collection.convert.ToScalaImplicits Interface
+       |scala.concurrent.ExecutionContext.Implicits Object
        |scala.math.Fractional.ExtraImplicits Interface
        |scala.math.Fractional.Implicits Object
        |scala.math.Integral.ExtraImplicits Interface
@@ -163,9 +150,9 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.math.Ordering.ExtraImplicits Interface
        |scala.math.Ordering.Implicits Object
        |scala.meta.internal.fastparse.core.Implicits Object
-       |scala.sys.process.ProcessImplicits Interface
        |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits1 Interface
        |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits2 Interface
+       |scala.tools.nsc.interpreter.StdReplVals#ReplImplicits Class
        |scala.tools.nsc.typechecker.Implicits Interface
        |scala.tools.nsc.typechecker.ImplicitsStats Object
        |""".stripMargin

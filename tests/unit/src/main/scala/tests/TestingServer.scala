@@ -12,6 +12,7 @@ import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CompletionParams
 import scala.meta.internal.metals.PositionSyntax._
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
@@ -326,6 +327,31 @@ final class TestingServer(
       val wrapped = UserConfiguration.toWrappedJson(config)
       val json = new JsonParser().parse(wrapped)
       server.didChangeConfiguration(new DidChangeConfigurationParams(json))
+    }
+  }
+
+  def completion(
+      filename: String,
+      query: String
+  ): Future[String] = {
+    val path = toPath(filename)
+    val input = path.toInputFromBuffers(buffers)
+    val offset = query.indexOf("@@")
+    if (offset < 0) sys.error("missing @@")
+    val start = input.text.indexOf(query.substring(0, offset))
+    if (start < 0) sys.error(s"missing '$query'")
+    val point = start + offset
+    val pos = m.Position.Range(input, point, point)
+    val params =
+      new CompletionParams(path.toTextDocumentIdentifier, pos.toLSP.getStart)
+    for {
+      completion <- server.completion(params).asScala
+    } yield {
+      val items =
+        completion.getItems.asScala.map(server.completionItemResolveSync)
+      items.iterator
+        .map(item => item.getLabel + item.getDetail)
+        .mkString("\n")
     }
   }
 

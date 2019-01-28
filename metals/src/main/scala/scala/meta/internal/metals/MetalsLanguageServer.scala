@@ -96,6 +96,7 @@ class MetalsLanguageServer(
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
   private val definitionIndex = newSymbolIndex()
+  private val symbolIndexer = new MetalsSymbolIndexer(definitionIndex)
   var buildServer = Option.empty[BuildServerConnection]
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
@@ -131,6 +132,7 @@ class MetalsLanguageServer(
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
+  private var compilers: Compilers = _
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _
@@ -139,7 +141,8 @@ class MetalsLanguageServer(
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = client
-    statusBar = new StatusBar(() => languageClient, time, progressTicks)
+    statusBar =
+      new StatusBar(() => languageClient, time, progressTicks, config.icons)
     embedded = register(new Embedded(config.icons, statusBar, () => userConfig))
     LanguageClientLogger.languageClient = Some(languageClient)
     cancelables.add(() => languageClient.shutdown())
@@ -189,7 +192,8 @@ class MetalsLanguageServer(
       buildTargets,
       config,
       statusBar,
-      time
+      time,
+      id => compilers.didCompileSuccessfully(id)
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -268,8 +272,22 @@ class MetalsLanguageServer(
       config.statistics,
       buildTargets,
       definitionIndex,
-      pkg => referencesProvider.referencedPackages.mightContain(pkg),
+      pkg => {
+        val mightContain =
+          referencesProvider.referencedPackages.mightContain(pkg)
+        if (mightContain) 0 else 1
+      },
       interactiveSemanticdbs.toFileOnDisk
+    )
+    compilers = register(
+      new Compilers(
+        buildTargets,
+        buffers,
+        symbolIndexer,
+        workspaceSymbols,
+        embedded,
+        statusBar
+      )
     )
     doctor = new Doctor(
       workspace,
@@ -307,6 +325,13 @@ class MetalsLanguageServer(
       )
       capabilities.setDefinitionProvider(true)
       capabilities.setReferencesProvider(true)
+      capabilities.setHoverProvider(true)
+      capabilities.setSignatureHelpProvider(
+        new SignatureHelpOptions(List("(", "[").asJava)
+      )
+      capabilities.setCompletionProvider(
+        new CompletionOptions(true, List(".").asJava)
+      )
       capabilities.setWorkspaceSymbolProvider(true)
       capabilities.setDocumentSymbolProvider(true)
       capabilities.setDocumentFormattingProvider(true)
@@ -574,6 +599,11 @@ class MetalsLanguageServer(
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path())
     if (!savedFiles.isRecentlyActive(path) && path.isScalaOrJava) {
+      event.eventType() match {
+        case EventType.CREATE =>
+          buildTargets.onCreate(path)
+        case _ =>
+      }
       onChange(List(path))
     } else if (path.isSemanticdb) {
       CompletableFuture.completedFuture {
@@ -635,9 +665,8 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/hover")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
-    CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/hover is not supported.")
-      null
+    CompletableFutures.computeAsync { token =>
+      compilers.hover(params, token).orNull
     }
 
   @JsonRequest("textDocument/documentHighlight")
@@ -767,21 +796,28 @@ class MetalsLanguageServer(
   }
   def referencesResult(params: ReferenceParams): ReferencesResult =
     referencesProvider.references(params)
-
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
-    CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/completion is not supported.")
-      null
+    CompletableFutures.computeAsync { token =>
+      compilers.completions(params, token).orNull
     }
+
+  @JsonRequest("completionItem/resolve")
+  def completionItemResolve(
+      item: CompletionItem
+  ): CompletableFuture[CompletionItem] =
+    CompletableFutures.computeAsync { token =>
+      compilers.completionItemResolve(item, token).getOrElse(item)
+    }
+  def completionItemResolveSync(item: CompletionItem): CompletionItem =
+    compilers.completionItemResolve(item, EmptyCancelChecker).getOrElse(item)
 
   @JsonRequest("textDocument/signatureHelp")
   def signatureHelp(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
-    CompletableFutures.computeAsync { _ =>
-      scribe.warn("textDocument/signatureHelp is not supported.")
-      null
+    CompletableFutures.computeAsync { token =>
+      compilers.signatureHelp(params, token).orNull
     }
 
   @JsonRequest("textDocument/codeAction")
@@ -1015,11 +1051,14 @@ class MetalsLanguageServer(
 
   private def indexWorkspaceSources(): Unit = {
     for {
-      sourceDirectory <- buildTargets.sourceDirectories
+      (sourceDirectory, targets) <- buildTargets.sourceDirectoriesToBuildTargets
       if sourceDirectory.isDirectory
       source <- ListFiles(sourceDirectory)
       if source.isScalaOrJava
     } {
+      targets.asScala.foreach { target =>
+        buildTargets.linkSourceFile(target, source)
+      }
       indexSourceFile(source, Some(sourceDirectory))
     }
   }
@@ -1028,7 +1067,7 @@ class MetalsLanguageServer(
       paths: Seq[AbsolutePath]
   ): Unit = {
     for {
-      path <- paths
+      path <- paths.iterator
       if path.isScalaOrJava
     } {
       indexSourceFile(path, buildTargets.inverseSourceDirectory(path))
@@ -1042,11 +1081,17 @@ class MetalsLanguageServer(
     try {
       val reluri = source.toIdeallyRelativeURI(sourceDirectory)
       val input = source.toInput
-      val symbols = ArrayBuffer.empty[String]
+      val symbols = ArrayBuffer.empty[CachedSymbolInformation]
       SemanticdbDefinition.foreach(input) {
-        case SemanticdbDefinition(info, _, owner) =>
+        case SemanticdbDefinition(info, occ, owner) =>
           if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
-            symbols += info.symbol
+            occ.range.foreach { range =>
+              symbols += CachedSymbolInformation(
+                info.symbol,
+                info.kind.toLSP,
+                range.toLSP
+              )
+            }
           }
           if (sourceDirectory.isDefined &&
             !info.symbol.isPackage &&

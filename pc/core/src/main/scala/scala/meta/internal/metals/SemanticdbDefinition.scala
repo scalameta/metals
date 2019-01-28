@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import org.eclipse.{lsp4j => l}
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
+import PCEnrichments._
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.ScalaToplevelMtags
@@ -11,6 +11,7 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
+import scala.meta.internal.{semanticdb => s}
 
 /**
  * A definition of a global symbol produced by mtags.
@@ -20,6 +21,10 @@ case class SemanticdbDefinition(
     occ: SymbolOccurrence,
     owner: String
 ) {
+  def toCached: CachedSymbolInformation = {
+    val range = occ.range.getOrElse(s.Range())
+    CachedSymbolInformation(info.symbol, info.kind.toLSP, range.toLSP)
+  }
   def toLSP(uri: String): l.SymbolInformation = {
     new l.SymbolInformation(
       info.displayName,

@@ -7,6 +7,8 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.jar.JarFile
+import java.util.logging.Level
+import java.util.logging.Logger
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
@@ -16,7 +18,8 @@ import scala.util.control.NonFatal
 /**
  * An index to lookup classfiles contained in a given classpath.
  */
-class PackageIndex {
+class PackageIndex() {
+  val logger = Logger.getLogger(classOf[PackageIndex].getName)
   val packages = new util.HashMap[String, util.ArrayList[String]]()
   private val isVisited = new util.HashSet[AbsolutePath]()
   private val enterPackage =
@@ -37,14 +40,16 @@ class PackageIndex {
         }
       } catch {
         case NonFatal(e) =>
-          scribe.error(s"failed to process classpath entry $entry", e)
+          logger.log(Level.SEVERE, entry.toURI.toString, e)
       }
     }
   }
 
   def addMember(pkg: String, member: String): Unit = {
-    val members = packages.computeIfAbsent(pkg, enterPackage)
-    members.add(member)
+    if (!member.contains("module-info.class")) {
+      val members = packages.computeIfAbsent(pkg, enterPackage)
+      members.add(member)
+    }
   }
 
   private def visitDirectoryEntry(dir: AbsolutePath): Unit = {
@@ -57,8 +62,8 @@ class PackageIndex {
         ): FileVisitResult = {
           val member = file.getFileName.toString
           if (member.endsWith(".class")) {
-            val relpath = AbsolutePath(file).toRelative(dir)
-            val pkg = relpath.toURI(isDirectory = false).toString
+            val relpath = AbsolutePath(file.getParent).toRelative(dir)
+            val pkg = relpath.toURI(isDirectory = true).toString
             addMember(pkg, member)
           }
           FileVisitResult.CONTINUE
@@ -105,14 +110,20 @@ class PackageIndex {
     }
   }
 
-  def expandJdkClasspath(): Unit = {
-    sys.props
-      .collectFirst {
-        case (k, v) if k.endsWith(".boot.class.path") =>
-          Classpath(v).entries
-            .filter(_.isFile)
-            .foreach(jar => visitJarEntry(jar))
-      }
+  def visitBootClasspath(): Unit = {
+    PackageIndex.bootClasspath.foreach(visit)
   }
 
+}
+
+object PackageIndex {
+  def bootClasspath: List[AbsolutePath] =
+    for {
+      entries <- sys.props.collectFirst {
+        case (k, v) if k.endsWith(".boot.class.path") =>
+          Classpath(v).entries
+      }.toList
+      entry <- entries
+      if entry.isFile
+    } yield entry
 }
