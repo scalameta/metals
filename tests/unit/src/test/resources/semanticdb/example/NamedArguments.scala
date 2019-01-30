@@ -29,7 +29,7 @@ object NamedArguments/*example.NamedArguments.*/ {
 
   // vararg
   List/*scala.collection.immutable.List.*/(
-    xs = 2
+    xs/*scala.collection.immutable.List.apply().(xs)*/ = 2
   )
 
 }

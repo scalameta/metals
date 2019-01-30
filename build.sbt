@@ -89,7 +89,7 @@ lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.8"
-  val scalameta = "4.1.0"
+  val scalameta = "4.1.3"
   val semanticdb = "4.1.0"
   val bsp = "2.0.0-M3"
   val sbtBloop = "1.2.4"
@@ -215,6 +215,9 @@ lazy val input = project
   .in(file("tests/input"))
   .settings(
     skip.in(publish) := true,
+    scalacOptions ++= List(
+      "-P:semanticdb:synthetics:on"
+    ),
     libraryDependencies ++= List(
       // these projects have macro annotations
       "org.scalameta" %% "scalameta" % V.scalameta,
