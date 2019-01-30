@@ -10,16 +10,16 @@ class ImplicitConversions/*example.ImplicitConversions#*/ {
   val char/*example.ImplicitConversions#char.*/: Char/*scala.Char#*/ = 'a'
 
   // extension methods
-  message/*scala.Predef.augmentString().*/
+  message/*example.ImplicitConversions#message.*/
     .stripSuffix/*scala.collection.immutable.StringLike#stripSuffix().*/("h")
-  tuple/*scala.Predef.any2stringadd().*/ +/*scala.Predef.any2stringadd#`+`().*/ "Hello"
+  tuple/*example.ImplicitConversions#tuple.*/ +/*scala.Predef.any2stringadd#`+`().*/ "Hello"
 
   // implicit conversions
-  val x/*example.ImplicitConversions#x.*/: Int/*scala.Int#*/ = message/*example.ImplicitConversions#string2Number().*/
+  val x/*example.ImplicitConversions#x.*/: Int/*scala.Int#*/ = message/*example.ImplicitConversions#message.*/
 
   // interpolators
   s/*scala.StringContext#s().*/"Hello $message/*example.ImplicitConversions#message.*/ $number/*example.ImplicitConversions#number.*/"
-  s/*scala.Predef.augmentString().*/"""Hello
+  s/*scala.StringContext#s().*/"""Hello
      |$message/*example.ImplicitConversions#message.*/
      |$number/*example.ImplicitConversions#number.*/""".stripMargin/*scala.collection.immutable.StringLike#stripMargin(+1).*/
 

@@ -29,7 +29,7 @@ object NamedArguments/*NamedArguments.scala*/ {
 
   // vararg
   List/*List.scala*/(
-    xs/*<no symbol>*/ = 2
+    xs/*List.scala*/ = 2
   )
 
 }
