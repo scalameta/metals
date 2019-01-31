@@ -52,6 +52,18 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
              |""".stripMargin
         )
       }
+      _ = {
+        val CFileEvent =
+          workspace.resolve("a/src/main/c/a/main.c")
+        Files.createDirectories(CFileEvent.toNIO.getParent)
+        FileWrites.write(
+          CFileEvent,
+          s"""
+             |import "stdio.h"
+             |void main(char **args) { println("Hello World!"); }s
+             |""".stripMargin
+        )
+      }
       _ <- server.didOpen("b/src/main/scala/B.scala")
       _ <- server.didOpen("c/src/main/scala/C.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -69,6 +81,11 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
           |}
           |""".stripMargin
       )
+      _ = assertIsNotDirectory(workspace.resolve("a/src/main/scala-2.12"))
+      _ = assertIsNotDirectory(workspace.resolve("b/src/main/scala-2.12"))
+      _ = assertIsNotDirectory(workspace.resolve("c/src/main/scala-2.12"))
+      _ = assertIsNotDirectory(workspace.resolve("b/src/main/java"))
+      _ = assertIsNotDirectory(workspace.resolve("c/src/main/java"))
     } yield ()
   }
 }

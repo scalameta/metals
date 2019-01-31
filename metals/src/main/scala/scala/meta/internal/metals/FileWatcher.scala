@@ -55,8 +55,13 @@ final class FileWatcher(
       }
       directoriesToWatch.add(dir.toNIO)
     }
-    // Watch source directories for "goto definition" index.
-    buildTargets.sourceDirectories.foreach(watch)
+    // Watch the parents of source directories for "goto definition" index.
+    // We watch the parents so that we get events if the actual source directories
+    // get deleted and/or created
+    buildTargets.sourceDirectories
+      .groupBy(ap => AbsolutePath(ap.toNIO.getParent))
+      .keys
+      .foreach(watch)
     buildTargets.scalacOptions.foreach { item =>
       // Watch META-INF/semanticdb directories for "find references" index.
       watch(item.targetroot.resolve(Directories.semanticdb))
@@ -81,8 +86,13 @@ final class FileWatcher(
   }
 
   class Listener extends DirectoryChangeListener {
+    // Used to filter out any events not occuring in the
+    // source directories
+    private def isInSourceDirectory(path: Path): Boolean = {
+      buildTargets.sourceDirectories.exists(dir => path.toString().startsWith(dir.toString()))
+    }
     override def onEvent(event: DirectoryChangeEvent): Unit = {
-      if (Files.isRegularFile(event.path())) {
+      if (Files.isRegularFile(event.path()) && isInSourceDirectory(event.path())) {
         didChangeWatchedFiles(event)
       }
     }
