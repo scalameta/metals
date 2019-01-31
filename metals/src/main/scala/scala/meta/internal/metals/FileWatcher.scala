@@ -89,10 +89,14 @@ final class FileWatcher(
     // Used to filter out any events not occuring in the
     // source directories
     private def isInSourceDirectory(path: Path): Boolean = {
-      buildTargets.sourceDirectories.exists(dir => path.toString().startsWith(dir.toString()))
+      buildTargets.sourceDirectories.exists(
+        dir => path.toString.startsWith(dir.toString())
+      )
     }
     override def onEvent(event: DirectoryChangeEvent): Unit = {
-      if (Files.isRegularFile(event.path()) && isInSourceDirectory(event.path())) {
+      if (Files.isRegularFile(event.path()) && isInSourceDirectory(
+          event.path()
+        )) {
         didChangeWatchedFiles(event)
       }
     }
