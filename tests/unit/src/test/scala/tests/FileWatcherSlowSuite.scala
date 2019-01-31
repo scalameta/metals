@@ -59,8 +59,8 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
         FileWrites.write(
           CFileEvent,
           s"""
-             |import "stdio.h"
-             |void main(char **args) { println("Hello World!"); }s
+             |#include <stdio.h>
+             |void main(char **args) { printf("Hello World!\n"); }
              |""".stripMargin
         )
       }
