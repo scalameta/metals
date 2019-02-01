@@ -8,16 +8,16 @@ class PatternMatching/*example.PatternMatching#*/ {
   }
 
   // tuple deconstruction
-  val (left/*local1*/, right/*local2*/) = (1, 2)
+  val (left/*example.PatternMatching#left.*/, right/*example.PatternMatching#right.*/) = (1, 2)
   (left/*example.PatternMatching#left.*/, right/*example.PatternMatching#right.*/)
 
   // val deconstruction
-  val Some/*scala.Some.*/(number1/*local3*/) =
+  val Some/*scala.Some.*/(number1/*example.PatternMatching#number1.*/) =
     some/*example.PatternMatching#some.*/
   println/*scala.Predef.println(+1).*/(number1/*example.PatternMatching#number1.*/)
 
   def localDeconstruction/*example.PatternMatching#localDeconstruction().*/ = {
-    val Some/*scala.Some.*/(number2/*local5*/) =
+    val Some/*scala.Some.*/(number2/*local4*/) =
       some/*example.PatternMatching#some.*/
     number2/*local4*/
   }

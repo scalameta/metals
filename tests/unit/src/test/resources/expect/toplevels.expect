@@ -3,6 +3,7 @@ example/Comments.scala -> example/Comments#
 example/Companion.scala -> example/Companion#
 example/Companion.scala -> example/Companion.
 example/Definitions.scala -> example/Definitions#
+example/EtaExpansion.scala -> example/EtaExpansion#
 example/ExampleSuite.scala -> example/ExampleSuite.
 example/ForComprehensions.scala -> example/ForComprehensions#
 example/ImplicitClasses.scala -> example/ImplicitClasses.
@@ -25,6 +26,7 @@ example/ReflectiveInvocation.scala -> example/ReflectiveInvocation#
 example/Scalalib.scala -> example/Scalalib#
 example/StructuralTypes.scala -> example/StructuralTypes.
 example/TypeParameters.scala -> example/TypeParameters#
+example/VarArgs.scala -> example/VarArgs#
 example/nested/DoublePackage.scala -> example/nested/x/DoublePackage#
 example/nested/DoublePackage.scala -> example/nested2/y/DoublePackage#
 example/nested/ExampleNested.scala -> example/nested/ExampleNested#

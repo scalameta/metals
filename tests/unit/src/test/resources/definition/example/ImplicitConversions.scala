@@ -10,16 +10,16 @@ class ImplicitConversions/*ImplicitConversions.scala*/ {
   val char/*ImplicitConversions.scala*/: Char/*Char.scala*/ = 'a'
 
   // extension methods
-  message/*Predef.scala*/
+  message/*ImplicitConversions.scala*/
     .stripSuffix/*StringLike.scala*/("h")
-  tuple/*Predef.scala*/ +/*Predef.scala*/ "Hello"
+  tuple/*ImplicitConversions.scala*/ +/*Predef.scala*/ "Hello"
 
   // implicit conversions
   val x/*ImplicitConversions.scala*/: Int/*Int.scala*/ = message/*ImplicitConversions.scala*/
 
   // interpolators
   s/*StringContext.scala*/"Hello $message/*ImplicitConversions.scala*/ $number/*ImplicitConversions.scala*/"
-  s/*Predef.scala*/"""Hello
+  s/*StringContext.scala*/"""Hello
      |$message/*ImplicitConversions.scala*/
      |$number/*ImplicitConversions.scala*/""".stripMargin/*StringLike.scala*/
 

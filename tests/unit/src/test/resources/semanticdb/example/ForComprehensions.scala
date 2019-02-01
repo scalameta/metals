@@ -9,31 +9,31 @@ class ForComprehensions/*example.ForComprehensions#*/ {
       b/*local1*/
     ) ==/*java.lang.Object#`==`().*/ (1, 2)
     (
-      c/*local4*/,
-      d/*local5*/
-    ) <- List/*scala.collection.immutable.List.*/((a/*local0*/, b/*local2*/))
+      c/*local7*/,
+      d/*local8*/
+    ) <- List/*scala.collection.immutable.List.*/((a/*local0*/, b/*local1*/))
     if (
       a/*local0*/,
-      b/*local2*/,
-      c/*local6*/,
-      d/*local7*/
+      b/*local1*/,
+      c/*local7*/,
+      d/*local8*/
     ) ==/*java.lang.Object#`==`().*/ (1, 2, 3, 4)
-    e/*local11*/ = (
+    e/*local10*/ = (
       a/*local0*/,
-      b/*local2*/,
-      c/*local9*/,
-      d/*local10*/
+      b/*local1*/,
+      c/*local7*/,
+      d/*local8*/
     )
-    if e/*local14*/ ==/*java.lang.Object#`==`().*/ (1, 2, 3, 4)
-    f/*local18*/ <- List/*scala.collection.immutable.List.*/(e/*local17*/)
+    if e/*local10*/ ==/*java.lang.Object#`==`().*/ (1, 2, 3, 4)
+    f/*local11*/ <- List/*scala.collection.immutable.List.*/(e/*local10*/)
   } yield {
     (
       a/*local0*/,
-      b/*local2*/,
-      c/*local15*/,
-      d/*local16*/,
-      e/*local17*/,
-      f/*local18*/
+      b/*local1*/,
+      c/*local7*/,
+      d/*local8*/,
+      e/*local10*/,
+      f/*local11*/
     )
   }
 

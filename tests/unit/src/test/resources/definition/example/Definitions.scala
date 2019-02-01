@@ -8,7 +8,7 @@ class Definitions/*Definitions.scala*/ {
       java.lang.Double/*Double.java*/
     ]
   ](
-    xs/*<no symbol>*/ = null
+    xs/*List.scala*/ = null
   )
   println/*Predef.scala*/(MacroAnnotation/*MacroAnnotation.scala*/.decodeMacroAnnotation/*MacroAnnotation.scala fallback to example.MacroAnnotation#*/)
   println/*Predef.scala*/(MacroAnnotation/*MacroAnnotation.scala*/.encodeMacroAnnotation/*MacroAnnotation.scala fallback to example.MacroAnnotation#*/)
