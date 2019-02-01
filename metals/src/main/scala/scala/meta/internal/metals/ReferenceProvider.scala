@@ -197,10 +197,24 @@ final class ReferenceProvider(
           case _ =>
             ""
         })
+    // Returns true if `info` is companion var setter method for occ.symbol var getter.
+    def isVarSetter(info: SymbolInformation): Boolean =
+      info.displayName.endsWith("_=") &&
+        info.displayName.startsWith(name) &&
+        occ.symbol == (Symbol(info.symbol) match {
+          case GlobalSymbol(owner, Descriptor.Method(setter, disambiguator)) =>
+            Symbols.Global(
+              owner.value,
+              Descriptor.Method(setter.stripSuffix("_="), disambiguator)
+            )
+          case _ =>
+            ""
+        })
     val candidates = for {
       info <- doc.symbols.iterator
       if info.symbol != name
       if {
+        isVarSetter(info) ||
         isCompanionObject(info) ||
         isCopyOrApplyParam(info) ||
         isCopyOrApplyMethod(info)
