@@ -8,7 +8,7 @@ class Definitions/*example.Definitions#*/ {
       java.lang.Double/*java.lang.Double#*/
     ]
   ](
-    xs = null
+    xs/*scala.collection.immutable.List.apply().(xs)*/ = null
   )
   println/*scala.Predef.println(+1).*/(MacroAnnotation/*example.MacroAnnotation.*/.decodeMacroAnnotation/*example.MacroAnnotation.decodeMacroAnnotation.*/)
   println/*scala.Predef.println(+1).*/(MacroAnnotation/*example.MacroAnnotation.*/.encodeMacroAnnotation/*example.MacroAnnotation.encodeMacroAnnotation.*/)

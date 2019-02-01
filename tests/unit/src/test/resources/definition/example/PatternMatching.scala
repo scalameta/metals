@@ -8,17 +8,17 @@ class PatternMatching/*PatternMatching.scala*/ {
   }
 
   // tuple deconstruction
-  val (left/*PatternMatching.semanticdb*/, right/*PatternMatching.semanticdb*/) = (1, 2)
+  val (left/*PatternMatching.scala*/, right/*PatternMatching.scala*/) = (1, 2)
   (left/*PatternMatching.scala*/, right/*PatternMatching.scala*/)
 
   // val deconstruction
-  val Some/*Option.scala*/(number1/*PatternMatching.semanticdb*/) =
+  val Some/*Option.scala*/(number1/*PatternMatching.scala*/) =
     some/*PatternMatching.scala*/
   println/*Predef.scala*/(number1/*PatternMatching.scala*/)
 
   def localDeconstruction/*PatternMatching.scala*/ = {
     val Some/*Option.scala*/(number2/*PatternMatching.semanticdb*/) =
       some/*PatternMatching.scala*/
-    number2/*no local definition*/
+    number2/*PatternMatching.semanticdb*/
   }
 }
