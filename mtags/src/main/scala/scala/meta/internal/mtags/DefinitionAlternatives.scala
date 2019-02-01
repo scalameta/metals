@@ -10,6 +10,7 @@ object DefinitionAlternatives {
       caseClassCompanionToType(symbol),
       caseClassApplyOrCopy(symbol),
       caseClassApplyOrCopyParams(symbol),
+      varGetter(symbol),
       methodOwner(symbol)
     ).flatten
   }
@@ -62,6 +63,17 @@ object DefinitionAlternatives {
           Descriptor.Method("apply" | "copy", _)
           ) =>
         GlobalSymbol(owner, Descriptor.Type(signature.name.value))
+    }
+
+  /** Convert reference to var setter to var getter. */
+  private def varGetter(symbol: Symbol): Option[Symbol] =
+    Option(symbol).collect {
+      case GlobalSymbol(owner, Descriptor.Method(name, disambiguator))
+          if name.endsWith("_=") =>
+        GlobalSymbol(
+          owner,
+          Descriptor.Method(name.stripSuffix("_="), disambiguator)
+        )
     }
 
   /**
