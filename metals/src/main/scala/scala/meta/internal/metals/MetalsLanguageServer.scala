@@ -249,7 +249,8 @@ class MetalsLanguageServer(
       () => userConfig,
       languageClient,
       statusBar,
-      config.icons
+      config.icons,
+      params.getWorkspaceFolders.asScala.map(_.getUri.toAbsolutePath).toList
     )
     referencesProvider = new ReferenceProvider(
       workspace,
