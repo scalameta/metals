@@ -49,19 +49,25 @@ final class FileWatcher(
 
   def restart(): Unit = {
     val directoriesToWatch = new util.ArrayList[Path]()
-    def watch(dir: AbsolutePath): Unit = {
+    val createdSourceDirectories = new util.ArrayList[AbsolutePath]()
+    def watch(dir: AbsolutePath, isSourceDirectory: Boolean): Unit = {
       if (!dir.isDirectory) {
         dir.createDirectories()
+        if (isSourceDirectory) createdSourceDirectories.add(dir)
       }
       directoriesToWatch.add(dir.toNIO)
     }
-    // Watch source directories for "goto definition" index.
-    buildTargets.sourceDirectories.foreach(watch)
+    // Watch the source directories for "goto definition" index.
+    buildTargets.sourceDirectories.foreach(watch(_, isSourceDirectory = true))
     buildTargets.scalacOptions.foreach { item =>
       // Watch META-INF/semanticdb directories for "find references" index.
-      watch(item.targetroot.resolve(Directories.semanticdb))
+      watch(
+        item.targetroot.resolve(Directories.semanticdb),
+        isSourceDirectory = false
+      )
     }
     startWatching(directoriesToWatch)
+    createdSourceDirectories.asScala.foreach(_.delete())
   }
 
   private def startWatching(paths: util.List[Path]): Unit = {

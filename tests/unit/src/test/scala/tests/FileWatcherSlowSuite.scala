@@ -9,6 +9,14 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
     cleanCompileCache("b")
     cleanCompileCache("c")
     RecursivelyDelete(workspace.resolve("a"))
+    RecursivelyDelete(workspace.resolve("b"))
+    RecursivelyDelete(workspace.resolve("c"))
+    val JavaFileEvent =
+      workspace.resolve("a/src/main/java/a/JavaFileEvent.java")
+    Files.createDirectories(JavaFileEvent.toNIO.getParent)
+    Files.createDirectories(workspace.resolve("a/src/main/scala").toNIO)
+    Files.createDirectories(workspace.resolve("b/src/main/scala").toNIO)
+    Files.createDirectories(workspace.resolve("c/src/main/scala").toNIO)
     for {
       _ <- server.initialize(
         """
@@ -41,14 +49,25 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
            |""".stripMargin
       )
       _ = {
-        val JavaFileEvent =
-          workspace.resolve("a/src/main/java/a/JavaFileEvent.java")
-        Files.createDirectories(JavaFileEvent.toNIO.getParent)
+        // Should generate an event
         FileWrites.write(
           JavaFileEvent,
           s"""
              |package a;
              |public class JavaFileEvent {}
+             |""".stripMargin
+        )
+      }
+      _ = {
+        // Should not generate a event
+        val CFileEvent =
+          workspace.resolve("a/src/main/c/a/main.c")
+        Files.createDirectories(CFileEvent.toNIO.getParent)
+        FileWrites.write(
+          CFileEvent,
+          s"""
+             |#include <stdio.h>
+             |void main(char **args) { printf("Hello World!\n"); }
              |""".stripMargin
         )
       }
@@ -69,6 +88,11 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
           |}
           |""".stripMargin
       )
+      _ = assertIsNotDirectory(workspace.resolve("a/src/main/scala-2.12"))
+      _ = assertIsNotDirectory(workspace.resolve("b/src/main/scala-2.12"))
+      _ = assertIsNotDirectory(workspace.resolve("c/src/main/scala-2.12"))
+      _ = assertIsNotDirectory(workspace.resolve("b/src/main/java"))
+      _ = assertIsNotDirectory(workspace.resolve("c/src/main/java"))
     } yield ()
   }
 }

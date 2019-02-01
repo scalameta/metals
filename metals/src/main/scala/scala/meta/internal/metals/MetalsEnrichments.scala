@@ -322,6 +322,10 @@ object MetalsEnrichments extends DecorateAsJava with DecorateAsScala {
       AbsolutePath(Files.createDirectories(dealias.toNIO))
     }
 
+    def delete(): Unit = {
+      Files.delete(dealias.toNIO)
+    }
+
   }
 
   implicit class XtensionStringUriProtocol(value: String) {
