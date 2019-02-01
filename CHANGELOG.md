@@ -1,5 +1,27 @@
 # Changelog
 
+## [v0.4.1](https://github.com/scalameta/metals/tree/v0.4.1) (2019-02-01)
+
+[Full Changelog](https://github.com/scalameta/metals/compare/v0.4.0...v0.4.1)
+
+- Upgrade to Bloop v1.2.5 [\#513](https://github.com/scalameta/metals/pull/513)
+  ([olafurpg](https://github.com/olafurpg))
+- Respect workspace folders for Scalafmt formatting, fixes \#509.
+  [\#512](https://github.com/scalameta/metals/pull/512)
+  ([olafurpg](https://github.com/olafurpg))
+- Fix navigation bug for var setters.
+  [\#511](https://github.com/scalameta/metals/pull/511)
+  ([olafurpg](https://github.com/olafurpg))
+- Upgrade to Scalameta v4.1.3.
+  [\#510](https://github.com/scalameta/metals/pull/510)
+  ([olafurpg](https://github.com/olafurpg))
+- Change behavior of FileWatcher so that it doesn't create non-existing source
+  directories [\#506](https://github.com/scalameta/metals/pull/506)
+  ([mudsam](https://github.com/mudsam))
+- Reference pluginCrossBuild via reflection to support older sbt 0.13.
+  [\#505](https://github.com/scalameta/metals/pull/505)
+  ([olafurpg](https://github.com/olafurpg))
+
 ## [v0.4.0](https://github.com/scalameta/metals/tree/v0.4.0) (2019-01-25)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v0.3.3...v0.4.0)
