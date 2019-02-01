@@ -250,7 +250,12 @@ class MetalsLanguageServer(
       languageClient,
       statusBar,
       config.icons,
-      params.getWorkspaceFolders.asScala.map(_.getUri.toAbsolutePath).toList
+      Option(params.getWorkspaceFolders) match {
+        case Some(folders) =>
+          folders.asScala.map(_.getUri.toAbsolutePath).toList
+        case _ =>
+          Nil
+      }
     )
     referencesProvider = new ReferenceProvider(
       workspace,
