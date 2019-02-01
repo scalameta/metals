@@ -325,4 +325,29 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
     } yield ()
   }
 
+  testAsync("workspace-folder") {
+    for {
+      _ <- server.initialize(
+        """|/a/.scalafmt.conf
+           |version="2.0.0-RC4"
+           |maxColumn=10
+           |/Main.scala
+           |object   Main { val x = 2 }
+           |""".stripMargin,
+        expectError = true,
+        workspaceFolders = List("a")
+      )
+      _ <- server.didOpen("Main.scala")
+      _ <- server.formatting("Main.scala")
+      _ = assertNoDiff(
+        server.bufferContent("Main.scala"),
+        """object Main {
+          |  val x =
+          |    2
+          |}
+          |""".stripMargin
+      )
+    } yield ()
+  }
+
 }

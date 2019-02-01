@@ -31,15 +31,21 @@ final class FormattingProvider(
     userConfig: () => UserConfiguration,
     client: MetalsLanguageClient,
     statusBar: StatusBar,
-    icons: Icons
+    icons: Icons,
+    workspaceFolders: List[AbsolutePath]
 )(implicit ec: ExecutionContext)
     extends Cancelable {
   override def cancel(): Unit = {
     scalafmt.clear()
   }
 
-  private def scalafmtConf: AbsolutePath =
-    workspace.resolve(userConfig().scalafmtConfigPath)
+  private def scalafmtConf: AbsolutePath = {
+    val configpath = userConfig().scalafmtConfigPath
+    (workspace :: workspaceFolders).iterator
+      .map(_.resolve(configpath))
+      .collectFirst { case path if path.isFile => path }
+      .getOrElse(workspace.resolve(configpath))
+  }
   private val reporter: ScalafmtReporter = new ScalafmtReporter {
     private var downloadingScalafmt = Promise[Unit]()
     override def error(file: Path, message: String): Unit = {

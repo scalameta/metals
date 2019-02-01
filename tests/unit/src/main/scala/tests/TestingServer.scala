@@ -34,6 +34,7 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
 import org.scalactic.source.Position
 import scala.collection.concurrent.TrieMap
@@ -206,7 +207,8 @@ final class TestingServer(
   def initialize(
       layout: String,
       expectError: Boolean = false,
-      preInitialized: () => Future[Unit] = () => Future.successful(())
+      preInitialized: () => Future[Unit] = () => Future.successful(()),
+      workspaceFolders: List[String] = Nil
   ): Future[Unit] = {
     Debug.printEnclosing()
     write(layout)
@@ -220,6 +222,11 @@ final class TestingServer(
         textDocumentCapabilities,
         null
       )
+    )
+    params.setWorkspaceFolders(
+      workspaceFolders
+        .map(file => new WorkspaceFolder(toPath(file).toURI.toString))
+        .asJava
     )
     params.setRootUri(workspace.toURI.toString)
     for {
@@ -513,7 +520,7 @@ object TestingServer {
       workspace,
       workspace.resolve(Directories.readonly)
     ).map(_.resolve(path))
-      .find(_.isFile)
+      .find(p => Files.exists(p.toNIO))
       .getOrElse {
         throw new IllegalArgumentException(s"no such file: $filename")
       }
