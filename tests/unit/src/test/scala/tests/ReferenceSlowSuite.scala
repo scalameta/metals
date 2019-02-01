@@ -129,4 +129,27 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
       _ = server.assertReferenceDefinitionBijection()
     } yield ()
   }
+
+  testAsync("var") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |object A {
+          |  var a = 1
+          |  a = 2
+          |  A.a = 2
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      _ = server.assertReferenceDefinitionBijection()
+    } yield ()
+  }
 }
