@@ -1,4 +1,4 @@
-def localSnapshotVersion = "0.4.0-SNAPSHOT"
+def localSnapshotVersion = "0.5.0-SNAPSHOT"
 inThisBuild(
   List(
     version ~= { dynVer =>
