@@ -18,7 +18,7 @@ Metals works in Emacs thanks to the the
 
 ## Installation
 
-To use `metals` in Emacs, place this snippet in your Emacs configuration to
+To use Metals in Emacs, place this snippet in your Emacs configuration to
 load `lsp-scala` along with its dependencies:
 
 ```el
