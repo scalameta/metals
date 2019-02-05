@@ -145,9 +145,9 @@ To configure Eglot with Metals:
 
 (use-package eglot
   :pin melpa-stable
-  ;; (optional) Automatically start metals for Scala files.
   :config
   (add-to-list 'eglot-server-programs '(scala-mode . ("metals-emacs")))
+  ;; (optional) Automatically start metals for Scala files.
   :hook (scala-mode . eglot-ensure))
 ```
 
