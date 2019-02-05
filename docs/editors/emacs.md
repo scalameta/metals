@@ -18,14 +18,8 @@ Metals works in Emacs thanks to the the
 
 ## Installation
 
-First, clone the `lsp-scala` repository.
-
-```sh
-git clone https://github.com/rossabaker/lsp-scala.git
-```
-
-Next, update your Emacs configuration to load `lsp-scala` along with its
-dependencies
+To use Metals in Emacs, place this snippet in your Emacs configuration to
+load `lsp-scala` along with its dependencies:
 
 ```el
 ;; Add melpa to your packages repositories
@@ -59,7 +53,6 @@ dependencies
   :hook (lsp-mode . lsp-ui-mode))
 
 (use-package lsp-scala
-  :load-path "~/path/to/lsp-scala"
   :after scala-mode
   :demand t
   ;; Optional - enable lsp-scala automatically in scala files
@@ -152,9 +145,9 @@ To configure Eglot with Metals:
 
 (use-package eglot
   :pin melpa-stable
-  ;; (optional) Automatically start metals for Scala files.
   :config
   (add-to-list 'eglot-server-programs '(scala-mode . ("metals-emacs")))
+  ;; (optional) Automatically start metals for Scala files.
   :hook (scala-mode . eglot-ensure))
 ```
 
