@@ -3,7 +3,6 @@ package tests
 import com.google.gson.JsonParser
 import java.util.Properties
 import scala.meta.internal.metals.UserConfiguration
-import scala.collection.JavaConverters._
 
 object UserConfigurationSuite extends BaseSuite {
   def check(
@@ -15,7 +14,8 @@ object UserConfigurationSuite extends BaseSuite {
       val wrapped = UserConfiguration.toWrappedJson(original)
       val json = new JsonParser().parse(wrapped).getAsJsonObject
       val jprops = new Properties()
-      jprops.putAll(props.asJava)
+      // java11 ambiguous .putAll via Properties/Hashtable, use .put
+      props.foreach { case (k, v) => jprops.put(k, v) }
       val obtained = UserConfiguration.fromJson(json, jprops)
       fn(obtained)
     }
