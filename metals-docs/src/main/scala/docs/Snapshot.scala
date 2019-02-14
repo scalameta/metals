@@ -33,13 +33,11 @@ object Snapshot {
 
   /** Returns the latest published snapshot release, or the current release if. */
   private def fetchLatest(repo: String): Snapshot = {
+    val url =
+      s"https://oss.sonatype.org/content/repositories/$repo/org/scalameta/metals_2.12/"
     // maven-metadata.xml is consistently outdated so we scrape the "Last modified" column
     // of the HTML page that lists all snapshot releases instead.
-    val doc = Jsoup
-      .connect(
-        s"https://oss.sonatype.org/content/repositories/$repo/org/scalameta/metals_2.12/"
-      )
-      .get
+    val doc = Jsoup.connect(url).get
     val dateTime = new SimpleDateFormat("EEE MMM d H:m:s z yyyy")
     val snapshots: Seq[Snapshot] = doc.select("tr").asScala.flatMap { tr =>
       val lastModified =
@@ -53,7 +51,27 @@ object Snapshot {
         List()
       }
     }
-    snapshots.maxBy(_.lastModified.getTime)
+    if (snapshots.isEmpty) {
+      val doc = Jsoup.connect(url + "maven-metadata.xml").get
+      val latest = doc.select("latest").text().trim
+      val Date = "(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)(\\d\\d)(\\d\\d)(\\d\\d).*".r
+      val lastUpdated = doc.select("lastUpdated").text().trim match {
+        case Date(year, mon, day, hr, min, sec) =>
+          new Date(
+            year.toInt - 1900,
+            mon.toInt - 1,
+            day.toInt,
+            hr.toInt,
+            min.toInt,
+            sec.toInt
+          )
+        case _ =>
+          new Date()
+      }
+      Snapshot(latest, lastUpdated)
+    } else {
+      snapshots.maxBy(_.lastModified.getTime)
+    }
   }
 
 }
