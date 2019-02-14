@@ -1,0 +1,117 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Metals v0.4.4 · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Metals is a language server for Scala that works with VS Code, Atom, Vim,"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Metals v0.4.4 · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/blog/2019/02/01/tin.html"/><meta property="og:description" content="Metals is a language server for Scala that works with VS Code, Atom, Vim,"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul><li class="navListItem navListItemActive"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></li></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></h1><p class="post-meta">February 1, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><div><span><p>Metals is a language server for Scala that works with VS Code, Atom, Vim,
+Sublime Text and Emacs. Metals is developed at the
+<a href="https://scala.epfl.ch/">Scala Center</a> along with contributors from the
+community.</p>
+<!-- truncate -->
+<h2><a class="anchor" aria-hidden="true" id="metals-server"></a><a href="#metals-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Metals server</h2>
+<p>In this milestone we merged 5 PRs, full details:
+<a href="https://github.com/scalameta/metals/milestone/5?closed=1">https://github.com/scalameta/metals/milestone/5?closed=1</a>.</p>
+<h3><a class="anchor" aria-hidden="true" id="improved-code-navigation"></a><a href="#improved-code-navigation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Improved code navigation</h3>
+<p>Several &quot;goto definition&quot; and &quot;find references&quot; bugs have been fixed in this
+release. In particular, code navigation should work more reliably now for the
+following language features</p>
+<ul>
+<li>for comprehensions with multiple assignments and guards</li>
+<li>eta-expanded methods and functions passed as values</li>
+<li>val patterns like <code>val (a, b) = ...</code></li>
+<li>named arguments in <code>apply</code> methods</li>
+<li>repeated parameter types (varargs)</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="empty-source-directories-are-no-longer-created"></a><a href="#empty-source-directories-are-no-longer-created" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Empty source directories are no longer created</h3>
+<p>Previously, Metals created all source directories like <code>src/main/java</code> and
+<code>src/main/scala-2.12</code> even if they were unused. Now, Metals still creates these
+directories but removes them again after the file watcher has started. Big
+thanks to first-time contributor <a href="https://github.com/mudsam">@mudsam</a> for
+implementing this fix!</p>
+<h3><a class="anchor" aria-hidden="true" id="multiple-workspace-folders"></a><a href="#multiple-workspace-folders" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Multiple workspace folders</h3>
+<p>Metals now looks for <code>.scalafmt.conf</code> in all workspace folders instead of only
+the workspace root.</p>
+<h3><a class="anchor" aria-hidden="true" id="avoid-metalssbt-compile-errors-on-old-sbt-versions"></a><a href="#avoid-metalssbt-compile-errors-on-old-sbt-versions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Avoid <code>metals.sbt</code> compile errors on old sbt versions</h3>
+<p>The generated <code>metals.sbt</code> file in <code>~/.sbt/0.13/plugins/metals.sbt</code> now compiles
+on all versions of sbt 0.13.x even if Metals itself still only works with sbt
+0.13.17+.</p>
+<h2><a class="anchor" aria-hidden="true" id="visual-studio-code"></a><a href="#visual-studio-code" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Visual Studio Code</h2>
+<p>The Metals extension was installed over 1000 times over the past week!</p>
+<h3><a class="anchor" aria-hidden="true" id="java-opts"></a><a href="#java-opts" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>JAVA_OPTS</code></h3>
+<p>The Metals extension now respects the <code>JAVA_OPTS</code> environment variable the same
+it does the <code>.jvmopts</code> file. For example, set <code>JAVA_OPTS</code> to
+<code>-Dhttps.proxyHost=… -Dhttps.proxyPort=…</code> to configure HTTP proxies. It's
+recommended to start VS Code with the <code>code</code> binary from the terminal to ensure
+environment variables propagate correctly.</p>
+<h2><a class="anchor" aria-hidden="true" id="sublime-text"></a><a href="#sublime-text" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sublime Text</h2>
+<p>There's a WIP pull request
+<a href="https://github.com/tomv564/LSP/pull/501">tom654/LSP#501</a> adding support for
+fuzzy symbol search (<code>workspace/symbol</code>). Please upvote with 👍 if you'd like to
+use this feature!</p>
+<h2><a class="anchor" aria-hidden="true" id="emacs"></a><a href="#emacs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Emacs</h2>
+<p>There is a new Gitter channel
+<a href="https://gitter.im/rossabaker/lsp-scala">rossabaker/lsp-scala</a> for Emacs and
+Metals users.</p>
+<p>The <code>lsp-scala</code> package is now published to MELPA
+<a href="https://github.com/melpa/melpa/pull/5868">melpa/melpa#5868</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="merged-prs"></a><a href="#merged-prs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Merged PRs</h2>
+<ul>
+<li>Upgrade to Bloop v1.2.5 <a href="https://github.com/scalameta/metals/pull/513">#513</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Respect workspace folders for Scalafmt formatting, fixes #509.
+<a href="https://github.com/scalameta/metals/pull/512">#512</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix navigation bug for var setters.
+<a href="https://github.com/scalameta/metals/pull/511">#511</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Upgrade to Scalameta v4.1.3.
+<a href="https://github.com/scalameta/metals/pull/510">#510</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Change behavior of FileWatcher so that it doesn't create non-existing source
+directories <a href="https://github.com/scalameta/metals/pull/506">#506</a>
+(<a href="https://github.com/mudsam">mudsam</a>)</li>
+<li>Reference pluginCrossBuild via reflection to support older sbt 0.13.
+<a href="https://github.com/scalameta/metals/pull/505">#505</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+</ul>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/metals/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#metals-server">Metals server</a><ul class="toc-headings"><li><a href="#improved-code-navigation">Improved code navigation</a></li><li><a href="#empty-source-directories-are-no-longer-created">Empty source directories are no longer created</a></li><li><a href="#multiple-workspace-folders">Multiple workspace folders</a></li><li><a href="#avoid-metalssbt-compile-errors-on-old-sbt-versions">Avoid <code>metals.sbt</code> compile errors on old sbt versions</a></li></ul></li><li><a href="#visual-studio-code">Visual Studio Code</a><ul class="toc-headings"><li><a href="#java-opts"><code>JAVA_OPTS</code></a></li></ul></li><li><a href="#sublime-text">Sublime Text</a></li><li><a href="#emacs">Emacs</a></li><li><a href="#merged-prs">Merged PRs</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>

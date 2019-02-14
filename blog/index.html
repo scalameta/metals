@@ -1,0 +1,90 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Blog · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Work-in-progress language server for Scala"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Blog · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="Work-in-progress language server for Scala"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="blog"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive siteNavItemActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul><li class="navListItem"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></li></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="posts"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></h1><p class="post-meta">February 1, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><article class="post-content"><div><span><p>Metals is a language server for Scala that works with VS Code, Atom, Vim,
+Sublime Text and Emacs. Metals is developed at the
+<a href="https://scala.epfl.ch/">Scala Center</a> along with contributors from the
+community.</p>
+</span></div><div class="read-more"><a class="button" href="/metals/blog/2019/02/01/tin.html">Read More</a></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></h1><p class="post-meta">January 24, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><article class="post-content"><div><span><p>We are excited to announce the release of Metals v0.4, codename &quot;Tin&quot; 🎉 Metals
+is a language server for Scala that works with VS Code, Atom, Vim, Sublime Text
+and Emacs. Metals is developed at the <a href="https://scala.epfl.ch/">Scala Center</a>
+with contributors from the community.</p>
+</span></div><div class="read-more"><a class="button" href="/metals/blog/2019/01/24/tin.html">Read More</a></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></h1><p class="post-meta">January 22, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><article class="post-content"><div><span><p>The latest Metals release introduces three new in-memory indexes to implement
+the features &quot;find symbol references&quot; and &quot;fuzzy symbol search&quot;. Indexes are
+important to provide fast response times for user requests but they come at the
+price of higher memory usage. To keep memory usage low, Metals uses a data
+structure called bloom filters that implements space-efficient sets. Thanks to
+bloom filters, the three new indexes added in the last release use only a few
+megabytes of memory even for large projects with &gt;500k lines of code.</p>
+<p>In this post, we look into how Metals uses bloom filters for fast indexing with
+small memory footprint. We explain what bloom filters are and how we can encode
+problems like fuzzy searching to take advantage of the nice properties of bloom
+filters. Finally, we evaluate these new features on a real-world project: the
+<a href="https://github.com/akka/akka">Akka</a> build.</p>
+</span></div><div class="read-more"><a class="button" href="/metals/blog/2019/01/22/bloom-filters.html">Read More</a></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></h1><p class="post-meta">December 14, 2018</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><article class="post-content"><div><span><p>We are pleased to announce the release of Metals v0.3.2. Metals is a language
+server for Scala that works with VS Code, Atom, Vim, Sublime Text and Emacs.
+Metals is developed at the <a href="https://scala.epfl.ch/">Scala Center</a> with
+contributors from the community.</p>
+</span></div><div class="read-more"><a class="button" href="/metals/blog/2018/12/14/iron.html">Read More</a></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></h1><p class="post-meta">December 12, 2018</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><article class="post-content"><div><span><p>Metals throws away its navigation index when it shuts down. Next time it starts,
+the index is computed again from scratch. Although this approach is simple, it
+requires indexing to be fast enough so you don't mind running it again and
+again. Also, because we don't persist the index to disk, we need to be careful
+with memory usage.</p>
+<p>This post covers how Metals achieves fast source indexing for Scala with a small
+memory footprint. We describe the problem statement, explain the initial
+solution and how an optimization delivered a 10x speedup. Finally, we evaluate
+the result on a real-world project.</p>
+</span></div><div class="read-more"><a class="button" href="/metals/blog/2018/12/12/fast-goto-definition.html">Read More</a></div></article></div><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2018/12/06/iron.html">Metals v0.3 - Iron</a></h1><p class="post-meta">December 6, 2018</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><article class="post-content"><div><span><p>We are excited to announce the release of Metals v0.3, codename &quot;Iron&quot; 🎉 Metals
+is a language server for Scala.</p>
+<h2><a class="anchor" aria-hidden="true" id="tl-dr"></a><a href="#tl-dr" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>TL;DR</h2>
+<ul>
+<li>simple installation</li>
+<li>accurate diagnostics</li>
+<li>goto definition</li>
+<li>text editors: Visual Studio Code, Atom, Vim and Sublime Text</li>
+<li>no completions</li>
+</ul>
+<p>Check out the website and give Metals a try: <a href="https://scalameta.org/metals/">https://scalameta.org/metals/</a></p>
+</span></div><div class="read-more"><a class="button" href="/metals/blog/2018/12/06/iron.html">Read More</a></div></article></div><div class="docs-prevnext"></div></div></div></div></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>

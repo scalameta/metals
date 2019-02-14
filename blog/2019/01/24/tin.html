@@ -1,0 +1,309 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Metals v0.4.0 · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="We are excited to announce the release of Metals v0.4, codename &quot;Tin&quot; 🎉 Metals"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Metals v0.4.0 · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/blog/2019/01/24/tin.html"/><meta property="og:description" content="We are excited to announce the release of Metals v0.4, codename &quot;Tin&quot; 🎉 Metals"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul><li class="navListItem"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></li></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></h1><p class="post-meta">January 24, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><div><span><p>We are excited to announce the release of Metals v0.4, codename &quot;Tin&quot; 🎉 Metals
+is a language server for Scala that works with VS Code, Atom, Vim, Sublime Text
+and Emacs. Metals is developed at the <a href="https://scala.epfl.ch/">Scala Center</a>
+with contributors from the community.</p>
+<!-- truncate -->
+<h2><a class="anchor" aria-hidden="true" id="metals-server"></a><a href="#metals-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Metals server</h2>
+<p>In this release we merged 50 PRs and closed 21 issues, full details:
+<a href="https://github.com/scalameta/metals/milestone/4?closed=1">https://github.com/scalameta/metals/milestone/4?closed=1</a>.</p>
+<h3><a class="anchor" aria-hidden="true" id="upgraded-bloop"></a><a href="#upgraded-bloop" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Upgraded Bloop</h3>
+<p>This release upgrades from Bloop v1.1.2 to v1.2.5, which includes several
+improvements to diagnostics and compilation performance. See release notes for
+more details and upgrade guide.</p>
+<ul>
+<li><a href="https://github.com/scalacenter/bloop/releases/tag/v1.2.5">v1.2.5</a></li>
+<li><a href="https://github.com/scalacenter/bloop/releases/tag/v1.2.4">v1.2.4</a></li>
+<li><a href="https://github.com/scalacenter/bloop/releases/tag/v1.2.3">v1.2.3</a></li>
+<li><a href="https://github.com/scalacenter/bloop/releases/tag/v1.2.1">v1.2.1</a></li>
+<li><a href="https://github.com/scalacenter/bloop/releases/tag/v1.2.0">v1.2.0</a></li>
+</ul>
+<p>Major props to <a href="https://github.com/jvican">@jvican</a> for his great work on Bloop.
+Bloop does the heavy lifting around build import and compilation for Metals.</p>
+<h3><a class="anchor" aria-hidden="true" id="syntax-errors-as-you-type"></a><a href="#syntax-errors-as-you-type" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Syntax errors as you type</h3>
+<p>Previously, Metals only published compile errors from the build on file save.
+Now, a syntax error is also published as you type making it easier to catch
+common errors like unclosed string literals and missing parentheses.</p>
+<p><img src="https://i.imgur.com/2nzeSQv.gif" alt="Syntax errors as you type"></p>
+<p>This change has an additional benefit in editors like Vim where compile errors
+would previously disappear if you for example inserted a newline above an error.
+Now, Metals updates the positions of errors as you type.</p>
+<h3><a class="anchor" aria-hidden="true" id="faster-and-more-reliable-clearing-of-fixed-compile-errors"></a><a href="#faster-and-more-reliable-clearing-of-fixed-compile-errors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Faster and more reliable clearing of fixed compile errors</h3>
+<p>A bug where red squiggles for fixed errors would occasionally not be cleared has
+now been fixed.</p>
+<p>Also red squiggles for fixed errors disappear faster thanks to an improvement in
+Bloop. Previously, diagnostics were cleared after the bytecode generation phase
+in the compiler and now they are cleared after the typer phase.</p>
+<h3><a class="anchor" aria-hidden="true" id="more-detailed-compilation-progress"></a><a href="#more-detailed-compilation-progress" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>More detailed compilation progress</h3>
+<p>The status bar now includes information which individual build targets are being
+compiled along with a percentage estimate for how much remains of the
+compilation.</p>
+<p><img src="https://i.imgur.com/fbQysxW.gif" alt="Detailed compile progress"></p>
+<h3><a class="anchor" aria-hidden="true" id="cascade-compile-command"></a><a href="#cascade-compile-command" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cascade compile command</h3>
+<p>Use the new &quot;Cascade compile&quot; command to trigger compilation in downstream build
+targets in the workspace. For example, if you have made changes in the main
+sources of you project you can run cascade compile to trigger compilation in the
+test sources.</p>
+<p><img src="https://i.imgur.com/EbKPn6g.png" alt="Cascade compile"></p>
+<h3><a class="anchor" aria-hidden="true" id="formatting-with-scalafmt"></a><a href="#formatting-with-scalafmt" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Formatting with Scalafmt</h3>
+<p>It's now possible to format code with
+<a href="https://scalameta.org/scalafmt/">Scalafmt</a>.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/50635748-b0894880-0f53-11e9-913b-acfd5f505351.gif" alt="Formatting with scalafmt"></p>
+<p>It's possible to use different version of Scalafmt between different workspaces.
+To configure which Scalafmt version to use for a given workspace update the
+<code>version</code> setting in <code>.scalafmt.conf</code>.</p>
+<pre><code class="hljs css language-conf"><span class="hljs-comment"># .scalafmt.conf</span>
+<span class="hljs-attr">version</span> = <span class="hljs-string">"1.5.1"</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="symbol-outline"></a><a href="#symbol-outline" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Symbol outline</h3>
+<p>It's now possible to browse the symbol outline of a source file.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/50635569-014c7180-0f53-11e9-8898-62803898781c.gif" alt="Document Symbols"></p>
+<p>Metals returns a hierarchical outline for editor that support it (like Visual
+Studio Code, Atom, Emacs) and otherwise returns a flat outline.</p>
+<h3><a class="anchor" aria-hidden="true" id="find-symbol-references"></a><a href="#find-symbol-references" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Find symbol references</h3>
+<p>It's now possible to look up all usages of a given symbol in the workspace.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/51531254-3a368280-1e3d-11e9-8df2-4560c6294e35.gif" alt="Find symbol references"></p>
+<h3><a class="anchor" aria-hidden="true" id="fuzzy-symbol-search"></a><a href="#fuzzy-symbol-search" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fuzzy symbol search</h3>
+<p>It's now possible to look up a symbol definition in the workspace or library
+dependencies by typing its name. All-lowercase queries are treated as
+case-insensitive searches.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/51537603-44fa1300-1e4f-11e9-84f2-eb7d4c6fc7ef.gif" alt="Fuzzy symbol search example"></p>
+<p>This feature is not supported yet in Sublime Text.</p>
+<h3><a class="anchor" aria-hidden="true" id="blog-post-on-low-memory-symbol-indexing-with-bloom-filters"></a><a href="#blog-post-on-low-memory-symbol-indexing-with-bloom-filters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Blog post on low-memory symbol indexing with Bloom filters</h3>
+<p>Read the post
+<a href="https://olafurpg.github.io/metals/blog/2019/01/22/bloom-filters.html">&quot;Low-memory symbol indexing with bloom filters&quot;</a>
+to learn how Metals implements indexing for the features &quot;fuzzy symbol search&quot;
+and &quot;find symbol references&quot;.</p>
+<h2><a class="anchor" aria-hidden="true" id="visual-studio-code"></a><a href="#visual-studio-code" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Visual Studio Code</h2>
+<p>Full changelog:
+<a href="https://github.com/scalameta/metals-vscode/blob/master/CHANGELOG.md">https://github.com/scalameta/metals-vscode/blob/master/CHANGELOG.md</a></p>
+<h3><a class="anchor" aria-hidden="true" id="lower-default-memory-settings"></a><a href="#lower-default-memory-settings" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Lower default memory settings</h3>
+<p>The extension now starts Metals with the JVM option <code>-Xms100M</code> instead of
+<code>-Xms1G</code>. The exact memory usage of Metals depends on the size of the project
+and whether Bloop is installed on the computer or not, but only 50-100Mb can be
+sufficient memory for Metals in many cases.</p>
+<h3><a class="anchor" aria-hidden="true" id="improved-java-home-detection"></a><a href="#improved-java-home-detection" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Improved Java home detection</h3>
+<p>The extension now chooses the latest available JDK home for Java 8. Previously,
+the extension sometimes picked the JRE over JDK or an older version of Java 8
+when newer security updates were installed on the computer.</p>
+<h3><a class="anchor" aria-hidden="true" id="jvmopts-detection"></a><a href="#jvmopts-detection" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>.jvmopts detection</h3>
+<p>The extension now uses JVM options from <code>.jvmopts</code> when launching Metals so it's
+possible to configure HTTP proxy settings without custom configuration. Memory
+options like <code>-Xms100M</code> are ignored in <code>.jvmopts</code>, use the &quot;Server Properties&quot;
+setting to customize memory settings.</p>
+<h2><a class="anchor" aria-hidden="true" id="vim"></a><a href="#vim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Vim</h2>
+<p>It's recommended to update vim-lsc to the latest version, full changelog:
+<a href="https://github.com/natebosch/vim-lsc/blob/master/CHANGELOG.md">https://github.com/natebosch/vim-lsc/blob/master/CHANGELOG.md</a></p>
+<h3><a class="anchor" aria-hidden="true" id="update-log-level-setting"></a><a href="#update-log-level-setting" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Update log_level setting</h3>
+<p>A recent change in how log messages are displayed makes the status bar updates
+from Metals disappear unless you set the default <code>log_level</code> setting to <code>Log</code>.
+Update <code>.vimrc</code> as follows:</p>
+<pre><code class="hljs css language-diff"> let g:lsc_server_commands = {
+<span class="hljs-deletion">-  \  'scala': 'metals-vim'</span>
+<span class="hljs-addition">+  \  'scala': {</span>
+<span class="hljs-addition">+  \    'command': 'metals-vim',</span>
+<span class="hljs-addition">+  \    'log_level': 'Log'</span>
+<span class="hljs-addition">+  \  }</span>
+<span class="hljs-addition">+  \}</span>
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="view-multi-line-error-messages"></a><a href="#view-multi-line-error-messages" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>View multi-line error messages</h3>
+<p>Run the new <code>:LSClientLineDiagnostics</code> command to display all diagnostics on the
+current line and to un-truncate multi-line error messages. Big thanks to
+<a href="https://github.com/ayoub-benali">@ayoub-benali</a> for contributing several
+<a href="https://github.com/tomv564/LSP/pulls?q=is%3Apr+author%3Aayoub-benali+sort%3Aupdated-desc">improvements to LSP</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="sublime-text"></a><a href="#sublime-text" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sublime Text</h2>
+<p>It's recommended to upgrade to LSP v0.8.1, full changelogs:</p>
+<ul>
+<li><a href="https://github.com/tomv564/LSP/releases/tag/0.8.1">https://github.com/tomv564/LSP/releases/tag/0.8.1</a></li>
+<li><a href="https://github.com/tomv564/LSP/releases/tag/0.8.0">https://github.com/tomv564/LSP/releases/tag/0.8.0</a></li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="built-in-import-build-dialogue"></a><a href="#built-in-import-build-dialogue" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Built-in &quot;import build&quot; dialogue</h3>
+<p>It's now possible to respond to the &quot;Import build&quot; dialogue from Sublime Text
+without using the HTTP server.</p>
+<h3><a class="anchor" aria-hidden="true" id="manual-import-build-command"></a><a href="#manual-import-build-command" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manual &quot;import build&quot; command</h3>
+<p>It's now possible to manually trigger a build import from the command palette.</p>
+<p><img src="https://i.imgur.com/LViPc95.png" alt="Import build command"></p>
+<p>See
+<a href="https://scalameta.org/metals/docs/editors/sublime.html#manually-trigger-build-import">manually trigger build import</a>
+for instructions how to configure this command.</p>
+<h2><a class="anchor" aria-hidden="true" id="emacs"></a><a href="#emacs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Emacs</h2>
+<p>The
+<a href="https://scalameta.org/metals/docs/editors/emacs.html">Emacs installation instructions</a>
+have been improved thanks to <a href="https://github.com/JesusMtnez">@JesusMtnez</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="merged-prs"></a><a href="#merged-prs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Merged PRs</h2>
+<ul>
+<li>Trigger didFocus when current compile may affect focused buffer.
+<a href="https://github.com/scalameta/metals/pull/500">#500</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Several polish improvements to workspace symbols
+<a href="https://github.com/scalameta/metals/pull/498">#498</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update sublime doc for manual build import trigger
+<a href="https://github.com/scalameta/metals/pull/495">#495</a>
+(<a href="https://github.com/ayoub-benali">ayoub-benali</a>)</li>
+<li>Handle sbt pluginsDirectory as symbolic link
+<a href="https://github.com/scalameta/metals/pull/417">#417</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Update feature_request.md
+<a href="https://github.com/scalameta/metals/pull/491">#491</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Avoid redundant didFocus compiles, fixes #483.
+<a href="https://github.com/scalameta/metals/pull/488">#488</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Polish before v0.4 release.
+<a href="https://github.com/scalameta/metals/pull/485">#485</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update Emacs docs <a href="https://github.com/scalameta/metals/pull/484">#484</a>
+(<a href="https://github.com/JesusMtnez">JesusMtnez</a>)</li>
+<li>Upgrade to Bloop v1.2.4 <a href="https://github.com/scalameta/metals/pull/481">#481</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Clean up indexing pipeline.
+<a href="https://github.com/scalameta/metals/pull/480">#480</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Avoid duplicate classpath indexing.
+<a href="https://github.com/scalameta/metals/pull/477">#477</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Support navigation for visited dependency sources via workspace/symbol.
+<a href="https://github.com/scalameta/metals/pull/476">#476</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Limit classpath search to jars.
+<a href="https://github.com/scalameta/metals/pull/475">#475</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Small fixes to workspace symbol
+<a href="https://github.com/scalameta/metals/pull/472">#472</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Implement workspace/symbol to search symbol by name.
+<a href="https://github.com/scalameta/metals/pull/471">#471</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Implement fast, low-overhead and synthetics-aware find references.
+<a href="https://github.com/scalameta/metals/pull/469">#469</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add &quot;Cascade compile&quot; and &quot;Cancel compile&quot; tasks.
+<a href="https://github.com/scalameta/metals/pull/467">#467</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Improve &quot;No SemanticDB&quot; error message
+<a href="https://github.com/scalameta/metals/pull/466">#466</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Improve the status bar redirection to window/logMessage
+<a href="https://github.com/scalameta/metals/pull/465">#465</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Lower recommended memory settings.
+<a href="https://github.com/scalameta/metals/pull/464">#464</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Disable SbtSlowSuite in Appveyor CI.
+<a href="https://github.com/scalameta/metals/pull/460">#460</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Improve diagnostic reporting.
+<a href="https://github.com/scalameta/metals/pull/459">#459</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add test case for &quot;missing scalafmt version&quot;
+<a href="https://github.com/scalameta/metals/pull/458">#458</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Use scalafmt-dynamic module to simplify formatting implementation.
+<a href="https://github.com/scalameta/metals/pull/452">#452</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Improve compilation tracking in the status bar.
+<a href="https://github.com/scalameta/metals/pull/451">#451</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Improve eglot documentation
+<a href="https://github.com/scalameta/metals/pull/450">#450</a>
+(<a href="https://github.com/JesusMtnez">JesusMtnez</a>)</li>
+<li>Feature/appveyor memory limits
+<a href="https://github.com/scalameta/metals/pull/449">#449</a>
+(<a href="https://github.com/PanAeon">PanAeon</a>)</li>
+<li>Preinit sbt on appveyor, because it usually fails the first time
+<a href="https://github.com/scalameta/metals/pull/448">#448</a>
+(<a href="https://github.com/PanAeon">PanAeon</a>)</li>
+<li>Add note to Emacs docs about Eglot usage
+<a href="https://github.com/scalameta/metals/pull/446">#446</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Removed ansi colors &amp; fixed TimerSuite for non standard locales
+<a href="https://github.com/scalameta/metals/pull/445">#445</a>
+(<a href="https://github.com/entangled90">entangled90</a>)</li>
+<li>Update sublime doc to reflect the changes in the LSP plugin
+<a href="https://github.com/scalameta/metals/pull/443">#443</a>
+(<a href="https://github.com/ayoub-benali">ayoub-benali</a>)</li>
+<li>Upgrade to mdoc v1.0.0 <a href="https://github.com/scalameta/metals/pull/442">#442</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add snapshot resolver since we're publishing snapshots
+<a href="https://github.com/scalameta/metals/pull/441">#441</a>
+(<a href="https://github.com/mpollmeier">mpollmeier</a>)</li>
+<li>Document textDocument/documentSymbol and textDocument/formatting
+<a href="https://github.com/scalameta/metals/pull/440">#440</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Remove -Dmetals.documentSymbol in favor of client capabilities
+<a href="https://github.com/scalameta/metals/pull/439">#439</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Fix wrong log <a href="https://github.com/scalameta/metals/pull/437">#437</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Add log when skipping formatting of a file due to Scalafmt configuration
+<a href="https://github.com/scalameta/metals/pull/436">#436</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Don't attempt build import if sbt version is &lt; 0.13.17
+<a href="https://github.com/scalameta/metals/pull/434">#434</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Implement textDocument/formatting using Scalafmt
+<a href="https://github.com/scalameta/metals/pull/429">#429</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Move critical file watching in-house.
+<a href="https://github.com/scalameta/metals/pull/427">#427</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Implement textDocument/documentSymbols
+<a href="https://github.com/scalameta/metals/pull/424">#424</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Add test to CreateDirectoriesSuite
+<a href="https://github.com/scalameta/metals/pull/421">#421</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Improve Emacs docs <a href="https://github.com/scalameta/metals/pull/419">#419</a>
+(<a href="https://github.com/JesusMtnez">JesusMtnez</a>)</li>
+<li>Fix incorrect docs <a href="https://github.com/scalameta/metals/pull/418">#418</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add more steps to release process.
+<a href="https://github.com/scalameta/metals/pull/414">#414</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+</ul>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/metals/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#metals-server">Metals server</a><ul class="toc-headings"><li><a href="#upgraded-bloop">Upgraded Bloop</a></li><li><a href="#syntax-errors-as-you-type">Syntax errors as you type</a></li><li><a href="#faster-and-more-reliable-clearing-of-fixed-compile-errors">Faster and more reliable clearing of fixed compile errors</a></li><li><a href="#more-detailed-compilation-progress">More detailed compilation progress</a></li><li><a href="#cascade-compile-command">Cascade compile command</a></li><li><a href="#formatting-with-scalafmt">Formatting with Scalafmt</a></li><li><a href="#symbol-outline">Symbol outline</a></li><li><a href="#find-symbol-references">Find symbol references</a></li><li><a href="#fuzzy-symbol-search">Fuzzy symbol search</a></li><li><a href="#blog-post-on-low-memory-symbol-indexing-with-bloom-filters">Blog post on low-memory symbol indexing with Bloom filters</a></li></ul></li><li><a href="#visual-studio-code">Visual Studio Code</a><ul class="toc-headings"><li><a href="#lower-default-memory-settings">Lower default memory settings</a></li><li><a href="#improved-java-home-detection">Improved Java home detection</a></li><li><a href="#jvmopts-detection">.jvmopts detection</a></li></ul></li><li><a href="#vim">Vim</a><ul class="toc-headings"><li><a href="#update-log-level-setting">Update log_level setting</a></li><li><a href="#view-multi-line-error-messages">View multi-line error messages</a></li></ul></li><li><a href="#sublime-text">Sublime Text</a><ul class="toc-headings"><li><a href="#built-in-import-build-dialogue">Built-in &quot;import build&quot; dialogue</a></li><li><a href="#manual-import-build-command">Manual &quot;import build&quot; command</a></li></ul></li><li><a href="#emacs">Emacs</a></li><li><a href="#merged-prs">Merged PRs</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>

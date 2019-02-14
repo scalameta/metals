@@ -1,0 +1,376 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Low-memory symbol indexing with bloom filters · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="The latest Metals release introduces three new in-memory indexes to implement"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Low-memory symbol indexing with bloom filters · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/blog/2019/01/22/bloom-filters.html"/><meta property="og:description" content="The latest Metals release introduces three new in-memory indexes to implement"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul><li class="navListItem"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></li></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></h1><p class="post-meta">January 22, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><div><span><p>The latest Metals release introduces three new in-memory indexes to implement
+the features &quot;find symbol references&quot; and &quot;fuzzy symbol search&quot;. Indexes are
+important to provide fast response times for user requests but they come at the
+price of higher memory usage. To keep memory usage low, Metals uses a data
+structure called bloom filters that implements space-efficient sets. Thanks to
+bloom filters, the three new indexes added in the last release use only a few
+megabytes of memory even for large projects with &gt;500k lines of code.</p>
+<p>In this post, we look into how Metals uses bloom filters for fast indexing with
+small memory footprint. We explain what bloom filters are and how we can encode
+problems like fuzzy searching to take advantage of the nice properties of bloom
+filters. Finally, we evaluate these new features on a real-world project: the
+<a href="https://github.com/akka/akka">Akka</a> build.</p>
+<!-- truncate -->
+<p>The work presented in this post was done as part of my job at the
+<a href="https://scala.epfl.ch/">Scala Center</a>.</p>
+<style>
+blockquote {
+  background-color: rgba(100, 205, 255, 0.3);
+  border-left: 8px solid #64cdff;
+}
+</style>
+<h2><a class="anchor" aria-hidden="true" id="bloom-filters"></a><a href="#bloom-filters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Bloom filters</h2>
+<p><a href="https://en.wikipedia.org/wiki/Bloom_filter">Bloom filters</a> are a probabilistic
+data structure that implements space-efficient sets. The difference between a
+bloom filter and a regular set such as <code>HashSet</code> is that bloom filters have the
+following limitations:</p>
+<ul>
+<li>the <code>contains(element)</code> method may return false positives, meaning it can
+occasionally return true even when the element is not a member of the set.</li>
+<li>when creating a bloom filter, you must provide an estimate for how many
+elements will be added to the set. A large estimate results in lower false
+positive rates for the <code>contains(element)</code> method at the cost of higher space
+usage. Conversely, a low estimate results in lower memory usage at the cost of
+higher false positives for the <code>contains(element)</code> method.</li>
+<li>you can't iterate through the elements of a bloom filter.</li>
+</ul>
+<p>In exchange for these limitations, bloom filters are able to compress a large
+number of elements into a small number of bits. Due to their space-efficiency,
+bloom filters are used in many applications ranging from browsers, CDNs and
+cryptocurrencies. In the next sections, we'll explore how bloom filters can also
+be used in the context of a language server like Metals.</p>
+<h2><a class="anchor" aria-hidden="true" id="find-symbol-references"></a><a href="#find-symbol-references" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Find symbol references</h2>
+<p>The &quot;find symbol references&quot; feature shows all usages of a given symbol. For
+example, in the demo below we find 843 references to the method <code>Actor.sender()</code>
+in the Akka build.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/51531254-3a368280-1e3d-11e9-8df2-4560c6294e35.gif" alt="Find symbol references example"></p>
+<p>Find symbol references is helpful for users when exploring a codebase and it's
+also an important component for Metals to implement other features down the road
+such as &quot;rename symbol&quot;.</p>
+<p>The challenge when implementing find references is that large projects have many
+symbol references. Iterating through all symbol references for every source file
+on every request is too slow. Most symbols appear only in a few source files so
+we need some way to reduce the search space.</p>
+<p>Metals uses bloom filters to reduce the number of files we search when looking
+for a symbol reference. For every file on disk, we keep an in-memory bloom
+filter which contains the set of all referenced symbols in that file. When
+looking for references to a given symbol, we skip files when their accompanying
+bloom filter does not contain a reference to that symbol. False positive results
+from the bloom filter are not a problem because they only slow down the response
+but don't compromise the correctness of the final result.</p>
+<p>Concretely, Metals keeps an in-memory map where keys are paths to source files
+in the workspace.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> references: <span class="hljs-type">Map</span>[<span class="hljs-type">Path</span>, <span class="hljs-type">BloomFilter</span>[<span class="hljs-type">Symbol</span>]]
+</code></pre>
+<p>The values represent the set of
+<a href="https://scalameta.org/docs/semanticdb/specification.html">SemanticDB symbols</a>
+referenced in that file. A nice property of keying the map by file paths is that
+we can incrementally update the map as files change. When a file is re-compiled
+producing a new SemanticDB file, we throw out the old bloom filter and compute a
+new one from scratch.</p>
+<p>To implement the search, we iterate through all entries of the map and only read
+SemanticDB files from disk when their accompanying bloom filter contains the
+query symbol (recap: false positives are OK).</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> query = <span class="hljs-comment">// ...</span>
+<span class="hljs-keyword">for</span> {
+  (path, bloom) &lt;- references
+  <span class="hljs-keyword">if</span> bloom.mightContain(query)
+  symbolOccurrence &lt;- readSemanticdbOccurrences(path) <span class="hljs-comment">// read from disk</span>
+  <span class="hljs-keyword">if</span> isSameSymbol(query, symbolOccurrence)
+} <span class="hljs-keyword">yield</span> symbolOccurrence
+</code></pre>
+<p>In the actual Metals implementation, we additionally take care of adjusting
+positions of the results in case the source file contents have changed since the
+SemanticDB file was created.</p>
+<h2><a class="anchor" aria-hidden="true" id="fuzzy-symbol-search"></a><a href="#fuzzy-symbol-search" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fuzzy symbol search</h2>
+<p>The &quot;fuzzy symbol search&quot; feature allows you to navigate to a symbol definition
+in the workspace sources or library dependencies by typing the symbol's name.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/51537603-44fa1300-1e4f-11e9-84f2-eb7d4c6fc7ef.gif" alt="Fuzzy symbol search example"></p>
+<p>The search is fuzzy, meaning the query doesn't have to be an exact match or a
+substring match with the target symbol. For example, we want the query <code>ReaSer</code>
+to match the symbol <code>ReactDOMServer</code>. Additionally, all-lowercase queries are
+treated as case-insensitive so that searching for <code>nelis</code> matches the symbol
+<code>NonEmptyList</code>.</p>
+<p>Like with find symbol references, the challenge when implementing fuzzy symbol
+search is that we have little time to respond and a lot of symbols to search.
+Testing the search query against every source file the workspace and every entry
+in the library classpath is too slow.</p>
+<p>Metals uses bloom filters to reduce the search space so that we only look at
+places that are likely to contain matches for the query. We have two different
+indexes, one for workspace sources and another one for the library classpath.</p>
+<h3><a class="anchor" aria-hidden="true" id="workspace-sources"></a><a href="#workspace-sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Workspace sources</h3>
+<p>The first index is a map keyed by source files in the workspace.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> inWorkspace: <span class="hljs-type">Map</span>[<span class="hljs-type">Path</span>, <span class="hljs-type">BloomFilter</span>[<span class="hljs-type">String</span>]]
+</code></pre>
+<p>The values of the map is the set of all possible sub-queries that match symbols
+defined in that source file. For example, consider the code below.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">package</span> data
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">NonEmptyListSpec</span> </span>{ ... }
+<span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">Props</span> </span>{ ... }
+</code></pre>
+<p>For this source file, we insert the following sub-queries into the index.</p>
+<pre><code class="hljs css language-txt"><span class="hljs-built_in">d</span>
+da
+dat
+data
+<span class="hljs-keyword">N</span>
+<span class="hljs-keyword">No</span>
+Non
+<span class="hljs-keyword">L</span>
+<span class="hljs-keyword">Li</span>
+<span class="hljs-keyword">Lis</span>
+<span class="hljs-keyword">List</span>
+<span class="hljs-built_in">S</span>
+Sp
+Spe
+Spec
+NEL
+NES
+ELS
+P
+<span class="hljs-keyword">Pr</span>
+<span class="hljs-keyword">Pro</span>
+<span class="hljs-keyword">Prop</span>
+Props
+</code></pre>
+<p>When searching for a query like <code>NoLi</code>, we split the query into the words <code>No</code>
+and <code>Li</code> and visit only files whose bloom filter contains all of those exact
+sub-queries. We include trigrams of the uppercase characters to further reduce
+the search space for queries like <code>NELS</code> that have few lowercase character.</p>
+<p>For all-lowercase queries, we return the union of results from multiple
+capitalization combinations in order to support case-insensitive searches. For
+example, the query <code>neli</code> returns all results matching any of the following
+queries.</p>
+<pre><code class="hljs css language-txt"><span class="hljs-attribute">neli
+Neli
+NEli
+NeLi
+NelI
+NELi
+NElI
+NeLI
+NELI</span>
+</code></pre>
+<p>To implement the search, we iterate through all entries of the in-memory map and
+only visit the source files on disk whose bloom filter contain a match for the
+query.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> query = ...
+<span class="hljs-keyword">for</span> {
+  (file, bloom) &lt;- inWorkspace
+  <span class="hljs-keyword">if</span> bloom.mightContain(query)
+  symbol &lt;- parseSymbols(file) <span class="hljs-comment">// reads from disk</span>
+  <span class="hljs-keyword">if</span> isFuzzyMatch(query, symbol)
+} <span class="hljs-keyword">yield</span> symbol
+</code></pre>
+<p>Like with find symbol references, false positive results from the bloom filter
+slow down the response but don't compromise the correctness of the result. Also,
+we incrementally update the map as files in the workspace change by removing old
+entries and compute a new bloom filter for the updated source file.</p>
+<h3><a class="anchor" aria-hidden="true" id="library-classpath"></a><a href="#library-classpath" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Library classpath</h3>
+<p>The library classpath index is similar to the workspace sources index except the
+keys of the map are package symbols (example <code>scala/collection/</code>) instead of
+file paths.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> inClasspath: <span class="hljs-type">Map</span>[<span class="hljs-type">Symbol</span>, (<span class="hljs-type">BloomFilter</span>[<span class="hljs-type">String</span>], <span class="hljs-type">Seq</span>[<span class="hljs-type">Symbol</span>])]
+</code></pre>
+<p>Unlike the workspace sources index, the library classpath index does not need to
+be incrementally updated when files re-compile. The bloom filters in the values
+of the map use the same sub-query technique as the bloom filters in the
+workspace sources index. For each bloom filter, we additionally store a listing
+of all members of that package. If a query matches a given bloom filter, we test
+the fuzzy search against all members of the package.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> query = ...
+<span class="hljs-keyword">for</span> {
+  (pkg, (bloom, packageMembers)) &lt;- inClasspath
+  <span class="hljs-keyword">if</span> bloom.mightContain(query)
+  member &lt;- packageMembers
+  <span class="hljs-keyword">if</span> isFuzzyMatch(query, symbol(pkg, member))
+  definitionOnDisk &lt;- findDefinition(member) <span class="hljs-comment">// writes to disk</span>
+} <span class="hljs-keyword">yield</span> definitionOnDisk
+</code></pre>
+<p>Due to how the Language Server Protocol works, the <code>findDefinition</code> method
+writes sources of library dependencies to disk so the editor can find the symbol
+definition location. To reduce the number of files written to disk, Metals
+limits the number of non-exact search results from the library classpath index.</p>
+<p>In the actual Metals implementation, the listing of package members is GZIP
+compressed to reduce memory usage and the members are decompressed on-demand
+when a bloom filter matches the query.</p>
+<h2><a class="anchor" aria-hidden="true" id="evaluation"></a><a href="#evaluation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Evaluation</h2>
+<p>We test Metals on the <a href="https://github.com/akka/akka">Akka codebase</a> to evaluate
+the performance of our bloom filter indexes. Akka is a library to build highly
+concurrent, distributed, and resilient message-driven applications on the JVM.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/51541018-159bd400-1e58-11e9-9181-cf2e32a0a40b.png" alt="Akka repository"></p>
+<p>The Akka codebase has 300-600k lines of code depending on whether you include
+comments and/or Java sources. Metals indexes both Java and Scala sources for
+fuzzy symbol search but only Scala sources for find symbol references.</p>
+<pre><code class="hljs">$ git clone https:<span class="hljs-comment">//github.com/akka/akka.git</span>
+$ cd akka
+$ loc
+Language  Files    Lines   Blank  Comment     Code
+Scala     <span class="hljs-number">1</span>,<span class="hljs-number">951</span>  <span class="hljs-number">358</span>,<span class="hljs-number">149</span>  <span class="hljs-number">57</span>,<span class="hljs-number">528</span>   <span class="hljs-number">76</span>,<span class="hljs-number">605</span>  <span class="hljs-number">224</span>,<span class="hljs-number">016</span>
+Java        <span class="hljs-number">486</span>  <span class="hljs-number">250</span>,<span class="hljs-number">609</span>  <span class="hljs-number">19</span>,<span class="hljs-number">838</span>   <span class="hljs-number">51</span>,<span class="hljs-number">291</span>  <span class="hljs-number">179</span>,<span class="hljs-number">480</span>
+</code></pre>
+<p>We open the base directory with Visual Studio Code and update the &quot;Metals Server
+Properties&quot; setting to <code>-Dmetals.statistics=all</code> to enable additional
+logging output. We import the build, open the file <code>Actor.scala</code> and wait until
+compilation has finished. It is normal if this step takes several minutes to
+complete.</p>
+<h3><a class="anchor" aria-hidden="true" id="response-times"></a><a href="#response-times" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Response times</h3>
+<p>First, we measure the response times for find symbol references.</p>
+<pre><code class="hljs"><span class="hljs-keyword">time:</span> found 8 references to symbol 'akka/actor/ActorCell.contextStack.' in 8ms
+<span class="hljs-keyword">time:</span> found 11 references to symbol 'akka/actor/Actor#postRestart().' in 17ms
+<span class="hljs-keyword">time:</span> found 146 references to symbol 'akka/actor/PoisonPill.' in 0.16s
+<span class="hljs-keyword">time:</span> found 163 references to symbol 'scala/collection/IterableLike#head().' in 0.23s
+<span class="hljs-keyword">time:</span> found 1027 references to symbol 'akka/actor/Actor#' in 0.5s
+<span class="hljs-keyword">time:</span> found 816 references to symbol 'scala/package.Throwable#' in 0.63s
+<span class="hljs-keyword">time:</span> found 6103 references to symbol 'scala/Predef.String#' in 1.54s
+</code></pre>
+<p>Response times range from 8ms up to 1.6s depending on the number of results. The
+6103 references to <code>String</code> origin from 913 source files, which is almost half
+of all Scala source files in the repository. These numbers do not take into
+account the delay in the editor to display the results in the UI. For large
+results like <code>String</code>, this delay can be several seconds depending on the
+editor.</p>
+<p>Next, we measure the response times for fuzzy symbol search.</p>
+<pre><code class="hljs"><span class="hljs-keyword">time:</span> found 0 results for query 'ConfigSEr' in 13ms
+<span class="hljs-keyword">time:</span> found 10 results for query 'ConfigSer' in 0.1s
+<span class="hljs-keyword">time:</span> found 105 results for query 'ActorRef' in 0.21s
+<span class="hljs-keyword">time:</span> found 105 results for query 'actorref' in 0.31s
+<span class="hljs-keyword">time:</span> found 1002 results for query 'actor' in 0.54s
+<span class="hljs-keyword">time:</span> found 3974 results for query 'S' in 1.98s
+</code></pre>
+<p>Response times range from 13ms up to 2s depending on the query and number of
+results. Queries with typos like <code>ConfigSEr</code> have 0 results and respond
+instantly, while generic queries like <code>S</code> have ~4k results and take 2 seconds to
+respond. Observe that all-lowercase queries like <code>actorref</code> are slower than
+capitalized queries like <code>ActorRef</code>, which is expected because we test multiple
+capitalization combinations for case-insensitive searches.</p>
+<h3><a class="anchor" aria-hidden="true" id="memory-usage"></a><a href="#memory-usage" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Memory usage</h3>
+<p>Next, we look at the memory usage of the bloom filter indexes. The numbers are
+computed with <a href="https://openjdk.java.net/projects/code-tools/jol/">JOL</a>
+<code>GraphLayout</code> and the element counts are approximate number of insertions into
+the bloom filters.</p>
+<pre><code class="hljs">memory: <span class="hljs-built_in">ref</span>erences index using <span class="hljs-number">3.72</span>M (<span class="hljs-number">274</span>,<span class="hljs-number">747</span> elements)
+memory: workspace symbol index using <span class="hljs-number">1.89</span>M (<span class="hljs-number">173</span>,<span class="hljs-number">419</span> elements)
+memory: classpath symbol index using <span class="hljs-number">1.72</span>M (<span class="hljs-number">382</span>,<span class="hljs-number">243</span> elements)
+</code></pre>
+<p>The three bloom filter indexes use 8Mb combined for the entire Akka build. The
+8Mb include the maps with file/symbol keys and also a GZIP compressed listing of
+package members for the classpath symbol index. For comparison, the
+<a href="https://scalameta.org/metals/blog/2018/12/12/fast-goto-definition.html">goto definition index</a>
+that does not use bloom filters requires 16Mb alone.</p>
+<pre><code class="hljs">memory: definition index using <span class="hljs-number">15.9</span>M (<span class="hljs-number">337</span>,<span class="hljs-number">532</span> lines Scala)
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="indexing-time"></a><a href="#indexing-time" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Indexing time</h3>
+<p>Next, we look at the time it takes to construct the indexes after build import.</p>
+<pre><code class="hljs"><span class="hljs-keyword">time:</span> imported build in 2.41s
+<span class="hljs-keyword">time:</span> updated build targets in 0.12s
+<span class="hljs-keyword">time:</span> started file watcher in 4.36s
+<span class="hljs-keyword">time:</span> indexed library classpath in 0.8s
+<span class="hljs-keyword">time:</span> indexed workspace SemanticDBs in 2.18s
+<span class="hljs-keyword">time:</span> indexed workspace sources in 3.35s
+<span class="hljs-keyword">time:</span> indexed library sources in 1.59s
+</code></pre>
+<p>The Akka build contains many source files but few library dependencies. The
+bottle-neck appears to be starting the file watcher and parsing all <code>*.scala</code>
+and <code>*.java</code> sources in the workspace. The following flamegraph shows a detailed
+breakdown of what goes on during indexing.</p>
+<p><a href="https://geirsson.com/assets/metals-akka-initialize.svg" target="_blank">
+<img src="https://i.imgur.com/Xhr1wXp.jpg" alt="Akka indexing flamegraph">
+</a></p>
+<blockquote>
+<p>Click on image to interactively explore the flamegraph.</p>
+</blockquote>
+<p>Some observations:</p>
+<ul>
+<li>it's slower to start the file watcher than compute all three indexes for find
+symbol references and fuzzy symbol search, combined.</li>
+<li>the method <code>BloomFilter.put()</code> accounts for 2.26% of the total runtime.</li>
+</ul>
+<p>For comparison, below is another flamegraph for the same indexing pipeline but
+in a different project, <a href="https://github.com/prisma/prisma">Prisma</a>. The total
+indexing time is around 8 seconds on a cold server for both Akka and Prisma but
+the distribution is different for how long each indexing task takes. Prisma has
+fewer sources (80k lines of Scala code, no Java) and a larger number of library
+dependencies compared to Akka.</p>
+<p><a href="https://geirsson.com/assets/metals-prisma-initialize.svg" target="_blank">
+<img src="https://i.imgur.com/JR3SNx6.jpg" alt="Prisma indexing flamegraph">
+</a></p>
+<blockquote>
+<p>Click on image to interactively explore the flamegraph.</p>
+</blockquote>
+<p>Computing the bloom filter indexes for find symbol references and fuzzy symbol
+search takes proportionally even less time in Prisma compared to Akka. The
+Prisma project is a good representation for projects with less than 100k lines
+of code and a large number of library dependencies.</p>
+<h2><a class="anchor" aria-hidden="true" id="conclusion"></a><a href="#conclusion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Conclusion</h2>
+<p>Metals uses three bloom filter indexes to implement the features &quot;find symbol
+references&quot; and &quot;fuzzy symbol search&quot;. On a case study project containing 600k
+lines of code, all three indexes use 8Mb of memory combined and enable
+sub-second response times for most user requests. Response times for fuzzy
+symbol search is occasionally slower for short queries like <code>S</code> but this
+limitation is not inherent with the bloom filter indexing approach and may be
+addressed in future releases.</p>
+<p>Computing the bloom filter indexes takes 4s in our case-study project, out of
+total 16s for the combined &quot;import build&quot; and &quot;indexing&quot; steps. These steps run
+whenever Metals starts in an existing project or after the build changes. Can
+indexing be made faster? Probably yes, but the user experience will still remain
+bottle-necked by sbt build export and compilation of workspace sources, which
+frequently take many minutes to complete on large projects.</p>
+<p>The indexes are in-memory maps where the keys are file paths and values are
+bloom filters. When files change, we can incrementally update the indexes by
+computing a new bloom filter for the updated source file.</p>
+<p>The bloom filter indexes are only used to narrow down the search space by
+eliminating files and packages that don't contain relevant results for the user
+query. False positive results slow down response times but don't compromise the
+correctness of the final result.</p>
+<p>Try out Metals today with VS Code, Atom, Vim, Sublime Text or Emacs using the
+installation instructions here
+<a href="https://scalameta.org/metals/docs/editors/overview.html">https://scalameta.org/metals/docs/editors/overview.html</a>.</p>
+<p>The indexer is working when the status bar says <code>Indexing⠋</code>
+<img src="https://i.imgur.com/6VLPu9c.gif" alt="Indexing status bar"></p>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/metals/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#bloom-filters">Bloom filters</a></li><li><a href="#find-symbol-references">Find symbol references</a></li><li><a href="#fuzzy-symbol-search">Fuzzy symbol search</a><ul class="toc-headings"><li><a href="#workspace-sources">Workspace sources</a></li><li><a href="#library-classpath">Library classpath</a></li></ul></li><li><a href="#evaluation">Evaluation</a><ul class="toc-headings"><li><a href="#response-times">Response times</a></li><li><a href="#memory-usage">Memory usage</a></li><li><a href="#indexing-time">Indexing time</a></li></ul></li><li><a href="#conclusion">Conclusion</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
