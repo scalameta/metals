@@ -13,10 +13,6 @@ const GridBlock = CompLibrary.GridBlock;
 
 const siteConfig = require(process.cwd() + "/siteConfig.js");
 
-function imgUrl(img) {
-  return siteConfig.baseUrl + "img/" + img;
-}
-
 function docUrl(doc, language) {
   return siteConfig.baseUrl + "docs/" + (language ? language + "/" : "") + doc;
 }
@@ -93,21 +89,21 @@ const Features = props => {
     {
       title: "Simple installation",
       content: "Open a directory, import your build and start coding.",
-      image: imgUrl("simple-installation.png"),
+      image: "https://i.imgur.com/L5CurFG.png",
       imageAlign: "left"
     },
     {
       title: "Accurate diagnostics",
       content:
         "Compile on file save and see errors from the build tool, no more spurious red squiggles or switching focus to the console.",
-      image: imgUrl("accurate-diagnostics.png"),
+      image: "https://i.imgur.com/JYLQGrc.gif",
       imageAlign: "right"
     },
     {
       title: "Goto definition",
       content:
         "Jump to symbol definitions in your project sources and Scala/Java library dependencies.",
-      image: imgUrl("goto-definition.gif"),
+      image: "https://i.imgur.com/bCIhFof.gif",
       imageAlign: "left"
     }
   ];
