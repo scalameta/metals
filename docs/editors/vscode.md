@@ -32,7 +32,7 @@ Update the "Sbt Script" setting to use a custom `sbt` script instead of the
 default Metals launcher if you need further customizations like reading environment
 variables.
 
-![Sbt Launcher](assets/vscode-sbt-script.png)
+![Sbt Launcher](https://i.imgur.com/NuwEBe4.png)
 ```
 
 ```scala mdoc:command-palette:vscode
@@ -49,7 +49,7 @@ to another version such as Java 11.
 To override the default Java home location, update the "Java Home" variable to
 in the settings menu.
 
-![Java Home setting](assets/vscode-java-home.png)
+![Java Home setting](https://i.imgur.com/sKrPKk2.png)
 
 If this setting is defined, the VS Code plugin uses the custom path instead of
 the `JAVA_HOME` environment variable.

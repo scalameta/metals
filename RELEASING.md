@@ -33,7 +33,6 @@
     - open `website/target/docs/editor/vscode.md` and copy everything from
       "Requirements" over to the scalameta/metals-vscode README
       - remove "Using latest SNAPSHOT" section, this table is only up-to-date on the website
-      - copy new images over too: `cp -r metals/docs/assets/vscode-* ../metals-vscode/assets`
     - open a PR, feel free to merge after CI is green
     - tag a new release and publish to Marketplace
   - https://github.com/NixOS/nixpkgs/pull/51988

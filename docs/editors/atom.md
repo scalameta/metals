@@ -6,7 +6,7 @@ title: Atom
 Metals works with Atom thanks to the
 [`ide-scala`](https://atom.io/packages/ide-scala) package.
 
-![Atom demo](assets/atom-demo.gif)
+![Atom demo](https://i.imgur.com/xPn2ATM.gif)
 
 ```scala mdoc:requirements
 
@@ -26,7 +26,7 @@ apm install ide-scala
 
 ```
 
-```scala mdoc:command-palette:vscode
+```scala mdoc:command-palette:atom
 
 ```
 

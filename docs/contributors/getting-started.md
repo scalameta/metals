@@ -75,7 +75,7 @@ Install the Metals extension from the Marketplace, search for "Metals".
 Next, update the "Server version" setting under preferences to point to the
 version you published locally via `sbt publishLocal`.
 
-![Metals server version setting](../assets/vscode-server-version.png)
+![Metals server version setting](https://i.imgur.com/ogVWI1t.png)
 
 When you make changes in the Metals Scala codebase
 
