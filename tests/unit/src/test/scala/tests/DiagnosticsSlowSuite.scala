@@ -84,14 +84,14 @@ object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
         testDiagnostics
       )
       _ <- server.didSave("b/src/main/scala/a/MainSuite.scala")(
-        _.lines.filterNot(_.startsWith("import")).mkString("\n")
+        _.linesIterator.filterNot(_.startsWith("import")).mkString("\n")
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         exampleDiagnostics + mainDiagnostics
       )
       _ <- server.didSave("a/src/main/scala/a/Main.scala")(
-        _.lines.filterNot(_.startsWith("import")).mkString("\n")
+        _.linesIterator.filterNot(_.startsWith("import")).mkString("\n")
       )
       _ = assertNoDiff(client.workspaceDiagnostics, exampleDiagnostics)
     } yield ()
