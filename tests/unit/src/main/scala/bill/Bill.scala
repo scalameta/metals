@@ -132,7 +132,7 @@ object Bill {
       System.exit(0)
     }
     override def workspaceBuildTargets()
-      : CompletableFuture[WorkspaceBuildTargetsResult] = {
+        : CompletableFuture[WorkspaceBuildTargetsResult] = {
       CompletableFuture.completedFuture {
         new WorkspaceBuildTargetsResult(Collections.singletonList(target))
       }

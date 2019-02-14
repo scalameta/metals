@@ -48,7 +48,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       None
   }
   var showMessageRequestHandler
-    : ShowMessageRequestParams => Option[MessageActionItem] = {
+      : ShowMessageRequestParams => Option[MessageActionItem] = {
     _: ShowMessageRequestParams =>
       None
   }
