@@ -6,12 +6,13 @@ import scala.meta.inputs.Input
 
 class TextEditorModifier extends StringModifier {
   val name = "editor"
+
   override def process(
       editor: String,
-      code: Input,
+      input: Input,
       reporter: Reporter
   ): String = {
-    val sections = code.text.split("---+").lift.andThen(_.filterNot(_.isEmpty))
+    val sections = input.text.split("---+").lift.andThen(_.filterNot(_.isEmpty))
     val sbtLauncher = sections(0).getOrElse(
       """
         |Update the server property `-Dmetals.sbt-script=/path/to/sbt` to use a custom
@@ -25,7 +26,7 @@ class TextEditorModifier extends StringModifier {
        |The first time you open Metals in a new workspace it prompts you to import the build.
        |Click "Import build" to start the installation step.
        |
-       |![Import build](../assets/$editor-import-build.png)
+       |![Import build](${Image.importBuild(editor)})
        |
        |- "Not now" disables this prompt for 2 minutes.
        |- "Don't show again" disables this prompt forever, use `rm -rf .metals/` to re-enable
@@ -62,7 +63,7 @@ class TextEditorModifier extends StringModifier {
        |When you change `build.sbt` or sources under `project/`, you will be prompted to
        |re-import the build.
        |
-       |![Import sbt changes](assets/$editor-import-changes.png)
+       |![Import sbt changes](${Image.importChanges(editor)})
        |
     """.stripMargin
   }

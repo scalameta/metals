@@ -11,7 +11,7 @@ out-of-the-box.
 The first time you open Metals in a new workspace it prompts you to import the
 build. Select "Import build" to start automatic installation.
 
-![Import build](../assets/vscode-import-build.png)
+![Import build](https://i.imgur.com/t5RJ3q6.png)
 
 ## Install without Bloop
 
