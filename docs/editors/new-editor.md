@@ -279,7 +279,7 @@ Metals has an optional web interface that can be used to trigger server commands
 and respond to server requests. This interface is not intended for regular
 users, it exists only to help editor plugin authors integrate with Metals.
 
-![Metals http client](assets/metals-http-client.png)
+![Metals http client](https://i.imgur.com/t5RJ3q6.png)
 
 The server is enabled by passing the `-Dmetals.http=on` system property. The
 server runs by default at [`http://localhost:5031`](http://localhost:5031/).
@@ -303,7 +303,7 @@ start of a long running process with unknown estimated total time. A
 `cancel: true` response from the client cancels the task. A `$/cancelRequest`
 request from the server indicates that the task has completed.
 
-![Metals slow task](assets/metals-slow-task.gif)
+![Metals slow task](https://i.imgur.com/nsjWHWR.gif)
 
 The difference between `metals/slowTask` and `window/showMessageRequest` is that
 `slowTask` is time-sensitive and the interface should display a timer for how
@@ -350,7 +350,7 @@ In general, Metals uses status notifications to update the user about ongoing
 events in the server such as batch compilation in the build server or when a
 successful connection was established with the build server.
 
-![Metals status bar](assets/metals-status.gif)
+![Metals status bar](https://i.imgur.com/XX9CLRH.gif)
 
 The "🚀 Imported build" and "🔄 Compiling explorer" messages at the bottom of
 the window are `metals/status` notifications.
@@ -381,7 +381,7 @@ The Metals did focus notification is sent from the client to the server when the
 editor changes focus to a new text document. Unlike `textDocument/didOpen`, the
 did focus notification is sent even when the text document is already open.
 
-![Metals did focus](assets/metals-did-focus.gif)
+![Metals did focus](https://i.imgur.com/XjTtAZK.gif)
 
 Observe that the compilation error appears as soon as `UserTest.scala` is
 focused even if the text document was already open before. The LSP

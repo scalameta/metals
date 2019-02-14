@@ -6,7 +6,7 @@ title: Sublime Text
 Metals has experimental support for Sublime Text 3 thanks to
 [tomv564/LSP](https://github.com/tomv564/LSP).
 
-![Sublime Text demo](../assets/sublime-demo.gif)
+![Sublime Text demo](https://i.imgur.com/vJKP0T3.gif)
 
 ```scala mdoc:requirements
 
@@ -60,7 +60,7 @@ definition.
 Open Sublime in the base directory of an sbt build. Run the "Enable Language
 Server in project" command.
 
-![Enable Language Server for this project](../assets/sublime-enable-lsp.gif)
+![Enable Language Server for this project](https://i.imgur.com/3c0ZSZm.gif)
 
 This starts the Metal language server but no functionality will work because the
 build has not been imported. The first time you enable Language Server in a

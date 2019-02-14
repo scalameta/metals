@@ -6,7 +6,7 @@ title: Vim
 Metals works in vim thanks to the the
 [`vim-lsc`](https://github.com/natebosch/vim-lsc/) extension.
 
-![Vim demo](../assets/vim-demo.gif)
+![Vim demo](https://i.imgur.com/jMMEmCC.gif)
 
 ```scala mdoc:requirements
 
@@ -129,7 +129,7 @@ command.
 
 This command opens your browser with a table like this.
 
-![Run Doctor](assets/http-run-doctor.png)
+![Run Doctor](https://i.imgur.com/yelm0jd.png)
 
 The callback `function('abs')` can be replaced with any function that does
 nothing.
@@ -163,7 +163,7 @@ nothing.
 
 Run `:LSClientDocumentSymbol` to show a symbol outline for the current file.
 
-![Document Symbols](assets/vim-document-symbols.png)
+![Document Symbols](https://i.imgur.com/T8SUD7B.png)
 
 ## Known issues
 
