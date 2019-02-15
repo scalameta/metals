@@ -19,7 +19,8 @@ import scala.meta.pc.CompletionItems
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import tests.Library
-import tests.SimpleJavaSymbolIndexer
+import tests.TestingSymbolSearch
+import tests.TestingWorkspaceSearch
 
 @State(Scope.Benchmark)
 abstract class CompletionBench {
@@ -83,16 +84,11 @@ abstract class CompletionBench {
 
   def newSearch(): SymbolSearch = {
     require(libraries.nonEmpty)
-    ClasspathSearch.fromClasspath(classpath, _ => 0)
+    new TestingSymbolSearch(ClasspathSearch.fromClasspath(classpath, _ => 0))
   }
-  def newIndexer() = new SimpleJavaSymbolIndexer(sources)
 
-  def newPC(
-      search: SymbolSearch = newSearch(),
-      indexer: SimpleJavaSymbolIndexer = newIndexer()
-  ): PresentationCompiler = {
+  def newPC(search: SymbolSearch = newSearch()): PresentationCompiler = {
     new ScalaPresentationCompiler()
-      .withIndexer(indexer)
       .withSearch(search)
       .newInstance("", classpath.asJava, Nil.asJava)
   }

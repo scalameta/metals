@@ -11,7 +11,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import scala.collection.JavaConverters._
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.MetalsSymbolIndexer
+import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
@@ -29,12 +29,14 @@ abstract class BasePCSuite extends BaseSuite {
   def extraClasspath: List[Path] = Nil
   val myclasspath: List[Path] = extraClasspath ++ scalaLibrary.toList
   val index = OnDemandSymbolIndex()
-  val indexer = new MetalsSymbolIndexer(index)
-  val search = new SimpleSymbolSearch(
-    ClasspathSearch.fromClasspath(myclasspath, _ => 0)
+  val indexer = new Docstrings(index)
+  val workspace = new TestingWorkspaceSearch
+  val search = new TestingSymbolSearch(
+    ClasspathSearch.fromClasspath(myclasspath, _ => 0),
+    new Docstrings(index),
+    workspace
   )
   val pc = new ScalaPresentationCompiler()
-    .withIndexer(indexer)
     .withSearch(search)
     .newInstance("", myclasspath.asJava, Nil.asJava)
 
@@ -73,7 +75,7 @@ abstract class BasePCSuite extends BaseSuite {
     if (offset < 0) {
       fail("missing @@")
     }
-    search.source = code2
+    workspace.inputs("test.scala") = code2
     (code2, offset)
   }
   def doc(e: JEither[String, MarkupContent]): String = {

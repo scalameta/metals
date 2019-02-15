@@ -16,7 +16,6 @@ import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.pc.PresentationCompiler
-import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.Properties
 
@@ -29,7 +28,6 @@ import scala.tools.nsc.Properties
 class Compilers(
     buildTargets: BuildTargets,
     buffers: Buffers,
-    indexer: SymbolIndexer,
     search: SymbolSearch,
     embedded: Embedded,
     statusBar: StatusBar
@@ -130,8 +128,7 @@ class Compilers(
       } else {
         embedded.presentationCompiler(info, scalac)
       }
-    pc.withIndexer(indexer)
-      .withSearch(search)
+    pc.withSearch(search)
       .newInstance(
         scalac.getTarget.getUri,
         classpath.asJava,

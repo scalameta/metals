@@ -13,7 +13,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 class ClasspathSearch(
     val map: collection.Map[String, CompressedPackageIndex],
     packagePriority: String => Int
-) extends SymbolSearch {
+) {
   // The maximum number of non-exact matches that we return for classpath queries.
   // Generic queries like "Str" can returns several thousand results, so we need
   // to limit it at some arbitrary point. Exact matches are always included.
@@ -24,14 +24,6 @@ class ClasspathSearch(
       if (byReference != 0) byReference
       else a.compare(b)
     }
-  }
-
-  override def search(
-      query: String,
-      buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor
-  ): SymbolSearch.Result = {
-    search(WorkspaceSymbolQuery.exact(query), visitor)
   }
 
   def search(

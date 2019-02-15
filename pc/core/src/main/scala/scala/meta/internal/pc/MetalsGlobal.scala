@@ -8,9 +8,7 @@ import scala.language.implicitConversions
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc
 import scala.meta.pc.SymbolDocumentation
-import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SymbolVisitor
 import scala.reflect.internal.{Flags => gf}
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -19,7 +17,6 @@ import scala.tools.nsc.reporters.Reporter
 class MetalsGlobal(
     settings: Settings,
     reporter: Reporter,
-    val indexer: SymbolIndexer,
     val search: SymbolSearch,
     val buildTargetIdentifier: String,
     val logger: Logger
@@ -82,28 +79,9 @@ class MetalsGlobal(
   }
   def methodInfo(symbol: Symbol): Option[SymbolDocumentation] = {
     val sym = compiler.semanticdbSymbol(methodInfoSymbol(symbol))
-    methodInfos.get(sym) match {
-      case Some(null) => None
-      case s: Some[t] => s
-      case None =>
-        index(sym)
-        val result = methodInfos.get(sym)
-        if (result.isEmpty) {
-          methodInfos.put(sym, null)
-        }
-        result
-    }
-  }
-
-  def index(symbol: String): Unit = {
-    indexer.visit(
-      symbol,
-      new SymbolVisitor {
-        override def visitSymbol(method: SymbolDocumentation): Unit = {
-          methodInfos(method.symbol()) = method
-        }
-      }
-    )
+    val documentation = search.documentation(sym)
+    if (documentation.isPresent) Some(documentation.get())
+    else None
   }
 
   // The following pattern match is an adaptation of this pattern match:

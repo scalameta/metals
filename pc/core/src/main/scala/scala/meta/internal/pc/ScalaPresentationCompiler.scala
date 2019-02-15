@@ -12,7 +12,6 @@ import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
-import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
@@ -22,12 +21,9 @@ case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
     classpath: Seq[Path] = Nil,
     options: Seq[String] = Nil,
-    indexer: SymbolIndexer = EmptySymbolIndexer,
     search: SymbolSearch = EmptySymbolSearch
 ) extends PresentationCompiler {
   val logger = Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
-  override def withIndexer(indexer: SymbolIndexer): PresentationCompiler =
-    copy(indexer = indexer)
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
   def this() = this(buildTargetIdentifier = "")
@@ -93,7 +89,7 @@ case class ScalaPresentationCompiler(
 
   override def signatureHelp(params: OffsetParams): SignatureHelp =
     access.withCompiler(new SignatureHelp()) { global =>
-      new SignatureHelpProvider(global, indexer).signatureHelp(params)
+      new SignatureHelpProvider(global).signatureHelp(params)
     }
 
   override def symbol(params: OffsetParams): String = {
@@ -129,7 +125,6 @@ case class ScalaPresentationCompiler(
     new MetalsGlobal(
       settings,
       new StoreReporter,
-      indexer,
       search,
       buildTargetIdentifier,
       logger

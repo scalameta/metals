@@ -96,7 +96,7 @@ class MetalsLanguageServer(
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
   private val definitionIndex = newSymbolIndex()
-  private val symbolIndexer = new MetalsSymbolIndexer(definitionIndex)
+  private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer = Option.empty[BuildServerConnection]
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
@@ -283,8 +283,7 @@ class MetalsLanguageServer(
       new Compilers(
         buildTargets,
         buffers,
-        symbolIndexer,
-        workspaceSymbols,
+        new MetalsSymbolSearch(symbolDocs, workspaceSymbols),
         embedded,
         statusBar
       )

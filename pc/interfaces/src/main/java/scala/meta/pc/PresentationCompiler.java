@@ -15,7 +15,6 @@ public abstract class PresentationCompiler {
     public abstract CompletionItems complete(OffsetParams params);
     public abstract CompletionItem completionItemResolve(CompletionItem item, String symbol);
     public abstract List<String> diagnostics();
-    public abstract PresentationCompiler withIndexer(SymbolIndexer indexer);
     public abstract PresentationCompiler withSearch(SymbolSearch search);
     public abstract PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath, List<String> options);
 }

@@ -5,6 +5,7 @@ import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util.Optional
 import java.util.concurrent.CancellationException
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
@@ -15,6 +16,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 import scala.util.control.NonFatal
@@ -29,8 +31,7 @@ final class WorkspaceSymbolProvider(
     val index: OnDemandSymbolIndex,
     isReferencedPackage: String => Int,
     fileOnDisk: AbsolutePath => AbsolutePath
-)(implicit ec: ExecutionContext)
-    extends SymbolSearch {
+)(implicit ec: ExecutionContext) {
   val inWorkspace = TrieMap.empty[Path, WorkspaceSymbolsIndex]
   var inDependencies = ClasspathSearch.fromClasspath(Nil, isReferencedPackage)
 
@@ -48,16 +49,13 @@ final class WorkspaceSymbolProvider(
     }
   }
 
-  override def search(
-      query: String,
-      buildTargetIdentifier: String,
-      visitor: SymbolSearchVisitor
+  def search(
+      query: WorkspaceSymbolQuery,
+      visitor: SymbolSearchVisitor,
+      target: Option[BuildTargetIdentifier]
   ): SymbolSearch.Result = {
-    search(
-      WorkspaceSymbolQuery.exact(query),
-      visitor,
-      Some(new BuildTargetIdentifier(buildTargetIdentifier))
-    )
+    workspaceSearch(query, visitor, target)
+    inDependencies.search(query, visitor)
   }
 
   def indexClasspath(): Unit = {
@@ -106,15 +104,6 @@ final class WorkspaceSymbolProvider(
     )
   }
 
-  private def search(
-      query: WorkspaceSymbolQuery,
-      visitor: SymbolSearchVisitor,
-      target: Option[BuildTargetIdentifier]
-  ): SymbolSearch.Result = {
-    workspaceSearch(query, visitor, target)
-    inDependencies.search(query, visitor)
-  }
-
   private def workspaceSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
@@ -152,6 +141,7 @@ final class WorkspaceSymbolProvider(
     search(query, visitor, None)
     visitor.results.sortBy(_.getName.length)
   }
+
 }
 
 object WorkspaceSymbolProvider {

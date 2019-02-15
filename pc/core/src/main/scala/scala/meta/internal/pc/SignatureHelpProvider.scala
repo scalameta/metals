@@ -6,12 +6,8 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import scala.collection.JavaConverters._
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.SymbolIndexer
 
-class SignatureHelpProvider(
-    val compiler: MetalsGlobal,
-    indexer: SymbolIndexer
-) {
+class SignatureHelpProvider(val compiler: MetalsGlobal) {
   import compiler._
 
   def signatureHelp(
