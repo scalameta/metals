@@ -1,0 +1,24 @@
+{
+  "version-0.4.4-docs": {
+    "Text Editors": [
+      "version-0.4.4-editors/overview",
+      "version-0.4.4-editors/vscode",
+      "version-0.4.4-editors/atom",
+      "version-0.4.4-editors/vim",
+      "version-0.4.4-editors/sublime",
+      "version-0.4.4-editors/emacs",
+      "version-0.4.4-editors/new-editor"
+    ],
+    "Build Tools": [
+      "version-0.4.4-build-tools/overview",
+      "version-0.4.4-build-tools/sbt",
+      "version-0.4.4-build-tools/bloop",
+      "version-0.4.4-build-tools/new-build-tool"
+    ],
+    "Contributing": [
+      "version-0.4.4-contributors/project-goals",
+      "version-0.4.4-contributors/getting-started",
+      "version-0.4.4-contributors/updating-website"
+    ]
+  }
+}

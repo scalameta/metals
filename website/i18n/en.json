@@ -48,6 +48,46 @@
       },
       "editors/vscode": {
         "title": "Visual Studio Code"
+      },
+      "version-0.4.4-bloop": {
+        "title": "Bloop"
+      },
+      "version-0.4.4-new-build-tool": {
+        "title": "Integrating a new build tool"
+      },
+      "version-0.4.4-overview": {
+        "title": "Text Editors",
+        "sidebar_label": "Overview"
+      },
+      "version-0.4.4-sbt": {
+        "title": "sbt"
+      },
+      "version-0.4.4-getting-started": {
+        "title": "Contributing to Metals"
+      },
+      "version-0.4.4-project-goals": {
+        "title": "Project Goals"
+      },
+      "version-0.4.4-updating-website": {
+        "title": "Contributing to the website"
+      },
+      "version-0.4.4-atom": {
+        "title": "Atom"
+      },
+      "version-0.4.4-emacs": {
+        "title": "Emacs"
+      },
+      "version-0.4.4-new-editor": {
+        "title": "Integrating a new editor"
+      },
+      "version-0.4.4-sublime": {
+        "title": "Sublime Text"
+      },
+      "version-0.4.4-vim": {
+        "title": "Vim"
+      },
+      "version-0.4.4-vscode": {
+        "title": "Visual Studio Code"
       }
     },
     "links": {

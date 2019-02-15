@@ -1,0 +1,33 @@
+---
+id: version-0.4.4-bloop
+title: Bloop
+original_id: bloop
+---
+
+[Bloop](https://scalacenter.github.io/bloop) is a compile server for Scala that
+works with sbt and has experimental support for other build tools like Maven,
+Gradle and Mill. If your workspace contains a `.bloop/` directory with Bloop
+JSON files then Metals will automatically connect to it.
+
+To manually tell Metals to connect with Bloop, run the "Connect to build server"
+(id: `build.connect`) command. In VS Code, open the the "Command palette"
+(`Cmd + Shift + P`) and search "connect to build server".
+
+![Import connect to build server command](https://i.imgur.com/mIR0WTe.png)
+
+## Installing Bloop CLI
+
+To compile, test and run from your terminal install the `bloop` command-line
+interface with the instructions here: https://scalacenter.github.io/bloop/setup
+
+
+## Customizing build import
+
+Consult the Bloop docs for customizing build import for sbt:
+https://scalacenter.github.io/bloop/docs/build-tools/sbt
+
+- Enable `IntegrationTest` and other custom configurations
+- Speed up build import
+- Enable sbt project references (source dependencies)
+- Export main class
+
