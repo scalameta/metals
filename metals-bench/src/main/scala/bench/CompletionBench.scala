@@ -37,19 +37,27 @@ abstract class CompletionBench {
 
   def downloadLibraries(): Unit = {
     libraries = Library.jdk :: Library.all
+    val akka = AkkaSources.download()
+    val replicator =
+      "akka-2.5.19/akka-cluster/src/main/scala/akka/cluster/ClusterDaemon.scala"
     completions = Map(
-      "scopeOpen" -> SourceCompletion(
+      "scopeOpen" -> SourceCompletion.fromPath(
         "A.scala",
-        "import Java\n",
-        "import Java".length
+        """
+          |import Java
+          |import scala.collection.mutable
+          |        """.stripMargin,
+        "import Java@@"
       ),
-      "scopeDeep" -> SourceCompletion.fromPath(
-        "UnzipWithApply.scala",
-        "if (pendin@@g12) pendingCount -= 1"
+      "scopeDeep" -> SourceCompletion.fromAkkaPath(
+        akka,
+        replicator,
+        "val nonSensitiveKeys = Join@@ConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.settings)"
       ),
-      "memberDeep" -> SourceCompletion.fromPath(
-        "UnzipWithApply.scala",
-        "shape.@@out21"
+      "memberDeep" -> SourceCompletion.fromAkkaPath(
+        akka,
+        replicator,
+        "val nonSensitiveKeys = JoinConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.@@settings)"
       )
     )
   }
@@ -95,12 +103,6 @@ abstract class CompletionBench {
   }
 }
 
-class OnDemandCompletionBench extends CompletionBench {
-  override def runSetup(): Unit = downloadLibraries()
-  override def presentationCompiler(): PresentationCompiler =
-    newPC(newSearch(), newIndexer())
-}
-
 class CachedSearchAndCompilerCompletionBench extends CompletionBench {
   var pc: PresentationCompiler = _
 
@@ -110,18 +112,4 @@ class CachedSearchAndCompilerCompletionBench extends CompletionBench {
   }
 
   override def presentationCompiler(): PresentationCompiler = pc
-}
-
-class CachedSearchCompletionBench extends CompletionBench {
-  var pc: PresentationCompiler = _
-  var cachedSearch: SymbolSearch = _
-
-  override def runSetup(): Unit = {
-    downloadLibraries()
-    cachedSearch = newSearch()
-  }
-
-  override def presentationCompiler(): PresentationCompiler =
-    newPC(cachedSearch)
-
 }

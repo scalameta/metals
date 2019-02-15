@@ -33,12 +33,17 @@ object Library {
           new Dependency(
             "com.typesafe.akka",
             "akka-testkit_2.12",
-            "2.5.9"
+            "2.5.19"
           ),
           new Dependency(
             "com.typesafe.akka",
             "akka-stream_2.12",
-            "2.5.9"
+            "2.5.19"
+          ),
+          new Dependency(
+            "com.typesafe.akka",
+            "akka-cluster_2.12",
+            "2.5.19"
           ),
           new Dependency(
             "org.apache.spark",
