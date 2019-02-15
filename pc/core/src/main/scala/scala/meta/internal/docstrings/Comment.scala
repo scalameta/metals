@@ -213,7 +213,7 @@ object MemberEntity {
   // Oh contravariance, contravariance, wherefore art thou contravariance?
   // Note: the above works for both the commonly misunderstood meaning of the line and the real one.
   implicit lazy val MemberEntityOrdering
-    : Ordering[MemberEntity] = Entity.EntityOrdering on (x => x)
+      : Ordering[MemberEntity] = Entity.EntityOrdering on (x => x)
 }
 
 /** An entity that is parameterized by types */
@@ -318,12 +318,12 @@ trait DocTemplateEntity extends MemberTemplateEntity {
 
   /** Classes that can be implicitly converted to this class */
   def incomingImplicitlyConvertedClasses
-    : List[(DocTemplateEntity, ImplicitConversion)]
+      : List[(DocTemplateEntity, ImplicitConversion)]
 
   /** Classes to which this class can be implicitly converted to
       NOTE: Some classes might not be included in the scaladoc run so they will be NoDocTemplateEntities */
   def outgoingImplicitlyConvertedClasses
-    : List[(TemplateEntity, TypeEntity, ImplicitConversion)]
+      : List[(TemplateEntity, TypeEntity, ImplicitConversion)]
 
 //  /** If this template takes place in inheritance and implicit conversion relations, it will be shown in this diagram */
 //  def inheritanceDiagram: Option[Diagram]

@@ -89,7 +89,7 @@ object ScaladocParser {
     }
 
     override val shortDescription
-      : Option[Text] = shortDescription0.lastOption collect {
+        : Option[Text] = shortDescription0.lastOption collect {
       case Body(List(Paragraph(Chain(List(Summary(Text(e)))))))
           if !e.trim.contains("\n") =>
         Text(e)
