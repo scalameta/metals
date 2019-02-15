@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import org.eclipse.{lsp4j => l}
 
-case class CachedSymbolInformation(
+case class WorkspaceSymbolInformation(
     symbol: String,
     kind: l.SymbolKind,
     range: l.Range

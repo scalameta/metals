@@ -21,14 +21,7 @@ class CompilerSearchVisitor(
     visit(SymbolSearchCandidate.Workspace(symbol))
   }
 
-  override def shouldVisitPath(path: Path): Boolean = {
-    // TODO: filter out paths that are guaranteed on a source dependency
-    true
-  }
-  def shouldVisitPackage(pkg: String): Boolean = {
-    // TODO come up with less hacky check, maybe staticPackageSymbol(..)
-    containsPackage(pkg.stripSuffix("/").replace('/', '.'))
-  }
+  def shouldVisitPackage(pkg: String): Boolean = containsPackage(pkg)
 
   override def isCancelled: Boolean = {
     // TODO(olafur) integrate CancelChecker

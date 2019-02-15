@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.nio.file.Path
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import scala.collection.JavaConverters._
@@ -11,6 +12,8 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 import scala.util.control.NonFatal
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.pc.SymbolSearchVisitor
+import org.eclipse.{lsp4j => l}
 
 class CompletionProvider(
     val compiler: MetalsGlobal,
@@ -343,7 +346,7 @@ class CompletionProvider(
   val packageSymbols = mutable.Map.empty[String, Option[Symbol]]
   def packageSymbolFromString(symbol: String): Option[Symbol] = {
     packageSymbols.getOrElseUpdate(symbol, {
-      val fqn = symbol.replace('/', '.').stripSuffix(".")
+      val fqn = symbol.stripSuffix("/").replace('/', '.')
       try {
         Some(rootMirror.staticPackage(fqn))
       } catch {
@@ -361,23 +364,49 @@ class CompletionProvider(
     if (query.isEmpty) SymbolSearch.Result.COMPLETE
     else {
       val context = doLocateContext(pos)
-      val visitor = new CompilerSearchVisitor(
-        query,
-        pkg => packageSymbolFromString(pkg).isDefined,
-        top => {
-          var added = 0
-          for {
-            sym <- loadSymbolFromClassfile(top)
-            if context.lookupSymbol(sym.name, _ => true).symbol != sym
-          } {
-            if (visit(new WorkspaceMember(sym))) {
-              added += 1
-            }
-          }
-          added
-        }
-      )
+      val visitor = new CompilerSearchVisitor(query, context, visit)
       search.search(query, buildTargetIdentifier, visitor)
+    }
+  }
+
+  /**
+   * Symbol search visitor that converts results into completion `WorkspaceMember`.
+   */
+  private class CompilerSearchVisitor(
+      query: String,
+      context: Context,
+      visitMember: Member => Boolean
+  ) extends SymbolSearchVisitor {
+    def visit(top: SymbolSearchCandidate): Int = {
+      var added = 0
+      for {
+        sym <- loadSymbolFromClassfile(top)
+        if context.lookupSymbol(sym.name, _ => true).symbol != sym
+      } {
+        if (visitMember(new WorkspaceMember(sym))) {
+          added += 1
+        }
+      }
+      added
+    }
+    def visitClassfile(pkg: String, filename: String): Int = {
+      visit(SymbolSearchCandidate.Classfile(pkg, filename))
+    }
+    def visitWorkspaceSymbol(
+        path: Path,
+        symbol: String,
+        kind: l.SymbolKind,
+        range: l.Range
+    ): Int = {
+      visit(SymbolSearchCandidate.Workspace(symbol))
+    }
+
+    def shouldVisitPackage(pkg: String): Boolean =
+      packageSymbolFromString(pkg).isDefined
+
+    override def isCancelled: Boolean = {
+      params.checkCanceled()
+      false
     }
   }
 

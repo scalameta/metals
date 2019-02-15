@@ -1081,12 +1081,12 @@ class MetalsLanguageServer(
     try {
       val reluri = source.toIdeallyRelativeURI(sourceDirectory)
       val input = source.toInput
-      val symbols = ArrayBuffer.empty[CachedSymbolInformation]
+      val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
       SemanticdbDefinition.foreach(input) {
         case SemanticdbDefinition(info, occ, owner) =>
           if (WorkspaceSymbolProvider.isRelevantKind(info.kind)) {
             occ.range.foreach { range =>
-              symbols += CachedSymbolInformation(
+              symbols += WorkspaceSymbolInformation(
                 info.symbol,
                 info.kind.toLSP,
                 range.toLSP
@@ -1169,7 +1169,7 @@ class MetalsLanguageServer(
         )
         logMemory(
           "classpath symbol index",
-          workspaceSymbols.inDependencies
+          workspaceSymbols.inDependencies.map
         )
       }
     }

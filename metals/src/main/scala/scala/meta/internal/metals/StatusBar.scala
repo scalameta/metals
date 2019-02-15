@@ -30,10 +30,7 @@ final class StatusBar(
     val icons: Icons
 ) extends Cancelable {
 
-  def trackBlockingTask[T](
-      message: String,
-      showTimer: Boolean = false
-  )(thunk: => T): T = {
+  def trackBlockingTask[T](message: String)(thunk: => T): T = {
     val promise = Promise[Unit]()
     trackFuture(message, promise.future)
     try {

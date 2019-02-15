@@ -11,7 +11,7 @@ import scala.meta.pc.SymbolSearchVisitor
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 class ClasspathSearch(
-    map: collection.Map[String, CompressedPackageIndex],
+    val map: collection.Map[String, CompressedPackageIndex],
     packagePriority: String => Int
 ) extends SymbolSearch {
   // The maximum number of non-exact matches that we return for classpath queries.

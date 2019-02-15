@@ -31,7 +31,7 @@ final class WorkspaceSymbolProvider(
     fileOnDisk: AbsolutePath => AbsolutePath
 )(implicit ec: ExecutionContext)
     extends SymbolSearch {
-  val inWorkspace = TrieMap.empty[Path, CompressedSourceIndex]
+  val inWorkspace = TrieMap.empty[Path, WorkspaceSymbolsIndex]
   var inDependencies = ClasspathSearch.fromClasspath(Nil, isReferencedPackage)
 
   def search(query: String): Seq[l.SymbolInformation] = {
@@ -75,7 +75,7 @@ final class WorkspaceSymbolProvider(
 
   def didChange(
       source: AbsolutePath,
-      symbols: Seq[CachedSymbolInformation]
+      symbols: Seq[WorkspaceSymbolInformation]
   ): Unit = {
     val bloomFilterStrings =
       Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
@@ -87,7 +87,7 @@ final class WorkspaceSymbolProvider(
     bloomFilterStrings.foreach { c =>
       bloom.put(c)
     }
-    inWorkspace(source.toNIO) = CompressedSourceIndex(bloom, symbols)
+    inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
   }
 
   private def indexClasspathUnsafe(): Unit = {
@@ -130,7 +130,6 @@ final class WorkspaceSymbolProvider(
             index <- inWorkspace.get(source.toNIO)
           } yield (source.toNIO, index)
       }
-      if visitor.shouldVisitPath(path)
       if query.matches(index.bloom)
       symbol <- index.symbols
       if query.matches(symbol.symbol)
@@ -149,7 +148,7 @@ final class WorkspaceSymbolProvider(
       token: CancelChecker
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
-    val visitor = new WorkspaceSymbolVisitor(query, token, index, fileOnDisk)
+    val visitor = new WorkspaceSearchVisitor(query, token, index, fileOnDisk)
     search(query, visitor, None)
     visitor.results.sortBy(_.getName.length)
   }

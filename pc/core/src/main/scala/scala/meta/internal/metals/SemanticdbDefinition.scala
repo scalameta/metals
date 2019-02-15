@@ -21,9 +21,9 @@ case class SemanticdbDefinition(
     occ: SymbolOccurrence,
     owner: String
 ) {
-  def toCached: CachedSymbolInformation = {
+  def toCached: WorkspaceSymbolInformation = {
     val range = occ.range.getOrElse(s.Range())
-    CachedSymbolInformation(info.symbol, info.kind.toLSP, range.toLSP)
+    WorkspaceSymbolInformation(info.symbol, info.kind.toLSP, range.toLSP)
   }
   def toLSP(uri: String): l.SymbolInformation = {
     new l.SymbolInformation(

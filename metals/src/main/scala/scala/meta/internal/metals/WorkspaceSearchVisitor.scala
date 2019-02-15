@@ -17,7 +17,14 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearchVisitor
 
-class WorkspaceSymbolVisitor(
+/**
+ * A symbol search visitor for `workspace/symbol`.
+ *
+ * - workspace symbols are converted directly to l.SymbolInformation
+ * - classpath symbols are converted into "goto definition" requests,
+ *   which creates files on disk, and then into l.SymbolInformation.
+ */
+class WorkspaceSearchVisitor(
     query: WorkspaceSymbolQuery,
     token: CancelChecker,
     index: OnDemandSymbolIndex,
@@ -38,8 +45,6 @@ class WorkspaceSymbolVisitor(
     }
   }
   override def shouldVisitPackage(pkg: String): Boolean = true
-  override def shouldVisitPath(path: Path): Boolean = true
-
   override def visitWorkspaceSymbol(
       path: Path,
       symbol: String,

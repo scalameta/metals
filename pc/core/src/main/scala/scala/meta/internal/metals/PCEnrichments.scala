@@ -11,8 +11,10 @@ import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.util.control.NonFatal
 
+/**
+ * Extension methods used for interfacing with the presentation compiler.
+ */
 object PCEnrichments extends PCEnrichments
-
 trait PCEnrichments {
 
   private def logger: Logger = Logger.getLogger(classOf[PCEnrichments].getName)

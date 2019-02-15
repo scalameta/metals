@@ -20,6 +20,12 @@ import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.Properties
 
+/**
+ * Manages lifecycle for presentation compilers in all build targets.
+ *
+ * We need a custom presentation compiler for each build target since
+ * build targets can have different classpaths and compiler settings.
+ */
 class Compilers(
     buildTargets: BuildTargets,
     buffers: Buffers,

@@ -34,12 +34,7 @@ final class Embedded(
     if (isBloopJars.get()) {
       bloopJars.foreach(_.close())
     }
-    for {
-      key <- presentationCompilers.keysIterator
-      compiler <- presentationCompilers.remove(key)
-    } {
-//      compiler.close()
-    }
+    presentationCompilers.clear()
   }
 
   /**
