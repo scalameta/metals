@@ -1,6 +1,8 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
@@ -12,9 +14,11 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolIndexer
 import scala.meta.pc.SymbolSearch
+import scala.tools.nsc.Properties
 
 class Compilers(
     buildTargets: BuildTargets,
@@ -25,13 +29,13 @@ class Compilers(
     statusBar: StatusBar
 ) extends Cancelable {
 
-  private val cache = TrieMap.empty[BuildTargetIdentifier, BuildTargetCompiler]
+  private val cache = TrieMap.empty[BuildTargetIdentifier, PresentationCompiler]
   override def cancel(): Unit = {
-    Cancelable.cancelAll(cache.values)
+    Cancelable.cancelEach(cache.values)(_.shutdown())
     cache.clear()
   }
   def didCompileSuccessfully(id: BuildTargetIdentifier): Unit = {
-    cache.remove(id).foreach(_.cancel())
+    cache.remove(id).foreach(_.shutdown())
   }
 
   def completionItemResolve(
@@ -41,7 +45,7 @@ class Compilers(
     for {
       data <- item.data
       compiler <- cache.get(new BuildTargetIdentifier(data.target))
-    } yield compiler.pc.completionItemResolve(item, data.symbol)
+    } yield compiler.completionItemResolve(item, data.symbol)
   }
   def completions(
       params: CompletionParams,
@@ -96,22 +100,36 @@ class Compilers(
               s"${statusBar.icons.sync}Loading presentation compiler",
               promise.future
             )
-            BuildTargetCompiler.fromClasspath(
-              scalac,
-              scala,
-              indexer,
-              search,
-              embedded
-            )
+            newCompiler(scalac, scala)
           }
         )
         val input = path.toInputFromBuffers(buffers)
         val pos = params.getPosition.toMeta(input)
-        val result = fn(compiler.pc, pos)
+        val result = fn(compiler, pos)
         result
       } finally {
         promise.trySuccess(())
       }
     }
+  }
+
+  def newCompiler(
+      scalac: ScalacOptionsItem,
+      info: ScalaBuildTarget
+  ): PresentationCompiler = {
+    val classpath = scalac.classpath.map(_.toNIO).toSeq
+    val pc: PresentationCompiler =
+      if (info.getScalaVersion == Properties.versionNumberString) {
+        new ScalaPresentationCompiler()
+      } else {
+        embedded.presentationCompiler(info, scalac)
+      }
+    pc.withIndexer(indexer)
+      .withSearch(search)
+      .newInstance(
+        scalac.getTarget.getUri,
+        classpath.asJava,
+        scalac.getOptions
+      )
   }
 }
