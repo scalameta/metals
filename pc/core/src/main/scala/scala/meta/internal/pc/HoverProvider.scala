@@ -43,7 +43,7 @@ class HoverProvider(compiler: MetalsGlobal) {
           if tree.tpe != null &&
             tree.tpe != NoType &&
             !tree.tpe.isErroneous =>
-        Some(tree.tpe.widen.toString)
+        Some(metalsToLongString(tree.tpe, new ShortenedNames()))
       case _ => None
     }
 
