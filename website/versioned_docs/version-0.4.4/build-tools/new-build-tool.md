@@ -52,7 +52,7 @@ We recommend you update the following compiler options when using Metals:
 Consult the
 [Bloop configuration format](https://scalacenter.github.io/bloop/docs/configuration-format/)
 to learn how to emit Bloop JSON files. Once the JSON files have been generated,
-use "[Connect to build server](../editors/new-editor.md#import-build)" server
+use "[Connect to build server](../editors/new-editor.html#import-build)" server
 command in Metals to establish a connection with Bloop.
 
 ## Custom build server
