@@ -16,8 +16,7 @@ object CompletionSuite extends BaseCompletionSuite {
       |object Local {
       |  @@
       |}""".stripMargin,
-    457,
-    compat = Map("2.11" -> 456)
+    Set(456, 457)
   )
 
   check(

@@ -10,16 +10,14 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   def checkLength(
       name: String,
       original: String,
-      expected: Int,
-      compat: Map[String, Int] = Map.empty
+      expected: Set[Int],
+      compat: Map[String, Set[Int]] = Map.empty
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
+      val expectedNumbers = getExpected(expected, compat)
       val result = pc.complete(CompilerOffsetParams("A.scala", code, offset))
-      assertEquals(
-        result.getItems.size(),
-        getExpected(expected, compat)
-      )
+      assert(expectedNumbers.contains(result.getItems.size()))
     }
   }
 
