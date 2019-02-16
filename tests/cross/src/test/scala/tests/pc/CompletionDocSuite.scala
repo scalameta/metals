@@ -236,6 +236,15 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true
   )
+
+  def executionDocstring: String =
+    """|> The implicit global `ExecutionContext`. Import `global` when you want to provide the global
+       |`ExecutionContext` implicitly.
+       |
+       |The default `ExecutionContext` implementation is backed by a work-stealing thread pool. By default,
+       |the thread pool uses a target number of worker threads equal to the number of
+       |[https://docs.oracle.com/javase/8/docs/api/java/lang/Runtime.html#availableProcessors--](available processors).
+       |""".stripMargin.trim
   check(
     "scala5",
     """
@@ -243,19 +252,14 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |  scala.concurrent.ExecutionContext.Implicits.global@@
       |}
     """.stripMargin,
-    """|> The implicit global `ExecutionContext`. Import `global` when you want to provide the global
-       |`ExecutionContext` implicitly.
-       |
-       |The default `ExecutionContext` implementation is backed by a work-stealing thread pool. By default,
-       |the thread pool uses a target number of worker threads equal to the number of
-       |[https://docs.oracle.com/javase/8/docs/api/java/lang/Runtime.html#availableProcessors--](available processors).
-       |global: ExecutionContext
-       |""".stripMargin,
+    s"""|$executionDocstring
+        |global: ExecutionContext
+        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.11" -> """|> The implicit global `ExecutionContext`.
-                   |global: ExecutionContextExecutor
-                   |""".stripMargin
+      "2.11" -> s"""|$executionDocstring
+                    |global: ExecutionContextExecutor
+                    |""".stripMargin
     )
   )
   check(
