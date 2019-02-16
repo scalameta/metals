@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.MarkedString
 import scala.collection.JavaConverters._
 import scala.meta.pc.OffsetParams
+import scala.meta.internal.metals.PCEnrichments._
 
 class HoverProvider(compiler: MetalsGlobal) {
   import compiler._
@@ -15,9 +16,37 @@ class HoverProvider(compiler: MetalsGlobal) {
       cursor = None
     )
     val pos = unit.position(params.offset())
-    val typedTree = compiler.typedTreeAt(pos)
+    val tree = compiler.typedTreeAt(pos)
+    tree match {
+      case Apply(qual, _) if !qual.pos.includes(pos) =>
+        val signatureHelp =
+          new SignatureHelpProvider(compiler).signatureHelp(params)
+        if (signatureHelp.getActiveParameter >= 0 &&
+          signatureHelp.getActiveSignature >= 0) {
+          val activeParameter = signatureHelp.getSignatures
+            .get(signatureHelp.getActiveSignature)
+            .getParameters
+            .get(signatureHelp.getActiveParameter)
+          Some(
+            new Hover(
+              s"""|```scala
+                  |${activeParameter.getLabel}
+                  |```
+                  |${activeParameter.getDocumentation.getRight.getValue}
+                  |""".stripMargin.trim.toMarkupContent
+            )
+          )
+        } else {
+          hoverFromTree(tree)
+        }
+      case _ =>
+        hoverFromTree(tree)
+    }
+  }
+
+  def hoverFromTree(tree: Tree): Option[Hover] = {
     for {
-      tpeName <- typeOfTree(typedTree)
+      tpeName <- typeOfTree(tree)
     } yield
       new Hover(
         List(

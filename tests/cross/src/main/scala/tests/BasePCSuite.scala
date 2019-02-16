@@ -4,6 +4,8 @@ import com.geirsson.coursiersmall.CoursierSmall
 import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import org.eclipse.lsp4j.MarkupContent
@@ -12,6 +14,7 @@ import scala.collection.JavaConverters._
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Docstrings
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
@@ -39,6 +42,7 @@ abstract class BasePCSuite extends BaseSuite {
   val pc = new ScalaPresentationCompiler()
     .withSearch(search)
     .newInstance("", myclasspath.asJava, Nil.asJava)
+  val tmp = AbsolutePath(Files.createTempDirectory("metals"))
 
   def indexJDK(): Unit = {
     index.addSourceJar(JdkSources().get)
@@ -75,14 +79,18 @@ abstract class BasePCSuite extends BaseSuite {
   }
   override def afterAll(): Unit = {
     pc.shutdown()
+    RecursivelyDelete(tmp)
   }
-  def params(code: String): (String, Int) = {
+  def params(code: String, filename: String = "test.scala"): (String, Int) = {
     val code2 = code.replaceAllLiterally("@@", "")
     val offset = code.indexOf("@@")
     if (offset < 0) {
       fail("missing @@")
     }
-    workspace.inputs("test.scala") = code2
+    val file = tmp.resolve(filename)
+    Files.write(file.toNIO, code2.getBytes(StandardCharsets.UTF_8))
+    index.addSourceFile(file, Some(tmp))
+    workspace.inputs(filename) = code2
     (code2, offset)
   }
   def doc(e: JEither[String, MarkupContent]): String = {
