@@ -129,10 +129,6 @@ lazy val pc = project
     moduleName := "pc",
     crossVersion := CrossVersion.full,
     crossScalaVersions := List(V.scala212, V.scala211),
-    libraryDependencies ++= {
-      if (isCI) Nil
-      else List("com.lihaoyi" %% "pprint" % "0.5.3")
-    },
     libraryDependencies ++= List(
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
@@ -148,7 +144,11 @@ lazy val mtags = project
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "org.scalameta" %% "contrib" % V.scalameta,
       "org.jsoup" % "jsoup" % "1.11.3"
-    )
+    ),
+    libraryDependencies ++= {
+      if (isCI) Nil
+      else List("com.lihaoyi" %% "pprint" % "0.5.3")
+    }
   )
 
 lazy val metals = project

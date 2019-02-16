@@ -1,8 +1,8 @@
 package scala.meta.internal.pc
 
 import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.MarkupContent
 import scala.collection.JavaConverters._
+import scala.meta.internal.metals.PCEnrichments._
 
 class CompletionItemResolver(
     val compiler: MetalsGlobal
@@ -42,10 +42,7 @@ class CompletionItemResolver(
             item.setDetail(out.toString)
           }
           val docstring = fullDocstring(gsym)
-          val content = new MarkupContent()
-          content.setKind("markdown")
-          content.setValue(docstring)
-          item.setDocumentation(content)
+          item.setDocumentation(docstring.toMarkupContent)
         case _ =>
       }
       item

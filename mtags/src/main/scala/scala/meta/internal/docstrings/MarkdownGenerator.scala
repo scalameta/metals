@@ -27,11 +27,14 @@ object MarkdownGenerator {
     toMarkdown(ScaladocParser.parseComment(docstring, defines))
   }
 
+  def toMarkdown(b: Body): String = {
+    Option(b)
+      .map(body => blocksToMarkdown(body.blocks))
+      .mkString
+  }
   def toMarkdown(c: Comment): String = {
     Seq(
-      Option(c.body)
-        .map(body => blocksToMarkdown(body.blocks))
-        .mkString,
+      toMarkdown(c.body),
       if (c.authors.nonEmpty)
         "\n**Authors**\n" + c.authors
           .map(body => "- " ++ blocksToMarkdown(body.blocks))

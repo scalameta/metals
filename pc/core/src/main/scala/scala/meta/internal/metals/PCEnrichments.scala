@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import java.util.logging.Level
 import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.MarkupContent
 import scala.meta.internal.{semanticdb => s}
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.pc.CompletionItemData
@@ -47,6 +48,14 @@ trait PCEnrichments {
         case data =>
           decodeJson(data, classOf[CompletionItemData])
       }
+  }
+  implicit class XtensionStringDoc(doc: String) {
+    def toMarkupContent: l.MarkupContent = {
+      val content = new MarkupContent
+      content.setKind("markdown")
+      content.setValue(doc)
+      content
+    }
   }
   implicit class XtensionRangeBuildProtocol(range: s.Range) {
     def toLocation(uri: String): l.Location = {

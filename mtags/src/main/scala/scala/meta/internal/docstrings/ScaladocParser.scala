@@ -1,10 +1,8 @@
 package scala.meta.internal.docstrings
 
-import java.util.regex.Pattern
 import scala.annotation.tailrec
 import scala.collection.{Map, Seq, mutable}
 import scala.meta.Position
-import scala.meta.internal.tokenizers.Chars
 import scala.util.matching.Regex
 
 /**
@@ -88,7 +86,7 @@ object ScaladocParser {
     }
 
     override val shortDescription
-      : Option[Text] = shortDescription0.lastOption collect {
+        : Option[Text] = shortDescription0.lastOption collect {
       case Body(List(Paragraph(Chain(List(Summary(Text(e)))))))
           if !e.trim.contains("\n") =>
         Text(e)

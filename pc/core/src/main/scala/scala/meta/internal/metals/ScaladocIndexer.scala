@@ -20,10 +20,6 @@ class ScaladocIndexer(
     fn: SymbolDocumentation => Unit
 ) extends ScalaMtags(input) {
   val defines = mutable.Map.empty[String, String]
-  def toMarkdown(symbol: String, docstring: String): String = {
-    defines ++= ScaladocParser.extractDefines(docstring)
-    MarkdownGenerator.fromDocstring(docstring, defines)
-  }
   override def visitOccurrence(
       occ: SymbolOccurrence,
       sinfo: SymbolInformation,
@@ -42,29 +38,22 @@ class ScaladocIndexer(
           case None => ""
         }
     }
-    class Param(name: String) {
-      def unapply(line: String): Option[String] = {
-        val idx = line.lastIndexOf(name)
-        if (idx < 0) None
-        else Some(line.substring(idx + name.length))
-      }
-    }
-    def doc(name: String): String = {
-      val param = new Param(name)
-      docstring.lines
-        .collectFirst {
-          case param(line) => line
-        }
+    defines ++= ScaladocParser.extractDefines(docstring)
+    val comment = ScaladocParser.parseComment(docstring, defines)
+    val markdown = MarkdownGenerator.toMarkdown(comment)
+    def param(name: String, default: String): SymbolDocumentation = {
+      val paramDoc = comment.valueParams
+        .get(name)
+        .orElse(comment.typeParams.get(name))
+        .map(MarkdownGenerator.toMarkdown)
         .getOrElse("")
-    }
-    lazy val markdown = toMarkdown(occ.symbol, docstring)
-    def param(name: String, default: String): SymbolDocumentation =
       new MetalsSymbolDocumentation(
         Symbols.Global(owner, Descriptor.Parameter(name)),
         name,
-        doc(name),
+        paramDoc,
         default
       )
+    }
     def mparam(member: Member): SymbolDocumentation = {
       val default = member match {
         case Term.Param(_, _, _, Some(term)) => term.syntax

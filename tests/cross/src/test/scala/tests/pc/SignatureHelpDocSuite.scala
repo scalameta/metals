@@ -10,12 +10,21 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  Option(1).fold("")(_ => @@)
       |}
     """.stripMargin,
-    """|Returns the result of applying $f to this $option's
-       | value if the $option is nonempty.
+    """|Returns the result of applying `f` to this scala.Option's
+       | value if the scala.Option is nonempty.  Otherwise, evaluates
+       | expression `ifEmpty`.
+       |
+       |
+       |**Notes**
+       |- This is equivalent to `scala.Option map f getOrElse ifEmpty`.
+       |
+       |**Parameters**
+       |- `ifEmpty`: the expression to evaluate if empty.
+       |- `f`: the function to apply if nonempty.
        |fold[B](ifEmpty: => B)(f: Int => B): B
        |                       ^^^^^^^^^^^
-       |  @param ifEmpty `.
-       |  @param f Int => ???  to this $option's
+       |  @param ifEmpty the expression to evaluate if empty.
+       |  @param f Int => ??? the function to apply if nonempty.
        |""".stripMargin
   )
 
@@ -26,12 +35,21 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  Option(1).fold("@@")
       |}
     """.stripMargin,
-    """|Returns the result of applying $f to this $option's
-       | value if the $option is nonempty.
+    """|Returns the result of applying `f` to this scala.Option's
+       | value if the scala.Option is nonempty.  Otherwise, evaluates
+       | expression `ifEmpty`.
+       |
+       |
+       |**Notes**
+       |- This is equivalent to `scala.Option map f getOrElse ifEmpty`.
+       |
+       |**Parameters**
+       |- `ifEmpty`: the expression to evaluate if empty.
+       |- `f`: the function to apply if nonempty.
        |fold[B](ifEmpty: => B)(f: Int => B): B
        |        ^^^^^^^^^^^^^
-       |  @param ifEmpty String `.
-       |  @param f to this $option's
+       |  @param ifEmpty String the expression to evaluate if empty.
+       |  @param f the function to apply if nonempty.
        |""".stripMargin
   )
   checkDoc(
@@ -82,14 +100,17 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  Option(1, 2, @@2)
       |}
     """.stripMargin,
-    // FIXME: https://github.com/scalameta/metals/issues/518
-    // The expected output is broken here.
     """|An Option factory which creates Some(x) if the argument is not null,
        | and None if it is null.
+       |
+       |
+       |**Parameters**
+       |- `x`: the value
+       |
+       |**Returns:** Some(value) if value != null, None if value == null
        |apply[A](x: A): Option[A]
        |         ^^^^
-       |  @param A n Option factory which creates Some(x) if the argument is not null,
-       |  @param x (Int, Int, Int) ) if the argument is not null,
+       |  @param x (Int, Int, Int) the value
        |""".stripMargin
   )
   checkDoc(
@@ -115,11 +136,23 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |}
     """.stripMargin,
     """|A container class for catch/finally logic.
+       |
+       | Pass a different value for rethrow if you want to probably
+       | unwisely allow catching control exceptions and other throwables
+       | which the rest of the world may expect to get through.
+       |
+       |**Type Parameters**
+       |- `T`: result type of bodies used in try and catch blocks
+       |
+       |**Parameters**
+       |- `rethrow`: Predicate on throwables determining when to rethrow a caught Throwable
+       |- `pf`: Partial function used when applying catch logic to determine result value
+       |- `fin`: Finally logic which if defined will be invoked after catch logic
        |<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = None, rethrow: Throwable => Boolean = shouldRethrow): Exception.Catch[T]
        |       ^^^^^^^^^^^^^^^^^^^^^^^^
        |  @param pf Partial function used when applying catch logic to determine result value
-       |  @param fin ally logic.
-       |  @param rethrow if you want to probably
+       |  @param fin Finally logic which if defined will be invoked after catch logic
+       |  @param rethrow Predicate on throwables determining when to rethrow a caught Throwable
        |""".stripMargin
   )
   check(
@@ -193,9 +226,29 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Class `Some[A]` represents existing values of type
        | `A`.
+       |
+       |
+       |**Authors**
+       |- Martin Odersky
        |<init>(value: Int): Some[Int]
        |       ^^^^^^^^^^
-       |  @param value s of type
+       |""".stripMargin
+  )
+  checkDoc(
+    "markdown",
+    """
+      |object A {
+      |  1.to(10).by(@@)
+      |}
+    """.stripMargin,
+    // tests both @define and HTML expansion
+    """|Create a new range with the `start` and `end` values of this range and
+       | a new `step`.
+       |
+       |
+       |**Returns:** a new range with a different step
+       |by(step: Int): Range
+       |   ^^^^^^^^^
        |""".stripMargin
   )
 }

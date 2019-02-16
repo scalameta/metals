@@ -20,7 +20,6 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import tests.Library
 import tests.TestingSymbolSearch
-import tests.TestingWorkspaceSearch
 
 @State(Scope.Benchmark)
 abstract class CompletionBench {

@@ -1,11 +1,11 @@
 package scala.meta.internal.pc
 
-import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import scala.collection.JavaConverters._
 import scala.meta.pc.OffsetParams
+import scala.meta.internal.metals.PCEnrichments._
 
 class SignatureHelpProvider(val compiler: MetalsGlobal) {
   import compiler._
@@ -393,7 +393,8 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
             val byNameLabel =
               if (isByNamedOrdered) s"<$label>"
               else label
-            val lparam = new ParameterInformation(byNameLabel, docstring)
+            val lparam =
+              new ParameterInformation(byNameLabel, docstring.toMarkupContent)
             // TODO(olafur): use LSP 3.14.0 ParameterInformation.label offsets instead of strings
             // once this issue is fixed https://github.com/eclipse/lsp4j/issues/300
             if (isActiveSignature && t.activeArg.matches(param, i, j)) {
@@ -407,12 +408,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
                       tpe
                     }
                   if (!lparam.getLabel.endsWith(typeString)) {
-                    val content = new MarkupContent()
-                    content.setKind("markdown")
-                    content.setValue(
-                      "```scala\n" + typeString + "\n```\n" + docstring
+                    lparam.setDocumentation(
+                      ("```scala\n" + typeString + "\n```\n" + docstring).toMarkupContent
                     )
-                    lparam.setDocumentation(content)
                   }
                 case _ =>
               }

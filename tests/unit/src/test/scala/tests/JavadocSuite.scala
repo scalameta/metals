@@ -1,6 +1,5 @@
 package tests
 
-import scala.language.postfixOps
 import scala.meta.internal.docstrings.MarkdownGenerator
 
 object JavadocSuite extends BaseSuite {
@@ -14,11 +13,11 @@ object JavadocSuite extends BaseSuite {
 
   check(
     "table",
-      s"""
-         |<table>
-         |<th>foo</th>
-         |<tr><td>bar</td></tr>
-         |</table>
+    s"""
+       |<table>
+       |<th>foo</th>
+       |<tr><td>bar</td></tr>
+       |</table>
        """.stripMargin,
     ""
   )

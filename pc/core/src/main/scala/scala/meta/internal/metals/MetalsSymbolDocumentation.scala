@@ -8,7 +8,6 @@ import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaParameter
 import com.thoughtworks.qdox.model.JavaTypeVariable
 import java.util
-import java.util.Collections
 import scala.collection.JavaConverters._
 import scala.meta.internal.docstrings.MarkdownGenerator
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -30,7 +29,6 @@ object MetalsSymbolDocumentation {
     try MarkdownGenerator.fromDocstring(s"/**${e.getComment}\n*/", Map.empty)
     catch {
       case NonFatal(_) =>
-        Collections.
         // The Scaladoc parser implementation uses fragile regexp processing which
         // sometimes causes exceptions.
         e.getComment

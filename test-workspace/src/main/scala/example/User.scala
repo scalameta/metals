@@ -1,3 +1,5 @@
 package myexample
 
-object A {}
+object A {
+  val x = 1
+}
