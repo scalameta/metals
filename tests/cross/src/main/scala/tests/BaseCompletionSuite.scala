@@ -7,20 +7,6 @@ import scala.meta.internal.metals.PCEnrichments._
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 
-  def checkLength(
-      name: String,
-      original: String,
-      expected: Set[Int],
-      compat: Map[String, Set[Int]] = Map.empty
-  ): Unit = {
-    test(name) {
-      val (code, offset) = params(original)
-      val expectedNumbers = getExpected(expected, compat)
-      val result = pc.complete(CompilerOffsetParams("A.scala", code, offset))
-      assert(expectedNumbers.contains(result.getItems.size()))
-    }
-  }
-
   private def resolvedCompletions(
       params: CompilerOffsetParams
   ): CompletionItems = {

@@ -7,18 +7,6 @@ object CompletionSuite extends BaseCompletionSuite {
     indexJDK()
   }
 
-  //  The following method tests too many results so we only assert the total number of results
-  // to catch at least regressions. It's OK to update the expected number, but at least double check
-  // the output makes sense before doing so.
-  checkLength(
-    "open",
-    """
-      |object Local {
-      |  @@
-      |}""".stripMargin,
-    Set(456, 457)
-  )
-
   check(
     "scope",
     """
