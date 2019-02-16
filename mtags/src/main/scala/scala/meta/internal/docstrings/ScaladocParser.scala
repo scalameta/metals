@@ -1,5 +1,6 @@
 package scala.meta.internal.docstrings
 
+import java.util.regex.Pattern
 import scala.annotation.tailrec
 import scala.collection.{Map, Seq, mutable}
 import scala.meta.Position
@@ -227,13 +228,19 @@ object ScaladocParser {
       defines: collection.Map[String, String]
   ): String = {
     val m = DefineReferenceRegex.pattern.matcher(in)
-    val out = new StringBuffer()
+    val out = new StringBuilder()
+    var start = 0
     while (m.find()) {
+      out.append(in.substring(start, m.start()))
+      start = m.end()
       val key = in.substring(m.start() + 1, m.end())
-      m.appendReplacement(out, defines.getOrElse(key, key))
+      defines.get(key) match {
+        case Some(value) => out.append(value)
+        case None => out.append(m.group())
+      }
     }
-    m.appendTail(out)
-    out.toString
+    out.append(in.substring(start))
+    out.toString()
   }
 
   def cleanLine(line: String): String = {

@@ -8,10 +8,13 @@ import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaParameter
 import com.thoughtworks.qdox.model.JavaTypeVariable
 import java.util
+import java.util.Collections
 import scala.collection.JavaConverters._
+import scala.meta.internal.docstrings.MarkdownGenerator
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.pc.SymbolDocumentation
+import scala.util.control.NonFatal
 
 case class MetalsSymbolDocumentation(
     symbol: String,
@@ -23,11 +26,21 @@ case class MetalsSymbolDocumentation(
 ) extends SymbolDocumentation
 
 object MetalsSymbolDocumentation {
+  def markdown(e: JavaAnnotatedElement): String = {
+    try MarkdownGenerator.fromDocstring(s"/**${e.getComment}\n*/", Map.empty)
+    catch {
+      case NonFatal(_) =>
+        Collections.
+        // The Scaladoc parser implementation uses fragile regexp processing which
+        // sometimes causes exceptions.
+        e.getComment
+    }
+  }
   def fromMethod(symbol: String, method: JavaMethod): SymbolDocumentation = {
     new MetalsSymbolDocumentation(
       symbol,
       method.getName,
-      method.getComment,
+      markdown(method),
       "",
       typeParameters(symbol, method, method.getTypeParameters),
       parameters(symbol, method, method.getParameters)
@@ -40,7 +53,7 @@ object MetalsSymbolDocumentation {
     new MetalsSymbolDocumentation(
       symbol,
       method.getName,
-      method.getComment,
+      markdown(method),
       "",
       typeParameters(symbol, method, method.getTypeParameters),
       Nil.asJava
@@ -53,7 +66,7 @@ object MetalsSymbolDocumentation {
     new MetalsSymbolDocumentation(
       symbol,
       method.getName,
-      method.getComment,
+      markdown(method),
       "",
       typeParameters(symbol, method, method.getTypeParameters),
       parameters(symbol, method, method.getParameters)

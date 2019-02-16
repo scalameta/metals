@@ -19,11 +19,10 @@ class ScaladocIndexer(
     input: Input.VirtualFile,
     fn: SymbolDocumentation => Unit
 ) extends ScalaMtags(input) {
-  val describes = mutable.Map.empty[String, String]
+  val defines = mutable.Map.empty[String, String]
   def toMarkdown(symbol: String, docstring: String): String = {
-    describes ++= ScaladocParser.extractDefines(docstring)
-    val comment = ScaladocParser.parseComment(docstring, describes)
-    MarkdownGenerator.toMarkdown(comment)
+    defines ++= ScaladocParser.extractDefines(docstring)
+    MarkdownGenerator.fromDocstring(docstring, defines)
   }
   override def visitOccurrence(
       occ: SymbolOccurrence,

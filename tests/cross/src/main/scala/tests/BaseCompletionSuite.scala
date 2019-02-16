@@ -65,8 +65,17 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           .append(commitCharacter)
           .append("\n")
       }
-      assertNoDiff(out.toString(), getExpected(expected, compat))
+      assertNoDiff(
+        trimTrailingSpace(out.toString()),
+        getExpected(expected, compat)
+      )
     }
+  }
+
+  def trimTrailingSpace(string: String): String = {
+    string.linesIterator
+      .map(_.replaceFirst("\\s++$", ""))
+      .mkString("\n")
   }
 
 }
