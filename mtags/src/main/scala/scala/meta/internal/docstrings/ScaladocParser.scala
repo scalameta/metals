@@ -3,6 +3,7 @@ package scala.meta.internal.docstrings
 import scala.annotation.tailrec
 import scala.collection.{Map, Seq, mutable}
 import scala.meta.Position
+import scala.meta.internal.tokenizers.Chars
 import scala.util.matching.Regex
 
 /**
@@ -197,6 +198,51 @@ object ScaladocParser {
       extends TagKey
 
   private val TrailingWhitespaceRegex = """\s+$""".r
+  def parseComment(
+      comment: String,
+      defines: collection.Map[String, String] = Map.empty
+  ): Comment = {
+    parseAtSymbol(HtmlConverter.convert(expandDefines(comment, defines)))
+  }
+
+  def extractDefines(
+      docstring: String
+  ): Iterator[(String, String)] = {
+    for {
+      section @ (start, end) <- ScaladocUtils.tagIndex(docstring).iterator
+      if ScaladocUtils.startsWithTag(docstring, section, "@define")
+      List("@define", key, value) <- List(
+        docstring
+          .substring(start, end)
+          .split("\\s", 3)
+          .toList
+      )
+      cleaned = value.linesIterator.map(cleanLine).mkString("\n").trim
+    } yield key -> cleaned
+  }
+
+  private val DefineReferenceRegex = "\\$([a-zA-Z]+)".r
+  def expandDefines(
+      in: String,
+      defines: collection.Map[String, String]
+  ): String = {
+    val m = DefineReferenceRegex.pattern.matcher(in)
+    val out = new StringBuffer()
+    while (m.find()) {
+      val key = in.substring(m.start() + 1, m.end())
+      m.appendReplacement(out, defines.getOrElse(key, key))
+    }
+    m.appendTail(out)
+    out.toString
+  }
+
+  def cleanLine(line: String): String = {
+    // Remove trailing whitespaces
+    TrailingWhitespaceRegex.replaceAllIn(line, "") match {
+      case CleanCommentLine(ctl) => ctl
+      case tl => tl
+    }
+  }
 
   /** Parses a raw comment string into a `Comment` object.
    * @param comment The expanded comment string (including start and end markers) to be parsed.
@@ -210,13 +256,6 @@ object ScaladocParser {
     /** The cleaned raw comment as a list of lines. Cleaning removes comment
      * start and end markers, line start markers  and unnecessary whitespace. */
     def clean(comment: String): List[String] = {
-      def cleanLine(line: String): String = {
-        // Remove trailing whitespaces
-        TrailingWhitespaceRegex.replaceAllIn(line, "") match {
-          case CleanCommentLine(ctl) => ctl
-          case tl => tl
-        }
-      }
       val strippedComment = comment.trim.stripPrefix("/*").stripSuffix("*/")
       val safeComment = DangerousTags.replaceAllIn(strippedComment, {
         htmlReplacement(_)
@@ -229,7 +268,7 @@ object ScaladocParser {
           java.util.regex.Matcher
             .quoteReplacement(safeTagMarker + mtch.matched + safeTagMarker)
         })
-      markedTagComment.lines.toList map (cleanLine(_))
+      markedTagComment.lines.toList.map(cleanLine)
     }
 
     /** Parses a comment (in the form of a list of lines) to a `Comment`
@@ -1401,4 +1440,5 @@ object ScaladocParser {
 
     def isWhitespaceOrNewLine(c: Char) = isWhitespace(c) || c == '\n'
   }
+
 }

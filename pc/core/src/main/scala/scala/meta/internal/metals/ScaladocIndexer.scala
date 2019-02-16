@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.meta._
 import scala.meta.internal.docstrings._
 import scala.meta.internal.mtags.ScalaMtags
@@ -18,6 +19,12 @@ class ScaladocIndexer(
     input: Input.VirtualFile,
     fn: SymbolDocumentation => Unit
 ) extends ScalaMtags(input) {
+  val describes = mutable.Map.empty[String, String]
+  def toMarkdown(symbol: String, docstring: String): String = {
+    describes ++= ScaladocParser.extractDefines(docstring)
+    val comment = ScaladocParser.parseComment(docstring, describes)
+    MarkdownGenerator.toMarkdown(comment)
+  }
   override def visitOccurrence(
       occ: SymbolOccurrence,
       sinfo: SymbolInformation,
@@ -51,7 +58,7 @@ class ScaladocIndexer(
         }
         .getOrElse("")
     }
-    lazy val markdown = ScaladocIndexer.toMarkdown(docstring)
+    lazy val markdown = toMarkdown(occ.symbol, docstring)
     def param(name: String, default: String): SymbolDocumentation =
       new MetalsSymbolDocumentation(
         Symbols.Global(owner, Descriptor.Parameter(name)),
@@ -138,48 +145,10 @@ object ScaladocIndexer {
   }
 
   def toMarkdown(docstring: String): String = {
-    val comment = ScaladocParser.parseAtSymbol(docstring)
-    val out = new StringBuilder()
-    def loop(i: Inline): Unit = i match {
-      case Chain(items) =>
-        items.foreach(loop)
-      case Italic(text) =>
-        out.append('*')
-        loop(text)
-        out.append('*')
-      case Bold(text) =>
-        out.append("**")
-        loop(text)
-        out.append("**")
-      case Underline(text) =>
-        out.append("_")
-        loop(text)
-        out.append("_")
-      case Superscript(text) =>
-        loop(text)
-      case Subscript(text) =>
-        loop(text)
-      case Link(target, title) =>
-        out.append("[")
-        loop(title)
-        out
-          .append("](")
-          .append(target)
-          .append(")")
-      case Monospace(text) =>
-        out.append("`")
-        loop(text)
-        out.append("`")
-      case Text(text) =>
-        out.append(text)
-      case _: EntityLink =>
-      case HtmlTag(data) =>
-        out.append(data)
-      case Summary(text) =>
-        loop(text)
-    }
-    loop(comment.short)
-    out.toString().trim
+
+    List(1).headOption
+//        MarkdownGenerator.toMarkdown(docstring)
+    docstring
   }
 
   def findLeadingDocstring(tokens: Tokens, start: Int): Option[String] =

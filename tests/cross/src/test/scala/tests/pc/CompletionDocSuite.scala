@@ -245,6 +245,43 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true
   )
+  check(
+    "scala12",
+    """
+      |object A {
+      |  Option(1).isDefined@@
+      |}
+    """.stripMargin,
+    """|> Returns true if the option is an instance of scala.Some, false otherwise.
+       |isDefined: Boolean
+       |""".stripMargin,
+    includeDocs = true
+  )
+  check(
+    "scala13",
+    """
+      |object A {
+      |  scala.collection.immutable.TreeMap.empty[Int, Int].updated@@
+      |}
+    """.stripMargin,
+    // tests both @define and HTML expansion
+    """|> A new TreeMap with the entry added is returned,
+       | if key is *not* in the TreeMap, otherwise
+       | the key is updated with the new entry.
+       |
+       |
+       |**Type Parameters**
+       |- `B1`: type of the value of the new binding which is a supertype of `B`
+       |
+       |**Parameters**
+       |- `key`: the key that should be updated
+       |- `value`: the value to be associated with `key`
+       |
+       |**Returns:** a new immutable tree map with the updated binding
+       |updated[B1 >: Int](key: Int, value: B1): TreeMap[Int,B1]
+       |""".stripMargin,
+    includeDocs = true
+  )
 
   check(
     "local",
