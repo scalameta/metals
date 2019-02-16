@@ -43,6 +43,13 @@ abstract class BasePCSuite extends BaseSuite {
   def indexJDK(): Unit = {
     index.addSourceJar(JdkSources().get)
   }
+
+  override def test(name: String)(fun: => Any): Unit = {
+    // We are unable to infer the JDK jars on Appveyor
+    // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
+    if (isAppveyor) ignore(name)(())
+    else super.test(name)(fun)
+  }
   def indexScalaLibrary(): Unit = {
     val sources = CoursierSmall.fetch(
       new Settings()
