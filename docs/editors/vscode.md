@@ -66,6 +66,20 @@ command to copy the Java 8 home path.
 /usr/libexec/java_home -v 1.8 | pbcopy
 ```
 
+## HTTP proxy
+
+Metals uses [Coursier](https://get-coursier.io/docs/other-proxy) to download
+artifacts from Maven Central. To use Metals behind an HTTP proxy, configure the
+system properties `-Dhttps.proxyHost=… -Dhttps.proxyPort=…` in one of the
+following locations:
+
+- `.jvmopts` file in the workspace directory.
+- `JAVA_OPTS` environment variable, make sure to start `code` from your terminal
+  when using this option since environment variables don't always propagate
+  correctly when opening VS Code as a GUI application outside a terminal.
+- "Server Properties" setting for the Metals VS Code extension, which can be
+  configured per-workspace or per-user.
+
 ## Using latest Metals SNAPSHOT
 
 Update the "Server Version" setting to try out the latest pending Metals
