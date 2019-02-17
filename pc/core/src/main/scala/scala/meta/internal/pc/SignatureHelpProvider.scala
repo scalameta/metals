@@ -83,11 +83,16 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       all
     }
   }
+
   object MethodCall {
-    // Returns true if this symbol is `TupleN.apply` constructor.
+
+    /**
+     * Returns true if this symbol is `TupleN.apply` constructor.
+     */
     def isTupleApply(sym: Symbol): Boolean =
       sym.name == termNames.apply &&
         definitions.isTupleSymbol(sym.owner.companion)
+
     def unapply(tree: Tree): Option[MethodCall] = {
       tree match {
         case TypeApply(qual, targs) =>

@@ -11,7 +11,6 @@ import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 import scala.util.control.NonFatal
-import scala.meta.internal.semanticdb.Scala._
 import scala.meta.pc.SymbolSearchVisitor
 import org.eclipse.{lsp4j => l}
 

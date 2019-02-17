@@ -11,7 +11,7 @@ class CompletionItemResolver(
   def resolve(item: CompletionItem, msym: String): CompletionItem = {
     val gsym = inverseSemanticdbSymbol(msym)
     if (gsym != NoSymbol) {
-      methodInfo(gsym).orElse(methodInfo(gsym.companion)) match {
+      symbolDocumentation(gsym).orElse(symbolDocumentation(gsym.companion)) match {
         case Some(info) if item.getDetail != null =>
           if (isJavaSymbol(gsym)) {
             val newDetail = info
@@ -53,7 +53,7 @@ class CompletionItemResolver(
 
   def fullDocstring(gsym: Symbol): String = {
     def docs(gsym: Symbol): String =
-      methodInfo(gsym).fold("")(_.docstring())
+      symbolDocumentation(gsym).fold("")(_.docstring())
     val gsymDoc = docs(gsym)
     def keyword(gsym: Symbol): String =
       if (gsym.isClass) "class"
