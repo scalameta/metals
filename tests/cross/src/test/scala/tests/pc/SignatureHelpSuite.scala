@@ -246,8 +246,45 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  } yield l
       |}
     """.stripMargin,
-    """|flatMap[B](f: Int => Option[B]): Option[B]
-       |           ^^^^^^^^^^^^^^^^^^^
+    ""
+  )
+
+  check(
+    "for1",
+    """
+      |object a {
+      |  for {
+      |    i <- List(1)
+      |    k = {
+      |      Option(10@@)
+      |    }
+      |  } yield k
+      |}
+    """.stripMargin,
+    """|apply[A](x: A): Option[A]
+       |         ^^^^
+       |""".stripMargin
+  )
+
+  check(
+    "for2",
+    """
+      |object a {
+      |  for {
+      |    i <- List(1)
+      |    if i < 0
+      |    k = 100
+      |    j <- i.to(@@)
+      |  } yield k
+      |}
+    """.stripMargin,
+    """|to(end: T): NumericRange.Inclusive[T]
+       |   ^^^^^^
+       |to(end: T, step: T): NumericRange.Inclusive[T]
+       |to(end: Int): Range.Inclusive
+       |to(end: Int, step: Int): Range.Inclusive
+       |to(end: T): FractionalProxy#ResultWithoutStep
+       |to(end: T, step: T): NumericRange.Inclusive[T]
        |""".stripMargin
   )
 

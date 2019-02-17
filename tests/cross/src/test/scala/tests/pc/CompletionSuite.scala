@@ -110,25 +110,25 @@ object CompletionSuite extends BaseCompletionSuite {
        |GenericCanBuildFrom scala.collection.generic.GenTraversableFactory
        |ReusableCBF: List.GenericCanBuildFrom[Nothing]
        |concat[A](xss: Traversable[A]*): List[A]
+       |fill[A](n: Int)(elem: => A): List[A]
        |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
        |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]]]
        |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]]]
        |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
-       |fill[A](n: Int)(elem: => A): List[A]
        |iterate[A](start: A, len: Int)(f: A => A): List[A]
        |range[T](start: T, end: T)(implicit evidence$1: Integral[T]): List[T]
        |range[T](start: T, end: T, step: T)(implicit evidence$2: Integral[T]): List[T]
+       |tabulate[A](n: Int)(f: Int => A): List[A]
        |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A]]
        |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
        |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
        |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
-       |tabulate[A](n: Int)(f: Int => A): List[A]
        |unapplySeq[A](x: List[A]): Some[List[A]]
        |->[B](y: B): (A, B)
        |+(other: String): String
        |ensuring(cond: A => Boolean): A
-       |ensuring(cond: A => Boolean, msg: => Any): A
        |ensuring(cond: Boolean): A
+       |ensuring(cond: A => Boolean, msg: => Any): A
        |ensuring(cond: Boolean, msg: => Any): A
        |formatted(fmtstr: String): String
        |asInstanceOf[T0]: T0
@@ -437,6 +437,21 @@ object CompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|incrementThisType(): A.this.type (with underlying type A)
+       |""".stripMargin
+  )
+  check(
+    "deprecated",
+    """
+      |class A {
+      |  1.until@@
+      |}
+    """.stripMargin,
+    """|until(end: T): NumericRange.Exclusive[T]
+       |until(end: T, step: T): NumericRange.Exclusive[T]
+       |until(end: Int): Range
+       |until(end: Int, step: Int): Range
+       |until(end: T): FractionalProxy#ResultWithoutStep
+       |until(end: T, step: T): NumericRange.Exclusive[T]
        |""".stripMargin
   )
 }

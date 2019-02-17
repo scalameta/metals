@@ -11,4 +11,5 @@ object MemberOrdering {
   val IsNotCaseAccessor = 1 << 23
   val IsNotPublic = 1 << 22
   val IsSynthetic = 1 << 21
+  val IsDeprecated = 1 << 20
 }

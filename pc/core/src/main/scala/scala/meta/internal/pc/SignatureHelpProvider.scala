@@ -84,6 +84,10 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     }
   }
   object MethodCall {
+    // Returns true if this symbol is `TupleN.apply` constructor.
+    def isTupleApply(sym: Symbol): Boolean =
+      sym.name == termNames.apply &&
+        definitions.isTupleSymbol(sym.owner.companion)
     def unapply(tree: Tree): Option[MethodCall] = {
       tree match {
         case TypeApply(qual, targs) =>
@@ -106,7 +110,10 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
             }
           }
           val symbol = treeSymbol(tree)
-          Option(symbol.info).map { info =>
+          for {
+            info <- Option(symbol.info)
+            if !isTupleApply(symbol)
+          } yield {
             val (refQual, argss) = info.paramss match {
               case _ :: tail =>
                 loop(qual, tail, args :: Nil)
@@ -221,8 +228,8 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
               } =>
           Some(expr)
         case _ =>
-          if (tree.pos.isTransparent) None
-          else Some(tree)
+          if (tree.pos != null && tree.pos.includes(pos)) Some(tree)
+          else None
       }
     }
     override def traverse(tree: compiler.Tree): Unit = {
@@ -261,9 +268,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
 
   // Same as `tree.symbol` but tries to recover from type errors
   // by using the completions API.
-  def treeSymbol(tree0: Tree): Symbol = {
-    if (tree0.symbol != NoSymbol && !tree0.symbol.isError) {
-      tree0.symbol
+  def treeSymbol(tree: Tree): Symbol = {
+    if (tree.symbol != NoSymbol && !tree.symbol.isError) {
+      tree.symbol
     } else {
       def applyQualifier(tree: Tree): Option[RefTree] = tree match {
         case Select(New(t: RefTree), _) => Some(t)
@@ -273,16 +280,32 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
           None
       }
       val completionFallback = for {
-        qual <- applyQualifier(tree0)
-        completion <- completionsAt(qual.pos.focus).results
-          .find(_.sym.name == qual.name)
-        if !completion.sym.isErroneous
-      } yield completion.sym
+        qual <- applyQualifier(tree)
+        completions = completionsAt(qual.pos.focus).results
+          .filter(_.sym.name == qual.name)
+          .sorted(memberOrdering(Option(qual.tpe), new ShortenedNames()))
+          .map(_.sym)
+          .distinct
+        completion <- completions match {
+          case Nil =>
+            None
+          case head :: Nil =>
+            Some(head)
+          case head :: _ =>
+            Some(
+              head.newOverloaded(
+                Option(qual.tpe).getOrElse(NoPrefix),
+                completions
+              )
+            )
+        }
+        if !completion.isErroneous
+      } yield completion
       completionFallback
         .orElse {
-          val qual = tree0 match {
+          val qual = tree match {
             case TreeApply(q @ Select(New(_), _), _) => q
-            case _ => tree0
+            case _ => tree
           }
           Option(compiler.typedTreeAt(qual.pos).symbol)
         }
@@ -292,6 +315,12 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
 
   case class ParamIndex(j: Int, param: Symbol)
 
+  def nonOverloadInfo(info: Type): Type = {
+    info match {
+      case OverloadedType(NoPrefix, head :: _) => head.info
+      case tpe => tpe
+    }
+  }
   def toSignatureHelp(t: EnclosingMethodCall): SignatureHelp = {
     val activeParent = t.call.nonOverload
     var activeSignature: Integer = null
@@ -300,9 +329,10 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     val infos = t.alternatives.zipWithIndex.collect {
       case (method: MethodSymbol, i) =>
         val isActiveSignature = method == activeParent
-        val tpe =
+        val tpe = nonOverloadInfo(
           if (isActiveSignature) t.call.qualTpe
           else method.info
+        )
         val paramss: List[List[Symbol]] =
           if (!isActiveSignature) {
             mparamss(tpe)
@@ -422,7 +452,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       printer.methodSignature(
         paramLabels.iterator.map(_.iterator.map(_.getLabel))
       ),
-      printer.methodDocstring,
+      printer.methodDocstring.toMarkupContent,
       paramLabels.iterator.flatten.toSeq.asJava
     )
   }
