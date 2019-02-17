@@ -35,6 +35,9 @@ class BootstrapModifier extends StringModifier {
            |  -o /usr/local/bin/$binary -f
            |```
            |Make sure the generated `$binary` binary is available on your `$$PATH`.
+           |
+           |Configure the system properties `-Dhttps.proxyHost=… -Dhttps.proxyPort=…`
+           |if you are behind an HTTP proxy.
            |""".stripMargin
       case _ =>
         reporter.error(s"Invalid info '$info'. Expected '<binary> <client>'")
