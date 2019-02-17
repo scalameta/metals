@@ -55,8 +55,8 @@ Note that 2.10.x and 2.13.0-M5 are not supported.</p>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
-<td>0.4.4+15-ac8fa735-SNAPSHOT</td>
-<td>14 Feb 2019 15:56</td>
+<td>0.4.4+17-2e3c4276-SNAPSHOT</td>
+<td>17 Feb 2019 10:36</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>
@@ -76,6 +76,8 @@ chmod +x coursier
   -o /usr/<span class="hljs-built_in">local</span>/bin/metals-sublime -f
 </code></pre>
 <p>Make sure the generated <code>metals-sublime</code> binary is available on your <code>$PATH</code>.</p>
+<p>Configure the system properties <code>-Dhttps.proxyHost=… -Dhttps.proxyPort=…</code>
+if you are behind an HTTP proxy.</p>
 <p>The <code>-Dmetals.client=sublime</code> flag configures Metals for usage with the Sublime
 Text LSP client.</p>
 <p>Next, update the LSP plugin settings to run <code>metals-sublime</code> for Scala sources:
