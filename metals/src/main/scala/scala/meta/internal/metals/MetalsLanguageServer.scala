@@ -513,7 +513,6 @@ class MetalsLanguageServer(
         ()
       }
     } else {
-      compilers.ensureCompiler(List(path))
       compileSourceFiles(List(path)).asJava
     }
   }
@@ -537,7 +536,6 @@ class MetalsLanguageServer(
               buildTargets.isInverseDependency(target, lastCompile.toList)
           val needsCompile = isAffectedByCurrentCompilation || isAffectedByLastCompilation
           if (needsCompile) {
-            compilers.ensureCompiler(List(path))
             compileSourceFiles(List(path))
               .map(_ => DidFocusResult.Compiled)
               .asJava
@@ -1054,7 +1052,6 @@ class MetalsLanguageServer(
         indexWorkspace(i)
       }
       _ = indexingPromise.trySuccess(())
-      _ = compilers.ensureCompiler(buffers.open)
       _ <- cascadeCompileSourceFiles(buffers.open.toSeq)
     } yield {
       BuildChange.Reconnected

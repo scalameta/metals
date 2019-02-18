@@ -12,8 +12,6 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -88,13 +86,6 @@ class Compilers(
       )
     }
 
-  /**
-   * Eagerly loads the presentation compiler in the background.
-   */
-  def ensureCompiler(paths: Iterable[AbsolutePath]): Unit = Future {
-    paths.foreach(path => loadCompiler(path))
-  }
-
   private def loadCompiler(path: AbsolutePath): Option[PresentationCompiler] = {
     for {
       target <- buildTargets.inverseSources(path)
@@ -109,20 +100,15 @@ class Compilers(
       if isSupported
       scalac <- buildTargets.scalacOptions(target)
     } yield {
-      val promise = Promise[Unit]()
-      try {
-        jcache.computeIfAbsent(
-          target, { _ =>
-            statusBar.trackFuture(
-              s"${statusBar.icons.sync}Loading presentation compiler",
-              promise.future
-            )
+      jcache.computeIfAbsent(
+        target, { _ =>
+          statusBar.trackBlockingTask(
+            s"${statusBar.icons.sync}Loading presentation compiler"
+          ) {
             newCompiler(scalac, scala)
           }
-        )
-      } finally {
-        promise.trySuccess(())
-      }
+        }
+      )
     }
   }
 

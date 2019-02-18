@@ -144,7 +144,7 @@ trait Signatures { this: MetalsGlobal =>
           implicitEvidencesByTypeParam.getOrElse(param, Nil) match {
             case Nil => ""
             case head :: Nil => s":$head"
-            case many => many.mkString(": ", " : ", "")
+            case many => many.mkString(": ", ": ", "")
           }
         s"$name$paramTypeString$contextBounds"
       } else {
