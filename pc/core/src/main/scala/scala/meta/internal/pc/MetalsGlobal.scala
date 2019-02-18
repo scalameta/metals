@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.util
 import java.util.logging.Logger
 import scala.language.implicitConversions
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
@@ -208,8 +209,17 @@ class MetalsGlobal(
     }
     val unit = newCompilationUnit(codeWithCursor, filename)
     val richUnit = new RichCompilationUnit(unit.source)
-    unitOfFile(richUnit.source.file) = richUnit
-    richUnit
+    unitOfFile.get(richUnit.source.file) match {
+      case Some(value)
+          if util.Arrays.equals(
+            value.source.content,
+            richUnit.source.content
+          ) =>
+        value
+      case _ =>
+        unitOfFile(richUnit.source.file) = richUnit
+        richUnit
+    }
   }
 
   // Needed for 2.11 where `Name` doesn't extend CharSequence.
