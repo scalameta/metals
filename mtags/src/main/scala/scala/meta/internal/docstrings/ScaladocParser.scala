@@ -262,11 +262,11 @@ object ScaladocParser {
      * start and end markers, line start markers  and unnecessary whitespace. */
     def clean(comment: String): List[String] = {
       val strippedComment = comment.trim.stripPrefix("/*").stripSuffix("*/")
-      val safeComment = DangerousTags.replaceAllIn(strippedComment, {
-        htmlReplacement(_)
+      val safeComment = DangerousTags.replaceAllIn(strippedComment, { mtch =>
+        java.util.regex.Matcher.quoteReplacement(htmlReplacement(mtch))
       })
-      val javadoclessComment = JavadocTags.replaceAllIn(safeComment, {
-        javadocReplacement(_)
+      val javadoclessComment = JavadocTags.replaceAllIn(safeComment, { mtch =>
+        java.util.regex.Matcher.quoteReplacement(javadocReplacement(mtch))
       })
       val markedTagComment =
         SafeTags.replaceAllIn(javadoclessComment, { mtch =>
