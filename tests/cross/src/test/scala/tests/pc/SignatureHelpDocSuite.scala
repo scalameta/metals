@@ -24,7 +24,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |fold[B](ifEmpty: => B)(f: Int => B): B
        |                       ^^^^^^^^^^^
        |  @param ifEmpty the expression to evaluate if empty.
-       |  @param f Int => ??? the function to apply if nonempty.
+       |  @param f the function to apply if nonempty.
        |""".stripMargin
   )
 
@@ -90,7 +90,6 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """|
        |map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |  @param f Int => ???
        |""".stripMargin
   )
   checkDoc(

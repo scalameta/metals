@@ -11,7 +11,6 @@ import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
-import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise

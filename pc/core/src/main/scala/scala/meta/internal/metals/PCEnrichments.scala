@@ -98,4 +98,15 @@ trait PCEnrichments {
       case _ => l.SymbolKind.Class
     }
   }
+  implicit class XtensionIteratorCollection[T](it: Iterator[T]) {
+    def headOption: Option[T] = {
+      if (it.hasNext) Some(it.next())
+      else None
+    }
+    def lastOption: Option[T] = {
+      it.foldLeft(Option.empty[T]) {
+        case (_, e) => Some(e)
+      }
+    }
+  }
 }

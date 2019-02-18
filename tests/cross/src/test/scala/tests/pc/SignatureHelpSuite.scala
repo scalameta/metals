@@ -424,4 +424,47 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |         ^^^^
        |""".stripMargin
   )
+
+  check(
+    "last-arg1",
+    """
+      |object A {
+      |  List[Int]("").map(a => @@)
+      |}
+    """.stripMargin,
+    """|map[B, That](f: A => B)(implicit bf: CanBuildFrom[List[A],B,That]): That
+       |             ^^^^^^^^^
+       |map[B](f: A => B): TraversableOnce[B]
+       |""".stripMargin
+  )
+
+  check(
+    "last-arg2",
+    """
+      |object A {
+      |  List(1).map(a => 2 @@)
+      |}
+    """.stripMargin,
+    """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
+       |             ^^^^^^^^^^^
+       |""".stripMargin
+  )
+  check(
+    "last-arg3",
+    """
+      |  trait TypeClass[F[_]]
+      |  object App {
+      |    final class TypeClassOps[F[_], A](private val a: F[A]) extends AnyVal {
+      |      def map[G[_]](fn: A => G[A])(implicit T: TypeClass[F]): G[A] = ???
+      |    }
+      |    implicit def conv[F[A], A](e: F[A])(implicit T: TypeClass[F]): TypeClassOps[F, A] = new TypeClassOps(e)
+      |    class App[F[_]:TypeClass] {
+      |      null.asInstanceOf[F[Int]].map(a => @@)
+      |    }
+      |  }
+    """.stripMargin,
+    """|map[G[_]](fn: Int => G[Int])(implicit T: TypeClass[F]): G[Int]
+       |          ^^^^^^^^^^^^^^^^^
+       |""".stripMargin
+  )
 }

@@ -46,6 +46,14 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       tparams: List[Tree],
       argss: List[List[Tree]]
   ) {
+    private def nonOverloadInfo(info: Type): Type = {
+      info match {
+        case OverloadedType(_, head :: _) => head.info
+        case PolyType(tparam, resultType) =>
+          PolyType(tparam, nonOverloadInfo(resultType))
+        case tpe => tpe
+      }
+    }
     def qualTpe: Type = {
       val fromOverload = qual.tpe match {
         case OverloadedType(pre, alts) =>
@@ -53,8 +61,10 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
           pre.memberType(alts.find(_ == toFind).getOrElse(alts.head))
         case tpe => tpe
       }
-      if (fromOverload == null) symbol.info
-      else fromOverload
+      nonOverloadInfo(
+        if (fromOverload == null) symbol.info
+        else fromOverload
+      )
     }
     def alternatives: List[Symbol] = symbol match {
       case o: ModuleSymbol =>
@@ -70,11 +80,11 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       if (!symbol.isOverloaded) symbol
       else alternatives.headOption.getOrElse(symbol)
     def gparamss: List[List[Symbol]] = {
-      if (symbol.typeParams.isEmpty) nonOverload.paramLists
+      if (qualTpe.typeParams.isEmpty) nonOverload.paramLists
       else nonOverload.typeParams :: nonOverload.paramLists
     }
     def all: List[List[Tree]] =
-      if (tparams.isEmpty) argss
+      if (qualTpe.typeParams.isEmpty) argss
       else tparams :: argss
     def paramTree(i: Int, j: Int): List[Tree] =
       all.lift(i).flatMap(_.lift(j)).toList
@@ -122,6 +132,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
               case _ :: tail =>
                 loop(qual, tail, args :: Nil)
               case _ =>
+                loop(qual, Nil, args :: Nil)
                 (qual, args :: Nil)
             }
             MethodCall(refQual, symbol, tparams, argss)
@@ -146,7 +157,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     }
     if (leadingDelimiter >= 0) {
       text.charAt(leadingDelimiter) match {
-        case '(' | '[' | ',' =>
+        case '(' | '[' | ',' | '>' =>
           var trailingDelimiter = offset
           while (trailingDelimiter < text.length &&
             text.charAt(trailingDelimiter).isWhitespace) {
@@ -235,7 +246,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     def visit(tree: Tree): Unit = tree match {
       case MethodCall(call) =>
         var start = call.qual.pos.end
-        val lastArgument = call.argss.lastOption.flatMap(_.lastOption)
+        val lastArgument = call.margss.iterator.flatten
+          .filter(_.pos.isRange)
+          .lastOption
         for {
           (args, i) <- call.margss.zipWithIndex
           (arg, j) <- args.zipWithIndex
@@ -308,12 +321,6 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
 
   case class ParamIndex(j: Int, param: Symbol)
 
-  def nonOverloadInfo(info: Type): Type = {
-    info match {
-      case OverloadedType(NoPrefix, head :: _) => head.info
-      case tpe => tpe
-    }
-  }
   def toSignatureHelp(t: EnclosingMethodCall): SignatureHelp = {
     val activeParent = t.call.nonOverload
     var activeSignature: Integer = null
@@ -322,10 +329,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     val infos = t.alternatives.zipWithIndex.collect {
       case (method: MethodSymbol, i) =>
         val isActiveSignature = method == activeParent
-        val tpe = nonOverloadInfo(
+        val tpe =
           if (isActiveSignature) t.call.qualTpe
           else method.info
-        )
         val paramss: List[List[Symbol]] =
           if (!isActiveSignature) {
             mparamss(tpe)
@@ -424,15 +430,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
               arg(i, j) match {
                 case Some(a) if a.tpe != null && !a.tpe.isErroneous =>
                   val tpe = metalsToLongString(a.tpe.widen, shortenedNames)
-                  val typeString =
-                    if (tpe.endsWith("=> Null")) {
-                      tpe.stripSuffix("=> Null") + "=> ???"
-                    } else {
-                      tpe
-                    }
-                  if (!lparam.getLabel.endsWith(typeString)) {
+                  if (!lparam.getLabel.endsWith(tpe)) {
                     lparam.setDocumentation(
-                      ("```scala\n" + typeString + "\n```\n" + docstring).toMarkupContent
+                      ("```scala\n" + tpe + "\n```\n" + docstring).toMarkupContent
                     )
                   }
                 case _ =>
