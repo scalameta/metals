@@ -296,6 +296,9 @@ lazy val cross = project
   .in(file("tests/cross"))
   .settings(
     testSettings,
+    libraryDependencies ++= List(
+      "org.typelevel" %% "cats-core" % "1.6.0"
+    ),
     crossScalaVersions := V.supportedScalaVersions
   )
   .dependsOn(mtest, pc)

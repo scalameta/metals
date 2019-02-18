@@ -19,7 +19,6 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       cursor = cursor(params.offset(), params.text())
     )
     val pos = unit.position(params.offset())
-    // TODO(olafur) validate we need `typeCheck` and `typedTreeAtPos` is not sufficient.
     compiler.typeCheck(unit)
     EnclosingMethodCall
       .fromPosition(pos, unit.body)
@@ -196,24 +195,13 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
 
   // A traverser that finds the nearest enclosing method call for a given position.
   class MethodCallTraverser(pos: Position) extends Traverser {
-    private var activeCallsite: MethodCall = _
-    private var activeArg: Arg = _
+    private var activeCallsite: Option[(MethodCall, Arg)] = None
     def fromTree(body: Tree): Option[EnclosingMethodCall] = {
       traverse(body)
-      if (activeCallsite == null) {
-        None
-      } else {
-        if (activeCallsite.alternatives.isEmpty) {
-          None
-        } else {
-          Some(
-            EnclosingMethodCall(
-              activeCallsite,
-              activeArg
-            )
-          )
-        }
-      }
+      for {
+        (callsite, arg) <- activeCallsite
+        if callsite.alternatives.nonEmpty
+      } yield EnclosingMethodCall(callsite, arg)
     }
 
     def toVisit(tree: Tree): Option[Tree] = {
@@ -247,19 +235,19 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     def visit(tree: Tree): Unit = tree match {
       case MethodCall(call) =>
         var start = call.qual.pos.end
+        val lastArgument = call.argss.lastOption.flatMap(_.lastOption)
         for {
           (args, i) <- call.margss.zipWithIndex
           (arg, j) <- args.zipWithIndex
         } {
           val realPos = treePos(arg)
           if (realPos.isRange) {
-            // NOTE(olafur): We don't use `arg.pos` because it does not enclose the full
-            // range from the previous argument. Instead, we use
-            val end = arg.pos.end
+            val end =
+              if (lastArgument.contains(arg)) tree.pos.end
+              else arg.pos.end
             val isEnclosed = start <= pos.start && pos.end <= end
             if (isEnclosed) {
-              activeCallsite = call
-              activeArg = Arg(arg, i, j)
+              activeCallsite = Some(call -> Arg(arg, i, j))
             }
             start = end
           }

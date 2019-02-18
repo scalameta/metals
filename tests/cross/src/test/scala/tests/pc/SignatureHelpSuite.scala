@@ -402,4 +402,15 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |              ^^^^^^
        |""".stripMargin
   )
+  check(
+    "last-arg",
+    """
+      |object A {
+      |  Option(a @@)
+      |}
+    """.stripMargin,
+    """|apply[A](x: A): Option[A]
+       |         ^^^^
+       |""".stripMargin
+  )
 }

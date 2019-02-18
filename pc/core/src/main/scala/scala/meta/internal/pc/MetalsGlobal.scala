@@ -126,6 +126,8 @@ class MetalsGlobal(
         loop(resultType, None)
       case TypeBounds(lo, hi) =>
         TypeBounds(loop(lo, None), loop(hi, None))
+      case MethodType(params, resultType) =>
+        MethodType(params, loop(resultType, None))
       case t => t
     }
     longType match {

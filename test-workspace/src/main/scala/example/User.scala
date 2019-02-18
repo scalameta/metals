@@ -1,5 +1,8 @@
 package myexample
 
+import scala.concurrent.Future
+
 object A {
-  val x = 1.to(end = 10).by(step = 2)
+  scala.concurrent.Future.traverse(List(scala.concurrent.Future.successful(1)))
+  scala.concurrent.Future.traverse(List(scala.concurrent.Future.successful(1)))
 }

@@ -18,7 +18,11 @@ object HoverSuite extends BasePCSuite {
             value.getContents.getLeft.asScala
               .map { e =>
                 if (e.isLeft) e.getLeft
-                else e.getRight.getValue
+                else {
+                  s"""```${e.getRight.getLanguage}
+                     |${e.getRight.getValue}
+                     |```""".stripMargin
+                }
               }
               .mkString("\n")
           }
@@ -35,7 +39,10 @@ object HoverSuite extends BasePCSuite {
       |  val x@@ = List(1)
       |}
       |""".stripMargin,
-    "List[Int]"
+    """```scala
+      |List[Int]
+      |```
+      |""".stripMargin
   )
 
   check(
@@ -56,4 +63,5 @@ object HoverSuite extends BasePCSuite {
        |the argument
        |""".stripMargin
   )
+
 }
