@@ -9,7 +9,6 @@ import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.ServiceLoader
-import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -27,13 +26,11 @@ import scala.util.control.NonFatal
 final class Embedded(
     icons: Icons,
     statusBar: StatusBar,
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
+    newBloopClassloader: () => URLClassLoader
 ) extends Cancelable {
 
   override def cancel(): Unit = {
-    if (isBloopJars.get()) {
-      bloopJars.foreach(_.close())
-    }
     presentationCompilers.clear()
   }
 
@@ -55,12 +52,10 @@ final class Embedded(
   /**
    * Fetches jars for bloop-frontend and creates a new orphan classloader.
    */
-  val isBloopJars = new AtomicBoolean(false)
   lazy val bloopJars: Option[URLClassLoader] = {
-    isBloopJars.set(true)
     statusBar.trackBlockingTask(s"${icons.sync}Downloading Bloop") {
       try {
-        Some(Embedded.newBloopClassloader())
+        Some(newBloopClassloader())
       } catch {
         case NonFatal(e) =>
           scribe.error(
@@ -113,7 +108,7 @@ object Embedded {
     new coursiersmall.Settings()
       .withTtl(Some(Duration.Inf))
       .withDependencies(List(dependency))
-  private def newPresentationCompilerClassLoader(
+  def newPresentationCompilerClassLoader(
       info: ScalaBuildTarget,
       scalac: ScalacOptionsItem
   ): URLClassLoader = {
@@ -146,7 +141,8 @@ object Embedded {
       new PresentationCompilerClassLoader(this.getClass.getClassLoader)
     new URLClassLoader(allURLs, parent)
   }
-  private def newBloopClassloader(): URLClassLoader = {
+
+  def newBloopClassloader(): URLClassLoader = {
     val settings = downloadSettings(
       new Dependency(
         "ch.epfl.scala",
@@ -162,6 +158,7 @@ object Embedded {
       )
     )
     val jars = coursiersmall.CoursierSmall.fetch(settings)
+    jars.foreach(jar => pprint.log(jar))
     // Don't make Bloop classloader a child or our classloader.
     val parent: ClassLoader = null
     val classloader =

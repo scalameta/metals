@@ -7,6 +7,7 @@ import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopProtocol
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsLogger
@@ -30,6 +31,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   private val sh = Executors.newSingleThreadScheduledExecutor()
+  lazy val bloopClassloader = Embedded.newBloopClassloader()
   def bspGlobalDirectories: List[AbsolutePath] = Nil
   var server: TestingServer = _
   var client: TestingClient = _
@@ -71,7 +73,8 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       config,
       bspGlobalDirectories,
       sh,
-      time
+      time,
+      () => bloopClassloader
     )(ex)
     server.server.userConfig = this.userConfig
   }

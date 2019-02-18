@@ -11,6 +11,7 @@ import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
 import java.net.URI
+import java.net.URLClassLoader
 import java.nio.charset.Charset
 
 import scala.meta.internal.semanticdb.Scala._
@@ -58,7 +59,9 @@ class MetalsLanguageServer(
     progressTicks: ProgressTicks = ProgressTicks.braille,
     bspGlobalDirectories: List[AbsolutePath] =
       BspServers.globalInstallDirectories,
-    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
+    newBloopClassloader: () => URLClassLoader = () =>
+      Embedded.newBloopClassloader()
 ) extends Cancelable {
 
   private val cancelables = new MutableCancelable()
@@ -143,7 +146,14 @@ class MetalsLanguageServer(
     languageClient.underlying = client
     statusBar =
       new StatusBar(() => languageClient, time, progressTicks, config.icons)
-    embedded = register(new Embedded(config.icons, statusBar, () => userConfig))
+    embedded = register(
+      new Embedded(
+        config.icons,
+        statusBar,
+        () => userConfig,
+        newBloopClassloader
+      )
+    )
     LanguageClientLogger.languageClient = Some(languageClient)
     cancelables.add(() => languageClient.shutdown())
   }

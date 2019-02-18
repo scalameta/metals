@@ -2,6 +2,7 @@ package tests
 
 import com.google.gson.JsonParser
 import java.io.IOException
+import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -85,7 +86,8 @@ final class TestingServer(
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
-    time: Time
+    time: Time,
+    newBloopClassloader: () => URLClassLoader
 )(implicit ex: ExecutionContextExecutorService) {
   val server = new MetalsLanguageServer(
     ex,
@@ -95,7 +97,8 @@ final class TestingServer(
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
-    time = time
+    time = time,
+    newBloopClassloader = newBloopClassloader
   )
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
