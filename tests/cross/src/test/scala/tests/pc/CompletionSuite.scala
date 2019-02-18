@@ -452,6 +452,14 @@ object CompletionSuite extends BaseCompletionSuite {
        |until(end: Int, step: Int): Range
        |until(end: T): FractionalProxy#ResultWithoutStep
        |until(end: T, step: T): NumericRange.Exclusive[T]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|until(end: T): FractionalProxy#ResultWithoutStep
+           |until(end: T, step: T): NumericRange.Exclusive[T]
+           |until(end: T): NumericRange.Exclusive[T]
+           |until(end: T, step: T): NumericRange.Exclusive[T]
+           |""".stripMargin
+    )
   )
 }

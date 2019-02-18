@@ -285,7 +285,18 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |to(end: Int, step: Int): Range.Inclusive
        |to(end: T): FractionalProxy#ResultWithoutStep
        |to(end: T, step: T): NumericRange.Inclusive[T]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|to(end: T): FractionalProxy#ResultWithoutStep
+           |   ^^^^^^
+           |to(end: T, step: T): NumericRange.Inclusive[T]
+           |to(end: T): NumericRange.Inclusive[T]
+           |to(end: T, step: T): NumericRange.Inclusive[T]
+           |to(end: Int): Range.Inclusive
+           |to(end: Int, step: Int): Range.Inclusive
+           |""".stripMargin
+    )
   )
 
   check(
