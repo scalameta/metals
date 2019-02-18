@@ -19,11 +19,33 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       cursor = cursor(params.offset(), params.text())
     )
     val pos = unit.position(params.offset())
-    compiler.typeCheck(unit)
-    EnclosingMethodCall
-      .fromPosition(pos, unit.body)
+    typedTreeAt(pos)
+    val enclosingApply = new EnclosingApply(pos).find(unit.body)
+    val typedEnclosing = typedTreeAt(enclosingApply.pos)
+    new MethodCallTraverser(unit, pos)
+      .fromTree(typedEnclosing)
       .map(toSignatureHelp)
       .getOrElse(new SignatureHelp())
+  }
+
+  class EnclosingApply(pos: Position) extends Traverser {
+    var last: Tree = EmptyTree
+    def find(tree: Tree): Tree = {
+      traverse(tree)
+      last
+    }
+    override def traverse(tree: Tree): Unit = {
+      if (tree.pos.includes(pos)) {
+        tree match {
+          case Apply(qual, _) if !qual.pos.includes(pos) =>
+            last = tree
+          case TypeApply(qual, _) if !qual.pos.includes(pos) =>
+            last = tree
+          case _ =>
+        }
+        super.traverse(tree)
+      }
+    }
   }
 
   case class Arg(
@@ -41,6 +63,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
 
   // A method call like `function[A, B](a, b)(c, d)`
   case class MethodCall(
+      tree: Tree,
       qual: Tree,
       symbol: Symbol,
       tparams: List[Tree],
@@ -105,7 +128,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     def unapply(tree: Tree): Option[MethodCall] = {
       tree match {
         case TypeApply(qual, targs) =>
-          Some(MethodCall(qual, treeSymbol(tree), targs, Nil))
+          Some(MethodCall(tree, qual, treeSymbol(tree), targs, Nil))
         case Apply(qual, args) =>
           var tparams: List[Tree] = Nil
           def loop(
@@ -135,7 +158,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
                 loop(qual, Nil, args :: Nil)
                 (qual, args :: Nil)
             }
-            MethodCall(refQual, symbol, tparams, argss)
+            MethodCall(tree, refQual, symbol, tparams, argss)
           }
         case _ => None
       }
@@ -199,13 +222,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     def symbol: Symbol = call.symbol
   }
 
-  object EnclosingMethodCall {
-    def fromPosition(pos: Position, body: Tree): Option[EnclosingMethodCall] =
-      new MethodCallTraverser(pos).fromTree(body)
-  }
-
   // A traverser that finds the nearest enclosing method call for a given position.
-  class MethodCallTraverser(pos: Position) extends Traverser {
+  class MethodCallTraverser(unit: RichCompilationUnit, pos: Position)
+      extends Traverser {
     private var activeCallsite: Option[(MethodCall, Arg)] = None
     def fromTree(body: Tree): Option[EnclosingMethodCall] = {
       traverse(body)

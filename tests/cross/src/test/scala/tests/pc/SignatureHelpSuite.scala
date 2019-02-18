@@ -149,6 +149,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |}
     """.stripMargin,
     """|apply[A](x: A): Option[A]
+       |         ^^^^
        |""".stripMargin
   )
   check(
@@ -432,9 +433,8 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       |  List[Int]("").map(a => @@)
       |}
     """.stripMargin,
-    """|map[B, That](f: A => B)(implicit bf: CanBuildFrom[List[A],B,That]): That
-       |             ^^^^^^^^^
-       |map[B](f: A => B): TraversableOnce[B]
+    """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
+       |             ^^^^^^^^^^^
        |""".stripMargin
   )
 
