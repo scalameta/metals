@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import java.util.Collections
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
@@ -11,10 +12,13 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.Properties
@@ -31,9 +35,15 @@ class Compilers(
     search: SymbolSearch,
     embedded: Embedded,
     statusBar: StatusBar
-) extends Cancelable {
+)(implicit ec: ExecutionContext)
+    extends Cancelable {
 
-  private val cache = TrieMap.empty[BuildTargetIdentifier, PresentationCompiler]
+  // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
+  val jcache = Collections.synchronizedMap(
+    new java.util.HashMap[BuildTargetIdentifier, PresentationCompiler]
+  )
+  private val cache = jcache.asScala
+
   override def cancel(): Unit = {
     Cancelable.cancelEach(cache.values)(_.shutdown())
     cache.clear()
@@ -79,10 +89,14 @@ class Compilers(
       )
     }
 
-  private def withPC[T](
-      params: TextDocumentPositionParams
-  )(fn: (PresentationCompiler, Position) => T): Option[T] = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
+  /**
+   * Eagerly loads the presentation compiler in the background.
+   */
+  def ensureCompiler(paths: Iterable[AbsolutePath]): Unit = Future {
+    paths.foreach(path => loadCompiler(path))
+  }
+
+  private def loadCompiler(path: AbsolutePath): Option[PresentationCompiler] = {
     for {
       target <- buildTargets.inverseSources(path)
       info <- buildTargets.info(target)
@@ -98,8 +112,8 @@ class Compilers(
     } yield {
       val promise = Promise[Unit]()
       try {
-        val compiler = cache.getOrElseUpdate(
-          target, {
+        jcache.computeIfAbsent(
+          target, { _ =>
             statusBar.trackFuture(
               s"${statusBar.icons.sync}Loading presentation compiler",
               promise.future
@@ -107,13 +121,21 @@ class Compilers(
             newCompiler(scalac, scala)
           }
         )
-        val input = path.toInputFromBuffers(buffers)
-        val pos = params.getPosition.toMeta(input)
-        val result = fn(compiler, pos)
-        result
       } finally {
         promise.trySuccess(())
       }
+    }
+  }
+
+  private def withPC[T](
+      params: TextDocumentPositionParams
+  )(fn: (PresentationCompiler, Position) => T): Option[T] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    loadCompiler(path).map { compiler =>
+      val input = path.toInputFromBuffers(buffers)
+      val pos = params.getPosition.toMeta(input)
+      val result = fn(compiler, pos)
+      result
     }
   }
 
