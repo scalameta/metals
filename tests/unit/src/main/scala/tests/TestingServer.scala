@@ -341,10 +341,11 @@ final class TestingServer(
     val input = path.toInputFromBuffers(buffers)
     val offset = query.indexOf("@@")
     if (offset < 0) sys.error("missing @@")
-    val start = input.text.indexOf(query.substring(0, offset))
+    val start = input.text.indexOf(query.replaceAllLiterally("@@", ""))
     if (start < 0) sys.error(s"missing '$query'")
     val point = start + offset
     val pos = m.Position.Range(input, point, point)
+    pprint.log(pos.toLSP)
     val params =
       new CompletionParams(path.toTextDocumentIdentifier, pos.toLSP.getStart)
     for {
@@ -353,7 +354,10 @@ final class TestingServer(
       val items =
         completion.getItems.asScala.map(server.completionItemResolveSync)
       items.iterator
-        .map(item => item.getLabel + item.getDetail)
+        .map(item => {
+          val label = Option(item.getInsertText).getOrElse(item.getLabel)
+          label + item.getDetail
+        })
         .mkString("\n")
     }
   }

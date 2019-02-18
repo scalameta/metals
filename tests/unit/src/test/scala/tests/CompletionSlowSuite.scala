@@ -52,4 +52,39 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
       )
     } yield ()
   }
+
+  testAsync("local") {
+    for {
+      _ <- server.initialize(
+        """/metals.json
+          |{
+          |  "a": {
+          |    "scalacOptions": [
+          |      "-Xplugin:/Users/olafurpg/.ivy2/cache/org.spire-math/kind-projector_2.12/jars/kind-projector_2.12-0.9.8.jar"
+          |    ]
+          |  }
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |import scala.concurrent.DelayedLazyVal
+          |
+          |object Main {
+          |  List(1).map { client =>
+          |    val x = 2
+          |    DelayedLazyVal // here
+          |    val y = 1
+          |  }
+          |}
+          |""".stripMargin
+      )
+      // assert that "DefinedInB" does not appear in results
+      _ <- assertCompletion(
+        "DelayedLazyVal@@ // here",
+        """|DelayedLazyVal scala.concurrent
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }

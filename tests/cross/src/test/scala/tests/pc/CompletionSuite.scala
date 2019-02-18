@@ -429,6 +429,24 @@ object CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
   check(
+    "local1",
+    """
+      |import scala.concurrent.DelayedLazyVal
+      |
+      |object Main {
+      |
+      |  List(1).map { client =>
+      |    val x = 2
+      |    DelayedLazyVal@@
+      |    val y = 1
+      |  }
+      |
+      |}
+    """.stripMargin,
+    """|thisIsLocal: Int
+       |""".stripMargin
+  )
+  check(
     "singleton",
     """
       |class A {
