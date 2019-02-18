@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.meta.pc
 import scala.meta.pc.SymbolDocumentation
 
@@ -53,10 +54,26 @@ trait Signatures { this: MetalsGlobal =>
       else ""
     }
     def isTypeParameters: Boolean = gtpe.typeParams.nonEmpty
-    def isImplicit: Boolean = gtpe.paramss.lastOption match {
-      case Some(head :: _) => head.isImplicit
-      case _ => false
+    def implicitParams: Option[List[Symbol]] =
+      gtpe.paramss.lastOption.filter(_.headOption.exists(_.isImplicit))
+    val implicitEvidencesByTypeParam
+      : collection.Map[Symbol, ListBuffer[String]] = {
+      val result = mutable.Map.empty[Symbol, ListBuffer[String]]
+      for {
+        param <- implicitParams.getOrElse(Nil).iterator
+        if param.name.startsWith(termNames.EVIDENCE_PARAM_PREFIX)
+        TypeRef(
+          _,
+          sym,
+          TypeRef(NoPrefix, tparam, Nil) :: Nil
+        ) <- List(param.info)
+      } {
+        val buf = result.getOrElseUpdate(tparam, ListBuffer.empty)
+        buf += sym.name.toString
+      }
+      result
     }
+    def isImplicit: Boolean = implicitParams.isDefined
     def mparamss: List[List[Symbol]] =
       gtpe.typeParams match {
         case Nil => gtpe.paramss
@@ -68,13 +85,18 @@ trait Signatures { this: MetalsGlobal =>
         case Nil => gtpe.paramss
         case tparams => tparams :: gtpe.paramss
       }
-      val params = paramss.iterator.map { params =>
-        val labels = params.iterator.map { param =>
-          val result = paramLabel(param, i)
-          i += 1
-          result
+      val params = paramss.iterator.flatMap { params =>
+        val labels = params.flatMap { param =>
+          if (param.name.startsWith(termNames.EVIDENCE_PARAM_PREFIX)) {
+            Nil
+          } else {
+            val result = paramLabel(param, i)
+            i += 1
+            result :: Nil
+          }
         }
-        labels
+        if (labels.isEmpty && params.nonEmpty) Nil
+        else labels.iterator :: Nil
       }
       methodSignature(params, name = "")
     }
@@ -118,7 +140,13 @@ trait Signatures { this: MetalsGlobal =>
         case None => param.nameString
       }
       if (param.isTypeParameter) {
-        name + paramTypeString
+        val contextBounds =
+          implicitEvidencesByTypeParam.getOrElse(param, Nil) match {
+            case Nil => ""
+            case head :: Nil => s":$head"
+            case many => many.mkString(": ", " : ", "")
+          }
+        s"$name$paramTypeString$contextBounds"
       } else {
         val default =
           if (param.isParamWithDefault) {

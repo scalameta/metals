@@ -467,4 +467,16 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |          ^^^^^^^^^^^^^^^^^
        |""".stripMargin
   )
+
+  check(
+    "evidence",
+    """
+      |object a {
+      |  Array.empty[@@]
+      |}
+    """.stripMargin,
+    """|empty[T: ClassTag]: Array[T]
+       |      ^^^^^^^^^^^
+       | """.stripMargin
+  )
 }
