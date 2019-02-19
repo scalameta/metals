@@ -30,14 +30,16 @@ class BaseSuite extends TestSuite {
   def assertNotEmpty(string: String): Unit = {
     if (string.isEmpty) {
       fail(
-        s"expected non-empty string, obtained empty string."
+        s"expected non-empty string, obtained empty string.",
+        stackBump = 1
       )
     }
   }
   def assertEmpty(string: String): Unit = {
     if (!string.isEmpty) {
       fail(
-        s"expected empty string, obtained: $string"
+        s"expected empty string, obtained: $string",
+        stackBump = 1
       )
     }
   }

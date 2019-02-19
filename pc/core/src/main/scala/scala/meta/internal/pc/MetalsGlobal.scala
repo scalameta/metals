@@ -200,11 +200,7 @@ class MetalsGlobal(
   // why this override is necessary. Compiler plugins like kind-projector
   // use `TypingTransformer`, which produces contexts that break completions.
   // We whitelist a set of known compiler phases which `addContext` was designed
-  // to work with. Metals officially only supports a hardcoded list of compiler
-  // plugins that are known to play nicely with the presentation compiler.
-  // Users who want to use Metals with other compiler plugins will need to send
-  // a PR introducing tests to show their compiler plugin plays nicely with the
-  // presentation compiler.
+  // to work with.
   override def addContext(contexts: Contexts, context: Context): Unit = {
     phase.name match {
       case "typer" | "namer" =>

@@ -26,7 +26,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ <- server.formatting("a/src/main/scala/a/Main.scala")
       // check that the file has been formatted
       _ = assertNoDiff(
-        server.bufferContent("a/src/main/scala/a/Main.scala"),
+        server.bufferContents("a/src/main/scala/a/Main.scala"),
         """|object FormatMe {
            |  val x = 1
            |}""".stripMargin
@@ -51,7 +51,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       )
       // check that the formatting request has been ignored
       _ = assertNoDiff(
-        server.bufferContent("a/src/main/scala/a/Main.scala"),
+        server.bufferContents("a/src/main/scala/a/Main.scala"),
         """|object FormatMe {
            | val x = 1  }
            |""".stripMargin
@@ -82,7 +82,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       }
       _ <- server.formatting("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(
-        server.bufferContent("a/src/main/scala/a/Main.scala"),
+        server.bufferContents("a/src/main/scala/a/Main.scala"),
         """|object FormatMe {
            |  val x = 1
            |}""".stripMargin
@@ -108,7 +108,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ <- server.formatting("a/src/main/scala/a/Main.scala")
       // check that the file has been formatted respecting the trailing comma config (new in 1.6.0)
       _ = assertNoDiff(
-        server.bufferContent("a/src/main/scala/a/Main.scala"),
+        server.bufferContents("a/src/main/scala/a/Main.scala"),
         """|case class User(
            |    name: String,
            |    age: Int
@@ -189,21 +189,21 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ <- server.formatting("Main.scala")
       // check Main.scala has been ignored (doesn't match includeFilters)
       _ = assertNoDiff(
-        server.bufferContent("Main.scala"),
+        server.bufferContents("Main.scala"),
         "  object   Main"
       )
       _ <- server.didOpen("UserSpec.scala")
       _ <- server.formatting("UserSpec.scala")
       // check UserSpec.scala has been ignored (matches excludeFilters)
       _ = assertNoDiff(
-        server.bufferContent("UserSpec.scala"),
+        server.bufferContents("UserSpec.scala"),
         "  object   UserSpec"
       )
       _ <- server.didOpen("ResourceSpec.scala")
       _ <- server.formatting("ResourceSpec.scala")
       // check ResourceSpec.scala has been formatted
       _ = assertNoDiff(
-        server.bufferContent("ResourceSpec.scala"),
+        server.bufferContents("ResourceSpec.scala"),
         "object ResourceSpec"
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -224,7 +224,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ <- server.formatting("project/plugins.sbt")
       // check plugins.sbt has been formatted
       _ = assertNoDiff(
-        server.bufferContent("project/plugins.sbt"),
+        server.bufferContents("project/plugins.sbt"),
         "object Plugins"
       )
     } yield ()
@@ -263,7 +263,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
         assertNoDiff(client.workspaceDiagnostics, "")
         // check file was formatted after version was inserted.
         assertNoDiff(
-          server.bufferContent("Main.scala"),
+          server.bufferContents("Main.scala"),
           "object Main\n"
         )
         assertNoDiff(
@@ -307,7 +307,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
         )
         // check file was not formatted because version is still missing.
         assertNoDiff(
-          server.bufferContent("Main.scala"),
+          server.bufferContents("Main.scala"),
           "object   Main"
         )
         assertNoDiff(
@@ -340,7 +340,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ <- server.didOpen("Main.scala")
       _ <- server.formatting("Main.scala")
       _ = assertNoDiff(
-        server.bufferContent("Main.scala"),
+        server.bufferContents("Main.scala"),
         """object Main {
           |  val x =
           |    2

@@ -4,13 +4,20 @@ import scala.concurrent.Future
 
 abstract class BaseCompletionSlowSuite(name: String)
     extends BaseSlowSuite(name) {
+
   def assertCompletion(
       query: String,
       expected: String,
       project: Char = 'a'
   )(implicit file: sourcecode.File, line: sourcecode.Line): Future[Unit] = {
     val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
-    server.completion(filename, query).map { completion =>
+    val text = server
+      .textContentsOnDisk(filename)
+      .replaceAllLiterally("// @@", query.replaceAllLiterally("@@", ""))
+    for {
+      _ <- server.didChange(filename)(_ => text)
+      completion <- server.completion(filename, query)
+    } yield {
       assertNoDiff(completion, expected)
     }
   }
@@ -26,21 +33,14 @@ abstract class BaseCompletionSlowSuite(name: String)
            |/a/src/main/scala/a/A.scala
            |package a
            |object A {
-           |  val x = "".substrin
-           |  Stream
-           |  TrieMap
-           |  locally {
-           |    val myLocalVariable = Array("")
-           |    myLocalVariable
-           |    val source = ""
-           |  }
+           |  // @@
            |}
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ = assertNotEmpty(client.workspaceDiagnostics)
+      _ = assertNoDiagnostics()
       _ <- assertCompletion(
-        "substrin@@",
+        "\"\".substrin@@",
         """|substring(beginIndex: Int): String
            |substring(beginIndex: Int, endIndex: Int): String
            |""".stripMargin
@@ -74,7 +74,13 @@ abstract class BaseCompletionSlowSuite(name: String)
            |""".stripMargin
       )
       _ <- assertCompletion(
-        "  myLocalVariable@@",
+        """
+          |locally {
+          |  val myLocalVariable = Array("")
+          |  myLocalVariable@@
+          |  val source = ""
+          |}
+          |""".stripMargin,
         """|myLocalVariable: Array[String]
            |""".stripMargin
       )

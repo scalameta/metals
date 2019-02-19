@@ -342,7 +342,8 @@ final class TestingServer(
     val offset = query.indexOf("@@")
     if (offset < 0) sys.error("missing @@")
     val start = input.text.indexOf(query.replaceAllLiterally("@@", ""))
-    if (start < 0) sys.error(s"missing '$query'")
+    if (start < 0)
+      sys.error(s"missing query '$query' from text:\n${input.text}")
     val point = start + offset
     val pos = m.Position.Range(input, point, point)
     val params =
@@ -353,10 +354,10 @@ final class TestingServer(
       val items =
         completion.getItems.asScala.map(server.completionItemResolveSync)
       items.iterator
-        .map(item => {
+        .map { item =>
           val label = Option(item.getInsertText).getOrElse(item.getLabel)
           label + item.getDetail
-        })
+        }
         .mkString("\n")
     }
   }
@@ -502,7 +503,9 @@ final class TestingServer(
 
   def textContents(filename: String): String =
     toPath(filename).toInputFromBuffers(buffers).text
-  def bufferContent(filename: String): String =
+  def textContentsOnDisk(filename: String): String =
+    toPath(filename).toInput.text
+  def bufferContents(filename: String): String =
     buffers
       .get(toPath(filename))
       .getOrElse(throw new NoSuchElementException(filename))

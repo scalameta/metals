@@ -104,10 +104,15 @@ case class ScalaPresentationCompiler(
       global.typedTreeAt(pos).symbol.fullName
     }
   }
+  // Metals officially only supports a hardcoded list of compiler
+  // plugins that are known to play nicely with the presentation compiler.
+  // Users who want to use Metals with other compiler plugins will need to
+  // send a PR adding tests to show their compiler plugin plays nicely with
+  // the presentation compiler.
   val whitelist = Array[Array[String]](
     Array("scalamacros", "paradise"),
     Array("kind-projector"),
-    Array("better-monadic-fore")
+    Array("better-monadic-for")
   )
 
   def isWhitelistedCompilerPlugin(option: String): Boolean =

@@ -28,8 +28,8 @@ class CompletionProvider(
       filename = params.filename,
       cursor = Some(params.offset)
     )
-    val position = unit.position(params.offset)
-    val (qual, kind, i) = safeCompletionsAt(position)
+    val pos = unit.position(params.offset)
+    val (qual, kind, i) = safeCompletionsAt(pos)
     val history = new ShortenedNames()
     val sorted = i.results.sorted(memberOrdering(qual, history))
     val items = sorted.iterator.zipWithIndex.map {

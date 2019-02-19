@@ -1,5 +1,6 @@
 package tests
 
+import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}
 
 object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
@@ -34,16 +35,12 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
           |/a/src/main/scala/a/A.scala
           |package a
           |object Main {
-          |  // DefinedIn
+          |  // @@
           |}
           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ = assertEmpty(client.workspaceDiagnostics)
-      _ <- server.didChange("a/src/main/scala/a/A.scala")(
-        _.replaceAllLiterally("// ", "")
-      )
-      // assert that "DefinedInB" does not appear in results
+      _ = assertNoDiagnostics()
       _ <- assertCompletion(
         "DefinedIn@@",
         """|a.Outer.DefinedInA a.Outer
@@ -53,7 +50,11 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
     } yield ()
   }
 
-  def checkPlugin(name: String, compilerPlugins: String): Unit =
+  def checkPlugin(
+      name: String,
+      compilerPlugins: String,
+      extra: => Future[Unit] = Future.successful(())
+  ): Unit =
     testAsync(name) {
       for {
         _ <- server.initialize(
@@ -68,23 +69,27 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
              |/a/src/main/scala/a/A.scala
              |package a
              |
-             |import scala.concurrent.DelayedLazyVal
-             |
              |object Main {
-             |  locally {
-             |    val x = 2
-             |    DelayedLazyVal // here
-             |    val y = 1
-             |  }
+             |  // @@
              |}
              |""".stripMargin
         )
-        // assert that "DefinedInB" does not appear in results
+        _ <- server.didOpen("a/src/main/scala/a/A.scala")
+        _ = assertNoDiagnostics()
         _ <- assertCompletion(
-          "DelayedLazyVal@@ // here",
+          """
+            |import scala.concurrent.DelayedLazyVal
+            |
+            |locally {
+            |  val x = 2
+            |  DelayedLazyVal@@
+            |  val y = 1
+            |}
+            |""".stripMargin,
           """|DelayedLazyVal scala.concurrent
              |""".stripMargin
         )
+        _ <- extra
       } yield ()
     }
 
@@ -92,17 +97,27 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
     "empty",
     ""
   )
+
   checkPlugin(
     "kind-projector",
     """
       |"org.spire-math::kind-projector:0.9.8"
-    """.stripMargin
+      |""".stripMargin,
+    for {
+      _ <- assertCompletion(
+        """|def baz[F[_], A]: F[A] = ???
+           |baz[Either[Int, ?], String].right@@
+           |""".stripMargin,
+        "right: Either.RightProjection[Int,String]"
+      )
+    } yield ()
   )
+
   checkPlugin(
     "better-monadic-for",
-    """
-      |"com.olegpy::better-monadic-for:0.3.0-M4"
-    """.stripMargin
+    """|
+       |"com.olegpy::better-monadic-for:0.3.0-M4"
+       |""".stripMargin
   )
 
 }
