@@ -116,8 +116,8 @@ object CompletionSuite extends BaseCompletionSuite {
        |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]]]
        |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
        |iterate[A](start: A, len: Int)(f: A => A): List[A]
-       |range[T](start: T, end: T)(implicit evidence$1: Integral[T]): List[T]
-       |range[T](start: T, end: T, step: T)(implicit evidence$2: Integral[T]): List[T]
+       |range[T: Integral](start: T, end: T): List[T]
+       |range[T: Integral](start: T, end: T, step: T): List[T]
        |tabulate[A](n: Int)(f: Int => A): List[A]
        |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A]]
        |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
@@ -400,7 +400,7 @@ object CompletionSuite extends BaseCompletionSuite {
       |  Array.concat@@
       |}
     """.stripMargin,
-    """|concat[T](xss: Array[T]*)(implicit evidence$8: ClassTag[T]): Array[T]
+    """|concat[T: ClassTag](xss: Array[T]*): Array[T]
        |""".stripMargin
   )
   check(
@@ -443,7 +443,7 @@ object CompletionSuite extends BaseCompletionSuite {
       |
       |}
     """.stripMargin,
-    """|thisIsLocal: Int
+    """|DelayedLazyVal scala.concurrent
        |""".stripMargin
   )
   check(
