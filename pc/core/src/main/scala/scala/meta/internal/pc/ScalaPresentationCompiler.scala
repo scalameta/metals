@@ -16,6 +16,7 @@ import scala.meta.pc.SymbolSearch
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
+import scala.util.Properties
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -103,18 +104,34 @@ case class ScalaPresentationCompiler(
       global.typedTreeAt(pos).symbol.fullName
     }
   }
+  val whitelist = Array[Array[String]](
+    Array("scalamacros", "paradise"),
+    Array("kind-projector"),
+    Array("better-monadic-fore")
+  )
+
+  def isWhitelistedCompilerPlugin(option: String): Boolean =
+    whitelist.exists { keywords =>
+      keywords.forall(keyword => option.contains(keyword))
+    }
+
   def newCompiler(): MetalsGlobal = {
     val classpath = this.classpath.mkString(File.pathSeparator)
     val options = this.options.iterator.filterNot { o =>
-      o.contains("semanticdb") ||
-      o.contains("scalajs")
+      (o.startsWith("-Xplugin") || o.startsWith("-P")) &&
+      !isWhitelistedCompilerPlugin(o)
     }.toList
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true
-    //    settings.YcachePluginClassLoader.value = "last-modified"
+    if (!Properties.versionNumberString.startsWith("2.11")) {
+      settings.processArguments(
+        List("-Ycache-plugin-class-loader:last-modified"),
+        processAll = true
+      )
+    }
     if (classpath.isEmpty) {
       settings.usejavacp.value = true
     }

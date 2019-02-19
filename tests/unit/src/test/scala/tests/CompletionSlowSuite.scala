@@ -46,45 +46,63 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
       // assert that "DefinedInB" does not appear in results
       _ <- assertCompletion(
         "DefinedIn@@",
-        """|DefinedInA a.Outer
-           |DefinedInC c
+        """|a.Outer.DefinedInA a.Outer
+           |c.DefinedInC c
            |""".stripMargin
       )
     } yield ()
   }
 
-  testAsync("local") {
-    for {
-      _ <- server.initialize(
-        """/metals.json
-          |{
-          |  "a": {
-          |    "scalacOptions": [
-          |      "-Xplugin:/Users/olafurpg/.ivy2/cache/org.spire-math/kind-projector_2.12/jars/kind-projector_2.12-0.9.8.jar"
-          |    ]
-          |  }
-          |}
-          |/a/src/main/scala/a/A.scala
-          |package a
-          |
-          |import scala.concurrent.DelayedLazyVal
-          |
-          |object Main {
-          |  List(1).map { client =>
-          |    val x = 2
-          |    DelayedLazyVal // here
-          |    val y = 1
-          |  }
-          |}
-          |""".stripMargin
-      )
-      // assert that "DefinedInB" does not appear in results
-      _ <- assertCompletion(
-        "DelayedLazyVal@@ // here",
-        """|DelayedLazyVal scala.concurrent
-           |""".stripMargin
-      )
-    } yield ()
-  }
+  def checkPlugin(name: String, compilerPlugins: String): Unit =
+    testAsync(name) {
+      for {
+        _ <- server.initialize(
+          s"""/metals.json
+             |{
+             |  "a": {
+             |    "compilerPlugins": [
+             |      $compilerPlugins
+             |    ]
+             |  }
+             |}
+             |/a/src/main/scala/a/A.scala
+             |package a
+             |
+             |import scala.concurrent.DelayedLazyVal
+             |
+             |object Main {
+             |  locally {
+             |    val x = 2
+             |    DelayedLazyVal // here
+             |    val y = 1
+             |  }
+             |}
+             |""".stripMargin
+        )
+        // assert that "DefinedInB" does not appear in results
+        _ <- assertCompletion(
+          "DelayedLazyVal@@ // here",
+          """|DelayedLazyVal scala.concurrent
+             |""".stripMargin
+        )
+      } yield ()
+    }
+
+  checkPlugin(
+    "empty",
+    ""
+  )
+  checkPlugin(
+    "kind-projector",
+    """
+      |"org.spire-math::kind-projector:0.9.8"
+    """.stripMargin
+  )
+  checkPlugin(
+    "better-monadic-for",
+    """
+      |"com.olegpy::better-monadic-for:0.3.0-M4"
+    """.stripMargin
+  )
 
 }

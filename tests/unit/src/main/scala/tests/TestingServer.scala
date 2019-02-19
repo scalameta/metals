@@ -345,7 +345,6 @@ final class TestingServer(
     if (start < 0) sys.error(s"missing '$query'")
     val point = start + offset
     val pos = m.Position.Range(input, point, point)
-    pprint.log(pos.toLSP)
     val params =
       new CompletionParams(path.toTextDocumentIdentifier, pos.toLSP.getStart)
     for {

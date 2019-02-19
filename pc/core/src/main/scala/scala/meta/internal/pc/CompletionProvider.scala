@@ -28,7 +28,6 @@ class CompletionProvider(
       filename = params.filename,
       cursor = Some(params.offset)
     )
-    pprint.log(unit.source.content.mkString)
     val position = unit.position(params.offset)
     val (qual, kind, i) = safeCompletionsAt(position)
     val history = new ShortenedNames()
