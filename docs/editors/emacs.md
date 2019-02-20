@@ -47,7 +47,8 @@ To use Metals in Emacs, place this snippet in your Emacs configuration to load
 (use-package flycheck
   :init (global-flycheck-mode))
 
-(use-package lsp-mode)
+(use-package lsp-mode
+ :init (setq lsp-prefer-flymake nil))
 
 (use-package lsp-ui
   :hook (lsp-mode . lsp-ui-mode))
