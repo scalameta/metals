@@ -89,11 +89,19 @@ class MetalsGlobal(
   def shortType(longType: Type, history: ShortenedNames): Type = {
     def loop(tpe: Type, name: Option[Name]): Type = tpe match {
       case TypeRef(pre, sym, args) =>
-        TypeRef(
-          loop(pre, Some(sym.name)),
-          sym,
-          args.map(arg => loop(arg, name))
-        )
+        if (sym.isAliasType &&
+          (sym.isAbstract || sym.overrides.lastOption.exists(_.isAbstract))) {
+          // Always dealias abstract type aliases but leave concrete aliases alone.
+          // trait Generic { type Repr /* dealias */ }
+          // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
+          loop(tpe.dealias, name)
+        } else {
+          TypeRef(
+            loop(pre, Some(sym.name)),
+            sym,
+            args.map(arg => loop(arg, None))
+          )
+        }
       case SingleType(pre, sym) =>
         if (sym.hasPackageFlag) {
           if (history.tryShortenName(name, sym)) NoPrefix
@@ -147,9 +155,9 @@ class MetalsGlobal(
   /**
    * Converts a SemanticDB symbol into a compiler symbol.
    */
-  def inverseSemanticdbSymbol(symbol: String): Symbol = {
+  def inverseSemanticdbSymbols(symbol: String): List[Symbol] = {
     import scala.meta.internal.semanticdb.Scala._
-    if (!symbol.isGlobal) return NoSymbol
+    if (!symbol.isGlobal) return Nil
     def loop(s: String): List[Symbol] = {
       if (s.isNone || s.isRootPackage) rootMirror.RootPackage :: Nil
       else if (s.isEmptyPackage) rootMirror.EmptyPackage :: Nil
@@ -165,20 +173,20 @@ class MetalsGlobal(
                 case Descriptor.None =>
                   Nil
                 case Descriptor.Type(value) =>
-                  val member = owner.info.member(TypeName(value)) :: Nil
-                  if (sym.isJava) owner.info.member(TermName(value)) :: member
+                  val member = owner.info.decl(TypeName(value)) :: Nil
+                  if (sym.isJava) owner.info.decl(TermName(value)) :: member
                   else member
                 case Descriptor.Term(value) =>
-                  owner.info.member(TermName(value)) :: Nil
+                  owner.info.decl(TermName(value)) :: Nil
                 case Descriptor.Package(value) =>
-                  owner.info.member(TermName(value)) :: Nil
+                  owner.info.decl(TermName(value)) :: Nil
                 case Descriptor.Parameter(value) =>
                   owner.paramss.flatten.filter(_.name.containsName(value))
                 case Descriptor.TypeParameter(value) =>
                   owner.typeParams.filter(_.name.containsName(value))
                 case Descriptor.Method(value, _) =>
                   owner.info
-                    .member(TermName(value))
+                    .decl(TermName(value))
                     .alternatives
                     .iterator
                     .filter(sym => semanticdbSymbol(sym) == s)
@@ -188,7 +196,11 @@ class MetalsGlobal(
         parentSymbol.flatMap(tryMember)
       }
     }
-    loop(symbol) match {
+    loop(symbol).filterNot(_ == NoSymbol)
+  }
+
+  def inverseSemanticdbSymbol(symbol: String): Symbol = {
+    inverseSemanticdbSymbols(symbol) match {
       case head :: _ =>
         head
       case Nil =>

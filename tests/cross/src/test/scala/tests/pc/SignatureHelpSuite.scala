@@ -284,7 +284,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |to(end: T, step: T): NumericRange.Inclusive[T]
        |to(end: Int): Range.Inclusive
        |to(end: Int, step: Int): Range.Inclusive
-       |to(end: T): FractionalProxy#ResultWithoutStep
+       |to(end: T): Range.Partial[T,NumericRange[T]]
        |to(end: T, step: T): NumericRange.Inclusive[T]
        |""".stripMargin,
     compat = Map(

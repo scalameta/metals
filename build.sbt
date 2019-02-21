@@ -297,6 +297,7 @@ lazy val cross = project
   .settings(
     testSettings,
     libraryDependencies ++= List(
+      "com.chuusai" %% "shapeless" % "2.3.3",
       "org.typelevel" %% "cats-core" % "1.6.0"
     ),
     crossScalaVersions := V.supportedScalaVersions

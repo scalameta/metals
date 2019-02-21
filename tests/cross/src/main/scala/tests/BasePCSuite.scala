@@ -21,6 +21,11 @@ import scala.meta.io.AbsolutePath
 import scala.util.Properties
 
 abstract class BasePCSuite extends BaseSuite {
+  def thisClasspath: Seq[Path] =
+    this.getClass.getClassLoader
+      .asInstanceOf[URLClassLoader]
+      .getURLs
+      .map(url => Paths.get(url.toURI))
   val scalaLibrary: Seq[Path] =
     this.getClass.getClassLoader
       .asInstanceOf[URLClassLoader]
@@ -29,8 +34,8 @@ abstract class BasePCSuite extends BaseSuite {
       .filter(_.getPath.contains("scala-library"))
       .map(url => Paths.get(url.toURI))
       .toSeq
-  def extraClasspath: List[Path] = Nil
-  val myclasspath: List[Path] = extraClasspath ++ scalaLibrary.toList
+  def extraClasspath: Seq[Path] = Nil
+  val myclasspath: Seq[Path] = extraClasspath ++ scalaLibrary.toList
   val index = OnDemandSymbolIndex()
   val indexer = new Docstrings(index)
   val workspace = new TestingWorkspaceSearch
