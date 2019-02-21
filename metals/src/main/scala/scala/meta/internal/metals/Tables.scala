@@ -9,10 +9,12 @@ import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 
 final class Tables(
-    workspace: AbsolutePath,
+
+     workspace: AbsolutePath,
     time: Time,
     config: MetalsServerConfig
 ) extends Cancelable {
+  val jarSymbols = new JarTopLevels(() => connection)
   val sbtDigests =
     new SbtDigests(() => connection, time)
   val dependencySources =

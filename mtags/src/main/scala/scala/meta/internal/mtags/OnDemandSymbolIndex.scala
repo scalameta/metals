@@ -67,6 +67,16 @@ final case class OnDemandSymbolIndex(
     }
   }
 
+  // Used to add cached toplevel symbols to index
+  def addSourceJarTopLevels(
+      jar: AbsolutePath,
+      loadTopLevels: () => TrieMap[String, AbsolutePath]
+  ): Unit = tryRun {
+    if (sourceJars.addEntry(jar)) {
+      this.toplevels ++= loadTopLevels()
+    }
+  }
+
   // Enters nontrivial toplevel symbols for Scala source files.
   // All other symbols can be inferred on the fly.
   override def addSourceFile(
