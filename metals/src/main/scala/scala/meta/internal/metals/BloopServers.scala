@@ -222,7 +222,7 @@ final class BloopServers(
             }
           })
           new MutableCancelable()
-            .add(Cancelable(() => job.cancel(true)))
+            .add(Cancelable(() => job.cancel(false)))
             .add(Cancelable(() => cancelMain.trySuccess(true)))
         case None =>
           scribe.error(
@@ -309,7 +309,7 @@ final class BloopServers(
       retryDelayMillis,
       TimeUnit.MILLISECONDS
     )
-    promise.future.onComplete(_ => tick.cancel(true))
+    promise.future.onComplete(_ => tick.cancel(false))
     promise.future.recover {
       case NonFatal(e) =>
         scribe.error("Unexpected error using backup", e)

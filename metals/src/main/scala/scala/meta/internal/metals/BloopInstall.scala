@@ -109,7 +109,7 @@ final class BloopInstall(
       languageClient.metalsSlowTask(Messages.BloopInstallProgress)
     handler.response = Some(taskResponse)
     val processFuture = handler.completeProcess.future.map { result =>
-      taskResponse.cancel(true)
+      taskResponse.cancel(false)
       scribe.info(s"time: ran 'sbt bloopInstall' in $elapsed")
       result
     }
@@ -125,7 +125,7 @@ final class BloopInstall(
     }
     cancelables
       .add(() => BloopInstall.destroyProcess(runningProcess))
-      .add(() => taskResponse.cancel(true))
+      .add(() => taskResponse.cancel(false))
 
     processFuture.foreach(_.toChecksumStatus.foreach(persistChecksumStatus))
     processFuture
@@ -305,7 +305,7 @@ object BloopInstall {
         }
       }
       scribe.info(s"sbt exit: $statusCode")
-      response.foreach(_.cancel(true))
+      response.foreach(_.cancel(false))
     }
 
     override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
