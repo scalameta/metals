@@ -34,6 +34,7 @@ class Compilers(
     statusBar: StatusBar
 )(implicit ec: ExecutionContext)
     extends Cancelable {
+  val plugins = new CompilerPlugins()
 
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   val jcache = Collections.synchronizedMap(
@@ -135,11 +136,12 @@ class Compilers(
       } else {
         embedded.presentationCompiler(info, scalac)
       }
+    val options = plugins.filterSupportedOptions(scalac.getOptions.asScala)
     pc.withSearch(search)
       .newInstance(
         scalac.getTarget.getUri,
         classpath.asJava,
-        scalac.getOptions
+        options.asJava
       )
   }
 }

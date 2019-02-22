@@ -21,7 +21,7 @@ import scala.util.Properties
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
     classpath: Seq[Path] = Nil,
-    options: Seq[String] = Nil,
+    options: List[String] = Nil,
     search: SymbolSearch = EmptySymbolSearch
 ) extends PresentationCompiler {
   val logger = Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
@@ -42,7 +42,7 @@ case class ScalaPresentationCompiler(
     copy(
       buildTargetIdentifier = buildTargetIdentifier,
       classpath = classpath.asScala,
-      options = options.asScala
+      options = options.asScala.toList
     )
   }
 
@@ -104,28 +104,9 @@ case class ScalaPresentationCompiler(
       global.typedTreeAt(pos).symbol.fullName
     }
   }
-  // Metals officially only supports a hardcoded list of compiler
-  // plugins that are known to play nicely with the presentation compiler.
-  // Users who want to use Metals with other compiler plugins will need to
-  // send a PR adding tests to show their compiler plugin plays nicely with
-  // the presentation compiler.
-  val whitelist = Array[Array[String]](
-    Array("scalamacros", "paradise"),
-    Array("kind-projector"),
-    Array("better-monadic-for")
-  )
-
-  def isWhitelistedCompilerPlugin(option: String): Boolean =
-    whitelist.exists { keywords =>
-      keywords.forall(keyword => option.contains(keyword))
-    }
 
   def newCompiler(): MetalsGlobal = {
     val classpath = this.classpath.mkString(File.pathSeparator)
-    val options = this.options.iterator.filterNot { o =>
-      (o.startsWith("-Xplugin") || o.startsWith("-P")) &&
-      !isWhitelistedCompilerPlugin(o)
-    }.toList
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings
     settings.Ymacroexpand.value = "discard"
@@ -142,7 +123,7 @@ case class ScalaPresentationCompiler(
       settings.usejavacp.value = true
     }
     val (isSuccess, unprocessed) =
-      settings.processArguments(options, processAll = true)
+      settings.processArguments(options.toList, processAll = true)
     require(isSuccess, unprocessed)
     require(unprocessed.isEmpty, unprocessed)
     new MetalsGlobal(
