@@ -300,6 +300,8 @@ lazy val cross = project
       "com.chuusai" %% "shapeless" % "2.3.3",
       "org.typelevel" %% "cats-core" % "1.6.0",
       "com.github.mpilquist" %% "simulacrum" % "0.15.0",
+      "com.olegpy" %% "better-monadic-for" % "0.3.0-M4",
+      "org.spire-math" %% "kind-projector" % "0.9.8",
       "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
     ),
     crossScalaVersions := V.supportedScalaVersions

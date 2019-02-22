@@ -8,8 +8,13 @@ object MacroCompletionSuite extends BaseCompletionSuite {
 
   override def scalacOptions: Seq[String] =
     thisClasspath
-      .filter(_.getFileName.toString.contains("paradise"))
-      .map(paradise => s"-Xplugin:$paradise")
+      .filter { path =>
+        val filename = path.getFileName.toString
+        filename.contains("paradise") ||
+        filename.contains("better-monadic-for") ||
+        filename.contains("kind-projector")
+      }
+      .map(plugin => s"-Xplugin:$plugin")
   override def beforeAll(): Unit = ()
 
   check(
@@ -44,7 +49,7 @@ object MacroCompletionSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
-  def paradise(name: String, completion: String, expected: String): Unit =
+  def simulacrum(name: String, completion: String, expected: String): Unit =
     check(
       s"paradise-$name",
       s"""package x
@@ -64,14 +69,14 @@ object MacroCompletionSuite extends BaseCompletionSuite {
          |""".stripMargin,
       expected
     )
-  paradise(
+  simulacrum(
     "import",
     """|import Semigroup.op@@
        |""".stripMargin,
     """|ops x.Semigroup
        |""".stripMargin
   )
-  paradise(
+  simulacrum(
     "object",
     """|Semigroup.apply@@
        |""".stripMargin,
@@ -80,7 +85,7 @@ object MacroCompletionSuite extends BaseCompletionSuite {
   )
   1.to(5).foreach { i =>
     val name = "generatedMethod".dropRight(i)
-    paradise(
+    simulacrum(
       s"member-$i",
       s"""|import Semigroup.ops._
           |1.$name@@
@@ -89,4 +94,29 @@ object MacroCompletionSuite extends BaseCompletionSuite {
          |""".stripMargin
     )
   }
+
+  check(
+    "kind-projector",
+    """
+      |object a {
+      |  def baz[F[_], A]: F[A] = ???
+      |  baz[Either[Int, ?], String].right@@
+      |}
+    """.stripMargin,
+    """|right: Either.RightProjection[Int,String]
+       |""".stripMargin
+  )
+
+  check(
+    "bm4",
+    """
+      |object a {
+      |  for (implicit0(x: String) <- Option(""))
+      |    implicitly[String].toCharArr@@
+      |}
+    """.stripMargin,
+    """|toCharArray(): Array[Char]
+       |""".stripMargin
+  )
+
 }
