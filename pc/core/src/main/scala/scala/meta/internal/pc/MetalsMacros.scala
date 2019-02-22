@@ -11,7 +11,7 @@ trait MetalsMacros { this: MetalsGlobal =>
    * they cannot change the results from completions/signatureHelp/hover. By disabling
    * blackbox macros we avoid a potentially expensive computation.
    */
-  class DisableBlackboxMacrosPlugin extends analyzer.MacroPlugin { self =>
+  class DisableBlackboxMacrosPlugin extends analyzer.MacroPlugin {
     override def pluginsMacroExpand(
         typer: analyzer.Typer,
         expandee: Tree,

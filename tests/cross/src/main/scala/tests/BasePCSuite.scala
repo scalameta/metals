@@ -35,6 +35,7 @@ abstract class BasePCSuite extends BaseSuite {
       .map(url => Paths.get(url.toURI))
       .toSeq
   def extraClasspath: Seq[Path] = Nil
+  def scalacOptions: Seq[String] = Nil
   val myclasspath: Seq[Path] = extraClasspath ++ scalaLibrary.toList
   val index = OnDemandSymbolIndex()
   val indexer = new Docstrings(index)
@@ -46,7 +47,7 @@ abstract class BasePCSuite extends BaseSuite {
   )
   val pc = new ScalaPresentationCompiler()
     .withSearch(search)
-    .newInstance("", myclasspath.asJava, Nil.asJava)
+    .newInstance("", myclasspath.asJava, scalacOptions.asJava)
   val tmp = AbsolutePath(Files.createTempDirectory("metals"))
 
   def indexJDK(): Unit = {

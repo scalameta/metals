@@ -298,7 +298,9 @@ lazy val cross = project
     testSettings,
     libraryDependencies ++= List(
       "com.chuusai" %% "shapeless" % "2.3.3",
-      "org.typelevel" %% "cats-core" % "1.6.0"
+      "org.typelevel" %% "cats-core" % "1.6.0",
+      "com.github.mpilquist" %% "simulacrum" % "0.15.0",
+      "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
     ),
     crossScalaVersions := V.supportedScalaVersions
   )

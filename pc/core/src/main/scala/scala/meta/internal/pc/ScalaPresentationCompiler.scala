@@ -113,7 +113,8 @@ case class ScalaPresentationCompiler(
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true
-    if (!Properties.versionNumberString.startsWith("2.11")) {
+    if (!Properties.versionNumberString.startsWith("2.11") &&
+      Properties.versionNumberString != "2.12.4") {
       settings.processArguments(
         List("-Ycache-plugin-class-loader:last-modified"),
         processAll = true
@@ -123,7 +124,7 @@ case class ScalaPresentationCompiler(
       settings.usejavacp.value = true
     }
     val (isSuccess, unprocessed) =
-      settings.processArguments(options.toList, processAll = true)
+      settings.processArguments(options, processAll = true)
     require(isSuccess, unprocessed)
     require(unprocessed.isEmpty, unprocessed)
     new MetalsGlobal(
