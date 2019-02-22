@@ -334,7 +334,6 @@ class MetalsLanguageServer(
       )
       capabilities.setDefinitionProvider(true)
       capabilities.setReferencesProvider(true)
-      capabilities.setHoverProvider(true)
       capabilities.setSignatureHelpProvider(
         new SignatureHelpOptions(List("(", "[").asJava)
       )
