@@ -39,6 +39,25 @@ object MacroCompletionSuite extends BaseCompletionSuite {
   )
 
   check(
+    "product-args",
+    """
+      |import shapeless._
+      |
+      |object App {
+      |  implicit class XtensionString(s: StringContext) {
+      |    object fr extends ProductArgs {
+      |      def applyProduct[T](a: T :: HNil): Either[T, String] = Left(a.head)
+      |    }
+      |  }
+      |  val x = 42
+      |  fr"$x".righ@@
+      |}
+      |""".stripMargin,
+    """|right: Either.RightProjection[Int,String]
+       |""".stripMargin
+  )
+
+  check(
     "blackbox",
     """
       |object A {
