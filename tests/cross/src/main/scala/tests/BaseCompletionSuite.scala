@@ -25,7 +25,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       expected: String,
       includeDocs: Boolean = false,
       includeCommitCharacter: Boolean = false,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      postProcessObtained: String => String = identity
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val (code, offset) = params(original)
@@ -50,7 +51,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           .append("\n")
       }
       assertNoDiff(
-        trimTrailingSpace(out.toString()),
+        postProcessObtained(trimTrailingSpace(out.toString())),
         getExpected(expected, compat)
       )
     }

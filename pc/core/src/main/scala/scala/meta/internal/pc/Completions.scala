@@ -36,17 +36,12 @@ trait Completions { this: MetalsGlobal =>
    * - public vs private
    * - synthetic vs non-synthetic
    */
-  def relevancePenalty(
-      m: Member,
-      qual: Option[Type],
-      history: ShortenedNames
-  ): Int = m match {
+  def relevancePenalty(m: Member, history: ShortenedNames): Int = m match {
     case TypeMember(sym, _, true, isInherited, _) =>
       computeRelevancePenalty(
         sym,
         m.implicitlyAdded,
         isInherited,
-        qual,
         history
       )
     case w: WorkspaceMember =>
@@ -56,7 +51,6 @@ trait Completions { this: MetalsGlobal =>
         sym,
         m.implicitlyAdded,
         isInherited = false,
-        qual,
         history
       )
     case _ =>
@@ -71,7 +65,6 @@ trait Completions { this: MetalsGlobal =>
       sym: Symbol,
       viaImplicitConversion: Boolean,
       isInherited: Boolean,
-      qual: Option[Type],
       history: ShortenedNames
   ): Int = {
     import MemberOrdering._
@@ -105,38 +98,36 @@ trait Completions { this: MetalsGlobal =>
     relevance
   }
 
-  def memberOrdering(
-      qual: Option[Type],
-      history: ShortenedNames
-  ): Ordering[Member] = new Ordering[Member] {
-    override def compare(o1: Member, o2: Member): Int = {
-      val byRelevance = Integer.compare(
-        relevancePenalty(o1, qual, history),
-        relevancePenalty(o2, qual, history)
-      )
-      if (byRelevance != 0) byRelevance
-      else {
-        val byIdentifier =
-          IdentifierComparator.compare(o1.sym.name, o2.sym.name)
-        if (byIdentifier != 0) byIdentifier
+  def memberOrdering(history: ShortenedNames): Ordering[Member] =
+    new Ordering[Member] {
+      override def compare(o1: Member, o2: Member): Int = {
+        val byRelevance = Integer.compare(
+          relevancePenalty(o1, history),
+          relevancePenalty(o2, history)
+        )
+        if (byRelevance != 0) byRelevance
         else {
-          val byOwner = o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
-          if (byOwner != 0) byOwner
+          val byIdentifier =
+            IdentifierComparator.compare(o1.sym.name, o2.sym.name)
+          if (byIdentifier != 0) byIdentifier
           else {
-            val byParamCount = Integer.compare(
-              o1.sym.paramss.iterator.flatten.size,
-              o2.sym.paramss.iterator.flatten.size
-            )
-            if (byParamCount != 0) byParamCount
+            val byOwner = o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
+            if (byOwner != 0) byOwner
             else {
-              detailString(qual, o1, history)
-                .compareTo(detailString(qual, o2, history))
+              val byParamCount = Integer.compare(
+                o1.sym.paramss.iterator.flatten.size,
+                o2.sym.paramss.iterator.flatten.size
+              )
+              if (byParamCount != 0) byParamCount
+              else {
+                detailString(o1, history)
+                  .compareTo(detailString(o2, history))
+              }
             }
           }
         }
       }
     }
-  }
 
   def infoString(sym: Symbol, info: Type, history: ShortenedNames): String =
     sym match {
@@ -157,24 +148,17 @@ trait Completions { this: MetalsGlobal =>
         }
     }
 
-  def detailString(
-      qual: Option[Type],
-      r: Member,
-      history: ShortenedNames
-  ): String = {
-    qual match {
-      case Some(tpe) if !r.sym.hasPackageFlag =>
-        // Compute type parameters based on the qualifier.
-        // Example: Map[Int, String].applyOrE@@
-        // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
-        // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
-        infoString(r.sym, tpe.memberType(r.sym), history)
-      case _ =>
-        if (r.sym.hasRawInfo) {
-          infoString(r.sym, r.sym.rawInfo, history)
-        } else {
-          "<_>"
-        }
+  def detailString(r: Member, history: ShortenedNames): String = {
+    if (!r.sym.hasPackageFlag) {
+      // Compute type parameters based on the qualifier.
+      // Example: Map[Int, String].applyOrE@@
+      // Before: getOrElse[V1 >: V]     (key: K,   default: => V1): V1
+      // After:  getOrElse[V1 >: String](key: Int, default: => V1): V1
+      infoString(r.sym, r.prefix.memberType(r.sym), history)
+    } else if (r.sym.hasRawInfo) {
+      infoString(r.sym, r.sym.rawInfo, history)
+    } else {
+      "<_>"
     }
   }
 

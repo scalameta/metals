@@ -109,7 +109,7 @@ object MacroCompletionSuite extends BaseCompletionSuite {
       s"""|import Semigroup.ops._
           |1.$name@@
           |""".stripMargin,
-      """|generatedMethod(y: A): A
+      """|generatedMethod(y: Int): Int
          |""".stripMargin
     )
   }

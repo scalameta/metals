@@ -104,11 +104,11 @@ object CompletionSuite extends BaseCompletionSuite {
       |  List.@@
       |}""".stripMargin,
     """|apply[A](xs: A*): List[A]
-       |canBuildFrom[A]: CanBuildFrom[List.Coll,A,List[A]]
+       |canBuildFrom[A]: CanBuildFrom[immutable.List.Coll,A,List[A]]
        |empty[A]: List[A]
        |newBuilder[A]: Builder[A,List[A]]
        |GenericCanBuildFrom scala.collection.generic.GenTraversableFactory
-       |ReusableCBF: List.GenericCanBuildFrom[Nothing]
+       |ReusableCBF: immutable.List.GenericCanBuildFrom[Nothing]
        |concat[A](xss: Traversable[A]*): List[A]
        |fill[A](n: Int)(elem: => A): List[A]
        |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
@@ -124,12 +124,12 @@ object CompletionSuite extends BaseCompletionSuite {
        |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
        |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
        |unapplySeq[A](x: List[A]): Some[List[A]]
-       |->[B](y: B): (A, B)
+       |->[B](y: B): (List.type, B)
        |+(other: String): String
-       |ensuring(cond: A => Boolean): A
-       |ensuring(cond: Boolean): A
-       |ensuring(cond: A => Boolean, msg: => Any): A
-       |ensuring(cond: Boolean, msg: => Any): A
+       |ensuring(cond: Boolean): List.type
+       |ensuring(cond: List.type => Boolean): List.type
+       |ensuring(cond: Boolean, msg: => Any): List.type
+       |ensuring(cond: List.type => Boolean, msg: => Any): List.type
        |formatted(fmtstr: String): String
        |asInstanceOf[T0]: T0
        |equals(obj: Any): Boolean
@@ -464,13 +464,17 @@ object CompletionSuite extends BaseCompletionSuite {
       |  1.until@@
       |}
     """.stripMargin,
-    """|until(end: T): NumericRange.Exclusive[T]
-       |until(end: T, step: T): NumericRange.Exclusive[T]
+    """|until(end: Long): NumericRange.Exclusive[Long]
+       |until(end: Long, step: Long): NumericRange.Exclusive[Long]
        |until(end: Int): Range
        |until(end: Int, step: Int): Range
-       |until(end: T): Range.Partial[T,NumericRange[T]]
-       |until(end: T, step: T): NumericRange.Exclusive[T]
+       |until(end: Double): Range.Partial[Double,NumericRange[Double]]
+       |until(end: Double, step: Double): NumericRange.Exclusive[Double]
        |""".stripMargin,
+    // NOTE(olafur) The compiler produces non-deterministic results for this
+    // test case, sometime it uses Double and sometimes it uses Float depending
+    // other whether its a clean compiler or reused one.
+    postProcessObtained = _.replaceAllLiterally("Float", "Double"),
     compat = Map(
       "2.12.4" ->
         """|until(end: T): Range.Partial[T,NumericRange[T]]

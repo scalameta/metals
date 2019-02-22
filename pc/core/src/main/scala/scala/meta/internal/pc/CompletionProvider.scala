@@ -29,16 +29,15 @@ class CompletionProvider(
       cursor = Some(params.offset)
     )
     val pos = unit.position(params.offset)
-    val (qual, kind, i) = safeCompletionsAt(pos)
+    val (kind, i) = safeCompletionsAt(pos)
     val history = new ShortenedNames()
-    val sorted = i.results.sorted(memberOrdering(qual, history))
+    val sorted = i.results.sorted(memberOrdering(history))
     val items = sorted.iterator.zipWithIndex.map {
       case (r, idx) =>
         params.checkCanceled()
         val label = r.symNameDropLocal.decoded
         val item = new CompletionItem(label)
-        // TODO(olafur): investigate TypeMembers.prefix field, maybe it can replace qual match here.
-        val detail = detailString(qual, r, history)
+        val detail = detailString(r, history)
         r match {
           case w: WorkspaceMember =>
             item.setInsertText(w.sym.fullName)
@@ -175,11 +174,10 @@ class CompletionProvider(
 
   private def safeCompletionsAt(
       position: Position
-  ): (Option[Type], LookupKind, InterestingMembers) = {
+  ): (LookupKind, InterestingMembers) = {
     def expected(e: Throwable) = {
       logger.warning(e.getMessage)
       (
-        None,
         LookupKind.None,
         InterestingMembers(Nil, SymbolSearch.Result.COMPLETE)
       )
@@ -205,13 +203,7 @@ class CompletionProvider(
         position
       )
       params.checkCanceled()
-      val qual = completions match {
-        case t: CompletionResult.TypeMembers =>
-          Option(t.qualifier.tpe)
-        case _ =>
-          None
-      }
-      (qual, kind, items)
+      (kind, items)
     } catch {
       case e: CyclicReference
           if e.getMessage.contains("illegal cyclic reference") =>
