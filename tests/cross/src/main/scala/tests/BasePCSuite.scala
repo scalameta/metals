@@ -57,7 +57,13 @@ abstract class BasePCSuite extends BaseSuite {
     // We are unable to infer the JDK jars on Appveyor
     // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
     if (isAppveyor) ignore(name)(())
-    else super.test(name)(fun)
+    else {
+      val testName =
+        if (Properties.versionNumberString != BuildInfoVersions.scala212)
+          s"${Properties.versionNumberString}-${name}"
+        else name
+      super.test(testName)(fun)
+    }
   }
   def indexScalaLibrary(): Unit = {
     val sources = CoursierSmall.fetch(
