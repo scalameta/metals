@@ -298,7 +298,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
            |to(end: Int, step: Int): Range.Inclusive
            |""".stripMargin,
       "2.11" ->
-        """|to(end: T): FractionalProxy#ResultWithoutStep
+        """|to(end: T): Range.Partial[T,NumericRange[T]]
            |   ^^^^^^
            |to(end: T, step: T): NumericRange.Inclusive[T]
            |to(end: T): NumericRange.Inclusive[T]
