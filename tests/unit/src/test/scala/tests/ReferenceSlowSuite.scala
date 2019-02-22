@@ -44,7 +44,8 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
     } yield ()
   }
 
-  flakyTest("synthetic") {
+  test("synthetic") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """
