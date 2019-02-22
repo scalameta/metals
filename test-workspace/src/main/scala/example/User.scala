@@ -1,8 +1,8 @@
-package myexample
+package example
 
-import scala.concurrent.Future
-
-object A {
-  scala.concurrent.Future.traverse(List(scala.concurrent.Future.successful(1)))
-  scala.concurrent.Future.traverse(List(scala.concurrent.Future.successful(1)))
+import shapeless._
+case class Person(name: String, age: Int)
+object User {
+  val gen = Generic[Person]
+  gen.to
 }

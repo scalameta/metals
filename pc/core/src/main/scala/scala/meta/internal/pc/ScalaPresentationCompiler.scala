@@ -128,6 +128,7 @@ case class ScalaPresentationCompiler(
     }.toList
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings
+    settings.Ymacroexpand.value = "discard"
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true

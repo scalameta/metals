@@ -19,7 +19,9 @@ class MetalsGlobal(
     val logger: Logger
 ) extends Global(settings, reporter)
     with Completions
-    with Signatures { compiler =>
+    with Signatures
+    with MetalsMacros { compiler =>
+  analyzer.addMacroPlugin(new DisableBlackboxMacrosPlugin)
 
   def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
 
