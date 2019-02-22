@@ -31,7 +31,6 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   private val sh = Executors.newSingleThreadScheduledExecutor()
-  lazy val bloopClassloader = Embedded.newBloopClassloader()
   def bspGlobalDirectories: List[AbsolutePath] = Nil
   var server: TestingServer = _
   var client: TestingClient = _
@@ -74,7 +73,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       bspGlobalDirectories,
       sh,
       time,
-      () => bloopClassloader
+      () => GlobalClassloaders.bloop
     )(ex)
     server.server.userConfig = this.userConfig
   }

@@ -158,7 +158,6 @@ object Embedded {
       )
     )
     val jars = coursiersmall.CoursierSmall.fetch(settings)
-    jars.foreach(jar => pprint.log(jar))
     // Don't make Bloop classloader a child or our classloader.
     val parent: ClassLoader = null
     val classloader =
