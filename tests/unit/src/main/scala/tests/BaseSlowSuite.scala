@@ -7,7 +7,6 @@ import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopProtocol
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsLogger
