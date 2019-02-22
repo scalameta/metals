@@ -472,6 +472,12 @@ object CompletionSuite extends BaseCompletionSuite {
        |until(end: T, step: T): NumericRange.Exclusive[T]
        |""".stripMargin,
     compat = Map(
+      "2.12.4" ->
+        """|until(end: T): Range.Partial[T,NumericRange[T]]
+           |until(end: T, step: T): NumericRange.Exclusive[T]
+           |until(end: T): NumericRange.Exclusive[T]
+           |until(end: T, step: T): NumericRange.Exclusive[T]
+        """.stripMargin,
       "2.11" ->
         """|until(end: T): FractionalProxy#ResultWithoutStep
            |until(end: T, step: T): NumericRange.Exclusive[T]
