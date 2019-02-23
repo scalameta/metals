@@ -1,6 +1,7 @@
 package tests
 
 import scala.collection.concurrent.TrieMap
+import java.nio.file.Paths
 
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.JarTopLevels
@@ -8,8 +9,11 @@ import scala.meta.internal.io.PlatformFileIO
 
 object JarTopLevelsSuite extends BaseTablesSuite {
   def jarSymbols: JarTopLevels = tables.jarSymbols
-  val jar1 = AbsolutePath(getClass.getResource("/jar-symbols/jar1.zip").getFile)
-  val jar2 = AbsolutePath(getClass.getResource("/jar-symbols/jar2.zip").getFile)
+  def getAbsolutePath(resource: String): AbsolutePath = {
+    AbsolutePath(Paths.get(getClass.getResource(resource).toURI))
+  }
+  val jar1 = getAbsolutePath("/jar-symbols/jar1.zip")
+  val jar2 = getAbsolutePath("/jar-symbols/jar2.zip")
 
   test("cachedSymbols") {
     val fs = PlatformFileIO.newJarFileSystem(jar1, create = false)
