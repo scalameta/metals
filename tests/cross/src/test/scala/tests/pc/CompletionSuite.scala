@@ -138,7 +138,46 @@ object CompletionSuite extends BaseCompletionSuite {
        |isInstanceOf[T0]: Boolean
        |synchronized[T0](x$1: T0): T0
        |toString(): String
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|apply[A](xs: A*): List[A]
+           |canBuildFrom[A]: CanBuildFrom[List.Coll,A,List[A]]
+           |empty[A]: List[A]
+           |newBuilder[A]: Builder[A,List[A]]
+           |GenericCanBuildFrom scala.collection.generic.GenTraversableFactory
+           |ReusableCBF: List.GenericCanBuildFrom[Nothing]
+           |concat[A](xss: Traversable[A]*): List[A]
+           |fill[A](n: Int)(elem: => A): List[A]
+           |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
+           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]]]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]]]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
+           |iterate[A](start: A, len: Int)(f: A => A): List[A]
+           |range[T: Integral](start: T, end: T): List[T]
+           |range[T: Integral](start: T, end: T, step: T): List[T]
+           |tabulate[A](n: Int)(f: Int => A): List[A]
+           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A]]
+           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
+           |unapplySeq[A](x: List[A]): Some[List[A]]
+           |->[B](y: B): (List.type, B)
+           |+(other: String): String
+           |ensuring(cond: Boolean): List.type
+           |ensuring(cond: List.type => Boolean): List.type
+           |ensuring(cond: Boolean, msg: => Any): List.type
+           |ensuring(cond: List.type => Boolean, msg: => Any): List.type
+           |formatted(fmtstr: String): String
+           |asInstanceOf[T0]: T0
+           |equals(obj: Any): Boolean
+           |getClass(): Class[_]
+           |hashCode(): Int
+           |isInstanceOf[T0]: Boolean
+           |synchronized[T0](x$1: T0): T0
+           |toString(): String
+           |""".stripMargin
+    )
   )
 
   check(
@@ -477,16 +516,16 @@ object CompletionSuite extends BaseCompletionSuite {
     postProcessObtained = _.replaceAllLiterally("Float", "Double"),
     compat = Map(
       "2.12.4" ->
-        """|until(end: T): Range.Partial[T,NumericRange[T]]
-           |until(end: T, step: T): NumericRange.Exclusive[T]
-           |until(end: T): NumericRange.Exclusive[T]
-           |until(end: T, step: T): NumericRange.Exclusive[T]
+        """|until(end: Double): Range.Partial[Double,NumericRange[Double]]
+           |until(end: Double, step: Double): NumericRange.Exclusive[Double]
+           |until(end: Long): NumericRange.Exclusive[Long]
+           |until(end: Long, step: Long): NumericRange.Exclusive[Long]
         """.stripMargin,
       "2.11" ->
-        """|until(end: T): Range.Partial[T,NumericRange[T]]
-           |until(end: T, step: T): NumericRange.Exclusive[T]
-           |until(end: T): NumericRange.Exclusive[T]
-           |until(end: T, step: T): NumericRange.Exclusive[T]
+        """|until(end: Double): Range.Partial[Double,NumericRange[Double]]
+           |until(end: Double, step: Double): NumericRange.Exclusive[Double]
+           |until(end: Long): NumericRange.Exclusive[Long]
+           |until(end: Long, step: Long): NumericRange.Exclusive[Long]
            |""".stripMargin
     )
   )
