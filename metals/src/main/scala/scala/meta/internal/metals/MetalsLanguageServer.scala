@@ -32,7 +32,7 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, HashSet}
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -1185,7 +1185,12 @@ class MetalsLanguageServer(
   private def indexDependencySources(
       dependencySources: DependencySourcesResult
   ): Unit = {
+    // Track used Jars so that we can
+    // remove cached symbols from Jars
+    // that are not used
+    val usedJars = HashSet[AbsolutePath]()
     JdkSources(userConfig.javaHome).foreach { zip =>
+      usedJars += zip
       addSourceJarSymbols(zip)
     }
     for {
@@ -1196,6 +1201,7 @@ class MetalsLanguageServer(
         val path = sourceUri.toAbsolutePath
         buildTargets.addDependencySource(path, item.getTarget)
         if (path.isJar) {
+          usedJars += path
           addSourceJarSymbols(path)
         } else {
           scribe.warn(s"unexpected dependency directory: $path")
@@ -1205,6 +1211,8 @@ class MetalsLanguageServer(
           scribe.error(s"error processing $sourceUri", e)
       }
     }
+    // Remove unused toplevel symbols from cache
+    tables.jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
   }
 
   /**
@@ -1228,7 +1236,6 @@ class MetalsLanguageServer(
         }
       }
     )
-
   }
 
   private val isCompiling = TrieMap.empty[BuildTargetIdentifier, Boolean]

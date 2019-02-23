@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.mtags.MD5
 
 /**
  * Handles caching of Jar Top Level Symbols in H2
@@ -20,39 +21,32 @@ final class JarTopLevels(conn: () => Connection) {
    * Retrieves top level Scala symbols of a jar from H2
    *
    * @param path absolute path of the jar
-   * @param digest MD5 digest of the jar
    * @return the top level Scala symbols in the jar
    */
   def getTopLevels(
       path: AbsolutePath
   ): Option[TrieMap[String, AbsolutePath]] = {
     val fs = PlatformFileIO.newJarFileSystem(path, create = false)
+    val toplevels = TrieMap[String, AbsolutePath]()
     conn()
       .query(
-        "select id from indexed_jar where path=? and last_modified=? and size=?"
-      ) { q =>
-        val attributes = getAttributes(path)
-        q.setString(1, path.toString)
-        q.setLong(2, attributes.lastModifiedTime().toMillis)
-        q.setLong(3, attributes.size())
-      } { _.getInt(1) }
-      .map { jar =>
-        val toplevels = TrieMap[String, AbsolutePath]()
-        conn().query(
-          "select symbol, path from toplevel_symbol where jar=?"
-        )(q => q.setInt(1, jar)) { rs =>
+        """select ts.symbol, ts.path
+          |from indexed_jar ij
+          |left join toplevel_symbol ts
+          |on ij.id=ts.jar
+          |where ij.md5=?""".stripMargin
+      ) { _.setString(1, getMD5Digest(path)) } { rs =>
+        if (rs.getString(1) != null && rs.getString(2) != null)
           toplevels(rs.getString(1)) = AbsolutePath(fs.getPath(rs.getString(2)))
-        }
-        toplevels
       }
       .headOption
+      .map(_ => toplevels)
   }
 
   /**
-   * Stores the top level symbols for the Jar in H2
+   * Stores the top level symbols for the Jar
    *
    * @param path absolute path of the jar
-   * @param digest MD5 digest of the jar
    * @param toplevels toplevel symbols in the jar
    * @return the number of toplevel symbols inserted
    */
@@ -64,13 +58,10 @@ final class JarTopLevels(conn: () => Connection) {
     var jarStmt: PreparedStatement = null
     val jar = try {
       jarStmt = conn().prepareStatement(
-        s"insert into indexed_jar (path, last_modified, size) values (?, ?, ?)",
+        s"insert into indexed_jar (md5) values (?)",
         Statement.RETURN_GENERATED_KEYS
       )
-      val attributes = getAttributes(path)
-      jarStmt.setString(1, path.toString)
-      jarStmt.setLong(2, attributes.lastModifiedTime().toMillis)
-      jarStmt.setLong(3, attributes.size())
+      jarStmt.setString(1, getMD5Digest(path))
       jarStmt.executeUpdate()
       val rs = jarStmt.getGeneratedKeys
       rs.next()
@@ -80,11 +71,8 @@ final class JarTopLevels(conn: () => Connection) {
     }
 
     // Add symbols for jar to H2
-    // Turn off auto commit to speed up batch execution
-    val ac = conn().getAutoCommit
     var symbolStmt: PreparedStatement = null
     try {
-      conn().setAutoCommit(false)
       symbolStmt = conn().prepareStatement(
         s"insert into toplevel_symbol (symbol, path, jar) values (?, ?, ?)"
       )
@@ -99,13 +87,32 @@ final class JarTopLevels(conn: () => Connection) {
       symbolStmt.executeBatch().sum
     } finally {
       if (symbolStmt != null) symbolStmt.close()
-      conn().setAutoCommit(ac)
     }
   }
 
-  private def getAttributes(path: AbsolutePath) = {
-    Files
+  /**
+   * Delete the jars that are not used and their top level symbols
+   *
+   * @param usedPaths paths of the used Jars
+   * @return number of jars deleted
+   */
+  def deleteNotUsedTopLevels(usedPaths: Array[AbsolutePath]): Int = {
+    val md5s = usedPaths.map(getMD5Digest).map("'" + _ + "'").mkString(",")
+    conn().update {
+      s"delete from indexed_jar where md5 not in ($md5s)"
+    } { _ =>
+      ()
+    }
+  }
+
+  private def getMD5Digest(path: AbsolutePath) = {
+    val attributes = Files
       .getFileAttributeView(path.toNIO, classOf[BasicFileAttributeView])
       .readAttributes()
+    MD5.compute(
+      path.toString + ":" + attributes
+        .lastModifiedTime()
+        .toMillis + ":" + attributes.size()
+    )
   }
 }
