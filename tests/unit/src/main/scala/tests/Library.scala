@@ -32,6 +32,16 @@ object Library {
             "4.1.0"
           ),
           new Dependency(
+            "com.lihaoyi",
+            "scalaparse_2.12",
+            "1.0.0"
+          ),
+          new Dependency(
+            "com.lihaoyi",
+            "acyclic_2.12",
+            "0.1.8"
+          ),
+          new Dependency(
             "com.typesafe.akka",
             "akka-testkit_2.12",
             "2.5.19"

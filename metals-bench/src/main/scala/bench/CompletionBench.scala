@@ -13,6 +13,7 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItems
@@ -43,6 +44,9 @@ abstract class CompletionBench {
     val scala = Corpus.scala()
     val typers =
       "scala-2.12.8/src/compiler/scala/tools/nsc/typechecker/Typers.scala"
+    val fastparse = Corpus.fastparse()
+    val exprs =
+      "fastparse-1.0.0/scalaparse/shared/src/main/scala/scalaparse/Exprs.scala"
     completions = Map(
       "scopeOpen" -> SourceCompletion.fromPath(
         "A.scala",
@@ -71,11 +75,22 @@ abstract class CompletionBench {
         scala,
         typers,
         "if (argProtos.isDefi@@nedAt(idx)) argProtos(idx) else NoType"
+      ),
+      "scopeFastparse" -> SourceCompletion.fromZipPath(
+        fastparse,
+        exprs,
+        "val InfixPattern = P( S@@implePattern ~ (Id ~/ SimplePattern).rep | `_*` )"
+      ),
+      "memberFastparse" -> SourceCompletion.fromZipPath(
+        fastparse,
+        exprs,
+        "  val Pattern: P0 = P( (WL ~ TypeOrBindPattern).r@@ep(1, sep = \"|\".~/) )"
       )
     )
   }
   @Param(
-    Array("scopeOpen", "scopeDeep", "memberDeep", "scopeTypers", "memberTypers")
+    Array("scopeOpen", "scopeDeep", "memberDeep", "scopeTypers", "memberTypers",
+      "scopeFastparse", "memberFastparse")
   )
   var completion: String = _
 
@@ -85,8 +100,9 @@ abstract class CompletionBench {
   def complete(): CompletionItems = {
     val pc = presentationCompiler()
     val result = currentCompletion.complete(pc)
-    // val diagnostics = pc.diagnostics()
-    // require(diagnostics.isEmpty, diagnostics.asScala.mkString("\n", "\n", "\n"))
+//    val diagnostics = pc.diagnostics()
+//    require(diagnostics.isEmpty, diagnostics.asScala.mkString("\n", "\n", "\n"))
+    require(!result.getItems.isEmpty, result)
     result
   }
 

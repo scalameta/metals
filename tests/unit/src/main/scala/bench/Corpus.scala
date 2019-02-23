@@ -12,6 +12,12 @@ object Corpus {
       "https://github.com/scala/scala/archive/v2.12.8.zip"
     )
   }
+  def fastparse(): AbsolutePath = {
+    download(
+      "fastparse-sources.zip",
+      "https://github.com/lihaoyi/fastparse/archive/1.0.0.zip"
+    )
+  }
   def akka(): AbsolutePath = {
     download(
       "akka-sources.zip",
