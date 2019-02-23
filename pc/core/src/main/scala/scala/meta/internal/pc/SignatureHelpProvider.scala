@@ -263,7 +263,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       }
     }
     def visit(tree: Tree): Unit = tree match {
-      case MethodCall(call) =>
+      case MethodCall(call) if call.qual.pos.isRange =>
         var start = call.qual.pos.end
         val lastArgument = call.margss.iterator.flatten
           .filter(_.pos.isRange)

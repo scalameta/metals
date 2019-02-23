@@ -488,4 +488,22 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |      ^^^^^^^^^^^
        | """.stripMargin
   )
+
+  check(
+    "implicit-conv",
+    """
+      |case class Text[T](value: T)
+      |object Text {
+      |  implicit def conv[T](e: T): Text[T] = Text(e)
+      |}
+      |object a {
+      |  def foo[T](e: Text[T]): T = e.value
+      |  foo(4@@2)
+      |}
+    """.stripMargin,
+    """|foo[T](e: Text[T]): T
+       |       ^^^^^^^^^^
+       | """.stripMargin
+  )
+
 }
