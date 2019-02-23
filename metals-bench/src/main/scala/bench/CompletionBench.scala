@@ -37,9 +37,12 @@ abstract class CompletionBench {
 
   def downloadLibraries(): Unit = {
     libraries = Library.jdk :: Library.all
-    val akka = AkkaSources.download()
+    val akka = Corpus.akka()
     val replicator =
       "akka-2.5.19/akka-cluster/src/main/scala/akka/cluster/ClusterDaemon.scala"
+    val scala = Corpus.scala()
+    val typers =
+      "scala-2.12.8/src/compiler/scala/tools/nsc/typechecker/Typers.scala"
     completions = Map(
       "scopeOpen" -> SourceCompletion.fromPath(
         "A.scala",
@@ -49,19 +52,31 @@ abstract class CompletionBench {
           |        """.stripMargin,
         "import Java@@"
       ),
-      "scopeDeep" -> SourceCompletion.fromAkkaPath(
+      "scopeDeep" -> SourceCompletion.fromZipPath(
         akka,
         replicator,
         "val nonSensitiveKeys = Join@@ConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.settings)"
       ),
-      "memberDeep" -> SourceCompletion.fromAkkaPath(
+      "memberDeep" -> SourceCompletion.fromZipPath(
         akka,
         replicator,
         "val nonSensitiveKeys = JoinConfigCompatChecker.removeSensitiveKeys(joiningNodeConfig, cluster.@@settings)"
+      ),
+      "scopeTypers" -> SourceCompletion.fromZipPath(
+        scala,
+        typers,
+        "if (argProtos.isDefinedAt(id@@x)) argProtos(idx) else NoType"
+      ),
+      "memberTypers" -> SourceCompletion.fromZipPath(
+        scala,
+        typers,
+        "if (argProtos.isDefi@@nedAt(idx)) argProtos(idx) else NoType"
       )
     )
   }
-  @Param(Array("scopeOpen", "scopeDeep", "memberDeep"))
+  @Param(
+    Array("scopeOpen", "scopeDeep", "memberDeep", "scopeTypers", "memberTypers")
+  )
   var completion: String = _
 
   @Benchmark
@@ -70,8 +85,8 @@ abstract class CompletionBench {
   def complete(): CompletionItems = {
     val pc = presentationCompiler()
     val result = currentCompletion.complete(pc)
-    val diagnostics = pc.diagnostics()
-    require(diagnostics.isEmpty, diagnostics.asScala.mkString("\n", "\n", "\n"))
+    // val diagnostics = pc.diagnostics()
+    // require(diagnostics.isEmpty, diagnostics.asScala.mkString("\n", "\n", "\n"))
     result
   }
 

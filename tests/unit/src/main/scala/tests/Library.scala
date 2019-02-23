@@ -7,6 +7,7 @@ import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
+import scala.util.Properties
 
 case class Library(
     name: String,
@@ -69,6 +70,11 @@ object Library {
             "io.grpc",
             "grpc-all",
             "1.10.0"
+          ),
+          new Dependency(
+            "org.scala-lang",
+            "scala-compiler",
+            Properties.versionNumberString
           ),
           new Dependency(
             "io.buoyant",

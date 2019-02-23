@@ -20,7 +20,7 @@ class WorkspaceFuzzBench {
 
   @Setup
   def setup(): Unit = {
-    symbols = TestingWorkspaceSymbolProvider(AkkaSources.download())
+    symbols = TestingWorkspaceSymbolProvider(Corpus.akka())
     symbols.indexWorkspace()
   }
 

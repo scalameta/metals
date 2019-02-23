@@ -18,7 +18,7 @@ case class SourceCompletion(filename: String, code: String, offset: Int) {
 }
 
 object SourceCompletion {
-  def fromAkkaPath(
+  def fromZipPath(
       akka: AbsolutePath,
       path: String,
       query: String
