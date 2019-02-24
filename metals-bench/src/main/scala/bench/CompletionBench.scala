@@ -46,7 +46,7 @@ abstract class CompletionBench {
       "scala-2.12.8/src/compiler/scala/tools/nsc/typechecker/Typers.scala"
     val fastparse = Corpus.fastparse()
     val exprs =
-      "fastparse-1.0.0/scalaparse/shared/src/main/scala/scalaparse/Exprs.scala"
+      "fastparse-2.1.0/scalaparse/src/scalaparse/Exprs.scala"
     completions = Map(
       "scopeOpen" -> SourceCompletion.fromPath(
         "A.scala",
@@ -79,12 +79,12 @@ abstract class CompletionBench {
       "scopeFastparse" -> SourceCompletion.fromZipPath(
         fastparse,
         exprs,
-        "val InfixPattern = P( S@@implePattern ~ (Id ~/ SimplePattern).rep | `_*` )"
+        "def InfixPattern = P( S@@implePattern ~ (Id ~/ SimplePattern).rep | `_*` )"
       ),
       "memberFastparse" -> SourceCompletion.fromZipPath(
         fastparse,
         exprs,
-        "  val Pattern: P0 = P( (WL ~ TypeOrBindPattern).r@@ep(1, sep = \"|\".~/) )"
+        "def CaseClause: P[Unit] = P( `case` ~ !(`class` | `object`) ~/ Pattern ~ ExprCtx.Gua@@rd.? ~ `=>` ~ CaseBlock  )"
       )
     )
   }

@@ -7,8 +7,10 @@ import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.reflect.internal.{Flags => gf}
+import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
 
 class MetalsGlobal(
@@ -19,9 +21,44 @@ class MetalsGlobal(
     val logger: Logger
 ) extends Global(settings, reporter)
     with Completions
-    with Signatures
-    with MetalsMacros { compiler =>
-  analyzer.addMacroPlugin(new DisableBlackboxMacrosPlugin)
+    with Signatures { compiler =>
+
+  override lazy val analyzer = new {
+    val global: compiler.type = compiler
+  } with InteractiveAnalyzer {
+
+    /**
+     * Disable blackbox macro expansion for better reliability and performance.
+     *
+     * The benefits of disabling blackbox macros are
+     * - we insure ourselves from misbehaving macro library that mess up with compiler APIs
+     * - we avoid potentially expensive computation during macro expansion
+     * It's safe to disable blackbox macros because they don't affect typing, meaning
+     * they cannot change the results from completions/signatureHelp/hover.
+     *
+     * Here are basic benchmark numbers running completions in Exprs.scala from fastparse,
+     * a 150 line source file where a scope completion triggers 80 macros.
+     * {{{
+     *   // expand 80 blackbox like normal
+     *   [info] CachedSearchAndCompilerCompletionBench.complete  scopeFastparse    ss   60  118.484 ± 56.395  ms/op
+     *   // disable all blackbox macros
+     *   [info] CachedSearchAndCompilerCompletionBench.complete  scopeFastparse    ss   60  60.489 ± 9.197  ms/op
+     * }}}
+     *
+     * We don't use `analyser.addMacroPlugin()` to disable blackbox macros because benchmarks show that
+     * macro plugins add ~10ms overhead compared to overriding this method directly.
+     */
+    override def pluginsMacroExpand(
+        typer: Typer,
+        expandee: Tree,
+        mode: Mode,
+        pt: Type
+    ): Tree = {
+      if (standardIsBlackbox(expandee.symbol)) expandee
+      else super.pluginsMacroExpand(typer, expandee, mode, pt)
+    }
+
+  }
 
   def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
 
