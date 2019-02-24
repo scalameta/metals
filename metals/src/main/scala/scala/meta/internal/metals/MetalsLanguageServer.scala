@@ -1211,8 +1211,16 @@ class MetalsLanguageServer(
           scribe.error(s"error processing $sourceUri", e)
       }
     }
-    // Remove unused toplevel symbols from cache
-    tables.jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
+    // Schedule removal of unused toplevel symbols from cache
+    sh.schedule(
+      new Runnable {
+        override def run(): Unit = {
+          tables.jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
+        }
+      },
+      2,
+      TimeUnit.SECONDS
+    )
   }
 
   /**

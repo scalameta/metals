@@ -1,19 +1,31 @@
 package tests
 
 import scala.collection.concurrent.TrieMap
-import java.nio.file.Paths
 
+import java.nio.file.{Path, Files}
+import scala.meta.internal.io.FileIO
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.JarTopLevels
 import scala.meta.internal.io.PlatformFileIO
 
 object JarTopLevelsSuite extends BaseTablesSuite {
-  def jarSymbols: JarTopLevels = tables.jarSymbols
-  def getAbsolutePath(resource: String): AbsolutePath = {
-    AbsolutePath(Paths.get(getClass.getResource(resource).toURI))
+  private def jarSymbols: JarTopLevels = tables.jarSymbols
+  private val tmp: Path = Files.createTempDirectory("metals")
+  private val jar1: AbsolutePath = createSourceZip(tmp, "jar1.zip")
+  private val jar2: AbsolutePath = createSourceZip(tmp, "jar2.zip")
+
+  private def createSourceZip(dir: Path, name: String): AbsolutePath = {
+    val zip = AbsolutePath(dir.resolve(name))
+    FileIO.withJarFileSystem(zip, create = true, close = true) { root =>
+      FileLayout.fromString(
+        """|/foo.scala
+           |object Hello {
+           |}""".stripMargin,
+        root
+      )
+    }
+    zip
   }
-  val jar1 = getAbsolutePath("/jar-symbols/jar1.zip")
-  val jar2 = getAbsolutePath("/jar-symbols/jar2.zip")
 
   test("cachedSymbols") {
     val fs = PlatformFileIO.newJarFileSystem(jar1, create = false)
