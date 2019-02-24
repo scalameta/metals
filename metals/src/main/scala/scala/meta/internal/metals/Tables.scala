@@ -13,6 +13,7 @@ final class Tables(
     time: Time,
     config: MetalsServerConfig
 ) extends Cancelable {
+  val jarSymbols = new JarTopLevels(() => connection)
   val sbtDigests =
     new SbtDigests(() => connection, time)
   val dependencySources =

@@ -12,6 +12,7 @@ import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.nio.charset.Charset
+
 import scala.meta.internal.semanticdb.Scala._
 import java.nio.charset.StandardCharsets
 import java.nio.file._
@@ -22,14 +23,16 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, HashSet}
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -37,11 +40,8 @@ import scala.concurrent.TimeoutException
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.ListFiles
-import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags._
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.tokenizers.TokenizeException
@@ -1185,8 +1185,13 @@ class MetalsLanguageServer(
   private def indexDependencySources(
       dependencySources: DependencySourcesResult
   ): Unit = {
+    // Track used Jars so that we can
+    // remove cached symbols from Jars
+    // that are not used
+    val usedJars = HashSet[AbsolutePath]()
     JdkSources(userConfig.javaHome).foreach { zip =>
-      definitionIndex.addSourceJar(zip)
+      usedJars += zip
+      addSourceJarSymbols(zip)
     }
     for {
       item <- dependencySources.getItems.asScala
@@ -1196,7 +1201,8 @@ class MetalsLanguageServer(
         val path = sourceUri.toAbsolutePath
         buildTargets.addDependencySource(path, item.getTarget)
         if (path.isJar) {
-          definitionIndex.addSourceJar(path)
+          usedJars += path
+          addSourceJarSymbols(path)
         } else {
           scribe.warn(s"unexpected dependency directory: $path")
         }
@@ -1205,6 +1211,39 @@ class MetalsLanguageServer(
           scribe.error(s"error processing $sourceUri", e)
       }
     }
+    // Schedule removal of unused toplevel symbols from cache
+    sh.schedule(
+      new Runnable {
+        override def run(): Unit = {
+          tables.jarSymbols.deleteNotUsedTopLevels(usedJars.toArray)
+        }
+      },
+      2,
+      TimeUnit.SECONDS
+    )
+  }
+
+  /**
+   * Add top level Scala symbols from source JAR into symbol index
+   * Uses H2 cache for symbols
+   *
+   * @param path JAR path
+   */
+  private def addSourceJarSymbols(path: AbsolutePath): Unit = {
+    definitionIndex.addSourceJarTopLevels(
+      path,
+      () => {
+        tables.jarSymbols.getTopLevels(path) match {
+          case Some(toplevels) => toplevels
+          case None =>
+            // Nothing in cache, read top level symbols and store them in cache
+            val tempIndex = OnDemandSymbolIndex()
+            tempIndex.addSourceJar(path)
+            tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
+            tempIndex.toplevels
+        }
+      }
+    )
   }
 
   private val isCompiling = TrieMap.empty[BuildTargetIdentifier, Boolean]
