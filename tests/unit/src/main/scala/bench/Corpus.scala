@@ -15,7 +15,7 @@ object Corpus {
   def fastparse(): AbsolutePath = {
     download(
       "fastparse-sources.zip",
-      "https://github.com/lihaoyi/fastparse/archive/1.0.0.zip"
+      "https://github.com/lihaoyi/fastparse/archive/2.1.0.zip"
     )
   }
   def akka(): AbsolutePath = {

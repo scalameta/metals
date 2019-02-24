@@ -29,6 +29,8 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.meta.internal.trees.Origin.None Object
        |scala.meta.prettyprinters.Show.None Object
        |scala.reflect.macros.NonemptyAttachments Class
+       |scala.tools.nsc.backend.jvm.opt.LocalOptImpls.RemoveHandlersResult.NoneRemoved Object
+       |scala.tools.nsc.settings.ScalaSettings#CachePolicy.None Object
        |""".stripMargin
   )
   check(
@@ -78,7 +80,8 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   )
   check(
     "File",
-    """|com.google.common.io.Files Class
+    """|acyclic.plugin.Value.File Class
+       |com.google.common.io.Files Class
        |com.google.common.io.Files#FileByteSink Class
        |com.google.common.io.Files#FileByteSource Class
        |com.google.common.io.Files#FilePredicate Class
@@ -95,7 +98,6 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |java.nio.file.Files Class
        |java.nio.file.Files#FileTypeDetectors Class
        |org.apache.hadoop.mapred.IFile Class
-       |org.apache.hadoop.record.compiler.JFile Class
        |org.apache.jute.compiler.JFile Class
        |org.apache.parquet.Files Class
        |scala.meta.inputs.Input.Stream.SerializationProxy#File Class
@@ -131,7 +133,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     """|akka.stream.extra.Implicits Object
        |akka.stream.scaladsl.GraphDSL.Implicits Object
        |com.fasterxml.jackson.module.scala.util.Implicits Object
-       |fastparse.core.Implicits Object
+       |fastparse.Implicits Object
        |kafka.javaapi.Implicits Object
        |kafka.utils.Implicits Object
        |org.apache.spark.sql.LowPrioritySQLImplicits Interface
@@ -154,7 +156,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
        |scala.tools.nsc.interpreter.Power#LowPriorityPrettifier#AnyPrettifier.Implicits2 Interface
        |scala.tools.nsc.interpreter.StdReplVals#ReplImplicits Class
        |scala.tools.nsc.typechecker.Implicits Interface
-       |scala.tools.nsc.typechecker.ImplicitsStats Object
+       |scala.tools.nsc.typechecker.ImplicitsStats Interface
        |""".stripMargin
   )
 
@@ -183,6 +185,17 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   check(
     "Input.None",
     """|scala.meta.inputs.Input.None Object
+       |""".stripMargin
+  )
+
+  check(
+    "IO",
+    """|akka.io.IO Object
+       |com.typesafe.config.ConfigException#IO Class
+       |org.eclipse.jetty.util.ByteArrayISO8859Writer Class
+       |org.eclipse.jetty.util.IO Class
+       |org.mortbay.util.ByteArrayISO8859Writer Class
+       |org.mortbay.util.IO Class
        |""".stripMargin
   )
 

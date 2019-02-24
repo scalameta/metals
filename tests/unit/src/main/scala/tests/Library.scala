@@ -29,12 +29,12 @@ object Library {
           new Dependency(
             "org.scalameta",
             "scalameta_2.12",
-            "4.1.0"
+            "4.1.4"
           ),
           new Dependency(
             "com.lihaoyi",
             "scalaparse_2.12",
-            "1.0.0"
+            "2.1.0"
           ),
           new Dependency(
             "com.lihaoyi",

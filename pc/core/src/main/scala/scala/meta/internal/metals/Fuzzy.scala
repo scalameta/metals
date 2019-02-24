@@ -235,14 +235,18 @@ object Fuzzy {
       result: mutable.Set[CharSequence] = mutable.Set.empty
   ): mutable.Set[CharSequence] = {
     def visit(symbol: String): Unit = {
+      if (symbol.endsWith("$sp.class")) return
       var i = 0
       var delimiter = i
       val upper = new StringBuilder()
-      while (i < symbol.length) {
+      var symbolicDelimiter = i
+      val N = lastIndex(symbol)
+      while (i < N) {
         val ch = symbol.charAt(i)
         ch match {
           case '.' | '/' | '#' | '$' =>
             delimiter = i + 1
+            symbolicDelimiter = delimiter
           case _ =>
             if (ch.isUpper) {
               delimiter = i
@@ -253,11 +257,28 @@ object Fuzzy {
         }
         i += 1
       }
+      val lastName = symbol.subSequence(symbolicDelimiter, N)
+      if (!symbol.endsWith("/") &&
+        !isAllNumeric(lastName) &&
+        lastName.length() < ExactSearchLimit) {
+        result += ExactCharSequence(lastName)
+      }
       result ++= new TrigramSubstrings(upper.toString)
     }
     symbols.foreach(visit)
     result
   }
+
+  def isAllNumeric(string: CharSequence): Boolean = {
+    var i = 0
+    val n = string.length()
+    while (i < n) {
+      if (!string.charAt(i).isDigit) return false
+      i += 1
+    }
+    true
+  }
+  val ExactSearchLimit = 3
 
   /**
    * Companion to `bloomFilterSymbolStrings`.
@@ -266,37 +287,41 @@ object Fuzzy {
       query: String,
       includeTrigrams: Boolean = true
   ): Iterable[CharSequence] = {
-    val result = mutable.Set.empty[CharSequence]
-    val upper = new StringBuilder
-    var i = 0
-    var border = 0
-    while (i < query.length) {
-      val ch = query.charAt(i)
-      ch match {
-        case '.' | '/' | '#' | '$' =>
-          result.add(new ZeroCopySubSequence(query, border, i))
-          border = i + 1
-        case _ =>
-          if (ch.isUpper) {
-            if (border != i) {
-              val exactName = new ZeroCopySubSequence(query, border, i)
-              result.add(exactName)
+    if (query.length < ExactSearchLimit) {
+      List(ExactCharSequence(query))
+    } else {
+      val result = mutable.Set.empty[CharSequence]
+      val upper = new StringBuilder
+      var i = 0
+      var border = 0
+      while (i < query.length) {
+        val ch = query.charAt(i)
+        ch match {
+          case '.' | '/' | '#' | '$' =>
+            result.add(new ZeroCopySubSequence(query, border, i))
+            border = i + 1
+          case _ =>
+            if (ch.isUpper) {
+              if (border != i) {
+                val exactName = new ZeroCopySubSequence(query, border, i)
+                result.add(exactName)
+              }
+              upper.append(ch)
+              border = i
             }
-            upper.append(ch)
-            border = i
-          }
+        }
+        i += 1
       }
-      i += 1
+      query.last match {
+        case '.' | '/' | '#' | '$' =>
+        case _ =>
+          result.add(new ZeroCopySubSequence(query, border, query.length))
+      }
+      if (includeTrigrams) {
+        result ++= new TrigramSubstrings(upper.toString)
+      }
+      result
     }
-    query.last match {
-      case '.' | '/' | '#' | '$' =>
-      case _ =>
-        result.add(new ZeroCopySubSequence(query, border, query.length))
-    }
-    if (includeTrigrams) {
-      result ++= new TrigramSubstrings(upper.toString)
-    }
-    result
   }
 
 }

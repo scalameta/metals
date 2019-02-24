@@ -13,7 +13,6 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItems

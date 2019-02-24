@@ -25,6 +25,8 @@ object FuzzySuite extends BaseSuite {
   }
 
   checkOK("::", "scala/collection/immutable/`::`#")
+  checkOK("IO", "scala/IO#")
+  checkOK("IS", "scala/InputOutputStream#")
   checkNO("Mon", "ModuleKindJS")
   checkNO("Min", "MavenPluginIntegration")
   checkOK("DoSymPro", "DocumentSymbolProvider")
