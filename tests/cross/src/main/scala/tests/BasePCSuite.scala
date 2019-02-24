@@ -51,7 +51,7 @@ abstract class BasePCSuite extends BaseSuite {
   val tmp = AbsolutePath(Files.createTempDirectory("metals"))
 
   def indexJDK(): Unit = {
-    index.addSourceJar(JdkSources().get)
+    JdkSources().foreach(jdk => index.addSourceJar(jdk))
   }
 
   override def test(name: String)(fun: => Any): Unit = {
