@@ -26,14 +26,16 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       includeDocs: Boolean = false,
       includeCommitCharacter: Boolean = false,
       compat: Map[String, String] = Map.empty,
-      postProcessObtained: String => String = identity
+      postProcessObtained: String => String = identity,
+      stableOrder: Boolean = true
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val (code, offset) = params(original)
       val result =
         resolvedCompletions(CompilerOffsetParams("A.scala", code, offset))
       val out = new StringBuilder()
-      result.getItems.asScala.sortBy(_.getSortText).foreach { item =>
+      val items = result.getItems.asScala.sortBy(_.getSortText)
+      items.foreach { item =>
         val label =
           if (item.getInsertText == null) item.getLabel else item.getInsertText
         val commitCharacter =
@@ -51,8 +53,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
           .append("\n")
       }
       assertNoDiff(
-        postProcessObtained(trimTrailingSpace(out.toString())),
-        getExpected(expected, compat)
+        sortLines(
+          stableOrder,
+          postProcessObtained(trimTrailingSpace(out.toString()))
+        ),
+        sortLines(stableOrder, getExpected(expected, compat))
       )
     }
   }

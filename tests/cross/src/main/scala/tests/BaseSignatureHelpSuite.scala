@@ -12,7 +12,8 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       original: String,
       expected: String,
       includeDocs: Boolean = false,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      stableOrder: Boolean = true
   ): Unit = {
     test(name) {
       val (code, offset) = params(original)
@@ -62,7 +63,10 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
             }
         }
       }
-      assertNoDiff(out.toString(), getExpected(expected, compat))
+      assertNoDiff(
+        sortLines(stableOrder, out.toString()),
+        sortLines(stableOrder, getExpected(expected, compat))
+      )
     }
   }
 }

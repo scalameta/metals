@@ -123,4 +123,7 @@ abstract class BasePCSuite extends BaseSuite {
       .orElse(compat.get(scalaVersion))
       .getOrElse(default)
   }
+  def sortLines(stableOrder: Boolean, string: String): String =
+    if (stableOrder) string
+    else string.lines.toList.sorted.mkString("\n")
 }

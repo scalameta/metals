@@ -514,6 +514,7 @@ object CompletionSuite extends BaseCompletionSuite {
     // test case, sometime it uses Double and sometimes it uses Float depending
     // other whether its a clean compiler or reused one.
     postProcessObtained = _.replaceAllLiterally("Float", "Double"),
+    stableOrder = false,
     compat = Map(
       "2.12.4" ->
         """|until(end: Double): Range.Partial[Double,NumericRange[Double]]

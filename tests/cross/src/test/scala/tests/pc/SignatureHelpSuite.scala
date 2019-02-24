@@ -287,6 +287,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |to(end: T): Range.Partial[T,NumericRange[T]]
        |to(end: T, step: T): NumericRange.Inclusive[T]
        |""".stripMargin,
+    stableOrder = false,
     compat = Map(
       "2.12.4" ->
         """|to(end: T): Range.Partial[T,NumericRange[T]]
