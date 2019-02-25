@@ -18,6 +18,7 @@ The current maintainers (people who can merge pull requests) are:
 
 - Alexey Alekhin - [`@laughedelic`](https://github.com/laughedelic)
 - Gabriele Petronella - [`@gabro`](https://github.com/gabro)
+- Johan Mudsam - [`@mudsam`](https://github.com/mudsam)
 - Jorge Vicente Cantero - [`@jvican`](https://github.com/jvican)
 - Ólafur Páll Geirsson - [`@olafurpg`](https://github.com/olafurpg)
 - Shane Delmore - [`@ShaneDelmore`](https://github.com/ShaneDelmore)
