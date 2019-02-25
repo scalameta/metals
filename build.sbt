@@ -36,6 +36,12 @@ inThisBuild(
         url("https://github.com/gabro")
       ),
       Developer(
+        "mudsam",
+        "Johan Mudsam",
+        "johan@mudsam.com",
+        url("https://github.com/mudsam")
+      ),
+      Developer(
         "jvican",
         "Jorge Vicente Cantero",
         "jorgevc@fastmail.es",
