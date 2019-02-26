@@ -39,6 +39,8 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     if (server != null) {
       server.server.cancelAll()
     }
+    ex.shutdown()
+    sh.shutdownNow()
   }
   def assertConnectedToBuildServer(
       expectedName: String
