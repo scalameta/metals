@@ -26,8 +26,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 import org.eclipse.lsp4j._
-import org.eclipse.lsp4j.jsonrpc.CancelChecker
-import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
@@ -291,6 +289,8 @@ class MetalsLanguageServer(
     )
     compilers = register(
       new Compilers(
+        workspace,
+        config,
         buildTargets,
         buffers,
         new MetalsSymbolSearch(symbolDocs, workspaceSymbols),
@@ -504,7 +504,7 @@ class MetalsLanguageServer(
     buffers.put(path, params.getTextDocument.getText)
     trees.didChange(path)
     if (path.isDependencySource(workspace)) {
-      CompletableFutures.computeAsync { _ =>
+      CancelTokens { _ =>
         // trigger compilation in preparation for definition requests
         interactiveSemanticdbs.textDocument(path)
         // publish diagnostics
@@ -649,7 +649,7 @@ class MetalsLanguageServer(
   def definition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CompletableFutures.computeAsync { _ =>
+    CancelTokens { _ =>
       definitionResult(position).locations
     }
 
@@ -657,7 +657,7 @@ class MetalsLanguageServer(
   def typeDefinition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CompletableFutures.computeAsync { _ =>
+    CancelTokens { _ =>
       scribe.warn("textDocument/typeDefinition is not supported.")
       null
     }
@@ -666,14 +666,14 @@ class MetalsLanguageServer(
   def implementation(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CompletableFutures.computeAsync { _ =>
+    CancelTokens { _ =>
       scribe.warn("textDocument/implementation is not supported.")
       null
     }
 
   @JsonRequest("textDocument/hover")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
-    CompletableFutures.computeAsync { token =>
+    CancelTokens { token =>
       compilers.hover(params, token).orNull
     }
 
@@ -681,7 +681,7 @@ class MetalsLanguageServer(
   def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[Hover] =
-    CompletableFutures.computeAsync { _ =>
+    CancelTokens { _ =>
       scribe.warn("textDocument/documentHighlight is not supported.")
       null
     }
@@ -692,7 +692,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[
     JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
   ] =
-    CompletableFutures.computeAsync { _ =>
+    CancelTokens { _ =>
       val result = documentSymbolResult(params)
       if (initializeParams.supportsHierarchicalDocumentSymbols) {
         JEither.forLeft(result)
@@ -704,20 +704,11 @@ class MetalsLanguageServer(
       }
     }
 
-  private def cancelableFuture[T](fn: CancelChecker => Future[T]): Future[T] = {
-    CompletableFutures.computeAsync(t => t).asScala.flatMap(fn)
-  }
-  private def cancelableJavaFuture[T](
-      fn: CancelChecker => Future[T]
-  ): CompletableFuture[T] = {
-    cancelableFuture(fn).asJava
-  }
-
   @JsonRequest("textDocument/formatting")
   def formatting(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    cancelableJavaFuture { token =>
+    CancelTokens.future { token =>
       formattingProvider.format(
         params.getTextDocument.getUri.toAbsolutePath,
         token
@@ -728,7 +719,7 @@ class MetalsLanguageServer(
   def rename(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
-    CompletableFutures.computeAsync { _ =>
+    CancelTokens { _ =>
       scribe.warn("textDocument/rename is not supported.")
       null
     }
@@ -737,7 +728,7 @@ class MetalsLanguageServer(
   def references(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
-    CompletableFutures.computeAsync { _ =>
+    CancelTokens { _ =>
       val timer = new Timer(time)
       val result = referencesResult(params)
       if (config.statistics.isReferences) {
@@ -750,7 +741,7 @@ class MetalsLanguageServer(
         }
       }
       if (result.symbol.nonEmpty) {
-        compileAndLookForNewReferfences(params, result)
+        compileAndLookForNewReferences(params, result)
       }
       result.locations.asJava
     }
@@ -758,7 +749,7 @@ class MetalsLanguageServer(
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
   // user to run references again to see updated results.
-  private def compileAndLookForNewReferfences(
+  private def compileAndLookForNewReferences(
       params: ReferenceParams,
       result: ReferencesResult
   ): Unit = {
@@ -806,7 +797,7 @@ class MetalsLanguageServer(
     referencesProvider.references(params)
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
-    CompletableFutures.computeAsync { token =>
+    CancelTokens { token =>
       compilers.completions(params, token).orNull
     }
 
@@ -814,17 +805,17 @@ class MetalsLanguageServer(
   def completionItemResolve(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
-    CompletableFutures.computeAsync { token =>
+    CancelTokens { token =>
       compilers.completionItemResolve(item, token).getOrElse(item)
     }
   def completionItemResolveSync(item: CompletionItem): CompletionItem =
-    compilers.completionItemResolve(item, EmptyCancelChecker).getOrElse(item)
+    compilers.completionItemResolve(item, EmptyCancelToken).getOrElse(item)
 
   @JsonRequest("textDocument/signatureHelp")
   def signatureHelp(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
-    CompletableFutures.computeAsync { token =>
+    CancelTokens { token =>
       compilers.signatureHelp(params, token).orNull
     }
 
@@ -832,7 +823,7 @@ class MetalsLanguageServer(
   def codeAction(
       params: CodeActionParams
   ): CompletableFuture[util.List[CodeAction]] =
-    CompletableFutures.computeAsync { _ =>
+    CancelTokens { _ =>
       scribe.warn("textDocument/codeAction is not supported.")
       null
     }
@@ -841,7 +832,7 @@ class MetalsLanguageServer(
   def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
-    CompletableFutures.computeAsync { _ =>
+    CancelTokens { _ =>
       scribe.warn("textDocument/codeLens is not supported.")
       null
     }
@@ -850,7 +841,7 @@ class MetalsLanguageServer(
   def workspaceSymbol(
       params: WorkspaceSymbolParams
   ): CompletableFuture[util.List[SymbolInformation]] =
-    cancelableJavaFuture { token =>
+    CancelTokens.future { token =>
       indexingPromise.future.map { _ =>
         val timer = new Timer(time)
         val result = workspaceSymbols.search(params.getQuery, token).asJava

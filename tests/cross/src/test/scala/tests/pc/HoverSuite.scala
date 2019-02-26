@@ -5,6 +5,7 @@ import scala.collection.JavaConverters._
 import tests.BasePCSuite
 
 object HoverSuite extends BasePCSuite {
+
   def check(name: String, original: String, expected: String): Unit = {
     test(name) {
       val filename = "hover.scala"

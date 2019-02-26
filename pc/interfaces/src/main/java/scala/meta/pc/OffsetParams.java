@@ -4,5 +4,8 @@ public interface OffsetParams {
     String filename();
     String text();
     int offset();
-    void checkCanceled();
+    CancelToken token();
+    default void checkCanceled() {
+        token().checkCanceled();
+    }
 }

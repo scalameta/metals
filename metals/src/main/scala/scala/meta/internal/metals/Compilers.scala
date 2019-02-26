@@ -10,12 +10,12 @@ import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
-import org.eclipse.lsp4j.jsonrpc.CancelChecker
-import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutorService
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.Properties
@@ -27,12 +27,14 @@ import scala.tools.nsc.Properties
  * build targets can have different classpaths and compiler settings.
  */
 class Compilers(
+    workspace: AbsolutePath,
+    config: MetalsServerConfig,
     buildTargets: BuildTargets,
     buffers: Buffers,
     search: SymbolSearch,
     embedded: Embedded,
     statusBar: StatusBar
-)(implicit ec: ExecutionContext)
+)(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
 
@@ -43,7 +45,9 @@ class Compilers(
   private val cache = jcache.asScala
 
   override def cancel(): Unit = {
-    Cancelable.cancelEach(cache.values)(_.shutdown())
+    Cancelable.cancelEach(cache.keys) { key =>
+      cache.remove(key).foreach(_.shutdown())
+    }
     cache.clear()
   }
   def didCompileSuccessfully(id: BuildTargetIdentifier): Unit = {
@@ -52,16 +56,33 @@ class Compilers(
 
   def completionItemResolve(
       item: CompletionItem,
-      token: CancelChecker
+      token: CancelToken
   ): Option[CompletionItem] = {
     for {
       data <- item.data
       compiler <- cache.get(new BuildTargetIdentifier(data.target))
-    } yield compiler.completionItemResolve(item, data.symbol)
+    } yield
+      compiler.completionItemResolve(
+        item,
+        data.symbol,
+        token
+      )
   }
+
+  def log: List[String] =
+    if (config.pcLog) {
+      List(
+        "-Ypresentation-debug",
+        "-Ypresentation-verbose",
+        "-Ypresentation-log",
+        workspace.resolve(Directories.pclog).toString()
+      )
+    } else {
+      Nil
+    }
   def completions(
       params: CompletionParams,
-      token: CancelChecker
+      token: CancelToken
   ): Option[CompletionList] =
     withPC(params) { (pc, pos) =>
       pc.complete(
@@ -70,7 +91,7 @@ class Compilers(
     }
   def hover(
       params: TextDocumentPositionParams,
-      token: CancelChecker
+      token: CancelToken
   ): Option[Hover] =
     withPC(params) { (pc, pos) =>
       pc.hover(
@@ -79,7 +100,7 @@ class Compilers(
     }
   def signatureHelp(
       params: TextDocumentPositionParams,
-      token: CancelChecker
+      token: CancelToken
   ): Option[SignatureHelp] =
     withPC(params) { (pc, pos) =>
       pc.signatureHelp(
@@ -138,10 +159,11 @@ class Compilers(
       }
     val options = plugins.filterSupportedOptions(scalac.getOptions.asScala)
     pc.withSearch(search)
+      .withExecutorService(ec)
       .newInstance(
         scalac.getTarget.getUri,
         classpath.asJava,
-        options.asJava
+        (log ++ options).asJava
       )
   }
 }

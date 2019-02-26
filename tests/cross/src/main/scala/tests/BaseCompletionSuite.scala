@@ -2,10 +2,14 @@ package tests
 
 import scala.collection.JavaConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.pc.CompletionItems
 import scala.meta.internal.metals.PCEnrichments._
+import scala.meta.pc.CancelToken
 
 abstract class BaseCompletionSuite extends BasePCSuite {
+
+  def cancelToken: CancelToken = EmptyCancelToken
 
   private def resolvedCompletions(
       params: CompilerOffsetParams
@@ -13,7 +17,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     val result = pc.complete(params)
     val newItems = result.getItems.asScala.map { item =>
       val symbol = item.data.get.symbol
-      pc.completionItemResolve(item, symbol)
+      pc.completionItemResolve(item, symbol, cancelToken)
     }
     result.setItems(newItems.asJava)
     result
@@ -27,12 +31,14 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       includeCommitCharacter: Boolean = false,
       compat: Map[String, String] = Map.empty,
       postProcessObtained: String => String = identity,
-      stableOrder: Boolean = true
+      stableOrder: Boolean = true,
+      postAssert: () => Unit = () => ()
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val (code, offset) = params(original)
-      val result =
-        resolvedCompletions(CompilerOffsetParams("A.scala", code, offset))
+      val result = resolvedCompletions(
+        CompilerOffsetParams("A.scala", code, offset, cancelToken)
+      )
       val out = new StringBuilder()
       val items = result.getItems.asScala.sortBy(_.getSortText)
       items.foreach { item =>
@@ -59,6 +65,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         ),
         sortLines(stableOrder, getExpected(expected, compat))
       )
+      postAssert()
     }
   }
 

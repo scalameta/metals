@@ -10,6 +10,7 @@ import scala.reflect.internal.{Flags => gf}
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
 
@@ -21,7 +22,9 @@ class MetalsGlobal(
     val logger: Logger
 ) extends Global(settings, reporter)
     with Completions
-    with Signatures { compiler =>
+    with Signatures
+    with GlobalProxy { compiler =>
+  hijackPresentationCompilerThread()
 
   override lazy val analyzer = new {
     val global: compiler.type = compiler

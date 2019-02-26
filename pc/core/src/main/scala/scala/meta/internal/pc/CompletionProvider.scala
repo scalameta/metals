@@ -267,7 +267,6 @@ class CompletionProvider(
       packageSymbolFromString(pkg).isDefined
 
     override def isCancelled: Boolean = {
-      params.checkCanceled()
       false
     }
   }

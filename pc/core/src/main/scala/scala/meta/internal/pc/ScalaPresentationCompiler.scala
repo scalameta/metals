@@ -3,11 +3,14 @@ package scala.meta.internal.pc
 import java.io.File
 import java.nio.file.Path
 import java.util
+import java.util.concurrent.ExecutorService
 import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
+import scala.meta.pc.CancelToken
 import scala.meta.pc.CompletionItems
 import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.OffsetParams
@@ -22,14 +25,19 @@ case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
     classpath: Seq[Path] = Nil,
     options: List[String] = Nil,
-    search: SymbolSearch = EmptySymbolSearch
+    search: SymbolSearch = EmptySymbolSearch,
+    ec: ExecutionContext = ExecutionContext.global
 ) extends PresentationCompiler {
   val logger = Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
+  override def withExecutorService(
+      executorService: ExecutorService
+  ): PresentationCompiler =
+    copy(ec = ExecutionContext.fromExecutorService(executorService))
   def this() = this(buildTargetIdentifier = "")
 
-  val access = new CompilerAccess(logger, () => newCompiler())
+  val access = new CompilerAccess(() => newCompiler())(ec)
   override def shutdown(): Unit = {
     access.shutdown()
   }
@@ -51,59 +59,51 @@ case class ScalaPresentationCompiler(
       .asInstanceOf[StoreReporter]
       .infos
       .iterator
-      .map(
-        info =>
-          new StringBuilder()
-            .append(info.pos.source.file.path)
-            .append(":")
-            .append(info.pos.column)
-            .append(" ")
-            .append(info.msg)
-            .append("\n")
-            .append(info.pos.lineContent)
-            .append("\n")
-            .append(info.pos.lineCaret)
-            .toString
-      )
+      .map { info =>
+        new StringBuilder()
+          .append(info.pos.source.file.path)
+          .append(":")
+          .append(info.pos.column)
+          .append(" ")
+          .append(info.msg)
+          .append("\n")
+          .append(info.pos.lineContent)
+          .append("\n")
+          .append(info.pos.lineCaret)
+          .toString
+      }
       .filterNot(_.contains("_CURSOR_"))
       .toList
       .asJava
   }
 
-  def emptyCompletion = new CompletionItems(LookupKind.None, Nil.asJava)
+  def emptyCompletion: CompletionItems = {
+    val items = new CompletionItems(LookupKind.None, Nil.asJava)
+    items.setIsIncomplete(true)
+    items
+  }
   override def complete(params: OffsetParams): CompletionItems =
-    access.withCompiler(emptyCompletion) { global =>
+    access.withCompiler(emptyCompletion, params.token) { global =>
       new CompletionProvider(global, params).completions()
     }
   override def completionItemResolve(
       item: CompletionItem,
-      symbol: String
+      symbol: String,
+      token: CancelToken
   ): CompletionItem =
-    access.withCompiler(item) { global =>
+    access.withCompiler(item, token) { global =>
       new CompletionItemResolver(global).resolve(item, symbol)
     }
 
   override def hover(params: OffsetParams): Hover =
-    access.withCompiler(new Hover()) { global =>
+    access.withCompiler(new Hover(), params.token) { global =>
       new HoverProvider(global).hover(params).orNull
     }
 
   override def signatureHelp(params: OffsetParams): SignatureHelp =
-    access.withCompiler(new SignatureHelp()) { global =>
+    access.withCompiler(new SignatureHelp(), params.token) { global =>
       new SignatureHelpProvider(global).signatureHelp(params)
     }
-
-  override def symbol(params: OffsetParams): String = {
-    access.withCompiler("") { global =>
-      val unit = global.addCompilationUnit(
-        code = params.text(),
-        filename = params.filename(),
-        cursor = None
-      )
-      val pos = unit.position(params.offset())
-      global.typedTreeAt(pos).symbol.fullName
-    }
-  }
 
   def newCompiler(): MetalsGlobal = {
     val classpath = this.classpath.mkString(File.pathSeparator)

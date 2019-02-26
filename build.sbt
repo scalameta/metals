@@ -130,6 +130,7 @@ lazy val pc = project
     crossVersion := CrossVersion.full,
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     )
@@ -196,8 +197,6 @@ lazy val metals = project
       "com.geirsson" %% "coursier-small" % "1.3.3",
       // undeclared transitive dependency of coursier-small
       "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
-      // for handling Java futures
-      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       // for logging
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
