@@ -83,7 +83,7 @@ final class FileWatcher(
 
   private def stopWatching(): Unit = {
     activeWatcher.foreach(_.close())
-    watching.cancel(true)
+    watching.cancel(false)
   }
 
   class Listener extends DirectoryChangeListener {

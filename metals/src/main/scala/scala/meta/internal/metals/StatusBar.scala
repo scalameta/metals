@@ -181,7 +181,7 @@ final class StatusBar(
 
   override def cancel(): Unit = {
     if (scheduledFuture != null) {
-      scheduledFuture.cancel(true)
+      scheduledFuture.cancel(false)
     }
   }
 }

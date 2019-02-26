@@ -1338,7 +1338,7 @@ class MetalsLanguageServer(
               lastCompile = isCompiling.keySet
               isCompiling.clear()
             }.ignoreValue,
-            Cancelable(() => completableFuture.cancel(true))
+            Cancelable(() => completableFuture.cancel(false))
           )
         }
       case _ =>
