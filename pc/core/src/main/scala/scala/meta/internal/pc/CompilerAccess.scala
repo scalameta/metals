@@ -1,11 +1,12 @@
 package scala.meta.internal.pc
 
+import java.lang
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.BiConsumer
 import java.util.logging.Level
 import java.util.logging.Logger
 import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
-import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 import scala.meta.pc.CancelToken
 
@@ -52,16 +53,19 @@ class CompilerAccess(
       val thread = Thread.currentThread()
       Thread.interrupted() // clear interrupt flag
       val isFinished = new AtomicBoolean(false)
-      token.onCancel().toScala.foreach {
-        case java.lang.Boolean.TRUE =>
-          if (isFinished.compareAndSet(false, true) && isDefined) {
-            _compiler.presentationCompilerThread.interrupt()
-            if (thread != _compiler.presentationCompilerThread) {
-              thread.interrupt()
+      token
+        .onCancel()
+        .whenComplete(new BiConsumer[java.lang.Boolean, Throwable] {
+          override def accept(isCancelled: lang.Boolean, u: Throwable): Unit = {
+            if (isCancelled && isFinished
+                .compareAndSet(false, true) && isDefined) {
+              _compiler.presentationCompilerThread.interrupt()
+              if (thread != _compiler.presentationCompilerThread) {
+                thread.interrupt()
+              }
             }
           }
-        case _ =>
-      }
+        })
       try {
         thunk(loadCompiler())
       } catch {

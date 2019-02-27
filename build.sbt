@@ -130,7 +130,6 @@ lazy val pc = project
     crossVersion := CrossVersion.full,
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
-      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     )
@@ -190,6 +189,7 @@ lazy val metals = project
       // ==================
       // Scala dependencies
       // ==================
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       "org.scalameta" %% "symtab" % V.scalameta,
