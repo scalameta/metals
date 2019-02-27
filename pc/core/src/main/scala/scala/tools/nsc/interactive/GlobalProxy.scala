@@ -1,12 +1,18 @@
 package scala.tools.nsc.interactive
 
+import java.util.logging.Level
+import scala.meta.internal.pc.MetalsGlobal
 import scala.util.control.NonFatal
 
-trait GlobalProxy { this: Global =>
+trait GlobalProxy { this: MetalsGlobal =>
   def presentationCompilerThread: Thread = this.compileRunner
   def hijackPresentationCompilerThread(): Unit = newRunnerThread()
 
   var threadId = 0
+
+  /**
+   * Shuts down the default presentation compiler thread and replaces it with a custom implementation.
+   */
   private def newRunnerThread(): Thread = {
     threadId += 1
     if (compileRunner.isAlive) {
@@ -15,7 +21,11 @@ trait GlobalProxy { this: Global =>
         re.get
       } catch {
         case NonFatal(e) =>
-          pprint.log(e)
+          metalsLogger.log(
+            Level.INFO,
+            "unexpected error shutting down presentation compiler thread",
+            e
+          )
       }
     }
     compileRunner = new MetalsGlobalThread(this, "Metals")

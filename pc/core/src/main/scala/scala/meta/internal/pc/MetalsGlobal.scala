@@ -26,6 +26,8 @@ class MetalsGlobal(
     with GlobalProxy { compiler =>
   hijackPresentationCompilerThread()
 
+  val metalsLogger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
+
   override lazy val analyzer = new {
     val global: compiler.type = compiler
   } with InteractiveAnalyzer {
