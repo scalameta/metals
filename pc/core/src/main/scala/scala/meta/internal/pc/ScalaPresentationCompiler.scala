@@ -131,8 +131,7 @@ case class ScalaPresentationCompiler(
       settings,
       new StoreReporter,
       search,
-      buildTargetIdentifier,
-      logger
+      buildTargetIdentifier
     )
   }
 }

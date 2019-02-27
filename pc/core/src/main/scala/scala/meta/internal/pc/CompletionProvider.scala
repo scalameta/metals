@@ -183,7 +183,11 @@ class CompletionProvider(
       )
     }
     try {
-      val completions = completionsAt(position)
+      val completions = completionsAt(position) match {
+        case CompletionResult.NoResults =>
+          new DynamicFallbackCompletions(position).print()
+        case r => r
+      }
       params.checkCanceled()
       val matchingResults = completions.matchingResults { entered => name =>
         Fuzzy.matches(entered, name)

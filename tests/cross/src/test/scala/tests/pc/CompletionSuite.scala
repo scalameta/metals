@@ -485,6 +485,7 @@ object CompletionSuite extends BaseCompletionSuite {
     """|DelayedLazyVal scala.concurrent
        |""".stripMargin
   )
+
   check(
     "singleton",
     """
@@ -496,6 +497,7 @@ object CompletionSuite extends BaseCompletionSuite {
     """|incrementThisType(): A.this.type (with underlying type A)
        |""".stripMargin
   )
+
   check(
     "deprecated",
     """
@@ -530,4 +532,61 @@ object CompletionSuite extends BaseCompletionSuite {
            |""".stripMargin
     )
   )
+
+  def classFoo: String =
+    """
+      |import scala.language.dynamics
+      |class Foo extends Dynamic {
+      |  def banana: Int = 42
+      |  def selectDynamic(field: String): Foo = this
+      |  def applyDynamicNamed(name: String)(arg: (String, Int)): Foo = this
+      |  def updateDynamic(name: String)(value: Int): Foo = this
+      |}
+      |""".stripMargin
+
+  check(
+    "dynamic",
+    s"""|$classFoo
+        |object Main {
+        |  new Foo().bana@@
+        |}
+        |""".stripMargin,
+    """|banana: Int
+       |""".stripMargin
+  )
+
+  check(
+    "dynamic2",
+    s"""|$classFoo
+        |object Main {
+        |  val x = new Foo().foo.bana@@
+        |}
+        |""".stripMargin,
+    """|banana: Int
+       |""".stripMargin
+  )
+
+  check(
+    "dynamic3",
+    s"""|$classFoo
+        |object Main {
+        |  val foo = new Foo()
+        |  (foo.bar = 42).bana@@
+        |}
+        |""".stripMargin,
+    """|banana: Int
+       |""".stripMargin
+  )
+
+  check(
+    "dynamic4",
+    s"""|$classFoo
+        |object Main {
+        |  val foo = new Foo().foo(x = 42).bana@@
+        |}
+        |""".stripMargin,
+    """|banana: Int
+       |""".stripMargin
+  )
+
 }

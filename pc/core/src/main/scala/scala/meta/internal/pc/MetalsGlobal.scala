@@ -18,15 +18,14 @@ class MetalsGlobal(
     settings: Settings,
     reporter: Reporter,
     val search: SymbolSearch,
-    val buildTargetIdentifier: String,
-    val logger: Logger
+    val buildTargetIdentifier: String
 ) extends Global(settings, reporter)
     with Completions
     with Signatures
     with GlobalProxy { compiler =>
   hijackPresentationCompilerThread()
 
-  val metalsLogger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
+  val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
 
   override lazy val analyzer = new {
     val global: compiler.type = compiler
@@ -265,11 +264,13 @@ class MetalsGlobal(
     }
   }
 
+  def CURSOR = "_CURSOR_"
+
   def addCompilationUnit(
       code: String,
       filename: String,
       cursor: Option[Int],
-      cursorName: String = "_CURSOR_"
+      cursorName: String = CURSOR
   ): RichCompilationUnit = {
     val codeWithCursor = cursor match {
       case Some(offset) =>

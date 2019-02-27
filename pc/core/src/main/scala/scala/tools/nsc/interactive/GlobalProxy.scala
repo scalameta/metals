@@ -8,20 +8,31 @@ trait GlobalProxy { this: MetalsGlobal =>
   def presentationCompilerThread: Thread = this.compileRunner
   def hijackPresentationCompilerThread(): Unit = newRunnerThread()
 
-  var threadId = 0
+  /**
+   * Forwarder to package private `typeMembers` method.
+   */
+  def metalsTypeMembers(pos: Position): List[Member] = {
+    val r = new Response[List[Member]]
+    getTypeCompletion(pos, r)
+    r.get match {
+      case Left(value) =>
+        value
+      case Right(value) =>
+        throw value
+    }
+  }
 
   /**
    * Shuts down the default presentation compiler thread and replaces it with a custom implementation.
    */
   private def newRunnerThread(): Thread = {
-    threadId += 1
     if (compileRunner.isAlive) {
       try {
         val re = askForResponse(() => throw ShutdownReq)
         re.get
       } catch {
         case NonFatal(e) =>
-          metalsLogger.log(
+          logger.log(
             Level.INFO,
             "unexpected error shutting down presentation compiler thread",
             e

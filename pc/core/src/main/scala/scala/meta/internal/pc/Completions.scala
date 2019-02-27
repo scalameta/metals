@@ -174,4 +174,48 @@ trait Completions { this: MetalsGlobal =>
       Nil
     }
   }
+
+  /**
+   * Detects type member select from qualifiers that extend `scala.Dynamic`.
+   *
+   * By default, type member completions on classes that extend `scala.Dynamic`
+   * return no results due to how `Dynamic` desugars trees. This traverser
+   * detects such cases and run a custom type member completion.
+   *
+   * @param pos the position of the completion.
+   */
+  class DynamicFallbackCompletions(pos: Position) extends Traverser {
+    var result: CompletionResult = CompletionResult.NoResults
+    def print(): CompletionResult = {
+      traverse(typedTreeAt(pos))
+      result
+    }
+    override def traverse(tree: Tree): Unit = {
+      tree match {
+        case tree @ Apply(
+              Select(qual, TermName("selectDynamic")),
+              List(lit @ Literal(Constant(name: String)))
+            ) if lit.pos.isTransparent && lit.pos.end >= tree.pos.end =>
+          val typeMembers = metalsTypeMembers(tree.fun.pos).collect {
+            case t: TypeMember => t
+          }
+          if (typeMembers.nonEmpty) {
+            val termName = name.stripSuffix(CURSOR)
+            result = CompletionResult.TypeMembers(
+              pos.point - termName.length,
+              qual,
+              tree,
+              typeMembers,
+              TermName(termName)
+            )
+          }
+          tree.setPos(tree.pos.withEnd(lit.pos.end))
+        case _ =>
+          if (tree.pos.includes(pos)) {
+            super.traverse(tree)
+          }
+      }
+    }
+  }
+
 }
