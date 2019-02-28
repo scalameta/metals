@@ -531,4 +531,91 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        | """.stripMargin
   )
 
+  check(
+    "pat",
+    """
+      |case class Person(name: String, age: Int)
+      |object a {
+      |  null.asInstanceOf[Person] match {
+      |    case Person(@@)
+      |}
+    """.stripMargin,
+    """|unapply(name: String, age: Int): Person
+       |        ^^^^^^^^^^^^
+       | """.stripMargin
+  )
+
+  check(
+    "pat1",
+    """
+      |class Person(name: String, age: Int)
+      |object Person {
+      |  def unapply(p: Person): Option[(String, Int)] = ???
+      |}
+      |object a {
+      |  null.asInstanceOf[Person] match {
+      |    case Person(@@) =>
+      |  }
+      |}
+    """.stripMargin,
+    """|unapply(name: String, age: Int): Person
+       |        ^^^^^^^^^^^^
+       | """.stripMargin
+  )
+
+  check(
+    "pat2",
+    """
+      |object a {
+      |  val Number = "$a, $b".r
+      |  "" match {
+      |    case Number(@@)
+      |  }
+      |}
+    """.stripMargin,
+    """|unapplySeq(target: Any): Option[List[String]]
+       |unapplySeq(m: Regex.Match): Option[List[String]]
+       |unapplySeq(c: Char): Option[List[Char]]
+       |unapplySeq(s: CharSequence): Option[List[String]]
+       |           ^^^^^^^^^^^^^^^
+       | """.stripMargin
+  )
+
+  check(
+    "pat3",
+    """
+      |object And {
+      |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
+      |}
+      |object a {
+      |  "" match {
+      |    case And("", s@@)
+      |  }
+      |}
+  """.stripMargin,
+    """|unapply[A](a: A): Some[(A, A)]
+       | """.stripMargin
+  )
+
+  check(
+    "pat4",
+    """
+      |object & {
+      |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
+      |}
+      |object a {
+      |  "" match {
+      |    case "" & s@@
+      |  }
+      |}
+    """.stripMargin,
+    // NOTE(olafur) it's kind of accidental that this doesn't return "unapply[A](..)",
+    // the reason is that the qualifier of infix unapplies doesn't have a range position
+    // and signature help excludes qualifiers without range positions in order to exclude
+    // generated code. Feel free to update this test to have the same expected output as
+    // `pat3` without regressing signature help in othere cases like partial functions that
+    // generate qualifiers with offset positions.
+    ""
+  )
+
 }

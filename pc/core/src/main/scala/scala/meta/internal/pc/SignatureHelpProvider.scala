@@ -79,17 +79,45 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         case tpe => tpe
       }
     }
-    def qualTpe: Type = {
-      val fromOverload = qual.tpe match {
-        case OverloadedType(pre, alts) =>
-          val toFind = nonOverload
-          pre.memberType(alts.find(_ == toFind).getOrElse(alts.head))
-        case tpe => tpe
-      }
-      nonOverloadInfo(
-        if (fromOverload == null) symbol.info
-        else fromOverload
-      )
+    val qualTpe: Type = symbol.name match {
+      case termNames.unapply =>
+        symbol.paramLists match {
+          case (head :: Nil) :: Nil =>
+            symbol.info.resultType match {
+              case TypeRef(
+                  _,
+                  definitions.OptionClass,
+                  TypeRef(_, tuple, args) :: Nil
+                  ) if definitions.isTupleSymbol(tuple) =>
+                val ctor = head.tpe.typeSymbol.primaryConstructor
+                val params = ctor.paramLists.headOption.getOrElse(Nil)
+                val isAlignedTypes = args.zip(params).forall {
+                  case (a, b) => a == b.tpe
+                }
+                if (isAlignedTypes) {
+                  ctor.info
+                } else {
+                  symbol.info
+                }
+              case _ =>
+                symbol.info
+            }
+          case _ =>
+            symbol.info
+        }
+      case termNames.unapplySeq =>
+        symbol.info
+      case _ =>
+        val fromOverload = qual.tpe match {
+          case OverloadedType(pre, alts) =>
+            val toFind = nonOverload
+            pre.memberType(alts.find(_ == toFind).getOrElse(alts.head))
+          case tpe => tpe
+        }
+        nonOverloadInfo(
+          if (fromOverload == null) symbol.info
+          else fromOverload
+        )
     }
     def alternatives: List[Symbol] = symbol match {
       case o: ModuleSymbol =>
@@ -133,7 +161,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
           Some(MethodCall(tree, qual, treeSymbol(qual), targs, Nil))
         case TypeApply(qual, targs) =>
           Some(MethodCall(tree, qual, treeSymbol(tree), targs, Nil))
-        case Apply(qual, args) =>
+        case TreeApply(qual, args) =>
           var tparams: List[Tree] = Nil
           def loop(
               t: Tree,
@@ -214,6 +242,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     def unapply(tree: Tree): Option[(Tree, List[Tree])] = tree match {
       case TypeApply(qual, args) => Some(qual -> args)
       case Apply(qual, args) => Some(qual -> args)
+      case UnApply(qual, args) => Some(qual -> args)
       case _ => None
     }
   }
@@ -295,11 +324,29 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     }
   }
 
+  implicit class XtensionGSymbol(sym: Symbol) {
+    def isDefined: Boolean =
+      sym != null &&
+        sym != NoSymbol &&
+        !sym.isErroneous
+  }
+
   // Same as `tree.symbol` but tries to recover from type errors
   // by using the completions API.
   def treeSymbol(tree: Tree): Symbol = {
-    if (tree.symbol != NoSymbol && !tree.symbol.isError) {
-      tree.symbol
+    val symbol =
+      if (tree.symbol == null) {
+        tree match {
+          case UnApply(qual, _) =>
+            qual.symbol
+          case _ =>
+            NoSymbol
+        }
+      } else {
+        tree.symbol
+      }
+    if (symbol.isDefined) {
+      symbol
     } else {
       def applyQualifier(tree: Tree): Option[RefTree] = tree match {
         case Select(New(t: RefTree), _) => Some(t)
@@ -332,11 +379,17 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       } yield completion
       completionFallback
         .orElse {
-          val qual = tree match {
-            case TreeApply(q @ Select(New(_), _), _) => q
-            case _ => tree
+          tree match {
+            case UnApply(q, a) =>
+              Option(compiler.typedTreeAt(q.pos).symbol)
+            case TreeApply(q @ Select(New(_), _), _) =>
+              Option(compiler.typedTreeAt(q.pos).symbol)
+            case Apply(tt: TypeTree, _)
+                if tt.original != null && tt.original.symbol.isModule =>
+              Some(tt.original.symbol.info.member(termNames.unapply))
+            case _ =>
+              None
           }
-          Option(compiler.typedTreeAt(qual.pos).symbol)
         }
         .getOrElse(NoSymbol)
     }
