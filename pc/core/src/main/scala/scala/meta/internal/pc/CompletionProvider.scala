@@ -112,6 +112,7 @@ class CompletionProvider(
         TermName("→").encode
       )
     ).flatMap(_.alternatives)
+    val completion: CompletionPosition = completionPosition
     val isSeen = mutable.Set.empty[String]
     val isIgnored = mutable.Set.empty[Symbol]
     val buf = List.newBuilder[Member]
@@ -125,9 +126,12 @@ class CompletionProvider(
       def isIgnoredWorkspace: Boolean =
         head.isInstanceOf[WorkspaceMember] &&
           (isIgnored(head.sym) || isIgnored(head.sym.companion))
+      def matchesAdtType: Boolean =
+        completion.matches(head)
       if (!isSeen(id) &&
         !isUninterestingSymbol(head.sym) &&
-        !isIgnoredWorkspace) {
+        !isIgnoredWorkspace &&
+        matchesAdtType) {
         isSeen += id
         buf += head
         isIgnored ++= dealiasedValForwarder(head.sym)

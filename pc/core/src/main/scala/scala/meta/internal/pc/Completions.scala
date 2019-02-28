@@ -218,4 +218,100 @@ trait Completions { this: MetalsGlobal =>
     }
   }
 
+  var lastEnclosing: List[Tree] = Nil
+  sealed abstract class CompletionPosition {
+    def matches(member: Member): Boolean
+  }
+  object CompletionPosition {
+    case object None extends CompletionPosition {
+      override def matches(member: Member): Boolean = true
+    }
+    case class Case(
+        c: CaseDef,
+        m: Match
+    ) extends CompletionPosition {
+      val selector = typedTreeAt(m.selector.pos).tpe
+      val parents = Set(selector.typeSymbol, selector.typeSymbol.companion)
+      def isSubClass(sym: Symbol, includeReverse: Boolean): Boolean = {
+        val typeSymbol = sym.tpe.typeSymbol
+        parents.exists { parent =>
+          typeSymbol.isSubClass(parent) ||
+          (includeReverse && parent.isSubClass(typeSymbol))
+        }
+      }
+      override def matches(head: Member): Boolean = {
+        isSubClass(head.sym, includeReverse = false) || {
+          def alternatives(unapply: Symbol): Boolean =
+            unapply.alternatives.exists { unapply =>
+              unapply.info
+              unapply.paramLists match {
+                case (param :: Nil) :: Nil =>
+                  isSubClass(param, includeReverse = true)
+                case _ =>
+                  false
+              }
+            }
+          alternatives(head.sym.tpe.member(termNames.unapply)) ||
+          alternatives(head.sym.tpe.member(termNames.unapplySeq))
+        }
+      }
+    }
+  }
+
+  object PatternMatch {
+    def unapply(enclosing: List[Tree]): Option[CompletionPosition.Case] =
+      enclosing match {
+        case (c: CaseDef) :: (m: Match) :: _ =>
+          Some(CompletionPosition.Case(c, m))
+        case _ =>
+          None
+      }
+  }
+  def completionPosition: CompletionPosition = {
+    lastEnclosing match {
+      case Ident(_) :: PatternMatch(c) =>
+        c
+      case Ident(_) :: Typed(_, _) :: PatternMatch(c) =>
+        c
+      case _ =>
+        CompletionPosition.None
+    }
+  }
+  class MetalsLocator(pos: Position) extends Traverser {
+    def locateIn(root: Tree): Tree = {
+      lastEnclosing = Nil
+      traverse(root)
+      lastEnclosing match {
+        case head :: _ => head
+        case _ => EmptyTree
+      }
+    }
+    protected def isEligible(t: Tree): Boolean = !t.pos.isTransparent
+    override def traverse(t: Tree) {
+      t match {
+        case tt: TypeTree
+            if tt.original != null && (tt.pos includes tt.original.pos) =>
+          traverse(tt.original)
+        case _ =>
+          if (t.pos includes pos) {
+            if (isEligible(t)) {
+              lastEnclosing ::= t
+            }
+            super.traverse(t)
+          } else
+            t match {
+              case mdef: MemberDef =>
+                val annTrees = mdef.mods.annotations match {
+                  case Nil if mdef.symbol != null =>
+                    // After typechecking, annotations are moved from the modifiers
+                    // to the annotation on the symbol of the annotatee.
+                    mdef.symbol.annotations.map(_.original)
+                  case anns => anns
+                }
+                traverseTrees(annTrees)
+              case _ =>
+            }
+      }
+    }
+  }
 }

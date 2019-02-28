@@ -642,4 +642,75 @@ object CompletionSuite extends BaseCompletionSuite {
     """|Some scala
        |""".stripMargin
   )
+
+  check(
+    "adt",
+    s"""|object Main {
+        |  Option(1) match {
+        |    case No@@
+        |}
+        |""".stripMargin,
+    """|None scala
+       |""".stripMargin
+  )
+
+  check(
+    "adt1",
+    s"""|object Main {
+        |  Option(1) match {
+        |    case S@@
+        |}
+        |""".stripMargin,
+    """|Some scala
+       |""".stripMargin
+  )
+
+  check(
+    "adt2",
+    s"""|object Main {
+        |  Option(1) match {
+        |    case S@@
+        |}
+        |""".stripMargin,
+    """|Some scala
+       |""".stripMargin
+  )
+
+  check(
+    "adt3",
+    s"""|object Main {
+        |  Option(1) match {
+        |    case _: S@@
+        |}
+        |""".stripMargin,
+    """|Some scala
+       |""".stripMargin
+  )
+
+  check(
+    "adt4",
+    s"""|object Main {
+        |  val Number = "".r
+        |  "" match {
+        |    case N@@
+        |}
+        |""".stripMargin,
+    """|Number: Regex
+       |""".stripMargin
+  )
+
+  check(
+    "adt5",
+    s"""|object Main {
+        |  val Number = "".r
+        |  "" match {
+        |    case _: N@@
+        |}
+        |""".stripMargin,
+    """|Number: Regex
+       |Nothing scala
+       |Null scala
+       |""".stripMargin
+  )
+
 }
