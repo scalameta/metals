@@ -589,4 +589,57 @@ object CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  check(
+    "dynamic5",
+    s"""|$classFoo
+        |object Main {
+        |  val foo = new Foo()
+        |  List(foo.selectDy@@)
+        |}
+        |""".stripMargin,
+    """|selectDynamic(field: String): Foo
+       |""".stripMargin
+  )
+
+  check(
+    "type",
+    s"""|object Main {
+        |  val foo: ListBuffe@@
+        |}
+        |""".stripMargin,
+    """|scala.collection.mutable.ListBuffer scala.collection.mutable
+       |""".stripMargin
+  )
+
+  check(
+    "type1",
+    s"""|object Main {
+        |  val foo: Map[Int, ListBuffe@@]
+        |}
+        |""".stripMargin,
+    """|scala.collection.mutable.ListBuffer scala.collection.mutable
+       |""".stripMargin
+  )
+
+  check(
+    "pat",
+    s"""|object Main {
+        |  Option(1) match {
+        |    case Som@@
+        |}
+        |""".stripMargin,
+    """|Some scala
+       |""".stripMargin
+  )
+
+  check(
+    "pat1",
+    s"""|object Main {
+        |  Option(1) match {
+        |    case List(Som@@)
+        |}
+        |""".stripMargin,
+    """|Some scala
+       |""".stripMargin
+  )
 }

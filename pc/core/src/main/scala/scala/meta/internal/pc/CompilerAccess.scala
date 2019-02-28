@@ -45,6 +45,7 @@ class CompilerAccess(
         default
     }
   }
+
   def withCompiler[T](
       default: T,
       token: CancelToken

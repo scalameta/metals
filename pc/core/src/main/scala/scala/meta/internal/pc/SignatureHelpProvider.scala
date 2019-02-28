@@ -41,6 +41,8 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
             last = tree
           case TypeApply(qual, _) if !qual.pos.includes(pos) =>
             last = tree
+          case AppliedTypeTree(qual, _) if !qual.pos.includes(pos) =>
+            last = tree
           case _ =>
         }
         super.traverse(tree)
@@ -127,6 +129,8 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
 
     def unapply(tree: Tree): Option[MethodCall] = {
       tree match {
+        case AppliedTypeTree(qual, targs) =>
+          Some(MethodCall(tree, qual, treeSymbol(qual), targs, Nil))
         case TypeApply(qual, targs) =>
           Some(MethodCall(tree, qual, treeSymbol(tree), targs, Nil))
         case Apply(qual, args) =>
@@ -346,7 +350,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     var activeParameter: Integer = null
     val shortenedNames = new ShortenedNames()
     val infos = t.alternatives.zipWithIndex.collect {
-      case (method: MethodSymbol, i) =>
+      case (method, i) if !method.isErroneous =>
         val isActiveSignature = method == activeParent
         val tpe =
           if (isActiveSignature) t.call.qualTpe
@@ -392,7 +396,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
 
   def toSignatureInformation(
       t: EnclosingMethodCall,
-      method: MethodSymbol,
+      method: Symbol,
       methodType: Type,
       mparamss: List[List[Symbol]],
       isActiveSignature: Boolean,

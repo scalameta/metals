@@ -507,4 +507,28 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        | """.stripMargin
   )
 
+  check(
+    "type",
+    """
+      |object a {
+      |  val x: Map[Int, Stri@@ng]
+      |}
+    """.stripMargin,
+    """|Map[A, B]: Map
+       |       ^
+       | """.stripMargin
+  )
+
+  check(
+    "type1",
+    """
+      |object a {
+      |  val x: Map[Int, Stri@@]
+      |}
+    """.stripMargin,
+    """|Map[A, B]: Map
+       |       ^
+       | """.stripMargin
+  )
+
 }
