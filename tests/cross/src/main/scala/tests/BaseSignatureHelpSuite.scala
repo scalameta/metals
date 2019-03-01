@@ -4,8 +4,13 @@ import scala.collection.JavaConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
-  def checkDoc(name: String, code: String, expected: String): Unit = {
-    check(name, code, expected, includeDocs = true)
+  def checkDoc(
+      name: String,
+      code: String,
+      expected: String,
+      compat: Map[String, String] = Map.empty
+  ): Unit = {
+    check(name, code, expected, includeDocs = true, compat = compat)
   }
   def check(
       name: String,
@@ -16,7 +21,8 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       stableOrder: Boolean = true
   ): Unit = {
     test(name) {
-      val (code, offset) = params(original)
+      val pkg = scala.meta.Term.Name(name).syntax
+      val (code, offset) = params(s"package $pkg\n" + original)
       val result =
         pc.signatureHelp(CompilerOffsetParams("A.scala", code, offset))
       val out = new StringBuilder()

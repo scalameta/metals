@@ -232,7 +232,19 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |- Martin Odersky
        |<init>(value: Int): Some[Int]
        |       ^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|Class `Some[A]` represents existing values of type
+           | `A`.
+           |
+           |
+           |**Authors**
+           |- Martin Odersky
+           |<init>(x: Int): Some[Int]
+           |       ^^^^^^
+           |""".stripMargin
+    )
   )
   checkDoc(
     "markdown",

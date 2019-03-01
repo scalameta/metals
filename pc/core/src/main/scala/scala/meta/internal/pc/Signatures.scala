@@ -136,8 +136,9 @@ trait Signatures { this: MetalsGlobal =>
     def paramLabel(param: Symbol, index: Int): String = {
       val paramTypeString = metalsToLongString(param.info, shortenedNames)
       val name = infoParams(index) match {
-        case Some(value) => value.name()
-        case None => param.nameString
+        case Some(value) if param.name.startsWith("x$") =>
+          value.name()
+        case _ => param.nameString
       }
       if (param.isTypeParameter) {
         val contextBounds =
