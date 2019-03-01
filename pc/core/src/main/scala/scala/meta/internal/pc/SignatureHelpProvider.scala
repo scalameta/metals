@@ -359,7 +359,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         qual <- applyQualifier(tree)
         completions = completionsAt(qual.pos.focus).results
           .filter(_.sym.name == qual.name)
-          .sorted(memberOrdering(new ShortenedNames()))
+          .sorted(memberOrdering(new ShortenedNames(), CompletionPosition.None))
           .map(_.sym)
           .distinct
         completion <- completions match {

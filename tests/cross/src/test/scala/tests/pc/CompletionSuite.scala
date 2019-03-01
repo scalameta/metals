@@ -651,6 +651,18 @@ object CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|None scala
+       |NoManifest scala.reflect
+       |ClassNotFoundException java.lang
+       |CloneNotSupportedException java.lang
+       |EnumConstantNotPresentException java.lang
+       |NoClassDefFoundError java.lang
+       |NoSuchFieldError java.lang
+       |NoSuchFieldException java.lang
+       |NoSuchMethodError java.lang
+       |NoSuchMethodException java.lang
+       |NotImplementedError scala
+       |NotNull scala
+       |TypeNotPresentException java.lang
        |""".stripMargin
   )
 
@@ -662,45 +674,49 @@ object CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some scala
-       |""".stripMargin
+       |IndexedSeq scala.collection
+       |Seq scala.collection
+       |""".stripMargin,
+    topLines = Some(3)
   )
 
   check(
     "adt2",
     s"""|object Main {
         |  Option(1) match {
-        |    case S@@
-        |}
-        |""".stripMargin,
-    """|Some scala
-       |""".stripMargin
-  )
-
-  check(
-    "adt3",
-    s"""|object Main {
-        |  Option(1) match {
         |    case _: S@@
         |}
         |""".stripMargin,
     """|Some scala
-       |""".stripMargin
+       |IndexedSeq scala.collection
+       |Seq scala.collection
+       |""".stripMargin,
+    topLines = Some(3)
+  )
+
+  check(
+    "adt3",
+    s"""|import Matches._
+        |object Matches {
+        |  val Number = "".r
+        |}
+        |object Main {
+        |  locally {
+        |    val NotString = 42
+        |    "" match {
+        |      case N@@
+        |  }
+        |}
+        |""".stripMargin,
+    """|Number: Regex
+       |NotString: Int
+       |Nil scala.collection.immutable
+       |""".stripMargin,
+    topLines = Option(3)
   )
 
   check(
     "adt4",
-    s"""|object Main {
-        |  val Number = "".r
-        |  "" match {
-        |    case N@@
-        |}
-        |""".stripMargin,
-    """|Number: Regex
-       |""".stripMargin
-  )
-
-  check(
-    "adt5",
     s"""|object Main {
         |  val Number = "".r
         |  "" match {
@@ -710,7 +726,8 @@ object CompletionSuite extends BaseCompletionSuite {
     """|Number: Regex
        |Nothing scala
        |Null scala
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Option(3)
   )
 
 }

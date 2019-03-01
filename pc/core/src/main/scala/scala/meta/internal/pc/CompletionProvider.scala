@@ -29,9 +29,9 @@ class CompletionProvider(
       cursor = Some(params.offset)
     )
     val pos = unit.position(params.offset)
-    val (kind, i) = safeCompletionsAt(pos)
+    val (kind, i, completion) = safeCompletionsAt(pos)
     val history = new ShortenedNames()
-    val sorted = i.results.sorted(memberOrdering(history))
+    val sorted = i.results.sorted(memberOrdering(history, completion))
     val items = sorted.iterator.zipWithIndex.map {
       case (r, idx) =>
         params.checkCanceled()
@@ -83,7 +83,8 @@ class CompletionProvider(
       completions: List[Member],
       kind: LookupKind,
       query: String,
-      pos: Position
+      pos: Position,
+      completion: CompletionPosition
   ): InterestingMembers = {
     val isUninterestingSymbol = Set[Symbol](
       // the methods == != ## are arguably "interesting" but they're here becuase
@@ -112,7 +113,6 @@ class CompletionProvider(
         TermName("→").encode
       )
     ).flatMap(_.alternatives)
-    val completion: CompletionPosition = completionPosition
     val isSeen = mutable.Set.empty[String]
     val isIgnored = mutable.Set.empty[Symbol]
     val buf = List.newBuilder[Member]
@@ -126,12 +126,10 @@ class CompletionProvider(
       def isIgnoredWorkspace: Boolean =
         head.isInstanceOf[WorkspaceMember] &&
           (isIgnored(head.sym) || isIgnored(head.sym.companion))
-      def matchesAdtType: Boolean =
-        completion.matches(head)
       if (!isSeen(id) &&
         !isUninterestingSymbol(head.sym) &&
         !isIgnoredWorkspace &&
-        matchesAdtType) {
+        completion.isCandidate(head)) {
         isSeen += id
         buf += head
         isIgnored ++= dealiasedValForwarder(head.sym)
@@ -178,12 +176,13 @@ class CompletionProvider(
 
   private def safeCompletionsAt(
       position: Position
-  ): (LookupKind, InterestingMembers) = {
+  ): (LookupKind, InterestingMembers, CompletionPosition) = {
     def expected(e: Throwable) = {
       logger.warning(e.getMessage)
       (
         LookupKind.None,
-        InterestingMembers(Nil, SymbolSearch.Result.COMPLETE)
+        InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
+        CompletionPosition.None
       )
     }
     try {
@@ -204,14 +203,16 @@ class CompletionProvider(
         case _ =>
           LookupKind.None
       }
+      val completion = completionPosition
       val items = filterInteresting(
         matchingResults,
         kind,
         completions.name.toString,
-        position
+        position,
+        completion
       )
       params.checkCanceled()
-      (kind, items)
+      (kind, items, completion)
     } catch {
       case e: CyclicReference
           if e.getMessage.contains("illegal cyclic reference") =>

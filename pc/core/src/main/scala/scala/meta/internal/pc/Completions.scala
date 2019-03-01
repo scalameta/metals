@@ -98,9 +98,18 @@ trait Completions { this: MetalsGlobal =>
     relevance
   }
 
-  def memberOrdering(history: ShortenedNames): Ordering[Member] =
-    new Ordering[Member] {
-      override def compare(o1: Member, o2: Member): Int = {
+  def memberOrdering(
+      history: ShortenedNames,
+      completion: CompletionPosition
+  ): Ordering[Member] = new Ordering[Member] {
+    val cache = mutable.Map.empty[Symbol, Boolean]
+    override def compare(o1: Member, o2: Member): Int = {
+      val byCompletion = -java.lang.Boolean.compare(
+        cache.getOrElseUpdate(o1.sym, completion.isPrioritized(o1)),
+        cache.getOrElseUpdate(o2.sym, completion.isPrioritized(o2))
+      )
+      if (byCompletion != 0) byCompletion
+      else {
         val byRelevance = Integer.compare(
           relevancePenalty(o1, history),
           relevancePenalty(o2, history)
@@ -111,7 +120,8 @@ trait Completions { this: MetalsGlobal =>
             IdentifierComparator.compare(o1.sym.name, o2.sym.name)
           if (byIdentifier != 0) byIdentifier
           else {
-            val byOwner = o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
+            val byOwner =
+              o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
             if (byOwner != 0) byOwner
             else {
               val byParamCount = Integer.compare(
@@ -128,6 +138,7 @@ trait Completions { this: MetalsGlobal =>
         }
       }
     }
+  }
 
   def infoString(sym: Symbol, info: Type, history: ShortenedNames): String =
     sym match {
@@ -220,16 +231,42 @@ trait Completions { this: MetalsGlobal =>
 
   var lastEnclosing: List[Tree] = Nil
   sealed abstract class CompletionPosition {
-    def matches(member: Member): Boolean
+
+    /**
+     * Returns false if this member should be excluded from completion items.
+     */
+    def isCandidate(member: Member): Boolean
+
+    /**
+     * Returns true if this member should be sorted at the top of completion items.
+     */
+    def isPrioritized(member: Member): Boolean
+
+  }
+  def completionPosition: CompletionPosition = {
+    lastEnclosing match {
+      case Ident(_) :: PatternMatch(c, m) =>
+        CompletionPosition.Case(isTyped = false, c, m)
+      case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
+        CompletionPosition.Case(isTyped = true, c, m)
+      case _ =>
+        CompletionPosition.None
+    }
   }
   object CompletionPosition {
     case object None extends CompletionPosition {
-      override def matches(member: Member): Boolean = true
+      override def isCandidate(member: Member): Boolean = true
+      override def isPrioritized(member: Member): Boolean = true
     }
     case class Case(
+        isTyped: Boolean,
         c: CaseDef,
         m: Match
     ) extends CompletionPosition {
+      override def isCandidate(member: Member): Boolean = {
+        // Can't complete regular def methods in pattern matching.
+        !member.sym.isMethod || !member.sym.isVal
+      }
       val selector = typedTreeAt(m.selector.pos).tpe
       val parents = Set(selector.typeSymbol, selector.typeSymbol.companion)
       def isSubClass(sym: Symbol, includeReverse: Boolean): Boolean = {
@@ -239,7 +276,7 @@ trait Completions { this: MetalsGlobal =>
           (includeReverse && parent.isSubClass(typeSymbol))
         }
       }
-      override def matches(head: Member): Boolean = {
+      override def isPrioritized(head: Member): Boolean = {
         isSubClass(head.sym, includeReverse = false) || {
           def alternatives(unapply: Symbol): Boolean =
             unapply.alternatives.exists { unapply =>
@@ -259,23 +296,13 @@ trait Completions { this: MetalsGlobal =>
   }
 
   object PatternMatch {
-    def unapply(enclosing: List[Tree]): Option[CompletionPosition.Case] =
+    def unapply(enclosing: List[Tree]): Option[(CaseDef, Match)] =
       enclosing match {
         case (c: CaseDef) :: (m: Match) :: _ =>
-          Some(CompletionPosition.Case(c, m))
+          Some((c, m))
         case _ =>
           None
       }
-  }
-  def completionPosition: CompletionPosition = {
-    lastEnclosing match {
-      case Ident(_) :: PatternMatch(c) =>
-        c
-      case Ident(_) :: Typed(_, _) :: PatternMatch(c) =>
-        c
-      case _ =>
-        CompletionPosition.None
-    }
   }
   class MetalsLocator(pos: Position) extends Traverser {
     def locateIn(root: Tree): Tree = {

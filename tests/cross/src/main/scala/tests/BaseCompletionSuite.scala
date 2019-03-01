@@ -32,7 +32,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       compat: Map[String, String] = Map.empty,
       postProcessObtained: String => String = identity,
       stableOrder: Boolean = true,
-      postAssert: () => Unit = () => ()
+      postAssert: () => Unit = () => (),
+      topLines: Option[Int] = None
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val (code, offset) = params(original)
@@ -40,7 +41,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         CompilerOffsetParams("A.scala", code, offset, cancelToken)
       )
       val out = new StringBuilder()
-      val items = result.getItems.asScala.sortBy(_.getSortText)
+      val baseItems = result.getItems.asScala.sortBy(_.getSortText)
+      val items = topLines match {
+        case Some(top) => baseItems.take(top)
+        case None => baseItems
+      }
       items.foreach { item =>
         val label =
           if (item.getInsertText == null) item.getLabel else item.getInsertText
