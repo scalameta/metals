@@ -47,7 +47,11 @@ case class BuildServerConnection(
   }
 
   private def register[T](e: CompletableFuture[T]): CompletableFuture[T] = {
-    ongoingRequests.add(Cancelable(() => Try(e.cancel(false))))
+    ongoingRequests.add(
+      Cancelable(
+        () => Try(e.completeExceptionally(new ControlCancellationException()))
+      )
+    )
     e
   }
 
