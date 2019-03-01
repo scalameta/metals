@@ -295,7 +295,8 @@ class MetalsLanguageServer(
         buffers,
         new MetalsSymbolSearch(symbolDocs, workspaceSymbols),
         embedded,
-        statusBar
+        statusBar,
+        sh
       )
     )
     doctor = new Doctor(
@@ -890,6 +891,10 @@ class MetalsLanguageServer(
           compileSourceFiles.cancelCurrentRequest()
           cascadeCompileSourceFiles.cancelCurrentRequest()
           scribe.info("compilation cancelled")
+        }.asJavaObject
+      case ServerCommands.PresentationCompilerRestart() =>
+        Future {
+          compilers.restartAll()
         }.asJavaObject
       case els =>
         scribe.error(s"Unknown command '$els'")

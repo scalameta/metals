@@ -4,6 +4,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.util.Collections
+import java.util.concurrent.ScheduledExecutorService
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
@@ -13,6 +14,7 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.concurrent.ExecutionContextExecutorService
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -33,7 +35,8 @@ class Compilers(
     buffers: Buffers,
     search: SymbolSearch,
     embedded: Embedded,
-    statusBar: StatusBar
+    statusBar: StatusBar,
+    sh: ScheduledExecutorService
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -45,10 +48,15 @@ class Compilers(
   private val cache = jcache.asScala
 
   override def cancel(): Unit = {
-    Cancelable.cancelEach(cache.keys) { key =>
-      cache.remove(key).foreach(_.shutdown())
-    }
+    Cancelable.cancelEach(cache.values)(_.shutdown())
     cache.clear()
+  }
+  def restartAll(): Unit = {
+    val count = cache.size
+    cancel()
+    scribe.info(
+      s"restarted ${count} presentation compiler${LogMessages.plural(count)}"
+    )
   }
   def didCompileSuccessfully(id: BuildTargetIdentifier): Unit = {
     cache.remove(id).foreach(_.shutdown())
@@ -160,6 +168,7 @@ class Compilers(
     val options = plugins.filterSupportedOptions(scalac.getOptions.asScala)
     pc.withSearch(search)
       .withExecutorService(ec)
+      .withScheduledExecutorService(sh)
       .newInstance(
         scalac.getTarget.getUri,
         classpath.asJava,

@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Path
 import java.util
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.ScheduledExecutorService
 import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.Hover
@@ -26,7 +27,8 @@ case class ScalaPresentationCompiler(
     classpath: Seq[Path] = Nil,
     options: List[String] = Nil,
     search: SymbolSearch = EmptySymbolSearch,
-    ec: ExecutionContext = ExecutionContext.global
+    ec: ExecutionContext = ExecutionContext.global,
+    sh: Option[ScheduledExecutorService] = None
 ) extends PresentationCompiler {
   val logger = Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
   override def withSearch(search: SymbolSearch): PresentationCompiler =
@@ -35,9 +37,13 @@ case class ScalaPresentationCompiler(
       executorService: ExecutorService
   ): PresentationCompiler =
     copy(ec = ExecutionContext.fromExecutorService(executorService))
+  override def withScheduledExecutorService(
+      sh: ScheduledExecutorService
+  ): PresentationCompiler =
+    copy(sh = Some(sh))
   def this() = this(buildTargetIdentifier = "")
 
-  val access = new CompilerAccess(() => newCompiler())(ec)
+  val access = new CompilerAccess(sh, () => newCompiler())(ec)
   override def shutdown(): Unit = {
     access.shutdown()
   }
