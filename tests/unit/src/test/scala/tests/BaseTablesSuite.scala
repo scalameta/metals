@@ -1,12 +1,14 @@
 package tests
 
 import java.nio.file.Files
+import scala.meta.internal.metals.MetalsLogger
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Tables
 import scala.meta.io.AbsolutePath
 
 abstract class BaseTablesSuite extends BaseSuite {
+  MetalsLogger.updateDefaultFormat()
   var workspace: AbsolutePath = _
   var tables: Tables = _
   var time = new FakeTime
