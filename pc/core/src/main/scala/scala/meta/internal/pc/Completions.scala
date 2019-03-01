@@ -15,6 +15,9 @@ trait Completions { this: MetalsGlobal =>
   class WorkspaceMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
 
+  class NamedArgMember(sym: Symbol)
+      extends ScopeMember(sym, NoType, true, EmptyTree)
+
   val packageSymbols = mutable.Map.empty[String, Option[Symbol]]
   def packageSymbolFromString(symbol: String): Option[Symbol] = {
     packageSymbols.getOrElseUpdate(symbol, {
@@ -242,9 +245,18 @@ trait Completions { this: MetalsGlobal =>
      */
     def isPrioritized(member: Member): Boolean
 
+    /**
+     * Returns true if this member should be sorted at the top of completion items.
+     */
+    def contribute: List[Member]
+
   }
   def completionPosition: CompletionPosition = {
     lastEnclosing match {
+      case (name: Ident) :: (a: Apply) :: _ =>
+        CompletionPosition.Arg(name, a)
+      case (name: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
+        CompletionPosition.Arg(name, a)
       case Ident(_) :: PatternMatch(c, m) =>
         CompletionPosition.Case(isTyped = false, c, m)
       case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
@@ -257,12 +269,51 @@ trait Completions { this: MetalsGlobal =>
     case object None extends CompletionPosition {
       override def isCandidate(member: Member): Boolean = true
       override def isPrioritized(member: Member): Boolean = true
+      override def contribute: List[Member] = Nil
+    }
+    case class Arg(ident: Ident, apply: Apply) extends CompletionPosition {
+      val method = typedTreeAt(apply.fun.pos).symbol
+      val params: List[Symbol] = {
+        def curriedParamList(t: Tree): Int = t match {
+          case Apply(fun, _) => 1 + curriedParamList(fun)
+          case _ => 0
+        }
+        val index = curriedParamList(apply.fun)
+        method.paramss.lift(index) match {
+          case Some(value) => value
+          case scala.None => method.paramss.flatten
+        }
+      }
+      val isNamed = apply.args.iterator
+        .filterNot(_ == ident)
+        .zip(params.iterator)
+        .map {
+          case (AssignOrNamedArg(Ident(name), _), _) =>
+            name
+          case (_, param) =>
+            param.name
+        }
+        .toSet
+      override def isCandidate(member: Member): Boolean = true
+      override def isPrioritized(member: Member): Boolean = true
+      override def contribute: List[Member] = {
+        val prefix = ident.name.toString.stripSuffix(CURSOR)
+        params.iterator
+          .filterNot { param =>
+            isNamed(param.name) ||
+            param.name.containsChar('$') // exclude synthetic parameters
+          }
+          .filter(param => param.name.startsWith(prefix))
+          .map(param => new NamedArgMember(param))
+          .toList
+      }
     }
     case class Case(
         isTyped: Boolean,
         c: CaseDef,
         m: Match
     ) extends CompletionPosition {
+      override def contribute: List[Member] = Nil
       override def isCandidate(member: Member): Boolean = {
         // Can't complete regular def methods in pattern matching.
         !member.sym.isMethod || !member.sym.isVal

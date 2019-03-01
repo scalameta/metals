@@ -35,7 +35,12 @@ class CompletionProvider(
     val items = sorted.iterator.zipWithIndex.map {
       case (r, idx) =>
         params.checkCanceled()
-        val label = r.symNameDropLocal.decoded
+        val label = r match {
+          case _: NamedArgMember =>
+            s"${r.symNameDropLocal.decoded} = "
+          case _ =>
+            r.symNameDropLocal.decoded
+        }
         val item = new CompletionItem(label)
         val detail = detailString(r, history)
         r match {
@@ -139,6 +144,7 @@ class CompletionProvider(
       }
     }
     completions.foreach(visit)
+    completion.contribute.foreach(visit)
     val searchResults =
       if (kind == LookupKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)

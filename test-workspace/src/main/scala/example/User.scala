@@ -1,15 +1,10 @@
 package example
 
-import scala.language.dynamics
+case class User(
+    name: String,
+    age: Int = 42,
+    address: String = "",
+    followers: Int = 0
+)
 
-class Foo extends Dynamic {
-  def banana: String = "42"
-  def selectDynamic(a: String): Foo = this
-  def applyDynamicNamed(name: String)(arg: (String, Int)): Foo = this
-  def updateDynamic(name: String)(value: Int): Foo = this
-}
-
-object User {
-  val foo = new Foo()
-  (foo.foobar = 2).ban
-}
+object User {}
