@@ -97,7 +97,7 @@ case class ScalaPresentationCompiler(
       symbol: String,
       token: CancelToken
   ): CompletionItem =
-    access.withCompiler(item, token) { global =>
+    access.withSharedCompiler(item) { global =>
       new CompletionItemResolver(global).resolve(item, symbol)
     }
 

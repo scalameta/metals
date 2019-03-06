@@ -39,26 +39,7 @@ class CompilerAccess(
     }
   }
 
-  def withCompiler[T](
-      default: T,
-      token: CancelToken
-  )(thunk: MetalsGlobal => T): T = lock.synchronized {
-    val thread = Thread.currentThread()
-    Thread.interrupted() // clear interrupt flag
-    val isFinished = new AtomicBoolean(false)
-    token
-      .onCancel()
-      .whenComplete(new BiConsumer[java.lang.Boolean, Throwable] {
-        override def accept(isCancelled: lang.Boolean, u: Throwable): Unit = {
-          if (isCancelled && isFinished
-              .compareAndSet(false, true) && isDefined) {
-            _compiler.presentationCompilerThread.interrupt()
-            if (thread != _compiler.presentationCompilerThread) {
-              thread.interrupt()
-            }
-          }
-        }
-      })
+  def withSharedCompiler[T](default: T)(thunk: MetalsGlobal => T): T = {
     try {
       thunk(loadCompiler())
     } catch {
@@ -83,9 +64,31 @@ class CompilerAccess(
           handleError(e)
           default
         }
-    } finally {
-      isFinished.set(true)
     }
+  }
+
+  def withCompiler[T](
+      default: T,
+      token: CancelToken
+  )(thunk: MetalsGlobal => T): T = lock.synchronized {
+    val thread = Thread.currentThread()
+    Thread.interrupted() // clear interrupt flag
+    val isFinished = new AtomicBoolean(false)
+    token
+      .onCancel()
+      .whenComplete(new BiConsumer[java.lang.Boolean, Throwable] {
+        override def accept(isCancelled: lang.Boolean, u: Throwable): Unit = {
+          if (isCancelled && isFinished
+              .compareAndSet(false, true) && isDefined) {
+            _compiler.presentationCompilerThread.interrupt()
+            if (thread != _compiler.presentationCompilerThread) {
+              thread.interrupt()
+            }
+          }
+        }
+      })
+    try withSharedCompiler(default)(thunk)
+    finally isFinished.set(true)
   }
 
   private def retryWithCleanCompiler[T](
