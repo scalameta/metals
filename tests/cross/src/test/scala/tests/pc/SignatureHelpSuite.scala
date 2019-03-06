@@ -390,6 +390,17 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin
   )
   check(
+    "named4",
+    """
+      |object A {
+      |  identity(x = @@)
+      |}
+    """.stripMargin,
+    """|identity[A](x: A): A
+       |            ^^^^
+       |""".stripMargin
+  )
+  check(
     "short-name",
     """
       |object A {

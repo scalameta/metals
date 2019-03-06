@@ -212,7 +212,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     }
     if (leadingDelimiter >= 0) {
       text.charAt(leadingDelimiter) match {
-        case '(' | '[' | ',' | '>' =>
+        case '(' | '[' | ',' | '>' | '=' =>
           var trailingDelimiter = offset
           while (trailingDelimiter < text.length &&
             text.charAt(trailingDelimiter).isWhitespace) {
