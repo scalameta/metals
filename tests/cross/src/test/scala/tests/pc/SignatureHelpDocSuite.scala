@@ -205,15 +205,15 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  String.valueOf(@@)
       |}
     """.stripMargin,
-    """|valueOf(b: Boolean): String
-       |        ^^^^^^^^^^
+    """|valueOf(obj: Any): String
+       |        ^^^^^^^^
+       |valueOf(data: Array[Char]): String
+       |valueOf(b: Boolean): String
        |valueOf(c: Char): String
        |valueOf(d: Double): String
-       |valueOf(data: Array[Char]): String
        |valueOf(f: Float): String
        |valueOf(i: Int): String
        |valueOf(l: Long): String
-       |valueOf(obj: Any): String
        |valueOf(data: Array[Char], offset: Int, count: Int): String
        |""".stripMargin
   )

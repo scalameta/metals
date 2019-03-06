@@ -32,7 +32,7 @@ trait Signatures { this: MetalsGlobal =>
       includeDocs: Boolean
   ) {
     private val info: Option[SymbolDocumentation] =
-      if (includeDocs || (gsym.isMethod && isJavaSymbol(gsym))) {
+      if (includeDocs) {
         symbolDocumentation(gsym)
       } else {
         None
