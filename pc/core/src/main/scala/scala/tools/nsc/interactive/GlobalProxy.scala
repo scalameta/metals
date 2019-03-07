@@ -12,8 +12,16 @@ trait GlobalProxy { this: MetalsGlobal =>
    * Forwarder to package private `typeMembers` method.
    */
   def metalsTypeMembers(pos: Position): List[Member] = {
-    val r = new Response[List[Member]]
-    getTypeCompletion(pos, r)
+    metalsAsk[List[Member]](r => getTypeCompletion(pos, r))
+  }
+
+  def metalsScopeMembers(pos: Position): List[Member] = {
+    metalsAsk[List[Member]](r => getScopeCompletion(pos, r))
+  }
+
+  def metalsAsk[T](fn: Response[T] => Unit): T = {
+    val r = new Response[T]
+    fn(r)
     r.get match {
       case Left(value) =>
         value

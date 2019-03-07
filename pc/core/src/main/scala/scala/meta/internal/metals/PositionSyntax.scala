@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-import scala.meta._
+import scala.meta.Position
 
 object PositionSyntax {
 

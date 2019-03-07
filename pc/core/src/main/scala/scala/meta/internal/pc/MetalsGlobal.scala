@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.util
 import java.util.logging.Logger
+import org.eclipse.{lsp4j => l}
 import scala.language.implicitConversions
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.SymbolDocumentation
@@ -301,6 +302,21 @@ class MetalsGlobal(
   // Needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
     name.toString
+  implicit class XtensionPositionMetals(pos: Position) {
+    private def toPos(offset: Int): l.Position = {
+      val line = pos.source.offsetToLine(offset)
+      val column = offset - pos.source.lineToOffset(line)
+      new l.Position(line, column)
+    }
+    def toLSP: l.Range = {
+      if (pos.isRange) {
+        new l.Range(toPos(pos.start), toPos(pos.end))
+      } else {
+        val p = toPos(pos.point)
+        new l.Range(p, p)
+      }
+    }
+  }
   implicit class XtensionSymbolMetals(sym: Symbol) {
     def isJavaModule: Boolean =
       sym.isJava && sym.isModule

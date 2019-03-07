@@ -1,10 +1,9 @@
 package example
+object User {
+  val name = "John"
+  def greeting = """Hello
+   $name! This is goodbye
+   """
 
-case class User(
-    name: String,
-    age: Int = 42,
-    address: String = "",
-    followers: Int = 0
-)
-
-object User {}
+  def message = "Hello $name, this is goodbye!"
+}

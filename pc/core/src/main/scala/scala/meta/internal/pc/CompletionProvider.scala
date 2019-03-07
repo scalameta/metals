@@ -54,6 +54,10 @@ class CompletionProvider(
           else ""
         val suffix = typeSuffix + templateSuffix
         r match {
+          case i: InterpolatorMember =>
+            item.setFilterText(i.filterText)
+            item.setTextEdit(i.edit)
+            item.setInsertTextFormat(InsertTextFormat.Snippet)
           case w: WorkspaceMember =>
             item.setInsertTextFormat(InsertTextFormat.Snippet)
             item.setInsertText(w.sym.fullName + suffix)
@@ -73,6 +77,7 @@ class CompletionProvider(
               item.setInsertText(label + suffix)
             }
         }
+
         item.setDetail(detail)
         item.setData(
           CompletionItemData(semanticdbSymbol(r.sym), buildTargetIdentifier).toJson
@@ -235,7 +240,7 @@ class CompletionProvider(
         case _ =>
           LookupKind.None
       }
-      val completion = completionPosition(position)
+      val completion = completionPosition(position, params.text())
       val items = filterInteresting(
         matchingResults,
         kind,

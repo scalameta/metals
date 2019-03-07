@@ -149,4 +149,5 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
        |Iterable[$0]
        |""".stripMargin
   )
+
 }

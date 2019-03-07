@@ -164,22 +164,6 @@ object MetalsEnrichments
       )
     }
   }
-  implicit class XtensionPositionLsp(pos: m.Position) {
-    def toSemanticdb: s.Range = {
-      new s.Range(
-        pos.startLine,
-        pos.startColumn,
-        pos.endLine,
-        pos.endColumn
-      )
-    }
-    def toLSP: l.Range = {
-      new l.Range(
-        new l.Position(pos.startLine, pos.startColumn),
-        new l.Position(pos.endLine, pos.endColumn)
-      )
-    }
-  }
 
   implicit class XtensionDocumentSymbol(symbol: Seq[l.DocumentSymbol]) {
 
@@ -393,19 +377,6 @@ object MetalsEnrichments
       )
     def toLSP: l.Range =
       new l.Range(range.getStart.toLSP, range.getEnd.toLSP)
-  }
-
-  implicit class XtensionLspRange(range: l.Range) {
-    def isOffset: Boolean =
-      range.getStart == range.getEnd
-    def toMeta(input: m.Input): m.Position =
-      m.Position.Range(
-        input,
-        range.getStart.getLine,
-        range.getStart.getCharacter,
-        range.getEnd.getLine,
-        range.getEnd.getCharacter
-      )
   }
 
   implicit class XtensionSymbolOccurrenceProtocol(occ: s.SymbolOccurrence) {

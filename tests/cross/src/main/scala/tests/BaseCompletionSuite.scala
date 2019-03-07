@@ -31,6 +31,28 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     )
     result.getItems.asScala.sortBy(_.getSortText)
   }
+  def checkEdit(
+      name: String,
+      original: String,
+      expected: String,
+      filterText: String = ""
+  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+    test(name) {
+      val items = getItems(original)
+      if (items.length != 1) {
+        fail(
+          s"expected single completion item, obtained ${items.length} items.\n${items}"
+        )
+      }
+      val item = items.head
+      val (code, _) = params(original)
+      val obtained = TextEdits.applyEdit(code, item.getTextEdit)
+      assertNoDiff(obtained, expected)
+      if (filterText.nonEmpty) {
+        assertNoDiff(item.getFilterText, filterText, "Invalid filter text")
+      }
+    }
+  }
 
   def checkSnippet(
       name: String,

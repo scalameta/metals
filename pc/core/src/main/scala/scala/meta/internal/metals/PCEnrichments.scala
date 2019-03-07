@@ -11,6 +11,7 @@ import org.eclipse.{lsp4j => l}
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.util.control.NonFatal
+import scala.{meta => m}
 
 /**
  * Extension methods used for interfacing with the presentation compiler.
@@ -107,6 +108,36 @@ trait PCEnrichments {
       it.foldLeft(Option.empty[T]) {
         case (_, e) => Some(e)
       }
+    }
+  }
+
+  implicit class XtensionLspRange(range: l.Range) {
+    def isOffset: Boolean =
+      range.getStart == range.getEnd
+    def toMeta(input: m.Input): m.Position =
+      m.Position.Range(
+        input,
+        range.getStart.getLine,
+        range.getStart.getCharacter,
+        range.getEnd.getLine,
+        range.getEnd.getCharacter
+      )
+  }
+
+  implicit class XtensionPositionLsp(pos: m.Position) {
+    def toSemanticdb: s.Range = {
+      new s.Range(
+        pos.startLine,
+        pos.startColumn,
+        pos.endLine,
+        pos.endColumn
+      )
+    }
+    def toLSP: l.Range = {
+      new l.Range(
+        new l.Position(pos.startLine, pos.startColumn),
+        new l.Position(pos.endLine, pos.endColumn)
+      )
     }
   }
 }
