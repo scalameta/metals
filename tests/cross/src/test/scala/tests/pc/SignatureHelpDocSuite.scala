@@ -3,6 +3,12 @@ package tests.pc
 import tests.BaseSignatureHelpSuite
 
 object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
+
+  override def beforeAll(): Unit = {
+    indexJDK()
+    indexScalaLibrary()
+  }
+
   checkDoc(
     "curry",
     """

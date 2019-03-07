@@ -3,7 +3,7 @@ package tests.pc
 import tests.BaseSignatureHelpSuite
 
 object SignatureHelpSuite extends BaseSignatureHelpSuite {
-  override def beforeAll(): Unit = ()
+
   check(
     "method",
     """

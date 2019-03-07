@@ -157,7 +157,7 @@ trait Completions { this: MetalsGlobal =>
               fullName(sym)
             } else {
               val short = shortType(info, history)
-              sym.infoString(short)
+              sym.infoString(short).replaceAllLiterally(" <: <?>", "")
             }
         }
     }
@@ -176,6 +176,10 @@ trait Completions { this: MetalsGlobal =>
     }
   }
 
+  def dealiasedType(sym: Symbol): List[Symbol] = {
+    if (sym.isAliasType) sym.dealiased :: Nil
+    else Nil
+  }
   def dealiasedValForwarder(sym: Symbol): List[Symbol] = {
     if (sym.isValue && sym.hasRawInfo && !semanticdbSymbol(sym).isLocal) {
       sym.rawInfo match {
@@ -234,24 +238,27 @@ trait Completions { this: MetalsGlobal =>
 
   var lastEnclosing: List[Tree] = Nil
   sealed abstract class CompletionPosition {
+    def isType: Boolean = false
+    def isNew: Boolean = false
 
     /**
      * Returns false if this member should be excluded from completion items.
      */
-    def isCandidate(member: Member): Boolean
+    def isCandidate(member: Member): Boolean = true
 
     /**
      * Returns true if this member should be sorted at the top of completion items.
      */
-    def isPrioritized(member: Member): Boolean
+    def isPrioritized(member: Member): Boolean = false
 
     /**
      * Returns true if this member should be sorted at the top of completion items.
      */
-    def contribute: List[Member]
+    def contribute: List[Member] = Nil
 
   }
-  def completionPosition: CompletionPosition = {
+
+  def completionPosition(pos: Position): CompletionPosition = {
     lastEnclosing match {
       case (name: Ident) :: (a: Apply) :: _ =>
         CompletionPosition.Arg(name, a)
@@ -262,15 +269,44 @@ trait Completions { this: MetalsGlobal =>
       case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
         CompletionPosition.Case(isTyped = true, c, m)
       case _ =>
-        CompletionPosition.None
+        inferCompletionPosition(pos, lastEnclosing)
     }
   }
-  object CompletionPosition {
-    case object None extends CompletionPosition {
-      override def isCandidate(member: Member): Boolean = true
-      override def isPrioritized(member: Member): Boolean = true
-      override def contribute: List[Member] = Nil
+  def inferCompletionPosition(
+      pos: Position,
+      enclosing: List[Tree]
+  ): CompletionPosition =
+    enclosing match {
+      case (_: Ident | _: Select) :: tail =>
+        tail match {
+          case (v: ValOrDefDef) :: _ =>
+            if (v.tpt.pos.includes(pos)) {
+              CompletionPosition.Type
+            } else {
+              CompletionPosition.None
+            }
+          case _ =>
+            inferCompletionPosition(pos, tail)
+        }
+      case AppliedTypeTree(_, args) :: _ =>
+        if (args.exists(_.pos.includes(pos))) {
+          CompletionPosition.Type
+        } else {
+          CompletionPosition.None
+        }
+      case New(_) :: _ =>
+        CompletionPosition.New
+      case _ =>
+        CompletionPosition.None
     }
+  object CompletionPosition {
+    case object Type extends CompletionPosition {
+      override def isType: Boolean = true
+    }
+    case object New extends CompletionPosition {
+      override def isNew: Boolean = true
+    }
+    case object None extends CompletionPosition
     case class Arg(ident: Ident, apply: Apply) extends CompletionPosition {
       val method = typedTreeAt(apply.fun.pos).symbol
       val params: List[Symbol] = {

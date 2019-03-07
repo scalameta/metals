@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.nio.file.Path
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.InsertTextFormat
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
@@ -43,10 +44,34 @@ class CompletionProvider(
         }
         val item = new CompletionItem(label)
         val detail = detailString(r, history)
+        val templateSuffix =
+          if (completion.isNew &&
+            r.sym.dealiased.requiresTemplateCurlyBraces) " {}"
+          else ""
+        val typeSuffix =
+          if (completion.isType && r.sym.dealiased.hasTypeParams) "[$0]"
+          else if (completion.isNew && r.sym.dealiased.hasTypeParams) "[$0]"
+          else ""
+        val suffix = typeSuffix + templateSuffix
         r match {
           case w: WorkspaceMember =>
-            item.setInsertText(w.sym.fullName)
+            item.setInsertTextFormat(InsertTextFormat.Snippet)
+            item.setInsertText(w.sym.fullName + suffix)
           case _ =>
+            if (r.sym.isMethod &&
+              !r.sym.info.isInstanceOf[NullaryMethodType]) {
+              item.setInsertTextFormat(InsertTextFormat.Snippet)
+              r.sym.paramss match {
+                case Nil =>
+                case Nil :: Nil =>
+                  item.setInsertText(label + "()")
+                case _ =>
+                  item.setInsertText(label + "($0)")
+              }
+            } else if (!suffix.isEmpty) {
+              item.setInsertTextFormat(InsertTextFormat.Snippet)
+              item.setInsertText(label + suffix)
+            }
         }
         item.setDetail(detail)
         item.setData(
@@ -138,6 +163,7 @@ class CompletionProvider(
         isSeen += id
         buf += head
         isIgnored ++= dealiasedValForwarder(head.sym)
+        isIgnored ++= dealiasedType(head.sym)
         true
       } else {
         false
@@ -163,7 +189,7 @@ class CompletionProvider(
 
   private def completionItemKind(r: Member): CompletionItemKind = {
     import org.eclipse.lsp4j.{CompletionItemKind => k}
-    val symbol = r.sym
+    val symbol = r.sym.dealiased
     val symbolIsFunction = isFunction(symbol)
     if (symbol.hasPackageFlag) k.Module
     else if (symbol.isPackageObject) k.Module
@@ -209,7 +235,7 @@ class CompletionProvider(
         case _ =>
           LookupKind.None
       }
-      val completion = completionPosition
+      val completion = completionPosition(position)
       val items = filterInteresting(
         matchingResults,
         kind,

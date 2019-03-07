@@ -85,10 +85,6 @@ abstract class BasePCSuite extends BaseSuite {
     }
   }
 
-  override def beforeAll(): Unit = {
-    indexJDK()
-    indexScalaLibrary()
-  }
   override def afterAll(): Unit = {
     pc.shutdown()
     RecursivelyDelete(tmp)

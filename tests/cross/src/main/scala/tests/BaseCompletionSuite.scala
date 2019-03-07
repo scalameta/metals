@@ -1,5 +1,6 @@
 package tests
 
+import org.eclipse.lsp4j.CompletionItem
 import scala.collection.JavaConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
@@ -23,6 +24,28 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     result
   }
 
+  def getItems(original: String): Seq[CompletionItem] = {
+    val (code, offset) = params(original)
+    val result = resolvedCompletions(
+      CompilerOffsetParams("A.scala", code, offset, cancelToken)
+    )
+    result.getItems.asScala.sortBy(_.getSortText)
+  }
+
+  def checkSnippet(
+      name: String,
+      original: String,
+      expected: String
+  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+    test(name) {
+      val items = getItems(original)
+      val obtained = items
+        .map(item => Option(item.getInsertText).getOrElse(item.getLabel))
+        .mkString("\n")
+      assertNoDiff(obtained, expected)
+    }
+  }
+
   def check(
       name: String,
       original: String,
@@ -36,19 +59,23 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       topLines: Option[Int] = None
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
-      val (code, offset) = params(original)
-      val result = resolvedCompletions(
-        CompilerOffsetParams("A.scala", code, offset, cancelToken)
-      )
       val out = new StringBuilder()
-      val baseItems = result.getItems.asScala.sortBy(_.getSortText)
+      val baseItems = getItems(original)
       val items = topLines match {
         case Some(top) => baseItems.take(top)
         case None => baseItems
       }
       items.foreach { item =>
         val label =
-          if (item.getInsertText == null) item.getLabel else item.getInsertText
+          if (item.getInsertText == null) {
+            item.getLabel
+          } else {
+            val fullyQualifiedPrefix = item.getInsertText.substring(
+              0,
+              item.getInsertText.indexOf(item.getLabel)
+            )
+            fullyQualifiedPrefix + item.getLabel
+          }
         val commitCharacter =
           if (includeCommitCharacter)
             item.getCommitCharacters.asScala.mkString(" (commit: '", " ", "')")

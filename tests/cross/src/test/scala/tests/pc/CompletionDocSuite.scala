@@ -3,6 +3,10 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 object CompletionDocSuite extends BaseCompletionSuite {
+  override def beforeAll(): Unit = {
+    indexJDK()
+    indexScalaLibrary()
+  }
 
   check(
     "java",

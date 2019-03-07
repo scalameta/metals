@@ -82,12 +82,14 @@ class CompletionItemResolver(
       if (companionDoc.isEmpty) gsymDoc
       else if (gsymDoc.isEmpty) companionDoc
       else {
-        s"""|### ${keyword(companion)} ${companion.name}
-            |$companionDoc
-            |
-            |### ${keyword(gsym)} ${gsym.name}
-            |${gsymDoc}
-            |""".stripMargin
+        List(
+          s"""|### ${keyword(companion)} ${companion.name}
+              |$companionDoc
+              |""".stripMargin,
+          s"""|### ${keyword(gsym)} ${gsym.name}
+              |${gsymDoc}
+              |""".stripMargin
+        ).sorted.mkString("\n")
       }
     }
   }

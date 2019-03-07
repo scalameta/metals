@@ -301,5 +301,23 @@ class MetalsGlobal(
   // Needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
     name.toString
+  implicit class XtensionSymbolMetals(sym: Symbol) {
+    def isJavaModule: Boolean =
+      sym.isJava && sym.isModule
+    def hasTypeParams: Boolean =
+      sym.typeParams.nonEmpty ||
+        (sym.isJavaModule && sym.companionClass.typeParams.nonEmpty)
+    def requiresTemplateCurlyBraces: Boolean = {
+      sym.isTraitOrInterface || sym.isAbstractClass
+    }
+    def isTypeSymbol: Boolean =
+      sym.isType ||
+        sym.isClass ||
+        sym.isTraitOrInterface ||
+        sym.isJavaModule
+    def dealiased: Symbol =
+      if (sym.isAliasType) sym.info.dealias.typeSymbol
+      else sym
+  }
 
 }

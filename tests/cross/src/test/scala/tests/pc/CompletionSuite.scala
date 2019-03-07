@@ -3,6 +3,7 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 object CompletionSuite extends BaseCompletionSuite {
+
   override def beforeAll(): Unit = {
     indexJDK()
   }
@@ -618,6 +619,17 @@ object CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|scala.collection.mutable.ListBuffer scala.collection.mutable
+       |""".stripMargin
+  )
+
+  check(
+    "type2",
+    s"""|object Main {
+        |  new scala.Iterable@@
+        |}
+        |""".stripMargin,
+    """|Iterable scala.collection
+       |Iterable[+A] = Iterable
        |""".stripMargin
   )
 
