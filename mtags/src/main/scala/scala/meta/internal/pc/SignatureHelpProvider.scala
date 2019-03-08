@@ -5,7 +5,7 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import scala.collection.JavaConverters._
 import scala.meta.pc.OffsetParams
-import scala.meta.internal.metals.PCEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 class SignatureHelpProvider(val compiler: MetalsGlobal) {
   import compiler._

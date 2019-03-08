@@ -20,7 +20,6 @@ import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.WorkspaceSources
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.{semanticdb => s}
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.Classpath
 import scala.{meta => m}
 

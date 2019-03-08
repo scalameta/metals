@@ -8,9 +8,11 @@ object HoverSuite extends BasePCSuite {
 
   def check(name: String, original: String, expected: String): Unit = {
     test(name) {
-      val filename = "hover.scala"
+      val filename = "hoverForDebuggingPurposes.scala"
       val (code, offset) = params(original, filename)
-      val hover = pc.hover(CompilerOffsetParams(filename, code, offset))
+      val hover = pc.hoverForDebuggingPurposes(
+        CompilerOffsetParams(filename, code, offset)
+      )
       val obtained = Option(hover) match {
         case Some(value) =>
           if (value.getContents.isRight) {

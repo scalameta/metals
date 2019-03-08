@@ -13,7 +13,6 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs

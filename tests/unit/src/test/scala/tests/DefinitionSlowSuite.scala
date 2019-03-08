@@ -8,7 +8,9 @@ import scala.meta.internal.metals.StatisticsConfig
 
 object DefinitionSlowSuite extends BaseSlowSuite("definition") {
   override def serverConfig: MetalsServerConfig =
-    super.serverConfig.copy(statistics = new StatisticsConfig("diagnostics"))
+    super.serverConfig.copy(
+      statistics = new StatisticsConfig("diagnosticsForDebuggingPurposes")
+    )
 
   override def testAsync(
       name: String,
@@ -228,7 +230,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |""".stripMargin
       )
       _ <- server.didFocus("a/src/main/scala/a/Main.scala")
-      // dependency diagnostics are unpublished.
+      // dependency diagnosticsForDebuggingPurposes are unpublished.
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
@@ -319,12 +321,12 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
           |/a/src/main/scala/a/User.scala
           |package a
           |import io.circe.derivation.JsonCodec
-          |@JsonCodec case class User(name: String)
+          |@JsonCodec case class User(displayName: String)
           |/a/src/main/scala/a/Main.scala
           |package a
           |object Main {
           |  val user = User("John")
-          |  val name = user.name
+          |  val displayName = user.displayName
           |  val encoder = User.encodeUser
           |}
           |""".stripMargin
@@ -338,7 +340,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
           |package a
           |object Main/*L1*/ {
           |  val user/*L2*/ = User/*User.scala:2*/("John")
-          |  val name/*L3*/ = user/*L2*/.name/*User.scala:2*/
+          |  val displayName/*L3*/ = user/*L2*/.displayName/*User.scala:2*/
           |  val encoder/*L4*/ = User/*User.scala:2*/.encodeUser/*User.scala:2*/
           |}
           |""".stripMargin

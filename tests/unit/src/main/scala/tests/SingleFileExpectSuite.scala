@@ -8,7 +8,7 @@ import scala.meta.io.AbsolutePath
 /**
  * An expect suite with a single output file.
  *
- * @param filename The name of the single expect file.
+ * @param filename The displayName of the single expect file.
  */
 abstract class SingleFileExpectSuite(filename: String)
     extends BaseExpectSuite(filename) {

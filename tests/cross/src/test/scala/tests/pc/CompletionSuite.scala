@@ -540,8 +540,8 @@ object CompletionSuite extends BaseCompletionSuite {
       |class Foo extends Dynamic {
       |  def banana: Int = 42
       |  def selectDynamic(field: String): Foo = this
-      |  def applyDynamicNamed(name: String)(arg: (String, Int)): Foo = this
-      |  def updateDynamic(name: String)(value: Int): Foo = this
+      |  def applyDynamicNamed(displayName: String)(arg: (String, Int)): Foo = this
+      |  def updateDynamic(displayName: String)(value: Int): Foo = this
       |}
       |""".stripMargin
 
@@ -798,7 +798,7 @@ object CompletionSuite extends BaseCompletionSuite {
 
   def user: String =
     """|case class User(
-       |    name: String = "John",
+       |    displayName: String = "John",
        |    age: Int = 42,
        |    address: String = "",
        |    followers: Int = 0

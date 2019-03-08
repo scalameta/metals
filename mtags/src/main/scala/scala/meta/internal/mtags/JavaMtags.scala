@@ -6,6 +6,7 @@ import com.thoughtworks.qdox.model.JavaConstructor
 import com.thoughtworks.qdox.model.JavaField
 import com.thoughtworks.qdox.model.JavaMember
 import com.thoughtworks.qdox.model.JavaMethod
+import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
 import java.io.StringReader
 import java.util.Comparator
@@ -46,11 +47,11 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
     }
   }
 
-  /** Computes the start/end offsets from a name in a line number.
+  /** Computes the start/end offsets from a displayName in a line number.
    *
-   * Applies a simple heuristic to find the name: the first occurence of
-   * name in that line. If the name does not appear in the line then
-   * 0 is returned. If the name appears for example in the return type
+   * Applies a simple heuristic to find the displayName: the first occurence of
+   * displayName in that line. If the displayName does not appear in the line then
+   * 0 is returned. If the displayName appears for example in the return type
    * of a method then we get the position of the return type, not the
    * end of the world.
    */
@@ -186,4 +187,9 @@ class JavaMtags(virtualFile: Input.VirtualFile) extends MtagsIndexer { self =>
       }
       term(name, pos, kind, 0)
     }
+
+  implicit class XtensionJavaModel(m: JavaModel) {
+    def lineNumber: Int = m.getLineNumber - 1
+  }
+
 }

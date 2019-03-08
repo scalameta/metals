@@ -137,7 +137,7 @@ trait Signatures { this: MetalsGlobal =>
       val paramTypeString = metalsToLongString(param.info, shortenedNames)
       val name = infoParams(index) match {
         case Some(value) if param.name.startsWith("x$") =>
-          value.name()
+          value.displayName()
         case _ => param.nameString
       }
       if (param.isTypeParameter) {

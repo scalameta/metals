@@ -2,7 +2,7 @@ package tests
 
 import org.eclipse.lsp4j.TextEdit
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.PCEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 object TextEdits {
   def applyEdit(text: String, edit: TextEdit): String = {

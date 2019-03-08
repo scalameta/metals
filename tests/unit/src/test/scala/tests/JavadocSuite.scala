@@ -116,7 +116,7 @@ object JavadocSuite extends BaseSuite {
     "method",
     s"""/**
        | * Returns an Image object that can then be painted on the screen.
-       | * The url argument must specify an absolute {@link URL}. The name
+       | * The url argument must specify an absolute {@link URL}. The displayName
        | * argument is a specifier that is relative to the url argument.
        | * <p>
        | * This method always returns immediately, whether or not the
@@ -128,13 +128,13 @@ object JavadocSuite extends BaseSuite {
        |
        | *
        | * @param  url  an absolute URL giving the base location of the image
-       | * @param  name the location of the image, relative to the url argument
+       | * @param  displayName the location of the image, relative to the url argument
        | * @return      the image at the specified URL
        | * @throws IOException when stuff hapend
        | * @see         Image
        | */""".stripMargin,
     s"""|Returns an Image object that can then be painted on the screen.
-        |The url argument must specify an absolute `URL`. The name
+        |The url argument must specify an absolute `URL`. The displayName
         |argument is a specifier that is relative to the url argument.
         |
         |This method always returns immediately, whether or not the
@@ -146,7 +146,7 @@ object JavadocSuite extends BaseSuite {
         |
         |**Parameters**
         |- `url`: an absolute URL giving the base location of the image
-        |- `name`: the location of the image, relative to the url argument
+        |- `displayName`: the location of the image, relative to the url argument
         |
         |**Returns:** the image at the specified URL
         |

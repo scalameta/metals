@@ -24,7 +24,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.{semanticdb => s}
@@ -54,7 +54,7 @@ import scala.{meta => m}
 object MetalsEnrichments
     extends DecorateAsJava
     with DecorateAsScala
-    with PCEnrichments {
+    with MtagsEnrichments {
 
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {

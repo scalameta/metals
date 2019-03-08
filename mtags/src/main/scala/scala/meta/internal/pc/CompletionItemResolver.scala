@@ -2,7 +2,7 @@ package scala.meta.internal.pc
 
 import org.eclipse.lsp4j.CompletionItem
 import scala.collection.JavaConverters._
-import scala.meta.internal.metals.PCEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 class CompletionItemResolver(
     val compiler: MetalsGlobal
@@ -21,7 +21,10 @@ class CompletionItemResolver(
               .zipWithIndex
               .foldLeft(item.getDetail) {
                 case (detail, (param, i)) =>
-                  detail.replaceAllLiterally(s"x$$${i + 1}", param.name())
+                  detail.replaceAllLiterally(
+                    s"x$$${i + 1}",
+                    param.displayName()
+                  )
               }
             item.setDetail(newDetail)
           } else {

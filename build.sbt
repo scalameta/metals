@@ -299,6 +299,7 @@ lazy val cross = project
     crossScalaVersions := V.supportedScalaVersions
   )
   .dependsOn(mtest, mtags)
+
 lazy val unit = project
   .in(file("tests/unit"))
   .settings(

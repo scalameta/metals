@@ -57,7 +57,6 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._

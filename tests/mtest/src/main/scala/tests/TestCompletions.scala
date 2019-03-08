@@ -9,7 +9,7 @@ object TestCompletions {
    *
    * - `item.getLabel` always contains unqualified names, even for "workspace completions"
    *   which insert fully qualified names.
-   * - `item.getInsertText` includes the fully qualied name of "workspace completions" and
+   * - `item.getInsertText` includes the fully qualied displayName of "workspace completions" and
    *   snippet syntax like `println($0)` or `java.util.Dequeue[$0]`.
    *
    * This method returns the insert text without the snippet syntax.

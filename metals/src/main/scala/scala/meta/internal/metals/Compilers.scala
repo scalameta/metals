@@ -42,6 +42,8 @@ class Compilers(
   val plugins = new CompilerPlugins()
 
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
+  // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
+  // function is expensive, which is the case here.
   val jcache = Collections.synchronizedMap(
     new java.util.HashMap[BuildTargetIdentifier, PresentationCompiler]
   )
@@ -69,12 +71,7 @@ class Compilers(
     for {
       data <- item.data
       compiler <- cache.get(new BuildTargetIdentifier(data.target))
-    } yield
-      compiler.completionItemResolve(
-        item,
-        data.symbol,
-        token
-      )
+    } yield compiler.completionItemResolve(item, data.symbol)
   }
 
   def log: List[String] =
@@ -83,7 +80,7 @@ class Compilers(
         "-Ypresentation-debug",
         "-Ypresentation-verbose",
         "-Ypresentation-log",
-        workspace.resolve(Directories.pclog).toString()
+        workspace.resolve(Directories.pc).toString()
       )
     } else {
       Nil
@@ -102,7 +99,7 @@ class Compilers(
       token: CancelToken
   ): Option[Hover] =
     withPC(params) { (pc, pos) =>
-      pc.hover(
+      pc.hoverForDebuggingPurposes(
         CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
       )
     }

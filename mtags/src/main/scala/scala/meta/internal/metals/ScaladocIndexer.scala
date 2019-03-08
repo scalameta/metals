@@ -23,7 +23,7 @@ class ScaladocIndexer(
   override def visitOccurrence(
       occ: SymbolOccurrence,
       sinfo: SymbolInformation,
-      owner: _root_.scala.Predef.String
+      owner: String
   ): Unit = {
     val docstring = currentTree.origin match {
       case Origin.None => ""
@@ -38,6 +38,7 @@ class ScaladocIndexer(
           case None => ""
         }
     }
+    // Register `@define` macros to use for expanding in later docstrings.
     defines ++= ScaladocParser.extractDefines(docstring)
     val comment = ScaladocParser.parseComment(docstring, defines)
     val markdown = MarkdownGenerator.toMarkdown(comment)
@@ -47,7 +48,7 @@ class ScaladocIndexer(
         .orElse(comment.typeParams.get(name))
         .map(MarkdownGenerator.toMarkdown)
         .getOrElse("")
-      new MetalsSymbolDocumentation(
+      MetalsSymbolDocumentation(
         Symbols.Global(owner, Descriptor.Parameter(name)),
         name,
         paramDoc,
@@ -66,16 +67,15 @@ class ScaladocIndexer(
       case _: Defn.Trait | _: Pkg.Object | _: Defn.Val | _: Defn.Var |
           _: Decl.Val | _: Decl.Var | _: Defn.Type | _: Decl.Type =>
         Some(
-          new MetalsSymbolDocumentation(
+          MetalsSymbolDocumentation(
             occ.symbol,
             sinfo.displayName,
-            markdown,
-            ""
+            markdown
           )
         )
       case t: Defn.Def =>
         Some(
-          new MetalsSymbolDocumentation(
+          MetalsSymbolDocumentation(
             occ.symbol,
             t.name.value,
             markdown,
@@ -86,7 +86,7 @@ class ScaladocIndexer(
         )
       case t: Decl.Def =>
         Some(
-          new MetalsSymbolDocumentation(
+          MetalsSymbolDocumentation(
             occ.symbol,
             t.name.value,
             markdown,
@@ -97,7 +97,7 @@ class ScaladocIndexer(
         )
       case t: Defn.Class =>
         Some(
-          new MetalsSymbolDocumentation(
+          MetalsSymbolDocumentation(
             occ.symbol,
             t.name.value,
             markdown,
@@ -110,11 +110,10 @@ class ScaladocIndexer(
         )
       case t: Member =>
         Some(
-          new MetalsSymbolDocumentation(
+          MetalsSymbolDocumentation(
             occ.symbol,
             t.name.value,
-            markdown,
-            ""
+            markdown
           )
         )
       case _ =>
@@ -132,13 +131,10 @@ object ScaladocIndexer {
     new ScaladocIndexer(input, fn).indexRoot()
   }
 
-  def toMarkdown(docstring: String): String = {
-
-    List(1).headOption
-//        MarkdownGenerator.toMarkdown(docstring)
-    docstring
-  }
-
+  /**
+   * Returns a Scaladoc string leading the given start position, if any.
+   * @param start the offset in the `Tokens` array.
+   */
   def findLeadingDocstring(tokens: Tokens, start: Int): Option[String] =
     if (start < 0) None
     else {

@@ -32,7 +32,7 @@ import tests.TestOrderings._
  * Fake LSP client that responds to notifications/requests initiated by the server.
  *
  * - Can customize how to respond to window/showMessageRequest
- * - Aggregates published diagnostics and pretty-prints them as strings
+ * - Aggregates published diagnosticsForDebuggingPurposes and pretty-prints them as strings
  */
 final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     extends MetalsLanguageClient {

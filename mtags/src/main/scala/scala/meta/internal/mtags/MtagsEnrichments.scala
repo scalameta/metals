@@ -1,21 +1,32 @@
 package scala.meta.internal.mtags
 
-import com.thoughtworks.qdox.model.JavaModel
+import com.google.gson.Gson
+import com.google.gson.JsonElement
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util
+import java.util.logging.Level
+import java.util.logging.Logger
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.MarkupContent
+import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.semanticdb.Language
-import scala.meta.io.AbsolutePath
+import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.io.AbsolutePath
+import scala.util.control.NonFatal
+import scala.{meta => m}
 
-object MtagsEnrichments {
+object MtagsEnrichments extends MtagsEnrichments
+trait MtagsEnrichments {
   implicit class XtensionRange(range: s.Range) {
     def isPoint: Boolean = {
       range.startLine == range.endLine &&
@@ -125,9 +136,7 @@ object MtagsEnrichments {
         toOffset(endLine, endColumn)
       )
   }
-  implicit class XtensionJavaModel(val m: JavaModel) extends AnyVal {
-    def lineNumber: Int = m.getLineNumber - 1
-  }
+
   implicit class XtensionJavaPriorityQueue[A](q: util.PriorityQueue[A]) {
 
     /**
@@ -138,5 +147,125 @@ object MtagsEnrichments {
       override def next(): A = q.poll()
     }
 
+  }
+
+  private def logger: Logger =
+    Logger.getLogger(classOf[MtagsEnrichments].getName)
+
+  protected def decodeJson[T](obj: AnyRef, cls: java.lang.Class[T]): Option[T] =
+    for {
+      data <- Option(obj)
+      value <- try {
+        Some(
+          new Gson().fromJson[T](
+            data.asInstanceOf[JsonElement],
+            cls
+          )
+        )
+      } catch {
+        case NonFatal(e) =>
+          logger.log(Level.SEVERE, s"decode error: $cls", e)
+          None
+      }
+    } yield value
+
+  implicit class XtensionCompletionItemData(item: CompletionItem) {
+    def data: Option[CompletionItemData] =
+      item.getData match {
+        case d: CompletionItemData =>
+          Some(d)
+        case data =>
+          decodeJson(data, classOf[CompletionItemData])
+      }
+  }
+  implicit class XtensionStringDoc(doc: String) {
+    def toMarkupContent: l.MarkupContent = {
+      val content = new MarkupContent
+      content.setKind("markdown")
+      content.setValue(doc)
+      content
+    }
+  }
+  implicit class XtensionRangeBuildProtocol(range: s.Range) {
+    def toLocation(uri: String): l.Location = {
+      new l.Location(uri, range.toLSP)
+    }
+    def toLSP: l.Range = {
+      val start = new l.Position(range.startLine, range.startCharacter)
+      val end = new l.Position(range.endLine, range.endCharacter)
+      new l.Range(start, end)
+    }
+    def encloses(other: l.Position): Boolean = {
+      range.startLine <= other.getLine &&
+      range.endLine >= other.getLine &&
+      range.startCharacter <= other.getCharacter &&
+      range.endCharacter > other.getCharacter
+    }
+    def encloses(other: l.Range): Boolean = {
+      encloses(other.getStart) &&
+      encloses(other.getEnd)
+    }
+  }
+
+  implicit class XtensionSymbolInformation(kind: s.SymbolInformation.Kind) {
+    def toLSP: l.SymbolKind = kind match {
+      case k.LOCAL => l.SymbolKind.Variable
+      case k.FIELD => l.SymbolKind.Field
+      case k.METHOD => l.SymbolKind.Method
+      case k.CONSTRUCTOR => l.SymbolKind.Constructor
+      case k.MACRO => l.SymbolKind.Method
+      case k.TYPE => l.SymbolKind.Class
+      case k.PARAMETER => l.SymbolKind.Variable
+      case k.SELF_PARAMETER => l.SymbolKind.Variable
+      case k.TYPE_PARAMETER => l.SymbolKind.TypeParameter
+      case k.OBJECT => l.SymbolKind.Object
+      case k.PACKAGE => l.SymbolKind.Module
+      case k.PACKAGE_OBJECT => l.SymbolKind.Module
+      case k.CLASS => l.SymbolKind.Class
+      case k.TRAIT => l.SymbolKind.Interface
+      case k.INTERFACE => l.SymbolKind.Interface
+      case _ => l.SymbolKind.Class
+    }
+  }
+  implicit class XtensionIteratorCollection[T](it: Iterator[T]) {
+    def headOption: Option[T] = {
+      if (it.hasNext) Some(it.next())
+      else None
+    }
+    def lastOption: Option[T] = {
+      it.foldLeft(Option.empty[T]) {
+        case (_, e) => Some(e)
+      }
+    }
+  }
+
+  implicit class XtensionLspRange(range: l.Range) {
+    def isOffset: Boolean =
+      range.getStart == range.getEnd
+    def toMeta(input: m.Input): m.Position =
+      m.Position.Range(
+        input,
+        range.getStart.getLine,
+        range.getStart.getCharacter,
+        range.getEnd.getLine,
+        range.getEnd.getCharacter
+      )
+  }
+
+  implicit class XtensionPositionLsp(pos: m.Position) {
+    def toSemanticdb: s.Range = {
+      new s.Range(
+        pos.startLine,
+        pos.startColumn,
+        pos.endLine,
+        pos.endColumn
+      )
+    }
+    def toLSP: l.Range = {
+      new l.Range(
+        new l.Position(pos.startLine, pos.startColumn),
+        new l.Position(pos.endLine, pos.endColumn)
+      )
+    }
   }
 }

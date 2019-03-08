@@ -3,12 +3,11 @@ package scala.meta.internal.pc
 import java.nio.file.Path
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.meta.internal.metals.Fuzzy
-import scala.meta.pc.CompletionItems
-import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 import scala.util.control.NonFatal
@@ -23,7 +22,7 @@ class CompletionProvider(
 
   val maxWorkspaceSymbolResults = 10
 
-  def completions(): CompletionItems = {
+  def completions(): CompletionList = {
     val unit = addCompilationUnit(
       code = params.text,
       filename = params.filename,
@@ -96,7 +95,7 @@ class CompletionProvider(
         }
         item
     }
-    val result = new CompletionItems(kind, items.toSeq.asJava)
+    val result = new CompletionList(items.toSeq.asJava)
     result.setIsIncomplete(i.isIncomplete)
     result
   }
@@ -116,7 +115,7 @@ class CompletionProvider(
 
   private def filterInteresting(
       completions: List[Member],
-      kind: LookupKind,
+      kind: CompletionListKind,
       query: String,
       pos: Position,
       completion: CompletionPosition
@@ -177,7 +176,7 @@ class CompletionProvider(
     completions.foreach(visit)
     completion.contribute.foreach(visit)
     val searchResults =
-      if (kind == LookupKind.Scope) {
+      if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
       } else {
         SymbolSearch.Result.COMPLETE
@@ -213,11 +212,11 @@ class CompletionProvider(
 
   private def safeCompletionsAt(
       position: Position
-  ): (LookupKind, InterestingMembers, CompletionPosition) = {
+  ): (CompletionListKind, InterestingMembers, CompletionPosition) = {
     def expected(e: Throwable) = {
       logger.warning(e.getMessage)
       (
-        LookupKind.None,
+        CompletionListKind.None,
         InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
         CompletionPosition.None
       )
@@ -234,11 +233,11 @@ class CompletionProvider(
       }
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
-          LookupKind.Scope
+          CompletionListKind.Scope
         case _: CompletionResult.TypeMembers =>
-          LookupKind.Type
+          CompletionListKind.Type
         case _ =>
-          LookupKind.None
+          CompletionListKind.None
       }
       val completion = completionPosition(position, params.text())
       val items = filterInteresting(

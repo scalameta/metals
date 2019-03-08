@@ -7,7 +7,6 @@ import org.eclipse.{lsp4j => l}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition

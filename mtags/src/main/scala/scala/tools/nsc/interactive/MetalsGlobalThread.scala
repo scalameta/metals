@@ -1,6 +1,6 @@
 package scala.tools.nsc.interactive
 
-import scala.meta.internal.pc.Cancellation
+import scala.meta.internal.pc.InterruptException
 
 /**
  * Adapation of PresentationCompilerThread from scala/scala.
@@ -41,7 +41,7 @@ final class MetalsGlobalThread(var compiler: Global, name: String = "")
 
         ex match {
           // + scalac deviation
-          case Cancellation() =>
+          case InterruptException() =>
             Thread.interrupted()
           // - scalac deviation
           case ex: FreshRunReq =>

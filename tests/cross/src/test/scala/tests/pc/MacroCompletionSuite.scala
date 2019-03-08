@@ -21,7 +21,7 @@ object MacroCompletionSuite extends BaseCompletionSuite {
     "generic",
     """
       |import shapeless._
-      |case class Person(name: String, age: Int)
+      |case class Person(displayName: String, age: Int)
       |object Person {
       |  val gen = Generic[Person]
       |  gen.to@@

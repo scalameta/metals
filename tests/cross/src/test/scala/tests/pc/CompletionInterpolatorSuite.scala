@@ -186,12 +186,12 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
   checkEdit(
     "positive1",
     """|object Main {
-       |  val myName = "name"
+       |  val myName = "displayName"
        |  "$$myNam@@"
        |}
        |""".stripMargin,
     """|object Main {
-       |  val myName = "name"
+       |  val myName = "displayName"
        |  s"\$\$\$myName$0"
        |}
        |""".stripMargin

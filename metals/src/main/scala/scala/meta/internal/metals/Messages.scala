@@ -182,9 +182,9 @@ class Messages(icons: Icons) {
       // the following characteristics:
       // - all options must be unique, we get a title string back from the
       //   editor for which server the user chose.
-      // - happy path: title is build server name without noisy version number.
-      // - name conflicts: disambiguate conflicting names by version number
-      // - name+version conflicts: append random characters to the title.
+      // - happy path: title is build server displayName without noisy version number.
+      // - displayName conflicts: disambiguate conflicting names by version number
+      // - displayName+version conflicts: append random characters to the title.
       val items = candidates.map { candidate =>
         val nameConflicts = candidates.count(_.getName == candidate.getName)
         val title: String = if (nameConflicts < 2) {

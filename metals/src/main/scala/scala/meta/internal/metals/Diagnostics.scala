@@ -15,15 +15,14 @@ import scala.collection.mutable
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.{meta => m}
 
 /**
- * Converts diagnostics from the build server and Scalameta parser into LSP diagnostics.
+ * Converts diagnosticsForDebuggingPurposes from the build server and Scalameta parser into LSP diagnosticsForDebuggingPurposes.
  *
- * BSP diagnostics have different semantics from LSP diagnostics with regards to how they
- * are published. BSP diagnostics can be accumulated when `reset=false`, meaning the client
+ * BSP diagnosticsForDebuggingPurposes have different semantics from LSP diagnosticsForDebuggingPurposes with regards to how they
+ * are published. BSP diagnosticsForDebuggingPurposes can be accumulated when `reset=false`, meaning the client
  * (Metals) is responsible for aggregating multiple `build/publishDiagnostics` notifications
  * into a single `textDocument/publishDiagnostics` notification.
  *
@@ -111,9 +110,9 @@ final class Diagnostics(
       queue.add(buildDiagnostic.toLSP)
     }
 
-    // NOTE(olafur): we buffer up several diagnostics for the same path before forwarding
+    // NOTE(olafur): we buffer up several diagnosticsForDebuggingPurposes for the same path before forwarding
     // them to the editor client. Without buffering, we risk publishing an exponential number
-    // notifications for a file with N number of diagnostics:
+    // notifications for a file with N number of diagnosticsForDebuggingPurposes:
     // Notification 1: [1]
     // Notification 2: [1, 2]
     // Notification 3: [1, 2, 3]

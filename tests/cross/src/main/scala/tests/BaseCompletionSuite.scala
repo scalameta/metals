@@ -1,11 +1,11 @@
 package tests
 
 import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionList
 import scala.collection.JavaConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.pc.CompletionItems
-import scala.meta.internal.metals.PCEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.CancelToken
 
 abstract class BaseCompletionSuite extends BasePCSuite {
@@ -14,11 +14,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
 
   private def resolvedCompletions(
       params: CompilerOffsetParams
-  ): CompletionItems = {
+  ): CompletionList = {
     val result = pc.complete(params)
     val newItems = result.getItems.asScala.map { item =>
       val symbol = item.data.get.symbol
-      pc.completionItemResolve(item, symbol, cancelToken)
+      pc.completionItemResolve(item, symbol)
     }
     result.setItems(newItems.asJava)
     result

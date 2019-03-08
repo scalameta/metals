@@ -17,7 +17,6 @@ import scala.concurrent.ExecutionContext
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
@@ -102,7 +101,7 @@ final class InteractiveSemanticdbs(
   }
 
   /**
-   * Unpublish diagnostics for un-focused dependency source, if any, and publish diagnostics
+   * Unpublish diagnosticsForDebuggingPurposes for un-focused dependency source, if any, and publish diagnosticsForDebuggingPurposes
    * for the currently focused source, if any.
    */
   def didFocus(path: AbsolutePath): Unit = {
@@ -119,7 +118,7 @@ final class InteractiveSemanticdbs(
           if diag.severity.isError
           range <- diag.range
         } yield {
-          // Use INFO instead of ERROR severity because these diagnostics are published for readonly
+          // Use INFO instead of ERROR severity because these diagnosticsForDebuggingPurposes are published for readonly
           // files of external dependencies so the user cannot fix them.
           val severity = DiagnosticSeverity.Information
           new l.Diagnostic(range.toLSP, diag.message, severity, "scala")

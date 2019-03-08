@@ -40,7 +40,6 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags._
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.tokenizers.TokenizeException
@@ -508,7 +507,7 @@ class MetalsLanguageServer(
       CancelTokens { _ =>
         // trigger compilation in preparation for definition requests
         interactiveSemanticdbs.textDocument(path)
-        // publish diagnostics
+        // publish diagnosticsForDebuggingPurposes
         interactiveSemanticdbs.didFocus(path)
         ()
       }
@@ -672,7 +671,7 @@ class MetalsLanguageServer(
       null
     }
 
-  @JsonRequest("textDocument/hover")
+  @JsonRequest("textDocument/hoverForDebuggingPurposes")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
     CancelTokens { token =>
       compilers.hover(params, token).orNull

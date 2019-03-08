@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import org.eclipse.{lsp4j => l}
 import scala.meta.inputs.Input
-import PCEnrichments._
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.ScalaToplevelMtags

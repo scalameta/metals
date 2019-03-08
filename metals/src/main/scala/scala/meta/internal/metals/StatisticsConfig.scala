@@ -4,7 +4,9 @@ final case class StatisticsConfig(value: String) {
   val isAll: Boolean = value == "all"
   val isMemory: Boolean = isAll || value.contains("memory")
   val isDefinition: Boolean = isAll || value.contains("definition")
-  val isDiagnostics: Boolean = isAll || value.contains("diagnostics")
+  val isDiagnostics: Boolean = isAll || value.contains(
+    "diagnosticsForDebuggingPurposes"
+  )
   val isReferences: Boolean = isAll || value.contains("references")
   val isWorkspaceSymbol: Boolean = isAll || value.contains("workspace-symbol")
   val isIndex: Boolean = isAll || value.contains("index")

@@ -8,7 +8,7 @@ import scala.meta.io.AbsolutePath
 /**
  * Expect test with multiple output files.
  *
- * @param directoryName root directory name: metals/src/test/resources/$name
+ * @param directoryName root directory displayName: metals/src/test/resources/$displayName
  */
 abstract class DirectoryExpectSuite(directoryName: String)
     extends BaseExpectSuite(directoryName) {

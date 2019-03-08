@@ -13,10 +13,10 @@ import scala.xml.XML
  *
  * Metals only uses the presentation compiler for limited features
  * - completions
- * - hover
+ * - hoverForDebuggingPurposes
  * - parameter hints
  * Compiler plugins that don't affect those features can be disabled, for example
- * WartRemover that only reports diagnostics. Diagnostics are already published from
+ * WartRemover that only reports diagnosticsForDebuggingPurposes. Diagnostics are already published from
  * the build, where all compiler plugins are enabled by default.
  *
  * Some compiler plugins change the semantics of the Scala language. Metals officially
@@ -29,7 +29,7 @@ import scala.xml.XML
  *
  * The process for adding support for other compiler plugins is the following,
  * send a PR to Metals adding integration tests to demonstrate thee compiler plugin
- * - needs to be enabled in order for completions/hover to function. Many plugins
+ * - needs to be enabled in order for completions/hoverForDebuggingPurposes to function. Many plugins
  *   like WartRemover that only use the compiler report don't need to be enabled.
  * - enabling the plugin does not break the presentation compiler in unexpected ways.
  */
@@ -62,7 +62,7 @@ class CompilerPlugins {
           val xml = XML.load(
             Files.newInputStream(root.resolve("scalac-plugin.xml").toNIO)
           )
-          val name = (xml \ "name").text
+          val name = (xml \ "displayName").text
           isSupportedPlugin(name)
         }
       } catch {

@@ -39,7 +39,7 @@ class MetalsGlobal(
      * - we insure ourselves from misbehaving macro library that mess up with compiler APIs
      * - we avoid potentially expensive computation during macro expansion
      * It's safe to disable blackbox macros because they don't affect typing, meaning
-     * they cannot change the results from completions/signatureHelp/hover.
+     * they cannot change the results from completions/signatureHelp/hoverForDebuggingPurposes.
      *
      * Here are basic benchmark numbers running completions in Exprs.scala from fastparse,
      * a 150 line source file where a scope completion triggers 80 macros.
@@ -128,7 +128,7 @@ class MetalsGlobal(
    *
    * It becomes difficult to read method signatures when they have a large number of parameters
    * with fully qualified names. This method strips out package prefixes to shorten the names while
-   * making sure to not convert two different symbols into same short name.
+   * making sure to not convert two different symbols into same short displayName.
    */
   def shortType(longType: Type, history: ShortenedNames): Type = {
     def loop(tpe: Type, name: Option[Name]): Type = tpe match {

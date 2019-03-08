@@ -114,7 +114,7 @@ object Embedded {
   ): URLClassLoader = {
     val pc = new Dependency(
       "org.scalameta",
-      s"pc_${info.getScalaVersion}",
+      s"mtags_${info.getScalaVersion}",
       BuildInfo.metalsVersion
     )
     val needsFullClasspath = !scalac.isSemanticdbEnabled

@@ -12,6 +12,12 @@ import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext
 import scala.meta.pc.CancelToken
 
+/**
+ * Manages the lifecycle of the compiler.
+ *
+ * - automatically restarts the compiler on expected crashes caused by macroparadise.
+ * - handles cancellation via `Thread.interrupt()` to stop the compiler during typechecking.
+ */
 class CompilerAccess(
     sh: Option[ScheduledExecutorService],
     newCompiler: () => MetalsGlobal
@@ -39,34 +45,11 @@ class CompilerAccess(
     }
   }
 
-  def withSharedCompiler[T](default: T)(thunk: MetalsGlobal => T): T = {
-    try {
-      thunk(loadCompiler())
-    } catch {
-      case Cancellation() =>
-        default
-      case NonFatal(e) =>
-        val isParadiseRelated = e.getStackTrace
-          .exists(_.getClassName.startsWith("org.scalamacros"))
-        if (isParadiseRelated) {
-          // Testing shows that the scalamacro paradise plugin tends to crash
-          // easily in long-running sessions. We retry with a fresh compiler
-          // to see if that fixes the issue. This is a hacky solution that is
-          // slow because creating new compiler instances is expensive. A better
-          // long-term solution is to fix the paradise plugin implementation
-          // to be  more resilient in long-running sessions.
-          retryWithCleanCompiler(
-            thunk,
-            default,
-            "the org.scalamacros:paradise compiler plugin"
-          )
-        } else {
-          handleError(e)
-          default
-        }
-    }
-  }
-
+  /**
+   * Run the given thunk with unique access to the compiler instance.
+   *
+   * Will not run other requests in parallel.
+   */
   def withCompiler[T](
       default: T,
       token: CancelToken
@@ -91,6 +74,40 @@ class CompilerAccess(
     finally isFinished.set(true)
   }
 
+  /**
+   * Run the given thunk with an unlocked compiler instance.
+   *
+   * May potentially run in parallel with other requests, use carefully.
+   * Does not support cancellation.
+   */
+  def withSharedCompiler[T](default: T)(thunk: MetalsGlobal => T): T = {
+    try {
+      thunk(loadCompiler())
+    } catch {
+      case InterruptException() =>
+        default
+      case NonFatal(e) =>
+        val isParadiseRelated = e.getStackTrace
+          .exists(_.getClassName.startsWith("org.scalamacros"))
+        if (isParadiseRelated) {
+          // Testing shows that the scalamacro paradise plugin tends to crash
+          // easily in long-running sessions. We retry with a fresh compiler
+          // to see if that fixes the issue. This is a hacky solution that is
+          // slow because creating new compiler instances is expensive. A better
+          // long-term solution is to fix the paradise plugin implementation
+          // to be  more resilient in long-running sessions.
+          retryWithCleanCompiler(
+            thunk,
+            default,
+            "the org.scalamacros:paradise compiler plugin"
+          )
+        } else {
+          handleError(e)
+          default
+        }
+    }
+  }
+
   private def retryWithCleanCompiler[T](
       thunk: MetalsGlobal => T,
       default: T,
@@ -103,7 +120,7 @@ class CompilerAccess(
     )
     try thunk(loadCompiler())
     catch {
-      case Cancellation() =>
+      case InterruptException() =>
         default
       case NonFatal(e) =>
         handleError(e)

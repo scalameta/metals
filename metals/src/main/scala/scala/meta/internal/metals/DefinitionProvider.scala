@@ -6,7 +6,6 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition

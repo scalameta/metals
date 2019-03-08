@@ -7,13 +7,11 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
-import scala.meta.pc.CancelToken
-import scala.meta.pc.CompletionItems
-import scala.meta.pc.CompletionItems.LookupKind
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
@@ -60,50 +58,26 @@ case class ScalaPresentationCompiler(
     )
   }
 
-  override def diagnostics(): util.List[String] = {
-    access.reporter
-      .asInstanceOf[StoreReporter]
-      .infos
-      .iterator
-      .map { info =>
-        new StringBuilder()
-          .append(info.pos.source.file.path)
-          .append(":")
-          .append(info.pos.column)
-          .append(" ")
-          .append(info.msg)
-          .append("\n")
-          .append(info.pos.lineContent)
-          .append("\n")
-          .append(info.pos.lineCaret)
-          .toString
-      }
-      .filterNot(_.contains("_CURSOR_"))
-      .toList
-      .asJava
-  }
-
-  def emptyCompletion: CompletionItems = {
-    val items = new CompletionItems(LookupKind.None, Nil.asJava)
+  def emptyCompletion: CompletionList = {
+    val items = new CompletionList(Nil.asJava)
     items.setIsIncomplete(true)
     items
   }
-  override def complete(params: OffsetParams): CompletionItems =
+  override def complete(params: OffsetParams): CompletionList =
     access.withCompiler(emptyCompletion, params.token) { global =>
       new CompletionProvider(global, params).completions()
     }
   override def completionItemResolve(
       item: CompletionItem,
-      symbol: String,
-      token: CancelToken
+      symbol: String
   ): CompletionItem =
+    // NOTE(olafur): we use a "shared" compiler instance here because
+    // we don't typecheck any sources, we only poke into the symbol table.
+    // If we used a shared compiler then we risk hitting `Thread.interrupt`,
+    // which can close open `*-sources.jar` files containing docstrings that
+    // we read in `completionItem/resolve`.
     access.withSharedCompiler(item) { global =>
       new CompletionItemResolver(global).resolve(item, symbol)
-    }
-
-  override def hover(params: OffsetParams): Hover =
-    access.withCompiler(new Hover(), params.token) { global =>
-      new HoverProvider(global).hover(params).orNull
     }
 
   override def signatureHelp(params: OffsetParams): SignatureHelp =
@@ -139,5 +113,36 @@ case class ScalaPresentationCompiler(
       search,
       buildTargetIdentifier
     )
+  }
+
+  // ================
+  // Internal methods
+  // ================
+
+  override def hoverForDebuggingPurposes(params: OffsetParams): Hover =
+    access.withCompiler(new Hover(), params.token) { global =>
+      new HoverProvider(global).hover(params).orNull
+    }
+  override def diagnosticsForDebuggingPurposes(): util.List[String] = {
+    access.reporter
+      .asInstanceOf[StoreReporter]
+      .infos
+      .iterator
+      .map { info =>
+        new StringBuilder()
+          .append(info.pos.source.file.path)
+          .append(":")
+          .append(info.pos.column)
+          .append(" ")
+          .append(info.msg)
+          .append("\n")
+          .append(info.pos.lineContent)
+          .append("\n")
+          .append(info.pos.lineCaret)
+          .toString
+      }
+      .filterNot(_.contains("_CURSOR_"))
+      .toList
+      .asJava
   }
 }

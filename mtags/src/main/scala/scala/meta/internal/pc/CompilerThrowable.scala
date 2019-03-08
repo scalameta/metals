@@ -4,6 +4,11 @@ import java.util.Collections
 import scala.annotation.tailrec
 
 object CompilerThrowable {
+
+  /**
+   * Removes stacktraces that are unrelated to the
+   * @param e
+   */
   def trimStackTrace(e: Throwable): Unit = {
     val isVisited = Collections.newSetFromMap(
       new java.util.IdentityHashMap[Throwable, java.lang.Boolean]

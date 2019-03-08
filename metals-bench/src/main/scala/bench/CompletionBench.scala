@@ -3,6 +3,7 @@ package bench
 import scala.collection.JavaConverters._
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import org.eclipse.lsp4j.CompletionList
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -15,7 +16,6 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.CompletionItems
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import tests.Library
@@ -96,12 +96,11 @@ abstract class CompletionBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def complete(): CompletionItems = {
+  def complete(): CompletionList = {
     val pc = presentationCompiler()
     val result = currentCompletion.complete(pc)
-//    val diagnostics = pc.diagnostics()
-//    require(diagnostics.isEmpty, diagnostics.asScala.mkString("\n", "\n", "\n"))
-    require(!result.getItems.isEmpty, result)
+//    val diagnosticsForDebuggingPurposes = pc.diagnosticsForDebuggingPurposes()
+//    require(diagnosticsForDebuggingPurposes.isEmpty, diagnosticsForDebuggingPurposes.asScala.mkString("\n", "\n", "\n")) require(!result.getItems.isEmpty, result)
     result
   }
 
@@ -122,7 +121,7 @@ abstract class CompletionBench {
       .newInstance("", classpath.asJava, Nil.asJava)
   }
 
-  def scopeComplete(pc: PresentationCompiler): CompletionItems = {
+  def scopeComplete(pc: PresentationCompiler): CompletionList = {
     val code = "import Java\n"
     pc.complete(CompilerOffsetParams("A.scala", code, code.length - 2))
   }
