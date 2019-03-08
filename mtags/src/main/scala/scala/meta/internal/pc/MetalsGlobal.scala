@@ -324,12 +324,13 @@ class MetalsGlobal(
       sym.typeParams.nonEmpty ||
         (sym.isJavaModule && sym.companionClass.typeParams.nonEmpty)
     def requiresTemplateCurlyBraces: Boolean = {
-      sym.isTraitOrInterface || sym.isAbstractClass
+      sym.isTrait || sym.isInterface || sym.isAbstractClass
     }
     def isTypeSymbol: Boolean =
       sym.isType ||
         sym.isClass ||
-        sym.isTraitOrInterface ||
+        sym.isTrait ||
+        sym.isInterface ||
         sym.isJavaModule
     def dealiased: Symbol =
       if (sym.isAliasType) sym.info.dealias.typeSymbol

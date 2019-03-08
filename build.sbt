@@ -114,42 +114,35 @@ lazy val V = new {
 skip.in(publish) := true
 
 lazy val interfaces = project
-  .in(file("pc/interfaces"))
+  .in(file("mtags-interfaces"))
   .settings(
-    moduleName := "pc-interfaces",
+    moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     libraryDependencies ++= List(
       "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0"
     ),
     crossVersion := CrossVersion.disabled
   )
-lazy val pc = project
-  .in(file("pc/core"))
-  .settings(
-    moduleName := "pc",
-    crossVersion := CrossVersion.full,
-    crossScalaVersions := List(V.scala212, V.scala211),
-    libraryDependencies ++= List(
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value,
-      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
-    )
-  )
-  .dependsOn(interfaces, mtags)
 
 lazy val mtags = project
   .settings(
     moduleName := "mtags",
+    crossVersion := CrossVersion.full,
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "org.scalameta" %% "contrib" % V.scalameta,
-      "org.jsoup" % "jsoup" % "1.11.3"
+      "org.jsoup" % "jsoup" % "1.11.3",
+      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     libraryDependencies ++= {
       if (isCI) Nil
+      // NOTE(olafur) pprint is indispensable for me while developing, I can't
+      // use println anymore for debugging because pprint.log is 100 times better.
       else List("com.lihaoyi" %% "pprint" % "0.5.3")
     }
   )
+  .dependsOn(interfaces)
 
 lazy val metals = project
   .settings(
@@ -221,7 +214,7 @@ lazy val metals = project
       "scala212" -> V.scala212
     )
   )
-  .dependsOn(pc, mtags)
+  .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
@@ -288,7 +281,7 @@ lazy val mtest = project
       "scala212" -> V.scala212
     )
   )
-  .dependsOn(pc)
+  .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val cross = project
@@ -305,7 +298,7 @@ lazy val cross = project
     ),
     crossScalaVersions := V.supportedScalaVersions
   )
-  .dependsOn(mtest, pc)
+  .dependsOn(mtest, mtags)
 lazy val unit = project
   .in(file("tests/unit"))
   .settings(
@@ -328,26 +321,22 @@ lazy val unit = project
       "testResourceDirectory" -> resourceDirectory.in(Test).value
     )
   )
-  .dependsOn(mtest, metals, pc)
+  .dependsOn(mtest, metals)
   .enablePlugins(BuildInfoPlugin)
 
 val cross211publishLocal = Def.task[Unit] {
-  // Runs `publishLocal` for mtags/pc with 2.11 scalaVersion.
+  // Runs `publishLocal` for mtags with 2.11 scalaVersion.
   val newState = Project
     .extract(state.value)
     .appendWithSession(
       List(
-        scalaVersion.in(mtags) := V.scala211,
-        scalaVersion.in(pc) := V.scala211
+        scalaVersion.in(mtags) := V.scala211
       ),
       state.value
     )
   Project
     .extract(newState)
     .runTask(publishLocal.in(mtags), newState)
-  Project
-    .extract(newState)
-    .runTask(publishLocal.in(pc), newState)
 }
 lazy val slow = project
   .in(file("tests/slow"))

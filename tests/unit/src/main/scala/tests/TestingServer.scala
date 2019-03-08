@@ -354,10 +354,9 @@ final class TestingServer(
       val items =
         completion.getItems.asScala.map(server.completionItemResolveSync)
       items.iterator
-        .map { item =>
-          val label = Option(item.getInsertText).getOrElse(item.getLabel)
-          label + item.getDetail
-        }
+        .map(
+          item => TestCompletions.getFullyQualifiedLabel(item) + item.getDetail
+        )
         .mkString("\n")
     }
   }

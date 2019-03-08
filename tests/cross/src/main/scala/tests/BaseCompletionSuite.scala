@@ -31,6 +31,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     )
     result.getItems.asScala.sortBy(_.getSortText)
   }
+
   def checkEdit(
       name: String,
       original: String,
@@ -88,16 +89,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         case None => baseItems
       }
       items.foreach { item =>
-        val label =
-          if (item.getInsertText == null) {
-            item.getLabel
-          } else {
-            val fullyQualifiedPrefix = item.getInsertText.substring(
-              0,
-              item.getInsertText.indexOf(item.getLabel)
-            )
-            fullyQualifiedPrefix + item.getLabel
-          }
+        val label = TestCompletions.getFullyQualifiedLabel(item)
         val commitCharacter =
           if (includeCommitCharacter)
             item.getCommitCharacters.asScala.mkString(" (commit: '", " ", "')")

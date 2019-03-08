@@ -94,7 +94,7 @@ object PositionSyntax {
         (" " * pos.startColumn) + caret
     }
 
-    private def lineContent(
+    def lineContent(
         line: Int,
         startColumn: Int = 0,
         endColumn: Int = Int.MaxValue
