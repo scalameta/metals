@@ -366,15 +366,15 @@ trait Completions { this: MetalsGlobal =>
      *
      * - escape existing `$` characters into `$$`, which are printed as `\$\$` in order to
      *   escape the TextMate snippet syntax.
-     * - wrap completed displayName in curly braces `s"Hello ${displayName}_` when the trailing character
+     * - wrap completed name in curly braces `s"Hello ${name}_` when the trailing character
      *   can be treated as an identifier part.
      * - insert the  leading `s` interpolator.
-     * - place the cursor at the end of the completed displayName using TextMate `$0` snippet syntax.
+     * - place the cursor at the end of the completed name using TextMate `$0` snippet syntax.
      *
      * @param lit The string literal, includes an instrumented `_CURSOR_` that we need to handle.
      * @param pos The offset position of the cursor, right below `@@_CURSOR_`.
      * @param interpolator Metadata about this interpolation, the location of the leading dollar
-     *                     character and whether the completed displayName needs to be wrapped in
+     *                     character and whether the completed name needs to be wrapped in
      *                     curly braces.
      * @param text The text of the original source code without the instrumented `_CURSOR_`.
      */

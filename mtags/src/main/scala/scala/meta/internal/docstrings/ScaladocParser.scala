@@ -166,11 +166,11 @@ object ScaladocParser {
   private val SingleTagRegex =
     new Regex("""\s*@(\S+)\s*""")
 
-  /** A Scaladoc tag not linked to a symbol. Returns the displayName of the tag, and the rest of the line. */
+  /** A Scaladoc tag not linked to a symbol. Returns the name of the tag, and the rest of the line. */
   private val SimpleTagRegex =
     new Regex("""\s*@(\S+)\s+(.*)""")
 
-  /** A Scaladoc tag linked to a symbol. Returns the displayName of the tag, the displayName
+  /** A Scaladoc tag linked to a symbol. Returns the name of the tag, the name
    * of the symbol, and the rest of the line. */
   private val SymbolTagRegex =
     new Regex(
@@ -185,7 +185,7 @@ object ScaladocParser {
   private val CodeBlockEndRegex =
     new Regex("""(.*?)((?:\}\}\})|(?:\u000E</pre>\u000E))(.*)""")
 
-  /** A key used for a tag map. The key is built from the displayName of the tag and
+  /** A key used for a tag map. The key is built from the name of the tag and
    * from the linked symbol if the tag has one.
    * Equality on tag keys is structural. */
   private sealed abstract class TagKey {
@@ -471,7 +471,7 @@ object ScaladocParser {
           (bodyTags.remove(key): @unchecked) match {
             case Some(r :: rs) if !(filterEmpty && r.blocks.isEmpty) =>
               //              if (rs.nonEmpty)
-              //                reporter.warning(pos, s"Only one '@${key.displayName}' tag is allowed")
+              //                reporter.warning(pos, s"Only one '@${key.name}' tag is allowed")
               Some(r)
             case _ => None
           }
@@ -492,7 +492,7 @@ object ScaladocParser {
               case stk: SimpleTagKey if (stk.name == key.name) =>
                 //                reporter.warning(
                 //                  pos,
-                //                  s"Tag '@${stk.displayName}' must be followed by a symbol displayName"
+                //                  s"Tag '@${stk.name}' must be followed by a symbol name"
                 //                )
                 None
               case _ => None
@@ -503,7 +503,7 @@ object ScaladocParser {
               //              if (bs.length > 1)
               //                reporter.warning(
               //                  pos,
-              //                  s"Only one '@${key.displayName}' tag for symbol ${key.symbol} is allowed"
+              //                  s"Only one '@${key.name}' tag for symbol ${key.symbol} is allowed"
               //                )
               (key.symbol, bs.head)
             }
@@ -519,9 +519,9 @@ object ScaladocParser {
             case (name, body) =>
               val newBody = body match {
                 case Body(List(Paragraph(Chain(content)))) =>
-                  //                  val link = memberLookup(pos, displayName, site)
+                  //                  val link = memberLookup(pos, name, site)
                   //                  val descr = Text(" ") +: content
-                  //                  val entityLink = EntityLink(Monospace(Text(displayName)), link)
+                  //                  val entityLink = EntityLink(Monospace(Text(name)), link)
                   //                  Body(List(Paragraph(Chain(entityLink +: descr))))
                   Body(List())
                 case _ => body
@@ -557,7 +557,7 @@ object ScaladocParser {
         )
 
         //        for ((key, _) <- bodyTags)
-        //          reporter.warning(pos, s"Tag '@${key.displayName}' is not recognised")
+        //          reporter.warning(pos, s"Tag '@${key.name}' is not recognised")
 
         com
       }

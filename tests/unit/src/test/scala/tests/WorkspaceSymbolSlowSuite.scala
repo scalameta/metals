@@ -21,7 +21,7 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
           |package a
           |package b
           |
-          |object PazQux { // Intentionally obscure displayName to not conflict with dependency names.
+          |object PazQux { // Intentionally obscure name to not conflict with dependency names.
           |
           |  class Inner {
           |    def bar = {
@@ -105,7 +105,7 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
           |/a/src/main/scala/a/A.scala
           |package a
           |
-          |case class UserBaxx(displayName: String, age: Int)
+          |case class UserBaxx(name: String, age: Int)
           |object UserBaxx
           |""".stripMargin
       )

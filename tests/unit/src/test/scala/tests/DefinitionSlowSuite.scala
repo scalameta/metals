@@ -321,12 +321,12 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
           |/a/src/main/scala/a/User.scala
           |package a
           |import io.circe.derivation.JsonCodec
-          |@JsonCodec case class User(displayName: String)
+          |@JsonCodec case class User(name: String)
           |/a/src/main/scala/a/Main.scala
           |package a
           |object Main {
           |  val user = User("John")
-          |  val displayName = user.displayName
+          |  val name = user.name
           |  val encoder = User.encodeUser
           |}
           |""".stripMargin
@@ -340,7 +340,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
           |package a
           |object Main/*L1*/ {
           |  val user/*L2*/ = User/*User.scala:2*/("John")
-          |  val displayName/*L3*/ = user/*L2*/.displayName/*User.scala:2*/
+          |  val name/*L3*/ = user/*L2*/.name/*User.scala:2*/
           |  val encoder/*L4*/ = User/*User.scala:2*/.encodeUser/*User.scala:2*/
           |}
           |""".stripMargin

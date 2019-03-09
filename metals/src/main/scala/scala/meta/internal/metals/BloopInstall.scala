@@ -262,8 +262,8 @@ object BloopInstall {
         |    val bloopPlugin = sbtPluginExtra(bloopModule, sbtVersion, scalaVersion)
         |    val metalsPlugin = sbtPluginExtra(metalsModule, sbtVersion, scalaVersion)
         |    List(bloopPlugin, metalsPlugin) ++ oldDependencies.filterNot { dep =>
-        |      (dep.organization == "ch.epfl.scala" && dep.displayName == "sbt-bloop") ||
-        |      (dep.organization == "org.scalameta" && dep.displayName == "sbt-metals")
+        |      (dep.organization == "ch.epfl.scala" && dep.name == "sbt-bloop") ||
+        |      (dep.organization == "org.scalameta" && dep.name == "sbt-metals")
         |    }
         |  } else {
         |    oldDependencies

@@ -62,7 +62,7 @@ class CompilerPlugins {
           val xml = XML.load(
             Files.newInputStream(root.resolve("scalac-plugin.xml").toNIO)
           )
-          val name = (xml \ "displayName").text
+          val name = (xml \ "name").text
           isSupportedPlugin(name)
         }
       } catch {

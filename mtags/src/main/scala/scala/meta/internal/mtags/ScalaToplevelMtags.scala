@@ -92,7 +92,7 @@ class ScalaToplevelMtags(
       case OBJECT =>
         emitMember(isPackageObject = true)
       case _ =>
-        require(isOk = false, "package displayName or package object")
+        require(isOk = false, "package name or package object")
     }
     if (scanner.curr.token == LBRACE) {
       // Handle sibling packages in the same file
@@ -142,7 +142,7 @@ class ScalaToplevelMtags(
     Position.Range(input, start, end)
   }
 
-  /** Returns a displayName and position for the current identifier token */
+  /** Returns a name and position for the current identifier token */
   def newIdentifier: Identifier = {
     scanner.curr.token match {
       case IDENTIFIER | BACKQUOTED_IDENT => // OK

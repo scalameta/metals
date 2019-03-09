@@ -6,7 +6,7 @@ package scala.meta.pc;
 public interface OffsetParams {
 
     /**
-     * The displayName of the source file.
+     * The name of the source file.
      */
     String filename();
 

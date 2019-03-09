@@ -16,7 +16,7 @@ public abstract class SymbolSearchVisitor {
 
     /**
      * Whether to visit a classpath package.
-     * @param pkg the package displayName formatted as `scala/collection/mutable/`
+     * @param pkg the package name formatted as `scala/collection/mutable/`
      * @return true if this visitor accepts results from this package, false otherwise.
      */
     abstract public boolean shouldVisitPackage(String pkg);

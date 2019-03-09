@@ -31,11 +31,11 @@ import scala.collection.mutable
  * Glossary and conventions used in this file:
  * - query, what the user typed to look up a symbol.
  * - symbol, a SemanticDB Java/Scala symbol (https://scalameta.org/docs/semanticdb/specification.html)
- *   or a java.util.zip.ZipEntry displayName pointing to a classfile.
+ *   or a java.util.zip.ZipEntry name pointing to a classfile.
  * - delimiter, one of the characters '.' or '/' or '#' that separate package/class/object/trait names
  *   in SemanticDB symbols, or '$' that separates inner classes in classfile names.
- * - displayName, characters between delimiters like "io" in "java/io/InputStream".
- * - main displayName, the last displayName in the query or symbol. For example, "Pos" is the main displayName in "s.m.Pos".
+ * - name, characters between delimiters like "io" in "java/io/InputStream".
+ * - main name, the last name in the query or symbol. For example, "Pos" is the main name in "s.m.Pos".
  * - qa, the start index in the query string.
  * - qb, the end index in the query string.
  * - sa, the start index in the symbol string.
@@ -61,7 +61,7 @@ object Fuzzy {
       skipNames: Int = 0
   ): Boolean = {
     // Loops through all names in the query/symbol strings in reverse order (last names first)
-    // and returns true if all query names match their corresponding symbol displayName.
+    // and returns true if all query names match their corresponding symbol name.
     // For the query "col.imm.Li" and symbol "scala/collection/immutable/List" we do the following loops.
     // Loop 1: compareNames("Li", "List")
     // Loop 2: compareNames("imm", "immutable")
@@ -83,7 +83,7 @@ object Fuzzy {
             loopDelimiters(qd.idx - 1, sd.idx - 1, depth + 1, skip - 1)
           }
         } else if (depth > 0 && !sd.isFinished) {
-          // Hop over the symbol displayName if the main query/symbol names match, this allows
+          // Hop over the symbol name if the main query/symbol names match, this allows
           // the query "m.Pos" to match the symbol "scala/meta/inputs/Position".
           loopDelimiters(qb, sd.idx - 1, depth, skip - 1)
         } else {
@@ -115,7 +115,7 @@ object Fuzzy {
   }
 
   /**
-   * Returns the length of the last displayName in this symbol.
+   * Returns the length of the last name in this symbol.
    *
    * Example: scala/Option$Some.class returns length of "Some"
    */

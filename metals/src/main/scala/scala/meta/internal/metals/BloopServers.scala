@@ -114,7 +114,7 @@ final class BloopServers(
     val args = bspCommand ++ Array(
       "--protocol",
       "local",
-      "--pipe-displayName",
+      "--pipe-name",
       pipeName
     )
     callBloopMain(

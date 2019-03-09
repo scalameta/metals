@@ -163,7 +163,7 @@ object ScaladocUtils {
   def returnDoc(str: String, sections: List[(Int, Int)]): Option[(Int, Int)] =
     sections find (startsWithTag(str, _, "@return"))
 
-  /** Extracts variable displayName from a string, stripping any pair of surrounding braces */
+  /** Extracts variable name from a string, stripping any pair of surrounding braces */
   def variableName(str: String): String =
     if (str.length >= 2 && (str charAt 0) == '{' && (str charAt (str.length - 1)) == '}')
       str.substring(1, str.length - 1)

@@ -99,7 +99,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
            |trailingCommas=never
            |/a/src/main/scala/a/Main.scala
            |case class User(
-           |  displayName: String,
+           |  name: String,
            |  age: Int,
            |)""".stripMargin,
         expectError = true
@@ -110,7 +110,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
       _ = assertNoDiff(
         server.bufferContents("a/src/main/scala/a/Main.scala"),
         """|case class User(
-           |    displayName: String,
+           |    name: String,
            |    age: Int
            |)""".stripMargin
       )
