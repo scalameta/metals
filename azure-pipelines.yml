@@ -3,4 +3,4 @@ jobs:
   pool:
     vmImage: 'Ubuntu-16.04'
   steps:
-  - script: ./sbt test
+  - script: ./sbt unit/test
