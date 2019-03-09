@@ -57,23 +57,6 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
-    "java-nullary",
-    """
-      |class Foo {
-      |  override def toString = "Foo"
-      |}
-      |object Main {
-      |  new Foo().toStrin@@
-      |  
-      |}
-      |""".stripMargin,
-    // even if `Foo.toString` is nullary, it overrides `Object.toString()`
-    // which is a Java non-nullary method with an empty parameter list.
-    """|toString()
-       |""".stripMargin
-  )
-
-  checkSnippet(
     "type",
     s"""|object Main {
         |  val x: scala.IndexedSe@@
