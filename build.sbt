@@ -343,6 +343,13 @@ lazy val slow = project
   .in(file("tests/slow"))
   .settings(
     testSettings,
+    testOnly.in(Test) := testOnly
+      .in(Test)
+      .dependsOn(
+        publishLocal.in(`sbt-metals`),
+        cross211publishLocal
+      )
+      .evaluated,
     test.in(Test) := test
       .in(Test)
       .dependsOn(

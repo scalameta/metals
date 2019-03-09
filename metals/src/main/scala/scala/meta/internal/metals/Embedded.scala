@@ -99,7 +99,12 @@ final class Embedded(
     val services =
       ServiceLoader.load(classOf[PresentationCompiler], classloader).iterator()
     if (services.hasNext) services.next()
-    else throw new NoSuchElementException(classOf[PresentationCompiler].getName)
+    else {
+      throw new NoSuchElementException(
+        s"${classOf[PresentationCompiler].getName}. " +
+          s"Jars: ${classloader.getURLs.toList}"
+      )
+    }
   }
 }
 
