@@ -43,6 +43,8 @@ final class MetalsGlobalThread(var compiler: Global, name: String = "")
           // + scalac deviation
           case InterruptException() =>
             Thread.interrupted()
+          case _: ThreadDeath =>
+            compiler = null
           // - scalac deviation
           case ex: FreshRunReq =>
             compiler.debugLog(
