@@ -8,9 +8,8 @@ jobs:
   pool:
     vmImage: 'windows-2019'
   steps:
-  - script: |
-    mkdir C:\sbt
-    curl -Lo C:\sbt\sbt https://github.com/coursier/sbt-launcher/releases/download/v1.2.5/csbt
-    curl -Lo C:\sbt\sbt.bat https://github.com/coursier/sbt-launcher/releases/download/v1.2.2/csbt.bat
-    SET PATH=C:\sbt;%JAVA_HOME%\bin;%PATH%
-    sbt test
+  - script: mkdir C:\sbt
+  - script: curl -Lo C:\sbt\sbt https://github.com/coursier/sbt-launcher/releases/download/v1.2.5/csbt
+  - script: curl -Lo C:\sbt\sbt.bat https://github.com/coursier/sbt-launcher/releases/download/v1.2.2/csbt.bat
+  - script: SET PATH=C:\sbt;%JAVA_HOME%\bin;%PATH%
+  - script: sbt test
