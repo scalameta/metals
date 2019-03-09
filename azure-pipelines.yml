@@ -3,11 +3,23 @@ jobs:
   pool:
     vmImage: 'Ubuntu-16.04'
   steps:
-  - script: ./sbt -batch unit/test
+  - task: JavaToolInstaller@0
+    inputs:
+      versionSpec: '8'
+      jdkArchitectureOption: x86
+      jdkSourceOption: azureStorage
+      jdkDestinationDirectory: javaJDK
+  - script: ./sbt test
 - job: Windows
   pool:
     vmImage: 'windows-2019'
   steps:
+  - task: JavaToolInstaller@0
+    inputs:
+      versionSpec: '8'
+      jdkArchitectureOption: x86
+      jdkSourceOption: azureStorage
+      jdkDestinationDirectory: javaJDK
   - script: mkdir C:\sbt
   - script: curl -Lo C:\sbt\sbt https://github.com/coursier/sbt-launcher/releases/download/v1.2.5/csbt
   - script: curl -Lo C:\sbt\sbt.bat https://github.com/coursier/sbt-launcher/releases/download/v1.2.2/csbt.bat
