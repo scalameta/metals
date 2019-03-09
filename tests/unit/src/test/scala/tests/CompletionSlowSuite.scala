@@ -117,7 +117,16 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
     "better-monadic-for",
     """|
        |"com.olegpy::better-monadic-for:0.3.0-M4"
-       |""".stripMargin
+       |""".stripMargin,
+    for {
+      _ <- assertCompletion(
+        """|  for (implicit0(x: String) <- Option(""))
+           |    implicitly[String].toCharArr@@
+           |""".stripMargin,
+        """|toCharArray(): Array[Char]
+           |""".stripMargin
+      )
+    } yield ()
   )
 
 }
