@@ -122,7 +122,7 @@ object Embedded {
       s"mtags_${info.getScalaVersion}",
       BuildInfo.metalsVersion
     )
-    val needsFullClasspath = !scalac.isSemanticdbEnabled
+    val needsFullClasspath = false // TODO(olafur) remove this comment, old code was "!scalac.isSemanticdbEnabled"
     val dependency =
       if (needsFullClasspath) pc
       else pc.withTransitive(false)
