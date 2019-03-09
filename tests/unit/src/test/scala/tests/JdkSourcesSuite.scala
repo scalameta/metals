@@ -4,7 +4,7 @@ import scala.meta.internal.metals.JdkSources
 
 object JdkSourcesSuite extends BaseSuite {
   test("src.zip") {
-    if (isAppveyor) {
+    if (isWindows) {
       // src.zip is not available on Appveyor.
       ()
     } else {

@@ -25,7 +25,7 @@ import scala.meta.internal.mtags.Symbol
  */
 object DefinitionSuite extends DirectoryExpectSuite("definition") {
   override def testCases(): List[ExpectTestCase] = {
-    if (isAppveyor) {
+    if (isWindows) {
       ignore("definition") {}
       return Nil
     }

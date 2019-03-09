@@ -23,7 +23,18 @@ import utest.ufansi.Str
  */
 class BaseSuite extends TestSuite {
   System.setProperty("metals.testing", "true")
-  def isAppveyor: Boolean = "True" == System.getenv("APPVEYOR")
+  def isWindows: Boolean =
+    isAppveyor || isAzureWindows
+  def isAppveyor: Boolean =
+    "True" == System.getenv("APPVEYOR")
+  def isAzureWindows: Boolean =
+    isAzure &&
+      "Windows_NT".equalsIgnoreCase(System.getenv("AGENT_OS"))
+  def isAzureLinux: Boolean =
+    isAzure &&
+      "Linux".equalsIgnoreCase(System.getenv("AGENT_OS"))
+  def isAzure: Boolean =
+    "True".equalsIgnoreCase(System.getenv("TF_BUILD"))
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]

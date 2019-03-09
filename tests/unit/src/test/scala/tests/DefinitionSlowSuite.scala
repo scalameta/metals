@@ -16,7 +16,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
       name: String,
       maxDuration: Duration = Duration("3min")
   )(run: => Future[Unit]): Unit = {
-    if (isAppveyor) {
+    if (isWindows) {
       // src.zip is missing on Appveyor which breaks definition tests.
       ignore(name) {}
     } else {

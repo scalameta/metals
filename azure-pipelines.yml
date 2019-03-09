@@ -1,6 +1,16 @@
 jobs:
-- job: Test
+- job: Linux
   pool:
     vmImage: 'Ubuntu-16.04'
   steps:
   - script: ./sbt -batch unit/test
+- job: Windows
+  pool:
+    vmImage: 'windows-2019'
+  steps:
+  - script: |
+    mkdir C:\sbt
+    curl -Lo C:\sbt\sbt https://github.com/coursier/sbt-launcher/releases/download/v1.2.5/csbt
+    curl -Lo C:\sbt\sbt.bat https://github.com/coursier/sbt-launcher/releases/download/v1.2.2/csbt.bat
+    SET PATH=C:\sbt;%JAVA_HOME%\bin;%PATH%
+    sbt test

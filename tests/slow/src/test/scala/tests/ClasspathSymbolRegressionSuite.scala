@@ -12,7 +12,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     RecursivelyDelete(tmp)
   }
   override def check(query: String, expected: String): Unit = {
-    if (isAppveyor) {
+    if (isWindows) {
       // Ignored on Appveyor because the JDK classpath is different.
       ignore(query)(())
     } else {

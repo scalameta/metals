@@ -19,7 +19,7 @@ abstract class BaseCompletionSlowSuite(name: String)
       completion <- server.completion(filename, query)
     } yield {
       val obtained =
-        if (isAppveyor) {
+        if (isWindows) {
           // HACK(olafur) we don't have access to the JDK sources on Appveyor
           // and the completion tests assert against the signatures of String.substring
           // which has parameters `beginIndex` and `endIndex`. This hack can be removed
