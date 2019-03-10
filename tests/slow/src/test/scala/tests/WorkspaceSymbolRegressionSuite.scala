@@ -1,10 +1,10 @@
 package tests
 
-import bench.AkkaSources
+import bench.Corpus
 import scala.meta.io.AbsolutePath
 
 object WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
-  def workspace: AbsolutePath = AkkaSources.download()
+  def workspace: AbsolutePath = Corpus.akka()
   check("Actor", "1025 results")
   check("Actor(", "")
   check(

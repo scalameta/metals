@@ -31,9 +31,9 @@ object ClientCommands {
   )
 
   val FocusDiagnostics = Command(
-    "metals-diagnostics-focus",
+    "metals-diagnosticsForDebuggingPurposes-focus",
     "Open problems",
-    """|Focus on the window that lists all published diagnostics.
+    """|Focus on the window that lists all published diagnosticsForDebuggingPurposes.
        |
        |In VS Code, this opens the "problems" window.
        |""".stripMargin

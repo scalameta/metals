@@ -1,12 +1,20 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import com.geirsson.coursiersmall
+import com.geirsson.coursiersmall.Dependency
+import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
 import java.nio.file.Files
-import java.util.concurrent.atomic.AtomicBoolean
-import scala.concurrent.Promise
+import java.nio.file.Paths
+import java.util.ServiceLoader
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.PresentationCompiler
 import scala.util.control.NonFatal
 
 /**
@@ -19,13 +27,12 @@ import scala.util.control.NonFatal
 final class Embedded(
     icons: Icons,
     statusBar: StatusBar,
-    userConfig: () => UserConfiguration
+    userConfig: () => UserConfiguration,
+    newBloopClassloader: () => URLClassLoader
 ) extends Cancelable {
 
   override def cancel(): Unit = {
-    if (isBloopJars.get()) {
-      bloopJars.foreach(_.close())
-    }
+    presentationCompilers.clear()
   }
 
   /**
@@ -46,19 +53,18 @@ final class Embedded(
   /**
    * Fetches jars for bloop-frontend and creates a new orphan classloader.
    */
-  val isBloopJars = new AtomicBoolean(false)
   lazy val bloopJars: Option[URLClassLoader] = {
-    isBloopJars.set(true)
-    val promise = Promise[Unit]()
-    statusBar.trackFuture(s"${icons.sync}Downloading Bloop", promise.future)
-    try {
-      Some(Embedded.newBloopClassloader())
-    } catch {
-      case NonFatal(e) =>
-        scribe.error("Failed to classload bloop, compilation will not work", e)
-        None
-    } finally {
-      promise.trySuccess(())
+    statusBar.trackBlockingTask(s"${icons.sync}Downloading Bloop") {
+      try {
+        Some(newBloopClassloader())
+      } catch {
+        case NonFatal(e) =>
+          scribe.error(
+            "Failed to classload bloop, compilation will not work",
+            e
+          )
+          None
+      }
     }
   }
 
@@ -77,29 +83,90 @@ final class Embedded(
     AbsolutePath(out)
   }
 
+  private val presentationCompilers: TrieMap[String, URLClassLoader] =
+    TrieMap.empty
+  def presentationCompiler(
+      info: ScalaBuildTarget,
+      scalac: ScalacOptionsItem
+  ): PresentationCompiler = {
+    val classloader = presentationCompilers.getOrElseUpdate(
+      info.getScalaVersion,
+      statusBar.trackBlockingTask(
+        s"${icons.sync}Downloading presentation compiler"
+      ) {
+        Embedded.newPresentationCompilerClassLoader(info, scalac)
+      }
+    )
+    val services =
+      ServiceLoader.load(classOf[PresentationCompiler], classloader).iterator()
+    if (services.hasNext) services.next()
+    else {
+      // NOTE(olafur): ServiceLoader doesn't find the presentation compiler service
+      // on Appveyor for some reason, I'm unable to reproduce on my computer. Here below
+      // we fallback to manual classloading.
+      val cls =
+        classloader.loadClass(classOf[ScalaPresentationCompiler].getName)
+      val ctor = cls.getDeclaredConstructor()
+      ctor.setAccessible(true)
+      ctor.newInstance().asInstanceOf[PresentationCompiler]
+    }
+  }
 }
 
 object Embedded {
-  private def newBloopClassloader(): URLClassLoader = {
-    val settings = new coursiersmall.Settings()
+  def downloadSettings(dependency: Dependency): Settings =
+    new coursiersmall.Settings()
       .withTtl(Some(Duration.Inf))
-      .withDependencies(
-        List(
-          new coursiersmall.Dependency(
-            "ch.epfl.scala",
-            "bloop-frontend_2.12",
-            BuildInfo.bloopVersion
-          )
+      .withDependencies(List(dependency))
+  def newPresentationCompilerClassLoader(
+      info: ScalaBuildTarget,
+      scalac: ScalacOptionsItem
+  ): URLClassLoader = {
+    val pc = new Dependency(
+      "org.scalameta",
+      s"mtags_${info.getScalaVersion}",
+      BuildInfo.metalsVersion
+    )
+    val needsFullClasspath = !scalac.isSemanticdbEnabled
+    val dependency =
+      if (needsFullClasspath) pc
+      else pc.withTransitive(false)
+    val settings = downloadSettings(dependency)
+    val jars = coursiersmall.CoursierSmall.fetch(settings)
+    val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
+    val semanticdbJars =
+      if (needsFullClasspath) Nil
+      else {
+        scalac.getOptions.asScala.collect {
+          case opt
+              if opt.startsWith("-Xplugin:") &&
+                opt.contains("semanticdb-scalac") =>
+            Paths.get(opt.stripPrefix("-Xplugin:"))
+        }
+      }
+    val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
+    val allURLs = allJars.map(_.toUri.toURL).toArray
+    // Share classloader for a subset of types.
+    val parent =
+      new PresentationCompilerClassLoader(this.getClass.getClassLoader)
+    new URLClassLoader(allURLs, parent)
+  }
+
+  def newBloopClassloader(): URLClassLoader = {
+    val settings = downloadSettings(
+      new Dependency(
+        "ch.epfl.scala",
+        "bloop-frontend_2.12",
+        BuildInfo.bloopVersion
+      )
+    ).addRepositories(
+      List(
+        coursiersmall.Repository.SonatypeReleases,
+        new coursiersmall.Repository.Maven(
+          "https://dl.bintray.com/scalacenter/releases"
         )
       )
-      .addRepositories(
-        List(
-          coursiersmall.Repository.SonatypeReleases,
-          new coursiersmall.Repository.Maven(
-            "https://dl.bintray.com/scalacenter/releases"
-          )
-        )
-      )
+    )
     val jars = coursiersmall.CoursierSmall.fetch(settings)
     // Don't make Bloop classloader a child or our classloader.
     val parent: ClassLoader = null

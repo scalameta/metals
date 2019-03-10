@@ -8,13 +8,15 @@ import scala.meta.internal.metals.StatisticsConfig
 
 object DefinitionSlowSuite extends BaseSlowSuite("definition") {
   override def serverConfig: MetalsServerConfig =
-    super.serverConfig.copy(statistics = new StatisticsConfig("diagnostics"))
+    super.serverConfig.copy(
+      statistics = new StatisticsConfig("diagnosticsForDebuggingPurposes")
+    )
 
   override def testAsync(
       name: String,
       maxDuration: Duration = Duration("3min")
   )(run: => Future[Unit]): Unit = {
-    if (isAppveyor) {
+    if (isWindows) {
       // src.zip is missing on Appveyor which breaks definition tests.
       ignore(name) {}
     } else {
@@ -228,7 +230,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |""".stripMargin
       )
       _ <- server.didFocus("a/src/main/scala/a/Main.scala")
-      // dependency diagnostics are unpublished.
+      // dependency diagnosticsForDebuggingPurposes are unpublished.
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }

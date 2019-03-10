@@ -6,6 +6,7 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.control.NonFatal
 
@@ -25,8 +26,19 @@ import scala.util.control.NonFatal
 final class StatusBar(
     client: () => MetalsLanguageClient,
     time: Time,
-    progressTicks: ProgressTicks = ProgressTicks.braille
+    progressTicks: ProgressTicks = ProgressTicks.braille,
+    val icons: Icons
 ) extends Cancelable {
+
+  def trackBlockingTask[T](message: String)(thunk: => T): T = {
+    val promise = Promise[Unit]()
+    trackFuture(message, promise.future)
+    try {
+      thunk
+    } finally {
+      promise.trySuccess(())
+    }
+  }
 
   def trackFuture[T](
       message: String,
@@ -169,7 +181,7 @@ final class StatusBar(
 
   override def cancel(): Unit = {
     if (scheduledFuture != null) {
-      scheduledFuture.cancel(true)
+      scheduledFuture.cancel(false)
     }
   }
 }

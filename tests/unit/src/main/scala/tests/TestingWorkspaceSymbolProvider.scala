@@ -14,7 +14,7 @@ object TestingWorkspaceSymbolProvider {
       buildTargets: BuildTargets = new BuildTargets,
       statistics: StatisticsConfig = StatisticsConfig.default,
       index: OnDemandSymbolIndex = OnDemandSymbolIndex(),
-      isReferencedPackage: String => Boolean = _ => false
+      isReferencedPackage: String => Int = _ => 0
   ): WorkspaceSymbolProvider = {
     new WorkspaceSymbolProvider(
       workspace = workspace,

@@ -17,16 +17,19 @@ object ScalaMtags {
 class ScalaMtags(val input: Input.VirtualFile)
     extends SimpleTraverser
     with MtagsIndexer {
-  private val root: Option[Source] = input.parse[Source].toOption
+  private val root: Parsed[Source] = input.parse[Source]
+  def source: Source = root.get
   override def language: Language = Language.SCALA
   override def indexRoot(): Unit = {
     root match {
-      case Some(tree) => apply(tree)
+      case Parsed.Success(tree) => apply(tree)
       case _ => // do nothing in case of parse error
     }
     // :facepalm: https://github.com/scalameta/scalameta/issues/1068
     PlatformTokenizerCache.megaCache.clear()
   }
+  def currentTree: Tree = myCurrentTree
+  private var myCurrentTree: Tree = q"a"
   override def apply(tree: Tree): Unit = withOwner() {
     def continue(): Unit = super.apply(tree)
     def stop(): Unit = ()
@@ -76,31 +79,36 @@ class ScalaMtags(val input: Input.VirtualFile)
         }
       }
     }
+    myCurrentTree = tree
     tree match {
       case _: Source => continue()
       case t: Template =>
         val overloads = new OverloadDisambiguator()
         overloads.disambiguator("") // primary constructor
         def disambiguatedMethod(
+            member: Member,
             name: Name,
             tparams: List[Type.Param],
             paramss: List[List[Term.Param]],
             kind: Kind
         ): Unit = {
+          val old = myCurrentTree
+          myCurrentTree = member
           val disambiguator = overloads.disambiguator(name.value)
           withOwner() {
             method(name, disambiguator, kind, 0)
             enterTypeParameters(tparams)
             enterTermParameters(paramss, isPrimaryCtor = false)
           }
+          myCurrentTree = old
         }
         t.stats.foreach {
           case t: Ctor.Secondary =>
-            disambiguatedMethod(t.name, Nil, t.paramss, Kind.CONSTRUCTOR)
+            disambiguatedMethod(t, t.name, Nil, t.paramss, Kind.CONSTRUCTOR)
           case t: Defn.Def =>
-            disambiguatedMethod(t.name, t.tparams, t.paramss, Kind.METHOD)
+            disambiguatedMethod(t, t.name, t.tparams, t.paramss, Kind.METHOD)
           case t: Decl.Def =>
-            disambiguatedMethod(t.name, t.tparams, t.paramss, Kind.METHOD)
+            disambiguatedMethod(t, t.name, t.tparams, t.paramss, Kind.METHOD)
           case _ =>
         }
         continue()

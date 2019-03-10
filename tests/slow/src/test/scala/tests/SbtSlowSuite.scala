@@ -40,7 +40,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
       name: String,
       maxDuration: Duration
   )(run: => Future[Unit]): Unit = {
-    if (isAppveyor) {
+    if (isWindows) {
       // Skip SbtSlowSuite on Windows because they're flaky due to likely the small
       // available memory on Appveyor CI machines.
       ignore(name)(())

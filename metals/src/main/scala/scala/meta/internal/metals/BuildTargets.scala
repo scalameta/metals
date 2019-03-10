@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.util
+import java.lang.{Iterable => JIterable}
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
@@ -25,6 +27,8 @@ final class BuildTargets() {
     TrieMap.empty[BuildTargetIdentifier, ScalacOptionsItem]
   private val inverseDependencies =
     TrieMap.empty[BuildTargetIdentifier, ListBuffer[BuildTargetIdentifier]]
+  private val buildTargetSources =
+    TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
   private val inverseDependencySources =
     TrieMap.empty[AbsolutePath, BuildTargetIdentifier]
 
@@ -34,10 +38,14 @@ final class BuildTargets() {
     buildTargetInfo.clear()
     scalacTargetInfo.clear()
     inverseDependencies.clear()
+    buildTargetSources.clear()
     inverseDependencySources.clear()
   }
   def sourceDirectories: Iterable[AbsolutePath] =
     sourceDirectoriesToBuildTarget.keys
+  def sourceDirectoriesToBuildTargets
+      : Iterator[(AbsolutePath, JIterable[BuildTargetIdentifier])] =
+    sourceDirectoriesToBuildTarget.iterator
   def scalacOptions: Iterable[ScalacOptionsItem] =
     scalacTargetInfo.values
 
@@ -56,6 +64,50 @@ final class BuildTargets() {
       new ConcurrentLinkedQueue()
     )
     queue.add(buildTarget)
+  }
+
+  def onCreate(source: AbsolutePath): Unit = {
+    for {
+      buildTarget <- sourceBuildTargets(source)
+    } {
+      linkSourceFile(buildTarget, source)
+    }
+  }
+
+  def buildTargetTransitiveSources(
+      id: BuildTargetIdentifier
+  ): Iterator[AbsolutePath] = {
+    for {
+      dependency <- buildTargetTransitiveDependencies(id).iterator
+      sources <- buildTargetSources.get(dependency).iterator
+      source <- sources.asScala.iterator
+    } yield source
+  }
+
+  def buildTargetTransitiveDependencies(
+      id: BuildTargetIdentifier
+  ): Iterable[BuildTargetIdentifier] = {
+    val isVisited = mutable.Set.empty[BuildTargetIdentifier]
+    val toVisit = new java.util.ArrayDeque[BuildTargetIdentifier]
+    toVisit.add(id)
+    while (!toVisit.isEmpty) {
+      val next = toVisit.pop()
+      if (!isVisited(next)) {
+        isVisited.add(next)
+        for {
+          info <- info(next).iterator
+          dependency <- info.getDependencies.asScala.iterator
+        } {
+          toVisit.add(dependency)
+        }
+      }
+    }
+    isVisited
+  }
+
+  def linkSourceFile(id: BuildTargetIdentifier, source: AbsolutePath): Unit = {
+    val set = buildTargetSources.getOrElseUpdate(id, ConcurrentHashSet.empty)
+    set.add(source)
   }
 
   def addWorkspaceBuildTargets(result: WorkspaceBuildTargetsResult): Unit = {
@@ -89,18 +141,24 @@ final class BuildTargets() {
    * Returns the first build target containing this source file.
    */
   def inverseSources(
-      textDocument: AbsolutePath
+      source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
-    for {
-      buildTargets <- sourceDirectoriesToBuildTarget.collectFirst {
+    val buildTargets = sourceBuildTargets(source)
+    buildTargets // prioritize JVM targets over JS/Native
+      .find(x => scalacOptions(x).exists(_.isJVM))
+      .orElse(buildTargets.headOption)
+  }
+
+  def sourceBuildTargets(
+      source: AbsolutePath
+  ): Iterable[BuildTargetIdentifier] = {
+    sourceDirectoriesToBuildTarget
+      .collectFirst {
         case (sourceDirectory, buildTargets)
-            if textDocument.toNIO.startsWith(sourceDirectory.toNIO) =>
+            if source.toNIO.startsWith(sourceDirectory.toNIO) =>
           buildTargets.asScala
       }
-      target <- buildTargets // prioritize JVM targets over JS/Native
-        .find(x => scalacOptions(x).exists(_.isJVM))
-        .orElse(buildTargets.headOption)
-    } yield target
+      .getOrElse(Iterable.empty)
   }
 
   def inverseSourceDirectory(source: AbsolutePath): Option[AbsolutePath] =

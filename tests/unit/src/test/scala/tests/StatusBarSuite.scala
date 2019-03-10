@@ -3,13 +3,15 @@ package tests
 import scala.concurrent.Promise
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
 
 object StatusBarSuite extends BaseSuite {
   val time = new FakeTime
   val client = new TestingClient(PathIO.workingDirectory, Buffers())
-  var status: StatusBar = new StatusBar(() => client, time, ProgressTicks.dots)
+  var status =
+    new StatusBar(() => client, time, ProgressTicks.dots, Icons.default)
   override def utestBeforeEach(path: Seq[String]): Unit = {
     client.statusParams.clear()
     status.cancel()

@@ -3,13 +3,14 @@ package tests
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
-object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
+object DiagnosticsSlowSuite
+    extends BaseSlowSuite("diagnosticsForDebuggingPurposes") {
 
   override def serverConfig: MetalsServerConfig = super.serverConfig.copy(
-    statistics = StatisticsConfig("diagnostics-clear")
+    statistics = StatisticsConfig("diagnosticsForDebuggingPurposes-clear")
   )
 
-  testAsync("diagnostics") {
+  testAsync("diagnosticsForDebuggingPurposes") {
     cleanCompileCache("a")
     cleanCompileCache("b")
     for {
@@ -116,7 +117,7 @@ object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        // Duplicate diagnostics are expected, the scala compiler reports them.
+        // Duplicate diagnosticsForDebuggingPurposes are expected, the scala compiler reports them.
         """|a/src/main/scala/Main.scala:3:7: error: a is already defined as value a
            |  val a = 2
            |      ^

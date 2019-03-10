@@ -2,6 +2,7 @@ package tests
 
 import com.google.gson.JsonParser
 import java.io.IOException
+import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -12,6 +13,7 @@ import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CompletionParams
 import scala.meta.internal.metals.PositionSyntax._
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
@@ -55,7 +57,6 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
@@ -84,7 +85,8 @@ final class TestingServer(
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
-    time: Time
+    time: Time,
+    newBloopClassloader: () => URLClassLoader
 )(implicit ex: ExecutionContextExecutorService) {
   val server = new MetalsLanguageServer(
     ex,
@@ -94,7 +96,8 @@ final class TestingServer(
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
-    time = time
+    time = time,
+    newBloopClassloader = newBloopClassloader
   )
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
@@ -329,6 +332,34 @@ final class TestingServer(
     }
   }
 
+  def completion(
+      filename: String,
+      query: String
+  ): Future[String] = {
+    val path = toPath(filename)
+    val input = path.toInputFromBuffers(buffers)
+    val offset = query.indexOf("@@")
+    if (offset < 0) sys.error("missing @@")
+    val start = input.text.indexOf(query.replaceAllLiterally("@@", ""))
+    if (start < 0)
+      sys.error(s"missing query '$query' from text:\n${input.text}")
+    val point = start + offset
+    val pos = m.Position.Range(input, point, point)
+    val params =
+      new CompletionParams(path.toTextDocumentIdentifier, pos.toLSP.getStart)
+    for {
+      completion <- server.completion(params).asScala
+    } yield {
+      val items =
+        completion.getItems.asScala.map(server.completionItemResolveSync)
+      items.iterator
+        .map(
+          item => TestCompletions.getFullyQualifiedLabel(item) + item.getDetail
+        )
+        .mkString("\n")
+    }
+  }
+
   def references(
       filename: String,
       substring: String
@@ -470,7 +501,9 @@ final class TestingServer(
 
   def textContents(filename: String): String =
     toPath(filename).toInputFromBuffers(buffers).text
-  def bufferContent(filename: String): String =
+  def textContentsOnDisk(filename: String): String =
+    toPath(filename).toInput.text
+  def bufferContents(filename: String): String =
     buffers
       .get(toPath(filename))
       .getOrElse(throw new NoSuchElementException(filename))

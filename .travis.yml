@@ -18,7 +18,10 @@ jobs:
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt slow/test"
       script:
-        - sbt sbt-metals/publishLocal slow/test
+        - sbt slow/test
+    - env: TEST="sbt +cross/test"
+      script:
+        - sbt +cross/test
     - stage: release
       script: sbt ci-release docs/docusaurusPublishGhpages
 

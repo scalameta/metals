@@ -77,6 +77,17 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val PresentationCompilerRestart = Command(
+    "presentation-compiler-restart",
+    "Restart presentation compiler",
+    """|Restart running presentation compiler instances.
+       |
+       |Metals automatically restarts the presentation compiler after every successful compilation
+       |in the build tool so this command should not be needed for normal usage. Please report
+       |an issue if you need to use this command.
+       |""".stripMargin
+  )
+
   /**
    * Open the browser at the given url.
    */

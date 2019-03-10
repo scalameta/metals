@@ -40,7 +40,7 @@ object BillSlowSuite extends BaseSlowSuite("bill") {
     } yield ()
   }
 
-  testAsync("diagnostics") {
+  testAsync("diagnosticsForDebuggingPurposes") {
     Bill.installWorkspace(workspace.toNIO)
     testRoundtripCompilation()
   }

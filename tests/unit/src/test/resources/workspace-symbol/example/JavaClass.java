@@ -2,6 +2,9 @@ package example;
 
 public class JavaClass/*example.JavaClass#*/ {
 
+    private JavaClass() {
+
+    }
     public JavaClass(int d) {
         this.d = d;
     }

@@ -1,8 +1,9 @@
 def localSnapshotVersion = "0.5.0-SNAPSHOT"
+def isCI = System.getProperty("CI") != null
 inThisBuild(
   List(
     version ~= { dynVer =>
-      if (sys.env.contains("CI")) dynVer
+      if (isCI) dynVer
       else localSnapshotVersion // only for local publishng
     },
     scalaVersion := V.scala212,
@@ -82,6 +83,7 @@ inThisBuild(
 )
 
 cancelable.in(Global) := true
+crossScalaVersions := Nil
 
 addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
 addCommandAlias("scalafixCheck", "; scalafix --check ; test:scalafix --check")
@@ -111,14 +113,36 @@ lazy val V = new {
 
 skip.in(publish) := true
 
+lazy val interfaces = project
+  .in(file("mtags-interfaces"))
+  .settings(
+    moduleName := "mtags-interfaces",
+    autoScalaLibrary := false,
+    libraryDependencies ++= List(
+      "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0"
+    ),
+    crossVersion := CrossVersion.disabled
+  )
+
 lazy val mtags = project
   .settings(
+    moduleName := "mtags",
+    crossVersion := CrossVersion.full,
     crossScalaVersions := List(V.scala212, V.scala211),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
-      "org.scalameta" %% "scalameta" % V.scalameta
-    )
+      "org.scalameta" %% "contrib" % V.scalameta,
+      "org.jsoup" % "jsoup" % "1.11.3",
+      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
+    ),
+    libraryDependencies ++= {
+      if (isCI) Nil
+      // NOTE(olafur) pprint is indispensable for me while developing, I can't
+      // use println anymore for debugging because pprint.log is 100 times better.
+      else List("com.lihaoyi" %% "pprint" % "0.5.3")
+    }
   )
+  .dependsOn(interfaces)
 
 lazy val metals = project
   .settings(
@@ -158,6 +182,7 @@ lazy val metals = project
       // ==================
       // Scala dependencies
       // ==================
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       "org.scalameta" %% "symtab" % V.scalameta,
@@ -165,8 +190,6 @@ lazy val metals = project
       "com.geirsson" %% "coursier-small" % "1.3.3",
       // undeclared transitive dependency of coursier-small
       "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
-      // for handling Java futures
-      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       // for logging
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
@@ -229,6 +252,7 @@ lazy val input = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "io.circe" %% "circe-derivation-annotations" % "0.9.0-M5"
     ),
+    scalacOptions += "-P:semanticdb:synthetics:on",
     addCompilerPlugin(
       "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
     )
@@ -239,6 +263,42 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   fork := true,
   testFrameworks := List(new TestFramework("utest.runner.Framework"))
 )
+
+lazy val mtest = project
+  .in(file("tests/mtest"))
+  .settings(
+    skip.in(publish) := true,
+    crossScalaVersions := List(V.scala212, V.scala211),
+    libraryDependencies ++= List(
+      "com.geirsson" %% "coursier-small" % "1.3.3",
+      "org.scalameta" %% "testkit" % V.scalameta,
+      "com.lihaoyi" %% "utest" % "0.6.0"
+    ),
+    buildInfoPackage := "tests",
+    buildInfoObject := "BuildInfoVersions",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "scala211" -> V.scala211,
+      "scala212" -> V.scala212
+    )
+  )
+  .dependsOn(mtags)
+  .enablePlugins(BuildInfoPlugin)
+
+lazy val cross = project
+  .in(file("tests/cross"))
+  .settings(
+    testSettings,
+    libraryDependencies ++= List(
+      "com.chuusai" %% "shapeless" % "2.3.3",
+      "org.typelevel" %% "cats-core" % "1.6.0",
+      "com.github.mpilquist" %% "simulacrum" % "0.15.0",
+      "com.olegpy" %% "better-monadic-for" % "0.3.0-M4",
+      "org.spire-math" %% "kind-projector" % "0.9.8",
+      "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
+    ),
+    crossScalaVersions := V.supportedScalaVersions
+  )
+  .dependsOn(mtest, mtags)
 
 lazy val unit = project
   .in(file("tests/unit"))
@@ -262,12 +322,41 @@ lazy val unit = project
       "testResourceDirectory" -> resourceDirectory.in(Test).value
     )
   )
-  .dependsOn(metals)
+  .dependsOn(mtest, metals)
   .enablePlugins(BuildInfoPlugin)
+
+val cross211publishLocal = Def.task[Unit] {
+  // Runs `publishLocal` for mtags with 2.11 scalaVersion.
+  val newState = Project
+    .extract(state.value)
+    .appendWithSession(
+      List(
+        scalaVersion.in(mtags) := V.scala211
+      ),
+      state.value
+    )
+  Project
+    .extract(newState)
+    .runTask(publishLocal.in(mtags), newState)
+}
 lazy val slow = project
   .in(file("tests/slow"))
   .settings(
-    testSettings
+    testSettings,
+    testOnly.in(Test) := testOnly
+      .in(Test)
+      .dependsOn(
+        publishLocal.in(`sbt-metals`),
+        cross211publishLocal
+      )
+      .evaluated,
+    test.in(Test) := test
+      .in(Test)
+      .dependsOn(
+        publishLocal.in(`sbt-metals`),
+        cross211publishLocal
+      )
+      .value
   )
   .dependsOn(unit)
 

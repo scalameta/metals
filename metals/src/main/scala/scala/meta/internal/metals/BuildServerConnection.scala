@@ -47,7 +47,11 @@ case class BuildServerConnection(
   }
 
   private def register[T](e: CompletableFuture[T]): CompletableFuture[T] = {
-    ongoingRequests.add(Cancelable(() => Try(e.cancel(true))))
+    ongoingRequests.add(
+      Cancelable(
+        () => Try(e.completeExceptionally(new ControlCancellationException()))
+      )
+    )
     e
   }
 
@@ -94,7 +98,7 @@ object BuildServerConnection {
     val server = launcher.getRemoteProxy
     val result = BuildServerConnection.initialize(workspace, server)
     val stopListening =
-      Cancelable(() => listening.cancel(true))
+      Cancelable(() => listening.cancel(false))
     BuildServerConnection(
       workspace,
       localClient,

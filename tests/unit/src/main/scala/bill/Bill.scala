@@ -49,7 +49,7 @@ import scala.meta.io.AbsolutePath
  * of interest to you:
  *
  * - server discovery installation of `.bsp/bill.json` files
- * - custom Scala compiler reporter to produce BSP diagnostics
+ * - custom Scala compiler reporter to produce BSP diagnosticsForDebuggingPurposes
  *
  * You can try bill by running the main method:
  *
@@ -414,7 +414,6 @@ object Bill {
   def handleCompile(wd: Path): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.meta.internal.metals.MetalsEnrichments._
-    import scala.meta.internal.mtags.MtagsEnrichments._
     val server = new Server()
     val client = new BuildClient {
       override def onBuildShowMessage(params: ShowMessageParams): Unit = ???

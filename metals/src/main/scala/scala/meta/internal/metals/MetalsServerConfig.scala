@@ -58,7 +58,11 @@ final case class MetalsServerConfig(
       default = true
     ),
     icons: Icons = Icons.default,
-    statistics: StatisticsConfig = StatisticsConfig.default
+    statistics: StatisticsConfig = StatisticsConfig.default,
+    pcLog: Boolean = MetalsServerConfig.binaryOption(
+      "metals.pc-log",
+      default = false
+    )
 ) {
   override def toString: String =
     List[String](
