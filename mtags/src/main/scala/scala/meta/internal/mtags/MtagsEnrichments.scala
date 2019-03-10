@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util
+import java.util.Optional
 import java.util.logging.Level
 import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
@@ -252,6 +253,11 @@ trait MtagsEnrichments {
       )
   }
 
+  implicit class XtensionOptionalJava[T](opt: Optional[T]) {
+    def asScala: Option[T] =
+      if (opt.isPresent) Some(opt.get())
+      else None
+  }
   implicit class XtensionPositionLsp(pos: m.Position) {
     def toSemanticdb: s.Range = {
       new s.Range(

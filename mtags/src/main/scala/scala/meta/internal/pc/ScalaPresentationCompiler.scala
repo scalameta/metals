@@ -18,6 +18,7 @@ import scala.meta.pc.SymbolSearch
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
+import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Properties
 
 case class ScalaPresentationCompiler(
@@ -26,7 +27,8 @@ case class ScalaPresentationCompiler(
     options: List[String] = Nil,
     search: SymbolSearch = EmptySymbolSearch,
     ec: ExecutionContext = ExecutionContext.global,
-    sh: Option[ScheduledExecutorService] = None
+    sh: Option[ScheduledExecutorService] = None,
+    config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
 ) extends PresentationCompiler {
   val logger = Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
   override def withSearch(search: SymbolSearch): PresentationCompiler =
@@ -39,6 +41,11 @@ case class ScalaPresentationCompiler(
       sh: ScheduledExecutorService
   ): PresentationCompiler =
     copy(sh = Some(sh))
+
+  override def withConfiguration(
+      config: PresentationCompilerConfig
+  ): PresentationCompiler =
+    copy(config = config)
   def this() = this(buildTargetIdentifier = "")
 
   val access = new CompilerAccess(sh, () => newCompiler())(ec)
@@ -111,7 +118,8 @@ case class ScalaPresentationCompiler(
       settings,
       new StoreReporter,
       search,
-      buildTargetIdentifier
+      buildTargetIdentifier,
+      config
     )
   }
 

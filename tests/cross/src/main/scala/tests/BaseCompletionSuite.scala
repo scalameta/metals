@@ -32,6 +32,16 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     result.getItems.asScala.sortBy(_.getSortText)
   }
 
+  def checkItems(
+      name: String,
+      original: String,
+      fn: Seq[CompletionItem] => Unit
+  ): Unit = {
+    test(name) {
+      fn(getItems(original))
+    }
+  }
+
   def checkEdit(
       name: String,
       original: String,
