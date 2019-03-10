@@ -1,5 +1,5 @@
 def localSnapshotVersion = "0.5.0-SNAPSHOT"
-def isCI = System.getProperty("CI") != null
+def isCI = System.getenv("CI") != null
 inThisBuild(
   List(
     version ~= { dynVer =>
