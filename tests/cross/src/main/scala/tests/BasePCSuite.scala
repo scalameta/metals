@@ -16,8 +16,10 @@ import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Properties
 
 abstract class BasePCSuite extends BaseSuite {
@@ -36,6 +38,7 @@ abstract class BasePCSuite extends BaseSuite {
       .toSeq
   def extraClasspath: Seq[Path] = Nil
   def scalacOptions: Seq[String] = Nil
+  def config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
   val myclasspath: Seq[Path] = extraClasspath ++ scalaLibrary.toList
   val index = OnDemandSymbolIndex()
   val indexer = new Docstrings(index)
@@ -47,6 +50,7 @@ abstract class BasePCSuite extends BaseSuite {
   )
   val pc = new ScalaPresentationCompiler()
     .withSearch(search)
+    .withConfiguration(config)
     .newInstance("", myclasspath.asJava, scalacOptions.asJava)
   val tmp = AbsolutePath(Files.createTempDirectory("metals"))
 

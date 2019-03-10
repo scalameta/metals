@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.SignatureHelp;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -74,6 +75,11 @@ public abstract class PresentationCompiler {
      * Provide a custom scheduled executor service to schedule `Thread.stop()` for unresponsive compiler instances.
      */
     public abstract PresentationCompiler withScheduledExecutorService(ScheduledExecutorService scheduledExecutorService);
+
+    /**
+     * Provide custom configuration for features like signature help and completions.
+     */
+    public abstract PresentationCompiler withConfiguration(PresentationCompilerConfig config);
 
     /**
      * Construct a new presentation compiler with the given parameters.

@@ -238,6 +238,28 @@ Possible values:
 
 ```
 
+### `-Dmetals.signature-help-command`
+
+An optional string value for a command identifier to trigger parameter hints
+(`textDocument/signatureHelp`) in the editor. Metals uses this setting to
+populate `CompletionItem.command` for completion items that move the cursor
+inside an argument list. For example, when completing `"".stripSu@@` into
+`"".stripSuffix(@@)`, Metals will automatically trigger parameter hints if this
+setting is provided by the editor.
+
+Default value:
+
+- `"editor.action.triggerParameterHints"`: when editor is Visual Studio Code.
+- empty: for all other editors.
+
+### `-Dmetals.pc.debug`
+
+Possible values:
+
+- `off` (default): do not log verbose debugging information for the presentation
+  compiler.
+- `on`: log verbose debugging information for the presentation compiler.
+
 ## Metals user configuration
 
 Users can customize the Metals server through the LSP

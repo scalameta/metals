@@ -5,6 +5,7 @@ import java.util.logging.Logger
 import org.eclipse.{lsp4j => l}
 import scala.language.implicitConversions
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
+import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.reflect.internal.{Flags => gf}
@@ -19,7 +20,8 @@ class MetalsGlobal(
     settings: Settings,
     reporter: Reporter,
     val search: SymbolSearch,
-    val buildTargetIdentifier: String
+    val buildTargetIdentifier: String,
+    val metalsConfig: PresentationCompilerConfig
 ) extends Global(settings, reporter)
     with Completions
     with Signatures

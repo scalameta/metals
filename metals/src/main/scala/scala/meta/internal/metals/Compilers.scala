@@ -75,7 +75,7 @@ class Compilers(
   }
 
   def log: List[String] =
-    if (config.pcLog) {
+    if (config.compilers.debug) {
       List(
         "-Ypresentation-debug",
         "-Ypresentation-verbose",
@@ -166,6 +166,7 @@ class Compilers(
     pc.withSearch(search)
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
+      .withConfiguration(config.compilers)
       .newInstance(
         scalac.getTarget.getUri,
         classpath.asJava,

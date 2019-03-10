@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.nio.file.Path
+import scala.meta.internal.mtags.MtagsEnrichments._
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
@@ -70,6 +71,14 @@ class CompletionProvider(
                   item.setInsertText(label + "()")
                 case _ =>
                   item.setInsertText(label + "($0)")
+                  metalsConfig
+                    .parameterHintsCommand()
+                    .asScala
+                    .foreach { command =>
+                      item.setCommand(
+                        new l.Command("", command)
+                      )
+                    }
               }
             } else if (!suffix.isEmpty) {
               item.setInsertTextFormat(InsertTextFormat.Snippet)
