@@ -12,6 +12,7 @@ import java.util.ServiceLoader
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
 import scala.util.control.NonFatal
@@ -100,10 +101,14 @@ final class Embedded(
       ServiceLoader.load(classOf[PresentationCompiler], classloader).iterator()
     if (services.hasNext) services.next()
     else {
-      throw new NoSuchElementException(
-        s"${classOf[PresentationCompiler].getName}. " +
-          s"Jars: ${classloader.getURLs.toList}"
-      )
+      // NOTE(olafur): ServiceLoader doesn't find the presentation compiler service
+      // on Appveyor for some reason, I'm unable to reproduce on my computer. Here below
+      // we fallback to manual classloading.
+      val cls =
+        classloader.loadClass(classOf[ScalaPresentationCompiler].getName)
+      val ctor = cls.getDeclaredConstructor()
+      ctor.setAccessible(true)
+      ctor.newInstance().asInstanceOf[PresentationCompiler]
     }
   }
 }
