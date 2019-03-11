@@ -8,7 +8,6 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.meta.internal.metals.Fuzzy
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 import scala.util.control.NonFatal
@@ -30,17 +29,19 @@ class CompletionProvider(
       cursor = Some(params.offset)
     )
     val pos = unit.position(params.offset)
-    val (kind, i, completion) = safeCompletionsAt(pos)
+    val (i, completion) = safeCompletionsAt(pos)
     val history = new ShortenedNames()
     val sorted = i.results.sorted(memberOrdering(history, completion))
     val items = sorted.iterator.zipWithIndex.map {
       case (r, idx) =>
         params.checkCanceled()
+        val symbolName = r.symNameDropLocal.decoded
+        val ident = Identifier.backtickWrap(symbolName)
         val label = r match {
           case _: NamedArgMember =>
-            s"${r.symNameDropLocal.decoded} = "
+            s"${ident} = "
           case _ =>
-            r.symNameDropLocal.decoded
+            ident
         }
         val item = new CompletionItem(label)
         val detail = detailString(r, history)
@@ -53,9 +54,18 @@ class CompletionProvider(
           else if (completion.isNew && r.sym.dealiased.hasTypeParams) "[$0]"
           else ""
         val suffix = typeSuffix + templateSuffix
+
         r match {
           case i: InterpolatorMember =>
             item.setFilterText(i.filterText)
+          case _ =>
+            if (ident.startsWith("`")) {
+              item.setFilterText(symbolName)
+            }
+        }
+
+        r match {
+          case i: InterpolatorMember =>
             item.setTextEdit(i.edit)
             item.setInsertTextFormat(InsertTextFormat.Snippet)
           case w: WorkspaceMember =>
@@ -221,11 +231,10 @@ class CompletionProvider(
 
   private def safeCompletionsAt(
       position: Position
-  ): (CompletionListKind, InterestingMembers, CompletionPosition) = {
+  ): (InterestingMembers, CompletionPosition) = {
     def expected(e: Throwable) = {
       logger.warning(e.getMessage)
       (
-        CompletionListKind.None,
         InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
         CompletionPosition.None
       )
@@ -238,7 +247,7 @@ class CompletionProvider(
       }
       params.checkCanceled()
       val matchingResults = completions.matchingResults { entered => name =>
-        Fuzzy.matches(entered, name)
+        CompletionFuzzy.matches(entered, name)
       }
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
@@ -257,7 +266,7 @@ class CompletionProvider(
         completion
       )
       params.checkCanceled()
-      (kind, items, completion)
+      (items, completion)
     } catch {
       case e: CyclicReference
           if e.getMessage.contains("illegal cyclic reference") =>

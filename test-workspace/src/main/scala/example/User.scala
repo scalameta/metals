@@ -1,5 +1,6 @@
 package example
 
 object User {
-    "".stripSuffix()
+  val `hello world` = "John"
+  "Hello $hello"
 }

@@ -21,6 +21,7 @@ import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Properties
+import scala.util.control.NonFatal
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
@@ -101,7 +102,11 @@ abstract class BasePCSuite extends BaseSuite {
     }
     val file = tmp.resolve(filename)
     Files.write(file.toNIO, code2.getBytes(StandardCharsets.UTF_8))
-    index.addSourceFile(file, Some(tmp))
+    try index.addSourceFile(file, Some(tmp))
+    catch {
+      case NonFatal(e) =>
+        println(s"warn: $e")
+    }
     workspace.inputs(filename) = code2
     (code2, offset)
   }

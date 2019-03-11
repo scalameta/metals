@@ -89,7 +89,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       postProcessObtained: String => String = identity,
       stableOrder: Boolean = true,
       postAssert: () => Unit = () => (),
-      topLines: Option[Int] = None
+      topLines: Option[Int] = None,
+      filterText: String = ""
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val out = new StringBuilder()
@@ -122,6 +123,15 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         sortLines(stableOrder, getExpected(expected, compat))
       )
       postAssert()
+      if (filterText.nonEmpty) {
+        items.foreach { item =>
+          assertNoDiff(
+            item.getFilterText,
+            filterText,
+            s"Invalid filter text for item:\n$item"
+          )
+        }
+      }
     }
   }
 
