@@ -41,7 +41,8 @@ import scala.collection.mutable
  * - sa, the start index in the symbol string.
  * - sb, the end index in the symbol string.
  */
-object Fuzzy {
+object Fuzzy extends Fuzzy
+class Fuzzy {
   private class Delimiter(
       val isFinished: Boolean,
       val idx: Int
@@ -152,11 +153,10 @@ object Fuzzy {
     var curr = fromIndex - 2
     var continue = true
     while (curr >= 0 && continue) {
-      string.charAt(curr) match {
-        case '.' | '/' | '#' | '$' =>
-          continue = false
-        case _ =>
-          curr -= 1
+      if (isDelimiter(string.charAt(curr))) {
+        continue = false
+      } else {
+        curr -= 1
       }
     }
     if (curr < 0) new Delimiter(true, 0)

@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.semanticdb.Scala._
 import scala.collection.mutable
-import scala.meta.internal.metals.Fuzzy
 import scala.util.control.NonFatal
 
 /**
@@ -407,12 +406,15 @@ trait Completions { this: MetalsGlobal =>
         write(out, lit.pos.start, interpolator.dollar)
         // Escape `$` for
         out.append("\\$")
-        if (interpolator.needsBraces) {
+        val symbolName = sym.decodedName.trim
+        val identifier = Identifier.backtickWrap(symbolName)
+        val needsBraces = interpolator.needsBraces || identifier.startsWith("`")
+        if (needsBraces) {
           out.append('{')
         }
-        out.append(sym.decodedName.trim)
+        out.append(identifier)
         out.append("$0")
-        if (interpolator.needsBraces) {
+        if (needsBraces) {
           out.append('}')
         }
         write(out, pos.point, lit.pos.end - CURSOR.length)
@@ -421,7 +423,7 @@ trait Completions { this: MetalsGlobal =>
       val filterText = text.substring(lit.pos.start, pos.point)
       override def contribute: List[Member] = {
         metalsScopeMembers(pos).collect {
-          case s: ScopeMember if Fuzzy.matches(query, s.sym.name) =>
+          case s: ScopeMember if CompletionFuzzy.matches(query, s.sym.name) =>
             val edit = new l.TextEdit(lrange, newText(s.sym))
             new InterpolatorMember(filterText, edit, s.sym)
         }
