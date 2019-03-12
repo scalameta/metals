@@ -962,4 +962,14 @@ object CompletionSuite extends BaseCompletionSuite {
     ""
   )
 
+  check(
+    "underscore",
+    s"""|object Main {
+        |  List(1).exists(_@@)
+        |}
+        |""".stripMargin,
+    // assert that `_root_` is not a completion item.
+    ""
+  )
+
 }
