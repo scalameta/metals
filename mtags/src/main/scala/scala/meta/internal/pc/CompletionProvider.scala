@@ -72,8 +72,7 @@ class CompletionProvider(
             item.setInsertTextFormat(InsertTextFormat.Snippet)
             item.setInsertText(w.sym.fullName + suffix)
           case _ =>
-            if (r.sym.isMethod &&
-              !r.sym.info.isInstanceOf[NullaryMethodType]) {
+            if (r.sym.isNonNullaryMethod) {
               item.setInsertTextFormat(InsertTextFormat.Snippet)
               r.sym.paramss match {
                 case Nil =>

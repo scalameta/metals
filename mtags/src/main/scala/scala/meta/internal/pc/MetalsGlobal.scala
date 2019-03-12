@@ -320,6 +320,14 @@ class MetalsGlobal(
     }
   }
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def isDefined: Boolean =
+      sym != null &&
+        sym != NoSymbol &&
+        !sym.isErroneous
+    def isNonNullaryMethod: Boolean =
+      sym.isMethod &&
+        !sym.info.isInstanceOf[NullaryMethodType] &&
+        !sym.paramss.isEmpty
     def isJavaModule: Boolean =
       sym.isJava && sym.isModule
     def hasTypeParams: Boolean =

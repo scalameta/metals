@@ -408,12 +408,23 @@ trait Completions { this: MetalsGlobal =>
         out.append("\\$")
         val symbolName = sym.decodedName.trim
         val identifier = Identifier.backtickWrap(symbolName)
-        val needsBraces = interpolator.needsBraces || identifier.startsWith("`")
+        val needsBraces =
+          interpolator.needsBraces ||
+            identifier.startsWith("`") ||
+            sym.isNonNullaryMethod
         if (needsBraces) {
           out.append('{')
         }
         out.append(identifier)
-        out.append("$0")
+        val snippet = sym.paramss match {
+          case Nil =>
+            "$0"
+          case Nil :: Nil =>
+            "()$0"
+          case _ =>
+            "($0)"
+        }
+        out.append(snippet)
         if (needsBraces) {
           out.append('}')
         }

@@ -197,4 +197,42 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "snippet",
+    """|object Main {
+       |  "$identity@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  s"\${identity($0)}"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "snippet2",
+    """|object Main {
+       |  "$toStrin@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  s"\${toString()$0}"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "snippet3",
+    """|object Main {
+       |  def empty: Boolean = true
+       |  "$empty@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  def empty: Boolean = true
+       |  s"\$empty$0"
+       |}
+       |""".stripMargin
+  )
+
 }
