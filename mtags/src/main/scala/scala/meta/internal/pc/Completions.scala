@@ -303,8 +303,10 @@ trait Completions { this: MetalsGlobal =>
         case '{' => i + 2
         case _ => i + 1
       }
-      chars(start).isUnicodeIdentifierStart &&
-      (start + 1).until(offset).forall(j => chars(j).isUnicodeIdentifierPart)
+      start == offset || {
+        chars(start).isUnicodeIdentifierStart &&
+        (start + 1).until(offset).forall(j => chars(j).isUnicodeIdentifierPart)
+      }
     }
     if (isCandidate) {
       val name = chars(i + 1) match {

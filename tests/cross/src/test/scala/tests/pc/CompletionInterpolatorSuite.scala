@@ -249,4 +249,36 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  check(
+    "empty",
+    """|object Main {
+       |  locally {
+       |    val a = ""
+       |    val b = 42
+       |    "$@@"
+       |  }
+       |}
+       |""".stripMargin,
+    """|a: String
+       |b: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "empty-brace",
+    """|object Main {
+       |  locally {
+       |    val a = ""
+       |    val b = 42
+       |    "${@@"
+       |  }
+       |}
+       |""".stripMargin,
+    """|a: String
+       |b: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
 }
