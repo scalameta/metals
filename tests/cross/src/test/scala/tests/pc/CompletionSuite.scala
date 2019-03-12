@@ -381,6 +381,20 @@ object CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
+    "commit1",
+    """
+      |package a
+      |
+      |object Main{
+      |  identity@@
+      |}
+      |""".stripMargin,
+    """|identity[A](x: A): A (commit: '')
+       |""".stripMargin,
+    includeCommitCharacter = true
+  )
+
+  check(
     "numeric-sort",
     """
       |package a
