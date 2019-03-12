@@ -170,7 +170,10 @@ class CompletionProvider(
           TypeName("ArrowAssoc")
         ),
         TermName("→").encode
-      )
+      ),
+      // NOTE(olafur) IntelliJ does not complete the root package and without this filter
+      // then `_root_` would appear as a completion result in the code `foobar(_<COMPLETE>)`
+      rootMirror.RootPackage
     ).flatMap(_.alternatives)
     val isSeen = mutable.Set.empty[String]
     val isIgnored = mutable.Set.empty[Symbol]
