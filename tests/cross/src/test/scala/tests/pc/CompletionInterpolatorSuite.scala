@@ -235,4 +235,18 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "brace",
+    """|object Main {
+       |  val myName = ""
+       |  "${myNa@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val myName = ""
+       |  s"\${myName$0}"
+       |}
+       |""".stripMargin
+  )
+
 }

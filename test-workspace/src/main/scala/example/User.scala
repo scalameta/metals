@@ -1,5 +1,6 @@
 package example
 
 object User {
-  // pprint.log()
+  val myName = 42
+  def foo = s"${myName}"
 }
