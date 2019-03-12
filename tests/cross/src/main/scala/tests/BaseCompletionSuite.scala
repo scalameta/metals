@@ -1,5 +1,6 @@
 package tests
 
+import java.util.Collections
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import scala.collection.JavaConverters._
@@ -103,7 +104,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         val label = TestCompletions.getFullyQualifiedLabel(item)
         val commitCharacter =
           if (includeCommitCharacter)
-            item.getCommitCharacters.asScala.mkString(" (commit: '", " ", "')")
+            Option(item.getCommitCharacters)
+              .getOrElse(Collections.emptyList())
+              .asScala
+              .mkString(" (commit: '", " ", "')")
           else ""
         val documentation = doc(item.getDocumentation)
         if (includeDocs && documentation.nonEmpty) {
