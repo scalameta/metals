@@ -118,6 +118,12 @@ object Embedded {
     new coursiersmall.Settings()
       .withTtl(Some(Duration.Inf))
       .withDependencies(List(dependency))
+      .addRepositories(
+        List(
+          coursiersmall.Repository.SonatypeReleases,
+          coursiersmall.Repository.SonatypeSnapshots
+        )
+      )
   def newPresentationCompilerClassLoader(
       info: ScalaBuildTarget,
       scalac: ScalacOptionsItem
@@ -161,7 +167,6 @@ object Embedded {
       )
     ).addRepositories(
       List(
-        coursiersmall.Repository.SonatypeReleases,
         new coursiersmall.Repository.Maven(
           "https://dl.bintray.com/scalacenter/releases"
         )
