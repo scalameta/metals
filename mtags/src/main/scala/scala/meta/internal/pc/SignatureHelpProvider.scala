@@ -324,13 +324,6 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     }
   }
 
-  implicit class XtensionGSymbol(sym: Symbol) {
-    def isDefined: Boolean =
-      sym != null &&
-        sym != NoSymbol &&
-        !sym.isErroneous
-  }
-
   // Same as `tree.symbol` but tries to recover from type errors
   // by using the completions API.
   def treeSymbol(tree: Tree): Symbol = {

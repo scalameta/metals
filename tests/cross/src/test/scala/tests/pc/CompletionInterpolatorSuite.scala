@@ -197,4 +197,88 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "snippet",
+    """|object Main {
+       |  "$identity@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  s"\${identity($0)}"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "snippet2",
+    """|object Main {
+       |  "$toStrin@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  s"\${toString()$0}"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "snippet3",
+    """|object Main {
+       |  def empty: Boolean = true
+       |  "$empty@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  def empty: Boolean = true
+       |  s"\$empty$0"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "brace",
+    """|object Main {
+       |  val myName = ""
+       |  "${myNa@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val myName = ""
+       |  s"\${myName$0}"
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "empty",
+    """|object Main {
+       |  locally {
+       |    val a = ""
+       |    val b = 42
+       |    "$@@"
+       |  }
+       |}
+       |""".stripMargin,
+    """|a: String
+       |b: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "empty-brace",
+    """|object Main {
+       |  locally {
+       |    val a = ""
+       |    val b = 42
+       |    "${@@"
+       |  }
+       |}
+       |""".stripMargin,
+    """|a: String
+       |b: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
 }

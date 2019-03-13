@@ -286,7 +286,7 @@ trait Completions { this: MetalsGlobal =>
         inferCompletionPosition(pos, lastEnclosing)
     }
   }
-  case class InterpolatorSplice(dollar: Int, needsBraces: Boolean)
+  case class InterpolatorSplice(dollar: Int, name: String, needsBraces: Boolean)
   def isPossibleInterpolatorSplice(
       pos: Position,
       text: String
@@ -294,21 +294,34 @@ trait Completions { this: MetalsGlobal =>
     val offset = pos.point
     val chars = pos.source.content
     var i = offset
-    while (i > 0 && chars(i) != '$') {
+    while (i > 0 && (chars(i) match { case '$' | '\n' => false; case _ => true })) {
       i -= 1
     }
     val isCandidate = i > 0 &&
-      chars(i) == '$' &&
-      chars(i + 1).isUnicodeIdentifierStart &&
-      (i + 2).until(offset).forall(j => chars(j).isUnicodeIdentifierPart)
+      chars(i) == '$' && {
+      val start = chars(i + 1) match {
+        case '{' => i + 2
+        case _ => i + 1
+      }
+      start == offset || {
+        chars(start).isUnicodeIdentifierStart &&
+        (start + 1).until(offset).forall(j => chars(j).isUnicodeIdentifierPart)
+      }
+    }
     if (isCandidate) {
+      val name = chars(i + 1) match {
+        case '{' => text.substring(i + 2, offset)
+        case _ => text.substring(i + 1, offset)
+      }
       Some(
         InterpolatorSplice(
           i,
-          needsBraces = text.charAt(offset) match {
-            case '"' => false
-            case ch => ch.isUnicodeIdentifierPart
-          }
+          name,
+          needsBraces = text.charAt(i + 1) == '{' ||
+            (text.charAt(offset) match {
+              case '"' => false // end of string literal
+              case ch => ch.isUnicodeIdentifierPart
+            })
         )
       )
     } else {
@@ -383,8 +396,6 @@ trait Completions { this: MetalsGlobal =>
         interpolator: InterpolatorSplice,
         text: String
     ) extends CompletionPosition {
-      val query =
-        pos.source.content.slice(interpolator.dollar + 1, pos.point).mkString
       val offset = if (lit.pos.focusEnd.line == pos.line) CURSOR.length else 0
       val litpos = lit.pos.withEnd(lit.pos.end - offset)
       val lrange = litpos.toLSP
@@ -408,13 +419,24 @@ trait Completions { this: MetalsGlobal =>
         out.append("\\$")
         val symbolName = sym.decodedName.trim
         val identifier = Identifier.backtickWrap(symbolName)
-        val needsBraces = interpolator.needsBraces || identifier.startsWith("`")
-        if (needsBraces) {
+        val symbolNeedsBraces =
+          interpolator.needsBraces ||
+            identifier.startsWith("`") ||
+            sym.isNonNullaryMethod
+        if (symbolNeedsBraces) {
           out.append('{')
         }
         out.append(identifier)
-        out.append("$0")
-        if (needsBraces) {
+        val snippet = sym.paramss match {
+          case Nil =>
+            "$0"
+          case Nil :: Nil =>
+            "()$0"
+          case _ =>
+            "($0)"
+        }
+        out.append(snippet)
+        if (symbolNeedsBraces) {
           out.append('}')
         }
         write(out, pos.point, lit.pos.end - CURSOR.length)
@@ -423,7 +445,8 @@ trait Completions { this: MetalsGlobal =>
       val filterText = text.substring(lit.pos.start, pos.point)
       override def contribute: List[Member] = {
         metalsScopeMembers(pos).collect {
-          case s: ScopeMember if CompletionFuzzy.matches(query, s.sym.name) =>
+          case s: ScopeMember
+              if CompletionFuzzy.matches(interpolator.name, s.sym.name) =>
             val edit = new l.TextEdit(lrange, newText(s.sym))
             new InterpolatorMember(filterText, edit, s.sym)
         }
