@@ -47,18 +47,19 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       name: String,
       original: String,
       expected: String,
-      filterText: String = ""
+      filterText: String = "",
+      assertSingleItem: Boolean = true
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val items = getItems(original)
-      if (items.length != 1) {
+      if (assertSingleItem && items.length != 1) {
         fail(
           s"expected single completion item, obtained ${items.length} items.\n${items}"
         )
       }
       val item = items.head
       val (code, _) = params(original)
-      val obtained = TextEdits.applyEdit(code, item.getTextEdit)
+      val obtained = TextEdits.applyEdits(code, item)
       assertNoDiff(obtained, expected)
       if (filterText.nonEmpty) {
         assertNoDiff(item.getFilterText, filterText, "Invalid filter text")

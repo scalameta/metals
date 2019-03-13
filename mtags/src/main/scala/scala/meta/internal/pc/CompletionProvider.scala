@@ -56,7 +56,7 @@ class CompletionProvider(
         val suffix = typeSuffix + templateSuffix
 
         r match {
-          case i: InterpolatorMember =>
+          case i: TextEditMember =>
             item.setFilterText(i.filterText)
           case _ =>
             if (ident.startsWith("`")) {
@@ -65,7 +65,7 @@ class CompletionProvider(
         }
 
         r match {
-          case i: InterpolatorMember =>
+          case i: TextEditMember =>
             item.setTextEdit(i.edit)
             item.setInsertTextFormat(InsertTextFormat.Snippet)
           case w: WorkspaceMember =>
