@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.lang.StringBuilder
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.semanticdb.Scala._
 import scala.collection.mutable
@@ -19,7 +20,7 @@ trait Completions { this: MetalsGlobal =>
   class NamedArgMember(sym: Symbol)
       extends ScopeMember(sym, NoType, true, EmptyTree)
 
-  class InterpolatorMember(
+  class TextEditMember(
       val filterText: String,
       val edit: l.TextEdit,
       sym: Symbol
@@ -275,22 +276,87 @@ trait Completions { this: MetalsGlobal =>
         CompletionPosition.Case(isTyped = false, c, m)
       case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
         CompletionPosition.Case(isTyped = true, c, m)
-      case (lit @ Literal(Constant(_: String))) :: _ =>
+      case (lit @ Literal(Constant(_: String))) :: head :: _ =>
         isPossibleInterpolatorSplice(pos, text) match {
           case Some(i) =>
-            CompletionPosition.Interpolator(lit, pos, i, text)
+            CompletionPosition.InterpolatorScope(lit, pos, i, text)
           case _ =>
-            CompletionPosition.None
+            isPossibleInterpolatorMember(lit, head, text, pos)
+              .getOrElse(CompletionPosition.None)
         }
       case _ =>
         inferCompletionPosition(pos, lastEnclosing)
     }
   }
-  case class InterpolatorSplice(dollar: Int, name: String, needsBraces: Boolean)
+  def interpolatorMemberArg(parent: Tree, lit: Literal): Option[Ident] =
+    parent match {
+      case Apply(
+          Select(
+            Apply(Ident(TermName("StringContext")), _ :: parts),
+            _
+          ),
+          args
+          ) =>
+        parts.zip(args).collectFirst {
+          case (`lit`, i: Ident) => i
+        }
+      case _ =>
+        None
+    }
+
+  def interpolatorMemberSelect(lit: Literal): Option[String] = lit match {
+    case Literal(Constant(s: String)) =>
+      if (s.startsWith(s".$CURSOR")) Some("")
+      else if (s.startsWith(".") &&
+        s.length > 2 &&
+        s.charAt(1).isUnicodeIdentifierStart) {
+        val cursor = s.indexOf(CURSOR)
+        if (cursor < 0) None
+        else {
+          val isValidIdentifier =
+            2.until(cursor).forall(i => s.charAt(i).isUnicodeIdentifierPart)
+          if (isValidIdentifier) {
+            Some(s.substring(1, cursor))
+          } else {
+            None
+          }
+        }
+      } else {
+        None
+      }
+    case _ =>
+      None
+  }
+
+  def isPossibleInterpolatorMember(
+      lit: Literal,
+      parent: Tree,
+      text: String,
+      cursor: Position
+  ): Option[CompletionPosition.InterpolatorType] = {
+    for {
+      query <- interpolatorMemberSelect(lit)
+      if text.charAt(lit.pos.point - 1) != '}'
+      arg <- interpolatorMemberArg(parent, lit)
+    } yield
+      CompletionPosition.InterpolatorType(
+        query,
+        arg,
+        lit,
+        cursor,
+        text
+      )
+  }
+
+  case class InterpolationSplice(
+      dollar: Int,
+      name: String,
+      needsBraces: Boolean
+  )
   def isPossibleInterpolatorSplice(
       pos: Position,
       text: String
-  ): Option[InterpolatorSplice] = {
+  ): Option[InterpolationSplice] = {
     val offset = pos.point
     val chars = pos.source.content
     var i = offset
@@ -314,7 +380,7 @@ trait Completions { this: MetalsGlobal =>
         case _ => text.substring(i + 1, offset)
       }
       Some(
-        InterpolatorSplice(
+        InterpolationSplice(
           i,
           name,
           needsBraces = text.charAt(i + 1) == '{' ||
@@ -372,6 +438,51 @@ trait Completions { this: MetalsGlobal =>
     }
 
     /**
+     * A completion to select type members inside string interpolators.
+     *
+     * Example: {{{
+     *   // before
+     *   s"Hello $name.len@@!"
+     *   // after
+     *   s"Hello ${name.length()$0}"
+     * }}}
+     * @param query the member query, "len" in the  example above.
+     * @param ident the identifier from where we select a member from, "name" above.
+     * @param literalPart the string literal part of the interpolator trailing
+     *                    the identifier including cursor instrumentation, "len_CURSOR_!"
+     *                    in the example above.
+     * @param cursor the cursor position where the completion is triggered, `@@` in the example above.
+     * @param text the text of the original source file without `_CURSOR_` instrumentation.
+     */
+    case class InterpolatorType(
+        query: String,
+        ident: Ident,
+        literalPart: Literal,
+        cursor: Position,
+        text: String
+    ) extends CompletionPosition {
+      val pos = ident.pos.withEnd(cursor.point).toLSP
+      def newText(sym: Symbol): String = {
+        new StringBuilder()
+          .append('{')
+          .append(text, ident.pos.start, ident.pos.end)
+          .append('.')
+          .append(Identifier.backtickWrap(sym.getterName.decoded))
+          .append(sym.snippetCursor)
+          .append('}')
+          .toString
+      }
+      val filter = text.substring(ident.pos.start - 1, cursor.point)
+      override def contribute: List[Member] = {
+        metalsTypeMembers(ident.pos).collect {
+          case m if CompletionFuzzy.matches(query, m.sym.name) =>
+            val edit = new l.TextEdit(pos, newText(m.sym))
+            new TextEditMember(filter, edit, m.sym)
+        }
+      }
+    }
+
+    /**
      * A completion to convert a string literal into a string literal, example `"Hello $na@@"`.
      *
      * When converting a string literal into an interpolator we need to ensure a few cases:
@@ -390,10 +501,10 @@ trait Completions { this: MetalsGlobal =>
      *                     curly braces.
      * @param text The text of the original source code without the instrumented `_CURSOR_`.
      */
-    case class Interpolator(
+    case class InterpolatorScope(
         lit: Literal,
         pos: Position,
-        interpolator: InterpolatorSplice,
+        interpolator: InterpolationSplice,
         text: String
     ) extends CompletionPosition {
       val offset = if (lit.pos.focusEnd.line == pos.line) CURSOR.length else 0
@@ -417,7 +528,7 @@ trait Completions { this: MetalsGlobal =>
         write(out, lit.pos.start, interpolator.dollar)
         // Escape `$` for
         out.append("\\$")
-        val symbolName = sym.decodedName.trim
+        val symbolName = sym.getterName.decoded
         val identifier = Identifier.backtickWrap(symbolName)
         val symbolNeedsBraces =
           interpolator.needsBraces ||
@@ -427,28 +538,20 @@ trait Completions { this: MetalsGlobal =>
           out.append('{')
         }
         out.append(identifier)
-        val snippet = sym.paramss match {
-          case Nil =>
-            "$0"
-          case Nil :: Nil =>
-            "()$0"
-          case _ =>
-            "($0)"
-        }
-        out.append(snippet)
+        out.append(sym.snippetCursor)
         if (symbolNeedsBraces) {
           out.append('}')
         }
         write(out, pos.point, lit.pos.end - CURSOR.length)
-        out.toString()
+        out.toString
       }
-      val filterText = text.substring(lit.pos.start, pos.point)
       override def contribute: List[Member] = {
         metalsScopeMembers(pos).collect {
           case s: ScopeMember
               if CompletionFuzzy.matches(interpolator.name, s.sym.name) =>
             val edit = new l.TextEdit(lrange, newText(s.sym))
-            new InterpolatorMember(filterText, edit, s.sym)
+            val filterText = text.substring(lit.pos.start, pos.point)
+            new TextEditMember(filterText, edit, s.sym)
         }
       }
     }

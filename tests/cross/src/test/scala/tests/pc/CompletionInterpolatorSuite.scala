@@ -281,4 +281,131 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
     topLines = Some(2)
   )
 
+  checkEdit(
+    "member",
+    """|object Main {
+       |  def member = 42
+       |  s"Hello $Main.membe@@!"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  def member = 42
+       |  s"Hello ${Main.member$0}!"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "member1",
+    """|object Main {
+       |  def method(arg: Int) = 42
+       |  s"Hello $Main.meth@@!"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  def method(arg: Int) = 42
+       |  s"Hello ${Main.method($0)}!"
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "member2",
+    """|object Main {
+       |  s"Hello $Main.toStr@@!"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  s"Hello ${Main.toString()$0}!"
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "member3",
+    """|object Main {
+       |  val a = ""
+       |  val b = 42
+       |  s"Hello $Main.@@!"
+       |}
+       |""".stripMargin,
+    """|a: String
+       |b: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  checkEdit(
+    "member-backtick",
+    """|object Main {
+       |  val `type` = ""
+       |  s"Hello $Main.type@@!"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val `type` = ""
+       |  s"Hello ${Main.`type`$0}!"
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "member-f",
+    """|object Main {
+       |  val a = ""
+       |  val b = 42
+       |  f"Hello $Main.@@!"
+       |}
+       |""".stripMargin,
+    """|a: String
+       |b: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "member-raw",
+    """|object Main {
+       |  val a = ""
+       |  val b = 42
+       |  raw"Hello $Main.@@!"
+       |}
+       |""".stripMargin,
+    """|a: String
+       |b: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "member-unknown",
+    """|object Main {
+       |  val a = ""
+       |  val b = 42
+       |  implicit class XtensionStringContext(c: StringContext) {
+       |    def unknown(args: Any*): String = ""
+       |  }
+       |  unknown"Hello $Main.@@!"
+       |}
+       |""".stripMargin,
+    """|a: String
+       |b: Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "member-multiline",
+    """|object Main {
+       |  val member = ""
+       |  s'''
+       |    Hello $Main.memb@@!
+       |  '''
+       |}
+       |""".stripMargin.triplequoted,
+    """|member: String
+       |""".stripMargin,
+    filterText = "$Main.memb"
+  )
+
 }

@@ -320,6 +320,14 @@ class MetalsGlobal(
     }
   }
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def snippetCursor: String = sym.paramss match {
+      case Nil =>
+        "$0"
+      case Nil :: Nil =>
+        "()$0"
+      case _ =>
+        "($0)"
+    }
     def isDefined: Boolean =
       sym != null &&
         sym != NoSymbol &&

@@ -1,6 +1,9 @@
 package example
 
 object User {
-  val myName = 42
-  def foo = s"${myName}"
+  val member = ""
+  val myName = "name"
+  def foo = s"""
+  ${User.member}
+  """
 }
