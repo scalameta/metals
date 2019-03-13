@@ -1,6 +1,7 @@
 package scala.meta.internal.mtags
 
 import scala.meta.internal.semanticdb.Scala._
+import scala.util.control.NonFatal
 
 /**
  * Represents a unique definitions such as a Scala `val`, `object`, `class`, or Java field/method.
@@ -72,6 +73,40 @@ object Symbol {
   def apply(sym: String): Symbol = {
     if (sym.isEmpty) Symbol.None
     else new Symbol(sym)
+  }
+
+  def validated(sym: String): Either[String, Symbol] = {
+    // NOTE(olafur): this validation method is hacky, we should write a proper
+    // parser that reports positioned error messages with actionable feedback
+    // on how to write correct SemanticDB symbols. This here is better than nothing
+    // at least.
+    def fail(message: String) = Left(
+      s"invalid SemanticDB symbol '$sym': ${message} (to learn the syntax " +
+        s"see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)"
+    )
+    def errorMessage(s: String): Option[String] = {
+      if (s.isNone) {
+        scala.None
+      } else {
+        s.desc match {
+          case Descriptor.None =>
+            Option(
+              s"missing descriptor, did you mean `$sym/` or `$sym.`?"
+            )
+          case _ =>
+            errorMessage(s.owner)
+        }
+      }
+    }
+    try {
+      errorMessage(sym) match {
+        case Some(error) => fail(error)
+        case scala.None => Right(Symbol(sym))
+      }
+    } catch {
+      case NonFatal(e) =>
+        fail(e.getMessage)
+    }
   }
 
   object Local {

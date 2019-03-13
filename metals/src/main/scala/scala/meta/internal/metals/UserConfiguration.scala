@@ -1,11 +1,14 @@
 package scala.meta.internal.metals
 
-import scala.meta.RelativePath
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-import com.google.gson.JsonElement
 import java.util.Properties
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.meta.RelativePath
+import scala.meta.internal.mtags.Symbol
+import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Try
 
 /**
@@ -17,20 +20,16 @@ case class UserConfiguration(
     javaHome: Option[String] = None,
     sbtScript: Option[String] = None,
     scalafmtConfigPath: RelativePath =
-      UserConfiguration.default.scalafmtConfigPath
+      UserConfiguration.default.scalafmtConfigPath,
+    symbolPrefixes: Map[String, String] =
+      UserConfiguration.default.symbolPrefixes
 )
 object UserConfiguration {
-  def CascadeCompile = "cascade"
-  def CurrentProjectCompile = "current-project"
-  def allCompile: List[String] =
-    List(CascadeCompile, CurrentProjectCompile)
-
-  val SyntaxOnCompile = "on-compile"
-  val SyntaxOnType = "on-type"
 
   object default {
-    def scalafmtConfigPath = RelativePath(".scalafmt.conf")
-    def compileOnSave = CurrentProjectCompile
+    def scalafmtConfigPath: RelativePath = RelativePath(".scalafmt.conf")
+    def symbolPrefixes: Map[String, String] =
+      PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap
   }
 
   def options: List[UserConfigurationOption] = List(
@@ -87,14 +86,32 @@ object UserConfiguration {
 
     def getStringKey(key: String): Option[String] =
       getKey(
-        key,
-        value =>
+        key, { value =>
           Try(value.getAsString)
             .fold(_ => {
               errors += s"json error: key '$key' should have value of type string but obtained $value"
               None
             }, Some(_))
             .filter(_.nonEmpty)
+        }
+      )
+    def getStringMap(key: String): Option[Map[String, String]] =
+      getKey(
+        key, { value =>
+          Try {
+            for {
+              entry <- value.getAsJsonObject.entrySet().asScala.iterator
+              if entry.getValue.isJsonPrimitive &&
+                entry.getValue.getAsJsonPrimitive.isString
+            } yield {
+              entry.getKey -> entry.getValue.getAsJsonPrimitive.getAsString
+            }
+          }.fold(_ => {
+              errors += s"json error: key '$key' should have be object with string values but obtained $value"
+              None
+            }, entries => Some(entries.toMap))
+            .filter(_.nonEmpty)
+        }
       )
 
     val javaHome =
@@ -105,13 +122,20 @@ object UserConfiguration {
         .getOrElse(default.scalafmtConfigPath)
     val sbtScript =
       getStringKey("sbt-script")
+    val symbolPrefixes =
+      getStringMap("symbol-prefixes")
+        .getOrElse(default.symbolPrefixes)
+    errors ++= symbolPrefixes.keys.flatMap { sym =>
+      Symbol.validated(sym).left.toOption
+    }
 
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
           javaHome,
           sbtScript,
-          scalafmtConfigPath
+          scalafmtConfigPath,
+          symbolPrefixes
         )
       )
     } else {

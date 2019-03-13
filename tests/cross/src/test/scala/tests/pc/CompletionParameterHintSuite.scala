@@ -1,6 +1,5 @@
 package tests.pc
 
-import java.util.Optional
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
 import tests.BaseCompletionSuite
@@ -8,7 +7,9 @@ import tests.BaseCompletionSuite
 object CompletionParameterHintSuite extends BaseCompletionSuite {
 
   override def config: PresentationCompilerConfig =
-    PresentationCompilerConfigImpl(Optional.of("hello"))
+    PresentationCompilerConfigImpl(
+      _parameterHintsCommand = Some("hello")
+    )
   checkItems(
     "command",
     """

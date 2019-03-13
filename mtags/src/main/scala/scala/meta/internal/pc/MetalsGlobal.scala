@@ -15,6 +15,7 @@ import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
+import scala.util.control.NonFatal
 
 class MetalsGlobal(
     settings: Settings,
@@ -25,7 +26,8 @@ class MetalsGlobal(
 ) extends Global(settings, reporter)
     with Completions
     with Signatures
-    with GlobalProxy { compiler =>
+    with GlobalProxy {
+  compiler =>
   hijackPresentationCompilerThread()
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
@@ -126,6 +128,20 @@ class MetalsGlobal(
   }
 
   /**
+   * A `Type` with custom pretty-printing representation, not used for typechecking.
+   *
+   * NOTE(olafur) Creating a new `Type` subclass is a hack, a better long-term solution would be
+   * to implement a custom pretty-printer for types so that we don't have to rely on `Type.toString`.
+   */
+  class PrettyType(
+      override val prefixString: String,
+      override val safeToString: String
+  ) extends Type {
+    def this(string: String) =
+      this(string + ".", string)
+  }
+
+  /**
    * Shortens fully qualified package prefixes to make type signatures easier to read.
    *
    * It becomes difficult to read method signatures when they have a large number of parameters
@@ -133,32 +149,63 @@ class MetalsGlobal(
    * making sure to not convert two different symbols into same short name.
    */
   def shortType(longType: Type, history: ShortenedNames): Type = {
-    def loop(tpe: Type, name: Option[Name]): Type = tpe match {
+    def loop(tpe: Type, name: Option[ShortName]): Type = tpe match {
       case TypeRef(pre, sym, args) =>
-        if (sym.isAliasType &&
-          (sym.isAbstract || sym.overrides.lastOption.exists(_.isAbstract))) {
-          // Always dealias abstract type aliases but leave concrete aliases alone.
-          // trait Generic { type Repr /* dealias */ }
-          // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
-          loop(tpe.dealias, name)
-        } else {
-          TypeRef(
-            loop(pre, Some(sym.name)),
-            sym,
-            args.map(arg => loop(arg, None))
-          )
+        val ownerSymbol = pre.termSymbol
+        history.config.get(ownerSymbol) match {
+          case Some(rename)
+              if history.tryShortenName(ShortName(rename, ownerSymbol)) =>
+            TypeRef(
+              new PrettyType(rename.toString),
+              sym,
+              args.map(arg => loop(arg, None))
+            )
+          case _ =>
+            history.renames.get(sym) match {
+              case Some(rename) if history.nameResolvesToSymbol(rename, sym) =>
+                TypeRef(
+                  NoPrefix,
+                  sym.newErrorSymbol(rename),
+                  args.map(arg => loop(arg, None))
+                )
+              case _ =>
+                if (sym.isAliasType &&
+                  (sym.isAbstract ||
+                  sym.overrides.lastOption.exists(_.isAbstract))) {
+                  // Always dealias abstract type aliases but leave concrete aliases alone.
+                  // trait Generic { type Repr /* dealias */ }
+                  // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
+                  loop(tpe.dealias, name)
+                } else if (history.owners(pre.typeSymbol)) {
+                  if (history.nameResolvesToSymbol(sym.name, sym)) {
+                    TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+                  } else {
+                    TypeRef(
+                      ThisType(pre.typeSymbol),
+                      sym,
+                      args.map(arg => loop(arg, None))
+                    )
+                  }
+                } else {
+                  TypeRef(
+                    loop(pre, Some(ShortName(sym))),
+                    sym,
+                    args.map(arg => loop(arg, None))
+                  )
+                }
+            }
         }
       case SingleType(pre, sym) =>
         if (sym.hasPackageFlag) {
-          if (history.tryShortenName(name, sym)) NoPrefix
+          if (history.tryShortenName(name)) NoPrefix
           else tpe
         } else {
-          SingleType(loop(pre, Some(sym.name)), sym)
+          SingleType(loop(pre, Some(ShortName(sym))), sym)
         }
       case ThisType(sym) =>
         if (sym.hasPackageFlag) {
-          if (history.tryShortenName(name, sym)) NoPrefix
-          else tpe
+          if (history.tryShortenName(name)) NoPrefix
+          else new PrettyType(history.fullname(sym))
         } else {
           TypeRef(NoPrefix, sym, Nil)
         }
@@ -183,8 +230,11 @@ class MetalsGlobal(
         TypeBounds(loop(lo, None), loop(hi, None))
       case MethodType(params, resultType) =>
         MethodType(params, loop(resultType, None))
+      case ErrorType =>
+        definitions.AnyTpe
       case t => t
     }
+
     longType match {
       case ThisType(_) => longType
       case _ => loop(longType, None)
@@ -204,12 +254,21 @@ class MetalsGlobal(
   def inverseSemanticdbSymbols(symbol: String): List[Symbol] = {
     import scala.meta.internal.semanticdb.Scala._
     if (!symbol.isGlobal) return Nil
+
     def loop(s: String): List[Symbol] = {
       if (s.isNone || s.isRootPackage) rootMirror.RootPackage :: Nil
       else if (s.isEmptyPackage) rootMirror.EmptyPackage :: Nil
-      else {
+      else if (s.isPackage) {
+        try {
+          rootMirror.staticPackage(s.stripSuffix("/").replace("/", ".")) :: Nil
+        } catch {
+          case NonFatal(_) =>
+            Nil
+        }
+      } else {
         val (desc, parent) = DescriptorParser(s)
         val parentSymbol = loop(parent)
+
         def tryMember(sym: Symbol): List[Symbol] =
           sym match {
             case NoSymbol =>
@@ -239,10 +298,19 @@ class MetalsGlobal(
                     .toList
               }
           }
+
         parentSymbol.flatMap(tryMember)
       }
     }
-    loop(symbol).filterNot(_ == NoSymbol)
+
+    try loop(symbol).filterNot(_ == NoSymbol)
+    catch {
+      case NonFatal(e) =>
+        logger.severe(
+          s"invalid SemanticDB symbol: $symbol\n${e.getMessage}"
+        )
+        Nil
+    }
   }
 
   def inverseSemanticdbSymbol(symbol: String): Symbol = {
@@ -304,12 +372,14 @@ class MetalsGlobal(
   // Needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
     name.toString
+
   implicit class XtensionPositionMetals(pos: Position) {
     private def toPos(offset: Int): l.Position = {
       val line = pos.source.offsetToLine(offset)
       val column = offset - pos.source.lineToOffset(line)
       new l.Position(line, column)
     }
+
     def toLSP: l.Range = {
       if (pos.isRange) {
         new l.Range(toPos(pos.start), toPos(pos.end))
@@ -319,7 +389,18 @@ class MetalsGlobal(
       }
     }
   }
+
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def isKindaTheSameAs(other: Symbol): Boolean = {
+      if (sym.hasPackageFlag) {
+        // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
+        other.fullName == sym.fullName
+      } else {
+        other.dealiased == sym.dealiased ||
+        other.companion == sym.dealiased
+      }
+    }
+
     def snippetCursor: String = sym.paramss match {
       case Nil =>
         "$0"
@@ -328,28 +409,35 @@ class MetalsGlobal(
       case _ =>
         "($0)"
     }
+
     def isDefined: Boolean =
       sym != null &&
         sym != NoSymbol &&
         !sym.isErroneous
+
     def isNonNullaryMethod: Boolean =
       sym.isMethod &&
         !sym.info.isInstanceOf[NullaryMethodType] &&
         !sym.paramss.isEmpty
+
     def isJavaModule: Boolean =
       sym.isJava && sym.isModule
+
     def hasTypeParams: Boolean =
       sym.typeParams.nonEmpty ||
         (sym.isJavaModule && sym.companionClass.typeParams.nonEmpty)
+
     def requiresTemplateCurlyBraces: Boolean = {
       sym.isTrait || sym.isInterface || sym.isAbstractClass
     }
+
     def isTypeSymbol: Boolean =
       sym.isType ||
         sym.isClass ||
         sym.isTrait ||
         sym.isInterface ||
         sym.isJavaModule
+
     def dealiased: Symbol =
       if (sym.isAliasType) sym.info.dealias.typeSymbol
       else sym

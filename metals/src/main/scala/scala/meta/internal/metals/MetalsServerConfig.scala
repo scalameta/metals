@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import scala.meta.internal.metals.Configs._
+import scala.meta.internal.pc.PresentationCompilerConfigImpl
 
 /**
  * Configuration parameters for the Metals language server.
@@ -59,7 +60,7 @@ final case class MetalsServerConfig(
     ),
     icons: Icons = Icons.default,
     statistics: StatisticsConfig = StatisticsConfig.default,
-    compilers: CompilersConfig = CompilersConfig()
+    compilers: PresentationCompilerConfigImpl = CompilersConfig()
 ) {
   override def toString: String =
     List[String](
@@ -71,6 +72,7 @@ final case class MetalsServerConfig(
       s"show-message=$showMessage",
       s"show-message-request=$showMessageRequest",
       s"no-initialized=$isNoInitialized",
+      s"compilers=$compilers",
       s"http=$isHttpEnabled",
       s"input-box=$isInputBoxEnabled",
       s"icons=$icons",
@@ -97,7 +99,7 @@ object MetalsServerConfig {
           executeClientCommand = ExecuteClientCommandConfig.on,
           globSyntax = GlobSyntaxConfig.vscode,
           compilers = CompilersConfig().copy(
-            parameterHint = Some("editor.action.triggerParameterHints")
+            _parameterHintsCommand = Some("editor.action.triggerParameterHints")
           )
         )
       case "vim-lsc" =>

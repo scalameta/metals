@@ -290,6 +290,7 @@ class MetalsLanguageServer(
       new Compilers(
         workspace,
         config,
+        () => userConfig,
         buildTargets,
         buffers,
         new MetalsSymbolSearch(symbolDocs, workspaceSymbols),
@@ -579,17 +580,22 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("workspace/didChangeConfiguration")
-  def didChangeConfiguration(params: DidChangeConfigurationParams): Unit = {
-    val json = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
-    UserConfiguration.fromJson(json) match {
-      case Left(errors) =>
-        errors.foreach { error =>
-          scribe.error(s"config error: $error")
-        }
-      case Right(value) =>
-        userConfig = value
+  def didChangeConfiguration(params: DidChangeConfigurationParams): Unit =
+    Future {
+      val json = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
+      UserConfiguration.fromJson(json) match {
+        case Left(errors) =>
+          errors.foreach { error =>
+            scribe.error(s"config error: $error")
+          }
+        case Right(value) =>
+          val old = userConfig
+          userConfig = value
+          if (userConfig.symbolPrefixes != old.symbolPrefixes) {
+            compilers.restartAll()
+          }
+      }
     }
-  }
 
   @JsonNotification("workspace/didChangeWatchedFiles")
   def didChangeWatchedFiles(

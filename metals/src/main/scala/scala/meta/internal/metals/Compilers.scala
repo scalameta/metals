@@ -31,6 +31,7 @@ import scala.tools.nsc.Properties
 class Compilers(
     workspace: AbsolutePath,
     config: MetalsServerConfig,
+    userConfig: () => UserConfiguration,
     buildTargets: BuildTargets,
     buffers: Buffers,
     search: SymbolSearch,
@@ -166,7 +167,9 @@ class Compilers(
     pc.withSearch(search)
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
-      .withConfiguration(config.compilers)
+      .withConfiguration(
+        config.compilers.copy(_symbolPrefixes = userConfig().symbolPrefixes)
+      )
       .newInstance(
         scalac.getTarget.getUri,
         classpath.asJava,

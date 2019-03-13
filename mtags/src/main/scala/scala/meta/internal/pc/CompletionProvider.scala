@@ -40,11 +40,17 @@ class CompletionProvider(
         val label = r match {
           case _: NamedArgMember =>
             s"${ident} = "
+          case o: OverrideDefMember =>
+            o.label
           case _ =>
             ident
         }
         val item = new CompletionItem(label)
-        val detail = detailString(r, history)
+        val detail = r match {
+          case o: OverrideDefMember => o.label
+          case _ => detailString(r, history)
+        }
+        item.setDetail(detail)
         val templateSuffix =
           if (completion.isNew &&
             r.sym.dealiased.requiresTemplateCurlyBraces) " {}"
@@ -58,6 +64,8 @@ class CompletionProvider(
         r match {
           case i: TextEditMember =>
             item.setFilterText(i.filterText)
+          case i: OverrideDefMember =>
+            item.setFilterText(i.filterText)
           case _ =>
             if (ident.startsWith("`")) {
               item.setFilterText(symbolName)
@@ -67,6 +75,10 @@ class CompletionProvider(
         r match {
           case i: TextEditMember =>
             item.setTextEdit(i.edit)
+            item.setInsertTextFormat(InsertTextFormat.Snippet)
+          case i: OverrideDefMember =>
+            item.setTextEdit(i.edit)
+            item.setAdditionalTextEdits(i.autoImports.asJava)
             item.setInsertTextFormat(InsertTextFormat.Snippet)
           case w: WorkspaceMember =>
             item.setInsertTextFormat(InsertTextFormat.Snippet)
@@ -94,10 +106,19 @@ class CompletionProvider(
               item.setInsertText(label + suffix)
             }
         }
+        val completionItemDataKind = r match {
+          case o: OverrideDefMember if o.sym.isJavaDefined =>
+            CompletionItemData.OverrideKind
+          case _ =>
+            null
+        }
 
-        item.setDetail(detail)
         item.setData(
-          CompletionItemData(semanticdbSymbol(r.sym), buildTargetIdentifier).toJson
+          CompletionItemData(
+            semanticdbSymbol(r.sym),
+            buildTargetIdentifier,
+            kind = completionItemDataKind
+          ).toJson
         )
         item.setKind(completionItemKind(r))
         item.setSortText(f"${idx}%05d")
@@ -144,36 +165,6 @@ class CompletionProvider(
       pos: Position,
       completion: CompletionPosition
   ): InterestingMembers = {
-    val isUninterestingSymbol = Set[Symbol](
-      // the methods == != ## are arguably "interesting" but they're here becuase
-      // - they're short so completing them doesn't save you keystrokes
-      // - they're available on everything so you
-      definitions.Any_==,
-      definitions.Any_!=,
-      definitions.Any_##,
-      definitions.Object_==,
-      definitions.Object_!=,
-      definitions.Object_##,
-      definitions.Object_eq,
-      definitions.Object_ne,
-      definitions.RepeatedParamClass,
-      definitions.ByNameParamClass,
-      definitions.JavaRepeatedParamClass,
-      definitions.Object_notify,
-      definitions.Object_notifyAll,
-      definitions.Object_notify,
-      definitions.getMemberMethod(definitions.ObjectClass, termNames.wait_),
-      definitions.getMemberMethod(
-        definitions.getMemberClass(
-          definitions.PredefModule,
-          TypeName("ArrowAssoc")
-        ),
-        TermName("→").encode
-      ),
-      // NOTE(olafur) IntelliJ does not complete the root package and without this filter
-      // then `_root_` would appear as a completion result in the code `foobar(_<COMPLETE>)`
-      rootMirror.RootPackage
-    ).flatMap(_.alternatives)
     val isSeen = mutable.Set.empty[String]
     val isIgnored = mutable.Set.empty[Symbol]
     val buf = List.newBuilder[Member]
@@ -241,11 +232,22 @@ class CompletionProvider(
       position: Position
   ): (InterestingMembers, CompletionPosition) = {
     def expected(e: Throwable) = {
-      logger.warning(e.getMessage)
-      (
-        InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
-        CompletionPosition.None
-      )
+      completionPosition(position, params.text()) match {
+        case CompletionPosition.None =>
+          logger.warning(e.getMessage)
+          (
+            InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
+            CompletionPosition.None
+          )
+        case completion =>
+          (
+            InterestingMembers(
+              completion.contribute,
+              SymbolSearch.Result.COMPLETE
+            ),
+            completion
+          )
+      }
     }
     try {
       val completions = completionsAt(position) match {

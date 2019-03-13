@@ -4,7 +4,11 @@
 // Original author: Li Haoyi
 package scala.meta.internal.pc
 
+import scala.tools.nsc.Global
+
 object Identifier {
+  def apply(name: Global#Name): String = backtickWrap(name)
+  def apply(name: String): String = backtickWrap(name)
   private val alphaKeywords = Set(
     "abstract", "case", "catch", "class", "def", "do", "else", "extends",
     "false", "finally", "final", "finally", "forSome", "for", "if", "implicit",
@@ -53,6 +57,9 @@ object Identifier {
     !valid
   }
 
+  def backtickWrap(name: Global#Name): String = {
+    backtickWrap(name.decoded.trim)
+  }
   def backtickWrap(s: String): String = {
     if (s.isEmpty) "``"
     else if (s(0) == '`' && s.last == '`') s
