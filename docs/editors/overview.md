@@ -43,9 +43,9 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
   <td align=center></td>
+  <td align=center>✅</td>
+  <td align=center>Status bar</td>
 </tr>
 <tr>
   <td>Vim</td>
