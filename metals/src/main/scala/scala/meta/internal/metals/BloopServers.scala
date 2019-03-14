@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import java.io.InputStream
 import java.io.PrintStream
-import java.net.InetSocketAddress
+import java.net.{InetAddress, InetSocketAddress}
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.file.Files
@@ -21,8 +21,9 @@ import scala.meta.io.AbsolutePath
 import scala.sys.process.Process
 import scala.sys.process.ProcessLogger
 import scala.util.Random
-import scala.util.Success
+import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
+import scala.util.Try
 
 /**
  * Establishes a connection with a bloop server.
@@ -62,10 +63,6 @@ final class BloopServers(
 
   private def defaultRetries: Int =
     if (config.bloopProtocol.isTcp) {
-      // NOTE(olafur) The TCP socket establishment is quite fragile on
-      // on Windows and retries seem to help. Maybe named pipes will help
-      // improve stability, or somebody who is more versed with I/O on Windows
-      // and can fix my crappy socket code.
       10
     } else {
       0
@@ -92,6 +89,7 @@ final class BloopServers(
   // Returns a random free port.
   private def randomPort(host: String): Int = {
     val s = new ServerSocket()
+    s.setReuseAddress(true)
     s.bind(new InetSocketAddress(host, 0))
     val port = s.getLocalPort
     s.close()
@@ -105,7 +103,7 @@ final class BloopServers(
 
   private def callBSP(): Future[(BloopSocket, Cancelable)] = {
     if (config.bloopProtocol.isNamedPipe) callNamedPipeBsp()
-    if (config.bloopProtocol.isTcp) callTcpBsp()
+    else if (config.bloopProtocol.isTcp) callTcpBsp()
     else callUnixBsp()
   }
 
@@ -120,12 +118,7 @@ final class BloopServers(
     callBloopMain(
       args,
       isOk = { () =>
-        Thread.sleep(1000)
-        true
-      },
-      onSuccess = { () =>
-        val connection = new Win32NamedPipeSocket(pipeName)
-        BloopSocket.NamedPipe(connection)
+        Try(BloopSocket.NamedPipe(new Win32NamedPipeSocket(pipeName)))
       }
     )
   }
@@ -144,16 +137,14 @@ final class BloopServers(
     callBloopMain(
       args,
       isOk = { () =>
-        // On macos/linux we can retry `new Socket(host, post)` until it stops throwing an exception
-        // but on windows this approach will spoil the socket somehow resulting in timeouts for
-        // the `build/initialize` handshake. Until Bloop `--protocol local` implements support
-        // for communicating a safe moment to establish the client socket we Thread.sleep blindly.
-        Thread.sleep(3000)
-        true
-      },
-      onSuccess = { () =>
-        val socket = new Socket(host, port)
-        BloopSocket.Tcp(socket)
+       Try {
+          val socket = new Socket()
+          socket.setReuseAddress(true)
+          socket.setTcpNoDelay(true)
+          val address = InetAddress.getByName(host)
+          socket.connect(new InetSocketAddress(address, port))
+          BloopSocket.Tcp(socket)
+        }
       }
     )
   }
@@ -169,33 +160,28 @@ final class BloopServers(
     callBloopMain(
       args,
       isOk = { () =>
-        Files.exists(socket.toNIO)
-      },
-      onSuccess = { () =>
-        BloopSocket.Unix(new UnixDomainSocket(socket.toFile.getCanonicalPath))
+        Try(BloopSocket.Unix(new UnixDomainSocket(socket.toFile.getCanonicalPath)))
       }
     )
   }
 
   private def callBloopMain(
       args: Array[String],
-      isOk: () => Boolean,
-      onSuccess: () => BloopSocket
+      isOk: () => Try[BloopSocket]
   ): Future[(BloopSocket, Cancelable)] = {
     val cancelable = callBloopMain(args)
-    waitUntilSuccess(isOk).map { confirmation =>
-      if (confirmation.isYes) {
-        (onSuccess(), cancelable)
-      } else {
+    waitUntilSuccess(isOk).map {
+      case Success(socket) =>
+        (socket, cancelable)
+      case Failure(_) =>
         cancelable.cancel()
         throw NoResponse
-      }
     }
   }
 
   private def callBloopMain(args: Array[String]): Cancelable = {
     val logger = MetalsLogger.newBspLogger(workspace)
-    if (bloopCommandLineIsInstalled(workspace)) {
+    if (bloopCommandLineIsInstalled(8212)) {
       scribe.info(s"running installed 'bloop ${args.mkString(" ")}'")
       val bspProcess = Process(
         Array("python", embedded.bloopPy.toString()) ++ args,
@@ -268,40 +254,43 @@ final class BloopServers(
     scribe.info(s"bloop exit: $exitCode")
   }
 
-  private def bloopCommandLineIsInstalled(workspace: AbsolutePath): Boolean = {
+  private def bloopCommandLineIsInstalled(port: Int): Boolean = {
+    var socket: Socket = null
     try {
-      val output = Process(
-        List("python", embedded.bloopPy.toString(), "help"),
-        cwd = workspace.toFile
-      ).!!(ProcessLogger(_ => ()))
-      // NOTE: our BSP integration requires bloop 1.1 or higher so we ensure
-      // users are on an older version.
-      val isOldVersion =
-        output.startsWith("bloop 1.0.0\n") ||
-          output.startsWith("bloop 0")
-      !isOldVersion
+      socket = new Socket()
+      socket.setReuseAddress(true)
+      socket.setTcpNoDelay(true)
+      socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress, port))
+      socket.isConnected
     } catch {
-      case NonFatal(_) =>
-        false
+      case NonFatal(_) => false
+    } finally {
+      if (socket != null)
+        try {
+          socket.close
+        } catch {
+          case NonFatal(_) =>
+        }
     }
   }
 
   case object NoResponse extends Exception("no response: bloop bsp")
 
-  private def waitUntilSuccess(isOk: () => Boolean): Future[Confirmation] = {
+  private def waitUntilSuccess(isOk: () => Try[BloopSocket]): Future[Try[BloopSocket]] = {
     val retryDelayMillis: Long = 200
     val maxRetries: Int = 40
-    val promise = Promise[Confirmation]()
+    val promise = Promise[Try[BloopSocket]]()
     var remainingRetries = maxRetries
     val tick = sh.scheduleAtFixedRate(
       new Runnable {
         override def run(): Unit = {
-          if (isOk()) {
-            promise.complete(Success(Confirmation.Yes))
-          } else if (remainingRetries < 0) {
-            promise.complete(Success(Confirmation.No))
-          } else {
-            remainingRetries -= 1
+          isOk() match {
+            case s@Success(_) =>
+              promise.complete(Success(s))
+            case f@Failure(ex) if (remainingRetries < 0) =>
+              promise.complete(Success(f))
+            case _ =>
+              remainingRetries -= 1
           }
         }
       },
@@ -313,7 +302,7 @@ final class BloopServers(
     promise.future.recover {
       case NonFatal(e) =>
         scribe.error("Unexpected error using backup", e)
-        Confirmation.No
+        Failure(e)
     }
   }
 }
