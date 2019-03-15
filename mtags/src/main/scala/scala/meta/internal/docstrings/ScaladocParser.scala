@@ -146,7 +146,7 @@ object ScaladocParser {
     mtch.group(1) match {
       case "code" => "`" + mtch.group(2) + "`"
       case "docRoot" => ""
-      case "link" => "`[[" + mtch.group(2) + "]]`"
+      case "link" => "[[" + mtch.group(2) + "]]"
       case "linkplain" => "[[" + mtch.group(2) + "]]"
       case "literal" => "`" + mtch.group(2) + "`"
       case "value" => "`" + mtch.group(2) + "`"
@@ -530,7 +530,7 @@ object ScaladocParser {
           }
         }
 
-        val com = createComment(
+        createComment(
           body0 = Some(parseWikiAtSymbol(docBody.toString, pos)),
           authors0 = allTags(SimpleTagKey("author")),
           see0 = allTags(SimpleTagKey("see")),
@@ -555,11 +555,6 @@ object ScaladocParser {
             allTags(SimpleTagKey("hideImplicitConversion")),
           shortDescription0 = allTags(SimpleTagKey("shortDescription"))
         )
-
-        //        for ((key, _) <- bodyTags)
-        //          reporter.warning(pos, s"Tag '@${key.name}' is not recognised")
-
-        com
       }
     }
 
@@ -1199,7 +1194,7 @@ object ScaladocParser {
       jump("[[")
       val parens = 2 + repeatJump('[')
       val stop = "]" * parens
-      val target = readUntil { check(stop) || isWhitespaceOrNewLine(char) }
+      val target = readUntil { check(stop) || char == '\n' }
       val title =
         if (!check(stop)) Some({
           jumpWhitespaceOrNewLine()
@@ -1212,8 +1207,7 @@ object ScaladocParser {
         case (SchemeUri(uri), optTitle) =>
           Link(uri, optTitle getOrElse Text(uri))
         case (qualName, optTitle) =>
-          Text(qualName)
-        //          makeEntityLink(optTitle getOrElse Text(target), pos, target, site)
+          Link(qualName, optTitle getOrElse Text(qualName))
       }
     }
 

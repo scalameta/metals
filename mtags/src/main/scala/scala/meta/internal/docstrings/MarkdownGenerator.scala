@@ -32,6 +32,9 @@ object MarkdownGenerator {
       .map(body => blocksToMarkdown(body.blocks))
       .mkString
   }
+
+  private val LinkPattern = """(\[[^\]]+\]\([^\)]+\))""".r
+
   def toMarkdown(c: Comment): String = {
     Seq(
       toMarkdown(c.body),
@@ -104,9 +107,14 @@ object MarkdownGenerator {
       else "",
       if (c.see.nonEmpty)
         "\n**See**\n" + c.see
-          .map(
-            body => "- [" ++ blocksToMarkdown(body.blocks).trim + "]()"
-          )
+          .map { body =>
+            // If we already have a link, just render it
+            // otherwise create a link from the given text
+            blocksToMarkdown(body.blocks).trim match {
+              case LinkPattern(text) => s"- $text"
+              case text => s"- [$text]($text)"
+            }
+          }
           .mkString("", "\n", "\n")
       else ""
     ).reduce(_ + _).trim
