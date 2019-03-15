@@ -137,7 +137,7 @@ final class BloopServers(
     callBloopMain(
       args,
       isOk = { () =>
-       Try {
+        Try {
           val socket = new Socket()
           socket.setReuseAddress(true)
           socket.setTcpNoDelay(true)
@@ -160,7 +160,9 @@ final class BloopServers(
     callBloopMain(
       args,
       isOk = { () =>
-        Try(BloopSocket.Unix(new UnixDomainSocket(socket.toFile.getCanonicalPath)))
+        Try(
+          BloopSocket.Unix(new UnixDomainSocket(socket.toFile.getCanonicalPath))
+        )
       }
     )
   }
@@ -260,7 +262,9 @@ final class BloopServers(
       socket = new Socket()
       socket.setReuseAddress(true)
       socket.setTcpNoDelay(true)
-      socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress, port))
+      socket.connect(
+        new InetSocketAddress(InetAddress.getLoopbackAddress, port)
+      )
       socket.isConnected
     } catch {
       case NonFatal(_) => false
@@ -276,7 +280,9 @@ final class BloopServers(
 
   case object NoResponse extends Exception("no response: bloop bsp")
 
-  private def waitUntilSuccess(isOk: () => Try[BloopSocket]): Future[Try[BloopSocket]] = {
+  private def waitUntilSuccess(
+      isOk: () => Try[BloopSocket]
+  ): Future[Try[BloopSocket]] = {
     val retryDelayMillis: Long = 200
     val maxRetries: Int = 40
     val promise = Promise[Try[BloopSocket]]()
@@ -285,9 +291,9 @@ final class BloopServers(
       new Runnable {
         override def run(): Unit = {
           isOk() match {
-            case s@Success(_) =>
+            case s @ Success(_) =>
               promise.complete(Success(s))
-            case f@Failure(ex) if (remainingRetries < 0) =>
+            case f @ Failure(ex) if (remainingRetries < 0) =>
               promise.complete(Success(f))
             case _ =>
               remainingRetries -= 1
