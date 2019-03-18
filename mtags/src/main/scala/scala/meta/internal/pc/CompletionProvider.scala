@@ -181,7 +181,8 @@ class CompletionProvider(
       if (!isSeen(id) &&
         !isUninterestingSymbol(head.sym) &&
         !isIgnoredWorkspace &&
-        completion.isCandidate(head)) {
+        completion.isCandidate(head) &&
+        !head.sym.name.containsName(CURSOR)) {
         isSeen += id
         buf += head
         isIgnored ++= dealiasedValForwarder(head.sym)
