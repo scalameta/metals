@@ -17,7 +17,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s"Hello \$myName$0, you are welcome"
        |}
        |""".stripMargin,
-    filterText = "\"Hello $myNam"
+    filterText = "\"Hello $myName"
   )
 
   checkEdit(
@@ -32,7 +32,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s"\$myName$0"
        |}
        |""".stripMargin,
-    filterText = "\"$myNam"
+    filterText = "\"$myName"
   )
 
   checkEdit(
@@ -47,7 +47,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s"\${myName$0}me"
        |}
        |""".stripMargin,
-    filterText = "\"$myNa"
+    filterText = "\"$myName"
   )
 
   checkEdit(
@@ -62,7 +62,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s'''\${myName$0}me'''
        |}
        |""".stripMargin.triplequoted,
-    filterText = "'''$myNa".triplequoted
+    filterText = "'''$myName".triplequoted
   )
 
   checkEdit(
@@ -81,7 +81,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |    |'''.stripMargin
        |}
        |""".stripMargin.triplequoted,
-    filterText = "'''\n    |$myNa".triplequoted
+    filterText = "'''\n    |$myName".triplequoted
   )
 
   checkEdit(
@@ -96,7 +96,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"\$myName$0 \$\$"
        |}
        |""".stripMargin.triplequoted,
-    filterText = "\"$myNam"
+    filterText = "\"$myName"
   )
 
   check(
@@ -405,7 +405,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin.triplequoted,
     """|member: String
        |""".stripMargin,
-    filterText = "$Main.memb"
+    filterText = "$Main.member"
   )
 
 }

@@ -67,7 +67,7 @@ object CompletionBacktickSuite extends BaseCompletionSuite {
        |  s"Hello \${`hello world`$0}"
        |}
        |""".stripMargin,
-    filterText = "\"Hello $hello"
+    filterText = "\"Hello $hello world"
   )
 
   check(

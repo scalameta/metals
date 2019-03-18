@@ -1,5 +1,8 @@
 package example
 
-// class Foo
-class Main {
+object Main {
+  val xxx = 42
+  val xsx = 42
+  val xsdx = 42
+//   s"Hello ${xsx}"
 }
