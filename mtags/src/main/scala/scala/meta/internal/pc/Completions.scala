@@ -510,12 +510,14 @@ trait Completions { this: MetalsGlobal =>
           .append('}')
           .toString
       }
-      val filter = text.substring(ident.pos.start - 1, cursor.point)
+      val filter =
+        text.substring(ident.pos.start - 1, cursor.point - query.length)
       override def contribute: List[Member] = {
         metalsTypeMembers(ident.pos).collect {
           case m if CompletionFuzzy.matches(query, m.sym.name) =>
             val edit = new l.TextEdit(pos, newText(m.sym))
-            new TextEditMember(filter, edit, m.sym)
+            val filterText = filter + m.sym.name.decoded
+            new TextEditMember(filterText, edit, m.sym)
         }
       }
     }
@@ -583,12 +585,14 @@ trait Completions { this: MetalsGlobal =>
         write(out, pos.point, lit.pos.end - CURSOR.length)
         out.toString
       }
+      val filter =
+        text.substring(lit.pos.start, pos.point - interpolator.name.length)
       override def contribute: List[Member] = {
         metalsScopeMembers(pos).collect {
           case s: ScopeMember
               if CompletionFuzzy.matches(interpolator.name, s.sym.name) =>
             val edit = new l.TextEdit(lrange, newText(s.sym))
-            val filterText = text.substring(lit.pos.start, pos.point)
+            val filterText = filter + s.sym.name.decoded
             new TextEditMember(filterText, edit, s.sym)
         }
       }
