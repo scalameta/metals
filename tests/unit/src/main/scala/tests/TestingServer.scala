@@ -13,6 +13,7 @@ import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import scala.meta.internal.metals.PositionSyntax._
 import org.eclipse.lsp4j.DidChangeConfigurationParams
@@ -332,10 +333,10 @@ final class TestingServer(
     }
   }
 
-  def completion(
+  def completionList(
       filename: String,
       query: String
-  ): Future[String] = {
+  ): Future[CompletionList] = {
     val path = toPath(filename)
     val input = path.toInputFromBuffers(buffers)
     val offset = query.indexOf("@@")
@@ -347,16 +348,28 @@ final class TestingServer(
     val pos = m.Position.Range(input, point, point)
     val params =
       new CompletionParams(path.toTextDocumentIdentifier, pos.toLSP.getStart)
-    for {
-      completion <- server.completion(params).asScala
-    } yield {
-      val items =
-        completion.getItems.asScala.map(server.completionItemResolveSync)
-      items.iterator
-        .map(
-          item => TestCompletions.getFullyQualifiedLabel(item) + item.getDetail
-        )
-        .mkString("\n")
+    server.completion(params).asScala
+  }
+
+  def formatCompletion(
+      completion: CompletionList,
+      includeDetail: Boolean
+  ): String = {
+    val items =
+      completion.getItems.asScala.map(server.completionItemResolveSync)
+    items.iterator
+      .map { item =>
+        val detail =
+          if (includeDetail) item.getDetail
+          else ""
+        TestCompletions.getFullyQualifiedLabel(item) + detail
+      }
+      .mkString("\n")
+  }
+
+  def completion(filename: String, query: String): Future[String] = {
+    completionList(filename, query).map { c =>
+      formatCompletion(c, includeDetail = true)
     }
   }
 

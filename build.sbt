@@ -9,6 +9,7 @@ inThisBuild(
     scalaVersion := V.scala212,
     crossScalaVersions := List(V.scala212),
     scalacOptions ++= List(
+      "-target:jvm-1.8",
       "-Yrangepos",
       "-deprecation",
       // -Xlint is unusable because of

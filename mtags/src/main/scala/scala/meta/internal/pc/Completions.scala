@@ -4,7 +4,9 @@ import java.lang.StringBuilder
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.semanticdb.Scala._
 import scala.collection.mutable
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.util.control.NonFatal
+import scala.collection.JavaConverters._
 
 /**
  * Utility methods for completions.
@@ -24,6 +26,14 @@ trait Completions { this: MetalsGlobal =>
       val filterText: String,
       val edit: l.TextEdit,
       sym: Symbol
+  ) extends ScopeMember(sym, NoType, true, EmptyTree)
+
+  class OverrideDefMember(
+      val label: String,
+      val edit: l.TextEdit,
+      val filterText: String,
+      sym: Symbol,
+      val autoImports: List[l.TextEdit]
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
 
   val packageSymbols = mutable.Map.empty[String, Option[Symbol]]
@@ -57,6 +67,15 @@ trait Completions { this: MetalsGlobal =>
       )
     case w: WorkspaceMember =>
       MemberOrdering.IsWorkspaceSymbol + w.sym.name.length()
+    case w: OverrideDefMember =>
+      var penalty = computeRelevancePenalty(
+        w.sym,
+        m.implicitlyAdded,
+        isInherited = false,
+        history
+      ) >>> 15
+      if (!w.sym.isAbstract) penalty |= MemberOrdering.IsNotAbstract
+      penalty
     case ScopeMember(sym, _, true, _) =>
       computeRelevancePenalty(
         sym,
@@ -106,8 +125,17 @@ trait Completions { this: MetalsGlobal =>
     // synthetic symbols are less relevant (e.g. `copy` on case classes)
     if (sym.isSynthetic) relevance |= IsSynthetic
     if (sym.isDeprecated) relevance |= IsDeprecated
+    if (isEvilMethod(sym.name)) relevance |= IsEvilMethod
     relevance
   }
+
+  lazy val isEvilMethod = Set[Name](
+    termNames.notifyAll_,
+    termNames.notify_,
+    termNames.wait_,
+    termNames.clone_,
+    termNames.finalize_
+  )
 
   def memberOrdering(
       history: ShortenedNames,
@@ -154,7 +182,8 @@ trait Completions { this: MetalsGlobal =>
   def infoString(sym: Symbol, info: Type, history: ShortenedNames): String =
     sym match {
       case m: MethodSymbol =>
-        new SignaturePrinter(m, history, info, includeDocs = false).defaultMethodSignature
+        new SignaturePrinter(m, history, info, includeDocs = false)
+          .defaultMethodSignature()
       case _ =>
         def fullName(s: Symbol): String = " " + s.owner.fullName
         dealiasedValForwarder(sym) match {
@@ -284,6 +313,14 @@ trait Completions { this: MetalsGlobal =>
             isPossibleInterpolatorMember(lit, head, text, pos)
               .getOrElse(CompletionPosition.None)
         }
+      case (_: Ident) ::
+            Select(Ident(TermName("scala")), TypeName("Unit")) ::
+            (defdef: DefDef) ::
+            (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
+        CompletionPosition.Override(defdef.name, t, pos, text, defdef)
+      case (valdef @ ValDef(_, name, _, Literal(Constant(null)))) ::
+            (t: Template) :: _ if name.endsWith(CURSOR) =>
+        CompletionPosition.Override(name, t, pos, text, valdef)
       case _ =>
         inferCompletionPosition(pos, lastEnclosing)
     }
@@ -338,7 +375,7 @@ trait Completions { this: MetalsGlobal =>
       query <- interpolatorMemberSelect(lit)
       if text.charAt(lit.pos.point - 1) != '}'
       arg <- interpolatorMemberArg(parent, lit)
-    } yield
+    } yield {
       CompletionPosition.InterpolatorType(
         query,
         arg,
@@ -346,6 +383,7 @@ trait Completions { this: MetalsGlobal =>
         cursor,
         text
       )
+    }
   }
 
   case class InterpolationSplice(
@@ -593,6 +631,207 @@ trait Completions { this: MetalsGlobal =>
           .toList
       }
     }
+
+    /**
+     * An `override def` completion to implement methods from the supertype.
+     *
+     * @param name the name of the method being completed including the `_CURSOR_` suffix.
+     * @param t the enclosing template for the class/object/trait we are implementing.
+     * @param pos the position of the completion request, points to `_CURSOR_`.
+     * @param text the text of the original source code without `_CURSOR_`.
+     * @param defn the method (either `val` or `def`) that we are implementing.
+     */
+    case class Override(
+        name: Name,
+        t: Template,
+        pos: Position,
+        text: String,
+        defn: ValOrDefDef
+    ) extends CompletionPosition {
+      val prefix = name.toString.stripSuffix(CURSOR)
+      val typed = typedTreeAt(t.pos)
+      val isDecl = typed.tpe.decls.toSet
+      val keyword = defn match {
+        case _: DefDef => "def"
+        case _ => "val"
+      }
+      val OVERRIDE = " override"
+      val start: Int = {
+        val fromDef = text.lastIndexOf(s" $keyword ", pos.point)
+        if (fromDef > 0 && text.endsWithAt(OVERRIDE, fromDef)) {
+          fromDef - OVERRIDE.length()
+        } else {
+          fromDef
+        }
+      }
+
+      def isExplicitOverride = text.startsWith(OVERRIDE, start)
+
+      val editStart = start + 1
+      val range = pos.withStart(editStart).withEnd(pos.point).toLSP
+      val lineStart = pos.source.lineToOffset(pos.line - 1)
+
+      // Infers the indentation at the completion position by counting the number of leading
+      // spaces in the line.
+      // For example:
+      // class Main {
+      //   def foo<COMPLETE> // inferred indent is 2 spaces.
+      // }
+      def inferIndent: Int = {
+        var i = 0
+        while (lineStart + i < text.length && text.charAt(lineStart + i) == ' ') {
+          i += 1
+        }
+        i
+      }
+
+      // Returns all the symbols of all transitive supertypes in the enclosing scope.
+      // For example:
+      // class Main extends Serializable {
+      //   class Inner {
+      //     // parentSymbols: List(Main, Serializable, Inner)
+      //   }
+      // }
+      def parentSymbols(context: Context): collection.Set[Symbol] = {
+        val isVisited = mutable.Set.empty[Symbol]
+        var cx = context
+
+        def expandParent(parent: Symbol): Unit = {
+          if (!isVisited(parent)) {
+            isVisited.add(parent)
+            parent.parentSymbols.foreach { parent =>
+              expandParent(parent)
+            }
+          }
+        }
+
+        while (cx != NoContext && !cx.owner.hasPackageFlag) {
+          expandParent(cx.owner)
+          cx = cx.outer
+        }
+        isVisited
+      }
+
+      // Returns the symbols that have been renamed in this scope.
+      // For example:
+      // import java.lang.{Boolean => JBoolean}
+      // class Main {
+      //   // renamedSymbols: Map(j.l.Boolean => JBoolean)
+      // }
+      def renamedSymbols(context: Context): collection.Map[Symbol, Name] = {
+        val result = mutable.Map.empty[Symbol, Name]
+        context.imports.foreach { imp =>
+          lazy val pre = imp.qual.tpe
+          imp.tree.selectors.foreach { sel =>
+            if (sel.rename != null) {
+              val member = pre.member(sel.name)
+              result(member) = sel.rename
+              member.companion match {
+                case NoSymbol =>
+                case companion =>
+                  result(companion) = sel.rename
+              }
+            }
+          }
+        }
+        result
+      }
+
+      // Returns true if this symbol is a method that we can override.
+      def isOverridableMethod(sym: Symbol): Boolean = {
+        sym.isMethod &&
+        !isDecl(sym) &&
+        !isNotOverridableName(sym.name) &&
+        sym.name.startsWith(prefix) &&
+        !sym.isPrivate &&
+        !sym.isSynthetic &&
+        !sym.isArtifact &&
+        !sym.isEffectivelyFinal &&
+        !sym.isVal &&
+        !sym.name.endsWith(CURSOR) &&
+        !sym.isConstructor &&
+        !sym.isMutable &&
+        !sym.isSetter && {
+          defn match {
+            case _: ValDef =>
+              // Is this a `override val`?
+              sym.isGetter && sym.isStable
+            case _ =>
+              // It's an `override def`.
+              !sym.isGetter
+          }
+        }
+      }
+      val context = doLocateContext(pos)
+      val re = renamedSymbols(context)
+      val owners = this.parentSymbols(context)
+      val filter = text.substring(editStart, pos.point - prefix.length)
+
+      def toOverrideMember(sym: Symbol): OverrideDefMember = {
+        val memberType = typed.tpe.memberType(sym)
+        val info =
+          if (memberType.isErroneous) sym.info
+          else {
+            memberType match {
+              case m: MethodType => m
+              case m: NullaryMethodType => m
+              case m @ PolyType(_, _: MethodType) => m
+              case _ => sym.info
+            }
+          }
+        val history = new ShortenedNames(
+          lookupSymbol = { name =>
+            context.lookupSymbol(name, _ => true)
+          },
+          config = renameConfig,
+          renames = re,
+          owners = owners
+        )
+        val printer = new SignaturePrinter(
+          sym,
+          history,
+          info,
+          includeDocs = false,
+          includeDefaultParam = false,
+          printLongType = false
+        )
+        val label = printer.defaultMethodSignature(Identifier(sym.name))
+        val prefix =
+          if (sym.isAbstract) s"${keyword} "
+          else s"override ${keyword} "
+        val overrideKeyword =
+          if (!sym.isAbstract || isExplicitOverride) "override "
+          // Don't insert `override` keyword if the supermethod is abstract and the
+          // user did not explicitly type "override". See:
+          // https://github.com/scalameta/metals/issues/565#issuecomment-472761240
+          else ""
+        val lzy =
+          if (sym.isLazy) "lazy "
+          else ""
+        val edit = new l.TextEdit(
+          range,
+          s"${overrideKeyword}${lzy}${keyword} $label = $${0:???}"
+        )
+        new OverrideDefMember(
+          prefix + label,
+          edit,
+          filter + sym.name.decoded,
+          sym,
+          history.autoImports(pos, context, lineStart, inferIndent)
+        )
+      }
+
+      override def contribute: List[Member] = {
+        if (start < 0) Nil
+        else {
+          typed.tpe.members.iterator
+            .filter(isOverridableMethod)
+            .map(toOverrideMember)
+            .toList
+        }
+      }
+    }
+
     case class Case(
         isTyped: Boolean,
         c: CaseDef,
@@ -677,4 +916,65 @@ trait Completions { this: MetalsGlobal =>
       }
     }
   }
+
+  lazy val isNotOverridableName: Set[Name] =
+    Iterator(
+      definitions.syntheticCoreMethods.iterator.map(_.name),
+      Iterator(
+        termNames.notify_,
+        termNames.notifyAll_,
+        termNames.wait_,
+        termNames.MIXIN_CONSTRUCTOR,
+        termNames.CONSTRUCTOR
+      )
+    ).flatten.toSet -- Set[Name](
+      termNames.hashCode_,
+      termNames.toString_,
+      termNames.equals_
+    )
+
+  lazy val isUninterestingSymbol: Set[Symbol] = Set[Symbol](
+    // the methods == != ## are arguably "interesting" but they're here becuase
+    // - they're short so completing them doesn't save you keystrokes
+    // - they're available on everything so you
+    definitions.Any_==,
+    definitions.Any_!=,
+    definitions.Any_##,
+    definitions.Object_==,
+    definitions.Object_!=,
+    definitions.Object_##,
+    definitions.Object_eq,
+    definitions.Object_ne,
+    definitions.RepeatedParamClass,
+    definitions.ByNameParamClass,
+    definitions.JavaRepeatedParamClass,
+    definitions.Object_notify,
+    definitions.Object_notifyAll,
+    definitions.Object_notify,
+    definitions.getMemberMethod(definitions.ObjectClass, termNames.wait_),
+    definitions.getMemberMethod(
+      definitions.getMemberClass(
+        definitions.PredefModule,
+        TypeName("ArrowAssoc")
+      ),
+      TermName("→").encode
+    ),
+    // NOTE(olafur) IntelliJ does not complete the root package and without this filter
+    // then `_root_` would appear as a completion result in the code `foobar(_<COMPLETE>)`
+    rootMirror.RootPackage
+  ).flatMap(_.alternatives)
+
+  lazy val renameConfig: collection.Map[Symbol, Name] =
+    metalsConfig
+      .symbolPrefixes()
+      .asScala
+      .map {
+        case (sym, name) =>
+          val nme =
+            if (name.endsWith("#")) TypeName(name.stripSuffix("#"))
+            else if (name.endsWith(".")) TermName(name.stripSuffix("."))
+            else TermName(name)
+          inverseSemanticdbSymbol(sym) -> nme
+      }
+      .filterKeys(_ != NoSymbol)
 }

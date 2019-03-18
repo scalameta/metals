@@ -24,6 +24,7 @@ project/plugins/project/
 .ensime
 
 .metals/
+metals.sbt
 
 .vscode/
 

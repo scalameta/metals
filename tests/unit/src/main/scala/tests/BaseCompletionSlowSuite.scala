@@ -1,14 +1,13 @@
 package tests
 
+import org.eclipse.lsp4j.CompletionList
 import scala.concurrent.Future
 
 abstract class BaseCompletionSlowSuite(name: String)
     extends BaseSlowSuite(name) {
 
-  def assertCompletion(
-      query: String,
-      expected: String,
-      project: Char = 'a'
+  def withCompletion(query: String, project: Char = 'a')(
+      fn: CompletionList => Unit
   )(implicit file: sourcecode.File, line: sourcecode.Line): Future[Unit] = {
     val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
     val text = server
@@ -16,8 +15,20 @@ abstract class BaseCompletionSlowSuite(name: String)
       .replaceAllLiterally("// @@", query.replaceAllLiterally("@@", ""))
     for {
       _ <- server.didChange(filename)(_ => text)
-      completion <- server.completion(filename, query)
+      completion <- server.completionList(filename, query)
     } yield {
+      fn(completion)
+    }
+  }
+
+  def assertCompletion(
+      query: String,
+      expected: String,
+      project: Char = 'a',
+      includeDetail: Boolean = true
+  )(implicit file: sourcecode.File, line: sourcecode.Line): Future[Unit] = {
+    withCompletion(query, project) { list =>
+      val completion = server.formatCompletion(list, includeDetail)
       val obtained =
         if (isWindows) {
           // HACK(olafur) we don't have access to the JDK sources on Appveyor

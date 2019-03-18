@@ -133,4 +133,18 @@ object UserConfigurationSuite extends BaseSuite {
     """.stripMargin
   )
 
+  checkError(
+    "symbol-prefixes",
+    """
+      |{
+      | "symbol-prefixes": {
+      |   "a.b": "c"
+      | }
+      |}
+    """.stripMargin,
+    "invalid SemanticDB symbol 'a.b': missing descriptor, " +
+      "did you mean `a.b/` or `a.b.`? " +
+      "(to learn the syntax see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)"
+  )
+
 }

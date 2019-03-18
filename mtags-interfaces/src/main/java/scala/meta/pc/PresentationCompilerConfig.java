@@ -1,5 +1,7 @@
 package scala.meta.pc;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -14,5 +16,14 @@ public interface PresentationCompilerConfig {
      * for details.
      */
     Optional<String> parameterHintsCommand();
+
+    Map<String, String> symbolPrefixes();
+
+    static Map<String, String> defaultSymbolPrefixes() {
+        HashMap<String, String> map = new HashMap<>();
+        map.put("scala/collection/mutable/", "mutable.");
+        map.put("java/util/", "ju.");
+        return map;
+    }
 
 }

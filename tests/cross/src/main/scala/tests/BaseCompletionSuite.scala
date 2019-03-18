@@ -43,6 +43,22 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     }
   }
 
+  def checkEditLine(
+      name: String,
+      template: String,
+      original: String,
+      expected: String,
+      filterText: String = "",
+      assertSingleItem: Boolean = true
+  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+    checkEdit(
+      name,
+      template.replaceAllLiterally("___", original),
+      template.replaceAllLiterally("___", expected),
+      filterText,
+      assertSingleItem
+    )
+  }
   def checkEdit(
       name: String,
       original: String,
@@ -92,7 +108,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       stableOrder: Boolean = true,
       postAssert: () => Unit = () => (),
       topLines: Option[Int] = None,
-      filterText: String = ""
+      filterText: String = "",
+      includeDetail: Boolean = true
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val out = new StringBuilder()
@@ -116,7 +133,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         }
         out
           .append(label)
-          .append(item.getDetail)
+          .append(if (includeDetail) item.getDetail else "")
           .append(commitCharacter)
           .append("\n")
       }

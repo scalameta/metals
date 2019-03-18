@@ -180,6 +180,11 @@ trait MtagsEnrichments {
       }
   }
   implicit class XtensionStringDoc(doc: String) {
+    def endsWithAt(value: String, offset: Int): Boolean = {
+      val start = offset - value.length
+      start >= 0 &&
+      doc.startsWith(value, start)
+    }
     def toMarkupContent: l.MarkupContent = {
       val content = new MarkupContent
       content.setKind("markdown")

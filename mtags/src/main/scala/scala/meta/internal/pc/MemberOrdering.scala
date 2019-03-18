@@ -12,4 +12,8 @@ object MemberOrdering {
   val IsNotPublic = 1 << 22
   val IsSynthetic = 1 << 21
   val IsDeprecated = 1 << 20
+  val IsEvilMethod = 1 << 19 // example: clone() and finalize()
+
+  // OverrideDefMember
+  val IsNotAbstract = 1 << 30
 }
