@@ -200,7 +200,7 @@ class MetalsLanguageServer(
       config,
       statusBar,
       time,
-      id => compilers.didCompileSuccessfully(id)
+      report => compilers.didCompile(report)
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -580,7 +580,9 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("workspace/didChangeConfiguration")
-  def didChangeConfiguration(params: DidChangeConfigurationParams): Unit =
+  def didChangeConfiguration(
+      params: DidChangeConfigurationParams
+  ): CompletableFuture[Unit] =
     Future {
       val json = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
       UserConfiguration.fromJson(json) match {
@@ -595,7 +597,7 @@ class MetalsLanguageServer(
             compilers.restartAll()
           }
       }
-    }
+    }.asJava
 
   @JsonNotification("workspace/didChangeWatchedFiles")
   def didChangeWatchedFiles(

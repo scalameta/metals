@@ -53,6 +53,12 @@ case class ScalaPresentationCompiler(
     access.shutdown()
   }
 
+  override def restart(): Unit = {
+    // NOTE(olafur) turns out that `shutdown()` has the same effect as `restart()`
+    // implementation-wise.
+    shutdown()
+  }
+
   override def newInstance(
       buildTargetIdentifier: String,
       classpath: util.List[Path],

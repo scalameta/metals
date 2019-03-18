@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.util.Collections
@@ -61,8 +62,20 @@ class Compilers(
       s"restarted ${count} presentation compiler${LogMessages.plural(count)}"
     )
   }
-  def didCompileSuccessfully(id: BuildTargetIdentifier): Unit = {
-    cache.remove(id).foreach(_.shutdown())
+
+  def didCompile(report: CompileReport): Unit = {
+    if (report.getErrors > 0) {
+      cache.get(report.getTarget).foreach(_.restart())
+    } else {
+      // Restart PC for all build targets that depend on this target since the classfiles
+      // may have changed.
+      for {
+        target <- buildTargets.inverseDependencies(report.getTarget)
+        compiler <- cache.get(target)
+      } {
+        compiler.restart()
+      }
+    }
   }
 
   def completionItemResolve(

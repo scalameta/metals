@@ -58,8 +58,15 @@ public abstract class PresentationCompiler {
      *
      * It is necessary to call this method in order to for example stop the presentation compiler thread.
      * If this method is not called, then the JVM may not shut exit cleanly.
+     *
+     * This presentation compiler instance should no longer be used after calling this method.
      */
     public abstract void shutdown();
+
+    /**
+     * Clean the symbol table and other mutable state in the compiler.
+     */
+    public abstract void restart();
 
     /**
      * Provide a SymbolSearch to extract docstrings, java parameter names and Scala default parameter values.
