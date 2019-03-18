@@ -326,11 +326,11 @@ final class TestingServer(
   }
 
   def didChangeConfiguration(config: String): Future[Unit] = {
-    Future {
-      val wrapped = UserConfiguration.toWrappedJson(config)
-      val json = new JsonParser().parse(wrapped)
-      server.didChangeConfiguration(new DidChangeConfigurationParams(json))
-    }
+    val wrapped = UserConfiguration.toWrappedJson(config)
+    val json = new JsonParser().parse(wrapped)
+    server
+      .didChangeConfiguration(new DidChangeConfigurationParams(json))
+      .asScala
   }
 
   def completionList(
