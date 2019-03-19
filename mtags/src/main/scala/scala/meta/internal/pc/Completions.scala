@@ -641,7 +641,7 @@ trait Completions { this: MetalsGlobal =>
       def caseTupleMember: List[Member] = {
         for {
           param <- params.headOption.toList
-          tuple <- definitions.functionOrSamArgTypes(param.info) match {
+          tuple <- metalsFunctionArgTypes(param.info) match {
             case tuple :: Nil if definitions.isTupleType(tuple) =>
               tuple :: Nil
             case els =>

@@ -1,5 +1,12 @@
 package example
 
+trait Samda {
+  def foobar(a: Int, b: Double): String
+}
+
 object Main {
-  // List(1 -> 2).map()
+  def foobar(fn: Samda): Unit = ()
+  foobar {
+    case (a, b) => ""
+  }
 }

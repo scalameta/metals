@@ -26,6 +26,7 @@ class MetalsGlobal(
 ) extends Global(settings, reporter)
     with Completions
     with Signatures
+    with Compat
     with GlobalProxy {
   compiler =>
   hijackPresentationCompilerThread()
