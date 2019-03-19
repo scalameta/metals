@@ -612,17 +612,9 @@ trait Completions { this: MetalsGlobal =>
       val isBrace = text.charAt(openDelim) == '{'
       val method = typedTreeAt(apply.fun.pos)
       val methodSym = method.symbol
-      lazy val params: List[Symbol] = {
-        def curriedParamList(t: Tree): Int = t match {
-          case Apply(fun, _) => 1 + curriedParamList(fun)
-          case _ => 0
-        }
-        val index = curriedParamList(apply.fun)
-        method.tpe.paramss.lift(index) match {
-          case Some(value) => value
-          case scala.None => methodSym.paramss.flatten
-        }
-      }
+      lazy val params: List[Symbol] =
+        method.tpe.paramss.headOption
+          .getOrElse(methodSym.paramss.flatten)
       lazy val isNamed = apply.args.iterator
         .filterNot(_ == ident)
         .zip(params.iterator)
@@ -652,8 +644,9 @@ trait Completions { this: MetalsGlobal =>
           tuple <- definitions.functionOrSamArgTypes(param.info) match {
             case tuple :: Nil if definitions.isTupleType(tuple) =>
               tuple :: Nil
-            case _ =>
-              Nil
+            case els =>
+              if (els.lengthCompare(1) > 0) definitions.tupleType(els) :: Nil
+              else Nil
           }
         } yield {
           val edit = ident.pos.withEnd(pos.point).toLSP

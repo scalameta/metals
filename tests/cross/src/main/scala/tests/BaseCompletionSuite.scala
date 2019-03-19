@@ -68,6 +68,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val items = getItems(original)
+      if (items.isEmpty) fail("obtained empty completions!")
       if (assertSingleItem && items.length != 1) {
         fail(
           s"expected single completion item, obtained ${items.length} items.\n${items}"

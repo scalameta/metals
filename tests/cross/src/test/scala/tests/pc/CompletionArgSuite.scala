@@ -229,4 +229,16 @@ object CompletionArgSuite extends BaseCompletionSuite {
     "f = : ((Int, Int)) => B",
     topLines = Some(1)
   )
+
+  checkEditLine(
+    "brace-function2",
+    """
+      |object Main {
+      |  ___
+      |}
+      |""".stripMargin,
+    "List(1).foldLeft(0) { cas@@ }",
+    "List(1).foldLeft(0) { case ($0) => }",
+    assertSingleItem = false
+  )
 }
