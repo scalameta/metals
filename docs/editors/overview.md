@@ -67,7 +67,7 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>Flat</td>
-  <td align=center></td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center></td>
 </tr>
