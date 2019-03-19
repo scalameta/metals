@@ -18,11 +18,12 @@ object TestCompletions {
     if (item.getInsertText == null) {
       item.getLabel
     } else {
-      val fullyQualifiedPrefix = item.getInsertText.substring(
-        0,
-        item.getInsertText.indexOf(item.getLabel)
-      )
-      fullyQualifiedPrefix + item.getLabel
+      val idx = item.getInsertText.indexOf(item.getLabel)
+      if (idx < 0) item.getLabel
+      else {
+        val fullyQualifiedPrefix = item.getInsertText.substring(0, idx)
+        fullyQualifiedPrefix + item.getLabel
+      }
     }
   }
 }

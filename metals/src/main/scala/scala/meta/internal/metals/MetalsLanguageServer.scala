@@ -1025,6 +1025,7 @@ class MetalsLanguageServer(
       build: BuildServerConnection
   ): Future[BuildChange] = {
     cancelables.add(build)
+    compilers.cancel()
     buildServer = Some(build)
     val importedBuild = timed("imported build") {
       for {

@@ -119,6 +119,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |           ^^^^^^^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin
   )
+
   check(
     "nested",
     """

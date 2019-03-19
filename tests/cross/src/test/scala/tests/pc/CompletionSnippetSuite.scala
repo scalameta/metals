@@ -86,7 +86,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |  def foo(param: ArrayDeque@@)
         |}
         |""".stripMargin,
-    """|java.util.ArrayDeque[$0]
+    """|ju.ArrayDeque[$0]
        |""".stripMargin
   )
 
@@ -96,7 +96,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |  new SimpleFileVisitor@@
         |}
         |""".stripMargin,
-    """|java.nio.file.SimpleFileVisitor[$0]
+    """|SimpleFileVisitor[$0]
        |""".stripMargin
   )
 

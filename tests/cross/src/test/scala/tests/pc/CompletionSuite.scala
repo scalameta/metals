@@ -14,16 +14,16 @@ object CompletionSuite extends BaseCompletionSuite {
       |  Lis@@
       |}""".stripMargin,
     """|List scala.collection.immutable
-       |java.awt.List java.awt
-       |java.util.List java.util
-       |scala.collection.immutable.ListMap scala.collection.immutable
-       |scala.collection.mutable.ListMap scala.collection.mutable
-       |scala.collection.immutable.ListSet scala.collection.immutable
-       |java.awt.peer.ListPeer java.awt.peer
-       |org.w3c.dom.NameList org.w3c.dom
-       |org.w3c.dom.NodeList org.w3c.dom
-       |java.util.ArrayList java.util
-       |org.w3c.dom.stylesheets.MediaList org.w3c.dom.stylesheets
+       |List - java.awt
+       |List - java.util
+       |ListMap - scala.collection.immutable
+       |ListMap - scala.collection.mutable
+       |ListSet - scala.collection.immutable
+       |ListPeer - java.awt.peer
+       |NameList - org.w3c.dom
+       |NodeList - org.w3c.dom
+       |ArrayList - java.util
+       |MediaList - org.w3c.dom.stylesheets
        |""".stripMargin
   )
 
@@ -211,14 +211,14 @@ object CompletionSuite extends BaseCompletionSuite {
       |  new PBuil@@
       |}""".stripMargin,
     """|ProcessBuilder java.lang
-       |scala.sys.process.ProcessBuilder scala.sys.process
-       |java.security.cert.CertPathBuilder java.security.cert
-       |java.security.cert.CertPathBuilderSpi java.security.cert
-       |scala.sys.process.ProcessBuilderImpl scala.sys.process
-       |java.security.cert.CertPathBuilderResult java.security.cert
-       |java.security.cert.PKIXBuilderParameters java.security.cert
-       |java.security.cert.CertPathBuilderException java.security.cert
-       |java.security.cert.PKIXCertPathBuilderResult java.security.cert
+       |ProcessBuilder - scala.sys.process
+       |CertPathBuilder - java.security.cert
+       |CertPathBuilderSpi - java.security.cert
+       |ProcessBuilderImpl - scala.sys.process
+       |CertPathBuilderResult - java.security.cert
+       |PKIXBuilderParameters - java.security.cert
+       |CertPathBuilderException - java.security.cert
+       |PKIXCertPathBuilderResult - java.security.cert
        |""".stripMargin
   )
 
@@ -230,11 +230,11 @@ object CompletionSuite extends BaseCompletionSuite {
       |  TrieMap@@
       |}""".stripMargin,
     """|TrieMap scala.collection.concurrent
-       |scala.collection.parallel.mutable.ParTrieMap scala.collection.parallel.mutable
-       |scala.collection.immutable.HashMap.HashTrieMap scala.collection.immutable.HashMap
-       |scala.collection.parallel.mutable.ParTrieMapCombiner scala.collection.parallel.mutable
-       |scala.collection.parallel.mutable.ParTrieMapSplitter scala.collection.parallel.mutable
-       |scala.collection.concurrent.TrieMapSerializationEnd scala.collection.concurrent
+       |ParTrieMap - scala.collection.parallel.mutable
+       |HashTrieMap - scala.collection.immutable.HashMap
+       |ParTrieMapCombiner - scala.collection.parallel.mutable
+       |ParTrieMapSplitter - scala.collection.parallel.mutable
+       |TrieMapSerializationEnd - scala.collection.concurrent
        |""".stripMargin
   )
 
@@ -252,15 +252,15 @@ object CompletionSuite extends BaseCompletionSuite {
     """
       |import JavaCon@@
       |""".stripMargin,
-    """|scala.collection.JavaConverters scala.collection
-       |scala.collection.JavaConversions scala.collection
-       |scala.concurrent.JavaConversions scala.concurrent
-       |scala.collection.convert.AsJavaConverters scala.collection.convert
+    """|JavaConverters - scala.collection
+       |JavaConversions - scala.collection
+       |JavaConversions - scala.concurrent
+       |AsJavaConverters - scala.collection.convert
        |""".stripMargin,
     compat = Map(
-      "2.11" -> """|scala.collection.JavaConverters scala.collection
-                   |scala.collection.JavaConversions scala.collection
-                   |scala.concurrent.JavaConversions scala.concurrent
+      "2.11" -> """|JavaConverters - scala.collection
+                   |JavaConversions - scala.collection
+                   |JavaConversions - scala.concurrent
                    |""".stripMargin
     )
   )
@@ -270,7 +270,7 @@ object CompletionSuite extends BaseCompletionSuite {
     """
       |import Paths@@
       |""".stripMargin,
-    """|java.nio.file.Paths java.nio.file
+    """|Paths - java.nio.file
        |""".stripMargin
   )
 
@@ -279,7 +279,7 @@ object CompletionSuite extends BaseCompletionSuite {
     """
       |import Catch@@
       |""".stripMargin,
-    """|scala.util.control.Exception.Catch scala.util.control.Exception
+    """|Catch - scala.util.control.Exception
        |""".stripMargin
   )
 
@@ -288,17 +288,17 @@ object CompletionSuite extends BaseCompletionSuite {
     """
       |import Path@@
       |""".stripMargin,
-    """|java.nio.file.Path java.nio.file
-       |java.nio.file.Paths java.nio.file
-       |java.awt.geom.Path2D java.awt.geom
-       |java.security.cert.CertPath java.security.cert
-       |java.awt.font.LayoutPath java.awt.font
-       |java.awt.geom.GeneralPath java.awt.geom
-       |java.nio.file.PathMatcher java.nio.file
-       |org.w3c.dom.xpath.XPathResult org.w3c.dom.xpath
-       |java.awt.geom.PathIterator java.awt.geom
-       |org.w3c.dom.xpath.XPathEvaluator org.w3c.dom.xpath
-       |org.w3c.dom.xpath.XPathException org.w3c.dom.xpath
+    """|Path - java.nio.file
+       |Paths - java.nio.file
+       |Path2D - java.awt.geom
+       |CertPath - java.security.cert
+       |LayoutPath - java.awt.font
+       |GeneralPath - java.awt.geom
+       |PathMatcher - java.nio.file
+       |XPathResult - org.w3c.dom.xpath
+       |PathIterator - java.awt.geom
+       |XPathEvaluator - org.w3c.dom.xpath
+       |XPathException - org.w3c.dom.xpath
        |""".stripMargin
   )
 
@@ -308,9 +308,9 @@ object CompletionSuite extends BaseCompletionSuite {
       |package a
       |import MetaData@@
       |""".stripMargin,
-    """|java.sql.DatabaseMetaData java.sql
-       |java.sql.ParameterMetaData java.sql
-       |java.sql.ResultSetMetaData java.sql
+    """|DatabaseMetaData - java.sql
+       |ParameterMetaData - java.sql
+       |ResultSetMetaData - java.sql
        |""".stripMargin
   )
 
@@ -325,7 +325,7 @@ object CompletionSuite extends BaseCompletionSuite {
       |  class Inner
       |}
       |""".stripMargin,
-    """|a.Outer.Inner a.Outer
+    """|Inner - a.Outer
        |""".stripMargin
   )
 
@@ -359,7 +359,7 @@ object CompletionSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """Files java.nio.file
-      |a.Outer.Files a.Outer
+      |Files - a.Outer
       |""".stripMargin
   )
 
@@ -621,7 +621,7 @@ object CompletionSuite extends BaseCompletionSuite {
         |  val foo: ListBuffe@@
         |}
         |""".stripMargin,
-    """|scala.collection.mutable.ListBuffer scala.collection.mutable
+    """|ListBuffer - scala.collection.mutable
        |""".stripMargin
   )
 
@@ -631,7 +631,7 @@ object CompletionSuite extends BaseCompletionSuite {
         |  val foo: Map[Int, ListBuffe@@]
         |}
         |""".stripMargin,
-    """|scala.collection.mutable.ListBuffer scala.collection.mutable
+    """|ListBuffer - scala.collection.mutable
        |""".stripMargin
   )
 

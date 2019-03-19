@@ -26,9 +26,47 @@ trait Signatures { this: MetalsGlobal =>
       ShortName(sym.name, sym)
   }
 
+  object ShortenedNames {
+
+    /**
+     * Pretty-prints a type at a given position/context with optional auto-imports.
+     *
+     * @param tpe the type to pretty-print.
+     * @param pos the position where the type will be inserted.
+     * @param scope the scope at the given position to know what names resolve to which symbols.
+     * @param importPosition the position where to place auto-imports.
+     */
+    def synthesize(
+        tpe: Type,
+        pos: Position,
+        scope: Context,
+        importPosition: AutoImportPosition
+    ): (String, List[l.TextEdit]) = {
+      val history = new ShortenedNames(
+        lookupSymbol = name => {
+          val companion =
+            if (name.isTypeName) name.toTermName
+            else name.toTypeName
+          scope.lookupSymbol(name, _ => true) ::
+            scope.lookupSymbol(companion, _ => true) :: Nil
+        },
+        renames = renamedSymbols(scope),
+        config = renameConfig
+      )
+      val tpeString = shortType(tpe, history).toString()
+      val edits = history.autoImports(
+        pos,
+        scope,
+        importPosition.offset,
+        importPosition.indent
+      )
+      (tpeString, edits)
+    }
+  }
+
   class ShortenedNames(
       val history: mutable.Map[Name, ShortName] = mutable.Map.empty,
-      val lookupSymbol: Name => NameLookup = _ => LookupNotFound,
+      val lookupSymbol: Name => List[NameLookup] = _ => Nil,
       val config: collection.Map[Symbol, Name] = Map.empty,
       val renames: collection.Map[Symbol, Name] = Map.empty,
       val owners: collection.Set[Symbol] = Set.empty
@@ -38,6 +76,7 @@ trait Signatures { this: MetalsGlobal =>
       if (topSymbolResolves(sym)) sym.fullName
       else s"_root_.${sym.fullName}"
     }
+
     def topSymbolResolves(sym: Symbol): Boolean = {
       // Returns the package `a` for the symbol `_root_.a.b.c`
       def topPackage(s: Symbol): Symbol = {
@@ -51,10 +90,11 @@ trait Signatures { this: MetalsGlobal =>
 
     def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean = {
       lookupSymbol(name) match {
-        case LookupNotFound => true
-        case l => sym.isKindaTheSameAs(l.symbol)
+        case Nil => true
+        case lookup => lookup.exists(_.symbol.isKindaTheSameAs(sym))
       }
     }
+
     def tryShortenName(short: ShortName): Boolean = {
       val ShortName(name, sym) = short
       history.get(name) match {
@@ -62,13 +102,10 @@ trait Signatures { this: MetalsGlobal =>
           if (other.isKindaTheSameAs(sym)) true
           else false
         case _ =>
-          val isOk = lookupSymbol(name) match {
-            case LookupSucceeded(_, symbol) =>
-              symbol.isKindaTheSameAs(sym)
-            case LookupNotFound =>
-              true
-            case _ =>
-              false
+          val isOk = lookupSymbol(name).filter(_ != LookupNotFound) match {
+            case Nil => true
+            case lookup =>
+              lookup.exists(_.symbol.isKindaTheSameAs(sym))
           }
           if (isOk) {
             history(name) = short

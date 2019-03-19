@@ -29,9 +29,16 @@ class CompletionProvider(
       cursor = Some(params.offset)
     )
     val pos = unit.position(params.offset)
+    val editRange = pos
+      .withStart(inferIdentStart(pos, params.text()))
+      .withEnd(inferIdentEnd(pos, params.text()))
+      .toLSP
+    def textEdit(newText: String) = new l.TextEdit(editRange, newText)
     val (i, completion) = safeCompletionsAt(pos)
     val history = new ShortenedNames()
     val sorted = i.results.sorted(memberOrdering(history, completion))
+    lazy val context = doLocateContext(pos)
+    lazy val importPosition = autoImportPosition(pos, params.text())
     val items = sorted.iterator.zipWithIndex.map {
       case (r, idx) =>
         params.checkCanceled()
@@ -44,6 +51,8 @@ class CompletionProvider(
             o.label
           case o: TextEditMember =>
             o.label.getOrElse(ident)
+          case o: WorkspaceMember =>
+            s"$ident - ${o.sym.owner.fullName}"
           case _ =>
             ident
         }
@@ -74,26 +83,42 @@ class CompletionProvider(
             }
         }
 
+        item.setInsertTextFormat(InsertTextFormat.Snippet)
+
         r match {
           case i: TextEditMember =>
             item.setTextEdit(i.edit)
-            item.setInsertTextFormat(InsertTextFormat.Snippet)
           case i: OverrideDefMember =>
             item.setTextEdit(i.edit)
             item.setAdditionalTextEdits(i.autoImports.asJava)
-            item.setInsertTextFormat(InsertTextFormat.Snippet)
           case w: WorkspaceMember =>
-            item.setInsertTextFormat(InsertTextFormat.Snippet)
-            item.setInsertText(w.sym.fullName + suffix)
+            importPosition match {
+              case None =>
+                // No import position, fully qualify the name in-place.
+                item.setTextEdit(textEdit(w.sym.fullName + suffix))
+              case Some(value) =>
+                val (short, edits) = ShortenedNames.synthesize(
+                  TypeRef(
+                    ThisType(w.sym.owner),
+                    w.sym,
+                    Nil
+                  ),
+                  pos,
+                  context,
+                  value
+                )
+                item.setAdditionalTextEdits(edits.asJava)
+                item.setTextEdit(textEdit(short + suffix))
+            }
           case _ =>
+            val baseLabel = Option(item.getTextEdit).fold(label)(_.getNewText)
             if (r.sym.isNonNullaryMethod) {
-              item.setInsertTextFormat(InsertTextFormat.Snippet)
               r.sym.paramss match {
                 case Nil =>
                 case Nil :: Nil =>
-                  item.setInsertText(label + "()")
+                  item.setTextEdit(textEdit(baseLabel + "()"))
                 case _ =>
-                  item.setInsertText(label + "($0)")
+                  item.setTextEdit(textEdit(baseLabel + "($0)"))
                   metalsConfig
                     .parameterHintsCommand()
                     .asScala
@@ -104,8 +129,7 @@ class CompletionProvider(
                     }
               }
             } else if (!suffix.isEmpty) {
-              item.setInsertTextFormat(InsertTextFormat.Snippet)
-              item.setInsertText(label + suffix)
+              item.setTextEdit(textEdit(baseLabel + suffix))
             }
         }
 
@@ -308,7 +332,7 @@ class CompletionProvider(
       pos: Position,
       visit: Member => Boolean
   ): SymbolSearch.Result = {
-    if (query.isEmpty) SymbolSearch.Result.COMPLETE
+    if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
     else {
       val context = doLocateContext(pos)
       val visitor = new CompilerSearchVisitor(query, context, visit)
@@ -399,6 +423,28 @@ class CompletionProvider(
         logger.warning(s"no such symbol: $classfile")
         Nil
     }
+  }
+
+  /**
+   * Returns the start offset of the identifier starting as the given offset position.
+   */
+  def inferIdentStart(pos: Position, text: String): Int = {
+    var i = pos.point - 1
+    while (i > 0 && text.charAt(i).isUnicodeIdentifierPart) {
+      i -= 1
+    }
+    i + 1
+  }
+
+  /**
+   * Returns the end offset of the identifier starting as the given offset position.
+   */
+  def inferIdentEnd(pos: Position, text: String): Int = {
+    var i = pos.point
+    while (i < text.length && text.charAt(i).isUnicodeIdentifierPart) {
+      i += 1
+    }
+    i
   }
 
 }
