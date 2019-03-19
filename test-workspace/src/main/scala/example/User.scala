@@ -1,8 +1,12 @@
 package example
 
+trait Samda {
+  def foobar(a: Int, b: Double): String
+}
+
 object Main {
-  val xxx = 42
-  val xsx = 42
-  val xsdx = 42
-//   s"Hello ${xsx}"
+  def foobar(fn: Samda): Unit = ()
+  foobar {
+    case (a, b) => ""
+  }
 }

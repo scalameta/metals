@@ -25,7 +25,9 @@ trait Completions { this: MetalsGlobal =>
   class TextEditMember(
       val filterText: String,
       val edit: l.TextEdit,
-      sym: Symbol
+      sym: Symbol,
+      val label: Option[String] = None,
+      val command: Option[String] = None
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
 
   class OverrideDefMember(
@@ -298,9 +300,9 @@ trait Completions { this: MetalsGlobal =>
   def completionPosition(pos: Position, text: String): CompletionPosition = {
     lastEnclosing match {
       case (name: Ident) :: (a: Apply) :: _ =>
-        CompletionPosition.Arg(name, a)
+        CompletionPosition.Arg(name, a, pos, text)
       case (name: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
-        CompletionPosition.Arg(name, a)
+        CompletionPosition.Arg(name, a, pos, text)
       case Ident(_) :: PatternMatch(c, m) =>
         CompletionPosition.Case(isTyped = false, c, m)
       case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
@@ -598,20 +600,22 @@ trait Completions { this: MetalsGlobal =>
       }
     }
     case object None extends CompletionPosition
-    case class Arg(ident: Ident, apply: Apply) extends CompletionPosition {
-      val method = typedTreeAt(apply.fun.pos).symbol
-      val params: List[Symbol] = {
-        def curriedParamList(t: Tree): Int = t match {
-          case Apply(fun, _) => 1 + curriedParamList(fun)
-          case _ => 0
+    case class Arg(ident: Ident, apply: Apply, pos: Position, text: String)
+        extends CompletionPosition {
+      val openDelim: Int = {
+        var start = ident.pos.start - 1
+        while (start > 0 && text.charAt(start).isWhitespace) {
+          start -= 1
         }
-        val index = curriedParamList(apply.fun)
-        method.paramss.lift(index) match {
-          case Some(value) => value
-          case scala.None => method.paramss.flatten
-        }
+        start
       }
-      val isNamed = apply.args.iterator
+      val isBrace = text.charAt(openDelim) == '{'
+      val method = typedTreeAt(apply.fun.pos)
+      val methodSym = method.symbol
+      lazy val params: List[Symbol] =
+        method.tpe.paramss.headOption
+          .getOrElse(methodSym.paramss.flatten)
+      lazy val isNamed = apply.args.iterator
         .filterNot(_ == ident)
         .zip(params.iterator)
         .map {
@@ -623,7 +627,7 @@ trait Completions { this: MetalsGlobal =>
         .toSet
       override def isCandidate(member: Member): Boolean = true
       override def isPrioritized(member: Member): Boolean = true
-      override def contribute: List[Member] = {
+      def namedArgMembers: List[Member] = {
         val prefix = ident.name.toString.stripSuffix(CURSOR)
         params.iterator
           .filterNot { param =>
@@ -633,6 +637,33 @@ trait Completions { this: MetalsGlobal =>
           .filter(param => param.name.startsWith(prefix))
           .map(param => new NamedArgMember(param))
           .toList
+      }
+      def caseTupleMember: List[Member] = {
+        for {
+          param <- params.headOption.toList
+          tuple <- metalsFunctionArgTypes(param.info) match {
+            case tuple :: Nil if definitions.isTupleType(tuple) =>
+              tuple :: Nil
+            case els =>
+              if (els.lengthCompare(1) > 0) definitions.tupleType(els) :: Nil
+              else Nil
+          }
+        } yield {
+          val edit = ident.pos.withEnd(pos.point).toLSP
+          val history = new ShortenedNames()
+          val prettyTuple = metalsToLongString(tuple, history)
+          new TextEditMember(
+            filterText = "case",
+            edit = new l.TextEdit(edit, "case ($0) =>"),
+            sym = param,
+            label = Some(s"case ${prettyTuple} =>"),
+            command = metalsConfig.parameterHintsCommand().asScala
+          )
+        }
+      }
+      override def contribute: List[Member] = {
+        if (isBrace) caseTupleMember
+        else namedArgMembers
       }
     }
 

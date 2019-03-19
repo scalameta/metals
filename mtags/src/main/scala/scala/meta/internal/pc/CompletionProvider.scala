@@ -42,6 +42,8 @@ class CompletionProvider(
             s"${ident} = "
           case o: OverrideDefMember =>
             o.label
+          case o: TextEditMember =>
+            o.label.getOrElse(ident)
           case _ =>
             ident
         }
@@ -106,6 +108,15 @@ class CompletionProvider(
               item.setInsertText(label + suffix)
             }
         }
+
+        r match {
+          case o: TextEditMember =>
+            o.command.foreach { command =>
+              item.setCommand(new l.Command("", command))
+            }
+          case _ =>
+        }
+
         val completionItemDataKind = r match {
           case o: OverrideDefMember if o.sym.isJavaDefined =>
             CompletionItemData.OverrideKind
