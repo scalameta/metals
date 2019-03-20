@@ -398,6 +398,19 @@ class MetalsGlobal(
   }
 
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def fullNameSyntax: String = {
+      val out = new java.lang.StringBuilder
+      def loop(s: Symbol): Unit = {
+        if (s.isRoot || s.isRootPackage || s == NoSymbol || s.owner.isEffectiveRoot) {
+          out.append(Identifier(s.name))
+        } else {
+          loop(s.effectiveOwner.enclClass)
+          out.append('.').append(Identifier(s.name))
+        }
+      }
+      loop(sym)
+      out.toString
+    }
     def isLocallyDefinedSymbol: Boolean = {
       sym.isLocalToBlock && sym.pos.isDefined
     }

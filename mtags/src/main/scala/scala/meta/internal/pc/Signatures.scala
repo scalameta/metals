@@ -73,8 +73,8 @@ trait Signatures { this: MetalsGlobal =>
   ) {
 
     def fullname(sym: Symbol): String = {
-      if (topSymbolResolves(sym)) sym.fullName
-      else s"_root_.${sym.fullName}"
+      if (topSymbolResolves(sym)) sym.fullNameSyntax
+      else s"_root_.${sym.fullNameSyntax}"
     }
 
     def topSymbolResolves(sym: Symbol): Boolean = {
