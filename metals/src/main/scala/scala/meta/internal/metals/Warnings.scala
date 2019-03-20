@@ -36,7 +36,9 @@ final class Warnings(
       scalacOptions <- buildTargets.scalacOptions(buildTarget)
     } yield {
       if (!scalacOptions.isSemanticdbEnabled) {
-        if (isSupportedScalaVersion(scala.getScalaVersion)) {
+        if (isSupportedScalaVersion(
+            ScalaVersions.dropVendorSuffix(scala.getScalaVersion)
+          )) {
           logger.error(
             s"$doesntWorkBecause the SemanticDB compiler plugin is not enabled for the build target ${info.getDisplayName}."
           )

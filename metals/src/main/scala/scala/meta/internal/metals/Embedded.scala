@@ -90,7 +90,7 @@ final class Embedded(
       scalac: ScalacOptionsItem
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
-      info.getScalaVersion,
+      ScalaVersions.dropVendorSuffix(info.getScalaVersion),
       statusBar.trackBlockingTask(
         s"${icons.sync}Downloading presentation compiler"
       ) {
@@ -130,7 +130,7 @@ object Embedded {
   ): URLClassLoader = {
     val pc = new Dependency(
       "org.scalameta",
-      s"mtags_${info.getScalaVersion}",
+      s"mtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
       BuildInfo.metalsVersion
     )
     val needsFullClasspath = !scalac.isSemanticdbEnabled
