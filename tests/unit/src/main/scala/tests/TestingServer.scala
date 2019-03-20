@@ -34,6 +34,7 @@ import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
@@ -368,6 +369,54 @@ final class TestingServer(
       .mkString("\n")
   }
 
+  private def offsetParams(
+      filename: String,
+      original: String
+  ): Future[(String, TextDocumentPositionParams)] = {
+    val offset = original.indexOf("@@")
+    if (offset < 0) sys.error(s"missing @@\n$original")
+    val text = original.replaceAllLiterally("@@", "")
+    val input = m.Input.String(text)
+    val path = workspace.resolve(filename)
+    path.touch()
+    val pos = m.Position.Range(input, offset, offset)
+    for {
+      _ <- didChange(filename)(_ => text)
+    } yield {
+      (
+        text,
+        new TextDocumentPositionParams(
+          path.toTextDocumentIdentifier,
+          pos.toLSP.getStart
+        )
+      )
+    }
+  }
+
+  def assertHover(
+      filename: String,
+      query: String,
+      expected: String
+  ): Future[Unit] = {
+    for {
+      hover <- hover(filename, query)
+    } yield {
+      DiffAssertions.assertNoDiffOrPrintObtained(
+        hover,
+        expected,
+        "obtained",
+        "expected"
+      )
+    }
+  }
+
+  def hover(filename: String, query: String): Future[String] = {
+    for {
+      (text, params) <- offsetParams(filename, query)
+      hover <- server.hover(params).asScala
+    } yield TestHovers.renderAsString(text, Option(hover), includeRange = false)
+  }
+
   def completion(filename: String, query: String): Future[String] = {
     completionList(filename, query).map { c =>
       formatCompletion(c, includeDetail = true)
@@ -404,6 +453,7 @@ final class TestingServer(
         .mkString("\n")
     }
   }
+
   def formatting(filename: String): Future[Unit] = {
     val path = toPath(filename)
     server

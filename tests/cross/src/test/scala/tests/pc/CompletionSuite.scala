@@ -73,12 +73,15 @@ object CompletionSuite extends BaseCompletionSuite {
     """|identity(a: Int): Int
        |""".stripMargin
   )
+  List(1)
+
   check(
     "tparam2",
     """
       |object A {
       |  Map.empty[Int, String].getOrEl@@
-      |}""".stripMargin,
+      |}
+      |""".stripMargin,
     """|getOrElse[V1 >: String](key: Int, default: => V1): V1
        |""".stripMargin,
     compat = Map(

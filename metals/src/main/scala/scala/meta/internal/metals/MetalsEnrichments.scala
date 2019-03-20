@@ -296,6 +296,21 @@ object MetalsEnrichments
         path
       }
 
+    def exists: Boolean = {
+      Files.exists(path.toNIO)
+    }
+
+    def touch(): Unit = {
+      if (!path.exists) {
+        parent.createDirectories()
+        Files.createFile(path.toNIO)
+      }
+    }
+
+    def parent: AbsolutePath = {
+      AbsolutePath(path.toNIO.getParent)
+    }
+
     def createDirectories(): AbsolutePath = {
       AbsolutePath(Files.createDirectories(dealias.toNIO))
     }

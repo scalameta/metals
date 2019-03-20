@@ -49,6 +49,11 @@ public interface PresentationCompilerConfig {
     boolean isCompletionItemDocumentationEnabled();
 
     /**
+     * Returns true if the result from <code>textDocument/hover</code> should include docstrings.
+     */
+    boolean isHoverDocumentationEnabled();
+
+    /**
      * Returns true if the <code>SignatureHelp.documentation</code> field should be populated.
      */
     boolean isSignatureHelpDocumentationEnabled();

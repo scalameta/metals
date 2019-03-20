@@ -4,6 +4,3 @@ inThisBuild(
   )
 )
 
-libraryDependencies ++= List(
-  "c"
-  )

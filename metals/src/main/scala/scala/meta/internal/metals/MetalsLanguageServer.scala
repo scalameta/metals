@@ -334,6 +334,7 @@ class MetalsLanguageServer(
         )
       )
       capabilities.setDefinitionProvider(true)
+      capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
       capabilities.setSignatureHelpProvider(
         new SignatureHelpOptions(List("(", "[").asJava)
@@ -679,10 +680,14 @@ class MetalsLanguageServer(
       null
     }
 
-  @JsonRequest("textDocument/hoverForDebuggingPurposes")
+  @JsonRequest("textDocument/hover")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
     CancelTokens { token =>
-      compilers.hover(params, token).orNull
+      compilers.hover(params, token) match {
+        case None => null
+        case Some(value) =>
+          value.orElse(null)
+      }
     }
 
   @JsonRequest("textDocument/documentHighlight")
