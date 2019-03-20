@@ -1002,10 +1002,18 @@ trait Completions { this: MetalsGlobal =>
       termNames.equals_
     )
 
+  lazy val isUninterestingSymbolOwner: Set[Symbol] = Set[Symbol](
+    // The extension methods in these classes are noisy because they appear on every completion.
+    definitions.getMemberClass(
+      definitions.PredefModule,
+      TypeName("ArrowAssoc")
+    ),
+    definitions.getMemberClass(
+      definitions.PredefModule,
+      TypeName("Ensuring")
+    )
+  )
   lazy val isUninterestingSymbol: Set[Symbol] = Set[Symbol](
-    // the methods == != ## are arguably "interesting" but they're here becuase
-    // - they're short so completing them doesn't save you keystrokes
-    // - they're available on everything so you
     definitions.Any_==,
     definitions.Any_!=,
     definitions.Any_##,
@@ -1021,13 +1029,6 @@ trait Completions { this: MetalsGlobal =>
     definitions.Object_notifyAll,
     definitions.Object_notify,
     definitions.getMemberMethod(definitions.ObjectClass, termNames.wait_),
-    definitions.getMemberMethod(
-      definitions.getMemberClass(
-        definitions.PredefModule,
-        TypeName("ArrowAssoc")
-      ),
-      TermName("→").encode
-    ),
     // NOTE(olafur) IntelliJ does not complete the root package and without this filter
     // then `_root_` would appear as a completion result in the code `foobar(_<COMPLETE>)`
     rootMirror.RootPackage

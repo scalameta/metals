@@ -230,6 +230,7 @@ class CompletionProvider(
           !head.sym.pos.isAfter(pos)
       if (!isSeen(id) &&
         !isUninterestingSymbol(head.sym) &&
+        !isUninterestingSymbolOwner(head.sym.owner) &&
         !isIgnoredWorkspace &&
         completion.isCandidate(head) &&
         !head.sym.name.containsName(CURSOR) &&

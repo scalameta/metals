@@ -124,12 +124,7 @@ object CompletionSuite extends BaseCompletionSuite {
        |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
        |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
        |unapplySeq[A](x: List[A]): Some[List[A]]
-       |->[B](y: B): (List.type, B)
        |+(other: String): String
-       |ensuring(cond: Boolean): List.type
-       |ensuring(cond: List.type => Boolean): List.type
-       |ensuring(cond: Boolean, msg: => Any): List.type
-       |ensuring(cond: List.type => Boolean, msg: => Any): List.type
        |formatted(fmtstr: String): String
        |asInstanceOf[T0]: T0
        |equals(obj: Any): Boolean
@@ -162,12 +157,7 @@ object CompletionSuite extends BaseCompletionSuite {
            |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
            |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
            |unapplySeq[A](x: List[A]): Some[List[A]]
-           |->[B](y: B): (List.type, B)
            |+(other: String): String
-           |ensuring(cond: Boolean): List.type
-           |ensuring(cond: List.type => Boolean): List.type
-           |ensuring(cond: Boolean, msg: => Any): List.type
-           |ensuring(cond: List.type => Boolean, msg: => Any): List.type
            |formatted(fmtstr: String): String
            |asInstanceOf[T0]: T0
            |equals(obj: Any): Boolean
