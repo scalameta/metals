@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.meta.internal.metals.Configs._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
+import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 /**
  * Configuration parameters for the Metals language server.
@@ -98,9 +99,12 @@ object MetalsServerConfig {
           icons = Icons.vscode,
           executeClientCommand = ExecuteClientCommandConfig.on,
           globSyntax = GlobSyntaxConfig.vscode,
-          compilers = CompilersConfig().copy(
-            _parameterHintsCommand = Some("editor.action.triggerParameterHints")
-          )
+          compilers =
+            CompilersConfig().copy(
+              _parameterHintsCommand =
+                Some("editor.action.triggerParameterHints"),
+              overrideDefFormat = OverrideDefFormat.Unicode
+            )
         )
       case "vim-lsc" =>
         base.copy(

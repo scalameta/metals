@@ -7,6 +7,7 @@ import scala.collection.mutable
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.util.control.NonFatal
 import scala.collection.JavaConverters._
+import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 /**
  * Utility methods for completions.
@@ -854,9 +855,14 @@ trait Completions { this: MetalsGlobal =>
           printLongType = false
         )
         val label = printer.defaultMethodSignature(Identifier(sym.name))
-        val prefix =
-          if (sym.isAbstract) s"${keyword} "
-          else s"override ${keyword} "
+        val prefix = metalsConfig.overrideDefFormat() match {
+          case OverrideDefFormat.Ascii =>
+            if (sym.isAbstract) s"${keyword} "
+            else s"override ${keyword} "
+          case OverrideDefFormat.Unicode =>
+            if (sym.isAbstract) ""
+            else "🔼 "
+        }
         val overrideKeyword =
           if (!sym.isAbstract || isExplicitOverride) "override "
           // Don't insert `override` keyword if the supermethod is abstract and the
