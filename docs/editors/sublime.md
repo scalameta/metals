@@ -92,6 +92,12 @@ in insert-mode.
 
 ![Find references](https://i.imgur.com/BJDkczD.gif)
 
+## Goto symbol in workspace
+
+You can search for symbols in dependency source using the command palette   
+
+![workspace symbols](https://i.imgur.com/8X0XNi2.gif)
+
 ## Manually trigger build import
 
 You can configure a custom command "Metals: Import Build" to manually trigger
@@ -122,7 +128,7 @@ in this location.
 ~/.config/sublime-text-3/Packages/Metals.sublime-commands
 ```
 
-Once configured, the command can be called from the command pallette.
+Once configured, the command can be called from the command palette.
 
 ![Import build command](https://i.imgur.com/LViPc95.png)
 
