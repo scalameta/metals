@@ -99,7 +99,7 @@ class CompletionProvider(
             importPosition match {
               case None =>
                 // No import position, fully qualify the name in-place.
-                item.setTextEdit(textEdit(w.sym.fullName + suffix))
+                item.setTextEdit(textEdit(w.sym.fullNameSyntax + suffix))
               case Some(value) =>
                 val (short, edits) = ShortenedNames.synthesize(
                   TypeRef(

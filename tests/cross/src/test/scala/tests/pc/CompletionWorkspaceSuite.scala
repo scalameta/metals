@@ -27,6 +27,23 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
     "import java.nio.file.Files"
   )
 
+  checkEditLine(
+    "import-escape",
+    """package pkg
+      |
+      |package app {
+      |  object Main {
+      |    ___
+      |  }
+      |}
+      |package `type` {
+      |  object Banana
+      |}
+      |""".stripMargin,
+    "import Banana@@",
+    "import pkg.`type`.Banana"
+  )
+
   checkEdit(
     "conflict",
     """package pkg
@@ -290,6 +307,21 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |  } yield x
       |}
       |""".stripMargin
+  )
+
+  checkEditLine(
+    "backtick",
+    """package `type`
+      |abstract class Foo {
+      |  def backtick: Foo
+      |}
+      |object Main extends Foo {
+      |  class Foo // conflict
+      |  ___
+      |}
+      |""".stripMargin,
+    "def backtick@@",
+    "def backtick: `type`.Foo = ${0:???}"
   )
 
 }
