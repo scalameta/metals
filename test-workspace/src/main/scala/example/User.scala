@@ -1,3 +1,5 @@
 package example
 
-object Main {}
+object Main {
+  val `type` = 42
+}
