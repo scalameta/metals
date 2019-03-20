@@ -34,14 +34,23 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       traverse(tree)
       last
     }
+    def isValidQualifier(qual: Tree): Boolean =
+      !qual.pos.includes(pos) && (qual match {
+        // Ignore synthetic TupleN constructors from tuple syntax.
+        case Select(ident @ Ident(TermName("scala")), TermName(tuple))
+            if tuple.startsWith("Tuple") && ident.pos == qual.pos =>
+          false
+        case _ =>
+          true
+      })
     override def traverse(tree: Tree): Unit = {
       if (tree.pos.includes(pos)) {
         tree match {
-          case Apply(qual, _) if !qual.pos.includes(pos) =>
+          case Apply(qual, _) if isValidQualifier(qual) =>
             last = tree
-          case TypeApply(qual, _) if !qual.pos.includes(pos) =>
+          case TypeApply(qual, _) if isValidQualifier(qual) =>
             last = tree
-          case AppliedTypeTree(qual, _) if !qual.pos.includes(pos) =>
+          case AppliedTypeTree(qual, _) if isValidQualifier(qual) =>
             last = tree
           case _ =>
         }
