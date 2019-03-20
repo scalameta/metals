@@ -47,9 +47,7 @@ object CancelCompletionSuite extends BaseCompletionSuite {
         CompilerOffsetParams("A.scala", code, offset, EmptyCancelToken)
       )
       val obtained = completion.getItems.asScala
-        .map { item =>
-          s"${item.getLabel}${item.getDetail}"
-        }
+        .map(_.getLabel)
         .mkString("\n")
       assertNoDiff(obtained, expected)
     }

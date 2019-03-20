@@ -16,8 +16,8 @@ class CompletionItemResolver(
         case Some(info) if item.getDetail != null =>
           if (isJavaSymbol(gsym)) {
             val data = item.data.getOrElse(CompletionItemData.empty)
-            val newDetail = replaceJavaParameters(info, item.getDetail)
-            item.setDetail(newDetail)
+            item.setLabel(replaceJavaParameters(info, item.getLabel))
+            item.setDetail(replaceJavaParameters(info, item.getDetail))
             if (item.getTextEdit != null && data.kind == CompletionItemData.OverrideKind) {
               item.getTextEdit.setNewText(
                 replaceJavaParameters(info, item.getTextEdit.getNewText)
@@ -31,15 +31,9 @@ class CompletionItemResolver(
               .iterator
               .map(_.defaultValue())
               .filterNot(_.isEmpty)
-            val matcher = "= \\{\\}".r.pattern.matcher(item.getDetail)
-            val out = new StringBuffer()
-            while (matcher.find()) {
-              if (defaults.hasNext) {
-                matcher.appendReplacement(out, s"= ${defaults.next()}")
-              }
-            }
-            matcher.appendTail(out)
-            item.setDetail(out.toString)
+              .toSeq
+            item.setLabel(replaceScalaDefaultParams(item.getLabel, defaults))
+            item.setDetail(replaceScalaDefaultParams(item.getDetail, defaults))
           }
           val docstring = fullDocstring(gsym)
           item.setDocumentation(docstring.toMarkupContent)
@@ -49,6 +43,19 @@ class CompletionItemResolver(
     } else {
       item
     }
+  }
+
+  def replaceScalaDefaultParams(base: String, defaults: Seq[String]): String = {
+    val matcher = "= \\{\\}".r.pattern.matcher(base)
+    val out = new StringBuffer()
+    val it = defaults.iterator
+    while (matcher.find()) {
+      if (it.hasNext) {
+        matcher.appendReplacement(out, s"= ${it.next()}")
+      }
+    }
+    matcher.appendTail(out)
+    out.toString
   }
 
   // NOTE(olafur): it's hacky to use `String.replaceAllLiterally("x$1", paramName)`, ideally we would use the

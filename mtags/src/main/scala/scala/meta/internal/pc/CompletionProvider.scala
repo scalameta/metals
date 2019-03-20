@@ -44,6 +44,10 @@ class CompletionProvider(
         params.checkCanceled()
         val symbolName = r.symNameDropLocal.decoded
         val ident = Identifier.backtickWrap(symbolName)
+        val detail = r match {
+          case o: OverrideDefMember => o.label
+          case _ => detailString(r, history)
+        }
         val label = r match {
           case _: NamedArgMember =>
             s"${ident} = "
@@ -54,13 +58,13 @@ class CompletionProvider(
           case o: WorkspaceMember =>
             s"$ident - ${o.sym.owner.fullName}"
           case _ =>
-            ident
+            if (r.sym.isMethod || r.sym.isValue) {
+              ident + detail
+            } else {
+              ident
+            }
         }
         val item = new CompletionItem(label)
-        val detail = r match {
-          case o: OverrideDefMember => o.label
-          case _ => detailString(r, history)
-        }
         item.setDetail(detail)
         val templateSuffix =
           if (completion.isNew &&
@@ -111,7 +115,7 @@ class CompletionProvider(
                 item.setTextEdit(textEdit(short + suffix))
             }
           case _ =>
-            val baseLabel = Option(item.getTextEdit).fold(label)(_.getNewText)
+            val baseLabel = ident
             if (r.sym.isNonNullaryMethod) {
               r.sym.paramss match {
                 case Nil =>
@@ -131,6 +135,14 @@ class CompletionProvider(
             } else if (!suffix.isEmpty) {
               item.setTextEdit(textEdit(baseLabel + suffix))
             }
+        }
+
+        if (item.getTextEdit == null) {
+          val editText = r match {
+            case _: NamedArgMember => item.getLabel
+            case _ => ident
+          }
+          item.setTextEdit(textEdit(editText))
         }
 
         r match {
