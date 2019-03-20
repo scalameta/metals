@@ -213,11 +213,15 @@ class CompletionProvider(
       def isIgnoredWorkspace: Boolean =
         head.isInstanceOf[WorkspaceMember] &&
           (isIgnored(head.sym) || isIgnored(head.sym.companion))
+      def isNotLocalForwardReference: Boolean =
+        !head.sym.isLocalToBlock ||
+          !head.sym.pos.isAfter(pos)
       if (!isSeen(id) &&
         !isUninterestingSymbol(head.sym) &&
         !isIgnoredWorkspace &&
         completion.isCandidate(head) &&
-        !head.sym.name.containsName(CURSOR)) {
+        !head.sym.name.containsName(CURSOR) &&
+        isNotLocalForwardReference) {
         isSeen += id
         buf += head
         isIgnored ++= dealiasedValForwarder(head.sym)

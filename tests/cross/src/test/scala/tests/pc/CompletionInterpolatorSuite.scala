@@ -259,8 +259,8 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|a: String
-       |b: Int
+    """|b: Int
+       |a: String
        |""".stripMargin,
     topLines = Some(2)
   )
@@ -275,8 +275,8 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    """|a: String
-       |b: Int
+    """|b: Int
+       |a: String
        |""".stripMargin,
     topLines = Some(2)
   )
