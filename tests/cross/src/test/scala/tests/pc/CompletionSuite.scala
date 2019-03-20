@@ -501,6 +501,26 @@ object CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
+    "local2",
+    """
+      |object Main {
+      |  def foo(): Unit = {
+      |    val prefixaa = 1
+      |    locally {
+      |      val prefixbb = 2
+      |      println(prefix@@)
+      |      val prefixcc = 3
+      |    }
+      |    val prefixyy = 4
+      |  }
+      |}
+    """.stripMargin,
+    """|prefixbb: Int
+       |prefixaa: Int
+       |""".stripMargin
+  )
+
+  check(
     "singleton",
     """
       |class A {

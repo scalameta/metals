@@ -2,6 +2,7 @@ package tests.pc
 
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import tests.BaseCompletionSuite
 
 object CompletionOverrideConfigSuite extends BaseCompletionSuite {
@@ -11,7 +12,8 @@ object CompletionOverrideConfigSuite extends BaseCompletionSuite {
       _symbolPrefixes = Map(
         "a/Weekday." -> "w",
         "java/util/function/" -> "f"
-      )
+      ),
+      overrideDefFormat = OverrideDefFormat.Unicode
     )
 
   checkEditLine(
@@ -45,5 +47,21 @@ object CompletionOverrideConfigSuite extends BaseCompletionSuite {
     "  def function@@",
     """  import java.util.{function => f}
       |  def function: f.Function[Int,String] = ${0:???}""".stripMargin
+  )
+
+  check(
+    "unicode",
+    """|package c
+       |class Number {
+       |  def number: Int = 42
+       |  def numberAbstract: Int
+       |}
+       |class Main extends Number {
+       |  def number@@
+       |}
+       |""".stripMargin,
+    """numberAbstract: Int
+      |🔼 number: Int
+      |""".stripMargin
   )
 }

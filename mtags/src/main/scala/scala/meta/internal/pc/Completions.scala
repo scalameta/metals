@@ -7,6 +7,7 @@ import scala.collection.mutable
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.util.control.NonFatal
 import scala.collection.JavaConverters._
+import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 /**
  * Utility methods for completions.
@@ -144,6 +145,17 @@ trait Completions { this: MetalsGlobal =>
       completion: CompletionPosition
   ): Ordering[Member] = new Ordering[Member] {
     val cache = mutable.Map.empty[Symbol, Boolean]
+    def compareLocalSymbols(o1: Member, o2: Member): Int = {
+      if (o1.sym.isLocallyDefinedSymbol &&
+        o2.sym.isLocallyDefinedSymbol &&
+        !o1.isInstanceOf[NamedArgMember] &&
+        !o2.isInstanceOf[NamedArgMember]) {
+        if (o1.sym.pos.isAfter(o2.sym.pos)) -1
+        else 1
+      } else {
+        0
+      }
+    }
     override def compare(o1: Member, o2: Member): Int = {
       val byCompletion = -java.lang.Boolean.compare(
         cache.getOrElseUpdate(o1.sym, completion.isPrioritized(o1)),
@@ -151,28 +163,32 @@ trait Completions { this: MetalsGlobal =>
       )
       if (byCompletion != 0) byCompletion
       else {
-        val byRelevance = Integer.compare(
-          relevancePenalty(o1, history),
-          relevancePenalty(o2, history)
-        )
-        if (byRelevance != 0) byRelevance
+        val byLocalSymbol = compareLocalSymbols(o1, o2)
+        if (byLocalSymbol != 0) byLocalSymbol
         else {
-          val byIdentifier =
-            IdentifierComparator.compare(o1.sym.name, o2.sym.name)
-          if (byIdentifier != 0) byIdentifier
+          val byRelevance = Integer.compare(
+            relevancePenalty(o1, history),
+            relevancePenalty(o2, history)
+          )
+          if (byRelevance != 0) byRelevance
           else {
-            val byOwner =
-              o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
-            if (byOwner != 0) byOwner
+            val byIdentifier =
+              IdentifierComparator.compare(o1.sym.name, o2.sym.name)
+            if (byIdentifier != 0) byIdentifier
             else {
-              val byParamCount = Integer.compare(
-                o1.sym.paramss.iterator.flatten.size,
-                o2.sym.paramss.iterator.flatten.size
-              )
-              if (byParamCount != 0) byParamCount
+              val byOwner =
+                o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
+              if (byOwner != 0) byOwner
               else {
-                detailString(o1, history)
-                  .compareTo(detailString(o2, history))
+                val byParamCount = Integer.compare(
+                  o1.sym.paramss.iterator.flatten.size,
+                  o2.sym.paramss.iterator.flatten.size
+                )
+                if (byParamCount != 0) byParamCount
+                else {
+                  detailString(o1, history)
+                    .compareTo(detailString(o2, history))
+                }
               }
             }
           }
@@ -839,9 +855,14 @@ trait Completions { this: MetalsGlobal =>
           printLongType = false
         )
         val label = printer.defaultMethodSignature(Identifier(sym.name))
-        val prefix =
-          if (sym.isAbstract) s"${keyword} "
-          else s"override ${keyword} "
+        val prefix = metalsConfig.overrideDefFormat() match {
+          case OverrideDefFormat.Ascii =>
+            if (sym.isAbstract) s"${keyword} "
+            else s"override ${keyword} "
+          case OverrideDefFormat.Unicode =>
+            if (sym.isAbstract) ""
+            else "🔼 "
+        }
         val overrideKeyword =
           if (!sym.isAbstract || isExplicitOverride) "override "
           // Don't insert `override` keyword if the supermethod is abstract and the

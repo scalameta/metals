@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.FileSystemWatcher
 import scala.collection.JavaConverters._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 object Configs {
 
@@ -43,7 +44,13 @@ object Configs {
     ): PresentationCompilerConfigImpl = {
       PresentationCompilerConfigImpl(
         MetalsServerConfig.binaryOption("pc.debug", default = false),
-        Option(props.getProperty("metals.signature-help-command"))
+        Option(props.getProperty("metals.signature-help-command")),
+        overrideDefFormat =
+          Option(props.getProperty("metals.override-def-format")) match {
+            case Some("unicode") => OverrideDefFormat.Unicode
+            case Some("ascii") => OverrideDefFormat.Ascii
+            case _ => OverrideDefFormat.Ascii
+          }
       )
     }
   }

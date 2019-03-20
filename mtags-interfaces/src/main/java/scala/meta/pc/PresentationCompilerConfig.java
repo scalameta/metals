@@ -26,4 +26,16 @@ public interface PresentationCompilerConfig {
         return map;
     }
 
+    /**
+     * What text format to use for rendering `override def` labels for completion items.
+     */
+    OverrideDefFormat overrideDefFormat();
+
+    enum OverrideDefFormat {
+        /** Render as "override def". */
+        Ascii,
+        /** Render as "🔼". */
+        Unicode
+    }
+
 }

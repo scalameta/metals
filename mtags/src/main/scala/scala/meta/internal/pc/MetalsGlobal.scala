@@ -381,6 +381,12 @@ class MetalsGlobal(
       new l.Position(line, column)
     }
 
+    def isAfter(other: Position): Boolean = {
+      pos.isDefined &&
+      other.isDefined &&
+      pos.point > other.point
+    }
+
     def toLSP: l.Range = {
       if (pos.isRange) {
         new l.Range(toPos(pos.start), toPos(pos.end))
@@ -392,6 +398,9 @@ class MetalsGlobal(
   }
 
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def isLocallyDefinedSymbol: Boolean = {
+      sym.isLocalToBlock && sym.pos.isDefined
+    }
     def isKindaTheSameAs(other: Symbol): Boolean = {
       if (sym.hasPackageFlag) {
         // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
