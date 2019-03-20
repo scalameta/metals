@@ -37,15 +37,13 @@ sealed trait BloopSocket extends Cancelable {
   import BloopSocket._
   override def cancel(): Unit = this match {
     case NamedPipe(socket) =>
-      socket.close()
+      if (!socket.isClosed && socket.isConnected) socket.close()
     case Unix(socket) =>
       if (!socket.isInputShutdown) socket.shutdownInput()
       if (!socket.isOutputShutdown) socket.shutdownOutput()
-      socket.close()
+      if (!socket.isClosed && socket.isConnected) socket.close()
     case Tcp(socket) =>
-      if (!socket.isClosed) {
-        socket.close()
-      }
+      if (!socket.isClosed && socket.isConnected) socket.close()
   }
 }
 

@@ -172,7 +172,7 @@ lazy val metals = project
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       // for BSP
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
+      "ch.epfl.scala" % "ipcsocket" % "1.0.1",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       // for LSP
       "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0",
