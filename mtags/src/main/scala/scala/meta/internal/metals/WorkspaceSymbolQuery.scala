@@ -19,6 +19,7 @@ case class WorkspaceSymbolQuery(
     alternatives: Array[AlternativeQuery],
     isTrailingDot: Boolean
 ) {
+  def isExact: Boolean = query.length < Fuzzy.ExactSearchLimit
   def matches(bloom: BloomFilter[CharSequence]): Boolean =
     alternatives.exists(_.matches(bloom))
   def matches(symbol: CharSequence): Boolean =

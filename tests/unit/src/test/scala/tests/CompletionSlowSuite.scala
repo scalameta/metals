@@ -43,8 +43,8 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
       _ = assertNoDiagnostics()
       _ <- assertCompletion(
         "DefinedIn@@",
-        """|a.Outer.DefinedInA a.Outer
-           |c.DefinedInC c
+        """|DefinedInA - a.Outer
+           |DefinedInC - c
            |""".stripMargin
       )
     } yield ()

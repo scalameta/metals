@@ -42,7 +42,9 @@ class ClasspathSearch(
       classfiles.add(classfile)
     }
     var nonExactMatches = 0
-    var searchResult = SymbolSearch.Result.COMPLETE
+    var searchResult =
+      if (query.isExact) SymbolSearch.Result.INCOMPLETE
+      else SymbolSearch.Result.COMPLETE
     for {
       hit <- classfiles.pollingIterator
       if {

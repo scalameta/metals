@@ -64,10 +64,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       original: String,
       expected: String,
       filterText: String = "",
-      assertSingleItem: Boolean = true
+      assertSingleItem: Boolean = true,
+      filter: String => Boolean = _ => true
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
-      val items = getItems(original)
+      val items = getItems(original).filter(item => filter(item.getLabel))
       if (items.isEmpty) fail("obtained empty completions!")
       if (assertSingleItem && items.length != 1) {
         fail(
@@ -92,7 +93,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     test(name) {
       val items = getItems(original)
       val obtained = items
-        .map(item => Option(item.getInsertText).getOrElse(item.getLabel))
+        .map { item =>
+          Option(item.getTextEdit)
+            .map(_.getNewText)
+            .getOrElse(item.getLabel)
+        }
         .mkString("\n")
       assertNoDiff(obtained, expected)
     }
@@ -134,7 +139,13 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         }
         out
           .append(label)
-          .append(if (includeDetail) item.getDetail else "")
+          .append(
+            if (includeDetail && !item.getLabel.contains(item.getDetail)) {
+              item.getDetail
+            } else {
+              ""
+            }
+          )
           .append(commitCharacter)
           .append("\n")
       }

@@ -1,5 +1,7 @@
 package tests
 
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
 import org.scalactic.source.Position
 import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
@@ -23,6 +25,7 @@ object DiffAssertions extends scala.meta.testkit.DiffAssertions {
       obtained
     )
   }
+
   def assertNoDiff(
       obtained: String,
       expected: String,
@@ -60,8 +63,8 @@ object DiffAssertions extends scala.meta.testkit.DiffAssertions {
     if (obtained.length < 1000) {
       sb.append(
         s"""#${header("Obtained")}
-           #${stripTrailingWhitespace(obtained)}
-           #
+            #${renderObtained(stripTrailingWhitespace(obtained))}
+            #
             #""".stripMargin('#')
       )
     }
@@ -79,7 +82,7 @@ object DiffAssertions extends scala.meta.testkit.DiffAssertions {
       implicit pos: Position
   ): Unit = {
     colored {
-      assertNoDiff(obtained, expected, hint)
+      assertNoDiff(obtained, expected, hint, hint)
     }
   }
   def colored[T](
@@ -101,19 +104,29 @@ object DiffAssertions extends scala.meta.testkit.DiffAssertions {
     }
   }
 
+  private def renderObtained(obtained: String): String = {
+    val out = new ByteArrayOutputStream()
+    renderObtained(obtained, new PrintStream(out))
+    out.toString()
+  }
+
+  private def renderObtained(obtained: String, out: PrintStream): Unit = {
+    obtained.linesIterator.toList match {
+      case head +: tail =>
+        out.println("    \"\"\"|" + head)
+        tail.foreach(line => out.println("       |" + line))
+      case head +: Nil =>
+        out.println(head)
+      case Nil =>
+        out.println("obtained is empty")
+    }
+  }
+
   def orPrintObtained(thunk: () => Unit, obtained: String): Unit = {
     try thunk()
     catch {
       case ex: Exception =>
-        obtained.linesIterator.toList match {
-          case head +: tail =>
-            println("    \"\"\"|" + head)
-            tail.foreach(line => println("       |" + line))
-          case head +: Nil =>
-            println(head)
-          case Nil =>
-            println("obtained is empty")
-        }
+        renderObtained(obtained, System.out)
         throw ex
     }
   }

@@ -297,6 +297,53 @@ trait Completions { this: MetalsGlobal =>
 
   }
 
+  /**
+   * A position to insert new imports
+   *
+   * @param offset the offset where to place the import.
+   * @param indent the indentation at which to place the import.
+   */
+  case class AutoImportPosition(offset: Int, indent: Int)
+
+  /**
+   * Extractor for tree nodes where we can insert import statements.
+   */
+  object NonSyntheticBlock {
+    def unapply(tree: Tree): Option[List[Tree]] = tree match {
+      case t: Template => Some(t.body)
+      case b: Block => Some(b.stats)
+      case _ => None
+    }
+  }
+
+  /**
+   * Extractor for a tree node where we can insert a leading import statements.
+   */
+  object NonSyntheticStatement {
+    def unapply(tree: Tree): Boolean = tree match {
+      case t: ValDef => !t.name.containsChar('$')
+      case _ => true
+    }
+  }
+
+  def autoImportPosition(
+      pos: Position,
+      text: String
+  ): Option[AutoImportPosition] = {
+    if (lastEnclosing.isEmpty) {
+      locateTree(pos)
+    }
+    lastEnclosing.headOption match {
+      case Some(_: Import) => None
+      case _ =>
+        lastEnclosing.sliding(2).collectFirst {
+          case List(stat @ NonSyntheticStatement(), NonSyntheticBlock(stats)) =>
+            val top = stats.find(_.pos.includes(stat.pos)).getOrElse(stat)
+            val line = top.pos.source.lineToOffset(top.pos.focusStart.line - 1)
+            AutoImportPosition(line, inferIndent(line, text))
+        }
+    }
+  }
   def completionPosition(pos: Position, text: String): CompletionPosition = {
     lastEnclosing match {
       case (name: Ident) :: (a: Apply) :: _ =>
@@ -706,20 +753,6 @@ trait Completions { this: MetalsGlobal =>
       val range = pos.withStart(editStart).withEnd(pos.point).toLSP
       val lineStart = pos.source.lineToOffset(pos.line - 1)
 
-      // Infers the indentation at the completion position by counting the number of leading
-      // spaces in the line.
-      // For example:
-      // class Main {
-      //   def foo<COMPLETE> // inferred indent is 2 spaces.
-      // }
-      def inferIndent: Int = {
-        var i = 0
-        while (lineStart + i < text.length && text.charAt(lineStart + i) == ' ') {
-          i += 1
-        }
-        i
-      }
-
       // Returns all the symbols of all transitive supertypes in the enclosing scope.
       // For example:
       // class Main extends Serializable {
@@ -745,31 +778,6 @@ trait Completions { this: MetalsGlobal =>
           cx = cx.outer
         }
         isVisited
-      }
-
-      // Returns the symbols that have been renamed in this scope.
-      // For example:
-      // import java.lang.{Boolean => JBoolean}
-      // class Main {
-      //   // renamedSymbols: Map(j.l.Boolean => JBoolean)
-      // }
-      def renamedSymbols(context: Context): collection.Map[Symbol, Name] = {
-        val result = mutable.Map.empty[Symbol, Name]
-        context.imports.foreach { imp =>
-          lazy val pre = imp.qual.tpe
-          imp.tree.selectors.foreach { sel =>
-            if (sel.rename != null) {
-              val member = pre.member(sel.name)
-              result(member) = sel.rename
-              member.companion match {
-                case NoSymbol =>
-                case companion =>
-                  result(companion) = sel.rename
-              }
-            }
-          }
-        }
-        result
       }
 
       // Returns true if this symbol is a method that we can override.
@@ -816,7 +824,7 @@ trait Completions { this: MetalsGlobal =>
           }
         val history = new ShortenedNames(
           lookupSymbol = { name =>
-            context.lookupSymbol(name, _ => true)
+            context.lookupSymbol(name, _ => true) :: Nil
           },
           config = renameConfig,
           renames = re,
@@ -852,7 +860,12 @@ trait Completions { this: MetalsGlobal =>
           edit,
           filter + sym.name.decoded,
           sym,
-          history.autoImports(pos, context, lineStart, inferIndent)
+          history.autoImports(
+            pos,
+            context,
+            lineStart,
+            inferIndent(lineStart, text)
+          )
         )
       }
 
@@ -1012,4 +1025,43 @@ trait Completions { this: MetalsGlobal =>
           inverseSemanticdbSymbol(sym) -> nme
       }
       .filterKeys(_ != NoSymbol)
+
+  // Infers the indentation at the completion position by counting the number of leading
+  // spaces in the line.
+  // For example:
+  // class Main {
+  //   def foo<COMPLETE> // inferred indent is 2 spaces.
+  // }
+  def inferIndent(lineStart: Int, text: String): Int = {
+    var i = 0
+    while (lineStart + i < text.length && text.charAt(lineStart + i) == ' ') {
+      i += 1
+    }
+    i
+  }
+
+  // Returns the symbols that have been renamed in this scope.
+  // For example:
+  // import java.lang.{Boolean => JBoolean}
+  // class Main {
+  //   // renamedSymbols: Map(j.l.Boolean => JBoolean)
+  // }
+  def renamedSymbols(context: Context): collection.Map[Symbol, Name] = {
+    val result = mutable.Map.empty[Symbol, Name]
+    context.imports.foreach { imp =>
+      lazy val pre = imp.qual.tpe
+      imp.tree.selectors.foreach { sel =>
+        if (sel.rename != null) {
+          val member = pre.member(sel.name)
+          result(member) = sel.rename
+          member.companion match {
+            case NoSymbol =>
+            case companion =>
+              result(companion) = sel.rename
+          }
+        }
+      }
+    }
+    result
+  }
 }
