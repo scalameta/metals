@@ -790,4 +790,16 @@ object CompletionSuite extends BaseCompletionSuite {
     ""
   )
 
+  check(
+    "filterText",
+    s"""|object Main {
+        |  "".substring@@
+        |}
+        |""".stripMargin,
+    """substring(beginIndex: Int): String
+      |substring(beginIndex: Int, endIndex: Int): String
+      |""".stripMargin,
+    filterText = "substring"
+  )
+
 }

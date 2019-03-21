@@ -24,7 +24,8 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "import Files@@",
-    "import java.nio.file.Files"
+    "import java.nio.file.Files",
+    filterText = "Files"
   )
 
   checkEditLine(
