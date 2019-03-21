@@ -84,9 +84,9 @@ class CompletionProvider(
           case i: OverrideDefMember =>
             item.setFilterText(i.filterText)
           case _ =>
-            if (ident.startsWith("`")) {
-              item.setFilterText(symbolName)
-            }
+            // Explicitly set filter text because the label has method signature and
+            // fully qualified name.
+            item.setFilterText(symbolName)
         }
 
         item.setInsertTextFormat(InsertTextFormat.Snippet)
