@@ -11,7 +11,10 @@ case class PresentationCompilerConfigImpl(
     _parameterHintsCommand: Option[String] = None,
     _symbolPrefixes: collection.Map[String, String] =
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala,
-    overrideDefFormat: OverrideDefFormat = OverrideDefFormat.Ascii
+    overrideDefFormat: OverrideDefFormat = OverrideDefFormat.Ascii,
+    isCompletionItemDetailEnabled: Boolean = true,
+    isCompletionItemDocumentationEnabled: Boolean = true,
+    isSignatureHelpDocumentationEnabled: Boolean = true
 ) extends PresentationCompilerConfig {
   override def symbolPrefixes(): util.Map[String, String] =
     _symbolPrefixes.asJava

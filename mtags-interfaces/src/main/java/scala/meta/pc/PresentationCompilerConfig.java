@@ -38,4 +38,19 @@ public interface PresentationCompilerConfig {
         Unicode
     }
 
+    /**
+     * Returns true if the <code>CompletionItem.detail</code> field should be populated.
+     */
+    boolean isCompletionItemDetailEnabled();
+
+    /**
+     * Returns true if the <code>CompletionItem.documentation</code> field should be populated.
+     */
+    boolean isCompletionItemDocumentationEnabled();
+
+    /**
+     * Returns true if the <code>SignatureHelp.documentation</code> field should be populated.
+     */
+    boolean isSignatureHelpDocumentationEnabled();
+
 }
