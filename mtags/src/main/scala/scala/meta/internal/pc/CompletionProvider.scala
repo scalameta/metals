@@ -65,7 +65,9 @@ class CompletionProvider(
             }
         }
         val item = new CompletionItem(label)
-        item.setDetail(detail)
+        if (metalsConfig.isCompletionItemDetailEnabled) {
+          item.setDetail(detail)
+        }
         val templateSuffix =
           if (completion.isNew &&
             r.sym.dealiased.requiresTemplateCurlyBraces) " {}"

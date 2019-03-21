@@ -100,7 +100,7 @@ object MetalsServerConfig {
           executeClientCommand = ExecuteClientCommandConfig.on,
           globSyntax = GlobSyntaxConfig.vscode,
           compilers =
-            CompilersConfig().copy(
+            base.compilers.copy(
               _parameterHintsCommand =
                 Some("editor.action.triggerParameterHints"),
               overrideDefFormat = OverrideDefFormat.Unicode
@@ -122,7 +122,11 @@ object MetalsServerConfig {
           showMessage = ShowMessageConfig.logMessage,
           showMessageRequest = ShowMessageRequestConfig.on,
           icons = Icons.unicode,
-          isExitOnShutdown = true
+          isExitOnShutdown = true,
+          compilers = base.compilers.copy(
+            // Avoid showing the method signature twice because it's already visible in the label.
+            isCompletionItemDetailEnabled = false
+          )
         )
       case "emacs" =>
         base.copy(

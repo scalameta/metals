@@ -17,7 +17,9 @@ class CompletionItemResolver(
           if (isJavaSymbol(gsym)) {
             val data = item.data.getOrElse(CompletionItemData.empty)
             item.setLabel(replaceJavaParameters(info, item.getLabel))
-            item.setDetail(replaceJavaParameters(info, item.getDetail))
+            if (metalsConfig.isCompletionItemDetailEnabled) {
+              item.setDetail(replaceJavaParameters(info, item.getDetail))
+            }
             if (item.getTextEdit != null && data.kind == CompletionItemData.OverrideKind) {
               item.getTextEdit.setNewText(
                 replaceJavaParameters(info, item.getTextEdit.getNewText)
@@ -33,10 +35,16 @@ class CompletionItemResolver(
               .filterNot(_.isEmpty)
               .toSeq
             item.setLabel(replaceScalaDefaultParams(item.getLabel, defaults))
-            item.setDetail(replaceScalaDefaultParams(item.getDetail, defaults))
+            if (metalsConfig.isCompletionItemDetailEnabled) {
+              item.setDetail(
+                replaceScalaDefaultParams(item.getDetail, defaults)
+              )
+            }
           }
-          val docstring = fullDocstring(gsym)
-          item.setDocumentation(docstring.toMarkupContent)
+          if (metalsConfig.isCompletionItemDocumentationEnabled) {
+            val docstring = fullDocstring(gsym)
+            item.setDocumentation(docstring.toMarkupContent)
+          }
         case _ =>
       }
       item

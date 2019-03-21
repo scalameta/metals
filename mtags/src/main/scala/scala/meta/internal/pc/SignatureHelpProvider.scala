@@ -494,15 +494,18 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
               val byNameLabel =
                 if (isByNamedOrdered) s"<$label>"
                 else label
-              val lparam =
-                new ParameterInformation(byNameLabel, docstring.toMarkupContent)
+              val lparam = new ParameterInformation(byNameLabel)
+              if (metalsConfig.isSignatureHelpDocumentationEnabled) {
+                lparam.setDocumentation(docstring.toMarkupContent)
+              }
               // TODO(olafur): use LSP 3.14.0 ParameterInformation.label offsets instead of strings
               // once this issue is fixed https://github.com/eclipse/lsp4j/issues/300
               if (isActiveSignature && t.activeArg.matches(param, i, j)) {
                 arg(i, j) match {
                   case Some(a) if a.tpe != null && !a.tpe.isErroneous =>
                     val tpe = metalsToLongString(a.tpe.widen, shortenedNames)
-                    if (!lparam.getLabel.endsWith(tpe)) {
+                    if (!lparam.getLabel.endsWith(tpe) &&
+                      metalsConfig.isSignatureHelpDocumentationEnabled) {
                       lparam.setDocumentation(
                         ("```scala\n" + tpe + "\n```\n" + docstring).toMarkupContent
                       )
@@ -516,13 +519,20 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
         if (labels.isEmpty && sortedByName.nonEmpty) Nil
         else labels :: Nil
     }
-    new SignatureInformation(
+    val signatureInformation = new SignatureInformation(
       printer.methodSignature(
         paramLabels.iterator.map(_.iterator.map(_.getLabel))
-      ),
-      printer.methodDocstring.toMarkupContent,
+      )
+    )
+    if (metalsConfig.isSignatureHelpDocumentationEnabled) {
+      signatureInformation.setDocumentation(
+        printer.methodDocstring.toMarkupContent
+      )
+    }
+    signatureInformation.setParameters(
       paramLabels.iterator.flatten.toSeq.asJava
     )
+    signatureInformation
   }
 
 }
