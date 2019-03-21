@@ -132,7 +132,9 @@ class Compilers(
       target <- buildTargets.inverseSources(path)
       info <- buildTargets.info(target)
       scala <- info.asScalaBuildTarget
-      isSupported = ScalaVersions.isSupportedScalaVersion(scala.getScalaVersion)
+      isSupported = ScalaVersions.isSupportedScalaVersion(
+        ScalaVersions.dropVendorSuffix(scala.getScalaVersion)
+      )
       _ = {
         if (!isSupported) {
           scribe.warn(s"unsupported Scala ${scala.getScalaVersion}")
@@ -171,7 +173,7 @@ class Compilers(
   ): PresentationCompiler = {
     val classpath = scalac.classpath.map(_.toNIO).toSeq
     val pc: PresentationCompiler =
-      if (info.getScalaVersion == Properties.versionNumberString) {
+      if (ScalaVersions.dropVendorSuffix(info.getScalaVersion) == Properties.versionNumberString) {
         new ScalaPresentationCompiler()
       } else {
         embedded.presentationCompiler(info, scalac)
