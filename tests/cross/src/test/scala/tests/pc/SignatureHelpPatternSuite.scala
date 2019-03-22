@@ -28,7 +28,13 @@ object SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |""".stripMargin,
     """|unapply(value: A): Some[A]
        |        ^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|unapply(x: A): Some[A]
+           |        ^^^^
+           |""".stripMargin
+    )
   )
 
   check(
