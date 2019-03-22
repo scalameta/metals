@@ -81,8 +81,11 @@ trait Signatures { this: MetalsGlobal =>
       // Returns the package `a` for the symbol `_root_.a.b.c`
       def topPackage(s: Symbol): Symbol = {
         val owner = s.owner
-        if (owner.isEffectiveRoot || owner.isEmptyPackageClass) s
-        else topPackage(owner)
+        if (s.isRoot || s.isRootPackage || s == NoSymbol || s.owner.isEffectiveRoot || s == owner) {
+          s
+        } else {
+          topPackage(owner)
+        }
       }
       val top = topPackage(sym)
       nameResolvesToSymbol(top.name.toTermName, top)
