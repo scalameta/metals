@@ -615,6 +615,7 @@ trait Completions { this: MetalsGlobal =>
       val offset = if (lit.pos.focusEnd.line == pos.line) CURSOR.length else 0
       val litpos = lit.pos.withEnd(lit.pos.end - offset)
       val lrange = litpos.toLSP
+      val hasClosingBrace = text.charAt(pos.point) == '}'
       def write(out: StringBuilder, from: Int, to: Int): Unit = {
         var i = from
         while (i < to) {
@@ -644,7 +645,7 @@ trait Completions { this: MetalsGlobal =>
         }
         out.append(identifier)
         out.append(sym.snippetCursor)
-        if (symbolNeedsBraces) {
+        if (symbolNeedsBraces && !hasClosingBrace) {
           out.append('}')
         }
         write(out, pos.point, lit.pos.end - CURSOR.length)

@@ -408,4 +408,26 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
     filterText = "$Main.member"
   )
 
+  checkEditLine(
+    "closing-brace",
+    """|object Main {
+       |  val hello = ""
+       |  ___
+       |}
+       |""".stripMargin,
+    """"Hello ${hell@@}"""".stripMargin,
+    """s"Hello \${hello$0}"""".stripMargin
+  )
+
+  checkEditLine(
+    "closing-brace-negative",
+    """|object Main {
+       |  val hello = ""
+       |  ___
+       |}
+       |""".stripMargin,
+    """"Hello ${hell@@o}"""".stripMargin,
+    """s"Hello \${hello$0}o}"""".stripMargin
+  )
+
 }

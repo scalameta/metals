@@ -29,9 +29,10 @@ class CompletionProvider(
       cursor = Some(params.offset)
     )
     val pos = unit.position(params.offset)
+    val end = inferIdentEnd(pos, params.text())
     val editRange = pos
       .withStart(inferIdentStart(pos, params.text()))
-      .withEnd(inferIdentEnd(pos, params.text()))
+      .withEnd(end.offset)
       .toLSP
     def textEdit(newText: String) = new l.TextEdit(editRange, newText)
     val (i, completion) = safeCompletionsAt(pos)
@@ -122,9 +123,9 @@ class CompletionProvider(
               r.sym.paramss match {
                 case Nil =>
                 case Nil :: Nil =>
-                  item.setTextEdit(textEdit(baseLabel + "()"))
+                  item.setTextEdit(textEdit(baseLabel + end.snippet("()")))
                 case _ =>
-                  item.setTextEdit(textEdit(baseLabel + "($0)"))
+                  item.setTextEdit(textEdit(baseLabel + end.snippet("($0)")))
                   metalsConfig
                     .parameterHintsCommand()
                     .asScala
@@ -456,14 +457,34 @@ class CompletionProvider(
   }
 
   /**
+   * The end position of a completion request with an optional custom method snippet.
+   * @param offset the offset where the completion ends.
+   * @param customSnippet an optional textmate snippet how to insert parentheses/braces.
+   *                      The `customSnippet` is non-empty when we override the default
+   *                      parentheses snippet `()` for completing methods.
+   *                      If the completion happens a an existing method call like `println@@()`
+   *                      then we want to reuse the existing parentheses and move the cursor
+   *                      into the argument list `println(@@)` instead of introducing duplicate
+   *                      parentheses `println(@@)()`.
+   */
+  class CompletionEnd(val offset: Int, customSnippet: Option[String]) {
+    def snippet(defaultSnippet: String): String =
+      customSnippet.getOrElse(defaultSnippet)
+  }
+
+  /**
    * Returns the end offset of the identifier starting as the given offset position.
    */
-  def inferIdentEnd(pos: Position, text: String): Int = {
+  def inferIdentEnd(pos: Position, text: String): CompletionEnd = {
     var i = pos.point
     while (i < text.length && text.charAt(i).isUnicodeIdentifierPart) {
       i += 1
     }
-    i
+    if (text.startsWith("(", i)) new CompletionEnd(i + 1, Some("($0"))
+    else if (text.startsWith("{", i)) new CompletionEnd(i + 1, Some("{$0"))
+    else if (text.startsWith(" {", i)) new CompletionEnd(i + 2, Some(" {$0"))
+    else if (text.startsWith(" _", i)) new CompletionEnd(i + 2, Some(" _$0"))
+    else new CompletionEnd(i, None)
   }
 
 }

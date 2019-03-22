@@ -133,4 +133,48 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  checkEditLine(
+    "trailing-paren",
+    s"""|object Main {
+        |  def trailing(a: Int) = ()
+        |  ___
+        |}
+        |""".stripMargin,
+    "trailing@@()",
+    "trailing($0)"
+  )
+
+  checkEditLine(
+    "trailing-brace",
+    s"""|object Main {
+        |  def trailing(a: Int) = ()
+        |  ___
+        |}
+        |""".stripMargin,
+    "trailing@@ { }",
+    "trailing {$0 }"
+  )
+
+  checkEditLine(
+    "trailing-brace1",
+    s"""|object Main {
+        |  def trailing(a: Int) = ()
+        |  ___
+        |}
+        |""".stripMargin,
+    "trailing@@{ }",
+    "trailing{$0 }"
+  )
+
+  checkEditLine(
+    "trailing-eta",
+    s"""|object Main {
+        |  def trailing(a: Int) = ()
+        |  ___
+        |}
+        |""".stripMargin,
+    "trailing@@ _",
+    "trailing _$0"
+  )
+
 }
