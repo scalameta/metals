@@ -92,17 +92,24 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       case termNames.unapply =>
         symbol.paramLists match {
           case (head :: Nil) :: Nil =>
-            symbol.info.resultType match {
+            symbol.info.finalResultType match {
               case TypeRef(
                   _,
                   definitions.OptionClass,
-                  TypeRef(_, tuple, args) :: Nil
-                  ) if definitions.isTupleSymbol(tuple) =>
+                  tpe @ TypeRef(_, tuple, args) :: Nil
+                  ) =>
                 val ctor = head.tpe.typeSymbol.primaryConstructor
                 val params = ctor.paramLists.headOption.getOrElse(Nil)
-                val isAlignedTypes = args.zip(params).forall {
-                  case (a, b) => a == b.tpe
+                val toZip = args match {
+                  case Nil => tpe
+                  case _ => args
                 }
+                val isAlignedTypes = toZip.lengthCompare(params.length) == 0 &&
+                  toZip.zip(params).forall {
+                    case (a, b) =>
+                      a == b.tpe ||
+                        b.tpe.typeSymbol.isTypeParameter
+                  }
                 if (isAlignedTypes) {
                   ctor.info
                 } else {
