@@ -62,6 +62,42 @@ trait Signatures { this: MetalsGlobal =>
       )
       (tpeString, edits)
     }
+
+    def synthesize(
+        sym: Symbol,
+        pos: Position,
+        scope: Context,
+        importPosition: AutoImportPosition
+    ): (String, List[l.TextEdit]) = {
+      if (scope.symbolIsInScope(sym)) (Identifier(sym.name), Nil)
+      else if (!scope.nameIsInScope(sym.name)) {
+        val startPos = pos.withPoint(importPosition.offset).focus
+        val indent = " " * importPosition.indent
+        val edit = new l.TextEdit(
+          startPos.toLSP,
+          s"${indent}import ${sym.fullNameSyntax}\n"
+        )
+        (Identifier(sym.name), edit :: Nil)
+      } else {
+        // HACK(olafur): we're using a type pretty-printer to pretty-print term objects here.
+        // A better solution would be to implement a proper term pretty-printer but that would require more work.
+        val (short, edit) = synthesize(
+          TypeRef(
+            ThisType(sym.owner),
+            sym,
+            Nil
+          ),
+          pos,
+          scope,
+          importPosition
+        )
+        if (sym.hasModuleFlag && !sym.isJavaDefined) {
+          (short.stripSuffix(".type"), edit)
+        } else {
+          (short, edit)
+        }
+      }
+    }
   }
 
   class ShortenedNames(

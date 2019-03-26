@@ -35,7 +35,7 @@ class CompletionProvider(
       .withEnd(end.offset)
       .toLSP
     def textEdit(newText: String) = new l.TextEdit(editRange, newText)
-    val (i, completion) = safeCompletionsAt(pos)
+    val (i, completion) = safeCompletionsAt(pos, editRange)
     val history = new ShortenedNames()
     val sorted = i.results.sorted(memberOrdering(history, completion))
     lazy val context = doLocateContext(pos)
@@ -95,6 +95,9 @@ class CompletionProvider(
         r match {
           case i: TextEditMember =>
             item.setTextEdit(i.edit)
+            if (i.additionalTextEdits.nonEmpty) {
+              item.setAdditionalTextEdits(i.additionalTextEdits.asJava)
+            }
           case i: OverrideDefMember =>
             item.setTextEdit(i.edit)
             item.setAdditionalTextEdits(i.autoImports.asJava)
@@ -285,10 +288,11 @@ class CompletionProvider(
   }
 
   private def safeCompletionsAt(
-      position: Position
+      position: Position,
+      editRange: l.Range
   ): (InterestingMembers, CompletionPosition) = {
     def expected(e: Throwable) = {
-      completionPosition(position, params.text()) match {
+      completionPosition(position, params.text(), editRange) match {
         case CompletionPosition.None =>
           logger.warning(e.getMessage)
           (
@@ -323,7 +327,7 @@ class CompletionProvider(
         case _ =>
           CompletionListKind.None
       }
-      val completion = completionPosition(position, params.text())
+      val completion = completionPosition(position, params.text(), editRange)
       val items = filterInteresting(
         matchingResults,
         kind,
@@ -443,48 +447,6 @@ class CompletionProvider(
         logger.warning(s"no such symbol: $classfile")
         Nil
     }
-  }
-
-  /**
-   * Returns the start offset of the identifier starting as the given offset position.
-   */
-  def inferIdentStart(pos: Position, text: String): Int = {
-    var i = pos.point - 1
-    while (i > 0 && text.charAt(i).isUnicodeIdentifierPart) {
-      i -= 1
-    }
-    i + 1
-  }
-
-  /**
-   * The end position of a completion request with an optional custom method snippet.
-   * @param offset the offset where the completion ends.
-   * @param customSnippet an optional textmate snippet how to insert parentheses/braces.
-   *                      The `customSnippet` is non-empty when we override the default
-   *                      parentheses snippet `()` for completing methods.
-   *                      If the completion happens a an existing method call like `println@@()`
-   *                      then we want to reuse the existing parentheses and move the cursor
-   *                      into the argument list `println(@@)` instead of introducing duplicate
-   *                      parentheses `println(@@)()`.
-   */
-  class CompletionEnd(val offset: Int, customSnippet: Option[String]) {
-    def snippet(defaultSnippet: String): String =
-      customSnippet.getOrElse(defaultSnippet)
-  }
-
-  /**
-   * Returns the end offset of the identifier starting as the given offset position.
-   */
-  def inferIdentEnd(pos: Position, text: String): CompletionEnd = {
-    var i = pos.point
-    while (i < text.length && text.charAt(i).isUnicodeIdentifierPart) {
-      i += 1
-    }
-    if (text.startsWith("(", i)) new CompletionEnd(i + 1, Some("($0"))
-    else if (text.startsWith("{", i)) new CompletionEnd(i + 1, Some("{$0"))
-    else if (text.startsWith(" {", i)) new CompletionEnd(i + 2, Some(" {$0"))
-    else if (text.startsWith(" _", i)) new CompletionEnd(i + 2, Some(" _$0"))
-    else new CompletionEnd(i, None)
   }
 
 }

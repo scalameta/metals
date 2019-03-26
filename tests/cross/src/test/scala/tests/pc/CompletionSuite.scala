@@ -759,8 +759,8 @@ object CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Number: Regex
-       |Nothing scala
-       |Null scala
+       |Nil scala.collection.immutable
+       |NoManifest scala.reflect
        |""".stripMargin,
     topLines = Option(3)
   )
@@ -774,8 +774,8 @@ object CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Number: Regex
-       |Nothing scala
-       |Null scala
+       |Nil scala.collection.immutable
+       |NoManifest scala.reflect
        |""".stripMargin,
     topLines = Option(3)
   )

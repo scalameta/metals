@@ -253,16 +253,6 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     }
   }
 
-  // Extractor for both term and type applications like `foo(1)` and foo[T]`
-  object TreeApply {
-    def unapply(tree: Tree): Option[(Tree, List[Tree])] = tree match {
-      case TypeApply(qual, args) => Some(qual -> args)
-      case Apply(qual, args) => Some(qual -> args)
-      case UnApply(qual, args) => Some(qual -> args)
-      case _ => None
-    }
-  }
-
   case class EnclosingMethodCall(
       call: MethodCall,
       activeArg: Arg
