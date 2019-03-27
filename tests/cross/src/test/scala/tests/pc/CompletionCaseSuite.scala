@@ -1,8 +1,17 @@
 package tests.pc
 
+import scala.meta.internal.pc.PresentationCompilerConfigImpl
+import scala.meta.pc.PresentationCompilerConfig
 import tests.BaseCompletionSuite
 
 object CompletionCaseSuite extends BaseCompletionSuite {
+
+  def paramHint = Some("param-hint")
+
+  override def config: PresentationCompilerConfig =
+    PresentationCompilerConfigImpl().copy(
+      _parameterHintsCommand = paramHint
+    )
 
   check(
     "empty",
@@ -326,7 +335,8 @@ object CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "List(1 -> 2).map { c@@ }",
     "List(1 -> 2).map { case ($0) => }",
-    assertSingleItem = false
+    assertSingleItem = false,
+    command = paramHint
   )
 
   check(
@@ -361,7 +371,8 @@ object CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "List(1).foldLeft(0) { cas@@ }",
     "List(1).foldLeft(0) { case ($0) => }",
-    assertSingleItem = false
+    assertSingleItem = false,
+    command = paramHint
   )
 
   checkEditLine(

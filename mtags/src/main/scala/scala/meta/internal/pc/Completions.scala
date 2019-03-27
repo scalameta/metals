@@ -1097,7 +1097,8 @@ trait Completions { this: MetalsGlobal =>
             "case () =>",
             new l.TextEdit(editRange, "case ($0) =>"),
             parents.selector.typeSymbol,
-            label = Some(s"case ${parents.selector} =>")
+            label = Some(s"case ${parents.selector} =>"),
+            command = metalsConfig.parameterHintsCommand().asScala
           )
         }
 
