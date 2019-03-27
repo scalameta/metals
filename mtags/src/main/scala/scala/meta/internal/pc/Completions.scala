@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import scala.reflect.internal.util.Position
 
 /**
  * Utility methods for completions.
@@ -329,6 +330,7 @@ trait Completions { this: MetalsGlobal =>
   object NonSyntheticBlock {
     def unapply(tree: Tree): Option[List[Tree]] = tree match {
       case t: Template => Some(t.body)
+      case t: PackageDef => Some(t.stats)
       case b: Block => Some(b.stats)
       case _ => None
     }
@@ -355,9 +357,20 @@ trait Completions { this: MetalsGlobal =>
       case Some(_: Import) => None
       case _ =>
         lastEnclosing.sliding(2).collectFirst {
-          case List(stat @ NonSyntheticStatement(), NonSyntheticBlock(stats)) =>
+          case List(
+              stat @ NonSyntheticStatement(),
+              block @ NonSyntheticBlock(stats)
+              ) if block.pos.line != stat.pos.line =>
             val top = stats.find(_.pos.includes(stat.pos)).getOrElse(stat)
-            val line = top.pos.source.lineToOffset(top.pos.focusStart.line - 1)
+            val defaultStart = top.pos.start
+            val startOffset = top match {
+              case d: MemberDef =>
+                d.mods.annotations.foldLeft(defaultStart)(_ min _.pos.start)
+              case _ =>
+                defaultStart
+            }
+            val start = Position.offset(pos.source, startOffset)
+            val line = pos.source.lineToOffset(start.line - 1)
             AutoImportPosition(line, inferIndent(line, text))
         }
     }
