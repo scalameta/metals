@@ -325,4 +325,57 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
     "def backtick: `type`.Foo = ${0:???}"
   )
 
+  checkEdit(
+    "annotation-def",
+    """|
+       |object Main {
+       |  @noinline
+       |  def foo: ArrayBuffer@@[Int] = ???
+       |}
+       |""".stripMargin,
+    """|
+       |object Main {
+       |  import scala.collection.mutable
+       |  @noinline
+       |  def foo: mutable.ArrayBuffer[Int] = ???
+       |}
+       |""".stripMargin,
+    filter = _ == "ArrayBuffer - scala.collection.mutable"
+  )
+
+  checkEdit(
+    "annotation-class",
+    """|package annotationclass
+       |object Main {
+       |  @deprecated("", "")
+       |  class Foo extends ArrayBuffer@@[Int]
+       |}
+       |""".stripMargin,
+    """|package annotationclass
+       |object Main {
+       |  import scala.collection.mutable
+       |  @deprecated("", "")
+       |  class Foo extends mutable.ArrayBuffer[Int]
+       |}
+       |""".stripMargin,
+    filter = _ == "ArrayBuffer - scala.collection.mutable"
+  )
+
+  checkEdit(
+    "annotation-trait",
+    """|package annotationtrait
+       |object Main {
+       |  @deprecated("", "")
+       |  trait Foo extends ArrayBuffer@@[Int]
+       |}
+       |""".stripMargin,
+    """|package annotationtrait
+       |object Main {
+       |  import scala.collection.mutable
+       |  @deprecated("", "")
+       |  trait Foo extends mutable.ArrayBuffer[Int]
+       |}
+       |""".stripMargin,
+    filter = _ == "ArrayBuffer - scala.collection.mutable"
+  )
 }
