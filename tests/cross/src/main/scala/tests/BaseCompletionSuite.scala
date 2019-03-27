@@ -50,15 +50,17 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       expected: String,
       filterText: String = "",
       assertSingleItem: Boolean = true,
-      filter: String => Boolean = _ => true
+      filter: String => Boolean = _ => true,
+      command: Option[String] = None
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     checkEdit(
-      name,
-      template.replaceAllLiterally("___", original),
-      template.replaceAllLiterally("___", expected),
-      filterText,
-      assertSingleItem,
-      filter
+      name = name,
+      original = template.replaceAllLiterally("___", original),
+      expected = template.replaceAllLiterally("___", expected),
+      filterText = filterText,
+      assertSingleItem = assertSingleItem,
+      filter = filter,
+      command = command
     )
   }
   def checkEdit(
@@ -67,7 +69,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       expected: String,
       filterText: String = "",
       assertSingleItem: Boolean = true,
-      filter: String => Boolean = _ => true
+      filter: String => Boolean = _ => true,
+      command: Option[String] = None
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val items = getItems(original).filter(item => filter(item.getLabel))
@@ -84,6 +87,11 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       if (filterText.nonEmpty) {
         assertNoDiff(item.getFilterText, filterText, "Invalid filter text")
       }
+      assertNoDiff(
+        Option(item.getCommand).fold("")(_.getCommand),
+        command.getOrElse(""),
+        "Invalid command"
+      )
     }
   }
 

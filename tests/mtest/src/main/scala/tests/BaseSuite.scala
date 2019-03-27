@@ -6,6 +6,7 @@ import scala.concurrent.duration.Duration
 import scala.language.experimental.macros
 import scala.meta.io.AbsolutePath
 import scala.reflect.ClassTag
+import scala.util.Properties
 import utest.TestSuite
 import utest.Tests
 import utest.asserts.Asserts
@@ -23,6 +24,8 @@ import utest.ufansi.Str
  */
 class BaseSuite extends TestSuite {
   System.setProperty("metals.testing", "true")
+  def isScala211: Boolean =
+    Properties.versionNumberString.startsWith("2.11")
   def isWindows: Boolean =
     isAppveyor || isAzureWindows
   def isAppveyor: Boolean =

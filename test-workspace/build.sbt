@@ -5,4 +5,5 @@ inThisBuild(
 )
 
 libraryDependencies ++= List(
+  "c"
   )

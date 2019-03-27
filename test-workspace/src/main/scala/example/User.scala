@@ -1,6 +1,10 @@
 package example
 
 object Main {
-  val hello = 42
-  s"Hello ${hello}"
+  val l: shapeless.HList = ???
+  import shapeless._
+  l match {
+    case head :: tail =>
+    case HNil         =>
+  }
 }

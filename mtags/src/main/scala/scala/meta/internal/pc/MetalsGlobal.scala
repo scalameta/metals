@@ -397,6 +397,19 @@ class MetalsGlobal(
     }
   }
 
+  implicit class XtensionContextMetals(context: Context) {
+    def nameIsInScope(name: Name): Boolean =
+      context.lookupSymbol(name, _ => true) != LookupNotFound
+    def symbolIsInScope(sym: Symbol): Boolean =
+      nameResolvesToSymbol(sym.name, sym)
+    def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean =
+      context.lookupSymbol(name, _ => true).symbol match {
+        case `sym` => true
+        case other =>
+          other.dealiased == sym ||
+            dealiasedValForwarder(other).contains(sym)
+      }
+  }
   implicit class XtensionSymbolMetals(sym: Symbol) {
     def fullNameSyntax: String = {
       val out = new java.lang.StringBuilder
@@ -414,6 +427,19 @@ class MetalsGlobal(
     def isLocallyDefinedSymbol: Boolean = {
       sym.isLocalToBlock && sym.pos.isDefined
     }
+
+    def asInfixPattern: Option[String] =
+      if (sym.isCase &&
+        !Character.isUnicodeIdentifierStart(sym.decodedName.head)) {
+        sym.primaryConstructor.paramss match {
+          case (a :: b :: Nil) :: _ =>
+            Some(s"${a.decodedName} ${sym.decodedName} ${b.decodedName}")
+          case _ => None
+        }
+      } else {
+        None
+      }
+
     def isKindaTheSameAs(other: Symbol): Boolean = {
       if (sym.hasPackageFlag) {
         // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
@@ -453,7 +479,6 @@ class MetalsGlobal(
     def requiresTemplateCurlyBraces: Boolean = {
       sym.isTrait || sym.isInterface || sym.isAbstractClass
     }
-
     def isTypeSymbol: Boolean =
       sym.isType ||
         sym.isClass ||
@@ -464,6 +489,30 @@ class MetalsGlobal(
     def dealiased: Symbol =
       if (sym.isAliasType) sym.info.dealias.typeSymbol
       else sym
+  }
+
+  def metalsSeenFromType(tree: Tree, symbol: Symbol): Type = {
+    def qual(t: Tree): Tree = t match {
+      case TreeApply(q, _) => qual(q)
+      case Select(q, _) => q
+      case Import(q, _) => q
+      case t => t
+    }
+    val pre = stabilizedType(qual(tree))
+    val memberType = pre.memberType(symbol)
+    if (memberType.isErroneous) symbol.info
+    else memberType
+  }
+
+  // Extractor for both term and type applications like `foo(1)` and foo[T]`
+  object TreeApply {
+    def unapply(tree: Tree): Option[(Tree, List[Tree])] = tree match {
+      case TypeApply(qual, args) => Some(qual -> args)
+      case Apply(qual, args) => Some(qual -> args)
+      case UnApply(qual, args) => Some(qual -> args)
+      case AppliedTypeTree(qual, args) => Some(qual -> args)
+      case _ => None
+    }
   }
 
 }
