@@ -69,7 +69,8 @@ object SbtDigest {
       val isSuccess =
         digestDirectory(workspace, digest) &&
           digestFileBytes(project.resolve("build.properties"), digest) &&
-          digestDirectory(project, digest)
+          digestDirectory(project, digest) &&
+          digestDirectory(project.resolve("project"), digest)
       if (isSuccess) Some(MD5.bytesToHex(digest.digest()))
       else None
     }
