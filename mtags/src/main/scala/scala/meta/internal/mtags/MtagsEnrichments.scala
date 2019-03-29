@@ -202,11 +202,16 @@ trait MtagsEnrichments {
       val end = new l.Position(range.endLine, range.endCharacter)
       new l.Range(start, end)
     }
-    def encloses(other: l.Position): Boolean = {
+    def encloses(
+        other: l.Position,
+        includeLastCharacter: Boolean = false
+    ): Boolean = {
       range.startLine <= other.getLine &&
       range.endLine >= other.getLine &&
-      range.startCharacter <= other.getCharacter &&
-      range.endCharacter > other.getCharacter
+      range.startCharacter <= other.getCharacter && {
+        if (includeLastCharacter) range.endCharacter >= other.getCharacter
+        else range.endCharacter > other.getCharacter
+      }
     }
     def encloses(other: l.Range): Boolean = {
       encloses(other.getStart) &&

@@ -403,9 +403,12 @@ object MetalsEnrichments
     def toLocation(uri: String): l.Location = {
       occ.range.getOrElse(s.Range(0, 0, 0, 0)).toLocation(uri)
     }
-    def encloses(pos: l.Position): Boolean =
+    def encloses(
+        pos: l.Position,
+        includeLastCharacter: Boolean = false
+    ): Boolean =
       occ.range.isDefined &&
-        occ.range.get.encloses(pos)
+        occ.range.get.encloses(pos, includeLastCharacter)
   }
 
   implicit class XtensionDiagnosticBsp(diag: b.Diagnostic) {
