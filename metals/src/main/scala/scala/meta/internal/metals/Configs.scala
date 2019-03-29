@@ -59,6 +59,10 @@ object Configs {
           "metals.completion-item.documentation",
           default = true
         ),
+        isHoverDocumentationEnabled = MetalsServerConfig.binaryOption(
+          "metals.hover.documentation",
+          default = true
+        ),
         isSignatureHelpDocumentationEnabled = MetalsServerConfig.binaryOption(
           "metals.signature-help.documentation",
           default = true

@@ -50,7 +50,7 @@ class CompilerAccess(
    *
    * Will not run other requests in parallel.
    */
-  def withCompiler[T](
+  def withCancelableCompiler[T](
       default: T,
       token: CancelToken
   )(thunk: MetalsGlobal => T): T = lock.synchronized {
@@ -74,6 +74,12 @@ class CompilerAccess(
     finally isFinished.set(true)
   }
 
+  def withNonCancelableCompiler[T](default: T, token: CancelToken)(
+      thunk: MetalsGlobal => T
+  ): T = lock.synchronized {
+    withSharedCompiler(default)(thunk)
+  }
+
   /**
    * Run the given thunk with an unlocked compiler instance.
    *
@@ -89,6 +95,10 @@ class CompilerAccess(
       case NonFatal(e) =>
         val isParadiseRelated = e.getStackTrace
           .exists(_.getClassName.startsWith("org.scalamacros"))
+        val isCompilerRelated = e.getStackTrace.headOption.exists { e =>
+          e.getClassName.startsWith("scala.tools") ||
+          e.getClassName.startsWith("scala.reflect")
+        }
         if (isParadiseRelated) {
           // Testing shows that the scalamacro paradise plugin tends to crash
           // easily in long-running sessions. We retry with a fresh compiler
@@ -100,6 +110,12 @@ class CompilerAccess(
             thunk,
             default,
             "the org.scalamacros:paradise compiler plugin"
+          )
+        } else if (isCompilerRelated) {
+          retryWithCleanCompiler(
+            thunk,
+            default,
+            "an error in the Scala compiler"
           )
         } else {
           handleError(e)

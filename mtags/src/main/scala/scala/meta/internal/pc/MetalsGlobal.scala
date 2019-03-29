@@ -8,6 +8,7 @@ import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
+import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
@@ -44,7 +45,7 @@ class MetalsGlobal(
      * - we insure ourselves from misbehaving macro library that mess up with compiler APIs
      * - we avoid potentially expensive computation during macro expansion
      * It's safe to disable blackbox macros because they don't affect typing, meaning
-     * they cannot change the results from completions/signatureHelp/hoverForDebuggingPurposes.
+     * they cannot change the results from completions/signatureHelp/hover.
      *
      * Here are basic benchmark numbers running completions in Exprs.scala from fastparse,
      * a 150 line source file where a scope completion triggers 80 macros.
@@ -86,8 +87,18 @@ class MetalsGlobal(
     symbol.toSemantic
   }
 
-  def printPretty(pos: Position): Unit = {
-    println(pretty(pos))
+  def printPretty(pos: sourcecode.Text[Position]): Unit = {
+    import scala.meta.internal.metals.PositionSyntax._
+    val input = scala.meta.Input.String(new String(pos.value.source.content))
+    val (start, end) =
+      if (pos.value.isRange) {
+        (pos.value.start, pos.value.end)
+      } else {
+        (pos.value.point, pos.value.point)
+      }
+    val range =
+      scala.meta.Position.Range(input, start, end)
+    println(range.formatMessage("info", pos.source))
   }
 
   def pretty(pos: Position): String = {
@@ -409,6 +420,16 @@ class MetalsGlobal(
           other.dealiased == sym ||
             dealiasedValForwarder(other).contains(sym)
       }
+  }
+  implicit class XtensionDefTreeMetals(defn: DefTree) {
+
+    /** Returns the position of the name/identifier of this definition. */
+    def namePos: Position = {
+      val start = defn.pos.point
+      val end = start + defn.name.length()
+      Position.range(defn.pos.source, start, start, end)
+    }
+
   }
   implicit class XtensionSymbolMetals(sym: Symbol) {
     def fullNameSyntax: String = {

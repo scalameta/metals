@@ -5,6 +5,7 @@ import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.util.Collections
+import java.util.Optional
 import java.util.concurrent.ScheduledExecutorService
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
@@ -111,9 +112,9 @@ class Compilers(
   def hover(
       params: TextDocumentPositionParams,
       token: CancelToken
-  ): Option[Hover] =
+  ): Option[Optional[Hover]] =
     withPC(params) { (pc, pos) =>
-      pc.hoverForDebuggingPurposes(
+      pc.hover(
         CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
       )
     }
