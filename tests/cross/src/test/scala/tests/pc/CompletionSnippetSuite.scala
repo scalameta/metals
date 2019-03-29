@@ -177,4 +177,14 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
     "trailing _$0"
   )
 
+  checkEditLine(
+    "implicit",
+    s"""|object Main {
+        |  ___
+        |}
+        |""".stripMargin,
+    "List(1).flatte@@",
+    "List(1).flatten"
+  )
+
 }
