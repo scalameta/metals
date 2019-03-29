@@ -35,16 +35,6 @@ object MarkdownGenerator {
   def toMarkdown(c: Comment): String = {
     Seq(
       toMarkdown(c.body),
-      if (c.authors.nonEmpty)
-        "\n**Authors**\n" + c.authors
-          .map(body => "- " ++ blocksToMarkdown(body.blocks))
-          .mkString("\n")
-      else "",
-      if (c.version.nonEmpty)
-        "\n" + c.version
-          .map(body => "**Version:** " ++ blocksToMarkdown(body.blocks))
-          .mkString("\n")
-      else "",
       if (c.constructor.nonEmpty)
         "\n" + c.constructor
           .map(

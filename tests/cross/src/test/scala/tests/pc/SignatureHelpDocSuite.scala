@@ -232,10 +232,6 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Class `Some[A]` represents existing values of type
        | `A`.
-       |
-       |
-       |**Authors**
-       |- Martin Odersky
        |<init>(value: Int): Some[Int]
        |       ^^^^^^^^^^
        |""".stripMargin,
@@ -243,10 +239,6 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       "2.11" ->
         """|Class `Some[A]` represents existing values of type
            | `A`.
-           |
-           |
-           |**Authors**
-           |- Martin Odersky
            |<init>(x: Int): Some[Int]
            |       ^^^^^^
            |""".stripMargin
