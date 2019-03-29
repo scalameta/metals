@@ -175,7 +175,8 @@ class MetalsLanguageServer(
         languageClient,
         tables,
         messages,
-        statusBar
+        statusBar,
+        () => compilers
       )
     )
     warnings = new Warnings(
@@ -683,7 +684,7 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/hover")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
     CancelTokens { token =>
-      compilers.hover(params, token) match {
+      compilers.hover(params, token, interactiveSemanticdbs) match {
         case None => null
         case Some(value) =>
           value.orElse(null)
@@ -829,7 +830,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
     CancelTokens { token =>
-      compilers.signatureHelp(params, token).orNull
+      compilers.signatureHelp(params, token, interactiveSemanticdbs).orNull
     }
 
   @JsonRequest("textDocument/codeAction")

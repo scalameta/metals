@@ -371,13 +371,14 @@ final class TestingServer(
 
   private def offsetParams(
       filename: String,
-      original: String
+      original: String,
+      root: AbsolutePath
   ): Future[(String, TextDocumentPositionParams)] = {
     val offset = original.indexOf("@@")
     if (offset < 0) sys.error(s"missing @@\n$original")
     val text = original.replaceAllLiterally("@@", "")
     val input = m.Input.String(text)
-    val path = workspace.resolve(filename)
+    val path = root.resolve(filename)
     path.touch()
     val pos = m.Position.Range(input, offset, offset)
     for {
@@ -396,10 +397,11 @@ final class TestingServer(
   def assertHover(
       filename: String,
       query: String,
-      expected: String
+      expected: String,
+      root: AbsolutePath = workspace
   ): Future[Unit] = {
     for {
-      hover <- hover(filename, query)
+      hover <- hover(filename, query, root)
     } yield {
       DiffAssertions.assertNoDiffOrPrintObtained(
         hover,
@@ -410,9 +412,13 @@ final class TestingServer(
     }
   }
 
-  def hover(filename: String, query: String): Future[String] = {
+  def hover(
+      filename: String,
+      query: String,
+      root: AbsolutePath
+  ): Future[String] = {
     for {
-      (text, params) <- offsetParams(filename, query)
+      (text, params) <- offsetParams(filename, query, root)
       hover <- server.hover(params).asScala
     } yield TestHovers.renderAsString(text, Option(hover), includeRange = false)
   }

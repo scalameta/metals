@@ -2,7 +2,6 @@ package tests
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import scala.meta.internal.metals.Messages.Only212Navigation
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
@@ -231,35 +230,6 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
       )
       _ <- server.didFocus("a/src/main/scala/a/Main.scala")
       // dependency diagnosticsForDebuggingPurposes are unpublished.
-      _ = assertNoDiff(client.workspaceDiagnostics, "")
-    } yield ()
-  }
-
-  testAsync("2.11") {
-    cleanDatabase()
-    for {
-      _ <- server.initialize(
-        """
-          |/metals.json
-          |{
-          |  "a": {
-          |    "scalaVersion": "2.11.12"
-          |  }
-          |}
-          |/a/src/main/scala/a/Main.scala
-          |object Main {
-          |  println("hello!")
-          |}
-          |""".stripMargin
-      )
-      _ = client.messageRequests.clear()
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ = server.workspaceDefinitions // trigger definition
-      _ <- server.didOpen("scala/Predef.scala")
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        Only212Navigation.params("2.11.12").getMessage
-      )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }

@@ -13,6 +13,7 @@ import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
@@ -112,6 +113,20 @@ case class ScalaPresentationCompiler(
     ) { global =>
       Optional.ofNullable(new HoverProvider(global, params).hover().orNull)
     }
+
+  override def semanticdbTextDocument(
+      filename: String,
+      code: String
+  ): Array[Byte] = {
+    access.withNonCancelableCompiler(
+      Array.emptyByteArray,
+      EmptyCancelToken
+    ) { global =>
+      new SemanticdbTextDocumentProvider(global)
+        .textDocument(filename, code)
+        .toByteArray
+    }
+  }
 
   def newCompiler(): MetalsGlobal = {
     val classpath = this.classpath.mkString(File.pathSeparator)

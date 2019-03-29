@@ -104,33 +104,46 @@ class Compilers(
       params: CompletionParams,
       token: CancelToken
   ): Option[CompletionList] =
-    withPC(params) { (pc, pos) =>
+    withPC(params, None) { (pc, pos) =>
       pc.complete(
         CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
       )
     }
   def hover(
       params: TextDocumentPositionParams,
-      token: CancelToken
+      token: CancelToken,
+      interactiveSemanticdbs: InteractiveSemanticdbs
   ): Option[Optional[Hover]] =
-    withPC(params) { (pc, pos) =>
+    withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
       pc.hover(
         CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
       )
     }
   def signatureHelp(
       params: TextDocumentPositionParams,
-      token: CancelToken
+      token: CancelToken,
+      interactiveSemanticdbs: InteractiveSemanticdbs
   ): Option[SignatureHelp] =
-    withPC(params) { (pc, pos) =>
+    withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
       pc.signatureHelp(
         CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
       )
     }
 
-  private def loadCompiler(path: AbsolutePath): Option[PresentationCompiler] = {
+  def loadCompiler(
+      path: AbsolutePath,
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+  ): Option[PresentationCompiler] =
     for {
-      target <- buildTargets.inverseSources(path)
+      target <- buildTargets
+        .inverseSources(path)
+        .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
+      compiler <- loadCompiler(target)
+    } yield compiler
+  def loadCompiler(
+      target: BuildTargetIdentifier
+  ): Option[PresentationCompiler] = {
+    for {
       info <- buildTargets.info(target)
       scala <- info.asScalaBuildTarget
       isSupported = ScalaVersions.isSupportedScalaVersion(
@@ -157,10 +170,11 @@ class Compilers(
   }
 
   private def withPC[T](
-      params: TextDocumentPositionParams
+      params: TextDocumentPositionParams,
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
   )(fn: (PresentationCompiler, Position) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    loadCompiler(path).map { compiler =>
+    loadCompiler(path, interactiveSemanticdbs).map { compiler =>
       val input = path.toInputFromBuffers(buffers)
       val pos = params.getPosition.toMeta(input)
       val result = fn(compiler, pos)
