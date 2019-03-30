@@ -270,7 +270,12 @@ object MetalsEnrichments
     }
 
     def isSbtRelated(workspace: AbsolutePath): Boolean = {
-      val isToplevel = Set(workspace.toNIO, workspace.toNIO.resolve("project"))
+      val project = workspace.toNIO.resolve("project")
+      val isToplevel = Set(
+        workspace.toNIO,
+        project,
+        project.resolve("project")
+      )
       isToplevel(path.toNIO.getParent) && {
         val filename = path.toNIO.getFileName.toString
         filename.endsWith("build.properties") ||

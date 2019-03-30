@@ -24,6 +24,7 @@ object Configs {
         List(
           new FileSystemWatcher(s"$root/*.sbt"),
           new FileSystemWatcher(s"$root/project/*.{scala,sbt}"),
+          new FileSystemWatcher(s"$root/project/project/*.{scala,sbt}"),
           new FileSystemWatcher(s"$root/project/build.properties")
         ).asJava
       )

@@ -55,6 +55,11 @@ public abstract class PresentationCompiler {
      */
     public abstract Optional<Hover> hover(OffsetParams params);
 
+    /**
+     * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.
+     */
+    public abstract byte[] semanticdbTextDocument(String filename, String code);
+
     // =================================
     // Configuration and lifecycle APIs.
     // =================================

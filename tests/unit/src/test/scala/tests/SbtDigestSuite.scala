@@ -82,9 +82,9 @@ object SbtDigestSuite extends BaseSuite {
     Some(project)
   )
 
-  // meta-meta builds impact the build itself but unlikely impact build projects.
+  val meta = "E8B5C90DC3EAA995306ED0C4A102107A"
   check(
-    "meta-metabuild is ignored",
+    "meta-metabuild is note ignored",
     """
       |/build.sbt
       |lazy val x = 2
@@ -95,7 +95,7 @@ object SbtDigestSuite extends BaseSuite {
       |package a.b
       |class A
     """.stripMargin,
-    Some(project)
+    Some(meta)
   )
 
   test("build.properties") {

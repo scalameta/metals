@@ -136,32 +136,6 @@ class Messages(icons: Icons) {
     }
   }
 
-  object Only212Navigation {
-    def statusBar(scalaVersion: String) =
-      MetalsStatusParams(
-        "$(alert) No navigation",
-        tooltip = params(scalaVersion).getMessage
-      )
-    def dismissForever: MessageActionItem =
-      new MessageActionItem("Don't show again")
-    def ok: MessageActionItem =
-      new MessageActionItem("Ok")
-    def params(scalaVersion: String): ShowMessageRequestParams = {
-      val params = new ShowMessageRequestParams()
-      params.setMessage(
-        s"Navigation for external library sources is not supported in Scala $scalaVersion."
-      )
-      params.setType(MessageType.Warning)
-      params.setActions(
-        List(
-          ok,
-          dismissForever
-        ).asJava
-      )
-      params
-    }
-  }
-
   object SelectBspServer {
     case class Request(
         params: ShowMessageRequestParams,

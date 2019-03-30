@@ -166,8 +166,6 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
           ImportBuildChanges.yes
         } else if (params == ImportBuild.params) {
           ImportBuild.yes
-        } else if (params == Only212Navigation.params("2.11.12")) {
-          Only212Navigation.dismissForever
         } else if (CheckDoctor.isDoctor(params)) {
           CheckDoctor.moreInformation
         } else if (SelectBspServer.isSelectBspServer(params)) {

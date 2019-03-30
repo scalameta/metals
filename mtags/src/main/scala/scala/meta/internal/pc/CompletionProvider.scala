@@ -127,6 +127,8 @@ class CompletionProvider(
                 case Nil =>
                 case Nil :: Nil =>
                   item.setTextEdit(textEdit(baseLabel + end.snippet("()")))
+                case head :: Nil if head.forall(_.isImplicit) =>
+                  () // Don't set ($0) snippet for implicit-only params.
                 case _ =>
                   item.setTextEdit(textEdit(baseLabel + end.snippet("($0)")))
                   metalsConfig

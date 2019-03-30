@@ -18,6 +18,8 @@ object SbtRelatedSuite extends BaseSuite {
   checkIsSbtRelated("project/build.properties")
   checkIsSbtRelated("project/Dependencies.scala")
   checkIsSbtRelated("project/Build.scala")
+  checkIsSbtRelated("project/project/plugins.sbt")
+  checkIsSbtRelated("project/project/build.sbt")
   checkIsSbtRelated("project/build.sbt")
   checkIsSbtRelated("build.sbt")
   checkIsNotSbtRelated("src/main/scala/Main.scala")

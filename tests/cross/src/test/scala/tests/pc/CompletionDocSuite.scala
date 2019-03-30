@@ -190,10 +190,6 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |AbstractIterator scala.collection
        |> Buffered iterators are iterators which provide a method `head`
        | that inspects the next element without discarding it.
-       |
-       |
-       |**Authors**
-       |- Martin Odersky
        |BufferedIterator scala.collection
        |> ### class Iterator
        |Iterators are data structures that allow to iterate over a sequence
@@ -225,17 +221,9 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |  } else it
        |}
        |```
-       |**Authors**
-       |- Martin Odersky, Matthias Zenger
        |
        |### object Iterator
        |The `Iterator` object provides various functions for creating specialized iterators.
-       |
-       |
-       |**Authors**
-       |- Martin Odersky
-       |
-       |- Matthias Zenger
        |Iterator scala.collection
        |""".stripMargin,
     includeDocs = true
@@ -315,10 +303,6 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |*Note:*: all Try combinators will catch exceptions and return failure unless otherwise specified in the documentation.
        |
        |`Try` comes to the Scala standard library after years of use as an integral part of Twitter's stack.
-       |
-       |
-       |**Authors**
-       |- based on Twitter's original implementation in com.twitter.util.
        |Try scala.util
        |""".stripMargin,
     includeDocs = true
@@ -334,11 +318,6 @@ object CompletionDocSuite extends BaseCompletionSuite {
        | mostly compatible with `java.lang.StringBuilder`, except where there are
        | conflicts with the Scala collections API (such as the `reverse` method.)
        |
-       |
-       |**Authors**
-       |- Stephane Micheloud
-       |
-       |- Martin Odersky
        |
        |**See**
        |- [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders]("Scala's Collection Library overview")
@@ -442,10 +421,6 @@ object CompletionDocSuite extends BaseCompletionSuite {
        | of the stack of bindings from the parent thread, and
        | from then on the bindings for the new thread
        | are independent of those for the original thread.
-       |
-       |
-       |**Authors**
-       |- Lex Spoon
        |DynamicVariable scala.util
        |""".stripMargin,
     includeDocs = true
