@@ -378,4 +378,20 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     filter = _ == "ArrayBuffer - scala.collection.mutable"
   )
+
+  checkEdit(
+    "class-param",
+    """|package classparam
+       |case class Foo(
+       |  name: Future@@[String]
+       |)
+       |""".stripMargin,
+    """|package classparam
+       |import scala.concurrent.Future
+       |case class Foo(
+       |  name: Future[String]
+       |)
+       |""".stripMargin,
+    filter = _ == "Future - scala.concurrent"
+  )
 }

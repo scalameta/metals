@@ -341,7 +341,10 @@ trait Completions { this: MetalsGlobal =>
    */
   object NonSyntheticStatement {
     def unapply(tree: Tree): Boolean = tree match {
-      case t: ValDef => !t.name.containsChar('$')
+      case t: ValOrDefDef =>
+        !t.name.containsChar('$') &&
+          !t.symbol.isParamAccessor &&
+          !t.symbol.isCaseAccessor
       case _ => true
     }
   }
