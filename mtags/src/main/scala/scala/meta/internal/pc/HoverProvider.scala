@@ -24,10 +24,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       )
       val pos = unit.position(params.offset())
       val tree = typedHoverTreeAt(pos)
-      val NamedArgument = new NamedArgument(pos)
       tree match {
-        case NamedArgument(hover) =>
-          Some(hover)
         case Import(qual, selectors) =>
           for {
             sel <- selectors.reverseIterator.find(_.namePos <= pos.start)
@@ -236,69 +233,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  /**
-   * Extractor for named arguments, example `arg` in `foo(arg = 42)`.
-   *
-   * When the cursor is over a named argument then we fallback to signature help
-   * (parameter hints) because the de-sugaring logic is quite involved.
-   */
-  class NamedArgument(pos: Position) {
-    def unapply(a: Apply): Option[Hover] = a match {
-      case Apply(qual, _) if !qual.pos.includes(pos) && !isForSynthetic(a) =>
-        val signatureHelp =
-          new SignatureHelpProvider(compiler).signatureHelp(params)
-        if (!signatureHelp.getSignatures.isEmpty &&
-          signatureHelp.getActiveParameter >= 0 &&
-          signatureHelp.getActiveSignature >= 0) {
-          val activeParameter = signatureHelp.getSignatures
-            .get(signatureHelp.getActiveSignature)
-            .getParameters
-            .get(signatureHelp.getActiveParameter)
-
-          val contents =
-            new java.util.ArrayList[JEither[String, MarkedString]]()
-          contents.add(
-            JEither.forRight(
-              new MarkedString("scala", activeParameter.getLabel)
-            )
-          )
-          Option(activeParameter.getDocumentation).foreach { documentation =>
-            documentation.asScala match {
-              case Left(value) =>
-                contents.add(JEither.forLeft(value))
-              case Right(value) =>
-                contents.add(
-                  JEither
-                    .forRight(new MarkedString(value.getKind, value.getValue))
-                )
-            }
-          }
-          Some(new Hover(contents))
-        } else {
-          None
-        }
-      case _ =>
-        None
-    }
-    val isForName = Set[Name](
-      nme.map,
-      nme.withFilter,
-      nme.flatMap,
-      nme.foreach
-    )
-    private def isForSynthetic(gtree: Tree): Boolean = {
-      def isForComprehensionSyntheticName(select: Select): Boolean = {
-        select.pos == select.qualifier.pos && isForName(select.name)
-      }
-      gtree match {
-        case Apply(fun, List(_: Function)) => isForSynthetic(fun)
-        case TypeApply(fun, _) => isForSynthetic(fun)
-        case gtree: Select if isForComprehensionSyntheticName(gtree) => true
-        case _ => false
-      }
-    }
-  }
-
   def symbolFlagString(sym: Symbol): String = {
     var mask = sym.flagMask
     // Strip case modifier off non-class symbols like synthetic apply/copy.
@@ -311,9 +245,43 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
       case t => t
     }
-    typedTreeAt(pos) match {
-      case Import(qual, _) if qual.pos.includes(pos) => loop(qual)
+    val typedTree = typedTreeAt(pos)
+    typedTree match {
+      case Import(qual, _) if qual.pos.includes(pos) =>
+        loop(qual)
+      case Apply(fun, args)
+          if !fun.pos.includes(pos) &&
+            !isForSynthetic(typedTree) =>
+        // Looks like a named argument, try the arguments.
+        val arg = args.collectFirst {
+          case arg if treePos(arg).includes(pos) =>
+            arg match {
+              case Block(_, expr) if treePos(expr).includes(pos) =>
+                // looks like a desugaring of named arguments in different order from definition-site.
+                expr
+              case a => a
+            }
+        }
+        arg.getOrElse(typedTree)
       case t => t
+    }
+  }
+
+  lazy val isForName = Set[Name](
+    nme.map,
+    nme.withFilter,
+    nme.flatMap,
+    nme.foreach
+  )
+  def isForSynthetic(gtree: Tree): Boolean = {
+    def isForComprehensionSyntheticName(select: Select): Boolean = {
+      select.pos == select.qualifier.pos && isForName(select.name)
+    }
+    gtree match {
+      case Apply(fun, List(_: Function)) => isForSynthetic(fun)
+      case TypeApply(fun, _) => isForSynthetic(fun)
+      case gtree: Select if isForComprehensionSyntheticName(gtree) => true
+      case _ => false
     }
   }
 }

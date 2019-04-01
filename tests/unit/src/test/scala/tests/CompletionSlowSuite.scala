@@ -9,7 +9,7 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
     basicTest(V.scala212)
   }
 
-  testAsync("workspace") {
+  flakyTest("workspace") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -129,7 +129,7 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
     } yield ()
   )
 
-  testAsync("symbol-prefixes") {
+  flakyTest("symbol-prefixes") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
