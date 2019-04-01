@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.nio.file.Path
 import java.util
 import java.util.Collections
@@ -137,6 +138,18 @@ final class FormattingProvider(
     reporterPromise.get().foreach(_.trySuccess(false))
     reporterPromise.set(None)
     cancelToken.set(Some(token))
+  }
+
+  // Warms up the Scalafmt instance so that the first formatting request responds faster.
+  // Does nothing if there is no .scalafmt.conf or there is no configured version setting.
+  def load(): Unit = {
+    if (scalafmtConf.isFile) {
+      scalafmt.format(
+        scalafmtConf.toNIO,
+        Paths.get("Main.scala"),
+        "object Main  {}"
+      )
+    }
   }
 
   def format(
