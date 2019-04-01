@@ -48,4 +48,15 @@ object HoverNamedArgSuite extends BaseHoverSuite {
     ""
   )
 
+  check(
+    "nested",
+    """package a
+      |object e {
+      |  class User(name: String, age: Int)
+      |  println(<<new User(age = 42, n@@ame = "")>>)
+      |}
+      |""".stripMargin,
+    "def this(name: String, age: Int): e.User".hover
+  )
+
 }

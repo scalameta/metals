@@ -245,9 +245,43 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
       case t => t
     }
-    typedTreeAt(pos) match {
-      case Import(qual, _) if qual.pos.includes(pos) => loop(qual)
+    val typedTree = typedTreeAt(pos)
+    typedTree match {
+      case Import(qual, _) if qual.pos.includes(pos) =>
+        loop(qual)
+      case Apply(fun, args)
+          if !fun.pos.includes(pos) &&
+            !isForSynthetic(typedTree) =>
+        // Looks like a named argument, try the arguments.
+        val arg = args.collectFirst {
+          case arg if treePos(arg).includes(pos) =>
+            arg match {
+              case Block(_, expr) if treePos(expr).includes(pos) =>
+                // looks like a desugaring of named arguments in different order from definition-site.
+                expr
+              case a => a
+            }
+        }
+        arg.getOrElse(typedTree)
       case t => t
+    }
+  }
+
+  lazy val isForName = Set[Name](
+    nme.map,
+    nme.withFilter,
+    nme.flatMap,
+    nme.foreach
+  )
+  def isForSynthetic(gtree: Tree): Boolean = {
+    def isForComprehensionSyntheticName(select: Select): Boolean = {
+      select.pos == select.qualifier.pos && isForName(select.name)
+    }
+    gtree match {
+      case Apply(fun, List(_: Function)) => isForSynthetic(fun)
+      case TypeApply(fun, _) => isForSynthetic(fun)
+      case gtree: Select if isForComprehensionSyntheticName(gtree) => true
+      case _ => false
     }
   }
 }
