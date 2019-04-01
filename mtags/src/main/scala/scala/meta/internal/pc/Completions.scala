@@ -10,6 +10,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.reflect.internal.util.Position
+import java.nio.file.Paths
 
 /**
  * Utility methods for completions.
@@ -215,7 +216,8 @@ trait Completions { this: MetalsGlobal =>
               fullName(sym)
             } else {
               val short = shortType(info, history)
-              sym.infoString(short).replaceAllLiterally(" <: <?>", "")
+              if (short == NoType) ""
+              else sym.infoString(short).replaceAllLiterally(" <: <?>", "")
             }
         }
     }
@@ -431,6 +433,8 @@ trait Completions { this: MetalsGlobal =>
       case (ident @ Ident(name)) :: Block(_, expr) :: (_: CaseDef) :: (m: Match) :: parent :: _
           if ident == expr && isCasePrefix(name) =>
         CompletionPosition.CaseKeyword(m.selector, editRange, pos, text, parent)
+      case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
+        CompletionPosition.Filename(c, p, pos, editRange)
       case _ =>
         inferCompletionPosition(pos, lastEnclosing)
     }
@@ -714,6 +718,63 @@ trait Completions { this: MetalsGlobal =>
         }
       }
     }
+
+    /**
+     * Completion for the name of a toplevel class, trait or object matching the filename.
+     *
+     * Example: {{{
+     *   // src/main/scala/app/UserDatabaseService.scala
+     *   class User@@ // completes "UserDatabaseService"
+     * }}}
+     *
+     * @param toplevel the toplevel class, trait or object definition.
+     * @param pkg the enclosing package definition.
+     * @param pos the completion position.
+     * @param editRange the range to replace in the completion.
+     */
+    case class Filename(
+        toplevel: DefTree,
+        pkg: PackageDef,
+        pos: Position,
+        editRange: l.Range
+    ) extends CompletionPosition {
+      val query = toplevel.name.toString().stripSuffix(CURSOR)
+      override def contribute: List[Member] = {
+        try {
+          val name = Paths
+            .get(pos.source.file.name.stripSuffix(".scala"))
+            .getFileName()
+            .toString()
+          val isTermName = toplevel.name.isTermName
+          val siblings = pkg.stats.count {
+            case d: DefTree =>
+              d.name.toString() == name &&
+                d.name.isTermName == isTermName
+            case _ => false
+          }
+          if (!name.isEmpty &&
+            CompletionFuzzy.matches(query, name) &&
+            siblings == 0) {
+            List(
+              new TextEditMember(
+                name,
+                new l.TextEdit(editRange, name),
+                toplevel.symbol
+                  .newErrorSymbol(TermName(name))
+                  .setInfo(NoType),
+                label = Some(s"${toplevel.symbol.keyString} ${name}")
+              )
+            )
+          } else {
+            Nil
+          }
+        } catch {
+          case NonFatal(e) =>
+            Nil
+        }
+      }
+    }
+
     case object None extends CompletionPosition
 
     /** Returns true if the identifier comes after an opening brace character '{' */

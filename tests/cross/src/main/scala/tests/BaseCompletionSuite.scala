@@ -25,10 +25,13 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     result
   }
 
-  def getItems(original: String): Seq[CompletionItem] = {
+  def getItems(
+      original: String,
+      filename: String = "A.scala"
+  ): Seq[CompletionItem] = {
     val (code, offset) = params(original)
     val result = resolvedCompletions(
-      CompilerOffsetParams("A.scala", code, offset, cancelToken)
+      CompilerOffsetParams(filename, code, offset, cancelToken)
     )
     result.getItems.asScala.sortBy(_.getSortText)
   }
@@ -125,11 +128,12 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       postAssert: () => Unit = () => (),
       topLines: Option[Int] = None,
       filterText: String = "",
-      includeDetail: Boolean = true
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+      includeDetail: Boolean = true,
+      filename: String = "A.scala"
+  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val out = new StringBuilder()
-      val baseItems = getItems(original)
+      val baseItems = getItems(original, filename)
       val items = topLines match {
         case Some(top) => baseItems.take(top)
         case None => baseItems
