@@ -15,15 +15,13 @@ import utest.framework.TestCallTree
 import utest.framework.Tree
 import utest.ufansi.Attrs
 import utest.ufansi.Str
+import scala.meta.internal.metals.Testing
 
 /**
  * Test suite that replace utest DSL with FunSuite-style syntax from ScalaTest.
- *
- * Exposes
- *
  */
 class BaseSuite extends TestSuite {
-  System.setProperty("metals.testing", "true")
+  Testing.enable()
   def isScala211: Boolean =
     Properties.versionNumberString.startsWith("2.11")
   def isWindows: Boolean =
