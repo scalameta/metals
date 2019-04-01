@@ -24,12 +24,17 @@ object HoverMarkup {
         .append(expressionType)
         .append("\n```\n")
     }
-    markdown
-      .append(if (needsExpressionType) "**Symbol signature**:\n" else "")
-      .append("```scala\n")
-      .append(symbolSignature)
-      .append("\n```\n")
-      .append(docstring)
+    if (symbolSignature.nonEmpty) {
+      markdown
+        .append(if (needsExpressionType) "**Symbol signature**:\n" else "")
+        .append("```scala\n")
+        .append(symbolSignature)
+        .append("\n```")
+    }
+    if (docstring.nonEmpty)
+      markdown
+        .append("\n")
+        .append(docstring)
     markdown.toString()
   }
 

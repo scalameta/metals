@@ -13,22 +13,23 @@ object HoverNamedArgSuite extends BaseHoverSuite {
       |   * @param named the argument
       |   */
       |  def foo(named: Int): Unit = ()
-      |  foo(nam@@ed = 2)
+      |  <<foo(nam@@ed = 2)>>
       |}
       |""".stripMargin,
     """|```scala
-       |named: Int
+       |def foo(named: Int): Unit
        |```
-       |```markdown
-       |the argument
-       |```
+       |Runs foo
+       |
+       |**Parameters**
+       |- `named`: the argument
        |""".stripMargin
   )
 
   check(
     "error",
     """package a
-      |object b {
+      |object c {
       |  def foo(a: String, named: Int): Unit = ()
       |  foo(nam@@ed = 2)
       |}
@@ -39,7 +40,7 @@ object HoverNamedArgSuite extends BaseHoverSuite {
   check(
     "error2",
     """package a
-      |object b {
+      |object d {
       |  def foo(a: Int, named: Int): Unit = ()
       |  foo("error", nam@@ed = 2)
       |}
