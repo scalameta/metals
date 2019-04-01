@@ -247,8 +247,8 @@ final class FormattingProvider(
     override def downloadWriter(): PrintWriter = {
       downloadingScalafmt.trySuccess(())
       downloadingScalafmt = Promise()
-      statusBar.trackFuture(
-        s"${icons.sync}Loading Scalafmt",
+      statusBar.trackSlowFuture(
+        "Loading Scalafmt",
         downloadingScalafmt.future
       )
       new PrintWriter(System.out)

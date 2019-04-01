@@ -516,6 +516,7 @@ class MetalsLanguageServer(
         ()
       }
     } else {
+      compilers.load(List(path))
       compileSourceFiles(List(path)).asJava
     }
   }
@@ -1062,7 +1063,11 @@ class MetalsLanguageServer(
         indexWorkspace(i)
       }
       _ = indexingPromise.trySuccess(())
-      _ <- cascadeCompileSourceFiles(buffers.open.toSeq)
+      _ <- Future.sequence[Unit, List](
+        cascadeCompileSourceFiles(buffers.open.toSeq) ::
+          compilers.load(buffers.open.toSeq) ::
+          Nil
+      )
     } yield {
       BuildChange.Reconnected
     }

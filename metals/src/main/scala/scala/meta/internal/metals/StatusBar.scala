@@ -9,6 +9,13 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.control.NonFatal
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ExecuteCommandParams
+import java.{util => ju}
+import scala.util.Failure
+import scala.util.Success
+import scala.concurrent.ExecutionContext
 
 /**
  * Manages sending metals/status notifications to the editor client.
@@ -28,7 +35,8 @@ final class StatusBar(
     time: Time,
     progressTicks: ProgressTicks = ProgressTicks.braille,
     val icons: Icons
-) extends Cancelable {
+)(implicit ec: ExecutionContext)
+    extends Cancelable {
 
   def trackBlockingTask[T](message: String)(thunk: => T): T = {
     val promise = Promise[Unit]()
@@ -38,6 +46,48 @@ final class StatusBar(
     } finally {
       promise.trySuccess(())
     }
+  }
+
+  def trackSlowTask[T](message: String)(thunk: => T): T = {
+    val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+    val future = task.asScala
+    try {
+      thunk
+    } catch {
+      case NonFatal(e) =>
+        slowTaskFailed(message, e)
+        throw e
+    } finally {
+      task.cancel(true)
+    }
+  }
+
+  def trackSlowFuture[T](message: String, thunk: Future[T]): Unit = {
+    val task = client().metalsSlowTask(MetalsSlowTaskParams(message))
+    val future = task.asScala
+    thunk.onComplete {
+      case Failure(exception) =>
+        slowTaskFailed(message, exception)
+        task.cancel(true)
+      case Success(value) =>
+        task.cancel(true)
+    }
+  }
+
+  private def slowTaskFailed(message: String, e: Throwable): Unit = {
+    scribe.error(s"$message failed", e)
+    client().logMessage(
+      new MessageParams(
+        MessageType.Error,
+        s"$message failed, see metals.log for more details."
+      )
+    )
+    client().metalsExecuteClientCommand(
+      new ExecuteCommandParams(
+        ClientCommands.ToggleLogs.id,
+        ju.Collections.emptyList()
+      )
+    )
   }
 
   def trackFuture[T](

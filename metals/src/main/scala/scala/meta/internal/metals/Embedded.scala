@@ -16,6 +16,7 @@ import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
 import scala.util.control.NonFatal
+import com.geirsson.coursiersmall.CoursierSmall
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -54,7 +55,7 @@ final class Embedded(
    * Fetches jars for bloop-frontend and creates a new orphan classloader.
    */
   lazy val bloopJars: Option[URLClassLoader] = {
-    statusBar.trackBlockingTask(s"${icons.sync}Downloading Bloop") {
+    statusBar.trackSlowTask(s"${icons.sync}Downloading Bloop") {
       try {
         Some(newBloopClassloader())
       } catch {
@@ -91,9 +92,7 @@ final class Embedded(
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
       ScalaVersions.dropVendorSuffix(info.getScalaVersion),
-      statusBar.trackBlockingTask(
-        s"${icons.sync}Downloading presentation compiler"
-      ) {
+      statusBar.trackSlowTask("Downloading presentation compiler") {
         Embedded.newPresentationCompilerClassLoader(info, scalac)
       }
     )
@@ -124,6 +123,7 @@ object Embedded {
           coursiersmall.Repository.SonatypeSnapshots
         )
       )
+
   def newPresentationCompilerClassLoader(
       info: ScalaBuildTarget,
       scalac: ScalacOptionsItem
@@ -138,7 +138,7 @@ object Embedded {
       if (needsFullClasspath) pc
       else pc.withTransitive(false)
     val settings = downloadSettings(dependency)
-    val jars = coursiersmall.CoursierSmall.fetch(settings)
+    val jars = CoursierSmall.fetch(settings)
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
     val semanticdbJars =
       if (needsFullClasspath) Nil
@@ -172,7 +172,7 @@ object Embedded {
         )
       )
     )
-    val jars = coursiersmall.CoursierSmall.fetch(settings)
+    val jars = CoursierSmall.fetch(settings)
     // Don't make Bloop classloader a child or our classloader.
     val parent: ClassLoader = null
     val classloader =
