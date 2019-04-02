@@ -1,4 +1,4 @@
-def localSnapshotVersion = "0.5.0-SNAPSHOT"
+def localSnapshotVersion = "0.5.1-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 inThisBuild(
   List(

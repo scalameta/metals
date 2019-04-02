@@ -23,6 +23,7 @@ import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.tools.nsc.Properties
+import scala.concurrent.Future
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -62,6 +63,23 @@ class Compilers(
     scribe.info(
       s"restarted ${count} presentation compiler${LogMessages.plural(count)}"
     )
+  }
+
+  def load(paths: Seq[AbsolutePath]): Future[Unit] = Future {
+    val targets = paths
+      .flatMap(path => buildTargets.inverseSources(path).toList)
+      .distinct
+    targets.foreach { target =>
+      loadCompiler(target).foreach { pc =>
+        pc.hover(
+          CompilerOffsetParams(
+            "Main.scala",
+            "object Ma\n",
+            "object Ma".length()
+          )
+        )
+      }
+    }
   }
 
   def didCompile(report: CompileReport): Unit = {
@@ -140,6 +158,7 @@ class Compilers(
         .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
       compiler <- loadCompiler(target)
     } yield compiler
+
   def loadCompiler(
       target: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
