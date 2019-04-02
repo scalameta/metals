@@ -805,4 +805,16 @@ object CompletionSuite extends BaseCompletionSuite {
     filterText = "substring"
   )
 
+  check(
+    "error",
+    s"""|object Main {
+        |  def foo(file: String): String = {
+        |    println(fil@@)
+        |    // type mismatch: obtained Unit, expected String
+        |  }
+        |}
+        |""".stripMargin,
+    "file: String"
+  )
+
 }
