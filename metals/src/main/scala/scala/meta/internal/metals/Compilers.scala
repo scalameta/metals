@@ -65,22 +65,26 @@ class Compilers(
     )
   }
 
-  def load(paths: Seq[AbsolutePath]): Future[Unit] = Future {
-    val targets = paths
-      .flatMap(path => buildTargets.inverseSources(path).toList)
-      .distinct
-    targets.foreach { target =>
-      loadCompiler(target).foreach { pc =>
-        pc.hover(
-          CompilerOffsetParams(
-            "Main.scala",
-            "object Ma\n",
-            "object Ma".length()
-          )
-        )
+  def load(paths: Seq[AbsolutePath]): Future[Unit] =
+    if (Testing.isEnabled) Future.successful(())
+    else {
+      Future {
+        val targets = paths
+          .flatMap(path => buildTargets.inverseSources(path).toList)
+          .distinct
+        targets.foreach { target =>
+          loadCompiler(target).foreach { pc =>
+            pc.hover(
+              CompilerOffsetParams(
+                "Main.scala",
+                "object Ma\n",
+                "object Ma".length()
+              )
+            )
+          }
+        }
       }
     }
-  }
 
   def didCompile(report: CompileReport): Unit = {
     if (report.getErrors > 0) {
