@@ -11,6 +11,7 @@ import scala.collection.mutable.ListBuffer
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.reflect.internal.util.Position
 import java.nio.file.Paths
+import java.util.logging.Level
 
 /**
  * Utility methods for completions.
@@ -380,7 +381,23 @@ trait Completions { this: MetalsGlobal =>
         }
     }
   }
+
   def completionPosition(
+      pos: Position,
+      text: String,
+      editRange: l.Range
+  ): CompletionPosition = {
+    // the implementation of completionPositionUnsafe does a lot of `typedTreeAt(pos).tpe`
+    // which often causes null pointer exceptions, it's easier to catch the error here than
+    // enforce discipline in the code.
+    try completionPositionUnsafe(pos, text, editRange)
+    catch {
+      case NonFatal(e) =>
+        logger.log(Level.SEVERE, e.getMessage(), e)
+        CompletionPosition.None
+    }
+  }
+  def completionPositionUnsafe(
       pos: Position,
       text: String,
       editRange: l.Range
@@ -794,8 +811,11 @@ trait Completions { this: MetalsGlobal =>
       val method = typedTreeAt(apply.fun.pos)
       val methodSym = method.symbol
       lazy val params: List[Symbol] =
-        method.tpe.paramss.headOption
-          .getOrElse(methodSym.paramss.flatten)
+        if (method.tpe == null) Nil
+        else {
+          method.tpe.paramss.headOption
+            .getOrElse(methodSym.paramss.flatten)
+        }
       lazy val isNamed = apply.args.iterator
         .filterNot(_ == ident)
         .zip(params.iterator)
