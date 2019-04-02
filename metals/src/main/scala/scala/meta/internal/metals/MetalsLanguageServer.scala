@@ -141,8 +141,13 @@ class MetalsLanguageServer(
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = client
-    statusBar =
-      new StatusBar(() => languageClient, time, progressTicks, config.icons)
+    statusBar = new StatusBar(
+      () => languageClient,
+      time,
+      progressTicks,
+      config.icons,
+      config.statusBar
+    )
     embedded = register(
       new Embedded(
         config.icons,
