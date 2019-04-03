@@ -23,9 +23,10 @@ import scala.xml.XML
  * only supports a hardcoded list of such compiler plugins:
  * - kind-projector, introduces new syntax for anonymous type lambdas
  * - better-monadic-for, changes for comprehension desugaring
- * - macro-paradise-plugin, adds support for macro annotations. Has been
- *   merged into the compiler for 2.13.
- * The IntelliJ Scala plugin has custom support for these three plugins.
+ * The IntelliJ Scala plugin has custom support for these plugins.
+ *
+ * Notably, macro-paradise-plugin id disabled because it does not work with the -Ymacro-expand:discard
+ * setting making completions always fail when inside an expanded tree.
  *
  * The process for adding support for other compiler plugins is the following,
  * send a PR to Metals adding integration tests to demonstrate thee compiler plugin
@@ -50,9 +51,10 @@ class CompilerPlugins {
   }
 
   private val isSupportedPlugin = Set(
-    "macro-paradise-plugin", // https://github.com/scalamacros/paradise/
     "kind-projector", // https://github.com/non/kind-projector
     "bm4" // https://github.com/oleg-py/better-monadic-for
+    // Intentionally not supported:
+    // "macro-paradise-plugin", see https://github.com/scalameta/metals/issues/622
   )
 
   private def isSupportedPlugin(path: AbsolutePath): Boolean = {

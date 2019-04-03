@@ -100,6 +100,8 @@ class CompilerAccess(
           e.getClassName.startsWith("scala.reflect")
         }
         if (isParadiseRelated) {
+          // NOTE(olafur) Metals disables macroparadise by default but other library
+          // clients of mtags may enable it.
           // Testing shows that the scalamacro paradise plugin tends to crash
           // easily in long-running sessions. We retry with a fresh compiler
           // to see if that fixes the issue. This is a hacky solution that is
