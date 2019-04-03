@@ -436,7 +436,11 @@ class MetalsGlobal(
       val out = new java.lang.StringBuilder
       def loop(s: Symbol): Unit = {
         if (s.isRoot || s.isRootPackage || s == NoSymbol || s.owner.isEffectiveRoot) {
-          out.append(Identifier(s.name))
+          val name =
+            if (s.isEmptyPackage || s.isEmptyPackageClass) TermName("_empty_")
+            else if (s.isRootPackage || s.isRoot) TermName("_root_")
+            else s.name
+          out.append(Identifier(name))
         } else {
           loop(s.effectiveOwner.enclClass)
           out.append('.').append(Identifier(s.name))

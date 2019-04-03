@@ -10,8 +10,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|assertion = : Boolean
+       |Main arg
        |:: scala.collection.immutable
-       |:+ scala.collection
        |""".stripMargin,
     topLines = Option(3)
   )
@@ -23,8 +23,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|message = : => Any
+       |Main arg1
        |:: scala.collection.immutable
-       |:+ scala.collection
        |""".stripMargin,
     topLines = Option(3)
   )
@@ -36,8 +36,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|message = : => Any
+       |Main arg2
        |:: scala.collection.immutable
-       |:+ scala.collection
        |""".stripMargin,
     topLines = Option(3)
   )
@@ -60,7 +60,7 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|age = : Int
        |followers = : Int
-       |:: scala.collection.immutable
+       |Main arg3
        |""".stripMargin,
     topLines = Option(3)
   )
@@ -75,7 +75,7 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|age = : Int
        |followers = : Int
-       |:: scala.collection.immutable
+       |Main arg4
        |""".stripMargin,
     topLines = Option(3)
   )
@@ -90,9 +90,10 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|address = : String
        |followers = : Int
-       |:: scala.collection.immutable
+       |Main arg5
+       |User arg5
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(4)
   )
 
   check(
@@ -118,8 +119,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|x = : Int
+       |Main arg7
        |:: scala.collection.immutable
-       |:+ scala.collection
        |""".stripMargin,
     topLines = Option(3)
   )
@@ -132,8 +133,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|suffix = : String
+       |Main arg8
        |:: scala.collection.immutable
-       |:+ scala.collection
        |""".stripMargin,
     topLines = Option(3)
   )
@@ -147,8 +148,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|end = : Int
+       |Main arg9
        |:: scala.collection.immutable
-       |:+ scala.collection
        |""".stripMargin,
     topLines = Option(3)
   )

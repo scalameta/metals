@@ -521,7 +521,7 @@ object CompletionSuite extends BaseCompletionSuite {
       |  incrementThisType@@
       |}
     """.stripMargin,
-    """|incrementThisType(): A.this.type (with underlying type A)
+    """|incrementThisType(): A.this.type (with underlying type singleton.A)
        |""".stripMargin
   )
 
@@ -808,13 +808,32 @@ object CompletionSuite extends BaseCompletionSuite {
   check(
     "error",
     s"""|object Main {
-        |  def foo(file: String): String = {
-        |    println(fil@@)
+        |  def foo(myError: String): String = {
+        |    println(myErr@@)
         |    // type mismatch: obtained Unit, expected String
         |  }
         |}
         |""".stripMargin,
-    "file: String"
+    "myError: String"
+  )
+
+  check(
+    "sort",
+    s"""|object Main {
+        |  def printnnn = ""
+        |  def printmmm = ""
+        |  locally {
+        |    val printxxx = ""
+        |    print@@
+        |  }
+        |}
+        |""".stripMargin,
+    """|printxxx: String
+       |printmmm: String
+       |printnnn: String
+       |print(x: Any): Unit
+       |""".stripMargin,
+    topLines = Some(4)
   )
 
 }
