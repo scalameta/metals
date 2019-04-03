@@ -12,6 +12,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.reflect.internal.util.Position
 import java.nio.file.Paths
 import java.util.logging.Level
+import scala.meta.internal.tokenizers.Chars
 
 /**
  * Utility methods for completions.
@@ -1410,42 +1411,49 @@ trait Completions { this: MetalsGlobal =>
    * Returns the start offset of the identifier starting as the given offset position.
    */
   def inferIdentStart(pos: Position, text: String): Int = {
-    var i = pos.point - 1
-    while (i > 0 && text.charAt(i).isUnicodeIdentifierPart) {
-      i -= 1
+    def fallback: Int = {
+      var i = pos.point - 1
+      while (i > 0 && Chars.isIdentifierPart(text.charAt(i))) {
+        i -= 1
+      }
+      i + 1
     }
-    i + 1
-  }
-
-  /**
-   * The end position of a completion request with an optional custom method snippet.
-   * @param offset the offset where the completion ends.
-   * @param customSnippet an optional textmate snippet how to insert parentheses/braces.
-   *                      The `customSnippet` is non-empty when we override the default
-   *                      parentheses snippet `()` for completing methods.
-   *                      If the completion happens a an existing method call like `println@@()`
-   *                      then we want to reuse the existing parentheses and move the cursor
-   *                      into the argument list `println(@@)` instead of introducing duplicate
-   *                      parentheses `println(@@)()`.
-   */
-  class CompletionEnd(val offset: Int, customSnippet: Option[String]) {
-    def snippet(defaultSnippet: String): String =
-      customSnippet.getOrElse(defaultSnippet)
+    def loop(enclosing: List[Tree]): Int = enclosing match {
+      case Nil => fallback
+      case head :: tl =>
+        if (!treePos(head).includes(pos)) loop(tl)
+        else {
+          head match {
+            case i: Ident =>
+              treePos(i).point
+            case Select(qual, nme) if !treePos(qual).includes(pos) =>
+              treePos(head).point
+            case _ => fallback
+          }
+        }
+    }
+    loop(lastEnclosing)
   }
 
   /**
    * Returns the end offset of the identifier starting as the given offset position.
    */
-  def inferIdentEnd(pos: Position, text: String): CompletionEnd = {
+  def inferIdentEnd(pos: Position, text: String): Int = {
     var i = pos.point
-    while (i < text.length && text.charAt(i).isUnicodeIdentifierPart) {
+    while (i < text.length && Chars.isIdentifierPart(text.charAt(i))) {
       i += 1
     }
-    if (text.startsWith("(", i)) new CompletionEnd(i + 1, Some("($0"))
-    else if (text.startsWith("{", i)) new CompletionEnd(i + 1, Some("{$0"))
-    else if (text.startsWith(" {", i)) new CompletionEnd(i + 2, Some(" {$0"))
-    else if (text.startsWith(" _", i)) new CompletionEnd(i + 2, Some(" _$0"))
-    else new CompletionEnd(i, None)
+    i
+  }
+
+  def isSnippetEnabled(pos: Position, text: String): Boolean = {
+    text.charAt(pos.point) match {
+      case ')' | ']' | '}' | ',' | '\n' => true
+      case _ =>
+        !text.startsWith(" _", pos.point) && {
+          text.startsWith("\r\n", pos.point)
+        }
+    }
   }
 
 }

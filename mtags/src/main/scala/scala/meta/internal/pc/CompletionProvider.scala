@@ -29,13 +29,16 @@ class CompletionProvider(
       cursor = Some(params.offset)
     )
     val pos = unit.position(params.offset)
+    val isSnippet = isSnippetEnabled(pos, params.text())
+    val (i, completion, editRange) = safeCompletionsAt(pos)
+    val start = inferIdentStart(pos, params.text())
     val end = inferIdentEnd(pos, params.text())
-    val editRange = pos
-      .withStart(inferIdentStart(pos, params.text()))
-      .withEnd(end.offset)
-      .toLSP
-    def textEdit(newText: String) = new l.TextEdit(editRange, newText)
-    val (i, completion) = safeCompletionsAt(pos, editRange)
+    val oldText = params.text().substring(start, end)
+    val stripSuffix = pos.withStart(start).withEnd(end).toLSP
+    def textEdit(newText: String) = {
+      if (newText == oldText) new l.TextEdit(stripSuffix, newText)
+      else new l.TextEdit(editRange, newText)
+    }
     val history = new ShortenedNames()
     val sorted = i.results.sorted(memberOrdering(history, completion))
     lazy val context = doLocateContext(pos)
@@ -70,11 +73,13 @@ class CompletionProvider(
           item.setDetail(detail)
         }
         val templateSuffix =
-          if (completion.isNew &&
+          if (!isSnippet) ""
+          else if (completion.isNew &&
             r.sym.dealiased.requiresTemplateCurlyBraces) " {}"
           else ""
         val typeSuffix =
-          if (completion.isType && r.sym.dealiased.hasTypeParams) "[$0]"
+          if (!isSnippet) ""
+          else if (completion.isType && r.sym.dealiased.hasTypeParams) "[$0]"
           else if (completion.isNew && r.sym.dealiased.hasTypeParams) "[$0]"
           else ""
         val suffix = typeSuffix + templateSuffix
@@ -122,15 +127,15 @@ class CompletionProvider(
             }
           case _ =>
             val baseLabel = ident
-            if (r.sym.isNonNullaryMethod) {
+            if (isSnippet && r.sym.isNonNullaryMethod) {
               r.sym.paramss match {
                 case Nil =>
                 case Nil :: Nil =>
-                  item.setTextEdit(textEdit(baseLabel + end.snippet("()")))
+                  item.setTextEdit(textEdit(baseLabel + "()"))
                 case head :: Nil if head.forall(_.isImplicit) =>
                   () // Don't set ($0) snippet for implicit-only params.
                 case _ =>
-                  item.setTextEdit(textEdit(baseLabel + end.snippet("($0)")))
+                  item.setTextEdit(textEdit(baseLabel + "($0)"))
                   metalsConfig
                     .parameterHintsCommand()
                     .asScala
@@ -290,16 +295,20 @@ class CompletionProvider(
   }
 
   private def safeCompletionsAt(
-      position: Position,
-      editRange: l.Range
-  ): (InterestingMembers, CompletionPosition) = {
+      pos: Position
+  ): (InterestingMembers, CompletionPosition, l.Range) = {
+    lazy val editRange = pos
+      .withStart(inferIdentStart(pos, params.text()))
+      .withEnd(pos.point)
+      .toLSP
     def expected(e: Throwable) = {
-      completionPosition(position, params.text(), editRange) match {
+      completionPosition(pos, params.text(), editRange) match {
         case CompletionPosition.None =>
           logger.warning(e.getMessage)
           (
             InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
-            CompletionPosition.None
+            CompletionPosition.None,
+            editRange
           )
         case completion =>
           (
@@ -307,14 +316,15 @@ class CompletionProvider(
               completion.contribute,
               SymbolSearch.Result.COMPLETE
             ),
-            completion
+            completion,
+            editRange
           )
       }
     }
     try {
-      val completions = completionsAt(position) match {
+      val completions = completionsAt(pos) match {
         case CompletionResult.NoResults =>
-          new DynamicFallbackCompletions(position).print()
+          new DynamicFallbackCompletions(pos).print()
         case r => r
       }
       params.checkCanceled()
@@ -329,16 +339,16 @@ class CompletionProvider(
         case _ =>
           CompletionListKind.None
       }
-      val completion = completionPosition(position, params.text(), editRange)
+      val completion = completionPosition(pos, params.text(), editRange)
       val items = filterInteresting(
         matchingResults,
         kind,
         completions.name.toString,
-        position,
+        pos,
         completion
       )
       params.checkCanceled()
-      (items, completion)
+      (items, completion, editRange)
     } catch {
       case e: CyclicReference
           if e.getMessage.contains("illegal cyclic reference") =>
