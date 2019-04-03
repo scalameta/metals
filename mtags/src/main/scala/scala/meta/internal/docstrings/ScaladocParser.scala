@@ -56,7 +56,7 @@ object ScaladocParser {
               case Text(text) =>
                 text match {
                   case LinkPattern(link, _, _, title) =>
-                    Link(link, Option(title) map(Text) getOrElse Text(link))
+                    Link(link, Option(title) map (Text) getOrElse Text(link))
                   case text =>
                     Link(text, Text(text))
                 }
@@ -1227,7 +1227,7 @@ object ScaladocParser {
 
       link match {
         case LinkPattern(link, _, _, title) =>
-          Link(link, Option(title) map(Text) getOrElse Text(link))
+          Link(link, Option(title) map (Text) getOrElse Text(link))
         case text =>
           Link(text, Text(text))
       }
