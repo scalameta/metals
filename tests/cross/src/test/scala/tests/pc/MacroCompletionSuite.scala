@@ -10,7 +10,6 @@ object MacroCompletionSuite extends BaseCompletionSuite {
     thisClasspath
       .filter { path =>
         val filename = path.getFileName.toString
-        filename.contains("paradise") ||
         filename.contains("better-monadic-for") ||
         filename.contains("kind-projector")
       }
@@ -92,27 +91,14 @@ object MacroCompletionSuite extends BaseCompletionSuite {
     "import",
     """|import Semigroup.op@@
        |""".stripMargin,
-    """|ops x.Semigroup
-       |""".stripMargin
+    ""
   )
   simulacrum(
     "object",
     """|Semigroup.apply@@
        |""".stripMargin,
-    """|apply[A](implicit instance: Semigroup[A]): Semigroup[A]
-       |""".stripMargin
+    ""
   )
-  1.to(5).foreach { i =>
-    val name = "generatedMethod".dropRight(i)
-    simulacrum(
-      s"member-$i",
-      s"""|import Semigroup.ops._
-          |1.$name@@
-          |""".stripMargin,
-      """|generatedMethod(y: Int): Int
-         |""".stripMargin
-    )
-  }
 
   check(
     "kind-projector",
