@@ -133,7 +133,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val out = new StringBuilder()
-      val baseItems = getItems(original, filename)
+      val withPkg =
+        if (original.contains("package")) original
+        else s"package ${scala.meta.Term.Name(name)}\n$original"
+      val baseItems = getItems(withPkg, filename)
       val items = topLines match {
         case Some(top) => baseItems.take(top)
         case None => baseItems

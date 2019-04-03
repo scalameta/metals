@@ -6,13 +6,14 @@ object MemberOrdering {
   val IsImplicitConversion = 1 << 28
   val IsInherited = 1 << 27
   val IsNotLocalByBlock = 1 << 26
-  val IsNotGetter = 1 << 25
-  val IsPackage = 1 << 24
-  val IsNotCaseAccessor = 1 << 23
-  val IsNotPublic = 1 << 22
-  val IsSynthetic = 1 << 21
-  val IsDeprecated = 1 << 20
-  val IsEvilMethod = 1 << 19 // example: clone() and finalize()
+  val IsNotDefinedInFile = 1 << 25
+  val IsNotGetter = 1 << 24
+  val IsPackage = 1 << 23
+  val IsNotCaseAccessor = 1 << 22
+  val IsNotPublic = 1 << 21
+  val IsSynthetic = 1 << 20
+  val IsDeprecated = 1 << 19
+  val IsEvilMethod = 1 << 18 // example: clone() and finalize()
 
   // OverrideDefMember
   val IsNotAbstract = 1 << 30

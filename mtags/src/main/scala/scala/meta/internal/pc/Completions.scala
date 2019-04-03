@@ -110,6 +110,9 @@ trait Completions { this: MetalsGlobal =>
     var relevance = 0
     // local symbols are more relevant
     if (!sym.isLocalToBlock) relevance |= IsNotLocalByBlock
+    // symbols defined in this file are more relevant
+    if (!sym.pos.isDefined || sym.hasPackageFlag)
+      relevance |= IsNotDefinedInFile
     // fields are more relevant than non fields
     if (!sym.hasGetter) relevance |= IsNotGetter
     // non-inherited members are more relevant
@@ -209,7 +212,8 @@ trait Completions { this: MetalsGlobal =>
         new SignaturePrinter(m, history, info, includeDocs = false)
           .defaultMethodSignature()
       case _ =>
-        def fullName(s: Symbol): String = " " + s.owner.fullName
+        def fullName(s: Symbol): String =
+          " " + s.owner.fullNameSyntax
         dealiasedValForwarder(sym) match {
           case dealiased :: _ =>
             fullName(dealiased)

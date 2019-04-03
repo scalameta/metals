@@ -66,7 +66,7 @@ object CompletionCaseSuite extends BaseCompletionSuite {
 
   check(
     "case",
-    """
+    """package kase
       |object A {
       |  Option(1) match {
       |    cas@@
@@ -147,7 +147,7 @@ object CompletionCaseSuite extends BaseCompletionSuite {
       |  }
       |}""".stripMargin,
     // Assert we don't include AdtTwo in the results.
-    """|case Cls(a, b) => Outer
+    """|case Cls(a, b) => `sealed-two`.Outer
        |""".stripMargin,
     compat = Map(
       // known-direct subclasses doesn't work well in 2.11 apparently.
