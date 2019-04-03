@@ -23,7 +23,9 @@ jobs:
       script:
         - sbt +cross/test
     - stage: release
-      script: sbt ci-release docs/docusaurusPublishGhpages
+      script:
+        - git fetch --tags
+        - sbt ci-release docs/docusaurusPublishGhpages
 
 cache:
   directories:
