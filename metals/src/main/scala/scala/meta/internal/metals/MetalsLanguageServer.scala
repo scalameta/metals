@@ -133,6 +133,7 @@ class MetalsLanguageServer(
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
+  private var foldingRangeProvider: FoldingRangeProvider = _
   private var compilers: Compilers = _
   var tables: Tables = _
   var statusBar: StatusBar = _
@@ -297,6 +298,7 @@ class MetalsLanguageServer(
       },
       interactiveSemanticdbs.toFileOnDisk
     )
+    foldingRangeProvider = FoldingRangeProvider(trees, params.getCapabilities.getTextDocument.getFoldingRange)
     compilers = register(
       new Compilers(
         workspace,
@@ -344,6 +346,7 @@ class MetalsLanguageServer(
           ServerCommands.all.map(_.id).asJava
         )
       )
+      capabilities.setFoldingRangeProvider(true)
       capabilities.setDefinitionProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
@@ -863,6 +866,16 @@ class MetalsLanguageServer(
       scribe.warn("textDocument/codeLens is not supported.")
       null
     }
+
+  @JsonRequest("textDocument/foldingRange")
+  def foldingRange(
+                    params: FoldingRangeRequestParams
+                  ): CompletableFuture[util.List[FoldingRange]] = {
+    CancelTokens { _ =>
+      val sourceFile = params.getTextDocument.getUri.toAbsolutePath
+      foldingRangeProvider.getRangedFor(sourceFile)
+    }
+  }
 
   @JsonRequest("workspace/symbol")
   def workspaceSymbol(
