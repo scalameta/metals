@@ -16,13 +16,13 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  Option(1).fold("")(_ => @@)
       |}
     """.stripMargin,
-    """|Returns the result of applying `f` to this scala.Option's
-       | value if the scala.Option is nonempty.  Otherwise, evaluates
+    """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
+       | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
        | expression `ifEmpty`.
        |
        |
        |**Notes**
-       |- This is equivalent to `scala.Option map f getOrElse ifEmpty`.
+       |- This is equivalent to `[scala.Option](scala.Option) map f getOrElse ifEmpty`.
        |
        |**Parameters**
        |- `ifEmpty`: the expression to evaluate if empty.
@@ -41,13 +41,13 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  Option(1).fold("@@")
       |}
     """.stripMargin,
-    """|Returns the result of applying `f` to this scala.Option's
-       | value if the scala.Option is nonempty.  Otherwise, evaluates
+    """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
+       | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
        | expression `ifEmpty`.
        |
        |
        |**Notes**
-       |- This is equivalent to `scala.Option map f getOrElse ifEmpty`.
+       |- This is equivalent to `[scala.Option](scala.Option) map f getOrElse ifEmpty`.
        |
        |**Parameters**
        |- `ifEmpty`: the expression to evaluate if empty.
@@ -150,14 +150,14 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |- `T`: result type of bodies used in try and catch blocks
        |
        |**Parameters**
-       |- `rethrow`: Predicate on throwables determining when to rethrow a caught Throwable
+       |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
        |- `pf`: Partial function used when applying catch logic to determine result value
        |- `fin`: Finally logic which if defined will be invoked after catch logic
        |<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = None, rethrow: Throwable => Boolean = shouldRethrow): Exception.Catch[T]
        |       ^^^^^^^^^^^^^^^^^^^^^^^^
        |  @param pf Partial function used when applying catch logic to determine result value
        |  @param fin Finally logic which if defined will be invoked after catch logic
-       |  @param rethrow Predicate on throwables determining when to rethrow a caught Throwable
+       |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
        |""".stripMargin
   )
   check(

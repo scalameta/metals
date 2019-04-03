@@ -15,6 +15,9 @@ import scala.util.matching.Regex
  */
 object ScaladocParser {
 
+  // Used in link() and for converting Javadoc @see to links
+  private val LinkPattern = """(.+?#?.+?(\([^\)]*\)?)?)((?:\s+)(.*))?""".r
+
   /* Creates comments with necessary arguments */
   def createComment(
       body0: Option[Body] = None,
@@ -42,7 +45,33 @@ object ScaladocParser {
   ): Comment = new Comment {
     val body = body0 getOrElse Body(Seq.empty)
     val authors = authors0
-    val see = see0
+    val see = see0.map { body =>
+      def convertTextToLink(inline: Inline): Inline = {
+        inline match {
+          case Chain(c) =>
+            Chain(c.map(i => convertTextToLink(i)))
+          case Summary(inline) =>
+            // Make sure Javadoc text is converted into links
+            Summary(inline match {
+              case Text(text) =>
+                text match {
+                  case LinkPattern(link, _, _, title) =>
+                    Link(link, Option(title) map (Text) getOrElse Text(link))
+                  case text =>
+                    Link(text, Text(text))
+                }
+              case x => x
+            })
+          case x => x
+        }
+      }
+      val blocks = body.blocks.map {
+        case Paragraph(inline) =>
+          Paragraph(convertTextToLink(inline))
+        case x => x
+      }
+      body.copy(blocks)
+    }
     val result = result0
     val throws = throws0
     val valueParams = valueParams0
@@ -146,7 +175,7 @@ object ScaladocParser {
     mtch.group(1) match {
       case "code" => "`" + mtch.group(2) + "`"
       case "docRoot" => ""
-      case "link" => "`[[" + mtch.group(2) + "]]`"
+      case "link" => "[[" + mtch.group(2) + "]]"
       case "linkplain" => "[[" + mtch.group(2) + "]]"
       case "literal" => "`" + mtch.group(2) + "`"
       case "value" => "`" + mtch.group(2) + "`"
@@ -530,7 +559,7 @@ object ScaladocParser {
           }
         }
 
-        val com = createComment(
+        createComment(
           body0 = Some(parseWikiAtSymbol(docBody.toString, pos)),
           authors0 = allTags(SimpleTagKey("author")),
           see0 = allTags(SimpleTagKey("see")),
@@ -555,11 +584,6 @@ object ScaladocParser {
             allTags(SimpleTagKey("hideImplicitConversion")),
           shortDescription0 = allTags(SimpleTagKey("shortDescription"))
         )
-
-        //        for ((key, _) <- bodyTags)
-        //          reporter.warning(pos, s"Tag '@${key.name}' is not recognised")
-
-        com
       }
     }
 
@@ -1195,25 +1219,17 @@ object ScaladocParser {
     }
 
     def link(): Inline = {
-      val SchemeUri = """([a-z]+:.*)""".r
       jump("[[")
       val parens = 2 + repeatJump('[')
       val stop = "]" * parens
-      val target = readUntil { check(stop) || isWhitespaceOrNewLine(char) }
-      val title =
-        if (!check(stop)) Some({
-          jumpWhitespaceOrNewLine()
-          inline(check(stop))
-        })
-        else None
+      val link = readUntil { check(stop) }
       jump(stop)
 
-      (target, title) match {
-        case (SchemeUri(uri), optTitle) =>
-          Link(uri, optTitle getOrElse Text(uri))
-        case (qualName, optTitle) =>
-          Text(qualName)
-        //          makeEntityLink(optTitle getOrElse Text(target), pos, target, site)
+      link match {
+        case LinkPattern(link, _, _, title) =>
+          Link(link, Option(title) map (Text) getOrElse Text(link))
+        case text =>
+          Link(text, Text(text))
       }
     }
 
