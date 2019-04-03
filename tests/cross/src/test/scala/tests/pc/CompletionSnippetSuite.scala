@@ -141,7 +141,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@()",
-    "trailing($0)"
+    "trailing()"
   )
 
   checkEditLine(
@@ -152,7 +152,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@ { }",
-    "trailing {$0 }"
+    "trailing { }"
   )
 
   checkEditLine(
@@ -163,7 +163,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@{ }",
-    "trailing{$0 }"
+    "trailing{ }"
   )
 
   checkEditLine(
@@ -174,7 +174,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "trailing@@ _",
-    "trailing _$0"
+    "trailing _"
   )
 
   checkEditLine(
@@ -185,6 +185,28 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     "List(1).flatte@@",
     "List(1).flatten"
+  )
+
+  checkEditLine(
+    "bug1",
+    s"""|object Main {
+        |  ___
+        |}
+        |""".stripMargin,
+    "scala.util.Try@@(1)",
+    "scala.util.Try(1)"
+  )
+
+  checkEditLine(
+    "symbol",
+    s"""|object Main {
+        |  val out = new StringBuilder()
+        |  ___
+        |}
+        |""".stripMargin,
+    "out.+@@=('a')",
+    "out.++==('a')",
+    filter = _.contains("++=(s: String)")
   )
 
 }
