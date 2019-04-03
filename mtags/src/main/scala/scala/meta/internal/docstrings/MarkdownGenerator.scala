@@ -33,8 +33,6 @@ object MarkdownGenerator {
       .mkString
   }
 
-  private val LinkPattern = """(\[[^\]]+\]\([^\)]+\))""".r
-
   def toMarkdown(c: Comment): String = {
     Seq(
       toMarkdown(c.body),
