@@ -334,4 +334,35 @@ class Fuzzy {
     }
   }
 
+  /**
+   * Returns true if all characters in the query have a case in-sensitive matching character in the symbol, in-order
+   *
+   * Matching examples:
+   * - int       toInt
+   * - int       instance  // Because `in` and `t`
+   * - int       intNumber
+   *
+   * Non-matching examples:
+   * - int       inSub // missing t
+   *
+   * @param query the query string, like "int"
+   * @param sym the symbol to test for matching against the query string, like "toInt".
+   */
+  def matchesSubCharacters(query: CharSequence, sym: CharSequence): Boolean = {
+    val A = query.length()
+    val B = sym.length()
+    def loop(a: Int, b: Int): Boolean = {
+      if (a >= A) true
+      else if (b >= B) false
+      else {
+        val ca = query.charAt(a).toLower
+        val cb = sym.charAt(b).toLower
+        if (ca == cb) loop(a + 1, b + 1)
+        else if (cb == '$') false
+        else loop(a, b + 1)
+      }
+    }
+    loop(0, 0)
+  }
+
 }

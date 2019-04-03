@@ -30,7 +30,7 @@ class CompletionProvider(
     )
     val pos = unit.position(params.offset)
     val isSnippet = isSnippetEnabled(pos, params.text())
-    val (i, completion, editRange) = safeCompletionsAt(pos)
+    val (i, completion, editRange, query) = safeCompletionsAt(pos)
     val start = inferIdentStart(pos, params.text())
     val end = inferIdentEnd(pos, params.text())
     val oldText = params.text().substring(start, end)
@@ -40,7 +40,7 @@ class CompletionProvider(
       else new l.TextEdit(editRange, newText)
     }
     val history = new ShortenedNames()
-    val sorted = i.results.sorted(memberOrdering(history, completion))
+    val sorted = i.results.sorted(memberOrdering(query, history, completion))
     lazy val context = doLocateContext(pos)
     lazy val importPosition = autoImportPosition(pos, params.text())
     val items = sorted.iterator.zipWithIndex.map {
@@ -296,11 +296,12 @@ class CompletionProvider(
 
   private def safeCompletionsAt(
       pos: Position
-  ): (InterestingMembers, CompletionPosition, l.Range) = {
+  ): (InterestingMembers, CompletionPosition, l.Range, String) = {
     lazy val editRange = pos
       .withStart(inferIdentStart(pos, params.text()))
       .withEnd(pos.point)
       .toLSP
+    val noQuery = "$a"
     def expected(e: Throwable) = {
       completionPosition(pos, params.text(), editRange) match {
         case CompletionPosition.None =>
@@ -308,7 +309,8 @@ class CompletionProvider(
           (
             InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
             CompletionPosition.None,
-            editRange
+            editRange,
+            noQuery
           )
         case completion =>
           (
@@ -317,7 +319,8 @@ class CompletionProvider(
               SymbolSearch.Result.COMPLETE
             ),
             completion,
-            editRange
+            editRange,
+            noQuery
           )
       }
     }
@@ -327,10 +330,6 @@ class CompletionProvider(
           new DynamicFallbackCompletions(pos).print()
         case r => r
       }
-      params.checkCanceled()
-      val matchingResults = completions.matchingResults { entered => name =>
-        CompletionFuzzy.matches(entered, name)
-      }
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           CompletionListKind.Scope
@@ -339,16 +338,18 @@ class CompletionProvider(
         case _ =>
           CompletionListKind.None
       }
-      val completion = completionPosition(pos, params.text(), editRange)
-      val items = filterInteresting(
-        matchingResults,
-        kind,
-        completions.name.toString,
-        pos,
-        completion
-      )
+      val isTypeMember = kind == CompletionListKind.Type
       params.checkCanceled()
-      (items, completion, editRange)
+      val matchingResults = completions.matchingResults { entered => name =>
+        if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
+        else CompletionFuzzy.matches(entered, name)
+      }
+      val completion = completionPosition(pos, params.text(), editRange)
+      val query = completions.name.toString
+      val items =
+        filterInteresting(matchingResults, kind, query, pos, completion)
+      params.checkCanceled()
+      (items, completion, editRange, query)
     } catch {
       case e: CyclicReference
           if e.getMessage.contains("illegal cyclic reference") =>

@@ -74,9 +74,9 @@ abstract class BaseCompletionSlowSuite(name: String)
            |Stream - java.util.stream
            |IntStream - java.util.stream
            |LogStream - java.rmi.server
+           |StreamView - scala.collection.immutable
            |BaseStream - java.util.stream
            |LongStream - java.util.stream
-           |StreamView - scala.collection.immutable
            |InputStream - java.io
            |PrintStream - java.io
            |DoubleStream - java.util.stream
