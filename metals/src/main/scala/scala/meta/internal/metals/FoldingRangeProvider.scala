@@ -20,12 +20,12 @@ final class FoldingRangeProvider(val trees: Trees, mode: FoldingMode) {
   }
 
   private def findFoldingRanges(tree: Tree): util.List[FoldingRange] = {
-    val ranges = new util.ArrayList[FoldingRange]()
+    val ranges = new FoldingRanges
     new RangeFinder(ranges).apply(tree)
-    ranges
+    ranges.get
   }
 
-  private class RangeFinder(ranges: util.ArrayList[FoldingRange])
+  private class RangeFinder(ranges: FoldingRanges)
       extends SimpleTraverser {
 
     private def fold(tree: Tree): Unit = tree match {
