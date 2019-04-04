@@ -357,7 +357,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       val completionFallback = for {
         qual <- applyQualifier(tree)
         completions = completionsAt(qual.pos.focus).results
-          .filter(_.sym.name == qual.name)
+          .filter(_.sym.javaClassSymbol.name == qual.name)
           .sorted(
             memberOrdering(
               qual.name.toString(),
@@ -365,7 +365,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
               CompletionPosition.None
             )
           )
-          .map(_.sym)
+          .map(_.sym.javaClassSymbol)
           .distinct
         completion <- completions match {
           case Nil =>

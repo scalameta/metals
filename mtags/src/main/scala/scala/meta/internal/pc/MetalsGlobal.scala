@@ -432,6 +432,10 @@ class MetalsGlobal(
 
   }
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def javaClassSymbol: Symbol = {
+      if (sym.isJavaModule) sym.companionClass
+      else sym
+    }
     def fullNameSyntax: String = {
       val out = new java.lang.StringBuilder
       def loop(s: Symbol): Unit = {
