@@ -30,7 +30,7 @@ object MacroCompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "2.11" ->
-        """|from(r: String :: Int :: HNil): Person
+        """|from(r: ::[String,::[Int,HNil]]): Person
            |""".stripMargin
     )
   )
@@ -51,7 +51,12 @@ object MacroCompletionSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|fold[C](fa: Int => C, fb: String => C): C
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|fold[X](fa: Int => X, fb: String => X): X
+           |""".stripMargin
+    )
   )
 
   check(
@@ -107,7 +112,12 @@ object MacroCompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|fold[C](fa: Int => C, fb: String => C): C
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|fold[X](fa: Int => X, fb: String => X): X
+           |""".stripMargin
+    )
   )
 
   check(
