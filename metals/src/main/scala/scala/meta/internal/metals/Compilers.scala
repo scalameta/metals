@@ -53,6 +53,18 @@ class Compilers(
   )
   private val cache = jcache.asScala
 
+  // The "rambo" compiler is used for source files that don't belong to a build target.
+  lazy val ramboCompiler: PresentationCompiler = {
+    scribe.info(
+      "no build target: using presentation compiler with only scala-library"
+    )
+    configure(new ScalaPresentationCompiler()).newInstance(
+      s"metals-default-${Properties.versionNumberString}",
+      PackageIndex.scalaLibrary.asJava,
+      Nil.asJava
+    )
+  }
+
   override def cancel(): Unit = {
     Cancelable.cancelEach(cache.values)(_.shutdown())
     cache.clear()
@@ -155,13 +167,17 @@ class Compilers(
   def loadCompiler(
       path: AbsolutePath,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
-  ): Option[PresentationCompiler] =
-    for {
-      target <- buildTargets
-        .inverseSources(path)
-        .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
-      compiler <- loadCompiler(target)
-    } yield compiler
+  ): Option[PresentationCompiler] = {
+    val target = buildTargets
+      .inverseSources(path)
+      .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
+    target match {
+      case None =>
+        if (path.toLanguage.isScala) Some(ramboCompiler)
+        else None
+      case Some(value) => loadCompiler(value)
+    }
+  }
 
   def loadCompiler(
       target: BuildTargetIdentifier
@@ -205,6 +221,14 @@ class Compilers(
     }
   }
 
+  private def configure(pc: PresentationCompiler): PresentationCompiler =
+    pc.withSearch(search)
+      .withExecutorService(ec)
+      .withScheduledExecutorService(sh)
+      .withConfiguration(
+        config.compilers.copy(_symbolPrefixes = userConfig().symbolPrefixes)
+      )
+
   def newCompiler(
       scalac: ScalacOptionsItem,
       info: ScalaBuildTarget
@@ -217,16 +241,10 @@ class Compilers(
         embedded.presentationCompiler(info, scalac)
       }
     val options = plugins.filterSupportedOptions(scalac.getOptions.asScala)
-    pc.withSearch(search)
-      .withExecutorService(ec)
-      .withScheduledExecutorService(sh)
-      .withConfiguration(
-        config.compilers.copy(_symbolPrefixes = userConfig().symbolPrefixes)
-      )
-      .newInstance(
-        scalac.getTarget.getUri,
-        classpath.asJava,
-        (log ++ options).asJava
-      )
+    configure(pc).newInstance(
+      scalac.getTarget.getUri,
+      classpath.asJava,
+      (log ++ options).asJava
+    )
   }
 }

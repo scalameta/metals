@@ -18,6 +18,7 @@ import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.internal.metals.PackageIndex
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Properties
@@ -29,14 +30,7 @@ abstract class BasePCSuite extends BaseSuite {
       .asInstanceOf[URLClassLoader]
       .getURLs
       .map(url => Paths.get(url.toURI))
-  val scalaLibrary: Seq[Path] =
-    this.getClass.getClassLoader
-      .asInstanceOf[URLClassLoader]
-      .getURLs
-      .iterator
-      .filter(_.getPath.contains("scala-library"))
-      .map(url => Paths.get(url.toURI))
-      .toSeq
+  val scalaLibrary: Seq[Path] = PackageIndex.scalaLibrary
   def extraClasspath: Seq[Path] = Nil
   def scalacOptions: Seq[String] = Nil
   def config: PresentationCompilerConfig = PresentationCompilerConfigImpl()

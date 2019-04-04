@@ -95,10 +95,7 @@ final class WorkspaceSymbolProvider(
     } {
       packages.visit(classpathEntry)
     }
-    inDependencies = ClasspathSearch.fromPackages(
-      packages,
-      isReferencedPackage
-    )
+    inDependencies = ClasspathSearch.fromPackages(packages, isReferencedPackage)
   }
 
   private def workspaceSearch(

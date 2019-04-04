@@ -450,6 +450,7 @@ class MetalsLanguageServer(
           List[Future[Unit]](
             quickConnectToBuildServer().ignoreValue,
             slowConnectToBuildServer(forceImport = false).ignoreValue,
+            Future(workspaceSymbols.indexClasspath()),
             Future(startHttpServer()),
             Future(formattingProvider.load())
           )
