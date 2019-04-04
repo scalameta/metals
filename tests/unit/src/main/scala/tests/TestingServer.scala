@@ -24,6 +24,7 @@ import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.FoldingRangeCapabilities
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
@@ -222,6 +223,7 @@ final class TestingServer(
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
+    textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
     params.setCapabilities(
       new ClientCapabilities(
         workspaceCapabilities,
