@@ -2,9 +2,7 @@ package scala.meta.internal.metals
 
 import java.util
 import java.util.Collections
-
 import org.eclipse.lsp4j.FoldingRange
-
 import scala.meta.internal.metals.FoldingRanges.foldingThreshold
 
 final class FoldingRanges {

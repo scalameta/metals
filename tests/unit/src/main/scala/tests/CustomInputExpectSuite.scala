@@ -2,9 +2,7 @@ package tests
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-
 import tests.BuildInfo.testResourceDirectory
-
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.io.AbsolutePath

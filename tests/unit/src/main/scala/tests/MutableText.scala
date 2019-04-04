@@ -1,7 +1,6 @@
 package tests
 
 import tests.MutableText.Insert
-
 import scala.collection.mutable
 
 object MutableText {

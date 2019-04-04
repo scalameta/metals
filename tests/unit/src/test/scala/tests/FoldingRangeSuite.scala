@@ -2,11 +2,11 @@ package tests
 
 import java.nio.file.Paths
 import java.util.UUID
-
 import org.eclipse.lsp4j.FoldingRange
 import tests.MutableText.Insert
-
-import scala.meta.internal.metals.{Buffers, FoldingMode, FoldingRangeProvider}
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.FoldingMode
+import scala.meta.internal.metals.FoldingRangeProvider
 import scala.meta.io.AbsolutePath
 
 object FoldingRangeSuite extends CustomInputExpectSuite("foldingRange") {
