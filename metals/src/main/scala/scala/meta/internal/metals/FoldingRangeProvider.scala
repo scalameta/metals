@@ -24,8 +24,10 @@ final class FoldingRangeProvider(val trees: Trees, foldOnlyLines: Boolean) {
     val ranges = new FoldingRanges(foldOnlyLines)
 
     tree traverse {
-      case block: Term.Block => ranges.add(Region, block.pos)
-      case template: Template => ranges.add(Region, template.pos)
+      case block: Term.Block =>
+        ranges.add(Region, block.pos)
+      case template: Template =>
+        ranges.add(Region, template.pos)
       case loop: Term.For =>
         val startLine = loop.pos.startLine
         val startColumn = loop.pos.startColumn + 3 // just after "for" since there may be no whitespace (e.g. "for{")

@@ -1,5 +1,0 @@
-object Outer {
-  trait Inner {
-
-  }
-}
