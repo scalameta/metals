@@ -40,7 +40,9 @@ object FoldingRangeProvider {
       trees: Trees,
       capabilities: FoldingRangeCapabilities
   ): FoldingRangeProvider = {
-    val foldOnlyLines = capabilities.getLineFoldingOnly
+    val foldOnlyLines: Boolean =
+      if (capabilities.getLineFoldingOnly == null) false
+      else capabilities.getLineFoldingOnly
 
     new FoldingRangeProvider(trees, foldOnlyLines)
   }
