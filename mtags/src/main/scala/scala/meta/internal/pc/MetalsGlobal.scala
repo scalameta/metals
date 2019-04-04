@@ -433,7 +433,7 @@ class MetalsGlobal(
   }
   implicit class XtensionSymbolMetals(sym: Symbol) {
     def javaClassSymbol: Symbol = {
-      if (sym.isJavaModule) sym.companionClass
+      if (sym.isJavaModule && !sym.hasPackageFlag) sym.companionClass
       else sym
     }
     def fullNameSyntax: String = {

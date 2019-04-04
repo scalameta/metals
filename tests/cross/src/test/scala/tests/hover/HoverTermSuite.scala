@@ -265,7 +265,7 @@ object HoverTermSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|```scala
-       |object java.nio.file.FileVisitResult
+       |class java.nio.file.FileVisitResult
        |```
        |""".stripMargin
   )
@@ -328,7 +328,7 @@ object HoverTermSuite extends BaseHoverSuite {
     """
       |import java.nio.file.{Fil@@es => File,Paths}
       |""".stripMargin,
-    """|object java.nio.file.Files
+    """|class java.nio.file.Files
        |""".stripMargin.hover
   )
 
@@ -337,7 +337,7 @@ object HoverTermSuite extends BaseHoverSuite {
     """
       |import java.nio.file.{Files => File,P@@aths}
       |""".stripMargin,
-    """|object java.nio.file.Paths
+    """|class java.nio.file.Paths
        |""".stripMargin.hover
   )
 
