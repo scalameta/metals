@@ -470,7 +470,9 @@ class MetalsGlobal(
       }
 
     def isKindaTheSameAs(other: Symbol): Boolean = {
-      if (sym.hasPackageFlag) {
+      if (other == NoSymbol) sym == NoSymbol
+      else if (sym == NoSymbol) false
+      else if (sym.hasPackageFlag) {
         // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
         other.fullName == sym.fullName
       } else {
