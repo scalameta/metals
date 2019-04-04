@@ -5,18 +5,27 @@ import java.util.UUID
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
+import tests.BuildInfo.testResourceDirectory
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FoldingRangeProvider
 import scala.meta.io.AbsolutePath
 
-object FoldingRangeSuite extends CustomInputExpectSuite("foldingRange") {
+object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
   private val buffers = Buffers()
   private val trees = TestingTrees(buffers)
 
   private val foldingRangeProvider =
     new FoldingRangeProvider(trees, foldOnlyLines = false)
 
-  override protected def obtainFrom(file: InputFile): String = {
+  override def testCases(): List[ExpectTestCase] = {
+    val inputDirectory = AbsolutePath(testResourceDirectory).resolve("foldingRange").resolve("input")
+    val customInput = InputProperties.fromDirectory(inputDirectory)
+    customInput.allFiles.map { file =>
+      ExpectTestCase(file, () => obtainFrom(file))
+    }
+  }
+
+  private def obtainFrom(file: InputFile): String = {
     val scalaSource = file.input.text
       .replaceAll(">>\\w+>>", "")
       .replaceAll("<<\\w+<<", "")
