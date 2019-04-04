@@ -10,6 +10,7 @@ import java.util.Optional
 import java.util.logging.Level
 import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
@@ -290,6 +291,14 @@ trait MtagsEnrichments {
         new l.Position(pos.startLine, pos.startColumn),
         new l.Position(pos.endLine, pos.endColumn)
       )
+    }
+
+    def toLSP(kind: String): FoldingRange = {
+      val range = new FoldingRange(pos.startLine, pos.endLine)
+      range.setKind(kind)
+      range.setStartCharacter(pos.startColumn)
+      range.setEndCharacter(pos.endColumn)
+      range
     }
   }
 }

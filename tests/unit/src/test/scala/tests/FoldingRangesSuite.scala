@@ -1,15 +1,16 @@
 package tests
 
 import org.eclipse.lsp4j.FoldingRange
+import scala.meta.internal.metals.FoldingRanges
 
-import scala.meta.internal.metals.FoldingMode
-
-final class LineFoldingModeSuite extends BaseSuite {
+final class FoldingRangesSuite extends BaseSuite {
   test("preserves-last-line") {
+    val ranges = new FoldingRanges(foldOnlyLines = true)
+
     val lastLine = 10
     val range = new FoldingRange(0, lastLine)
 
-    FoldingMode.FoldLines.adjust(range)
+    ranges.add(range)
 
     assertEquals(range.getEndLine, lastLine - 1)
   }

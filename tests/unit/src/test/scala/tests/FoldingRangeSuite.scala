@@ -5,7 +5,6 @@ import java.util.UUID
 import org.eclipse.lsp4j.FoldingRange
 import tests.MutableText.Insert
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.FoldingMode
 import scala.meta.internal.metals.FoldingRangeProvider
 import scala.meta.io.AbsolutePath
 
@@ -14,7 +13,7 @@ object FoldingRangeSuite extends CustomInputExpectSuite("foldingRange") {
   private val trees = TestingTrees(buffers)
 
   private val foldingRangeProvider =
-    new FoldingRangeProvider(trees, FoldingMode.FoldCharacters)
+    new FoldingRangeProvider(trees, foldOnlyLines = false)
 
   override protected def obtainFrom(file: InputFile): String = {
     val scalaSource = file.input.text

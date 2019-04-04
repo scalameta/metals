@@ -9,13 +9,10 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta._
 import scala.meta.inputs.Position
-import scala.meta.internal.metals.FoldingMode._
-import scala.meta.internal.metals.FoldingRangeKind.Factory
-import scala.meta.internal.metals.FoldingRangeKind.Region
-import scala.meta.internal.metals.FoldingRanges.foldingThreshold
+import scala.meta.internal.metals.FoldingRangeProvider._
 import scala.meta.io.AbsolutePath
 
-final class FoldingRangeProvider(val trees: Trees, mode: FoldingMode) {
+final class FoldingRangeProvider(val trees: Trees, foldOnlyLines: Boolean) {
   def getRangedFor(path: AbsolutePath): util.List[FoldingRange] = {
     trees
       .get(path)
@@ -24,7 +21,7 @@ final class FoldingRangeProvider(val trees: Trees, mode: FoldingMode) {
   }
 
   private def findFoldingRanges(tree: Tree): util.List[FoldingRange] = {
-    val ranges = new FoldingRanges(mode)
+    val ranges = new FoldingRanges(foldOnlyLines)
 
     tree traverse {
       case block: Term.Block => ranges.add(Region, block.pos)
@@ -36,83 +33,41 @@ final class FoldingRangeProvider(val trees: Trees, mode: FoldingMode) {
 }
 
 object FoldingRangeProvider {
+  val foldingThreshold = 2 // e.g. {}
+  val Region = "region"
+
   def apply(
       trees: Trees,
       capabilities: FoldingRangeCapabilities
   ): FoldingRangeProvider = {
-    val mode =
-      if (capabilities.getLineFoldingOnly) FoldLines
-      else FoldCharacters
+    val foldOnlyLines = capabilities.getLineFoldingOnly
 
-    new FoldingRangeProvider(trees, mode)
+    new FoldingRangeProvider(trees, foldOnlyLines)
   }
 }
 
-trait FoldingMode {
-  def adjust(range: FoldingRange): Unit
-}
-
-object FoldingMode {
-  object FoldLines extends FoldingMode {
-    override def adjust(range: FoldingRange): Unit = preserveLastLine(range)
-
-    private def preserveLastLine(range: FoldingRange): Unit = {
-      val adjustedEndLine = range.getEndLine - 1 // we want to preserve the last line containing e.g. '}'
-      range.setEndLine(adjustedEndLine)
-    }
-  }
-
-  object FoldCharacters extends FoldingMode {
-    override def adjust(range: FoldingRange): Unit = {}
-  }
-}
-
-object FoldingRangeKind {
-  abstract class Factory(kind: String) {
-    final def create(
-        startLine: Int,
-        startColumn: Int,
-        endLine: Int,
-        endColumn: Int
-    )(mode: FoldingMode): FoldingRange = {
-      val range = new FoldingRange(startLine, endLine)
-      range.setKind(kind)
-      range.setStartCharacter(startColumn)
-      range.setEndCharacter(endColumn)
-      mode.adjust(range)
-      range
-    }
-  }
-
-  object Region extends Factory("region")
-}
-
-object FoldingRanges {
-  protected val foldingThreshold = 2 // e.g. {}
-}
-
-final class FoldingRanges(mode: FoldingMode) {
+final class FoldingRanges(foldOnlyLines: Boolean) {
   private val allRanges = new util.ArrayList[FoldingRange]()
 
   def get: util.List[FoldingRange] = Collections.unmodifiableList(allRanges)
 
-  def add(factory: Factory, pos: Position): Unit = {
-    val range = factory.create(
-      pos.startLine,
-      pos.startColumn,
-      pos.endLine,
-      pos.endColumn
-    )(mode)
-
+  def add(kind: String, pos: Position): Unit = {
+    import MetalsEnrichments._
+    val range = pos.toLSP(kind)
     add(range)
   }
 
   def add(range: FoldingRange): Unit = {
     if (isNotCollapsed(range)) {
+      if (foldOnlyLines) {
+        range.setEndLine(range.getEndLine - 1) // we want to preserve the last line containing e.g. '}'
+      }
+
       allRanges.add(range)
     }
   }
 
+  // examples of collapsed: "class A {}" or "def foo = {}"
   private def isNotCollapsed(range: FoldingRange): Boolean =
     spansMultipleLines(range) || foldsMoreThanThreshold(range)
 
