@@ -109,7 +109,7 @@ trait Completions { this: MetalsGlobal =>
     import MemberOrdering._
     var relevance = 0
     // local symbols are more relevant
-    if (!sym.isLocalToBlock) relevance |= IsNotLocalByBlock
+    if (!sym.isLocalToBlock && !sym.owner.isType) relevance |= IsNotLocalByBlock
     // symbols defined in this file are more relevant
     if (!sym.pos.isDefined || sym.hasPackageFlag)
       relevance |= IsNotDefinedInFile
