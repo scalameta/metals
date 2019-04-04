@@ -150,10 +150,13 @@ trait Completions { this: MetalsGlobal =>
   )
 
   def memberOrdering(
+      query: String,
       history: ShortenedNames,
       completion: CompletionPosition
   ): Ordering[Member] = new Ordering[Member] {
-    val cache = mutable.Map.empty[Symbol, Boolean]
+    val queryLower = query.toLowerCase()
+    val priorityCache = mutable.Map.empty[Symbol, Boolean]
+    val fuzzyCache = mutable.Map.empty[Symbol, Int]
     def compareLocalSymbols(o1: Member, o2: Member): Int = {
       if (o1.sym.isLocallyDefinedSymbol &&
         o2.sym.isLocallyDefinedSymbol &&
@@ -165,10 +168,18 @@ trait Completions { this: MetalsGlobal =>
         0
       }
     }
+    def fuzzyScore(o: Member): Int = {
+      fuzzyCache.getOrElseUpdate(o.sym, {
+        val name = o.sym.name.toString().toLowerCase()
+        if (name.startsWith(queryLower)) 0
+        else if (name.toLowerCase().contains(queryLower)) 1
+        else 2
+      })
+    }
     override def compare(o1: Member, o2: Member): Int = {
       val byCompletion = -java.lang.Boolean.compare(
-        cache.getOrElseUpdate(o1.sym, completion.isPrioritized(o1)),
-        cache.getOrElseUpdate(o2.sym, completion.isPrioritized(o2))
+        priorityCache.getOrElseUpdate(o1.sym, completion.isPrioritized(o1)),
+        priorityCache.getOrElseUpdate(o2.sym, completion.isPrioritized(o2))
       )
       if (byCompletion != 0) byCompletion
       else {
@@ -181,22 +192,27 @@ trait Completions { this: MetalsGlobal =>
           )
           if (byRelevance != 0) byRelevance
           else {
-            val byIdentifier =
-              IdentifierComparator.compare(o1.sym.name, o2.sym.name)
-            if (byIdentifier != 0) byIdentifier
+            val byFuzzy =
+              java.lang.Integer.compare(fuzzyScore(o1), fuzzyScore(o2))
+            if (byFuzzy != 0) byFuzzy
             else {
-              val byOwner =
-                o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
-              if (byOwner != 0) byOwner
+              val byIdentifier =
+                IdentifierComparator.compare(o1.sym.name, o2.sym.name)
+              if (byIdentifier != 0) byIdentifier
               else {
-                val byParamCount = Integer.compare(
-                  o1.sym.paramss.iterator.flatten.size,
-                  o2.sym.paramss.iterator.flatten.size
-                )
-                if (byParamCount != 0) byParamCount
+                val byOwner =
+                  o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
+                if (byOwner != 0) byOwner
                 else {
-                  detailString(o1, history)
-                    .compareTo(detailString(o2, history))
+                  val byParamCount = Integer.compare(
+                    o1.sym.paramss.iterator.flatten.size,
+                    o2.sym.paramss.iterator.flatten.size
+                  )
+                  if (byParamCount != 0) byParamCount
+                  else {
+                    detailString(o1, history)
+                      .compareTo(detailString(o2, history))
+                  }
                 }
               }
             }
@@ -1069,6 +1085,8 @@ trait Completions { this: MetalsGlobal =>
           }
         case sel => new Parents(sel.pos)
       }
+      override def isPrioritized(member: Member): Boolean =
+        member.isInstanceOf[TextEditMember]
       override def contribute: List[Member] = {
         val result = ListBuffer.empty[Member]
         val isVisited = mutable.Set.empty[Symbol]

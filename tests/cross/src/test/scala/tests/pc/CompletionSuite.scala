@@ -286,8 +286,8 @@ object CompletionSuite extends BaseCompletionSuite {
        |Path2D - java.awt.geom
        |CertPath - java.security.cert
        |LayoutPath - java.awt.font
-       |GeneralPath - java.awt.geom
        |PathMatcher - java.nio.file
+       |GeneralPath - java.awt.geom
        |XPathResult - org.w3c.dom.xpath
        |PathIterator - java.awt.geom
        |XPathEvaluator - org.w3c.dom.xpath
@@ -690,9 +690,6 @@ object CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|None scala
        |NoManifest scala.reflect
-       |ClassNotFoundException java.lang
-       |CloneNotSupportedException java.lang
-       |EnumConstantNotPresentException java.lang
        |NoClassDefFoundError java.lang
        |NoSuchFieldError java.lang
        |NoSuchFieldException java.lang
@@ -700,6 +697,9 @@ object CompletionSuite extends BaseCompletionSuite {
        |NoSuchMethodException java.lang
        |NotImplementedError scala
        |NotNull scala
+       |ClassNotFoundException java.lang
+       |CloneNotSupportedException java.lang
+       |EnumConstantNotPresentException java.lang
        |TypeNotPresentException java.lang
        |""".stripMargin
   )
@@ -712,8 +712,8 @@ object CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some scala
-       |IndexedSeq scala.collection
        |Seq scala.collection
+       |Set scala.collection.immutable
        |""".stripMargin,
     topLines = Some(3)
   )
@@ -726,8 +726,8 @@ object CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some scala
-       |IndexedSeq scala.collection
        |Seq scala.collection
+       |Set scala.collection.immutable
        |""".stripMargin,
     topLines = Some(3)
   )
@@ -834,6 +834,38 @@ object CompletionSuite extends BaseCompletionSuite {
        |print(x: Any): Unit
        |""".stripMargin,
     topLines = Some(4)
+  )
+
+  check(
+    "fuzzy-member",
+    s"""|class Foo {
+        |  def getTimeStamp: Int = 0
+        |}
+        |object Main {
+        |  new Foo().time@@
+        |}
+        |""".stripMargin,
+    """|getTimeStamp: Int
+       |""".stripMargin
+  )
+
+  check(
+    "fuzzy-member-sort",
+    s"""|class Foo {
+        |  def toInt: Int = 0
+        |  def instance: Int = 42
+        |  def intNumber: Int = 42
+        |}
+        |object Main {
+        |  new Foo().int@@
+        |}
+        |""".stripMargin,
+    """|intNumber: Int
+       |toInt: Int
+       |instance: Int
+       |asInstanceOf[T0]: T0
+       |isInstanceOf[T0]: Boolean
+       |""".stripMargin
   )
 
 }

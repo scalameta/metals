@@ -106,9 +106,9 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
     for {
       _ <- assertCompletion(
         """|def baz[F[_], A]: F[A] = ???
-           |baz[Either[Int, ?], String].right@@
+           |baz[Either[Int, ?], String].fold@@
            |""".stripMargin,
-        "right: Either.RightProjection[Int,String]"
+        "fold[C](fa: Int => C, fb: String => C): C"
       )
     } yield ()
   )

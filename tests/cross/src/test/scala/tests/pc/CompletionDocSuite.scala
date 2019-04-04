@@ -128,7 +128,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |  Predef@@
       |}
     """.stripMargin,
-    """|DeprecatedPredef scala
+    """|
        |> The `Predef` object provides definitions that are accessible in all Scala
        | compilation units without explicit qualification.
        |
@@ -176,6 +176,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
        | Short value to a Long value as required, and to add additional higher-order
        | functions to Array values. These are described in more detail in the documentation of [scala.Array](scala.Array).
        |Predef scala
+       |DeprecatedPredef scala
        |""".stripMargin,
     includeDocs = true
   )
@@ -186,11 +187,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |  scala.collection.Iterator@@
       |}
     """.stripMargin,
-    """|> Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses.
-       |AbstractIterator scala.collection
-       |> Buffered iterators are iterators which provide a method `head`
-       | that inspects the next element without discarding it.
-       |BufferedIterator scala.collection
+    """|
        |> ### class Iterator
        |Iterators are data structures that allow to iterate over a sequence
        | of elements. They have a `hasNext` method for checking
@@ -225,6 +222,11 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |### object Iterator
        |The `Iterator` object provides various functions for creating specialized iterators.
        |Iterator scala.collection
+       |> Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses.
+       |AbstractIterator scala.collection
+       |> Buffered iterators are iterators which provide a method `head`
+       | that inspects the next element without discarding it.
+       |BufferedIterator scala.collection
        |""".stripMargin,
     includeDocs = true
   )

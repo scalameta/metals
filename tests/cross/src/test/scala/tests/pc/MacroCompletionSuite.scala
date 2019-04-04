@@ -23,16 +23,14 @@ object MacroCompletionSuite extends BaseCompletionSuite {
       |case class Person(name: String, age: Int)
       |object Person {
       |  val gen = Generic[Person]
-      |  gen.to@@
+      |  gen.from@@
       |}
       |""".stripMargin,
-    """|to(t: Person): String :: Int :: HNil
-       |toString(): String
+    """|from(r: String :: Int :: HNil): Person
        |""".stripMargin,
     compat = Map(
       "2.11" ->
-        """|to(t: Person): ::[String,::[Int,HNil]]
-           |toString(): String
+        """|from(r: ::[String,::[Int,HNil]]): Person
            |""".stripMargin
     )
   )
@@ -49,11 +47,16 @@ object MacroCompletionSuite extends BaseCompletionSuite {
       |    }
       |  }
       |  val x = 42
-      |  fr"$x".righ@@
+      |  fr"$x".fold@@
       |}
       |""".stripMargin,
-    """|right: Either.RightProjection[Int,String]
-       |""".stripMargin
+    """|fold[C](fa: Int => C, fb: String => C): C
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|fold[X](fa: Int => X, fb: String => X): X
+           |""".stripMargin
+    )
   )
 
   check(
@@ -105,11 +108,16 @@ object MacroCompletionSuite extends BaseCompletionSuite {
     """
       |object a {
       |  def baz[F[_], A]: F[A] = ???
-      |  baz[Either[Int, ?], String].right@@
+      |  baz[Either[Int, ?], String].fold@@
       |}
     """.stripMargin,
-    """|right: Either.RightProjection[Int,String]
-       |""".stripMargin
+    """|fold[C](fa: Int => C, fb: String => C): C
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|fold[X](fa: Int => X, fb: String => X): X
+           |""".stripMargin
+    )
   )
 
   check(
