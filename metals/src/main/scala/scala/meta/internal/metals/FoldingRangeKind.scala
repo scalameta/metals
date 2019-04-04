@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import org.eclipse.lsp4j.FoldingRange
 
-object FoldingRanges {
+object FoldingRangeKind {
   abstract class Factory(kind: String) {
     final def create(
         startLine: Int,

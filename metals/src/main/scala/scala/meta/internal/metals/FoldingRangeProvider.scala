@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.{FoldingRange, FoldingRangeCapabilities}
 
 import scala.meta.Term.Block
 import scala.meta.internal.metals.FoldingMode._
-import scala.meta.internal.metals.FoldingRanges.{Factory, Region}
+import scala.meta.internal.metals.FoldingRangeKind.{Factory, Region}
 import scala.meta.io.AbsolutePath
 import scala.meta.transversers.SimpleTraverser
 import scala.meta.{Position, Template, Tree}
