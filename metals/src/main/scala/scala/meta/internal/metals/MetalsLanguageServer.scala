@@ -298,7 +298,10 @@ class MetalsLanguageServer(
       },
       interactiveSemanticdbs.toFileOnDisk
     )
-    foldingRangeProvider = FoldingRangeProvider(trees, params.getCapabilities.getTextDocument.getFoldingRange)
+    foldingRangeProvider = FoldingRangeProvider(
+      trees,
+      params.getCapabilities.getTextDocument.getFoldingRange
+    )
     compilers = register(
       new Compilers(
         workspace,
@@ -869,8 +872,8 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/foldingRange")
   def foldingRange(
-                    params: FoldingRangeRequestParams
-                  ): CompletableFuture[util.List[FoldingRange]] = {
+      params: FoldingRangeRequestParams
+  ): CompletableFuture[util.List[FoldingRange]] = {
     CancelTokens { _ =>
       val sourceFile = params.getTextDocument.getUri.toAbsolutePath
       foldingRangeProvider.getRangedFor(sourceFile)
