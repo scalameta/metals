@@ -176,7 +176,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
             JEither.forRight[String, MarkedString](
               new MarkedString(
                 "scala",
-                s"${symbol.keyString} ${symbol.fullName}"
+                s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
               )
             )
           ).asJava

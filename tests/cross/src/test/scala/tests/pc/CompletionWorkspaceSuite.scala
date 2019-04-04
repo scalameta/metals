@@ -59,6 +59,24 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "import-conflict",
+    """package `import-conflict`
+      |object Main {
+      |  val java = 42
+      |  Files@@
+      |}
+      |""".stripMargin,
+    """package `import-conflict`
+      |object Main {
+      |  val java = 42
+      |  import _root_.java.nio.file.Files
+      |  Files
+      |}
+      |""".stripMargin,
+    filter = _ == "Files - java.nio.file"
+  )
+
+  checkEdit(
     "extends",
     """package pkg
       |object Main extends CompletableFutur@@

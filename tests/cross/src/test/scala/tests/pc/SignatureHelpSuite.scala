@@ -93,6 +93,35 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
+    "ctor3",
+    """
+      |object a {
+      |  import java.io.File
+      |  new File(@@)
+      |}
+    """.stripMargin,
+    """|<init>(x$1: URI): File
+       |<init>(x$1: File, x$2: String): File
+       |<init>(x$1: String, x$2: String): File
+       |<init>(x$1: String): File
+       |""".stripMargin
+  )
+
+  check(
+    "ctor4",
+    """
+      |object a {
+      |  new java.io.File(@@)
+      |}
+    """.stripMargin,
+    """|<init>(x$1: URI): File
+       |<init>(x$1: File, x$2: String): File
+       |<init>(x$1: String, x$2: String): File
+       |<init>(x$1: String): File
+       |""".stripMargin
+  )
+
+  check(
     "apply",
     """
       |object a {

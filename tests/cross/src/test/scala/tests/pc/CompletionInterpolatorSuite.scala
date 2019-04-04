@@ -430,4 +430,20 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
     """s"Hello \${hello$0}o}"""".stripMargin
   )
 
+  // See https://github.com/scalameta/metals/issues/608
+  // Turns out this bug was accidentally fixed by limiting snippets to only
+  // when creating new expressions, inside existing code we don't insert ($0) snippets.
+  checkEditLine(
+    "existing-interpolator-snippet",
+    """|object Main {
+       |  val hello = ""
+       |  def helloMethod(a: Int) = ""
+       |  ___
+       |}
+       |""".stripMargin,
+    """s"Hello $hello@@"""".stripMargin,
+    """s"Hello $helloMethod"""".stripMargin,
+    filter = _.contains("a: Int")
+  )
+
 }

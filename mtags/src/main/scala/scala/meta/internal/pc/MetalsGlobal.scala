@@ -432,6 +432,10 @@ class MetalsGlobal(
 
   }
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def javaClassSymbol: Symbol = {
+      if (sym.isJavaModule && !sym.hasPackageFlag) sym.companionClass
+      else sym
+    }
     def fullNameSyntax: String = {
       val out = new java.lang.StringBuilder
       def loop(s: Symbol): Unit = {
@@ -466,7 +470,9 @@ class MetalsGlobal(
       }
 
     def isKindaTheSameAs(other: Symbol): Boolean = {
-      if (sym.hasPackageFlag) {
+      if (other == NoSymbol) sym == NoSymbol
+      else if (sym == NoSymbol) false
+      else if (sym.hasPackageFlag) {
         // NOTE(olafur) hacky workaround for comparing module symbol with package symbol
         other.fullName == sym.fullName
       } else {

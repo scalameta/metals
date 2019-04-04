@@ -364,11 +364,18 @@ trait Completions { this: MetalsGlobal =>
    * Extractor for a tree node where we can insert a leading import statements.
    */
   object NonSyntheticStatement {
+    lazy val isCaseCompletion = Set[Name](
+      TermName("c_CURSOR_"),
+      TermName("ca_CURSOR_"),
+      TermName("cas_CURSOR_"),
+      TermName("case_CURSOR_")
+    )
     def unapply(tree: Tree): Boolean = tree match {
       case t: ValOrDefDef =>
         !t.name.containsChar('$') &&
           !t.symbol.isParamAccessor &&
           !t.symbol.isCaseAccessor
+      case Ident(name) => !isCaseCompletion(name)
       case _ => true
     }
   }
