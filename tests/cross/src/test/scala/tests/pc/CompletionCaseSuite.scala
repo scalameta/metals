@@ -190,6 +190,32 @@ object CompletionCaseSuite extends BaseCompletionSuite {
     filter = _.contains("Failure")
   )
 
+  checkEdit(
+    "local-case",
+    """
+      |object A {
+      |  import scala.util.Try
+      |  import scala.util.Success
+      |  Try(1) match {
+      |    case Success(x) =>
+      |      println(x)
+      |    case@@
+      |  }
+      |}""".stripMargin,
+    """
+      |object A {
+      |  import scala.util.Try
+      |  import scala.util.Success
+      |  import scala.util.Failure
+      |  Try(1) match {
+      |    case Success(x) =>
+      |      println(x)
+      |    case Failure(exception) => $0
+      |  }
+      |}""".stripMargin,
+    filter = _.contains("Failure")
+  )
+
   check(
     "apply-type",
     """
