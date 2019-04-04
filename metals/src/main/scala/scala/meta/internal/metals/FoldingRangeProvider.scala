@@ -11,6 +11,7 @@ import scala.meta._
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.FoldingRangeProvider._
 import scala.meta.io.AbsolutePath
+import scala.meta.tokens.Token.KwYield
 
 final class FoldingRangeProvider(val trees: Trees, foldOnlyLines: Boolean) {
   def getRangedFor(path: AbsolutePath): util.List[FoldingRange] = {
@@ -40,6 +41,24 @@ final class FoldingRangeProvider(val trees: Trees, foldOnlyLines: Boolean) {
         range.setEndCharacter(endColumn)
 
         ranges.add(Region, range)
+
+      // it preserves the whitespaces between "yield" token and the body
+      case loop: Term.ForYield =>
+        val startLine = loop.pos.startLine
+        val startColumn = loop.pos.startColumn + 3 // just after "for" since there may be no whitespace (e.g. "for{")
+
+        val range = loop.tokens.collectFirst {
+          case token if token.is[KwYield] => // fold up to the 'yield' token
+            val endLine = token.pos.startLine
+            val endColumn = token.pos.startColumn
+
+            val range = new FoldingRange(startLine, endLine)
+            range.setStartCharacter(startColumn)
+            range.setEndCharacter(endColumn)
+            range
+        }
+
+        range.foreach(ranges.add(Region, _))
     }
 
     ranges.get
