@@ -3,7 +3,8 @@ package tests
 import java.nio.file.Paths
 import java.util.UUID
 import org.eclipse.lsp4j.FoldingRange
-import tests.MutableText.Insert
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.{lsp4j => l}
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FoldingRangeProvider
 import scala.meta.io.AbsolutePath
@@ -41,28 +42,16 @@ object FoldingRangeSuite extends CustomInputExpectSuite("foldingRange") {
       scalaSource: String,
       actualRanges: Seq[FoldingRange]
   ): String = {
-    val mutableText = MutableText(scalaSource)
-
-    val insertions = for {
+    val edits = for {
       range <- actualRanges
-      insertion <- Seq(opening(range), closing(range))
-    } yield insertion
+      start = new l.Position(range.getStartLine, range.getStartCharacter)
+      end = new l.Position(range.getEndLine, range.getEndCharacter)
+      edit <- Seq(
+        new TextEdit(new l.Range(start, start), s">>${range.getKind}>>"),
+        new TextEdit(new l.Range(end, end), s"<<${range.getKind}<<")
+      )
+    } yield edit
 
-    mutableText.updateWith(insertions)
-    mutableText.toString
+    TextEdits.applyEdits(scalaSource, edits.toList)
   }
-
-  private def opening(range: FoldingRange): Insert =
-    Insert(
-      range.getStartLine,
-      range.getStartCharacter,
-      s">>${range.getKind}>>"
-    )
-
-  private def closing(range: FoldingRange): Insert =
-    Insert(
-      range.getEndLine,
-      range.getEndCharacter,
-      s"<<${range.getKind}<<"
-    )
 }
