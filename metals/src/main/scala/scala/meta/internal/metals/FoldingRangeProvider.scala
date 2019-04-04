@@ -9,7 +9,7 @@ import scala.meta.internal.metals.FoldingMode._
 import scala.meta.internal.metals.FoldingRanges.{Factory, Region}
 import scala.meta.io.AbsolutePath
 import scala.meta.transversers.SimpleTraverser
-import scala.meta.{Position, Tree}
+import scala.meta.{Position, Template, Tree}
 
 final class FoldingRangeProvider(val trees: Trees, mode: FoldingMode) {
   def getRangedFor(path: AbsolutePath): util.List[FoldingRange] = {
@@ -29,7 +29,8 @@ final class FoldingRangeProvider(val trees: Trees, mode: FoldingMode) {
       extends SimpleTraverser {
 
     private def fold(tree: Tree): Unit = tree match {
-      case Block(_) => createRange(Region, tree.pos)
+      case _: Block => createRange(Region, tree.pos)
+      case _: Template => createRange(Region, tree.pos)
       case _ =>
     }
 

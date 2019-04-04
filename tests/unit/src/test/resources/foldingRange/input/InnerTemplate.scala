@@ -1,0 +1,5 @@
+object Outer {
+  trait Inner {
+
+  }
+}

@@ -1,5 +1,5 @@
-class A {
+class A >>region>>{
   def foo = >>region>>{
 
   }<<region<<
-}
+}<<region<<
