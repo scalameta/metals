@@ -38,7 +38,7 @@ trait MtagsIndexer {
 
   private val root: String =
     Symbols.RootPackage
-  var currentOwner: String = root
+  var currentOwner: String = Symbols.EmptyPackage
   private var myLastCurrentOwner: String = currentOwner
   def lastCurrentOwner: String = myLastCurrentOwner
 
@@ -150,5 +150,7 @@ trait MtagsIndexer {
     visitOccurrence(occ, info, previousOwner)
   }
   def symbol(signature: Descriptor): String =
-    Symbols.Global(currentOwner, signature)
+    if (currentOwner.eq(Symbols.EmptyPackage) && signature.isPackage)
+      Symbols.Global(Symbols.RootPackage, signature)
+    else Symbols.Global(currentOwner, signature)
 }

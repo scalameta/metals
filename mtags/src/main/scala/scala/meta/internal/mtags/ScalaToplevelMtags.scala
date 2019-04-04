@@ -81,6 +81,9 @@ class ScalaToplevelMtags(
 
   def emitPackage(): Unit = {
     require(scanner.curr.token == PACKAGE, "package")
+    if (currentOwner eq Symbols.EmptyPackage) {
+      currentOwner = Symbols.RootPackage
+    }
     val old = currentOwner
     acceptTrivia()
     scanner.curr.token match {

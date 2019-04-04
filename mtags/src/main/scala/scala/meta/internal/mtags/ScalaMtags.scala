@@ -114,6 +114,9 @@ class ScalaMtags(val input: Input.VirtualFile)
         continue()
       case t: Pkg => pkg(t.ref); continue()
       case t: Pkg.Object =>
+        if (currentOwner eq Symbols.EmptyPackage) {
+          currentOwner = Symbols.RootPackage
+        }
         currentOwner =
           Symbols.Global(currentOwner, Descriptor.Package(t.name.value))
         term("package", t.name.pos, Kind.OBJECT, 0)
