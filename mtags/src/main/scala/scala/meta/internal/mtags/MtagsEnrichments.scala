@@ -293,9 +293,8 @@ trait MtagsEnrichments {
       )
     }
 
-    def toLSP(kind: String): FoldingRange = {
+    def toLSPFoldingRange: FoldingRange = {
       val range = new FoldingRange(pos.startLine, pos.endLine)
-      range.setKind(kind)
       range.setStartCharacter(pos.startColumn)
       range.setEndCharacter(pos.endColumn)
       range

@@ -26,6 +26,18 @@ final class FoldingRangeProvider(val trees: Trees, foldOnlyLines: Boolean) {
     tree traverse {
       case block: Term.Block => ranges.add(Region, block.pos)
       case template: Template => ranges.add(Region, template.pos)
+      case loop: Term.For =>
+        val startLine = loop.pos.startLine
+        val startColumn = loop.pos.startColumn + 3 // just after "for" since there may be no whitespace (e.g. "for{")
+
+        val endLine = loop.body.pos.startLine
+        val endColumn = loop.body.pos.startColumn  //  must be exact$startColumn, since it can be "}{"
+
+        val range = new FoldingRange(startLine, endLine)
+        range.setStartCharacter(startColumn)
+        range.setEndCharacter(endColumn)
+
+        ranges.add(Region, range)
     }
 
     ranges.get
@@ -55,7 +67,12 @@ final class FoldingRanges(foldOnlyLines: Boolean) {
 
   def add(kind: String, pos: Position): Unit = {
     import MetalsEnrichments._
-    val range = pos.toLSP(kind)
+    val range = pos.toLSPFoldingRange
+    add(kind, range)
+  }
+
+  def add(kind: String, range: FoldingRange): Unit = {
+    range.setKind(kind)
     add(range)
   }
 
