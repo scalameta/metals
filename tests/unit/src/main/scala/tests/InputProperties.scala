@@ -52,6 +52,6 @@ object InputProperties {
     )
   }
 
-  def fromDirectory(directory:AbsolutePath): InputProperties =
+  def fromDirectory(directory: AbsolutePath): InputProperties =
     InputProperties(directory, List(directory), Classpath(Nil), Classpath(Nil))
 }

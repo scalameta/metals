@@ -31,7 +31,7 @@ final class FoldingRangeProvider(val trees: Trees, foldOnlyLines: Boolean) {
         val startColumn = loop.pos.startColumn + 3 // just after "for" since there may be no whitespace (e.g. "for{")
 
         val endLine = loop.body.pos.startLine
-        val endColumn = loop.body.pos.startColumn  //  must be exact$startColumn, since it can be "}{"
+        val endColumn = loop.body.pos.startColumn // must be exact$startColumn, since it can be "}{"
 
         val range = new FoldingRange(startLine, endLine)
         range.setStartCharacter(startColumn)
