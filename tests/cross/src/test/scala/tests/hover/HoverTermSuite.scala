@@ -368,4 +368,14 @@ object HoverTermSuite extends BaseHoverSuite {
     """|val number: Int
        |""".stripMargin.hover
   )
+
+  check(
+    "widen",
+    """
+      |object Main {
+      |  println(<<java.nio.file.FileVisitResult.CONTIN@@UE>>)
+      |}
+      |""".stripMargin,
+    """final val CONTINUE: FileVisitResult""".hover
+  )
 }
