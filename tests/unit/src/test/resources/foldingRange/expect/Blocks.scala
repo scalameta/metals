@@ -10,6 +10,10 @@ class A >>region>>{
 
   def longSingleLineBlock = >>region>>{ ???; ???; ???; }<<region<<
 
+  def mappedSequence = Seq().map >>region>>{
+    x => x.toString()
+  }<<region<<
+
   def collapsedBlock = {}
 
   class CollapsedType {}
