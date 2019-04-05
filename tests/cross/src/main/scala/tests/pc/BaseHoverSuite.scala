@@ -1,13 +1,15 @@
 package tests.pc
 
-import java.lang.StringBuilder
-import scala.meta.inputs.Input
+import tests.BasePCSuite
+import tests.RangeReplace
+import tests.TestHovers
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments._
-import tests.BasePCSuite
-import tests.TestHovers
 
-abstract class BaseHoverSuite extends BasePCSuite with TestHovers {
+abstract class BaseHoverSuite
+    extends BasePCSuite
+    with TestHovers
+    with RangeReplace {
 
   def check(
       name: String,
@@ -37,15 +39,7 @@ abstract class BaseHoverSuite extends BasePCSuite with TestHovers {
         range <- Option(h.getRange)
       } {
         val base = codeOriginal.replaceAllLiterally("@@", "")
-        val input = Input.String(base)
-        val pos = range.toMeta(input)
-        val withRange = new StringBuilder()
-          .append(base, 0, pos.start)
-          .append("<<")
-          .append(base, pos.start, pos.end)
-          .append(">>")
-          .append(base, pos.end, base.length)
-          .toString
+        val withRange = replaceInRange(base, range)
         assertNoDiff(
           withRange,
           packagePrefix + original.replaceAllLiterally("@@", ""),

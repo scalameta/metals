@@ -128,6 +128,7 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var definitionProvider: DefinitionProvider = _
+  private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
@@ -280,6 +281,10 @@ class MetalsLanguageServer(
       buffers,
       definitionProvider
     )
+    documentHighlightProvider = new DocumentHighlightProvider(
+      definitionProvider,
+      semanticdbs
+    )
     workspaceSymbols = new WorkspaceSymbolProvider(
       workspace,
       config.statistics,
@@ -342,6 +347,7 @@ class MetalsLanguageServer(
       capabilities.setDefinitionProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
+      capabilities.setDocumentHighlightProvider(true)
       capabilities.setSignatureHelpProvider(
         new SignatureHelpOptions(List("(", "[").asJava)
       )
@@ -702,10 +708,9 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/documentHighlight")
   def documentHighlights(
       params: TextDocumentPositionParams
-  ): CompletableFuture[Hover] =
+  ): CompletableFuture[util.List[DocumentHighlight]] =
     CancelTokens { _ =>
-      scribe.warn("textDocument/documentHighlight is not supported.")
-      null
+      documentHighlightProvider.documentHighlight(params)
     }
 
   @JsonRequest("textDocument/documentSymbol")

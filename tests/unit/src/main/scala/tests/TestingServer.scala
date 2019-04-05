@@ -431,6 +431,37 @@ final class TestingServer(
     }
   }
 
+  def assertHighlight(
+      filename: String,
+      query: String,
+      expected: String,
+      root: AbsolutePath = workspace
+  ): Future[Unit] = {
+    for {
+      highlight <- highlight(filename, query, root)
+    } yield {
+      DiffAssertions.assertNoDiffOrPrintObtained(
+        highlight,
+        expected,
+        "obtained",
+        "expected"
+      )
+    }
+  }
+
+  def highlight(
+      filename: String,
+      query: String,
+      root: AbsolutePath
+  ): Future[String] = {
+    for {
+      (text, params) <- offsetParams(filename, query, root)
+      highlights <- server.documentHighlights(params).asScala
+    } yield {
+      TestHighlights.renderAsString(text, highlights.asScala.toList)
+    }
+  }
+
   def references(
       filename: String,
       substring: String
