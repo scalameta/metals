@@ -22,6 +22,7 @@ final class FoldingRangeProvider(val trees: Trees, foldOnlyLines: Boolean) {
 object FoldingRangeProvider {
   val foldingThreshold = 2 // e.g. {}
   val Region = "region"
+  val Imports = "imports"
 
   def apply(
       trees: Trees,

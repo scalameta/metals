@@ -2,9 +2,11 @@ package scala.meta.internal.metals
 
 import java.util
 import org.eclipse.lsp4j.FoldingRange
+import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.meta.Term
 import scala.meta._
-import scala.meta.internal.metals.FoldingRangeProvider.Region
+import scala.meta.internal.metals.FoldingRangeProvider._
 
 final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
   def extract(tree: Tree): util.List[FoldingRange] = {
@@ -19,7 +21,7 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
       traverse(tree)
     }
 
-    def fold(tree: Tree): Unit = tree match {
+    private def fold(tree: Tree): Unit = tree match {
       case _: Term.Block =>
         ranges.add(Region, tree.pos)
       case _: Template =>
@@ -91,12 +93,51 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
       case _ =>
     }
 
-    def traverse(tree: Tree): Unit = tree match {
+    private def traverse(tree: Tree): Unit = tree match {
       case stmt: Case if stmt.body.is[Term.Block] =>
-        stmt.children.filter(_ ne stmt.body).foreach(apply) // skip body
+        val withoutBody = stmt.children.filter(_ ne stmt.body) // skip body
+        traverse(withoutBody)
         traverse(stmt.body)
 
-      case _ => tree.children.foreach(apply)
+      case _ => traverse(tree.children)
+    }
+
+    private def traverse(trees: Seq[Tree]): Unit = {
+      val importGroups = mutable.Buffer(mutable.Buffer[Import]())
+      val nonImport = mutable.Buffer[Tree]()
+
+      @tailrec
+      def split(seq: Seq[Tree]): Unit =
+        seq match {
+          case Seq() =>
+          case (i: Import) +: tail =>
+            importGroups.head += i
+            split(tail)
+          case tree +: tail =>
+            if (importGroups.head.nonEmpty)
+              importGroups += mutable.Buffer[Import]()
+            nonImport += tree
+            split(tail)
+        }
+
+      split(trees)
+
+      importGroups.foreach(foldImports)
+      nonImport.foreach(apply)
+    }
+
+    private def foldImports(imports: Seq[Import]): Unit = imports match {
+      case Seq() =>
+      case _ +: Seq() =>
+      case _ =>
+        val firstImporterPos = imports.head.importers.head.pos
+        val lastImportPos = imports.last.pos
+
+        val range =
+          new FoldingRange(firstImporterPos.startLine, lastImportPos.endLine)
+        range.setStartCharacter(firstImporterPos.startColumn)
+        range.setEndCharacter(lastImportPos.endColumn)
+        ranges.addAsIs(Imports, range)
     }
   }
 }
