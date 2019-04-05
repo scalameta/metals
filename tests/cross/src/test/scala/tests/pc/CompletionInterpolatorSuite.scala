@@ -99,6 +99,20 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
     filterText = "\"$myName"
   )
 
+  checkEdit(
+    "escape-ident",
+    """|object Main {
+       |  val myName = ""
+       |  "Say $myName is $myNam@@"
+       |}
+       |""".stripMargin.triplequoted,
+    """|object Main {
+       |  val myName = ""
+       |  s"Say \$myName is \$myName$0"
+       |}
+       |""".stripMargin.triplequoted
+  )
+
   check(
     "interpolator",
     """|object Main {
