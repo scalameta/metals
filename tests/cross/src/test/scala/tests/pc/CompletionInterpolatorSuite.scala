@@ -99,6 +99,20 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
     filterText = "\"$myName"
   )
 
+  checkEdit(
+    "escape-ident",
+    """|object Main {
+       |  val myName = ""
+       |  "Say $myName is $myNam@@"
+       |}
+       |""".stripMargin.triplequoted,
+    """|object Main {
+       |  val myName = ""
+       |  s"Say \$myName is \$myName$0"
+       |}
+       |""".stripMargin.triplequoted
+  )
+
   check(
     "interpolator",
     """|object Main {
@@ -444,6 +458,42 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
     """s"Hello $hello@@"""".stripMargin,
     """s"Hello $helloMethod"""".stripMargin,
     filter = _.contains("a: Int")
+  )
+
+  checkEditLine(
+    "token-error",
+    """|object Main {
+       |  val hello = ""
+       |  ___
+       |}
+       |""".stripMargin,
+    """s"Hello $@@"""".stripMargin,
+    """s"Hello $hello"""".stripMargin,
+    filter = _.contains("hello")
+  )
+
+  checkEditLine(
+    "brace-token-error-pos",
+    """|object Main {
+       |  val hello = ""
+       |  ___
+       |}
+       |""".stripMargin,
+    """s"Hello ${@@"""".stripMargin,
+    """s"Hello ${hello"""".stripMargin,
+    filter = _.contains("hello")
+  )
+
+  checkEditLine(
+    "brace-token-error",
+    """|object Main {
+       |  val hello = ""
+       |  ___
+       |}
+       |""".stripMargin,
+    """s"Hello ${@@}"""".stripMargin,
+    """s"Hello ${hello}"""".stripMargin,
+    filter = _.contains("hello")
   )
 
 }

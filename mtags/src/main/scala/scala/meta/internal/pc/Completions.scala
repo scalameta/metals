@@ -721,7 +721,11 @@ trait Completions { this: MetalsGlobal =>
         while (i < to) {
           text.charAt(i) match {
             case '$' =>
-              out.append("\\$\\$")
+              if (i + 1 < to && text.charAt(i + 1).isLetter) {
+                out.append("\\$")
+              } else {
+                out.append("\\$\\$")
+              }
             case ch =>
               out.append(ch)
           }

@@ -184,17 +184,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       )
     } else {
       val context = doLocateContext(pos)
-      def widen(t: Type): Type =
-        if (symbol.isLocallyDefinedSymbol) {
-          // NOTE(olafur) Dealias type for local symbols to avoid unwanted `x.type` singleton
-          // types for cases like:
-          //   for (x <- List(1); if @@x > 1) println(x)
-          // We might want to refine this heuristic down the road to either widen more aggressively
-          // or less aggressively as we gain more experience.
-          t.widen
-        } else {
-          t
-        }
       val history = new ShortenedNames(
         lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
       )
@@ -204,7 +193,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       val printer = new SignaturePrinter(
         symbol,
         history,
-        widen(symbolInfo),
+        symbolInfo.widen,
         includeDocs = true
       )
       val name =
@@ -213,7 +202,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       val flags = List(symbolFlagString(symbol), keyword, name)
         .filterNot(_.isEmpty)
         .mkString(" ")
-      val prettyType = metalsToLongString(widen(tpe).finalResultType, history)
+      val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
       val macroSuffix =
         if (symbol.isMacro) " = macro"
         else ""
