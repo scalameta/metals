@@ -155,7 +155,6 @@ trait Completions { this: MetalsGlobal =>
       completion: CompletionPosition
   ): Ordering[Member] = new Ordering[Member] {
     val queryLower = query.toLowerCase()
-    val priorityCache = mutable.Map.empty[Symbol, Boolean]
     val fuzzyCache = mutable.Map.empty[Symbol, Int]
     def compareLocalSymbols(o1: Member, o2: Member): Int = {
       if (o1.sym.isLocallyDefinedSymbol &&
@@ -177,10 +176,7 @@ trait Completions { this: MetalsGlobal =>
       })
     }
     override def compare(o1: Member, o2: Member): Int = {
-      val byCompletion = -java.lang.Boolean.compare(
-        priorityCache.getOrElseUpdate(o1.sym, completion.isPrioritized(o1)),
-        priorityCache.getOrElseUpdate(o2.sym, completion.isPrioritized(o2))
-      )
+      val byCompletion = completion.compare(o1, o2)
       if (byCompletion != 0) byCompletion
       else {
         val byLocalSymbol = compareLocalSymbols(o1, o2)
@@ -329,9 +325,26 @@ trait Completions { this: MetalsGlobal =>
     def isCandidate(member: Member): Boolean = true
 
     /**
-     * Returns true if this member should be sorted at the top of completion items.
+     * Returns ordering between two candidate completions.
+     *
+     * - negative number if o1 member should be sorted before o2
+     * - positive number if o2 member should be sorted before o1
+     * - zero 0 if o1 and o2 are equal
      */
-    def isPrioritized(member: Member): Boolean = false
+    def compare(o1: Member, o2: Member): Int = {
+      -java.lang.Boolean.compare(
+        isPrioritizedCached(o1),
+        isPrioritizedCached(o2)
+      )
+    }
+
+    // Default implementation for `compare` delegates to the `isPrioritized` method
+    // which groups prioritized members with first and non-prioritized second.
+    final lazy val cache = mutable.Map.empty[Symbol, Boolean]
+    final def isPrioritizedCached(m: Member): Boolean =
+      cache.getOrElseUpdate(m.sym, isPrioritized(m))
+
+    def isPrioritized(m: Member): Boolean = true
 
     /**
      * Returns true if this member should be sorted at the top of completion items.
@@ -842,7 +855,7 @@ trait Completions { this: MetalsGlobal =>
         extends CompletionPosition {
       val method = typedTreeAt(apply.fun.pos)
       val methodSym = method.symbol
-      lazy val params: List[Symbol] =
+      lazy val baseParams: List[Symbol] =
         if (method.tpe == null) Nil
         else {
           method.tpe.paramss.headOption
@@ -850,7 +863,7 @@ trait Completions { this: MetalsGlobal =>
         }
       lazy val isNamed = apply.args.iterator
         .filterNot(_ == ident)
-        .zip(params.iterator)
+        .zip(baseParams.iterator)
         .map {
           case (AssignOrNamedArg(Ident(name), _), _) =>
             name
@@ -858,18 +871,40 @@ trait Completions { this: MetalsGlobal =>
             param.name
         }
         .toSet
-      override def isCandidate(member: Member): Boolean = true
-      override def isPrioritized(member: Member): Boolean = true
-      override def contribute: List[Member] = {
+      lazy val params: List[Symbol] = {
         val prefix = ident.name.toString.stripSuffix(CURSOR)
-        params.iterator
+        baseParams.iterator
           .filterNot { param =>
             isNamed(param.name) ||
             param.name.containsChar('$') // exclude synthetic parameters
           }
           .filter(param => param.name.startsWith(prefix))
-          .map(param => new NamedArgMember(param))
           .toList
+      }
+      lazy val isParamName = params.iterator
+        .map(_.name)
+        .filterNot(isNamed)
+        .map(_.toString().trim())
+        .toSet
+      override def isCandidate(member: Member): Boolean = true
+      def isName(m: Member): Boolean =
+        isParamName(m.sym.nameString.trim())
+      override def compare(o1: Member, o2: Member): Int = {
+        val byName = -java.lang.Boolean.compare(isName(o1), isName(o2))
+        if (byName != 0) byName
+        else {
+          java.lang.Boolean.compare(
+            o1.isInstanceOf[NamedArgMember],
+            o2.isInstanceOf[NamedArgMember]
+          )
+        }
+      }
+      override def isPrioritized(member: Member): Boolean = {
+        member.isInstanceOf[NamedArgMember] ||
+        isParamName(member.sym.name.toString().trim())
+      }
+      override def contribute: List[Member] = {
+        params.map(param => new NamedArgMember(param))
       }
     }
 

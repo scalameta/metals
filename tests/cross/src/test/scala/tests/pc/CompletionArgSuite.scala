@@ -196,4 +196,18 @@ object CompletionArgSuite extends BaseCompletionSuite {
     ""
   )
 
+  check(
+    "priority",
+    s"""|object Main {
+        |  def foo(argument : Int) : Int = argument
+        |  val argument = 5
+        |  foo(argu@@)
+        |}
+        |""".stripMargin,
+    """|argument: Int
+       |argument = : Int
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
 }
