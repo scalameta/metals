@@ -123,7 +123,8 @@ final class TestingServer(
         val kind =
           if (includeKind) s" ${info.getKind}"
           else ""
-        s"${info.getContainerName}${info.getName}$kind"
+        val container = Option(info.getContainerName()).getOrElse("")
+        s"${container}${info.getName}$kind"
       }
       .mkString("\n")
   }

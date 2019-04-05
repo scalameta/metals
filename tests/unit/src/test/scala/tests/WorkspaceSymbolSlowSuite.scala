@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Messages
 import tests.MetalsTestEnrichments._
 
 object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
@@ -147,6 +148,51 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
            |  val x: Option[Int] = None
            |                       ^^^^
            |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("workspace-only") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |object File
+          |object MetalsUniqueName
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      // Assert "File" searches only workspace, not libraries.
+      _ = assertNoDiff(
+        server.workspaceSymbol("File"),
+        s"""|a.File
+            |${Messages.WorkspaceSymbolDependencies.title}
+            |""".stripMargin
+      )
+      _ = {
+        // Assert "File;" searches workspace + libraries
+        val file = server.workspaceSymbol("File;")
+        assert(file.startsWith("a.File"))
+        assertContains(file, "java.io.File")
+        assertNotContains(
+          file,
+          Messages.WorkspaceSymbolDependencies.title
+        )
+      }
+      // Assert we automatically fallback to library dependencies on no match.
+      _ = assertNoDiff(
+        server.workspaceSymbol("Files"),
+        "java.nio.file.Files"
+      )
+      // Assert we don't suggest to "add ';' to search library dependencies"
+      _ = assertNoDiff(
+        server.workspaceSymbol("MetalsUniqueName"),
+        "a.MetalsUniqueName"
       )
     } yield ()
   }

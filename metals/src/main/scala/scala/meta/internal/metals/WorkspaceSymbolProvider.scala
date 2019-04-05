@@ -131,9 +131,10 @@ final class WorkspaceSymbolProvider(
       token: CancelChecker
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
-    val visitor = new WorkspaceSearchVisitor(query, token, index, fileOnDisk)
+    val visitor =
+      new WorkspaceSearchVisitor(workspace, query, token, index, fileOnDisk)
     search(query, visitor, None)
-    visitor.results.sortBy(_.getName.length)
+    visitor.allResults()
   }
 
 }

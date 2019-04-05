@@ -17,7 +17,8 @@ import scala.meta.internal.semanticdb.SymbolInformation.Kind
 case class WorkspaceSymbolQuery(
     query: String,
     alternatives: Array[AlternativeQuery],
-    isTrailingDot: Boolean
+    isTrailingDot: Boolean,
+    isClasspath: Boolean = true
 ) {
   def isExact: Boolean = query.length < Fuzzy.ExactSearchLimit
   def matches(bloom: BloomFilter[CharSequence]): Boolean =
@@ -40,13 +41,13 @@ object WorkspaceSymbolQuery {
   }
   def fromTextQuery(query: String): WorkspaceSymbolQuery = {
     val isTrailingDot = query.endsWith(".")
-    val actualQuery =
-      if (isTrailingDot) query.stripSuffix(".")
-      else query
+    val isClasspath = query.contains(";")
+    val actualQuery = query.stripSuffix(".").replaceAllLiterally(";", "")
     WorkspaceSymbolQuery(
       actualQuery,
       AlternativeQuery.all(actualQuery),
-      isTrailingDot
+      isTrailingDot,
+      isClasspath
     )
   }
 

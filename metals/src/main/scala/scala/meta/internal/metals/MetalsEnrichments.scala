@@ -324,6 +324,11 @@ object MetalsEnrichments
       Files.delete(dealias.toNIO)
     }
 
+    def writeText(text: String): Unit = {
+      parent.createDirectories()
+      Files.write(path.toNIO, text.getBytes(StandardCharsets.UTF_8))
+    }
+
   }
 
   implicit class XtensionStringUriProtocol(value: String) {
