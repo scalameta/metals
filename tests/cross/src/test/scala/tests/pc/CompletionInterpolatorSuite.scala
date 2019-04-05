@@ -446,4 +446,40 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
     filter = _.contains("a: Int")
   )
 
+  checkEditLine(
+    "token-error",
+    """|object Main {
+       |  val hello = ""
+       |  ___
+       |}
+       |""".stripMargin,
+    """s"Hello $@@"""".stripMargin,
+    """s"Hello $hello"""".stripMargin,
+    filter = _.contains("hello")
+  )
+
+  checkEditLine(
+    "brace-token-error-pos",
+    """|object Main {
+       |  val hello = ""
+       |  ___
+       |}
+       |""".stripMargin,
+    """s"Hello ${@@"""".stripMargin,
+    """s"Hello ${hello"""".stripMargin,
+    filter = _.contains("hello")
+  )
+
+  checkEditLine(
+    "brace-token-error",
+    """|object Main {
+       |  val hello = ""
+       |  ___
+       |}
+       |""".stripMargin,
+    """s"Hello ${@@}"""".stripMargin,
+    """s"Hello ${hello}"""".stripMargin,
+    filter = _.contains("hello")
+  )
+
 }

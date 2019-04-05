@@ -20,11 +20,27 @@ class CompletionProvider(
 ) {
   import compiler._
 
+  private def cursorName: String = {
+    val i = params.offset() - 1
+    params.text().charAt(i) match {
+      case '$' =>
+        // Don't use `_` to avoid tokenization error in string interpolator.
+        "CURSOR"
+      case '{' if params.text().charAt(i - 1) == '$' =>
+        // Insert potentially missing `}` to avoid "unclosed literal" error in String interpolator..
+        CURSOR + "}"
+      case _ =>
+        // Default _CURSOR_ instrumentation.
+        CURSOR
+    }
+  }
+
   def completions(): CompletionList = {
     val unit = addCompilationUnit(
       code = params.text,
       filename = params.filename,
-      cursor = Some(params.offset)
+      cursor = Some(params.offset),
+      cursorName = cursorName
     )
     val pos = unit.position(params.offset)
     val isSnippet = isSnippetEnabled(pos, params.text())
