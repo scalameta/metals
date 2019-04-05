@@ -354,11 +354,13 @@ final class TestingServer(
 
   def formatCompletion(
       completion: CompletionList,
-      includeDetail: Boolean
+      includeDetail: Boolean,
+      filter: String => Boolean = _ => true
   ): String = {
     val items =
       completion.getItems.asScala.map(server.completionItemResolveSync)
     items.iterator
+      .filter(item => filter(item.getLabel()))
       .map { item =>
         val label = TestCompletions.getFullyQualifiedLabel(item)
         val detail =

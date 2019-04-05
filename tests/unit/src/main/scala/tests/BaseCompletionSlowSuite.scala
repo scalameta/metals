@@ -25,10 +25,11 @@ abstract class BaseCompletionSlowSuite(name: String)
       query: String,
       expected: String,
       project: Char = 'a',
-      includeDetail: Boolean = true
+      includeDetail: Boolean = true,
+      filter: String => Boolean = _ => true
   )(implicit file: sourcecode.File, line: sourcecode.Line): Future[Unit] = {
     withCompletion(query, project) { list =>
-      val completion = server.formatCompletion(list, includeDetail)
+      val completion = server.formatCompletion(list, includeDetail, filter)
       val obtained =
         if (isWindows) {
           // HACK(olafur) we don't have access to the JDK sources on Appveyor

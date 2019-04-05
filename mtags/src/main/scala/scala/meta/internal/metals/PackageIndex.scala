@@ -5,6 +5,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.net.URLClassLoader
+import java.nio.file.Paths
 import java.util
 import java.util.jar.JarFile
 import java.util.logging.Level
@@ -112,6 +114,9 @@ class PackageIndex() {
 
   def visitBootClasspath(): Unit = {
     PackageIndex.bootClasspath.foreach(visit)
+    PackageIndex.scalaLibrary.foreach { scalaLibrary =>
+      visit(AbsolutePath(scalaLibrary))
+    }
   }
 
 }
@@ -126,4 +131,14 @@ object PackageIndex {
       entry <- entries
       if entry.isFile
     } yield entry
+
+  def scalaLibrary: Seq[Path] = {
+    this.getClass.getClassLoader
+      .asInstanceOf[URLClassLoader]
+      .getURLs
+      .iterator
+      .filter(_.getPath.contains("scala-library"))
+      .map(url => Paths.get(url.toURI))
+      .toSeq
+  }
 }

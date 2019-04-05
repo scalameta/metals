@@ -20,8 +20,6 @@ class CompletionProvider(
 ) {
   import compiler._
 
-  val maxWorkspaceSymbolResults = 10
-
   def completions(): CompletionList = {
     val unit = addCompilationUnit(
       code = params.text,

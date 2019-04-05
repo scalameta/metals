@@ -198,4 +198,26 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
       )
     } yield ()
   }
+
+  testAsync("rambo") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|/a/src/main/scala/a/A.scala
+           |object Main extends App {
+           |  // @@
+           |}
+           |""".stripMargin,
+        expectError = true
+      )
+      _ <- assertCompletion(
+        "Properties@@",
+        // Assert both JDK and scala-library are indexed.
+        """|Properties - java.util
+           |Properties - scala.util
+           |""".stripMargin,
+        filter = _.startsWith("Properties -")
+      )
+    } yield ()
+  }
 }
