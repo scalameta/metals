@@ -97,6 +97,11 @@ object CompletionSuite extends BaseCompletionSuite {
       |  def@@
       |}""".stripMargin,
     """|default: Int
+       |override def equals(obj: Any): Boolean
+       |override def hashCode(): Int
+       |override def toString(): String
+       |override def clone(): Object
+       |override def finalize(): Unit
        |""".stripMargin
   )
 

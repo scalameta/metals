@@ -57,7 +57,7 @@ object CancelCompletionSuite extends BaseCompletionSuite {
     "basic",
     """
       |object A {
-      |  asser@@
+      |  val x = asser@@
       |}
     """.stripMargin,
     """|assert(assertion: Boolean): Unit

@@ -482,10 +482,24 @@ trait Completions { this: MetalsGlobal =>
             Select(Ident(TermName("scala")), TypeName("Unit")) ::
             (defdef: DefDef) ::
             (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
-        CompletionPosition.Override(defdef.name, t, pos, text, defdef)
+        CompletionPosition.Override(
+          defdef.name,
+          t,
+          pos,
+          text,
+          defdef.pos.start,
+          !_.isGetter
+        )
       case (valdef @ ValDef(_, name, _, Literal(Constant(null)))) ::
             (t: Template) :: _ if name.endsWith(CURSOR) =>
-        CompletionPosition.Override(name, t, pos, text, valdef)
+        CompletionPosition.Override(
+          name,
+          t,
+          pos,
+          text,
+          valdef.pos.start,
+          _.isStable
+        )
       case (m @ Match(_, Nil)) :: parent :: _ =>
         CompletionPosition.CaseKeyword(m.selector, editRange, pos, text, parent)
       case Ident(name) :: (_: CaseDef) :: (m: Match) :: parent :: _
@@ -496,6 +510,15 @@ trait Completions { this: MetalsGlobal =>
         CompletionPosition.CaseKeyword(m.selector, editRange, pos, text, parent)
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
         CompletionPosition.Filename(c, p, pos, editRange)
+      case (ident: Ident) :: (t: Template) :: _ =>
+        CompletionPosition.Override(
+          ident.name,
+          t,
+          pos,
+          text,
+          ident.pos.start,
+          _ => true
+        )
       case _ =>
         inferCompletionPosition(
           pos,
@@ -708,6 +731,7 @@ trait Completions { this: MetalsGlobal =>
      *   // after
      *   s"Hello ${name.length()$0}"
      * }}}
+     *
      * @param query the member query, "len" in the  example above.
      * @param ident the identifier from where we select a member from, "name" above.
      * @param literalPart the string literal part of the interpolator trailing
@@ -968,29 +992,13 @@ trait Completions { this: MetalsGlobal =>
         t: Template,
         pos: Position,
         text: String,
-        defn: ValOrDefDef
+        start: Int,
+        isCandidate: Symbol => Boolean
     ) extends CompletionPosition {
       val prefix = name.toString.stripSuffix(CURSOR)
       val typed = typedTreeAt(t.pos)
       val isDecl = typed.tpe.decls.toSet
-      val keyword = defn match {
-        case _: DefDef => "def"
-        case _ => "val"
-      }
-      val OVERRIDE = " override"
-      val start: Int = {
-        val fromDef = text.lastIndexOf(s" $keyword ", pos.point)
-        if (fromDef > 0 && text.endsWithAt(OVERRIDE, fromDef)) {
-          fromDef - OVERRIDE.length()
-        } else {
-          fromDef
-        }
-      }
-
-      def isExplicitOverride = text.startsWith(OVERRIDE, start)
-
-      val editStart = start + 1
-      val range = pos.withStart(editStart).withEnd(pos.point).toLSP
+      val range = pos.withStart(start).withEnd(pos.point).toLSP
       val lineStart = pos.source.lineToOffset(pos.line - 1)
 
       // Returns all the symbols of all transitive supertypes in the enclosing scope.
@@ -1025,32 +1033,22 @@ trait Completions { this: MetalsGlobal =>
         sym.isMethod &&
         !isDecl(sym) &&
         !isNotOverridableName(sym.name) &&
-        sym.name.startsWith(prefix) &&
         !sym.isPrivate &&
         !sym.isSynthetic &&
         !sym.isArtifact &&
         !sym.isEffectivelyFinal &&
-        !sym.isVal &&
         !sym.name.endsWith(CURSOR) &&
         !sym.isConstructor &&
         !sym.isMutable &&
-        !sym.isSetter && {
-          defn match {
-            case _: ValDef =>
-              // Is this a `override val`?
-              sym.isGetter && sym.isStable
-            case _ =>
-              // It's an `override def`.
-              !sym.isGetter
-          }
-        }
+        !sym.isSetter &&
+        isCandidate(sym)
       }
+
       val context = doLocateContext(pos)
       val re = renamedSymbols(context)
       val owners = this.parentSymbols(context)
-      val filter = text.substring(editStart, pos.point - prefix.length)
 
-      def toOverrideMember(sym: Symbol): OverrideDefMember = {
+      private case class OverrideCandidate(sym: Symbol) {
         val memberType = typed.tpe.memberType(sym)
         val info =
           if (memberType.isErroneous) sym.info
@@ -1062,6 +1060,7 @@ trait Completions { this: MetalsGlobal =>
               case _ => sym.info
             }
           }
+
         val history = new ShortenedNames(
           lookupSymbol = { name =>
             context.lookupSymbol(name, _ => true) :: Nil
@@ -1070,6 +1069,7 @@ trait Completions { this: MetalsGlobal =>
           renames = re,
           owners = owners
         )
+
         val printer = new SignaturePrinter(
           sym,
           history,
@@ -1078,32 +1078,38 @@ trait Completions { this: MetalsGlobal =>
           includeDefaultParam = false,
           printLongType = false
         )
-        val label = printer.defaultMethodSignature(Identifier(sym.name))
-        val prefix = metalsConfig.overrideDefFormat() match {
-          case OverrideDefFormat.Ascii =>
-            if (sym.isAbstract) s"${keyword} "
-            else s"override ${keyword} "
-          case OverrideDefFormat.Unicode =>
-            if (sym.isAbstract) ""
-            else "🔼 "
-        }
+
         val overrideKeyword =
-          if (!sym.isAbstract || isExplicitOverride) "override "
+          if (!sym.isAbstract || text.startsWith("o", start)) "override "
           // Don't insert `override` keyword if the supermethod is abstract and the
-          // user did not explicitly type "override". See:
+          // user did not explicitly type starting with o . See:
           // https://github.com/scalameta/metals/issues/565#issuecomment-472761240
           else ""
+
         val lzy =
           if (sym.isLazy) "lazy "
           else ""
-        val edit = new l.TextEdit(
-          range,
-          s"${overrideKeyword}${lzy}${keyword} $label = $${0:???}"
-        )
-        new OverrideDefMember(
-          prefix + label,
+
+        val keyword = if (sym.isStable) "val " else "def "
+
+        val overrideDef = metalsConfig.overrideDefFormat() match {
+          case OverrideDefFormat.Unicode =>
+            if (sym.isAbstract) "🔼 "
+            else "⏫ "
+          case _ =>
+            if (sym.isAbstract) s"${keyword}"
+            else s"${overrideKeyword}${keyword}"
+        }
+
+        val name = Identifier(sym.name)
+
+        val filterText = s"${overrideKeyword}${lzy}${keyword}${name}"
+
+        // if we had no val or def then filter will be empty
+        def toMember = new OverrideDefMember(
+          label,
           edit,
-          filter + sym.name.decoded,
+          filterText,
           sym,
           history.autoImports(
             pos,
@@ -1112,6 +1118,15 @@ trait Completions { this: MetalsGlobal =>
             inferIndent(lineStart, text)
           )
         )
+
+        private def label = overrideDef + name + signature
+
+        private def signature = printer.defaultMethodSignature()
+
+        private def edit = new l.TextEdit(
+          range,
+          s"$filterText$signature = $${0:???}"
+        )
       }
 
       override def contribute: List[Member] = {
@@ -1119,7 +1134,11 @@ trait Completions { this: MetalsGlobal =>
         else {
           typed.tpe.members.iterator
             .filter(isOverridableMethod)
-            .map(toOverrideMember)
+            .map(OverrideCandidate.apply)
+            .filter { candidate =>
+              CompletionFuzzy.matchesSubCharacters(prefix, candidate.filterText)
+            }
+            .map(_.toMember)
             .toList
         }
       }

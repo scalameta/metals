@@ -60,8 +60,8 @@ object CompletionOverrideConfigSuite extends BaseCompletionSuite {
        |  def number@@
        |}
        |""".stripMargin,
-    """numberAbstract: Int
-      |🔼 number: Int
+    """🔼 numberAbstract: Int
+      |⏫ number: Int
       |""".stripMargin
   )
 }
