@@ -4,9 +4,21 @@ class A>>region>>{
   }<<region<<
 
   val multiLineCase = ??? match>>region>> {
-    case _ =>
+    case _ =>>>region>>
       ???
+      ???<<region<<
+  }<<region<<
+
+  val manyCases = ??? match>>region>> {
+    case 1 =>>>region>>
       ???
+      ???<<region<<
+    case 2 =>>>region>>
+      ???
+      ???<<region<<
+    case _ =>>>region>>
+      ???
+      ???<<region<<
   }<<region<<
 
   val abomination = ???
@@ -17,9 +29,9 @@ class A>>region>>{
 
     case
       3
-    =>
+      =>>>region>>
 
-      ???
+      ???<<region<<
   }<<region<<
   // abomination ends
 }<<region<<

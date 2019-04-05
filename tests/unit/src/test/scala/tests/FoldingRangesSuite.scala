@@ -10,7 +10,7 @@ final class FoldingRangesSuite extends BaseSuite {
     val lastLine = 10
     val range = new FoldingRange(0, lastLine)
 
-    ranges.add(range)
+    ranges.add("Region", range)
 
     assertEquals(range.getEndLine, lastLine - 1)
   }
