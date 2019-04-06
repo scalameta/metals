@@ -24,6 +24,9 @@ object FuzzySuite extends BaseSuite {
     }
   }
 
+  checkOK("scala.concurrent.package", "scala/concurrent/package.class")
+  checkOK("scala.concurrent", "scala/concurrent/package.class")
+
   checkOK("::", "scala/collection/immutable/`::`#")
   checkOK("IO", "scala/IO#")
   checkOK("IS", "scala/InputOutputStream#")
