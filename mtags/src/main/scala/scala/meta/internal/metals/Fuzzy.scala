@@ -61,6 +61,7 @@ class Fuzzy {
       symbol: CharSequence,
       skipNames: Int = 0
   ): Boolean = {
+    val li = lastIndex(symbol)
     // Loops through all names in the query/symbol strings in reverse order (last names first)
     // and returns true if all query names match their corresponding symbol name.
     // For the query "col.imm.Li" and symbol "scala/collection/immutable/List" we do the following loops.
@@ -83,6 +84,11 @@ class Fuzzy {
           } else {
             loopDelimiters(qd.idx - 1, sd.idx - 1, depth + 1, skip - 1)
           }
+        } else if (sb == li && exactMatch("package", symbol, sd.idx, sb)) {
+          // If last symbol name does not match and the symbol name
+          // is "package" skip symbol name.
+          // This allows "scala.concurrent" to match "scala/concurrent/package"
+          loopDelimiters(qb, sd.idx - 1, depth, skip)
         } else if (depth > 0 && !sd.isFinished) {
           // Hop over the symbol name if the main query/symbol names match, this allows
           // the query "m.Pos" to match the symbol "scala/meta/inputs/Position".
@@ -98,6 +104,24 @@ class Fuzzy {
       0,
       skipNames
     )
+  }
+
+  private def exactMatch(
+      query: CharSequence,
+      symbol: CharSequence,
+      sd: Int,
+      sb: Int
+  ): Boolean = {
+    if (query.length == sb - sd) {
+      var idx = 0
+      while (idx < query.length) {
+        if (query.charAt(idx) != symbol.charAt(sd + idx)) return false
+        idx += 1
+      }
+      true
+    } else {
+      false
+    }
   }
 
   private def lastIndex(symbol: CharSequence): Int = {
