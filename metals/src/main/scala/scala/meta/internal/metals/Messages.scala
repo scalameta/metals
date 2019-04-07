@@ -265,4 +265,23 @@ class Messages(icons: Icons) {
       params
     }
   }
+
+  object WorkspaceSymbolDependencies {
+    def title: String =
+      "Add ';' to search library dependencies"
+    def detail: String =
+      """|The workspace/symbol feature ("Go to symbol in workspace") allows you to search for 
+         |classes, traits and objects that are defined in your workspace as well as library dependencies.
+         |
+         |By default, a query searches only for symbols defined in this workspace. Include a semicolon 
+         |character `;` in the query to search for symbols in library dependencies.
+         |
+         |Examples:
+         |- "Future": workspace only
+         |- "Future;": workspace + library dependencies
+         |- ";Future": workspace + library dependencies
+         |
+         |The library dependencies are automatically searched when no results are found in the workspace.
+         |""".stripMargin
+  }
 }

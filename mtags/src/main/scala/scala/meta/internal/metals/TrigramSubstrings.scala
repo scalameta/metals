@@ -45,9 +45,12 @@ object TrigramSubstrings {
       maxCount: Int = 250
   ): Traversable[String] = new Traversable[String] {
     override def foreach[U](f: String => U): Unit = {
+      if (query.isEmpty()) ()
+      else runForeach(query.head.toUpper, f)
+    }
+    def runForeach[U](first: Char, f: String => U): Unit = {
       var continue = true
       var count = 0
-      val first = query.head.toUpper
       def emit(string: String): Unit = {
         count += 1
         if (count > maxCount) {

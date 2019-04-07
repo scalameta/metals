@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Messages
 import tests.MetalsTestEnrichments._
 
 object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
@@ -148,6 +149,52 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
            |                       ^^^^
            |""".stripMargin
       )
+    } yield ()
+  }
+
+  testAsync("workspace-only") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |object Properties
+          |object MetalsUniqueName
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      // Assert "Properties" searches only workspace, not libraries.
+      _ = assertNoDiff(
+        server.workspaceSymbol("Properties"),
+        s"""|a.Properties
+            |${Messages.WorkspaceSymbolDependencies.title}
+            |""".stripMargin
+      )
+      _ = {
+        // Assert "Properties;" searches workspace + libraries
+        val file = server.workspaceSymbol("Properties;")
+        assert(file.startsWith("a.Properties"))
+        assertContains(file, "scala.util.Properties")
+        assertNotContains(
+          file,
+          Messages.WorkspaceSymbolDependencies.title
+        )
+        // Assert we automatically fallback to library dependencies on no match.
+        assertContains(
+          server.workspaceSymbol("Future"),
+          "scala.concurrent.Future"
+        )
+        // Assert we don't suggest to "add ';' to search library dependencies"
+        // because "MetalsUniqueName" has no matches in library dependencies.
+        assertNoDiff(
+          server.workspaceSymbol("MetalsUniqueName"),
+          "a.MetalsUniqueName"
+        )
+      }
     } yield ()
   }
 }
