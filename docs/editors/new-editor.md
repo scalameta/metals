@@ -238,7 +238,7 @@ Possible values:
 
 ```
 
-### `-Dmetals.signature-help-command`
+### `-Dmetals.signature-help.command`
 
 An optional string value for a command identifier to trigger parameter hints
 (`textDocument/signatureHelp`) in the editor. Metals uses this setting to
@@ -250,6 +250,16 @@ setting is provided by the editor.
 Default value:
 
 - `"editor.action.triggerParameterHints"`: when editor is Visual Studio Code.
+- empty: for all other editors.
+
+### `-Dmetals.completion.command`
+
+An optional string value for a command identifier to trigger completion
+(`textDocument/signatureHelp`) in the editor.
+
+Default value:
+
+- `"editor.action.triggerSuggest"`: when editor is Visual Studio Code.
 - empty: for all other editors.
 
 ### `-Dmetals.pc.debug`

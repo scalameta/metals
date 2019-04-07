@@ -99,12 +99,11 @@ object MetalsServerConfig {
           icons = Icons.vscode,
           executeClientCommand = ExecuteClientCommandConfig.on,
           globSyntax = GlobSyntaxConfig.vscode,
-          compilers =
-            base.compilers.copy(
-              _parameterHintsCommand =
-                Some("editor.action.triggerParameterHints"),
-              overrideDefFormat = OverrideDefFormat.Unicode
-            )
+          compilers = base.compilers.copy(
+            _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
+            _completionCommand = Some("editor.action.triggerSuggest"),
+            overrideDefFormat = OverrideDefFormat.Unicode
+          )
         )
       case "vim-lsc" =>
         base.copy(
