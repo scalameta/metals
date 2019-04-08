@@ -30,8 +30,9 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
         ranges.add(Region, tree.pos)
 
       case loop: Term.For =>
-        val startLine = loop.pos.startLine
-        val startColumn = loop.pos.startColumn + 3 // just after "for" since there may be no whitespace (e.g. "for{")
+        val forToken = loop.tokens.head
+        val startLine = forToken.pos.endLine
+        val startColumn = forToken.pos.endColumn // fold everything just after "for"
 
         val endLine = loop.body.pos.startLine
         val endColumn = loop.body.pos.startColumn // must be exact$startColumn, since it can be "}{"
@@ -44,8 +45,9 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
 
       // it preserves the whitespaces between "yield" token and the body
       case loop: Term.ForYield =>
-        val startLine = loop.pos.startLine
-        val startColumn = loop.pos.startColumn + 3 // just after "for" since there may be no whitespace (e.g. "for{")
+        val forToken = loop.tokens.head
+        val startLine = forToken.pos.endLine
+        val startColumn = forToken.pos.endColumn // fold everything just after "for"
 
         val range = loop.tokens.collectFirst {
           case token: Token.KwYield => // fold up to the 'yield' token
@@ -79,10 +81,10 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
             val startLine = token.pos.endLine
             val startColumn = token.pos.endColumn
 
-            // TODO 1: simplify
+            val tokens = stmt.tokens
             val lastToken = // every but last case ends on the first column of the new case...
-              if (stmt.tokens.last.pos.endColumn == 0)
-                stmt.tokens.dropRight(1).last
+              if (tokens.last.pos.endColumn == 0)
+                tokens.dropRight(1).last
               else stmt.tokens.last
 
             val range = new FoldingRange(startLine, lastToken.pos.endLine)
@@ -109,20 +111,20 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
       val nonImport = mutable.Buffer[Tree]()
 
       @tailrec
-      def split(seq: Seq[Tree]): Unit =
+      def groupImports(seq: Seq[Tree]): Unit =
         seq match {
           case Seq() =>
           case (i: Import) +: tail =>
             importGroups.head += i
-            split(tail)
+            groupImports(tail)
           case tree +: tail =>
             if (importGroups.head.nonEmpty)
               importGroups += mutable.Buffer[Import]()
             nonImport += tree
-            split(tail)
+            groupImports(tail)
         }
 
-      split(trees)
+      groupImports(trees)
 
       importGroups.foreach(foldImports)
       nonImport.foreach(apply)
@@ -132,12 +134,12 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
       case Seq() =>
       case _ +: Seq() =>
       case _ =>
-        val firstImporterPos = imports.head.importers.head.pos
+        val firstImportKeywordPos = imports.head.tokens.head.pos
         val lastImportPos = imports.last.pos
 
         val range =
-          new FoldingRange(firstImporterPos.startLine, lastImportPos.endLine)
-        range.setStartCharacter(firstImporterPos.startColumn)
+          new FoldingRange(firstImportKeywordPos.endLine, lastImportPos.endLine)
+        range.setStartCharacter(firstImportKeywordPos.endColumn)
         range.setEndCharacter(lastImportPos.endColumn)
         ranges.addAsIs(Imports, range)
     }
