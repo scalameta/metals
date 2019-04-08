@@ -7,10 +7,12 @@ import scala.collection.mutable
 import scala.meta.Term
 import scala.meta._
 import scala.meta.internal.metals.FoldingRangeProvider._
+import scala.meta.tokens.Token
 
 final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
   def extract(tree: Tree): util.List[FoldingRange] = {
     val ranges = new FoldingRanges(foldOnlyLines)
+    extractCommentRanges(tree.tokens, ranges)
     new Traverser(ranges).apply(tree)
     ranges.get
   }
@@ -140,4 +142,45 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
         ranges.addAsIs(Imports, range)
     }
   }
+
+  private def extractCommentRanges(
+      tokens: Seq[Token],
+      ranges: FoldingRanges
+  ): Unit = {
+    val iterator = tokens.iterator
+
+    @tailrec
+    def findLastConsecutiveComment(acc: Token.Comment): Token.Comment =
+      if (iterator.hasNext) {
+        iterator.next() match {
+          case token: Token.Comment => findLastConsecutiveComment(token)
+          case _: Token.Space | _: Token.LF => findLastConsecutiveComment(acc)
+          case _ => acc
+        }
+      } else acc
+
+    def isLineComment(comment: Token.Comment): Boolean =
+      comment.toString().startsWith("//")
+
+    while (iterator.hasNext) {
+      iterator.next() match {
+        case first: Token.Comment =>
+          val last = findLastConsecutiveComment(first)
+
+          val range = new FoldingRange(first.pos.startLine, last.pos.endLine)
+          range.setStartCharacter(first.pos.startColumn)
+          range.setEndCharacter(last.pos.endColumn)
+
+          if (isLineComment(last)) {
+            if (range.getStartLine < range.getEndLine) { // one line comment should not be folded
+              ranges.addAsIs(Comment, range)
+            }
+          } else {
+            ranges.add(Comment, range)
+          }
+        case _ =>
+      }
+    }
+  }
+
 }
