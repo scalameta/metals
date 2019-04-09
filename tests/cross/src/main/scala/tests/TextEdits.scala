@@ -21,9 +21,11 @@ object TextEdits {
       val out = new java.lang.StringBuilder()
       positions.foreach {
         case (edit, pos) =>
-          out
-            .append(text, curr, pos.start)
-            .append(edit.getNewText)
+          out.append(text, curr, pos.start)
+          edit.getNewText().foreach {
+            case '\t' => out.append("\\t")
+            case ch => out.append(ch)
+          }
           curr = pos.end
       }
       out.append(text, curr, text.length)

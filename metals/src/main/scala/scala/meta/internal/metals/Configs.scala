@@ -44,8 +44,12 @@ object Configs {
         props: Properties = System.getProperties
     ): PresentationCompilerConfigImpl = {
       PresentationCompilerConfigImpl(
-        MetalsServerConfig.binaryOption("metals.pc.debug", default = false),
-        Option(props.getProperty("metals.signature-help-command")),
+        debug =
+          MetalsServerConfig.binaryOption("metals.pc.debug", default = false),
+        _parameterHintsCommand =
+          Option(props.getProperty("metals.signature-help.command")),
+        _completionCommand =
+          Option(props.getProperty("metals.completion.command")),
         overrideDefFormat =
           Option(props.getProperty("metals.override-def-format")) match {
             case Some("unicode") => OverrideDefFormat.Unicode

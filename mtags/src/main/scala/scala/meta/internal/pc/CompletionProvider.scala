@@ -64,6 +64,7 @@ class CompletionProvider(
         val ident = Identifier.backtickWrap(symbolName)
         val detail = r match {
           case o: OverrideDefMember => o.label
+          case t: TextEditMember if t.detail.isDefined => t.detail.get
           case _ => detailString(r, history)
         }
         val label = r match {
@@ -317,7 +318,12 @@ class CompletionProvider(
       .toLSP
     val noQuery = "$a"
     def expected(e: Throwable) = {
-      completionPosition(pos, params.text(), editRange) match {
+      completionPosition(
+        pos,
+        params.text(),
+        editRange,
+        CompletionResult.NoResults
+      ) match {
         case CompletionPosition.None =>
           logger.warning(e.getMessage)
           (
@@ -358,7 +364,8 @@ class CompletionProvider(
         if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
         else CompletionFuzzy.matches(entered, name)
       }
-      val completion = completionPosition(pos, params.text(), editRange)
+      val completion =
+        completionPosition(pos, params.text(), editRange, completions)
       val query = completions.name.toString
       val items =
         filterInteresting(matchingResults, kind, query, pos, completion)

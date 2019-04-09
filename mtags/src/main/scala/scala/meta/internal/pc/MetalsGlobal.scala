@@ -17,6 +17,7 @@ import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
 import scala.util.control.NonFatal
+import scala.collection.mutable
 
 class MetalsGlobal(
     settings: Settings,
@@ -385,6 +386,12 @@ class MetalsGlobal(
   implicit def nameToCharSequence(name: Name): CharSequence =
     name.toString
 
+  implicit class XtensionTypeMetals(tpe: Type) {
+    def isDefined: Boolean =
+      tpe != null &&
+        tpe != NoType &&
+        !tpe.isErroneous
+  }
   implicit class XtensionPositionMetals(pos: Position) {
     private def toPos(offset: Int): l.Position = {
       val line = pos.source.offsetToLine(offset)
@@ -412,13 +419,12 @@ class MetalsGlobal(
     def nameIsInScope(name: Name): Boolean =
       context.lookupSymbol(name, _ => true) != LookupNotFound
     def symbolIsInScope(sym: Symbol): Boolean =
-      nameResolvesToSymbol(sym.name, sym)
+      nameResolvesToSymbol(sym.name.toTypeName, sym) ||
+        nameResolvesToSymbol(sym.name.toTermName, sym)
     def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean =
       context.lookupSymbol(name, _ => true).symbol match {
         case `sym` => true
-        case other =>
-          other.dealiased == sym ||
-            dealiasedValForwarder(other).contains(sym)
+        case other => other.isKindaTheSameAs(sym)
       }
   }
   implicit class XtensionDefTreeMetals(defn: DefTree) {
@@ -432,6 +438,46 @@ class MetalsGlobal(
 
   }
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def foreachKnownDirectSubClass(fn: Symbol => Unit): Unit = {
+      // NOTE(olafur) The logic in this method is fairly involved because `knownDirectSubClasses`
+      // returns a lot of redundant and unrelevant symbols in long-running sessions. For example,
+      // `knownDirectSubClasses` returns `Subclass_CURSOR_` symbols if the user ran a completion while
+      // defining the class with name "Subclass".
+      val isVisited = mutable.Set.empty[String]
+      def loop(sym: Symbol): Unit = {
+        sym.knownDirectSubclasses.foreach { child =>
+          val unique = semanticdbSymbol(child)
+          if (!isVisited(unique)) {
+            isVisited += unique
+            if (child.name.containsName(CURSOR)) ()
+            else if (child.isStale) ()
+            else if (child.isSealed && (child.isAbstract || child.isTrait)) {
+              loop(child)
+            } else {
+              fn(child)
+            }
+          }
+        }
+      }
+      loop(sym)
+    }
+    // Returns true if this symbol is locally defined from an old version of the source file.
+    def isStale: Boolean =
+      sym.pos.isRange &&
+        unitOfFile.get(sym.pos.source.file).exists { unit =>
+          if (unit.source ne sym.pos.source) {
+            // HACK(olafur) Check if the position of the symbol in the old
+            // source points to the symbol's name in the new source file. There
+            // are cases where the same class definition has two different
+            // symbols between two completion request and
+            // `knownDirectSubClasses` returns the version of the class symbol
+            // while `Context.lookupSymbol` returns the new version of the class
+            // symbol.
+            !unit.source.content.startsWith(sym.decodedName, sym.pos.point)
+          } else {
+            false
+          }
+        }
     def javaClassSymbol: Symbol = {
       if (sym.isJavaModule && !sym.hasPackageFlag) sym.companionClass
       else sym
@@ -477,7 +523,8 @@ class MetalsGlobal(
         other.fullName == sym.fullName
       } else {
         other.dealiased == sym.dealiased ||
-        other.companion == sym.dealiased
+        other.companion == sym.dealiased ||
+        semanticdbSymbol(other.dealiased) == semanticdbSymbol(sym.dealiased)
       }
     }
 
@@ -517,6 +564,15 @@ class MetalsGlobal(
         sym.isInterface ||
         sym.isJavaModule
 
+    def dealiasedSingleType: Symbol =
+      if (sym.isValue) {
+        sym.info match {
+          case SingleType(_, dealias) => dealias
+          case _ => sym
+        }
+      } else {
+        sym
+      }
     def dealiased: Symbol =
       if (sym.isAliasType) sym.info.dealias.typeSymbol
       else sym
