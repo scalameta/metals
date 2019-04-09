@@ -2,14 +2,17 @@ class A >>region>>{
   def foo =
     for>>region>> {
       x <- ???
-    } <<region<<>>region>>{
+    } <<region<<{
       ???
-    }<<region<<
+    }
 
   def noSpacing =
     for>>region>>{
       x <- ???
     }<<region<<>>region>>{
+      ???
+      ???
+      ???
       ???
     }<<region<<
 
@@ -23,7 +26,7 @@ class A >>region>>{
     }
 
   // yes, it is the body
-  <<region<<>>region>>{
+  <<region<<{
     ???
-  }<<region<<
+  }
 }<<region<<

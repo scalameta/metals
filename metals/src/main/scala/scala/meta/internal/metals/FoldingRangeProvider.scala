@@ -9,9 +9,9 @@ import scala.meta.internal.metals.FoldingRangeProvider._
 import scala.meta.io.AbsolutePath
 
 final class FoldingRangeProvider(val trees: Trees, foldOnlyLines: Boolean) {
-  private val extractor = new FoldingRangeExtractor(foldOnlyLines)
 
   def getRangedFor(path: AbsolutePath): util.List[FoldingRange] = {
+    val extractor = new FoldingRangeExtractor(foldOnlyLines)
     trees
       .get(path)
       .map(extractor.extract)

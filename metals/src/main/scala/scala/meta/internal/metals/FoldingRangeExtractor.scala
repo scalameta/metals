@@ -2,147 +2,94 @@ package scala.meta.internal.metals
 
 import java.util
 import org.eclipse.lsp4j.FoldingRange
+import org.eclipse.lsp4j.FoldingRangeKind
 import scala.annotation.tailrec
 import scala.collection.mutable
-import scala.meta.Term
 import scala.meta._
 import scala.meta.internal.metals.FoldingRangeProvider._
+import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.tokens.Token
+import scala.meta.tokens.Token.KwMatch
 
 final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
+  private val ranges = new FoldingRanges(foldOnlyLines)
+
   def extract(tree: Tree): util.List[FoldingRange] = {
-    val ranges = new FoldingRanges(foldOnlyLines)
     extractCommentRanges(tree.tokens.iterator, ranges)
-    new Traverser(ranges).apply(tree)
+    extractFrom(tree, Position.None)
     ranges.get
   }
 
-  private final class Traverser(ranges: FoldingRanges) {
-    def apply(tree: Tree): Unit = {
-      fold(tree)
-      traverse(tree)
-    }
-
-    private def fold(tree: Tree): Unit = tree match {
-      case _: Term.Block =>
-        ranges.add(Region, tree.pos)
-      case _: Template =>
-        ranges.add(Region, tree.pos)
-
-      case loop: Term.For =>
-        val forToken = loop.tokens.head
-        val startLine = forToken.pos.endLine
-        val startColumn = forToken.pos.endColumn // fold everything just after "for"
-
-        val endLine = loop.body.pos.startLine
-        val endColumn = loop.body.pos.startColumn // must be exact$startColumn, since it can be "}{"
-
-        val range = new FoldingRange(startLine, endLine)
-        range.setStartCharacter(startColumn)
-        range.setEndCharacter(endColumn)
-
-        ranges.add(Region, range)
-
-      // it preserves the whitespaces between "yield" token and the body
-      case loop: Term.ForYield =>
-        val forToken = loop.tokens.head
-        val startLine = forToken.pos.endLine
-        val startColumn = forToken.pos.endColumn // fold everything just after "for"
-
-        val range = loop.tokens.collectFirst {
-          case token: Token.KwYield => // fold up to the 'yield' token
-            val endLine = token.pos.startLine
-            val endColumn = token.pos.startColumn
-
-            val range = new FoldingRange(startLine, endLine)
-            range.setStartCharacter(startColumn)
-            range.setEndCharacter(endColumn)
-            range
-        }
-
-        range.foreach(ranges.add(Region, _))
-
-      case matchTerm: Term.Match =>
-        val range = matchTerm.tokens.collectFirst {
-          case token: Token.KwMatch => // fold just behind the 'match' token
-            val startLine = token.pos.endLine
-            val startColumn = token.pos.endColumn
-
-            val range = new FoldingRange(startLine, matchTerm.pos.endLine)
-            range.setStartCharacter(startColumn)
-            range.setEndCharacter(matchTerm.pos.endColumn)
-            range
-        }
-        range.foreach(ranges.add(Region, _))
-
-      case stmt: Case =>
-        val range = stmt.tokens.collectFirst {
-          case token: Token.RightArrow =>
-            val startLine = token.pos.endLine
-            val startColumn = token.pos.endColumn
-
-            val tokens = stmt.tokens
-            val lastToken = // every but last case ends on the first column of the new case...
-              if (tokens.last.pos.endColumn == 0)
-                tokens.dropRight(1).last
-              else stmt.tokens.last
-
-            val range = new FoldingRange(startLine, lastToken.pos.endLine)
-            range.setStartCharacter(startColumn)
-            range.setEndCharacter(lastToken.pos.endColumn)
-            range
-        }
-
-        range.foreach(ranges.addAsIs(Region, _))
-      case _ =>
-    }
-
-    private def traverse(tree: Tree): Unit = tree match {
-      case stmt: Case if stmt.body.is[Term.Block] =>
-        val withoutBody = stmt.children.filter(_ ne stmt.body) // skip body
-        traverse(withoutBody)
-        traverse(stmt.body)
-
-      case _ => traverse(tree.children)
-    }
-
-    private def traverse(trees: List[Tree]): Unit = {
-      val importGroups = mutable.ListBuffer(mutable.ListBuffer.empty[Import])
-      val nonImport = mutable.Buffer[Tree]()
-
-      @tailrec
-      def groupImports(imports: List[Tree]): Unit =
-        imports match {
-          case Nil =>
-          case (i: Import) :: tail =>
-            importGroups.head += i
-            groupImports(tail)
-          case tree :: tail =>
-            if (importGroups.head.nonEmpty) {
-              importGroups += mutable.ListBuffer.empty[Import]
-            }
-
-            nonImport += tree
-            groupImports(tail)
-        }
-
-      groupImports(trees)
-
-      importGroups.foreach(group => foldImports(group.toList))
-      nonImport.foreach(apply)
-    }
-
-    private def foldImports(imports: List[Import]): Unit =
-      if (imports.size > 1) {
-        val firstImportKeywordPos = imports.head.tokens.head.pos
-        val lastImportPos = imports.last.pos
-
-        val range =
-          new FoldingRange(firstImportKeywordPos.endLine, lastImportPos.endLine)
-        range.setStartCharacter(firstImportKeywordPos.endColumn)
-        range.setEndCharacter(lastImportPos.endColumn)
-        ranges.addAsIs(Imports, range)
+  def extractFrom(tree: Tree, enclosing: Position): Unit = {
+    if (span(tree.pos) > 2) {
+      val newEnclosing = tree match {
+        case Foldable(pos) if span(enclosing) - span(pos) > 2 =>
+          val range = createRange(pos)
+          ranges.add(FoldingRangeKind.Region, range)
+          pos
+        case _ => enclosing
       }
+
+      val (importGroups, otherChildren) = extractImports(tree.children)
+      importGroups.foreach(group => foldImports(group))
+
+      otherChildren.foreach(child => {
+        val childEnclosing =
+          if (newEnclosing.contains(child.pos)) newEnclosing
+          else enclosing
+
+        extractFrom(child, childEnclosing)
+      })
+    }
+  }
+
+  private def extractImports(trees: List[Tree]) = {
+    val importGroups = mutable.ListBuffer(mutable.ListBuffer.empty[Import])
+    val nonImport = mutable.ListBuffer[Tree]()
+
+    @tailrec
+    def groupImports(imports: List[Tree]): Unit =
+      imports match {
+        case Nil =>
+        case (i: Import) :: tail =>
+          importGroups.head += i
+          groupImports(tail)
+        case tree :: tail =>
+          if (importGroups.head.nonEmpty) {
+            importGroups += mutable.ListBuffer.empty[Import]
+          }
+
+          nonImport += tree
+          groupImports(tail)
+      }
+
+    groupImports(trees)
+    (importGroups.map(_.toList).toList, nonImport.toList)
+  }
+
+  private def foldImports(imports: List[Import]): Unit =
+    if (imports.size > 1) {
+      val firstImportKeywordPos = imports.head.tokens.head.pos
+      val lastImportPos = imports.last.pos
+
+      val range =
+        new FoldingRange(firstImportKeywordPos.endLine, lastImportPos.endLine)
+      range.setStartCharacter(firstImportKeywordPos.endColumn)
+      range.setEndCharacter(lastImportPos.endColumn)
+      ranges.addAsIs(Imports, range)
+    }
+
+  private def span(pos: Position): Int = {
+    if (pos == Position.None) Int.MaxValue
+    else pos.endLine - pos.startLine
+  }
+
+  private def createRange(position: Position): FoldingRange = {
+    val range = new FoldingRange(position.startLine, position.endLine)
+    range.setStartCharacter(position.startColumn)
+    range.setEndCharacter(position.endColumn)
+    range
   }
 
   private def extractCommentRanges(
@@ -184,4 +131,66 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
     }
   }
 
+  private object Foldable {
+    def unapply(tree: Tree): Option[Position] = tree match {
+      case _: Term.Apply => None
+      case _: Term.Select => None
+      case _: Pkg => None
+      case _: Defn => None
+
+      case _: Lit.String =>
+        range(tree.pos.input, tree.pos.start + 3, tree.pos.end)
+
+      case term: Term.Match =>
+        for {
+          token <- term.expr.findFirstTrailing(_.is[KwMatch])
+          pos <- range(tree.pos.input, token.pos.end, term.pos.end)
+        } yield pos
+
+      case c: Case =>
+        val isLastCase = c.parent.exists(_.children.lastOption.contains(c))
+        val startingPoint = c.cond.getOrElse(c.pat)
+        val bodyEnd = c.body.pos.end
+
+        for {
+          token <- startingPoint.findFirstTrailing(_.is[Token.RightArrow])
+          end = if (isLastCase) bodyEnd + 1 else bodyEnd // last case does not span until the closing bracket
+          pos <- range(tree.pos.input, token.pos.end, end)
+        } yield pos
+
+      case term: Term.Try =>
+        val start = tree.pos.start + 3
+        range(tree.pos.input, start, term.expr.pos.end)
+
+      case For(endPosition) =>
+        val start = tree.pos.start + 3
+        val end = endPosition.start
+        range(tree.pos.input, start, end)
+
+      case template: Template =>
+        template.inits.lastOption match {
+          case Some(init) =>
+            range(tree.pos.input, init.pos.end, template.pos.end)
+          case None =>
+            range(tree.pos.input, template.pos.start, template.pos.end)
+        }
+
+      case _: Stat => Some(tree.pos)
+      case _ => None
+    }
+
+    private def range(input: Input, start: Int, end: Int): Option[Position] =
+      Some(Position.Range(input, start, end))
+
+    private object For {
+      def unapply(tree: Tree): Option[Position] = tree match {
+        case loop: Term.For => Some(loop.body.pos)
+        case loop: Term.ForYield =>
+          for {
+            token <- loop.body.findFirstLeading(_.is[Token.KwYield])
+          } yield token.pos
+        case _ => None
+      }
+    }
+  }
 }

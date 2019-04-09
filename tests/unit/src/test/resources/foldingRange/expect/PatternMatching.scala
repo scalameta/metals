@@ -1,24 +1,24 @@
 class A>>region>>{
-  val emptyCase = ??? match>>region>> {
+  val emptyCase = ??? match {
     case _ =>
-  }<<region<<
+  }
 
   val multiLineCase = ??? match>>region>> {
-    case _ =>>>region>>
+    case _ =>
       ???
-      ???<<region<<
+      ???
   }<<region<<
 
   val manyCases = ??? match>>region>> {
     case 1 =>>>region>>
       ???
-      ???<<region<<
-    case 2 =>>>region>>
       ???
-      ???<<region<<
-    case _ =>>>region>>
+<<region<<    case 2 =>>>region>>
       ???
-      ???<<region<<
+      ???
+<<region<<    case _ =>
+      ???
+      ???
   }<<region<<
 
   val abomination = ???
@@ -31,7 +31,7 @@ class A>>region>>{
       3
       =>>>region>>
 
-      ???<<region<<
-  }<<region<<
+      ???
+<<region<<  }<<region<<
   // abomination ends
 }<<region<<
