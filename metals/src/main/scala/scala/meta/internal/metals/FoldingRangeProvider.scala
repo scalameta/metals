@@ -3,7 +3,7 @@ package scala.meta.internal.metals
 import java.util
 import java.util.Collections
 import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.FoldingRangeCapabilities
+import org.eclipse.lsp4j.InitializeParams
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.FoldingRangeProvider._
 import scala.meta.io.AbsolutePath
@@ -25,13 +25,16 @@ object FoldingRangeProvider {
   val Imports = "imports"
   val Comment = "comment"
 
-  def apply(
-      trees: Trees,
-      capabilities: FoldingRangeCapabilities
-  ): FoldingRangeProvider = {
-    val foldOnlyLines: Boolean =
-      if (capabilities.getLineFoldingOnly == null) false
-      else capabilities.getLineFoldingOnly
+  def apply(trees: Trees, params: InitializeParams): FoldingRangeProvider = {
+    val settings = for {
+      capabilities <- Option(params.getCapabilities)
+      textDocument <- Option(capabilities.getTextDocument)
+      settings <- Option(textDocument.getFoldingRange)
+    } yield settings
+
+    val foldOnlyLines = settings
+      .map(_.getLineFoldingOnly)
+      .contains(true)
 
     new FoldingRangeProvider(trees, foldOnlyLines)
   }
