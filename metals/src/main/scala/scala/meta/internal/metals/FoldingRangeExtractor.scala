@@ -12,7 +12,7 @@ import scala.meta.tokens.Token
 final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
   def extract(tree: Tree): util.List[FoldingRange] = {
     val ranges = new FoldingRanges(foldOnlyLines)
-    extractCommentRanges(tree.tokens, ranges)
+    extractCommentRanges(tree.tokens.iterator, ranges)
     new Traverser(ranges).apply(tree)
     ranges.get
   }
@@ -106,34 +106,34 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
       case _ => traverse(tree.children)
     }
 
-    private def traverse(trees: Seq[Tree]): Unit = {
-      val importGroups = mutable.Buffer(mutable.Buffer[Import]())
+    private def traverse(trees: List[Tree]): Unit = {
+      val importGroups = mutable.ListBuffer(mutable.ListBuffer.empty[Import])
       val nonImport = mutable.Buffer[Tree]()
 
       @tailrec
-      def groupImports(seq: Seq[Tree]): Unit =
-        seq match {
-          case Seq() =>
-          case (i: Import) +: tail =>
+      def groupImports(imports: List[Tree]): Unit =
+        imports match {
+          case Nil =>
+          case (i: Import) :: tail =>
             importGroups.head += i
             groupImports(tail)
-          case tree +: tail =>
-            if (importGroups.head.nonEmpty)
-              importGroups += mutable.Buffer[Import]()
+          case tree :: tail =>
+            if (importGroups.head.nonEmpty) {
+              importGroups += mutable.ListBuffer.empty[Import]
+            }
+
             nonImport += tree
             groupImports(tail)
         }
 
       groupImports(trees)
 
-      importGroups.foreach(foldImports)
+      importGroups.foreach(group => foldImports(group.toList))
       nonImport.foreach(apply)
     }
 
-    private def foldImports(imports: Seq[Import]): Unit = imports match {
-      case Seq() =>
-      case _ +: Seq() =>
-      case _ =>
+    private def foldImports(imports: List[Import]): Unit =
+      if (imports.size > 1) {
         val firstImportKeywordPos = imports.head.tokens.head.pos
         val lastImportPos = imports.last.pos
 
@@ -142,19 +142,18 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
         range.setStartCharacter(firstImportKeywordPos.endColumn)
         range.setEndCharacter(lastImportPos.endColumn)
         ranges.addAsIs(Imports, range)
-    }
+      }
   }
 
   private def extractCommentRanges(
-      tokens: Seq[Token],
+      tokens: Iterator[Token],
       ranges: FoldingRanges
   ): Unit = {
-    val iterator = tokens.iterator
 
     @tailrec
     def findLastConsecutiveComment(acc: Token.Comment): Token.Comment =
-      if (iterator.hasNext) {
-        iterator.next() match {
+      if (tokens.hasNext) {
+        tokens.next() match {
           case token: Token.Comment => findLastConsecutiveComment(token)
           case _: Token.Space | _: Token.LF => findLastConsecutiveComment(acc)
           case _ => acc
@@ -164,8 +163,8 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
     def isLineComment(comment: Token.Comment): Boolean =
       comment.toString().startsWith("//")
 
-    while (iterator.hasNext) {
-      iterator.next() match {
+    while (tokens.hasNext) {
+      tokens.next() match {
         case first: Token.Comment =>
           val last = findLastConsecutiveComment(first)
 
