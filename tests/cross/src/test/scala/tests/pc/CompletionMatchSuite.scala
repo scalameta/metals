@@ -45,38 +45,39 @@ object CompletionMatchSuite extends BaseCompletionSuite {
       |""".stripMargin,
     ""
   )
-  // Assert that Workday/Weekend symbols from previous test don't appear in result.
-  checkEdit(
-    "stale2",
-    """package stale
-      |sealed abstract class Weekday
-      |object Weekday {
-      |  case object Workday extends Weekday
-      |  case object Weekend extends Weekday
-      |}
-      |object App {
-      |  null.asInstanceOf[Weekday] matc@@
-      |}
-      |""".stripMargin,
-    // Tab characters are used to indicate user-configured indentation in the editor.
-    // For example, in VS Code, the tab characters become 2 space indent by default.
-    """|package stale
-       |sealed abstract class Weekday
-       |object Weekday {
-       |  case object Workday extends Weekday
-       |  case object Weekend extends Weekday
-       |}
-       |object App {
-       |  import stale.Weekday.Workday
-       |  import stale.Weekday.Weekend
-       |  null.asInstanceOf[Weekday] match {
-       |\tcase Workday => $0
-       |\tcase Weekend =>
-       |}
-       |}
-       |""".stripMargin,
-    filter = _.contains("exhaustive")
-  )
+  if (!isScala211)
+    // Assert that Workday/Weekend symbols from previous test don't appear in result.
+    checkEdit(
+      "stale2",
+      """package stale
+        |sealed abstract class Weekday
+        |object Weekday {
+        |  case object Workday extends Weekday
+        |  case object Weekend extends Weekday
+        |}
+        |object App {
+        |  null.asInstanceOf[Weekday] matc@@
+        |}
+        |""".stripMargin,
+      // Tab characters are used to indicate user-configured indentation in the editor.
+      // For example, in VS Code, the tab characters become 2 space indent by default.
+      """|package stale
+         |sealed abstract class Weekday
+         |object Weekday {
+         |  case object Workday extends Weekday
+         |  case object Weekend extends Weekday
+         |}
+         |object App {
+         |  import stale.Weekday.Workday
+         |  import stale.Weekday.Weekend
+         |  null.asInstanceOf[Weekday] match {
+         |\tcase Workday => $0
+         |\tcase Weekend =>
+         |}
+         |}
+         |""".stripMargin,
+      filter = _.contains("exhaustive")
+    )
   checkEdit(
     "stale3",
     """package stale
@@ -118,6 +119,9 @@ object CompletionMatchSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|match
        |match (exhaustive) Foo (2 cases)
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" -> "match"
+    )
   )
 }
