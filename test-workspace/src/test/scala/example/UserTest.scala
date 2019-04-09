@@ -1,8 +1,22 @@
-package example
+object Main {
+  def chain = Seq(1).map(
+    x =>
+    x + 1
+     + 1
+     + 1
+     + 1
+     + 1
+     + 1
+     + 1
+  ).map(
+    x => x + 1
+    + 1
+    + 1
+    + 1
+    + 1
+    + 1
+  )
 
-import java.nio.file.Path
 
-class UserTest {
-  val abc = 2
-  println(abc + abc)
 }
+

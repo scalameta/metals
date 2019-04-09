@@ -8,4 +8,6 @@ class A>>region>>{
       |
       |
     """<<region<<.stripMargin
+
+  val b = ???
 }<<region<<

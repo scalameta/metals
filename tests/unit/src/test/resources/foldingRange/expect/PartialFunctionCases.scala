@@ -23,7 +23,7 @@ class A >>region>>{
     case _ => println()
   }<<region<<
 
-  val foo = Seq().map>>region>>{
+  val foo = >>region>>Seq().map{
     case 0 =>
     case 1 => println()
     case 2 => println()

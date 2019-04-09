@@ -8,4 +8,6 @@ class A{
       |
       |
     """.stripMargin
+
+  val b = ???
 }

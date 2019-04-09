@@ -7,12 +7,14 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.meta._
 import scala.meta.internal.metals.FoldingRangeProvider._
-import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.KwMatch
 
 final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
+  private val spanThreshold = 3
+
   private val ranges = new FoldingRanges(foldOnlyLines)
 
   def extract(tree: Tree): util.List[FoldingRange] = {
@@ -22,9 +24,9 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
   }
 
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
-    if (span(tree.pos) > 2) {
+    if (span(tree.pos) > spanThreshold) {
       val newEnclosing = tree match {
-        case Foldable(pos) if span(enclosing) - span(pos) > 2 =>
+        case Foldable(pos) if span(enclosing) - span(pos) > spanThreshold =>
           val range = createRange(pos)
           ranges.add(FoldingRangeKind.Region, range)
           pos
@@ -133,8 +135,8 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
 
   private object Foldable {
     def unapply(tree: Tree): Option[Position] = tree match {
-      case _: Term.Apply => None
       case _: Term.Select => None
+      case _: Term.Function => None
       case _: Pkg => None
       case _: Defn => None
 
@@ -175,7 +177,12 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
             range(tree.pos.input, template.pos.start, template.pos.end)
         }
 
-      case _: Stat => Some(tree.pos)
+      case _: Term.Block => Some(tree.pos)
+      case _: Stat =>
+        tree.parent.collect {
+          case _: Term.Block | _: Term.Function | _: Template | _: Defn =>
+            tree.pos
+        }
       case _ => None
     }
 
