@@ -5,6 +5,7 @@ import java.sql.Connection
 import java.sql.DriverManager
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
+import scala.meta.internal.builds.Digests
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.meta.internal.pc.InterruptException
@@ -15,8 +16,8 @@ final class Tables(
     config: MetalsServerConfig
 ) extends Cancelable {
   val jarSymbols = new JarTopLevels(() => connection)
-  val sbtDigests =
-    new SbtDigests(() => connection, time)
+  val digests =
+    new Digests(() => connection, time)
   val dependencySources =
     new DependencySources(() => connection)
   val dismissedNotifications =

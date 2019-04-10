@@ -1,0 +1,307 @@
+package tests
+
+import scala.concurrent.Future
+import scala.meta.internal.builds.GradleDigest
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.AbsolutePath
+
+object GradleSlowSuite extends BaseImportSuite("gradle-import") {
+
+  override def currentDigest(
+      workspace: AbsolutePath
+  ): Option[String] = GradleDigest.current(workspace)
+
+  testAsync("basic") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|/build.gradle
+           |plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-library:2.12.8'
+           |}
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has no .bloop directory so user is asked to "import via bloop"
+          ImportBuild.params("gradle").getMessage,
+          bloopInstallProgress("gradle").message
+        ).mkString("\n")
+      )
+      _ = client.messageRequests.clear() // restart
+      _ = assertStatus(_.isInstalled)
+      _ <- server.didChange("build.gradle")(_ + "\n// comment")
+      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ <- server.didSave("build.gradle")(identity)
+      // Comment changes do not trigger "re-import project" request
+      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ <- server.didChange("build.gradle") { text =>
+        text + "\ndef version = \"1.0.0\"\n"
+      }
+      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ <- server.didSave("build.gradle")(identity)
+    } yield {
+      assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has .bloop directory so user is asked to "re-import project"
+          ImportBuildChanges.params("gradle").getMessage,
+          bloopInstallProgress("gradle").message
+        ).mkString("\n")
+      )
+    }
+  }
+
+  testAsync("force-command") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|/build.gradle
+           |plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-library:2.12.8'
+           |}
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has no .bloop directory so user is asked to "import via bloop"
+          ImportBuild.params("gradle").getMessage,
+          bloopInstallProgress("gradle").message
+        ).mkString("\n")
+      )
+      _ = client.messageRequests.clear() // restart
+      _ <- server.executeCommand(ServerCommands.ImportBuild.id)
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          bloopInstallProgress("gradle").message
+        ).mkString("\n")
+      )
+    } yield ()
+  }
+
+  testAsync("new-dependency") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|/build.gradle
+           |plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-library:2.12.8'
+           |}
+           |/src/main/scala/reload/Main.scala
+           |package reload
+           |object Main extends App {
+           |  println("sourcecode.Line(42)")
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/scala/reload/Main.scala")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ <- server.didSave("build.gradle") { text =>
+        s"""$text
+           |dependencies {
+           |    implementation 'com.lihaoyi:sourcecode_2.12:0.1.4'
+           |}
+           |""".stripMargin
+      }
+      _ <- server
+        .didSave("src/main/scala/reload/Main.scala") { text =>
+          text.replaceAll("\"", "")
+        }
+        .recover { case e => scribe.error("compile", e) }
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+    } yield ()
+  }
+
+  testAsync("error") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|/build.gradle
+           |, syntax error
+           |""".stripMargin,
+        expectError = true
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          ImportBuild.params("gradle").getMessage,
+          bloopInstallProgress("gradle").message
+        ).mkString("\n")
+      )
+      _ = assertNoDiff(
+        client.workspaceShowMessages,
+        ImportProjectFailed.getMessage
+      )
+      _ = assertStatus(!_.isInstalled)
+      _ = client.messageRequests.clear()
+      _ <- server.didSave("build.gradle") { _ =>
+        """|plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-library:2.12.8'
+           |}
+           |""".stripMargin
+      }
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          ImportBuild.params("gradle").getMessage,
+          bloopInstallProgress("gradle").message
+        ).mkString("\n")
+      )
+      _ = assertStatus(_.isInstalled)
+    } yield ()
+  }
+
+  private def projectWithVersion(version: String) = {
+    s"""|plugins {
+        |    id 'scala'
+        |}
+        |repositories {
+        |    mavenCentral()
+        |}
+        |dependencies {
+        |    implementation 'org.scala-lang:scala-library:$version'
+        |}
+        |""".stripMargin
+  }
+
+  testAsync("different-scala") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""
+           |/build.gradle
+           |${projectWithVersion("2.12.7")}
+           |/a/build.gradle
+           |${projectWithVersion("2.12.4")}
+           |/b/build.gradle
+           |${projectWithVersion("2.12.3")}
+           |/c/build.gradle
+           |${projectWithVersion("2.11.12")}
+           |/d/build.gradle
+           |${projectWithVersion("2.11.8")}
+           |/e/build.gradle
+           |${projectWithVersion("2.10.7")}
+           |/f/build.gradle
+           |${projectWithVersion(V.scala212)}
+           |/settings.gradle
+           |include 'a'
+           |include 'b'
+           |include 'c'
+           |include 'd'
+           |include 'e'
+           |include 'f'
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |object A // 2.12.4
+           |/b/src/main/scala/a/A.scala
+           |package a // 2.12.3
+           |object A
+           |/c/src/main/scala/a/A.scala
+           |package a
+           |object A // 2.11.12
+           |/d/src/main/scala/a/A.scala
+           |package a
+           |object A // 2.11.8
+           |/e/src/main/scala/a/A.scala
+           |package a
+           |object A // 2.10.7
+           |/f/src/main/scala/a/A.scala
+           |package a
+           |object A // ${V.scala212}
+           |""".stripMargin,
+        expectError = true
+      )
+      _ = assertStatus(_.isInstalled)
+      _ = assertNoDiff(
+        client.messageRequests.peekLast(),
+        // only 3 projects since no empty test targets are created for gradle
+        CheckDoctor.multipleMisconfiguredProjects(3)
+      )
+      _ <- Future.sequence(
+        ('a' to 'f')
+          .map(project => s"$project/src/main/scala/a/A.scala")
+          .map(file => server.didOpen(file))
+      )
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ = {
+        assertNoDiff(
+          client.workspaceClientCommands,
+          List(
+            ClientCommands.ReloadDoctor.id,
+            ClientCommands.RunDoctor.id
+          ).mkString("\n")
+        )
+      }
+    } yield ()
+  }
+
+  testAsync("fatal-warnings") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/build.gradle
+          |plugins {
+          |    id 'scala'
+          |}
+          |repositories {
+          |    mavenCentral()
+          |}
+          |dependencies {
+          |    implementation 'org.scala-lang:scala-library:2.12.8'
+          |}
+          |tasks.withType(ScalaCompile) {
+          |    scalaCompileOptions.additionalParameters = [
+          |         '-Xfatal-warnings',
+          |         '-Ywarn-unused'
+          |    ]
+          |}
+          |/src/main/scala/warning/Warning.scala
+          |import scala.concurrent.Future // unused
+          |object Warning
+          |""".stripMargin
+      )
+      _ = assertStatus(_.isInstalled)
+      _ <- server.didOpen("src/main/scala/warning/Warning.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """
+          |src/main/scala/warning/Warning.scala:1:1: error: Unused import
+          |import scala.concurrent.Future // unused
+          |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        """.stripMargin
+      )
+    } yield ()
+  }
+
+}

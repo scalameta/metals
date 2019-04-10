@@ -1,20 +1,8 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.CompileParams
-import ch.epfl.scala.bsp4j.DependencySourcesParams
-import ch.epfl.scala.bsp4j.DependencySourcesResult
-import ch.epfl.scala.bsp4j.ScalacOptionsParams
-import ch.epfl.scala.bsp4j.SourcesParams
-import com.google.gson.JsonElement
-import io.methvin.watcher.DirectoryChangeEvent
-import io.methvin.watcher.DirectoryChangeEvent.EventType
-import io.undertow.server.HttpServerExchange
 import java.net.URI
 import java.net.URLClassLoader
 import java.nio.charset.Charset
-
-import scala.meta.internal.semanticdb.Scala._
 import scala.meta.pc.CancelToken
 import java.nio.charset.StandardCharsets
 import java.nio.file._
@@ -25,26 +13,36 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.CompileParams
+import ch.epfl.scala.bsp4j.DependencySourcesParams
+import ch.epfl.scala.bsp4j.DependencySourcesResult
+import ch.epfl.scala.bsp4j.ScalacOptionsParams
+import ch.epfl.scala.bsp4j.SourcesParams
+import com.google.gson.JsonElement
+import io.methvin.watcher.DirectoryChangeEvent
+import io.methvin.watcher.DirectoryChangeEvent.EventType
+import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
-
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable.{ArrayBuffer, HashSet}
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashSet
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.TimeoutException
+import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.BuildTool.Sbt
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags._
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.tokenizers.TokenizeException
-import scala.util.Try
 import scala.util.control.NonFatal
 
 class MetalsLanguageServer(
@@ -676,7 +674,7 @@ class MetalsLanguageServer(
         List(
           Future(reindexWorkspaceSources(paths)),
           compileSourceFiles(paths).ignoreValue,
-          onSbtBuildChanged(paths).ignoreValue
+          onBuildChanged(paths).ignoreValue
         )
       )
       .ignoreValue
@@ -962,52 +960,45 @@ class MetalsLanguageServer(
   private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
-    buildTools.asSbt match {
+    buildTools.loadSupported match {
+      case Some(buildTool) =>
+        if (BuildTool.isCompatibleVersion(
+            buildTool.minimumVersion,
+            buildTool.version
+          )) {
+          buildTool.digest(workspace) match {
+            case None =>
+              scribe.warn(s"Skipping build import, no checksum.")
+              Future.successful(BuildChange.None)
+            case Some(digest) =>
+              slowConnectToBuildServer(forceImport, buildTool, digest)
+          }
+        } else {
+          scribe.warn(
+            s"Skipping build import for unsupported $buildTool version ${buildTool.version}"
+          )
+          languageClient.showMessage(
+            messages.IncompatibleBuildToolVersion.params(buildTool)
+          )
+          Future.successful(BuildChange.None)
+        }
       case None =>
         if (!buildTools.isAutoConnectable) {
           warnings.noBuildTool()
         }
         Future.successful(BuildChange.None)
-      case Some(sbt) =>
-        if (!isCompatibleSbtVersion(sbt.version)) {
-          scribe.warn(
-            s"Skipping build import for unsupported sbt version ${sbt.version}"
-          )
-          languageClient.showMessage(
-            messages.IncompatibleSbtVersion.params(sbt)
-          )
-          Future.successful(BuildChange.None)
-        } else {
-          SbtDigest.current(workspace) match {
-            case None =>
-              scribe.warn(s"Skipping build import, no checksum.")
-              Future.successful(BuildChange.None)
-            case Some(digest) =>
-              slowConnectToBuildServer(forceImport, sbt, digest)
-          }
-        }
-    }
-  }
-
-  private def isCompatibleSbtVersion(version: String): Boolean = {
-    version.split('.') match {
-      case Array("1", _, _) => true
-      case Array("0", "13", patch)
-          if Try(patch.toInt).filter(_ >= 17).isSuccess =>
-        true
-      case _ => false
     }
   }
 
   private def slowConnectToBuildServer(
       forceImport: Boolean,
-      sbt: Sbt,
+      buildTool: BuildTool,
       checksum: String
   ): Future[BuildChange] =
     for {
       result <- {
-        if (forceImport) bloopInstall.runUnconditionally(sbt)
-        else bloopInstall.runIfApproved(sbt, checksum)
+        if (forceImport) bloopInstall.runUnconditionally(buildTool)
+        else bloopInstall.runIfApproved(buildTool, checksum)
       }
       change <- {
         if (result.isInstalled) quickConnectToBuildServer()
@@ -1414,16 +1405,16 @@ class MetalsLanguageServer(
   }
 
   /**
-   * Re-imports the sbt build if build files have changed.
+   * Re-imports the build if build files have changed.
    */
-  private val onSbtBuildChanged =
+  private val onBuildChanged =
     BatchedFunction.fromFuture[AbsolutePath, BuildChange](
-      onSbtBuildChangedUnbatched
+      onBuildChangedUnbatched
     )
-  private def onSbtBuildChangedUnbatched(
+  private def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[BuildChange] = {
-    val isBuildChange = paths.exists(_.isSbtRelated(workspace))
+    val isBuildChange = paths.exists(buildTools.isBuildRelated(workspace, _))
     if (isBuildChange) {
       slowConnectToBuildServer(forceImport = false)
     } else {

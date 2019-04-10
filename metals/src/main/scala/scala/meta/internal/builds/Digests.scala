@@ -1,14 +1,15 @@
-package scala.meta.internal.metals
+package scala.meta.internal.builds
 
 import java.sql.Connection
 import java.sql.Timestamp
+import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.JdbcEnrichments._
-import scala.meta.internal.metals.SbtDigest.Status
+import scala.meta.internal.metals.Time
 
 /**
  * Wrapper around the sbt_digest sql table.
  */
-final class SbtDigests(conn: () => Connection, time: Time) {
+final class Digests(conn: () => Connection, time: Time) {
 
   def setStatus(md5Digest: String, status: Status): Int =
     conn().update(
@@ -20,22 +21,22 @@ final class SbtDigests(conn: () => Connection, time: Time) {
       stmt.setTimestamp(3, timestamp)
     }
 
-  def last(): Option[SbtDigest] =
+  def last(): Option[Digest] =
     conn()
       .query(
         "select md5, status, when_recorded from sbt_digest d order by d.when_recorded desc limit 1;"
       )(_ => ()) { rs =>
         val digest = rs.getString(1)
         val n = rs.getByte(2).toInt
-        val status = SbtDigest.Status.all
+        val status = Digest.Status.all
           .find(_.value == n)
-          .getOrElse(SbtDigest.Status.Unknown(n))
+          .getOrElse(Digest.Status.Unknown(n))
         val timestamp = rs.getTimestamp(3).getTime
-        SbtDigest(digest, status, timestamp)
+        Digest(digest, status, timestamp)
       }
       .headOption
 
-  def byDigest(md5: String): List[SbtDigest] =
+  def byDigest(md5: String): List[Digest] =
     conn()
       .query(
         "select status, when_recorded from sbt_digest where md5 = ?;"
@@ -43,14 +44,14 @@ final class SbtDigests(conn: () => Connection, time: Time) {
         _.setString(1, md5)
       ) { rs =>
         val n = rs.getByte(1).toInt
-        val status = SbtDigest.Status.all
+        val status = Digest.Status.all
           .find(_.value == n)
-          .getOrElse(SbtDigest.Status.Unknown(n))
+          .getOrElse(Digest.Status.Unknown(n))
         val timestamp = rs.getTimestamp(2).getTime
-        SbtDigest(md5, status, timestamp)
+        Digest(md5, status, timestamp)
       }
 
-  def getStatus(md5Digest: String): Option[SbtDigest.Status] = {
+  def getStatus(md5Digest: String): Option[Digest.Status] = {
     val all = byDigest(md5Digest)
     if (all.isEmpty) None
     else Some(all.maxBy(_.millis).status)

@@ -19,6 +19,7 @@ import scala.util.Try
 case class UserConfiguration(
     javaHome: Option[String] = None,
     sbtScript: Option[String] = None,
+    gradleScript: Option[String] = None,
     scalafmtConfigPath: RelativePath =
       UserConfiguration.default.scalafmtConfigPath,
     symbolPrefixes: Map[String, String] =
@@ -48,6 +49,16 @@ object UserConfiguration {
       """Optional absolute path to an `sbt` executable to use for running `sbt bloopInstall`.
         |By default, Metals uses `java -jar sbt-launch.jar` with an embedded launcher while respecting
         |`.jvmopts` and `.sbtopts`. Update this setting if your `sbt` script requires more customizations
+        |like using environment variables.
+        |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "gradle-script",
+      """empty string `""`.""",
+      "/usr/local/bin/gradle",
+      "gradle script",
+      """Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`.
+        |By default, Metals uses gradlew with 5.3.1 gradle version. Update this setting if your `gradle` script requires more customizations
         |like using environment variables.
         |""".stripMargin
     ),
@@ -122,6 +133,8 @@ object UserConfiguration {
         .getOrElse(default.scalafmtConfigPath)
     val sbtScript =
       getStringKey("sbt-script")
+    val gradleScript =
+      getStringKey("gradle-script")
     val symbolPrefixes =
       getStringMap("symbol-prefixes")
         .getOrElse(default.symbolPrefixes)
@@ -134,6 +147,7 @@ object UserConfiguration {
         UserConfiguration(
           javaHome,
           sbtScript,
+          gradleScript,
           scalafmtConfigPath,
           symbolPrefixes
         )

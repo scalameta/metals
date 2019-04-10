@@ -37,21 +37,6 @@ final class Embedded(
   }
 
   /**
-   * Returns path to a local copy of sbt-launch.jar.
-   *
-   * We use embedded sbt-launch.jar instead of user `sbt` command because
-   * we can't rely on `sbt` resolving correctly when using system processes, at least
-   * it failed on Windows when I tried it.
-   */
-  lazy val embeddedSbtLauncher: AbsolutePath = {
-    val embeddedLauncher = this.getClass.getResourceAsStream("/sbt-launch.jar")
-    val out = Files.createTempDirectory("metals").resolve("sbt-launch.jar")
-    out.toFile.deleteOnExit()
-    Files.copy(embeddedLauncher, out)
-    AbsolutePath(out)
-  }
-
-  /**
    * Fetches jars for bloop-frontend and creates a new orphan classloader.
    */
   lazy val bloopJars: Option[URLClassLoader] = {

@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLogger.{silentInTests => logger}
 import scala.meta.internal.metals.ScalaVersions._
