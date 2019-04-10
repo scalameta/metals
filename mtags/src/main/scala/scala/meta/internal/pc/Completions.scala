@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.net.URI
 import java.lang.StringBuilder
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.semanticdb.Scala._
@@ -874,9 +875,10 @@ trait Completions { this: MetalsGlobal =>
       override def contribute: List[Member] = {
         try {
           val name = Paths
-            .get(pos.source.file.name.stripSuffix(".scala"))
+            .get(URI.create(pos.source.file.name))
             .getFileName()
             .toString()
+            .stripSuffix(".scala")
           val isTermName = toplevel.name.isTermName
           val siblings = pkg.stats.count {
             case d: DefTree =>

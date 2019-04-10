@@ -1,7 +1,10 @@
 package scala.meta.internal.metals
 
+import java.{util => ju}
 import java.util.Collections
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.eclipse.lsp4j.Location
+import scala.meta.pc.CancelToken
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -36,22 +39,42 @@ final class DefinitionProvider(
     semanticdbs: Semanticdbs,
     icons: Icons,
     statusBar: StatusBar,
-    warnings: Warnings
+    warnings: Warnings,
+    compilers: () => Compilers
 ) {
 
   def definition(
       path: AbsolutePath,
-      params: TextDocumentPositionParams
+      params: TextDocumentPositionParams,
+      token: CancelToken
   ): DefinitionResult = {
-    val result = semanticdbs.textDocument(path)
-    result.documentIncludingStale match {
+    semanticdbs.textDocument(path).documentIncludingStale match {
       case Some(doc) =>
         definitionFromSnapshot(path, params, doc)
       case _ =>
-        warnings.noSemanticdb(path)
-        DefinitionResult.empty
+        val fromCompilers =
+          compilers()
+            .definition(params, token)
+            .getOrElse(Collections.emptyList())
+        if (!fromCompilers.isEmpty()) {
+          DefinitionResult(
+            fromCompilers,
+            "",
+            None,
+            None
+          )
+        } else {
+          warnings.noSemanticdb(path)
+          DefinitionResult.empty
+        }
     }
   }
+
+  def fromSymbol(sym: String): ju.List[Location] =
+    DefinitionDestination.fromSymbol(sym).flatMap(_.toResult) match {
+      case None => ju.Collections.emptyList()
+      case Some(destination) => destination.locations
+    }
 
   def positionOccurrence(
       source: AbsolutePath,

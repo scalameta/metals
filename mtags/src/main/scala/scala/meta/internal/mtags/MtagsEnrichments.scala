@@ -14,6 +14,7 @@ import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
+import scala.meta.pc.OffsetParams
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
@@ -290,6 +291,21 @@ trait MtagsEnrichments {
         new l.Position(pos.startLine, pos.startColumn),
         new l.Position(pos.endLine, pos.endColumn)
       )
+    }
+  }
+  implicit class XtensionOffsetParams(params: OffsetParams) {
+    def isDelimiter: Boolean = {
+      params.offset() < 0 ||
+      params.offset() >= params.text().length ||
+      (params.text().charAt(params.offset()) match {
+        case '(' | ')' | '{' | '}' | '[' | ']' | ',' | '=' | '.' => true
+        case _ => false
+      })
+    }
+    def isWhitespace: Boolean = {
+      params.offset() < 0 ||
+      params.offset() >= params.text().length ||
+      params.text().charAt(params.offset()).isWhitespace
     }
   }
 }

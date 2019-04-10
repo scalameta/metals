@@ -1,5 +1,7 @@
 package scala.meta.pc;
 
+import org.eclipse.lsp4j.Location;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -11,6 +13,11 @@ public interface SymbolSearch {
      * Returns the documentation of this symbol, if any.
      */
     Optional<SymbolDocumentation> documentation(String symbol);
+
+    /**
+     * Returns the definition of this symbol, if any.
+     */
+    List<Location> definition(String symbol);
 
     /**
      * Runs fuzzy symbol search for the given query.

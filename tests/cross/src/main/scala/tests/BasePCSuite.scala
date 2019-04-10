@@ -41,7 +41,8 @@ abstract class BasePCSuite extends BaseSuite {
   val search = new TestingSymbolSearch(
     ClasspathSearch.fromClasspath(myclasspath, _ => 0),
     new Docstrings(index),
-    workspace
+    workspace,
+    index
   )
   val pc = new ScalaPresentationCompiler()
     .withSearch(search)
