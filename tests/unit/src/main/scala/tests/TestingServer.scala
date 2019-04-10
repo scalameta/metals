@@ -1,6 +1,5 @@
 package tests
 
-import com.google.gson.JsonParser
 import java.io.IOException
 import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
@@ -12,10 +11,10 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
+import com.google.gson.JsonParser
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
-import scala.meta.internal.metals.PositionSyntax._
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
@@ -24,6 +23,8 @@ import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.FoldingRangeCapabilities
+import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
@@ -41,6 +42,7 @@ import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
 import org.scalactic.source.Position
+import tests.MetalsTestEnrichments._
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -56,6 +58,7 @@ import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
@@ -66,7 +69,6 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.{meta => m}
-import tests.MetalsTestEnrichments._
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -222,6 +224,7 @@ final class TestingServer(
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
+    textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
     params.setCapabilities(
       new ClientCapabilities(
         workspaceCapabilities,
@@ -351,6 +354,16 @@ final class TestingServer(
     val params =
       new CompletionParams(path.toTextDocumentIdentifier, pos.toLSP.getStart)
     server.completion(params).asScala
+  }
+
+  def foldingRange(filename: String): Future[String] = {
+    val path = toPath(filename)
+    val uri = path.toURI.toString
+    val params = new FoldingRangeRequestParams(new TextDocumentIdentifier(uri))
+    for {
+      ranges <- server.foldingRange(params).asScala
+      textEdits = FoldingRangesTextEdits(ranges)
+    } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
 
   def formatCompletion(

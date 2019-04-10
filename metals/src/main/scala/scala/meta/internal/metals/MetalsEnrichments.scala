@@ -22,13 +22,16 @@ import scala.compat.java8.FutureConverters
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.trees.Origin
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.tokens.Token
 import scala.util.Properties
 import scala.{meta => m}
 
@@ -496,6 +499,28 @@ object MetalsEnrichments
         case _: CancellationException =>
           true
       }
+  }
+
+  implicit class XtensionTreeTokenStream(tree: Tree) {
+    def leadingTokens: Iterator[Token] = tree.origin match {
+      case Origin.Parsed(input, _, pos) =>
+        val tokens = input.tokenize.get
+        tokens.slice(0, pos.start - 1).reverseIterator
+      case _ => Iterator.empty
+    }
+
+    def trailingTokens: Iterator[Token] = tree.origin match {
+      case Origin.Parsed(input, _, pos) =>
+        val tokens = input.tokenize.get
+        tokens.slice(pos.end + 1, tokens.length).iterator
+      case _ => Iterator.empty
+    }
+
+    def findFirstLeading(predicate: Token => Boolean): Option[Token] =
+      leadingTokens.find(predicate)
+
+    def findFirstTrailing(predicate: Token => Boolean): Option[Token] =
+      trailingTokens.find(predicate)
   }
 
 }

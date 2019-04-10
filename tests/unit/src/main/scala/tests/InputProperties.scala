@@ -51,4 +51,7 @@ object InputProperties {
       dependencySources = Classpath(getKey("dependencySources"))
     )
   }
+
+  def fromDirectory(directory: AbsolutePath): InputProperties =
+    InputProperties(directory, List(directory), Classpath(Nil), Classpath(Nil))
 }

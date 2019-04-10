@@ -8,6 +8,7 @@ object SaveExpect {
       MtagsSuite,
       ToplevelSuite,
       DocumentSymbolSuite,
+      FoldingRangeSuite,
       WorkspaceSymbolExpectSuite
     ).foreach { suite =>
       val header = suite.suiteName.length + 2
