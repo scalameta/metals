@@ -8,24 +8,33 @@ import scala.meta.inputs.Position
 import scala.meta.internal.metals.FoldingRangeProvider._
 import scala.meta.io.AbsolutePath
 
-final class FoldingRangeProvider(val trees: Trees, foldOnlyLines: Boolean) {
+final class FoldingRangeProvider(
+    val trees: Trees,
+    val buffers: Buffers,
+    foldOnlyLines: Boolean
+) {
 
   def getRangedFor(path: AbsolutePath): util.List[FoldingRange] = {
-    val extractor = new FoldingRangeExtractor(foldOnlyLines)
     trees
       .get(path)
-      .map(extractor.extract)
+      .map(tree => {
+        val distance =
+          TokenEditDistance.fromBuffer(path, tree.pos.input.text, buffers)
+        val extractor = new FoldingRangeExtractor(distance, foldOnlyLines)
+        extractor.extract(tree)
+      })
       .getOrElse(util.Collections.emptyList())
   }
 }
 
 object FoldingRangeProvider {
-  val foldingThreshold = 2 // e.g. {}
-  val Region = "region"
-  val Imports = "imports"
-  val Comment = "comment"
+  val foldingThreshold = 2
 
-  def apply(trees: Trees, params: InitializeParams): FoldingRangeProvider = {
+  def apply(
+      trees: Trees,
+      buffers: Buffers,
+      params: InitializeParams
+  ): FoldingRangeProvider = {
     val settings = for {
       capabilities <- Option(params.getCapabilities)
       textDocument <- Option(capabilities.getTextDocument)
@@ -36,7 +45,7 @@ object FoldingRangeProvider {
       .map(_.getLineFoldingOnly)
       .contains(true)
 
-    new FoldingRangeProvider(trees, foldOnlyLines)
+    new FoldingRangeProvider(trees, buffers, foldOnlyLines)
   }
 }
 

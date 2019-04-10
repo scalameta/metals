@@ -1,9 +1,8 @@
 package tests
 
 import java.nio.file.Paths
+import java.util
 import java.util.UUID
-import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
 import tests.BuildInfo.testResourceDirectory
 import scala.meta.internal.metals.Buffers
@@ -15,7 +14,7 @@ object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
   private val trees = TestingTrees(buffers)
 
   private val foldingRangeProvider =
-    new FoldingRangeProvider(trees, foldOnlyLines = false)
+    new FoldingRangeProvider(trees, buffers, foldOnlyLines = false)
 
   override def testCases(): List[ExpectTestCase] = {
     val inputDirectory = AbsolutePath(testResourceDirectory)
@@ -29,17 +28,17 @@ object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
 
   private def obtainFrom(file: InputFile): String = {
     val scalaSource = file.input.text
-      .replaceAll(">>\\w+>>", "")
-      .replaceAll("<<\\w+<<", "")
 
     val actualRanges = findFoldingRangesFor(scalaSource)
-    generateOutput(scalaSource, actualRanges)
+    val edits = FoldingRangesTextEdits.apply(actualRanges)
+    TextEdits.applyEdits(scalaSource, edits)
   }
 
-  private def findFoldingRangesFor(source: String): Seq[FoldingRange] = {
-    import collection.JavaConverters._
+  private def findFoldingRangesFor(
+      source: String
+  ): util.List[l.FoldingRange] = {
     val path = registerSource(source)
-    foldingRangeProvider.getRangedFor(path).asScala
+    foldingRangeProvider.getRangedFor(path)
   }
 
   private def registerSource(source: String): AbsolutePath = {
@@ -47,22 +46,5 @@ object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
     val path = AbsolutePath(Paths.get(name))
     buffers.put(path, source)
     path
-  }
-
-  private def generateOutput(
-      scalaSource: String,
-      actualRanges: Seq[FoldingRange]
-  ): String = {
-    val edits = for {
-      range <- actualRanges
-      start = new l.Position(range.getStartLine, range.getStartCharacter)
-      end = new l.Position(range.getEndLine, range.getEndCharacter)
-      edit <- Seq(
-        new TextEdit(new l.Range(start, start), s">>${range.getKind}>>"),
-        new TextEdit(new l.Range(end, end), s"<<${range.getKind}<<")
-      )
-    } yield edit
-
-    TextEdits.applyEdits(scalaSource, edits.toList)
   }
 }

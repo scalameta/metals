@@ -298,7 +298,7 @@ class MetalsLanguageServer(
       },
       interactiveSemanticdbs.toFileOnDisk
     )
-    foldingRangeProvider = FoldingRangeProvider(trees, params)
+    foldingRangeProvider = FoldingRangeProvider(trees, buffers, params)
     compilers = register(
       new Compilers(
         workspace,

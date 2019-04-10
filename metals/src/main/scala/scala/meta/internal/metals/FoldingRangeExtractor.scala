@@ -2,17 +2,20 @@ package scala.meta.internal.metals
 
 import java.util
 import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.FoldingRangeKind
+import org.eclipse.lsp4j.FoldingRangeKind._
+import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.meta._
-import scala.meta.internal.metals.FoldingRangeProvider._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.KwMatch
 
-final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
+final class FoldingRangeExtractor(
+    distance: TokenEditDistance,
+    foldOnlyLines: Boolean
+) {
   private val spanThreshold = 3
 
   private val ranges = new FoldingRanges(foldOnlyLines)
@@ -27,9 +30,13 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
     if (span(tree.pos) > spanThreshold) {
       val newEnclosing = tree match {
         case Foldable(pos) if span(enclosing) - span(pos) > spanThreshold =>
-          val range = createRange(pos)
-          ranges.add(FoldingRangeKind.Region, range)
-          pos
+          distance.toRevised(pos.toLSP) match {
+            case Some(revisedPos) =>
+              val range = createRange(revisedPos)
+              ranges.add(Region, range)
+              pos
+            case None => enclosing
+          }
         case _ => enclosing
       }
 
@@ -87,11 +94,12 @@ final class FoldingRangeExtractor(foldOnlyLines: Boolean) {
     else pos.endLine - pos.startLine
   }
 
-  private def createRange(position: Position): FoldingRange = {
-    val range = new FoldingRange(position.startLine, position.endLine)
-    range.setStartCharacter(position.startColumn)
-    range.setEndCharacter(position.endColumn)
-    range
+  private def createRange(range: l.Range): FoldingRange = {
+    val foldingRange =
+      new FoldingRange(range.getStart.getLine, range.getEnd.getLine)
+    foldingRange.setStartCharacter(range.getStart.getCharacter)
+    foldingRange.setEndCharacter(range.getEnd.getCharacter)
+    foldingRange
   }
 
   private def extractCommentRanges(

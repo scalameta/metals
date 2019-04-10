@@ -24,7 +24,9 @@ import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeCapabilities
+import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
@@ -353,6 +355,16 @@ final class TestingServer(
     val params =
       new CompletionParams(path.toTextDocumentIdentifier, pos.toLSP.getStart)
     server.completion(params).asScala
+  }
+
+  def foldingRange(filename: String): Future[String] = {
+    val path = toPath(filename)
+    val uri = path.toURI.toString
+    val params = new FoldingRangeRequestParams(new TextDocumentIdentifier(uri))
+    for {
+      ranges <- server.foldingRange(params).asScala
+      textEdits = FoldingRangesTextEdits(ranges)
+    } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
 
   def formatCompletion(
