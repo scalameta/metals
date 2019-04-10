@@ -248,7 +248,12 @@ class CompletionProvider(
         if (head.sym.isClass || head.sym.isModule) {
           head.sym.fullName
         } else {
-          semanticdbSymbol(head.sym)
+          head match {
+            case o: OverrideDefMember =>
+              o.label
+            case _ =>
+              semanticdbSymbol(head.sym)
+          }
         }
       def isIgnoredWorkspace: Boolean =
         head.isInstanceOf[WorkspaceMember] &&

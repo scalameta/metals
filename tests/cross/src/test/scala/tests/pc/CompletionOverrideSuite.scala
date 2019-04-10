@@ -61,7 +61,8 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |    def iterator: Iterator[Int] = ${0:???}
       |  }
       |}
-      |""".stripMargin
+      |""".stripMargin,
+    filter = _.contains("iter")
   )
 
   checkEdit(
@@ -90,7 +91,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |}
       |object Main {
       |  new Context {
-      |    override def ad@@
+      |    override def add@@
       |  }
       |}
     """.stripMargin,
@@ -197,7 +198,8 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |    def iterator: Iterator[A] = ${0:???}
       |  }
       |}
-    """.stripMargin
+    """.stripMargin,
+    filter = _.contains("iter")
   )
 
   check(
@@ -692,4 +694,128 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     "override lazy val analyzer: Object{val global: r.Main} = ${0:???}"
   )
 
+  checkEditLine(
+    "val-trait",
+    """|package s
+       |trait Val {
+       |  val hello1: Int = 42
+       |}
+       |class Main extends Val {
+       |  ___
+       |}
+       |""".stripMargin,
+    "val hello@@",
+    "override val hello1: Int = ${0:???}"
+  )
+
+  check(
+    "ident",
+    """|package t
+       |abstract class Val {
+       |  def hello: Int = 2
+       |}
+       |class Main extends Val {
+       |   hello@@
+       |}
+       |""".stripMargin,
+    """|hello: Int
+       |override def hello: Int
+       |""".stripMargin,
+    includeDetail = false
+  )
+
+  check(
+    "override-abstract",
+    """|package u
+       |abstract class Val {
+       |  def overTop: Int
+       |}
+       |class Main extends Val {
+       |   over@@
+       |}
+       |""".stripMargin,
+    /**
+     * NOTE(tgodzik) observe that the "override" is not needed here but the completion
+     * has "override" because the identifier name starts with "o". It's a known limitation
+     * due to the feature that allows for easily auto-completing on writing o... .
+     */
+    """|def overTop: Int
+       |overTop: Int
+       |""".stripMargin,
+    includeDetail = false,
+    topLines = Some(2)
+  )
+
+  check(
+    "override-concrete",
+    """|package w
+       |abstract class Val {
+       |  def overTop: Int = 5
+       |}
+       |class Main extends Val {
+       |   over@@
+       |}
+       |""".stripMargin,
+    """|overTop: Int
+       |override def overTop: Int
+       |""".stripMargin,
+    includeDetail = false,
+    topLines = Some(2)
+  )
+
+  checkEdit(
+    "fuzzy-abstract",
+    """|package v
+       |abstract class Val {
+       |  def hello: Int
+       |}
+       |class Main extends Val {
+       |   ovhello@@
+       |}
+       |""".stripMargin,
+    """|package v
+       |abstract class Val {
+       |  def hello: Int
+       |}
+       |class Main extends Val {
+       |   override def hello: Int = ${0:???}
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "override-word",
+    """|package y
+       |abstract class Val {
+       |  def hello1: Int = 2
+       |  val hello2: Int = 2
+       |}
+       |class Main extends Val {
+       |   overr@@
+       |}
+       |""".stripMargin,
+    """|override def hello1: Int
+       |override val hello2: Int
+       |""".stripMargin,
+    includeDetail = false,
+    topLines = Some(2)
+  )
+
+  check(
+    "def-word",
+    """|package z
+       |abstract class Val {
+       |  def hello1: Int
+       |  val hello2: Int = 5
+       |}
+       |class Main extends Val {
+       |   def@@
+       |}
+       |""".stripMargin,
+    """|def hello1: Int
+       |override def equals(obj: Any): Boolean
+       |""".stripMargin,
+    includeDetail = false,
+    topLines = Some(2)
+  )
 }

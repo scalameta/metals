@@ -11,9 +11,9 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |___
       |}
       |""".stripMargin,
-    "  Files@@",
+    "  val x = Files@@",
     """  import java.nio.file.Files
-      |  Files""".stripMargin
+      |  val x = Files""".stripMargin
   )
 
   checkEditLine(
@@ -63,14 +63,14 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
     """package `import-conflict`
       |object Main {
       |  val java = 42
-      |  Files@@
+      |  val x = Files@@
       |}
       |""".stripMargin,
     """package `import-conflict`
       |object Main {
       |  val java = 42
       |  import _root_.java.nio.file.Files
-      |  Files
+      |  val x = Files
       |}
       |""".stripMargin,
     filter = _ == "Files - java.nio.file"
