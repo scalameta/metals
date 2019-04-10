@@ -10,7 +10,6 @@ import java.util.Optional
 import java.util.logging.Level
 import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
