@@ -55,8 +55,7 @@ final class FoldingRanges(foldOnlyLines: Boolean) {
   def get: util.List[FoldingRange] = Collections.unmodifiableList(allRanges)
 
   def add(kind: String, pos: Position): Unit = {
-    import MetalsEnrichments._
-    val range = pos.toLSPFoldingRange
+    val range = createRange(pos)
     add(kind, range)
   }
 
@@ -78,6 +77,13 @@ final class FoldingRanges(foldOnlyLines: Boolean) {
 
       allRanges.add(range)
     }
+  }
+
+  private def createRange(pos: Position): FoldingRange = {
+    val range = new FoldingRange(pos.startLine, pos.endLine)
+    range.setStartCharacter(pos.startColumn)
+    range.setEndCharacter(pos.endColumn)
+    range
   }
 
   // examples of collapsed: "class A {}" or "def foo = {}"

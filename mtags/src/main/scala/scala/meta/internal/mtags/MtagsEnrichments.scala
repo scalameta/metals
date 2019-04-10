@@ -292,12 +292,5 @@ trait MtagsEnrichments {
         new l.Position(pos.endLine, pos.endColumn)
       )
     }
-
-    def toLSPFoldingRange: FoldingRange = {
-      val range = new FoldingRange(pos.startLine, pos.endLine)
-      range.setStartCharacter(pos.startColumn)
-      range.setEndCharacter(pos.endColumn)
-      range
-    }
   }
 }
