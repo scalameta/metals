@@ -4,9 +4,11 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import java.{util => ju}
 import java.util.Collections
 import java.util.Optional
 import java.util.concurrent.ScheduledExecutorService
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
@@ -153,6 +155,15 @@ class Compilers(
         CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
       )
     }
+  def definition(
+      params: TextDocumentPositionParams,
+      token: CancelToken
+  ): Option[ju.List[Location]] =
+    withPC(params, None) { (pc, pos) =>
+      pc.definition(
+        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
+      )
+    }
   def signatureHelp(
       params: TextDocumentPositionParams,
       token: CancelToken,
@@ -214,7 +225,9 @@ class Compilers(
   )(fn: (PresentationCompiler, Position) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     loadCompiler(path, interactiveSemanticdbs).map { compiler =>
-      val input = path.toInputFromBuffers(buffers)
+      val input = path
+        .toInputFromBuffers(buffers)
+        .copy(path = params.getTextDocument.getUri())
       val pos = params.getPosition.toMeta(input)
       val result = fn(compiler, pos)
       result

@@ -31,7 +31,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   ): Seq[CompletionItem] = {
     val (code, offset) = params(original)
     val result = resolvedCompletions(
-      CompilerOffsetParams(filename, code, offset, cancelToken)
+      CompilerOffsetParams("file:/" + filename, code, offset, cancelToken)
     )
     result.getItems.asScala.sortBy(_.getSortText)
   }

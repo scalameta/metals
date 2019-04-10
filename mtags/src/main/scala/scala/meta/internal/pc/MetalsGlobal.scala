@@ -89,17 +89,21 @@ class MetalsGlobal(
   }
 
   def printPretty(pos: sourcecode.Text[Position]): Unit = {
-    import scala.meta.internal.metals.PositionSyntax._
-    val input = scala.meta.Input.String(new String(pos.value.source.content))
-    val (start, end) =
-      if (pos.value.isRange) {
-        (pos.value.start, pos.value.end)
-      } else {
-        (pos.value.point, pos.value.point)
-      }
-    val range =
-      scala.meta.Position.Range(input, start, end)
-    println(range.formatMessage("info", pos.source))
+    if (pos.value == null || pos.value == NoPosition) {
+      println(pos.value.toString())
+    } else {
+      import scala.meta.internal.metals.PositionSyntax._
+      val input = scala.meta.Input.String(new String(pos.value.source.content))
+      val (start, end) =
+        if (pos.value.isRange) {
+          (pos.value.start, pos.value.end)
+        } else {
+          (pos.value.point, pos.value.point)
+        }
+      val range =
+        scala.meta.Position.Range(input, start, end)
+      println(range.formatMessage("info", pos.source))
+    }
   }
 
   def pretty(pos: Position): String = {

@@ -1,5 +1,6 @@
 package scala.meta.pc;
 
+import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.Hover;
@@ -54,6 +55,11 @@ public abstract class PresentationCompiler {
      * Returns the type of the expression at the given position along with the symbol of the referenced symbol.
      */
     public abstract Optional<Hover> hover(OffsetParams params);
+
+    /**
+     * Returns the definition of the symbol at the given position.
+     */
+    public abstract List<Location> definition(OffsetParams params);
 
     /**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.

@@ -12,9 +12,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
 
   def hover(): Option[Hover] = {
-    if (params.offset() < 0 ||
-      params.offset() >= params.text().length ||
-      params.text().charAt(params.offset()).isWhitespace) {
+    if (params.isWhitespace) {
       None
     } else {
       val unit = addCompilationUnit(
@@ -236,7 +234,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
     val typedTree = typedTreeAt(pos)
     typedTree match {
-      case Import(qual, _) if qual.pos.includes(pos) =>
+      case Import(qual, se) if qual.pos.includes(pos) =>
         loop(qual)
       case Apply(fun, args)
           if !fun.pos.includes(pos) &&

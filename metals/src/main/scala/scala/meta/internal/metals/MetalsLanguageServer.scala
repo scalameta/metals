@@ -15,6 +15,7 @@ import java.net.URLClassLoader
 import java.nio.charset.Charset
 
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.pc.CancelToken
 import java.nio.charset.StandardCharsets
 import java.nio.file._
 import java.util
@@ -258,7 +259,8 @@ class MetalsLanguageServer(
       semanticdbs,
       config.icons,
       statusBar,
-      warnings
+      warnings,
+      () => compilers
     )
     formattingProvider = new FormattingProvider(
       workspace,
@@ -306,7 +308,11 @@ class MetalsLanguageServer(
         () => userConfig,
         buildTargets,
         buffers,
-        new MetalsSymbolSearch(symbolDocs, workspaceSymbols),
+        new MetalsSymbolSearch(
+          symbolDocs,
+          workspaceSymbols,
+          definitionProvider
+        ),
         embedded,
         statusBar,
         sh
@@ -676,8 +682,8 @@ class MetalsLanguageServer(
   def definition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ =>
-      definitionResult(position).locations
+    CancelTokens { token =>
+      definitionResult(position, token).locations
     }
 
   @JsonRequest("textDocument/typeDefinition")
@@ -1410,12 +1416,13 @@ class MetalsLanguageServer(
    * The resolved symbol is used for testing purposes only.
    */
   def definitionResult(
-      position: TextDocumentPositionParams
+      position: TextDocumentPositionParams,
+      token: CancelToken = EmptyCancelToken
   ): DefinitionResult = {
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.toLanguage.isScala) {
       val result = timedThunk("definition", config.statistics.isDefinition)(
-        definitionProvider.definition(source, position)
+        definitionProvider.definition(source, position, token)
       )
       // Record what build target this dependency source (if any) was jumped from,
       // needed to know what classpath to compile the dependency source with.
