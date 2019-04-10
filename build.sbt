@@ -50,6 +50,12 @@ inThisBuild(
         url("https://jvican.github.io/")
       ),
       Developer(
+        "marek1840",
+        "Marek Żarnowski",
+        "mzarnowski@virtuslab.com",
+        url("https://github.com/marek1840")
+      ),
+      Developer(
         "olafurpg",
         "Ólafur Páll Geirsson",
         "olafurpg@gmail.com",
@@ -60,6 +66,12 @@ inThisBuild(
         "Shane Delmore",
         "sdelmore@twitter.com",
         url("http://delmore.io")
+      ),
+      Developer(
+        "tgodzik",
+        "Tomasz Godzik",
+        "tgodzik@virtuslab.com",
+        url("https://github.com/tgodzik")
       )
     ),
     testFrameworks := List(),
