@@ -318,4 +318,38 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
     } yield ()
   }
 
+  testAsync("fallback") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a":{}}
+          |/a/src/main/scala/a/Main.scala
+          |package a
+          |object Main {
+          |  val name = "John"
+          |  // println(name)
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ <- server.didChange("a/src/main/scala/a/Main.scala")(
+        _.replaceAllLiterally("// ", "")
+      )
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        // assert that `name` and `assert` resolve even if they have not been saved.
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main/*L1*/ {
+           |  val name/*L2*/ = "John"
+           |  println/*Predef.scala*/(name/*L2*/)
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }

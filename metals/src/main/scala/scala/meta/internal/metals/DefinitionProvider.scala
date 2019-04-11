@@ -48,25 +48,27 @@ final class DefinitionProvider(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): DefinitionResult = {
-    semanticdbs.textDocument(path).documentIncludingStale match {
-      case Some(doc) =>
-        definitionFromSnapshot(path, params, doc)
-      case _ =>
-        val fromCompilers =
-          compilers()
-            .definition(params, token)
-            .getOrElse(Collections.emptyList())
-        if (!fromCompilers.isEmpty()) {
-          DefinitionResult(
-            fromCompilers,
-            "",
-            None,
-            None
-          )
-        } else {
+    val fromSemanticdb =
+      semanticdbs.textDocument(path).documentIncludingStale match {
+        case Some(doc) =>
+          definitionFromSnapshot(path, params, doc)
+        case _ =>
           warnings.noSemanticdb(path)
           DefinitionResult.empty
-        }
+      }
+    if (fromSemanticdb.locations.isEmpty()) {
+      val fromCompilers =
+        compilers()
+          .definition(params, token)
+          .getOrElse(Collections.emptyList())
+      DefinitionResult(
+        fromCompilers,
+        "",
+        None,
+        None
+      )
+    } else {
+      fromSemanticdb
     }
   }
 
