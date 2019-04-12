@@ -65,12 +65,13 @@ class JavadocIndexer(
   }
 
   def markdown(e: JavaAnnotatedElement): String = {
-    try MarkdownGenerator.fromDocstring(s"/**${e.getComment}\n*/", Map.empty)
+    val comment = Option(e.getComment).getOrElse("")
+    try MarkdownGenerator.fromDocstring(s"/**$comment\n*/", Map.empty)
     catch {
       case NonFatal(_) =>
         // The Scaladoc parser implementation uses fragile regexp processing which
         // sometimes causes exceptions.
-        e.getComment
+        comment
     }
   }
   def fromMethod(symbol: String, method: JavaMethod): SymbolDocumentation = {
