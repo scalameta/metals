@@ -105,6 +105,40 @@ const Features = props => {
         "Jump to symbol definitions in your project sources and Scala/Java library dependencies.",
       image: "https://i.imgur.com/bCIhFof.gif",
       imageAlign: "left"
+    },
+    {
+      title: "Completions",
+      content:
+        "Explore new library APIs, implement interfaces, generate exhaustive matches and more.",
+      image:
+        "https://user-images.githubusercontent.com/1408093/56036958-725bac00-5d2e-11e9-9cf7-46249125494a.gif",
+      imageAlign: "right"
+    },
+    {
+      title: "Hover (aka. type at point)",
+      content: "See the expression type and symbol signature under the cursor.",
+      image: "https://i.imgur.com/2MfQvsM.gif",
+      imageAlign: "left"
+    },
+    {
+      title: "Signature help (aka. parameter hints)",
+      content:
+        "View a method signature and method overloads as you fill in the arguments.",
+      image: "https://i.imgur.com/2MfQvsM.gif",
+      imageAlign: "right"
+    },
+    {
+      title: "Find symbol references",
+      content: "Find all usages of a symbol in the workspace.",
+      image:
+        "https://user-images.githubusercontent.com/1408093/51089190-75fc8880-1769-11e9-819c-95262205e95c.png",
+      imageAlign: "left"
+    },
+    {
+      title: "Fuzzy symbol search",
+      content: "Search for symbols in the workspace or library dependencies.",
+      image: "https://i.imgur.com/w5yrK1w.gif",
+      imageAlign: "right"
     }
   ];
   return (

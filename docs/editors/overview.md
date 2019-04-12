@@ -261,7 +261,7 @@ Fuzzy search a symbol in the workspace of library dependencies by its name.
 - Queries ending with a dot `.` list nested symbols.
 - Queries containing a semicolon `;` search library dependencies.
 
-![Fuzzy symbol search example](https://user-images.githubusercontent.com/1408093/51537603-44fa1300-1e4f-11e9-84f2-eb7d4c6fc7ef.gif)
+![Fuzzy symbol search example](https://i.imgur.com/w5yrK1w.gif)
 
 ## Formatting
 
