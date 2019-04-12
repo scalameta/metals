@@ -87,11 +87,8 @@ class ClasspathSearch(
       symbol = new ConcatSequence(pkg, member)
       isMatch = query.matches(symbol)
       if isMatch
-    } yield {
-      Classfile(pkg, member)
-    }
+    } yield Classfile(pkg, member)
   }
-
 }
 
 object ClasspathSearch {

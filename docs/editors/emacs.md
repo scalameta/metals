@@ -8,10 +8,6 @@ Metals works in Emacs thanks to the the
 
 ![Emacs demo](https://i.imgur.com/KJQLMZ7.gif)
 
-> The Emacs LSP client has [several known issues](#known-issues). Most
-> critically, diagnostics are not published for unopened buffers meaning compile
-> errors can get lost.
-
 ```scala mdoc:requirements
 
 ```
@@ -90,35 +86,11 @@ in your build.
 
 ![Run doctor command](https://i.imgur.com/yelm0jd.png)
 
-## Known issues
-
-- `lsp-mode` blocks the UI during the `initialize` handshake so you may notice
-  that opening `*.scala` file gets slower. Metals does as much as possible to
-  move computation out of `initialize` but `lsp-mode` should ideally not freeze
-  the UI during any LSP request/response cycle.
-- `lsp-mode` does not publish diagnostics for unopened buffers so you only see
-  compile errors for the open file.
-- `lsp-mode` does not send a `shutdown` request and `exit` notification when
-  closing Emacs meaning Metals can't properly clean up resources.
-- `lsp-mode` does not respect the Metals server capabilities that are declared
-  during the initialize handshake. The following warnings can be ignored in the
-  logs:
-  - `textDocument/hover is not supported`
-  - `textDocument/documentSymbol is not supported`
-- `lsp-mode` executes `workspace/executeCommand` commands within a specific
-  timeout so long-running commands like "Import build" cause the following error
-  to be reported in the logs:
-  `lsp--send-wait: Timed out while waiting for a response from the language server`.
-  Feel free to ignore this error.
-- `flycheck` does not explicitly support Windows so diagnostics may not report
-  correctly on Windows:
-  http://www.flycheck.org/en/latest/user/installation.html#windows-support
-
 ### eglot
 
 There is an alternative LSP client called
-[eglot](https://github.com/joaotavora/eglot) that might be worth trying out to
-see if it addresses the issues of lsp-mode.
+[eglot](https://github.com/joaotavora/eglot) that might be worth trying out if
+you want to use an alternative to lsp-mode.
 
 To configure Eglot with Metals:
 

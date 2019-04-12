@@ -3,8 +3,21 @@ id: vim
 title: Vim
 ---
 
-Metals works in vim thanks to the the
-[`vim-lsc`](https://github.com/natebosch/vim-lsc/) extension.
+Metals works with most LSP clients for Vim:
+
+- [`vim-lsc`](https://github.com/natebosch/vim-lsc/): simple installation and
+  low resource usage but limited functionality (no auto-import, cancellation,
+  formatting, folding).
+- [`coc.nvim`](https://github.com/neoclide/coc.nvim): installation requires
+  neovim or Vim v8.1 along with npm. Feature rich, supports all of LSP.
+- [`LanguageClient-neovim`](https://github.com/autozimu/LanguageClient-neovim/):
+  client written in Rust.
+- [`vim-lsp`](https://github.com/prabirshrestha/vim-lsp): simple installation
+  but limited functionality (no auto-import, cancellation and no prompt for
+  build import).
+
+In this page, we use vim-lsc since it offers the simplest installation but the
+same steps can be adapted to use Metals with other LSP clients.
 
 ![Vim demo](https://i.imgur.com/jMMEmCC.gif)
 
@@ -164,21 +177,6 @@ nothing.
 Run `:LSClientDocumentSymbol` to show a symbol outline for the current file.
 
 ![Document Symbols](https://i.imgur.com/T8SUD7B.png)
-
-## Known issues
-
-- [vim-lsc#123](https://github.com/natebosch/vim-lsc/issues/123): newlines in
-  compile errors are escaped with `^@`.
-
-## LanguageClient-neovim
-
-The `vim-lsc` client is recommended over the
-[`autozimu/LanguageClient-neovim`](https://github.com/autozimu/LanguageClient-neovim/)
-client for the following reasons:
-
-- Installation is more complicated compared to vim-lsc
-- `LanguageClient-neovim` does not implement `window/showMessageRequest`
-- `LanguageClient-neovim` does not implement `window/logMessage`
 
 ```scala mdoc:generic
 
