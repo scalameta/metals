@@ -15,6 +15,7 @@ import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.pc.DefinitionResultImpl
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -60,10 +61,10 @@ final class DefinitionProvider(
       val fromCompilers =
         compilers()
           .definition(params, token)
-          .getOrElse(Collections.emptyList())
+          .getOrElse(DefinitionResultImpl.empty)
       DefinitionResult(
-        fromCompilers,
-        "",
+        fromCompilers.locations(),
+        fromCompilers.symbol(),
         None,
         None
       )

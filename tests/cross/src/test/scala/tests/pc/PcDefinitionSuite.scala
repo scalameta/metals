@@ -123,19 +123,28 @@ object PcDefinitionSuite extends BasePcDefinitionSuite {
        |""".stripMargin
   )
 
-  // NOTE(olafur): we don't provide navigation in imports for now.
   check(
     "import1",
     """|
-       |import scala.concurrent.@@Future
+       |import scala.concurrent./*scala/concurrent/Future. Future.scala*/@@Future
        |object Main {
        |}
        |""".stripMargin
   )
+
   check(
     "import2",
     """|
        |imp@@ort scala.concurrent.Future
+       |object Main {
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "import3",
+    """|
+       |import scala.co@@ncurrent.Future
        |object Main {
        |}
        |""".stripMargin
@@ -168,6 +177,33 @@ object PcDefinitionSuite extends BasePcDefinitionSuite {
     """|
        |object Main {
        |  val lst = 1 /*scala/collection/immutable/List#`::`(). List.scala*/@@:: Nil
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "colon",
+    """|
+       |object Main {
+       |  val number@@: Int = 1
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "package",
+    """|
+       |object Main {
+       |  val n = ma@@th.max(1, 2)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "eta",
+    """|
+       |object Main {
+       |  List(1).map(@@_ + 2)
        |}
        |""".stripMargin
   )

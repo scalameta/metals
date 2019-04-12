@@ -174,10 +174,10 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |  def contramap/*L6*/[A/*L6*/, B/*L6*/](fa/*L6*/: F/*L5*/[A/*L6*/])(f/*L6*/: B/*L6*/ => A/*L6*/): F/*L5*/[B/*L6*/]
            |  override def imap/*L7*/[A/*L7*/, B/*L7*/](fa/*L7*/: F/*L5*/[A/*L7*/])(f/*L7*/: A/*L7*/ => B/*L7*/)(fi/*L7*/: B/*L7*/ => A/*L7*/): F/*L5*/[B/*L7*/] = contramap/*L6*/(fa/*L7*/)(fi/*L7*/)
            |
-           |  def compose/*L9*/[G/*L9*/[_]: Contravariant/*L5*/]: Functor/*Functor.scala*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
+           |  def compose/*L9*/[G/*L9*/[_]:/*unexpected: L5*/ Contravariant/*L5*/]: Functor/*Functor.scala*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
            |    new ComposedContravariant/*Composed.scala*/[F/*L5*/, G/*L9*/] {
            |      val F/*L11*/ = self/*L5*/
-           |      val G/*L12*/ = Contravariant/*<no symbol>*/[G/*L9*/]
+           |      val G/*L12*/ = Contravariant/*L5*/[G/*L9*/]
            |    }
            |
            |  /**
@@ -217,9 +217,6 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |.metals/readonly/cats/Contravariant.scala:10:45: information: <error> takes no type parameters, expected: one
            |  def compose[G[_]: Contravariant]: Functor[λ[α => F[G[α]]]] =
            |                                            ^
-           |.metals/readonly/cats/Contravariant.scala:13:15: information: not found: value Contravariant
-           |      val G = Contravariant[G]
-           |              ^^^^^^^^^^^^^
            |.metals/readonly/cats/Contravariant.scala:24:61: information: not found: type λ
            |  override def composeFunctor[G[_]: Functor]: Contravariant[λ[α => F[G[α]]]] =
            |                                                            ^

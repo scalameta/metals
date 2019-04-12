@@ -23,10 +23,9 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       val pos = unit.position(params.offset())
       val tree = typedHoverTreeAt(pos)
       tree match {
-        case Import(qual, selectors) =>
+        case i @ Import(qual, selectors) =>
           for {
-            sel <- selectors.reverseIterator.find(_.namePos <= pos.start)
-            member = qual.symbol.info.member(sel.name)
+            member <- i.selector(pos)
             hover <- toHover(member, pos)
           } yield hover
         case _: Select | _: Apply | _: TypeApply | _: Ident =>
@@ -228,14 +227,10 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   }
 
   private def typedHoverTreeAt(pos: Position): Tree = {
-    def loop(tree: Tree): Tree = tree match {
-      case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
-      case t => t
-    }
     val typedTree = typedTreeAt(pos)
     typedTree match {
       case Import(qual, se) if qual.pos.includes(pos) =>
-        loop(qual)
+        qual.findSubtree(pos)
       case Apply(fun, args)
           if !fun.pos.includes(pos) &&
             !isForSynthetic(typedTree) =>

@@ -4,11 +4,9 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import java.{util => ju}
 import java.util.Collections
 import java.util.Optional
 import java.util.concurrent.ScheduledExecutorService
-import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
@@ -21,6 +19,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
+import scala.meta.pc
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
@@ -158,7 +157,7 @@ class Compilers(
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken
-  ): Option[ju.List[Location]] =
+  ): Option[pc.DefinitionResult] =
     withPC(params, None) { (pc, pos) =>
       pc.definition(
         CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)

@@ -8,9 +8,9 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 
 class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
-  def definition(): ju.List[Location] = {
-    if (params.isWhitespace || params.isDelimiter) {
-      ju.Collections.emptyList()
+  def definition(): DefinitionResultImpl = {
+    if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
+      DefinitionResultImpl.empty
     } else {
       val unit = addCompilationUnit(
         params.text(),
@@ -21,14 +21,22 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       val tree = definitionTypedTreeAt(pos)
       if (tree.symbol == null ||
         tree.symbol == NoSymbol ||
-        tree.symbol.hasPackageFlag ||
-        tree.symbol.isErroneous) {
-        ju.Collections.emptyList()
+        tree.symbol.isErroneous ||
+        tree.symbol.isSynthetic) {
+        DefinitionResultImpl.empty
+      } else if (tree.symbol.hasPackageFlag) {
+        DefinitionResultImpl(
+          semanticdbSymbol(tree.symbol),
+          ju.Collections.emptyList()
+        )
       } else if (tree.symbol.pos != null &&
         tree.symbol.pos.isDefined &&
         tree.symbol.pos.source.eq(unit.source)) {
-        ju.Collections.singletonList(
-          new Location(params.filename(), tree.symbol.pos.toLSP)
+        DefinitionResultImpl(
+          semanticdbSymbol(tree.symbol),
+          ju.Collections.singletonList(
+            new Location(params.filename(), tree.symbol.pos.toLSP)
+          )
         )
       } else {
         val res = new ju.ArrayList[Location]()
@@ -38,7 +46,10 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
             res.addAll(search.definition(sym))
           }
         }
-        res
+        DefinitionResultImpl(
+          semanticdbSymbol(tree.symbol),
+          res
+        )
       }
     }
   }
@@ -95,18 +106,24 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       if (shouldTypeQualifier) analyzer.newTyper(context).typedQualifier(tree0)
       else tree0
     typedTree match {
-      case Import(expr, selectors) =>
-        EmptyTree
+      case i @ Import(expr, selectors) =>
+        if (expr.pos.includes(pos)) {
+          expr.findSubtree(pos)
+        } else {
+          i.selector(pos) match {
+            case None => EmptyTree
+            case Some(sym) => Ident(sym.name).setSymbol(sym)
+          }
+        }
       case sel @ Select(qualifier, name) if sel.tpe == ErrorType =>
         val symbols = tree.tpe.member(name)
         typedTree.setSymbol(symbols)
-      case defn: DefTree if !defn.namePos.includes(pos) =>
+      case defn: DefTree if !defn.namePos.metalsIncludes(pos) =>
         EmptyTree
       case _: Template =>
         EmptyTree
       case _ =>
         loop(tree)
-
     }
   }
 }
