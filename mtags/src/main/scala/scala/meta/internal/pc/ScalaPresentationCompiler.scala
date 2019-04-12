@@ -1,6 +1,5 @@
 package scala.meta.internal.pc
 
-import java.{util => ju}
 import java.io.File
 import java.nio.file.Path
 import java.util
@@ -8,7 +7,6 @@ import java.util.Optional
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.util.logging.Logger
-import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Hover
@@ -116,9 +114,9 @@ case class ScalaPresentationCompiler(
       Optional.ofNullable(new HoverProvider(global, params).hover().orNull)
     }
 
-  def definition(params: OffsetParams): ju.List[Location] = {
+  def definition(params: OffsetParams): DefinitionResultImpl = {
     access.withNonCancelableCompiler(
-      ju.Collections.emptyList[Location](),
+      DefinitionResultImpl.empty,
       params.token
     ) { global =>
       new PcDefinitionProvider(global, params).definition()

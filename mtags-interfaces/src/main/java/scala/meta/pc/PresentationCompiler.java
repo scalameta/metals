@@ -59,7 +59,7 @@ public abstract class PresentationCompiler {
     /**
      * Returns the definition of the symbol at the given position.
      */
-    public abstract List<Location> definition(OffsetParams params);
+    public abstract DefinitionResult definition(OffsetParams params);
 
     /**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.

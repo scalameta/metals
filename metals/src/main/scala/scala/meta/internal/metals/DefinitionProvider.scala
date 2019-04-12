@@ -15,6 +15,7 @@ import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.pc.DefinitionResultImpl
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -48,25 +49,27 @@ final class DefinitionProvider(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): DefinitionResult = {
-    semanticdbs.textDocument(path).documentIncludingStale match {
-      case Some(doc) =>
-        definitionFromSnapshot(path, params, doc)
-      case _ =>
-        val fromCompilers =
-          compilers()
-            .definition(params, token)
-            .getOrElse(Collections.emptyList())
-        if (!fromCompilers.isEmpty()) {
-          DefinitionResult(
-            fromCompilers,
-            "",
-            None,
-            None
-          )
-        } else {
+    val fromSemanticdb =
+      semanticdbs.textDocument(path).documentIncludingStale match {
+        case Some(doc) =>
+          definitionFromSnapshot(path, params, doc)
+        case _ =>
           warnings.noSemanticdb(path)
           DefinitionResult.empty
-        }
+      }
+    if (fromSemanticdb.locations.isEmpty()) {
+      val fromCompilers =
+        compilers()
+          .definition(params, token)
+          .getOrElse(DefinitionResultImpl.empty)
+      DefinitionResult(
+        fromCompilers.locations(),
+        fromCompilers.symbol(),
+        None,
+        None
+      )
+    } else {
+      fromSemanticdb
     }
   }
 

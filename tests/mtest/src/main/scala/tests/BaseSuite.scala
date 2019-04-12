@@ -97,7 +97,12 @@ class BaseSuite extends TestSuite {
       title: String = ""
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     DiffAssertions.colored {
-      DiffAssertions.assertNoDiff(obtained, expected, title, title)
+      DiffAssertions.assertNoDiffOrPrintObtained(
+        obtained,
+        expected,
+        title,
+        title
+      )
     }
   }
   override def utestAfterAll(): Unit = afterAll()

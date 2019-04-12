@@ -127,7 +127,19 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
       _ <- server.didChange("b/src/main/scala/b/B.scala")(
         _.replaceAllLiterally("val b", "\n  val number")
       )
-      _ = server.assertReferenceDefinitionBijection()
+      _ = server.assertReferenceDefinitionDiff(
+        """|--- references
+           |+++ definition
+           |@@ -33,1 +33,7 @@
+           |        ^
+           |+=============
+           |+= b/B.number.
+           |+=============
+           |+b/src/main/scala/b/B.scala:4:7: b/B.number.
+           |+  val number = new a.A().bar(2)
+           |+      ^^^^^^
+           |""".stripMargin
+      )
     } yield ()
   }
 

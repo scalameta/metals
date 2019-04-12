@@ -267,29 +267,6 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
           .map(file => server.didOpen(file))
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
-      _ = assertNoDiff(
-        server.workspaceDefinitions,
-        s"""
-           |/a/src/main/scala/a/A.scala
-           |package a
-           |object A/*L1*/ // 2.12.4
-           |/b/src/main/scala/a/A.scala
-           |package a/*<no symbol>*/ // 2.12.3
-           |object A/*<no symbol>*/
-           |/c/src/main/scala/a/A.scala
-           |package a
-           |object A/*L1*/ // 2.11.12
-           |/d/src/main/scala/a/A.scala
-           |package a/*<no symbol>*/
-           |object A/*<no symbol>*/ // 2.11.8
-           |/e/src/main/scala/a/A.scala
-           |package a/*<no symbol>*/
-           |object A/*<no symbol>*/ // 2.10.7
-           |/f/src/main/scala/a/A.scala
-           |package a
-           |object A/*L1*/ // ${V.scala212}
-           |""".stripMargin
-      )
       _ = {
         assertNoDiff(
           client.workspaceClientCommands,

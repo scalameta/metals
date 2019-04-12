@@ -209,7 +209,10 @@ final class TestingServer(
         l => newRef(ref.symbol, l)
       )
     }
-    WorkspaceSymbolReferences(references.result(), definition.result())
+    WorkspaceSymbolReferences(
+      references.result().distinct,
+      definition.result().distinct
+    )
   }
 
   def initialize(

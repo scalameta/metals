@@ -396,7 +396,18 @@ class MetalsGlobal(
         tpe != NoType &&
         !tpe.isErroneous
   }
+  implicit class XtensionImportMetals(imp: Import) {
+    def selector(pos: Position): Option[Symbol] =
+      for {
+        sel <- imp.selectors.reverseIterator.find(_.namePos <= pos.start)
+      } yield imp.expr.symbol.info.member(sel.name)
+  }
   implicit class XtensionPositionMetals(pos: Position) {
+    // Same as `Position.includes` except handles an off-by-one bug when other.point > pos.end
+    def metalsIncludes(other: Position): Boolean = {
+      pos.includes(other) &&
+      (!other.isOffset || other.point != pos.end)
+    }
     private def toPos(offset: Int): l.Position = {
       val line = pos.source.offsetToLine(offset)
       val column = offset - pos.source.lineToOffset(line)
@@ -431,12 +442,22 @@ class MetalsGlobal(
         case other => other.isKindaTheSameAs(sym)
       }
   }
+
+  implicit class XtensionTreeMetals(tree: Tree) {
+    def findSubtree(pos: Position): Tree = {
+      def loop(tree: Tree): Tree = tree match {
+        case Select(qual, _) if qual.pos.includes(pos) => loop(qual)
+        case t => t
+      }
+      loop(tree)
+    }
+  }
   implicit class XtensionDefTreeMetals(defn: DefTree) {
 
     /** Returns the position of the name/identifier of this definition. */
     def namePos: Position = {
       val start = defn.pos.point
-      val end = start + defn.name.length()
+      val end = start + defn.name.length() - 1
       Position.range(defn.pos.source, start, start, end)
     }
 
