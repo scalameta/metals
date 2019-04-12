@@ -189,7 +189,7 @@ code.
 **✅ Vim**: auto-import and snippets require
 [coc.nvim](https://github.com/neoclide/coc.nvim) client.
 
-**✅Sublime**: no auto-import.
+**✅ Sublime**: no auto-import.
 
 Use code completions to explore APIs, implement interfaces, generate exhaustive
 pattern matches and more.
@@ -204,7 +204,7 @@ pattern matches and more.
 - **String interpolator**: automatically convert string literals into string
   interpolators.
 - **Filename**: complete classnames based on the enclosing file.
-- **Documentation**: read the docstring for for method symbols by pressing
+- **Documentation**: read the docstring for method symbols by pressing
   ctrl+space in VS Code.
 
 ### Known limitations
@@ -220,7 +220,7 @@ See the expression type and symbol signature under the cursor.
 
 - **Expression type**: shows the non-generic type of the highlighted expression.
 - **Symbol signature**: shows the generic signature of symbol under the cursor
-  along with it's docstring, if available.
+  along with its docstring, if available.
 
 ## Signature help (aka. parameter hints)
 
@@ -259,7 +259,7 @@ Fuzzy search a symbol in the workspace of library dependencies by its name.
 
 - All-lowercase queries are treated as case-insensitive searches.
 - Queries ending with a dot `.` list nested symbols.
-- Queries with a semicolon `;` search library dependencies.
+- Queries containing a semicolon `;` search library dependencies.
 
 ![Fuzzy symbol search example](https://user-images.githubusercontent.com/1408093/51537603-44fa1300-1e4f-11e9-84f2-eb7d4c6fc7ef.gif)
 

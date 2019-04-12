@@ -9,7 +9,7 @@ Metals works with most LSP clients for Vim:
   low resource usage but limited functionality (no auto-import, cancellation,
   formatting, folding).
 - [`coc.nvim`](https://github.com/neoclide/coc.nvim): installation requires
-  neovim or vim v8.1 along with npm. Feature rich, supports all of LSP.
+  neovim or Vim v8.1 along with npm. Feature rich, supports all of LSP.
 - [`LanguageClient-neovim`](https://github.com/autozimu/LanguageClient-neovim/):
   client written in Rust.
 - [`vim-lsp`](https://github.com/prabirshrestha/vim-lsp): simple installation
