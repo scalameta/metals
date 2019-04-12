@@ -1,5 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Vim · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;Metals works in vim thanks to the the&lt;/p&gt;
-"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Vim · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="&lt;p&gt;Metals works in vim thanks to the the&lt;/p&gt;
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Vim · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;Metals works with most LSP clients for Vim:&lt;/p&gt;
+"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Vim · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="&lt;p&gt;Metals works with most LSP clients for Vim:&lt;/p&gt;
 "/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class=""><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Text Editors</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Text Editors</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/editors/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vscode.html">Visual Studio Code</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/atom.html">Atom</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/docs/editors/vim.html">Vim</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/sublime.html">Sublime Text</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/emacs.html">Emacs</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/new-editor.html">Integrating a new editor</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Build Tools</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/sbt.html">sbt</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/bloop.html">Bloop</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/new-build-tool.html">Integrating a new build tool</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Contributing</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/project-goals.html">Project Goals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/getting-started.html">Contributing to Metals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/updating-website.html">Contributing to the website</a></li></ul></div></div></section></div><script>
             document.addEventListener('DOMContentLoaded', function() {
               createToggler('#navToggler', '#docsNav', 'docsSliderActive');
@@ -27,16 +27,30 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/editors/vim.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Vim</h1></header><article><div><span><p>Metals works in vim thanks to the the
-<a href="https://github.com/natebosch/vim-lsc/"><code>vim-lsc</code></a> extension.</p>
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/editors/vim.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Vim</h1></header><article><div><span><p>Metals works with most LSP clients for Vim:</p>
+<ul>
+<li><a href="https://github.com/natebosch/vim-lsc/"><code>vim-lsc</code></a>: simple installation and
+low resource usage but limited functionality (no auto-import, cancellation,
+formatting, folding).</li>
+<li><a href="https://github.com/neoclide/coc.nvim"><code>coc.nvim</code></a>: installation requires
+neovim or Vim v8.1 along with npm. Feature rich, supports all of LSP.</li>
+<li><a href="https://github.com/autozimu/LanguageClient-neovim/"><code>LanguageClient-neovim</code></a>:
+client written in Rust.</li>
+<li><a href="https://github.com/prabirshrestha/vim-lsp"><code>vim-lsp</code></a>: simple installation
+but limited functionality (no auto-import, cancellation and no prompt for
+build import).</li>
+</ul>
+<p>In this page, we use vim-lsc since it offers the simplest installation but the
+same steps can be adapted to use Metals with other LSP clients.</p>
 <p><img src="https://i.imgur.com/jMMEmCC.gif" alt="Vim demo"></p>
 <h2><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h2>
-<p><strong>Java 8</strong>. Metals does not work with Java 11 yet so make sure the JAVA_HOME
-environment variable points to Java 8.</p>
+<p><strong>OpenJDK or Oracle Java 8</strong>. Eclipse OpenJ9 and Java 11 are not
+supported, please make sure the <code>JAVA_HOME</code> environment variable
+points to valid Java 8 installation.</p>
 <p><strong>macOS, Linux or Windows</strong>. Metals is developed on macOS and every PR is
 tested on Ubuntu+Windows.</p>
 <p><strong>Scala 2.12 and 2.11</strong>. Metals works only with Scala versions 2.12.8, 2.12.7, 2.12.6, 2.12.5, 2.12.4, 2.11.12, 2.11.11, 2.11.10 and 2.11.9.
-Note that 2.10.x and 2.13.0-M5 are not supported.</p>
+Note that 2.10.x and 2.13.x are not supported.</p>
 <h2><a class="anchor" aria-hidden="true" id="installing-the-plugin"></a><a href="#installing-the-plugin" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing the plugin</h2>
 <p>First, install the following plugins</p>
 <ul>
@@ -83,13 +97,13 @@ exist yet.</p>
 </thead>
 <tbody>
 <tr>
-<td>0.5.0-M1</td>
-<td>11 Apr 2019 04:59</td>
+<td>0.5.0</td>
+<td>12 Apr 2019 14:41</td>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
-<td>0.5.0-M1+4-9000069e-SNAPSHOT</td>
-<td>12 Apr 2019 11:01</td>
+<td>0.5.0+4-5f530a2b-SNAPSHOT</td>
+<td>12 Apr 2019 15:19</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>
@@ -103,7 +117,7 @@ chmod +x coursier
   --java-opt -Xss4m \
   --java-opt -Xms100m \
   --java-opt -Dmetals.client=vim-lsc \
-  org.scalameta:metals_2.12:0.5.0-M1 \
+  org.scalameta:metals_2.12:0.5.0 \
   -r bintray:scalacenter/releases \
   -r sonatype:snapshots \
   -o /usr/<span class="hljs-built_in">local</span>/bin/metals-vim -f
@@ -203,20 +217,6 @@ nothing.</p>
 <h2><a class="anchor" aria-hidden="true" id="show-document-symbols"></a><a href="#show-document-symbols" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Show document symbols</h2>
 <p>Run <code>:LSClientDocumentSymbol</code> to show a symbol outline for the current file.</p>
 <p><img src="https://i.imgur.com/T8SUD7B.png" alt="Document Symbols"></p>
-<h2><a class="anchor" aria-hidden="true" id="known-issues"></a><a href="#known-issues" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Known issues</h2>
-<ul>
-<li><a href="https://github.com/natebosch/vim-lsc/issues/123">vim-lsc#123</a>: newlines in
-compile errors are escaped with <code>^@</code>.</li>
-</ul>
-<h2><a class="anchor" aria-hidden="true" id="languageclient-neovim"></a><a href="#languageclient-neovim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>LanguageClient-neovim</h2>
-<p>The <code>vim-lsc</code> client is recommended over the
-<a href="https://github.com/autozimu/LanguageClient-neovim/"><code>autozimu/LanguageClient-neovim</code></a>
-client for the following reasons:</p>
-<ul>
-<li>Installation is more complicated compared to vim-lsc</li>
-<li><code>LanguageClient-neovim</code> does not implement <code>window/showMessageRequest</code></li>
-<li><code>LanguageClient-neovim</code> does not implement <code>window/logMessage</code></li>
-</ul>
 <h2><a class="anchor" aria-hidden="true" id="gitignore-metals-and-bloop"></a><a href="#gitignore-metals-and-bloop" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Gitignore <code>.metals/</code> and <code>.bloop/</code></h2>
 <p>The Metals server places logs and other files in the <code>.metals/</code> directory. The
 Bloop compile server places logs and compilation artifacts in the <code>.bloop</code>
@@ -226,7 +226,7 @@ systems like git.</p>
 .metals/
 .bloop/
 </code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/atom.html"><span class="arrow-prev">← </span><span>Atom</span></a><a class="docs-next button" href="/metals/docs/editors/sublime.html"><span>Sublime Text</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-the-plugin">Installing the plugin</a></li><li><a href="#importing-a-build">Importing a build</a><ul class="toc-headings"><li><a href="#custom-sbt-launcher">Custom sbt launcher</a></li><li><a href="#speeding-up-import">Speeding up import</a></li><li><a href="#importing-changes">Importing changes</a></li></ul></li><li><a href="#learn-more-about-vim-lsc">Learn more about vim-lsc</a></li><li><a href="#customize-goto-definition">Customize goto definition</a></li><li><a href="#list-all-workspace-compile-errors">List all workspace compile errors</a></li><li><a href="#close-buffer-without-exiting">Close buffer without exiting</a></li><li><a href="#shut-down-the-language-server">Shut down the language server</a></li><li><a href="#run-doctor">Run doctor</a></li><li><a href="#manually-start-build-import">Manually start build import</a></li><li><a href="#manually-connect-with-build-server">Manually connect with build server</a></li><li><a href="#show-document-symbols">Show document symbols</a></li><li><a href="#known-issues">Known issues</a></li><li><a href="#languageclient-neovim">LanguageClient-neovim</a></li><li><a href="#gitignore-metals-and-bloop">Gitignore <code>.metals/</code> and <code>.bloop/</code></a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/atom.html"><span class="arrow-prev">← </span><span>Atom</span></a><a class="docs-next button" href="/metals/docs/editors/sublime.html"><span>Sublime Text</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-the-plugin">Installing the plugin</a></li><li><a href="#importing-a-build">Importing a build</a><ul class="toc-headings"><li><a href="#custom-sbt-launcher">Custom sbt launcher</a></li><li><a href="#speeding-up-import">Speeding up import</a></li><li><a href="#importing-changes">Importing changes</a></li></ul></li><li><a href="#learn-more-about-vim-lsc">Learn more about vim-lsc</a></li><li><a href="#customize-goto-definition">Customize goto definition</a></li><li><a href="#list-all-workspace-compile-errors">List all workspace compile errors</a></li><li><a href="#close-buffer-without-exiting">Close buffer without exiting</a></li><li><a href="#shut-down-the-language-server">Shut down the language server</a></li><li><a href="#run-doctor">Run doctor</a></li><li><a href="#manually-start-build-import">Manually start build import</a></li><li><a href="#manually-connect-with-build-server">Manually connect with build server</a></li><li><a href="#show-document-symbols">Show document symbols</a></li><li><a href="#gitignore-metals-and-bloop">Gitignore <code>.metals/</code> and <code>.bloop/</code></a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;

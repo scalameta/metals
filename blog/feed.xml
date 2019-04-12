@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Fri, 01 Feb 2019 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Sun, 12 Apr 2020 06:00:00 GMT</lastBuildDate>
         <docs>http://blogs.law.harvard.edu/tech/rss</docs>
         <generator>Feed for Node.js</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2019 Metals</copyright>
+        <item>
+            <title><![CDATA[Metals v0.5.0]]></title>
+            <link>http://scalameta.org/metals/blog/2020/04/12/mercury.html</link>
+            <guid>http://scalameta.org/metals/blog/2020/04/12/mercury.html</guid>
+            <pubDate>Sun, 12 Apr 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉 This release introduces new features, performance improvements and bug fixes with highlights including:</p> <ul> <li>code completions</li> <li>parameter hints</li> <li>show type at point</li> <li>code f...</li></ul>]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.4.4]]></title>
             <link>http://scalameta.org/metals/blog/2019/02/01/tin.html</link>
