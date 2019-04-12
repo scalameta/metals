@@ -15,10 +15,15 @@ functionality.
   <td align=center>Build import</td>
   <td align=center>Diagnostics</td>
   <td align=center>Goto definition</td>
+  <td align=center>Completions</td>
+  <td align=center>Hover</td>
+  <td align=center>Parameter hints</td>
   <td align=center>Find references</td>
   <td align=center>Document symbols</td>
   <td align=center>Workspace symbols</td>
   <td align=center>Formatting</td>
+  <td align=center>Folding</td>
+  <td align=center>Highlight</td>
   <td align=center>Metals Extensions</td>
 </tr>
 </thead>
@@ -34,6 +39,11 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
 </tr>
 <tr>
   <td>Atom</td>
@@ -41,9 +51,14 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
+  <td align=center>✅*</td>
+  <td align=center>✅</td>
+  <td align=center></td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center></td>
+  <td align=center>✅</td>
+  <td align=center> </td>
   <td align=center>✅</td>
   <td align=center>Status bar</td>
 </tr>
@@ -51,12 +66,17 @@ functionality.
   <td>Vim</td>
   <td align=center>Few steps</td>
   <td align=center>✅</td>
-  <td align=center>Escaped newlines</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅*</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>Flat</td>
   <td align=center>✅</td>
   <td align=center></td>
+  <td align=center>✅*</td>
+  <td align=center>✅*</td>
   <td align=center>Status bar</td>
 </tr>
 <tr>
@@ -65,9 +85,14 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
+  <td align=center>✅*</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>Flat</td>
   <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center> </td>
   <td align=center>✅</td>
   <td align=center></td>
 </tr>
@@ -75,7 +100,12 @@ functionality.
   <td>Emacs</td>
   <td align=center>Few steps</td>
   <td align=center>✅</td>
-  <td align=center>Single buffer</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -128,10 +158,9 @@ focused text file.
 
 ### Known limitations
 
-- Slow feedback. Compilation is handled by the build tool, meaning diagnostics
-  may take a while to publish for large projects. The batch compilation mode
-  used by build tools is slower than the interactive compiler used by IntelliJ
-  as you type.
+- Slow feedback for type errors. Syntax errors are published as you type but
+  type errors are handled by the build tool, meaning diagnostics may take a
+  while to publish for large projects.
 
 ## Goto definition
 
@@ -146,17 +175,58 @@ buffer.
 
 ### Known limitations
 
-- Navigation does not work for identifiers that have just been typed in unsaved
-  editor buffer. An identifier must compile successfully at least once in order
-  to resolve to a definition.
 - Navigation does not work for buffers that do not tokenize, for example due to
   unclosed string literals.
-- [scalameta/scalameta#1780](https://github.com/scalameta/scalameta/issues/1780)
-  extension methods sometimes resolve to the implicit conversion method instead
-  of the extension method.
 - [scalameta/scalameta#1802](https://github.com/scalameta/scalameta/issues/1802)
   reflective invocations (methods calls on structural types) do not resolve to a
   definition.
+
+## Completions
+
+**✅ Atom**: no auto-import and string interpolator completions produce invalid
+code.
+
+**✅ Vim**: auto-import and snippets require
+[coc.nvim](https://github.com/neoclide/coc.nvim) client.
+
+**✅Sublime**: no auto-import.
+
+Use code completions to explore APIs, implement interfaces, generate exhaustive
+pattern matches and more.
+
+![2019-04-12 14 19 39](https://user-images.githubusercontent.com/1408093/56036958-725bac00-5d2e-11e9-9cf7-46249125494a.gif)
+
+- **Auto-import**: symbols that are not in scope are automatically imported
+  locally. Imports still need to be organized manually, we are exploring ways to
+  automate this workflow in the future.
+- **Override def**: implement methods from the super class.
+- **Exhaustive match**: generate an exhaustive pattern match for sealed types.
+- **String interpolator**: automatically convert string literals into string
+  interpolators.
+- **Filename**: complete classnames based on the enclosing file.
+- **Documentation**: read the docstring for for method symbols by pressing
+  ctrl+space in VS Code.
+
+### Known limitations
+
+- completion results don't include symbols that have just been typed in separate
+  files without a successful compilation in the build tool.
+
+## Hover (aka. type at point)
+
+See the expression type and symbol signature under the cursor.
+
+![](https://i.imgur.com/2MfQvsM.gif)
+
+- **Expression type**: shows the non-generic type of the highlighted expression.
+- **Symbol signature**: shows the generic signature of symbol under the cursor
+  along with it's docstring, if available.
+
+## Signature help (aka. parameter hints)
+
+View a method signature and method overloads as you fill in the arguments.
+
+![](https://i.imgur.com/DAWIrHu.gif)
 
 ## Find references
 
@@ -189,6 +259,7 @@ Fuzzy search a symbol in the workspace of library dependencies by its name.
 
 - All-lowercase queries are treated as case-insensitive searches.
 - Queries ending with a dot `.` list nested symbols.
+- Queries with a semicolon `;` search library dependencies.
 
 ![Fuzzy symbol search example](https://user-images.githubusercontent.com/1408093/51537603-44fa1300-1e4f-11e9-84f2-eb7d4c6fc7ef.gif)
 
@@ -201,6 +272,18 @@ Learn how to configure Scalafmt at
 https://scalameta.org/scalafmt/docs/configuration.html.
 
 ![Formatting](https://user-images.githubusercontent.com/1408093/50635748-b0894880-0f53-11e9-913b-acfd5f505351.gif)
+
+## Code folding
+
+Fold ranges such as large multi-line expressions, import groups and comments.
+
+![](https://camo.githubusercontent.com/3fdd7ae28907ac61c0a1ac5fdc07d085245957aa/68747470733a2f2f692e696d6775722e636f6d2f667149554a54472e676966)
+
+## Document highlight
+
+Highlight references to the same symbol in the open file.
+
+![](https://i.imgur.com/0uhc9P5.gif)
 
 ## Metals Extensions
 
@@ -223,9 +306,8 @@ extensions, see [integrating a new editor](new-editor.md).
 
 Metals does not support the following features:
 
-- Completions
-- Show type of expression
-- Show symbol docstring
 - Rename symbol
-- Remove unused imports
-- Refactoring with Scalafix
+- Organize imports
+- Run test
+- Debugging
+- Refactoring: move class, extract/inline value, convert to block
