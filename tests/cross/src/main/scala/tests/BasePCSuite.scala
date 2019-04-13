@@ -131,5 +131,5 @@ abstract class BasePCSuite extends BaseSuite {
   }
   def sortLines(stableOrder: Boolean, string: String): String =
     if (stableOrder) string
-    else string.lines.toList.sorted.mkString("\n")
+    else string.linesIterator.toList.sorted.mkString("\n")
 }

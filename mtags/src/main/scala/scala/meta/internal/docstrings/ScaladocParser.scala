@@ -302,7 +302,7 @@ object ScaladocParser {
           java.util.regex.Matcher
             .quoteReplacement(safeTagMarker + mtch.matched + safeTagMarker)
         })
-      markedTagComment.lines.toList.map(cleanLine)
+      markedTagComment.linesIterator.toList.map(cleanLine)
     }
 
     /** Parses a comment (in the form of a list of lines) to a `Comment`

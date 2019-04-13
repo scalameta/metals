@@ -9,7 +9,7 @@ import scala.collection.JavaConverters._
 object TestHovers extends TestHovers
 trait TestHovers {
   implicit class XtensionString(string: String) {
-    def hover: String = string.trim.lines.toList match {
+    def hover: String = string.trim.linesIterator.toList match {
       case List(symbolSignature) =>
         HoverMarkup("", symbolSignature, "")
       case List(expressionType, symbolSignature) =>
