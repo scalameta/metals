@@ -11,7 +11,7 @@ title: Visual Studio Code
 
 ## Installation
 
-Install the Metals extension from the Marketplace, search for "Metals".
+Install the Metals extension from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals).
 
 [![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals)
 
