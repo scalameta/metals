@@ -124,7 +124,7 @@ const Features = props => {
       title: "Signature help (aka. parameter hints)",
       content:
         "View a method signature and method overloads as you fill in the arguments.",
-      image: "https://i.imgur.com/2MfQvsM.gif",
+      image: "https://i.imgur.com/DAWIrHu.gif",
       imageAlign: "right"
     },
     {
