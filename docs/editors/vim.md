@@ -29,7 +29,7 @@ same steps can be adapted to use Metals with other LSP clients.
 
 ## Installing the plugin
 
-`coc.nvim` requires [node](https://nodejs.org/en/download/) in order to work. It also uses [yarn](https://yarnpkg.com/en/docs/install#debian-stable) to manage extensions but you could opt-out of it and use `vim-plug` instead for example.
+`coc.nvim` requires [Node.js](https://nodejs.org/en/download/) in order to work. It also uses [Yarn](https://yarnpkg.com/en/docs/install#debian-stable) to manage extensions but you could opt-out of it and use `vim-plug` instead for example.
 
 For convenience we recommend installing both:
 
@@ -71,7 +71,7 @@ input our configuration. Here's the recommended default:
 ```jsonc
 {
   "languageserver": {
-    "scalametals": {
+    "metals": {
       "command": "metals-vim",
       "rootPatterns": ["build.sbt"],
       "trace.server": "verbose",
@@ -94,12 +94,19 @@ autocmd FileType json syntax match Comment +\/\/.\+$+
 If you now start Vim in a Scala project then it will fail since the `metals-vim` binary does not
 exist yet.
 
-```scala mdoc:bootstrap:metals-vim coc
+```scala mdoc:bootstrap:metals-vim coc.nvim
 
 ```
 
-The `-Dmetals.client=coc` flag is important since it configures Metals for
+The `-Dmetals.client=coc.nvim` flag is important since it configures Metals for
 usage with the `coc.nvim` client.
+
+You might also want to include the following properties to better understand what's happening under the hood:
+
+```
+-Dmetals.status-bar=log-message
+-Dmetals.status-bar=show-message
+```
 
 ```scala mdoc:editor:vim
 
@@ -193,16 +200,6 @@ For comprehensive documentation about `coc.nvim`, run the following command.
 :help coc-contents
 ```
 
-## Customize goto definition
-
-Configure `~/.vimrc` to use a different command than `gd` for triggering "goto
-definition".
-
-```vim
-" ~/.vimrc
-nmap <silent> gd <Plug>(coc-definition)
-```
-
 ## List all workspace compile errors
 
 To list all compilation errors and warnings in the workspace, run the following
@@ -244,7 +241,7 @@ To troubleshoot problems with your build workspace execute the following
 command.
 
 ```vim
-:call CocRequest('scalametals', 'workspace/executeCommand', { 'command': 'doctor-run' })
+:call CocRequest('metals', 'workspace/executeCommand', { 'command': 'doctor-run' })
 ```
 
 This command opens your browser with a table like this.
@@ -259,7 +256,7 @@ To manually start the `sbt bloopInstall` step, call the following command below.
 This command works only for sbt builds at the moment.
 
 ```vim
-:call CocRequest('scalametals', 'workspace/executeCommand', { 'command': 'build-import' })
+:call CocRequest('metals', 'workspace/executeCommand', { 'command': 'build-import' })
 ```
 
 ## Manually connect with build server
@@ -269,7 +266,7 @@ the command below. This command works only at the moment if there is a `.bloop/`
 directory containing JSON files.
 
 ```vim
-:call CocRequest('scalametals', 'workspace/executeCommand', { 'command': 'build-connect' })
+:call CocRequest('metals', 'workspace/executeCommand', { 'command': 'build-connect' })
 ```
 
 ## Show document symbols
