@@ -24,8 +24,6 @@ class BootstrapModifier extends StringModifier {
            |curl -L -o coursier https://git.io/coursier
            |chmod +x coursier
            |./coursier bootstrap \\
-           |  --java-opt -XX:+UseG1GC \\
-           |  --java-opt -XX:+UseStringDeduplication  \\
            |  --java-opt -Xss4m \\
            |  --java-opt -Xms100m \\
            |  --java-opt -Dmetals.client=$client \\

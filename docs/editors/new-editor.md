@@ -113,6 +113,8 @@ Possible values:
 - `on`: the `metals/status` notification is supported.
 - `log-message`: translate `metals/status` notifications to `window/logMessage`
   notifications. Used by vim-lsc at the moment.
+- `show-message`: translate `metals/status` notifications to
+  `window/showMessage` notifications. Used by coc.nvim at the moment.
 
 ### `-Dmetals.slow-task`
 
@@ -249,7 +251,8 @@ setting is provided by the editor.
 
 Default value:
 
-- `"editor.action.triggerParameterHints"`: when editor is Visual Studio Code.
+- `"editor.action.triggerParameterHints"`: when editor client is Visual Studio
+  Code or coc.nvim.
 - empty: for all other editors.
 
 ### `-Dmetals.completion.command`
@@ -259,7 +262,8 @@ An optional string value for a command identifier to trigger completion
 
 Default value:
 
-- `"editor.action.triggerSuggest"`: when editor is Visual Studio Code.
+- `"editor.action.triggerSuggest"`: when editor client is Visual Studio Code or
+  coc.nvim.
 - empty: for all other editors.
 
 ### `-Dmetals.pc.debug`
