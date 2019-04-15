@@ -49,6 +49,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     assertNoDiff(obtained, expectedName)
   }
   override def utestBeforeEach(path: Seq[String]): Unit = {
+    if (path.isEmpty) return
     if (server != null) {
       server.server.cancel()
     }
