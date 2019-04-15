@@ -225,4 +225,48 @@ object DiagnosticsSlowSuite
     } yield ()
   }
 
+  testAsync("reset-build") {
+    cleanWorkspace()
+    import scala.meta.internal.metals.ServerCommands
+    for {
+      _ <- server.initialize(
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/a/src/main/scala/a/A.scala
+            |package a
+            |object A {
+            |  val x: Int = 42
+            |}
+            |/a/src/main/scala/a/B.scala
+            |package a
+            |object B {
+            |  val x: String = 42
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/B.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/B.scala:3:19: error: type mismatch;
+           | found   : Int(42)
+           | required: String
+           |  val x: String = 42
+           |                  ^^
+           |""".stripMargin
+      )
+      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer.id)
+      _ = assertNoDiagnostics()
+      _ <- server.didSave("a/src/main/scala/a/B.scala")(
+        _.replaceAllLiterally("String", "Int")
+      )
+      _ <- server.didClose("a/src/main/scala/a/B.scala")
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
 }

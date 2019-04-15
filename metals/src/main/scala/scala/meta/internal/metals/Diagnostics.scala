@@ -51,6 +51,14 @@ final class Diagnostics(
   private val compileTimer =
     TrieMap.empty[BuildTargetIdentifier, Timer]
 
+  def reset(): Unit = {
+    val keys = diagnostics.keys
+    diagnostics.clear()
+    keys.foreach { key =>
+      publishDiagnostics(key)
+    }
+  }
+
   def onStartCompileBuildTarget(target: BuildTargetIdentifier): Unit = {
     if (statistics.isDiagnostics) {
       compileTimer(target) = new Timer(Time.system)
