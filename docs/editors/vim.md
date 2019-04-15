@@ -74,7 +74,6 @@ input our configuration. Here's the recommended default:
     "metals": {
       "command": "metals-vim",
       "rootPatterns": ["build.sbt"],
-      "trace.server": "verbose",
       "filetypes": ["scala"]
     }
   }
