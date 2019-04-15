@@ -16,6 +16,7 @@ import utest.framework.Tree
 import utest.ufansi.Attrs
 import utest.ufansi.Str
 import scala.meta.internal.metals.Testing
+import scala.collection.mutable
 
 /**
  * Test suite that replace utest DSL with FunSuite-style syntax from ScalaTest.
@@ -126,7 +127,7 @@ class BaseSuite extends TestSuite {
       super.formatException(x, "")
   }
   case class FlatTest(name: String, thunk: () => Unit)
-  private val myTests = IndexedSeq.newBuilder[FlatTest]
+  private val myTests = mutable.ArrayBuffer.empty[FlatTest]
 
   def ignore(name: String)(fun: => Any): Unit = {
     myTests += FlatTest(
@@ -135,8 +136,12 @@ class BaseSuite extends TestSuite {
     )
   }
 
+  def isTestSuiteEnabled: Boolean = true
+
   def test(name: String)(fun: => Any): Unit = {
-    myTests += FlatTest(name, () => fun)
+    if (isTestSuiteEnabled) {
+      myTests += FlatTest(name, () => fun)
+    }
   }
   def testAsync(name: String, maxDuration: Duration = Duration("10min"))(
       run: => Future[Unit]
@@ -154,11 +159,13 @@ class BaseSuite extends TestSuite {
   }
 
   override def tests: Tests = {
-    val ts = myTests.result()
-    val names = Tree("", ts.map(x => Tree(x.name)): _*)
+    if (myTests.isEmpty) {
+      myTests += FlatTest("empty", () => ())
+    }
+    val names = Tree("", myTests.map(x => Tree(x.name)): _*)
     val thunks = new TestCallTree({
       this.beforeAll()
-      Right(ts.map(x => new TestCallTree(Left(x.thunk()))))
+      Right(myTests.map(x => new TestCallTree(Left(x.thunk()))))
     })
     Tests(names, thunks)
   }
