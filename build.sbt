@@ -394,10 +394,8 @@ lazy val docs = project
     moduleName := "metals-docs",
     mdoc := run.in(Compile).evaluated,
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.11.3",
-      "com.lihaoyi" %% "utest" % "0.6.0" % Test
-    ),
-    testFrameworks := List(new TestFramework("utest.runner.Framework"))
+      "org.jsoup" % "jsoup" % "1.11.3"
+    )
   )
-  .dependsOn(metals, mtest % "compile->test")
+  .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)
