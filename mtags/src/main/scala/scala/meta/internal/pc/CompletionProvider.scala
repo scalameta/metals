@@ -63,7 +63,7 @@ class CompletionProvider(
         val symbolName = r.symNameDropLocal.decoded
         val ident = Identifier.backtickWrap(symbolName)
         val detail = r match {
-          case o: OverrideDefMember => o.label
+          case o: OverrideDefMember => o.detail
           case t: TextEditMember if t.detail.isDefined => t.detail.get
           case _ => detailString(r, history)
         }

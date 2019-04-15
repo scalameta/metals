@@ -44,7 +44,8 @@ trait Completions { this: MetalsGlobal =>
       val edit: l.TextEdit,
       val filterText: String,
       sym: Symbol,
-      val autoImports: List[l.TextEdit]
+      val autoImports: List[l.TextEdit],
+      val detail: String
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
 
   val packageSymbols = mutable.Map.empty[String, Option[Symbol]]
@@ -1094,13 +1095,16 @@ trait Completions { this: MetalsGlobal =>
 
         val keyword = if (sym.isStable) "val " else "def "
 
+        val asciOverrideDef = {
+          if (sym.isAbstract) s"${keyword}"
+          else s"${overrideKeyword}${keyword}"
+        }
+
         val overrideDef = metalsConfig.overrideDefFormat() match {
           case OverrideDefFormat.Unicode =>
             if (sym.isAbstract) "🔼 "
             else "⏫ "
-          case _ =>
-            if (sym.isAbstract) s"${keyword}"
-            else s"${overrideKeyword}${keyword}"
+          case _ => asciOverrideDef
         }
 
         val name = Identifier(sym.name)
@@ -1118,10 +1122,13 @@ trait Completions { this: MetalsGlobal =>
             context,
             lineStart,
             inferIndent(lineStart, text)
-          )
+          ),
+          details
         )
 
         private def label = overrideDef + name + signature
+
+        private def details = asciOverrideDef + name + signature
 
         private def signature = printer.defaultMethodSignature()
 
