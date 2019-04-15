@@ -535,7 +535,7 @@ class MetalsLanguageServer(
       CancelTokens { _ =>
         // trigger compilation in preparation for definition requests
         interactiveSemanticdbs.textDocument(path)
-        // publish diagnosticsForDebuggingPurposes
+        // publish diagnostics
         interactiveSemanticdbs.didFocus(path)
         ()
       }

@@ -16,7 +16,7 @@ import scala.xml.XML
  * - hover
  * - parameter hints
  * Compiler plugins that don't affect those features can be disabled, for example
- * WartRemover that only reports diagnosticsForDebuggingPurposes. Diagnostics are already published from
+ * WartRemover that only reports diagnostics. Diagnostics are already published from
  * the build, where all compiler plugins are enabled by default.
  *
  * Some compiler plugins change the semantics of the Scala language. Metals officially

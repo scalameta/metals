@@ -11,7 +11,7 @@ import scala.meta.parsers.Parsed
  *
  * - provides the latest good Scalameta tree for a given source file
  *   similar as `Buffers` provides the current text content.
- * - publishes diagnosticsForDebuggingPurposes for syntax errors.
+ * - publishes diagnostics for syntax errors.
  */
 final class Trees(buffers: Buffers, diagnostics: Diagnostics) {
   private val trees = TrieMap.empty[AbsolutePath, Tree]

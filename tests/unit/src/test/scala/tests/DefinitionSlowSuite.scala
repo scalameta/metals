@@ -8,7 +8,7 @@ import scala.meta.internal.metals.StatisticsConfig
 object DefinitionSlowSuite extends BaseSlowSuite("definition") {
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(
-      statistics = new StatisticsConfig("diagnosticsForDebuggingPurposes")
+      statistics = new StatisticsConfig("diagnostics")
     )
 
   override def testAsync(
@@ -226,7 +226,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |""".stripMargin
       )
       _ <- server.didFocus("a/src/main/scala/a/Main.scala")
-      // dependency diagnosticsForDebuggingPurposes are unpublished.
+      // dependency diagnostics are unpublished.
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }

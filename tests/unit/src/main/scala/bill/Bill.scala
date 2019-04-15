@@ -49,7 +49,7 @@ import scala.meta.io.AbsolutePath
  * of interest to you:
  *
  * - server discovery installation of `.bsp/bill.json` files
- * - custom Scala compiler reporter to produce BSP diagnosticsForDebuggingPurposes
+ * - custom Scala compiler reporter to produce BSP diagnostics.
  *
  * You can try bill by running the main method:
  *
