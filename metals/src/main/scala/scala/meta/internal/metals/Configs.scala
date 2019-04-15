@@ -71,6 +71,10 @@ object Configs {
         isSignatureHelpDocumentationEnabled = MetalsServerConfig.binaryOption(
           "metals.signature-help.documentation",
           default = true
+        ),
+        isCompletionItemResolve = MetalsServerConfig.binaryOption(
+          "metals.completion-item.resolve",
+          default = true
         )
       )
     }

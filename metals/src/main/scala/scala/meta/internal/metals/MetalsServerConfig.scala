@@ -113,6 +113,17 @@ object MetalsServerConfig {
           isHttpEnabled = true,
           icons = Icons.unicode
         )
+      case "coc.nvim" =>
+        base.copy(
+          statusBar = StatusBarConfig.showMessage,
+          isHttpEnabled = true,
+          compilers = base.compilers.copy(
+            _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
+            _completionCommand = Some("editor.action.triggerSuggest"),
+            overrideDefFormat = OverrideDefFormat.Unicode,
+            isCompletionItemResolve = false
+          )
+        )
       case "sublime" =>
         base.copy(
           isHttpEnabled = true,

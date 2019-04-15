@@ -16,7 +16,8 @@ case class PresentationCompilerConfigImpl(
     isCompletionItemDetailEnabled: Boolean = true,
     isCompletionItemDocumentationEnabled: Boolean = true,
     isHoverDocumentationEnabled: Boolean = true,
-    isSignatureHelpDocumentationEnabled: Boolean = true
+    isSignatureHelpDocumentationEnabled: Boolean = true,
+    isCompletionItemResolve: Boolean = true
 ) extends PresentationCompilerConfig {
   override def symbolPrefixes(): util.Map[String, String] =
     _symbolPrefixes.asJava

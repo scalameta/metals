@@ -361,7 +361,10 @@ class MetalsLanguageServer(
         new SignatureHelpOptions(List("(", "[").asJava)
       )
       capabilities.setCompletionProvider(
-        new CompletionOptions(true, List(".").asJava)
+        new CompletionOptions(
+          config.compilers.isCompletionItemResolve,
+          List(".").asJava
+        )
       )
       capabilities.setWorkspaceSymbolProvider(true)
       capabilities.setDocumentSymbolProvider(true)
@@ -842,7 +845,11 @@ class MetalsLanguageServer(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
     CancelTokens { token =>
-      compilers.completionItemResolve(item, token).getOrElse(item)
+      if (config.compilers.isCompletionItemResolve) {
+        compilers.completionItemResolve(item, token).getOrElse(item)
+      } else {
+        item
+      }
     }
   def completionItemResolveSync(item: CompletionItem): CompletionItem =
     compilers.completionItemResolve(item, EmptyCancelToken).getOrElse(item)

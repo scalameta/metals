@@ -16,8 +16,9 @@ Metals works with most LSP clients for Vim:
   but limited functionality (no auto-import, cancellation and no prompt for
   build import).
 
-In this page, we use `coc.nvim` (Conquer Of Completion) since it offers a richer user experience but the
-same steps can be adapted to use Metals with other LSP clients.
+In this page, we use `coc.nvim` (Conquer Of Completion) since it offers a richer
+user experience but the same steps can be adapted to use Metals with other LSP
+clients.
 
 ![Vim demo](https://i.imgur.com/jMMEmCC.gif)
 
@@ -25,11 +26,23 @@ same steps can be adapted to use Metals with other LSP clients.
 
 ```
 
-**vim >= 8.1 and neovim >= 0.3.1**: Make sure you have the correct supported version.
+## Installing Vim
 
-## Installing the plugin
+The coc.nvim plugin requires either **Vim >= 8.1** or **neovim >= 0.3.1**. Make
+sure you have the correct version installed.
 
-`coc.nvim` requires [Node.js](https://nodejs.org/en/download/) in order to work. It also uses [Yarn](https://yarnpkg.com/en/docs/install#debian-stable) to manage extensions but you could opt-out of it and use `vim-plug` instead for example.
+```sh
+$ vim --version | head
+VIM - Vi IMproved 8.1
+$ nvim --version | head
+NVIM v0.3.4
+```
+
+## Installing yarn
+
+`coc.nvim` requires [Node.js](https://nodejs.org/en/download/) in order to work.
+It also uses [Yarn](https://yarnpkg.com/en/docs/install#debian-stable) to manage
+extensions but you could opt-out of it and use `vim-plug` instead for example.
 
 For convenience we recommend installing both:
 
@@ -38,7 +51,10 @@ curl -sL install-node.now.sh/lts | sh
 curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
 ```
 
-Once the requirements are satisfied, we can now proceed to install the following plugins:
+## Installing the plugin
+
+Once the requirements are satisfied, we can now proceed to install the following
+plugins:
 
 - [`neoclide/coc.nvim`](https://github.com/neoclide/coc.nvim/): Language Server
   Protocol client to communicate with the Metals language server.
@@ -65,22 +81,26 @@ installed, be sure to update to the latest version with `:PlugUpdate`.
 
 ### COC Configuration
 
-We need to tell `coc.nvim` that our LSP server is going to be `metals`. In order to do so, we need to run `:CocConfig` and
-input our configuration. Here's the recommended default:
+We need to tell `coc.nvim` that our LSP server is going to be `metals`. In order
+to do so, we need to run `:CocConfig` and input our configuration. Here's the
+recommended default:
 
 ```jsonc
+// vim:    ~/.vim/coc-settings.json
+// neovim: ~/.config/nvim/coc-settings.json
 {
   "languageserver": {
     "metals": {
       "command": "metals-vim",
       "rootPatterns": ["build.sbt"],
-      "filetypes": ["scala"]
+      "filetypes": ["scala", "sbt"]
     }
   }
 }
 ```
 
-`coc.nvim` uses [jsonc](https://code.visualstudio.com/docs/languages/json) as configuration file format. It's basically json with comments support.
+`coc.nvim` uses [jsonc](https://code.visualstudio.com/docs/languages/json) as
+configuration file format. It's basically json with comments support.
 
 In order to get comments highlighting, please add:
 
@@ -90,8 +110,8 @@ autocmd FileType json syntax match Comment +\/\/.\+$+
 
 ### Generating metals binary
 
-If you now start Vim in a Scala project then it will fail since the `metals-vim` binary does not
-exist yet.
+If you now start Vim in a Scala project then it will fail since the `metals-vim`
+binary does not exist yet.
 
 ```scala mdoc:bootstrap:metals-vim coc.nvim
 
@@ -100,7 +120,8 @@ exist yet.
 The `-Dmetals.client=coc.nvim` flag is important since it configures Metals for
 usage with the `coc.nvim` client.
 
-You might also want to include the following properties to better understand what's happening under the hood:
+You might also want to include the following properties to better understand
+what's happening under the hood:
 
 ```
 -Dmetals.status-bar=log-message
@@ -113,7 +134,8 @@ You might also want to include the following properties to better understand wha
 
 ### LSP commands key mapping
 
-`coc.nvim` doesn't come with a default key mapping for LSP commands, you need to configure it yourself.
+`coc.nvim` doesn't come with a default key mapping for LSP commands, you need to
+configure it yourself.
 
 Here's a recommended configuration:
 
@@ -247,7 +269,8 @@ This command opens your browser with a table like this.
 
 ![Run Doctor](https://i.imgur.com/yelm0jd.png)
 
-Note: the binary `metals-vim` needs to be built using `-Dmetals.http=true` for this command to work.
+Note: the binary `metals-vim` needs to be built using `-Dmetals.http=true` for
+this command to work.
 
 ## Manually start build import
 
@@ -270,7 +293,8 @@ directory containing JSON files.
 
 ## Show document symbols
 
-Run `:CocList outline` to show a symbol outline for the current file or use the default key `<space> o`.
+Run `:CocList outline` to show a symbol outline for the current file or use the
+default key `<space> o`.
 
 ![Document Symbols](https://i.imgur.com/LviFAVm.gif)
 
