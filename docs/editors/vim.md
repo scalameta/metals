@@ -28,13 +28,16 @@ clients.
 
 ## Installing Vim
 
-The coc.nvim plugin requires either **Vim >= 8.1** or **neovim >= 0.3.1**. Make
+The coc.nvim plugin requires either **Vim >= 8.1** or **Neovim >= 0.3.1**. Make
 sure you have the correct version installed.
 
 ```sh
-$ vim --version | head
+# If using Vim
+vim --version | head
 VIM - Vi IMproved 8.1
-$ nvim --version | head
+
+# If using Neovim
+nvim --version | head
 NVIM v0.3.4
 ```
 
@@ -46,12 +49,12 @@ extensions but you could opt-out of it and use `vim-plug` instead for example.
 
 For convenience we recommend installing both:
 
-```
+```sh
 curl -sL install-node.now.sh/lts | sh
 curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
 ```
 
-## Installing the plugin
+## Installing coc.nvim
 
 Once the requirements are satisfied, we can now proceed to install the following
 plugins:
@@ -79,7 +82,7 @@ au BufRead,BufNewFile *.sbt set filetype=scala
 Run `:PlugInstall` to install the plugin. If you already have `coc.nvim`
 installed, be sure to update to the latest version with `:PlugUpdate`.
 
-### COC Configuration
+### Configuration
 
 We need to tell `coc.nvim` that our LSP server is going to be `metals`. In order
 to do so, we need to run `:CocConfig` and input our configuration. Here's the
@@ -119,14 +122,6 @@ binary does not exist yet.
 
 The `-Dmetals.client=coc.nvim` flag is important since it configures Metals for
 usage with the `coc.nvim` client.
-
-You might also want to include the following properties to better understand
-what's happening under the hood:
-
-```
--Dmetals.status-bar=log-message
--Dmetals.status-bar=show-message
-```
 
 ```scala mdoc:editor:vim
 

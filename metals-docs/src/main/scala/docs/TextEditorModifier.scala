@@ -31,6 +31,7 @@ class TextEditorModifier extends StringModifier {
        |- "Not now" disables this prompt for 2 minutes.
        |- "Don't show again" disables this prompt forever, use `rm -rf .metals/` to re-enable
        |  the prompt.
+       |- Use `tail -f .metals/metals.log` to watch the build import progress.
        |- Behind the scenes, Metals uses [Bloop](https://scalacenter.github.io/bloop/) to
        |  import sbt builds, but you don't need Bloop installed on your machine to run this step.
        |

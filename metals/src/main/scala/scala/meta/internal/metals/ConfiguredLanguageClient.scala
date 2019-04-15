@@ -53,10 +53,14 @@ final class ConfiguredLanguageClient(
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     if (config.statusBar.isOn) {
       underlying.metalsStatus(params)
-    } else if (config.statusBar.isLogMessage && !pendingShowMessage.get()) {
-      underlying.logMessage(new MessageParams(MessageType.Log, params.text))
-    } else if (config.statusBar.isShowMessage && !pendingShowMessage.get()) {
-      underlying.showMessage(new MessageParams(MessageType.Log, params.text))
+    } else if (params.text.nonEmpty && !pendingShowMessage.get()) {
+      if (config.statusBar.isLogMessage) {
+        underlying.logMessage(new MessageParams(MessageType.Log, params.text))
+      } else if (config.statusBar.isShowMessage) {
+        underlying.showMessage(new MessageParams(MessageType.Log, params.text))
+      } else {
+        ()
+      }
     } else {
       ()
     }
