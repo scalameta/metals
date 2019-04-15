@@ -1,20 +1,27 @@
 package docs
 
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time._
+import java.time.format.DateTimeFormatter
 import org.jsoup.Jsoup
 import scala.collection.JavaConverters._
 import scala.meta.internal.metals.BuildInfo
 import scala.util.control.NonFatal
+import scala.util.Try
 
-case class Snapshot(version: String, lastModified: Date) {
-  def date: String = {
-    val pattern = new SimpleDateFormat("dd MMM yyyy HH:mm")
-    pattern.format(lastModified)
-  }
+case class Snapshot(version: String, lastModified: LocalDateTime) {
+  def date: String = Snapshot.snapshotOutputFormatter.format(lastModified)
 }
 
 object Snapshot {
+  private[docs] val zdtFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss zzz uuuu")
+  private[docs] val mavenMetadataLastUpdatedFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("uuuuMMddHHmmss")
+  private[docs] val snapshotOutputFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("dd MMM uuuu HH:mm")
+  private implicit val localDateTimeOrdering: Ordering[LocalDateTime] =
+    Ordering.fromLessThan[LocalDateTime]((a, b) => a.compareTo(b) < 0)
+
   def latest(repo: String): Snapshot = {
     if (System.getenv("CI") != null) {
       try {
@@ -29,7 +36,8 @@ object Snapshot {
     }
   }
 
-  private def current: Snapshot = Snapshot(BuildInfo.metalsVersion, new Date())
+  private def current: Snapshot =
+    Snapshot(BuildInfo.metalsVersion, LocalDateTime.now())
 
   /** Returns the latest published snapshot release, or the current release if. */
   private def fetchLatest(repo: String): Snapshot = {
@@ -38,15 +46,15 @@ object Snapshot {
     // maven-metadata.xml is consistently outdated so we scrape the "Last modified" column
     // of the HTML page that lists all snapshot releases instead.
     val doc = Jsoup.connect(url).get
-    val dateTime = new SimpleDateFormat("EEE MMM d H:m:s z yyyy")
     val snapshots: Seq[Snapshot] = doc.select("tr").asScala.flatMap { tr =>
       val lastModified =
         tr.select("td:nth-child(2)").text()
       val version =
         tr.select("td:nth-child(1)").text().stripSuffix("/")
       if (lastModified.nonEmpty && !version.contains("maven-metadata")) {
-        val date = dateTime.parse(lastModified)
-        List(Snapshot(version, date))
+        val date: ZonedDateTime =
+          ZonedDateTime.parse(lastModified, zdtFormatter)
+        List(Snapshot(version, date.toLocalDateTime))
       } else {
         List()
       }
@@ -54,23 +62,16 @@ object Snapshot {
     if (snapshots.isEmpty) {
       val doc = Jsoup.connect(url + "maven-metadata.xml").get
       val latest = doc.select("latest").text().trim
-      val Date = "(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)(\\d\\d)(\\d\\d)(\\d\\d).*".r
-      val lastUpdated = doc.select("lastUpdated").text().trim match {
-        case Date(year, mon, day, hr, min, sec) =>
-          new Date(
-            year.toInt - 1900,
-            mon.toInt - 1,
-            day.toInt,
-            hr.toInt,
-            min.toInt,
-            sec.toInt
+      val lastUpdated: LocalDateTime =
+        Try(
+          LocalDateTime.parse(
+            doc.select("lastUpdated").text().trim,
+            mavenMetadataLastUpdatedFormatter
           )
-        case _ =>
-          new Date()
-      }
+        ).getOrElse(LocalDateTime.now())
       Snapshot(latest, lastUpdated)
     } else {
-      snapshots.maxBy(_.lastModified.getTime)
+      snapshots.maxBy(_.lastModified)
     }
   }
 
