@@ -99,7 +99,7 @@ final class InteractiveSemanticdbs(
   }
 
   /**
-   * Unpublish diagnosticsForDebuggingPurposes for un-focused dependency source, if any, and publish diagnosticsForDebuggingPurposes
+   * Unpublish diagnostics for un-focused dependency source, if any, and publish diagnostics
    * for the currently focused source, if any.
    */
   def didFocus(path: AbsolutePath): Unit = {
@@ -116,7 +116,7 @@ final class InteractiveSemanticdbs(
           if diag.severity.isError
           range <- diag.range
         } yield {
-          // Use INFO instead of ERROR severity because these diagnosticsForDebuggingPurposes are published for readonly
+          // Use INFO instead of ERROR severity because these diagnostics are published for readonly
           // files of external dependencies so the user cannot fix them.
           val severity = DiagnosticSeverity.Information
           new l.Diagnostic(range.toLSP, diag.message, severity, "scala")

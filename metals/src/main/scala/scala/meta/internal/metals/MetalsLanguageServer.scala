@@ -535,7 +535,7 @@ class MetalsLanguageServer(
       CancelTokens { _ =>
         // trigger compilation in preparation for definition requests
         interactiveSemanticdbs.textDocument(path)
-        // publish diagnosticsForDebuggingPurposes
+        // publish diagnostics
         interactiveSemanticdbs.didFocus(path)
         ()
       }
@@ -922,6 +922,10 @@ class MetalsLanguageServer(
         slowConnectToBuildServer(forceImport = true).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
         quickConnectToBuildServer().asJavaObject
+      case ServerCommands.DisconnectBuildServer() =>
+        Future {
+          disconnectOldBuildServer()
+        }.asJavaObject
       case ServerCommands.RunDoctor() =>
         Future {
           doctor.executeRunDoctor()
@@ -1054,21 +1058,29 @@ class MetalsLanguageServer(
     } yield result
   }.recover {
     case NonFatal(e) =>
+      disconnectOldBuildServer()
       val message =
         "Failed to connect with build server, no functionality will work."
       val details = " See logs for more details."
-      buildServer.foreach(_.shutdown())
-      buildServer = None
-      scribe.error(message, e)
       languageClient.showMessage(
         new MessageParams(MessageType.Error, message + details)
       )
+      scribe.error(message, e)
       BuildChange.Failed
   }
 
+  private def disconnectOldBuildServer(): Unit = {
+    if (buildServer.isDefined) {
+      scribe.info("disconnected: build server")
+    }
+    buildServer.foreach(_.shutdown())
+    buildServer = None
+    diagnostics.reset()
+  }
   private def connectToNewBuildServer(
       build: BuildServerConnection
   ): Future[BuildChange] = {
+    disconnectOldBuildServer()
     cancelables.add(build)
     compilers.cancel()
     buildServer = Some(build)

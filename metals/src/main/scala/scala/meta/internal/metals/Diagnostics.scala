@@ -19,10 +19,10 @@ import scala.meta.io.AbsolutePath
 import scala.{meta => m}
 
 /**
- * Converts diagnosticsForDebuggingPurposes from the build server and Scalameta parser into LSP diagnosticsForDebuggingPurposes.
+ * Converts diagnostics from the build server and Scalameta parser into LSP diagnostics.
  *
- * BSP diagnosticsForDebuggingPurposes have different semantics from LSP diagnosticsForDebuggingPurposes with regards to how they
- * are published. BSP diagnosticsForDebuggingPurposes can be accumulated when `reset=false`, meaning the client
+ * BSP diagnostics have different semantics from LSP diagnostics with regards to how they
+ * are published. BSP diagnostics can be accumulated when `reset=false`, meaning the client
  * (Metals) is responsible for aggregating multiple `build/publishDiagnostics` notifications
  * into a single `textDocument/publishDiagnostics` notification.
  *
@@ -50,6 +50,14 @@ final class Diagnostics(
     new ConcurrentLinkedQueue[AbsolutePath]()
   private val compileTimer =
     TrieMap.empty[BuildTargetIdentifier, Timer]
+
+  def reset(): Unit = {
+    val keys = diagnostics.keys
+    diagnostics.clear()
+    keys.foreach { key =>
+      publishDiagnostics(key)
+    }
+  }
 
   def onStartCompileBuildTarget(target: BuildTargetIdentifier): Unit = {
     if (statistics.isDiagnostics) {
@@ -110,9 +118,9 @@ final class Diagnostics(
       queue.add(buildDiagnostic.toLSP)
     }
 
-    // NOTE(olafur): we buffer up several diagnosticsForDebuggingPurposes for the same path before forwarding
+    // NOTE(olafur): we buffer up several diagnostics for the same path before forwarding
     // them to the editor client. Without buffering, we risk publishing an exponential number
-    // notifications for a file with N number of diagnosticsForDebuggingPurposes:
+    // notifications for a file with N number of diagnostics:
     // Notification 1: [1]
     // Notification 2: [1, 2]
     // Notification 3: [1, 2, 3]

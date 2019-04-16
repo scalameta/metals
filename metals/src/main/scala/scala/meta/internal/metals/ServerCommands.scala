@@ -28,6 +28,12 @@ object ServerCommands {
       |""".stripMargin
   )
 
+  val DisconnectBuildServer = Command(
+    "build-disconnect",
+    "Disconnect to build server",
+    """Unconditionally cancel existing build server connection without reconnecting"""
+  )
+
   val ScanWorkspaceSources = Command(
     "sources-scan",
     "Scan sources",

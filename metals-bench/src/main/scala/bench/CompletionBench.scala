@@ -99,8 +99,6 @@ abstract class CompletionBench {
   def complete(): CompletionList = {
     val pc = presentationCompiler()
     val result = currentCompletion.complete(pc)
-//    val diagnosticsForDebuggingPurposes = pc.diagnosticsForDebuggingPurposes()
-//    require(diagnosticsForDebuggingPurposes.isEmpty, diagnosticsForDebuggingPurposes.asScala.mkString("\n", "\n", "\n")) require(!result.getItems.isEmpty, result)
     result
   }
 
