@@ -48,6 +48,14 @@ To use Metals in Emacs, place this snippet in your Emacs configuration to load
 
 (use-package lsp-ui)
 
+;; Use company for completions
+(use-package company
+  :demand t
+  :hook (after-init . global-company-mode))
+
+;; Add company-lsp backend for metals
+(use-package company-lsp)
+
 (use-package lsp-scala
   :after scala-mode
   :demand t
