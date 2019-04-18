@@ -69,8 +69,10 @@ Note that 2.10.x and 2.13.x are not supported.</p>
 (<span class="hljs-name">use-package</span> lsp-mode
  <span class="hljs-symbol">:init</span> (<span class="hljs-name">setq</span> lsp-prefer-flymake <span class="hljs-literal">nil</span>))
 
-(<span class="hljs-name">use-package</span> lsp-ui
-  <span class="hljs-symbol">:hook</span> (<span class="hljs-name">lsp-mode</span> . lsp-ui-mode))
+(<span class="hljs-name">use-package</span> lsp-ui)
+
+<span class="hljs-comment">;; Add company-lsp backend for metals</span>
+(<span class="hljs-name">use-package</span> company-lsp)
 
 (<span class="hljs-name">use-package</span> lsp-scala
   <span class="hljs-symbol">:after</span> scala-mode
@@ -99,8 +101,8 @@ not exist yet.</p>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
-<td>0.5.0+28-769afc45-SNAPSHOT</td>
-<td>16 Apr 2019 07:50</td>
+<td>0.5.0+32-a89aca61-SNAPSHOT</td>
+<td>18 Apr 2019 08:18</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>
