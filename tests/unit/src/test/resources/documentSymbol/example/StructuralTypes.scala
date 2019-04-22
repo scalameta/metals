@@ -12,8 +12,8 @@
 
   /*example.StructuralTypes.V(Constant):17*/val V: Object {
     def scalameta: String
-  } = new {
-    def scalameta = "4.0"
+  } = /*example.StructuralTypes.V.new (anonymous)(Interface):17*/new {
+    /*example.StructuralTypes.V.`new (anonymous)`#scalameta(Method):16*/def scalameta = "4.0"
   }
   V.scalameta
 }

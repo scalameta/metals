@@ -2,7 +2,7 @@
 
 /*example.Locals(Class):8*/class Locals {
   {
-    val x = 2
+    /*example.Locals#x(Constant):5*/val x = 2
     x + 2
   }
 }

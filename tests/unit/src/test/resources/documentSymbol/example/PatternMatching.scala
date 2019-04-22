@@ -17,7 +17,7 @@
   println(number1)
 
   /*example.PatternMatching#localDeconstruction(Method):23*/def localDeconstruction = {
-    val Some(number2) =
+    /*example.PatternMatching#localDeconstruction.number2(Constant):21*/val Some(number2) =
       some
     number2
   }

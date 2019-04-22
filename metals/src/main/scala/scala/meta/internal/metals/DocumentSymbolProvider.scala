@@ -93,7 +93,17 @@ class DocumentSymbolProvider(trees: Trees) {
         case t: Pkg =>
           addChild(t.ref.syntax, SymbolKind.Package, t.pos, t.ref.pos, "")
           newOwner()
-        case _: Source | _: Template =>
+        case t: Term.NewAnonymous =>
+          val (name, selection) = t.templ.inits match {
+            case Nil => ("(anonymous)", t.pos)
+            case inits =>
+              (inits.map(_.tpe.syntax).mkString(" with "), inits.head.pos)
+          }
+          if (t.templ.stats.nonEmpty) {
+            addChild(s"new $name", SymbolKind.Interface, t.pos, selection, "")
+            newOwner()
+          } else continue()
+        case _: Source | _: Template | _: Term.Block =>
           continue()
         case t: Defn.Class =>
           addChild(
@@ -139,6 +149,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.name.pos,
             t.decltpe.fold("")(_.syntax)
           )
+          newOwner()
         case t: Decl.Def =>
           addChild(
             t.name.value,
@@ -147,6 +158,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.name.pos,
             t.decltpe.syntax
           )
+          newOwner()
         case t: Defn.Val =>
           addPats(
             t.pats,
@@ -154,6 +166,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.pos,
             t.decltpe.fold("")(_.syntax)
           )
+          newOwner()
         case t: Decl.Val =>
           addPats(
             t.pats,
@@ -161,6 +174,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.pos,
             t.decltpe.syntax
           )
+          newOwner()
         case t: Defn.Var =>
           addPats(
             t.pats,
@@ -168,6 +182,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.pos,
             t.decltpe.fold("")(_.syntax)
           )
+          newOwner()
         case t: Decl.Var =>
           addPats(
             t.pats,
@@ -175,6 +190,7 @@ class DocumentSymbolProvider(trees: Trees) {
             t.pos,
             t.decltpe.syntax
           )
+          newOwner()
         case t: Defn.Type =>
           addChild(
             t.name.value,
