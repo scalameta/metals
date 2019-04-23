@@ -10,7 +10,6 @@ import scala.util.control.NonFatal
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
-import scala.reflect.internal.util.Position
 import java.nio.file.Paths
 import java.util.logging.Level
 import scala.meta.internal.tokenizers.Chars
@@ -354,76 +353,6 @@ trait Completions { this: MetalsGlobal =>
      */
     def contribute: List[Member] = Nil
 
-  }
-
-  /**
-   * A position to insert new imports
-   *
-   * @param offset the offset where to place the import.
-   * @param indent the indentation at which to place the import.
-   */
-  case class AutoImportPosition(offset: Int, indent: Int)
-
-  /**
-   * Extractor for tree nodes where we can insert import statements.
-   */
-  object NonSyntheticBlock {
-    def unapply(tree: Tree): Option[List[Tree]] = tree match {
-      case t: Template => Some(t.body)
-      case t: PackageDef => Some(t.stats)
-      case b: Block => Some(b.stats)
-      case _ => None
-    }
-  }
-
-  /**
-   * Extractor for a tree node where we can insert a leading import statements.
-   */
-  object NonSyntheticStatement {
-    lazy val isCaseCompletion = Set[Name](
-      TermName("c_CURSOR_"),
-      TermName("ca_CURSOR_"),
-      TermName("cas_CURSOR_"),
-      TermName("case_CURSOR_")
-    )
-    def unapply(tree: Tree): Boolean = tree match {
-      case t: ValOrDefDef =>
-        !t.name.containsChar('$') &&
-          !t.symbol.isParamAccessor &&
-          !t.symbol.isCaseAccessor
-      case Ident(name) => !isCaseCompletion(name)
-      case _ => true
-    }
-  }
-
-  def autoImportPosition(
-      pos: Position,
-      text: String
-  ): Option[AutoImportPosition] = {
-    if (lastEnclosing.isEmpty) {
-      locateTree(pos)
-    }
-    lastEnclosing.headOption match {
-      case Some(_: Import) => None
-      case _ =>
-        lastEnclosing.sliding(2).collectFirst {
-          case List(
-              stat @ NonSyntheticStatement(),
-              block @ NonSyntheticBlock(stats)
-              ) if block.pos.line != stat.pos.line =>
-            val top = stats.find(_.pos.includes(stat.pos)).getOrElse(stat)
-            val defaultStart = top.pos.start
-            val startOffset = top match {
-              case d: MemberDef =>
-                d.mods.annotations.foldLeft(defaultStart)(_ min _.pos.start)
-              case _ =>
-                defaultStart
-            }
-            val start = Position.offset(pos.source, startOffset)
-            val line = pos.source.lineToOffset(start.line - 1)
-            AutoImportPosition(line, inferIndent(line, text))
-        }
-    }
   }
 
   def completionPosition(
@@ -1048,6 +977,14 @@ trait Completions { this: MetalsGlobal =>
       }
 
       val context = doLocateContext(pos)
+      val baseAutoImport = autoImportPosition(pos, text)
+      val autoImport = baseAutoImport.getOrElse(
+        AutoImportPosition(lineStart, inferIndent(lineStart, text))
+      )
+      val importContext =
+        if (baseAutoImport.isDefined)
+          doLocateImportContext(pos, baseAutoImport)
+        else context
       val re = renamedSymbols(context)
       val owners = this.parentSymbols(context)
 
@@ -1119,19 +1056,16 @@ trait Completions { this: MetalsGlobal =>
           sym,
           history.autoImports(
             pos,
-            context,
-            lineStart,
-            inferIndent(lineStart, text)
+            importContext,
+            autoImport.offset,
+            autoImport.indent
           ),
           details
         )
 
         private def label = overrideDef + name + signature
-
         private def details = asciOverrideDef + name + signature
-
         private def signature = printer.defaultMethodSignature()
-
         private def edit = new l.TextEdit(
           range,
           s"$filterText$signature = $${0:???}"
@@ -1167,10 +1101,11 @@ trait Completions { this: MetalsGlobal =>
       override def contribute: List[Member] = {
         val tpe = prefix.widen
         val members = ListBuffer.empty[TextEditMember]
-        val context = doLocateContext(pos)
+        val importPos = autoImportPosition(pos, text)
+        val context = doLocateImportContext(pos, importPos)
         tpe.typeSymbol.foreachKnownDirectSubClass { sym =>
           val (shortName, edits) =
-            autoImportPosition(pos, text) match {
+            importPos match {
               case Some(value) =>
                 ShortenedNames.synthesize(sym, pos, context, value)
               case scala.None =>

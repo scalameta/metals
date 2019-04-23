@@ -62,14 +62,14 @@ object CompletionMatchSuite extends BaseCompletionSuite {
       // Tab characters are used to indicate user-configured indentation in the editor.
       // For example, in VS Code, the tab characters become 2 space indent by default.
       """|package stale
+         |import stale.Weekday.Workday
+         |import stale.Weekday.Weekend
          |sealed abstract class Weekday
          |object Weekday {
          |  case object Workday extends Weekday
          |  case object Weekend extends Weekday
          |}
          |object App {
-         |  import stale.Weekday.Workday
-         |  import stale.Weekday.Weekend
          |  null.asInstanceOf[Weekday] match {
          |\tcase Workday => $0
          |\tcase Weekend =>

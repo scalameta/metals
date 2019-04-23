@@ -29,8 +29,8 @@ class MetalsGlobal(
     with Completions
     with Signatures
     with Compat
-    with GlobalProxy {
-  compiler =>
+    with GlobalProxy
+    with AutoImports { compiler =>
   hijackPresentationCompilerThread()
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
@@ -217,7 +217,12 @@ class MetalsGlobal(
           if (history.tryShortenName(name)) NoPrefix
           else tpe
         } else {
-          SingleType(loop(pre, Some(ShortName(sym))), sym)
+          pre match {
+            case ThisType(psym) if history.nameResolvesToSymbol(psym) =>
+              SingleType(NoPrefix, sym)
+            case _ =>
+              SingleType(loop(pre, Some(ShortName(sym))), sym)
+          }
         }
       case ThisType(sym) =>
         if (sym.hasPackageFlag) {

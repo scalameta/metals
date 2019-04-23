@@ -117,10 +117,11 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """
+      |import java.nio.file.{FileVisitResult, Path}
+      |import java.nio.file.attribute.BasicFileAttributes
+      |
       |object Main {
       |  new java.nio.file.SimpleFileVisitor[java.nio.file.Path] {
-      |    import java.nio.file.{FileVisitResult, Path}
-      |    import java.nio.file.attribute.BasicFileAttributes
       |    override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = ${0:???}
       |  }
       |}
@@ -264,20 +265,27 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     includeDetail = false
   )
 
-  checkEditLine(
+  checkEdit(
     "mutable",
-    s"""|abstract class Mutable {
-        |  def foo: scala.collection.mutable.Set[Int]
-        |}
-        |object Main {
-        |  new Mutable {
-        |___
-        |  }
-        |}
-        |""".stripMargin,
-    "    def foo@@",
-    """    import scala.collection.mutable
-      |    def foo: mutable.Set[Int] = ${0:???}""".stripMargin
+    """|abstract class Mutable {
+       |  def foo: scala.collection.mutable.Set[Int]
+       |}
+       |object Main {
+       |  new Mutable {
+       |    def foo@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|import scala.collection.mutable
+       |abstract class Mutable {
+       |  def foo: scala.collection.mutable.Set[Int]
+       |}
+       |object Main {
+       |  new Mutable {
+       |    def foo: mutable.Set[Int] = ${0:???}
+       |  }
+       |}
+       |""".stripMargin
   )
 
   checkEditLine(
@@ -296,35 +304,47 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     """    def foo: scala.collection.mutable.Set[Int] = ${0:???}"""
   )
 
-  checkEditLine(
+  checkEdit(
     "jutil",
-    s"""|abstract class JUtil {
-        |  def foo: java.util.List[Int]
-        |}
-        |class Main extends JUtil {
-        |___
-        |}
-        |""".stripMargin,
-    "  def foo@@",
-    """  import java.{util => ju}
-      |  def foo: ju.List[Int] = ${0:???}""".stripMargin
+    """|abstract class JUtil {
+       |  def foo: java.util.List[Int]
+       |}
+       |class Main extends JUtil {
+       |  def foo@@
+       |}
+       |""".stripMargin,
+    """|import java.{util => ju}
+       |abstract class JUtil {
+       |  def foo: java.util.List[Int]
+       |}
+       |class Main extends JUtil {
+       |  def foo: ju.List[Int] = ${0:???}
+       |}
+       |""".stripMargin
   )
 
-  checkEditLine(
+  checkEdit(
     "jutil-conflict",
-    s"""|package jutil
-        |abstract class JUtil {
-        |  def foo: java.util.List[Int]
-        |}
-        |class Main extends JUtil {
-        |  val java = 42
-        |___
-        |}
-        |""".stripMargin,
-    "  def foo@@",
-    // Ensure we insert `_root_` prefix for import because `val java = 42`
-    """  import _root_.java.{util => ju}
-      |  def foo: ju.List[Int] = ${0:???}""".stripMargin
+    """|package jutil
+       |abstract class JUtil {
+       |  def foo: java.util.List[Int]
+       |}
+       |class Main extends JUtil {
+       |  val java = 42
+       |  def foo@@
+       |}
+       |""".stripMargin,
+    // Ensure we don't insert `_root_` prefix for import because `val java = 42` is local.
+    """|package jutil
+       |import java.{util => ju}
+       |abstract class JUtil {
+       |  def foo: java.util.List[Int]
+       |}
+       |class Main extends JUtil {
+       |  val java = 42
+       |  def foo: ju.List[Int] = ${0:???}
+       |}
+       |""".stripMargin
   )
 
   checkEditLine(
@@ -817,5 +837,29 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDetail = false,
     topLines = Some(2)
+  )
+
+  checkEdit(
+    "path-dependent",
+    """|trait Over {
+       |  object Outer {
+       |    class Inner
+       |  }
+       |  def inner: Outer.Inner
+       |}
+       |class Under extends Over {
+       |  def inner@@
+       |}
+       |""".stripMargin,
+    """|trait Over {
+       |  object Outer {
+       |    class Inner
+       |  }
+       |  def inner: Outer.Inner
+       |}
+       |class Under extends Over {
+       |  def inner: Outer.Inner = ${0:???}
+       |}
+       |""".stripMargin
   )
 }
