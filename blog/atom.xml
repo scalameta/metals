@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2020-04-12T06:00:00Z</updated>
+    <updated>2019-04-12T06:00:00Z</updated>
     <generator>Feed for Node.js</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
@@ -10,10 +10,10 @@
     <rights>Copyright © 2019 Metals</rights>
     <entry>
         <title type="html"><![CDATA[Metals v0.5.0]]></title>
-        <id>http://scalameta.org/metals/blog/2020/04/12/mercury.html</id>
-        <link href="http://scalameta.org/metals/blog/2020/04/12/mercury.html">
+        <id>http://scalameta.org/metals/blog/2019/04/12/mercury.html</id>
+        <link href="http://scalameta.org/metals/blog/2019/04/12/mercury.html">
         </link>
-        <updated>2020-04-12T06:00:00Z</updated>
+        <updated>2019-04-12T06:00:00Z</updated>
         <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉 This release introduces new features, performance improvements and bug fixes with highlights including:</p> <ul> <li>code completions</li> <li>parameter hints</li> <li>show type at point</li> <li>code fo...</li></ul>]]></summary>
         <author>
             <name>Ólafur Páll Geirsson</name>
