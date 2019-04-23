@@ -53,7 +53,7 @@ Finally, once `bloopInstall` is finished, execute the "Import build" command
 Bloop build server.
 
 For more information about sbt-bloop, consult the
-[Bloop website](https://scalacenter.github.io/bloop/docs/installation/#sbt).
+[Bloop website](https://scalacenter.github.io/bloop/docs/build-tools/sbt).
 
 ### Permanent metalsEnable
 
