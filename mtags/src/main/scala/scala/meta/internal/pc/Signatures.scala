@@ -107,6 +107,10 @@ trait Signatures { this: MetalsGlobal =>
       val renames: collection.Map[Symbol, Name] = Map.empty,
       val owners: collection.Set[Symbol] = Set.empty
   ) {
+    def this(context: Context) =
+      this(lookupSymbol = { name =>
+        context.lookupSymbol(name, _ => true) :: Nil
+      })
 
     def fullname(sym: Symbol): String = {
       if (topSymbolResolves(sym)) sym.fullNameSyntax
@@ -127,6 +131,9 @@ trait Signatures { this: MetalsGlobal =>
       nameResolvesToSymbol(top.name.toTermName, top)
     }
 
+    def nameResolvesToSymbol(sym: Symbol): Boolean = {
+      nameResolvesToSymbol(sym.name, sym)
+    }
     def nameResolvesToSymbol(name: Name, sym: Symbol): Boolean = {
       lookupSymbol(name) match {
         case Nil => true
@@ -184,6 +191,7 @@ trait Signatures { this: MetalsGlobal =>
       }
       if (toImport.nonEmpty) {
         val indent = " " * inferIndent
+        val scope = new ShortenedNames(context)
         val formatted = toImport.toSeq
           .sortBy {
             case (owner, _) => owner.fullName
@@ -197,7 +205,7 @@ trait Signatures { this: MetalsGlobal =>
               val name =
                 if (isGroup) importNames.mkString("{", ", ", "}")
                 else importNames.mkString
-              s"${indent}import ${fullname(owner)}.${name}"
+              s"${indent}import ${scope.fullname(owner)}.${name}"
           }
           .mkString("", "\n", "\n")
         val startPos = pos.withPoint(lineStart).focus

@@ -180,9 +180,10 @@ object CompletionCaseSuite extends BaseCompletionSuite {
       |  }
       |}""".stripMargin,
     """
+      |import scala.util.Failure
+      |
       |object A {
       |  val t: scala.util.Try[Int] = ???
-      |  import scala.util.Failure
       |  t match {
       |    case Failure(exception) => $0
       |  }
@@ -193,9 +194,9 @@ object CompletionCaseSuite extends BaseCompletionSuite {
   checkEdit(
     "local-case",
     """
+      |import scala.util.Try
+      |import scala.util.Success
       |object A {
-      |  import scala.util.Try
-      |  import scala.util.Success
       |  Try(1) match {
       |    case Success(x) =>
       |      println(x)
@@ -203,10 +204,10 @@ object CompletionCaseSuite extends BaseCompletionSuite {
       |  }
       |}""".stripMargin,
     """
+      |import scala.util.Try
+      |import scala.util.Success
+      |import scala.util.Failure
       |object A {
-      |  import scala.util.Try
-      |  import scala.util.Success
-      |  import scala.util.Failure
       |  Try(1) match {
       |    case Success(x) =>
       |      println(x)
