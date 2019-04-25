@@ -27,6 +27,7 @@ import scala.meta.internal.metals.MetalsStatusParams
 import scala.meta.io.AbsolutePath
 import tests.MetalsTestEnrichments._
 import tests.TestOrderings._
+import scala.meta.inputs.Input
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -99,11 +100,16 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     pathDiagnostics(toPath(filename))
   }
   def pathDiagnostics(path: AbsolutePath): String = {
+    val isDeleted = !path.isFile
     val diags = diagnostics.getOrElse(path, Nil).sortBy(_.getRange)
     val relpath =
       path.toRelative(workspace).toURI(isDirectory = false).toString
     val input =
-      path.toInputFromBuffers(buffers).copy(path = relpath)
+      if (isDeleted) {
+        Input.VirtualFile(relpath + " (deleted)", "\n <deleted>" * 1000)
+      } else {
+        path.toInputFromBuffers(buffers).copy(path = relpath)
+      }
     val sb = new StringBuilder
     diags.foreach { diag =>
       val message = diag.formatMessage(input)

@@ -653,6 +653,7 @@ class MetalsLanguageServer(
       CompletableFuture.completedFuture {
         event.eventType() match {
           case EventType.DELETE =>
+            diagnostics.didDelete(AbsolutePath(event.path()))
             referencesProvider.onDelete(event.path())
           case EventType.CREATE | EventType.MODIFY =>
             referencesProvider.onChange(event.path())
