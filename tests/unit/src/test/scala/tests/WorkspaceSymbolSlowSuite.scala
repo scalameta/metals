@@ -1,5 +1,6 @@
 package tests
 
+import java.nio.file.Files
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import scala.concurrent.Future
@@ -195,6 +196,39 @@ object WorkspaceSymbolSlowSuite extends BaseSlowSuite("workspace-symbol") {
           "a.MetalsUniqueName"
         )
       }
+    } yield ()
+  }
+
+  testAsync("deleted") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/a/Before.scala
+          |package a
+          |object MyObjectSymbol
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Before.scala")
+      _ = assertNoDiff(
+        server.workspaceSymbol("MyObjectSymbol", includeFilename = true),
+        """a.MyObjectSymbol Before.scala"""
+      )
+      _ = {
+        val before = server.toPath("a/src/main/scala/a/Before.scala").toNIO
+        val after = before.resolveSibling("After.scala")
+        Files.move(before, after)
+      }
+      _ <- server.didOpen("a/src/main/scala/a/After.scala")
+      _ <- server.didSave("a/src/main/scala/a/After.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        server.workspaceSymbol("MyObjectSymbol", includeFilename = true),
+        // Assert "Before.scala" is removed from the results
+        """a.MyObjectSymbol After.scala"""
+      )
     } yield ()
   }
 }
