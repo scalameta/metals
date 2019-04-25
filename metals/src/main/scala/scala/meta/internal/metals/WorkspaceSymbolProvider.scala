@@ -5,6 +5,7 @@ import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.nio.file.Files
 import java.util.concurrent.CancellationException
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
@@ -114,6 +115,9 @@ final class WorkspaceSymbolProvider(
           } yield (source.toNIO, index)
       }
       if query.matches(index.bloom)
+      isDeleted = !Files.isRegularFile(path)
+      _ = if (isDeleted) inWorkspace.remove(path)
+      if !isDeleted
       symbol <- index.symbols
       if query.matches(symbol.symbol)
     } {

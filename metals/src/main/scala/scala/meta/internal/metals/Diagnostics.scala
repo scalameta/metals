@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import java.util
+import java.{util => ju}
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.Diagnostic
@@ -39,7 +39,7 @@ final class Diagnostics(
     config: () => UserConfiguration
 ) {
   private val diagnostics =
-    TrieMap.empty[AbsolutePath, util.Queue[Diagnostic]]
+    TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
   private val syntaxError =
     TrieMap.empty[AbsolutePath, Diagnostic]
   private val snapshots =
@@ -93,6 +93,17 @@ final class Diagnostics(
     publishDiagnostics(path)
   }
 
+  def didDelete(path: AbsolutePath): Unit = {
+    diagnostics.remove(path)
+    syntaxError.remove(path)
+    languageClient.publishDiagnostics(
+      new PublishDiagnosticsParams(
+        path.toURI.toString(),
+        ju.Collections.emptyList()
+      )
+    )
+  }
+
   def didChange(path: AbsolutePath): Unit = {
     publishDiagnostics(path)
   }
@@ -136,7 +147,7 @@ final class Diagnostics(
   private def publishDiagnostics(path: AbsolutePath): Unit = {
     publishDiagnostics(
       path,
-      diagnostics.getOrElse(path, new util.LinkedList[Diagnostic]())
+      diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]())
     )
   }
 
@@ -145,8 +156,9 @@ final class Diagnostics(
 
   private def publishDiagnostics(
       path: AbsolutePath,
-      queue: util.Queue[Diagnostic]
+      queue: ju.Queue[Diagnostic]
   ): Unit = {
+    if (!path.isFile) return didDelete(path)
     val current = path.toInputFromBuffers(buffers)
     val snapshot = snapshots.getOrElse(path, current)
     val edit = TokenEditDistance(
@@ -155,7 +167,7 @@ final class Diagnostics(
       doNothingWhenUnchanged = false
     )
     val uri = path.toURI.toString
-    val all = new util.ArrayList[Diagnostic](queue.size() + 1)
+    val all = new ju.ArrayList[Diagnostic](queue.size() + 1)
     for {
       diagnostic <- queue.asScala
       freshDiagnostic <- toFreshDiagnostic(edit, uri, diagnostic, snapshot)

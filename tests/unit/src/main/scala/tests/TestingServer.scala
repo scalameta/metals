@@ -2,10 +2,12 @@ package tests
 
 import java.io.IOException
 import java.net.URLClassLoader
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
@@ -118,15 +120,24 @@ final class TestingServer(
     FileLayout.fromString(layout, root = workspace)
   }
 
-  def workspaceSymbol(query: String, includeKind: Boolean = false): String = {
+  def workspaceSymbol(
+      query: String,
+      includeKind: Boolean = false,
+      includeFilename: Boolean = false
+  ): String = {
     val infos = server.workspaceSymbol(query)
     infos
       .map { info =>
         val kind =
           if (includeKind) s" ${info.getKind}"
           else ""
+        val filename =
+          if (includeFilename) {
+            val path = Paths.get(URI.create(info.getLocation().getUri()))
+            s" ${path.getFileName()}"
+          } else ""
         val container = Option(info.getContainerName()).getOrElse("")
-        s"${container}${info.getName}$kind"
+        s"${container}${info.getName}$kind$filename"
       }
       .mkString("\n")
   }
@@ -256,7 +267,7 @@ final class TestingServer(
     require(server.buildServer.isDefined, "Build server did not initialize")
   }
 
-  private def toPath(filename: String): AbsolutePath =
+  def toPath(filename: String): AbsolutePath =
     TestingServer.toPath(workspace, filename)
 
   def executeCommand(command: String): Future[Unit] = {

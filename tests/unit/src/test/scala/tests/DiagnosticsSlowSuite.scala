@@ -1,5 +1,7 @@
 package tests
 
+import java.nio.file.Files
+
 object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
 
   testAsync("diagnostics") {
@@ -257,6 +259,39 @@ object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
       _ <- server.didClose("a/src/main/scala/a/B.scala")
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
+  testAsync("delete") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/a/A.scala
+           |object A {
+           |  val a = 2
+           |}
+           |/a/src/main/scala/a/B.scala
+           |object B {
+           |  val a: String = 2
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/B.scala:2:19: error: type mismatch;
+           | found   : Int(2)
+           | required: String
+           |  val a: String = 2
+           |                  ^
+           |""".stripMargin
+      )
+      _ = Files.delete(server.toPath("a/src/main/scala/a/B.scala").toNIO)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
       _ = assertNoDiagnostics()
     } yield ()
   }
