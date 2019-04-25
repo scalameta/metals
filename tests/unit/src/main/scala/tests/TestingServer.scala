@@ -2,6 +2,7 @@ package tests
 
 import java.io.IOException
 import java.net.URLClassLoader
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -132,7 +133,7 @@ final class TestingServer(
           else ""
         val filename =
           if (includeFilename) {
-            val path = Paths.get(info.getLocation().getUri())
+            val path = Paths.get(URI.create(info.getLocation().getUri()))
             s" ${path.getFileName()}"
           } else ""
         val container = Option(info.getContainerName()).getOrElse("")
