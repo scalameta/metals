@@ -81,7 +81,10 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     server.server.userConfig = this.userConfig
   }
 
-  def assertNoDiagnostics(): Unit = {
+  def assertNoDiagnostics()(
+      implicit file: sourcecode.File,
+      line: sourcecode.Line
+  ): Unit = {
     assertNoDiff(client.workspaceDiagnostics, "")
   }
 

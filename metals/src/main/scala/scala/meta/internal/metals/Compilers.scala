@@ -195,9 +195,7 @@ class Compilers(
     for {
       info <- buildTargets.info(target)
       scala <- info.asScalaBuildTarget
-      isSupported = ScalaVersions.isSupportedScalaVersion(
-        ScalaVersions.dropVendorSuffix(scala.getScalaVersion)
-      )
+      isSupported = ScalaVersions.isSupportedScalaVersion(scala.getScalaVersion)
       _ = {
         if (!isSupported) {
           scribe.warn(s"unsupported Scala ${scala.getScalaVersion}")

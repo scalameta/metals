@@ -69,6 +69,7 @@ object DidFocusSlowSuite extends BaseSlowSuite("did-focus") {
   }
 
   testAsync("497") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """

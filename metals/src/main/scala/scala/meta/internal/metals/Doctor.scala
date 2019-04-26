@@ -21,7 +21,8 @@ final class Doctor(
     config: MetalsServerConfig,
     languageClient: MetalsLanguageClient,
     httpServer: () => Option[MetalsHttpServer],
-    tables: Tables
+    tables: Tables,
+    messages: Messages
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
 
@@ -120,7 +121,10 @@ final class Doctor(
       }
     } else {
       val messages = ListBuffer.empty[String]
-      if (!isLatestScalaVersion(scalaVersion)) {
+      if (ScalaVersions.isDeprecatedScalaVersion(scalaVersion)) {
+        messages += s"This Scala version will not be supported in upcoming versions of Metals, " +
+          s"please upgrade to Scala ${recommendedVersion(scalaVersion)}."
+      } else if (!isLatestScalaVersion(scalaVersion)) {
         messages += s"Upgrade to Scala ${recommendedVersion(scalaVersion)} to enjoy the latest compiler improvements."
       }
       if (!scala.scalac.isSourcerootDeclared) {
@@ -136,13 +140,32 @@ final class Doctor(
     }
   }
 
+  def deprecatedVersionWarning: Option[String] = {
+    val deprecatedVersions = (for {
+      target <- buildTargets.all.toIterator
+      scala <- target.info.asScalaBuildTarget
+      if ScalaVersions.isDeprecatedScalaVersion(scala.getScalaVersion())
+    } yield scala.getScalaVersion()).toSet
+    if (deprecatedVersions.isEmpty) {
+      None
+    } else {
+      val recommendedVersions = deprecatedVersions.map(recommendedVersion)
+      Some(
+        messages.DeprecatedScalaVersion.message(
+          deprecatedVersions,
+          recommendedVersions
+        )
+      )
+    }
+  }
+
   private def problemSummary: Option[String] = {
     val targets = buildTargets.all.toList
     val isMissingSemanticdb = targets.filter(!_.isSemanticdbEnabled)
     val count = isMissingSemanticdb.length
     val isAllProjects = count == targets.size
     if (isMissingSemanticdb.isEmpty) {
-      None
+      deprecatedVersionWarning
     } else if (isAllProjects) {
       Some(CheckDoctor.allProjectsMisconfigured)
     } else if (count == 1) {
@@ -169,26 +192,62 @@ final class Doctor(
             "two build targets: main and test."
         )
       )
-      .element("table")(
-        _.element("thead")(
-          _.element("tr")(
-            _.element("th")(_.text("Build target"))
-              .element("th")(_.text("Scala"))
-              .element("th")(_.text("Diagnostics"))
-              .element("th")(_.text("Goto definition"))
-              .element("th")(_.text("Recommendation"))
+    val targets = buildTargets.all.toList
+    if (targets.isEmpty) {
+      html
+        .element("p")(
+          _.text(
+            s"${Icons.unicode.alert} No build targets were detected in this workspace so most functionality won't work."
+          ).element("ul")(
+            _.element("li")(
+              _.text(
+                s"Make sure the workspace directory '$workspace' matches the root of your build."
+              )
+            ).element("li")(
+              _.text(
+                "Try removing the directories .metals/ and .bloop/, then restart metals And import the build again."
+              )
+            )
           )
-        ).element("tbody")(buildTargetRows)
-      )
+        )
+    } else {
+      html
+        .element("table")(
+          _.element("thead")(
+            _.element("tr")(
+              _.element("th")(_.text("Build target"))
+                .element("th")(_.text("Scala"))
+                .element("th")(_.text("Diagnostics"))
+                .element("th")(_.text("Goto definition"))
+                .element("th")(_.text("Completions"))
+                .element("th")(_.text("Find references"))
+                .element("th")(_.text("Recommendation"))
+            )
+          ).element("tbody")(html => buildTargetRows(html, targets))
+        )
+    }
   }
 
-  private def buildTargetRows(html: HtmlBuilder): Unit = {
-    buildTargets.all.toList.sortBy(_.info.getBaseDirectory).foreach { target =>
+  private def buildTargetRows(
+      html: HtmlBuilder,
+      targets: List[ScalaTarget]
+  ): Unit = {
+    targets.sortBy(_.info.getBaseDirectory).foreach { target =>
       val scala = target.info.asScalaBuildTarget
       val scalaVersion =
         scala.fold("<unknown>")(_.getScalaVersion)
       val isSemanticdbEnabled = target.isSemanticdbEnabled
-      val navigation: String =
+      val definition: String =
+        if (ScalaVersions.isSupportedScalaVersion(scalaVersion)) {
+          Icons.unicode.check
+        } else {
+          Icons.unicode.alert
+        }
+      // NOTE(olafur) completions are currently the same as definition but in
+      // the future we may want to update the definition column to take the
+      // existence of library sources into account.
+      val completions: String = definition
+      val references: String =
         if (isSemanticdbEnabled) {
           Icons.unicode.check
         } else {
@@ -199,7 +258,9 @@ final class Doctor(
         _.element("td")(_.text(target.info.getDisplayName))
           .element("td")(_.text(scalaVersion))
           .element("td", center)(_.text(Icons.unicode.check))
-          .element("td", center)(_.text(navigation))
+          .element("td", center)(_.text(definition))
+          .element("td", center)(_.text(completions))
+          .element("td", center)(_.text(references))
           .element("td")(
             _.text(recommendation(scalaVersion, isSemanticdbEnabled, target))
           )

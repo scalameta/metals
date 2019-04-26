@@ -196,8 +196,8 @@ pattern matches and more.
 
 ![2019-04-12 14 19 39](https://user-images.githubusercontent.com/1408093/56036958-725bac00-5d2e-11e9-9cf7-46249125494a.gif)
 
-- **Auto-import**: symbols that are not in scope are automatically imported
-  locally. Imports still need to be organized manually, we are exploring ways to
+- **Auto-import**: imports are inserted at the bottom of the global import list.
+  Imports still need to be sorted and grouped manually, we are exploring ways to
   automate this workflow in the future.
 - **Override def**: implement methods from the super class.
 - **Exhaustive match**: generate an exhaustive pattern match for sealed types.

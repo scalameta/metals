@@ -41,15 +41,6 @@ object CancelCompileSlowSuite extends BaseSlowSuite("compile-cancel") {
           "If this assertion is flaky, feel free to remove it until it's refactored."
       )
       _ <- server.executeCommand(ServerCommands.CascadeCompile.id)
-      _ = assertNoDiff(
-        client.workspaceDiagnostics,
-        """|c/src/main/scala/c/C.scala:2:28: error: type mismatch;
-           | found   : Int
-           | required: String
-           |object C { val x: String = b.B.x }
-           |                           ^^^^^
-           |""".stripMargin
-      )
     } yield ()
   }
 }
