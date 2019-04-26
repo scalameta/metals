@@ -284,4 +284,21 @@ class Messages(icons: Icons) {
          |The library dependencies are automatically searched when no results are found in the workspace.
          |""".stripMargin
   }
+
+  object DeprecatedScalaVersion {
+    def message(
+        usingNow: Iterable[String],
+        shouldBeUsing: Iterable[String]
+    ): String = {
+      val using =
+        if (usingNow.size == 1)
+          s"a legacy Scala version ${usingNow.head}"
+        else usingNow.mkString("legacy Scala versions ", ", ", "")
+      val recommended =
+        if (shouldBeUsing.size == 1) shouldBeUsing.head
+        else shouldBeUsing.mkString(" and ")
+      s"You are using $using, which will not be supported in future versions of Metals. " +
+        s"Please upgrade to Scala $recommended."
+    }
+  }
 }

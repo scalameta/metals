@@ -110,7 +110,7 @@ lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.8"
-  val scalameta = "4.1.4"
+  val scalameta = "4.1.9"
   val semanticdb = scalameta
   val bsp = "2.0.0-M3"
   val bloop = "1.2.5"
@@ -118,9 +118,10 @@ lazy val V = new {
   val scalafmt = "2.0.0-RC4"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
-  def supportedScalaVersions = Seq(
-    "2.12.8", "2.12.7", "2.12.6", "2.12.5", "2.12.4", "2.11.12", "2.11.11",
-    "2.11.10", "2.11.9"
+  def supportedScalaVersions =
+    Seq("2.12.8", "2.12.7", "2.11.12") ++ deprecatedScalaVersions
+  def deprecatedScalaVersions = Seq(
+    "2.12.6", "2.12.5", "2.12.4", "2.11.11", "2.11.10", "2.11.9"
   )
 }
 
@@ -144,7 +145,6 @@ lazy val mtags = project
     crossScalaVersions := V.supportedScalaVersions,
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
-      "org.scalameta" %% "contrib" % V.scalameta,
       "org.jsoup" % "jsoup" % "1.11.3",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
@@ -198,7 +198,6 @@ lazy val metals = project
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
-      "org.scalameta" %% "symtab" % V.scalameta,
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "com.geirsson" %% "coursier-small" % "1.3.3",
       // undeclared transitive dependency of coursier-small
@@ -210,7 +209,7 @@ lazy val metals = project
       "com.lihaoyi" %% "pprint" % "0.5.3",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
-      "org.scalameta" % "interactive" % V.scalameta cross CrossVersion.full
+      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -223,6 +222,7 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "supportedScalaVersions" -> V.supportedScalaVersions,
+      "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212
     )

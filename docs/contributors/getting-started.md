@@ -60,6 +60,21 @@ sbt
 > test
 ```
 
+### Manually testing a `SlowSuite`
+
+Every test suite that extends `SlowSuite` generates a workspace directory under
+`tests/unit/target/e2e/$suitename/$testname`.  To debug why a `SlowSuite` might
+be failing, run the test once and then open it directly in your editor.  For
+example, for the test case `"deprecated-scala"` in `WarningsSlowSuite` run the
+following command:
+
+```
+code tests/unit/target/e2e/warnings/deprecated-scala
+```
+
+If you are using VS Code, make sure to update the "Server Version" setting to
+use your locally published version of Metals.
+
 ## Manual tests
 
 Some functionality is best to manually test through an editor. A common workflow

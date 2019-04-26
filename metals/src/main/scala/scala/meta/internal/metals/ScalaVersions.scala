@@ -6,8 +6,14 @@ object ScalaVersions {
   def dropVendorSuffix(version: String): String =
     version.replaceAll("-bin-.*", "")
 
-  val isSupportedScalaVersion: Set[String] =
+  private val _isDeprecatedScalaVersion: Set[String] =
+    BuildInfo.deprecatedScalaVersions.toSet
+  private val _isSupportedScalaVersion: Set[String] =
     BuildInfo.supportedScalaVersions.toSet
+  def isSupportedScalaVersion(version: String): Boolean =
+    _isSupportedScalaVersion(dropVendorSuffix(version))
+  def isDeprecatedScalaVersion(version: String): Boolean =
+    _isDeprecatedScalaVersion(dropVendorSuffix(version))
   def isSupportedScalaBinaryVersion(scalaVersion: String): Boolean =
     Set("2.12", "2.11").exists { binaryVersion =>
       scalaVersion.startsWith(binaryVersion)

@@ -324,7 +324,8 @@ class MetalsLanguageServer(
       config,
       languageClient,
       () => httpServer,
-      tables
+      tables,
+      messages
     )
   }
   def setupJna(): Unit = {
