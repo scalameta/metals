@@ -1,5 +1,67 @@
 # Changelog
 
+## [v0.5.1](https://github.com/scalameta/metals/tree/v0.5.1) (2019-04-26)
+
+[Full Changelog](https://github.com/scalameta/metals/compare/v0.5.0...v0.5.1)
+
+**Merged pull requests:**
+
+- Upgrade to latest Scalameta.
+  [\#702](https://github.com/scalameta/metals/pull/702)
+  ([olafurpg](https://github.com/olafurpg))
+- Add question template [\#701](https://github.com/scalameta/metals/pull/701)
+  ([gabro](https://github.com/gabro))
+- Don't return workspace/symbol results for deleted files.
+  [\#695](https://github.com/scalameta/metals/pull/695)
+  ([olafurpg](https://github.com/olafurpg))
+- Insert global imports instead of local imports.
+  [\#692](https://github.com/scalameta/metals/pull/692)
+  ([olafurpg](https://github.com/olafurpg))
+- Fix a dead link to Bloop site
+  [\#691](https://github.com/scalameta/metals/pull/691)
+  ([gabro](https://github.com/gabro))
+- Update a couple .lines to .linesIterator for java11
+  [\#688](https://github.com/scalameta/metals/pull/688)
+  ([er1c](https://github.com/er1c))
+- Fix typo [\#687](https://github.com/scalameta/metals/pull/687)
+  ([greenrd](https://github.com/greenrd))
+- Handle document symbols for nested declarations
+  [\#686](https://github.com/scalameta/metals/pull/686)
+  ([gabro](https://github.com/gabro))
+- Update Emacs docs [\#681](https://github.com/scalameta/metals/pull/681)
+  ([JesusMtnez](https://github.com/JesusMtnez))
+- Add "Coming from IntelliJ" section to VS Code docs.
+  [\#678](https://github.com/scalameta/metals/pull/678)
+  ([olafurpg](https://github.com/olafurpg))
+- Clear diagnostics on build import, fixes \#644.
+  [\#677](https://github.com/scalameta/metals/pull/677)
+  ([olafurpg](https://github.com/olafurpg))
+- Disable flaky test on Appveyor.
+  [\#676](https://github.com/scalameta/metals/pull/676)
+  ([olafurpg](https://github.com/olafurpg))
+- Update stable version in issue template
+  [\#671](https://github.com/scalameta/metals/pull/671)
+  ([gabro](https://github.com/gabro))
+- Documenting coc.nvim as the recommended LSP client for Vim
+  [\#665](https://github.com/scalameta/metals/pull/665)
+  ([gvolpe](https://github.com/gvolpe))
+- Remove Deprecated Usage Of `java.util.Date` API
+  [\#663](https://github.com/scalameta/metals/pull/663)
+  ([isomarcte](https://github.com/isomarcte))
+- Link to vscode marketplace
+  [\#661](https://github.com/scalameta/metals/pull/661)
+  ([raboof](https://github.com/raboof))
+- Use correct GIF for signature help on landing page.
+  [\#660](https://github.com/scalameta/metals/pull/660)
+  ([olafurpg](https://github.com/olafurpg))
+- Document new features and write release announcement.
+  [\#655](https://github.com/scalameta/metals/pull/655)
+  ([olafurpg](https://github.com/olafurpg))
+- Make detail view in override not show unicode character.
+  [\#654](https://github.com/scalameta/metals/pull/654)
+  ([tgodzik](https://github.com/tgodzik))
+
+
 ## [v0.5.0](https://github.com/scalameta/metals/tree/v0.5.0) (2019-04-12)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v0.4.4...v0.5.0)
