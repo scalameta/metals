@@ -21,6 +21,13 @@
             <description><![CDATA[<p>We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉 This release introduces new features, performance improvements and bug fixes with highlights including:</p> <ul> <li>code completions</li> <li>parameter hints</li> <li>show type at point</li> <li>code fo...</li></ul>]]></description>
         </item>
         <item>
+            <title><![CDATA[Metals v0.5.1]]></title>
+            <link>http://scalameta.org/metals/blog/2019/04/26/mercury.html</link>
+            <guid>http://scalameta.org/metals/blog/2019/04/26/mercury.html</guid>
+            <pubDate>Fri, 26 Apr 2019 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>This release introduces minor improvements and bug fixes with highlights including:</p> <ul> <li>auto-imports are inserted at the toplevel instead of locally</li> <li>document symbol lists inner methods and anonymous classes</li> <li>the recommended Vim client is now coc.nvim</li> <li>dia...</li></ul>]]></description>
+        </item>
+        <item>
             <title><![CDATA[Metals v0.4.4]]></title>
             <link>http://scalameta.org/metals/blog/2019/02/01/tin.html</link>
             <guid>http://scalameta.org/metals/blog/2019/02/01/tin.html</guid>

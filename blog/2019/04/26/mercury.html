@@ -1,0 +1,174 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Metals v0.5.1 · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="This release introduces minor improvements and bug fixes with highlights"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Metals v0.5.1 · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/blog/2019/04/26/mercury.html"/><meta property="og:description" content="This release introduces minor improvements and bug fixes with highlights"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul><li class="navListItem"><a class="navItem" href="/metals/blog/2020/04/12/mercury.html">Metals v0.5.0</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/blog/2019/04/26/mercury.html">Metals v0.5.1</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/04/26/mercury.html">Metals v0.5.1</a></h1><p class="post-meta">April 26, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><div><span><p>This release introduces minor improvements and bug fixes with highlights
+including:</p>
+<ul>
+<li>auto-imports are inserted at the toplevel instead of locally</li>
+<li>document symbol lists inner methods and anonymous classes</li>
+<li>the recommended Vim client is now coc.nvim</li>
+<li>diagnostics are cleared for deleted files</li>
+<li>fuzzy symbol search no longer returns results for deleted files</li>
+<li>find all references now handles synthetic <code>update</code> calls</li>
+</ul>
+<p>Metals is a language server for Scala that works with VS Code, Atom, Vim,
+Sublime Text and Emacs. Metals is developed at the
+<a href="https://scala.epfl.ch/">Scala Center</a> along with contributors from the
+community.</p>
+<p>In this release we merged 15 PRs and closed 7 issues, full details:
+<a href="https://github.com/scalameta/metals/milestone/8?closed=1">https://github.com/scalameta/metals/milestone/8?closed=1</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="automatic-imports-are-placed-globally-instead-of-locally"></a><a href="#automatic-imports-are-placed-globally-instead-of-locally" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Automatic imports are placed globally instead of locally</h2>
+<p>Previously, auto-imports were placed locally like this:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">Main</span> </span>{
+  <span class="hljs-keyword">import</span> scala.concurrent.<span class="hljs-type">Future</span> <span class="hljs-comment">// &lt;- automatically added by Metals</span>
+  <span class="hljs-keyword">val</span> future = <span class="hljs-type">Future</span>@@
+}
+</code></pre>
+<p>Now, the import is inserted at the toplevel instead</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> scala.concurrent.<span class="hljs-type">Future</span> <span class="hljs-comment">// &lt;- automatically added by Metals</span>
+
+<span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">Main</span> </span>{
+  <span class="hljs-keyword">val</span> future = <span class="hljs-type">Future</span>@@
+}
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="document-symbols-now-shows-inner-methods-and-anonymous-classes"></a><a href="#document-symbols-now-shows-inner-methods-and-anonymous-classes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Document symbols now shows inner methods and anonymous classes</h2>
+<p><strong>Before</strong>:</p>
+<p><img src="https://user-images.githubusercontent.com/691940/56455884-dc92d300-6364-11e9-837e-c8aedd13e78d.png" alt="image"></p>
+<p><strong>After</strong>:</p>
+<p><img src="https://user-images.githubusercontent.com/691940/56455880-cab13000-6364-11e9-910a-4b55854df147.png" alt="image"></p>
+<h2><a class="anchor" aria-hidden="true" id="diagnostics-gracefully-handle-deleted-files"></a><a href="#diagnostics-gracefully-handle-deleted-files" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Diagnostics gracefully handle deleted files</h2>
+<p>Previously, deleting a file with compile errors would result in the stale
+diagnostics to stay until you restarted the Metals server. Now, diagnostics are
+cleared when a source file is deleted.</p>
+<h2><a class="anchor" aria-hidden="true" id="fuzzy-symbol-sarch-gracefully-handles-deleted-files"></a><a href="#fuzzy-symbol-sarch-gracefully-handles-deleted-files" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fuzzy symbol sarch gracefully handles deleted files</h2>
+<p>Previously, fuzzy searching for a symbol could return results from deleted
+files. Now, fuzzy symbol search only shows results from files that exist on
+disk.</p>
+<h2><a class="anchor" aria-hidden="true" id="find-all-references-handles-synthetic-update-calls"></a><a href="#find-all-references-handles-synthetic-update-calls" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Find all references handles synthetic <code>update</code> calls</h2>
+<p>Previously, find all references did not catch references where an <code>update()</code>
+method call was synthesized.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">val</span> cache = mutable.<span class="hljs-type">Map</span>.empty[<span class="hljs-type">String</span>, <span class="hljs-type">String</span>]
+cache(<span class="hljs-string">"a"</span>) = <span class="hljs-string">"b"</span> <span class="hljs-comment">// before: referenced `Map.update()` instead of `cache`</span>
+</code></pre>
+<p>Now, the reference to <code>cache</code> in <code>cache(&quot;a&quot;) = &quot;b&quot;</code> is indexed as well as the
+synthetic call to the <code>Map.update()</code> method.</p>
+<h2><a class="anchor" aria-hidden="true" id="the-recommended-vim-client-is-now-cocnvim"></a><a href="#the-recommended-vim-client-is-now-cocnvim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The recommended Vim client is now coc.nvim</h2>
+<p>Previously, the
+<a href="https://scalameta.org/metals/docs/editors/vim.html">vim installation instructions</a>
+recommended the vim-lsc client. Now, the installation instructions recommend
+coc.vim since it supports more functionality of the Language Server Protocol. If
+you use Vim, we recommend trying out coc.vim to enjoy more advanced features
+like completions with auto-imports.</p>
+<h2><a class="anchor" aria-hidden="true" id="contributors"></a><a href="#contributors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributors</h2>
+<p>Big thanks to everybody who contributed to this release!</p>
+<pre><code class="hljs"><span class="hljs-meta">$</span> <span class="hljs-string">git shortlog -sn --no-merges v0.5.0..v0.5.1</span>
+<span class="hljs-meta">Ólafur</span> <span class="hljs-string">Páll Geirsson</span>
+<span class="hljs-attr">Gabriele</span> <span class="hljs-string">Petronella</span>
+<span class="hljs-attr">Gabriel</span> <span class="hljs-string">Volpe</span>
+<span class="hljs-attr">JesusMtnez</span>
+<span class="hljs-attr">Eric</span> <span class="hljs-string">Peters</span>
+<span class="hljs-attr">Arnout</span> <span class="hljs-string">Engelen</span>
+<span class="hljs-attr">Robin</span> <span class="hljs-string">Green</span>
+<span class="hljs-attr">Tomasz</span> <span class="hljs-string">Godzik</span>
+<span class="hljs-attr">David</span> <span class="hljs-string">Strawn</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="merged-prs"></a><a href="#merged-prs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Merged PRs</h2>
+<ul>
+<li>Upgrade to latest Scalameta.
+<a href="https://github.com/scalameta/metals/pull/702">#702</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add question template <a href="https://github.com/scalameta/metals/pull/701">#701</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Don't return workspace/symbol results for deleted files.
+<a href="https://github.com/scalameta/metals/pull/695">#695</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Insert global imports instead of local imports.
+<a href="https://github.com/scalameta/metals/pull/692">#692</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix a dead link to Bloop site
+<a href="https://github.com/scalameta/metals/pull/691">#691</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Update a couple .lines to .linesIterator for java11
+<a href="https://github.com/scalameta/metals/pull/688">#688</a>
+(<a href="https://github.com/er1c">er1c</a>)</li>
+<li>Fix typo <a href="https://github.com/scalameta/metals/pull/687">#687</a>
+(<a href="https://github.com/greenrd">greenrd</a>)</li>
+<li>Handle document symbols for nested declarations
+<a href="https://github.com/scalameta/metals/pull/686">#686</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Update Emacs docs <a href="https://github.com/scalameta/metals/pull/681">#681</a>
+(<a href="https://github.com/JesusMtnez">JesusMtnez</a>)</li>
+<li>Add &quot;Coming from IntelliJ&quot; section to VS Code docs.
+<a href="https://github.com/scalameta/metals/pull/678">#678</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Clear diagnostics on build import, fixes #644.
+<a href="https://github.com/scalameta/metals/pull/677">#677</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Disable flaky test on Appveyor.
+<a href="https://github.com/scalameta/metals/pull/676">#676</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update stable version in issue template
+<a href="https://github.com/scalameta/metals/pull/671">#671</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Documenting coc.nvim as the recommended LSP client for Vim
+<a href="https://github.com/scalameta/metals/pull/665">#665</a>
+(<a href="https://github.com/gvolpe">gvolpe</a>)</li>
+<li>Remove Deprecated Usage Of <code>java.util.Date</code> API
+<a href="https://github.com/scalameta/metals/pull/663">#663</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Link to vscode marketplace
+<a href="https://github.com/scalameta/metals/pull/661">#661</a>
+(<a href="https://github.com/raboof">raboof</a>)</li>
+<li>Use correct GIF for signature help on landing page.
+<a href="https://github.com/scalameta/metals/pull/660">#660</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Document new features and write release announcement.
+<a href="https://github.com/scalameta/metals/pull/655">#655</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Make detail view in override not show unicode character.
+<a href="https://github.com/scalameta/metals/pull/654">#654</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+</ul>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/metals/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#automatic-imports-are-placed-globally-instead-of-locally">Automatic imports are placed globally instead of locally</a></li><li><a href="#document-symbols-now-shows-inner-methods-and-anonymous-classes">Document symbols now shows inner methods and anonymous classes</a></li><li><a href="#diagnostics-gracefully-handle-deleted-files">Diagnostics gracefully handle deleted files</a></li><li><a href="#fuzzy-symbol-sarch-gracefully-handles-deleted-files">Fuzzy symbol sarch gracefully handles deleted files</a></li><li><a href="#find-all-references-handles-synthetic-update-calls">Find all references handles synthetic <code>update</code> calls</a></li><li><a href="#the-recommended-vim-client-is-now-cocnvim">The recommended Vim client is now coc.nvim</a></li><li><a href="#contributors">Contributors</a></li><li><a href="#merged-prs">Merged PRs</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Docs</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Community</h5><a href="https://gitter.im/scalameta/metals" target="_blank">Chat on Gitter</a></div><div><h5>More</h5><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
