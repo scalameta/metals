@@ -326,6 +326,7 @@ including:</p>
 <li>diagnostics are cleared for deleted files</li>
 <li>fuzzy symbol search no longer returns results for deleted files</li>
 <li>find all references now handles synthetic <code>update</code> calls</li>
+<li>deprecate older Scala versions</li>
 </ul>
 <p>Metals is a language server for Scala that works with VS Code, Atom, Vim,
 Sublime Text and Emacs. Metals is developed at the
@@ -375,6 +376,18 @@ recommended the vim-lsc client. Now, the installation instructions recommend
 coc.vim since it supports more functionality of the Language Server Protocol. If
 you use Vim, we recommend trying out coc.vim to enjoy more advanced features
 like completions with auto-imports.</p>
+<h2><a class="anchor" aria-hidden="true" id="deprecate-older-scala-versions"></a><a href="#deprecate-older-scala-versions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Deprecate older Scala versions</h2>
+<p>Metals works with Scala 2.11 and Scala 2.12. Starting from the next release,
+Metals will drop support for the older patch versions of those series, and it
+will exclusively support these version:</p>
+<ul>
+<li>2.11.12</li>
+<li>2.12.7</li>
+<li>2.12.8</li>
+</ul>
+<p>Starting from this release, we will show a warning at startup if you're using an
+outdated Scala version, prompting you to upgrade your project to the latest
+version.</p>
 <h2><a class="anchor" aria-hidden="true" id="contributors"></a><a href="#contributors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributors</h2>
 <p>Big thanks to everybody who contributed to this release!</p>
 <pre><code class="hljs"><span class="hljs-meta">$</span> <span class="hljs-string">git shortlog -sn --no-merges v0.5.0..v0.5.1</span>
