@@ -1,7 +1,17 @@
 # Metals
 
-[![Join the chat at https://gitter.im/scalameta/metals](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/scalameta/metals)
-[![](https://travis-ci.org/scalameta/metals.svg?branch=master)](https://travis-ci.org/scalameta/metals)
+<a href="https://travis-ci.org/scalameta/metals">
+<img src="https://img.shields.io/travis/scalameta/metals/master.svg?style=flat-square" />
+</a>
+<a href="https://gitter.im/scalameta/metals">
+<img alt="Join the chat on Gitter" src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&style=flat-square&color=F71263" />
+</a>
+<a href="https://twitter.com/scalameta">
+<img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&style=flat-square&color=blue" />
+</a>
+<a href="https://index.scala-lang.org/scalameta/metals/metals">
+<img src="https://index.scala-lang.org/scalameta/metals/metals/latest.svg" />
+</a>
 
 ## Documentation
 
