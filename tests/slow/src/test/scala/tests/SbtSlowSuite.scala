@@ -259,7 +259,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
       _ = assertStatus(_.isInstalled)
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
-        CheckDoctor.multipleMisconfiguredProjects(6)
+        CheckDoctor.multipleMisconfiguredProjects(8)
       )
       _ <- Future.sequence(
         ('a' to 'f')
