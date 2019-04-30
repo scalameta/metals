@@ -38,6 +38,7 @@ final class FileWatcher(
 ) extends Cancelable {
 
   private val executor = Executors.newFixedThreadPool(1)
+  ThreadPools.discardRejectedRunnables("FileWatcher.executor", executor)
   private var activeWatcher: Option[DirectoryWatcher] = None
   private var watching: CompletableFuture[Void] = new CompletableFuture()
 

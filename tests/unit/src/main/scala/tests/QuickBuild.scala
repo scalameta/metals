@@ -285,8 +285,6 @@ object QuickBuild {
     if (json.isFile) {
       newDigest(workspace) match {
         case None =>
-          // do nothing
-          scribe.info("quick-build is cached")
         case Some((digestFile, digest)) =>
           val timer = new Timer(Time.system)
           val gson = new Gson()

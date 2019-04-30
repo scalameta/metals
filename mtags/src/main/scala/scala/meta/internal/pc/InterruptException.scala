@@ -12,6 +12,10 @@ object InterruptException {
         _: CancellationException =>
       true
     case _ =>
-      false
+      if (e.getCause() != null) {
+        unapply(e.getCause())
+      } else {
+        false
+      }
   }
 }

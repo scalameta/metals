@@ -7,6 +7,7 @@ import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+import scala.meta.internal.pc.InterruptException
 
 final class Tables(
     workspace: AbsolutePath,
@@ -45,10 +46,14 @@ final class Tables(
     try persistentConnection(isAutoServer = true)
     catch {
       case NonFatal(e) =>
-        scribe.error(
-          s"unable to setup persistent H2 database with AUTO_SERVER=true, falling back to AUTO_SERVER=false.",
-          e
-        )
+        val message =
+          s"unable to setup persistent H2 database with AUTO_SERVER=true, falling back to AUTO_SERVER=false."
+        e match {
+          case InterruptException() =>
+            scribe.info(message)
+          case _ =>
+            scribe.error(e)
+        }
         tryNoAutoServer()
     }
   }

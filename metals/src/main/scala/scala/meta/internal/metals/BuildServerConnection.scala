@@ -16,9 +16,9 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import scala.meta.internal.pc.InterruptException
 
 /**
  * An actively running and initialized BSP connection.
@@ -36,13 +36,23 @@ case class BuildServerConnection(
   private val ongoingRequests = new MutableCancelable().addAll(cancelables)
 
   /** Run build/shutdown procedure */
-  def shutdown(): Future[Unit] = {
-    for {
-      _ <- server.buildShutdown().asScala
-    } yield {
+  def shutdown(): Future[Unit] = Future {
+    try {
+      server.buildShutdown().get(2, TimeUnit.SECONDS)
       server.onBuildExit()
       // Cancel pending compilations on our side, this is not needed for Bloop.
       cancel()
+    } catch {
+      case e: TimeoutException =>
+        scribe.error(
+          s"timeout: build server '${initializeResult.getDisplayName}' during shutdown"
+        )
+      case InterruptException() =>
+      case e: Throwable =>
+        scribe.error(
+          s"build shutdown: ${initializeResult.getDisplayName()}",
+          e
+        )
     }
   }
 

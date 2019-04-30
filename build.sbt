@@ -1,4 +1,4 @@
-def localSnapshotVersion = "0.5.1-SNAPSHOT"
+def localSnapshotVersion = "0.6.0-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 inThisBuild(
   List(
@@ -120,9 +120,7 @@ lazy val V = new {
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
     Seq("2.12.8", "2.12.7", "2.11.12") ++ deprecatedScalaVersions
-  def deprecatedScalaVersions = Seq(
-    "2.12.6", "2.12.5", "2.12.4", "2.11.11", "2.11.10", "2.11.9"
-  )
+  def deprecatedScalaVersions = Seq[String]()
 }
 
 skip.in(publish) := true
@@ -133,7 +131,7 @@ lazy val interfaces = project
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     libraryDependencies ++= List(
-      "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0"
+      "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.7.1"
     ),
     crossVersion := CrossVersion.disabled
   )

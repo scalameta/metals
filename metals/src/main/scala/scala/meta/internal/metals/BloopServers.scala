@@ -65,7 +65,7 @@ final class BloopServers(
     if (config.bloopProtocol.isTcp) {
       10
     } else {
-      0
+      2
     }
 
   private def newServerUnsafe(): Future[BuildServerConnection] = {

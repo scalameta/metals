@@ -61,7 +61,7 @@ class MetalsLanguageServer(
     newBloopClassloader: () => URLClassLoader = () =>
       Embedded.newBloopClassloader()
 ) extends Cancelable {
-
+  ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
   override def cancel(): Unit = {

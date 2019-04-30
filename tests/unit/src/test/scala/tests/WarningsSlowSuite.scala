@@ -5,7 +5,9 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Messages
 
 object WarningsSlowSuite extends BaseSlowSuite("warnings") {
-  testAsync("deprecated-scala") {
+  // NOTE(olafur) Ignored because at the time of this writing we have no deprecated
+  // Scala versions.
+  ignore("deprecated-scala") {
     cleanWorkspace()
     val using = V.deprecatedScalaVersions.head
     val recommended = ScalaVersions.recommendedVersion(using)

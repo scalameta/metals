@@ -510,13 +510,13 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
               if (metalsConfig.isSignatureHelpDocumentationEnabled) {
                 lparam.setDocumentation(docstring.toMarkupContent)
               }
-              // TODO(olafur): use LSP 3.14.0 ParameterInformation.label offsets instead of strings
-              // once this issue is fixed https://github.com/eclipse/lsp4j/issues/300
               if (isActiveSignature && t.activeArg.matches(param, i, j)) {
                 arg(i, j) match {
                   case Some(a) if a.tpe != null && !a.tpe.isErroneous =>
                     val tpe = metalsToLongString(a.tpe.widen, shortenedNames)
-                    if (!lparam.getLabel.endsWith(tpe) &&
+                    if (lparam.getLabel() != null &&
+                      lparam.getLabel().isLeft() &&
+                      !lparam.getLabel().getLeft().endsWith(tpe) &&
                       metalsConfig.isSignatureHelpDocumentationEnabled) {
                       lparam.setDocumentation(
                         ("```scala\n" + tpe + "\n```\n" + docstring).toMarkupContent
@@ -533,7 +533,10 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     }
     val signatureInformation = new SignatureInformation(
       printer.methodSignature(
-        paramLabels.iterator.map(_.iterator.map(_.getLabel))
+        paramLabels.iterator.map(_.iterator.collect {
+          case i if i.getLabel() != null && i.getLabel().isLeft() =>
+            i.getLabel().getLeft()
+        })
       )
     )
     if (metalsConfig.isSignatureHelpDocumentationEnabled) {

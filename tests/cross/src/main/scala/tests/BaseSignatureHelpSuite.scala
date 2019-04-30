@@ -40,7 +40,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
               .append("\n")
             if (result.getActiveSignature == i && result.getActiveParameter != null) {
               val param = signature.getParameters.get(result.getActiveParameter)
-              val column = signature.getLabel.indexOf(param.getLabel)
+              val column = signature.getLabel.indexOf(param.getLabel.getLeft())
               if (column < 0) {
                 fail(s"""invalid parameter label
                         |  param.label    : ${param.getLabel}
@@ -50,7 +50,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
               val indent = " " * column
               out
                 .append(indent)
-                .append("^" * param.getLabel.length)
+                .append("^" * param.getLabel.getLeft().length)
                 .append("\n")
               signature.getParameters.asScala.foreach { param =>
                 val pdoc = doc(param.getDocumentation)
@@ -60,7 +60,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
                 if (includeDocs && pdoc.nonEmpty) {
                   out
                     .append("  @param ")
-                    .append(param.getLabel.replaceFirst(":.*", ""))
+                    .append(param.getLabel.getLeft().replaceFirst(":.*", ""))
                     .append(" ")
                     .append(pdoc)
                     .append("\n")

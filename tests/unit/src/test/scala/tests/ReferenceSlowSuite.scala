@@ -39,7 +39,7 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
         }
       )
       _ = assertNoDiagnostics()
-      _ = server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = server.assertReferenceDefinitionBijection()
     } yield ()
   }
@@ -71,7 +71,7 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
         }
       )
       _ = assertNoDiagnostics()
-      _ = server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = server.assertReferenceDefinitionDiff(
         """|--- references
            |+++ definition
