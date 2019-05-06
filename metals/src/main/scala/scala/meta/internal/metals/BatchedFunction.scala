@@ -38,6 +38,20 @@ final class BatchedFunction[A, B](
     promise.future
   }
 
+  /**
+   * Pauses applications of the arguments to the fn but allows to accumulate requests  
+   */
+  def pause: Unit = 
+    paused.set(true)
+
+  /**
+   * Restarts appliation of the accumulated requests to the fn 
+   */
+  def unpause: Unit = {
+    paused.set(false)
+    unlock()
+  }
+
   def cancelCurrentRequest(): Unit = {
     current.get().cancelable.cancel()
   }
@@ -61,6 +75,8 @@ final class BatchedFunction[A, B](
     }
   }
 
+  private val paused = new AtomicBoolean()
+
   private val lock = new AtomicBoolean()
   private def unlock(): Unit = {
     lock.set(false)
@@ -69,7 +85,7 @@ final class BatchedFunction[A, B](
     }
   }
   private def runAcquire(): Unit = {
-    if (lock.compareAndSet(false, true)) {
+    if (lock.compareAndSet(false, true) && !paused.get()) {
       runRelease()
     } else {
       // Do nothing, the submitted arguments will be handled

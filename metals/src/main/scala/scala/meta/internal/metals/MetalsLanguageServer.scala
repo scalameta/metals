@@ -603,6 +603,17 @@ class MetalsLanguageServer(
     }
   }
 
+  @JsonNotification("metals/windowStateDidChange")
+  def windowStateDidChane(params: WindowStateDidChangeParams): Unit = {
+    CompletableFuture.completedFuture {
+      if(params.focused) {
+        compileSourceFiles.unpause
+      } else {
+        compileSourceFiles.pause
+      }
+    }
+  }
+
   @JsonNotification("textDocument/didChange")
   def didChange(
       params: DidChangeTextDocumentParams
