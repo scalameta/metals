@@ -10,6 +10,7 @@ import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ConfiguredLanguageClient
 import scala.util.control.NonFatal
+import scala.meta.internal.metals.Embedded
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -23,7 +24,9 @@ object Main {
       ec,
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,
-      config = config
+      config = config,
+      newBloopClassloader = () =>
+        Embedded.newBloopClassloader(config.bloopEmbeddedVersion)
     )
     try {
       scribe.info(s"Starting Metals server with configuration: $config")

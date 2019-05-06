@@ -158,12 +158,14 @@ object Embedded {
     new URLClassLoader(allURLs, parent)
   }
 
-  def newBloopClassloader(): URLClassLoader = {
+  def newBloopClassloader(
+      bloopVersion: String = BuildInfo.bloopVersion
+  ): URLClassLoader = {
     val settings = downloadSettings(
       new Dependency(
         "ch.epfl.scala",
         "bloop-frontend_2.12",
-        BuildInfo.bloopVersion
+        bloopVersion
       )
     ).addRepositories(
       List(

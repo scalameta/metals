@@ -234,7 +234,6 @@ lazy val `sbt-metals` = project
   .settings(
     sbtPlugin := true,
     crossScalaVersions := List(V.scala212, V.scala210),
-    addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % V.sbtBloop),
     sbtVersion in pluginCrossBuild := {
       scalaBinaryVersion.value match {
         case "2.10" => "0.13.17"

@@ -92,7 +92,7 @@ final class BloopInstall(
       args: List[String]
   ): Future[BloopInstallResult] = {
     persistChecksumStatus(Status.Started)
-    BloopInstall.writeGlobalPluginFile(sbt)
+    BloopInstall.writeGlobalPluginFile(sbt, config.bloopSbtVersion)
     val elapsed = new Timer(time)
     val handler = new BloopInstall.ProcessHandler()
     val pb = new NuProcessBuilder(handler, args.asJava)
@@ -211,12 +211,13 @@ object BloopInstall {
       .resolve("plugins")
   }
 
-  private def writeGlobalPluginFile(sbt: Sbt): Unit = {
+  private def writeGlobalPluginFile(sbt: Sbt, sbtBloopVersion: String): Unit = {
     val plugins =
       if (sbt.version.startsWith("0.13")) pluginsDirectory("0.13")
       else pluginsDirectory("1.0")
     plugins.createDirectories()
-    val bytes = globalMetalsSbt.getBytes(StandardCharsets.UTF_8)
+    val bytes =
+      globalMetalsSbt(sbtBloopVersion).getBytes(StandardCharsets.UTF_8)
     val destination = plugins.resolve("metals.sbt")
     if (destination.isFile && destination.readAllBytes.sameElements(bytes)) {
       // Do nothing if the file is unchanged. If we write to the file unconditionally
@@ -232,7 +233,7 @@ object BloopInstall {
   /**
    * Contents of metals.sbt file that is installed globally.
    */
-  private def globalMetalsSbt: String = {
+  private def globalMetalsSbt(sbtBloopVersion: String): String = {
     val resolvers =
       if (BuildInfo.metalsVersion.endsWith("-SNAPSHOT")) {
         """|resolvers ++= {
@@ -255,7 +256,7 @@ object BloopInstall {
         |  import Defaults.sbtPluginExtra
         |  val oldDependencies = libraryDependencies.value
         |  if (System.getenv("METALS_ENABLED") == "true") {
-        |    val bloopModule = "ch.epfl.scala" % "sbt-bloop" % "${BuildInfo.sbtBloopVersion}"
+        |    val bloopModule = "ch.epfl.scala" % "sbt-bloop" % "${sbtBloopVersion}"
         |    val metalsModule = "org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"
         |    val sbtVersion = Keys.sbtBinaryVersion.in(TaskKey[Unit]("pluginCrossBuild")).value
         |    val scalaVersion = Keys.scalaBinaryVersion.in(update).value
