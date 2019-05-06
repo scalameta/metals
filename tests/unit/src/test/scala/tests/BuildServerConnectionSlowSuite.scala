@@ -4,7 +4,8 @@ import scala.meta.internal.metals.ServerCommands
 
 object BuildServerConnectionSlowSuite
     extends BaseSlowSuite("build-server-connection") {
-  testAsync("basic") {
+  // NOTE(olafur) ignored because this test is flaky.
+  ignore("basic") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

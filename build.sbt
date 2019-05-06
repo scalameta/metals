@@ -120,7 +120,14 @@ lazy val V = new {
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
     Seq("2.12.8", "2.12.7", "2.11.12") ++ deprecatedScalaVersions
-  def deprecatedScalaVersions = Seq[String]()
+  def deprecatedScalaVersions = Seq[String](
+    "2.12.6",
+    "2.12.5",
+    "2.12.4",
+    "2.11.11",
+    "2.11.10",
+    "2.11.9"
+  )
 }
 
 skip.in(publish) := true
