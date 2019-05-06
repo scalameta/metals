@@ -274,6 +274,16 @@ Possible values:
   compiler.
 - `on`: log verbose debugging information for the presentation compiler.
 
+### `-Dbloop.embedded.version`
+
+Version number of the embedded Bloop server. Default value is
+`-Dbloop.embedded.version=@BLOOP_VERSION@`.
+
+### `-Dbloop.sbt.version`
+
+Version number of the sbt-bloop plugin to use for the "Install build" command.
+Default value is `-Dbloop.sbt.version=@SBT_BLOOP_VERSION@`.
+
 ## Metals user configuration
 
 Users can customize the Metals server through the LSP
