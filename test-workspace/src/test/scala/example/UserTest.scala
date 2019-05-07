@@ -17,6 +17,6 @@ object Main {
     + 1
   )
 
+  object 
 
 }
-

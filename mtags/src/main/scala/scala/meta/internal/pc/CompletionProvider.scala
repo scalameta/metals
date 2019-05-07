@@ -238,7 +238,9 @@ class CompletionProvider(
       kind: CompletionListKind,
       query: String,
       pos: Position,
-      completion: CompletionPosition
+      completion: CompletionPosition,
+      editRange: l.Range,
+      latestEnclosing: List[Tree]
   ): InterestingMembers = {
     val isSeen = mutable.Set.empty[String]
     val isIgnored = mutable.Set.empty[Symbol]
@@ -279,6 +281,7 @@ class CompletionProvider(
     }
     completions.foreach(visit)
     completion.contribute.foreach(visit)
+    buf ++= keywords(pos, editRange, latestEnclosing)
     val searchResults =
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
@@ -314,6 +317,11 @@ class CompletionProvider(
     else k.Value
   }
 
+  private def getEnclosing(pos: Position): List[Tree] = {
+    locateTree(pos)
+    lastEnclosing
+  }
+
   private def safeCompletionsAt(
       pos: Position
   ): (InterestingMembers, CompletionPosition, l.Range, String) = {
@@ -327,7 +335,8 @@ class CompletionProvider(
         pos,
         params.text(),
         editRange,
-        CompletionResult.NoResults
+        CompletionResult.NoResults,
+        getEnclosing(pos)
       ) match {
         case CompletionPosition.None =>
           logger.warning(e.getMessage)
@@ -369,11 +378,26 @@ class CompletionProvider(
         if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
         else CompletionFuzzy.matches(entered, name)
       }
+      val latestEnclosing = getEnclosing(pos)
       val completion =
-        completionPosition(pos, params.text(), editRange, completions)
+        completionPosition(
+          pos,
+          params.text(),
+          editRange,
+          completions,
+          latestEnclosing
+        )
       val query = completions.name.toString
       val items =
-        filterInteresting(matchingResults, kind, query, pos, completion)
+        filterInteresting(
+          matchingResults,
+          kind,
+          query,
+          pos,
+          completion,
+          editRange,
+          latestEnclosing
+        )
       params.checkCanceled()
       (items, completion, editRange, query)
     } catch {

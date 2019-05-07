@@ -43,7 +43,8 @@ object CompletionMatchSuite extends BaseCompletionSuite {
       |case object Weekend extends Weekday
       |@@
       |""".stripMargin,
-    ""
+    "",
+    filter = _ => false
   )
   if (!isScala211)
     // Assert that Workday/Weekend symbols from previous test don't appear in result.

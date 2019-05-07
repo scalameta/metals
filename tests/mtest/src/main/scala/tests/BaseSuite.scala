@@ -15,7 +15,8 @@ import utest.framework.TestCallTree
 import utest.framework.Tree
 import utest.ufansi.Attrs
 import utest.ufansi.Str
-import scala.meta.internal.metals.Testing
+
+import scala.meta.internal.metals.{JdkSources, Testing}
 import scala.collection.mutable
 
 /**
@@ -27,6 +28,7 @@ class BaseSuite extends TestSuite {
     Properties.versionNumberString.startsWith("2.11")
   def isWindows: Boolean =
     isAppveyor || isAzureWindows
+  def hasJdkSources: Boolean = JdkSources().isDefined
   def isAppveyor: Boolean =
     "True" == System.getenv("APPVEYOR")
   def isAzureWindows: Boolean =

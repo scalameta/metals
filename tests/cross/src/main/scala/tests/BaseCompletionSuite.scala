@@ -129,19 +129,22 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       topLines: Option[Int] = None,
       filterText: String = "",
       includeDetail: Boolean = true,
-      filename: String = "A.scala"
+      filename: String = "A.scala",
+      filter: String => Boolean = _ => true,
+      enablePackageWrap: Boolean = true
   )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val out = new StringBuilder()
       val withPkg =
-        if (original.contains("package")) original
+        if (original.contains("package") || !enablePackageWrap) original
         else s"package ${scala.meta.Term.Name(name)}\n$original"
       val baseItems = getItems(withPkg, filename)
       val items = topLines match {
         case Some(top) => baseItems.take(top)
         case None => baseItems
       }
-      items.foreach { item =>
+      val filteredItems = items.filter(item => filter(item.getLabel))
+      filteredItems.foreach { item =>
         val label = TestCompletions.getFullyQualifiedLabel(item)
         val commitCharacter =
           if (includeCommitCharacter)
@@ -175,7 +178,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       )
       postAssert()
       if (filterText.nonEmpty) {
-        items.foreach { item =>
+        filteredItems.foreach { item =>
           assertNoDiff(
             item.getFilterText,
             filterText,

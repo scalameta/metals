@@ -359,12 +359,19 @@ trait Completions { this: MetalsGlobal =>
       pos: Position,
       text: String,
       editRange: l.Range,
-      completions: CompletionResult
+      completions: CompletionResult,
+      latestEnclosing: List[Tree]
   ): CompletionPosition = {
     // the implementation of completionPositionUnsafe does a lot of `typedTreeAt(pos).tpe`
     // which often causes null pointer exceptions, it's easier to catch the error here than
     // enforce discipline in the code.
-    try completionPositionUnsafe(pos, text, editRange, completions)
+    try completionPositionUnsafe(
+      pos,
+      text,
+      editRange,
+      completions,
+      latestEnclosing
+    )
     catch {
       case NonFatal(e) =>
         logger.log(Level.SEVERE, e.getMessage(), e)
@@ -375,7 +382,8 @@ trait Completions { this: MetalsGlobal =>
       pos: Position,
       text: String,
       editRange: l.Range,
-      completions: CompletionResult
+      completions: CompletionResult,
+      latestEnclosingArg: List[Tree]
   ): CompletionPosition = {
     val PatternMatch = new PatternMatch(pos)
     def fromIdentApply(
@@ -389,10 +397,12 @@ trait Completions { this: MetalsGlobal =>
           CompletionPosition.None
         }
       } else {
+
         CompletionPosition.Arg(ident, apply, pos, text)
       }
     }
-    lastEnclosing match {
+
+    latestEnclosingArg match {
       case (ident: Ident) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
@@ -454,7 +464,7 @@ trait Completions { this: MetalsGlobal =>
         inferCompletionPosition(
           pos,
           text,
-          lastEnclosing,
+          latestEnclosingArg,
           completions,
           editRange
         )
