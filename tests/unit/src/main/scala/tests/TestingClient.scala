@@ -4,6 +4,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
+
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -164,13 +165,18 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   }
   override def showMessageRequest(
       params: ShowMessageRequestParams
-  ): CompletableFuture[MessageActionItem] =
+  ): CompletableFuture[MessageActionItem] = {
+    def isSameMessage(
+        createParams: String => ShowMessageRequestParams
+    ): Boolean = {
+      createParams("gradle") == params || createParams("sbt") == params
+    }
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.getMessage)
       showMessageRequestHandler(params).getOrElse {
-        if (params == ImportBuildChanges.params) {
+        if (isSameMessage(ImportBuildChanges.params)) {
           ImportBuildChanges.yes
-        } else if (params == ImportBuild.params) {
+        } else if (isSameMessage(ImportBuild.params)) {
           ImportBuild.yes
         } else if (CheckDoctor.isDoctor(params)) {
           CheckDoctor.moreInformation
@@ -183,6 +189,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
         }
       }
     }
+  }
   override def logMessage(params: MessageParams): Unit = {
     logMessages.add(params)
   }

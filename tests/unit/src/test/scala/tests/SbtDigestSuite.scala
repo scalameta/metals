@@ -1,77 +1,69 @@
 package tests
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
-import scala.meta.internal.metals.SbtDigest
+import scala.meta.internal.builds.SbtDigest
+import scala.meta.io.AbsolutePath
 
-object SbtDigestSuite extends BaseSuite {
-  def digest(layout: String): Option[String] = {
-    val root = FileLayout.fromString(layout)
-    val obtained = SbtDigest.current(root)
-    obtained
-  }
-  def check(name: String, layout: String, expected: Option[String]): Unit = {
-    test(name) {
-      val root = FileLayout.fromString(layout)
-      val obtained = SbtDigest.current(root)
-      (obtained, expected) match {
-        case (None, None) => ()
-        case (Some(x), Some(y)) =>
-          assertNoDiff(x, y)
-          Files.write(
-            root.resolve("build.sbt").toNIO,
-            "\n// this is a comment\n".getBytes(StandardCharsets.UTF_8),
-            StandardOpenOption.APPEND
-          )
-          val obtained2 = SbtDigest.current(root)
-          assertEquals(
-            obtained2,
-            obtained,
-            "comments and whitespace did impact digest"
-          )
-          Files.write(
-            root.resolve("build.sbt").toNIO,
-            "\nlazy val anotherProject = x\n".getBytes(StandardCharsets.UTF_8),
-            StandardOpenOption.APPEND
-          )
-          val obtained3 = SbtDigest.current(root)
-          assertNotEquals(
-            obtained3,
-            obtained,
-            "significant tokens did not impact digest"
-          )
-        case (None, Some(y)) =>
-          fail(s"expected digest $y but did not obtain a digest")
-        case (Some(x), None) =>
-          fail(s"expected no digest but did obtained digest $x")
-      }
-    }
-  }
+object SbtDigestSuite extends BaseDigestSuite {
 
-  val solo = "62E46F71242E515912BE6814C9356D63"
-  check(
-    "solo build.sbt",
+  override def digestCurrent(
+      root: AbsolutePath
+  ): Option[String] = SbtDigest.current(root)
+
+  checkSame(
+    "same-build.sbt",
     """
       |/build.sbt
       |lazy val x = 2
     """.stripMargin,
-    Some(solo)
+    """
+      |/build.sbt
+      |lazy val x = 2
+    """.stripMargin
   )
 
-  check(
-    "comments and whitespace have no effect",
+  checkSame(
+    "comments-whitespace",
+    """
+      |/build.sbt
+      |lazy val x = 2
+    """.stripMargin,
     """
       |/build.sbt
       |lazy val x =
       | 2 // this is two
-    """.stripMargin,
-    Some(solo)
+    """.stripMargin
   )
 
-  val project = "08E20CE98E81FAB7388686CCADFC2F64"
-  check(
-    "metabuild",
+  checkDiff(
+    "significant-tokens",
+    """
+      |/build.sbt
+      |lazy val x = 2
+      |lazy val anotherProject = x
+    """.stripMargin,
+    """
+      |/build.sbt
+      |lazy val x = 2
+    """.stripMargin
+  )
+
+  checkDiff(
+    "metabuild-not-ignored",
+    """
+      |/build.sbt
+      |lazy val x = 2
+    """.stripMargin,
+    """
+      |/build.sbt
+      |lazy val x = 2
+      |/project/Build.scala
+      |package a.b
+      |class A
+    """.stripMargin
+  )
+
+  checkDiff(
+    "meta-metabuild-not-ignored",
     """
       |/build.sbt
       |lazy val x = 2
@@ -79,12 +71,6 @@ object SbtDigestSuite extends BaseSuite {
       |package a.b
       |class A
     """.stripMargin,
-    Some(project)
-  )
-
-  val meta = "E8B5C90DC3EAA995306ED0C4A102107A"
-  check(
-    "meta-metabuild is note ignored",
     """
       |/build.sbt
       |lazy val x = 2
@@ -94,29 +80,36 @@ object SbtDigestSuite extends BaseSuite {
       |/project/project/Build2.scala
       |package a.b
       |class A
-    """.stripMargin,
-    Some(meta)
+    """.stripMargin
   )
 
-  test("build.properties") {
-    val v1 = digest(
-      """
-        |/build.sbt
-        |lazy val x = 2
-        |/project/build.properties
-        |sbt.version=1.0
-        |""".stripMargin
-    ).get
-    val v2 = digest(
-      """
-        |/build.sbt
-        |lazy val x = 2
-        |/project/build.properties
-        |sbt.version=2.0
-        |""".stripMargin
-    ).get
-    assertNotEquals(v1, solo, "build.properties should affect digest")
-    assertNotEquals(v1, v2, "build.properties should affect digest")
-  }
+  checkDiff(
+    "build.properties-not-ignored",
+    """
+      |/build.sbt
+      |lazy val x = 2
+      |""".stripMargin,
+    """
+      |/build.sbt
+      |lazy val x = 2
+      |/project/build.properties
+      |sbt.version=2.0
+      |""".stripMargin
+  )
 
+  checkDiff(
+    "build.properties-diff",
+    """
+      |/build.sbt
+      |lazy val x = 2
+      |/project/build.properties
+      |sbt.version=1.0
+      |""".stripMargin,
+    """
+      |/build.sbt
+      |lazy val x = 2
+      |/project/build.properties
+      |sbt.version=2.0
+      |""".stripMargin
+  )
 }

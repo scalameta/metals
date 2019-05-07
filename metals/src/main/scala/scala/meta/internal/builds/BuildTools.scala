@@ -1,9 +1,9 @@
-package scala.meta.internal.metals
+package scala.meta.internal.builds
 
 import java.nio.file.Files
-import scala.meta.io.AbsolutePath
-import MetalsEnrichments._
 import java.util.Properties
+import scala.collection.JavaConverters._
+import scala.meta.io.AbsolutePath
 
 /**
  * Detects what build tool is used in this workspace.
@@ -54,31 +54,41 @@ final class BuildTools(
     }
   }
   def isMill: Boolean = workspace.resolve("build.sc").isFile
-  def isGradle: Boolean = workspace.resolve("build.gradle").isFile
+  def isGradle: Boolean =
+    workspace.resolve("build.gradle").isFile || workspace
+      .resolve("build.gradle.kts")
+      .isFile
   def isMaven: Boolean = workspace.resolve("pom.xml").isFile
   def isPants: Boolean = workspace.resolve("pants.ini").isFile
   def isBazel: Boolean = workspace.resolve("WORKSPACE").isFile
-  import BuildTool._
-  def asSbt: Option[Sbt] =
-    if (isSbt) Some(SbtVersion(workspace))
-    else None
-  def all: List[BuildTool] = {
-    val buf = List.newBuilder[BuildTool]
-    if (isBloop) buf += Bloop
-    buf ++= asSbt.toList
-    if (isMill) buf += Mill
-    if (isGradle) buf += Gradle
-    if (isMaven) buf += Maven
-    if (isPants) buf += Pants
-    if (isBazel) buf += Bazel
+
+  def all: List[String] = {
+    val buf = List.newBuilder[String]
+    if (isBloop) buf += "Bloop"
+    if (isSbt) buf += "Sbt"
+    if (isMill) buf += "Mill"
+    if (isGradle) buf += "Gradle"
+    if (isMaven) buf += "Maven"
+    if (isPants) buf += "Pants"
+    if (isBazel) buf += "Bazel"
     buf.result()
   }
   def isEmpty: Boolean = {
     all.isEmpty
   }
+  def loadSupported(): Option[BuildTool] = {
+    if (isSbt) Some(SbtBuildTool(workspace))
+    else if (isGradle) Some(GradleBuildTool)
+    else None
+  }
   override def toString: String = {
     val names = all.mkString("+")
     if (names.isEmpty) "<no build tool>"
     else names
+  }
+  def isBuildRelated(workspace: AbsolutePath, path: AbsolutePath): Boolean = {
+    if (isSbt) SbtBuildTool.isSbtRelatedPath(workspace, path)
+    else if (isGradle) GradleBuildTool.isGradleRelatedPath(workspace, path)
+    else false
   }
 }

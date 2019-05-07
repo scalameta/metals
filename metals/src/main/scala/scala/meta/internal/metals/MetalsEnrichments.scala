@@ -272,21 +272,6 @@ object MetalsEnrichments
       filename.endsWith(".jar")
     }
 
-    def isSbtRelated(workspace: AbsolutePath): Boolean = {
-      val project = workspace.toNIO.resolve("project")
-      val isToplevel = Set(
-        workspace.toNIO,
-        project,
-        project.resolve("project")
-      )
-      isToplevel(path.toNIO.getParent) && {
-        val filename = path.toNIO.getFileName.toString
-        filename.endsWith("build.properties") ||
-        filename.endsWith(".sbt") ||
-        filename.endsWith(".scala")
-      }
-    }
-
     /**
      * Reads file contents from editor buffer with fallback to disk.
      */

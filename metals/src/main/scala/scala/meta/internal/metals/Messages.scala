@@ -7,7 +7,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.meta.internal.metals.BuildTool.Sbt
+import scala.meta.internal.builds.BuildTool
 import scala.meta.io.AbsolutePath
 
 /**
@@ -16,7 +16,6 @@ import scala.meta.io.AbsolutePath
 object Messages extends Messages(Icons.vscode)
 
 class Messages(icons: Icons) {
-  val BloopInstallProgress = MetalsSlowTaskParams("sbt bloopInstall")
   val ImportProjectFailed = new MessageParams(
     MessageType.Error,
     "Import project failed, no functionality will work. See the logs for more details"
@@ -27,6 +26,8 @@ class Messages(icons: Icons) {
       "See the logs for more details. "
   )
 
+  def bloopInstallProgress(buildToolName: String) =
+    MetalsSlowTaskParams(s"$buildToolName bloopInstall")
   def dontShowAgain: MessageActionItem =
     new MessageActionItem("Don't show again")
   def notNow: MessageActionItem =
@@ -34,9 +35,9 @@ class Messages(icons: Icons) {
   object ImportBuildChanges {
     def yes: MessageActionItem =
       new MessageActionItem("Import changes")
-    def params: ShowMessageRequestParams = {
+    def params(buildToolName: String): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
-      params.setMessage("sbt build needs to be re-imported")
+      params.setMessage(s"$buildToolName build needs to be re-imported")
       params.setType(MessageType.Info)
       params.setActions(
         List(
@@ -51,10 +52,10 @@ class Messages(icons: Icons) {
 
   object ImportBuild {
     def yes = new MessageActionItem("Import build")
-    def params: ShowMessageRequestParams = {
+    def params(buildToolName: String): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        "New sbt workspace detected, would you like to import the build?"
+        s"New $buildToolName workspace detected, would you like to import the build?"
       )
       params.setType(MessageType.Info)
       params.setActions(
@@ -112,18 +113,19 @@ class Messages(icons: Icons) {
     }
   }
 
-  object IncompatibleSbtVersion {
-    def toFixMessage =
-      "To fix this problem, upgrade to sbt v0.13.17+"
+  object IncompatibleBuildToolVersion {
+
     def dismissForever: MessageActionItem =
       new MessageActionItem("Don't show again")
     def learnMore: MessageActionItem =
       new MessageActionItem("Learn more")
     def learnMoreUrl: String = Urls.docs("import-build")
-    def params(sbt: Sbt): ShowMessageRequestParams = {
+    def params(tool: BuildTool): ShowMessageRequestParams = {
+      def toFixMessage =
+        s"To fix this problem, upgrade to $tool ${tool.minimumVersion} "
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"Automatic build import is not supported for sbt ${sbt.version}. $toFixMessage"
+        s"Automatic build import is not supported for $tool ${tool.version}. $toFixMessage"
       )
       params.setType(MessageType.Warning)
       params.setActions(

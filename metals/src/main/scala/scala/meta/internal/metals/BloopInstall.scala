@@ -1,31 +1,32 @@
 package scala.meta.internal.metals
 
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import com.zaxxer.nuprocess.NuAbstractProcessHandler
 import com.zaxxer.nuprocess.NuProcess
 import com.zaxxer.nuprocess.NuProcessBuilder
 import fansi.ErrorMode
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.meta.internal.metals.BuildTool.Sbt
+import scala.meta.internal.builds.Digest
+import scala.meta.internal.builds.Digest.Status
+import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.SbtDigest.Status
 import scala.meta.io.AbsolutePath
 import scala.util.Success
 
 /**
- * Runs `sbt bloopInstall` processes.
+ * Runs `sbt/gradle bloopInstall` processes.
  *
  * Handles responsibilities like:
- * - install metals.sbt as a global sbt plugin
- * - launching embedded sbt-launch.jar via system process
- * - reporting client about `sbt bloopInstall` progress
+ * - install metals
+ * - launching embedded build tool via system process
+ * - reporting client about `bloopInstall` progress
  */
 final class BloopInstall(
     workspace: AbsolutePath,
@@ -49,50 +50,24 @@ final class BloopInstall(
 
   override def toString: String = s"BloopInstall($workspace)"
 
-  def runUnconditionally(sbt: Sbt): Future[BloopInstallResult] = {
-    val sbtArgs = List[String](
-      "metalsEnable",
-      "bloopInstall"
-    )
-    val args: List[String] = userConfig().sbtScript match {
-      case Some(script) =>
-        script :: sbtArgs
-      case None =>
-        val javaArgs = List[String](
-          JavaBinary(userConfig().javaHome),
-          "-Djline.terminal=jline.UnsupportedTerminal",
-          "-Dsbt.log.noformat=true",
-          "-Dfile.encoding=UTF-8"
-        )
-        val jarArgs = List(
-          "-jar",
-          embedded.embeddedSbtLauncher.toString()
-        )
-        List(
-          javaArgs,
-          SbtOpts.fromWorkspace(workspace),
-          JvmOpts.fromWorkspace(workspace),
-          jarArgs,
-          sbtArgs
-        ).flatten
-    }
-    scribe.info(s"running 'sbt ${sbtArgs.mkString(" ")}'")
-    val result = runArgumentsUnconditionally(sbt, args)
+  def runUnconditionally(buildTool: BuildTool): Future[BloopInstallResult] = {
+    val args = buildTool.args(workspace, userConfig, config)
+    scribe.info(s"running '${args.mkString(" ")}'")
+    val result = runArgumentsUnconditionally(buildTool, args)
     result.foreach { e =>
       if (e.isFailed) {
         // Record the exact command that failed to help troubleshooting.
-        scribe.error(s"sbt command failed: ${args.mkString(" ")}")
+        scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
       }
     }
     result
   }
 
   private def runArgumentsUnconditionally(
-      sbt: Sbt,
+      buildTool: BuildTool,
       args: List[String]
   ): Future[BloopInstallResult] = {
-    persistChecksumStatus(Status.Started)
-    BloopInstall.writeGlobalPluginFile(sbt, config.bloopSbtVersion)
+    persistChecksumStatus(Status.Started, buildTool)
     val elapsed = new Timer(time)
     val handler = new BloopInstall.ProcessHandler()
     val pb = new NuProcessBuilder(handler, args.asJava)
@@ -106,14 +81,16 @@ final class BloopInstall(
     // stays forever in view even after successful build import. In newer
     // VS Code versions the message is hidden after a delay.
     val taskResponse =
-      languageClient.metalsSlowTask(Messages.BloopInstallProgress)
+      languageClient.metalsSlowTask(
+        Messages.bloopInstallProgress(buildTool.toString())
+      )
     handler.response = Some(taskResponse)
     val processFuture = handler.completeProcess.future.map { result =>
       taskResponse.cancel(false)
-      scribe.info(s"time: ran 'sbt bloopInstall' in $elapsed")
+      scribe.info(s"time: ran '$buildTool bloopInstall' in $elapsed")
       result
     }
-    statusBar.trackFuture("Running sbt bloopInstall", processFuture)
+    statusBar.trackFuture(s"Running $buildTool bloopInstall", processFuture)
     taskResponse.asScala.foreach { item =>
       if (item.cancel) {
         scribe.info("user cancelled build import")
@@ -127,7 +104,9 @@ final class BloopInstall(
       .add(() => BloopInstall.destroyProcess(runningProcess))
       .add(() => taskResponse.cancel(false))
 
-    processFuture.foreach(_.toChecksumStatus.foreach(persistChecksumStatus))
+    processFuture.foreach(
+      _.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))
+    )
     processFuture
   }
 
@@ -137,24 +116,32 @@ final class BloopInstall(
     if (notification.isDismissed) {
       Some(BloopInstallResult.Dismissed)
     } else {
-      tables.sbtDigests.last().collect {
-        case SbtDigest(md5, status, _) if md5 == digest =>
+      tables.digests.last().collect {
+        case Digest(md5, status, _) if md5 == digest =>
           BloopInstallResult.Duplicate(status)
       }
     }
   }
 
-  def runIfApproved(sbt: Sbt, digest: String): Future[BloopInstallResult] = {
+  def runIfApproved(
+      buildTool: BuildTool,
+      digest: String
+  ): Future[BloopInstallResult] = {
     oldInstallResult(digest) match {
       case Some(result) =>
         scribe.info(s"skipping build import with status '${result.name}'")
         Future.successful(result)
       case None =>
         for {
-          userResponse <- requestImport(buildTools, languageClient, digest)
+          userResponse <- requestImport(
+            buildTools,
+            buildTool,
+            languageClient,
+            digest
+          )
           installResult <- {
             if (userResponse.isYes) {
-              runUnconditionally(sbt)
+              runUnconditionally(buildTool)
             } else {
               // Don't spam the user with requests during rapid build changes.
               notification.dismiss(2, TimeUnit.MINUTES)
@@ -165,21 +152,25 @@ final class BloopInstall(
     }
   }
 
-  private def persistChecksumStatus(status: Status): Unit = {
-    SbtDigest.foreach(workspace) { checksum =>
-      tables.sbtDigests.setStatus(checksum, status)
+  private def persistChecksumStatus(
+      status: Status,
+      buildTool: BuildTool
+  ): Unit = {
+    buildTool.digest(workspace).foreach { checksum =>
+      tables.digests.setStatus(checksum, status)
     }
   }
 
   private def requestImport(
       buildTools: BuildTools,
+      buildTool: BuildTool,
       languageClient: MetalsLanguageClient,
       digest: String
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
-    tables.sbtDigests.setStatus(digest, Status.Requested)
+    tables.digests.setStatus(digest, Status.Requested)
     if (buildTools.isBloop) {
       languageClient
-        .showMessageRequest(ImportBuildChanges.params)
+        .showMessageRequest(ImportBuildChanges.params(buildTool.toString))
         .asScala
         .map { item =>
           if (item == dontShowAgain) {
@@ -189,7 +180,7 @@ final class BloopInstall(
         }
     } else {
       languageClient
-        .showMessageRequest(ImportBuild.params)
+        .showMessageRequest(ImportBuild.params(buildTool.toString()))
         .asScala
         .map { item =>
           if (item == dontShowAgain) {
@@ -203,75 +194,6 @@ final class BloopInstall(
 }
 
 object BloopInstall {
-
-  def pluginsDirectory(version: String): AbsolutePath = {
-    AbsolutePath(System.getProperty("user.home"))
-      .resolve(".sbt")
-      .resolve(version)
-      .resolve("plugins")
-  }
-
-  private def writeGlobalPluginFile(sbt: Sbt, sbtBloopVersion: String): Unit = {
-    val plugins =
-      if (sbt.version.startsWith("0.13")) pluginsDirectory("0.13")
-      else pluginsDirectory("1.0")
-    plugins.createDirectories()
-    val bytes =
-      globalMetalsSbt(sbtBloopVersion).getBytes(StandardCharsets.UTF_8)
-    val destination = plugins.resolve("metals.sbt")
-    if (destination.isFile && destination.readAllBytes.sameElements(bytes)) {
-      // Do nothing if the file is unchanged. If we write to the file unconditionally
-      // we risk triggering sbt re-compilation of global plugins that slows down
-      // build import greatly. If somebody validates it doesn't affect load times
-      // then feel free to remove this guard.
-      ()
-    } else {
-      Files.write(destination.toNIO, bytes)
-    }
-  }
-
-  /**
-   * Contents of metals.sbt file that is installed globally.
-   */
-  private def globalMetalsSbt(sbtBloopVersion: String): String = {
-    val resolvers =
-      if (BuildInfo.metalsVersion.endsWith("-SNAPSHOT")) {
-        """|resolvers ++= {
-           |  if (System.getenv("METALS_ENABLED") == "true") {
-           |    List(Resolver.sonatypeRepo("snapshots"))
-           |  } else {
-           |    List()
-           |  }
-           |}
-           |""".stripMargin
-      } else {
-        ""
-      }
-    s"""|// DO NOT EDIT! This file is auto-generated.
-        |// By default, this file does not do anything.
-        |// If the environment variable METALS_ENABLED has the value 'true',
-        |// then this file enables sbt-metals and sbt-bloop.
-        |$resolvers
-        |libraryDependencies := {
-        |  import Defaults.sbtPluginExtra
-        |  val oldDependencies = libraryDependencies.value
-        |  if (System.getenv("METALS_ENABLED") == "true") {
-        |    val bloopModule = "ch.epfl.scala" % "sbt-bloop" % "${sbtBloopVersion}"
-        |    val metalsModule = "org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"
-        |    val sbtVersion = Keys.sbtBinaryVersion.in(TaskKey[Unit]("pluginCrossBuild")).value
-        |    val scalaVersion = Keys.scalaBinaryVersion.in(update).value
-        |    val bloopPlugin = sbtPluginExtra(bloopModule, sbtVersion, scalaVersion)
-        |    val metalsPlugin = sbtPluginExtra(metalsModule, sbtVersion, scalaVersion)
-        |    List(bloopPlugin, metalsPlugin) ++ oldDependencies.filterNot { dep =>
-        |      (dep.organization == "ch.epfl.scala" && dep.name == "sbt-bloop") ||
-        |      (dep.organization == "org.scalameta" && dep.name == "sbt-metals")
-        |    }
-        |  } else {
-        |    oldDependencies
-        |  }
-        |}
-        |""".stripMargin
-  }
 
   /**
    * First tries to destroy the process gracefully, with fallback to forcefully.
@@ -305,7 +227,7 @@ object BloopInstall {
           completeProcess.trySuccess(BloopInstallResult.Failed(statusCode))
         }
       }
-      scribe.info(s"sbt exit: $statusCode")
+      scribe.info(s"build tool exit: $statusCode")
       response.foreach(_.cancel(false))
     }
 

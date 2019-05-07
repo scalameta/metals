@@ -3,51 +3,22 @@ package tests
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import java.util.concurrent.TimeUnit
+
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
+import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsSlowTaskResult
-import scala.meta.internal.metals.SbtDigest
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.metals.BuildTool.Sbt
+import scala.meta.io.AbsolutePath
 
-object SbtSlowSuite extends BaseSlowSuite("import") {
+object SbtSlowSuite extends BaseImportSuite("sbt-import") {
 
-  def currentChecksum(): String =
-    SbtDigest.current(workspace).getOrElse {
-      fail("no sbt checksum for workspace")
-    }
-  def assertNoStatus(): Unit =
-    server.server.tables.sbtDigests.getStatus(currentChecksum()) match {
-      case Some(value) =>
-        fail(s"expected no status. obtained $value", stackBump = 1)
-      case None =>
-        () // OK
-    }
-  def assertStatus(fn: SbtDigest.Status => Boolean): Unit = {
-    val checksum = currentChecksum()
-    server.server.tables.sbtDigests.getStatus(checksum) match {
-      case Some(status) =>
-        assert(fn(status))
-      case None =>
-        fail(s"missing persisted checksum $checksum", stackBump = 1)
-    }
-  }
-
-  override def testAsync(
-      name: String,
-      maxDuration: Duration
-  )(run: => Future[Unit]): Unit = {
-    if (isWindows) {
-      // Skip SbtSlowSuite on Windows because they're flaky due to likely the small
-      // available memory on Appveyor CI machines.
-      ignore(name)(())
-    } else {
-      super.testAsync(name, maxDuration)(run)
-    }
-  }
+  override def currentDigest(
+      workspace: AbsolutePath
+  ): Option[String] = SbtDigest.current(workspace)
 
   testAsync("basic") {
     cleanWorkspace()
@@ -63,8 +34,8 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuild.params.getMessage,
-          BloopInstallProgress.message
+          ImportBuild.params("sbt").getMessage,
+          bloopInstallProgress("sbt").message
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -84,8 +55,8 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         client.workspaceMessageRequests,
         List(
           // Project has .bloop directory so user is asked to "re-import project"
-          ImportBuildChanges.params.getMessage,
-          BloopInstallProgress.message
+          ImportBuildChanges.params("sbt").getMessage,
+          bloopInstallProgress("sbt").message
         ).mkString("\n")
       )
     }
@@ -105,8 +76,8 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuild.params.getMessage,
-          BloopInstallProgress.message
+          ImportBuild.params("sbt").getMessage,
+          bloopInstallProgress("sbt").message
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -114,7 +85,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          BloopInstallProgress.message
+          bloopInstallProgress("sbt").message
         ).mkString("\n")
       )
     } yield ()
@@ -153,7 +124,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
 
   testAsync("cancel") {
     client.slowTaskHandler = params => {
-      if (params == BloopInstallProgress) {
+      if (params == bloopInstallProgress("sbt")) {
         Thread.sleep(TimeUnit.SECONDS.toMillis(2))
         Some(MetalsSlowTaskResult(cancel = true))
       } else {
@@ -196,8 +167,8 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params.getMessage,
-          BloopInstallProgress.message
+          ImportBuild.params("sbt").getMessage,
+          bloopInstallProgress("sbt").message
         ).mkString("\n")
       )
       _ = assertNoDiff(
@@ -212,8 +183,8 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params.getMessage,
-          BloopInstallProgress.message
+          ImportBuild.params("sbt").getMessage,
+          bloopInstallProgress("sbt").message
         ).mkString("\n")
       )
       _ = assertStatus(_.isInstalled)
@@ -402,7 +373,7 @@ object SbtSlowSuite extends BaseSlowSuite("import") {
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
-        IncompatibleSbtVersion.params(Sbt("0.13.15")).getMessage
+        IncompatibleBuildToolVersion.params(SbtBuildTool("0.13.15")).getMessage
       )
     } yield ()
   }
