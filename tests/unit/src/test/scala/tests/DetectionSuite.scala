@@ -113,4 +113,44 @@ object DetectionSuite extends BaseSuite {
        |project.ext['version'] = '123'
        |""".stripMargin
   )
+
+  /**------------ Maven ------------**/
+  def checkNotMaven(name: String, layout: String): Unit = {
+    checkMaven(name, layout, isTrue = false)
+  }
+  def checkMaven(
+      name: String,
+      layout: String,
+      isTrue: Boolean = true
+  ): Unit = {
+    test(s"maven-$name") {
+      check(layout, new BuildTools(_, Nil).isMaven, isTrue)
+    }
+  }
+
+  checkNotMaven(
+    "build.sbt",
+    """|/build.sbt
+       |lazy val a = project
+       |""".stripMargin
+  )
+
+  checkNotMaven(
+    "mill",
+    """|/mill.sc
+       |import mill._
+       |""".stripMargin
+  )
+
+  checkMaven(
+    "pom.xml",
+    """|/pom.xml
+       |<project>
+       |  <modelVersion>4.0.0</modelVersion>
+       |  <groupId>com.mycompany.app</groupId>
+       |  <artifactId>my-app</artifactId>
+       |  <version>1</version>
+       |</project>
+       |""".stripMargin
+  )
 }

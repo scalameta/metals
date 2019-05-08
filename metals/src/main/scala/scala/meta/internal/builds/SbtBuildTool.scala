@@ -18,7 +18,6 @@ case class SbtBuildTool(version: String) extends BuildTool {
    * it failed on Windows when I tried it.
    */
   lazy val embeddedSbtLauncher: AbsolutePath = {
-    val tempDir = Files.createTempDirectory("metals")
     val out = BuildTool.copyFromResource(tempDir, "sbt-launch.jar")
     AbsolutePath(out)
   }

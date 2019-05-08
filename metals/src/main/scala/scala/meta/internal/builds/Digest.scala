@@ -14,6 +14,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.tokens.Token
 import scala.util.control.NonFatal
 import scala.collection.JavaConverters._
+import scala.xml.Node
 
 case class Digest(
     md5: String,
@@ -90,13 +91,45 @@ object Digest {
       Set("gradle", "groovy", "gradle.kts", "java", "kts").exists(
         path.toString().endsWith(_)
       )
+    val isXml = ext == "xml"
 
     if (isScala && path.isFile) {
       digestScala(path, digest)
     } else if (isGradle && path.isFile) {
       digestGeneralJvm(path, digest)
+    } else if (isXml) {
+      digestXml(path, digest)
     } else {
       true
+    }
+  }
+
+  def digestXml(
+      file: AbsolutePath,
+      digest: MessageDigest
+  ): Boolean = {
+    import scala.xml.XML
+    def digestElement(node: Node): Boolean = {
+      digest.update(node.label.getBytes())
+      for {
+        attr <- node.attributes
+        _ = digest.update(attr.key.getBytes())
+        value <- attr.value
+      } digest.update(value.toString().getBytes())
+
+      val chldrenSuccessful: Seq[Boolean] = for {
+        child <- node.child
+      } yield digestElement(child)
+      chldrenSuccessful.forall(p => p)
+    }
+    try {
+      val xml = XML.loadFile(file.toNIO.toFile())
+      digestElement(xml)
+      xml.text.split("\\s+").foreach(word => digest.update(word.getBytes))
+      true
+    } catch {
+      case NonFatal(_) =>
+        false
     }
   }
 
