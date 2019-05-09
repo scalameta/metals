@@ -30,6 +30,8 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashSet
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -515,7 +517,15 @@ class MetalsLanguageServer(
     // Ensure that `shutdown` has completed before killing the process.
     // Some clients may send `exit` immediately after `shutdown` causing
     // the build server to get killed before it can clean up resources.
-    shutdownPromise.get().future.onComplete { _ =>
+    try {
+      Await.result(
+        shutdownPromise.get().future,
+        Duration(3, TimeUnit.SECONDS)
+      )
+    } catch {
+      case NonFatal(e) =>
+        scribe.error("shutdown error", e)
+    } finally {
       System.exit(0)
     }
   }
