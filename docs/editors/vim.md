@@ -257,7 +257,7 @@ To troubleshoot problems with your build workspace execute the following
 command.
 
 ```vim
-:call CocRequest('metals', 'workspace/executeCommand', { 'command': 'doctor-run' })
+:call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'doctor-run' })
 ```
 
 This command opens your browser with a table like this.
@@ -273,7 +273,7 @@ To manually start the `sbt bloopInstall` step, call the following command below.
 This command works only for sbt builds at the moment.
 
 ```vim
-:call CocRequest('metals', 'workspace/executeCommand', { 'command': 'build-import' })
+:call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-import' })
 ```
 
 ## Manually connect with build server
@@ -283,7 +283,7 @@ the command below. This command works only at the moment if there is a `.bloop/`
 directory containing JSON files.
 
 ```vim
-:call CocRequest('metals', 'workspace/executeCommand', { 'command': 'build-connect' })
+:call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-connect' })
 ```
 
 ## Show document symbols
