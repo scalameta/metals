@@ -833,10 +833,11 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|def hello1: Int
+       |def
        |override def equals(obj: Any): Boolean
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(2)
+    topLines = Some(3)
   )
 
   checkEdit(

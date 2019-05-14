@@ -16,9 +16,10 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       |  supe@@
       |}
       |""".stripMargin,
-    """|superVisorStrategy: Int
-       |super
-       |""".stripMargin
+    """|superVisorStrategy: Int (commit: '.')
+       |super (commit: '.')
+       |""".stripMargin,
+    includeCommitCharacter = true
   )
 
   check(
@@ -221,8 +222,9 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       |class Foo {
       |}
       |""".stripMargin,
-    """|import
-       |""".stripMargin
+    """|import (commit: '')
+       |""".stripMargin,
+    includeCommitCharacter = true
   )
 
   check(
@@ -283,7 +285,76 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       |  }
       |}
     """.stripMargin,
-    """type
-    """.stripMargin
+    // NOTE(olafur) `type` is technically valid in blocks but they're not completed
+    // to reduce noise (we do the same for class, object, trait).
+    ""
   )
+
+  check(
+    "new-type",
+    """
+      |package foo
+      |
+      |trait Foo {
+      |  val x: Map[Int, new@@]
+      |}
+    """.stripMargin,
+    ""
+  )
+
+  check(
+    "new-pattern",
+    """
+      |package foo
+      |
+      |trait Foo {
+      |  List(1) match {
+      |    case new@@
+      |  }
+      |}
+    """.stripMargin,
+    ""
+  )
+
+  check(
+    "super-typeapply",
+    """
+      |package foo
+      |
+      |class Foo {
+      |  def supervisorStrategy: Int
+      |  def callObject = supe@@[Int]
+      |}
+    """.stripMargin,
+    """|supervisorStrategy: Int
+       |super
+       |""".stripMargin
+  )
+
+  check(
+    "protected-def",
+    """
+      |package foo
+      |
+      |class Foo {
+      |  protected def@@
+      |}
+    """.stripMargin,
+    "def"
+  )
+
+  check(
+    "protected-val",
+    """
+      |package foo
+      |
+      |class Foo {
+      |  protected va@@
+      |}
+    """.stripMargin,
+    """val
+      |var
+      |""".stripMargin
+  )
+
 }

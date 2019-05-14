@@ -15,8 +15,8 @@ import utest.framework.TestCallTree
 import utest.framework.Tree
 import utest.ufansi.Attrs
 import utest.ufansi.Str
-
-import scala.meta.internal.metals.{JdkSources, Testing}
+import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.Testing
 import scala.collection.mutable
 
 /**
