@@ -19,6 +19,8 @@ const siteConfig = {
     indexName: "metals"
   },
 
+  gaTrackingId: 'UA-140140828-1',
+
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
     { doc: "editors/overview", label: "Docs" },
