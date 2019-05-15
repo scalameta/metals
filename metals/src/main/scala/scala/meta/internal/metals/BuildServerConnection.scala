@@ -12,6 +12,8 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import ch.epfl.scala.bsp4j.ScalaMainClassesParams
+import ch.epfl.scala.bsp4j.ScalaMainClassesResult
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
@@ -67,6 +69,12 @@ case class BuildServerConnection(
 
   def compile(params: CompileParams): CompletableFuture[CompileResult] = {
     register(server.buildTargetCompile(params))
+  }
+
+  def mainClasses(
+      params: ScalaMainClassesParams
+  ): CompletableFuture[ScalaMainClassesResult] = {
+    register(server.buildTargetScalaMainClasses(params))
   }
 
   private val cancelled = new AtomicBoolean(false)

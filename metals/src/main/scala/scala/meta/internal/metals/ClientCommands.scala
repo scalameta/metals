@@ -39,6 +39,15 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  val RunCode = Command(
+    "metals-scala-run",
+    "run",
+    "runs code",
+    """|`string`, Build target identifier
+       |`string`, Name of the class containing the main method  
+    """.stripMargin
+  )
+
   def all: List[Command] = List(
     RunDoctor,
     ToggleLogs,
