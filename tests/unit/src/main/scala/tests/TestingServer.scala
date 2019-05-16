@@ -57,6 +57,7 @@ import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.DidFocusResult
+import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageServer
@@ -283,6 +284,11 @@ final class TestingServer(
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
     server.didFocus(toPath(filename).toURI.toString).asScala
   }
+
+  def windowStateDidChange(focused: Boolean): Unit = {
+    server.windowStateDidChane(WindowStateDidChangeParams(focused))
+  }
+
   def didSave(filename: String)(fn: String => String): Future[Unit] = {
     Debug.printEnclosing()
     val abspath = toPath(filename)

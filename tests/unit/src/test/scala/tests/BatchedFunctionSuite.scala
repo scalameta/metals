@@ -36,4 +36,39 @@ object BatchedFunctionSuite extends BaseSuite {
     }
   }
 
+  testAsync("accumulate") {
+    val lock = new Object
+    val mkString = BatchedFunction.fromFuture[String, String]({ numbers =>
+      Future {
+        lock.synchronized {
+          numbers.mkString
+        }
+      }
+    })
+    val results = lock.synchronized {
+      mkString.accumulate
+
+      val strings = List(
+        mkString(List("a")),
+        mkString(List("b")),
+        mkString(List("c"))
+      )
+
+      mkString.restart
+
+      strings
+    }
+
+    Future.sequence(results).map { results =>
+      assertNoDiff(
+        results.mkString("\n"),
+        """
+          |abc
+          |abc
+          |abc
+        """.stripMargin
+      )
+    }
+  }
+
 }
