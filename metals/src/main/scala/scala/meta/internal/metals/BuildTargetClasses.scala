@@ -22,6 +22,10 @@ final class BuildTargetClasses(
   val onCompiled: BatchedFunction[b.BuildTargetIdentifier, Unit] =
     BatchedFunction.fromFuture(fetchMainClassesFor)
 
+  def pause(): Unit = onCompiled.accumulate
+
+  def unpause(): Unit = onCompiled.restart
+
   private def fetchMainClassesFor(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {

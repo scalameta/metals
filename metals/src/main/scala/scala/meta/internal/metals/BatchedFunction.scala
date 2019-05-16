@@ -38,16 +38,18 @@ final class BatchedFunction[A, B](
     promise.future
   }
 
+  def apply(argument: A): Future[B] = apply(List(argument))
+
   /**
-   * Pauses applications of the arguments to the fn but allows to accumulate requests  
+   * Pauses applications of the arguments to the fn but allows to accumulate requests
    */
-  def pause: Unit = 
+  def accumulate: Unit =
     paused.set(true)
 
   /**
-   * Restarts appliation of the accumulated requests to the fn 
+   * Restarts appliation of the accumulated requests to the fn
    */
-  def unpause: Unit = {
+  def restart: Unit = {
     paused.set(false)
     unlock()
   }
@@ -75,7 +77,7 @@ final class BatchedFunction[A, B](
     }
   }
 
-  private val paused = new AtomicBoolean()
+  private val paused = new AtomicBoolean(false)
 
   private val lock = new AtomicBoolean()
   private def unlock(): Unit = {
@@ -85,7 +87,7 @@ final class BatchedFunction[A, B](
     }
   }
   private def runAcquire(): Unit = {
-    if (lock.compareAndSet(false, true) && !paused.get()) {
+    if (!paused.get() && lock.compareAndSet(false, true)) {
       runRelease()
     } else {
       // Do nothing, the submitted arguments will be handled

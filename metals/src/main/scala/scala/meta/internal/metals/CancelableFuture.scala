@@ -6,3 +6,8 @@ case class CancelableFuture[T](
     future: Future[T],
     cancelable: Cancelable = Cancelable.empty
 )
+
+object CancelableFuture {
+  def successful[T](value: T): CancelableFuture[T] =
+    CancelableFuture(Future.successful(value))
+}

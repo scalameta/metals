@@ -605,12 +605,14 @@ class MetalsLanguageServer(
 
   @JsonNotification("metals/windowStateDidChange")
   def windowStateDidChane(params: WindowStateDidChangeParams): Unit = {
-    CompletableFuture.completedFuture {
-      if(params.focused) {
-        compileSourceFiles.unpause
-      } else {
-        compileSourceFiles.pause
-      }
+    if (params.focused) {
+      compilations.unpause()
+      onBuildChanged.restart
+      parseTrees.restart
+    } else {
+      compilations.pause()
+      onBuildChanged.accumulate
+      parseTrees.accumulate
     }
   }
 
@@ -622,7 +624,7 @@ class MetalsLanguageServer(
       params.getContentChanges.asScala.headOption.foreach { change =>
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
-        trees.didChange(path)
+        parseTrees(path)
         diagnostics.didChange(path)
       }
     }
@@ -641,7 +643,7 @@ class MetalsLanguageServer(
     savedFiles.add(path)
     // read file from disk, we only remove files from buffers on didClose.
     buffers.put(path, path.toInput.text)
-    trees.didChange(path)
+    parseTrees(path)
     onChange(List(path))
   }
 
@@ -1400,6 +1402,11 @@ class MetalsLanguageServer(
     )
   }
 
+  val parseTrees =
+    new BatchedFunction[AbsolutePath, Unit](
+      paths =>
+        CancelableFuture.successful(paths.distinct.foreach(trees.didChange))
+    )
   /**
    * Re-imports the build if build files have changed.
    */

@@ -22,6 +22,16 @@ final class Compilations(
   private val isCompiling = TrieMap.empty[b.BuildTargetIdentifier, Boolean]
   private var lastCompile: collection.Set[b.BuildTargetIdentifier] = Set.empty
 
+  def pause(): Unit = {
+    compileBatch.accumulate
+    cascadeBatch.accumulate
+  }
+
+  def unpause(): Unit = {
+    compileBatch.restart
+    cascadeBatch.restart
+  }
+
   def currentlyCompiling: Iterable[b.BuildTargetIdentifier] = isCompiling.keys
   def isCurrentlyCompiling(buildTarget: b.BuildTargetIdentifier): Boolean =
     isCompiling.contains(buildTarget)
