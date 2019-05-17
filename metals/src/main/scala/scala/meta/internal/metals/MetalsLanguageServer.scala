@@ -99,6 +99,7 @@ class MetalsLanguageServer(
   private val definitionIndex = newSymbolIndex()
   private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer = Option.empty[BuildServerConnection]
+  private val buildTargetClasses = new BuildTargetClasses(() => buildServer)
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
@@ -128,6 +129,7 @@ class MetalsLanguageServer(
   private var buildClient: ForwardingMetalsBuildClient = _
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
+  private var codeLensProvider: CodeLensProvider = _
   private var definitionProvider: DefinitionProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
@@ -251,6 +253,12 @@ class MetalsLanguageServer(
         interactiveSemanticdbs
       )
     )
+    codeLensProvider = new CodeLensProvider(
+      buildTargetClasses,
+      buffers,
+      buildTargets,
+      semanticdbs
+    )
     definitionProvider = new DefinitionProvider(
       workspace,
       mtags,
@@ -353,6 +361,7 @@ class MetalsLanguageServer(
           ServerCommands.all.map(_.id).asJava
         )
       )
+      capabilities.setCodeLensProvider(new CodeLensOptions(false))
       capabilities.setFoldingRangeProvider(true)
       capabilities.setDefinitionProvider(true)
       capabilities.setHoverProvider(true)
@@ -886,8 +895,8 @@ class MetalsLanguageServer(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
-      scribe.warn("textDocument/codeLens is not supported.")
-      null
+      val sourceFile = params.getTextDocument.getUri.toAbsolutePath
+      codeLensProvider.findLenses(sourceFile)
     }
 
   @JsonRequest("textDocument/foldingRange")
@@ -1400,13 +1409,24 @@ class MetalsLanguageServer(
             }
           val params = new CompileParams(allTargets.asJava)
           targets.foreach(target => isCompiling(target) = true)
-          val completableFuture = build.compile(params)
-          CancelableFuture(
-            completableFuture.asScala.map { _ =>
+
+          val compilation = build.compile(params)
+          val task = for {
+            result <- compilation.asScala
+            _ <- Future {
               lastCompile = isCompiling.keySet
               isCompiling.clear()
-            }.ignoreValue,
-            Cancelable(() => completableFuture.cancel(false))
+            }
+            _ <- if (result.isSuccessful) {
+              buildTargetClasses.onCompiled(targets)
+            } else {
+              Future.successful(())
+            }
+          } yield result
+
+          CancelableFuture(
+            task.ignoreValue,
+            Cancelable(() => compilation.cancel(false))
           )
         }
       case _ =>
