@@ -62,6 +62,35 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
     }
   }
 
+  testAsync("transitive") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|/build.gradle
+           |plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-reflect:2.12.8'
+           |}
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          // Project has no .bloop directory so user is asked to "import via bloop"
+          ImportBuild.params("gradle").getMessage,
+          bloopInstallProgress("gradle").message
+        ).mkString("\n")
+      )
+      _ = client.messageRequests.clear()
+      _ = assertStatus(_.isInstalled)
+    } yield assertNoDiff(client.workspaceMessageRequests, "")
+  }
+
   testAsync("force-command") {
     cleanWorkspace()
     for {
