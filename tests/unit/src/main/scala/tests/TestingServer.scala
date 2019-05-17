@@ -15,6 +15,7 @@ import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import com.google.gson.JsonParser
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CodeLensParams
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
@@ -377,6 +378,16 @@ final class TestingServer(
     for {
       ranges <- server.foldingRange(params).asScala
       textEdits = FoldingRangesTextEdits(ranges)
+    } yield TextEdits.applyEdits(textContents(filename), textEdits)
+  }
+
+  def codeLenses(filename: String): Future[String] = {
+    val path = toPath(filename)
+    val uri = path.toURI.toString
+    val params = new CodeLensParams(new TextDocumentIdentifier(uri))
+    for {
+      lenses <- server.codeLens(params).asScala
+      textEdits = CodeLensesTextEdits(lenses.asScala)
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
 

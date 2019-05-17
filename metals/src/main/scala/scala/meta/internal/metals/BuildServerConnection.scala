@@ -1,10 +1,5 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BuildClientCapabilities
-import ch.epfl.scala.bsp4j.CompileParams
-import ch.epfl.scala.bsp4j.CompileResult
-import ch.epfl.scala.bsp4j.InitializeBuildParams
-import ch.epfl.scala.bsp4j.InitializeBuildResult
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.Collections
@@ -12,13 +7,20 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import ch.epfl.scala.bsp4j.BuildClientCapabilities
+import ch.epfl.scala.bsp4j.CompileParams
+import ch.epfl.scala.bsp4j.CompileResult
+import ch.epfl.scala.bsp4j.InitializeBuildParams
+import ch.epfl.scala.bsp4j.InitializeBuildResult
+import ch.epfl.scala.bsp4j.ScalaMainClassesParams
+import ch.epfl.scala.bsp4j.ScalaMainClassesResult
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.util.Try
-import scala.meta.internal.pc.InterruptException
 
 /**
  * An actively running and initialized BSP connection.
@@ -67,6 +69,15 @@ case class BuildServerConnection(
 
   def compile(params: CompileParams): CompletableFuture[CompileResult] = {
     register(server.buildTargetCompile(params))
+  }
+
+  def mainClasses(
+      params: ScalaMainClassesParams
+  ): CompletableFuture[ScalaMainClassesResult] = {
+    // TODO use server.buildTargetScalaMainClasses when bloop releases version supporting mainClasses
+    CompletableFuture.completedFuture(
+      new ScalaMainClassesResult(Collections.emptyList())
+    )
   }
 
   private val cancelled = new AtomicBoolean(false)
