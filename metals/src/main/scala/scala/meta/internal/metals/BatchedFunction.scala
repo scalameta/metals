@@ -38,6 +38,8 @@ final class BatchedFunction[A, B](
     promise.future
   }
 
+  def apply(argument: A): Future[B] = apply(List(argument))
+
   def cancelCurrentRequest(): Unit = {
     current.get().cancelable.cancel()
   }

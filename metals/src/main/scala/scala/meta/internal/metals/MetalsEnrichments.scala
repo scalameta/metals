@@ -77,7 +77,8 @@ object MetalsEnrichments
   }
 
   implicit class XtensionCompileResult(result: b.CompileResult) {
-    def isSuccessful: Boolean = result.getStatusCode == b.StatusCode.OK
+    def isOK: Boolean = result.getStatusCode == b.StatusCode.OK
+    def isError: Boolean = result.getStatusCode == b.StatusCode.ERROR
   }
 
   implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {
@@ -510,5 +511,10 @@ object MetalsEnrichments
 
     def findFirstTrailing(predicate: Token => Boolean): Option[Token] =
       trailingTokens.find(predicate)
+  }
+
+  implicit class XtensionURI(uri: URI) {
+    def toAbsolutePath: AbsolutePath =
+      AbsolutePath(Paths.get(uri))
   }
 }

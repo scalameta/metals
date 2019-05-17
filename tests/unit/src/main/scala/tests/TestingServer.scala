@@ -271,15 +271,15 @@ final class TestingServer(
   def toPath(filename: String): AbsolutePath =
     TestingServer.toPath(workspace, filename)
 
-  def executeCommand(command: String): Future[Unit] = {
+  def executeCommand(command: String): Future[Any] = {
     Debug.printEnclosing()
     server
       .executeCommand(
         new ExecuteCommandParams(command, Collections.emptyList())
       )
       .asScala
-      .ignoreValue
   }
+
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
     server.didFocus(toPath(filename).toURI.toString).asScala
   }

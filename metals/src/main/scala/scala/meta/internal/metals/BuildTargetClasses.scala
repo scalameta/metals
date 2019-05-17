@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.{bsp4j => b}
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -12,13 +13,12 @@ import scala.meta.internal.metals.MetalsEnrichments._
 final class BuildTargetClasses(
     buildServer: () => Option[BuildServerConnection]
 )(implicit val ec: ExecutionContext) {
-  private val buildTargets =
-    new ConcurrentHashMap[b.BuildTargetIdentifier, Classes]()
+  private val index = new TrieMap[b.BuildTargetIdentifier, Classes]()
 
   def isInitialized(target: b.BuildTargetIdentifier): Boolean =
-    classesOf(target).initialized.get()
+    classesOf(target).isInitialized.get()
 
-  def main(target: b.BuildTargetIdentifier): util.Map[String, ScalaMainClass] =
+  def main(target: b.BuildTargetIdentifier): TrieMap[String, ScalaMainClass] =
     classesOf(target).main
 
   val onCompiled: BatchedFunction[b.BuildTargetIdentifier, Unit] =
@@ -39,7 +39,7 @@ final class BuildTargetClasses(
           _ = initializeMainClasses(mainClasses)
         } yield
           for (target <- targets) {
-            classesOf(target).initialized.set(true)
+            classesOf(target).isInitialized.set(true)
           }
 
         task
@@ -49,14 +49,13 @@ final class BuildTargetClasses(
   }
 
   private def classesOf(target: b.BuildTargetIdentifier): Classes =
-    buildTargets.computeIfAbsent(target, _ => new Classes)
+    index.getOrElseUpdate(target, new Classes)
 
   private def initializeMainClasses(result: b.ScalaMainClassesResult): Unit = {
     def createObjectSymbol(className: String): String = {
-      val isRootPackage = !className.contains(".")
       val symbol = className.replaceAll("\\.", "/") + "."
-      scribe.info(s"$className, $isRootPackage, $symbol")
-      if (isRootPackage) {
+      val isInsideDefaultPackage = !className.contains(".")
+      if (isInsideDefaultPackage) {
         "_empty_/" + symbol
       } else {
         symbol
@@ -72,8 +71,8 @@ final class BuildTargetClasses(
   }
 
   final class Classes {
-    val initialized = new AtomicReference[Boolean](false)
-    val main = new ConcurrentHashMap[String, ScalaMainClass]()
+    val isInitialized = new AtomicReference[Boolean](false)
+    val main = new TrieMap[String, ScalaMainClass]()
 
     def clear(): Unit = {
       main.clear()

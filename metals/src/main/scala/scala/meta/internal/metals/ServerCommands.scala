@@ -72,6 +72,12 @@ object ServerCommands {
     """Cancel the currently ongoing compilation, if any."""
   )
 
+  val StartDebugSession = Command(
+    "debug-session-start",
+    "Start debug session",
+    "Start a new debug session"
+  )
+
   val BspSwitch = Command(
     "bsp-switch",
     "Switch build server",
@@ -107,6 +113,7 @@ object ServerCommands {
     RunDoctor,
     CascadeCompile,
     CancelCompile,
+    StartDebugSession,
     BspSwitch
   )
 

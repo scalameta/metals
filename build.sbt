@@ -189,6 +189,7 @@ lazy val metals = project
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       // for LSP
       "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0",
+      "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.7.1",
       // for producing SemanticDB from Java source files
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9",
       // for finding paths of global log/cache directories
