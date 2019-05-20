@@ -34,11 +34,19 @@ object GradleBuildTool extends BuildTool {
        |allprojects {
        |    apply plugin: bloop.integrations.gradle.BloopPlugin
        |    afterEvaluate {
-       |        Dependency scalaLib = project.configurations.collect {
-       |            it.dependencies.find {
-       |                it.name == 'scala-library'
+       |        ModuleComponentIdentifier scalaLib = project.configurations.all.collectMany{
+       |          if(it.isCanBeResolved() && it.isVisible()){
+       |            it.resolvedConfiguration.resolvedArtifacts.findResults {
+       |              ComponentIdentifier identifier = it.getId().getComponentIdentifier() 
+       |              if(identifier instanceof ModuleComponentIdentifier && it.name == 'scala-library'){
+       |                ModuleComponentIdentifier moduleIdentifier = (ModuleComponentIdentifier) identifier
+       |                moduleIdentifier
+       |              } 
        |            }
-       |        }.find { it }
+       |          } else {
+       |            []
+       |          }
+       |        }.find{it}
        |        Set versions = $versionsArray
        |        if(!scalaLib){
        |          logger.warn('No scala library is configured, cannot determine version.')
