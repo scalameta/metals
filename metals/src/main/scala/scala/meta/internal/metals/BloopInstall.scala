@@ -1,14 +1,12 @@
 package scala.meta.internal.metals
 
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import com.zaxxer.nuprocess.NuAbstractProcessHandler
 import com.zaxxer.nuprocess.NuProcess
 import com.zaxxer.nuprocess.NuProcessBuilder
-import fansi.ErrorMode
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -214,14 +212,16 @@ object BloopInstall {
   private class ProcessHandler() extends NuAbstractProcessHandler {
     var response: Option[CompletableFuture[_]] = None
     val completeProcess = Promise[BloopInstallResult]()
-    val standardOutput = new StringBuilder
-    val errorOutput = new StringBuilder
+    val stdout = new ProcessOutput(line => scribe.info(line))
+    val stderr = new ProcessOutput(line => scribe.error(line))
 
     override def onStart(nuProcess: NuProcess): Unit = {
       nuProcess.closeStdin(false)
     }
 
     override def onExit(statusCode: Int): Unit = {
+      stdout.onProcessExit()
+      stderr.onProcessExit()
       if (!completeProcess.isCompleted) {
         if (statusCode == 0) {
           completeProcess.trySuccess(BloopInstallResult.Installed)
@@ -229,50 +229,20 @@ object BloopInstall {
           completeProcess.trySuccess(BloopInstallResult.Failed(statusCode))
         }
       }
-      def getLast(output: StringBuilder, fn: String => Unit) {
-        val last = output.toString()
-        if (last.trim().nonEmpty) {
-          fn(last)
-        }
-      }
-      getLast(errorOutput, scribe.error(_))
-      getLast(standardOutput, scribe.info(_))
       scribe.info(s"build tool exit: $statusCode")
       response.foreach(_.cancel(false))
     }
 
     override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
-      log(standardOutput, closed, buffer)(out => scribe.info(out))
-    }
-
-    override def onStderr(buffer: ByteBuffer, closed: Boolean): Unit = {
-      log(errorOutput, closed, buffer)(out => scribe.error(out))
-    }
-
-    private def log(output: StringBuilder, closed: Boolean, buffer: ByteBuffer)(
-        fn: String => Unit
-    ): Unit = {
       if (!closed) {
-        val text = toPlainString(buffer)
-        output.append(text)
-        val lines = output.linesIterator.toList
-        if (output.endsWith("\n")) {
-          lines.foreach(fn)
-          output.clear()
-        } else {
-          lines.take(lines.size - 1).foreach(fn)
-          val last = lines.last
-          output.clear()
-          output.append(last)
-        }
+        stdout.onByteOutput(buffer)
       }
     }
 
-    private def toPlainString(buffer: ByteBuffer): String = {
-      val bytes = new Array[Byte](buffer.remaining())
-      buffer.get(bytes)
-      val ansiString = new String(bytes, StandardCharsets.UTF_8)
-      fansi.Str(ansiString, ErrorMode.Sanitize).plainText
+    override def onStderr(buffer: ByteBuffer, closed: Boolean): Unit = {
+      if (!closed) {
+        stderr.onByteOutput(buffer)
+      }
     }
   }
 }
