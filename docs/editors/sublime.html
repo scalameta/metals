@@ -64,8 +64,8 @@ Note that 2.10.x and 2.13.x are not supported.</p>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
-<td>0.5.2+11-84c179b2-SNAPSHOT</td>
-<td>20 May 2019 17:11</td>
+<td>0.5.2+13-1c09f3e3-SNAPSHOT</td>
+<td>21 May 2019 09:56</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>
@@ -87,21 +87,6 @@ chmod +x coursier
 if you are behind an HTTP proxy.</p>
 <p>The <code>-Dmetals.client=sublime</code> flag configures Metals for usage with the Sublime
 Text LSP client.</p>
-<p>Next, update the LSP plugin settings to run <code>metals-sublime</code> for Scala sources:
-<code>Command Palette (Cmd + Shift + P) &gt; LSP Settings</code>. Update the JSON file to
-include the Metals server.</p>
-<pre><code class="hljs css language-json">{
-  <span class="hljs-attr">"clients"</span>: {
-    <span class="hljs-attr">"metals"</span>: {
-      <span class="hljs-attr">"command"</span>: [<span class="hljs-string">"metals-sublime"</span>],
-      <span class="hljs-attr">"enabled"</span>: <span class="hljs-literal">true</span>,
-      <span class="hljs-attr">"languageId"</span>: <span class="hljs-string">"scala"</span>,
-      <span class="hljs-attr">"scopes"</span>: [<span class="hljs-string">"source.scala"</span>],
-      <span class="hljs-attr">"syntaxes"</span>: [<span class="hljs-string">"Packages/Scala/Scala.sublime-syntax"</span>]
-    }
-  }
-}
-</code></pre>
 <p>Next, open &quot;Preferences &gt; Key Binding&quot; and register <code>F12</code> to trigger goto
 definition.</p>
 <pre><code class="hljs css language-json">[
