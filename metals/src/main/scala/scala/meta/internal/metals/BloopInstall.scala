@@ -214,6 +214,8 @@ object BloopInstall {
   private class ProcessHandler() extends NuAbstractProcessHandler {
     var response: Option[CompletableFuture[_]] = None
     val completeProcess = Promise[BloopInstallResult]()
+    val standardOutput = new StringBuilder
+    val errorOutput = new StringBuilder
 
     override def onStart(nuProcess: NuProcess): Unit = {
       nuProcess.closeStdin(false)
@@ -227,25 +229,41 @@ object BloopInstall {
           completeProcess.trySuccess(BloopInstallResult.Failed(statusCode))
         }
       }
+      def getLast(output: StringBuilder, fn: String => Unit) {
+        val last = output.toString()
+        if (last.trim().nonEmpty) {
+          fn(last)
+        }
+      }
+      getLast(errorOutput, scribe.error(_))
+      getLast(standardOutput, scribe.info(_))
       scribe.info(s"build tool exit: $statusCode")
       response.foreach(_.cancel(false))
     }
 
     override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
-      log(closed, buffer)(out => scribe.info(out))
+      log(standardOutput, closed, buffer)(out => scribe.info(out))
     }
 
     override def onStderr(buffer: ByteBuffer, closed: Boolean): Unit = {
-      log(closed, buffer)(out => scribe.error(out))
+      log(errorOutput, closed, buffer)(out => scribe.error(out))
     }
 
-    private def log(closed: Boolean, buffer: ByteBuffer)(
+    private def log(output: StringBuilder, closed: Boolean, buffer: ByteBuffer)(
         fn: String => Unit
     ): Unit = {
       if (!closed) {
-        val text = toPlainString(buffer).trim
-        if (text.nonEmpty) {
-          fn(text)
+        val text = toPlainString(buffer)
+        output.append(text)
+        val lines = output.linesIterator.toList
+        if (output.endsWith("\n")) {
+          lines.foreach(fn)
+          output.clear()
+        } else {
+          lines.take(lines.size - 1).foreach(fn)
+          val last = lines.last
+          output.clear()
+          output.append(last)
         }
       }
     }

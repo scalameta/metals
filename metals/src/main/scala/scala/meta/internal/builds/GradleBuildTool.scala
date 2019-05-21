@@ -118,16 +118,17 @@ object GradleBuildTool extends BuildTool {
       userConfig: () => UserConfiguration,
       config: MetalsServerConfig
   ): List[String] = {
+    val cmd = List(
+      "--console=plain",
+      "--init-script",
+      initScriptPath.toString,
+      "bloopInstall"
+    )
     userConfig().gradleScript match {
       case Some(script) =>
-        List(script, "bloopInstall", "--initScript", initScriptPath.toString)
+        script :: cmd
       case None =>
-        List(
-          embeddedGradleLauncher.toString(),
-          "bloopInstall",
-          "--init-script",
-          initScriptPath.toString
-        )
+        embeddedGradleLauncher.toString() :: cmd
     }
   }
 
