@@ -24,24 +24,6 @@ First, install the LSP plugin:
 The `-Dmetals.client=sublime` flag configures Metals for usage with the Sublime
 Text LSP client.
 
-Next, update the LSP plugin settings to run `metals-sublime` for Scala sources:
-`Command Palette (Cmd + Shift + P) > LSP Settings`. Update the JSON file to
-include the Metals server.
-
-```json
-{
-  "clients": {
-    "metals": {
-      "command": ["metals-sublime"],
-      "enabled": true,
-      "languageId": "scala",
-      "scopes": ["source.scala"],
-      "syntaxes": ["Packages/Scala/Scala.sublime-syntax"]
-    }
-  }
-}
-```
-
 Next, open "Preferences > Key Binding" and register `F12` to trigger goto
 definition.
 
