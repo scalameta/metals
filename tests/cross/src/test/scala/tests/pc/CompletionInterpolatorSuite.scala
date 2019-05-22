@@ -14,7 +14,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object Main {
        |  val myName = ""
-       |  def message = s"Hello \$myName$0, you are welcome"
+       |  def message = s"Hello $myName$0, you are welcome"
        |}
        |""".stripMargin,
     filterText = "\"Hello $myName"
@@ -22,14 +22,14 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
 
   checkEdit(
     "string1",
-    s"""|object Main {
-        |  val myName = ""
-        |  def message = "$$myNam@@"
-        |}
-        |""".stripMargin,
     """|object Main {
        |  val myName = ""
-       |  def message = s"\$myName$0"
+       |  def message = "$myNam@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val myName = ""
+       |  def message = s"$myName$0"
        |}
        |""".stripMargin,
     filterText = "\"$myName"
@@ -44,7 +44,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|object Main {
        |  val myName = ""
-       |  def message = s"\${myName$0}me"
+       |  def message = s"${myName$0}me"
        |}
        |""".stripMargin,
     filterText = "\"$myName"
@@ -59,7 +59,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin.triplequoted,
     """|object Main {
        |  val myName = ""
-       |  def message = s'''\${myName$0}me'''
+       |  def message = s'''${myName$0}me'''
        |}
        |""".stripMargin.triplequoted,
     filterText = "'''$myName".triplequoted
@@ -77,7 +77,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|object Main {
        |  val myName = ""
        |  def message = s'''
-       |    |\${myName$0}me
+       |    |${myName$0}me
        |    |'''.stripMargin
        |}
        |""".stripMargin.triplequoted,
@@ -93,7 +93,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin.triplequoted,
     """|object Main {
        |  val myName = ""
-       |  s"\$myName$0 \$\$"
+       |  s"$myName$0 $$"
        |}
        |""".stripMargin.triplequoted,
     filterText = "\"$myName"
@@ -108,7 +108,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin.triplequoted,
     """|object Main {
        |  val myName = ""
-       |  s"Say \$myName is \$myName$0"
+       |  s"Say $$myName is $myName$0"
        |}
        |""".stripMargin.triplequoted
   )
@@ -206,7 +206,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object Main {
        |  val myName = "name"
-       |  s"\$\$\$myName$0"
+       |  s"$$$myName$0"
        |}
        |""".stripMargin
   )
@@ -218,7 +218,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  s"\${identity($0)}"
+       |  s"${identity($0)}"
        |}
        |""".stripMargin
   )
@@ -230,7 +230,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  s"\${toString()$0}"
+       |  s"${toString()$0}"
        |}
        |""".stripMargin
   )
@@ -244,7 +244,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object Main {
        |  def empty: Boolean = true
-       |  s"\$empty$0"
+       |  s"$empty$0"
        |}
        |""".stripMargin
   )
@@ -258,7 +258,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object Main {
        |  val myName = ""
-       |  s"\${myName$0}"
+       |  s"${myName$0}"
        |}
        |""".stripMargin
   )
@@ -430,7 +430,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """"Hello ${hell@@}"""".stripMargin,
-    """s"Hello \${hello$0}"""".stripMargin
+    """s"Hello ${hello$0}"""".stripMargin
   )
 
   checkEditLine(
@@ -441,7 +441,7 @@ object CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """"Hello ${hell@@o}"""".stripMargin,
-    """s"Hello \${hello$0}o}"""".stripMargin
+    """s"Hello ${hello$0}o}"""".stripMargin
   )
 
   // See https://github.com/scalameta/metals/issues/608
