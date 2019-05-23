@@ -16,12 +16,24 @@ import scala.collection.mutable
  */
 class LineListener(onLine: String => Unit) {
   private var buffer = new StringBuilder()
+  private def onCharacter(char: Char): Unit = {
+    if (char == '\n') {
+      flush()
+    } else {
+      buffer.append(char)
+    }
+  }
 
   /** Clear buffered output. */
   def flush(): Unit = {
+    onLine(buffer.toString())
+    buffer = new StringBuilder()
+  }
+
+  /** Clear buffered output, if there exists any. */
+  def flushIfNonEmpty(): Unit = {
     if (buffer.length() > 0) {
-      onLine(buffer.toString())
-      buffer = new StringBuilder()
+      flush()
     }
   }
 
@@ -56,14 +68,6 @@ class LineListener(onLine: String => Unit) {
       }
     }
     this
-  }
-
-  private def onCharacter(char: Char): Unit = {
-    if (char == '\n') {
-      flush()
-    } else {
-      buffer.append(char)
-    }
   }
 
   case class State(apply: Int => State)

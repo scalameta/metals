@@ -13,7 +13,7 @@ object LineListenerSuite extends BaseSuite {
       var buf = mutable.ListBuffer.empty[String]
       val output = new LineListener(line => buf += line)
       act(output)
-      output.flush()
+      output.flushIfNonEmpty()
       assertEquals(buf.toList, expected)
     }
   }
@@ -44,7 +44,7 @@ object LineListenerSuite extends BaseSuite {
     "eol2", { out =>
       out.appendString("a\n\n")
     },
-    List("a")
+    List("a", "")
   )
 
   check(

@@ -220,8 +220,8 @@ object BloopInstall {
     }
 
     override def onExit(statusCode: Int): Unit = {
-      stdout.flush()
-      stderr.flush()
+      stdout.flushIfNonEmpty()
+      stderr.flushIfNonEmpty()
       if (!completeProcess.isCompleted) {
         if (statusCode == 0) {
           completeProcess.trySuccess(BloopInstallResult.Installed)
