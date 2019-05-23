@@ -212,16 +212,16 @@ object BloopInstall {
   private class ProcessHandler() extends NuAbstractProcessHandler {
     var response: Option[CompletableFuture[_]] = None
     val completeProcess = Promise[BloopInstallResult]()
-    val stdout = new ProcessOutput(line => scribe.info(line))
-    val stderr = new ProcessOutput(line => scribe.error(line))
+    val stdout = new LineListener(line => scribe.info(line))
+    val stderr = new LineListener(line => scribe.error(line))
 
     override def onStart(nuProcess: NuProcess): Unit = {
       nuProcess.closeStdin(false)
     }
 
     override def onExit(statusCode: Int): Unit = {
-      stdout.onProcessExit()
-      stderr.onProcessExit()
+      stdout.flush()
+      stderr.flush()
       if (!completeProcess.isCompleted) {
         if (statusCode == 0) {
           completeProcess.trySuccess(BloopInstallResult.Installed)
@@ -235,13 +235,13 @@ object BloopInstall {
 
     override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
       if (!closed) {
-        stdout.onByteOutput(buffer)
+        stdout.appendBytes(buffer)
       }
     }
 
     override def onStderr(buffer: ByteBuffer, closed: Boolean): Unit = {
       if (!closed) {
-        stderr.onByteOutput(buffer)
+        stderr.appendBytes(buffer)
       }
     }
   }

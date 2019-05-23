@@ -6,31 +6,31 @@ import java.nio.charset.StandardCharsets
 import fansi.ErrorMode
 
 /**
- * Handles streaming console output from a system process with potential ANSI codes.
+ * Converts a stream of strings (with potential ANSI codes and newlines) into a callback for indvidual lines
+ * where each individual line has no newline \n characters.
  *
- * @param onLine The callback handler when the process has printed a single line.
- *               Guaranteed to have no newline \n characters.
+ * @param onLine The callback handler when a single line has been consumed from the input.
  */
-class ProcessOutput(onLine: String => Unit) {
+class LineListener(onLine: String => Unit) {
   private var buffer = new StringBuilder()
 
-  /** The process has exited, clears out buffered output. */
-  def onProcessExit(): Unit = {
+  /** Clear buffered output. */
+  def flush(): Unit = {
     if (buffer.length() > 0) {
       onLine(buffer.toString())
       reset()
     }
   }
 
-  def onByteOutput(bytes: ByteBuffer): this.type = {
-    onPlainOutput(toPlainString(bytes))
+  def appendBytes(bytes: ByteBuffer): this.type = {
+    appendPlainString(toPlainString(bytes))
   }
 
-  def onStringOutput(text: String): this.type = {
-    onPlainOutput(toPlainString(text))
+  def appendString(text: String): this.type = {
+    appendPlainString(toPlainString(text))
   }
 
-  private def onPlainOutput(text: String): this.type = {
+  private def appendPlainString(text: String): this.type = {
     def loop(start: Int): Unit = {
       val newline = text.indexOf('\n', start)
       if (newline < 0) {
