@@ -44,7 +44,7 @@ object LineListenerSuite extends BaseSuite {
     "eol2", { out =>
       out.appendString("a\n\n")
     },
-    List("a", "")
+    List("a")
   )
 
   check(
