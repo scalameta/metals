@@ -60,4 +60,11 @@ object LineListenerSuite extends BaseSuite {
     },
     List("a", "b")
   )
+
+  check(
+    "emoji", { out =>
+      out.appendString("🇮🇸🇵🇱")
+    },
+    List("🇮🇸🇵🇱")
+  )
 }
