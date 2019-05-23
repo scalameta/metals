@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.metals.LineListener
+import scala.meta.internal.ansi.LineListener
 import scala.collection.mutable
 
 object LineListenerSuite extends BaseSuite {

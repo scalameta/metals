@@ -10,6 +10,7 @@ import com.zaxxer.nuprocess.NuProcessBuilder
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.meta.internal.ansi.LineListener
 import scala.meta.internal.builds.Digest
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.BuildTool
