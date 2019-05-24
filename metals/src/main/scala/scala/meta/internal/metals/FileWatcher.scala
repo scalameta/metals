@@ -89,7 +89,7 @@ final class FileWatcher(
 
   class Listener extends DirectoryChangeListener {
     override def onEvent(event: DirectoryChangeEvent): Unit = {
-      if (Files.isRegularFile(event.path())) {
+      if (!Files.isDirectory(event.path())) {
         didChangeWatchedFiles(event)
       }
     }

@@ -669,7 +669,11 @@ class MetalsLanguageServer(
       event: DirectoryChangeEvent
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path())
-    if (!savedFiles.isRecentlyActive(path) && path.isScalaOrJava) {
+    val isScalaOrJava = path.isScalaOrJava
+    if (isScalaOrJava && event.eventType() == EventType.DELETE) {
+      diagnostics.didDelete(path)
+      CompletableFuture.completedFuture(())
+    } else if (isScalaOrJava && !savedFiles.isRecentlyActive(path)) {
       event.eventType() match {
         case EventType.CREATE =>
           buildTargets.onCreate(path)
@@ -680,7 +684,6 @@ class MetalsLanguageServer(
       CompletableFuture.completedFuture {
         event.eventType() match {
           case EventType.DELETE =>
-            diagnostics.didDelete(AbsolutePath(event.path()))
             referencesProvider.onDelete(event.path())
           case EventType.CREATE | EventType.MODIFY =>
             referencesProvider.onChange(event.path())
