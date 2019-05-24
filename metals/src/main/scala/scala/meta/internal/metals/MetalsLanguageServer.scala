@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import java.net.URI
 import java.net.URLClassLoader
 import java.nio.charset.Charset
-import scala.meta.pc.CancelToken
 import java.nio.charset.StandardCharsets
 import java.nio.file._
 import java.util
@@ -13,8 +12,6 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.DependencySourcesParams
 import ch.epfl.scala.bsp4j.DependencySourcesResult
 import ch.epfl.scala.bsp4j.ScalacOptionsParams
@@ -27,15 +24,14 @@ import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
-import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashSet
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.TimeoutException
+import scala.concurrent.duration.Duration
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.io.FileIO
@@ -44,6 +40,7 @@ import scala.meta.internal.mtags._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
+import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 
@@ -99,6 +96,7 @@ class MetalsLanguageServer(
   private val definitionIndex = newSymbolIndex()
   private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer = Option.empty[BuildServerConnection]
+  private val buildTargetClasses = new BuildTargetClasses(() => buildServer)
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
@@ -107,6 +105,12 @@ class MetalsLanguageServer(
     new DelegatingLanguageClient(NoopLanguageClient, config)
   var userConfig = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
+  val compilations: Compilations = new Compilations(
+    buildTargets,
+    buildTargetClasses,
+    () => workspace,
+    () => buildServer
+  )
   private val fileWatcher = register(
     new FileWatcher(
       buildTargets,
@@ -128,6 +132,7 @@ class MetalsLanguageServer(
   private var buildClient: ForwardingMetalsBuildClient = _
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
+  private var codeLensProvider: CodeLensProvider = _
   private var definitionProvider: DefinitionProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
@@ -193,7 +198,7 @@ class MetalsLanguageServer(
       statusBar,
       config.icons,
       buildTools,
-      isCompiling.contains
+      compilations.isCurrentlyCompiling
     )
     diagnostics = new Diagnostics(
       buildTargets,
@@ -250,6 +255,12 @@ class MetalsLanguageServer(
         fileSystemSemanticdbs,
         interactiveSemanticdbs
       )
+    )
+    codeLensProvider = new CodeLensProvider(
+      buildTargetClasses,
+      buffers,
+      buildTargets,
+      semanticdbs
     )
     definitionProvider = new DefinitionProvider(
       workspace,
@@ -550,7 +561,7 @@ class MetalsLanguageServer(
       }
     } else {
       compilers.load(List(path))
-      compileSourceFiles(List(path)).asJava
+      compilations.compileFiles(List(path)).ignoreValue.asJava
     }
   }
 
@@ -567,13 +578,20 @@ class MetalsLanguageServer(
       buildTargets.inverseSources(path) match {
         case Some(target) =>
           val isAffectedByCurrentCompilation =
-            buildTargets.isInverseDependency(target, isCompiling.keys.toList)
+            buildTargets.isInverseDependency(
+              target,
+              compilations.currentlyCompiling.toList
+            )
           def isAffectedByLastCompilation: Boolean =
-            !lastCompile(target) &&
-              buildTargets.isInverseDependency(target, lastCompile.toList)
+            !compilations.wasPreviouslyCompiled(target) &&
+              buildTargets.isInverseDependency(
+                target,
+                compilations.previouslyCompiled.toList
+              )
           val needsCompile = isAffectedByCurrentCompilation || isAffectedByLastCompilation
           if (needsCompile) {
-            compileSourceFiles(List(path))
+            compilations
+              .compileFiles(List(path))
               .map(_ => DidFocusResult.Compiled)
               .asJava
           } else {
@@ -683,7 +701,7 @@ class MetalsLanguageServer(
       .sequence(
         List(
           Future(reindexWorkspaceSources(paths)),
-          compileSourceFiles(paths).ignoreValue,
+          compilations.compileFiles(paths).ignoreValue,
           onBuildChanged(paths).ignoreValue
         )
       )
@@ -804,7 +822,7 @@ class MetalsLanguageServer(
   ): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val old = path.toInputFromBuffers(buffers)
-    cascadeCompileSourceFiles(Seq(path)).foreach { _ =>
+    compilations.cascadeCompileFiles(Seq(path)).foreach { _ =>
       val newBuffer = path.toInputFromBuffers(buffers)
       val newParams: Option[ReferenceParams] =
         if (newBuffer.text == old.text) Some(params)
@@ -951,19 +969,20 @@ class MetalsLanguageServer(
       case ServerCommands.OpenBrowser(url) =>
         Future.successful(Urls.openBrowser(url)).asJavaObject
       case ServerCommands.CascadeCompile() =>
-        cascadeCompileSourceFiles(buffers.open.toSeq).asJavaObject
+        compilations
+          .cascadeCompileFiles(buffers.open.toSeq)
+          .asJavaObject
       case ServerCommands.CancelCompile() =>
         Future {
-          compileSourceFiles.cancelCurrentRequest()
-          cascadeCompileSourceFiles.cancelCurrentRequest()
+          compilations.cancel()
           scribe.info("compilation cancelled")
         }.asJavaObject
       case ServerCommands.PresentationCompilerRestart() =>
         Future {
           compilers.restartAll()
         }.asJavaObject
-      case els =>
-        scribe.error(s"Unknown command '$els'")
+      case cmd =>
+        scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
     }
 
@@ -1116,7 +1135,9 @@ class MetalsLanguageServer(
       }
       _ = indexingPromise.trySuccess(())
       _ <- Future.sequence[Unit, List](
-        cascadeCompileSourceFiles(buffers.open.toSeq) ::
+        compilations
+          .cascadeCompileFiles(buffers.open.toSeq)
+          .ignoreValue ::
           compilers.load(buffers.open.toSeq) ::
           Nil
       )
@@ -1365,53 +1386,6 @@ class MetalsLanguageServer(
         }
       }
     )
-  }
-
-  private val isCompiling = TrieMap.empty[BuildTargetIdentifier, Boolean]
-  private var lastCompile: collection.Set[BuildTargetIdentifier] = Set.empty
-  val cascadeCompileSourceFiles =
-    new BatchedFunction[AbsolutePath, Unit](
-      paths => compileSourceFilesUnbatched(paths, isCascade = true)
-    )
-  val compileSourceFiles =
-    new BatchedFunction[AbsolutePath, Unit](
-      paths => compileSourceFilesUnbatched(paths, isCascade = false)
-    )
-  private def compileSourceFilesUnbatched(
-      paths: Seq[AbsolutePath],
-      isCascade: Boolean
-  ): CancelableFuture[Unit] = {
-    val scalaPaths = paths.filter { path =>
-      path.isScalaOrJava &&
-      !path.isDependencySource(workspace)
-    }
-    buildServer match {
-      case Some(build) if scalaPaths.nonEmpty =>
-        val targets = scalaPaths.flatMap(buildTargets.inverseSources).distinct
-        if (targets.isEmpty) {
-          scribe.warn(s"no build target: ${scalaPaths.mkString("\n  ")}")
-          Future.successful(()).asCancelable
-        } else {
-          val allTargets =
-            if (isCascade) {
-              targets.flatMap(buildTargets.inverseDependencies).distinct
-            } else {
-              targets
-            }
-          val params = new CompileParams(allTargets.asJava)
-          targets.foreach(target => isCompiling(target) = true)
-          val completableFuture = build.compile(params)
-          CancelableFuture(
-            completableFuture.asScala.map { _ =>
-              lastCompile = isCompiling.keySet
-              isCompiling.clear()
-            }.ignoreValue,
-            Cancelable(() => completableFuture.cancel(false))
-          )
-        }
-      case _ =>
-        Future.successful(()).asCancelable
-    }
   }
 
   /**

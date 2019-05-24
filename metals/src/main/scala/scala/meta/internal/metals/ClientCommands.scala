@@ -39,6 +39,17 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  val RunMain = Command(
+    "metals-main-run",
+    "run",
+    "Runs main method",
+    """|Array of strings of length 2 where
+       |- first array element is a build target identifier URI
+       |- second array element is the name of the class containing the main method 
+       |Example: `["mybuild://workspace/foo/?id=foo", "com.app.Main"]`
+    """.stripMargin
+  )
+
   def all: List[Command] = List(
     RunDoctor,
     ToggleLogs,
