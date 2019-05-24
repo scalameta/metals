@@ -40,7 +40,7 @@ final class Embedded(
    * Fetches jars for bloop-frontend and creates a new orphan classloader.
    */
   lazy val bloopJars: Option[URLClassLoader] = {
-    statusBar.trackSlowTask(s"${icons.sync}Downloading Bloop") {
+    statusBar.trackSlowTask("Downloading Bloop") {
       try {
         Some(newBloopClassloader())
       } catch {

@@ -1604,12 +1604,14 @@ trait Completions { this: MetalsGlobal =>
   }
 
   def isSnippetEnabled(pos: Position, text: String): Boolean = {
-    text.charAt(pos.point) match {
-      case ')' | ']' | '}' | ',' | '\n' => true
-      case _ =>
-        !text.startsWith(" _", pos.point) && {
-          text.startsWith("\r\n", pos.point)
-        }
+    pos.point < text.length() && {
+      text.charAt(pos.point) match {
+        case ')' | ']' | '}' | ',' | '\n' => true
+        case _ =>
+          !text.startsWith(" _", pos.point) && {
+            text.startsWith("\r\n", pos.point)
+          }
+      }
     }
   }
 

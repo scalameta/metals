@@ -124,4 +124,11 @@ object CompletionFilenameSuite extends BaseCompletionSuite {
     "",
     filename = "User.scala"
   )
+
+  check(
+    "end-of-file",
+    "object Use@@",
+    "object User",
+    filename = "User.scala"
+  )
 }
