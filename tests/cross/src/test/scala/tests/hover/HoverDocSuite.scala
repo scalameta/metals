@@ -3,6 +3,8 @@ package tests.hover
 import tests.pc.BaseHoverSuite
 
 object HoverDocSuite extends BaseHoverSuite {
+  override def requiresJdkSources: Boolean = true
+
   override def beforeAll(): Unit = {
     indexJDK()
   }

@@ -50,6 +50,8 @@ abstract class BasePCSuite extends BaseSuite {
     .newInstance("", myclasspath.asJava, scalacOptions.asJava)
   val tmp = AbsolutePath(Files.createTempDirectory("metals"))
 
+  def requiresJdkSources: Boolean = false
+
   def indexJDK(): Unit = {
     JdkSources().foreach(jdk => index.addSourceJar(jdk))
   }
@@ -57,13 +59,21 @@ abstract class BasePCSuite extends BaseSuite {
   override def test(name: String)(fun: => Any): Unit = {
     // We are unable to infer the JDK jars on Appveyor
     // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
-    if (isWindows) ignore(name)(())
+    if (isWindows || (requiresJdkSources && !hasJdkSources)) ignore(name)(())
     else {
       val testName =
         if (Properties.versionNumberString != BuildInfoVersions.scala212)
-          s"${Properties.versionNumberString}-${name}"
+          s"${Properties.versionNumberString}-$name"
         else name
-      super.test(testName)(fun)
+      super.test(testName) {
+        try {
+          fun
+        } catch {
+          case NonFatal(e) if e.getMessage.contains("x$1") && !hasJdkSources =>
+            // ignore failing test if jdk sources are missing
+            ()
+        }
+      }
     }
   }
   def indexScalaLibrary(): Unit = {

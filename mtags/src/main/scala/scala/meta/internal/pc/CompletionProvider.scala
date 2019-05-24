@@ -201,14 +201,21 @@ class CompletionProvider(
           item.setDeprecated(true)
         }
         // Commit character
-        if (r.sym.isMethod && !isNullary(r.sym)) {
-          // NOTE(olafur) don't use `(` as a commit character for methods because it conflicts with
-          // the `($0)` snippet behavior resulting in a redundant unit literal: `println(())`.
-          // The ideal solution would be to not use the `($0)` snippet when the commit character `(` is used,
-          // however language servers can't distinguish what commit character is used. It works as
-          // expected in IntelliJ.
-        } else {
-          item.setCommitCharacters(List(".").asJava)
+        r match {
+          case t: TextEditMember if t.commitCharacter.isDefined =>
+            item.setCommitCharacters(t.commitCharacter.toList.asJava)
+          case _ =>
+            if (r.sym.isMethod && !isNullary(r.sym)) {
+              // NOTE(olafur) don't use `(` as a commit character for methods because it conflicts with
+              // the `($0)` snippet behavior resulting in a redundant unit literal: `println(())`.
+              // The ideal solution would be to not use the `($0)` snippet when the commit character `(` is used,
+              // however language servers can't distinguish what commit character is used. It works as
+              // expected in IntelliJ.
+            } else if (r.sym.isError) {
+              () // No commit character
+            } else {
+              item.setCommitCharacters(List(".").asJava)
+            }
         }
         if (idx == 0) {
           item.setPreselect(true)
@@ -238,7 +245,9 @@ class CompletionProvider(
       kind: CompletionListKind,
       query: String,
       pos: Position,
-      completion: CompletionPosition
+      completion: CompletionPosition,
+      editRange: l.Range,
+      latestParentTrees: List[Tree]
   ): InterestingMembers = {
     val isSeen = mutable.Set.empty[String]
     val isIgnored = mutable.Set.empty[Symbol]
@@ -279,6 +288,7 @@ class CompletionProvider(
     }
     completions.foreach(visit)
     completion.contribute.foreach(visit)
+    buf ++= keywords(pos, editRange, latestParentTrees)
     val searchResults =
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
@@ -314,6 +324,13 @@ class CompletionProvider(
     else k.Value
   }
 
+  private def getLastVisitedParentTrees(pos: Position): List[Tree] = {
+    if (lastVisistedParentTrees.isEmpty) {
+      locateTree(pos)
+    }
+    lastVisistedParentTrees
+  }
+
   private def safeCompletionsAt(
       pos: Position
   ): (InterestingMembers, CompletionPosition, l.Range, String) = {
@@ -327,7 +344,8 @@ class CompletionProvider(
         pos,
         params.text(),
         editRange,
-        CompletionResult.NoResults
+        CompletionResult.NoResults,
+        getLastVisitedParentTrees(pos)
       ) match {
         case CompletionPosition.None =>
           logger.warning(e.getMessage)
@@ -369,11 +387,26 @@ class CompletionProvider(
         if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
         else CompletionFuzzy.matches(entered, name)
       }
+      val latestParentTrees = getLastVisitedParentTrees(pos)
       val completion =
-        completionPosition(pos, params.text(), editRange, completions)
+        completionPosition(
+          pos,
+          params.text(),
+          editRange,
+          completions,
+          latestParentTrees
+        )
       val query = completions.name.toString
       val items =
-        filterInteresting(matchingResults, kind, query, pos, completion)
+        filterInteresting(
+          matchingResults,
+          kind,
+          query,
+          pos,
+          completion,
+          editRange,
+          latestParentTrees
+        )
       params.checkCanceled()
       (items, completion, editRange, query)
     } catch {

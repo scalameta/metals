@@ -30,7 +30,8 @@ class MetalsGlobal(
     with Signatures
     with Compat
     with GlobalProxy
-    with AutoImports { compiler =>
+    with AutoImports
+    with Keywords { compiler =>
   hijackPresentationCompilerThread()
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)

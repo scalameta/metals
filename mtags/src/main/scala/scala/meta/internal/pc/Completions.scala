@@ -35,7 +35,8 @@ trait Completions { this: MetalsGlobal =>
       val label: Option[String] = None,
       val detail: Option[String] = None,
       val command: Option[String] = None,
-      val additionalTextEdits: List[l.TextEdit] = Nil
+      val additionalTextEdits: List[l.TextEdit] = Nil,
+      val commitCharacter: Option[String] = None
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
 
   class OverrideDefMember(
@@ -316,7 +317,12 @@ trait Completions { this: MetalsGlobal =>
     }
   }
 
-  var lastEnclosing: List[Tree] = Nil
+  // NOTE(olafur): This variable keeps the list of all parent tree nodes
+  // from the last visited tree node called from `typedTreeAt(pos)`
+  // or `locateTree(pos)`. It's dirty to store this as a global mutable
+  // variable but it avoids repeating traversals from the compiler
+  // implementation of `completionsAt(pos)`.
+  var lastVisistedParentTrees: List[Tree] = Nil
   sealed abstract class CompletionPosition {
     def isType: Boolean = false
     def isNew: Boolean = false
@@ -359,12 +365,19 @@ trait Completions { this: MetalsGlobal =>
       pos: Position,
       text: String,
       editRange: l.Range,
-      completions: CompletionResult
+      completions: CompletionResult,
+      latestEnclosing: List[Tree]
   ): CompletionPosition = {
     // the implementation of completionPositionUnsafe does a lot of `typedTreeAt(pos).tpe`
     // which often causes null pointer exceptions, it's easier to catch the error here than
     // enforce discipline in the code.
-    try completionPositionUnsafe(pos, text, editRange, completions)
+    try completionPositionUnsafe(
+      pos,
+      text,
+      editRange,
+      completions,
+      latestEnclosing
+    )
     catch {
       case NonFatal(e) =>
         logger.log(Level.SEVERE, e.getMessage(), e)
@@ -375,7 +388,8 @@ trait Completions { this: MetalsGlobal =>
       pos: Position,
       text: String,
       editRange: l.Range,
-      completions: CompletionResult
+      completions: CompletionResult,
+      latestEnclosingArg: List[Tree]
   ): CompletionPosition = {
     val PatternMatch = new PatternMatch(pos)
     def fromIdentApply(
@@ -389,10 +403,12 @@ trait Completions { this: MetalsGlobal =>
           CompletionPosition.None
         }
       } else {
+
         CompletionPosition.Arg(ident, apply, pos, text)
       }
     }
-    lastEnclosing match {
+
+    latestEnclosingArg match {
       case (ident: Ident) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
@@ -454,7 +470,7 @@ trait Completions { this: MetalsGlobal =>
         inferCompletionPosition(
           pos,
           text,
-          lastEnclosing,
+          latestEnclosingArg,
           completions,
           editRange
         )
@@ -1402,9 +1418,9 @@ trait Completions { this: MetalsGlobal =>
   }
   class MetalsLocator(pos: Position) extends Traverser {
     def locateIn(root: Tree): Tree = {
-      lastEnclosing = Nil
+      lastVisistedParentTrees = Nil
       traverse(root)
-      lastEnclosing match {
+      lastVisistedParentTrees match {
         case head :: _ => head
         case _ => EmptyTree
       }
@@ -1418,10 +1434,10 @@ trait Completions { this: MetalsGlobal =>
         case _ =>
           if (t.pos includes pos) {
             if (isEligible(t)) {
-              lastEnclosing ::= t
+              lastVisistedParentTrees ::= t
             }
             super.traverse(t)
-          } else
+          } else {
             t match {
               case mdef: MemberDef =>
                 val annTrees = mdef.mods.annotations match {
@@ -1434,6 +1450,7 @@ trait Completions { this: MetalsGlobal =>
                 traverseTrees(annTrees)
               case _ =>
             }
+          }
       }
     }
   }
@@ -1589,7 +1606,7 @@ trait Completions { this: MetalsGlobal =>
           }
         }
     }
-    loop(lastEnclosing)
+    loop(lastVisistedParentTrees)
   }
 
   /**

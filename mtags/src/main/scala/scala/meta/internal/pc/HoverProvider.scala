@@ -136,7 +136,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
             None
         }
     }
-    lastEnclosing match {
+    lastVisistedParentTrees match {
       case head :: tail =>
         tryTail(tail) match {
           case Some(value) =>

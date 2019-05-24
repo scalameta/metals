@@ -35,13 +35,13 @@ trait AutoImports { this: MetalsGlobal =>
       pos: Position,
       text: String
   ): Option[AutoImportPosition] = {
-    if (lastEnclosing.isEmpty) {
+    if (lastVisistedParentTrees.isEmpty) {
       locateTree(pos)
     }
-    lastEnclosing.headOption match {
+    lastVisistedParentTrees.headOption match {
       case Some(_: Import) => None
       case _ =>
-        val enclosingPackage = lastEnclosing.collectFirst {
+        val enclosingPackage = lastVisistedParentTrees.collectFirst {
           case pkg: PackageDef => pkg
         }
         enclosingPackage match {
