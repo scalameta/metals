@@ -4,35 +4,37 @@ package scala.meta.internal.ansi
 
 /**
  * A state machine for filtering out ANSI escape codes from a character stream.
+ *
+ * In addition to stripping out ANSI escape codes, we also strip out carriage return \r
+ * characters from Windows-style "\r\n" line breaks.
  */
-case class AnsiStateMachine(
-    apply: Int => AnsiStateMachine
-)
+case class AnsiStateMachine(apply: Int => AnsiStateMachine)
 object AnsiStateMachine {
+  // Helpful docs on ANSI escape sequences: http://ascii-table.com/ansi-escape-sequences.php
   val Start: AnsiStateMachine = AnsiStateMachine {
-    case 27 => Ansi1
-    case 13 => CarriageReturn // \r
+    case 27 => AnsiEscape
+    case '\r' => CarriageReturn
     case _ => Print
   }
 
   val CarriageReturn: AnsiStateMachine = AnsiStateMachine {
-    case 10 => LineFeed // drop \r from \r\n
+    case '\n' => LineFeed // drop \r from \r\n
     case _ => Print
   }
   val LineFeed: AnsiStateMachine = AnsiStateMachine(_ => LineFeed)
   val Print: AnsiStateMachine = AnsiStateMachine(_ => Print)
   val Discard: AnsiStateMachine = AnsiStateMachine(_ => Discard)
-  val Ansi1: AnsiStateMachine = AnsiStateMachine {
-    case '[' => Ansi2
+  val AnsiEscape: AnsiStateMachine = AnsiStateMachine {
+    case '[' => AnsiNumericValue
     case _ => Print
   }
-  val Ansi2: AnsiStateMachine = AnsiStateMachine {
-    case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => Ansi3
+  val AnsiNumericValue: AnsiStateMachine = AnsiStateMachine {
+    case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => AnsiValue
     case _ => Print
   }
-  val Ansi3: AnsiStateMachine = AnsiStateMachine {
-    case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => Ansi3
-    case ';' => Ansi2
+  val AnsiValue: AnsiStateMachine = AnsiStateMachine {
+    case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => AnsiValue
+    case ';' => AnsiNumericValue
     case '@' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' |
         'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V' | 'W' |
         'X' | 'Y' | 'Z' | '[' | '\\' | ']' | '^' | '_' | '`' | 'a' | 'b' | 'c' |

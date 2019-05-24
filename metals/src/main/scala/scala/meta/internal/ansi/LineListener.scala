@@ -38,6 +38,16 @@ class LineListener(onLine: String => Unit) {
   }
 
   def appendBytes(bytes: ByteBuffer): this.type = {
+    // NOTE(olafur): this is a hot execution path so the code is not implemented in the most readable
+    // or maintainable way for performance reasons. We are streaming the output from build logs
+    // to the LSP client, with basic processing like stripping out ANSI escape code that won't
+    // render nicely in the editor UI. We could write the same logic with fewer lines of code
+    // and a more readable implementation by doing something like:
+    // - convert bytes into a string
+    // - strip out ansi escape codes from string using fansi
+    // - use linesIterator to walk lines
+    // Instead, we process the byte-stream directly to filter out unwanted ANSI escape code
+    // and \r characters as they are printed from the build tool.
     val chars = StandardCharsets.UTF_8.decode(bytes)
     while (chars.hasRemaining()) {
       val ch = chars.get()
@@ -68,6 +78,7 @@ class LineListener(onLine: String => Unit) {
     stack.clear()
     state = AnsiStateMachine.Start
   }
+
   private def onCharacter(char: Char): Unit = {
     if (char == '\n') {
       flush()
