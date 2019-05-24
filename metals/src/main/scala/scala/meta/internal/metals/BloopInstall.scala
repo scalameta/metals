@@ -1,17 +1,16 @@
 package scala.meta.internal.metals
 
 import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import com.zaxxer.nuprocess.NuAbstractProcessHandler
 import com.zaxxer.nuprocess.NuProcess
 import com.zaxxer.nuprocess.NuProcessBuilder
-import fansi.ErrorMode
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.meta.internal.ansi.LineListener
 import scala.meta.internal.builds.Digest
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.BuildTool
@@ -214,12 +213,16 @@ object BloopInstall {
   private class ProcessHandler() extends NuAbstractProcessHandler {
     var response: Option[CompletableFuture[_]] = None
     val completeProcess = Promise[BloopInstallResult]()
+    val stdout = new LineListener(line => scribe.info(line))
+    val stderr = new LineListener(line => scribe.error(line))
 
     override def onStart(nuProcess: NuProcess): Unit = {
       nuProcess.closeStdin(false)
     }
 
     override def onExit(statusCode: Int): Unit = {
+      stdout.flushIfNonEmpty()
+      stderr.flushIfNonEmpty()
       if (!completeProcess.isCompleted) {
         if (statusCode == 0) {
           completeProcess.trySuccess(BloopInstallResult.Installed)
@@ -232,29 +235,15 @@ object BloopInstall {
     }
 
     override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
-      log(closed, buffer)(out => scribe.info(out))
-    }
-
-    override def onStderr(buffer: ByteBuffer, closed: Boolean): Unit = {
-      log(closed, buffer)(out => scribe.error(out))
-    }
-
-    private def log(closed: Boolean, buffer: ByteBuffer)(
-        fn: String => Unit
-    ): Unit = {
       if (!closed) {
-        val text = toPlainString(buffer).trim
-        if (text.nonEmpty) {
-          fn(text)
-        }
+        stdout.appendBytes(buffer)
       }
     }
 
-    private def toPlainString(buffer: ByteBuffer): String = {
-      val bytes = new Array[Byte](buffer.remaining())
-      buffer.get(bytes)
-      val ansiString = new String(bytes, StandardCharsets.UTF_8)
-      fansi.Str(ansiString, ErrorMode.Sanitize).plainText
+    override def onStderr(buffer: ByteBuffer, closed: Boolean): Unit = {
+      if (!closed) {
+        stderr.appendBytes(buffer)
+      }
     }
   }
 }
