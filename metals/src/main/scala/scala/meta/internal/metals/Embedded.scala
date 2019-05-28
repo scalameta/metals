@@ -151,6 +151,21 @@ object Embedded {
         "ch.epfl.scala",
         "bloop-frontend_2.12",
         bloopVersion
+      ),
+      new Dependency(
+        "org.scala-lang",
+        "scala-library",
+        BuildInfo.scala212
+      ),
+      new Dependency(
+        "org.scala-lang",
+        "scala-compiler",
+        BuildInfo.scala212
+      ),
+      new Dependency(
+        "org.scala-lang",
+        "scala-reflect",
+        BuildInfo.scala212
       )
     ).addRepositories(
       List(
