@@ -954,9 +954,7 @@ class MetalsLanguageServer(
       case ServerCommands.ConnectBuildServer() =>
         quickConnectToBuildServer().asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
-        Future {
-          disconnectOldBuildServer()
-        }.asJavaObject
+        disconnectOldBuildServer().asJavaObject
       case ServerCommands.RunDoctor() =>
         Future {
           doctor.executeRunDoctor()
@@ -1066,10 +1064,7 @@ class MetalsLanguageServer(
 
   private def autoConnectToBuildServer(): Future[BuildChange] = {
     for {
-      _ <- buildServer match {
-        case Some(old) => old.shutdown()
-        case None => Future.successful(())
-      }
+      _ <- disconnectOldBuildServer()
       maybeBuild <- timed("connected to build server") {
         if (buildTools.isBloop) bloopServers.newServer()
         else bspServers.newServer()
@@ -1094,18 +1089,21 @@ class MetalsLanguageServer(
       BuildChange.Failed
   }
 
-  private def disconnectOldBuildServer(): Unit = {
+  private def disconnectOldBuildServer(): Future[Unit] = {
     if (buildServer.isDefined) {
       scribe.info("disconnected: build server")
     }
-    buildServer.foreach(_.shutdown())
-    buildServer = None
-    diagnostics.reset()
+    buildServer match {
+      case None => Future.successful(())
+      case Some(value) =>
+        buildServer = None
+        diagnostics.reset()
+        value.shutdown()
+    }
   }
   private def connectToNewBuildServer(
       build: BuildServerConnection
   ): Future[BuildChange] = {
-    disconnectOldBuildServer()
     cancelables.add(build)
     compilers.cancel()
     buildServer = Some(build)

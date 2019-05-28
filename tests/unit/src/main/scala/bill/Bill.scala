@@ -73,6 +73,10 @@ object Bill {
     override def onConnectWithClient(server: BuildClient): Unit =
       client = server
     var workspace: Path = Paths.get(".").toAbsolutePath.normalize()
+    // Returns true if we're tracing shutdown requests, used for testing purposes.
+    def isShutdownTrace(): Boolean = {
+      Files.isRegularFile(workspace.resolve("shutdown-trace"))
+    }
     def src: Path = workspace.resolve("src")
     def scalaJars: util.List[String] =
       myClasspath
@@ -119,6 +123,9 @@ object Bill {
       Future {
         workspace = Paths.get(URI.create(params.getRootUri))
         MetalsLogger.setupLspLogger(AbsolutePath(workspace), true)
+        if (isShutdownTrace()) {
+          println("trace: initialize")
+        }
         val capabilities = new BuildServerCapabilities
         capabilities.setCompileProvider(new CompileProvider(languages))
         new InitializeBuildResult("Bill", "1.0", "2.0.0-M2", capabilities)
@@ -126,6 +133,13 @@ object Bill {
     }
     override def onBuildInitialized(): Unit = {}
     override def buildShutdown(): CompletableFuture[AnyRef] = {
+      if (isShutdownTrace()) {
+        // Artifically delay shutdown to test that running "Connect to build server"
+        // waits for the shutdown request to respond before initializing a new build
+        // server connection.
+        Thread.sleep(1000)
+        println("trace: shutdown")
+      }
       CompletableFuture.completedFuture(null)
     }
     override def onBuildExit(): Unit = {
@@ -357,7 +371,6 @@ object Bill {
         .create()
       server.client = launcher.getRemoteProxy
       val listening = launcher.startListening()
-      pprint.log("listening...")
       listening.get()
     } catch {
       case NonFatal(e) =>
