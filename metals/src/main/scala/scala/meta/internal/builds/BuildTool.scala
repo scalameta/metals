@@ -23,6 +23,8 @@ abstract class BuildTool {
     dir.toFile.deleteOnExit()
     dir
   }
+
+  def redirectErrorOutput: Boolean = false
 }
 
 object BuildTool {

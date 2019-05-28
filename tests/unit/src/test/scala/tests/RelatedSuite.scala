@@ -5,6 +5,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.MavenBuildTool
+import scala.meta.internal.builds.MillBuildTool
 
 object RelatedSuite extends BaseSuite {
   private def addNot(flag: Boolean) =
@@ -75,4 +76,19 @@ object RelatedSuite extends BaseSuite {
   checkIsMavenRelated("a/b/c/pom.xml")
   checkIsNotMavenRelated("a/b/c/settings.xml")
   checkIsNotMavenRelated("other.xml")
+
+  /**------------ Mill ------------**/
+  def checkIsNotMillRelated(relpath: String): Unit = {
+    checkIsMillRelated(relpath, isTrue = false)
+  }
+  def checkIsMillRelated(relpath: String, isTrue: Boolean = true): Unit = {
+    test(s"is${addNot(isTrue)}MillRelated - $relpath") {
+      checkRelated(relpath, MillBuildTool.isMillRelatedPath, isTrue)
+    }
+  }
+  checkIsMillRelated("build.sc")
+  checkIsMillRelated("a/b/c/other.sc")
+  checkIsNotMillRelated("/ab/c/A.groovy")
+  checkIsNotMillRelated("/ab/c/A.kts")
+  checkIsNotMillRelated("/ab/c/A.scala")
 }

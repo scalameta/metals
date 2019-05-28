@@ -21,6 +21,7 @@ case class UserConfiguration(
     sbtScript: Option[String] = None,
     gradleScript: Option[String] = None,
     mavenScript: Option[String] = None,
+    millScript: Option[String] = None,
     scalafmtConfigPath: RelativePath =
       UserConfiguration.default.scalafmtConfigPath,
     symbolPrefixes: Map[String, String] =
@@ -70,6 +71,15 @@ object UserConfiguration {
       "maven script",
       """Optional absolute path to a `maven` executable to use for generating bloop config.
         |By default, Metals uses mvnw maven wrapper with 3.6.1 maven version. Update this setting if your `maven` script requires more customizations
+        |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "mill-script",
+      """empty string `""`.""",
+      "/usr/local/bin/mill",
+      "mill script",
+      """Optional absolute path to a `mill` executable to use for running `mill mill.contrib.Bloop/install`.
+        |By default, Metals uses mill wrapper script with 0.4.0 mill version. Update this setting if your `mill` script requires more customizations
         |like using environment variables.
         |""".stripMargin
     ),
@@ -148,6 +158,8 @@ object UserConfiguration {
       getStringKey("gradle-script")
     val mavenScript =
       getStringKey("maven-script")
+    val millScript =
+      getStringKey("mill-script")
     val symbolPrefixes =
       getStringMap("symbol-prefixes")
         .getOrElse(default.symbolPrefixes)
@@ -162,6 +174,7 @@ object UserConfiguration {
           sbtScript,
           gradleScript,
           mavenScript,
+          millScript,
           scalafmtConfigPath,
           symbolPrefixes
         )

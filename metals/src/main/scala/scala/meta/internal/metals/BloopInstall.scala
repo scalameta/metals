@@ -68,7 +68,9 @@ final class BloopInstall(
   ): Future[BloopInstallResult] = {
     persistChecksumStatus(Status.Started, buildTool)
     val elapsed = new Timer(time)
-    val handler = new BloopInstall.ProcessHandler()
+    val handler = new BloopInstall.ProcessHandler(
+      joinErrorWithInfo = buildTool.redirectErrorOutput
+    )
     val pb = new NuProcessBuilder(handler, args.asJava)
     pb.setCwd(workspace.toNIO)
     userConfig().javaHome.foreach(pb.environment().put("JAVA_HOME", _))
@@ -211,11 +213,15 @@ object BloopInstall {
   /**
    * Converts running system processing into Future[BloopInstallResult].
    */
-  private class ProcessHandler() extends NuAbstractProcessHandler {
+  private class ProcessHandler(
+      joinErrorWithInfo: Boolean
+  ) extends NuAbstractProcessHandler {
     var response: Option[CompletableFuture[_]] = None
     val completeProcess = Promise[BloopInstallResult]()
     val stdout = new LineListener(line => scribe.info(line))
-    val stderr = new LineListener(line => scribe.error(line))
+    val stderr =
+      if (joinErrorWithInfo) stdout
+      else new LineListener(line => scribe.error(line))
 
     override def onStart(nuProcess: NuProcess): Unit = {
       nuProcess.closeStdin(false)
