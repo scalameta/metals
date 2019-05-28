@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.io.PrintStream
 import java.nio.file.Files
+import java.nio.file.StandardOpenOption
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scribe._
@@ -26,7 +27,11 @@ object MetalsLogger {
 
   def redirectSystemOut(logfile: AbsolutePath): Unit = {
     Files.createDirectories(logfile.toNIO.getParent)
-    val logStream = Files.newOutputStream(logfile.toNIO)
+    val logStream = Files.newOutputStream(
+      logfile.toNIO,
+      StandardOpenOption.APPEND,
+      StandardOpenOption.CREATE
+    )
     val out = new PrintStream(logStream)
     System.setOut(out)
     System.setErr(out)
