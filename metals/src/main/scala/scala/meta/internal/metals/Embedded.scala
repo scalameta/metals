@@ -98,7 +98,9 @@ final class Embedded(
 }
 
 object Embedded {
-  def downloadSettings(dependency: Dependency): Settings =
+  def downloadSettings(
+      dependency: Dependency
+  ): Settings =
     new coursiersmall.Settings()
       .withTtl(Some(Duration.Inf))
       .withDependencies(List(dependency))
@@ -152,13 +154,32 @@ object Embedded {
         "bloop-frontend_2.12",
         bloopVersion
       )
-    ).addRepositories(
-      List(
-        new coursiersmall.Repository.Maven(
-          "https://dl.bintray.com/scalacenter/releases"
+    ).withForceVersions(
+        List(
+          new Dependency(
+            "org.scala-lang",
+            "scala-library",
+            BuildInfo.scala212
+          ),
+          new Dependency(
+            "org.scala-lang",
+            "scala-compiler",
+            BuildInfo.scala212
+          ),
+          new Dependency(
+            "org.scala-lang",
+            "scala-reflect",
+            BuildInfo.scala212
+          )
         )
       )
-    )
+      .addRepositories(
+        List(
+          new coursiersmall.Repository.Maven(
+            "https://dl.bintray.com/scalacenter/releases"
+          )
+        )
+      )
     val jars = CoursierSmall.fetch(settings)
     // Don't make Bloop classloader a child or our classloader.
     val parent: ClassLoader = null
