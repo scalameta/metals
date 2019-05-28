@@ -3,6 +3,7 @@ package scala.meta.pc;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Configuration options used by the Metals presentation compiler.
@@ -62,5 +63,15 @@ public interface PresentationCompilerConfig {
      * Returns true if the <code>SignatureHelp.documentation</code> field should be populated.
      */
     boolean isSignatureHelpDocumentationEnabled();
+
+    /**
+     * The maximum delay for requests to respond.
+     */
+    long timeoutDelay();
+
+    /**
+     * The unit to use for <code>timeoutDelay</code>.
+     */
+    TimeUnit timeoutUnit();
 
 }

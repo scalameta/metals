@@ -6,6 +6,8 @@ import scala.meta.internal.pc.InterruptException
  * Adapation of PresentationCompilerThread from scala/scala.
  *
  * Changes are marked with "+- scalac deviation" comments.
+ * Note that most of the work with the presentation compiler does not happen on
+ * this thread, see CompilerJobQueue.
  */
 final class MetalsGlobalThread(var compiler: Global, name: String = "")
     extends Thread("Scala Presentation Compiler [" + name + "]") {

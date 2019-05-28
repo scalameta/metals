@@ -13,6 +13,7 @@ import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -22,13 +23,15 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Properties
+import java.util.concurrent.CompletableFuture
+import scala.meta.pc.DefinitionResult
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
     classpath: Seq[Path] = Nil,
     options: List[String] = Nil,
     search: SymbolSearch = EmptySymbolSearch,
-    ec: ExecutionContext = ExecutionContext.global,
+    ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
 ) extends PresentationCompiler {
@@ -50,15 +53,13 @@ case class ScalaPresentationCompiler(
     copy(config = config)
   def this() = this(buildTargetIdentifier = "")
 
-  val access = new CompilerAccess(sh, () => newCompiler())(ec)
+  val access = new CompilerAccess(config, sh, () => newCompiler())(ec)
   override def shutdown(): Unit = {
     access.shutdown()
   }
 
   override def restart(): Unit = {
-    // NOTE(olafur) turns out that `shutdown()` has the same effect as `restart()`
-    // implementation-wise.
-    shutdown()
+    access.restart()
   }
 
   override def newInstance(
@@ -78,8 +79,10 @@ case class ScalaPresentationCompiler(
     items.setIsIncomplete(true)
     items
   }
-  override def complete(params: OffsetParams): CompletionList =
-    access.withCancelableCompiler(emptyCompletion, params.token) { global =>
+  override def complete(
+      params: OffsetParams
+  ): CompletableFuture[CompletionList] =
+    access.withInterruptableCompiler(emptyCompletion, params.token) { global =>
       new CompletionProvider(global, params).completions()
     }
 
@@ -87,17 +90,19 @@ case class ScalaPresentationCompiler(
   // we don't typecheck any sources, we only poke into the symbol table.
   // If we used a shared compiler then we risk hitting `Thread.interrupt`,
   // which can close open `*-sources.jar` files containing Scaladoc/Javadoc strings.
-
   override def completionItemResolve(
       item: CompletionItem,
       symbol: String
-  ): CompletionItem =
+  ): CompletableFuture[CompletionItem] = CompletableFuture.completedFuture {
     access.withSharedCompiler(item) { global =>
       new CompletionItemResolver(global).resolve(item, symbol)
     }
+  }
 
-  override def signatureHelp(params: OffsetParams): SignatureHelp =
-    access.withNonCancelableCompiler(
+  override def signatureHelp(
+      params: OffsetParams
+  ): CompletableFuture[SignatureHelp] =
+    access.withNonInterruptableCompiler(
       new SignatureHelp(),
       params.token
     ) { global =>
@@ -106,16 +111,16 @@ case class ScalaPresentationCompiler(
 
   override def hover(
       params: OffsetParams
-  ): Optional[Hover] =
-    access.withNonCancelableCompiler(
+  ): CompletableFuture[Optional[Hover]] =
+    access.withNonInterruptableCompiler(
       Optional.empty[Hover](),
       params.token
     ) { global =>
       Optional.ofNullable(new HoverProvider(global, params).hover().orNull)
     }
 
-  def definition(params: OffsetParams): DefinitionResultImpl = {
-    access.withNonCancelableCompiler(
+  def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
+    access.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,
       params.token
     ) { global =>
@@ -126,8 +131,8 @@ case class ScalaPresentationCompiler(
   override def semanticdbTextDocument(
       filename: String,
       code: String
-  ): Array[Byte] = {
-    access.withNonCancelableCompiler(
+  ): CompletableFuture[Array[Byte]] = {
+    access.withInterruptableCompiler(
       Array.emptyByteArray,
       EmptyCancelToken
     ) { global =>

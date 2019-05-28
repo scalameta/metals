@@ -5,10 +5,11 @@ import org.eclipse.lsp4j.Location
 import scala.meta.pc.OffsetParams
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.pc.DefinitionResult
 
 class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
-  def definition(): DefinitionResultImpl = {
+  def definition(): DefinitionResult = {
     if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
       DefinitionResultImpl.empty
     } else {

@@ -43,6 +43,7 @@ import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
+import scala.util.Success
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -200,7 +201,8 @@ class MetalsLanguageServer(
         tables,
         messages,
         statusBar,
-        () => compilers
+        () => compilers,
+        config
       )
     )
     warnings = new Warnings(
@@ -737,8 +739,8 @@ class MetalsLanguageServer(
   def definition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { token =>
-      definitionResult(position, token).locations
+    CancelTokens.future { token =>
+      definitionResult(position, token).map(_.locations)
     }
 
   @JsonRequest("textDocument/typeDefinition")
@@ -761,12 +763,10 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/hover")
   def hover(params: TextDocumentPositionParams): CompletableFuture[Hover] =
-    CancelTokens { token =>
-      compilers.hover(params, token, interactiveSemanticdbs) match {
-        case None => null
-        case Some(value) =>
-          value.orElse(null)
-      }
+    CancelTokens.future { token =>
+      compilers
+        .hover(params, token, interactiveSemanticdbs)
+        .map(_.orNull)
     }
 
   @JsonRequest("textDocument/documentHighlight")
@@ -888,30 +888,34 @@ class MetalsLanguageServer(
     referencesProvider.references(params)
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
-    CancelTokens { token =>
-      compilers.completions(params, token).orNull
+    CancelTokens.future { token =>
+      compilers
+        .completions(params, token)
+        .getOrElse(Future.successful(null))
     }
 
   @JsonRequest("completionItem/resolve")
   def completionItemResolve(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
-    CancelTokens { token =>
+    CancelTokens.future { token =>
       if (config.compilers.isCompletionItemResolve) {
-        compilers.completionItemResolve(item, token).getOrElse(item)
+        compilers
+          .completionItemResolve(item, token)
+          .getOrElse(Future.successful(item))
       } else {
-        item
+        Future.successful(item)
       }
     }
-  def completionItemResolveSync(item: CompletionItem): CompletionItem =
-    compilers.completionItemResolve(item, EmptyCancelToken).getOrElse(item)
 
   @JsonRequest("textDocument/signatureHelp")
   def signatureHelp(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
-    CancelTokens { token =>
-      compilers.signatureHelp(params, token, interactiveSemanticdbs).orNull
+    CancelTokens.future { token =>
+      compilers
+        .signatureHelp(params, token, interactiveSemanticdbs)
+        .getOrElse(Future.successful(null))
     }
 
   @JsonRequest("textDocument/codeAction")
@@ -1429,19 +1433,23 @@ class MetalsLanguageServer(
   def definitionResult(
       position: TextDocumentPositionParams,
       token: CancelToken = EmptyCancelToken
-  ): DefinitionResult = {
+  ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.toLanguage.isScala) {
       val result = timedThunk("definition", config.statistics.isDefinition)(
         definitionProvider.definition(source, position, token)
       )
-      // Record what build target this dependency source (if any) was jumped from,
-      // needed to know what classpath to compile the dependency source with.
-      interactiveSemanticdbs.didDefinition(source, result)
+      result.onComplete {
+        case Success(value) =>
+          // Record what build target this dependency source (if any) was jumped from,
+          // needed to know what classpath to compile the dependency source with.
+          interactiveSemanticdbs.didDefinition(source, value)
+        case _ =>
+      }
       result
     } else {
       // Ignore non-scala files.
-      DefinitionResult.empty
+      Future.successful(DefinitionResult.empty)
     }
   }
 

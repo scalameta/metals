@@ -9,6 +9,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.pc.CancelToken
 import tests.BaseCompletionSuite
+import scala.meta.internal.pc.InterruptException
 
 object CancelCompletionSuite extends BaseCompletionSuite {
 
@@ -36,16 +37,20 @@ object CancelCompletionSuite extends BaseCompletionSuite {
     test(name) {
       val (code, offset) = params(query)
       val token = new AlwaysCancelToken
-      val cancelledCompletion =
-        pc.complete(CompilerOffsetParams("A.scala", code, offset, token))
-      assert(token.isCancelled.get())
-      assert(cancelledCompletion.getItems.isEmpty)
-      assert(cancelledCompletion.isIncomplete)
+      try {
+        pc.complete(CompilerOffsetParams("A.scala", code, offset, token)).get()
+        fail("Expected completion request to be interrupted")
+      } catch {
+        case InterruptException() =>
+          assert(token.isCancelled.get())
+      }
 
       // assert that regular completion works as expected.
-      val completion = pc.complete(
-        CompilerOffsetParams("A.scala", code, offset, EmptyCancelToken)
-      )
+      val completion = pc
+        .complete(
+          CompilerOffsetParams("A.scala", code, offset, EmptyCancelToken)
+        )
+        .get()
       val obtained = completion.getItems.asScala
         .map(_.getLabel)
         .mkString("\n")

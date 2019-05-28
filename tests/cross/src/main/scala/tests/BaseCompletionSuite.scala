@@ -16,10 +16,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   private def resolvedCompletions(
       params: CompilerOffsetParams
   ): CompletionList = {
-    val result = pc.complete(params)
+    val result = pc.complete(params).get()
     val newItems = result.getItems.asScala.map { item =>
       val symbol = item.data.get.symbol
-      pc.completionItemResolve(item, symbol)
+      pc.completionItemResolve(item, symbol).get()
     }
     result.setItems(newItems.asJava)
     result

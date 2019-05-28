@@ -10,8 +10,7 @@ import scala.meta.io.AbsolutePath
 trait GlobalSymbolIndex {
 
   /**
-   * Lookup the definition of a global symbol.
-   *
+   * Lookup the definition of a global symbol. *
    * Returns the path of the file that defines the symbol but does not include
    * the exact position of the definition. Computing the range position of the
    * definition is not handled by this method, it is left for the user and can

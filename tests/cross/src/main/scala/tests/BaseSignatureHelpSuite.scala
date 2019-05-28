@@ -24,7 +24,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       val pkg = scala.meta.Term.Name(name).syntax
       val (code, offset) = params(s"package $pkg\n" + original)
       val result =
-        pc.signatureHelp(CompilerOffsetParams("A.scala", code, offset))
+        pc.signatureHelp(CompilerOffsetParams("A.scala", code, offset)).get()
       val out = new StringBuilder()
       if (result != null) {
         result.getSignatures.asScala.zipWithIndex.foreach {

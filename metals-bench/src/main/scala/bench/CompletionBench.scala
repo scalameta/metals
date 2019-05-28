@@ -121,7 +121,7 @@ abstract class CompletionBench {
 
   def scopeComplete(pc: PresentationCompiler): CompletionList = {
     val code = "import Java\n"
-    pc.complete(CompilerOffsetParams("A.scala", code, code.length - 2))
+    pc.complete(CompilerOffsetParams("A.scala", code, code.length - 2)).get()
   }
 }
 

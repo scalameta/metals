@@ -38,7 +38,8 @@ final class InteractiveSemanticdbs(
     tables: Tables,
     messages: Messages,
     statusBar: StatusBar,
-    compilers: () => Compilers
+    compilers: () => Compilers,
+    config: MetalsServerConfig
 )(implicit ec: ExecutionContext)
     extends Cancelable
     with Semanticdbs {
@@ -147,7 +148,12 @@ final class InteractiveSemanticdbs(
     } yield {
       val text = FileIO.slurp(source, charset)
       val uri = source.toURI.toString
-      val bytes = pc.semanticdbTextDocument(uri, text)
+      // NOTE(olafur): it's unfortunate that we block on `semanticdbTextDocument`
+      // here but to avoid it we would need to refactor the `Semanticdbs` trait,
+      // which requires more effort than it's worth.
+      val bytes = pc
+        .semanticdbTextDocument(uri, text)
+        .get(config.compilers.timeoutDelay, config.compilers.timeoutUnit)
       val textDocument = TextDocument.parseFrom(bytes)
       textDocumentCache.put(source, textDocument)
       PlatformTokenizerCache.megaCache.clear() // :facepalm:

@@ -160,15 +160,14 @@ class BaseSuite extends TestSuite {
     throw ex
   }
 
-  override def tests: Tests = {
+  lazy val tests: Tests = {
     if (myTests.isEmpty) {
       myTests += FlatTest("empty", () => ())
     }
+    this.beforeAll()
     val names = Tree("", myTests.map(x => Tree(x.name)): _*)
-    val thunks = new TestCallTree({
-      this.beforeAll()
-      Right(myTests.map(x => new TestCallTree(Left(x.thunk()))))
-    })
+    val inner = Right(myTests.map(x => new TestCallTree(Left(x.thunk()))))
+    val thunks = new TestCallTree(inner)
     Tests(names, thunks)
   }
 }

@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.SignatureHelp;
 
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -35,36 +36,37 @@ public abstract class PresentationCompiler {
      *
      * @implNote supports cancellation.
      */
-    public abstract CompletionList complete(OffsetParams params);
+    public abstract CompletableFuture<CompletionList> complete(OffsetParams params);
 
     /**
      * Returns a fully resolved completion item with defined fields such as `documentation` and `details` populated.
      *
      * @implNote does not support cancellation.
      */
-    public abstract CompletionItem completionItemResolve(CompletionItem item, String symbol);
+    public abstract CompletableFuture<CompletionItem> completionItemResolve(CompletionItem item, String symbol);
 
     /**
      * Returns the parameter hints at the given source position.
      *
      * @implNote supports cancellation.
      */
-    public abstract SignatureHelp signatureHelp(OffsetParams params);
+    public abstract CompletableFuture<SignatureHelp> signatureHelp(OffsetParams params);
 
     /**
      * Returns the type of the expression at the given position along with the symbol of the referenced symbol.
      */
-    public abstract Optional<Hover> hover(OffsetParams params);
+    public abstract CompletableFuture<Optional<Hover>> hover(OffsetParams params);
 
     /**
      * Returns the definition of the symbol at the given position.
+
      */
-    public abstract DefinitionResult definition(OffsetParams params);
+    public abstract CompletableFuture<DefinitionResult> definition(OffsetParams params);
 
     /**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.
      */
-    public abstract byte[] semanticdbTextDocument(String filename, String code);
+    public abstract CompletableFuture<byte[]> semanticdbTextDocument(String filename, String code);
 
     // =================================
     // Configuration and lifecycle APIs.

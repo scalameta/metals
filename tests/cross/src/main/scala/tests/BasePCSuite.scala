@@ -23,6 +23,8 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Properties
 import scala.util.control.NonFatal
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
@@ -35,7 +37,7 @@ abstract class BasePCSuite extends BaseSuite {
   def scalacOptions: Seq[String] = Nil
   def config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
   val myclasspath: Seq[Path] = extraClasspath ++ scalaLibrary.toList
-  val index = OnDemandSymbolIndex()
+  val index = new DelegatingGlobalSymbolIndex(OnDemandSymbolIndex())
   val indexer = new Docstrings(index)
   val workspace = new TestingWorkspaceSearch
   val search = new TestingSymbolSearch(
@@ -44,11 +46,18 @@ abstract class BasePCSuite extends BaseSuite {
     workspace,
     index
   )
+  val executorService: ScheduledExecutorService =
+    Executors.newSingleThreadScheduledExecutor()
   val pc = new ScalaPresentationCompiler()
     .withSearch(search)
     .withConfiguration(config)
+    .withExecutorService(executorService)
+    .withScheduledExecutorService(executorService)
     .newInstance("", myclasspath.asJava, scalacOptions.asJava)
   val tmp = AbsolutePath(Files.createTempDirectory("metals"))
+  override def utestAfterAll(): Unit = {
+    executorService.shutdown()
+  }
 
   def requiresJdkSources: Boolean = false
 
@@ -69,7 +78,10 @@ abstract class BasePCSuite extends BaseSuite {
         try {
           fun
         } catch {
-          case NonFatal(e) if e.getMessage.contains("x$1") && !hasJdkSources =>
+          case NonFatal(e)
+              if e.getMessage != null &&
+                e.getMessage.contains("x$1") &&
+                !hasJdkSources =>
             // ignore failing test if jdk sources are missing
             ()
         }

@@ -1,44 +1,52 @@
 package scala.meta.internal.pc
 
-import java.lang
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.BiConsumer
 import java.util.logging.Level
 import java.util.logging.Logger
 import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
-import scala.concurrent.ExecutionContext
 import scala.meta.pc.CancelToken
+import java.util.concurrent.CompletableFuture
+import scala.meta.pc.PresentationCompilerConfig
+import scala.concurrent.ExecutionContextExecutor
 
 /**
- * Manages the lifecycle of the compiler.
+ * Manages the lifecycle and multi-threaded access to the presentation compiler.
  *
- * - automatically restarts the compiler on expected crashes caused by macroparadise.
- * - handles cancellation via `Thread.interrupt()` to stop the compiler during typechecking.
+ * - automatically restarts the compiler on miscellaneous crashes.
+ * - handles cancellation via `Thread.interrupt()` to stop the compiler during typechecking,
+ *   for functions that support cancellation.
  */
 class CompilerAccess(
+    config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => MetalsGlobal
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContextExecutor) {
   private val logger: Logger = Logger.getLogger(classOf[CompilerAccess].getName)
+
+  private val jobs = CompilerJobQueue()
   private def isEmpty: Boolean = _compiler == null
   private def isDefined: Boolean = !isEmpty
   def reporter: StoreReporter =
     if (isEmpty) new StoreReporter()
     else _compiler.reporter.asInstanceOf[StoreReporter]
-  def shutdown(): Unit = lock.synchronized {
+
+  def shutdown(): Unit = {
+    restart()
+    jobs.shutdown()
+  }
+
+  def restart(): Unit = {
     val compiler = _compiler
     if (compiler != null) {
       compiler.askShutdown()
       _compiler = null
       sh.foreach { scheduler =>
-        scheduler.schedule(new Runnable {
-          override def run(): Unit = {
-            if (compiler.presentationCompilerThread.isAlive) {
-              compiler.presentationCompilerThread.stop()
-            }
+        scheduler.schedule[Unit](() => {
+          if (compiler.presentationCompilerThread.isAlive) {
+            compiler.presentationCompilerThread.stop()
           }
         }, 2, TimeUnit.SECONDS)
       }
@@ -46,45 +54,58 @@ class CompilerAccess(
   }
 
   /**
-   * Run the given thunk with unique access to the compiler instance.
-   *
-   * Will not run other requests in parallel.
+   * Asynchronously execute a function on the compiler thread with `Thread.interrupt()` cancellation.
    */
-  def withCancelableCompiler[T](
+  def withInterruptableCompiler[T](
       default: T,
       token: CancelToken
-  )(thunk: MetalsGlobal => T): T = lock.synchronized {
-    val thread = Thread.currentThread()
-    Thread.interrupted() // clear interrupt flag
+  )(thunk: MetalsGlobal => T): CompletableFuture[T] = {
     val isFinished = new AtomicBoolean(false)
-    token
-      .onCancel()
-      .whenComplete(new BiConsumer[java.lang.Boolean, Throwable] {
-        override def accept(isCancelled: lang.Boolean, u: Throwable): Unit = {
-          if (isCancelled && isFinished
-              .compareAndSet(false, true) && isDefined) {
+    var queueThread = Option.empty[Thread]
+    val result = onCompilerJobQueue(
+      () => {
+        queueThread = Some(Thread.currentThread())
+        Thread.interrupted() // clear interrupt thread
+        try withSharedCompiler(default)(thunk)
+        finally isFinished.set(true)
+      },
+      token
+    )
+    // Interrupt the queue thread
+    token.onCancel.whenCompleteAsync(
+      (isCancelled, _) => {
+        queueThread.foreach { thread =>
+          if (isCancelled &&
+            isFinished.compareAndSet(false, true) &&
+            isDefined) {
             _compiler.presentationCompilerThread.interrupt()
             if (thread != _compiler.presentationCompilerThread) {
               thread.interrupt()
             }
           }
         }
-      })
-    try withSharedCompiler(default)(thunk)
-    finally isFinished.set(true)
-  }
-
-  def withNonCancelableCompiler[T](default: T, token: CancelToken)(
-      thunk: MetalsGlobal => T
-  ): T = lock.synchronized {
-    withSharedCompiler(default)(thunk)
+      },
+      ec
+    )
+    result
   }
 
   /**
-   * Run the given thunk with an unlocked compiler instance.
+   * Asynchronously execute a function on the compiler thread without `Thread.interrupt()` cancellation.
+   *
+   * Note that the function is still cancellable.
+   */
+  def withNonInterruptableCompiler[T](
+      default: T,
+      token: CancelToken
+  )(thunk: MetalsGlobal => T): CompletableFuture[T] = {
+    onCompilerJobQueue(() => withSharedCompiler(default)(thunk), token)
+  }
+
+  /**
+   * Execute a function on the current thread without cancellation support.
    *
    * May potentially run in parallel with other requests, use carefully.
-   * Does not support cancellation.
    */
   def withSharedCompiler[T](default: T)(thunk: MetalsGlobal => T): T = {
     try {
@@ -131,7 +152,7 @@ class CompilerAccess(
       default: T,
       cause: String
   ): T = {
-    shutdown()
+    restart()
     logger.log(
       Level.INFO,
       s"compiler crashed due to $cause, retrying with new compiler instance."
@@ -149,15 +170,45 @@ class CompilerAccess(
   private def handleError(e: Throwable): Unit = {
     CompilerThrowable.trimStackTrace(e)
     logger.log(Level.SEVERE, e.getMessage, e)
-    shutdown()
+    restart()
   }
   private var _compiler: MetalsGlobal = _
-  private val lock = new Object
   private def loadCompiler(): MetalsGlobal = {
     if (_compiler == null) {
       _compiler = newCompiler()
     }
     _compiler.reporter.reset()
     _compiler
+  }
+
+  private def onCompilerJobQueue[T](
+      thunk: () => T,
+      token: CancelToken
+  ): CompletableFuture[T] = {
+    val result = new CompletableFuture[T]()
+    jobs.submit(result, { () =>
+      token.checkCanceled()
+      Thread.interrupted() // clear interrupt bit
+      result.complete(thunk())
+      ()
+    })
+
+    // User cancelled task.
+    token.onCancel.whenCompleteAsync((isCancelled, ex) => {
+      if (isCancelled && !result.isDone()) {
+        result.cancel(false)
+      }
+    }, ec)
+    // Task has timed out, cancel this request and restart the compiler.
+    sh.foreach { scheduler =>
+      scheduler.schedule[Unit]({ () =>
+        if (!result.isDone()) {
+          result.cancel(false)
+          restart()
+        }
+      }, config.timeoutDelay(), config.timeoutUnit())
+    }
+
+    result
   }
 }

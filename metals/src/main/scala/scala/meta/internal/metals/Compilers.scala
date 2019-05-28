@@ -5,7 +5,6 @@ import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.util.Collections
-import java.util.Optional
 import java.util.concurrent.ScheduledExecutorService
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
@@ -117,11 +116,11 @@ class Compilers(
   def completionItemResolve(
       item: CompletionItem,
       token: CancelToken
-  ): Option[CompletionItem] = {
+  ): Option[Future[CompletionItem]] = {
     for {
       data <- item.data
       compiler <- cache.get(new BuildTargetIdentifier(data.target))
-    } yield compiler.completionItemResolve(item, data.symbol)
+    } yield compiler.completionItemResolve(item, data.symbol).asScala
   }
 
   def log: List[String] =
@@ -138,40 +137,68 @@ class Compilers(
   def completions(
       params: CompletionParams,
       token: CancelToken
-  ): Option[CompletionList] =
+  ): Option[Future[CompletionList]] =
     withPC(params, None) { (pc, pos) =>
       pc.complete(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
     }
+
   def hover(
       params: TextDocumentPositionParams,
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
-  ): Option[Optional[Hover]] =
+  ): Future[Option[Hover]] =
     withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
       pc.hover(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
+        .map(_.asScala)
+    }.getOrElse {
+      Future.successful(Option.empty)
     }
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken
-  ): Option[pc.DefinitionResult] =
+  ): Option[Future[pc.DefinitionResult]] =
     withPC(params, None) { (pc, pos) =>
       pc.definition(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
     }
   def signatureHelp(
       params: TextDocumentPositionParams,
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
-  ): Option[SignatureHelp] =
+  ): Option[Future[SignatureHelp]] =
     withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
       pc.signatureHelp(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
     }
 
   def loadCompiler(

@@ -7,10 +7,12 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util
 import java.util.Optional
+import java.util.concurrent.CancellationException
 import java.util.logging.Level
 import java.util.logging.Logger
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.MarkupContent
+import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
@@ -307,5 +309,15 @@ trait MtagsEnrichments {
       params.offset() >= params.text().length ||
       params.text().charAt(params.offset()).isWhitespace
     }
+  }
+  implicit class XtensionCancelChecker(token: CancelChecker) {
+    def isCancelled: Boolean =
+      try {
+        token.checkCanceled()
+        false
+      } catch {
+        case _: CancellationException =>
+          true
+      }
   }
 }

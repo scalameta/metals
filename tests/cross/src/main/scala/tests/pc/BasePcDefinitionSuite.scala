@@ -22,9 +22,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       import scala.meta.inputs.Position
       import scala.meta.inputs.Input
       val offsetRange = Position.Range(Input.String(code), offset, offset).toLSP
-      val defn = pc.definition(
-        CompilerOffsetParams(uri, code, offset)
-      )
+      val defn = pc.definition(CompilerOffsetParams(uri, code, offset)).get()
       val edits = defn.locations().asScala.toList.flatMap { location =>
         if (location.getUri() == uri) {
           List(

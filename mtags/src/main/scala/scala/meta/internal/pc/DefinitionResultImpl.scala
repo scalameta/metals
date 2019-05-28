@@ -10,6 +10,6 @@ case class DefinitionResultImpl(
 ) extends DefinitionResult
 
 object DefinitionResultImpl {
-  def empty: DefinitionResultImpl =
+  def empty: DefinitionResult =
     DefinitionResultImpl("", ju.Collections.emptyList())
 }
