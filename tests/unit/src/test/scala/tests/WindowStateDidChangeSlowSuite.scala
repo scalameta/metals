@@ -16,13 +16,15 @@ object WindowStateDidChangeSlowSuite
         """.stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = Thread.sleep(100)
       _ = assertNoDiagnostics()
-      _ = server.windowStateDidChange(false)
+      _ = server.windowStateDidChange(focused = false)
       didSave = server.didSave("a/src/main/scala/a/A.scala")(
         _.replaceAllLiterally("val x", "x")
       )
+      _ = Thread.sleep(100)
       _ = assertNoDiagnostics()
-      _ = server.windowStateDidChange(true)
+      _ = server.windowStateDidChange(focused = true)
       _ <- didSave
       _ = assertNoDiff(
         client.workspaceDiagnostics,

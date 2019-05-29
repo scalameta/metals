@@ -286,7 +286,7 @@ final class TestingServer(
   }
 
   def windowStateDidChange(focused: Boolean): Unit = {
-    server.windowStateDidChane(WindowStateDidChangeParams(focused))
+    server.windowStateDidChange(WindowStateDidChangeParams(focused))
   }
 
   def didSave(filename: String)(fn: String => String): Future[Unit] = {

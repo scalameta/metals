@@ -23,13 +23,13 @@ final class Compilations(
   private var lastCompile: collection.Set[b.BuildTargetIdentifier] = Set.empty
 
   def pause(): Unit = {
-    compileBatch.accumulate
-    cascadeBatch.accumulate
+    compileBatch.pause()
+    cascadeBatch.pause()
   }
 
   def unpause(): Unit = {
-    compileBatch.restart
-    cascadeBatch.restart
+    compileBatch.unpause()
+    cascadeBatch.unpause()
   }
 
   def currentlyCompiling: Iterable[b.BuildTargetIdentifier] = isCompiling.keys

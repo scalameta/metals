@@ -604,15 +604,15 @@ class MetalsLanguageServer(
   }
 
   @JsonNotification("metals/windowStateDidChange")
-  def windowStateDidChane(params: WindowStateDidChangeParams): Unit = {
+  def windowStateDidChange(params: WindowStateDidChangeParams): Unit = {
     if (params.focused) {
       compilations.unpause()
-      onBuildChanged.restart
-      parseTrees.restart
+      onBuildChanged.unpause()
+      parseTrees.unpause()
     } else {
       compilations.pause()
-      onBuildChanged.accumulate
-      parseTrees.accumulate
+      onBuildChanged.pause()
+      parseTrees.pause()
     }
   }
 

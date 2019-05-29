@@ -43,13 +43,13 @@ final class BatchedFunction[A, B](
   /**
    * Pauses applications of the arguments to the fn but allows to accumulate requests
    */
-  def accumulate: Unit =
+  def pause(): Unit =
     paused.set(true)
 
   /**
    * Restarts appliation of the accumulated requests to the fn
    */
-  def restart: Unit = {
+  def unpause(): Unit = {
     paused.set(false)
     unlock()
   }
