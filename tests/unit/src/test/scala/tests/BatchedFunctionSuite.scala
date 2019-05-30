@@ -45,7 +45,7 @@ object BatchedFunctionSuite extends BaseSuite {
       def reportFailure(cause: Throwable): Unit = cause.printStackTrace()
     }
 
-    val mkString = BatchedFunction.fromFuture[String, String]{ numbers =>
+    val mkString = BatchedFunction.fromFuture[String, String] { numbers =>
       Future.successful {
         numbers.mkString
       }

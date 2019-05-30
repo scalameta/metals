@@ -1407,6 +1407,7 @@ class MetalsLanguageServer(
       paths =>
         CancelableFuture.successful(paths.distinct.foreach(trees.didChange))
     )
+
   /**
    * Re-imports the build if build files have changed.
    */
