@@ -339,6 +339,19 @@ class MetalsLanguageServer(
       messages
     )
   }
+
+  private def pauseComputations(): Unit = {
+    onBuildChanged.pause()
+    parseTrees.pause()
+    compilations.pause()
+  }
+
+  private def unpauseComputations(): Unit = {
+    onBuildChanged.unpause()
+    parseTrees.unpause()
+    compilations.unpause()
+  }
+
   def setupJna(): Unit = {
     // This is required to avoid the following error:
     //   java.lang.NoClassDefFoundError: Could not initialize class com.sun.jna.platform.win32.Kernel32
@@ -606,13 +619,9 @@ class MetalsLanguageServer(
   @JsonNotification("metals/windowStateDidChange")
   def windowStateDidChange(params: WindowStateDidChangeParams): Unit = {
     if (params.focused) {
-      compilations.unpause()
-      onBuildChanged.unpause()
-      parseTrees.unpause()
+      pauseComputations()
     } else {
-      compilations.pause()
-      onBuildChanged.pause()
-      parseTrees.pause()
+      unpauseComputations()
     }
   }
 
