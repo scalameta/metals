@@ -889,9 +889,7 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
     CancelTokens.future { token =>
-      compilers
-        .completions(params, token)
-        .getOrElse(Future.successful(null))
+      compilers.completions(params, token)
     }
 
   @JsonRequest("completionItem/resolve")
@@ -900,9 +898,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[CompletionItem] =
     CancelTokens.future { token =>
       if (config.compilers.isCompletionItemResolve) {
-        compilers
-          .completionItemResolve(item, token)
-          .getOrElse(Future.successful(item))
+        compilers.completionItemResolve(item, token)
       } else {
         Future.successful(item)
       }
@@ -913,9 +909,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
     CancelTokens.future { token =>
-      compilers
-        .signatureHelp(params, token, interactiveSemanticdbs)
-        .getOrElse(Future.successful(null))
+      compilers.signatureHelp(params, token, interactiveSemanticdbs)
     }
 
   @JsonRequest("textDocument/codeAction")

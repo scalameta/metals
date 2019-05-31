@@ -62,8 +62,7 @@ public abstract class PresentationCompiler {
 
      */
     public abstract CompletableFuture<DefinitionResult> definition(OffsetParams params);
-
-    /**
+/**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.
      */
     public abstract CompletableFuture<byte[]> semanticdbTextDocument(String filename, String code);

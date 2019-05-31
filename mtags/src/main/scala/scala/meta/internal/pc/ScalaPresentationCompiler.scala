@@ -59,7 +59,7 @@ case class ScalaPresentationCompiler(
   }
 
   override def restart(): Unit = {
-    access.restart()
+    access.shutdownCurrentCompiler()
   }
 
   override def newInstance(

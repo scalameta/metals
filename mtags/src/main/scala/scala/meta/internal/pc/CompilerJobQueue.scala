@@ -35,6 +35,10 @@ class CompilerJobQueue(val executor: ThreadPoolExecutor) {
   def submit(result: CompletableFuture[_], fn: () => Unit): Unit = {
     executor.execute(new CompilerJobQueue.Job(result, fn))
   }
+  // The implementation of `Executors.newSingleThreadExecutor()` uses finalize.
+  override def finalize(): Unit = {
+    executor.shutdown()
+  }
 }
 
 object CompilerJobQueue {
@@ -75,6 +79,10 @@ object CompilerJobQueue {
   private class LastInFirstOutBlockingQueue
       extends PriorityBlockingQueue[Runnable](10, new ju.Comparator[Runnable] {
         def compare(o1: Runnable, o2: Runnable): Int = {
+          // Downcast is safe because we only submit `Job` runnables into this
+          // threadpool via `CompilerJobQueue.submit`. We can't make the queue
+          // `PriorityBlockingQueue[Job]` because `new ThreadPoolExecutor` requires
+          // a `BlockingQueue[Runnable]` and Java queues are invariant.
           -java.lang.Long.compare(
             o1.asInstanceOf[Job].start,
             o2.asInstanceOf[Job].start

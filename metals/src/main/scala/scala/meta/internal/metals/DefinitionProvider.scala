@@ -59,19 +59,7 @@ final class DefinitionProvider(
           DefinitionResult.empty
       }
     if (fromSemanticdb.locations.isEmpty()) {
-      compilers().definition(params, token) match {
-        case None =>
-          Future.successful(DefinitionResult.empty)
-        case Some(fromCompilers) =>
-          fromCompilers.map { c =>
-            DefinitionResult(
-              c.locations(),
-              c.symbol(),
-              None,
-              None
-            )
-          }
-      }
+      compilers().definition(params, token)
     } else {
       Future.successful(fromSemanticdb)
     }

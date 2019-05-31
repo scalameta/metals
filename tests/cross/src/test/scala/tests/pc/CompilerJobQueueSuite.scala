@@ -50,10 +50,10 @@ object CompilerJobQueueSuite extends BaseSuite {
 
     Await.result(all, Duration("1s"))
 
-    // Assert that the jobs don't run in the default order.
+    // Assert all submitted non-cancelled jobs completed.
     assertEquals(obtained.length, size)
 
-    // Assert all submitted non-cancelled jobs completed.
+    // Assert that the jobs don't run in the default order.
     assertNotEquals(obtained.toList, original)
   }
 }

@@ -18,7 +18,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
-import scala.meta.pc
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
@@ -116,12 +115,12 @@ class Compilers(
   def completionItemResolve(
       item: CompletionItem,
       token: CancelToken
-  ): Option[Future[CompletionItem]] = {
+  ): Future[CompletionItem] = {
     for {
       data <- item.data
       compiler <- cache.get(new BuildTargetIdentifier(data.target))
     } yield compiler.completionItemResolve(item, data.symbol).asScala
-  }
+  }.getOrElse(Future.successful(item))
 
   def log: List[String] =
     if (config.compilers.debug) {
@@ -134,10 +133,11 @@ class Compilers(
     } else {
       Nil
     }
+
   def completions(
       params: CompletionParams,
       token: CancelToken
-  ): Option[Future[CompletionList]] =
+  ): Future[CompletionList] =
     withPC(params, None) { (pc, pos) =>
       pc.complete(
           CompilerOffsetParams(
@@ -148,7 +148,7 @@ class Compilers(
           )
         )
         .asScala
-    }
+    }.getOrElse(Future.successful(new CompletionList()))
 
   def hover(
       params: TextDocumentPositionParams,
@@ -172,7 +172,7 @@ class Compilers(
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken
-  ): Option[Future[pc.DefinitionResult]] =
+  ): Future[DefinitionResult] =
     withPC(params, None) { (pc, pos) =>
       pc.definition(
           CompilerOffsetParams(
@@ -183,12 +183,20 @@ class Compilers(
           )
         )
         .asScala
-    }
+        .map { c =>
+          DefinitionResult(
+            c.locations(),
+            c.symbol(),
+            None,
+            None
+          )
+        }
+    }.getOrElse(Future.successful(DefinitionResult.empty))
   def signatureHelp(
       params: TextDocumentPositionParams,
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
-  ): Option[Future[SignatureHelp]] =
+  ): Future[SignatureHelp] =
     withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
       pc.signatureHelp(
           CompilerOffsetParams(
@@ -199,7 +207,7 @@ class Compilers(
           )
         )
         .asScala
-    }
+    }.getOrElse(Future.successful(new SignatureHelp()))
 
   def loadCompiler(
       path: AbsolutePath,

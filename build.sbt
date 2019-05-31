@@ -145,6 +145,7 @@ lazy val mtags = project
     crossVersion := CrossVersion.full,
     crossScalaVersions := V.supportedScalaVersions,
     scalacOptions ++= List(
+      // Needed for SAM types on 2.11.
       "-Xexperimental"
     ),
     libraryDependencies ++= List(

@@ -27,18 +27,26 @@ class CompilerAccess(
   private val logger: Logger = Logger.getLogger(classOf[CompilerAccess].getName)
 
   private val jobs = CompilerJobQueue()
+  private var _compiler: MetalsGlobal = _
   private def isEmpty: Boolean = _compiler == null
   private def isDefined: Boolean = !isEmpty
+  private def loadCompiler(): MetalsGlobal = {
+    if (_compiler == null) {
+      _compiler = newCompiler()
+    }
+    _compiler.reporter.reset()
+    _compiler
+  }
   def reporter: StoreReporter =
     if (isEmpty) new StoreReporter()
     else _compiler.reporter.asInstanceOf[StoreReporter]
 
   def shutdown(): Unit = {
-    restart()
+    shutdownCurrentCompiler()
     jobs.shutdown()
   }
 
-  def restart(): Unit = {
+  def shutdownCurrentCompiler(): Unit = {
     val compiler = _compiler
     if (compiler != null) {
       compiler.askShutdown()
@@ -65,7 +73,6 @@ class CompilerAccess(
     val result = onCompilerJobQueue(
       () => {
         queueThread = Some(Thread.currentThread())
-        Thread.interrupted() // clear interrupt thread
         try withSharedCompiler(default)(thunk)
         finally isFinished.set(true)
       },
@@ -152,7 +159,7 @@ class CompilerAccess(
       default: T,
       cause: String
   ): T = {
-    restart()
+    shutdownCurrentCompiler()
     logger.log(
       Level.INFO,
       s"compiler crashed due to $cause, retrying with new compiler instance."
@@ -170,15 +177,7 @@ class CompilerAccess(
   private def handleError(e: Throwable): Unit = {
     CompilerThrowable.trimStackTrace(e)
     logger.log(Level.SEVERE, e.getMessage, e)
-    restart()
-  }
-  private var _compiler: MetalsGlobal = _
-  private def loadCompiler(): MetalsGlobal = {
-    if (_compiler == null) {
-      _compiler = newCompiler()
-    }
-    _compiler.reporter.reset()
-    _compiler
+    shutdownCurrentCompiler()
   }
 
   private def onCompilerJobQueue[T](
@@ -199,12 +198,12 @@ class CompilerAccess(
         result.cancel(false)
       }
     }, ec)
-    // Task has timed out, cancel this request and restart the compiler.
+    // Task has timed out, cancel this request and shutdown the current compiler.
     sh.foreach { scheduler =>
       scheduler.schedule[Unit]({ () =>
         if (!result.isDone()) {
           result.cancel(false)
-          restart()
+          shutdownCurrentCompiler()
         }
       }, config.timeoutDelay(), config.timeoutUnit())
     }
