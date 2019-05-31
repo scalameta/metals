@@ -59,6 +59,7 @@ class MetalsLanguageServer(
       Embedded.newBloopClassloader()
 ) extends Cancelable {
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
+  ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
   override def cancel(): Unit = {
@@ -118,6 +119,16 @@ class MetalsLanguageServer(
     )
   )
   private val indexingPromise = Promise[Unit]()
+  val parseTrees = new BatchedFunction[AbsolutePath, Unit](
+    paths => CancelableFuture(paths.distinct.foreach(trees.didChange))
+  )
+  private val onBuildChanged =
+    BatchedFunction.fromFuture[AbsolutePath, BuildChange](
+      onBuildChangedUnbatched
+    )
+  val pauseables = Pauseable.fromPausables(
+    onBuildChanged :: parseTrees :: compilations.pauseables
+  )
 
   // These can't be instantiated until we know the workspace root directory.
   private var bloopInstall: BloopInstall = _
@@ -339,6 +350,7 @@ class MetalsLanguageServer(
       messages
     )
   }
+
   def setupJna(): Unit = {
     // This is required to avoid the following error:
     //   java.lang.NoClassDefFoundError: Could not initialize class com.sun.jna.platform.win32.Kernel32
@@ -603,19 +615,27 @@ class MetalsLanguageServer(
     }
   }
 
+  @JsonNotification("metals/windowStateDidChange")
+  def windowStateDidChange(params: WindowStateDidChangeParams): Unit = {
+    if (params.focused) {
+      pauseables.unpause()
+    } else {
+      pauseables.pause()
+    }
+  }
+
   @JsonNotification("textDocument/didChange")
   def didChange(
       params: DidChangeTextDocumentParams
-  ): CompletableFuture[Unit] = {
-    CompletableFuture.completedFuture {
-      params.getContentChanges.asScala.headOption.foreach { change =>
+  ): CompletableFuture[Unit] =
+    params.getContentChanges.asScala.headOption match {
+      case None => CompletableFuture.completedFuture(())
+      case Some(change) =>
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
-        trees.didChange(path)
         diagnostics.didChange(path)
-      }
+        parseTrees(path).asJava
     }
-  }
 
   @JsonNotification("textDocument/didClose")
   def didClose(params: DidCloseTextDocumentParams): Unit = {
@@ -630,8 +650,10 @@ class MetalsLanguageServer(
     savedFiles.add(path)
     // read file from disk, we only remove files from buffers on didClose.
     buffers.put(path, path.toInput.text)
-    trees.didChange(path)
-    onChange(List(path))
+    Future
+      .sequence(List(parseTrees(path), onChange(List(path))))
+      .ignoreValue
+      .asJava
   }
 
   @JsonNotification("workspace/didChangeConfiguration")
@@ -662,7 +684,7 @@ class MetalsLanguageServer(
       .map(_.getUri.toAbsolutePath)
       .filterNot(savedFiles.isRecentlyActive) // de-duplicate didSave events.
       .toSeq
-    onChange(paths)
+    onChange(paths).asJava
   }
 
   def didChangeWatchedFiles(
@@ -679,7 +701,7 @@ class MetalsLanguageServer(
           buildTargets.onCreate(path)
         case _ =>
       }
-      onChange(List(path))
+      onChange(List(path)).asJava
     } else if (path.isSemanticdb) {
       CompletableFuture.completedFuture {
         event.eventType() match {
@@ -696,7 +718,7 @@ class MetalsLanguageServer(
     }
   }
 
-  private def onChange(paths: Seq[AbsolutePath]): CompletableFuture[Unit] = {
+  private def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
     paths.foreach { path =>
       fingerprints.add(path, FileIO.slurp(path, charset))
     }
@@ -709,7 +731,6 @@ class MetalsLanguageServer(
         )
       )
       .ignoreValue
-      .asJava
   }
 
   @JsonRequest("textDocument/definition")
@@ -1389,13 +1410,6 @@ class MetalsLanguageServer(
     )
   }
 
-  /**
-   * Re-imports the build if build files have changed.
-   */
-  private val onBuildChanged =
-    BatchedFunction.fromFuture[AbsolutePath, BuildChange](
-      onBuildChangedUnbatched
-    )
   private def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[BuildChange] = {

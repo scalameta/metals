@@ -2,10 +2,13 @@ package tests
 
 import scala.concurrent.Future
 import scala.meta.internal.metals.BatchedFunction
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
+import scala.util.Success
 
 object BatchedFunctionSuite extends BaseSuite {
   testAsync("batch") {
+    implicit val ec = ExecutionContext.global
+
     val lock = new Object
     val mkString = BatchedFunction.fromFuture[String, String]({ numbers =>
       Future {
@@ -36,4 +39,31 @@ object BatchedFunctionSuite extends BaseSuite {
     }
   }
 
+  test("pause") {
+    implicit val ec = new ExecutionContext {
+      def execute(runnable: Runnable): Unit = runnable.run()
+      def reportFailure(cause: Throwable): Unit = cause.printStackTrace()
+    }
+
+    val mkString = BatchedFunction.fromFuture[String, String] { numbers =>
+      Future.successful {
+        numbers.mkString
+      }
+    }
+
+    val unpaused = mkString(List("a"))
+    assertEquals(unpaused.value, Some(Success("a")))
+
+    mkString.pause()
+
+    val paused = mkString("b")
+    assert(!paused.isCompleted)
+    val paused2 = mkString("c")
+    assert(!paused2.isCompleted)
+
+    mkString.unpause()
+
+    assertEquals(paused.value, Some(Success("bc")))
+    assertEquals(paused2.value, Some(Success("bc")))
+  }
 }
