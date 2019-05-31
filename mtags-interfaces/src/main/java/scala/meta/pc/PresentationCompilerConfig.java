@@ -67,8 +67,8 @@ public interface PresentationCompilerConfig {
     /**
      * The maximum delay for requests to respond.
      *
-     * After the given delay, every request to completions/hover/signatureHelp are automatically
-     * cancelled and the presentation compiler is restarted.
+     * After the given delay, every request to completions/hover/signatureHelp
+     * is automatically cancelled and the presentation compiler is restarted.
      */
     long timeoutDelay();
 
