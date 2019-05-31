@@ -7,7 +7,7 @@ import scala.util.Success
 
 object BatchedFunctionSuite extends BaseSuite {
   testAsync("batch") {
-    import ExecutionContext.Implicits.global
+    implicit val ec = ExecutionContext.global
 
     val lock = new Object
     val mkString = BatchedFunction.fromFuture[String, String]({ numbers =>

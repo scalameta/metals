@@ -2,7 +2,7 @@ package tests
 
 object WindowStateDidChangeSlowSuite
     extends BaseSlowSuite("window-state-did-change") {
-  testAsync("compile-after-focus") {
+  testAsync("basic") {
     for {
       _ <- server.initialize(
         """
@@ -16,22 +16,26 @@ object WindowStateDidChangeSlowSuite
         """.stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ = Thread.sleep(100)
       _ = assertNoDiagnostics()
+
       _ = server.windowStateDidChange(focused = false)
-      didSave = server.didSave("a/src/main/scala/a/A.scala")(
-        _.replaceAllLiterally("val x", "x")
+      _ = assert(server.server.pauseables.isPaused.get())
+      didChange = server.didChange("a/src/main/scala/a/A.scala")(
+        _.replaceAllLiterally("= 42", "=")
       )
-      _ = Thread.sleep(100)
-      _ = assertNoDiagnostics()
+      _ = Thread.sleep(10) // give the parser a moment to complete.
+      // Assert didChange is still running because parsing is paused.
+      _ = assert(!didChange.isCompleted)
+
       _ = server.windowStateDidChange(focused = true)
-      _ <- didSave
+      _ = assert(!server.server.pauseables.isPaused.get())
+      _ <- didChange
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/A.scala:3:3: error: not found: value x
-           |  x = 42
-           |  ^
-        """.stripMargin
+        """|a/src/main/scala/a/A.scala:4:1: error: illegal start of simple expression
+           |}
+           |^
+           |""".stripMargin
       )
     } yield ()
   }

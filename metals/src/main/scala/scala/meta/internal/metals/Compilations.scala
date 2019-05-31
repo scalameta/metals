@@ -18,19 +18,10 @@ final class Compilations(
     new BatchedFunction[b.BuildTargetIdentifier, b.CompileResult](compile)
   private val cascadeBatch =
     new BatchedFunction[b.BuildTargetIdentifier, b.CompileResult](compile)
+  def pauseables: List[Pauseable] = List(compileBatch, cascadeBatch)
 
   private val isCompiling = TrieMap.empty[b.BuildTargetIdentifier, Boolean]
   private var lastCompile: collection.Set[b.BuildTargetIdentifier] = Set.empty
-
-  def pause(): Unit = {
-    compileBatch.pause()
-    cascadeBatch.pause()
-  }
-
-  def unpause(): Unit = {
-    compileBatch.unpause()
-    cascadeBatch.unpause()
-  }
 
   def currentlyCompiling: Iterable[b.BuildTargetIdentifier] = isCompiling.keys
   def isCurrentlyCompiling(buildTarget: b.BuildTargetIdentifier): Boolean =

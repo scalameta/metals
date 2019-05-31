@@ -19,7 +19,8 @@ import scala.util.control.NonFatal
 final class BatchedFunction[A, B](
     fn: Seq[A] => CancelableFuture[B]
 )(implicit ec: ExecutionContext)
-    extends (Seq[A] => Future[B]) {
+    extends (Seq[A] => Future[B])
+    with Pauseable {
 
   /**
    * Call the function with the given arguments.
@@ -40,17 +41,7 @@ final class BatchedFunction[A, B](
 
   def apply(argument: A): Future[B] = apply(List(argument))
 
-  /**
-   * Pauses applications of the arguments to the fn but allows to accumulate requests
-   */
-  def pause(): Unit =
-    paused.set(true)
-
-  /**
-   * Restarts appliation of the accumulated requests to the fn
-   */
-  def unpause(): Unit = {
-    paused.set(false)
+  override def doUnpause(): Unit = {
     unlock()
   }
 
@@ -77,8 +68,6 @@ final class BatchedFunction[A, B](
     }
   }
 
-  private val paused = new AtomicBoolean(false)
-
   private val lock = new AtomicBoolean()
   private def unlock(): Unit = {
     lock.set(false)
@@ -87,7 +76,7 @@ final class BatchedFunction[A, B](
     }
   }
   private def runAcquire(): Unit = {
-    if (!paused.get() && lock.compareAndSet(false, true)) {
+    if (!isPaused.get() && lock.compareAndSet(false, true)) {
       runRelease()
     } else {
       // Do nothing, the submitted arguments will be handled
