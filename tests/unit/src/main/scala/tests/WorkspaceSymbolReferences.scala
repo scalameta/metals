@@ -26,11 +26,15 @@ case class WorkspaceSymbolReferences(
   def referencesFormat: String = format(references)
   def definitionFormat: String = format(definition)
   def diff: String = {
-    DiffAssertions.unifiedDiff(
-      referencesFormat,
-      definitionFormat,
-      "references",
-      "definition"
-    )
+    DiffAssertions
+      .unifiedDiff(
+        referencesFormat,
+        definitionFormat,
+        "references",
+        "definition"
+      )
+      .linesIterator
+      .filterNot(_.startsWith("@@"))
+      .mkString("\n")
   }
 }

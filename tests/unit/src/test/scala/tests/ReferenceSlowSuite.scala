@@ -77,13 +77,11 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
       _ = server.assertReferenceDefinitionDiff(
         """|--- references
            |+++ definition
-           |@@ -18,5 +18,2 @@
            |       ^^^^^
            |-a/src/main/scala/a/B.scala:4:11: a/A.apply().
            |-  val a = A(1)
            |-          ^
            | =================
-           |@@ -45,5 +42,2 @@
            |          ^^^^^^
            |-a/src/main/scala/a/B.scala:4:11: a/A.horror().
            |-  val a = A(1)
@@ -133,7 +131,6 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
       _ = server.assertReferenceDefinitionDiff(
         """|--- references
            |+++ definition
-           |@@ -33,1 +33,7 @@
            |        ^
            |+=============
            |+= b/B.number.
