@@ -1,5 +1,7 @@
 package tests
 
+import scala.meta.internal.metals.ServerCommands
+
 object ReferenceSlowSuite extends BaseSlowSuite("reference") {
   testAsync("case-class") {
     cleanWorkspace()
@@ -127,6 +129,7 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
       _ <- server.didChange("b/src/main/scala/b/B.scala")(
         _.replaceAllLiterally("val b", "\n  val number")
       )
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
       _ = server.assertReferenceDefinitionDiff(
         """|--- references
            |+++ definition

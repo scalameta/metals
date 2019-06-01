@@ -1303,6 +1303,7 @@ class MetalsLanguageServer(
       buildTargets.reset()
       interactiveSemanticdbs.reset()
       buildClient.reset()
+      referencesProvider.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
       for {

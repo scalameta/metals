@@ -19,7 +19,7 @@ case class PresentationCompilerConfigImpl(
     isHoverDocumentationEnabled: Boolean = true,
     isSignatureHelpDocumentationEnabled: Boolean = true,
     isCompletionItemResolve: Boolean = true,
-    timeoutDelay: Long = 10,
+    timeoutDelay: Long = 20,
     timeoutUnit: TimeUnit = TimeUnit.SECONDS
 ) extends PresentationCompilerConfig {
   override def symbolPrefixes(): util.Map[String, String] =
