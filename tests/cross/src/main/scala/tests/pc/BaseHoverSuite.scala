@@ -29,9 +29,11 @@ abstract class BaseHoverSuite
         else ""
       val codeOriginal = packagePrefix + noRange
       val (code, offset) = params(codeOriginal, filename)
-      val hover = pc.hover(
-        CompilerOffsetParams(filename, code, offset)
-      )
+      val hover = pc
+        .hover(
+          CompilerOffsetParams(filename, code, offset)
+        )
+        .get()
       val obtained: String = renderAsString(code, hover.asScala, includeRange)
       assertNoDiff(obtained, expected)
       for {

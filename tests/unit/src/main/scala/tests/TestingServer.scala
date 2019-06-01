@@ -195,7 +195,7 @@ final class TestingServer(
       token <- input.tokenize.get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
-      definition = server.definitionResult(params)
+      definition = server.definitionResult(params).asJava.get()
       if !definition.symbol.isPackage
       if !definition.definition.exists(_.isDependencySource(workspace))
       location <- definition.locations.asScala
@@ -403,7 +403,8 @@ final class TestingServer(
       filter: String => Boolean = _ => true
   ): String = {
     val items =
-      completion.getItems.asScala.map(server.completionItemResolveSync)
+      completion.getItems.asScala
+        .map(item => server.completionItemResolve(item).get())
     items.iterator
       .filter(item => filter(item.getLabel()))
       .map { item =>
@@ -579,7 +580,7 @@ final class TestingServer(
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     input.tokenize.get.foreach { token =>
       val params = token.toPositionParams(identifier)
-      val definition = server.definitionResult(params)
+      val definition = server.definitionResult(params).asJava.get()
       definition.definition.foreach { path =>
         if (path.isDependencySource(workspace)) {
           readonlySources(path.toNIO.getFileName.toString) = path

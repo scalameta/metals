@@ -11,13 +11,14 @@ import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Language
 import scala.meta.pc.SymbolDocumentation
 import scala.util.control.NonFatal
+import scala.meta.internal.mtags.GlobalSymbolIndex
 
 /**
  * Implementation of the `documentation(symbol: String): Option[SymbolDocumentation]` method in `SymbolSearch`.
  *
  * Handles both javadoc and scaladoc.
  */
-class Docstrings(index: OnDemandSymbolIndex) {
+class Docstrings(index: GlobalSymbolIndex) {
   val cache = TrieMap.empty[String, SymbolDocumentation]
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 

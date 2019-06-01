@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.util
 import java.util.Optional
+import java.util.concurrent.TimeUnit
 import scala.meta.pc.PresentationCompilerConfig
 import scala.collection.JavaConverters._
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
@@ -17,7 +18,9 @@ case class PresentationCompilerConfigImpl(
     isCompletionItemDocumentationEnabled: Boolean = true,
     isHoverDocumentationEnabled: Boolean = true,
     isSignatureHelpDocumentationEnabled: Boolean = true,
-    isCompletionItemResolve: Boolean = true
+    isCompletionItemResolve: Boolean = true,
+    timeoutDelay: Long = 20,
+    timeoutUnit: TimeUnit = TimeUnit.SECONDS
 ) extends PresentationCompilerConfig {
   override def symbolPrefixes(): util.Map[String, String] =
     _symbolPrefixes.asJava

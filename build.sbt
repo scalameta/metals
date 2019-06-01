@@ -144,6 +144,10 @@ lazy val mtags = project
     moduleName := "mtags",
     crossVersion := CrossVersion.full,
     crossScalaVersions := V.supportedScalaVersions,
+    scalacOptions ++= List(
+      // Needed for SAM types on 2.11.
+      "-Xexperimental"
+    ),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "org.jsoup" % "jsoup" % "1.11.3",

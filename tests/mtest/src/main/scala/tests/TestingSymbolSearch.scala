@@ -10,6 +10,8 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.Symbol
 
 /**
  * Implementation of `SymbolSearch` for testing purposes.
@@ -20,13 +22,12 @@ class TestingSymbolSearch(
     classpath: ClasspathSearch = ClasspathSearch.empty,
     docs: Docstrings = Docstrings.empty,
     workspace: TestingWorkspaceSearch = TestingWorkspaceSearch.empty,
-    index: OnDemandSymbolIndex = OnDemandSymbolIndex()
+    index: GlobalSymbolIndex = OnDemandSymbolIndex()
 ) extends SymbolSearch {
   override def documentation(symbol: String): Optional[SymbolDocumentation] = {
     docs.documentation(symbol)
   }
 
-  import scala.meta.internal.mtags.Symbol
   override def definition(symbol: String): ju.List[Location] = {
     index.definition(Symbol(symbol)) match {
       case None =>

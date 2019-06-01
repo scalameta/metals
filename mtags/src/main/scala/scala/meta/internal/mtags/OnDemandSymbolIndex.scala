@@ -59,7 +59,7 @@ final case class OnDemandSymbolIndex(
               addSourceFile(source, None)
             } catch {
               case NonFatal(e) =>
-                onError(IndexError(source, e))
+                onError.lift(IndexError(source, e))
             }
           }
         }

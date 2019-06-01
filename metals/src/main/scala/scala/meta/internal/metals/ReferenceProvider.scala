@@ -42,6 +42,9 @@ final class ReferenceProvider(
       onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
     }
   }
+  def reset(): Unit = {
+    index.clear()
+  }
   def onDelete(file: Path): Unit = {
     index.remove(file)
   }

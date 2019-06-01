@@ -5,7 +5,6 @@ import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.util.Collections
-import java.util.Optional
 import java.util.concurrent.ScheduledExecutorService
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
@@ -19,7 +18,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
-import scala.meta.pc
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
@@ -117,12 +115,12 @@ class Compilers(
   def completionItemResolve(
       item: CompletionItem,
       token: CancelToken
-  ): Option[CompletionItem] = {
+  ): Future[CompletionItem] = {
     for {
       data <- item.data
       compiler <- cache.get(new BuildTargetIdentifier(data.target))
-    } yield compiler.completionItemResolve(item, data.symbol)
-  }
+    } yield compiler.completionItemResolve(item, data.symbol).asScala
+  }.getOrElse(Future.successful(item))
 
   def log: List[String] =
     if (config.compilers.debug) {
@@ -135,44 +133,81 @@ class Compilers(
     } else {
       Nil
     }
+
   def completions(
       params: CompletionParams,
       token: CancelToken
-  ): Option[CompletionList] =
+  ): Future[CompletionList] =
     withPC(params, None) { (pc, pos) =>
       pc.complete(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
-    }
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
+    }.getOrElse(Future.successful(new CompletionList()))
+
   def hover(
       params: TextDocumentPositionParams,
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
-  ): Option[Optional[Hover]] =
+  ): Future[Option[Hover]] =
     withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
       pc.hover(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
+        .map(_.asScala)
+    }.getOrElse {
+      Future.successful(Option.empty)
     }
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken
-  ): Option[pc.DefinitionResult] =
+  ): Future[DefinitionResult] =
     withPC(params, None) { (pc, pos) =>
       pc.definition(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
-    }
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
+        .map { c =>
+          DefinitionResult(
+            c.locations(),
+            c.symbol(),
+            None,
+            None
+          )
+        }
+    }.getOrElse(Future.successful(DefinitionResult.empty))
   def signatureHelp(
       params: TextDocumentPositionParams,
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
-  ): Option[SignatureHelp] =
+  ): Future[SignatureHelp] =
     withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
       pc.signatureHelp(
-        CompilerOffsetParams(pos.input.syntax, pos.input.text, pos.start, token)
-      )
-    }
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
+    }.getOrElse(Future.successful(new SignatureHelp()))
 
   def loadCompiler(
       path: AbsolutePath,
