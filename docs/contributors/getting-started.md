@@ -26,6 +26,13 @@ You will need the following applications installed:
 - `tests/slow` slow integration tests.
 - `test-workspace` demo project for manually testing Metals through an editor.
 
+## Git hooks
+
+This git repository has a pre-push hook to run Scalafmt and Scalafix.
+
+Pro tip: keep an sbt session open in a separate terminal when running `git
+push` in order to speed up the `sbt scalafix` pre-push hook.
+
 ## Related projects
 
 The improvement you are looking to contribute may belong in a separate
