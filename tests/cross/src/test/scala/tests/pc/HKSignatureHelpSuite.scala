@@ -7,9 +7,7 @@ import tests.BaseSignatureHelpSuite
 
 object HKSignatureHelpSuite extends BaseSignatureHelpSuite {
   override def extraClasspath: List[Path] =
-    this.getClass.getClassLoader
-      .asInstanceOf[URLClassLoader]
-      .getURLs
+    ClasspathLoader.getURLs(this.getClass.getClassLoader)
       .map(url => Paths.get(url.toURI))
       .toList
 
