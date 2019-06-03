@@ -28,9 +28,7 @@ import java.util.concurrent.ScheduledExecutorService
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
-    this.getClass.getClassLoader
-      .asInstanceOf[URLClassLoader]
-      .getURLs
+    ClasspathLoader.getURLs(this.getClass.getClassLoader)
       .map(url => Paths.get(url.toURI))
   val scalaLibrary: Seq[Path] = PackageIndex.scalaLibrary
   def extraClasspath: Seq[Path] = Nil
