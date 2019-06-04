@@ -96,22 +96,21 @@ inThisBuild(
 )
 
 onLoad.in(Global) ~= { old =>
-  import java.nio.file._
-  val sh =
-    if (scala.util.Properties.isWin) "#!C:/Program\\ Files/Git/usr/bin/sh.exe"
-    else "#!/bin/sh"
-  val prePush = Paths.get(".git", "hooks", "pre-push")
-  Files.createDirectories(prePush.getParent)
-  Files.write(
-    prePush,
-    s"""$sh
-       |set -eux
-       |sbt -client 'all compile:scalafix test:scalafix'
-       |bin/scalafmt --diff
-       |git diff --exit-code
-       |""".stripMargin.getBytes()
-  )
-  prePush.toFile.setExecutable(true)
+  if (!scala.util.Properties.isWin) {
+    import java.nio.file._
+    val prePush = Paths.get(".git", "hooks", "pre-push")
+    Files.createDirectories(prePush.getParent)
+    Files.write(
+      prePush,
+      """#!/bin/sh
+        |set -eux
+        |sbt -client 'all compile:scalafix test:scalafix'
+        |bin/scalafmt --diff
+        |git diff --exit-code
+        |""".stripMargin.getBytes()
+    )
+    prePush.toFile.setExecutable(true)
+  }
   old
 }
 cancelable.in(Global) := true
