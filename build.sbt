@@ -104,7 +104,6 @@ onLoad.in(Global) ~= { old =>
       prePush,
       """#!/bin/sh
         |set -eux
-        |sbt -client 'all compile:scalafix test:scalafix'
         |bin/scalafmt --diff
         |git diff --exit-code
         |""".stripMargin.getBytes()

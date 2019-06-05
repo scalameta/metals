@@ -28,10 +28,11 @@ You will need the following applications installed:
 
 ## Git hooks
 
-This git repository has a pre-push hook to run Scalafmt and Scalafix.
+This git repository has a pre-push hook to run Scalafmt.
 
-Pro tip: keep an sbt session open in a separate terminal when running `git
-push` in order to speed up the `sbt scalafix` pre-push hook.
+The CI also uses Scalafix to assert that there a no unused imports, to
+automatically remove unused imports run `sbt scalafixAll`. We don't run
+Scalafix as a pre-push git hook since starting sbt takes a long time.
 
 ## Related projects
 
