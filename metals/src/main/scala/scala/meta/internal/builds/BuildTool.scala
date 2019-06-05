@@ -17,6 +17,12 @@ abstract class BuildTool {
   def version: String
 
   def minimumVersion: String
+
+  protected lazy val tempDir = {
+    val dir = Files.createTempDirectory("metals")
+    dir.toFile.deleteOnExit()
+    dir
+  }
 }
 
 object BuildTool {
@@ -33,10 +39,14 @@ object BuildTool {
     }
   }
 
-  def copyFromResource(tempDir: Path, filePath: String): Path = {
+  def copyFromResource(
+      tempDir: Path,
+      filePath: String,
+      destination: Option[String] = None
+  ): Path = {
     val embeddedFile =
       this.getClass.getResourceAsStream(s"/$filePath")
-    val outFile = tempDir.resolve(filePath)
+    val outFile = tempDir.resolve(destination.getOrElse(filePath))
     Files.createDirectories(outFile.getParent)
     Files.copy(embeddedFile, outFile)
     outFile

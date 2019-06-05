@@ -20,6 +20,7 @@ case class UserConfiguration(
     javaHome: Option[String] = None,
     sbtScript: Option[String] = None,
     gradleScript: Option[String] = None,
+    mavenScript: Option[String] = None,
     scalafmtConfigPath: RelativePath =
       UserConfiguration.default.scalafmtConfigPath,
     symbolPrefixes: Map[String, String] =
@@ -59,6 +60,16 @@ object UserConfiguration {
       "gradle script",
       """Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`.
         |By default, Metals uses gradlew with 5.3.1 gradle version. Update this setting if your `gradle` script requires more customizations
+        |like using environment variables.
+        |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "maven-script",
+      """empty string `""`.""",
+      "/usr/local/bin/mvn",
+      "maven script",
+      """Optional absolute path to a `maven` executable to use for generating bloop config.
+        |By default, Metals uses mvnw maven wrapper with 3.6.1 maven version. Update this setting if your `maven` script requires more customizations
         |like using environment variables.
         |""".stripMargin
     ),
@@ -135,6 +146,8 @@ object UserConfiguration {
       getStringKey("sbt-script")
     val gradleScript =
       getStringKey("gradle-script")
+    val mavenScript =
+      getStringKey("maven-script")
     val symbolPrefixes =
       getStringMap("symbol-prefixes")
         .getOrElse(default.symbolPrefixes)
@@ -148,6 +161,7 @@ object UserConfiguration {
           javaHome,
           sbtScript,
           gradleScript,
+          mavenScript,
           scalafmtConfigPath,
           symbolPrefixes
         )

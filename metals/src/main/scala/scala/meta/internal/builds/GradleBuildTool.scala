@@ -7,7 +7,7 @@ import scala.meta.io.AbsolutePath
 import scala.util.Properties
 import scala.meta.internal.metals.MetalsServerConfig
 
-object GradleBuildTool extends BuildTool {
+case class GradleBuildTool() extends BuildTool {
 
   private val initScriptName = "init-script.gradle"
 
@@ -85,15 +85,10 @@ object GradleBuildTool extends BuildTool {
        |}
     """.stripMargin.getBytes()
 
-  private lazy val tempDir = {
-    val dir = Files.createTempDirectory("metals")
-    dir.toFile.deleteOnExit()
-    dir
-  }
-
   private lazy val initScriptPath: Path = {
     Files.write(tempDir.resolve(initScriptName), initScript)
   }
+
   private lazy val embeddedGradleLauncher: AbsolutePath = {
     val gradleWrapper =
       if (Properties.isWin) "gradlew.bat"
@@ -139,6 +134,9 @@ object GradleBuildTool extends BuildTool {
 
   override def minimumVersion: String = "3.0.0"
 
+}
+
+object GradleBuildTool {
   def isGradleRelatedPath(workspace: AbsolutePath, path: AbsolutePath) = {
     val buildSrc = workspace.toNIO.resolve("buildSrc")
     val filename = path.toNIO.getFileName.toString

@@ -78,7 +78,8 @@ final class BuildTools(
   }
   def loadSupported(): Option[BuildTool] = {
     if (isSbt) Some(SbtBuildTool(workspace))
-    else if (isGradle) Some(GradleBuildTool)
+    else if (isGradle) Some(GradleBuildTool())
+    else if (isMaven) Some(MavenBuildTool())
     else None
   }
   override def toString: String = {
@@ -89,6 +90,7 @@ final class BuildTools(
   def isBuildRelated(workspace: AbsolutePath, path: AbsolutePath): Boolean = {
     if (isSbt) SbtBuildTool.isSbtRelatedPath(workspace, path)
     else if (isGradle) GradleBuildTool.isGradleRelatedPath(workspace, path)
+    else if (isMaven) MavenBuildTool.isMavenRelatedPath(workspace, path)
     else false
   }
 }

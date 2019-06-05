@@ -4,6 +4,7 @@ import scala.meta.internal.builds.GradleBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.builds.MavenBuildTool
 
 object RelatedSuite extends BaseSuite {
   private def addNot(flag: Boolean) =
@@ -60,4 +61,18 @@ object RelatedSuite extends BaseSuite {
   checkIsGradleRelated("buildSrc/a/b/c/Hello.groovy")
   checkIsNotGradleRelated("/ab/c/A.groovy")
   checkIsNotGradleRelated("/ab/c/A.kts")
+
+  /**------------ Maven ------------**/
+  def checkIsNotMavenRelated(relpath: String): Unit = {
+    checkIsMavenRelated(relpath, isTrue = false)
+  }
+  def checkIsMavenRelated(relpath: String, isTrue: Boolean = true): Unit = {
+    test(s"is${addNot(isTrue)}MavenRelated - $relpath") {
+      checkRelated(relpath, MavenBuildTool.isMavenRelatedPath, isTrue)
+    }
+  }
+  checkIsMavenRelated("pom.xml")
+  checkIsMavenRelated("a/b/c/pom.xml")
+  checkIsNotMavenRelated("a/b/c/settings.xml")
+  checkIsNotMavenRelated("other.xml")
 }

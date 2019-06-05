@@ -71,6 +71,7 @@ final class BloopInstall(
     val handler = new BloopInstall.ProcessHandler()
     val pb = new NuProcessBuilder(handler, args.asJava)
     pb.setCwd(workspace.toNIO)
+    userConfig().javaHome.foreach(pb.environment().put("JAVA_HOME", _))
     pb.environment().put("COURSIER_PROGRESS", "disable")
     pb.environment().put("METALS_ENABLED", "true")
     pb.environment().put("SCALAMETA_VERSION", BuildInfo.semanticdbVersion)

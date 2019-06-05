@@ -169,7 +169,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     def isSameMessage(
         createParams: String => ShowMessageRequestParams
     ): Boolean = {
-      createParams("gradle") == params || createParams("sbt") == params
+      Set("gradle", "sbt", "maven").map(createParams).exists(_ == params)
     }
     CompletableFuture.completedFuture {
       messageRequests.addLast(params.getMessage)
