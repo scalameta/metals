@@ -4,7 +4,7 @@ title: Emacs
 ---
 
 Metals works in Emacs thanks to the the
-[`lsp-scala`](https://github.com/rossabaker/lsp-scala) package.
+[`lsp-mode`](https://github.com/emacs-lsp/lsp-mode) package.
 
 ![Emacs demo](https://i.imgur.com/KJQLMZ7.gif)
 
@@ -15,7 +15,7 @@ Metals works in Emacs thanks to the the
 ## Installation
 
 To use Metals in Emacs, place this snippet in your Emacs configuration to load
-`lsp-scala` along with its dependencies:
+`lsp-mode` along with its dependencies:
 
 ```el
 ;; Add melpa to your packages repositories
@@ -44,18 +44,14 @@ To use Metals in Emacs, place this snippet in your Emacs configuration to load
   :init (global-flycheck-mode))
 
 (use-package lsp-mode
- :init (setq lsp-prefer-flymake nil))
+  ;; Optional - enable lsp-mode automatically in scala files
+  :hook (scala-mode . lsp)
+  :config (setq lsp-prefer-flymake nil))
 
 (use-package lsp-ui)
 
 ;; Add company-lsp backend for metals
 (use-package company-lsp)
-
-(use-package lsp-scala
-  :after scala-mode
-  :demand t
-  ;; Optional - enable lsp-scala automatically in scala files
-  :hook (scala-mode . lsp))
 ```
 
 > You may need to disable other packages like `ensime` or sbt server to prevent
@@ -77,13 +73,13 @@ usage with Emacs.
 
 ## Manually trigger build import
 
-To manually trigger a build import, run `M-x lsp-scala-build-import`.
+To manually trigger a build import, run `M-x lsp-metals-build-import`.
 
 ![Import build command](https://i.imgur.com/SvGXJDK.png)
 
 ## Run doctor
 
-Run `M-x lsp-scala-doctor-run` to troubleshoot potential configuration problems
+Run `M-x lsp-metals-doctor-run` to troubleshoot potential configuration problems
 in your build.
 
 ![Run doctor command](https://i.imgur.com/yelm0jd.png)
