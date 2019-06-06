@@ -108,12 +108,19 @@ final class Doctor(
       isSemanticdbEnabled: Boolean,
       scala: ScalaTarget
   ): String = {
+
+    def isMaven: Boolean = workspace.resolve("pom.xml").isFile
+    def hint() =
+      if (isMaven)
+        "enable SemanticDB following instructions on the " +
+          "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
+      else s"run 'Build import' to enable code navigation."
+
     if (!isSemanticdbEnabled) {
       if (isSupportedScalaVersion(scalaVersion)) {
-        s"Run 'Build import' to enable code navigation."
+        hint().capitalize
       } else if (isSupportedScalaBinaryVersion(scalaVersion)) {
-        s"Upgrade to Scala ${recommendedVersion(scalaVersion)} and " +
-          s"run 'Build import' to enable code navigation."
+        s"Upgrade to Scala ${recommendedVersion(scalaVersion)} and " + hint()
       } else {
         s"Code navigation is not supported for this compiler version, upgrade to " +
           s"Scala ${BuildInfo.scala212} or ${BuildInfo.scala211} and " +
@@ -262,7 +269,7 @@ final class Doctor(
           .element("td", center)(_.text(completions))
           .element("td", center)(_.text(references))
           .element("td")(
-            _.text(recommendation(scalaVersion, isSemanticdbEnabled, target))
+            _.raw(recommendation(scalaVersion, isSemanticdbEnabled, target))
           )
       )
     }
