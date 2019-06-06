@@ -11,9 +11,9 @@ functionality.
 | ---------- | :----------: | :-----------------------: |
 | sbt        |  Automatic   |            ✅             |
 | Bloop      |  Automatic   |  If configured correctly  |
-| Maven      |    Manual    |                           |
-| Gradle     |    Manual    |                           |
-| Mill       |    Manual    |                           |
+| Maven      |  Automatic   |                           |
+| Gradle     |  Automatic   |                           |
+| Mill       |  Automatic   |                           |
 
 ## Installation
 
