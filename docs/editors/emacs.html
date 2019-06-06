@@ -36,7 +36,7 @@
               }
             });
         </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/editors/emacs.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Emacs</h1></header><article><div><span><p>Metals works in Emacs thanks to the the
-<a href="https://github.com/rossabaker/lsp-scala"><code>lsp-scala</code></a> package.</p>
+<a href="https://github.com/emacs-lsp/lsp-mode"><code>lsp-mode</code></a> package.</p>
 <p><img src="https://i.imgur.com/KJQLMZ7.gif" alt="Emacs demo"></p>
 <h2><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h2>
 <p><strong>OpenJDK or Oracle Java 8</strong>. Eclipse OpenJ9 and Java 11 are not
@@ -48,7 +48,7 @@ tested on Ubuntu+Windows.</p>
 Note that 2.10.x and 2.13.x are not supported.</p>
 <h2><a class="anchor" aria-hidden="true" id="installation"></a><a href="#installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installation</h2>
 <p>To use Metals in Emacs, place this snippet in your Emacs configuration to load
-<code>lsp-scala</code> along with its dependencies:</p>
+<code>lsp-mode</code> along with its dependencies:</p>
 <pre><code class="hljs css language-el"><span class="hljs-comment">;; Add melpa to your packages repositories</span>
 (<span class="hljs-name">add-to-list</span> 'package-archives '(<span class="hljs-string">"melpa"</span> . <span class="hljs-string">"https://melpa.org/packages/"</span>) <span class="hljs-literal">t</span>)
 
@@ -75,18 +75,14 @@ Note that 2.10.x and 2.13.x are not supported.</p>
   <span class="hljs-symbol">:init</span> (<span class="hljs-name">global-flycheck-mode</span>))
 
 (<span class="hljs-name">use-package</span> lsp-mode
- <span class="hljs-symbol">:init</span> (<span class="hljs-name">setq</span> lsp-prefer-flymake <span class="hljs-literal">nil</span>))
+  <span class="hljs-comment">;; Optional - enable lsp-mode automatically in scala files</span>
+  <span class="hljs-symbol">:hook</span> (<span class="hljs-name">scala-mode</span> . lsp)
+  <span class="hljs-symbol">:config</span> (<span class="hljs-name">setq</span> lsp-prefer-flymake <span class="hljs-literal">nil</span>))
 
 (<span class="hljs-name">use-package</span> lsp-ui)
 
 <span class="hljs-comment">;; Add company-lsp backend for metals</span>
 (<span class="hljs-name">use-package</span> company-lsp)
-
-(<span class="hljs-name">use-package</span> lsp-scala
-  <span class="hljs-symbol">:after</span> scala-mode
-  <span class="hljs-symbol">:demand</span> <span class="hljs-literal">t</span>
-  <span class="hljs-comment">;; Optional - enable lsp-scala automatically in scala files</span>
-  <span class="hljs-symbol">:hook</span> (<span class="hljs-name">scala-mode</span> . lsp))
 </code></pre>
 <blockquote>
 <p>You may need to disable other packages like <code>ensime</code> or sbt server to prevent
@@ -109,8 +105,8 @@ not exist yet.</p>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
-<td>0.5.2+56-2b5676b0-SNAPSHOT</td>
-<td>05 Jun 2019 14:30</td>
+<td>0.5.2+58-2b325211-SNAPSHOT</td>
+<td>06 Jun 2019 08:55</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>
@@ -167,10 +163,10 @@ to learn how to speed up build import.</p>
 re-import the build.</p>
 <p><img src="https://i.imgur.com/UFK0p8i.png" alt="Import sbt changes"></p>
 <h2><a class="anchor" aria-hidden="true" id="manually-trigger-build-import"></a><a href="#manually-trigger-build-import" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manually trigger build import</h2>
-<p>To manually trigger a build import, run <code>M-x lsp-scala-build-import</code>.</p>
+<p>To manually trigger a build import, run <code>M-x lsp-metals-build-import</code>.</p>
 <p><img src="https://i.imgur.com/SvGXJDK.png" alt="Import build command"></p>
 <h2><a class="anchor" aria-hidden="true" id="run-doctor"></a><a href="#run-doctor" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Run doctor</h2>
-<p>Run <code>M-x lsp-scala-doctor-run</code> to troubleshoot potential configuration problems
+<p>Run <code>M-x lsp-metals-doctor-run</code> to troubleshoot potential configuration problems
 in your build.</p>
 <p><img src="https://i.imgur.com/yelm0jd.png" alt="Run doctor command"></p>
 <h3><a class="anchor" aria-hidden="true" id="eglot"></a><a href="#eglot" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>eglot</h3>
