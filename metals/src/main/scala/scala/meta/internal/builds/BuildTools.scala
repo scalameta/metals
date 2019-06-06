@@ -65,7 +65,7 @@ final class BuildTools(
   def all: List[String] = {
     val buf = List.newBuilder[String]
     if (isBloop) buf += "Bloop"
-    if (isSbt) buf += "Sbt"
+    if (isSbt) buf += "sbt"
     if (isMill) buf += "Mill"
     if (isGradle) buf += "Gradle"
     if (isMaven) buf += "Maven"

@@ -25,6 +25,9 @@ abstract class BuildTool {
   }
 
   def redirectErrorOutput: Boolean = false
+
+  def executableName: String
+
 }
 
 object BuildTool {

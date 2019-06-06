@@ -52,8 +52,9 @@ case class MillBuildTool() extends BuildTool {
 
   override def version: String = "0.4.0"
 
-  override def toString(): String = "mill"
+  override def toString(): String = "Mill"
 
+  def executableName = "mill"
 }
 
 object MillBuildTool {

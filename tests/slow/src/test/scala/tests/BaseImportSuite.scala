@@ -4,9 +4,20 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.meta.internal.builds.Digest
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.metals.Messages._
 
 abstract class BaseImportSuite(suiteName: String)
     extends BaseSlowSuite(suiteName) {
+
+  def buildTool: BuildTool
+
+  def importBuildMessage = ImportBuild.params(buildTool.toString()).getMessage
+
+  def importBuildChangesMessage =
+    ImportBuildChanges.params(buildTool.toString()).getMessage
+
+  def progressMessage = bloopInstallProgress(buildTool.executableName).message
 
   def currentDigest(workspace: AbsolutePath): Option[String]
 
