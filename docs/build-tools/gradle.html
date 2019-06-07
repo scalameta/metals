@@ -1,0 +1,105 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Gradle · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;Gradle is a build tool that can be used easily with a large number of&lt;/p&gt;
+"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Gradle · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="&lt;p&gt;Gradle is a build tool that can be used easily with a large number of&lt;/p&gt;
+"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-140140828-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class=""><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/build-tools/gradle.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Gradle</h1></header><article><div><span><p>Gradle is a build tool that can be used easily with a large number of
+programming languages including Scala. With it you can easily define your
+builds for Groovy or Kotlin, which enables for a high degree of customization.
+You can look up all the possible features on the
+<a href="https://gradle.org/">Gradle website</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="automatic-installation"></a><a href="#automatic-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Automatic installation</h2>
+<p>The first time you open Metals in a new workspace it prompts you to import the
+build. Select &quot;Import build&quot; to start automatic installation. After it's
+finished you should be able edit and compile your code.</p>
+<h2><a class="anchor" aria-hidden="true" id="manual-installation"></a><a href="#manual-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manual installation</h2>
+<p>In a highly customized workspaces it might not be possible to use automatic
+import. In such cases there is a number of steps required to generate the needed
+Bloop config.</p>
+<p>First we need to add the Bloop plugin dependency to the project, it should be
+included in the buildscript section:</p>
+<pre><code class="hljs css language-groovy">buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath <span class="hljs-string">'ch.epfl.scala:gradle-bloop_2.11:@BLOOP_VERSION@@'</span>
+    }
+}
+</code></pre>
+<p>Secondly, we need to enable the plugin for all the projects we want to include,
+it's easiest to define it for <code>allprojects</code>:</p>
+<pre><code class="hljs css language-groovy">allprojects {
+   apply <span class="hljs-string">plugin:</span> bloop.integrations.gradle.BloopPlugin
+}
+</code></pre>
+<p>Now we can run <code>gradle bloopInstall</code>, which will create a Bloop configuration
+files. This will enable us to work with Metals and most features will work, but
+for everything to work properly we need to also add the SemanticDB plugin. This
+can be done by adding a couple of options to the scala compiler:</p>
+<pre><code class="hljs css language-groovy">allprojects {
+    afterEvaluate {
+        configurations {
+            scalaCompilerPlugin
+        }
+        dependencies {
+            scalaCompilerPlugin <span class="hljs-string">"org.scalameta:semanticdb-scalac_$scalaVersion:@SCALAMETA_VERSION@@"</span>
+        }
+        <span class="hljs-keyword">def</span> pluginFile = project.configurations.scalaCompilerPlugin.find {
+            it.name.contains(<span class="hljs-string">"semanticdb"</span>)
+        }
+        <span class="hljs-keyword">if</span> (!pluginFile) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> RuntimeException(<span class="hljs-string">"SemanticDB plugin not found!"</span>)
+        }
+        tasks.withType(ScalaCompile) {
+            <span class="hljs-keyword">def</span> params = [
+                <span class="hljs-string">'-Xplugin:'</span> + pluginFile.absolutePath,
+                <span class="hljs-string">'-P:semanticdb:synthetics:on'</span>,
+                <span class="hljs-string">'-P:semanticdb:failures:warning'</span>,
+                <span class="hljs-string">'-P:semanticdb:sourceroot:'</span> + project.rootProject.projectDir,
+                <span class="hljs-string">'-Yrangepos'</span>,
+                <span class="hljs-string">'-Xplugin-require:semanticdb'</span>
+            ]
+            <span class="hljs-keyword">if</span> (scalaCompileOptions.additionalParameters)
+                scalaCompileOptions.additionalParameters += params
+            <span class="hljs-keyword">else</span>
+                scalaCompileOptions.additionalParameters = params
+        }
+    }
+}
+</code></pre>
+<p>You need to also define <code>scalaVersion</code> which corresponds to the scala version in
+your project. We also use afterEvaluate here so that we have scala dependency
+and all build specific scala compiler options defined before adding the
+SemanticDB plugin. It might be not needed in your project depending on the
+specifics.</p>
+<p>Now you can rerun <code>gradle bloopInstall</code> to have a properly configured SemanticDB
+plugin in Bloop config.</p>
+<p>This is much more complex than in case of the automatic installation, so it is
+recommended to only do manual installation when having problems with the
+automatic one. You can also always try to reach us on the Metals gitter channel
+in case of any problems.</p>
+</span></div></article></div><div class="docs-prevnext"></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#automatic-installation">Automatic installation</a></li><li><a href="#manual-installation">Manual installation</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
