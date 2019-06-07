@@ -7,13 +7,14 @@ sidebar_label: Overview
 Metals works with the following build tools with varying degree of
 functionality.
 
-| Build tool | Installation | Goto library dependencies |
-| ---------- | :----------: | :-----------------------: |
-| sbt        |  Automatic   |            ✅             |
-| Bloop      |  Automatic   |  If configured correctly  |
-| Maven      |    Manual    |                           |
-| Gradle     |    Manual    |                           |
-| Mill       |    Manual    |                           |
+| Build tool | Installation | Goto library dependencies | Find references      |
+| ---------- | :----------: | :-----------------------: | :------------------: |
+| sbt        |  Automatic   |      Automatic            |     Automatic        |
+| Bloop      |  Automatic   |    Semi-automatic         |   Semi-automatic     |
+| Maven      |  Automatic   |      Automatic            |   Semi-automatic     |
+| Gradle     |  Automatic   |      Automatic            |     Automatic        |
+| Mill       |  Automatic   |      Automatic            |     Automatic        |
+
 
 ## Installation
 
@@ -31,13 +32,19 @@ compiler plugin and `-Yrangepos` option enabled.
 
 ## Goto library dependencies
 
-**✅**: it is possible to navigate Scala+Java library dependencies using "Goto
+**Automatic**: it is possible to navigate Scala+Java library dependencies using "Goto
 definition".
 
-**If configured correctly**: navigation in library dependency sources works as
+**Semi-automatic**: navigation in library dependency sources works as
 long as the
 [Bloop JSON files](https://scalacenter.github.io/bloop/docs/configuration-format/)
 are populated with `*-sources.jar`.
+
+## Find references
+
+**Automatic**: it is possible to find all references to a symbol in the project
+
+**Semi-automatic**: it is possible to 'Find symbol references' as soon the SemanticDB compiler plugin is manually enabled in the build, check separate build tool pages for details.
 
 ## Integrating a new build tool
 
