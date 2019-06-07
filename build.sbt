@@ -129,10 +129,10 @@ lazy val V = new {
   val scala212 = "2.12.8"
   val scalameta = "4.1.9"
   val semanticdb = scalameta
-  val bsp = "2.0.0-M3"
-  val bloop = "1.3.0-RC1"
+  val bsp = "2.0.0-M4"
+  val bloop = "1.3.0"
   val sbtBloop = bloop
-  val gradleBloop = "1.3.0-RC1"
+  val gradleBloop = bloop
   val scalafmt = "2.0.0-RC4"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
