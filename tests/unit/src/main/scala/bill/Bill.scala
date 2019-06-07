@@ -161,7 +161,11 @@ object Bill {
             new SourcesItem(
               target.getId,
               List(
-                new SourceItem(src.toUri.toString, false)
+                new SourceItem(
+                  src.toUri.toString,
+                  SourceItemKind.DIRECTORY,
+                  false
+                )
               ).asJava
             )
           ).asJava
