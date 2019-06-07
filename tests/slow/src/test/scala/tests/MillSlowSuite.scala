@@ -5,8 +5,11 @@ import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.ServerCommands
 import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.MetalsSlowTaskResult
+import scala.meta.internal.builds.MillBuildTool
 
 object MillSlowSuite extends BaseImportSuite("mill-import") {
+
+  val buildTool = MillBuildTool()
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -28,8 +31,8 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuild.params("mill").getMessage,
-          bloopInstallProgress("mill").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -53,8 +56,8 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
         client.workspaceMessageRequests,
         List(
           // Project has .bloop directory so user is asked to "re-import project"
-          ImportBuildChanges.params("mill").getMessage,
-          bloopInstallProgress("mill").message
+          importBuildChangesMessage,
+          progressMessage
         ).mkString("\n")
       )
     }
@@ -76,8 +79,8 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuild.params("mill").getMessage,
-          bloopInstallProgress("mill").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -85,7 +88,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          bloopInstallProgress("mill").message
+          progressMessage
         ).mkString("\n")
       )
     } yield ()
@@ -176,8 +179,8 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("mill").getMessage,
-          bloopInstallProgress("mill").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = assertNoDiff(
@@ -197,8 +200,8 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("mill").getMessage,
-          bloopInstallProgress("mill").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = assertStatus(_.isInstalled)

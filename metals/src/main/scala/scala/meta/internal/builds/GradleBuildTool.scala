@@ -102,8 +102,6 @@ case class GradleBuildTool() extends BuildTool {
     AbsolutePath(out)
   }
 
-  override def toString: String = "gradle"
-
   override def digest(
       workspace: AbsolutePath
   ): Option[String] = GradleDigest.current(workspace)
@@ -134,6 +132,9 @@ case class GradleBuildTool() extends BuildTool {
 
   override def minimumVersion: String = "3.0.0"
 
+  override def toString: String = "Gradle"
+
+  def executableName = "gradle"
 }
 
 object GradleBuildTool {

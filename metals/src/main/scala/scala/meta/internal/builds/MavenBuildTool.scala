@@ -53,7 +53,9 @@ case class MavenBuildTool() extends BuildTool {
 
   def version: String = "3.6.1"
 
-  override def toString(): String = "maven"
+  override def toString(): String = "Maven"
+
+  def executableName = "mvn"
 }
 
 object MavenBuildTool {

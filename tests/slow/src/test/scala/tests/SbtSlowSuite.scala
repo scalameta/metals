@@ -16,6 +16,8 @@ import scala.meta.io.AbsolutePath
 
 object SbtSlowSuite extends BaseImportSuite("sbt-import") {
 
+  val buildTool = SbtBuildTool("")
+
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = SbtDigest.current(workspace)
@@ -34,8 +36,8 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuild.params("sbt").getMessage,
-          bloopInstallProgress("sbt").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -55,8 +57,8 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
         client.workspaceMessageRequests,
         List(
           // Project has .bloop directory so user is asked to "re-import project"
-          ImportBuildChanges.params("sbt").getMessage,
-          bloopInstallProgress("sbt").message
+          importBuildChangesMessage,
+          progressMessage
         ).mkString("\n")
       )
     }
@@ -76,8 +78,8 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuild.params("sbt").getMessage,
-          bloopInstallProgress("sbt").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -85,7 +87,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          bloopInstallProgress("sbt").message
+          progressMessage
         ).mkString("\n")
       )
     } yield ()
@@ -167,8 +169,8 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("sbt").getMessage,
-          bloopInstallProgress("sbt").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = assertNoDiff(
@@ -183,8 +185,8 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("sbt").getMessage,
-          bloopInstallProgress("sbt").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = assertStatus(_.isInstalled)

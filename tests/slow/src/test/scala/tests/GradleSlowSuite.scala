@@ -7,8 +7,11 @@ import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.builds.GradleBuildTool
 
 object GradleSlowSuite extends BaseImportSuite("gradle-import") {
+
+  val buildTool = GradleBuildTool()
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -34,8 +37,8 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuild.params("gradle").getMessage,
-          bloopInstallProgress("gradle").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -55,8 +58,8 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
         client.workspaceMessageRequests,
         List(
           // Project has .bloop directory so user is asked to "re-import project"
-          ImportBuildChanges.params("gradle").getMessage,
-          bloopInstallProgress("gradle").message
+          importBuildChangesMessage,
+          progressMessage
         ).mkString("\n")
       )
     }
@@ -82,8 +85,8 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuild.params("gradle").getMessage,
-          bloopInstallProgress("gradle").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear()
@@ -111,8 +114,8 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
         client.workspaceMessageRequests,
         List(
           // Project has no .bloop directory so user is asked to "import via bloop"
-          ImportBuild.params("gradle").getMessage,
-          bloopInstallProgress("gradle").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -120,7 +123,7 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          bloopInstallProgress("gradle").message
+          progressMessage
         ).mkString("\n")
       )
     } yield ()
@@ -177,8 +180,8 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("gradle").getMessage,
-          bloopInstallProgress("gradle").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = assertNoDiff(
@@ -202,8 +205,8 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("gradle").getMessage,
-          bloopInstallProgress("gradle").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = assertStatus(_.isInstalled)

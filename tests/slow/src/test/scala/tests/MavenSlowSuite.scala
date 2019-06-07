@@ -6,8 +6,11 @@ import scala.meta.internal.builds.MavenDigest
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.io.InputStreamIO
 import java.nio.charset.StandardCharsets
+import scala.meta.internal.builds.MavenBuildTool
 
 object MavenSlowSuite extends BaseImportSuite("maven-import") {
+
+  val buildTool = MavenBuildTool()
 
   val defaultPom = new String(
     InputStreamIO.readBytes(
@@ -31,8 +34,8 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("maven").getMessage,
-          bloopInstallProgress("maven").message,
+          importBuildMessage,
+          progressMessage,
           // we don't have semanticDB plugin yet
           CheckDoctor.allProjectsMisconfigured
         ).mkString("\n")
@@ -58,8 +61,8 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
         client.workspaceMessageRequests,
         List(
           // Project has .bloop directory so user is asked to "re-import project"
-          ImportBuildChanges.params("maven").getMessage,
-          bloopInstallProgress("maven").message
+          importBuildChangesMessage,
+          progressMessage
         ).mkString("\n")
       )
     }
@@ -76,8 +79,8 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("maven").getMessage,
-          bloopInstallProgress("maven").message,
+          importBuildMessage,
+          progressMessage,
           // we don't have semanticDB plugin yet
           CheckDoctor.allProjectsMisconfigured
         ).mkString("\n")
@@ -87,7 +90,7 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          bloopInstallProgress("maven").message
+          progressMessage
         ).mkString("\n")
       )
     } yield ()
@@ -151,8 +154,8 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("maven").getMessage,
-          bloopInstallProgress("maven").message
+          importBuildMessage,
+          progressMessage
         ).mkString("\n")
       )
       _ = assertNoDiff(
@@ -165,8 +168,8 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          ImportBuild.params("maven").getMessage,
-          bloopInstallProgress("maven").message,
+          importBuildMessage,
+          progressMessage,
           // we don't have semanticDB plugin yet
           CheckDoctor.allProjectsMisconfigured
         ).mkString("\n")

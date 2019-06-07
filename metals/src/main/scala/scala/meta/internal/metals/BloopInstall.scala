@@ -84,15 +84,20 @@ final class BloopInstall(
     // VS Code versions the message is hidden after a delay.
     val taskResponse =
       languageClient.metalsSlowTask(
-        Messages.bloopInstallProgress(buildTool.toString())
+        Messages.bloopInstallProgress(buildTool.executableName)
       )
     handler.response = Some(taskResponse)
     val processFuture = handler.completeProcess.future.map { result =>
       taskResponse.cancel(false)
-      scribe.info(s"time: ran '$buildTool bloopInstall' in $elapsed")
+      scribe.info(
+        s"time: ran '${buildTool.executableName} bloopInstall' in $elapsed"
+      )
       result
     }
-    statusBar.trackFuture(s"Running $buildTool bloopInstall", processFuture)
+    statusBar.trackFuture(
+      s"Running ${buildTool.executableName} bloopInstall",
+      processFuture
+    )
     taskResponse.asScala.foreach { item =>
       if (item.cancel) {
         scribe.info("user cancelled build import")

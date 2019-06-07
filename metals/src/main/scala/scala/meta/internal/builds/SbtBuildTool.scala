@@ -8,8 +8,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 
 case class SbtBuildTool(version: String) extends BuildTool {
 
-  override def toString: String = "sbt"
-
   /**
    * Returns path to a local copy of sbt-launch.jar.
    *
@@ -80,6 +78,10 @@ case class SbtBuildTool(version: String) extends BuildTool {
       Files.write(destination.toNIO, bytes)
     }
   }
+
+  override def toString: String = "sbt"
+
+  def executableName = "sbt"
 }
 
 object SbtBuildTool {
