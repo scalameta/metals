@@ -8,6 +8,15 @@
       "build-tools/bloop": {
         "title": "Bloop"
       },
+      "build-tools/gradle": {
+        "title": "Gradle"
+      },
+      "build-tools/maven": {
+        "title": "Maven"
+      },
+      "build-tools/mill": {
+        "title": "Mill"
+      },
       "build-tools/new-build-tool": {
         "title": "Integrating a new build tool"
       },
@@ -23,6 +32,9 @@
       },
       "contributors/project-goals": {
         "title": "Project Goals"
+      },
+      "contributors/releasing": {
+        "title": "Making a release"
       },
       "contributors/updating-website": {
         "title": "Contributing to the website"
