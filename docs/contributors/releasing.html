@@ -1,0 +1,133 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Making a release · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;ul&gt;
+&lt;li&gt;Choose the right version number:&lt;/li&gt;
+&lt;/ul&gt;
+"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Making a release · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="&lt;ul&gt;
+&lt;li&gt;Choose the right version number:&lt;/li&gt;
+&lt;/ul&gt;
+"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-140140828-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class=""><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Contributing</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Text Editors</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/editors/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vscode.html">Visual Studio Code</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/atom.html">Atom</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vim.html">Vim</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/sublime.html">Sublime Text</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/emacs.html">Emacs</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/new-editor.html">Integrating a new editor</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Build Tools</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/sbt.html">sbt</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/bloop.html">Bloop</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/new-build-tool.html">Integrating a new build tool</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Contributing</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/project-goals.html">Project Goals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/getting-started.html">Contributing to Metals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/updating-website.html">Contributing to the website</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/docs/contributors/releasing.html">Making a release</a></li></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/contributors/releasing.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Making a release</h1></header><article><div><span><ul>
+<li><p>Choose the right version number:</p>
+<ul>
+<li><code>x.0.0</code> is reserved for incompatible changes and require a milestone cycle.</li>
+<li><code>x.y.0</code> is reserved for compatible changes.</li>
+<li><code>x.y.z</code> is reserved for bugfixes that don't change the public API,</li>
+</ul></li>
+<li><p>Tag the release:</p>
+<ul>
+<li>The tag must be called <code>vx.y.z</code>, e.g. <code>v3.0.0</code>.</li>
+<li><code>git tag -a vx.y.z -m &quot;vx.y.z&quot;</code></li>
+<li><code>git push upstream --tags</code></li>
+<li>Do not create a release on GitHub just yet. Creating a release on GitHub
+sends out a notification to repository watchers, and the release isn't ready
+for that yet.</li>
+</ul></li>
+<li><p>Wait for <a href="https://travis-ci.org/scalameta/metals/branches">the Travis CI job</a>
+in Active Branches to build the binaries and stage them to Sonatype.</p></li>
+<li><p>While waiting for Travis, update the milestones:</p>
+<ul>
+<li><a href="https://github.com/scalameta/metals/milestones">https://github.com/scalameta/metals/milestones</a></li>
+<li>Close the milestone or milestones corresponding to the release. For example,
+for a v3.3.0 release, we close both 3.3.0 and 3.2.1 (because we never
+released 3.2.1, so all its tickets went straight to 3.3.0).</li>
+<li>Create the milestone or milestones corresponding to future releases. For
+example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.</li>
+</ul></li>
+<li><p>While waiting for Travis, draft the release notes:</p>
+<ul>
+<li>Copy <code>website/blog/2018-12-06-iron.md</code> as a template</li>
+<li>Open a PR to the repo</li>
+<li><a href="https://github.com/scalameta/metals/releases/new">https://github.com/scalameta/metals/releases/new</a>.</li>
+</ul></li>
+<li><p>Verify the Sonatype release:</p>
+<ul>
+<li>Make sure that the release shows up at
+<a href="https://oss.sonatype.org/content/repositories/releases/org/scalameta/">https://oss.sonatype.org/content/repositories/releases/org/scalameta/</a>.</li>
+<li>Run <code>./bin/test-release.sh $VERSION</code> to ensure that all artifacts have
+successfully been released.</li>
+</ul></li>
+<li><p>Upgrade downstream projects:</p>
+<ul>
+<li><a href="https://github.com/scalameta/metals-vscode">https://github.com/scalameta/metals-vscode</a>:
+<ul>
+<li>generate metals website with <code>sbt docs/run</code></li>
+<li>open <code>website/target/docs/editor/vscode.md</code> and copy everything from
+&quot;Requirements&quot; over to the scalameta/metals-vscode README
+<ul>
+<li>remove &quot;Using latest SNAPSHOT&quot; section, this table is only up-to-date on
+the website</li>
+</ul></li>
+<li>open a PR, feel free to merge after CI is green</li>
+<li>tag a new release and publish to Marketplace</li>
+</ul></li>
+<li><a href="https://github.com/NixOS/nixpkgs/pull/51988">https://github.com/NixOS/nixpkgs/pull/51988</a>
+<ul>
+<li>update the version number and <code>outputHash</code></li>
+</ul></li>
+</ul></li>
+<li><p>Publish the release on GitHub:</p>
+<ul>
+<li><a href="https://github.com/scalameta/metals/releases">https://github.com/scalameta/metals/releases</a></li>
+<li>Copy-paste the release from the website blog</li>
+<li>In the dropdown, pick the recently pushed tag.</li>
+<li>In the release title, say <code>Metals vX.Y.Z</code>.</li>
+<li>Once the VS Code extension has been updated on the Marketplace, click
+&quot;Publish release&quot;.</li>
+</ul></li>
+<li><p>Announce on Gitter: <a href="https://gitter.im/scalameta/metals">https://gitter.im/scalameta/metals</a></p>
+<ul>
+<li>Tag everybody with <code>@/all</code></li>
+</ul></li>
+</ul>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/contributors/updating-website.html"><span class="arrow-prev">← </span><span>Contributing to the website</span></a></div></div></div><nav class="onPageNav"></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
