@@ -18,7 +18,8 @@
     "Contributing": [
       "contributors/project-goals",
       "contributors/getting-started",
-      "contributors/updating-website"
+      "contributors/updating-website",
+      "contributors/releasing"
     ]
   }
 }
