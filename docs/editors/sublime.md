@@ -46,9 +46,9 @@ Server in project" command.
 
 This starts the Metal language server but no functionality will work because the
 build has not been imported. The first time you enable Language Server in a
-project, it prompts you to "Import changes". This step is required for compile
-errors and goto definition to work and while it is running, no Metals
-functionality will work.
+project you must open a `*.scala` file, then it will prompt you to "Import changes".
+This step is required for compile errors and goto definition to work and while it
+is running, no Metals functionality will work.
 
 This step can take a long time, especially the first time you run it in a new
 workspace. The exact time depends on the complexity of the build and if library
