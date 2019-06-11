@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.util
+import java.{util => ju}
 import java.util.logging.Logger
 import org.eclipse.{lsp4j => l}
 import scala.language.implicitConversions
@@ -168,11 +169,13 @@ class MetalsGlobal(
    */
   def shortType(longType: Type, history: ShortenedNames): Type = {
     val isVisited = mutable.Set.empty[(Type, Option[ShortName])]
+    val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
     def loop(tpe: Type, name: Option[ShortName]): Type = {
+      val key = tpe -> name
       // NOTE(olafur) Prevent infinite recursion, see https://github.com/scalameta/metals/issues/749
-      if (isVisited(tpe -> name)) return tpe
-      isVisited += (tpe -> name)
-      tpe match {
+      if (isVisited(key)) return cached.getOrDefault(key, tpe)
+      isVisited += key
+      val result = tpe match {
         case TypeRef(pre, sym, args) =>
           val ownerSymbol = pre.termSymbol
           history.config.get(ownerSymbol) match {
@@ -264,6 +267,8 @@ class MetalsGlobal(
           definitions.AnyTpe
         case t => t
       }
+      cached.putIfAbsent(key, result)
+      result
     }
 
     longType match {
