@@ -20,4 +20,22 @@ object CompletionIssueSuite extends BaseCompletionSuite {
     """.stripMargin,
     ""
   )
+
+  check(
+    "issue-749",
+    """package a
+      |trait Observable[+A] {
+      |  type Self[+T] <: Observable[T]
+      |}
+      |trait EventStream[+A] extends Observable[A] {
+      |  override type Self[+T] = EventStream[T]
+      |}
+      |class Main {
+      |  val stream: EventStream[Int] = ???
+      |  stream.@@
+      |}
+      |""".stripMargin,
+    "Self[+T] = Main.this.stream.Self",
+    topLines = Some(1)
+  )
 }
