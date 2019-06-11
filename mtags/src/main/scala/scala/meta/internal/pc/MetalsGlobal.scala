@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.util
+import java.{util => ju}
 import java.util.logging.Logger
 import org.eclipse.{lsp4j => l}
 import scala.language.implicitConversions
@@ -167,95 +168,107 @@ class MetalsGlobal(
    * making sure to not convert two different symbols into same short name.
    */
   def shortType(longType: Type, history: ShortenedNames): Type = {
-    def loop(tpe: Type, name: Option[ShortName]): Type = tpe match {
-      case TypeRef(pre, sym, args) =>
-        val ownerSymbol = pre.termSymbol
-        history.config.get(ownerSymbol) match {
-          case Some(rename)
-              if history.tryShortenName(ShortName(rename, ownerSymbol)) =>
-            TypeRef(
-              new PrettyType(rename.toString),
-              sym,
-              args.map(arg => loop(arg, None))
-            )
-          case _ =>
-            history.renames.get(sym) match {
-              case Some(rename) if history.nameResolvesToSymbol(rename, sym) =>
-                TypeRef(
-                  NoPrefix,
-                  sym.newErrorSymbol(rename),
-                  args.map(arg => loop(arg, None))
-                )
-              case _ =>
-                if (sym.isAliasType &&
-                  (sym.isAbstract ||
-                  sym.overrides.lastOption.exists(_.isAbstract))) {
-                  // Always dealias abstract type aliases but leave concrete aliases alone.
-                  // trait Generic { type Repr /* dealias */ }
-                  // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
-                  loop(tpe.dealias, name)
-                } else if (history.owners(pre.typeSymbol)) {
-                  if (history.nameResolvesToSymbol(sym.name, sym)) {
-                    TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+    val isVisited = mutable.Set.empty[(Type, Option[ShortName])]
+    val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
+    def loop(tpe: Type, name: Option[ShortName]): Type = {
+      val key = tpe -> name
+      // NOTE(olafur) Prevent infinite recursion, see https://github.com/scalameta/metals/issues/749
+      if (isVisited(key)) return cached.getOrDefault(key, tpe)
+      isVisited += key
+      val result = tpe match {
+        case TypeRef(pre, sym, args) =>
+          val ownerSymbol = pre.termSymbol
+          history.config.get(ownerSymbol) match {
+            case Some(rename)
+                if history.tryShortenName(ShortName(rename, ownerSymbol)) =>
+              TypeRef(
+                new PrettyType(rename.toString),
+                sym,
+                args.map(arg => loop(arg, None))
+              )
+            case _ =>
+              history.renames.get(sym) match {
+                case Some(rename)
+                    if history.nameResolvesToSymbol(rename, sym) =>
+                  TypeRef(
+                    NoPrefix,
+                    sym.newErrorSymbol(rename),
+                    args.map(arg => loop(arg, None))
+                  )
+                case _ =>
+                  if (sym.isAliasType &&
+                    (sym.isAbstract ||
+                    sym.overrides.lastOption.exists(_.isAbstract))) {
+
+                    // Always dealias abstract type aliases but leave concrete aliases alone.
+                    // trait Generic { type Repr /* dealias */ }
+                    // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
+                    loop(tpe.dealias, name)
+                  } else if (history.owners(pre.typeSymbol)) {
+                    if (history.nameResolvesToSymbol(sym.name, sym)) {
+                      TypeRef(NoPrefix, sym, args.map(arg => loop(arg, None)))
+                    } else {
+                      TypeRef(
+                        ThisType(pre.typeSymbol),
+                        sym,
+                        args.map(arg => loop(arg, None))
+                      )
+                    }
                   } else {
                     TypeRef(
-                      ThisType(pre.typeSymbol),
+                      loop(pre, Some(ShortName(sym))),
                       sym,
                       args.map(arg => loop(arg, None))
                     )
                   }
-                } else {
-                  TypeRef(
-                    loop(pre, Some(ShortName(sym))),
-                    sym,
-                    args.map(arg => loop(arg, None))
-                  )
-                }
-            }
-        }
-      case SingleType(pre, sym) =>
-        if (sym.hasPackageFlag) {
-          if (history.tryShortenName(name)) NoPrefix
-          else tpe
-        } else {
-          pre match {
-            case ThisType(psym) if history.nameResolvesToSymbol(psym) =>
-              SingleType(NoPrefix, sym)
-            case _ =>
-              SingleType(loop(pre, Some(ShortName(sym))), sym)
+              }
           }
-        }
-      case ThisType(sym) =>
-        if (sym.hasPackageFlag) {
-          if (history.tryShortenName(name)) NoPrefix
-          else new PrettyType(history.fullname(sym))
-        } else {
-          TypeRef(NoPrefix, sym, Nil)
-        }
-      case ConstantType(Constant(sym: TermSymbol))
-          if sym.hasFlag(gf.JAVA_ENUM) =>
-        loop(SingleType(sym.owner.thisPrefix, sym), None)
-      case ConstantType(Constant(tpe: Type)) =>
-        ConstantType(Constant(loop(tpe, None)))
-      case SuperType(thistpe, supertpe) =>
-        SuperType(loop(thistpe, None), loop(supertpe, None))
-      case RefinedType(parents, decls) =>
-        RefinedType(parents.map(parent => loop(parent, None)), decls)
-      case AnnotatedType(annotations, underlying) =>
-        AnnotatedType(annotations, loop(underlying, None))
-      case ExistentialType(quantified, underlying) =>
-        ExistentialType(quantified, loop(underlying, None))
-      case PolyType(tparams, resultType) =>
-        PolyType(tparams, resultType.map(t => loop(t, None)))
-      case NullaryMethodType(resultType) =>
-        loop(resultType, None)
-      case TypeBounds(lo, hi) =>
-        TypeBounds(loop(lo, None), loop(hi, None))
-      case MethodType(params, resultType) =>
-        MethodType(params, loop(resultType, None))
-      case ErrorType =>
-        definitions.AnyTpe
-      case t => t
+        case SingleType(pre, sym) =>
+          if (sym.hasPackageFlag) {
+            if (history.tryShortenName(name)) NoPrefix
+            else tpe
+          } else {
+            pre match {
+              case ThisType(psym) if history.nameResolvesToSymbol(psym) =>
+                SingleType(NoPrefix, sym)
+              case _ =>
+                SingleType(loop(pre, Some(ShortName(sym))), sym)
+            }
+          }
+        case ThisType(sym) =>
+          if (sym.hasPackageFlag) {
+            if (history.tryShortenName(name)) NoPrefix
+            else new PrettyType(history.fullname(sym))
+          } else {
+            TypeRef(NoPrefix, sym, Nil)
+          }
+        case ConstantType(Constant(sym: TermSymbol))
+            if sym.hasFlag(gf.JAVA_ENUM) =>
+          loop(SingleType(sym.owner.thisPrefix, sym), None)
+        case ConstantType(Constant(tpe: Type)) =>
+          ConstantType(Constant(loop(tpe, None)))
+        case SuperType(thistpe, supertpe) =>
+          SuperType(loop(thistpe, None), loop(supertpe, None))
+        case RefinedType(parents, decls) =>
+          RefinedType(parents.map(parent => loop(parent, None)), decls)
+        case AnnotatedType(annotations, underlying) =>
+          AnnotatedType(annotations, loop(underlying, None))
+        case ExistentialType(quantified, underlying) =>
+          ExistentialType(quantified, loop(underlying, None))
+        case PolyType(tparams, resultType) =>
+          PolyType(tparams, resultType.map(t => loop(t, None)))
+        case NullaryMethodType(resultType) =>
+          loop(resultType, None)
+        case TypeBounds(lo, hi) =>
+          TypeBounds(loop(lo, None), loop(hi, None))
+        case MethodType(params, resultType) =>
+          MethodType(params, loop(resultType, None))
+        case ErrorType =>
+          definitions.AnyTpe
+        case t => t
+      }
+      cached.putIfAbsent(key, result)
+      result
     }
 
     longType match {
