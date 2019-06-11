@@ -11,8 +11,11 @@
     ],
     "Build Tools": [
       "build-tools/overview",
-      "build-tools/sbt",
       "build-tools/bloop",
+      "build-tools/gradle",
+      "build-tools/maven",
+      "build-tools/mill",
+      "build-tools/sbt",
       "build-tools/new-build-tool"
     ],
     "Contributing": [

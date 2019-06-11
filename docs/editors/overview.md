@@ -295,6 +295,9 @@ Highlight references to the same symbol in the open file.
 
 **Input box**: Editor client implements the `metals/inputBox` request.
 
+**Window state**: Editor client implements the `metals/windowStateDidChange`
+notification.
+
 **✅**: Editor implements all Metals extension endpoints.
 
 The Metals language server supports custom extensions that are not part of the
