@@ -504,6 +504,25 @@ export interface MetalsInputBoxResult {
 }
 ```
 
+### `metals/windowStateDidChange`
+
+The `metals/windowStateDidChange` notification is sent from the client to the
+server to indicate whether the editor application window is focused or not. When
+the editor window is not focused, Metals tries to avoid triggering expensive
+computation in the background such as compilation.
+
+_Notification_:
+
+- method: `metals/windowStateDidChange`
+- params: `WindowStateDidChangeParams` defined as follows:
+
+```ts
+interface WindowStateDidChangeParams( {
+  /** If true, the editor application window is focused. False, otherwise. */
+  focused: boolean;
+}
+```
+
 ## Language Server Protocol
 
 Consult the
