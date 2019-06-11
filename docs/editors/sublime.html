@@ -59,8 +59,8 @@ Note that 2.10.x and 2.13.x are not supported.</p>
 </thead>
 <tbody>
 <tr>
-<td>0.5.2</td>
-<td>06 May 2019 10:14</td>
+<td>0.6.0</td>
+<td>11 Jun 2019 08:38</td>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
@@ -77,7 +77,7 @@ chmod +x coursier
   --java-opt -Xss4m \
   --java-opt -Xms100m \
   --java-opt -Dmetals.client=sublime \
-  org.scalameta:metals_2.12:0.5.2 \
+  org.scalameta:metals_2.12:0.6.0 \
   -r bintray:scalacenter/releases \
   -r sonatype:snapshots \
   -o /usr/<span class="hljs-built_in">local</span>/bin/metals-sublime -f
@@ -103,9 +103,9 @@ Server in project&quot; command.</p>
 <p><img src="https://i.imgur.com/3c0ZSZm.gif" alt="Enable Language Server for this project"></p>
 <p>This starts the Metal language server but no functionality will work because the
 build has not been imported. The first time you enable Language Server in a
-project, it prompts you to &quot;Import changes&quot;. This step is required for compile
-errors and goto definition to work and while it is running, no Metals
-functionality will work.</p>
+project you must open a <code>*.scala</code> file, then it will prompt you to &quot;Import changes&quot;.
+This step is required for compile errors and goto definition to work and while it
+is running, no Metals functionality will work.</p>
 <p>This step can take a long time, especially the first time you run it in a new
 workspace. The exact time depends on the complexity of the build and if library
 dependencies are cached or need to be downloaded. For example, this step can
