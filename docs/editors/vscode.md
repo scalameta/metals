@@ -67,6 +67,17 @@ command to copy the Java 8 home path.
 /usr/libexec/java_home -v 1.8 | pbcopy
 ```
 
+## Custom artifact repositories (Maven or Ivy resolvers)
+
+Use the 'Custom Repositories' setting for the Metals VS Code extension to tell
+[Coursier](https://get-coursier.io/docs/other-proxy) to try to download Metals
+artifacts from your private artifact repository.
+
+Use `.jvmopts` to set sbt options
+(https://www.scala-sbt.org/1.0/docs/Proxy-Repositories.html) for
+`sbt bloopInstall` which resolves library dependencies. You can also provide a
+custom sbt script (see 'Custom sbt launcher').
+
 ## HTTP proxy
 
 Metals uses [Coursier](https://get-coursier.io/docs/other-proxy) to download
