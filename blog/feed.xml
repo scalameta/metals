@@ -21,6 +21,13 @@
             <description><![CDATA[<p>We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉 This release introduces new features, performance improvements and bug fixes with highlights including:</p> <ul> <li>code completions</li> <li>parameter hints</li> <li>show type at point</li> <li>code fo...</li></ul>]]></description>
         </item>
         <item>
+            <title><![CDATA[Metals v0.6.1 - Radium]]></title>
+            <link>http://scalameta.org/metals/blog/2019/06/11/radium.html</link>
+            <guid>http://scalameta.org/metals/blog/2019/06/11/radium.html</guid>
+            <pubDate>Tue, 11 Jun 2019 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>We are excited to announce the release of Metals v0.6.1, codename &quot;Radium&quot; 🎉 The release mostly focused on adding support for the build tools Gradle, Maven and Mill.</p> <p>Metals is a language server for Scala that works with VS Code, Atom, Vim, ...</p>]]></description>
+        </item>
+        <item>
             <title><![CDATA[Metals v0.5.1]]></title>
             <link>http://scalameta.org/metals/blog/2019/04/26/mercury.html</link>
             <guid>http://scalameta.org/metals/blog/2019/04/26/mercury.html</guid>

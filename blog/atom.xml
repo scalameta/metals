@@ -21,6 +21,18 @@
         </author>
     </entry>
     <entry>
+        <title type="html"><![CDATA[Metals v0.6.1 - Radium]]></title>
+        <id>http://scalameta.org/metals/blog/2019/06/11/radium.html</id>
+        <link href="http://scalameta.org/metals/blog/2019/06/11/radium.html">
+        </link>
+        <updated>2019-06-11T06:00:00Z</updated>
+        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.6.1, codename &quot;Radium&quot; 🎉 The release mostly focused on adding support for the build tools Gradle, Maven and Mill.</p> <p>Metals is a language server for Scala that works with VS Code, Atom, Vim, ...</p>]]></summary>
+        <author>
+            <name>Tomasz Godzik</name>
+            <uri>https://twitter.com/tomekgodzik</uri>
+        </author>
+    </entry>
+    <entry>
         <title type="html"><![CDATA[Metals v0.5.1]]></title>
         <id>http://scalameta.org/metals/blog/2019/04/26/mercury.html</id>
         <link href="http://scalameta.org/metals/blog/2019/04/26/mercury.html">
