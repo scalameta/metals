@@ -40,7 +40,7 @@ object ServerCommands {
     """|Walk all files in the workspace and index where symbols are defined.
        |
        |Is automatically run once after `initialized` notification and incrementally
-       |updated on file wathching events. A language client that doesn't support
+       |updated on file watching events. A language client that doesn't support
        |file watching can run this manually instead. It should not be much slower
        |than walking the entire file tree and reading `*.scala` files to string,
        |indexing itself is cheap.
