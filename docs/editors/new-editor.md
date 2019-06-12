@@ -139,7 +139,7 @@ Possible values:
 
 - `off` (default): the `metals/executeClientCommand` notification is not
   supported. Client commands can still be handled by enabling
-  `-Dmetals.http=true`.
+  `-Dmetals.http=on`.
 - `on`: the `metals/executeClientCommand` notification is supported and all
   [Metals client commands](#metals-client-commands) are handled.
 
