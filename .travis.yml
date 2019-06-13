@@ -3,7 +3,7 @@ jdk:
 os:
   - linux
 language: scala
-
+dist: trusty
 stages:
   - name: test
   - name: release

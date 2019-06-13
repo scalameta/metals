@@ -37,11 +37,23 @@ case class MillBuildTool() extends BuildTool {
       predefScriptPath.toString,
       "mill.contrib.Bloop/install"
     )
+    import scala.collection.JavaConverters._
+    val millVersionPath = workspace.resolve(".mill-version")
+    val millVersion = if (millVersionPath.isFile) {
+      Files
+        .readAllLines(millVersionPath.toNIO)
+        .asScala
+        .headOption
+        .getOrElse(version)
+    } else {
+      version
+    }
+
     userConfig().millScript match {
       case Some(script) =>
         script :: cmd
       case None =>
-        embeddedMillWrapper.toString() :: "--mill-version" :: version :: cmd
+        embeddedMillWrapper.toString() :: "--mill-version" :: millVersion :: cmd
     }
   }
 
@@ -50,7 +62,7 @@ case class MillBuildTool() extends BuildTool {
 
   override def minimumVersion: String = "0.4.0"
 
-  override def version: String = "0.4.0"
+  override def version: String = "0.4.1"
 
   override def toString(): String = "Mill"
 
