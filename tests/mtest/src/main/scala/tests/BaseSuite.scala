@@ -165,8 +165,10 @@ class BaseSuite extends TestSuite {
       myTests += FlatTest("empty", () => ())
     }
     this.beforeAll()
-    val names = Tree("", myTests.map(x => Tree(x.name)): _*)
-    val inner = Right(myTests.map(x => new TestCallTree(Left(x.thunk()))))
+    val names = Tree("", myTests.map(x => Tree(x.name)).toSeq: _*)
+    val inner = Right(
+      myTests.map(x => new TestCallTree(Left(x.thunk()))).toIndexedSeq
+    )
     val thunks = new TestCallTree(inner)
     Tests(names, thunks)
   }

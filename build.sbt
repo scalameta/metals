@@ -1,5 +1,28 @@
 def localSnapshotVersion = "0.6.2-SNAPSHOT"
 def isCI = System.getenv("CI") != null
+
+def crossSetting[A](
+    scalaVersion: String,
+    if211: List[A],
+    otherwise: List[A] = Nil
+): List[A] =
+  CrossVersion.partialVersion(scalaVersion) match {
+    case Some((2, 11)) => if211
+    case _ => otherwise
+  }
+
+def crossSetting[A](
+    scalaVersion: String,
+    if211: List[A],
+    if212: List[A],
+    otherwise: List[A]
+): List[A] =
+  CrossVersion.partialVersion(scalaVersion) match {
+    case Some((2, 11)) => if211
+    case Some((2, 12)) => if212
+    case _ => otherwise
+  }
+
 inThisBuild(
   List(
     version ~= { dynVer =>
@@ -14,7 +37,7 @@ inThisBuild(
       "-deprecation",
       // -Xlint is unusable because of
       // https://github.com/scala/bug/issues/10448
-      "-Ywarn-unused-import"
+      "-Ywarn-unused:imports"
     ),
     addCompilerPlugin(
       "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
@@ -127,7 +150,8 @@ lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.8"
-  val scalameta = "4.1.9"
+  val scala213 = "2.13.0"
+  val scalameta = "4.1.12"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4"
   val bloop = "1.3.2"
@@ -137,10 +161,8 @@ lazy val V = new {
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
-    Seq("2.12.8", "2.12.7", "2.11.12") ++ deprecatedScalaVersions
-  def deprecatedScalaVersions = Seq[String](
-    "2.12.6", "2.12.5", "2.12.4", "2.11.11", "2.11.10", "2.11.9"
-  )
+    Seq(scala213, scala212) ++ deprecatedScalaVersions
+  def deprecatedScalaVersions = Seq("2.12.7", scala211)
 }
 
 skip.in(publish) := true
@@ -161,9 +183,13 @@ lazy val mtags = project
     moduleName := "mtags",
     crossVersion := CrossVersion.full,
     crossScalaVersions := V.supportedScalaVersions,
-    scalacOptions ++= List(
-      // Needed for SAM types on 2.11.
-      "-Xexperimental"
+    scalacOptions ++= crossSetting(
+      scalaVersion.value,
+      if211 = List("-Xexperimental", "-Ywarn-unused-import")
+    ),
+    scalacOptions --= crossSetting(
+      scalaVersion.value,
+      if211 = List("-Ywarn-unused:imports")
     ),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
@@ -174,7 +200,12 @@ lazy val mtags = project
       if (isCI) Nil
       // NOTE(olafur) pprint is indispensable for me while developing, I can't
       // use println anymore for debugging because pprint.log is 100 times better.
-      else List("com.lihaoyi" %% "pprint" % "0.5.3")
+      else
+        crossSetting(
+          scalaVersion.value,
+          if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
+          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.5")
+        )
     }
   )
   .dependsOn(interfaces)
@@ -228,7 +259,7 @@ lazy val metals = project
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.5.3",
+      "com.lihaoyi" %% "pprint" % "0.5.5",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
@@ -247,7 +278,8 @@ lazy val metals = project
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "scala211" -> V.scala211,
-      "scala212" -> V.scala212
+      "scala212" -> V.scala212,
+      "scala213" -> V.scala213
     )
   )
   .dependsOn(mtags)
@@ -264,7 +296,11 @@ lazy val `sbt-metals` = project
       }
     },
     libraryDependencies --= libraryDependencies.in(ThisBuild).value,
-    scalacOptions --= Seq("-Yrangepos", "-Ywarn-unused-import"),
+    scalacOptions --= Seq(
+      "-Yrangepos",
+      "-Ywarn-unused-import",
+      "-Ywarn-unused:imports"
+    ),
     buildInfoPackage := "scala.meta.internal.sbtmetals",
     buildInfoKeys := Seq[BuildInfoKey](
       "metalsVersion" -> version.value,
@@ -303,11 +339,22 @@ lazy val mtest = project
   .in(file("tests/mtest"))
   .settings(
     skip.in(publish) := true,
-    crossScalaVersions := List(V.scala212, V.scala211),
+    crossScalaVersions := V.supportedScalaVersions,
     libraryDependencies ++= List(
-      "com.geirsson" %% "coursier-small" % "1.3.3",
-      "org.scalameta" %% "testkit" % V.scalameta,
-      "com.lihaoyi" %% "utest" % "0.6.0"
+      "io.get-coursier" %% "coursier" % "2.0.0-RC2-2",
+      "org.scalameta" %% "testkit" % V.scalameta
+    ) ++ crossSetting(
+      scalaVersion.value,
+      if211 = List("com.lihaoyi" %% "utest" % "0.6.8"),
+      otherwise = List("com.lihaoyi" %% "utest" % "0.6.9")
+    ),
+    scalacOptions ++= crossSetting(
+      scalaVersion.value,
+      if211 = List("-Xexperimental", "-Ywarn-unused-import")
+    ),
+    scalacOptions --= crossSetting(
+      scalaVersion.value,
+      if211 = List("-Ywarn-unused:imports")
     ),
     buildInfoPackage := "tests",
     buildInfoObject := "BuildInfoVersions",
@@ -325,13 +372,24 @@ lazy val cross = project
     testSettings,
     libraryDependencies ++= List(
       "com.chuusai" %% "shapeless" % "2.3.3",
-      "org.typelevel" %% "cats-core" % "1.6.0",
-      "com.github.mpilquist" %% "simulacrum" % "0.15.0",
-      "com.olegpy" %% "better-monadic-for" % "0.3.0-M4",
-      "org.spire-math" %% "kind-projector" % "0.9.8",
-      "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
+      "org.typelevel" %% "cats-core" % "2.0.0-M4",
+      "com.github.mpilquist" %% "simulacrum" % "0.19.0",
+      "com.olegpy" %% "better-monadic-for" % "0.3.0",
+      "org.typelevel" %% "kind-projector" % "0.10.3"
+    ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, major)) if major <= 12 =>
+        List("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+      case _ => Nil
+    }),
+    crossScalaVersions := V.supportedScalaVersions,
+    scalacOptions ++= crossSetting(
+      scalaVersion.value,
+      if211 = List("-Xexperimental", "-Ywarn-unused-import")
     ),
-    crossScalaVersions := V.supportedScalaVersions
+    scalacOptions --= crossSetting(
+      scalaVersion.value,
+      if211 = List("-Ywarn-unused:imports")
+    )
   )
   .dependsOn(mtest, mtags)
 

@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.collection.JavaConverters._
+import scala.collection.Seq
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.meta.pc

@@ -1,6 +1,7 @@
 package scala.meta.internal.docstrings
 
 import scala.meta._
+import scala.collection.Seq
 
 /**
  * Generates markdown from the docstring

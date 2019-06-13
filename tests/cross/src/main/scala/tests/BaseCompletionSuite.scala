@@ -8,6 +8,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.CancelToken
+import scala.collection.Seq
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 

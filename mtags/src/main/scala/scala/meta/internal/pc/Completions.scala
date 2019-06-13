@@ -1426,7 +1426,7 @@ trait Completions { this: MetalsGlobal =>
       }
     }
     protected def isEligible(t: Tree): Boolean = !t.pos.isTransparent
-    override def traverse(t: Tree) {
+    override def traverse(t: Tree): Unit = {
       t match {
         case tt: TypeTree
             if tt.original != null && (tt.pos includes tt.original.pos) =>
@@ -1516,6 +1516,7 @@ trait Completions { this: MetalsGlobal =>
           inverseSemanticdbSymbol(sym) -> nme
       }
       .filterKeys(_ != NoSymbol)
+      .toMap
 
   // Infers the indentation at the completion position by counting the number of leading
   // spaces in the line.

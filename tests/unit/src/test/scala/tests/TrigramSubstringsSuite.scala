@@ -5,7 +5,7 @@ import scala.meta.internal.metals.TrigramSubstrings
 object TrigramSubstringsSuite extends BaseSuite {
   def check(original: String, expected: String): Unit = {
     test(original) {
-      val obtained = new TrigramSubstrings(original).mkString("\n")
+      val obtained = TrigramSubstrings(original).mkString("\n")
       assertNoDiff(obtained, expected)
     }
   }

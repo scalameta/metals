@@ -1,8 +1,7 @@
 package tests
 
-import com.geirsson.coursiersmall.CoursierSmall
-import com.geirsson.coursiersmall.Dependency
-import com.geirsson.coursiersmall.Settings
+import coursier._
+import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -88,19 +87,15 @@ abstract class BasePCSuite extends BaseSuite {
     }
   }
   def indexScalaLibrary(): Unit = {
-    val sources = CoursierSmall.fetch(
-      new Settings()
-        .withClassifiers(List("sources"))
-        .withDependencies(
-          List(
-            new Dependency(
-              "org.scala-lang",
-              "scala-library",
-              BuildInfoVersions.scala212
-            )
-          )
+    val sources = Fetch()
+      .addClassifiers(Classifier.sources)
+      .addDependencies(
+        Dependency(
+          mod"org.scala-lang:scala-library",
+          BuildInfoVersions.scala212
         )
-    )
+      )
+      .run()
     sources.foreach { jar =>
       index.addSourceJar(AbsolutePath(jar))
     }

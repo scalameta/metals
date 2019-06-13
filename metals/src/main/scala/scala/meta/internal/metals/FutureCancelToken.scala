@@ -17,7 +17,7 @@ case class FutureCancelToken(f: Future[Unit])(implicit ec: ExecutionContext)
 
   override def checkCanceled(): Unit = {
     if (isCancelled) {
-      throw new ControlCancellationException()
+      throw new InterruptedException()
     }
   }
 

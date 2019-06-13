@@ -117,6 +117,6 @@ Try to remove any usage of `sbt-metals` in your build.
 
 ### Module not found: org.scalameta#semanticdb-scalac_2.12.4
 
-Metals works only with Scala 2.12.7 and 2.11.12 at the moment, down to the exact
+Metals works only with Scala 2.13.0, 2.12.8, 2.12.7, and 2.11.12 at the moment, down to the exact
 version. If you are using an older version of Scala then the SemanticDB compiler
 plugin will not resolve.
