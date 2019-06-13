@@ -3,7 +3,6 @@ package tests
 import com.geirsson.coursiersmall.CoursierSmall
 import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
-import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -16,6 +15,7 @@ import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.metals.PackageIndex
@@ -28,7 +28,8 @@ import java.util.concurrent.ScheduledExecutorService
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
-    ClasspathLoader.getURLs(this.getClass.getClassLoader)
+    ClasspathLoader
+      .getURLs(this.getClass.getClassLoader)
       .map(url => Paths.get(url.toURI))
   val scalaLibrary: Seq[Path] = PackageIndex.scalaLibrary
   def extraClasspath: Seq[Path] = Nil

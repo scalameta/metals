@@ -328,7 +328,8 @@ object Bill {
   def myClassLoader: ClassLoader =
     this.getClass.getClassLoader
   def myClasspath: Seq[Path] =
-    ClasspathLoader.getURLs(myClassLoader)
+    ClasspathLoader
+      .getURLs(myClassLoader)
       .map(url => Paths.get(url.toURI))
 
   def cwd: Path = Paths.get(System.getProperty("user.dir"))

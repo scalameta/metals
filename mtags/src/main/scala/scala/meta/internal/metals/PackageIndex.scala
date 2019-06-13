@@ -133,7 +133,8 @@ object PackageIndex {
     } yield entry
 
   def scalaLibrary: Seq[Path] = {
-    ClasspathLoader.getURLs(this.getClass.getClassLoader)
+    ClasspathLoader
+      .getURLs(this.getClass.getClassLoader)
       .iterator
       .filter(_.getPath.contains("scala-library"))
       .map(url => Paths.get(url.toURI))
