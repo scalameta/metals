@@ -1,13 +1,14 @@
 package tests.pc
 
-import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
 import tests.BaseSignatureHelpSuite
+import scala.meta.internal.mtags.ClasspathLoader
 
 object HKSignatureHelpSuite extends BaseSignatureHelpSuite {
   override def extraClasspath: List[Path] =
-    ClasspathLoader.getURLs(this.getClass.getClassLoader)
+    ClasspathLoader
+      .getURLs(this.getClass.getClassLoader)
       .map(url => Paths.get(url.toURI))
       .toList
 

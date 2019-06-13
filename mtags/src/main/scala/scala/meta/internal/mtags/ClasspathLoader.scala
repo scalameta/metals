@@ -9,6 +9,7 @@ import scala.meta.io.RelativePath
 import sun.misc.Unsafe
 
 object ClasspathLoader {
+
   /**
    * Utility to get SystemClassLoader/ClassLoader urls in java8 and java9+
    *   Based upon: https://gist.github.com/hengyunabc/644f8e84908b7b405c532a51d8e34ba9
@@ -17,7 +18,10 @@ object ClasspathLoader {
     if (classLoader.isInstanceOf[URLClassLoader]) {
       classLoader.asInstanceOf[URLClassLoader].getURLs()
       // java9+
-    } else if (classLoader.getClass().getName().startsWith("jdk.internal.loader.ClassLoaders$")) {
+    } else if (classLoader
+        .getClass()
+        .getName()
+        .startsWith("jdk.internal.loader.ClassLoaders$")) {
       try {
         val field = classOf[Unsafe].getDeclaredField("theUnsafe")
         field.setAccessible(true)
@@ -31,7 +35,10 @@ object ClasspathLoader {
         // jdk.internal.loader.URLClassPath.path
         val pathField = ucpField.getType().getDeclaredField("path")
         val pathFieldOffset = unsafe.objectFieldOffset(pathField)
-        val paths: Seq[URL] = unsafe.getObject(ucpObject, pathFieldOffset).asInstanceOf[util.ArrayList[URL]].asScala
+        val paths: Seq[URL] = unsafe
+          .getObject(ucpObject, pathFieldOffset)
+          .asInstanceOf[util.ArrayList[URL]]
+          .asScala
 
         paths
       } catch {

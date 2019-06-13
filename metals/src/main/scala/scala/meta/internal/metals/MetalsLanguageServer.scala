@@ -369,7 +369,6 @@ class MetalsLanguageServer(
   ): CompletableFuture[InitializeResult] = {
     timed("initialize")(Future {
       setupJna()
-      warnUnsupportedJavaVersion()
       initializeParams = Option(params)
       updateWorkspaceDirectory(params)
       val capabilities = new ServerCapabilities()
@@ -405,19 +404,6 @@ class MetalsLanguageServer(
       }
       new InitializeResult(capabilities)
     }).asJava
-  }
-
-  def isUnsupportedJavaVersion: Boolean =
-    scala.util.Properties.isJavaAtLeast("9")
-  def warnUnsupportedJavaVersion(): Unit = {
-    if (isUnsupportedJavaVersion) {
-      val javaVersion = System.getProperty("java.version")
-      val message =
-        s"Unsupported Java version $javaVersion, no functionality will work. " +
-          s"To fix this problem, restart the server using Java 8."
-      languageClient.showMessage(new MessageParams(MessageType.Error, message))
-      scribe.error(message)
-    }
   }
 
   private def registerNiceToHaveFilePatterns(): Unit = {
@@ -1073,8 +1059,6 @@ class MetalsLanguageServer(
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
     if (!buildTools.isAutoConnectable) {
-      Future.successful(BuildChange.None)
-    } else if (isUnsupportedJavaVersion) {
       Future.successful(BuildChange.None)
     } else {
       autoConnectToBuildServer()
