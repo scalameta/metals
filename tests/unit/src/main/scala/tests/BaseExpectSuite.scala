@@ -12,17 +12,8 @@ import scala.meta.io.Classpath
 abstract class BaseExpectSuite(val suiteName: String) extends BaseSuite {
   lazy val input = InputProperties.default()
 
-  lazy val symtab = {
-    val bootClasspath =
-      sys.props
-        .collectFirst {
-          case (k, v) if k.endsWith(".boot.class.path") => Classpath(v)
-        }
-        .getOrElse(Classpath(Nil))
-    GlobalSymbolTable(
-      input.classpath ++ bootClasspath
-    )
-  }
+  lazy val symtab = GlobalSymbolTable(input.classpath, true)
+
   final lazy val sourceroot: AbsolutePath =
     AbsolutePath(BuildInfo.sourceroot)
   final lazy val classpath =
