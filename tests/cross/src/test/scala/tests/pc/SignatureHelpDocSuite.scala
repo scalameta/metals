@@ -93,7 +93,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |        ^^^^^^^^^^^^^
            |  @param ifEmpty String the expression to evaluate if empty.
            |  @param f the function to apply if nonempty.
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
   checkDoc(
@@ -140,7 +140,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
         """|
            |map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
   checkDoc(
@@ -292,7 +292,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |valueOf(data: Array[Char], offset: Int, count: Int): String
            |valueOf(data: Array[Char]): String
            |valueOf(obj: Object): String
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
   check(
@@ -325,7 +325,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |valueOf(l: Long): String
            |valueOf(obj: Object): String
            |valueOf(data: Array[Char], offset: Int, count: Int): String
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
   checkDoc(

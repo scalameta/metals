@@ -42,7 +42,7 @@ object PrettyPrintSuite extends BaseCompletionSuite {
     // `sym.info` on the supermethod has an error result type.
     "def foo(x: Int): Any",
     compat = Map(
-      "2.13" -> "def foo(x: Int): x.type",
+      "2.13" -> "def foo(x: Int): x.type"
     )
   )
 

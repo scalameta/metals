@@ -94,8 +94,8 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         """|ju.ArrayDeque[$0]
            |mutable.ArrayDeque
            |mutable.ArrayDequeOps
-           |""".stripMargin,
-      )
+           |""".stripMargin
+    )
   )
 
   checkSnippet(
@@ -122,8 +122,8 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable[$0] {}
            |IterableOnce[$0] {}
-           |""".stripMargin,
-      )
+           |""".stripMargin
+    )
   )
 
   checkSnippet(
@@ -140,7 +140,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable[$0]
            |IterableOnce[$0]
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -158,7 +158,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         """|Iterable
            |Iterable[$0]
            |IterableOnce[$0]
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 

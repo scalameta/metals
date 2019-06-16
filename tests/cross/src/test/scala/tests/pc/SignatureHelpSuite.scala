@@ -53,7 +53,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       "2.13" ->
         """|map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
   check(
@@ -276,7 +276,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|lengthCompare(len: Int): Int
            |              ^^^^^^^^
            |lengthCompare(that: Iterable[_]): Int
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
   check(
@@ -523,7 +523,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       "2.13" ->
         """|map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -541,7 +541,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       "2.13" ->
         """|map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
   check(
@@ -606,7 +606,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
       "2.13" ->
         """|Map[K, V]: Map
            |       ^
-           | """.stripMargin,
+           | """.stripMargin
     )
   )
 
@@ -682,7 +682,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
            |unapplySeq(c: Char): Option[List[Char]]
            |unapplySeq(s: CharSequence): Option[List[String]]
            |           ^^^^^^^^^^^^^^^
-           | """.stripMargin,
+           | """.stripMargin
     )
   )
 

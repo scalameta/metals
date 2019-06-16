@@ -17,7 +17,7 @@ object HoverTermSuite extends BaseHoverSuite {
       "2.13" ->
         """|List[String]
            |final override def map[B](f: Int => B): List[B]
-           |""".stripMargin.hover,
+           |""".stripMargin.hover
     )
   )
 
@@ -75,7 +75,7 @@ object HoverTermSuite extends BaseHoverSuite {
       "2.13" ->
         """|String
            |def s(args: Any*): String = macro
-           |""".stripMargin.hover,
+           |""".stripMargin.hover
     )
   )
 

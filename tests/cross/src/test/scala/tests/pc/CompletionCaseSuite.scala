@@ -368,7 +368,7 @@ object CompletionCaseSuite extends BaseCompletionSuite {
       "2.13" ->
         """|case Nil => scala.collection.immutable
            |case head :: next => scala.collection.immutable
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 

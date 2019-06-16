@@ -125,7 +125,7 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
            |override def equals(x$1: Any): Boolean
            |override def hashCode(): Int
            |override def finalize(): Unit
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -148,7 +148,7 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
         """|valueOf[T](implicit vt: ValueOf[T]): T
            |val
            |var
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -169,7 +169,7 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       "2.13" ->
         """|value: Int
            |valueOf[T](implicit vt: ValueOf[T]): T
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 

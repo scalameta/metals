@@ -17,7 +17,7 @@ abstract class BaseHoverSuite
       expected: String,
       includeRange: Boolean = false,
       automaticPackage: Boolean = true,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   ): Unit = {
     test(name) {
       val filename = "Hover.scala"

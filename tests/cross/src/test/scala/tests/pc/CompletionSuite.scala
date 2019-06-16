@@ -129,7 +129,7 @@ object CompletionSuite extends BaseCompletionSuite {
            |override def toString(): String
            |override def clone(): Object
            |override def finalize(): Unit
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -209,7 +209,6 @@ object CompletionSuite extends BaseCompletionSuite {
            |synchronized[T0](x$1: T0): T0
            |toString(): String
            |""".stripMargin,
-
       "2.11" ->
         """|apply[A](xs: A*): List[A]
            |canBuildFrom[A]: CanBuildFrom[List.Coll,A,List[A]]
@@ -757,7 +756,7 @@ object CompletionSuite extends BaseCompletionSuite {
         """|Iterable scala.collection
            |Iterable[+A] = Iterable
            |IterableOnce[+A] = IterableOnce
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -818,9 +817,8 @@ object CompletionSuite extends BaseCompletionSuite {
            |CloneNotSupportedException java.lang
            |EnumConstantNotPresentException java.lang
            |TypeNotPresentException java.lang
-           |""".stripMargin,
+           |""".stripMargin
     )
-
   )
 
   check(
@@ -840,7 +838,7 @@ object CompletionSuite extends BaseCompletionSuite {
         """|Some scala
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -861,7 +859,7 @@ object CompletionSuite extends BaseCompletionSuite {
         """|Some scala
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 

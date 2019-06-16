@@ -49,8 +49,8 @@ object HoverDocSuite extends BaseHoverSuite {
            |```
            |List<String> s = Collections.emptyList();
            |```
-           |""".stripMargin,
-        )
+           |""".stripMargin
+    )
   )
 
 }

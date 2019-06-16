@@ -89,7 +89,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
           |    override def foreach[U](f: Int => U): Unit = ${0:???}
           |  }
           |}
-          |""".stripMargin,
+          |""".stripMargin
     )
   )
 
@@ -174,7 +174,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
            |override def toString(): String
            |override def clone(): Object
            |override def finalize(): Unit
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -221,7 +221,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |  }
       |}
     """.stripMargin,
-    filter = _.contains("iterat"),
+    filter = _.contains("iterat")
   )
 
   check(
@@ -864,7 +864,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
         """|def hello1: Int
            |def
            |override def equals(obj: Object): Boolean
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 

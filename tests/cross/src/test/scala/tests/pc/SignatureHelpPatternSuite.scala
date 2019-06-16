@@ -19,7 +19,7 @@ object SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       "2.13" ->
         """|map[B](f: ((Int, Int)) => B): List[B]
            |       ^^^^^^^^^^^^^^^^^^^^
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 

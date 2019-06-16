@@ -196,7 +196,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
         s"""
            |$predefDocString
            |Predef scala
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
   check(
