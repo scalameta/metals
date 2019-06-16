@@ -20,7 +20,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
     """
       |object Main {
       |  printl@@
-      |  
+      |
       |}
       |""".stripMargin,
     """|println()
@@ -48,7 +48,7 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
       |}
       |object Main {
       |  new Foo().toStrin@@
-      |  
+      |
       |}
       |""".stripMargin,
     // even if `Foo.toString` is nullary, it overrides `Object.toString()`
@@ -88,7 +88,14 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|ju.ArrayDeque[$0]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|ju.ArrayDeque[$0]
+           |mutable.ArrayDeque
+           |mutable.ArrayDequeOps
+           |""".stripMargin,
+      )
   )
 
   checkSnippet(
@@ -109,7 +116,14 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|Iterable
        |Iterable[$0] {}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|Iterable
+           |Iterable[$0] {}
+           |IterableOnce[$0] {}
+           |""".stripMargin,
+      )
   )
 
   checkSnippet(
@@ -120,7 +134,14 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|Iterable
        |Iterable[$0]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|Iterable
+           |Iterable[$0]
+           |IterableOnce[$0]
+           |""".stripMargin,
+    )
   )
 
   checkSnippet(
@@ -131,7 +152,14 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|Iterable
        |Iterable[$0]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|Iterable
+           |Iterable[$0]
+           |IterableOnce[$0]
+           |""".stripMargin,
+    )
   )
 
   checkEditLine(

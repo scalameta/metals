@@ -103,7 +103,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   def checkSnippet(
       name: String,
       original: String,
-      expected: String
+      expected: String,
+      compat: Map[String, String] = Map.empty
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val items = getItems(original)
@@ -114,7 +115,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
             .getOrElse(item.getLabel)
         }
         .mkString("\n")
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, getExpected(expected, compat))
     }
   }
 
