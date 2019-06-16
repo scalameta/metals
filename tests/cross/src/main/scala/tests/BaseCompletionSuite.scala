@@ -74,7 +74,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       filterText: String = "",
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
-      command: Option[String] = None
+      command: Option[String] = None,
+      compat: Map[String, String] = Map.empty
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val items = getItems(original).filter(item => filter(item.getLabel))
@@ -87,7 +88,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       val item = items.head
       val (code, _) = params(original)
       val obtained = TextEdits.applyEdits(code, item)
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, getExpected(expected, compat))
       if (filterText.nonEmpty) {
         assertNoDiff(item.getFilterText, filterText, "Invalid filter text")
       }

@@ -62,7 +62,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    filter = _.contains("iter")
+    filter = _.contains("iterat")
   )
 
   checkEdit(
@@ -80,7 +80,17 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |    def foreach[U](f: Int => U): Unit = ${0:???}
       |  }
       |}
-      |""".stripMargin
+      |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """
+          |object Main {
+          |  new scala.Traversable[Int] {
+          |    override def foreach[U](f: Int => U): Unit = ${0:???}
+          |  }
+          |}
+          |""".stripMargin,
+    )
   )
 
   checkEdit(
@@ -154,7 +164,18 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |override def clone(): Object
        |override def finalize(): Unit
        |""".stripMargin,
-    includeDetail = false
+    includeDetail = false,
+    compat = Map(
+      "2.13" ->
+        """|override def aaa: Int
+           |override def bbb: Int
+           |override def equals(obj: Object): Boolean
+           |override def hashCode(): Int
+           |override def toString(): String
+           |override def clone(): Object
+           |override def finalize(): Unit
+           |""".stripMargin,
+    )
   )
 
   def implement(completion: String): String =
@@ -200,7 +221,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |  }
       |}
     """.stripMargin,
-    filter = _.contains("iter")
+    filter = _.contains("iterat"),
   )
 
   check(
@@ -837,7 +858,14 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |override def equals(obj: Any): Boolean
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(3)
+    topLines = Some(3),
+    compat = Map(
+      "2.13" ->
+        """|def hello1: Int
+           |def
+           |override def equals(obj: Object): Boolean
+           |""".stripMargin,
+    )
   )
 
   checkEdit(
