@@ -115,7 +115,18 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
        |override def equals(x$1: Any): Boolean
        |override def hashCode(): Int
        |override def finalize(): Unit
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|value: Int
+           |valueOf[T](implicit vt: ValueOf[T]): T
+           |val
+           |var
+           |override def equals(x$1: Any): Boolean
+           |override def hashCode(): Int
+           |override def finalize(): Unit
+           |""".stripMargin,
+    )
   )
 
   check(
@@ -131,7 +142,14 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|val
        |var
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|valueOf[T](implicit vt: ValueOf[T]): T
+           |val
+           |var
+           |""".stripMargin,
+    )
   )
 
   check(
@@ -146,7 +164,13 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|value: Int
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|value: Int
+           |valueOf[T](implicit vt: ValueOf[T]): T
+           |""".stripMargin,
+    )
   )
 
   checkEditLine(
