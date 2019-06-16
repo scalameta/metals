@@ -155,7 +155,6 @@ final class InteractiveSemanticdbs(
         .semanticdbTextDocument(uri, text)
         .get(config.compilers.timeoutDelay, config.compilers.timeoutUnit)
       val textDocument = TextDocument.parseFrom(bytes)
-      textDocumentCache.put(source, textDocument)
       PlatformTokenizerCache.megaCache.clear() // :facepalm:
       textDocument
     }
