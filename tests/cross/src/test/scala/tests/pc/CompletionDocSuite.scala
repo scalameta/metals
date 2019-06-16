@@ -55,7 +55,12 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|singletonList[T](o: T): List[T]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|singletonList[T <: Object](o: T): List[T]
+           |""".stripMargin
+    )
   )
   check(
     "java5",
@@ -123,13 +128,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true
   )
-  check(
-    "scala3",
-    """
-      |object A {
-      |  Predef@@
-      |}
-    """.stripMargin,
+  def predefDocString =
     """|
        |> The `Predef` object provides definitions that are accessible in all Scala
        | compilation units without explicit qualification.
@@ -177,10 +176,28 @@ object CompletionDocSuite extends BaseCompletionSuite {
        | are provided for the "widening" of numeric values, for instance, converting a
        | Short value to a Long value as required, and to add additional higher-order
        | functions to Array values. These are described in more detail in the documentation of [scala.Array](scala.Array).
+       |""".stripMargin.trim
+
+  check(
+    "scala3",
+    """
+      |object A {
+      |  Predef@@
+      |}
+    """.stripMargin,
+    s"""
+       |$predefDocString
        |Predef scala
        |DeprecatedPredef scala
        |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
+    compat = Map(
+      "2.13" ->
+        s"""
+           |$predefDocString
+           |Predef scala
+           |""".stripMargin,
+    )
   )
   check(
     "scala4",
@@ -230,7 +247,58 @@ object CompletionDocSuite extends BaseCompletionSuite {
        | that inspects the next element without discarding it.
        |BufferedIterator scala.collection
        |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
+    compat = Map(
+      "2.13" ->
+        """|> ### class Iterator
+           |Iterators are data structures that allow to iterate over a sequence
+           | of elements. They have a `hasNext` method for checking
+           | if there is a next element available, and a `next` method
+           | which returns the next element and advances the iterator.
+           |
+           | An iterator is mutable: most operations on it change its state. While it is often used
+           | to iterate through the elements of a collection, it can also be used without
+           | being backed by any collection (see constructors on the companion object).
+           |
+           | It is of particular importance to note that, unless stated otherwise, *one should never
+           | use an iterator after calling a method on it*. The two most important exceptions
+           | are also the sole abstract methods: `next` and `hasNext`.
+           |
+           | Both these methods can be called any number of times without having to discard the
+           | iterator. Note that even `hasNext` may cause mutation -- such as when iterating
+           | from an input stream, where it will block until the stream is closed or some
+           | input becomes available.
+           |
+           | Consider this example for safe and unsafe use:
+           |
+           |```
+           |def f[A](it: Iterator[A]) = {
+           |  if (it.hasNext) {            // Safe to reuse "it" after "hasNext"
+           |    it.next                    // Safe to reuse "it" after "next"
+           |    val remainder = it.drop(2) // it is *not* safe to use "it" again after this line!
+           |    remainder.take(2)          // it is *not* safe to use "remainder" after this line!
+           |  } else it
+           |}
+           |```
+           |
+           |### object Iterator
+           |The `Iterator` object provides various functions for creating specialized iterators.
+           |Iterator scala.collection
+           |> Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses.
+           |AbstractIterator scala.collection
+           |> Buffered iterators are iterators which provide a method `head`
+           | that inspects the next element without discarding it.
+           |BufferedIterator scala.collection
+           |LinearSeqIterator scala.collection
+           |ClassTagIterableFactory scala.collection
+           |EvidenceIterableFactory scala.collection
+           |EvidenceIterableFactoryDefaults scala.collection
+           |IterableFactory scala.collection
+           |IterableFactoryDefaults scala.collection
+           |SortedIterableFactory scala.collection
+           |SpecificIterableFactory scala.collection
+           |""".stripMargin
+    )
   )
 
   def executionDocstring: String =
@@ -383,7 +451,25 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |- `fin`: Finally logic which if defined will be invoked after catch logic
        |Catch - scala.util.control.Exception
        |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
+    compat = Map(
+      "2.13" ->
+        """|> A container class for catch/finally logic.
+           |
+           | Pass a different value for rethrow if you want to probably
+           | unwisely allow catching control exceptions and other throwables
+           | which the rest of the world may expect to get through.
+           |
+           |**Type Parameters**
+           |- `T`: result type of bodies used in try and catch blocks
+           |
+           |**Parameters**
+           |- `fin`: Finally logic which if defined will be invoked after catch logic
+           |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
+           |- `pf`: Partial function used when applying catch logic to determine result value
+           |Catch - scala.util.control.Exception
+           |""".stripMargin
+    )
   )
 
   check(
@@ -464,7 +550,26 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |**Returns:** a new immutable tree map with the updated binding
        |updated[B1 >: Int](key: Int, value: B1): TreeMap[Int,B1]
        |""".stripMargin,
-    includeDocs = true
+    includeDocs = true,
+    compat = Map(
+      "2.13" ->
+        """|> A new TreeMap with the entry added is returned,
+           | if key is *not* in the TreeMap, otherwise
+           | the key is updated with the new entry.
+           |
+           |
+           |**Type Parameters**
+           |- `B1`: type of the value of the new binding which is a supertype of `B`
+           |
+           |**Parameters**
+           |- `value`: the value to be associated with `key`
+           |- `key`: the key that should be updated
+           |
+           |**Returns:** a new immutable tree map with the updated binding
+           |updated[V1 >: Int](key: Int, value: V1): TreeMap[Int,V1]
+           |updatedWith[V1 >: Int](key: Int)(remappingFunction: Option[Int] => Option[V1]): TreeMap[Int,V1]
+           |""".stripMargin
+    )
   )
 
   check(
