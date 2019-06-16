@@ -74,8 +74,8 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |package a
            |import java.util.concurrent.Future/*Future.java*/ // unused
            |import scala.util.Failure/*Try.scala*/ // unused
-           |object Main/*L3*/ extends App/*App.scala*/ {
-           |  val message/*L4*/ = Message/*Message.java:1*/.message/*Message.java:2*/
+           |object Main/*MainSuite.scala:6*/ extends App/*App.scala*/ {
+           |  val message/*;L6;MainSuite.scala:6*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
            |  println/*Predef.scala*/(message/*L4*/)
            |}
@@ -86,7 +86,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |import org.scalatest.FunSuite/*FunSuite.scala*/
            |object MainSuite/*L4*/ extends FunSuite/*FunSuite.scala*/ {
            |  test/*FunSuiteLike.scala*/("a") {
-           |    val condition/*L6*/ = Main/*Main.scala:3*/.message/*Main.scala:4*/.contains/*String.java*/("Hello")
+           |    val condition/*L7*/ = Main/*Main.scala:3*/.message/*Main.scala:4*/.contains/*String.java*/("Hello")
            |    assert/*Assertions.scala*/(condition/*L6*/)
            |  }
            |}
@@ -111,7 +111,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |package a
            |import java.util.concurrent.Future/*Future.java*/ // unused
            |import scala.util.Failure/*Try.scala*/ // unused
-           |object Main/*L5*/ extends App/*App.scala*/ {
+           |object Main/*MainSuite.scala:8*/ extends App/*App.scala*/ {
            |  val helloMessage/*<no symbol>*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
            |  println/*Predef.scala*/(message/*<no symbol>*/)
@@ -125,8 +125,65 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |import org.scalatest.FunSuite/*FunSuite.scala*/
            |object MainSuite/*L6*/ extends FunSuite/*FunSuite.scala*/ {
            |  test/*FunSuiteLike.scala*/(testName/*<no symbol>*/) {
-           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java*/("Hello")
+           |    val condition/*L9*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java*/("Hello")
            |    assert/*Assertions.scala*/(condition/*L8*/)
+           |  }
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  // This test makes sure that textDocument/definition returns reference locations
+  // instead of definition location if the symbol at the given text document position
+  // represents a definition itself.
+  // https://github.com/scalameta/metals/issues/755
+  testAsync("definition-fallback-to-show-usages") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {},
+          |  "b": {
+          |    "dependsOn": [ "a" ]
+          |  }
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |object A {
+          |  val name = "John"
+          |  def main() = {
+          |    println(name)
+          |  }
+          |}
+          |/b/src/main/scala/a/B.scala
+          |package a
+          |object B {
+          |  def main() = {
+          |    println(A.name)
+          |  }
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didOpen("b/src/main/scala/a/B.scala")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/a/A.scala
+           |package a
+           |object A/*B.scala:3*/ {
+           |  val name/*;B.scala:3;L4*/ = "John"
+           |  def main/*L3*/() = {
+           |    println/*Predef.scala*/(name/*L2*/)
+           |  }
+           |}
+           |/b/src/main/scala/a/B.scala
+           |package a
+           |object B/*L1*/ {
+           |  def main/*L2*/() = {
+           |    println/*Predef.scala*/(A/*A.scala:1*/.name/*A.scala:2*/)
            |  }
            |}
            |""".stripMargin
@@ -170,14 +227,14 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |/**
            | * Must obey the laws defined in cats.laws.ContravariantLaws.
            | */
-           |@typeclass/*<no symbol>*/ trait Contravariant/*L5*/[F/*L5*/[_]] extends Invariant/*Invariant.scala*/[F/*L5*/] { self/*L5*/ =>
+           |@typeclass/*<no symbol>*/ trait Contravariant/*L5*/[F/*L5*/[_]] extends Invariant/*Invariant.scala*/[F/*L5*/] { self/*L1*/ =>
            |  def contramap/*L6*/[A/*L6*/, B/*L6*/](fa/*L6*/: F/*L5*/[A/*L6*/])(f/*L6*/: B/*L6*/ => A/*L6*/): F/*L5*/[B/*L6*/]
            |  override def imap/*L7*/[A/*L7*/, B/*L7*/](fa/*L7*/: F/*L5*/[A/*L7*/])(f/*L7*/: A/*L7*/ => B/*L7*/)(fi/*L7*/: B/*L7*/ => A/*L7*/): F/*L5*/[B/*L7*/] = contramap/*L6*/(fa/*L7*/)(fi/*L7*/)
            |
            |  def compose/*L9*/[G/*L9*/[_]:/*unexpected: L5*/ Contravariant/*L5*/]: Functor/*Functor.scala*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
            |    new ComposedContravariant/*Composed.scala*/[F/*L5*/, G/*L9*/] {
            |      val F/*L11*/ = self/*L5*/
-           |      val G/*L12*/ = Contravariant/*L5*/[G/*L9*/]
+           |      val G/*L12*/ = Contravariant/*<no symbol>*/[G/*L9*/]
            |    }
            |
            |  /**
@@ -217,6 +274,9 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
            |.metals/readonly/cats/Contravariant.scala:10:45: information: <error> takes no type parameters, expected: one
            |  def compose[G[_]: Contravariant]: Functor[λ[α => F[G[α]]]] =
            |                                            ^
+           |.metals/readonly/cats/Contravariant.scala:13:15: information: not found: value Contravariant
+           |      val G = Contravariant[G]
+           |              ^^^^^^^^^^^^^
            |.metals/readonly/cats/Contravariant.scala:24:61: information: not found: type λ
            |  override def composeFunctor[G[_]: Functor]: Contravariant[λ[α => F[G[α]]]] =
            |                                                            ^
@@ -306,7 +366,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
           |/a/src/main/scala/a/Main.scala
           |package a
           |object Main/*L1*/ {
-          |  val user/*L2*/ = User/*User.scala:2*/("John")
+          |  val user/*L3*/ = User/*User.scala:2*/("John")
           |  val name/*L3*/ = user/*L2*/.name/*User.scala:2*/
           |  val encoder/*L4*/ = User/*User.scala:2*/.encodeUser/*User.scala:2*/
           |}
@@ -315,7 +375,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
     } yield ()
   }
 
-  testAsync("fallback") {
+  testAsync("fallback-to-presentation-compiler") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -337,7 +397,7 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
       )
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        // assert that `name` and `assert` resolve even if they have not been saved.
+        // assert that definition of `name` and `assert` resolve even if they have not been saved.
         """|/a/src/main/scala/a/Main.scala
            |package a
            |object Main/*L1*/ {

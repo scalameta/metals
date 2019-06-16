@@ -740,7 +740,7 @@ class MetalsLanguageServer(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { token =>
-      definitionResult(position, token).map(_.locations)
+      definitionOrReferences(position, token).map(_.locations)
     }
 
   @JsonRequest("textDocument/typeDefinition")
@@ -820,21 +820,7 @@ class MetalsLanguageServer(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens { _ =>
-      val timer = new Timer(time)
-      val result = referencesResult(params)
-      if (config.statistics.isReferences) {
-        if (result.symbol.isEmpty) {
-          scribe.info(s"time: found 0 references in $timer")
-        } else {
-          scribe.info(
-            s"time: found ${result.locations.length} references to symbol '${result.symbol}' in $timer"
-          )
-        }
-      }
-      if (result.symbol.nonEmpty) {
-        compileAndLookForNewReferences(params, result)
-      }
-      result.locations.asJava
+      referencesResult(params).locations.asJava
     }
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
@@ -870,7 +856,7 @@ class MetalsLanguageServer(
       newParams match {
         case None =>
         case Some(p) =>
-          val newResult = referencesResult(p)
+          val newResult = referencesProvider.references(p)
           val diff = newResult.locations.length - result.locations.length
           val isSameSymbol = newResult.symbol == result.symbol
           if (isSameSymbol && diff > 0) {
@@ -884,8 +870,23 @@ class MetalsLanguageServer(
       }
     }
   }
-  def referencesResult(params: ReferenceParams): ReferencesResult =
-    referencesProvider.references(params)
+  def referencesResult(params: ReferenceParams): ReferencesResult = {
+    val timer = new Timer(time)
+    val result = referencesProvider.references(params)
+    if (config.statistics.isReferences) {
+      if (result.symbol.isEmpty) {
+        scribe.info(s"time: found 0 references in $timer")
+      } else {
+        scribe.info(
+          s"time: found ${result.locations.length} references to symbol '${result.symbol}' in $timer"
+        )
+      }
+    }
+    if (result.symbol.nonEmpty) {
+      compileAndLookForNewReferences(params, result)
+    }
+    result
+  }
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
     CancelTokens.future { token =>
@@ -1417,6 +1418,65 @@ class MetalsLanguageServer(
       slowConnectToBuildServer(forceImport = false)
     } else {
       Future.successful(BuildChange.None)
+    }
+  }
+
+  /**
+   * Returns the the definition location or reference locations of a symbol
+   * at a given text document position.
+   * If the symbol represents the definition itself, this method returns
+   * the reference locations, otherwise this returns definition location.
+   * https://github.com/scalameta/metals/issues/755
+   */
+  def definitionOrReferences(
+      position: TextDocumentPositionParams,
+      token: CancelToken = EmptyCancelToken
+  ): Future[DefinitionResult] = {
+    val source = position.getTextDocument.getUri.toAbsolutePath
+    if (source.toLanguage.isScala) {
+      (for {
+        doc <- semanticdbs.textDocument(source).documentIncludingStale
+        positionOccurrence = definitionProvider.positionOccurrence(
+          source,
+          position,
+          doc
+        )
+        occ <- positionOccurrence.occurrence
+      } yield occ) match {
+        case Some(occ) =>
+          if (occ.role.isDefinition) {
+            val referecneContext = new ReferenceContext(false)
+            val refParams = new ReferenceParams(referecneContext)
+            refParams.setTextDocument(position.getTextDocument())
+            refParams.setPosition(position.getPosition())
+            val result = referencesResult(refParams)
+            if (result.locations.isEmpty) {
+              // Fallback again to the original behavior that returns
+              // the definition location itself if no reference locations found,
+              // for avoiding the confusing messages like "No definition found ..."
+              definitionResult(position, token)
+            } else {
+              Future.successful(
+                DefinitionResult(
+                  locations = result.locations.asJava,
+                  symbol = result.symbol,
+                  definition = None,
+                  semanticdb = None
+                )
+              )
+            }
+          } else {
+            definitionResult(position, token)
+          }
+        case None =>
+          warnings.noSemanticdb(source)
+          // Even if it failed to retrieve the symbol occurrence from semanticdb,
+          // try to find its definitions from presentation compiler.
+          definitionResult(position, token)
+      }
+    } else {
+      // Ignore non-scala files.
+      Future.successful(DefinitionResult.empty)
     }
   }
 

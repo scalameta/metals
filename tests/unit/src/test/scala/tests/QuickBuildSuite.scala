@@ -55,8 +55,8 @@ object QuickBuildSuite extends BaseSlowSuite("quick-build") {
            |package a
            |import com.geirsson.coursiersmall._
            |import scala.util.Success/*Try.scala*/
-           |object A/*L3*/ {
-           |  val settings/*L4*/ = new Settings/*Settings.scala*/()
+           |object A/*B.scala:6*/ {
+           |  val settings/*B.scala:6*/ = new Settings/*Settings.scala*/()
            |}
            |/b/src/main/scala/b/B.scala
            |package b
