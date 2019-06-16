@@ -94,12 +94,10 @@ case class QuickBuild(
       s"src/main/scala-$binaryVersion",
       s"src/main/scala-$binaryVersion"
     ).map(relpath => baseDirectory.resolve(relpath))
-    val allDependencies =
-      if (libraryDependencies.isEmpty) {
-        Array(s"org.scala-lang:scala-library:$scalaVersion")
-      } else {
-        libraryDependencies
-      }
+    val allDependencies = Array(
+      s"org.scala-lang:scala-library:$scalaVersion",
+      s"org.scala-lang:scala-reflect:$scalaVersion"
+    ) ++ libraryDependencies
     val allJars = classDirectory :: QuickBuild.fetch(
       allDependencies,
       scalaVersion,

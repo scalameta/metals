@@ -55,6 +55,25 @@ final class BuildTargets() {
       scalac <- scalacTargetInfo.get(id)
     } yield ScalaTarget(target, scalac)
 
+  def scalaTarget(id: BuildTargetIdentifier): Option[ScalaTarget] =
+    for {
+      info <- buildTargetInfo.get(id)
+      scalac <- scalacTargetInfo.get(id)
+    } yield ScalaTarget(info, scalac)
+
+  def allWorkspaceJars: Iterator[AbsolutePath] = {
+    val isVisited = mutable.Set.empty[AbsolutePath]
+    for {
+      target <- all
+      classpathEntry <- target.scalac.classpath
+      if classpathEntry.extension == "jar"
+      if !isVisited(classpathEntry)
+    } yield {
+      isVisited += classpathEntry
+      classpathEntry
+    }
+  }
+
   def addSourceDirectory(
       directory: AbsolutePath,
       buildTarget: BuildTargetIdentifier
@@ -71,6 +90,15 @@ final class BuildTargets() {
       buildTarget <- sourceBuildTargets(source)
     } {
       linkSourceFile(buildTarget, source)
+    }
+  }
+
+  def buildTargetSources(
+      id: BuildTargetIdentifier
+  ): Iterable[AbsolutePath] = {
+    this.buildTargetSources.get(id) match {
+      case None => Nil
+      case Some(value) => value.asScala
     }
   }
 

@@ -11,23 +11,25 @@ import com.google.gson.JsonObject
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
-import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
+import java.util.concurrent.atomic.AtomicBoolean
+import scala.meta.internal.tvp._
 
 /**
  * A build client that forwards notifications from the build server to the language client.
  */
 final class ForwardingMetalsBuildClient(
-    languageClient: LanguageClient,
+    languageClient: MetalsLanguageClient,
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
     config: MetalsServerConfig,
     statusBar: StatusBar,
     time: Time,
-    didCompile: CompileReport => Unit
+    didCompile: CompileReport => Unit,
+    treeViewProvider: () => TreeViewProvider
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -46,8 +48,12 @@ final class ForwardingMetalsBuildClient(
   def reset(): Unit = {
     cancel()
   }
+
   override def cancel(): Unit = {
-    compilations.values.foreach { compilation =>
+    for {
+      key <- compilations.keysIterator
+      compilation <- compilations.remove(key)
+    } {
       compilation.promise.cancel()
     }
   }
@@ -90,7 +96,7 @@ final class ForwardingMetalsBuildClient(
         } {
           diagnostics.onStartCompileBuildTarget(task.getTarget)
           // cancel ongoing compilation for the current target, if any.
-          compilations.get(task.getTarget).foreach(_.promise.cancel())
+          compilations.remove(task.getTarget).foreach(_.promise.cancel())
 
           val name = info.getDisplayName
           val promise = Promise[CompileReport]()
@@ -115,7 +121,7 @@ final class ForwardingMetalsBuildClient(
       case TaskDataKind.COMPILE_REPORT =>
         for {
           report <- params.asCompileReport
-          compilation <- compilations.get(report.getTarget)
+          compilation <- compilations.remove(report.getTarget)
         } {
           diagnostics.onFinishCompileBuildTarget(report.getTarget)
           didCompile(report)
@@ -135,6 +141,9 @@ final class ForwardingMetalsBuildClient(
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
               statusBar.addMessage(message)
+            }
+            if (!compilation.isNoOp) {
+              treeViewProvider().onBuildTargetDidCompile(report.getTarget())
             }
             hasReportedError.remove(target)
           } else {
@@ -173,5 +182,51 @@ final class ForwardingMetalsBuildClient(
         }
       case _ =>
     }
+  }
+
+  def ongoingCompilations: Array[TreeViewNode] = {
+    compilations.keysIterator.flatMap(ongoingCompileNode).toArray
+  }
+
+  def ongoingCompileNode(
+      id: BuildTargetIdentifier
+  ): Option[TreeViewNode] = {
+    for {
+      compilation <- compilations.get(id)
+      info <- buildTargets.info(id)
+    } yield
+      TreeViewNode(
+        "compile",
+        id.getUri,
+        s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progress.percentage}%)"
+      )
+  }
+
+  def ongoingCompilationNode: TreeViewNode = {
+    val size = compilations.size
+    val counter = if (size > 0) s" ($size)" else ""
+    TreeViewNode(
+      "compile",
+      "metals://ongoing-compilations",
+      s"Ongoing compilations$counter",
+      collapseState = MetalsTreeItemCollapseState.collapsed
+    )
+  }
+
+  def toplevelTreeNodes: Array[TreeViewNode] =
+    Array(ongoingCompilationNode)
+
+  private val wasEmpty = new AtomicBoolean(true)
+  private val isEmpty = new AtomicBoolean(true)
+  def tickBuildTreeView(): Unit = {
+    isEmpty.set(compilations.isEmpty)
+    if (wasEmpty.get() && isEmpty.get()) {
+      () // Nothing changed since the last notification.
+    } else {
+      languageClient.metalsTreeViewDidChange(
+        TreeViewDidChangeParams(toplevelTreeNodes)
+      )
+    }
+    wasEmpty.set(isEmpty.get())
   }
 }

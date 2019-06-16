@@ -33,6 +33,7 @@ import scala.meta.internal.builds.GradleBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MillBuildTool
+import scala.meta.internal.tvp.TreeViewDidChangeParams
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -226,4 +227,8 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   ): CompletableFuture[MetalsInputBoxResult] = {
     CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
   }
+
+  override def metalsTreeViewDidChange(
+      params: TreeViewDidChangeParams
+  ): Unit = ()
 }

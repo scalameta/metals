@@ -119,6 +119,7 @@ class BaseSuite extends TestSuite {
     override def exceptionStackFrameHighlighter(
         s: StackTraceElement
     ): Boolean = {
+      s.getClassName.startsWith("scala.meta.internal.tvp.") ||
       s.getClassName.startsWith("scala.meta.internal.pc.") ||
       s.getClassName.startsWith("scala.meta.internal.mtags.") ||
       s.getClassName.startsWith("scala.meta.internal.metals.") ||

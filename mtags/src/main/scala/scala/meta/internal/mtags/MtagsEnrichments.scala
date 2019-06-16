@@ -25,6 +25,7 @@ import scala.meta.internal.io.PathIO
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
+import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
@@ -53,6 +54,8 @@ trait MtagsEnrichments {
     else Language.UNKNOWN_LANGUAGE
   }
   implicit class XtensionPathMetals(file: Path) {
+    def isClassfile: Boolean = filename.endsWith(".class")
+    def filename: String = file.getFileName().toString()
     def toLanguage: Language = {
       filenameToLanguage(file.getFileName.toString)
     }
@@ -311,7 +314,12 @@ trait MtagsEnrichments {
       params.text().charAt(params.offset()).isWhitespace
     }
   }
-  implicit class XtensionListOps[T](lst: List[T]) {
+  implicit class XtensionIterableOps[T](lst: Iterable[T]) {
+    def distinctBy[B](fn: T => B): List[T] = {
+      new XtensionIteratorOps(lst.iterator).distinctBy(fn)
+    }
+  }
+  implicit class XtensionIteratorOps[T](lst: Iterator[T]) {
     def distinctBy[B](fn: T => B): List[T] = {
       val isVisited = mutable.Set.empty[B]
       val buf = mutable.ListBuffer.empty[T]
@@ -334,5 +342,10 @@ trait MtagsEnrichments {
         case _: CancellationException =>
           true
       }
+  }
+  implicit class XtensionSemanticdbProperties(properties: Int) {
+    def isEnum: Boolean = (properties & p.ENUM.value) != 0
+    def isVar: Boolean = (properties & p.VAR.value) != 0
+    def isVal: Boolean = (properties & p.VAL.value) != 0
   }
 }

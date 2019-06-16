@@ -21,11 +21,12 @@ import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j._
+import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable.HashSet
+import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -36,6 +37,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.tvp._
 import scala.meta.internal.mtags._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
@@ -44,6 +46,8 @@ import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonObject
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -158,6 +162,7 @@ class MetalsLanguageServer(
   private var embedded: Embedded = _
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
+  var treeView: TreeViewProvider = NoopTreeViewProvider
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = client
@@ -231,7 +236,8 @@ class MetalsLanguageServer(
       config,
       statusBar,
       time,
-      report => compilers.didCompile(report)
+      report => compilers.didCompile(report),
+      () => treeView
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -355,6 +361,18 @@ class MetalsLanguageServer(
       tables,
       messages
     )
+    if (isTreeViewSupported(params)) {
+      treeView = new MetalsTreeViewProvider(
+        () => workspace,
+        languageClient,
+        buildTargets,
+        () => buildClient,
+        definitionIndex,
+        sh,
+        config.statistics,
+        id => compilations.compileTargets(List(id))
+      )
+    }
   }
 
   def setupJna(): Unit = {
@@ -406,8 +424,19 @@ class MetalsLanguageServer(
           TimeUnit.SECONDS
         )
       }
+      capabilities.setExperimental(MetalsExperimental())
       new InitializeResult(capabilities)
     }).asJava
+  }
+
+  private def isTreeViewSupported(params: InitializeParams): Boolean = {
+    params.getCapabilities() != null &&
+    params.getCapabilities().getExperimental() != null && {
+      params.getCapabilities().getExperimental() match {
+        case json: JsonObject => json.has("treeViewProvider")
+        case _ => false
+      }
+    }
   }
 
   private def registerNiceToHaveFilePatterns(): Unit = {
@@ -576,7 +605,9 @@ class MetalsLanguageServer(
     interactiveSemanticdbs.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
-    if (openedFiles.isRecentlyActive(path)) {
+    if (path.isDependencySource(workspace)) {
+      CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
+    } else if (openedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
       buildTargets.inverseSources(path) match {
@@ -992,10 +1023,76 @@ class MetalsLanguageServer(
         Future {
           compilers.restartAll()
         }.asJavaObject
+      case ServerCommands.GotoLocation() =>
+        Future {
+          for {
+            args <- Option(params.getArguments())
+            argObject <- args.asScala.headOption
+            arg = argObject.asInstanceOf[JsonPrimitive]
+            if arg.isString()
+            symbol = arg.getAsString()
+            location <- definitionProvider.fromSymbol(symbol).asScala.headOption
+          } {
+            languageClient.metalsExecuteClientCommand(
+              new ExecuteCommandParams(
+                ClientCommands.GotoLocation.id,
+                List(location: Object).asJava
+              )
+            )
+          }
+        }.asJavaObject
+      case ServerCommands.GotoLog() =>
+        Future {
+          val log = workspace.resolve(Directories.log)
+          val linesCount = log.readText.lines.size
+          val pos = new l.Position(linesCount, 0)
+          languageClient.metalsExecuteClientCommand(
+            new ExecuteCommandParams(
+              ClientCommands.GotoLocation.id,
+              List(
+                new Location(log.toURI.toString(), new l.Range(pos, pos)): Object
+              ).asJava
+            )
+          )
+        }.asJavaObject
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
     }
+
+  @JsonRequest("metals/treeViewChildren")
+  def treeViewChildren(
+      params: TreeViewChildrenParams
+  ): CompletableFuture[MetalsTreeViewChildrenResult] = {
+    Future {
+      treeView.children(params)
+    }.asJava
+  }
+
+  @JsonRequest("metals/treeViewParent")
+  def treeViewParent(
+      params: TreeViewParentParams
+  ): CompletableFuture[TreeViewParentResult] = {
+    Future {
+      treeView.parent(params)
+    }.asJava
+  }
+
+  @JsonNotification("metals/treeViewVisibilityDidChange")
+  def treeViewVisibilityDidChange(
+      params: TreeViewVisibilityDidChangeParams
+  ): CompletableFuture[Unit] =
+    Future {
+      treeView.onVisibilityDidChange(params)
+    }.asJava
+
+  @JsonNotification("metals/treeViewNodeCollapseDidChange")
+  def treeViewNodeCollapseDidChange(
+      params: TreeViewNodeCollapseDidChangeParams
+  ): CompletableFuture[Unit] =
+    Future {
+      treeView.onCollapseDidChange(params)
+    }.asJava
 
   private def slowConnectToBuildServer(
       forceImport: Boolean
@@ -1082,6 +1179,26 @@ class MetalsLanguageServer(
           connectToNewBuildServer(build)
         case None =>
           Future.successful(BuildChange.None)
+      }
+      _ = {
+        languageClient.metalsTreeViewDidChange(
+          TreeViewDidChangeParams(
+            Array(
+              TreeViewNode(
+                "build",
+                null,
+                null,
+                null
+              ),
+              TreeViewNode(
+                "compile",
+                null,
+                null,
+                null
+              )
+            )
+          )
+        )
       }
     } yield result
   }.recover {
@@ -1194,7 +1311,7 @@ class MetalsLanguageServer(
             occ.range.foreach { range =>
               symbols += WorkspaceSymbolInformation(
                 info.symbol,
-                info.kind.toLSP,
+                info.kind,
                 range.toLSP
               )
             }
@@ -1340,7 +1457,7 @@ class MetalsLanguageServer(
     // Track used Jars so that we can
     // remove cached symbols from Jars
     // that are not used
-    val usedJars = HashSet[AbsolutePath]()
+    val usedJars = mutable.HashSet.empty[AbsolutePath]
     JdkSources(userConfig.javaHome).foreach { zip =>
       usedJars += zip
       addSourceJarSymbols(zip)

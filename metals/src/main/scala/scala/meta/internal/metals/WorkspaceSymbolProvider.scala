@@ -8,7 +8,6 @@ import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.io.AbsolutePath
@@ -76,13 +75,21 @@ final class WorkspaceSymbolProvider(
     inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
   }
 
+  def buildTargetSymbols(
+      id: BuildTargetIdentifier
+  ): Iterator[WorkspaceSymbolInformation] = {
+    for {
+      source <- buildTargets.buildTargetSources(id).iterator
+      index <- inWorkspace.get(source.toNIO).iterator
+      sym <- index.symbols.iterator
+    } yield sym
+  }
+
   private def indexClasspathUnsafe(): Unit = {
     val packages = new PackageIndex()
     packages.visitBootClasspath()
     for {
-      target <- buildTargets.all
-      classpathEntry <- target.scalac.classpath
-      if classpathEntry.extension == "jar"
+      classpathEntry <- buildTargets.allWorkspaceJars
     } {
       packages.visit(classpathEntry)
     }

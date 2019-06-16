@@ -10,6 +10,7 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.UnregistrationParams
+import scala.meta.internal.tvp._
 
 class DelegatingLanguageClient(
     var underlying: MetalsLanguageClient,
@@ -82,6 +83,12 @@ class DelegatingLanguageClient(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
     underlying.metalsInputBox(params)
+  }
+
+  override def metalsTreeViewDidChange(
+      params: TreeViewDidChangeParams
+  ): Unit = {
+    underlying.metalsTreeViewDidChange(params)
   }
 
 }

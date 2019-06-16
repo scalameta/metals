@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import scala.meta.internal.tvp._
 
 /**
  * A language client that ignores all requests.
@@ -35,4 +36,7 @@ object NoopLanguageClient extends MetalsLanguageClient {
   ): CompletableFuture[MetalsInputBoxResult] = {
     CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
   }
+  override def metalsTreeViewDidChange(
+      params: TreeViewDidChangeParams
+  ): Unit = ()
 }

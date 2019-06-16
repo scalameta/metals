@@ -22,6 +22,8 @@ object Library {
       Classpath(PackageIndex.bootClasspath),
       Classpath(JdkSources().get :: Nil)
     )
+  def cats: Seq[AbsolutePath] =
+    fetch("org.typelevel", "cats-core_2.12", "2.0.0-M4")
   def all: List[Library] = {
     val settings = new Settings()
       .withDependencies(
@@ -105,4 +107,13 @@ object Library {
       )
     )
   }
+
+  def fetch(org: String, artifact: String, version: String): Seq[AbsolutePath] =
+    CoursierSmall
+      .fetch(
+        new Settings().withDependencies(
+          List(new Dependency(org, artifact, version).withTransitive(false))
+        )
+      )
+      .map(AbsolutePath(_))
 }

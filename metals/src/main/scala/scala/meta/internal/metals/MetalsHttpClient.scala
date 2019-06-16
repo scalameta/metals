@@ -18,6 +18,7 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import scala.meta.internal.tvp._
 
 /**
  * Editor client that implement dialogue UIs like window/showMessageRequest.
@@ -50,6 +51,12 @@ final class MetalsHttpClient(
     sh: ScheduledExecutorService
 )(implicit ec: ExecutionContext)
     extends MetalsLanguageClient {
+
+  override def metalsTreeViewDidChange(
+      params: TreeViewDidChangeParams
+  ): Unit = {
+    underlying.metalsTreeViewDidChange(params)
+  }
 
   override def metalsInputBox(
       params: MetalsInputBoxParams

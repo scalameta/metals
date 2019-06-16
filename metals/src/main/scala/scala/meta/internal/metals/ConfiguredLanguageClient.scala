@@ -14,6 +14,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.UnregistrationParams
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.tvp._
 
 /**
  * Delegates requests/notifications to the underlying language client according to the user configuration.
@@ -132,6 +133,14 @@ final class ConfiguredLanguageClient(
     } else {
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
     }
+  }
+
+  override def metalsTreeViewDidChange(
+      params: TreeViewDidChangeParams
+  ): Unit = {
+    // NOTE(olafur): no need to configure here because `NoopTreeViewProvider` is
+    // used when the client doens't support TVP.
+    underlying.metalsTreeViewDidChange(params)
   }
 
 }

@@ -33,6 +33,21 @@ final class Symbol private (val value: String) {
   def owner: Symbol = Symbol(value.owner)
   def displayName: String = desc.name.value
 
+  def enclosingPackage: Symbol = {
+    def loop(s: Symbol): Symbol = {
+      if (s.isPackage || s.isNone) s
+      else loop(s.owner)
+    }
+    loop(this)
+  }
+  def enclosingPackageChain: String = {
+    def loop(s: Symbol): List[String] = {
+      if (s.isPackage) Nil
+      else s.displayName :: loop(s.owner)
+    }
+    if (isPackage || isNone) displayName
+    else loop(this).reverse.mkString(".")
+  }
   def toplevel: Symbol = {
     if (value.isNone) this
     else if (value.isPackage) this
