@@ -48,7 +48,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
+           |""".stripMargin,
+    )
   )
   check(
     "ctor",
@@ -169,7 +175,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|apply[A](xs: A*): List[A]
        |         ^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|apply[A](elems: A*): List[A]
+           |         ^^^^^^^^^
+           |""".stripMargin
+    )
   )
   check(
     "nested3",
@@ -191,7 +203,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|apply[A](xs: A*): List[A]
        |         ^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|apply[A](elems: A*): List[A]
+           |         ^^^^^^^^^
+           |""".stripMargin
+    )
   )
   check(
     "tparam",
@@ -252,7 +270,14 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|lengthCompare(len: Int): Int
        |              ^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|lengthCompare(len: Int): Int
+           |              ^^^^^^^^
+           |lengthCompare(that: Iterable[_]): Int
+           |""".stripMargin,
+    )
   )
   check(
     "error1",
@@ -319,6 +344,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     stableOrder = false,
     compat = Map(
+      "2.13" ->
+        """|to(end: T): NumericRange.Inclusive[T]
+           |   ^^^^^^
+           |to(end: Int): Range.Inclusive
+           |to(end: Int, step: Int): Range.Inclusive
+           |to(end: T, step: T): NumericRange.Inclusive[T]
+           |""".stripMargin,
       "2.12.4" ->
         """|to(end: T): Range.Partial[T,NumericRange[T]]
            |   ^^^^^^
@@ -486,7 +518,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
+           |""".stripMargin,
+    )
   )
 
   check(
@@ -498,7 +536,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
+           |""".stripMargin,
+    )
   )
   check(
     "last-arg3",
@@ -557,7 +601,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Map[A, B]: Map
        |       ^
-       | """.stripMargin
+       | """.stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|Map[K, V]: Map
+           |       ^
+           | """.stripMargin,
+    )
   )
 
   check(
@@ -569,7 +619,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Map[A, B]: Map
        |       ^
-       | """.stripMargin
+       | """.stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|Map[K, V]: Map
+           |       ^
+           | """.stripMargin
+    )
   )
 
   check(
@@ -619,7 +675,15 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
        |unapplySeq(c: Char): Option[List[Char]]
        |unapplySeq(s: CharSequence): Option[List[String]]
        |           ^^^^^^^^^^^^^^^
-       | """.stripMargin
+       | """.stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|unapplySeq(m: Regex.Match): Option[List[String]]
+           |unapplySeq(c: Char): Option[List[Char]]
+           |unapplySeq(s: CharSequence): Option[List[String]]
+           |           ^^^^^^^^^^^^^^^
+           | """.stripMargin,
+    )
   )
 
   check(
