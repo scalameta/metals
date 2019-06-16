@@ -16,7 +16,8 @@ abstract class BaseHoverSuite
       original: String,
       expected: String,
       includeRange: Boolean = false,
-      automaticPackage: Boolean = true
+      automaticPackage: Boolean = true,
+      compat: Map[String, String] = Map.empty,
   ): Unit = {
     test(name) {
       val filename = "Hover.scala"
@@ -35,7 +36,7 @@ abstract class BaseHoverSuite
         )
         .get()
       val obtained: String = renderAsString(code, hover.asScala, includeRange)
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, getExpected(expected, compat))
       for {
         h <- hover.asScala
         range <- Option(h.getRange)
