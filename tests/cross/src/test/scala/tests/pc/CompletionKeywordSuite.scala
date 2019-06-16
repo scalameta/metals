@@ -122,7 +122,7 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
            |valueOf[T](implicit vt: ValueOf[T]): T
            |val
            |var
-           |override def equals(x$1: Any): Boolean
+           |override def equals(x$1: Object): Boolean
            |override def hashCode(): Int
            |override def finalize(): Unit
            |""".stripMargin
