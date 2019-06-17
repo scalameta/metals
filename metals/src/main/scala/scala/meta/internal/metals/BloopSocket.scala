@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
+import scala.util.control.NonFatal
 import org.scalasbt.ipcsocket.UnixDomainSocket
 
 /**
@@ -35,18 +36,28 @@ sealed trait BloopSocket extends Cancelable {
       )
   }
   import BloopSocket._
-  override def cancel(): Unit = this match {
-    case NamedPipe(socket) =>
-      socket.close()
-    case Unix(socket) =>
-      if (!socket.isInputShutdown) socket.shutdownInput()
-      if (!socket.isOutputShutdown) socket.shutdownOutput()
-      socket.close()
-    case Tcp(socket) =>
-      if (!socket.isClosed) {
+  override def cancel(): Unit = silently {
+    this match {
+      case NamedPipe(socket) =>
         socket.close()
-      }
+      case Unix(socket) =>
+        if (!socket.isInputShutdown) socket.shutdownInput()
+        if (!socket.isOutputShutdown) socket.shutdownOutput()
+        socket.close()
+      case Tcp(socket) =>
+        if (!socket.isClosed) {
+          socket.close()
+        }
+    }
   }
+
+  private def silently[T](thunk: => T): Unit =
+    try thunk
+    catch {
+      case NonFatal(e)
+          if e.getMessage() != null &&
+            e.getMessage().contains("Socket is not connected") =>
+    }
 }
 
 object BloopSocket {
