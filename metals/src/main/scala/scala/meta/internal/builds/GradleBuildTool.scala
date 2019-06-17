@@ -60,7 +60,7 @@ case class GradleBuildTool() extends BuildTool {
        |              scalaCompilerPlugin
        |          }
        |          dependencies {
-       |              scalaCompilerPlugin 'org.scalameta:semanticdb-scalac_' + scalaLib.version + ':4.1.4'
+       |              scalaCompilerPlugin 'org.scalameta:semanticdb-scalac_' + scalaLib.version + ':4.1.12'
        |          }
        |          String semanticDb = configurations.scalaCompilerPlugin.files.find { it.name.contains('semanticdb') }.toString()
        |          if (!semanticDb) {
