@@ -20,7 +20,8 @@ abstract class BaseExpectSuite(val suiteName: String) extends BaseSuite {
         }
         .getOrElse(Classpath(Nil))
     GlobalSymbolTable(
-      input.classpath ++ bootClasspath
+      input.classpath ++ bootClasspath,
+      includeJdk = true
     )
   }
   final lazy val sourceroot: AbsolutePath =
