@@ -360,7 +360,8 @@ lazy val mtest = project
     buildInfoObject := "BuildInfoVersions",
     buildInfoKeys := Seq[BuildInfoKey](
       "scala211" -> V.scala211,
-      "scala212" -> V.scala212
+      "scala212" -> V.scala212,
+      "scalaVersion" -> scalaVersion.value
     )
   )
   .dependsOn(mtags)

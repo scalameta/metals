@@ -92,7 +92,13 @@ abstract class BasePCSuite extends BaseSuite {
       .addDependencies(
         Dependency(
           mod"org.scala-lang:scala-library",
-          BuildInfoVersions.scala212
+          // NOTE(gabro): we should ideally just use BuildoInfoVersions.scalaVersion
+          // but using the 2.11 stdlib would cause a lot tests to break for little benefit.
+          // We can remove this switch once we drop support for 2.11
+          BuildInfoVersions.scalaVersion match {
+            case v if v.startsWith("2.13") => BuildInfoVersions.scalaVersion
+            case _ => BuildInfoVersions.scala212
+          }
         )
       )
       .run()
