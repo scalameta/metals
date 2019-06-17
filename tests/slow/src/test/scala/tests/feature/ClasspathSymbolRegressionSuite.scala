@@ -1,8 +1,10 @@
-package tests
+package tests.feature
 
 import java.nio.file.Files
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.io.AbsolutePath
+import tests.BaseWorkspaceSymbolSuite
+import tests.Library
 
 object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   var tmp = AbsolutePath(Files.createTempDirectory("metals"))

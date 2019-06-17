@@ -1,7 +1,8 @@
-package tests
+package tests.feature
 
 import bench.Corpus
 import scala.meta.io.AbsolutePath
+import tests.BaseWorkspaceSymbolSuite
 
 object WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   def workspace: AbsolutePath = Corpus.akka()
