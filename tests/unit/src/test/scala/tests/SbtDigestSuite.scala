@@ -22,6 +22,25 @@ object SbtDigestSuite extends BaseDigestSuite {
   )
 
   checkSame(
+    "only-sbt-file-at-workspace-level",
+    """
+      |/build.sbt
+      |lazy val x = 2
+      |/test.xml
+      |<tag>
+      |  <inner-tag>test</inner-tag>
+      |</tag>
+      |/Build.scala
+      |package a.b
+      |class A
+    """.stripMargin,
+    """
+      |/build.sbt
+      |lazy val x = 2
+    """.stripMargin
+  )
+
+  checkSame(
     "comments-whitespace",
     """
       |/build.sbt
