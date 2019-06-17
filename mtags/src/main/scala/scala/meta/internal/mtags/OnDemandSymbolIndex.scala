@@ -213,7 +213,8 @@ final case class OnDemandSymbolIndex(
     val noExtension = toplevel.value.stripSuffix(".").stripSuffix("#")
     List(
       noExtension + ".scala",
-      noExtension + ".java"
+      noExtension + ".java",
+      "java.base/" + noExtension + ".java" // For Java 11.
     )
   }
 
