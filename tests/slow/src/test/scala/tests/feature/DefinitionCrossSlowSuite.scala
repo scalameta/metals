@@ -32,4 +32,33 @@ object DefinitionCrossSlowSuite
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
+
+  testAsync("2.13") {
+    cleanDatabase()
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {
+          |    "scalaVersion": "2.13.0"
+          |  }
+          |}
+          |/a/src/main/scala/a/Main.scala
+          |object Main {
+          |  println("hello!")
+          |}
+          |""".stripMargin
+      )
+      _ = client.messageRequests.clear()
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = server.workspaceDefinitions // trigger definition
+      _ <- server.didOpen("scala/Predef.scala")
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        ""
+      )
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+    } yield ()
+  }
 }

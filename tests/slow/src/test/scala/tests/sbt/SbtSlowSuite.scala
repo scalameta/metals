@@ -208,6 +208,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
            |lazy val d = project.settings(scalaVersion := "2.11.8")
            |lazy val e = project.settings(scalaVersion := "2.10.7")
            |lazy val f = project.settings(scalaVersion := "${V.scala212}")
+           |lazy val g = project.settings(scalaVersion := "${V.scala213}")
            |/a/src/main/scala/a/A.scala
            |package a
            |object A // 2.12.4
@@ -226,13 +227,16 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
            |/f/src/main/scala/a/A.scala
            |package a
            |object A // ${V.scala212}
+           |/g/src/main/scala/a/A.scala
+           |package a
+           |object A // ${V.scala213}
            |""".stripMargin,
         expectError = true
       )
       _ = assertStatus(_.isInstalled)
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
-        CheckDoctor.multipleMisconfiguredProjects(6)
+        CheckDoctor.multipleMisconfiguredProjects(8)
       )
       _ <- Future.sequence(
         ('a' to 'f')

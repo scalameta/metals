@@ -419,13 +419,13 @@ lazy val unit = project
   .dependsOn(mtest, metals)
   .enablePlugins(BuildInfoPlugin)
 
-val cross211publishLocal = Def.task[Unit] {
-  // Runs `publishLocal` for mtags with 2.11 scalaVersion.
+def crossPublishLocal(scalaV: String) = Def.task[Unit] {
+  // Runs `publishLocal` for mtags with $scalaV.
   val newState = Project
     .extract(state.value)
     .appendWithSession(
       List(
-        scalaVersion.in(mtags) := V.scala211
+        scalaVersion.in(mtags) := scalaV
       ),
       state.value
     )
@@ -441,14 +441,16 @@ lazy val slow = project
       .in(Test)
       .dependsOn(
         publishLocal.in(`sbt-metals`),
-        cross211publishLocal
+        crossPublishLocal(V.scala211),
+        crossPublishLocal(V.scala213)
       )
       .evaluated,
     test.in(Test) := test
       .in(Test)
       .dependsOn(
         publishLocal.in(`sbt-metals`),
-        cross211publishLocal
+        crossPublishLocal(V.scala211),
+        crossPublishLocal(V.scala213)
       )
       .value
   )
