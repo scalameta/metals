@@ -1,9 +1,9 @@
-package tests
+package tests.sbt
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import java.util.concurrent.TimeUnit
-
+import tests.BaseImportSuite
 import scala.concurrent.Future
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest

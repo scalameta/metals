@@ -1,4 +1,4 @@
-package tests
+package tests.maven
 
 import scala.meta.internal.metals.Messages._
 import scala.meta.io.AbsolutePath
@@ -7,6 +7,7 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.io.InputStreamIO
 import java.nio.charset.StandardCharsets
 import scala.meta.internal.builds.MavenBuildTool
+import tests.BaseImportSuite
 
 object MavenSlowSuite extends BaseImportSuite("maven-import") {
 

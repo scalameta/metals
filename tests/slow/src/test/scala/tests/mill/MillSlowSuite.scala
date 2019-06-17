@@ -1,4 +1,5 @@
-package tests
+package tests.mill
+
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.metals.Messages._
@@ -6,6 +7,7 @@ import scala.meta.internal.metals.ServerCommands
 import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.builds.MillBuildTool
+import tests.BaseImportSuite
 
 object MillSlowSuite extends BaseImportSuite("mill-import") {
 

@@ -1,4 +1,6 @@
-package tests
+package tests.feature
+
+import tests.BaseCompletionSlowSuite
 
 object DefinitionCrossSlowSuite
     extends BaseCompletionSlowSuite("definition-cross") {
