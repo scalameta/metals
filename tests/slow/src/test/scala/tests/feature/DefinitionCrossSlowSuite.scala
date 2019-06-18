@@ -1,54 +1,35 @@
 package tests.feature
 
 import tests.BaseCompletionSlowSuite
+import scala.meta.internal.metals.BuildInfo
 
 object DefinitionCrossSlowSuite
     extends BaseCompletionSlowSuite("definition-cross") {
+
   testAsync("2.11") {
-    cleanDatabase()
-    for {
-      _ <- server.initialize(
-        """
-          |/metals.json
-          |{
-          |  "a": {
-          |    "scalaVersion": "2.11.12"
-          |  }
-          |}
-          |/a/src/main/scala/a/Main.scala
-          |object Main {
-          |  println("hello!")
-          |}
-          |""".stripMargin
-      )
-      _ = client.messageRequests.clear()
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ = server.workspaceDefinitions // trigger definition
-      _ <- server.didOpen("scala/Predef.scala")
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        ""
-      )
-      _ = assertNoDiff(client.workspaceDiagnostics, "")
-    } yield ()
+    basicDefinitionTest(BuildInfo.scala211)
   }
 
   testAsync("2.13") {
+    basicDefinitionTest(BuildInfo.scala213)
+  }
+
+  def basicDefinitionTest(scalaVersion: String) = {
     cleanDatabase()
     for {
       _ <- server.initialize(
-        """
-          |/metals.json
-          |{
-          |  "a": {
-          |    "scalaVersion": "2.13.0"
-          |  }
-          |}
-          |/a/src/main/scala/a/Main.scala
-          |object Main {
-          |  println("hello!")
-          |}
-          |""".stripMargin
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${scalaVersion}"
+           |  }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |object Main {
+           |  println("hello!")
+           |}
+           |""".stripMargin
       )
       _ = client.messageRequests.clear()
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
