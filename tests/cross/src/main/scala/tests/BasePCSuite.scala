@@ -135,22 +135,6 @@ abstract class BasePCSuite extends BaseSuite {
       " " + e.getRight.getValue
     }
   }.trim
-  private def scalaVersion: String =
-    Properties.versionNumberString
-  private def scalaBinary: String =
-    scalaVersion.split("\\.").take(2).mkString(".")
-  val compatProcess = Map.empty[String, String => String]
-  def getExpected(default: String, compat: Map[String, String]): String = {
-    val postProcess = compatProcess
-      .get(scalaBinary)
-      .orElse(compatProcess.get(scalaVersion))
-      .getOrElse(identity[String] _)
-    val result = compat
-      .get(scalaBinary)
-      .orElse(compat.get(scalaVersion))
-      .getOrElse(default)
-    postProcess(result)
-  }
   def sortLines(stableOrder: Boolean, string: String): String =
     if (stableOrder) string
     else string.linesIterator.toList.sorted.mkString("\n")

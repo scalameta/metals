@@ -174,4 +174,25 @@ class BaseSuite extends TestSuite {
     val thunks = new TestCallTree(inner)
     Tests(names, thunks)
   }
+
+  private def scalaVersion: String =
+    Properties.versionNumberString
+  private def scalaBinary(scalaVersion: String): String =
+    scalaVersion.split("\\.").take(2).mkString(".")
+  val compatProcess = Map.empty[String, String => String]
+  def getExpected(
+      default: String,
+      compat: Map[String, String],
+      scalaVersion: String = this.scalaVersion
+  ): String = {
+    val postProcess = compatProcess
+      .get(scalaBinary(scalaVersion))
+      .orElse(compatProcess.get(scalaVersion))
+      .getOrElse(identity[String] _)
+    val result = compat
+      .get(scalaBinary(scalaVersion))
+      .orElse(compat.get(scalaVersion))
+      .getOrElse(default)
+    postProcess(result)
+  }
 }

@@ -71,31 +71,59 @@ abstract class BaseCompletionSlowSuite(name: String)
       )
       _ <- assertCompletion(
         "Stream@@",
-        """|Stream scala.collection.immutable
-           |Stream - java.util.stream
-           |IntStream - java.util.stream
-           |LogStream - java.rmi.server
-           |StreamView - scala.collection.immutable
-           |BaseStream - java.util.stream
-           |LongStream - java.util.stream
-           |InputStream - java.io
-           |PrintStream - java.io
-           |DoubleStream - java.util.stream
-           |OutputStream - java.io
-           |StreamBuilder - scala.collection.immutable.Stream
-           |StreamHandler - java.util.logging
-           |StreamCanBuildFrom - scala.collection.immutable.Stream
-           |""".stripMargin
+        getExpected(
+          """|Stream scala.collection.immutable
+             |Stream - java.util.stream
+             |IntStream - java.util.stream
+             |LogStream - java.rmi.server
+             |StreamView - scala.collection.immutable
+             |BaseStream - java.util.stream
+             |LongStream - java.util.stream
+             |InputStream - java.io
+             |PrintStream - java.io
+             |DoubleStream - java.util.stream
+             |OutputStream - java.io
+             |StreamBuilder - scala.collection.immutable.Stream
+             |StreamHandler - java.util.logging
+             |StreamCanBuildFrom - scala.collection.immutable.Stream
+             |""".stripMargin,
+          Map(
+            "2.13" ->
+              """|Stream scala.collection.immutable
+                 |Stream - java.util.stream
+                 |IntStream - java.util.stream
+                 |LogStream - java.rmi.server
+                 |BaseStream - java.util.stream
+                 |LongStream - java.util.stream
+                 |StreamShape - scala.collection.convert.StreamExtensions
+                 |InputStream - java.io
+                 |PrintStream - java.io
+                 |DoubleStream - java.util.stream
+                 |OutputStream - java.io
+                 |StreamHandler - java.util.logging
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
       _ <- assertCompletion(
         "TrieMap@@",
-        """|TrieMap - scala.collection.concurrent
-           |ParTrieMap - scala.collection.parallel.mutable
-           |HashTrieMap - scala.collection.immutable.HashMap
-           |ParTrieMapCombiner - scala.collection.parallel.mutable
-           |ParTrieMapSplitter - scala.collection.parallel.mutable
-           |TrieMapSerializationEnd - scala.collection.concurrent
-           |""".stripMargin
+        getExpected(
+          """|TrieMap - scala.collection.concurrent
+             |ParTrieMap - scala.collection.parallel.mutable
+             |HashTrieMap - scala.collection.immutable.HashMap
+             |ParTrieMapCombiner - scala.collection.parallel.mutable
+             |ParTrieMapSplitter - scala.collection.parallel.mutable
+             |TrieMapSerializationEnd - scala.collection.concurrent
+             |""".stripMargin,
+          Map(
+            "2.13" ->
+              """|TrieMap - scala.collection.concurrent
+                 |TrieMapSerializationEnd - scala.collection.concurrent
+                 |""".stripMargin
+          ),
+          scalaVersion
+        )
       )
       _ <- assertCompletion(
         """
