@@ -78,9 +78,9 @@ object MillDigestSuite extends BaseDigestSuite {
     """
       |/build.sc
       |import mill._, scalalib._
-      | 
+      |
       |object foo extends ScalaModule {
-      |  
+      |
       | def scalaVersion =    "2.12.8"
       |}
     """.stripMargin
@@ -99,7 +99,7 @@ object MillDigestSuite extends BaseDigestSuite {
       |/build.sc
       |import mill._, scalalib._
       |object foo extends ScalaModule {
-      |  def scalaVersion = "2.12.8"
+      |  def scalaVersion = "2.12.7"
       |}
     """.stripMargin
   )
