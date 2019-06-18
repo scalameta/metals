@@ -1,7 +1,6 @@
 package tests
 
 import coursier._
-import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
