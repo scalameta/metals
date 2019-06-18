@@ -1503,7 +1503,7 @@ trait Completions { this: MetalsGlobal =>
     rootMirror.RootPackage,
     // NOTE(gabro) valueOf was added as a Predef member in 2.13. We filter it out since is a niche
     // use case and it would appear upon typing 'val'
-    definitions.getMemberMethod(
+    definitions.getMemberIfDefined(
       definitions.PredefModule,
       TermName("valueOf")
     )
