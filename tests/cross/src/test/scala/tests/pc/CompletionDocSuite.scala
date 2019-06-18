@@ -55,12 +55,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|singletonList[T](o: T): List[T]
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|singletonList[T <: Object](o: T): List[T]
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
   check(
     "java5",

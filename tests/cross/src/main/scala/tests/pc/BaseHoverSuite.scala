@@ -52,4 +52,13 @@ abstract class BaseHoverSuite
     }
   }
 
+  override val compatProcess: Map[String, String => String] = Map(
+    "2.13" -> { s =>
+      s.replaceAllLiterally(
+        "def map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That",
+        "def map[B](f: Int => B): List[B]"
+      )
+    }
+  )
+
 }

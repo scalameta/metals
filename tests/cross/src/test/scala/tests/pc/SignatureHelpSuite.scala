@@ -48,13 +48,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|map[B](f: Int => B): List[B]
-           |       ^^^^^^^^^^^
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
   check(
     "ctor",
@@ -175,13 +169,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|apply[A](xs: A*): List[A]
        |         ^^^^^^
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|apply[A](elems: A*): List[A]
-           |         ^^^^^^^^^
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
   check(
     "nested3",
@@ -203,13 +191,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|apply[A](xs: A*): List[A]
        |         ^^^^^^
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|apply[A](elems: A*): List[A]
-           |         ^^^^^^^^^
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
   check(
     "tparam",
@@ -518,13 +500,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|map[B](f: Int => B): List[B]
-           |       ^^^^^^^^^^^
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -536,13 +512,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|map[B](f: Int => B): List[B]
-           |       ^^^^^^^^^^^
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
   check(
     "last-arg3",
@@ -601,13 +571,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Map[A, B]: Map
        |       ^
-       | """.stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|Map[K, V]: Map
-           |       ^
-           | """.stripMargin
-    )
+       | """.stripMargin
   )
 
   check(
@@ -619,13 +583,7 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Map[A, B]: Map
        |       ^
-       | """.stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|Map[K, V]: Map
-           |       ^
-           | """.stripMargin
-    )
+       | """.stripMargin
   )
 
   check(

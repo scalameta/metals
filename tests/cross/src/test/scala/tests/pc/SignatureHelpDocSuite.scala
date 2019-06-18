@@ -176,17 +176,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |             ^^^^
        |  @param T <T> the class of the objects in the set
        |  @param o o the sole object to be stored in the returned set.
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|Returns an immutable set containing only the specified object.
-           |The returned set is serializable.
-           |singleton[T <: Object](o: T): Set[T]
-           |                       ^^^^
-           |  @param T < <T> the class of the objects in the set
-           |  @param o o the sole object to be stored in the returned set.
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
   checkDoc(
     "default",
@@ -279,21 +269,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |valueOf(data: Array[Char], offset: Int, count: Int): String
        |valueOf(data: Array[Char]): String
        |valueOf(obj: Any): String
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|valueOf(d: Double): String
-           |valueOf(f: Float): String
-           |valueOf(l: Long): String
-           |valueOf(i: Int): String
-           |        ^^^^^^
-           |valueOf(c: Char): String
-           |valueOf(b: Boolean): String
-           |valueOf(data: Array[Char], offset: Int, count: Int): String
-           |valueOf(data: Array[Char]): String
-           |valueOf(obj: Object): String
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
   check(
     "java4",

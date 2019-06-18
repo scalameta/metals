@@ -119,18 +119,7 @@ object CompletionSuite extends BaseCompletionSuite {
        |override def toString(): String
        |override def clone(): Object
        |override def finalize(): Unit
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|default: Int
-           |def
-           |override def equals(obj: Object): Boolean
-           |override def hashCode(): Int
-           |override def toString(): String
-           |override def clone(): Object
-           |override def finalize(): Unit
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(

@@ -75,4 +75,20 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       )
     }
   }
+
+  override val compatProcess: Map[String, String => String] = Map(
+    "2.13" -> { s =>
+      s.replaceAllLiterally("valueOf(obj: Any)", "valueOf(obj: Object)")
+        .replaceAllLiterally(
+          "singleton[T](o: T)",
+          "singleton[T <: Object](o: T)"
+        )
+        .replaceAllLiterally("Map[A, B]", "Map[K, V]")
+        .replaceAllLiterally("apply[A](xs: A*)", "apply[A](elems: A*)")
+        .replaceAllLiterally(
+          "def map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That",
+          "def map[B](f: Int => B): List[B]"
+        )
+    }
+  )
 }

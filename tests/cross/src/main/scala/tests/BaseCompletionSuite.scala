@@ -198,4 +198,14 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       .mkString("\n")
   }
 
+  override val compatProcess: Map[String, String => String] = Map(
+    "2.13" -> { s =>
+      s.replaceAllLiterally("equals(obj: Any)", "equals(obj: Object)")
+        .replaceAllLiterally(
+          "singletonList[T](o: T)",
+          "singletonList[T <: Object](o: T)"
+        )
+    }
+  )
+
 }

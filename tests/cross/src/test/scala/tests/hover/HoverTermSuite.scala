@@ -12,13 +12,7 @@ object HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|List[String]
        |final override def map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
-       |""".stripMargin.hover,
-    compat = Map(
-      "2.13" ->
-        """|List[String]
-           |final override def map[B](f: Int => B): List[B]
-           |""".stripMargin.hover
-    )
+       |""".stripMargin.hover
   )
 
   check(

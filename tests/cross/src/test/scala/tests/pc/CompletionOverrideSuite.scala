@@ -164,18 +164,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |override def clone(): Object
        |override def finalize(): Unit
        |""".stripMargin,
-    includeDetail = false,
-    compat = Map(
-      "2.13" ->
-        """|override def aaa: Int
-           |override def bbb: Int
-           |override def equals(obj: Object): Boolean
-           |override def hashCode(): Int
-           |override def toString(): String
-           |override def clone(): Object
-           |override def finalize(): Unit
-           |""".stripMargin
-    )
+    includeDetail = false
   )
 
   def implement(completion: String): String =
@@ -858,14 +847,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |override def equals(obj: Any): Boolean
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(3),
-    compat = Map(
-      "2.13" ->
-        """|def hello1: Int
-           |def
-           |override def equals(obj: Object): Boolean
-           |""".stripMargin
-    )
+    topLines = Some(3)
   )
 
   checkEdit(
