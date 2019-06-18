@@ -366,7 +366,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
             )
           )
           .map(_.sym.javaClassSymbol)
-          .distinct
+          .distinctBy(semanticdbSymbol)
         completion <- completions match {
           case Nil =>
             None

@@ -16,6 +16,7 @@ import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
+import scala.collection.mutable
 import scala.meta.pc.OffsetParams
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
@@ -308,6 +309,20 @@ trait MtagsEnrichments {
       params.offset() < 0 ||
       params.offset() >= params.text().length ||
       params.text().charAt(params.offset()).isWhitespace
+    }
+  }
+  implicit class XtensionListOps[T](lst: List[T]) {
+    def distinctBy[B](fn: T => B): List[T] = {
+      val isVisited = mutable.Set.empty[B]
+      val buf = mutable.ListBuffer.empty[T]
+      lst.foreach { elem =>
+        val hash = fn(elem)
+        if (!isVisited(hash)) {
+          isVisited += hash
+          buf += elem
+        }
+      }
+      buf.result()
     }
   }
   implicit class XtensionCancelChecker(token: CancelChecker) {
