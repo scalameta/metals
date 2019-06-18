@@ -6,33 +6,35 @@ import scala.collection.mutable.ArrayBuffer
 object TrigramSubstrings {
 
   /**
+   * Iterate over all possible substrings of length 3 for the given string.
+   */
+  def foreach(string: String, f: String => Unit): Unit = {
+    val N = string.length
+    val arr = new Array[Char](3)
+    var i = 0
+    while (i < N) {
+      var j = i + 1
+      while (j < N) {
+        var k = j + 1
+        while (k < N) {
+          arr(0) = string.charAt(i)
+          arr(1) = string.charAt(j)
+          arr(2) = string.charAt(k)
+          f(new String(arr))
+          k += 1
+        }
+        j += 1
+      }
+      i += 1
+    }
+  }
+
+  /**
    * Returns all possible substrings of length 3 for the given string.
    */
-  def apply(string: String): ArrayBuffer[String] = {
-
-    def runForeach[U](f: String => U): Unit = {
-      val N = string.length
-      val arr = new Array[Char](3)
-      var i = 0
-      while (i < N) {
-        var j = i + 1
-        while (j < N) {
-          var k = j + 1
-          while (k < N) {
-            arr(0) = string.charAt(i)
-            arr(1) = string.charAt(j)
-            arr(2) = string.charAt(k)
-            f(new String(arr))
-            k += 1
-          }
-          j += 1
-        }
-        i += 1
-      }
-    }
-
+  def seq(string: String): ArrayBuffer[String] = {
     val buf = ArrayBuffer.empty[String]
-    runForeach(trigram => { buf += trigram })
+    foreach(string, trigram => buf += trigram)
     buf
   }
 

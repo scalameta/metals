@@ -287,7 +287,7 @@ class Fuzzy {
         lastName.length() < ExactSearchLimit) {
         result += ExactCharSequence(lastName)
       }
-      result ++= TrigramSubstrings(upper.toString)
+      TrigramSubstrings.foreach(upper.toString, trigram => result += trigram)
     }
     symbols.foreach(visit)
     result
@@ -352,7 +352,7 @@ class Fuzzy {
           result.add(new ZeroCopySubSequence(query, border, query.length))
       }
       if (includeTrigrams) {
-        result ++= TrigramSubstrings(upper.toString)
+        TrigramSubstrings.foreach(upper.toString, trigram => result += trigram)
       }
       result
     }
