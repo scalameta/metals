@@ -12,7 +12,15 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|apply($0)
        |unapplySeq($0)
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        // the second apply is from scala/collection/BuildFrom#apply(), introduced in 2.13
+        """|apply($0)
+           |unapplySeq($0)
+           |apply($0)
+           |""".stripMargin
+    )
   )
 
   checkSnippet(
