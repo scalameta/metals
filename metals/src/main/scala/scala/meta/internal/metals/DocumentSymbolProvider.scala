@@ -82,7 +82,9 @@ class DocumentSymbolProvider(trees: Trees) {
     override def apply(tree: Tree): Unit = {
       def continue(withNewOwner: Boolean = false): Unit = {
         val oldRoot = owner
-        if (withNewOwner) owner = owner.getChildren.asScala.last
+        val children = owner.getChildren.asScala
+        val hasChildren = children.nonEmpty
+        if (withNewOwner && hasChildren) owner = children.last
         super.apply(tree)
         owner = oldRoot
       }
