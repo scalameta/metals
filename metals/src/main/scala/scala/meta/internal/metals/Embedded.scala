@@ -180,9 +180,18 @@ object Embedded {
           )
         )
       )
+
+    // java9+ compatability
+    val parent: ClassLoader = try {
+      val parentClassLoaderMethod =
+        classOf[ClassLoader].getMethod("getPlatformClassLoader")
+      parentClassLoaderMethod.invoke(null).asInstanceOf[ClassLoader]
+    } catch {
+      case _: NoSuchMethodException => null
+    }
+
     val jars = CoursierSmall.fetch(settings)
-    // Don't make Bloop classloader a child or our classloader.
-    val parent: ClassLoader = null
+    // Don't make Bloop classloader a child of our classloader.
     val classloader =
       new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, parent)
     classloader

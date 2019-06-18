@@ -5,13 +5,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
-import java.net.URLClassLoader
 import java.nio.file.Paths
 import java.util
 import java.util.jar.JarFile
 import java.util.logging.Level
 import java.util.logging.Logger
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
@@ -133,9 +133,8 @@ object PackageIndex {
     } yield entry
 
   def scalaLibrary: Seq[Path] = {
-    this.getClass.getClassLoader
-      .asInstanceOf[URLClassLoader]
-      .getURLs
+    ClasspathLoader
+      .getURLs(this.getClass.getClassLoader)
       .iterator
       .filter(_.getPath.contains("scala-library"))
       .map(url => Paths.get(url.toURI))

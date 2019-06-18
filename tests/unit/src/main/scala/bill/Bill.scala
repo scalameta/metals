@@ -10,7 +10,6 @@ import java.io.File
 import java.io.PrintStream
 import java.io.PrintWriter
 import java.net.URI
-import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -25,7 +24,7 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.Future
-import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.{BuildInfo, MetalsLogger, RecursivelyDelete}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.reflect.internal.util.BatchSourceFile
@@ -38,8 +37,7 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
-import scala.meta.internal.metals.MetalsLogger
-import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.io.AbsolutePath
 
 /**
@@ -331,10 +329,11 @@ object Bill {
     ): CompletableFuture[ScalaMainClassesResult] = ???
   }
 
-  def myClassLoader: URLClassLoader =
-    this.getClass.getClassLoader.asInstanceOf[URLClassLoader]
-  def myClasspath: Iterator[Path] =
-    myClassLoader.getURLs.iterator
+  def myClassLoader: ClassLoader =
+    this.getClass.getClassLoader
+  def myClasspath: Seq[Path] =
+    ClasspathLoader
+      .getURLs(myClassLoader)
       .map(url => Paths.get(url.toURI))
 
   def cwd: Path = Paths.get(System.getProperty("user.dir"))
