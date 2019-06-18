@@ -48,7 +48,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
   check(
     "ctor",
@@ -169,7 +175,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|apply[A](xs: A*): List[A]
        |         ^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|apply[A](elems: A*): List[A]
+           |         ^^^^^^^^^
+           |""".stripMargin
+    )
   )
   check(
     "nested3",
@@ -191,7 +203,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|apply[A](xs: A*): List[A]
        |         ^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|apply[A](elems: A*): List[A]
+           |         ^^^^^^^^^
+           |""".stripMargin
+    )
   )
   check(
     "tparam",
@@ -500,7 +518,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
   check(
@@ -512,7 +536,13 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
   check(
     "last-arg3",

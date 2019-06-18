@@ -80,11 +80,6 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
     "2.13" -> { s =>
       s.replaceAllLiterally("valueOf(obj: Any)", "valueOf(obj: Object)")
         .replaceAllLiterally("Map[A, B]: Map", "Map[K, V]: Map")
-        .replaceAllLiterally("apply[A](xs: A*)", "apply[A](elems: A*)")
-        .replaceAllLiterally(
-          "def map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That",
-          "def map[B](f: Int => B): List[B]"
-        )
     }
   )
 }
