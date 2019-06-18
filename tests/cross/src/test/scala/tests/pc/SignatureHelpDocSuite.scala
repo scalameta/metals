@@ -194,7 +194,17 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |             ^^^^
        |  @param T <T> the class of the objects in the set
        |  @param o o the sole object to be stored in the returned set.
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """| Returns an immutable set containing only the specified object.
+           |The returned set is serializable.
+           |singleton[T <: Object](o: T): Set[T]
+           |                       ^^^^
+           |  @param T <T> the class of the objects in the set
+           |  @param o o the sole object to be stored in the returned set.
+           |""".stripMargin
+    )
   )
   checkDoc(
     "default",
