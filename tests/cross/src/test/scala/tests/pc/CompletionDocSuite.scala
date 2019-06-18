@@ -459,6 +459,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |
        | $usesMutableState
        |
+       |
        |**Type Parameters**
        |- `A`: the element type
        |
