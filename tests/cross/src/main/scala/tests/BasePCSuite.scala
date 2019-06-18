@@ -69,7 +69,7 @@ abstract class BasePCSuite extends BaseSuite {
     if (isWindows || (requiresJdkSources && !hasJdkSources)) ignore(name)(())
     else {
       val testName =
-        if (Properties.versionNumberString != BuildInfoVersions.scala212)
+        if (isCI && Properties.versionNumberString != BuildInfoVersions.scala212)
           s"${Properties.versionNumberString}-$name"
         else name
       super.test(testName) {

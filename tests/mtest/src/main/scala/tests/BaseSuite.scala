@@ -39,6 +39,8 @@ class BaseSuite extends TestSuite {
       "Linux".equalsIgnoreCase(System.getenv("AGENT_OS"))
   def isAzure: Boolean =
     "True".equalsIgnoreCase(System.getenv("TF_BUILD"))
+  def isCI: Boolean =
+    "true".equalsIgnoreCase(System.getenv("CI"))
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
