@@ -499,7 +499,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
            | section on `Vectors` for more information.
 
            |### object Vector
-           |$$factoryInfo
+           |$factoryInfo
            |Vector scala.collection.immutable
            |""".stripMargin
     )

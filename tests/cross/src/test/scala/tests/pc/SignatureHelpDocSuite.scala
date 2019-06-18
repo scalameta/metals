@@ -38,10 +38,19 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
            | expression `ifEmpty`.
            |
+           |This is equivalent to:
            |
-           |**Notes**
-           |- This is equivalent to `[scala.Option](scala.Option) map f getOrElse ifEmpty`.
+           |```
+           |option match {
+           |  case Some(x) => f(x)
+           |  case None    => ifEmpty
+           |}
+           |```
+           |This is also equivalent to:
            |
+           |```
+           |option map f getOrElse ifEmpty
+           |```
            |**Parameters**
            |- `f`: the function to apply if nonempty.
            |- `ifEmpty`: the expression to evaluate if empty.
@@ -82,10 +91,19 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
            | expression `ifEmpty`.
            |
+           |This is equivalent to:
            |
-           |**Notes**
-           |- This is equivalent to `[scala.Option](scala.Option) map f getOrElse ifEmpty`.
+           |```
+           |option match {
+           |  case Some(x) => f(x)
+           |  case None    => ifEmpty
+           |}
+           |```
+           |This is also equivalent to:
            |
+           |```
+           |option map f getOrElse ifEmpty
+           |```
            |**Parameters**
            |- `f`: the function to apply if nonempty.
            |- `ifEmpty`: the expression to evaluate if empty.
