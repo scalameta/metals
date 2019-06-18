@@ -442,15 +442,6 @@ object CompletionDocSuite extends BaseCompletionSuite {
            |""".stripMargin
     )
   )
-  def vectorClassDocstring =
-    """|> ### class Vector
-       |Vector is a general-purpose, immutable data structure.  It provides random access and updates
-       | in effectively constant time, as well as very fast append and prepend.  Because vectors strike
-       | a good balance between fast random selections and fast random functional updates, they are
-       | currently the default implementation of immutable indexed sequences.  It is backed by a little
-       | endian bit-mapped vector trie with a branching factor of 32.  Locality is very good, but not
-       | contiguous, which is good for very large sequences.
-       |""".stripMargin
   check(
     "scala8",
     """
@@ -467,7 +458,6 @@ object CompletionDocSuite extends BaseCompletionSuite {
        | contiguous, which is good for very large sequences.
        |
        | $usesMutableState
-       |
        |
        |**Type Parameters**
        |- `A`: the element type
@@ -490,6 +480,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
            | currently the default implementation of immutable indexed sequences.  It is backed by a little
            | endian bit-mapped vector trie with a branching factor of 32.  Locality is very good, but not
            | contiguous, which is good for very large sequences.
+           |
            |
            |**Type Parameters**
            |- `A`: the element type
