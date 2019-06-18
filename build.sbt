@@ -11,18 +11,6 @@ def crossSetting[A](
     case _ => otherwise
   }
 
-def crossSetting[A](
-    scalaVersion: String,
-    if211: List[A],
-    if212: List[A],
-    otherwise: List[A]
-): List[A] =
-  CrossVersion.partialVersion(scalaVersion) match {
-    case Some((2, 11)) => if211
-    case Some((2, 12)) => if212
-    case _ => otherwise
-  }
-
 inThisBuild(
   List(
     version ~= { dynVer =>
