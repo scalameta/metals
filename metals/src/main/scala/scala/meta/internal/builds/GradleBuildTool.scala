@@ -37,11 +37,11 @@ case class GradleBuildTool() extends BuildTool {
        |        ModuleComponentIdentifier scalaLib = project.configurations.all.collectMany{
        |          if(it.isCanBeResolved() && it.isVisible()){
        |            it.resolvedConfiguration.resolvedArtifacts.findResults {
-       |              ComponentIdentifier identifier = it.getId().getComponentIdentifier() 
+       |              ComponentIdentifier identifier = it.getId().getComponentIdentifier()
        |              if(identifier instanceof ModuleComponentIdentifier && it.name == 'scala-library'){
        |                ModuleComponentIdentifier moduleIdentifier = (ModuleComponentIdentifier) identifier
        |                moduleIdentifier
-       |              } 
+       |              }
        |            }
        |          } else {
        |            []
@@ -60,7 +60,7 @@ case class GradleBuildTool() extends BuildTool {
        |              scalaCompilerPlugin
        |          }
        |          dependencies {
-       |              scalaCompilerPlugin 'org.scalameta:semanticdb-scalac_' + scalaLib.version + ':4.1.4'
+       |              scalaCompilerPlugin 'org.scalameta:semanticdb-scalac_' + scalaLib.version + ':${BuildInfo.semanticdbVersion}'
        |          }
        |          String semanticDb = configurations.scalaCompilerPlugin.files.find { it.name.contains('semanticdb') }.toString()
        |          if (!semanticDb) {

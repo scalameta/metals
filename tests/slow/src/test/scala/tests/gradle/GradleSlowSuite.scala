@@ -246,6 +246,8 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
            |${projectWithVersion("2.10.7")}
            |/f/build.gradle
            |${projectWithVersion(V.scala212)}
+           |/g/build.gradle
+           |${projectWithVersion(V.scala213)}
            |/settings.gradle
            |include 'a'
            |include 'b'
@@ -253,6 +255,7 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
            |include 'd'
            |include 'e'
            |include 'f'
+           |include 'g'
            |/a/src/main/scala/a/A.scala
            |package a
            |object A // 2.12.4
@@ -271,6 +274,9 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
            |/f/src/main/scala/a/A.scala
            |package a
            |object A // ${V.scala212}
+           |/g/src/main/scala/a/A.scala
+           |package a
+           |object A // ${V.scala213}
            |""".stripMargin,
         expectError = true
       )
@@ -278,7 +284,7 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
         // only 3 projects since no empty test targets are created for gradle
-        CheckDoctor.multipleMisconfiguredProjects(3)
+        CheckDoctor.multipleMisconfiguredProjects(4)
       )
       _ <- Future.sequence(
         ('a' to 'f')

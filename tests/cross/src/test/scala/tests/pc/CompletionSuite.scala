@@ -24,7 +24,23 @@ object CompletionSuite extends BaseCompletionSuite {
        |NodeList - org.w3c.dom
        |ArrayList - java.util
        |MediaList - org.w3c.dom.stylesheets
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|List scala.collection.immutable
+           |LazyList scala.collection.immutable
+           |List - java.awt
+           |List - java.util
+           |ListMap - scala.collection.immutable
+           |ListMap - scala.collection.mutable
+           |ListSet - scala.collection.immutable
+           |ListPeer - java.awt.peer
+           |NameList - org.w3c.dom
+           |NodeList - org.w3c.dom
+           |ArrayList - java.util
+           |MediaList - org.w3c.dom.stylesheets
+           |""".stripMargin
+    )
   )
 
   check(
@@ -144,6 +160,44 @@ object CompletionSuite extends BaseCompletionSuite {
        |toString(): String
        |""".stripMargin,
     compat = Map(
+      "2.13" ->
+        """|empty[A]: List[A]
+           |from[B](coll: IterableOnce[B]): List[B]
+           |newBuilder[A]: Builder[A,List[A]]
+           |apply[A](elems: A*): List[A]
+           |concat[A](xss: Iterable[A]*): List[A]
+           |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A]]
+           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]]]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]]]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]]]
+           |fill[A](n: Int)(elem: => A): List[A]
+           |iterableFactory[A]: Factory[A,List[A]]
+           |iterate[A](start: A, len: Int)(f: A => A): List[A]
+           |range[A: Integral](start: A, end: A): List[A]
+           |range[A: Integral](start: A, end: A, step: A): List[A]
+           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A]]
+           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]]]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]]]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]]]
+           |tabulate[A](n: Int)(f: Int => A): List[A]
+           |unapplySeq[A](x: List[A]): SeqFactory.UnapplySeqWrapper[A]
+           |unfold[A, S](init: S)(f: S => Option[(A, S)]): List[A]
+           |+(other: String): String
+           |formatted(fmtstr: String): String
+           |fromSpecific(from: Any)(it: IterableOnce[A]): List[A]
+           |fromSpecific(it: IterableOnce[A]): List[A]
+           |newBuilder(from: Any): Builder[A,List[A]]
+           |newBuilder: Builder[A,List[A]]
+           |toFactory(from: Any): Factory[A,List[A]]
+           |apply(from: Any): Builder[A,List[A]]
+           |asInstanceOf[T0]: T0
+           |equals(obj: Object): Boolean
+           |getClass(): Class[_]
+           |hashCode(): Int
+           |isInstanceOf[T0]: Boolean
+           |synchronized[T0](x$1: T0): T0
+           |toString(): String
+           |""".stripMargin,
       "2.11" ->
         """|apply[A](xs: A*): List[A]
            |canBuildFrom[A]: CanBuildFrom[List.Coll,A,List[A]]
@@ -234,7 +288,13 @@ object CompletionSuite extends BaseCompletionSuite {
        |ParTrieMapCombiner - scala.collection.parallel.mutable
        |ParTrieMapSplitter - scala.collection.parallel.mutable
        |TrieMapSerializationEnd - scala.collection.concurrent
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|TrieMap scala.collection.concurrent
+           |TrieMapSerializationEnd - scala.collection.concurrent
+           |""".stripMargin
+    )
   )
 
   check(
@@ -257,6 +317,17 @@ object CompletionSuite extends BaseCompletionSuite {
        |AsJavaConverters - scala.collection.convert
        |""".stripMargin,
     compat = Map(
+      "2.13" -> """|JavaConverters - scala.collection
+                   |AsJavaConsumer - scala.jdk.FunctionWrappers
+                   |JavaConversions - scala.concurrent
+                   |AsJavaConverters - scala.collection.convert
+                   |FromJavaConsumer - scala.jdk.FunctionWrappers
+                   |AsJavaBiConsumer - scala.jdk.FunctionWrappers
+                   |AsJavaIntConsumer - scala.jdk.FunctionWrappers
+                   |AsJavaLongConsumer - scala.jdk.FunctionWrappers
+                   |FromJavaBiConsumer - scala.jdk.FunctionWrappers
+                   |FromJavaIntConsumer - scala.jdk.FunctionWrappers
+                   |""".stripMargin,
       "2.11" -> """|JavaConverters - scala.collection
                    |JavaConversions - scala.collection
                    |JavaConversions - scala.concurrent
@@ -551,6 +622,12 @@ object CompletionSuite extends BaseCompletionSuite {
     postProcessObtained = _.replaceAllLiterally("Float", "Double"),
     stableOrder = false,
     compat = Map(
+      "2.13" ->
+        """|until(end: Int): Range
+           |until(end: Int, step: Int): Range
+           |until(end: Long): NumericRange.Exclusive[Long]
+           |until(end: Long, step: Long): NumericRange.Exclusive[Long]
+           |""".stripMargin,
       "2.12.4" ->
         """|until(end: Double): Range.Partial[Double,NumericRange[Double]]
            |until(end: Double, step: Double): NumericRange.Exclusive[Double]
@@ -662,7 +739,14 @@ object CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|Iterable scala.collection
        |Iterable[+A] = Iterable
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|Iterable scala.collection
+           |Iterable[+A] = Iterable
+           |IterableOnce[+A] = IterableOnce
+           |""".stripMargin
+    )
   )
 
   check(
@@ -707,7 +791,23 @@ object CompletionSuite extends BaseCompletionSuite {
        |CloneNotSupportedException java.lang
        |EnumConstantNotPresentException java.lang
        |TypeNotPresentException java.lang
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|None scala
+           |NoManifest scala.reflect
+           |NoClassDefFoundError java.lang
+           |NoSuchFieldError java.lang
+           |NoSuchFieldException java.lang
+           |NoSuchMethodError java.lang
+           |NoSuchMethodException java.lang
+           |NotImplementedError scala
+           |ClassNotFoundException java.lang
+           |CloneNotSupportedException java.lang
+           |EnumConstantNotPresentException java.lang
+           |TypeNotPresentException java.lang
+           |""".stripMargin
+    )
   )
 
   check(
@@ -721,7 +821,14 @@ object CompletionSuite extends BaseCompletionSuite {
        |Seq scala.collection
        |Set scala.collection.immutable
        |""".stripMargin,
-    topLines = Some(3)
+    topLines = Some(3),
+    compat = Map(
+      "2.13" ->
+        """|Some scala
+           |Seq scala.collection.immutable
+           |Set scala.collection.immutable
+           |""".stripMargin
+    )
   )
 
   check(
@@ -735,7 +842,14 @@ object CompletionSuite extends BaseCompletionSuite {
        |Seq scala.collection
        |Set scala.collection.immutable
        |""".stripMargin,
-    topLines = Some(3)
+    topLines = Some(3),
+    compat = Map(
+      "2.13" ->
+        """|Some scala
+           |Seq scala.collection.immutable
+           |Set scala.collection.immutable
+           |""".stripMargin
+    )
   )
 
   check(

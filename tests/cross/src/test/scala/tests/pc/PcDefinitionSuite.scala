@@ -94,7 +94,15 @@ object PcDefinitionSuite extends BasePcDefinitionSuite {
        |object Main {
        |  /*scala/collection/immutable/List.apply(). List.scala*/@@List(1)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|
+           |object Main {
+           |  /*scala/collection/immutable/List.apply(). List.scala*//*scala/collection/IterableFactory#apply(). Factory.scala*/List(1)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(

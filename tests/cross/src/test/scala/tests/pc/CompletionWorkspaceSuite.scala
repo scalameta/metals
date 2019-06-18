@@ -228,7 +228,8 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |    case x: ju.ArrayDeque =>
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    filter = _.contains("java.util")
   )
 
   checkEdit(

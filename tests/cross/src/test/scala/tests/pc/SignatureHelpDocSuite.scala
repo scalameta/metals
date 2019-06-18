@@ -31,7 +31,35 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |                       ^^^^^^^^^^^
        |  @param ifEmpty the expression to evaluate if empty.
        |  @param f the function to apply if nonempty.
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
+           | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
+           | expression `ifEmpty`.
+           |
+           |This is equivalent to:
+           |
+           |```
+           |option match {
+           |  case Some(x) => f(x)
+           |  case None    => ifEmpty
+           |}
+           |```
+           |This is also equivalent to:
+           |
+           |```
+           |option map f getOrElse ifEmpty
+           |```
+           |**Parameters**
+           |- `f`: the function to apply if nonempty.
+           |- `ifEmpty`: the expression to evaluate if empty.
+           |fold[B](ifEmpty: => B)(f: Int => B): B
+           |                       ^^^^^^^^^^^
+           |  @param ifEmpty the expression to evaluate if empty.
+           |  @param f the function to apply if nonempty.
+           |""".stripMargin
+    )
   )
 
   checkDoc(
@@ -56,7 +84,35 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |        ^^^^^^^^^^^^^
        |  @param ifEmpty String the expression to evaluate if empty.
        |  @param f the function to apply if nonempty.
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
+           | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
+           | expression `ifEmpty`.
+           |
+           |This is equivalent to:
+           |
+           |```
+           |option match {
+           |  case Some(x) => f(x)
+           |  case None    => ifEmpty
+           |}
+           |```
+           |This is also equivalent to:
+           |
+           |```
+           |option map f getOrElse ifEmpty
+           |```
+           |**Parameters**
+           |- `f`: the function to apply if nonempty.
+           |- `ifEmpty`: the expression to evaluate if empty.
+           |fold[B](ifEmpty: => B)(f: Int => B): B
+           |        ^^^^^^^^^^^^^
+           |  @param ifEmpty String the expression to evaluate if empty.
+           |  @param f the function to apply if nonempty.
+           |""".stripMargin
+    )
   )
   checkDoc(
     "curry3",
@@ -96,7 +152,14 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """|
        |map[B, That](f: Int => B)(implicit bf: CanBuildFrom[List[Int],B,That]): That
        |             ^^^^^^^^^^^
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|
+           |map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
+           |""".stripMargin
+    )
   )
   checkDoc(
     "too-many",
@@ -131,7 +194,17 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |             ^^^^
        |  @param T <T> the class of the objects in the set
        |  @param o o the sole object to be stored in the returned set.
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """| Returns an immutable set containing only the specified object.
+           |The returned set is serializable.
+           |singleton[T <: Object](o: T): Set[T]
+           |                       ^^^^
+           |  @param T <T> the class of the objects in the set
+           |  @param o o the sole object to be stored in the returned set.
+           |""".stripMargin
+    )
   )
   checkDoc(
     "default",
@@ -158,7 +231,29 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |  @param pf Partial function used when applying catch logic to determine result value
        |  @param fin Finally logic which if defined will be invoked after catch logic
        |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|A container class for catch/finally logic.
+           |
+           | Pass a different value for rethrow if you want to probably
+           | unwisely allow catching control exceptions and other throwables
+           | which the rest of the world may expect to get through.
+           |
+           |**Type Parameters**
+           |- `T`: result type of bodies used in try and catch blocks
+           |
+           |**Parameters**
+           |- `fin`: Finally logic which if defined will be invoked after catch logic
+           |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
+           |- `pf`: Partial function used when applying catch logic to determine result value
+           |<init>(pf: Exception.Catcher[T], fin: Option[Exception.Finally] = None, rethrow: Throwable => Boolean = shouldRethrow): Exception.Catch[T]
+           |       ^^^^^^^^^^^^^^^^^^^^^^^^
+           |  @param pf Partial function used when applying catch logic to determine result value
+           |  @param fin Finally logic which if defined will be invoked after catch logic
+           |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
+           |""".stripMargin
+    )
   )
   check(
     "java",
@@ -221,7 +316,21 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |valueOf(i: Int): String
        |valueOf(l: Long): String
        |valueOf(data: Array[Char], offset: Int, count: Int): String
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|valueOf(data: Array[Char]): String
+           |        ^^^^^^^^^^^^^^^^^
+           |valueOf(b: Boolean): String
+           |valueOf(c: Char): String
+           |valueOf(d: Double): String
+           |valueOf(f: Float): String
+           |valueOf(i: Int): String
+           |valueOf(l: Long): String
+           |valueOf(obj: Object): String
+           |valueOf(data: Array[Char], offset: Int, count: Int): String
+           |""".stripMargin
+    )
   )
   checkDoc(
     "ctor2",

@@ -8,4 +8,7 @@ object CompletionCrossSlowSuite
   testAsync("basic-211") {
     basicTest(V.scala211)
   }
+  testAsync("basic-213") {
+    basicTest(V.scala213)
+  }
 }

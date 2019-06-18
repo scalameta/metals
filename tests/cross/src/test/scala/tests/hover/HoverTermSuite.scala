@@ -23,7 +23,13 @@ object HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     """|List[Int]
        |override def apply[A](xs: A*): List[A]
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      "2.13" ->
+        """|List[Int]
+           |def apply[A](elems: A*): List[A]
+           |""".stripMargin.hover
+    )
   )
 
   check(
@@ -58,7 +64,13 @@ object HoverTermSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     """|def s(args: Any*): String
-       |""".stripMargin.hover
+       |""".stripMargin.hover,
+    compat = Map(
+      "2.13" ->
+        """|String
+           |def s(args: Any*): String = macro
+           |""".stripMargin.hover
+    )
   )
 
   check(

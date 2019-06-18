@@ -19,7 +19,7 @@ abstract class Comment {
 
   private def closeHtmlTags(inline: Inline): Inline = {
     val stack = mutable.ListBuffer.empty[HtmlTag]
-    def scan(i: Inline) {
+    def scan(i: Inline): Unit = {
       i match {
         case Chain(list) =>
           list foreach scan

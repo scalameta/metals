@@ -3,8 +3,8 @@ id: sbt
 title: sbt
 ---
 
-sbt is most commonly used build tool in the Scala community and works with Metals
-out-of-the-box.
+sbt is most commonly used build tool in the Scala community and works with
+Metals out-of-the-box.
 
 ## Automatic installation
 
@@ -114,9 +114,3 @@ in your project.
 ```
 
 Try to remove any usage of `sbt-metals` in your build.
-
-### Module not found: org.scalameta#semanticdb-scalac_2.12.4
-
-Metals works only with Scala 2.12.7 and 2.11.12 at the moment, down to the exact
-version. If you are using an older version of Scala then the SemanticDB compiler
-plugin will not resolve.

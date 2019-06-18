@@ -25,6 +25,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Properties
 import java.util.concurrent.CompletableFuture
 import scala.meta.pc.DefinitionResult
+import scala.collection.Seq
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",

@@ -363,7 +363,13 @@ object CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case Nil => scala.collection.immutable
        |case head :: tl => scala.collection.immutable
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|case Nil => scala.collection.immutable
+           |case head :: next => scala.collection.immutable
+           |""".stripMargin
+    )
   )
 
   checkEditLine(

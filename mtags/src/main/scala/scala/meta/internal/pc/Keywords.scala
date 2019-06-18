@@ -100,14 +100,13 @@ trait Keywords { this: MetalsGlobal =>
         // diagnostics reported by the parser to see if it expected a definition here.
         // This is admittedly not a great solution, but it's the best I can think of at this point.
         val point = pos.withPoint(pos.point - name.length())
-        val isExpectedStartOfDefinition = reporter match {
-          case s: StoreReporter =>
+        val isExpectedStartOfDefinition = storeReporter(reporter) match {
+          case Some(s: StoreReporter) =>
             s.infos.exists { info =>
               info.pos.focus == point &&
               info.msg == "expected start of definition"
             }
-          case _ =>
-            false
+          case _ => false
         }
         isExpectedStartOfDefinition
     }

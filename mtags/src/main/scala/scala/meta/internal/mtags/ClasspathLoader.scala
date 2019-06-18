@@ -7,6 +7,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.meta.io.RelativePath
 import sun.misc.Unsafe
+import scala.collection.Seq
 
 object ClasspathLoader {
 

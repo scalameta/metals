@@ -489,9 +489,10 @@ object ScaladocParser {
           tags.filterNot(pair => stripTags.contains(pair._1))
 
         val bodyTags: mutable.Map[TagKey, List[Body]] =
-          mutable.Map(tagsWithoutDiagram mapValues { tag =>
-            tag map (parseWikiAtSymbol(_, pos))
-          } toSeq: _*)
+          mutable.Map(tagsWithoutDiagram.map {
+            case (key, tag) =>
+              key -> tag.map(parseWikiAtSymbol(_, pos))
+          }.toSeq: _*)
 
         def oneTag(
             key: SimpleTagKey,
@@ -1303,7 +1304,7 @@ object ScaladocParser {
       }
     }
 
-    def reportError(pos: Position, message: String) {
+    def reportError(pos: Position, message: String): Unit = {
       //pprint.log(message)
       //      reporter.warning(pos, message)
     }
@@ -1315,11 +1316,11 @@ object ScaladocParser {
     def char: Char =
       if (offset >= buffer.length) endOfText else buffer charAt offset
 
-    final def nextChar() {
+    final def nextChar(): Unit = {
       offset += 1
     }
 
-    final def prevChar() {
+    final def prevChar(): Unit = {
       offset -= 1
     }
 

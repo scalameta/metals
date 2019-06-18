@@ -62,7 +62,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    filter = _.contains("iter")
+    filter = _.contains("iterat")
   )
 
   checkEdit(
@@ -80,7 +80,17 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |    def foreach[U](f: Int => U): Unit = ${0:???}
       |  }
       |}
-      |""".stripMargin
+      |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """
+          |object Main {
+          |  new scala.Traversable[Int] {
+          |    override def foreach[U](f: Int => U): Unit = ${0:???}
+          |  }
+          |}
+          |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -200,7 +210,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
       |  }
       |}
     """.stripMargin,
-    filter = _.contains("iter")
+    filter = _.contains("iterat")
   )
 
   check(

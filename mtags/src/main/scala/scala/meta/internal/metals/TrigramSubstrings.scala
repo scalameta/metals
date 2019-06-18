@@ -1,12 +1,14 @@
 package scala.meta.internal.metals
 
 import java.lang.StringBuilder
+import scala.collection.mutable.ArrayBuffer
 
-/**
- * Returns all possible substrings of length 3 for the given string.
- */
-class TrigramSubstrings(string: String) extends Traversable[String] {
-  override def foreach[U](f: String => U): Unit = {
+object TrigramSubstrings {
+
+  /**
+   * Iterate over all possible substrings of length 3 for the given string.
+   */
+  def foreach(string: String, f: String => Unit): Unit = {
     val N = string.length
     val arr = new Array[Char](3)
     var i = 0
@@ -26,9 +28,15 @@ class TrigramSubstrings(string: String) extends Traversable[String] {
       i += 1
     }
   }
-}
 
-object TrigramSubstrings {
+  /**
+   * Returns all possible substrings of length 3 for the given string.
+   */
+  def seq(string: String): ArrayBuffer[String] = {
+    val buf = ArrayBuffer.empty[String]
+    foreach(string, trigram => buf += trigram)
+    buf
+  }
 
   /**
    * Returns combinations of the query string with up to three characters uppercased.
@@ -43,12 +51,10 @@ object TrigramSubstrings {
   def uppercased(
       query: String,
       maxCount: Int = 250
-  ): Traversable[String] = new Traversable[String] {
-    override def foreach[U](f: String => U): Unit = {
-      if (query.isEmpty()) ()
-      else runForeach(query.head.toUpper, f)
-    }
-    def runForeach[U](first: Char, f: String => U): Unit = {
+  ): ArrayBuffer[String] = {
+
+    def runForeach[U](f: String => U): Unit = {
+      val first: Char = query.head.toUpper
       var continue = true
       var count = 0
       def emit(string: String): Unit = {
@@ -83,5 +89,9 @@ object TrigramSubstrings {
         emit(trigram)
       }
     }
+
+    val buf = ArrayBuffer.empty[String]
+    runForeach(trigram => { buf += trigram })
+    buf
   }
 }

@@ -20,15 +20,16 @@ class RequirementsModifier extends StringModifier {
     s"""
        |## Requirements
        |
-       |**OpenJDK or Oracle Java 8**. Eclipse OpenJ9 and Java 11 are not 
-       |supported, please make sure the `JAVA_HOME` environment variable 
+       |**OpenJDK or Oracle Java 8**. Eclipse OpenJ9 and Java 11 are not
+       |supported, please make sure the `JAVA_HOME` environment variable
        |points to valid Java 8 installation.
        |
        |**macOS, Linux or Windows**. Metals is developed on macOS and every PR is
        |tested on Ubuntu+Windows.
        |
-       |**Scala 2.12 and 2.11**. Metals works only with Scala versions $supportedScalaVersions.
-       |Note that 2.10.x and 2.13.x are not supported.
+       |**Scala 2.13, 2.12 and 2.11**. Metals supports these Scala versions $supportedScalaVersions.
+       |Note that 2.11.x support is deprecated and it will be removed in future releases.
+       |It's recommended to upgrade to Scala 2.12 or Scala 2.13
        |""".stripMargin
   }
 }

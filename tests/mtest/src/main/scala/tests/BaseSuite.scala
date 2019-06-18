@@ -39,6 +39,8 @@ class BaseSuite extends TestSuite {
       "Linux".equalsIgnoreCase(System.getenv("AGENT_OS"))
   def isAzure: Boolean =
     "True".equalsIgnoreCase(System.getenv("TF_BUILD"))
+  def isCI: Boolean =
+    "true".equalsIgnoreCase(System.getenv("CI"))
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
@@ -165,9 +167,32 @@ class BaseSuite extends TestSuite {
       myTests += FlatTest("empty", () => ())
     }
     this.beforeAll()
-    val names = Tree("", myTests.map(x => Tree(x.name)): _*)
-    val inner = Right(myTests.map(x => new TestCallTree(Left(x.thunk()))))
+    val names = Tree("", myTests.map(x => Tree(x.name)).toSeq: _*)
+    val inner = Right(
+      myTests.map(x => new TestCallTree(Left(x.thunk()))).toIndexedSeq
+    )
     val thunks = new TestCallTree(inner)
     Tests(names, thunks)
+  }
+
+  private def scalaVersion: String =
+    Properties.versionNumberString
+  private def scalaBinary(scalaVersion: String): String =
+    scalaVersion.split("\\.").take(2).mkString(".")
+  val compatProcess = Map.empty[String, String => String]
+  def getExpected(
+      default: String,
+      compat: Map[String, String],
+      scalaVersion: String = this.scalaVersion
+  ): String = {
+    val postProcess = compatProcess
+      .get(scalaBinary(scalaVersion))
+      .orElse(compatProcess.get(scalaVersion))
+      .getOrElse(identity[String] _)
+    val result = compat
+      .get(scalaBinary(scalaVersion))
+      .orElse(compat.get(scalaVersion))
+      .getOrElse(default)
+    postProcess(result)
   }
 }

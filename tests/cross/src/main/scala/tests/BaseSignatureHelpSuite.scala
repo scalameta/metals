@@ -60,7 +60,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
                 if (includeDocs && pdoc.nonEmpty) {
                   out
                     .append("  @param ")
-                    .append(param.getLabel.getLeft().replaceFirst(":.*", ""))
+                    .append(param.getLabel.getLeft().replaceFirst("[ :].*", ""))
                     .append(" ")
                     .append(pdoc)
                     .append("\n")
@@ -75,4 +75,11 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       )
     }
   }
+
+  override val compatProcess: Map[String, String => String] = Map(
+    "2.13" -> { s =>
+      s.replaceAllLiterally("valueOf(obj: Any)", "valueOf(obj: Object)")
+        .replaceAllLiterally("Map[A, B]: Map", "Map[K, V]: Map")
+    }
+  )
 }

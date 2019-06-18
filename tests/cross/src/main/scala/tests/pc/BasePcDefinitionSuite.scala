@@ -11,7 +11,8 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 abstract class BasePcDefinitionSuite extends BasePCSuite {
   def check(
       name: String,
-      original: String
+      original: String,
+      compat: Map[String, String] = Map.empty
   ): Unit = {
     test(name) {
       val noRange = original
@@ -53,7 +54,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       }
       val obtained = TextEdits.applyEdits(code, edits)
       val expected = original.replaceAllLiterally("@@", "")
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, getExpected(expected, compat))
     }
   }
 }

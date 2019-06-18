@@ -1,8 +1,6 @@
 package tests
 
-import com.geirsson.coursiersmall.CoursierSmall
-import com.geirsson.coursiersmall.Dependency
-import com.geirsson.coursiersmall.Settings
+import coursier._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -25,6 +23,7 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import scala.collection.Seq
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
@@ -70,7 +69,7 @@ abstract class BasePCSuite extends BaseSuite {
     if (isWindows || (requiresJdkSources && !hasJdkSources)) ignore(name)(())
     else {
       val testName =
-        if (Properties.versionNumberString != BuildInfoVersions.scala212)
+        if (isCI && Properties.versionNumberString != BuildInfoVersions.scala212)
           s"${Properties.versionNumberString}-$name"
         else name
       super.test(testName) {
@@ -88,19 +87,21 @@ abstract class BasePCSuite extends BaseSuite {
     }
   }
   def indexScalaLibrary(): Unit = {
-    val sources = CoursierSmall.fetch(
-      new Settings()
-        .withClassifiers(List("sources"))
-        .withDependencies(
-          List(
-            new Dependency(
-              "org.scala-lang",
-              "scala-library",
-              BuildInfoVersions.scala212
-            )
-          )
+    val sources = Fetch()
+      .addClassifiers(Classifier.sources)
+      .addDependencies(
+        Dependency(
+          mod"org.scala-lang:scala-library",
+          // NOTE(gabro): we should ideally just use BuildoInfoVersions.scalaVersion
+          // but using the 2.11 stdlib would cause a lot tests to break for little benefit.
+          // We can remove this switch once we drop support for 2.11
+          BuildInfoVersions.scalaVersion match {
+            case v if v.startsWith("2.13") => BuildInfoVersions.scalaVersion
+            case _ => BuildInfoVersions.scala212
+          }
         )
-    )
+      )
+      .run()
     sources.foreach { jar =>
       index.addSourceJar(AbsolutePath(jar))
     }
@@ -134,22 +135,6 @@ abstract class BasePCSuite extends BaseSuite {
       " " + e.getRight.getValue
     }
   }.trim
-  private def scalaVersion: String =
-    Properties.versionNumberString
-  private def scalaBinary: String =
-    scalaVersion.split("\\.").take(2).mkString(".")
-  val compatProcess = Map.empty[String, String => String]
-  def getExpected(default: String, compat: Map[String, String]): String = {
-    val postProcess = compatProcess
-      .get(scalaBinary)
-      .orElse(compatProcess.get(scalaVersion))
-      .getOrElse(identity[String] _)
-    val result = compat
-      .get(scalaBinary)
-      .orElse(compat.get(scalaVersion))
-      .getOrElse(default)
-    postProcess(result)
-  }
   def sortLines(stableOrder: Boolean, string: String): String =
     if (stableOrder) string
     else string.linesIterator.toList.sorted.mkString("\n")

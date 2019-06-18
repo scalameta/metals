@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.io._
+import scala.meta.internal.io.{ListFiles => _, _}
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}

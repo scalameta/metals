@@ -31,7 +31,26 @@ object HoverDocSuite extends BaseHoverSuite {
        |```
        |List<String> s = Collections.emptyList();
        |```
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|**Expression type**:
+           |```scala
+           |java.util.List[Int]
+           |```
+           |**Symbol signature**:
+           |```scala
+           |final def emptyList[T <: Object](): java.util.List[T]
+           |```
+           |Returns an empty list (immutable).  This list is serializable.
+           |
+           |This example illustrates the type-safe way to obtain an empty list:
+           |
+           |```
+           |List<String> s = Collections.emptyList();
+           |```
+           |""".stripMargin
+    )
   )
 
 }

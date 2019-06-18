@@ -115,7 +115,17 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
        |override def equals(x$1: Any): Boolean
        |override def hashCode(): Int
        |override def finalize(): Unit
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|value: Int
+           |val
+           |var
+           |override def equals(x$1: Object): Boolean
+           |override def hashCode(): Int
+           |override def finalize(): Unit
+           |""".stripMargin
+    )
   )
 
   check(
