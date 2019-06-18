@@ -6,7 +6,7 @@ const baseUrl = "/metals/";
 
 const siteConfig = {
   title: "Metals",
-  tagline: "Work-in-progress language server for Scala",
+  tagline: "Language Server for Scala",
   url: "http://scalameta.org",
   baseUrl: baseUrl,
 
@@ -19,7 +19,7 @@ const siteConfig = {
     indexName: "metals"
   },
 
-  gaTrackingId: 'UA-140140828-1',
+  gaTrackingId: "UA-140140828-1",
 
   // For no header links in the top nav bar -> headerLinks: [],
   headerLinks: [
