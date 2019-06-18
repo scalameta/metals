@@ -9,6 +9,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.collection.Seq
 
 class ClasspathSearch(
     val map: collection.Map[String, CompressedPackageIndex],

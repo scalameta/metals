@@ -2,6 +2,7 @@ package tests.pc
 
 import java.nio.file.Path
 import tests.BaseCompletionSuite
+import scala.collection.Seq
 
 object MacroCompletionSuite extends BaseCompletionSuite {
   override def extraClasspath: Seq[Path] = thisClasspath

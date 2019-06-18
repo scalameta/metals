@@ -23,6 +23,7 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import scala.collection.Seq
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
