@@ -60,7 +60,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
                 if (includeDocs && pdoc.nonEmpty) {
                   out
                     .append("  @param ")
-                    .append(param.getLabel.getLeft().replaceFirst(":.*", ""))
+                    .append(param.getLabel.getLeft().replaceFirst("[ :].*", ""))
                     .append(" ")
                     .append(pdoc)
                     .append("\n")
