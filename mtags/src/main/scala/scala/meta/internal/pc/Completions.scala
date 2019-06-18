@@ -1500,7 +1500,13 @@ trait Completions { this: MetalsGlobal =>
     definitions.getMemberMethod(definitions.ObjectClass, termNames.wait_),
     // NOTE(olafur) IntelliJ does not complete the root package and without this filter
     // then `_root_` would appear as a completion result in the code `foobar(_<COMPLETE>)`
-    rootMirror.RootPackage
+    rootMirror.RootPackage,
+    // NOTE(gabro) valueOf was added as a Predef member in 2.13. We filter it out since is a niche
+    // use case and it would appear upon typing 'val'
+    definitions.getMemberMethod(
+      definitions.PredefModule,
+      TermName("valueOf")
+    )
   ).flatMap(_.alternatives)
 
   lazy val renameConfig: collection.Map[Symbol, Name] =

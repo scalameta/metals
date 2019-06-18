@@ -119,7 +119,6 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
     compat = Map(
       "2.13" ->
         """|value: Int
-           |valueOf[T](implicit vt: ValueOf[T]): T
            |val
            |var
            |override def equals(x$1: Object): Boolean
@@ -142,14 +141,7 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|val
        |var
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|valueOf[T](implicit vt: ValueOf[T]): T
-           |val
-           |var
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -164,13 +156,7 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|value: Int
-       |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|value: Int
-           |valueOf[T](implicit vt: ValueOf[T]): T
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEditLine(
