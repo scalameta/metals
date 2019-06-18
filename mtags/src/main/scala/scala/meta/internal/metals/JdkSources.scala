@@ -14,7 +14,7 @@ object JdkSources {
   }
 
   def defaultJavaHome: Option[String] = {
-    Option(System.getProperty("JAVA_HOME")).orElse(
+    Option(System.getenv("JAVA_HOME")).orElse(
       Option(System.getProperty("java.home"))
     )
   }
