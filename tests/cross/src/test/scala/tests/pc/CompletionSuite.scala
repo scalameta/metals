@@ -188,7 +188,7 @@ object CompletionSuite extends BaseCompletionSuite {
       |  }
       |  Xtension@@
       |}""".stripMargin,
-    """|XtensionMethod(a: Int): A.XtensionMethod
+    """|XtensionMethod(a: Int): XtensionMethod
        |""".stripMargin
   )
 

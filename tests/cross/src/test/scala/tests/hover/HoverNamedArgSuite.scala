@@ -56,7 +56,7 @@ object HoverNamedArgSuite extends BaseHoverSuite {
       |  println(<<new User(age = 42, n@@ame = "")>>)
       |}
       |""".stripMargin,
-    "def this(name: String, age: Int): e.User".hover
+    "def this(name: String, age: Int): User".hover
   )
 
 }
