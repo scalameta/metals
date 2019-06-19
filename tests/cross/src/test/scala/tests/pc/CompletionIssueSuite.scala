@@ -64,4 +64,46 @@ object CompletionIssueSuite extends BaseCompletionSuite {
       |}""".stripMargin
   )
 
+  checkEdit(
+    "issue-783",
+    """
+      |package all
+      |import all.World.Countries.{
+      |  Sweden,
+      |  Norway
+      |}
+      |
+      |object World {
+      |  object Countries{
+      |    object Sweden
+      |    object Norway
+      |    object France
+      |    object USA
+      |  }
+      |}
+      |import all.World.Countries.France
+      |object B {
+      |  val allCountries = Sweden + Norway + France + USA@@
+      |}""".stripMargin,
+    """
+      |package all
+      |import all.World.Countries.{
+      |  Sweden,
+      |  Norway
+      |}
+      |import all.World.Countries.USA
+      |
+      |object World {
+      |  object Countries{
+      |    object Sweden
+      |    object Norway
+      |    object France
+      |    object USA
+      |  }
+      |}
+      |import all.World.Countries.France
+      |object B {
+      |  val allCountries = Sweden + Norway + France + USA
+      |}""".stripMargin
+  )
 }

@@ -54,7 +54,7 @@ trait AutoImports { this: MetalsGlobal =>
               .getOrElse(pkg.pid)
             Some(
               new AutoImportPosition(
-                pos.source.lineToOffset(lastImport.pos.line),
+                pos.source.lineToOffset(lastImport.pos.focusEnd.line),
                 text
               )
             )
