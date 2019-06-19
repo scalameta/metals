@@ -316,7 +316,17 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
             val end =
               if (lastArgument.contains(arg)) tree.pos.end
               else arg.pos.end
-            val isEnclosed = start <= pos.start && pos.end <= end
+            val extraEndOffset = unit.source.content(pos.point - 1) match {
+              case ')' | ']' => 0
+              case _ =>
+                // NOTE(olafur) Add one extra character for missing closing paren/bracket.
+                // This happens in the example "List(1, 2@@" and the compiler inferred a closing
+                // parenthesis.
+                1
+            }
+            val isEnclosed =
+              start <= pos.start &&
+                pos.end < (end + extraEndOffset)
             if (isEnclosed) {
               activeCallsite = Some(call -> Arg(arg, i, j))
             }
