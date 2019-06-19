@@ -1429,8 +1429,8 @@ class MetalsLanguageServer(
       } yield occ) match {
         case Some(occ) =>
           if (occ.role.isDefinition) {
-            val referecneContext = new ReferenceContext(false)
-            val refParams = new ReferenceParams(referecneContext)
+            val referenceContext = new ReferenceContext(false)
+            val refParams = new ReferenceParams(referenceContext)
             refParams.setTextDocument(position.getTextDocument())
             refParams.setPosition(position.getPosition())
             val result = referencesResult(refParams)
