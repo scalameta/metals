@@ -580,7 +580,7 @@ final class TestingServer(
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     input.tokenize.get.foreach { token =>
       val params = token.toPositionParams(identifier)
-      val definition = server.definitionResult(params).asJava.get()
+      val definition = server.definitionOrReferences(params).asJava.get()
       definition.definition.foreach { path =>
         if (path.isDependencySource(workspace)) {
           readonlySources(path.toNIO.getFileName.toString) = path
@@ -601,10 +601,10 @@ final class TestingServer(
       val occurrence = if (token.isIdentifier) {
         if (definition.symbol.isPackage) None // ignore packages
         else if (symbols.isEmpty) Some("<no symbol>")
-        else Some(Symbols.Multi(symbols))
+        else Some(Symbols.Multi(symbols.sorted))
       } else {
         if (symbols.isEmpty) None // OK, expected
-        else Some(s"unexpected: ${Symbols.Multi(symbols)}")
+        else Some(s"unexpected: ${Symbols.Multi(symbols.sorted)}")
       }
       occurrences ++= occurrence.map { symbol =>
         s.SymbolOccurrence(Some(token.pos.toSemanticdb), symbol)
