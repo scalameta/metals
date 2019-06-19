@@ -236,12 +236,8 @@ class MetalsGlobal(
             }
           }
         case ThisType(sym) =>
-          if (sym.hasPackageFlag) {
-            if (history.tryShortenName(name)) NoPrefix
-            else new PrettyType(history.fullname(sym))
-          } else {
-            TypeRef(NoPrefix, sym, Nil)
-          }
+          if (history.tryShortenName(name)) NoPrefix
+          else new PrettyType(history.fullname(sym))
         case ConstantType(Constant(sym: TermSymbol))
             if sym.hasFlag(gf.JAVA_ENUM) =>
           loop(SingleType(sym.owner.thisPrefix, sym), None)
