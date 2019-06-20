@@ -121,5 +121,4 @@ object BillSlowSuite extends BaseSlowSuite("bill") {
     Bill.installGlobal(globalBsp.toNIO, "Bob")
     testSelectServerDialogue()
   }
-
 }

@@ -18,12 +18,6 @@ object CompletionSuite extends BaseCompletionSuite {
        |List - java.util
        |ListMap - scala.collection.immutable
        |ListMap - scala.collection.mutable
-       |ListSet - scala.collection.immutable
-       |ListPeer - java.awt.peer
-       |NameList - org.w3c.dom
-       |NodeList - org.w3c.dom
-       |ArrayList - java.util
-       |MediaList - org.w3c.dom.stylesheets
        |""".stripMargin,
     compat = Map(
       "2.13" ->
@@ -32,15 +26,9 @@ object CompletionSuite extends BaseCompletionSuite {
            |List - java.awt
            |List - java.util
            |ListMap - scala.collection.immutable
-           |ListMap - scala.collection.mutable
-           |ListSet - scala.collection.immutable
-           |ListPeer - java.awt.peer
-           |NameList - org.w3c.dom
-           |NodeList - org.w3c.dom
-           |ArrayList - java.util
-           |MediaList - org.w3c.dom.stylesheets
            |""".stripMargin
-    )
+    ),
+    topLines = Some(5)
   )
 
   check(
@@ -780,34 +768,8 @@ object CompletionSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|None scala
        |NoManifest scala.reflect
-       |NoClassDefFoundError java.lang
-       |NoSuchFieldError java.lang
-       |NoSuchFieldException java.lang
-       |NoSuchMethodError java.lang
-       |NoSuchMethodException java.lang
-       |NotImplementedError scala
-       |NotNull scala
-       |ClassNotFoundException java.lang
-       |CloneNotSupportedException java.lang
-       |EnumConstantNotPresentException java.lang
-       |TypeNotPresentException java.lang
        |""".stripMargin,
-    compat = Map(
-      "2.13" ->
-        """|None scala
-           |NoManifest scala.reflect
-           |NoClassDefFoundError java.lang
-           |NoSuchFieldError java.lang
-           |NoSuchFieldException java.lang
-           |NoSuchMethodError java.lang
-           |NoSuchMethodException java.lang
-           |NotImplementedError scala
-           |ClassNotFoundException java.lang
-           |CloneNotSupportedException java.lang
-           |EnumConstantNotPresentException java.lang
-           |TypeNotPresentException java.lang
-           |""".stripMargin
-    )
+    topLines = Some(2)
   )
 
   check(

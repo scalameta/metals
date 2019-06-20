@@ -236,6 +236,20 @@ class Fuzzy {
     loop(qa, -1, sa, -1)
   }
 
+  def bloomFilterSymbolStrings(
+      symbols: Iterable[String]
+  ): StringBloomFilter = {
+    val estimatedSize = symbols.foldLeft(0) {
+      case (accum, string) =>
+        val redundantSuffix =
+          if (string.endsWith(".class")) ".class".length()
+          else 0
+        accum + string.length() - redundantSuffix
+    }
+    val hasher = new StringBloomFilter(estimatedSize)
+    bloomFilterSymbolStrings(symbols, hasher)
+  }
+
   /**
    * Returns the set of strings to insert into a bloom filter index of a single package or file.
    *
@@ -256,10 +270,11 @@ class Fuzzy {
    */
   def bloomFilterSymbolStrings(
       symbols: Iterable[String],
-      result: mutable.Set[CharSequence] = mutable.Set.empty
-  ): mutable.Set[CharSequence] = {
+      hasher: StringBloomFilter
+  ): StringBloomFilter = {
     def visit(symbol: String): Unit = {
       if (symbol.endsWith("$sp.class")) return
+      hasher.reset()
       var i = 0
       var delimiter = i
       val upper = new StringBuilder()
@@ -269,15 +284,16 @@ class Fuzzy {
         val ch = symbol.charAt(i)
         ch match {
           case '.' | '/' | '#' | '$' =>
+            hasher.reset()
             delimiter = i + 1
             symbolicDelimiter = delimiter
           case _ =>
             if (ch.isUpper) {
               delimiter = i
+              hasher.reset()
               upper.append(ch)
             }
-            val namePrefix = new ZeroCopySubSequence(symbol, delimiter, i + 1)
-            result.add(namePrefix)
+            hasher.putCharIncrementally(ch)
         }
         i += 1
       }
@@ -285,12 +301,15 @@ class Fuzzy {
       if (!symbol.endsWith("/") &&
         !isAllNumeric(lastName) &&
         lastName.length() < ExactSearchLimit) {
-        result += ExactCharSequence(lastName)
+        hasher.putCharSequence(ExactCharSequence(lastName))
       }
-      TrigramSubstrings.foreach(upper.toString, trigram => result += trigram)
+      TrigramSubstrings.foreach(
+        upper.toString,
+        trigram => hasher.putCharSequence(trigram)
+      )
     }
     symbols.foreach(visit)
-    result
+    hasher
   }
 
   /**

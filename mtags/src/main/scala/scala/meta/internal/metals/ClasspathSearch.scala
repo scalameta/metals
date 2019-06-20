@@ -31,6 +31,7 @@ class ClasspathSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
+    if (query.query == "_") return SymbolSearch.Result.COMPLETE
     val classfiles =
       new PriorityQueue[Classfile](new ClassfileComparator(query.query))
     for {

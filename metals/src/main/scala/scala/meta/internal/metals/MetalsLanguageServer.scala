@@ -190,8 +190,12 @@ class MetalsLanguageServer(
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
     tables = register(new Tables(workspace, time, config))
     buildTools = new BuildTools(workspace, bspGlobalDirectories)
-    fileSystemSemanticdbs =
-      new FileSystemSemanticdbs(buildTargets, charset, workspace, fingerprints)
+    fileSystemSemanticdbs = new FileSystemSemanticdbs(
+      buildTargets,
+      charset,
+      workspace,
+      fingerprints
+    )
     interactiveSemanticdbs = register(
       new InteractiveSemanticdbs(
         workspace,
@@ -1217,7 +1221,7 @@ class MetalsLanguageServer(
     }
   }
 
-  def timedThunk[T](didWhat: String, onlyIf: Boolean)(thunk: => T): T = {
+  def timedThunk[T](didWhat: String, onlyIf: Boolean = true)(thunk: => T): T = {
     val elapsed = new Timer(time)
     val result = thunk
     if (onlyIf) {

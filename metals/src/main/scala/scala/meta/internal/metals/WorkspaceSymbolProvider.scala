@@ -1,9 +1,6 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import com.google.common.hash.BloomFilter
-import com.google.common.hash.Funnels
-import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Files
 import java.util.concurrent.CancellationException
@@ -73,16 +70,8 @@ final class WorkspaceSymbolProvider(
       source: AbsolutePath,
       symbols: Seq[WorkspaceSymbolInformation]
   ): Unit = {
-    val bloomFilterStrings =
+    val bloom =
       Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
-    val bloom = BloomFilter.create[CharSequence](
-      Funnels.stringFunnel(StandardCharsets.UTF_8),
-      Integer.valueOf(bloomFilterStrings.size),
-      0.01
-    )
-    bloomFilterStrings.foreach { c =>
-      bloom.put(c)
-    }
     inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
   }
 

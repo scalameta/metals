@@ -24,6 +24,8 @@ import scala.collection.mutable
  */
 class BaseSuite extends TestSuite {
   Testing.enable()
+  def isJava8: Boolean =
+    !Properties.isJavaAtLeast("9")
   def isScala211: Boolean =
     Properties.versionNumberString.startsWith("2.11")
   def isWindows: Boolean =
@@ -180,6 +182,7 @@ class BaseSuite extends TestSuite {
   private def scalaBinary(scalaVersion: String): String =
     scalaVersion.split("\\.").take(2).mkString(".")
   val compatProcess = Map.empty[String, String => String]
+
   def getExpected(
       default: String,
       compat: Map[String, String],

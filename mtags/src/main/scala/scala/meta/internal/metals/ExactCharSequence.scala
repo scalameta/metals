@@ -15,11 +15,11 @@ case class ExactCharSequence(value: CharSequence) extends CharSequence {
       // this charsequence when adding it to a bloom filter.
       12345.toChar
     } else {
-      value.charAt(index + 1)
+      value.charAt(index - 1)
     }
   }
 
   override def subSequence(start: Int, end: Int): CharSequence = {
-    ExactCharSequence(value.subSequence(start + 1, end + 1))
+    throw new UnsupportedOperationException()
   }
 }
