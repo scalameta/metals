@@ -711,4 +711,60 @@ object SignatureHelpSuite extends BaseSignatureHelpSuite {
     ""
   )
 
+  check(
+    "off-by-one",
+    """
+      |object a {
+      |  identity(42)@@
+      |}
+      |""".stripMargin,
+    ""
+  )
+
+  check(
+    "off-by-one2",
+    """
+      |object a {
+      |  identity(42@@)
+      |}
+      |""".stripMargin,
+    """|identity[A](x: A): A
+       |            ^^^^
+       |""".stripMargin
+  )
+
+  check(
+    "between-parens",
+    """
+      |object a {
+      |  Option(1).fold(2)@@(_ + 1)
+      |}
+      |""".stripMargin,
+    ""
+  )
+
+  check(
+    "between-parens2",
+    """
+      |object a {
+      |  Option(1).fold(2@@)(_ + 1)
+      |}
+      |""".stripMargin,
+    """|fold[B](ifEmpty: => B)(f: Int => B): B
+       |        ^^^^^^^^^^^^^
+       |""".stripMargin
+  )
+
+  check(
+    "between-parens3",
+    """
+      |object a {
+      |  Option(1).fold(2)(@@_ + 1)
+      |}
+      |""".stripMargin,
+    """|fold[B](ifEmpty: => B)(f: Int => B): B
+       |                       ^^^^^^^^^^^
+       |""".stripMargin
+  )
+
 }
