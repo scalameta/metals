@@ -6,7 +6,7 @@ const baseUrl = "/metals/";
 
 const siteConfig = {
   title: "Metals",
-  tagline: "Language Server for Scala",
+  tagline: "Scala language server with rich IDE features",
   url: "http://scalameta.org",
   baseUrl: baseUrl,
 
