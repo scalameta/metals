@@ -442,11 +442,11 @@ object CompletionSuite extends BaseCompletionSuite {
       |  Map.emp@@
       |}
       |""".stripMargin,
-    """|empty[K, V]: Map[K,V] (commit: '.')
+    """|empty[K, V]: Map[K,V] (commit: '')
        |""".stripMargin,
     includeCommitCharacter = true,
     compat = Map(
-      "2.11" -> "empty[A, B]: Map[A,B] (commit: '.')"
+      "2.11" -> "empty[A, B]: Map[A,B] (commit: '')"
     )
   )
 
