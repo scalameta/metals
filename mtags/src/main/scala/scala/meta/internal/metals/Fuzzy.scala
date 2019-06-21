@@ -237,7 +237,8 @@ class Fuzzy {
   }
 
   def bloomFilterSymbolStrings(
-      symbols: Iterable[String]
+      symbols: Iterable[String],
+      pkg: String = ""
   ): StringBloomFilter = {
     val estimatedSize = symbols.foldLeft(0) {
       case (accum, string) =>
@@ -246,8 +247,9 @@ class Fuzzy {
           else 0
         accum + string.length() - redundantSuffix
     }
-    val hasher = new StringBloomFilter(estimatedSize)
+    val hasher = new StringBloomFilter(estimatedSize * 20)
     bloomFilterSymbolStrings(symbols, hasher)
+    hasher
   }
 
   /**
@@ -269,47 +271,50 @@ class Fuzzy {
    * @param symbols all symbols in a source file or a package.
    */
   def bloomFilterSymbolStrings(
+      symbol: String,
+      hasher: StringBloomFilter
+  ): Unit = {
+    if (symbol.endsWith("$sp.class")) return
+    hasher.reset()
+    var i = 0
+    var delimiter = i
+    val upper = new StringBuilder()
+    var symbolicDelimiter = i
+    val N = lastIndex(symbol)
+    while (i < N) {
+      val ch = symbol.charAt(i)
+      ch match {
+        case '.' | '/' | '#' | '$' =>
+          hasher.reset()
+          delimiter = i + 1
+          symbolicDelimiter = delimiter
+        case _ =>
+          if (ch.isUpper) {
+            delimiter = i
+            hasher.reset()
+            upper.append(ch)
+          }
+          hasher.putCharIncrementally(ch)
+      }
+      i += 1
+    }
+    val lastName = new ZeroCopySubSequence(symbol, symbolicDelimiter, N)
+    if (!symbol.endsWith("/") &&
+      !isAllNumeric(lastName) &&
+      lastName.length() < ExactSearchLimit) {
+      hasher.putCharSequence(ExactCharSequence(lastName))
+    }
+    TrigramSubstrings.foreach(
+      upper.toString,
+      trigram => hasher.putCharSequence(trigram)
+    )
+  }
+
+  def bloomFilterSymbolStrings(
       symbols: Iterable[String],
       hasher: StringBloomFilter
-  ): StringBloomFilter = {
-    def visit(symbol: String): Unit = {
-      if (symbol.endsWith("$sp.class")) return
-      hasher.reset()
-      var i = 0
-      var delimiter = i
-      val upper = new StringBuilder()
-      var symbolicDelimiter = i
-      val N = lastIndex(symbol)
-      while (i < N) {
-        val ch = symbol.charAt(i)
-        ch match {
-          case '.' | '/' | '#' | '$' =>
-            hasher.reset()
-            delimiter = i + 1
-            symbolicDelimiter = delimiter
-          case _ =>
-            if (ch.isUpper) {
-              delimiter = i
-              hasher.reset()
-              upper.append(ch)
-            }
-            hasher.putCharIncrementally(ch)
-        }
-        i += 1
-      }
-      val lastName = new ZeroCopySubSequence(symbol, symbolicDelimiter, N)
-      if (!symbol.endsWith("/") &&
-        !isAllNumeric(lastName) &&
-        lastName.length() < ExactSearchLimit) {
-        hasher.putCharSequence(ExactCharSequence(lastName))
-      }
-      TrigramSubstrings.foreach(
-        upper.toString,
-        trigram => hasher.putCharSequence(trigram)
-      )
-    }
-    symbols.foreach(visit)
-    hasher
+  ): Unit = {
+    symbols.foreach(sym => bloomFilterSymbolStrings(sym, hasher))
   }
 
   /**

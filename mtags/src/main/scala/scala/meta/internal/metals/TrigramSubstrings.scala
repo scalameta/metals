@@ -8,7 +8,11 @@ object TrigramSubstrings {
   /**
    * Iterate over all possible substrings of length 3 for the given string.
    */
-  def foreach(string: String, f: String => Unit, maxResults: Int = 30): Unit = {
+  def foreach(
+      string: String,
+      f: String => Unit,
+      maxResults: Int = 250
+  ): Unit = {
     val N = string.length
     val arr = new Array[Char](3)
     var max = maxResults

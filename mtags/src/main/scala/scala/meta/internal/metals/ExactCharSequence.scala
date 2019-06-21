@@ -10,12 +10,12 @@ case class ExactCharSequence(value: CharSequence) extends CharSequence {
   override def length(): Int = value.length() + 1
 
   override def charAt(index: Int): Char = {
-    if (index == 0) {
+    if (index == value.length()) {
       // NOTE(olafur): Magical character to customize the hash value of
       // this charsequence when adding it to a bloom filter.
       12345.toChar
     } else {
-      value.charAt(index - 1)
+      value.charAt(index)
     }
   }
 

@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import com.google.common.hash.BloomFilter
 import scala.meta.internal.metals.WorkspaceSymbolQuery.AlternativeQuery
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
@@ -23,8 +22,6 @@ case class WorkspaceSymbolQuery(
 ) {
   def isExact: Boolean = query.length < Fuzzy.ExactSearchLimit
   def matches(bloom: StringBloomFilter): Boolean =
-    alternatives.exists(_.matches(bloom))
-  def matches(bloom: BloomFilter[CharSequence]): Boolean =
     alternatives.exists(_.matches(bloom))
   def matches(symbol: CharSequence): Boolean =
     alternatives.exists(_.matches(symbol, isTrailingDot))
@@ -57,12 +54,10 @@ object WorkspaceSymbolQuery {
   case class AlternativeQuery(
       query: String,
       bloomFilterQueries: Array[CharSequence],
-      bloomFilterByteQueries: Array[Long]
+      bloomFilterCachedQueries: Array[Long]
   ) {
     def matches(bloom: StringBloomFilter): Boolean =
-      bloomFilterQueries.forall(bloom.mightContain)
-    def matches(bloom: BloomFilter[CharSequence]): Boolean =
-      bloomFilterQueries.forall(bloom.mightContain)
+      bloomFilterCachedQueries.forall(bloom.mightContain)
     def matches(symbol: CharSequence, isTrailingDot: Boolean): Boolean =
       Fuzzy.matches(query, symbol, if (isTrailingDot) 1 else 0)
   }

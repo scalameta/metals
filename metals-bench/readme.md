@@ -139,6 +139,7 @@ Open the `*.svg` files in your browser to see the graphs.
 
 ```
 > bench/jmh:run -i 10 -wi 10 -f1 -t1 .*ClasspathIndexingBench
-[info] Benchmark                   Mode  Cnt     Score    Error  Units
-[info] ClasspathIndexingBench.run    ss   10  1809.068 ± 61.461  ms/op
+[info] Benchmark                   Mode  Cnt    Score    Error  Units
+[info] ClasspathIndexingBench.run    ss   10  919.237  ± 42.827  ms/op # JDK 8
+[info] ClasspathIndexingBench.run    ss   10  1316.451 ± 22.595  ms/op # JDK 11
 ```

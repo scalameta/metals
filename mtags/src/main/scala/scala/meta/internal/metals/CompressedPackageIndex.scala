@@ -14,10 +14,17 @@ import java.{util => ju}
  *   for this package.
  */
 case class CompressedPackageIndex(
+    packages: Array[String],
     bloom: StringBloomFilter,
     memberBytes: Array[Byte]
 ) {
-  def members: Array[String] = Compression.decompress(memberBytes)
+  require(packages.nonEmpty)
+  def members: Array[Classfile] = {
+    Compression.decompress(memberBytes)
+  }
+  def compare(other: CompressedPackageIndex): Int = {
+    packages(0).compare(other.packages(0))
+  }
 }
 
 object CompressedPackageIndex {
@@ -43,23 +50,54 @@ object CompressedPackageIndex {
   }
   def fromPackages(
       packages: PackageIndex
-  ): Iterator[(String, CompressedPackageIndex)] = {
-    for {
-      (pkg, members) <- packages.packages.asScala.iterator
-      if !isExcludedPackage(pkg)
-    } yield {
-      val bloom = Fuzzy.bloomFilterSymbolStrings(members.asScala)
-      Fuzzy.bloomFilterSymbolStrings(List(pkg), bloom)
-      // Sort members for deterministic order for deterministic results.
-      val membersSeq = new ju.ArrayList[String](members.size())
-      membersSeq.addAll(members)
-      membersSeq.sort(String.CASE_INSENSITIVE_ORDER)
+  ): Array[CompressedPackageIndex] = {
+    val buf = Array.newBuilder[CompressedPackageIndex]
+    val members = new ju.ArrayList[ClasspathElementPart]()
+    def defaultBlomFilter() = new StringBloomFilter(500)
+    val bufPackages = Array.newBuilder[String]
+    var bloom = defaultBlomFilter()
+    def flush(): Unit = {
       // Compress members because they make up the bulk of memory usage in the classpath index.
       // For a 140mb classpath with spark/linkerd/akka/.. the members take up 12mb uncompressed
       // and ~900kb compressed. We are accummulating a lot of different custom indexes in Metals
       // so we should try to keep each of them as small as possible.
       val compressedMembers = Compression.compress(members.asScala.iterator)
-      (pkg, CompressedPackageIndex(bloom, compressedMembers))
+      buf += CompressedPackageIndex(
+        bufPackages.result(),
+        bloom,
+        compressedMembers
+      )
     }
+    def enterPackage(pkg: String): Unit = {
+      bufPackages += pkg
+      members.add(PackageElementPart(pkg))
+      Fuzzy.bloomFilterSymbolStrings(pkg, bloom)
+    }
+    def newBloom(): Unit = {
+      flush()
+      bloom = defaultBlomFilter()
+      bufPackages.clear()
+      members.clear()
+    }
+    for {
+      (pkg, packageMembers) <- packages.packages.asScala.iterator
+      if !isExcludedPackage(pkg)
+    } {
+      enterPackage(pkg)
+      // Sort members for deterministic order for deterministic results.
+      val sortedMembers = new ju.ArrayList[String](packageMembers.size())
+      sortedMembers.addAll(packageMembers)
+      sortedMembers.sort(String.CASE_INSENSITIVE_ORDER)
+      sortedMembers.forEach { member =>
+        if (bloom.isFull) {
+          newBloom()
+          enterPackage(pkg)
+        }
+        members.add(ClassfileElementPart(member))
+        Fuzzy.bloomFilterSymbolStrings(member, bloom)
+      }
+    }
+    flush()
+    buf.result()
   }
 }

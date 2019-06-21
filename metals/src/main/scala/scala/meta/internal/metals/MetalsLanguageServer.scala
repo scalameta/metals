@@ -1275,7 +1275,7 @@ class MetalsLanguageServer(
         )
         logMemory(
           "classpath symbol index",
-          workspaceSymbols.inDependencies.map
+          workspaceSymbols.inDependencies.packages
         )
       }
     }

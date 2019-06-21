@@ -33,8 +33,13 @@ import com.google.common.hash.Funnels
  * unnecessary hashing.
  */
 class StringBloomFilter(estimatedSize: Int) {
-  private val bloom: BloomFilter[java.lang.Long] =
-    BloomFilter.create(Funnels.longFunnel(), Integer.valueOf(estimatedSize))
+  val maxFalsePositiveRatio = 0.01
+  val bloom: BloomFilter[java.lang.Long] = BloomFilter.create(
+    Funnels.longFunnel(),
+    Integer.valueOf(estimatedSize),
+    maxFalsePositiveRatio
+  )
+  def isFull: Boolean = bloom.expectedFpp() > maxFalsePositiveRatio
   // NOTE(olafur): we don't use the XXHashFactory.fastestInstance() instance
   // because the docstring warns about using the native hash instance in
   // applications where multiple isolated classloaders run on the same JVM,

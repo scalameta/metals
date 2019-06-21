@@ -175,6 +175,14 @@ class PackageIndex() {
 }
 
 object PackageIndex {
+  def fromClasspath(classpath: collection.Seq[Path]): PackageIndex = {
+    val packages = new PackageIndex()
+    packages.visitBootClasspath()
+    classpath.foreach { path =>
+      packages.visit(AbsolutePath(path))
+    }
+    packages
+  }
   def bootClasspath: List[AbsolutePath] =
     for {
       entries <- sys.props.collectFirst {
