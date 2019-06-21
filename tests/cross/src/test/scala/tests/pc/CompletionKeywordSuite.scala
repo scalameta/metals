@@ -16,8 +16,8 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       |  supe@@
       |}
       |""".stripMargin,
-    """|superVisorStrategy: Int (commit: '.')
-       |super (commit: '.')
+    """|superVisorStrategy: Int (commit: '')
+       |super (commit: '')
        |""".stripMargin,
     includeCommitCharacter = true
   )
