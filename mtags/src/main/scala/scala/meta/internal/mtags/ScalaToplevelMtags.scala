@@ -38,7 +38,7 @@ class ScalaToplevelMtags(
     val input: Input.VirtualFile,
     includeInnerClasses: Boolean
 ) extends MtagsIndexer {
-  private val scanner = new LegacyScanner(input, dialects.Scala212)
+  private val scanner = new LegacyScanner(input, dialects.Scala213)
   scanner.reader.nextChar()
   def isDone: Boolean = scanner.curr.token == EOF
   def isNewline: Boolean =

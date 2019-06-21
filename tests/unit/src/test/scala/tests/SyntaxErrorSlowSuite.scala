@@ -312,4 +312,22 @@ object SyntaxErrorSlowSuite extends BaseSlowSuite("syntax-error") {
     )
   )
 
+  testAsync("literal-types") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": { "scalaVersion": "2.13.0" }}
+           |/a/src/main/scala/A.scala
+           |object A {
+           |  val x: Option["literal"] = Some("literal")
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/A.scala")
+      _ = assertEmpty(client.workspaceDiagnostics)
+    } yield ()
+  }
+
 }
