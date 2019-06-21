@@ -82,7 +82,7 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalaTokenize(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
-      val scanner = new LegacyScanner(input, meta.dialects.Scala212)
+      val scanner = new LegacyScanner(input, meta.dialects.Scala213)
       var i = 0
       scanner.foreach(_ => i += 1)
     }
