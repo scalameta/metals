@@ -7,6 +7,7 @@ import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.CompressedPackageIndex
 
 object TestingWorkspaceSymbolProvider {
   def apply(
@@ -14,7 +15,8 @@ object TestingWorkspaceSymbolProvider {
       buildTargets: BuildTargets = new BuildTargets,
       statistics: StatisticsConfig = StatisticsConfig.default,
       index: OnDemandSymbolIndex = OnDemandSymbolIndex(),
-      isReferencedPackage: String => Int = _ => 0
+      isReferencedPackage: String => Int = _ => 0,
+      bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): WorkspaceSymbolProvider = {
     new WorkspaceSymbolProvider(
       workspace = workspace,
@@ -22,7 +24,8 @@ object TestingWorkspaceSymbolProvider {
       buildTargets = new BuildTargets,
       index = index,
       isReferencedPackage,
-      _.toFileOnDisk(workspace)
+      _.toFileOnDisk(workspace),
+      bucketSize = bucketSize
     )
   }
 }

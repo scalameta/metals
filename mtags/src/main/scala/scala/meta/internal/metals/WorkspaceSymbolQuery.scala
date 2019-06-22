@@ -24,8 +24,7 @@ case class WorkspaceSymbolQuery(
   def matches(bloom: StringBloomFilter): Boolean =
     alternatives.exists(_.matches(bloom))
   def matches(symbol: CharSequence): Boolean =
-    if (isExact) Fuzzy.isExactMatch(query, symbol)
-    else alternatives.exists(_.matches(symbol, isTrailingDot))
+    alternatives.exists(_.matches(symbol, isTrailingDot))
 
   def matches(info: SymbolInformation): Boolean = {
     WorkspaceSymbolQuery.isRelevantKind(info.kind) &&

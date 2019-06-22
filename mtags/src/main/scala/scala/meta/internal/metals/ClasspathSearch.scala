@@ -1,8 +1,6 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
-import java.util
-import java.util.Comparator
 import java.util.PriorityQueue
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
@@ -16,20 +14,6 @@ class ClasspathSearch(
   // Generic queries like "Str" can returns several thousand results, so we need
   // to limit it at some arbitrary point. Exact matches are always included.
   private val maxNonExactMatches = 10
-  private val byReferenceThenAlphabeticalComparator =
-    new Comparator[CompressedPackageIndex] {
-      override def compare(
-          a: CompressedPackageIndex,
-          b: CompressedPackageIndex
-      ): Int = {
-        val byReference = -Integer.compare(
-          packagePriority(a.packages(0)),
-          packagePriority(b.packages(0))
-        )
-        if (byReference != 0) byReference
-        else a.compare(b)
-      }
-    }
 
   def search(
       query: WorkspaceSymbolQuery,
@@ -70,17 +54,11 @@ class ClasspathSearch(
     searchResult
   }
 
-  private def packagesSortedByReferences(): Array[CompressedPackageIndex] = {
-    util.Arrays.sort(packages, byReferenceThenAlphabeticalComparator)
-    packages
-  }
-
   private def search(
       query: WorkspaceSymbolQuery,
       shouldVisitPackage: String => Boolean,
       isCancelled: () => Boolean
   ): Iterator[Classfile] = {
-    val packages = packagesSortedByReferences()
     for {
       pkg <- packages.iterator
       if pkg.packages.exists(shouldVisitPackage)
@@ -88,7 +66,10 @@ class ClasspathSearch(
       if query.matches(pkg.bloom)
       classfile <- pkg.members
       if classfile.isClassfile
-      isMatch = query.matches(classfile.fullname)
+      isMatch = {
+        if (query.isExact) Fuzzy.isExactMatch(query.query, classfile.filename)
+        else query.matches(classfile.fullname)
+      }
       if isMatch
     } yield classfile
   }
@@ -99,16 +80,18 @@ object ClasspathSearch {
     new ClasspathSearch(Array.empty, _ => 0)
   def fromPackages(
       packages: PackageIndex,
-      packagePriority: String => Int
+      packagePriority: String => Int,
+      bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): ClasspathSearch = {
-    val map = CompressedPackageIndex.fromPackages(packages)
+    val map = CompressedPackageIndex.fromPackages(packages, bucketSize)
     new ClasspathSearch(map, packagePriority)
   }
   def fromClasspath(
       classpath: collection.Seq[Path],
-      packagePriority: String => Int
+      packagePriority: String => Int,
+      bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): ClasspathSearch = {
     val packages = PackageIndex.fromClasspath(classpath)
-    fromPackages(packages, packagePriority)
+    fromPackages(packages, packagePriority, bucketSize)
   }
 }

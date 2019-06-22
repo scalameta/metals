@@ -18,16 +18,18 @@ import scala.meta.io.AbsolutePath
 import tests.Library
 import tests.TestingWorkspaceSymbolProvider
 import tests.MetalsTestEnrichments._
+import org.openjdk.jmh.annotations.Level
+import scala.meta.internal.metals.CompressedPackageIndex
 
 @State(Scope.Benchmark)
 class ClasspathFuzzBench {
   var symbols: WorkspaceSymbolProvider = _
   var tmp: AbsolutePath = _
 
-  @Setup
+  @Setup(Level.Trial)
   def setup(): Unit = {
     tmp = AbsolutePath(Files.createTempDirectory("metals"))
-    symbols = TestingWorkspaceSymbolProvider(tmp)
+    symbols = TestingWorkspaceSymbolProvider(tmp, bucketSize = bucketSize)
     symbols.indexLibraries(Library.all)
     symbols.indexClasspath()
   }
@@ -39,6 +41,11 @@ class ClasspathFuzzBench {
 
   @Param(Array("InputStream", "Str", "Like", "M.E", "File", "Files"))
   var query: String = _
+
+  // @Param(Array("256", "512", "1024", "2048", "4096", "8192"))
+  var bucketSize: Int =
+    // See docstring of DefaultBucketSize for results from testing different bucket sizes.
+    CompressedPackageIndex.DefaultBucketSize
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
