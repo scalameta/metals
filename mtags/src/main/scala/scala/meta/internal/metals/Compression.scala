@@ -48,7 +48,8 @@ object Compression {
         val tag = in.readTag()
         tag match {
           case 10 /* magic tag for `writeString(1, ...)` */ =>
-            out += Classfile(pkg, in.readString())
+            val name = in.readString()
+            out += Classfile(pkg, name)
           case 18 /* magic tag for `writeString(2, ...)` */ =>
             pkg = in.readString()
           case 0 =>

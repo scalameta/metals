@@ -109,19 +109,25 @@ class Fuzzy {
   private def exactMatch(
       query: CharSequence,
       symbol: CharSequence,
-      sd: Int,
+      sa: Int,
       sb: Int
   ): Boolean = {
-    if (query.length == sb - sd) {
+    if (query.length == sb - sa) {
       var idx = 0
       while (idx < query.length) {
-        if (query.charAt(idx) != symbol.charAt(sd + idx)) return false
+        if (query.charAt(idx) != symbol.charAt(sa + idx)) return false
         idx += 1
       }
       true
     } else {
       false
     }
+  }
+
+  def isExactMatch(query: String, filename: CharSequence): Boolean = {
+    val sb = lastIndex(filename)
+    val sa = sb - query.length()
+    exactMatch(query, filename, sa, sb)
   }
 
   private def lastIndex(symbol: CharSequence): Int = {

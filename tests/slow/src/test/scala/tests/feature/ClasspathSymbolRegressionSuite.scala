@@ -13,7 +13,10 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   override def afterAll(): Unit = {
     RecursivelyDelete(tmp)
   }
-  override def check(query: String, expected: String): Unit = {
+  override def check(
+      query: String,
+      expected: String
+  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
     if (isWindows) {
       // Ignored on Appveyor because the JDK classpath is different.
       ignore(query)(())
@@ -194,9 +197,7 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
     "IO",
     """|akka.io.IO Object
        |com.typesafe.config.ConfigException#IO Class
-       |org.eclipse.jetty.util.ByteArrayISO8859Writer Class
        |org.eclipse.jetty.util.IO Class
-       |org.mortbay.util.ByteArrayISO8859Writer Class
        |org.mortbay.util.IO Class
        |""".stripMargin
   )

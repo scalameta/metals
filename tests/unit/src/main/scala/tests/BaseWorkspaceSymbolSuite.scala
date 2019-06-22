@@ -16,7 +16,10 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
     p.indexClasspath()
     p
   }
-  def check(query: String, expected: String): Unit = {
+  def check(
+      query: String,
+      expected: String
+  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
     test(query) {
       val result = symbols.search(query)
       val obtained =
