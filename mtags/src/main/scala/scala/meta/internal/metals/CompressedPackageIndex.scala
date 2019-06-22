@@ -151,7 +151,7 @@ object CompressedPackageIndex {
       sortedMembers.forEach { member =>
         if (bucket.isFull) {
           newBucket()
-          enterPackage(pkg) // enter package again because we started a new bucket.
+          enterPackage(pkg)
         }
         members.add(ClassfileElementPart(member))
         Fuzzy.bloomFilterSymbolStrings(member, bucket)

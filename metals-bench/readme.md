@@ -24,13 +24,13 @@ Date: 2018 October 8th, commit 59bda2ac81a497fa168677499bd1a9df60fec5ab
 ## workspace/symbol
 
 ```
-[info] Benchmark                   (query)  Mode  Cnt    Score    Error  Units
-[info] ClasspathFuzzBench.run  InputStream    ss   30   51.488 ±  5.863  ms/op
-[info] ClasspathFuzzBench.run          Str    ss   30   69.864 ±  7.779  ms/op
-[info] ClasspathFuzzBench.run         Like    ss   30   20.670 ±  1.762  ms/op
-[info] ClasspathFuzzBench.run          M.E    ss   30  111.428 ± 14.784  ms/op
-[info] ClasspathFuzzBench.run         File    ss   30   82.478 ± 12.599  ms/op
-[info] ClasspathFuzzBench.run        Files    ss   30   56.654 ±  6.465  ms/op
+[info] Benchmark                   (query)  Mode  Cnt    Score   Error  Units
+[info] ClasspathFuzzBench.run  InputStream    ss   50   51.825 ± 4.510  ms/op
+[info] ClasspathFuzzBench.run          Str    ss   50   75.340 ± 8.054  ms/op
+[info] ClasspathFuzzBench.run         Like    ss   50   18.955 ± 2.129  ms/op
+[info] ClasspathFuzzBench.run          M.E    ss   50  108.284 ± 8.370  ms/op
+[info] ClasspathFuzzBench.run         File    ss   50   77.288 ± 4.674  ms/op
+[info] ClasspathFuzzBench.run        Files    ss   50   47.241 ± 4.018  ms/op
 
 [info] Benchmark                                          (query)  Mode  Cnt    Score   Error  Units
 [info] WorkspaceFuzzBench.upper                               FSM    ss   30  215.994 ± 2.248  ms/op

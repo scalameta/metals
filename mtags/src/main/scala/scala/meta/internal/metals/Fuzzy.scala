@@ -251,9 +251,12 @@ class Fuzzy {
         val redundantSuffix =
           if (string.endsWith(".class")) ".class".length()
           else 0
-        accum + string.length() - redundantSuffix
+        val uppercases = string.count(_.isUpper)
+        accum + string.length() +
+          TrigramSubstrings.trigramCombinations(uppercases) -
+          redundantSuffix
     }
-    val hasher = new StringBloomFilter(estimatedSize * 20)
+    val hasher = new StringBloomFilter(estimatedSize)
     bloomFilterSymbolStrings(symbols, hasher)
     hasher
   }

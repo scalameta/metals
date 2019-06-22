@@ -6,12 +6,21 @@ import scala.collection.mutable.ArrayBuffer
 object TrigramSubstrings {
 
   /**
+   * The default 250 is chosen to support symbols with up to 10 uppercase characters.
+   *
+   * {{{
+   *   combinatorial.choose(12, 3) == 200
+   * }}}
+   */
+  val DefaultMaxTrigrams = 250
+
+  /**
    * Iterate over all possible substrings of length 3 for the given string.
    */
   def foreach(
       string: String,
       f: String => Unit,
-      maxResults: Int = 250
+      maxResults: Int = DefaultMaxTrigrams
   ): Unit = {
     val N = string.length
     val arr = new Array[Char](3)
@@ -57,7 +66,7 @@ object TrigramSubstrings {
    */
   def uppercased(
       query: String,
-      maxCount: Int = 250
+      maxCount: Int = DefaultMaxTrigrams
   ): ArrayBuffer[String] = {
 
     def runForeach[U](f: String => U): Unit = {
@@ -101,4 +110,15 @@ object TrigramSubstrings {
     runForeach(trigram => { buf += trigram })
     buf
   }
+
+  private val DefaultMaxUppercases = 12
+  private val cachedCombinations =
+    3.to(DefaultMaxUppercases).map(n => n -> choose(n)).toMap
+  def trigramCombinations(n: Int): Int = {
+    if (n > DefaultMaxUppercases) DefaultMaxTrigrams
+    else if (n < 3) 0
+    else cachedCombinations(n)
+  }
+  private def choose(n: Int, k: Int = 3): Int =
+    (n - k + 1).to(n).product / 1.to(k).product
 }

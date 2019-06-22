@@ -72,8 +72,7 @@ final class WorkspaceSymbolProvider(
       source: AbsolutePath,
       symbols: Seq[WorkspaceSymbolInformation]
   ): Unit = {
-    val bloom =
-      Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
+    val bloom = Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
     inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
   }
 

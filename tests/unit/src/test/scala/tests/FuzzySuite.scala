@@ -128,4 +128,14 @@ object FuzzySuite extends BaseSuite {
        |""".stripMargin
   )
 
+  test("estimatedSize") {
+    // All uppercase inputs are most adversarial because we index all trigram
+    // uppercase combinations.
+    val alphabet = 'A'.to('Z').map(_.toChar).mkString
+    val bloom = Fuzzy.bloomFilterSymbolStrings(List(alphabet))
+    // Assert that the expected false positive ratio remains
+    // reasonable despite pathological input.
+    assert(bloom.bloom.expectedFpp() < 0.02)
+  }
+
 }
