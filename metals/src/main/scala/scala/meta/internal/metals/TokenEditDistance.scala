@@ -252,7 +252,7 @@ object TokenEditDistance {
       }
     }
     val deltas = {
-      import scala.collection.JavaConverters._
+      import scala.meta.internal.jdk.CollectionConverters._
       DiffUtils
         .diff(original.asJava, revised.asJava, TokenEqualizer)
         .getDeltas

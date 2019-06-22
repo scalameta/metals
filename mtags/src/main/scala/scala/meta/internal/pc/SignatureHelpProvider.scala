@@ -3,7 +3,7 @@ package scala.meta.internal.pc
 import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.OffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments._
 

@@ -5,7 +5,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
 import tests.TextEdits
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {

@@ -1,6 +1,6 @@
 package bench
 
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import org.eclipse.lsp4j.CompletionList

@@ -1,7 +1,7 @@
 package tests.pc
 
 import java.lang
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicBoolean

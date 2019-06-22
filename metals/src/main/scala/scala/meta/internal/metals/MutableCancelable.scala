@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentLinkedQueue
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 
 /** Open collection of cancelables that should cancel together */
 final class MutableCancelable extends Cancelable {

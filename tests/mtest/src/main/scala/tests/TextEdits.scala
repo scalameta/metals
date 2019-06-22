@@ -4,7 +4,7 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.TextEdit
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 
 /**
  * Client implementation of how to interpret `TextEdit` from LSP, used for testing purposes.

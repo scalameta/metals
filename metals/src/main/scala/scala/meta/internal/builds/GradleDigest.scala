@@ -4,7 +4,7 @@ import java.security.MessageDigest
 import java.nio.file.Files
 import java.util.stream.Collectors
 import java.nio.file.Path
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 
 object GradleDigest extends Digestable {
   override protected def digestWorkspace(

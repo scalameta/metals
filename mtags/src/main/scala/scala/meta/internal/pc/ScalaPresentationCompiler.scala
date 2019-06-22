@@ -11,7 +11,7 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.meta.internal.metals.EmptyCancelToken

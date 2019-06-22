@@ -3,7 +3,7 @@ package scala.meta.internal.builds
 import java.nio.file.{Files, Path}
 import java.security.MessageDigest
 
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.builds.Digest.digestScala
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath

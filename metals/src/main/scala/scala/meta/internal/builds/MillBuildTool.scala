@@ -37,7 +37,7 @@ case class MillBuildTool() extends BuildTool {
       predefScriptPath.toString,
       "mill.contrib.Bloop/install"
     )
-    import scala.collection.JavaConverters._
+    import scala.meta.internal.jdk.CollectionConverters._
     val millVersionPath = workspace.resolve(".mill-version")
     val millVersion = if (millVersionPath.isFile) {
       Files

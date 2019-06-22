@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import java.{util => ju}
 
 /**

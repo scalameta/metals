@@ -4,7 +4,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import java.util.Properties
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.collection.mutable.ListBuffer
 import scala.meta.RelativePath
 import scala.meta.internal.mtags.Symbol

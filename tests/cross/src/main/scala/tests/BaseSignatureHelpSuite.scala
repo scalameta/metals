@@ -1,6 +1,6 @@
 package tests
 
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
