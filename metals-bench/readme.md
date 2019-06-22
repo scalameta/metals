@@ -134,3 +134,11 @@ If all went well you should see an output like this in the end.
 ```
 
 Open the `*.svg` files in your browser to see the graphs.
+
+## Classpath indexing
+
+```
+> bench/jmh:run -i 10 -wi 10 -f1 -t1 .*ClasspathIndexingBench
+[info] Benchmark                   Mode  Cnt     Score    Error  Units
+[info] ClasspathIndexingBench.run    ss   10  1809.068 ± 61.461  ms/op
+```
