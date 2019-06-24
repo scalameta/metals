@@ -46,21 +46,15 @@ class StringBloomFilter(estimatedSize: Int) {
   // which is the case in Metals where we isolate the mtags classloader for
   // Scala 2.11/2.12/2.13.
   private val factory = XXHashFactory.fastestJavaInstance()
-  private val xx64 = factory.newStreamingHash64(1234)
+  private val streamingHash = factory.newStreamingHash64(1234)
   // Chars are 16 bit so we need two bytes per character.
-  private val array = new Array[Byte](2)
+  private val buffer = new Array[Byte](2)
 
   /** Resets the hash value. */
-  def reset(): Unit = xx64.reset()
+  def reset(): Unit = streamingHash.reset()
 
   /** Returns the current hash value. */
-  def value(): Long = xx64.getValue()
-
-  private def updateHashCode(char: Char): Unit = {
-    array(0) = char.toByte
-    array(1) = (char >> 8).toByte
-    xx64.update(array, 0, 2)
-  }
+  def value(): Long = streamingHash.getValue()
 
   /**
    * Inserts a new string to the bloom filter that is the concatenation of the
@@ -82,6 +76,12 @@ class StringBloomFilter(estimatedSize: Int) {
     bloom.put(value())
   }
 
+  private def updateHashCode(char: Char): Unit = {
+    buffer(0) = char.toByte
+    buffer(1) = (char >> 8).toByte
+    streamingHash.update(buffer, 0, 2)
+  }
+
   /** Insert a single string into the bloom filter. */
   def putCharSequence(chars: CharSequence): Boolean = {
     bloom.put(computeHashCode(chars))
@@ -89,7 +89,7 @@ class StringBloomFilter(estimatedSize: Int) {
 
   /** Computes the hascode of a single string that can be later passed to `mightContain(Long)`. */
   def computeHashCode(chars: CharSequence): Long = {
-    xx64.reset()
+    streamingHash.reset()
     var i = 0
     val N = chars.length()
     while (i < N) {
@@ -117,4 +117,5 @@ class StringBloomFilter(estimatedSize: Int) {
   def approximateElementCount(): Long = {
     bloom.approximateElementCount()
   }
+
 }

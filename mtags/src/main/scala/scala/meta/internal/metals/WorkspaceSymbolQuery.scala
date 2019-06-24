@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import scala.meta.internal.metals.WorkspaceSymbolQuery.AlternativeQuery
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
-import java.security.MessageDigest
 
 /**
  * A query for workspace/symbol.
@@ -67,7 +66,6 @@ object WorkspaceSymbolQuery {
     def apply(query: String): AlternativeQuery = {
       val hasher = new StringBloomFilter(0)
       val queries = Fuzzy.bloomFilterQueryStrings(query).toArray
-      val digest = MessageDigest.getInstance("MD5")
       val bytes = queries.map { query =>
         hasher.computeHashCode(query)
       }
