@@ -18,13 +18,14 @@ import scala.meta.io.AbsolutePath
 import tests.Library
 import tests.TestingWorkspaceSymbolProvider
 import tests.MetalsTestEnrichments._
+import org.openjdk.jmh.annotations.Level
 
 @State(Scope.Benchmark)
 class ClasspathFuzzBench {
   var symbols: WorkspaceSymbolProvider = _
   var tmp: AbsolutePath = _
 
-  @Setup
+  @Setup(Level.Trial)
   def setup(): Unit = {
     tmp = AbsolutePath(Files.createTempDirectory("metals"))
     symbols = TestingWorkspaceSymbolProvider(tmp)
@@ -39,7 +40,6 @@ class ClasspathFuzzBench {
 
   @Param(Array("InputStream", "Str", "Like", "M.E", "File", "Files"))
   var query: String = _
-
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)

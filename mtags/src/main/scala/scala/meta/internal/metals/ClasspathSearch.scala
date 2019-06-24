@@ -1,36 +1,25 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
-import java.util
-import java.util.Comparator
 import java.util.PriorityQueue
-import scala.collection.concurrent.TrieMap
-import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.collection.Seq
 
 class ClasspathSearch(
-    val map: collection.Map[String, CompressedPackageIndex],
+    val packages: Array[CompressedPackageIndex],
     packagePriority: String => Int
 ) {
   // The maximum number of non-exact matches that we return for classpath queries.
   // Generic queries like "Str" can returns several thousand results, so we need
   // to limit it at some arbitrary point. Exact matches are always included.
   private val maxNonExactMatches = 10
-  private val byReferenceThenAlphabeticalComparator = new Comparator[String] {
-    override def compare(a: String, b: String): Int = {
-      val byReference = -Integer.compare(packagePriority(a), packagePriority(b))
-      if (byReference != 0) byReference
-      else a.compare(b)
-    }
-  }
 
   def search(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
+    if (query.query == "_") return SymbolSearch.Result.COMPLETE
     val classfiles =
       new PriorityQueue[Classfile](new ClassfileComparator(query.query))
     for {
@@ -65,53 +54,44 @@ class ClasspathSearch(
     searchResult
   }
 
-  private def packagesSortedByReferences(): Array[String] = {
-    val packages = map.keys.toArray
-    util.Arrays.sort(packages, byReferenceThenAlphabeticalComparator)
-    packages
-  }
-
   private def search(
       query: WorkspaceSymbolQuery,
-      visitPackage: String => Boolean,
+      shouldVisitPackage: String => Boolean,
       isCancelled: () => Boolean
   ): Iterator[Classfile] = {
-    val packages = packagesSortedByReferences()
     for {
       pkg <- packages.iterator
-      if visitPackage(pkg)
+      if pkg.packages.exists(shouldVisitPackage)
       if !isCancelled()
-      compressed = map(pkg)
-      if query.matches(compressed.bloom)
-      member <- compressed.members
-      if member.endsWith(".class")
-      symbol = new ConcatSequence(pkg, member)
-      isMatch = query.matches(symbol)
+      if query.matches(pkg.bloom)
+      classfile <- pkg.members
+      if classfile.isClassfile
+      isMatch = {
+        if (query.isExact) Fuzzy.isExactMatch(query.query, classfile.filename)
+        else query.matches(classfile.fullname)
+      }
       if isMatch
-    } yield Classfile(pkg, member)
+    } yield classfile
   }
 }
 
 object ClasspathSearch {
   def empty: ClasspathSearch =
-    new ClasspathSearch(Map.empty, _ => 0)
+    new ClasspathSearch(Array.empty, _ => 0)
   def fromPackages(
       packages: PackageIndex,
-      packagePriority: String => Int
+      packagePriority: String => Int,
+      bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): ClasspathSearch = {
-    val map = TrieMap.empty[String, CompressedPackageIndex]
-    map ++= CompressedPackageIndex.fromPackages(packages)
+    val map = CompressedPackageIndex.fromPackages(packages, bucketSize)
     new ClasspathSearch(map, packagePriority)
   }
   def fromClasspath(
-      classpath: Seq[Path],
-      packagePriority: String => Int
+      classpath: collection.Seq[Path],
+      packagePriority: String => Int,
+      bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): ClasspathSearch = {
-    val packages = new PackageIndex()
-    packages.visitBootClasspath()
-    classpath.foreach { path =>
-      packages.visit(AbsolutePath(path))
-    }
-    fromPackages(packages, packagePriority)
+    val packages = PackageIndex.fromClasspath(classpath)
+    fromPackages(packages, packagePriority, bucketSize)
   }
 }

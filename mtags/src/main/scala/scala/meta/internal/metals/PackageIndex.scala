@@ -13,21 +13,25 @@ import java.util.logging.Logger
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.collection.JavaConverters._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.util.control.NonFatal
+import scala.util.Properties
+import java.nio.file.FileSystems
+import java.net.URI
 
 /**
  * An index to lookup classfiles contained in a given classpath.
  */
 class PackageIndex() {
   val logger = Logger.getLogger(classOf[PackageIndex].getName)
-  val packages = new util.HashMap[String, util.ArrayList[String]]()
+  val packages = new util.HashMap[String, util.Set[String]]()
   private val isVisited = new util.HashSet[AbsolutePath]()
   private val enterPackage =
-    new util.function.Function[String, util.ArrayList[String]] {
-      override def apply(t: String): util.ArrayList[String] = {
-        new util.ArrayList[String]()
+    new util.function.Function[String, util.HashSet[String]] {
+      override def apply(t: String): util.HashSet[String] = {
+        new util.HashSet[String]()
       }
     }
   def visit(entry: AbsolutePath): Unit = {
@@ -80,6 +84,7 @@ class PackageIndex() {
       }
     )
   }
+
   private def visitJarEntry(jarpath: AbsolutePath): Unit = {
     val file = jarpath.toFile
     val jar = new JarFile(file)
@@ -113,15 +118,71 @@ class PackageIndex() {
   }
 
   def visitBootClasspath(): Unit = {
-    PackageIndex.bootClasspath.foreach(visit)
+    if (Properties.isJavaAtLeast("9")) {
+      expandJrtClasspath()
+    } else {
+      PackageIndex.bootClasspath.foreach(visit)
+    }
     PackageIndex.scalaLibrary.foreach { scalaLibrary =>
       visit(AbsolutePath(scalaLibrary))
+    }
+  }
+
+  private def expandJrtClasspath(): Unit = {
+    val fs = FileSystems.getFileSystem(URI.create("jrt:/"))
+    val dir = fs.getPath("/packages")
+    var count = 0
+    val start = System.nanoTime()
+    for {
+      pkg <- Files.newDirectoryStream(dir).iterator().asScala
+      symbol = pkg.toString.stripPrefix("/packages/").replace('.', '/') + "/"
+      moduleLink <- Files.list(pkg).iterator().asScala
+    } {
+      val module =
+        if (!Files.isSymbolicLink(moduleLink)) moduleLink
+        else Files.readSymbolicLink(moduleLink)
+      Files.walkFileTree(
+        module,
+        new SimpleFileVisitor[Path] {
+          private var activeDirectory: String = ""
+          override def preVisitDirectory(
+              dir: Path,
+              attrs: BasicFileAttributes
+          ): FileVisitResult = {
+            activeDirectory =
+              module.relativize(dir).iterator().asScala.mkString("", "/", "/")
+            if (CompressedPackageIndex.isExcludedPackage(activeDirectory)) {
+              FileVisitResult.SKIP_SUBTREE
+            } else {
+              FileVisitResult.CONTINUE
+            }
+          }
+          override def visitFile(
+              file: Path,
+              attrs: BasicFileAttributes
+          ): FileVisitResult = {
+            val filename = file.getFileName().toString()
+            if (filename.endsWith(".class")) {
+              addMember(activeDirectory, filename)
+            }
+            FileVisitResult.CONTINUE
+          }
+        }
+      )
     }
   }
 
 }
 
 object PackageIndex {
+  def fromClasspath(classpath: collection.Seq[Path]): PackageIndex = {
+    val packages = new PackageIndex()
+    packages.visitBootClasspath()
+    classpath.foreach { path =>
+      packages.visit(AbsolutePath(path))
+    }
+    packages
+  }
   def bootClasspath: List[AbsolutePath] =
     for {
       entries <- sys.props.collectFirst {

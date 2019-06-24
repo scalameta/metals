@@ -109,19 +109,25 @@ class Fuzzy {
   private def exactMatch(
       query: CharSequence,
       symbol: CharSequence,
-      sd: Int,
+      sa: Int,
       sb: Int
   ): Boolean = {
-    if (query.length == sb - sd) {
+    if (query.length == sb - sa) {
       var idx = 0
       while (idx < query.length) {
-        if (query.charAt(idx) != symbol.charAt(sd + idx)) return false
+        if (query.charAt(idx) != symbol.charAt(sa + idx)) return false
         idx += 1
       }
       true
     } else {
       false
     }
+  }
+
+  def isExactMatch(query: String, filename: CharSequence): Boolean = {
+    val sb = lastIndex(filename)
+    val sa = sb - query.length()
+    exactMatch(query, filename, sa, sb)
   }
 
   private def lastIndex(symbol: CharSequence): Int = {
@@ -236,6 +242,25 @@ class Fuzzy {
     loop(qa, -1, sa, -1)
   }
 
+  def bloomFilterSymbolStrings(
+      symbols: Iterable[String],
+      pkg: String = ""
+  ): StringBloomFilter = {
+    val estimatedSize = symbols.foldLeft(0) {
+      case (accum, string) =>
+        val redundantSuffix =
+          if (string.endsWith(".class")) ".class".length()
+          else 0
+        val uppercases = string.count(_.isUpper)
+        accum + string.length() +
+          TrigramSubstrings.trigramCombinations(uppercases) -
+          redundantSuffix
+    }
+    val hasher = new StringBloomFilter(estimatedSize)
+    bloomFilterSymbolStrings(symbols, hasher)
+    hasher
+  }
+
   /**
    * Returns the set of strings to insert into a bloom filter index of a single package or file.
    *
@@ -255,42 +280,50 @@ class Fuzzy {
    * @param symbols all symbols in a source file or a package.
    */
   def bloomFilterSymbolStrings(
-      symbols: Iterable[String],
-      result: mutable.Set[CharSequence] = mutable.Set.empty
-  ): mutable.Set[CharSequence] = {
-    def visit(symbol: String): Unit = {
-      if (symbol.endsWith("$sp.class")) return
-      var i = 0
-      var delimiter = i
-      val upper = new StringBuilder()
-      var symbolicDelimiter = i
-      val N = lastIndex(symbol)
-      while (i < N) {
-        val ch = symbol.charAt(i)
-        ch match {
-          case '.' | '/' | '#' | '$' =>
-            delimiter = i + 1
-            symbolicDelimiter = delimiter
-          case _ =>
-            if (ch.isUpper) {
-              delimiter = i
-              upper.append(ch)
-            }
-            val namePrefix = new ZeroCopySubSequence(symbol, delimiter, i + 1)
-            result.add(namePrefix)
-        }
-        i += 1
+      symbol: String,
+      hasher: StringBloomFilter
+  ): Unit = {
+    if (symbol.endsWith("$sp.class")) return
+    hasher.reset()
+    var i = 0
+    var delimiter = i
+    val upper = new StringBuilder()
+    var symbolicDelimiter = i
+    val N = lastIndex(symbol)
+    while (i < N) {
+      val ch = symbol.charAt(i)
+      ch match {
+        case '.' | '/' | '#' | '$' =>
+          hasher.reset()
+          delimiter = i + 1
+          symbolicDelimiter = delimiter
+        case _ =>
+          if (ch.isUpper) {
+            delimiter = i
+            hasher.reset()
+            upper.append(ch)
+          }
+          hasher.putCharIncrementally(ch)
       }
-      val lastName = new ZeroCopySubSequence(symbol, symbolicDelimiter, N)
-      if (!symbol.endsWith("/") &&
-        !isAllNumeric(lastName) &&
-        lastName.length() < ExactSearchLimit) {
-        result += ExactCharSequence(lastName)
-      }
-      TrigramSubstrings.foreach(upper.toString, trigram => result += trigram)
+      i += 1
     }
-    symbols.foreach(visit)
-    result
+    val lastName = new ZeroCopySubSequence(symbol, symbolicDelimiter, N)
+    if (!symbol.endsWith("/") &&
+      !isAllNumeric(lastName) &&
+      lastName.length() < ExactSearchLimit) {
+      hasher.putCharSequence(ExactCharSequence(lastName))
+    }
+    TrigramSubstrings.foreach(
+      upper.toString,
+      trigram => hasher.putCharSequence(trigram)
+    )
+  }
+
+  def bloomFilterSymbolStrings(
+      symbols: Iterable[String],
+      hasher: StringBloomFilter
+  ): Unit = {
+    symbols.foreach(sym => bloomFilterSymbolStrings(sym, hasher))
   }
 
   /**

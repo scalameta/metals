@@ -1,9 +1,6 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import com.google.common.hash.BloomFilter
-import com.google.common.hash.Funnels
-import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Files
 import java.util.concurrent.CancellationException
@@ -28,10 +25,12 @@ final class WorkspaceSymbolProvider(
     val buildTargets: BuildTargets,
     val index: OnDemandSymbolIndex,
     isReferencedPackage: String => Int,
-    fileOnDisk: AbsolutePath => AbsolutePath
+    fileOnDisk: AbsolutePath => AbsolutePath,
+    bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
 )(implicit ec: ExecutionContext) {
   val inWorkspace = TrieMap.empty[Path, WorkspaceSymbolsIndex]
-  var inDependencies = ClasspathSearch.fromClasspath(Nil, isReferencedPackage)
+  var inDependencies =
+    ClasspathSearch.fromClasspath(Nil, isReferencedPackage, bucketSize)
 
   def search(query: String): Seq[l.SymbolInformation] = {
     search(query, () => ())
@@ -73,16 +72,7 @@ final class WorkspaceSymbolProvider(
       source: AbsolutePath,
       symbols: Seq[WorkspaceSymbolInformation]
   ): Unit = {
-    val bloomFilterStrings =
-      Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
-    val bloom = BloomFilter.create[CharSequence](
-      Funnels.stringFunnel(StandardCharsets.UTF_8),
-      Integer.valueOf(bloomFilterStrings.size),
-      0.01
-    )
-    bloomFilterStrings.foreach { c =>
-      bloom.put(c)
-    }
+    val bloom = Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
     inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
   }
 
@@ -96,7 +86,8 @@ final class WorkspaceSymbolProvider(
     } {
       packages.visit(classpathEntry)
     }
-    inDependencies = ClasspathSearch.fromPackages(packages, isReferencedPackage)
+    inDependencies =
+      ClasspathSearch.fromPackages(packages, isReferencedPackage, bucketSize)
   }
 
   private def workspaceSearch(

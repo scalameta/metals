@@ -24,13 +24,13 @@ Date: 2018 October 8th, commit 59bda2ac81a497fa168677499bd1a9df60fec5ab
 ## workspace/symbol
 
 ```
-[info] Benchmark                   (query)  Mode  Cnt    Score    Error  Units
-[info] ClasspathFuzzBench.run  InputStream    ss   60   46.368 ±  3.053  ms/op
-[info] ClasspathFuzzBench.run          Str    ss   60   65.793 ±  5.230  ms/op
-[info] ClasspathFuzzBench.run         Like    ss   60   17.341 ±  0.211  ms/op
-[info] ClasspathFuzzBench.run          M.E    ss   60  150.852 ± 15.329  ms/op
-[info] ClasspathFuzzBench.run         File    ss   60   70.818 ±  4.629  ms/op
-[info] ClasspathFuzzBench.run        Files    ss   60   49.294 ±  3.296  ms/op
+[info] Benchmark                   (query)  Mode  Cnt    Score   Error  Units
+[info] ClasspathFuzzBench.run  InputStream    ss   50   51.825 ± 4.510  ms/op
+[info] ClasspathFuzzBench.run          Str    ss   50   75.340 ± 8.054  ms/op
+[info] ClasspathFuzzBench.run         Like    ss   50   18.955 ± 2.129  ms/op
+[info] ClasspathFuzzBench.run          M.E    ss   50  108.284 ± 8.370  ms/op
+[info] ClasspathFuzzBench.run         File    ss   50   77.288 ± 4.674  ms/op
+[info] ClasspathFuzzBench.run        Files    ss   50   47.241 ± 4.018  ms/op
 
 [info] Benchmark                                          (query)  Mode  Cnt    Score   Error  Units
 [info] WorkspaceFuzzBench.upper                               FSM    ss   30  215.994 ± 2.248  ms/op
@@ -139,6 +139,7 @@ Open the `*.svg` files in your browser to see the graphs.
 
 ```
 > bench/jmh:run -i 10 -wi 10 -f1 -t1 .*ClasspathIndexingBench
-[info] Benchmark                   Mode  Cnt     Score    Error  Units
-[info] ClasspathIndexingBench.run    ss   10  1809.068 ± 61.461  ms/op
+[info] Benchmark                   Mode  Cnt    Score    Error  Units
+[info] ClasspathIndexingBench.run    ss   10  919.237  ± 42.827  ms/op # JDK 8
+[info] ClasspathIndexingBench.run    ss   10  1316.451 ± 22.595  ms/op # JDK 11
 ```

@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import com.google.common.hash.BloomFilter
 import scala.meta.internal.metals.WorkspaceSymbolQuery.AlternativeQuery
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
@@ -20,11 +19,12 @@ case class WorkspaceSymbolQuery(
     isTrailingDot: Boolean,
     isClasspath: Boolean = true
 ) {
-  def isExact: Boolean = query.length < Fuzzy.ExactSearchLimit
-  def matches(bloom: BloomFilter[CharSequence]): Boolean =
+  val isExact: Boolean = query.length < Fuzzy.ExactSearchLimit
+  def matches(bloom: StringBloomFilter): Boolean =
     alternatives.exists(_.matches(bloom))
   def matches(symbol: CharSequence): Boolean =
     alternatives.exists(_.matches(symbol, isTrailingDot))
+
   def matches(info: SymbolInformation): Boolean = {
     WorkspaceSymbolQuery.isRelevantKind(info.kind) &&
     this.matches(info.symbol)
@@ -53,20 +53,23 @@ object WorkspaceSymbolQuery {
 
   case class AlternativeQuery(
       query: String,
-      bloomFilterQueries: Array[CharSequence]
+      bloomFilterQueries: Array[CharSequence],
+      bloomFilterCachedQueries: Array[Long]
   ) {
-    def matches(bloom: BloomFilter[CharSequence]): Boolean =
-      bloomFilterQueries.forall(bloom.mightContain)
+    def matches(bloom: StringBloomFilter): Boolean =
+      bloomFilterCachedQueries.forall(bloom.mightContain)
     def matches(symbol: CharSequence, isTrailingDot: Boolean): Boolean =
       Fuzzy.matches(query, symbol, if (isTrailingDot) 1 else 0)
   }
 
   object AlternativeQuery {
     def apply(query: String): AlternativeQuery = {
-      AlternativeQuery(
-        query,
-        Fuzzy.bloomFilterQueryStrings(query).toArray
-      )
+      val hasher = new StringBloomFilter(0)
+      val queries = Fuzzy.bloomFilterQueryStrings(query).toArray
+      val bytes = queries.map { query =>
+        hasher.computeHashCode(query)
+      }
+      AlternativeQuery(query, queries, bytes)
     }
     def all(query: String): Array[AlternativeQuery] = {
       val isAllLowercase = query.forall(_.isLower)

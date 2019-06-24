@@ -59,10 +59,10 @@ object FuzzySuite extends BaseSuite {
         .toSeq
         .map(_.toString)
         .sorted
-      val isPrefix = Fuzzy.bloomFilterSymbolStrings(Seq(in)).map(_.toString)
+      val isPrefix = Fuzzy.bloomFilterSymbolStrings(Seq(in))
       assertNoDiff(obtained.mkString("\n"), expected)
       val allWords = Fuzzy.bloomFilterQueryStrings(in).map(_.toString)
-      val isNotPrefix = allWords.filterNot(isPrefix)
+      val isNotPrefix = allWords.filterNot(word => isPrefix.mightContain(word))
       assert(isNotPrefix.isEmpty)
     }
   }
@@ -127,5 +127,15 @@ object FuzzySuite extends BaseSuite {
        |serialization
        |""".stripMargin
   )
+
+  test("estimatedSize") {
+    // All uppercase inputs are most adversarial because we index all trigram
+    // uppercase combinations.
+    val alphabet = 'A'.to('Z').map(_.toChar).mkString
+    val bloom = Fuzzy.bloomFilterSymbolStrings(List(alphabet))
+    // Assert that the expected false positive ratio remains
+    // reasonable despite pathological input.
+    assert(bloom.bloom.expectedFpp() < 0.02)
+  }
 
 }
