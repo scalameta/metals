@@ -46,7 +46,7 @@ import scala.{meta => m}
  *
  * Includes the following converters from the standard library: {{{
  *  import scala.compat.java8.FutureConverters._
- *  import scala.collection.JavaConverters._
+ *  import scala.meta.internal.jdk.CollectionConverters._
  * }}}
  *
  * If this doesn't scale because we have too many unrelated extension methods

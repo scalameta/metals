@@ -2,7 +2,7 @@ package scala.meta.internal.builds
 
 import java.nio.file.Files
 import java.util.Properties
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.io.AbsolutePath
 
 /**

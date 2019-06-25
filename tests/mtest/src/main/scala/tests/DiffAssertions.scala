@@ -3,7 +3,7 @@ package tests
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import org.scalactic.source.Position
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 import utest.ufansi.Color
 

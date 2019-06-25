@@ -3,7 +3,7 @@ package tests
 import java.util
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 
 object FoldingRangesTextEdits {
   def apply(ranges: util.List[l.FoldingRange]): List[l.TextEdit] = {

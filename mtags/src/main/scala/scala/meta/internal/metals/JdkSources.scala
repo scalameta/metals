@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Files
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import java.nio.file.Paths
 import scala.meta.io.AbsolutePath
 

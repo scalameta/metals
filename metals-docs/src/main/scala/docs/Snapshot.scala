@@ -3,7 +3,7 @@ package docs
 import java.time._
 import java.time.format.DateTimeFormatter
 import org.jsoup.Jsoup
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BuildInfo
 import scala.util.control.NonFatal
 import scala.util.Try

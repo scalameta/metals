@@ -5,7 +5,7 @@ import com.google.gson.JsonPrimitive
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.Messages
 
 object FormattingSlowSuite extends BaseSlowSuite("formatting") {

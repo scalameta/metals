@@ -8,7 +8,7 @@ import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaParameter
 import com.thoughtworks.qdox.model.JavaTypeVariable
 import java.util
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.docstrings.MarkdownGenerator

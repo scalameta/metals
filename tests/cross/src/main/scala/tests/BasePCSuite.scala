@@ -7,7 +7,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Docstrings

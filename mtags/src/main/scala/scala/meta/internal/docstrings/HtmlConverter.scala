@@ -6,7 +6,7 @@ import org.jsoup.nodes.{Element, Node, TextNode}
 import org.jsoup.safety.{Cleaner, Whitelist}
 
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.util.matching.Regex
 
 // TODO - Add conversion of tables

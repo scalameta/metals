@@ -4,7 +4,7 @@ import java.util
 import java.util.Optional
 import java.util.concurrent.TimeUnit
 import scala.meta.pc.PresentationCompilerConfig
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 case class PresentationCompilerConfigImpl(

@@ -11,7 +11,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.tokens.Token
 import scala.util.control.NonFatal
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.xml.Node
 
 case class Digest(

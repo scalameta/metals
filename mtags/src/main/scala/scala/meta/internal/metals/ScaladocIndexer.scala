@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.collection.mutable
 import scala.meta._
 import scala.meta.internal.docstrings._

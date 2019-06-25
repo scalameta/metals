@@ -10,7 +10,7 @@ import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
 import java.io.StringReader
 import java.util.Comparator
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.mtags.MtagsEnrichments._

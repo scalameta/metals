@@ -3,7 +3,7 @@ package scala.meta.internal.metals
 import java.util.Properties
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.FileSystemWatcher
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat

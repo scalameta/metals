@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.MarkedString
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.reflect.internal.{Flags => gf}
-import scala.collection.JavaConverters._
+import scala.meta.internal.jdk.CollectionConverters._
 
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
