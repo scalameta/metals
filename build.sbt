@@ -142,7 +142,7 @@ lazy val V = new {
   val scalameta = "4.2.3"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4"
-  val bloop = "1.3.2"
+  val bloop = "1.3.2+110-3f2ffa65"
   val sbtBloop = bloop
   val gradleBloop = bloop
   val scalafmt = "2.0.1"
@@ -291,32 +291,6 @@ lazy val metals = project
   .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin)
 
-lazy val `sbt-metals` = project
-  .settings(
-    sbtPlugin := true,
-    crossScalaVersions := List(V.scala212, V.scala210),
-    sbtVersion in pluginCrossBuild := {
-      scalaBinaryVersion.value match {
-        case "2.10" => "0.13.17"
-        case "2.12" => "1.0.4"
-      }
-    },
-    libraryDependencies --= libraryDependencies.in(ThisBuild).value,
-    scalacOptions --= Seq(
-      "-Yrangepos",
-      "-Ywarn-unused-import",
-      "-Ywarn-unused:imports"
-    ),
-    buildInfoPackage := "scala.meta.internal.sbtmetals",
-    buildInfoKeys := Seq[BuildInfoKey](
-      "metalsVersion" -> version.value,
-      "supportedScalaVersions" -> V.supportedScalaVersions,
-      "scalametaVersion" -> V.scalameta
-    )
-  )
-  .enablePlugins(BuildInfoPlugin)
-  .disablePlugins(ScalafixPlugin)
-
 lazy val input = project
   .in(file("tests/input"))
   .settings(
@@ -454,15 +428,15 @@ lazy val slow = project
     testOnly.in(Test) := testOnly
       .in(Test)
       .dependsOn(
-        publishLocal.in(`sbt-metals`),
-        publishMtags
+        crossPublishLocal(V.scala211),
+        crossPublishLocal(V.scala213)
       )
       .evaluated,
     test.in(Test) := test
       .in(Test)
       .dependsOn(
-        publishLocal.in(`sbt-metals`),
-        publishMtags
+        crossPublishLocal(V.scala211),
+        crossPublishLocal(V.scala213)
       )
       .value
   )

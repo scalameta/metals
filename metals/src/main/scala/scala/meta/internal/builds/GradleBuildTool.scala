@@ -21,6 +21,9 @@ case class GradleBuildTool() extends BuildTool {
        |initscript {
        |    repositories {
        |        mavenCentral()
+       |        
+       |        // TODO - Remove
+       |        mavenLocal()
        |        // This might be removed when updating gradle bloop version to a full one
        |        maven{
        |          url 'https://dl.bintray.com/scalacenter/releases'
@@ -33,55 +36,6 @@ case class GradleBuildTool() extends BuildTool {
        |}
        |allprojects {
        |    apply plugin: bloop.integrations.gradle.BloopPlugin
-       |    afterEvaluate {
-       |        ModuleComponentIdentifier scalaLib = project.configurations.all.collectMany{
-       |          if(it.isCanBeResolved() && it.isVisible()){
-       |            it.resolvedConfiguration.resolvedArtifacts.findResults {
-       |              ComponentIdentifier identifier = it.getId().getComponentIdentifier()
-       |              if(identifier instanceof ModuleComponentIdentifier && it.name == 'scala-library'){
-       |                ModuleComponentIdentifier moduleIdentifier = (ModuleComponentIdentifier) identifier
-       |                moduleIdentifier
-       |              }
-       |            }
-       |          } else {
-       |            []
-       |          }
-       |        }.find{it}
-       |        Set versions = $versionsArray
-       |        if(!scalaLib){
-       |          logger.warn('No scala library is configured, cannot determine version.')
-       |        } else if (!versions.contains(scalaLib.version)){
-       |          logger.warn('Unsupported scala version ' + scalaLib.version)
-       |        } else {
-       |          repositories {
-       |              mavenCentral()
-       |          }
-       |          configurations {
-       |              scalaCompilerPlugin
-       |          }
-       |          dependencies {
-       |              scalaCompilerPlugin 'org.scalameta:semanticdb-scalac_' + scalaLib.version + ':${BuildInfo.semanticdbVersion}'
-       |          }
-       |          String semanticDb = configurations.scalaCompilerPlugin.files.find { it.name.contains('semanticdb') }.toString()
-       |          if (!semanticDb) {
-       |              throw new RuntimeException("SemanticDB plugin not found!")
-       |          }
-       |          tasks.withType(ScalaCompile) {
-       |              def params = [
-       |                      '-Xplugin:' + semanticDb,
-       |                      '-P:semanticdb:synthetics:on',
-       |                      '-P:semanticdb:failures:warning',
-       |                      '-P:semanticdb:sourceroot:' + project.rootProject.projectDir,
-       |                      '-Yrangepos',
-       |                      '-Xplugin-require:semanticdb'
-       |              ]
-       |              if (scalaCompileOptions.additionalParameters)
-       |                scalaCompileOptions.additionalParameters += params
-       |              else
-       |                scalaCompileOptions.additionalParameters = params
-       |          }
-       |        }
-       |    }
        |}
     """.stripMargin.getBytes()
 

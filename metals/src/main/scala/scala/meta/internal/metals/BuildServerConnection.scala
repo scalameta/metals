@@ -21,6 +21,9 @@ import scala.concurrent.Future
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonArray
 
 /**
  * An actively running and initialized BSP connection.
@@ -130,13 +133,33 @@ object BuildServerConnection {
     )
   }
 
+  final case class BloopExtraBuildParams(
+      semanticdbVersion: String,
+      supportedScalaVersions: Seq[String]
+  ) {
+    def toJson: JsonObject = {
+      val gson = new JsonObject
+      gson.add("semanticdbVersion", new JsonPrimitive(semanticdbVersion))
+      val array = new JsonArray()
+      supportedScalaVersions.foreach(
+        version => array.add(new JsonPrimitive(version))
+      )
+      gson.add("supportedScalaVersions", array)
+      gson
+    }
+  }
+
   /** Run build/initialize handshake */
   private def initialize(
       workspace: AbsolutePath,
       server: MetalsBuildServer
   ): InitializeBuildResult = {
-    val initializeResult = server.buildInitialize(
-      new InitializeBuildParams(
+    val extraParams = BloopExtraBuildParams(
+      BuildInfo.scalametaVersion,
+      BuildInfo.supportedScalaVersions
+    )
+    val initializeResult = server.buildInitialize {
+      val params = new InitializeBuildParams(
         "Metals",
         BuildInfo.metalsVersion,
         BuildInfo.bspVersion,
@@ -145,7 +168,9 @@ object BuildServerConnection {
           Collections.singletonList("scala")
         )
       )
-    )
+      params.setData(extraParams.toJson)
+      params
+    }
     // Block on the `build/initialize` request because it should respond instantly
     // and we want to fail fast if the connection is not
     val result =
