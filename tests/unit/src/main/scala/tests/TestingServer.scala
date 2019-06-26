@@ -76,6 +76,7 @@ import scala.meta.io.RelativePath
 import scala.{meta => m}
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
+import scala.meta.internal.tvp.TreeViewProvider
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -680,10 +681,10 @@ final class TestingServer(
   }
 
   def assertTreeViewChildren(
-      viewId: String,
       uri: String,
       expected: String
   )(implicit line: sourcecode.Line, file: sourcecode.File): Unit = {
+    val viewId: String = TreeViewProvider.Build
     val result =
       server.treeView.children(TreeViewChildrenParams(viewId, uri)).nodes
     val obtained = result

@@ -21,7 +21,6 @@ import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsInputBoxParams
 import scala.meta.internal.metals.MetalsInputBoxResult
-import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsSlowTaskParams
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.MetalsStatusParams
@@ -33,7 +32,7 @@ import scala.meta.internal.builds.GradleBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MillBuildTool
-import scala.meta.internal.tvp.TreeViewDidChangeParams
+import scala.meta.internal.metals.NoopLanguageClient
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -42,7 +41,7 @@ import scala.meta.internal.tvp.TreeViewDidChangeParams
  * - Aggregates published diagnostics and pretty-prints them as strings
  */
 final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
-    extends MetalsLanguageClient {
+    extends NoopLanguageClient {
   val diagnostics = TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
   val diagnosticsCount = TrieMap.empty[AbsolutePath, AtomicInteger]
   val messageRequests = new ConcurrentLinkedDeque[String]()
@@ -228,7 +227,4 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
   }
 
-  override def metalsTreeViewDidChange(
-      params: TreeViewDidChangeParams
-  ): Unit = ()
 }

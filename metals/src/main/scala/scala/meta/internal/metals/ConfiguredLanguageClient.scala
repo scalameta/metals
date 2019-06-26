@@ -2,19 +2,13 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
-import org.eclipse.lsp4j.ApplyWorkspaceEditParams
-import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
-import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
-import org.eclipse.lsp4j.UnregistrationParams
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.tvp._
 
 /**
  * Delegates requests/notifications to the underlying language client according to the user configuration.
@@ -24,31 +18,13 @@ import scala.meta.internal.tvp._
  * from window/logMessage are always visible in the UI while in VS Code the logs are hidden by default.
  */
 final class ConfiguredLanguageClient(
-    var underlying: MetalsLanguageClient,
+    _underlying: MetalsLanguageClient,
     config: MetalsServerConfig
 )(implicit ec: ExecutionContext)
-    extends MetalsLanguageClient {
+    extends DelegatingLanguageClient(_underlying, config) {
 
   override def shutdown(): Unit = {
     underlying = NoopLanguageClient
-  }
-
-  override def registerCapability(
-      params: RegistrationParams
-  ): CompletableFuture[Void] = {
-    underlying.registerCapability(params)
-  }
-
-  override def unregisterCapability(
-      params: UnregistrationParams
-  ): CompletableFuture[Void] = {
-    underlying.unregisterCapability(params)
-  }
-
-  override def applyEdit(
-      params: ApplyWorkspaceEditParams
-  ): CompletableFuture[ApplyWorkspaceEditResponse] = {
-    underlying.applyEdit(params)
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
@@ -78,10 +54,6 @@ final class ConfiguredLanguageClient(
       new CompletableFuture[MetalsSlowTaskResult]()
     }
   }
-  override def telemetryEvent(value: Any): Unit =
-    underlying.telemetryEvent(value)
-  override def publishDiagnostics(diagnostics: PublishDiagnosticsParams): Unit =
-    underlying.publishDiagnostics(diagnostics)
   override def showMessage(params: MessageParams): Unit = {
     if (config.showMessage.isOn) {
       underlying.showMessage(params)
@@ -133,14 +105,6 @@ final class ConfiguredLanguageClient(
     } else {
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
     }
-  }
-
-  override def metalsTreeViewDidChange(
-      params: TreeViewDidChangeParams
-  ): Unit = {
-    // NOTE(olafur): no need to configure here because `NoopTreeViewProvider` is
-    // used when the client doens't support TVP.
-    underlying.metalsTreeViewDidChange(params)
   }
 
 }

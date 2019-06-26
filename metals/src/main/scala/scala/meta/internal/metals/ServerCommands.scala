@@ -123,16 +123,16 @@ object ServerCommands {
     "Open the Metals repository on GitHub to ask a question, report a bug or request a new feature."
   )
 
-  val StarMetals = Command(
+  val MetalsGithub = Command(
     OpenBrowser("https://github.com/scalameta/metals"),
-    "Star Metals on GitHub",
-    "Give Metals some love and star it on GitHub 🙏"
+    "Metals on GitHub",
+    "Open the Metals repository on GitHub GitHub"
   )
 
-  val StarBloop = Command(
+  val BloopGithub = Command(
     OpenBrowser("https://github.com/scalacenter/bloop"),
-    "Star Bloop on GitHub",
-    "Give Bloop some love and star it on GitHub 🙏"
+    "Bloop on GitHub",
+    "Open the Metals repository on GitHub GitHub"
   )
 
   val ChatOnGitter = Command(
@@ -153,9 +153,9 @@ object ServerCommands {
     "Open the Bloop website to read the full instructions on how to install and use Bloop."
   )
 
-  val FollowTwitter = Command(
+  val ScalametaTwitter = Command(
     OpenBrowser("https://twitter.com/scalameta"),
-    "Follow Scalameta on Twitter",
+    "Scalameta on Twitter",
     "Stay up to date with the latest release announcements and learn new Scala code editing tricks."
   )
 

@@ -9,23 +9,23 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 /**
  * A tree view that exposes a package explorer to browse symbols such as classes, traits and methods.
  *
- * @param A The metadata used to render the toplevel nodes such as jar files or
- *          a Scala build target (with scala version, classpath, ...).
- * @param B The identifier key that is persisted into the URI of tree view nodes,
- *          such as a jar file URI or a build target URI.
+ * @param Value The metadata used to render the toplevel nodes such as jar files or
+ *              a Scala build target (with scala version, classpath, ...).
+ * @param Key The identifier key that is persisted into the URI of tree view nodes,
+ *            such as a jar file URI or a build target URI.
  */
-class ClasspathTreeView[A, B](
+class ClasspathTreeView[Value, Key](
     definitionIndex: GlobalSymbolIndex,
     viewId: String,
     scheme: String,
     title: String,
-    id: A => B,
-    encode: B => String,
-    decode: String => B,
-    valueTitle: A => String,
-    valueTooltip: A => String,
-    toplevels: () => Iterator[A],
-    loadSymbols: (B, String) => Iterator[TreeViewSymbolInformation]
+    id: Value => Key,
+    encode: Key => String,
+    decode: String => Key,
+    valueTitle: Value => String,
+    valueTooltip: Value => String,
+    toplevels: () => Iterator[Value],
+    loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation]
 ) {
   val rootUri = scheme + ":"
   def root = TreeViewNode(
@@ -46,10 +46,14 @@ class ClasspathTreeView[A, B](
       TreeViewNode.sortAlphabetically(toplevels().map(toViewNode).toArray)
     } else {
       val node = fromUri(uri)
-      val descendents = loadSymbols(node.value, node.symbol)
+
+      // Get all transitive children nodes
+      val descendents = loadSymbols(node.key, node.symbol)
         .filter(i => node.isDescendent(i.symbol))
         .flatMap(i => i :: i.parents)
         .distinctBy(_.symbol)
+
+      // Get direct children nodes
       val children = descendents.filter { s =>
         s.symbol.owner == node.symbol && {
           s.kind.isPackage ||
@@ -58,58 +62,70 @@ class ClasspathTreeView[A, B](
             .isDefined
         }
       }
+
+      // Auto-expand if there is only a single child node.
       val hasSiblings = children.length > 1
-      val result = children.iterator.map { info =>
-        val grandChildren =
-          descendents.filter(_.symbol.owner == info.symbol)
-        val childNode = node.withSymbol(info.symbol)
-        val displayName = Symbol(info.symbol).displayName
+
+      val result: Array[TreeViewNode] = children.iterator.map { child =>
+        // Infer the title of this node from its symbol kind.
+        val displayName = Symbol(child.symbol).displayName
         val label =
-          if (info.kind.isPackage) {
+          if (child.kind.isPackage) {
             displayName + "/"
-          } else if (info.kind.isMethod && !info.isVal && !info.isVar) {
+          } else if (child.kind.isMethod && !child.isVal && !child.isVar) {
             displayName + "()"
           } else {
             displayName
           }
+
+        // Get the children of this child to determine its collapse state.
+        val grandChildren =
+          descendents.filter(_.symbol.owner == child.symbol)
         val collapseState =
           if (!hasSiblings && grandChildren.nonEmpty)
             MetalsTreeItemCollapseState.expanded
-          else if (info.symbol.isPackage)
+          else if (child.symbol.isPackage)
             MetalsTreeItemCollapseState.collapsed
           else if (grandChildren.nonEmpty)
             MetalsTreeItemCollapseState.collapsed
           else
             MetalsTreeItemCollapseState.none
+
+        val command =
+          if (child.kind.isPackage) null
+          else MetalsCommand.goto(child.symbol)
+
+        val icon = child.kind match {
+          case k.OBJECT | k.PACKAGE_OBJECT => "object"
+          case k.TRAIT => "trait"
+          case k.CLASS => "class"
+          case k.INTERFACE => "interface"
+          case k.METHOD | k.MACRO =>
+            if (child.properties.isVal) "val"
+            else if (child.properties.isVar) "var"
+            else "method"
+          case k.FIELD =>
+            if (child.properties.isEnum) "enum"
+            else "field"
+          case _ => null
+        }
+
         TreeViewNode(
-          "build",
-          childNode.toUri,
+          viewId,
+          nodeUri = node.withSymbol(child.symbol).toUri,
           label = label,
-          tooltip = info.symbol,
+          tooltip = child.symbol,
           collapseState = collapseState,
-          command =
-            if (info.kind.isPackage) null
-            else MetalsCommand.goto(info.symbol),
-          icon = info.kind match {
-            case k.OBJECT | k.PACKAGE_OBJECT => "object"
-            case k.TRAIT => "trait"
-            case k.CLASS => "class"
-            case k.INTERFACE => "interface"
-            case k.METHOD | k.MACRO =>
-              if (info.properties.isVal) "val"
-              else if (info.properties.isVar) "var"
-              else "method"
-            case k.FIELD =>
-              if (info.properties.isEnum) "enum"
-              else "field"
-            case _ => null
-          }
+          command = command,
+          icon = icon
         )
       }.toArray
+
       if (node.symbol.isPackage) {
         TreeViewNode.sortAlphabetically(
           result,
           (a, b) => {
+            // Sort package objects at the top.
             -java.lang.Boolean.compare(
               a.label == "package",
               b.label == "package"
@@ -125,14 +141,24 @@ class ClasspathTreeView[A, B](
   }
 
   def toUri(
-      jar: B,
+      jar: Key,
       symbol: String = Symbols.RootPackage
-  ): SymbolTreeViewNode[B] =
-    SymbolTreeViewNode[B](scheme, jar, encode, symbol)
-  def fromUri(uri: String): SymbolTreeViewNode[B] =
-    SymbolTreeViewNode.fromUri[B](scheme, uri, decode, encode)
+  ): NodeUri =
+    NodeUri(jar, symbol)
 
-  def toViewNode(value: A): TreeViewNode = {
+  def fromUri(uri: String): NodeUri = {
+    val stripped = uri.stripPrefix(s"$scheme:")
+    val separator = stripped.lastIndexOf("!/")
+    if (separator < 0) {
+      NodeUri(decode(stripped))
+    } else {
+      val key = decode(stripped.substring(0, separator))
+      val symbol = stripped.substring(separator + 2)
+      NodeUri(key, symbol)
+    }
+  }
+
+  def toViewNode(value: Value): TreeViewNode = {
     val uri = toUri(id(value)).toUri
     TreeViewNode(
       viewId,
@@ -141,6 +167,31 @@ class ClasspathTreeView[A, B](
       tooltip = valueTooltip(value),
       collapseState = MetalsTreeItemCollapseState.collapsed
     )
+  }
+
+  /** URI of a tree view node that encodes a SemanticDB symbol and a Key. */
+  case class NodeUri(
+      key: Key,
+      symbol: String = Symbols.RootPackage
+  ) {
+    override def toString(): String = toUri
+    def withSymbol(newSymbol: String): NodeUri =
+      copy(symbol = newSymbol)
+    val isRoot = symbol == Symbols.RootPackage
+    def isDescendent(child: String): Boolean =
+      if (isRoot) true
+      else child.startsWith(symbol)
+    def toUri: String = s"$scheme:${encode(key)}!/$symbol"
+    def parentChain: List[String] = {
+      parent match {
+        case None => toUri :: s"$scheme:" :: Nil
+        case Some(p) => toUri :: p.parentChain
+      }
+    }
+    def parent: Option[NodeUri] = {
+      if (isRoot) None
+      else Some(NodeUri(key, symbol.owner))
+    }
   }
 
 }

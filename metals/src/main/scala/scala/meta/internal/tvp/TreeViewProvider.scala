@@ -1,11 +1,23 @@
 package scala.meta.internal.tvp
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import scala.meta.io.AbsolutePath
+import org.eclipse.{lsp4j => l}
 
 trait TreeViewProvider {
+  val Build = TreeViewProvider.Build
+  val Compile = TreeViewProvider.Compile
+  val Help = TreeViewProvider.Help
+  def didFocusTextDocument(
+      path: AbsolutePath
+  ): Unit = ()
   def children(
       params: TreeViewChildrenParams
   ): MetalsTreeViewChildrenResult = MetalsTreeViewChildrenResult(Array.empty)
+  def syncCursor(
+      path: AbsolutePath,
+      pos: l.Position
+  ): Option[TreeViewNodeRevealResult] = None
   def onCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams
   ): Unit = ()
@@ -18,4 +30,10 @@ trait TreeViewProvider {
   def onBuildTargetDidCompile(
       id: BuildTargetIdentifier
   ): Unit = ()
+}
+
+object TreeViewProvider {
+  val Build = "metalsBuild"
+  val Compile = "metalsCompile"
+  val Help = "metalsHelp"
 }

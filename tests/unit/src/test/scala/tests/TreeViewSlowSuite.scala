@@ -37,19 +37,16 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
           |""".stripMargin
       )
       _ = server.assertTreeViewChildren(
-        "build",
         s"projects:${server.buildTarget("a")}",
         ""
       )
       _ <- server.didOpen("a/src/main/scala/a/First.scala")
       _ <- server.didOpen("b/src/main/scala/b/Third.scala")
       _ = server.assertTreeViewChildren(
-        "build",
         s"projects:${server.buildTarget("a")}",
         "a/ +"
       )
       _ = server.assertTreeViewChildren(
-        "build",
         s"projects:${server.buildTarget("a")}!/a/",
         """|First class -
            |First object
@@ -58,14 +55,12 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
            |""".stripMargin
       )
       _ = server.assertTreeViewChildren(
-        "build",
         s"projects:${server.buildTarget("a")}!/a/First#",
         """|a() method
            |b val
            |""".stripMargin
       )
       _ = server.assertTreeViewChildren(
-        "build",
         s"projects:${server.buildTarget("a")}!/a/Second#",
         """|a() method
            |b val
@@ -93,12 +88,10 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
       )
       _ = {
         server.assertTreeViewChildren(
-          "build",
           s"libraries:${server.jar("sourcecode")}",
           "sourcecode/ +"
         )
         server.assertTreeViewChildren(
-          "build",
           s"libraries:${server.jar("scala-library")}!/scala/Some#",
           """|value val
              |isEmpty() method
@@ -107,7 +100,6 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |""".stripMargin
         )
         server.assertTreeViewChildren(
-          "build",
           s"libraries:${server.jar("lsp4j")}!/org/eclipse/lsp4j/FileChangeType#",
           """|Created enum
              |Changed enum
@@ -119,13 +111,11 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |""".stripMargin
         )
         server.assertTreeViewChildren(
-          "build",
           s"libraries:${server.jar("circe-core")}!/_root_/",
           """|io/ +
              |""".stripMargin
         )
         server.assertTreeViewChildren(
-          "build",
           s"libraries:${server.jar("cats-core")}!/cats/instances/symbol/",
           """|package object
              |""".stripMargin

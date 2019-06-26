@@ -11,14 +11,12 @@ import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.concurrent.CancellationException
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
-import scala.meta.internal.tvp._
 
 /**
  * Editor client that implement dialogue UIs like window/showMessageRequest.
@@ -43,20 +41,15 @@ import scala.meta.internal.tvp._
 final class MetalsHttpClient(
     workspace: AbsolutePath,
     url: () => String,
-    underlying: MetalsLanguageClient,
+    _underlying: MetalsLanguageClient,
     triggerReload: () => Unit,
     charset: Charset,
     icons: Icons,
     time: Time,
-    sh: ScheduledExecutorService
+    sh: ScheduledExecutorService,
+    config: MetalsServerConfig
 )(implicit ec: ExecutionContext)
-    extends MetalsLanguageClient {
-
-  override def metalsTreeViewDidChange(
-      params: TreeViewDidChangeParams
-  ): Unit = {
-    underlying.metalsTreeViewDidChange(params)
-  }
+    extends DelegatingLanguageClient(_underlying, config) {
 
   override def metalsInputBox(
       params: MetalsInputBoxParams
@@ -67,11 +60,6 @@ final class MetalsHttpClient(
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {}
-
-  override def telemetryEvent(value: Any): Unit =
-    underlying.telemetryEvent(value)
-  override def publishDiagnostics(diagnostics: PublishDiagnosticsParams): Unit =
-    underlying.publishDiagnostics(diagnostics)
 
   // =============
   // metals/status

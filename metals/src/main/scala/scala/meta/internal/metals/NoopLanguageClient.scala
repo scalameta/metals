@@ -14,7 +14,7 @@ import scala.meta.internal.tvp._
  * Used during shutdown procedure to ensure no status bar updates
  * or log messages are published during shutdown.
  */
-object NoopLanguageClient extends MetalsLanguageClient {
+abstract class NoopLanguageClient extends MetalsLanguageClient {
   override def metalsStatus(params: MetalsStatusParams): Unit = ()
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
@@ -39,4 +39,9 @@ object NoopLanguageClient extends MetalsLanguageClient {
   override def metalsTreeViewDidChange(
       params: TreeViewDidChangeParams
   ): Unit = ()
+  // override def metalsTreeViewNodeReveal(
+  //     params: TreeViewNodeRevealResult
+  // ): Unit = ()
 }
+
+object NoopLanguageClient extends NoopLanguageClient

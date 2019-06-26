@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util
+import java.{util => ju}
 import java.lang.{Iterable => JIterable}
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -19,6 +20,7 @@ import scala.meta.io.AbsolutePath
  * In-memory cache for looking up build server metadata.
  */
 final class BuildTargets() {
+  private var tables: Option[Tables] = None
   private val sourceDirectoriesToBuildTarget =
     TrieMap.empty[AbsolutePath, ConcurrentLinkedQueue[BuildTargetIdentifier]]
   private val buildTargetInfo =
@@ -31,6 +33,10 @@ final class BuildTargets() {
     TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
   private val inverseDependencySources =
     TrieMap.empty[AbsolutePath, BuildTargetIdentifier]
+
+  def setTables(newTables: Tables): Unit = {
+    tables = Some(newTables)
+  }
 
   def reset(): Unit = {
     sourceDirectoriesToBuildTarget.values.foreach(_.clear())
@@ -62,16 +68,16 @@ final class BuildTargets() {
     } yield ScalaTarget(info, scalac)
 
   def allWorkspaceJars: Iterator[AbsolutePath] = {
-    val isVisited = mutable.Set.empty[AbsolutePath]
-    for {
-      target <- all
-      classpathEntry <- target.scalac.classpath
-      if classpathEntry.extension == "jar"
-      if !isVisited(classpathEntry)
-    } yield {
-      isVisited += classpathEntry
-      classpathEntry
-    }
+    val isVisited = new ju.HashSet[AbsolutePath]()
+    Iterator(
+      for {
+        target <- all
+        classpathEntry <- target.scalac.classpath
+        if classpathEntry.extension == "jar"
+        if isVisited.add(classpathEntry)
+      } yield classpathEntry,
+      PackageIndex.bootClasspath.iterator
+    ).flatten
   }
 
   def addSourceDirectory(
@@ -175,6 +181,7 @@ final class BuildTargets() {
     buildTargets // prioritize JVM targets over JS/Native
       .find(x => scalacOptions(x).exists(_.isJVM))
       .orElse(buildTargets.headOption)
+      .orElse(tables.flatMap(_.dependencySources.getBuildTarget(source)))
   }
 
   def sourceBuildTargets(

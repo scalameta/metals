@@ -188,6 +188,7 @@ trait MtagsEnrichments {
       }
   }
   implicit class XtensionStringDoc(doc: String) {
+    def asSymbol: Symbol = Symbol(doc)
     def endsWithAt(value: String, offset: Int): Boolean = {
       val start = offset - value.length
       start >= 0 &&

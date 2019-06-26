@@ -99,6 +99,7 @@ class MetalsLanguageServer(
   private val fingerprints = new MutableMd5Fingerprints
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
+  var focusedDocument = Option.empty[AbsolutePath]
   private val definitionIndex = newSymbolIndex()
   private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer = Option.empty[BuildServerConnection]
@@ -194,6 +195,7 @@ class MetalsLanguageServer(
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
     tables = register(new Tables(workspace, time, config))
+    buildTargets.setTables(tables)
     buildTools = new BuildTools(workspace, bspGlobalDirectories)
     fileSystemSemanticdbs = new FileSystemSemanticdbs(
       buildTargets,
@@ -366,11 +368,11 @@ class MetalsLanguageServer(
         () => workspace,
         languageClient,
         buildTargets,
-        () => buildClient,
+        () => buildClient.ongoingCompilations(),
         definitionIndex,
-        sh,
         config.statistics,
-        id => compilations.compileTargets(List(id))
+        id => compilations.compileTargets(List(id)),
+        sh
       )
     }
   }
@@ -487,7 +489,8 @@ class MetalsLanguageServer(
         charset,
         config.icons,
         time,
-        sh
+        sh,
+        config
       )
       render = () => newClient.renderHtml
       completeCommand = e => newClient.completeCommand(e)
@@ -601,8 +604,10 @@ class MetalsLanguageServer(
   @JsonNotification("metals/didFocusTextDocument")
   def didFocus(uri: String): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
+    focusedDocument = Some(path)
     // unpublish diagnostic for dependencies
     interactiveSemanticdbs.didFocus(path)
+    Future(treeView.didFocusTextDocument(path))
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(workspace)) {
@@ -1094,6 +1099,19 @@ class MetalsLanguageServer(
       treeView.onCollapseDidChange(params)
     }.asJava
 
+  @JsonRequest("metals/treeViewSyncCursor")
+  def treeViewNodeCollapseDidChange(
+      params: TextDocumentPositionParams
+  ): CompletableFuture[TreeViewNodeRevealResult] =
+    Future {
+      treeView
+        .syncCursor(
+          params.getTextDocument().getUri().toAbsolutePath,
+          params.getPosition()
+        )
+        .orNull
+    }.asJava
+
   private def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
@@ -1185,13 +1203,13 @@ class MetalsLanguageServer(
           TreeViewDidChangeParams(
             Array(
               TreeViewNode(
-                "build",
+                treeView.Build,
                 null,
                 null,
                 null
               ),
               TreeViewNode(
-                "compile",
+                treeView.Compile,
                 null,
                 null,
                 null
@@ -1199,6 +1217,7 @@ class MetalsLanguageServer(
             )
           )
         )
+        focusedDocument.foreach(treeView.didFocusTextDocument)
       }
     } yield result
   }.recover {

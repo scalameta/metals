@@ -65,7 +65,7 @@ object ClientCommands {
   val GotoLocation = Command(
     "metals-goto-location",
     "Goto location",
-    "Move the cursor focus the the provided location",
+    "Move the cursor focus the provided location",
     """|A LSP `Location` object with `uri` and `range` fields.
        |Example: 
        |```json
@@ -80,28 +80,11 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  val TreeViewRevealNode = Command(
-    "metals-reveal-treeview",
-    "Reveal tree view node",
-    "Reveal the tree view node with the given URI.",
-    """|An object with string fields `viewId` and `uri`.
-       |Example: 
-       |```json
-       |{
-       |  "viewId": "build",
-       |  "uri": "libraries:path/to/scala-library.jar!/scala/Predef."
-       |}
-       |```
-       |""".stripMargin
-  )
-
   def all: List[Command] = List(
-    EchoCommand,
-    GotoLocation,
     RunDoctor,
     ToggleLogs,
     FocusDiagnostics,
     GotoLocation,
-    TreeViewRevealNode
+    EchoCommand
   )
 }

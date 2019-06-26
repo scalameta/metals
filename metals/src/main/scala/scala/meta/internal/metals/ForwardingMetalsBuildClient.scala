@@ -15,7 +15,6 @@ import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
-import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.internal.tvp._
 
 /**
@@ -38,7 +37,9 @@ final class ForwardingMetalsBuildClient(
       promise: Promise[CompileReport],
       isNoOp: Boolean,
       progress: TaskProgress = TaskProgress.empty
-  )
+  ) extends TreeViewCompilation {
+    def progressPercentage = progress.percentage
+  }
 
   private val compilations = TrieMap.empty[BuildTargetIdentifier, Compilation]
   private val hasReportedError = Collections.newSetFromMap(
@@ -184,49 +185,10 @@ final class ForwardingMetalsBuildClient(
     }
   }
 
-  def ongoingCompilations: Array[TreeViewNode] = {
-    compilations.keysIterator.flatMap(ongoingCompileNode).toArray
-  }
-
-  def ongoingCompileNode(
-      id: BuildTargetIdentifier
-  ): Option[TreeViewNode] = {
-    for {
-      compilation <- compilations.get(id)
-      info <- buildTargets.info(id)
-    } yield
-      TreeViewNode(
-        "compile",
-        id.getUri,
-        s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progress.percentage}%)"
-      )
-  }
-
-  def ongoingCompilationNode: TreeViewNode = {
-    val size = compilations.size
-    val counter = if (size > 0) s" ($size)" else ""
-    TreeViewNode(
-      "compile",
-      "metals://ongoing-compilations",
-      s"Ongoing compilations$counter",
-      collapseState = MetalsTreeItemCollapseState.collapsed
-    )
-  }
-
-  def toplevelTreeNodes: Array[TreeViewNode] =
-    Array(ongoingCompilationNode)
-
-  private val wasEmpty = new AtomicBoolean(true)
-  private val isEmpty = new AtomicBoolean(true)
-  def tickBuildTreeView(): Unit = {
-    isEmpty.set(compilations.isEmpty)
-    if (wasEmpty.get() && isEmpty.get()) {
-      () // Nothing changed since the last notification.
-    } else {
-      languageClient.metalsTreeViewDidChange(
-        TreeViewDidChangeParams(toplevelTreeNodes)
-      )
-    }
-    wasEmpty.set(isEmpty.get())
+  def ongoingCompilations(): TreeViewCompilations = new TreeViewCompilations {
+    override def get(id: BuildTargetIdentifier) = compilations.get(id)
+    override def isEmpty = compilations.isEmpty
+    override def size = compilations.size
+    override def buildTargets = compilations.keysIterator
   }
 }
