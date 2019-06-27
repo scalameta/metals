@@ -15,6 +15,11 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.mtags.Symbol
+import scala.util.Try
+import scala.meta.internal.mtags.Mtags
+import java.net.URLClassLoader
+import scala.util.control.NonFatal
 
 /**
  * In-memory cache for looking up build server metadata.
@@ -182,6 +187,85 @@ final class BuildTargets() {
       .find(x => scalacOptions(x).exists(_.isJVM))
       .orElse(buildTargets.headOption)
       .orElse(tables.flatMap(_.dependencySources.getBuildTarget(source)))
+      .orElse(inferBuildTarget(source))
+  }
+
+  /**
+   * Tries to guess what build target this readonly file belongs to from the symbols it defines.
+   *
+   * By default, we rely on carefully recording what build target produced what
+   * files in the `.metals/readonly/` directory. This approach has the problem
+   * that navigation failed to work in `readonly/` sources if
+
+   * - a new metals feature forgot to record the build target
+   * - a user removes `.metals/metals.h2.db`
+
+   * When encountering an unknown `readonly/` file we do the following steps to
+   * infer what build target it belongs to:
+
+   * - extract toplevel symbol definitions from the source code.
+   * - find a jar file from any classfile that defines one of the toplevel
+   *   symbols.
+   * - find the build target which has that jar file in it's classpath.
+   *
+   * This approach is not glamorous but it seems to work reasonably well.
+   */
+  def inferBuildTarget(
+      source: AbsolutePath
+  ): Option[BuildTargetIdentifier] =
+    Try(unsafeInferBuildTarget(source)).getOrElse(None)
+  private def unsafeInferBuildTarget(
+      source: AbsolutePath
+  ): Option[BuildTargetIdentifier] = {
+    val input = source.toInput
+    val toplevels = Mtags
+      .allToplevels(input)
+      .occurrences
+      .map(occ => Symbol(occ.symbol).toplevel)
+      .toSet
+    inferBuildTarget(toplevels).map { inferred =>
+      // Persist inferred result to avoid re-computing it again and again.
+      tables.foreach(_.dependencySources.setBuildTarget(source, inferred.id))
+      inferred.id
+    }
+  }
+  case class InferredBuildTarget(
+      jar: AbsolutePath,
+      symbol: String,
+      id: BuildTargetIdentifier
+  )
+  def inferBuildTarget(
+      toplevels: Iterable[Symbol]
+  ): Option[InferredBuildTarget] = {
+    val classloader = new URLClassLoader(
+      allWorkspaceJars.map(_.toNIO.toUri().toURL()).toArray,
+      null
+    )
+    lazy val classpaths =
+      all.map(i => i.info.getId -> i.scalac.classpath.toSeq).toSeq
+    try {
+      toplevels.foldLeft(Option.empty[InferredBuildTarget]) {
+        case (Some(x), toplevel) => Some(x)
+        case (None, toplevel) =>
+          val classfile = toplevel.owner.value + toplevel.displayName + ".class"
+          val resource = classloader
+            .findResource(classfile)
+            .toURI()
+            .toString()
+            .replaceFirst("!/.*", "")
+            .stripPrefix("jar:")
+          val path = resource.toAbsolutePath
+          classpaths.collectFirst {
+            case (id, classpath) if classpath.contains(path) =>
+              InferredBuildTarget(path, toplevel.value, id)
+          }
+      }
+    } catch {
+      case NonFatal(_) =>
+        None
+    } finally {
+      classloader.close()
+    }
   }
 
   def sourceBuildTargets(

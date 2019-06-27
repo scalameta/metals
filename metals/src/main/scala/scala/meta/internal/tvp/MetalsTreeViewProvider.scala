@@ -11,8 +11,6 @@ import scala.meta.internal.metals._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import org.eclipse.{lsp4j => l}
-import java.net.URLClassLoader
-import scala.util.control.NonFatal
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
@@ -241,30 +239,11 @@ class MetalsTreeViewProvider(
       }
       val result =
         if (path.isDependencySource(workspace())) {
-          val classloader = new URLClassLoader(
-            buildTargets.allWorkspaceJars
-              .map(_.toNIO.toUri().toURL())
-              .toArray,
-            null
-          )
-          val toplevel = Symbol(closestSymbol.symbol).toplevel
-          val classfile = toplevel.owner.value + toplevel.displayName + ".class"
-          try {
-            val resource = classloader
-              .findResource(classfile)
-              .toURI()
-              .toString()
-              .replaceFirst("!/.*", "")
-              .stripPrefix("jar:")
-            val path = resource.toAbsolutePath
-            val uri = libraries.toUri(path, closestSymbol.symbol)
-            Some(uri.parentChain)
-          } catch {
-            case NonFatal(_) =>
-              None
-          } finally {
-            classloader.close()
-          }
+          buildTargets
+            .inferBuildTarget(List(Symbol(closestSymbol.symbol)))
+            .map { inferred =>
+              libraries.toUri(inferred.jar, inferred.symbol).parentChain
+            }
         } else {
           buildTargets
             .inverseSources(path)
