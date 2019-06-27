@@ -1099,13 +1099,13 @@ class MetalsLanguageServer(
       treeView.onCollapseDidChange(params)
     }.asJava
 
-  @JsonRequest("metals/treeViewSyncCursor")
-  def treeViewNodeCollapseDidChange(
+  @JsonRequest("metals/treeViewReveal")
+  def treeViewReveal(
       params: TextDocumentPositionParams
   ): CompletableFuture[TreeViewNodeRevealResult] =
     Future {
       treeView
-        .syncCursor(
+        .reveal(
           params.getTextDocument().getUri().toAbsolutePath,
           params.getPosition()
         )

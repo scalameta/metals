@@ -68,8 +68,5 @@ case class TreeViewDidChangeParams(
 
 case class TreeViewNodeRevealResult(
     viewId: String,
-    uriChain: Array[String],
-    @Nullable expand: java.lang.Integer = null,
-    @Nullable select: java.lang.Boolean = null,
-    @Nullable focus: java.lang.Boolean = null
+    uriChain: Array[String]
 )

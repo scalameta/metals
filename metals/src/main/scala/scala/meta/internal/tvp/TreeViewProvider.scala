@@ -14,7 +14,7 @@ trait TreeViewProvider {
   def children(
       params: TreeViewChildrenParams
   ): MetalsTreeViewChildrenResult = MetalsTreeViewChildrenResult(Array.empty)
-  def syncCursor(
+  def reveal(
       path: AbsolutePath,
       pos: l.Position
   ): Option[TreeViewNodeRevealResult] = None

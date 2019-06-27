@@ -224,7 +224,7 @@ class MetalsTreeViewProvider(
     MetalsTreeViewChildrenResult(children)
   }
 
-  override def syncCursor(
+  override def reveal(
       path: AbsolutePath,
       pos: l.Position
   ): Option[TreeViewNodeRevealResult] = {

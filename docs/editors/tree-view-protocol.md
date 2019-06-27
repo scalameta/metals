@@ -213,23 +213,27 @@ interface TreeViewNodeCollapseDidChangeParams {
 }
 ```
 
-### `metals/treeViewNodeReveal`
+### `metals/treeViewReveal`
 
-The tree view node collapse change notification is sent from the client to the
-server to notify that a tree node has either been collapsed or expanded.
+The reveal request is sent from the client to the server to convert a text
+document position into it's corresponding tree view node.
 
-_Notification_:
+_Request_:
 
-- method: `metals/treeViewNodeCollapseDidChange`
-- params: `TreeViewNodeCollapseDidChangeParams` defined as follows:
+- method: `metals/treeViewReveal`
+- params: `TextDocumentPositionParams`, as defined in LSP.
+
+_Response_:
+
+- result: `TreeViewRevealResult` defined as follows.
 
 ```ts
-interface TreeViewNodeCollapseDidChangeParams {
-  /** The ID of the view that this node is associated with. */
-  viewId: string;
-  /** The URI of the node that was collapsed or expanded. */
-  nodeUri: string;
-  /** True if the node is collapsed, false if the node was expanded. */
-  collapsed: boolean;
+interface TreeViewChildrenResult {
+  /** The child nodes of the requested parent node. */
+  nodes: TreeViewNode[];
 }
 ```
+
+Example implementation of the reveal request.
+
+![2019-06-27 16 02 33](https://user-images.githubusercontent.com/1408093/60277613-33d19880-98fe-11e9-9aee-71c0a0c0861f.gif)
