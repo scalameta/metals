@@ -26,6 +26,7 @@
 <url> <loc>http://scalameta.org/metals/docs/editors/new-editor.html</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="http://scalameta.org/metals/docs/editors/new-editor.html" /> </url>
 <url> <loc>http://scalameta.org/metals/docs/editors/overview.html</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="http://scalameta.org/metals/docs/editors/overview.html" /> </url>
 <url> <loc>http://scalameta.org/metals/docs/editors/sublime.html</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="http://scalameta.org/metals/docs/editors/sublime.html" /> </url>
+<url> <loc>http://scalameta.org/metals/docs/editors/tree-view-protocol.html</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="http://scalameta.org/metals/docs/editors/tree-view-protocol.html" /> </url>
 <url> <loc>http://scalameta.org/metals/docs/editors/vim.html</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="http://scalameta.org/metals/docs/editors/vim.html" /> </url>
 <url> <loc>http://scalameta.org/metals/docs/editors/vscode.html</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="http://scalameta.org/metals/docs/editors/vscode.html" /> </url>
 </urlset>
