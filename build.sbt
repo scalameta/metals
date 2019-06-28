@@ -145,7 +145,7 @@ lazy val V = new {
   val bloop = "1.3.2"
   val sbtBloop = bloop
   val gradleBloop = bloop
-  val scalafmt = "2.0.0-RC4"
+  val scalafmt = "2.0.0"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
