@@ -46,6 +46,8 @@ const siteConfig = {
 
   stylesheets: [baseUrl + "css/custom.css"],
 
+  blogSidebarCount: "ALL",
+
   // This copyright info is used in /core/Footer.js and blog rss/atom feeds.
   copyright: `Copyright © ${new Date().getFullYear()} Metals`,
 
