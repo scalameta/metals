@@ -86,7 +86,7 @@ inThisBuild(
       )
     ),
     testFrameworks := List(),
-    resolvers += Resolver.sonatypeRepo("releases"),
+    resolvers += Resolver.sonatypeRepo("public"),
     // faster publishLocal:
     publishArtifact.in(packageDoc) := sys.env.contains("CI"),
     publishArtifact.in(packageSrc) := sys.env.contains("CI"),
