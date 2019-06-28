@@ -33,6 +33,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.metals.NoopLanguageClient
+import scala.meta.internal.tvp.TreeViewDidChangeParams
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -48,6 +49,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   val showMessages = new ConcurrentLinkedQueue[MessageParams]()
   val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
   val logMessages = new ConcurrentLinkedQueue[MessageParams]()
+  val treeViewChanges = new ConcurrentLinkedQueue[TreeViewDidChangeParams]()
   val clientCommands = new ConcurrentLinkedDeque[ExecuteCommandParams]()
   var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
     _: MetalsSlowTaskParams =>
@@ -225,6 +227,23 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
     CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
+  }
+
+  override def metalsTreeViewDidChange(
+      params: TreeViewDidChangeParams
+  ): Unit = {
+    treeViewChanges.add(params)
+  }
+
+  def workspaceTreeViewChanges: String = {
+    treeViewChanges.asScala.toSeq
+      .map { change =>
+        change.nodes
+          .map(n => n.viewId + " " + Option(n.nodeUri).getOrElse("<root>"))
+          .mkString("\n")
+      }
+      .sorted
+      .mkString("----\n")
   }
 
 }

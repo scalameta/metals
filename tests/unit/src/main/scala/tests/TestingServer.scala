@@ -680,6 +680,53 @@ final class TestingServer(
       }
   }
 
+  def treeViewReveal(
+      filename: String,
+      linePattern: String,
+      isIgnored: String => Boolean = _ => true
+  )(implicit sourcecodeLine: sourcecode.Line, file: sourcecode.File): String = {
+    val path = toPath(filename)
+    val line = path.toInput.value.lines.zipWithIndex
+      .collectFirst {
+        case (text, line) if text.contains(linePattern) =>
+          line
+      }
+      .getOrElse(
+        sys.error(s"$path: not found pattern '$linePattern'")
+      )
+    val reveal =
+      server.treeView.reveal(toPath(filename), new l.Position(line, 0)).get
+    val parents = (reveal.uriChain :+ null).map { uri =>
+      server.treeView.children(TreeViewChildrenParams(reveal.viewId, uri))
+    }
+    val label = parents.iterator
+      .flatMap { r =>
+        r.nodes.iterator.map { n =>
+          val icon = Option(n.icon) match {
+            case None => ""
+            case Some(value) => s" $value"
+          }
+          val label = n.label + icon
+          n.nodeUri -> label
+        }
+      }
+      .toMap
+      .updated("root", "root")
+    val tree = parents
+      .zip(reveal.uriChain :+ "root")
+      .foldLeft(PrettyPrintTree.empty) {
+        case (child, (parent, uri)) =>
+          PrettyPrintTree(
+            label(uri),
+            parent.nodes
+              .map(n => PrettyPrintTree(label(n.nodeUri)))
+              .filterNot(t => isIgnored(t.value))
+              .toList :+ child
+          )
+      }
+    tree.toString()
+  }
+
   def assertTreeViewChildren(
       uri: String,
       expected: String

@@ -238,13 +238,13 @@ class MetalsTreeViewProvider(
       val closestSymbol = occurrences.minBy { occ =>
         val startLine = occ.range.fold(Int.MaxValue)(_.startLine)
         val distance = math.abs(pos.getLine - startLine)
-        if (pos.getLine() > startLine) -distance
-        else distance
+        val isLeading = pos.getLine() > startLine
+        (!isLeading, distance)
       }
       val result =
         if (path.isDependencySource(workspace())) {
           buildTargets
-            .inferBuildTarget(List(Symbol(closestSymbol.symbol)))
+            .inferBuildTarget(List(Symbol(closestSymbol.symbol).toplevel))
             .map { inferred =>
               libraries.toUri(inferred.jar, inferred.symbol).parentChain
             }
