@@ -3,7 +3,7 @@
   "localized-strings": {
     "next": "Next",
     "previous": "Previous",
-    "tagline": "Work-in-progress language server for Scala",
+    "tagline": "Scala language server with rich IDE features",
     "docs": {
       "build-tools/bloop": {
         "title": "Bloop"
@@ -54,6 +54,9 @@
       },
       "editors/sublime": {
         "title": "Sublime Text"
+      },
+      "editors/tree-view-protocol": {
+        "title": "Tree View Protocol"
       },
       "editors/vim": {
         "title": "Vim"

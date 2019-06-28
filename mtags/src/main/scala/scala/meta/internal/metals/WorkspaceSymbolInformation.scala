@@ -1,12 +1,15 @@
 package scala.meta.internal.metals
 
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 case class WorkspaceSymbolInformation(
     symbol: String,
-    kind: l.SymbolKind,
+    sematicdbKind: s.SymbolInformation.Kind,
     range: l.Range
 ) {
+  def kind: l.SymbolKind = sematicdbKind.toLSP
   def toLSP(uri: String): l.SymbolInformation = {
     import scala.meta.internal.semanticdb.Scala._
     val (desc, owner) = DescriptorParser(symbol)

@@ -31,7 +31,11 @@ object DiffAssertions extends scala.meta.testkit.DiffAssertions {
       expected: String,
       obtainedTitle: String,
       expectedTitle: String
-  )(implicit source: Position): Boolean = colored {
+  )(
+      implicit source: Position,
+      line: sourcecode.Line,
+      file: sourcecode.File
+  ): Boolean = colored {
     if (obtained.isEmpty && !expected.isEmpty) fail("Obtained empty output!")
     val result = unifiedDiff(obtained, expected, obtainedTitle, expectedTitle)
     if (result.isEmpty) true

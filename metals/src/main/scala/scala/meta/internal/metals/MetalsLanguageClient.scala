@@ -6,8 +6,9 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
+import scala.meta.internal.tvp._
 
-trait MetalsLanguageClient extends LanguageClient {
+trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
 
   /**
    * Display message in the editor "status bar", which should be displayed somewhere alongside the buffer.

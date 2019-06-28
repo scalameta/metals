@@ -202,8 +202,12 @@ class CompilerAccess(
     sh.foreach { scheduler =>
       scheduler.schedule[Unit]({ () =>
         if (!result.isDone()) {
-          result.cancel(false)
-          shutdownCurrentCompiler()
+          try {
+            result.cancel(false)
+            shutdownCurrentCompiler()
+          } catch {
+            case NonFatal(_) =>
+          }
         }
       }, config.timeoutDelay(), config.timeoutUnit())
     }

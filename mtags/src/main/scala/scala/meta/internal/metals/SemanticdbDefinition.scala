@@ -22,7 +22,7 @@ case class SemanticdbDefinition(
 ) {
   def toCached: WorkspaceSymbolInformation = {
     val range = occ.range.getOrElse(s.Range())
-    WorkspaceSymbolInformation(info.symbol, info.kind.toLSP, range.toLSP)
+    WorkspaceSymbolInformation(info.symbol, info.kind, range.toLSP)
   }
   def toLSP(uri: String): l.SymbolInformation = {
     new l.SymbolInformation(

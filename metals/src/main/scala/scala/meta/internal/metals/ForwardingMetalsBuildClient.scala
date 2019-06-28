@@ -11,23 +11,24 @@ import com.google.gson.JsonObject
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
-import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.tvp._
 
 /**
  * A build client that forwards notifications from the build server to the language client.
  */
 final class ForwardingMetalsBuildClient(
-    languageClient: LanguageClient,
+    languageClient: MetalsLanguageClient,
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
     config: MetalsServerConfig,
     statusBar: StatusBar,
     time: Time,
-    didCompile: CompileReport => Unit
+    didCompile: CompileReport => Unit,
+    treeViewProvider: () => TreeViewProvider
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -36,7 +37,9 @@ final class ForwardingMetalsBuildClient(
       promise: Promise[CompileReport],
       isNoOp: Boolean,
       progress: TaskProgress = TaskProgress.empty
-  )
+  ) extends TreeViewCompilation {
+    def progressPercentage = progress.percentage
+  }
 
   private val compilations = TrieMap.empty[BuildTargetIdentifier, Compilation]
   private val hasReportedError = Collections.newSetFromMap(
@@ -46,8 +49,12 @@ final class ForwardingMetalsBuildClient(
   def reset(): Unit = {
     cancel()
   }
+
   override def cancel(): Unit = {
-    compilations.values.foreach { compilation =>
+    for {
+      key <- compilations.keysIterator
+      compilation <- compilations.remove(key)
+    } {
       compilation.promise.cancel()
     }
   }
@@ -90,7 +97,7 @@ final class ForwardingMetalsBuildClient(
         } {
           diagnostics.onStartCompileBuildTarget(task.getTarget)
           // cancel ongoing compilation for the current target, if any.
-          compilations.get(task.getTarget).foreach(_.promise.cancel())
+          compilations.remove(task.getTarget).foreach(_.promise.cancel())
 
           val name = info.getDisplayName
           val promise = Promise[CompileReport]()
@@ -115,7 +122,7 @@ final class ForwardingMetalsBuildClient(
       case TaskDataKind.COMPILE_REPORT =>
         for {
           report <- params.asCompileReport
-          compilation <- compilations.get(report.getTarget)
+          compilation <- compilations.remove(report.getTarget)
         } {
           diagnostics.onFinishCompileBuildTarget(report.getTarget)
           didCompile(report)
@@ -135,6 +142,9 @@ final class ForwardingMetalsBuildClient(
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
               statusBar.addMessage(message)
+            }
+            if (!compilation.isNoOp) {
+              treeViewProvider().onBuildTargetDidCompile(report.getTarget())
             }
             hasReportedError.remove(target)
           } else {
@@ -173,5 +183,12 @@ final class ForwardingMetalsBuildClient(
         }
       case _ =>
     }
+  }
+
+  def ongoingCompilations(): TreeViewCompilations = new TreeViewCompilations {
+    override def get(id: BuildTargetIdentifier) = compilations.get(id)
+    override def isEmpty = compilations.isEmpty
+    override def size = compilations.size
+    override def buildTargets = compilations.keysIterator
   }
 }

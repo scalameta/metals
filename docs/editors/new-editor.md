@@ -342,6 +342,11 @@ them to improve the user experience.
 To enable Metals extensions, start the main process with the system property
 `-Dmetals.extensions=true`.
 
+### Tree View Protocol
+
+Metals implements several custom JSON-RPC endpoints related to rendering tree
+views in the editor client, the [Tree View Protocol](tree-view-protocol.md).
+
 ### `metals/slowTask`
 
 The Metals slow task request is sent from the server to the client to notify the

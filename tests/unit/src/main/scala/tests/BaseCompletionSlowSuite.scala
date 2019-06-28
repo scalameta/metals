@@ -77,6 +77,7 @@ abstract class BaseCompletionSlowSuite(name: String)
              |IntStream - java.util.stream
              |LogStream - java.rmi.server
              |StreamView - scala.collection.immutable
+             |Streamable - scala.reflect.io
              |BaseStream - java.util.stream
              |LongStream - java.util.stream
              |InputStream - java.io
@@ -84,7 +85,6 @@ abstract class BaseCompletionSlowSuite(name: String)
              |DoubleStream - java.util.stream
              |OutputStream - java.io
              |StreamBuilder - scala.collection.immutable.Stream
-             |StreamHandler - java.util.logging
              |StreamCanBuildFrom - scala.collection.immutable.Stream
              |""".stripMargin,
           Map(
@@ -93,6 +93,7 @@ abstract class BaseCompletionSlowSuite(name: String)
                  |Stream - java.util.stream
                  |IntStream - java.util.stream
                  |LogStream - java.rmi.server
+                 |Streamable - scala.reflect.io
                  |BaseStream - java.util.stream
                  |LongStream - java.util.stream
                  |StreamShape - scala.collection.convert.StreamExtensions
@@ -100,7 +101,6 @@ abstract class BaseCompletionSlowSuite(name: String)
                  |PrintStream - java.io
                  |DoubleStream - java.util.stream
                  |OutputStream - java.io
-                 |StreamHandler - java.util.logging
                  |""".stripMargin
           ),
           scalaVersion

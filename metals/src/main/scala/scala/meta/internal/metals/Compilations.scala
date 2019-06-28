@@ -5,6 +5,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 final class Compilations(
     buildTargets: BuildTargets,
@@ -30,6 +31,12 @@ final class Compilations(
   def previouslyCompiled: Iterable[b.BuildTargetIdentifier] = lastCompile
   def wasPreviouslyCompiled(buildTarget: b.BuildTargetIdentifier): Boolean =
     lastCompile.contains(buildTarget)
+
+  def compileTargets(
+      targets: Seq[BuildTargetIdentifier]
+  ): Future[b.CompileResult] = {
+    compileBatch(targets)
+  }
 
   def compileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
     val targets = expand(paths)

@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.tvp.TreeViewCompilations
 
 /**
  * A BSP client interface that uses lsp4j data structures where applicable.
@@ -13,8 +14,9 @@ import org.eclipse.{lsp4j => l}
  */
 trait MetalsBuildClient {
 
-  @JsonNotification("build/showMessage")
-  def onBuildShowMessage(params: l.MessageParams): Unit
+  @JsonNotification("build/showMessage") def onBuildShowMessage(
+      params: l.MessageParams
+  ): Unit
 
   @JsonNotification("build/logMessage")
   def onBuildLogMessage(params: l.MessageParams): Unit
@@ -27,5 +29,7 @@ trait MetalsBuildClient {
 
   @JsonNotification("buildTarget/compileReport")
   def onBuildTargetCompileReport(params: b.CompileReport): Unit
+
+  def ongoingCompilations(): TreeViewCompilations
 
 }

@@ -6,8 +6,7 @@
       "editors/atom",
       "editors/vim",
       "editors/sublime",
-      "editors/emacs",
-      "editors/new-editor"
+      "editors/emacs"
     ],
     "Build Tools": [
       "build-tools/overview",
@@ -15,10 +14,12 @@
       "build-tools/gradle",
       "build-tools/maven",
       "build-tools/mill",
-      "build-tools/sbt",
-      "build-tools/new-build-tool"
+      "build-tools/sbt"
     ],
     "Contributing": [
+      "build-tools/new-build-tool",
+      "editors/new-editor",
+      "editors/tree-view-protocol",
       "contributors/project-goals",
       "contributors/getting-started",
       "contributors/updating-website",

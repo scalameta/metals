@@ -91,9 +91,7 @@ final class InteractiveSemanticdbs(
     for {
       destination <- result.definition
       if destination.isDependencySource(workspace)
-      buildTarget <- buildTargets.inverseSources(source).orElse {
-        tables.dependencySources.getBuildTarget(source)
-      }
+      buildTarget <- buildTargets.inverseSources(source)
     } {
       tables.dependencySources.setBuildTarget(destination, buildTarget)
     }

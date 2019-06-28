@@ -70,9 +70,13 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.tvp.TreeViewChildrenParams
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.{meta => m}
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import scala.meta.internal.tvp.TreeViewProvider
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -241,11 +245,13 @@ final class TestingServer(
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
+    val experimental = new JsonObject()
+    experimental.add("treeViewProvider", new JsonPrimitive(true))
     params.setCapabilities(
       new ClientCapabilities(
         workspaceCapabilities,
         textDocumentCapabilities,
-        null
+        experimental
       )
     )
     params.setWorkspaceFolders(
@@ -646,6 +652,102 @@ final class TestingServer(
       occurrences = symbols.map(_.toSymbolOccurrence)
     )
     Semanticdbs.printTextDocument(textDocument)
+  }
+
+  def buildTarget(displayName: String): String = {
+    server.buildTargets.all
+      .find(_.info.getDisplayName() == displayName)
+      .map(_.info.getId().getUri())
+      .getOrElse {
+        val alternatives =
+          server.buildTargets.all.map(_.info.getDisplayName()).mkString(" ")
+        throw new NoSuchElementException(
+          s"$displayName (alternatives: ${alternatives}"
+        )
+      }
+  }
+
+  def jar(filename: String): String = {
+    server.buildTargets.allWorkspaceJars
+      .find(_.filename.contains(filename))
+      .map(_.toURI.toString())
+      .getOrElse {
+        val alternatives =
+          server.buildTargets.allWorkspaceJars.map(_.filename).mkString(" ")
+        throw new NoSuchElementException(
+          s"$filename (alternatives: ${alternatives}"
+        )
+      }
+  }
+
+  def treeViewReveal(
+      filename: String,
+      linePattern: String,
+      isIgnored: String => Boolean = _ => true
+  )(implicit sourcecodeLine: sourcecode.Line, file: sourcecode.File): String = {
+    val path = toPath(filename)
+    val line = path.toInput.value.lines.zipWithIndex
+      .collectFirst {
+        case (text, line) if text.contains(linePattern) =>
+          line
+      }
+      .getOrElse(
+        sys.error(s"$path: not found pattern '$linePattern'")
+      )
+    val reveal =
+      server.treeView.reveal(toPath(filename), new l.Position(line, 0)).get
+    val parents = (reveal.uriChain :+ null).map { uri =>
+      server.treeView.children(TreeViewChildrenParams(reveal.viewId, uri))
+    }
+    val label = parents.iterator
+      .flatMap { r =>
+        r.nodes.iterator.map { n =>
+          val icon = Option(n.icon) match {
+            case None => ""
+            case Some(value) => s" $value"
+          }
+          val label = n.label + icon
+          n.nodeUri -> label
+        }
+      }
+      .toMap
+      .updated("root", "root")
+    val tree = parents
+      .zip(reveal.uriChain :+ "root")
+      .foldLeft(PrettyPrintTree.empty) {
+        case (child, (parent, uri)) =>
+          PrettyPrintTree(
+            label(uri),
+            parent.nodes
+              .map(n => PrettyPrintTree(label(n.nodeUri)))
+              .filterNot(t => isIgnored(t.value))
+              .toList :+ child
+          )
+      }
+    tree.toString()
+  }
+
+  def assertTreeViewChildren(
+      uri: String,
+      expected: String
+  )(implicit line: sourcecode.Line, file: sourcecode.File): Unit = {
+    val viewId: String = TreeViewProvider.Build
+    val result =
+      server.treeView.children(TreeViewChildrenParams(viewId, uri)).nodes
+    val obtained = result
+      .map { node =>
+        val collapse =
+          if (node.isExpanded) " +"
+          else if (node.isCollapsed) " -"
+          else ""
+        val icon = Option(node.icon) match {
+          case None => ""
+          case Some(i) => " " + i
+        }
+        s"${node.label}${icon}${collapse}"
+      }
+      .mkString("\n")
+    DiffAssertions.assertNoDiff(obtained, expected, "obtained", "expected")
   }
 
   def textContents(filename: String): String =

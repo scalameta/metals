@@ -196,7 +196,8 @@ object DefinitionSlowSuite extends BaseSlowSuite("definition") {
   // requires org.scalamacros:macroparadise and io.spire-match:kind-projector.
   // Navigation continues to mostly work, except for areas that have compilation
   // errors.
-  testAsync("missing-compiler-plugin") {
+  // NOTE(olafur): ignored because this test case is flaky and regularly failing the CI.
+  ignore("missing-compiler-plugin") {
     for {
       _ <- server.initialize(
         """

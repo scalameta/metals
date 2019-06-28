@@ -8,6 +8,7 @@ final case class StatisticsConfig(value: String) {
   val isReferences: Boolean = isAll || value.contains("references")
   val isWorkspaceSymbol: Boolean = isAll || value.contains("workspace-symbol")
   val isIndex: Boolean = isAll || value.contains("index")
+  val isTreeView: Boolean = isAll || value.contains("tree-view")
 }
 
 object StatisticsConfig {

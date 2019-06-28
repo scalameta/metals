@@ -21,6 +21,9 @@ class Timer(time: Time) {
   def elapsedSeconds: Long = {
     TimeUnit.NANOSECONDS.toSeconds(elapsedNanos)
   }
+  def toStringSeconds: String = {
+    Timer.readableSeconds(elapsedSeconds)
+  }
   override def toString: String = {
     Timer.readableNanos(elapsedNanos)
   }
