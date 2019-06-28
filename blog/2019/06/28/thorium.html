@@ -1,0 +1,291 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Metals v0.7.0 - Thorium · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="We are excited to announce the release of Metals v0.7.1 - codename &quot;Thorium&quot; 🎉"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Metals v0.7.0 - Thorium · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/blog/2019/06/28/thorium.html"/><meta property="og:description" content="We are excited to announce the release of Metals v0.7.1 - codename &quot;Thorium&quot; 🎉"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-140140828-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>All Blog Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All Blog Posts</h3><ul><li class="navListItem"><a class="navItem" href="/metals/blog/2020/04/12/mercury.html">Metals v0.5.0</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/blog/2019/06/28/thorium.html">Metals v0.7.0 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/06/11/radium.html">Metals v0.6.1 - Radium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/04/26/mercury.html">Metals v0.5.1</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/06/iron.html">Metals v0.3 - Iron</a></li></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/06/28/thorium.html">Metals v0.7.0 - Thorium</a></h1><p class="post-meta">June 28, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://github.com/olafurpg.png" alt="Ólafur Páll Geirsson"/></a></div></div></header><div><span><p>We are excited to announce the release of Metals v0.7.1 - codename &quot;Thorium&quot; 🎉
+The release includes several new features along with bug fixes.</p>
+<p>Metals is a language server for Scala that works with VS Code, Atom, Vim,
+Sublime Text and Emacs. Metals is developed at the
+<a href="https://scala.epfl.ch/">Scala Center</a> and <a href="https://virtuslab.com">VirtusLab</a>
+along with contributors from the community.</p>
+<p>In this release we merged 21 PRs and closed 8 issues, full details:
+<a href="https://github.com/scalameta/metals/milestone/11?closed=1">https://github.com/scalameta/metals/milestone/11?closed=1</a></p>
+<h2><a class="anchor" aria-hidden="true" id="tl-dr"></a><a href="#tl-dr" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>TL;DR</h2>
+<ul>
+<li>New tree view in VS Code</li>
+<li>New support for Scala 2.13</li>
+<li>New support for JDK 11</li>
+<li>New improved classpath indexing performance</li>
+<li>New fallback to &quot;find references&quot; when calling &quot;goto definition&quot; on a symbol
+definition</li>
+<li>Bug fixes for importing builds in Gradle, Mill and sbt</li>
+<li>Dropped support for deprecated Scala versions 2.11.9, 2.11.10, 2.11.11,
+2.12.4, 2.12.5 and 2.12.6.</li>
+</ul>
+<p>Check out the website and give Metals a try: <a href="https://scalameta.org/metals/">https://scalameta.org/metals/</a></p>
+<h2><a class="anchor" aria-hidden="true" id="tree-views-in-vs-code"></a><a href="#tree-views-in-vs-code" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Tree views in VS Code</h2>
+<p>There is now a new &quot;Metals&quot; sidebar in VS Code that contains three tree views:</p>
+<ul>
+<li>Build: overview of the build state, with buttons to manually trigger build
+import.</li>
+<li>Compile: overview of ongoing compilations, with buttons to manually cascade
+compilation and cancel ongoing compilation.</li>
+<li>Help and feedback: buttons to automate troubleshooting Metals issues and links
+to relevant online resources such as GitHub, Gitter and Twitter.</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="projects-explorer"></a><a href="#projects-explorer" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Projects explorer</h3>
+<p><img src="https://user-images.githubusercontent.com/1408093/60208747-59589680-9859-11e9-8a09-2a6c38683975.gif" alt="2019-06-26 20 28 14"></p>
+<h3><a class="anchor" aria-hidden="true" id="libraries-explorer"></a><a href="#libraries-explorer" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Libraries explorer</h3>
+<p>Browse symbols that are defined in jars of library dependencies.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/60208786-6e352a00-9859-11e9-8d55-2125c91d506f.gif" alt="2019-06-26 20 28 51"></p>
+<h3><a class="anchor" aria-hidden="true" id="reveal-active-file-in-metals-side-bar"></a><a href="#reveal-active-file-in-metals-side-bar" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Reveal active file in Metals side bar</h3>
+<p>There is a new command &quot;Reveal active file in Metals side bar&quot; that focuses the
+library and project explorer to the current open file.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/60277613-33d19880-98fe-11e9-9aee-71c0a0c0861f.gif" alt="2019-06-27 16 02 33"></p>
+<h3><a class="anchor" aria-hidden="true" id="compilation-explorer"></a><a href="#compilation-explorer" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Compilation explorer</h3>
+<p>Get an overview of all compilations that are ongoing in the build. Previously,
+only a single compilation progress was reported through the status bar.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/60052207-f4743380-96d4-11e9-9192-f71db4100fe9.gif" alt="2019-06-23 15 41 07"></p>
+<h3><a class="anchor" aria-hidden="true" id="help-and-feedback-explorer"></a><a href="#help-and-feedback-explorer" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Help and feedback explorer</h3>
+<p><img width="295" alt="Screenshot 2019-06-27 at 15 57 15" src="https://user-images.githubusercontent.com/1408093/60277560-1ef50500-98fe-11e9-8c02-70b841a590c3.png"></p>
+<h2><a class="anchor" aria-hidden="true" id="support-for-scala-213"></a><a href="#support-for-scala-213" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Support for Scala 2.13</h2>
+<p>Metals now supports Scala 2.13.0! Please upgrade to Scalafmt v2.0.0 in order to
+format 2.13-specific syntax such as underscore separators (<code>1_000_000</code>). Note
+that completions may in rare situations not work perfectly for Scala 2.13, in
+particular:</p>
+<ul>
+<li>whitebox string interpolator macros, we had to disable one unit test for 2.13.
+See <a href="https://github.com/scalameta/metals/issues/777">#777</a>.</li>
+<li>better-monadic-for compile plugin, we had to disable one unit test for 2.13.
+See <a href="https://github.com/scalameta/metals/issues/777">#777</a>.</li>
+</ul>
+<p>Big thanks to <a href="https://github.com/gabro">@gabro</a> for leading this effort!</p>
+<h2><a class="anchor" aria-hidden="true" id="jdk-11-support"></a><a href="#jdk-11-support" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>JDK 11 support</h2>
+<p>Metals can now run on Java 11! To use Java 11 instead of Java 8, point the
+<code>$JAVA_HOME</code> environment variable to a Java 11 installation.</p>
+<p>The VS Code extension will continue to use Java 8 by default, update the &quot;Java
+Home&quot; setting to use Java 11 instead.</p>
+<p><img src="https://i.imgur.com/F5djfzt.png" alt=""></p>
+<p>To obtain the Java 11 home on macOS, use the following command:</p>
+<pre><code class="hljs css language-sh">$ /usr/libexec/java_home 11
+/Library/Java/JavaVirtualMachines/openjdk-11.0.1.jdk/Contents/Home
+</code></pre>
+<p>Big thanks to <a href="https://github.com/er1c">@er1c</a> for pushing for the effort on
+both the Bloop and Metals side to support Java 11!</p>
+<h2><a class="anchor" aria-hidden="true" id="improved-classpath-indexing-performance"></a><a href="#improved-classpath-indexing-performance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Improved classpath indexing performance</h2>
+<p>Previously, to support fuzzy symbol search Metals indexed classpath elements
+using an algorithm that required a quadratic iteration on the number of
+characters in classfile names. Now, the fuzzy symbol search algorithm only
+requires a linear pass on the characters of a classfile name. This optimization
+resulted in a 2x speedup for indexing a 235Mb classpath in our benchmarks.</p>
+<pre><code class="hljs css language-diff">  Benchmark                   Mode  Cnt     Score    Error  Units
+<span class="hljs-deletion">- ClasspathIndexingBench.run    ss   10  1809.068 ± 61.461  ms/op # JDK 8</span>
+<span class="hljs-addition">+ ClasspathIndexingBench.run    ss   10  919.237  ± 42.827  ms/op # JDK 8</span>
+<span class="hljs-addition">+ ClasspathIndexingBench.run    ss   10  1316.451 ± 22.595  ms/op # JDK 11</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="fallback-to-find-references-from-goto-definition"></a><a href="#fallback-to-find-references-from-goto-definition" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fallback to &quot;find references&quot; from &quot;goto definition&quot;</h2>
+<p>Previously, nothing happened when invoking &quot;goto definition&quot; on the symbol
+definition itself. Now, Metals falls back to &quot;find references&quot; in this
+situation.</p>
+<p><img src="https://i.imgur.com/BT3h0FJ.gif" alt="Fallback"></p>
+<p>Big thanks to <a href="https://github.com/tanishiking">@tanishiking</a> for contributing
+this new feature!</p>
+<h2><a class="anchor" aria-hidden="true" id="dropping-older-scala-versions"></a><a href="#dropping-older-scala-versions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dropping older Scala versions</h2>
+<p>The Scala versions supported by Metals are now the following.</p>
+<table>
+<thead>
+<tr><th style="text-align:left">Version</th><th>Old Status</th><th>New Status</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:left">2.11.9</td><td>Deprecated</td><td>Dropped</td></tr>
+<tr><td style="text-align:left">2.11.10</td><td>Deprecated</td><td>Dropped</td></tr>
+<tr><td style="text-align:left">2.11.11</td><td>Deprecated</td><td>Dropped</td></tr>
+<tr><td style="text-align:left">2.11.12</td><td>Supported</td><td>Deprecated, with no plans to be dropped in upcoming releases*</td></tr>
+<tr><td style="text-align:left">2.12.4</td><td>Deprecated</td><td>Dropped</td></tr>
+<tr><td style="text-align:left">2.12.5</td><td>Deprecated</td><td>Dropped</td></tr>
+<tr><td style="text-align:left">2.12.6</td><td>Deprecated</td><td>Dropped</td></tr>
+<tr><td style="text-align:left">2.12.7</td><td>Supported</td><td>Deprecated, please upgrade to 2.12.8</td></tr>
+<tr><td style="text-align:left">2.12.8</td><td>Supported</td><td>Supported</td></tr>
+<tr><td style="text-align:left">2.13.0</td><td>Unsupported</td><td>Supported</td></tr>
+</tbody>
+</table>
+<p>* Scala 2.11 support will likely stay around for a while given the situation
+with Spark, Scala Native, Playframework and other libraries and frameworks that
+have been late to adopt 2.12. Our download numbers show that ~10% of Metals
+users are still on 2.11. Nevertheless, we encourage our users to upgrade to 2.12
+to enjoy a better code editing experience thanks to multiple improvements in the
+compiler.</p>
+<h2><a class="anchor" aria-hidden="true" id="fixes-for-auto-importing-builds"></a><a href="#fixes-for-auto-importing-builds" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fixes for auto importing builds</h2>
+<ul>
+<li>digest only <code>.sbt</code> files at workspace level for sbt projects (thanks
+<a href="https://github.com/wojciechUrbanski">@wojciechUrbanski</a>!)</li>
+<li>fix SemanticDB plugin path on Windows for Gradle workspaces</li>
+<li>update default Mill version to 0.4.1 to fix an issue with classpath not
+containing Scala library</li>
+<li>Metals now pick up the version from <code>.mill-version</code> for the <code>millw</code> script</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="no-more-work-in-progress"></a><a href="#no-more-work-in-progress" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>No more &quot;work in progress&quot;</h2>
+<p>Previously, the Metals website used the &quot;Work-in-progress language server for
+Scala&quot; tagline to reflect the experimental status of the project. Now, the
+tagline on the website has been changed to &quot;Scala language server with rich IDE
+features&quot; to reflect that Metals is used by thousands of developers today for
+their day-to-day coding.</p>
+<h2><a class="anchor" aria-hidden="true" id="miscellaneous-fixes"></a><a href="#miscellaneous-fixes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Miscellaneous fixes</h2>
+<ul>
+<li>fix off-by-one for parameter hints when the cursor was after the closing <code>)</code>
+parenthesis</li>
+<li>make sure we add an autoimport in the correct line in case of brackets</li>
+<li>document symbol outline no longer fails when <code>val _ = ()</code> is the only thing in
+a block expression</li>
+<li>nested objects are now imported correctly in case of deeper nesting</li>
+<li>fix concurrent modification in text document cache (thanks
+<a href="https://github.com/chikei">@chikei</a>!)</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="contributors"></a><a href="#contributors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributors</h2>
+<p>Big thanks to everybody who contributed to this release, it's amazing we had a
+couple of new contributors to Metals!</p>
+<pre><code class="hljs"><span class="hljs-meta">$</span> <span class="hljs-string">git shortlog -sn --no-merges v0.6.1..v0.7.0</span>
+<span class="hljs-attr">Gabriele</span> <span class="hljs-string">Petronella</span>
+<span class="hljs-meta">Ólafur</span> <span class="hljs-string">Páll Geirsson</span>
+<span class="hljs-attr">Tomasz</span> <span class="hljs-string">Godzik</span>
+<span class="hljs-attr">Eric</span> <span class="hljs-string">Peters</span>
+<span class="hljs-attr">tanishiking</span>
+<span class="hljs-attr">Ruben</span> <span class="hljs-string">Berenguel</span>
+<span class="hljs-attr">TzeKei</span> <span class="hljs-string">Lee</span>
+<span class="hljs-attr">Wojciech</span> <span class="hljs-string">Urbanski</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="merged-prs"></a><a href="#merged-prs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Merged PRs</h2>
+<h2><a class="anchor" aria-hidden="true" id="v070-https-githubcom-scalameta-metals-tree-v070-2019-06-28"></a><a href="#v070-https-githubcom-scalameta-metals-tree-v070-2019-06-28" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a href="https://github.com/scalameta/metals/tree/v0.7.0">v0.7.0</a> (2019-06-28)</h2>
+<p><a href="https://github.com/scalameta/metals/compare/v0.6.1...v0.7.0">Full Changelog</a></p>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>Upgrade to Scalameta v4.2.0
+<a href="https://github.com/scalameta/metals/pull/799">#799</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Introduce Tree View Protocol
+<a href="https://github.com/scalameta/metals/pull/797">#797</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add a benchmark for classpath indexing performance.
+<a href="https://github.com/scalameta/metals/pull/795">#795</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Migrate Java converters to 2.13
+<a href="https://github.com/scalameta/metals/pull/794">#794</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Remove dot as a commit character
+<a href="https://github.com/scalameta/metals/pull/793">#793</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Make classpath indexing linear instead of quadratic.
+<a href="https://github.com/scalameta/metals/pull/792">#792</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Use 2.13 dialect for syntax errors
+<a href="https://github.com/scalameta/metals/pull/789">#789</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Fix off-by-one for parameter hints.
+<a href="https://github.com/scalameta/metals/pull/786">#786</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Make sure we add an autoimport in the correct line
+<a href="https://github.com/scalameta/metals/pull/785">#785</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Fix typo <a href="https://github.com/scalameta/metals/pull/784">#784</a>
+(<a href="https://github.com/tanishiking">tanishiking</a>)</li>
+<li>Remove Work-in-progress from the tagline
+<a href="https://github.com/scalameta/metals/pull/782">#782</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Fix JdkSources not to ignore JAVA_HOME environment variable
+<a href="https://github.com/scalameta/metals/pull/781">#781</a>
+(<a href="https://github.com/tanishiking">tanishiking</a>)</li>
+<li>Fix importing nested objects
+<a href="https://github.com/scalameta/metals/pull/778">#778</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Fix an issue when <code>val \_ = \(\)</code> is the only thing in the block
+<a href="https://github.com/scalameta/metals/pull/776">#776</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Fallback to &quot;show usages&quot; from &quot;Goto definition&quot; if the symbol represents a
+definition itself <a href="https://github.com/scalameta/metals/pull/775">#775</a>
+(<a href="https://github.com/tanishiking">tanishiking</a>)</li>
+<li>Move slow tests to separate directories and run them separately on Travis
+<a href="https://github.com/scalameta/metals/pull/773">#773</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Digest only sbt files at workspace level
+<a href="https://github.com/scalameta/metals/pull/772">#772</a>
+(<a href="https://github.com/wojciechUrbanski">wojciechUrbanski</a>)</li>
+<li>Fix wrong windows SemanticDB file path
+<a href="https://github.com/scalameta/metals/pull/771">#771</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Fix concurrent modification
+<a href="https://github.com/scalameta/metals/pull/766">#766</a>
+(<a href="https://github.com/chikei">chikei</a>)</li>
+<li>Factor out a ClasspathLoader.getURLs(classLoader) helper for java9+
+compatability, update usages
+<a href="https://github.com/scalameta/metals/pull/765">#765</a>
+(<a href="https://github.com/er1c">er1c</a>)</li>
+<li>Include mill version from .mill-version file
+<a href="https://github.com/scalameta/metals/pull/764">#764</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Add 2.13 support and drop deprecated versions
+<a href="https://github.com/scalameta/metals/pull/763">#763</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Clarifiyng a setting <a href="https://github.com/scalameta/metals/pull/759">#759</a>
+(<a href="https://github.com/rberenguel">rberenguel</a>)</li>
+<li>Fix very small typo in docs
+<a href="https://github.com/scalameta/metals/pull/758">#758</a>
+(<a href="https://github.com/rberenguel">rberenguel</a>)</li>
+<li>Fix completions to compilation in blog
+<a href="https://github.com/scalameta/metals/pull/757">#757</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Update VS Code docs <a href="https://github.com/scalameta/metals/pull/756">#756</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Add release notes for Metals Radium release
+<a href="https://github.com/scalameta/metals/pull/752">#752</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+</ul>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/metals/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#tl-dr">TL;DR</a></li><li><a href="#tree-views-in-vs-code">Tree views in VS Code</a><ul class="toc-headings"><li><a href="#projects-explorer">Projects explorer</a></li><li><a href="#libraries-explorer">Libraries explorer</a></li><li><a href="#reveal-active-file-in-metals-side-bar">Reveal active file in Metals side bar</a></li><li><a href="#compilation-explorer">Compilation explorer</a></li><li><a href="#help-and-feedback-explorer">Help and feedback explorer</a></li></ul></li><li><a href="#support-for-scala-213">Support for Scala 2.13</a></li><li><a href="#jdk-11-support">JDK 11 support</a></li><li><a href="#improved-classpath-indexing-performance">Improved classpath indexing performance</a></li><li><a href="#fallback-to-find-references-from-goto-definition">Fallback to &quot;find references&quot; from &quot;goto definition&quot;</a></li><li><a href="#dropping-older-scala-versions">Dropping older Scala versions</a></li><li><a href="#fixes-for-auto-importing-builds">Fixes for auto importing builds</a></li><li><a href="#no-more-work-in-progress">No more &quot;work in progress&quot;</a></li><li><a href="#miscellaneous-fixes">Miscellaneous fixes</a></li><li><a href="#contributors">Contributors</a></li><li><a href="#merged-prs">Merged PRs</a></li><li><a href="#v070-https-githubcom-scalameta-metals-tree-v070-2019-06-28">v0.7.0</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>

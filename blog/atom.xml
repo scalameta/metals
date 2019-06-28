@@ -21,6 +21,18 @@
         </author>
     </entry>
     <entry>
+        <title type="html"><![CDATA[Metals v0.7.0 - Thorium]]></title>
+        <id>http://scalameta.org/metals/blog/2019/06/28/thorium.html</id>
+        <link href="http://scalameta.org/metals/blog/2019/06/28/thorium.html">
+        </link>
+        <updated>2019-06-28T06:00:00Z</updated>
+        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.7.1 - codename &quot;Thorium&quot; 🎉 The release includes several new features along with bug fixes.</p> <p>Metals is a language server for Scala that works with VS Code, Atom, Vim, Sublime Text and Emacs. ...</p>]]></summary>
+        <author>
+            <name>Ólafur Páll Geirsson</name>
+            <uri>https://twitter.com/olafurpg</uri>
+        </author>
+    </entry>
+    <entry>
         <title type="html"><![CDATA[Metals v0.6.1 - Radium]]></title>
         <id>http://scalameta.org/metals/blog/2019/06/11/radium.html</id>
         <link href="http://scalameta.org/metals/blog/2019/06/11/radium.html">
