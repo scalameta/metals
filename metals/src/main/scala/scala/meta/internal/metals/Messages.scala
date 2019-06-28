@@ -299,7 +299,7 @@ class Messages(icons: Icons) {
       val recommended =
         if (shouldBeUsing.size == 1) shouldBeUsing.head
         else shouldBeUsing.mkString(" and ")
-      s"You are using $using, might not be supported in future versions of Metals. " +
+      s"You are using $using, which might not be supported in future versions of Metals. " +
         s"Please upgrade to Scala $recommended."
     }
   }
