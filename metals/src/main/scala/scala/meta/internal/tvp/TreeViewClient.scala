@@ -6,8 +6,6 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 trait TreeViewClient {
   @JsonNotification("metals/treeViewDidChange")
   def metalsTreeViewDidChange(params: TreeViewDidChangeParams): Unit
-  // @JsonNotification("metals/treeViewNodeReveal")
-  // def metalsTreeViewNodeReveal(params: TreeViewNodeRevealResult): Unit
 }
 
 case class TreeViewChildrenParams(

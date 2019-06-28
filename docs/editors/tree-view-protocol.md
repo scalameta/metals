@@ -52,7 +52,7 @@ export interface TreeViewNode {
 ```
 
 The children of a tree view node can be obtained through the
-[`metals/treeViewChildren`](#metals-treeviewchildren) request.
+`metals/treeViewChildren` request.
 
 ### Tree View Command
 
@@ -129,7 +129,8 @@ interface TreeViewChildrenResult {
 ### `metals/treeViewParent`
 
 The tree view parent is sent from the client to the server to obtain the parent
-node of a child node.
+node of a child node. The `metals/treeViewParent` endpoint is required to
+support `metals/treeViewReveal`.
 
 _Request_:
 
@@ -236,4 +237,4 @@ interface TreeViewChildrenResult {
 
 Example implementation of the reveal request.
 
-![2019-06-27 16 02 33](https://user-images.githubusercontent.com/1408093/60277613-33d19880-98fe-11e9-9aee-71c0a0c0861f.gif)
+![2019-06-27 18 47 17](https://user-images.githubusercontent.com/1408093/60284529-0d1a5e80-990c-11e9-853a-0aa0f6e12993.gif)

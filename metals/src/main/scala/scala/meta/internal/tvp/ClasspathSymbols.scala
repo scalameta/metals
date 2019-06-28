@@ -40,6 +40,10 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
     cache.remove(path)
   }
 
+  def reset(): Unit = {
+    cache.clear()
+  }
+
   def symbols(
       in: AbsolutePath,
       symbol: String

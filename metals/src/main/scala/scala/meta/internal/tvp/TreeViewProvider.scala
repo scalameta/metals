@@ -8,6 +8,7 @@ trait TreeViewProvider {
   val Build = TreeViewProvider.Build
   val Compile = TreeViewProvider.Compile
   val Help = TreeViewProvider.Help
+  def reset(): Unit = ()
   def didFocusTextDocument(
       path: AbsolutePath
   ): Unit = ()

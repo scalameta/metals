@@ -47,14 +47,12 @@ class ClasspathTreeView[Value, Key](
     } else {
       val node = fromUri(uri)
 
-      // Get all transitive children nodes
-      val descendents = loadSymbols(node.key, node.symbol)
+      val transitiveChildren = loadSymbols(node.key, node.symbol)
         .filter(i => node.isDescendent(i.symbol))
         .flatMap(i => i :: i.parents)
         .distinctBy(_.symbol)
 
-      // Get direct children nodes
-      val children = descendents.filter { s =>
+      val directChildren = transitiveChildren.filter { s =>
         s.symbol.owner == node.symbol && {
           s.kind.isPackage ||
           definitionIndex
@@ -64,9 +62,9 @@ class ClasspathTreeView[Value, Key](
       }
 
       // Auto-expand if there is only a single child node.
-      val hasSiblings = children.length > 1
+      val childHasSiblings = directChildren.length > 1
 
-      val result: Array[TreeViewNode] = children.iterator.map { child =>
+      val result: Array[TreeViewNode] = directChildren.iterator.map { child =>
         // Infer the title of this node from its symbol kind.
         val displayName = Symbol(child.symbol).displayName
         val label =
@@ -80,9 +78,9 @@ class ClasspathTreeView[Value, Key](
 
         // Get the children of this child to determine its collapse state.
         val grandChildren =
-          descendents.filter(_.symbol.owner == child.symbol)
+          transitiveChildren.filter(_.symbol.owner == child.symbol)
         val collapseState =
-          if (!hasSiblings && grandChildren.nonEmpty)
+          if (!childHasSiblings && grandChildren.nonEmpty)
             MetalsTreeItemCollapseState.expanded
           else if (child.symbol.isPackage)
             MetalsTreeItemCollapseState.collapsed

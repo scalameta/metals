@@ -126,13 +126,13 @@ object ServerCommands {
   val MetalsGithub = Command(
     OpenBrowser("https://github.com/scalameta/metals"),
     "Metals on GitHub",
-    "Open the Metals repository on GitHub GitHub"
+    "Open the Metals repository on GitHub"
   )
 
   val BloopGithub = Command(
     OpenBrowser("https://github.com/scalacenter/bloop"),
     "Bloop on GitHub",
-    "Open the Metals repository on GitHub GitHub"
+    "Open the Metals repository on GitHub"
   )
 
   val ChatOnGitter = Command(

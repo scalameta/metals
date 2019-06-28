@@ -30,7 +30,7 @@ class MetalsTreeViewProvider(
   private val isCollapsed = TrieMap.empty[BuildTargetIdentifier, Boolean]
   private val pendingProjectUpdates =
     ConcurrentHashSet.empty[BuildTargetIdentifier]
-  val classpath = new ClasspathSymbols(
+  private val classpath = new ClasspathSymbols(
     isStatisticsEnabled = statistics.isTreeView
   )
   val libraries = new ClasspathTreeView[AbsolutePath, AbsolutePath](
@@ -69,6 +69,10 @@ class MetalsTreeViewProvider(
       }
     }
   )
+
+  override def reset(): Unit = {
+    classpath.reset()
+  }
 
   private def flushPendingProjectUpdates(): Unit = {
     val toUpdate = pendingProjectUpdates.asScala.iterator

@@ -285,9 +285,17 @@ Highlight references to the same symbol in the open file.
 
 ![](https://i.imgur.com/0uhc9P5.gif)
 
+## Package explorer
+
+Browse packages, classes and methods in the workspace and library dependencies
+using the Metals sidebar. This feature is only implemented in VS Code.
+
 ## Metals Extensions
 
 **Status bar**: Editor client implements the `metals/status` notification.
+
+**Tree view**: Editor client implements the
+[Tree View Protocol](tree-view-protocol.md).
 
 **Did focus**: Editor client implements the `metals/didFocus` notification.
 

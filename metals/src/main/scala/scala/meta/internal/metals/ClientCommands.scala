@@ -65,7 +65,7 @@ object ClientCommands {
   val GotoLocation = Command(
     "metals-goto-location",
     "Goto location",
-    "Move the cursor focus the provided location",
+    "Move the cursor focus to the provided location",
     """|A LSP `Location` object with `uri` and `range` fields.
        |Example: 
        |```json
