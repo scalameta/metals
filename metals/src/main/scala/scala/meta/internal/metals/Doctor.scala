@@ -129,7 +129,7 @@ final class Doctor(
     } else {
       val messages = ListBuffer.empty[String]
       if (ScalaVersions.isDeprecatedScalaVersion(scalaVersion)) {
-        messages += s"This Scala version will not be supported in upcoming versions of Metals, " +
+        messages += s"This Scala version might not be supported in upcoming versions of Metals, " +
           s"please upgrade to Scala ${recommendedVersion(scalaVersion)}."
       } else if (!isLatestScalaVersion(scalaVersion)) {
         messages += s"Upgrade to Scala ${recommendedVersion(scalaVersion)} to enjoy the latest compiler improvements."
