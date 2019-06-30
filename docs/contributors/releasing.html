@@ -77,7 +77,12 @@ example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.</li>
 <li>Make sure that the release shows up at
 <a href="https://oss.sonatype.org/content/repositories/releases/org/scalameta/">https://oss.sonatype.org/content/repositories/releases/org/scalameta/</a>.</li>
 <li>Run <code>./bin/test-release.sh $VERSION</code> to ensure that all artifacts have
-successfully been released.</li>
+successfully been released. It's important to ensure that this script passes
+before announcing the release since it takes a while for all published
+artifacts to sync with Maven Central.</li>
+<li>To check that the release to Sonatype succeed even if the artifacts are not
+yet available on Maven Central run:
+<code>./bin/test-release.sh $VERSION -r sonatype:public</code></li>
 </ul></li>
 <li><p>Upgrade downstream projects:</p>
 <ul>
