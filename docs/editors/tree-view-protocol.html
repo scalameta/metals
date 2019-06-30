@@ -48,7 +48,7 @@ structures.</p>
 <h3><a class="anchor" aria-hidden="true" id="tree-view-node"></a><a href="#tree-view-node" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Tree View Node</h3>
 <p>A tree view can contain multiple tree view nodes. A tree view node can have the
 following metadata.</p>
-<pre><code class="hljs css language-ts"><span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> TreeViewNode {
+<pre><code class="hljs css language-ts"><span class="hljs-keyword">interface</span> TreeViewNode {
   <span class="hljs-comment">/** The ID of the view that this node is associated with. */</span>
   viewId: <span class="hljs-built_in">string</span>;
   <span class="hljs-comment">/** The URI of this node, or undefined if node is a root of the tree. */</span>
@@ -133,8 +133,8 @@ the parent node or one of its ancestor nodes.</p>
 }
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="metals-treeviewparent"></a><a href="#metals-treeviewparent" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>metals/treeViewParent</code></h3>
-<p>The tree view parent is sent from the client to the server to obtain the parent
-node of a child node. The <code>metals/treeViewParent</code> endpoint is required to
+<p>The tree view parent request is sent from the client to the server to obtain the
+parent node of a child node. The <code>metals/treeViewParent</code> endpoint is required to
 support <code>metals/treeViewReveal</code>.</p>
 <p><em>Request</em>:</p>
 <ul>
@@ -214,9 +214,16 @@ document position into it's corresponding tree view node.</p>
 <ul>
 <li>result: <code>TreeViewRevealResult</code> defined as follows.</li>
 </ul>
-<pre><code class="hljs css language-ts"><span class="hljs-keyword">interface</span> TreeViewChildrenResult {
-  <span class="hljs-comment">/** The child nodes of the requested parent node. */</span>
-  nodes: TreeViewNode[];
+<pre><code class="hljs css language-ts"><span class="hljs-keyword">interface</span> MetalsTreeRevealResult {
+  <span class="hljs-comment">/** The ID of the view that this node is associated with. */</span>
+  viewId: <span class="hljs-built_in">string</span>;
+  <span class="hljs-comment">/**
+   * The list of URIs for the node to reveal and all of its ancestor parents.
+   *
+   * The node to reveal is at index 0, it's parent is at index 1 and so forth
+   * up until the root node.
+   */</span>
+  uriChain: <span class="hljs-built_in">string</span>[];
 }
 </code></pre>
 <p>Example implementation of the reveal request.</p>
