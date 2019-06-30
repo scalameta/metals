@@ -41,7 +41,12 @@ title: Making a release
   - Make sure that the release shows up at
     https://oss.sonatype.org/content/repositories/releases/org/scalameta/.
   - Run `./bin/test-release.sh $VERSION` to ensure that all artifacts have
-    successfully been released.
+    successfully been released. It's important to ensure that this script passes
+    before announcing the release since it takes a while for all published
+    artifacts to sync with Maven Central.
+  - To check that the release to Sonatype succeed even if the artifacts are not
+    yet available on Maven Central run:
+    `./bin/test-release.sh $VERSION -r sonatype:public`
 
 - Upgrade downstream projects:
 
