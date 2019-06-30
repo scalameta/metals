@@ -38,7 +38,7 @@ VIM - Vi IMproved 8.1
 
 # If using Neovim
 nvim --version | head
-NVIM v0.3.4
+NVIM v0.3.7
 ```
 
 ## Installing yarn

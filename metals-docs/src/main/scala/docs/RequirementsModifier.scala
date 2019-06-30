@@ -20,9 +20,9 @@ class RequirementsModifier extends StringModifier {
     s"""
        |## Requirements
        |
-       |**OpenJDK or Oracle Java 8**. Eclipse OpenJ9 and Java 11 are not
+       |**Java 8 or 11 provided by OpenJDK or Oracle**. Eclipse OpenJ9 is not
        |supported, please make sure the `JAVA_HOME` environment variable
-       |points to valid Java 8 installation.
+       |points to a valid Java 8 or 11 installation.
        |
        |**macOS, Linux or Windows**. Metals is developed on macOS and every PR is
        |tested on Ubuntu+Windows.
