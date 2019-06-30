@@ -18,6 +18,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags.Symbol
 import scala.util.Try
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.io.PathIO
 import java.net.URLClassLoader
 import scala.util.control.NonFatal
 
@@ -25,6 +26,10 @@ import scala.util.control.NonFatal
  * In-memory cache for looking up build server metadata.
  */
 final class BuildTargets() {
+  private var workspace = PathIO.workingDirectory
+  def setWorkspaceDirectory(newWorkspace: AbsolutePath): Unit = {
+    workspace = newWorkspace
+  }
   private var tables: Option[Tables] = None
   private val sourceDirectoriesToBuildTarget =
     TrieMap.empty[AbsolutePath, ConcurrentLinkedQueue[BuildTargetIdentifier]]
@@ -213,7 +218,8 @@ final class BuildTargets() {
   def inferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] =
-    Try(unsafeInferBuildTarget(source)).getOrElse(None)
+    if (!source.isDependencySource(workspace)) None
+    else Try(unsafeInferBuildTarget(source)).getOrElse(None)
   private def unsafeInferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
