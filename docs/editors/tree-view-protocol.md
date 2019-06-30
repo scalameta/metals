@@ -25,7 +25,7 @@ A tree view can contain multiple tree view nodes. A tree view node can have the
 following metadata.
 
 ```ts
-export interface TreeViewNode {
+interface TreeViewNode {
   /** The ID of the view that this node is associated with. */
   viewId: string;
   /** The URI of this node, or undefined if node is a root of the tree. */
@@ -128,8 +128,8 @@ interface TreeViewChildrenResult {
 
 ### `metals/treeViewParent`
 
-The tree view parent is sent from the client to the server to obtain the parent
-node of a child node. The `metals/treeViewParent` endpoint is required to
+The tree view parent request is sent from the client to the server to obtain the
+parent node of a child node. The `metals/treeViewParent` endpoint is required to
 support `metals/treeViewReveal`.
 
 _Request_:
@@ -229,9 +229,16 @@ _Response_:
 - result: `TreeViewRevealResult` defined as follows.
 
 ```ts
-interface TreeViewChildrenResult {
-  /** The child nodes of the requested parent node. */
-  nodes: TreeViewNode[];
+interface MetalsTreeRevealResult {
+  /** The ID of the view that this node is associated with. */
+  viewId: string;
+  /**
+   * The list of URIs for the node to reveal and all of its ancestor parents.
+   *
+   * The node to reveal is at index 0, it's parent is at index 1 and so forth
+   * up until the root node.
+   */
+  uriChain: string[];
 }
 ```
 
