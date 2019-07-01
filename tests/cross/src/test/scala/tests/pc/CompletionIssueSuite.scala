@@ -106,4 +106,61 @@ object CompletionIssueSuite extends BaseCompletionSuite {
       |  val allCountries = Sweden + Norway + France + USA
       |}""".stripMargin
   )
+
+  check(
+    "issue-813-empty",
+    """|package a
+       |
+       |object Main {
+       |  (1 to 10).toList
+       |  .map(_ + 1) // comment breaks completions
+       |  .@@
+       |}
+       |""".stripMargin,
+    """|::[B >: Int](x: B): List[B]
+       |:::[B >: Int](prefix: List[B]): List[B]
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "issue-813",
+    """|package a
+       |
+       |object Main {
+       |  Array(1, 1,10)
+       |  .map(_ + 1)
+       |  .fil@@ 
+       |}
+       |""".stripMargin,
+    """|filter(p: Int => Boolean): Array[Int]
+       |filterNot(p: Int => Boolean): Array[Int]
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "issue-813-space",
+    """|package a
+       |
+       |object Main {
+       |  Array(1, 1,10)
+       |  .map(_ + 1)
+       |  . fil@@ 
+       |}
+       |""".stripMargin,
+    """|filter(p: Int => Boolean): Array[Int]
+       |filterNot(p: Int => Boolean): Array[Int]
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  override val compatProcess: Map[String, String => String] = Map(
+    "2.13" -> { s =>
+      s.replaceAllLiterally(
+        "::[B >: Int](x: B): List[B]",
+        "::[B >: Int](elem: B): List[B]"
+      )
+    }
+  )
 }
