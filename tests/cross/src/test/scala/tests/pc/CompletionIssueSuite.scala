@@ -129,7 +129,7 @@ object CompletionIssueSuite extends BaseCompletionSuite {
        |
        |object Main {
        |  Array(1, 1,10)
-       |  .map(_ + 1)
+       |  .map(_ + 1) // comment breaks completions
        |  .fil@@ 
        |}
        |""".stripMargin,
@@ -145,8 +145,24 @@ object CompletionIssueSuite extends BaseCompletionSuite {
        |
        |object Main {
        |  Array(1, 1,10)
-       |  .map(_ + 1)
+       |  .map(_ + 1) // comment breaks completions
        |  . fil@@ 
+       |}
+       |""".stripMargin,
+    """|filter(p: Int => Boolean): Array[Int]
+       |filterNot(p: Int => Boolean): Array[Int]
+       |""".stripMargin,
+    topLines = Some(2)
+  )
+
+  check(
+    "issue-813-multi",
+    """|package a
+       |
+       |object Main {
+       |  Array(1, 1,10)
+       |  .map(_ + 1) /* comment breaks completions */
+       |  .fil@@ 
        |}
        |""".stripMargin,
     """|filter(p: Int => Boolean): Array[Int]
