@@ -11,12 +11,12 @@ install:
 
 environment:
   APPVEYOR_CACHE_ENTRY_ZIP_ARGS: "-t7z -m0=lzma -mx=9"
-  JAVA_OPTS: -Xss2m -Xmx1024m -XX:-TieredCompilation -XX:ReservedCodeCacheSize=48m -Dfile.encoding=UTF-8 -Djna.nosys=true
+  JAVA_OPTS: -Xss2m -Xmx4096m -XX:-TieredCompilation -XX:ReservedCodeCacheSize=48m -Dfile.encoding=UTF-8 -Djna.nosys=true
 before_build:
   - ps: |
       @"
       -Xss2m
-      -Xmx1024m
+      -Xmx4096m
       -XX:ReservedCodeCacheSize=48m
       -XX:-TieredCompilation
       -Dfile.encoding=UTF-8
