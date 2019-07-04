@@ -369,9 +369,29 @@ class CompletionProvider(
       val isTypeMember = kind == CompletionListKind.Type
       params.checkCanceled()
       val matchingResults = completions.matchingResults { entered => name =>
-        if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
-        else CompletionFuzzy.matches(entered, name)
+        /** NOTE(tgodzik): presentation compiler bug https://github.com/scala/scala/pull/8193
+         *  should be removed once we drop support for 2.12.8 and 2.13.0
+         *  in case we have a comment presentation compiler will see it as the name
+         *  CompletionIssueSuite.issue-813 for more details
+         */
+        val realEntered =
+          if (entered.startsWith("$div$div") ||
+            entered.startsWith("$div$times")) { // start of a comment: "//" or "/*"
+            // we reverse the situation and look for the word from start of complition to either '.' or ' '
+            val reversedString = entered.toString().reverse
+            val lastSpace = reversedString.indexOfSlice("0200u$") // reversed $u0020 = ' '
+            val lastDot = reversedString.indexOfSlice("E200u$") // reversed $u002E = '.'
+            val startOfWord =
+              if (lastSpace < lastDot && lastSpace >= 0) lastSpace else lastDot
+            reversedString.slice(0, startOfWord).reverse
+          } else {
+            entered.toString
+          }
+        if (isTypeMember)
+          CompletionFuzzy.matchesSubCharacters(realEntered, name)
+        else CompletionFuzzy.matches(realEntered, name)
       }
+
       val latestParentTrees = getLastVisitedParentTrees(pos)
       val completion =
         completionPosition(
