@@ -70,6 +70,27 @@ class MetalsTreeViewProvider(
     }
   )
 
+  override def init(): Unit = {
+    languageClient.metalsTreeViewDidChange(
+      TreeViewDidChangeParams(
+        Array(
+          TreeViewNode(
+            Build,
+            null,
+            null,
+            null
+          ),
+          TreeViewNode(
+            Compile,
+            null,
+            null,
+            null
+          )
+        )
+      )
+    )
+  }
+
   override def reset(): Unit = {
     classpath.reset()
   }
