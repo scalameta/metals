@@ -1199,24 +1199,7 @@ class MetalsLanguageServer(
           Future.successful(BuildChange.None)
       }
       _ = {
-        languageClient.metalsTreeViewDidChange(
-          TreeViewDidChangeParams(
-            Array(
-              TreeViewNode(
-                treeView.Build,
-                null,
-                null,
-                null
-              ),
-              TreeViewNode(
-                treeView.Compile,
-                null,
-                null,
-                null
-              )
-            )
-          )
-        )
+        treeView.init()
         focusedDocument.foreach(treeView.didFocusTextDocument)
       }
     } yield result
