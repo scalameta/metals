@@ -36,7 +36,7 @@ configuration section:
         <compilerPlugin>
             <groupId>org.scalameta</groupId>
             <artifactId>semanticdb-scalac_${scala.version}</artifactId>
-            <version>@@SCALAMETA_VERSION@@</version>
+            <version>@SCALAMETA_VERSION@</version>
         </compilerPlugin>
     </compilerPlugins>
     <args>
@@ -54,7 +54,7 @@ configuration section:
 Next, we need to do run bloopInstall via maven, which can be done easily
 through:
 
-`mvn ch.epfl.scala:maven-bloop_2.10:@@BLOOP_VERSION@@:bloopInstall -DdownloadSources=true`
+`mvn ch.epfl.scala:maven-bloop_2.10:@BLOOP_VERSION@:bloopInstall -DdownloadSources=true`
 
 Everything should now be correctly configured and work even when reimporting the
 project.
@@ -63,7 +63,7 @@ If you don't want to modify the `pom.xml` you can also run bloopInstall with an
 additional parameter:
 
 ```
-mvn ch.epfl.scala:maven-bloop_2.10:@@BLOOP_VERSION@@:bloopInstall -DdownloadSources=true -DaddScalacArgs=-Xplugin:/path/to/semanticdb-scalac.jar|-P:semanticdb:synthetics:on|-P:semanticdb:failures:warning|-P:semanticdb:sourceroot:/path/to/workspace|-Yrangepos|-Xplugin-require:semanticdb'
+mvn ch.epfl.scala:maven-bloop_2.10:@BLOOP_VERSION@:bloopInstall -DdownloadSources=true -DaddScalacArgs=-Xplugin:/path/to/semanticdb-scalac.jar|-P:semanticdb:synthetics:on|-P:semanticdb:failures:warning|-P:semanticdb:sourceroot:/path/to/workspace|-Yrangepos|-Xplugin-require:semanticdb'
 ```
 
 `-DaddScalacArgs` takes a string with additional scalac options separated by

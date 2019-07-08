@@ -30,7 +30,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'ch.epfl.scala:gradle-bloop_2.11:@@BLOOP_VERSION@@'
+        classpath 'ch.epfl.scala:gradle-bloop_2.12:@BLOOP_VERSION@'
     }
 }
 ```
@@ -56,7 +56,7 @@ allprojects {
             scalaCompilerPlugin
         }
         dependencies {
-            scalaCompilerPlugin "org.scalameta:semanticdb-scalac_$scalaVersion:@@SCALAMETA_VERSION@@"
+            scalaCompilerPlugin "org.scalameta:semanticdb-scalac_$scalaVersion:@SCALAMETA_VERSION@"
         }
         def pluginFile = project.configurations.scalaCompilerPlugin.find {
             it.name.contains("semanticdb")
