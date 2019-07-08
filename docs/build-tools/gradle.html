@@ -55,7 +55,7 @@ included in the buildscript section:</p>
         mavenCentral()
     }
     dependencies {
-        classpath <span class="hljs-string">'ch.epfl.scala:gradle-bloop_2.11:@BLOOP_VERSION@@'</span>
+        classpath <span class="hljs-string">'ch.epfl.scala:gradle-bloop_2.12:1.3.2'</span>
     }
 }
 </code></pre>
@@ -75,7 +75,7 @@ can be done by adding a couple of options to the scala compiler:</p>
             scalaCompilerPlugin
         }
         dependencies {
-            scalaCompilerPlugin <span class="hljs-string">"org.scalameta:semanticdb-scalac_$scalaVersion:@SCALAMETA_VERSION@@"</span>
+            scalaCompilerPlugin <span class="hljs-string">"org.scalameta:semanticdb-scalac_$scalaVersion:4.2.0"</span>
         }
         <span class="hljs-keyword">def</span> pluginFile = project.configurations.scalaCompilerPlugin.find {
             it.name.contains(<span class="hljs-string">"semanticdb"</span>)
