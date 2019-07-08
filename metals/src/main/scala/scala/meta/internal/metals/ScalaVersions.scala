@@ -15,12 +15,12 @@ object ScalaVersions {
   def isDeprecatedScalaVersion(version: String): Boolean =
     _isDeprecatedScalaVersion(dropVendorSuffix(version))
   def isSupportedScalaBinaryVersion(scalaVersion: String): Boolean =
-    Set("2.12", "2.11").exists { binaryVersion =>
+    Set("2.13", "2.12", "2.11").exists { binaryVersion =>
       scalaVersion.startsWith(binaryVersion)
     }
 
   val isLatestScalaVersion: Set[String] =
-    Set(BuildInfo.scala212, BuildInfo.scala211)
+    Set(BuildInfo.scala213, BuildInfo.scala212, BuildInfo.scala211)
 
   def recommendedVersion(scalaVersion: String): String = BuildInfo.scala212
 
