@@ -15,7 +15,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   class Notification(val id: Int)(implicit name: sourcecode.Name) {
     override def toString: String = s"Notification(${name.value}, $id)"
     def isDismissed: Boolean = {
-      val now = new Timestamp(time.millis())
+      val now = new Timestamp(time.currentMillis())
       conn().query {
         "select * from dismissed_notification where id = ? and when_expires > ? limit 1;"
       } { stmt =>
@@ -29,12 +29,12 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
       dismiss(10000, TimeUnit.DAYS)
     }
     def dismiss(count: Long, unit: TimeUnit): Unit = {
-      val sum = time.millis() + unit.toMillis(count)
+      val sum = time.currentMillis() + unit.toMillis(count)
       if (sum < 0) dismissForever()
       else dismiss(new Timestamp(sum))
     }
     def dismiss(whenExpire: Timestamp): Unit = {
-      val now = new Timestamp(time.millis())
+      val now = new Timestamp(time.currentMillis())
       conn().update {
         "insert into dismissed_notification values (?, ?, ?);"
       } { stmt =>

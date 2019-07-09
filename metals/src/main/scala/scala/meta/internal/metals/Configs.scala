@@ -23,6 +23,7 @@ object Configs {
       new DidChangeWatchedFilesRegistrationOptions(
         List(
           new FileSystemWatcher(s"$root/*.sbt"),
+          new FileSystemWatcher(s"$root/pom.xml"),
           new FileSystemWatcher(s"$root/*.sc"),
           new FileSystemWatcher(s"$root/*?.gradle"),
           new FileSystemWatcher(s"$root/*.gradle.kts"),

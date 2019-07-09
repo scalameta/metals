@@ -9,14 +9,14 @@ object DigestsSuite extends BaseTablesSuite {
     assertEquals(digests.setStatus("a", Requested), 1)
     assertEquals(
       digests.last().get,
-      Digest("a", Requested, time.millis())
+      Digest("a", Requested, time.currentMillis())
     )
     time.elapseSeconds(1)
     assertEquals(digests.getStatus("a").get, Requested)
     assertEquals(digests.setStatus("a", Installed), 1)
     assertEquals(
       digests.last().get,
-      Digest("a", Installed, time.millis())
+      Digest("a", Installed, time.currentMillis())
     )
     time.elapseSeconds(1)
     assertEquals(digests.getStatus("a").get, Installed)

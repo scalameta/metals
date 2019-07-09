@@ -21,7 +21,7 @@ class ChosenBuildServers(conn: () => Connection, time: Time) {
     conn().update(
       s"merge into chosen_build_server key(md5) values (?, ?, ?);"
     ) { stmt =>
-      val timestamp = new Timestamp(time.millis())
+      val timestamp = new Timestamp(time.currentMillis())
       stmt.setString(1, md5)
       stmt.setString(2, server)
       stmt.setTimestamp(3, timestamp)

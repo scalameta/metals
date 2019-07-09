@@ -15,7 +15,7 @@ final class Digests(conn: () => Connection, time: Time) {
     conn().update(
       s"insert into sbt_digest values (?, ?, ?);"
     ) { stmt =>
-      val timestamp = new Timestamp(time.millis())
+      val timestamp = new Timestamp(time.currentMillis())
       stmt.setString(1, md5Digest)
       stmt.setByte(2, status.value.toByte)
       stmt.setTimestamp(3, timestamp)
