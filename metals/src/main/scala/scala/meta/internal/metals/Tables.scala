@@ -90,6 +90,10 @@ final class Tables(
       else ""
     val dbfile = workspace.resolve(".metals").resolve("metals")
     Files.createDirectories(dbfile.toNIO.getParent)
+    System.setProperty(
+      "h2.bindAddress",
+      System.getProperty("h2.bindAddress", "127.0.0.1")
+    )
     val url = s"jdbc:h2:file:$dbfile;MV_STORE=false$autoServer"
     tryUrl(url)
   }
