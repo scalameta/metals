@@ -13,4 +13,6 @@ class FakeTime extends Time {
     elapse(n, TimeUnit.SECONDS)
   }
   override def nanos(): Long = elapsed
+
+  override def currentMillis(): Long = TimeUnit.NANOSECONDS.toMillis(elapsed)
 }
