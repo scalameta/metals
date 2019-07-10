@@ -20,7 +20,9 @@ object FileLayout {
             val file =
               path.stripPrefix("/").split("/").foldLeft(root)(_ resolve _)
             val parent = file.toNIO.getParent
-            Files.createDirectories(parent)
+            if (!Files.exists(parent)) { // cannot create directories when parent is a symlink
+              Files.createDirectories(parent)
+            }
             Files.deleteIfExists(file.toNIO)
             Files.write(
               file.toNIO,

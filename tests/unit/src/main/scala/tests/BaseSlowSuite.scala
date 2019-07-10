@@ -35,6 +35,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
   var server: TestingServer = _
   var client: TestingClient = _
   var workspace: AbsolutePath = _
+
   override def afterAll(): Unit = {
     if (server != null) {
       server.server.cancelAll()
@@ -42,12 +43,14 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     ex.shutdownNow()
     sh.shutdownNow()
   }
+
   def assertConnectedToBuildServer(
       expectedName: String
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
     val obtained = server.server.buildServer.get.name
     assertNoDiff(obtained, expectedName)
   }
+
   override def utestBeforeEach(path: Seq[String]): Unit = {
     if (path.isEmpty) return
     if (server != null) {
@@ -55,12 +58,7 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
     }
     val name = path.last
     if (utest.ufansi.Str(name).plainText.contains("IGNORED")) return
-    workspace = PathIO.workingDirectory
-      .resolve("target")
-      .resolve("e2e")
-      .resolve(suiteName)
-      .resolve(name.replace(' ', '-'))
-    Files.createDirectories(workspace.toNIO)
+    workspace = createWorkspace(name)
     val buffers = Buffers()
     val config = serverConfig.copy(
       bloopProtocol = protocol,
@@ -79,6 +77,16 @@ abstract class BaseSlowSuite(suiteName: String) extends BaseSuite {
       () => Embedded.newBloopClassloader()
     )(ex)
     server.server.userConfig = this.userConfig
+  }
+
+  protected def createWorkspace(name: String): AbsolutePath = {
+    val path = PathIO.workingDirectory
+      .resolve("target")
+      .resolve("e2e")
+      .resolve(suiteName)
+      .resolve(name.replace(' ', '-'))
+    Files.createDirectories(path.toNIO)
+    path
   }
 
   def assertNoDiagnostics()(
