@@ -192,7 +192,7 @@ class MetalsLanguageServer(
   }
 
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
-    workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri)))
+    workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri))).dealias
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, config))

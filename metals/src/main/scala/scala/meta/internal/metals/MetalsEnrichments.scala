@@ -286,12 +286,15 @@ object MetalsEnrichments
       }
     }
 
-    def dealias: AbsolutePath =
-      if (Files.isSymbolicLink(path.toNIO)) {
-        AbsolutePath(Files.readSymbolicLink(path.toNIO))
+    // Using [[Files.isSymbolicLink]] is not enough.
+    // It will be false when one of the parents is a symlink (e.g. /dir/link/file.txt)
+    def dealias: AbsolutePath = {
+      if (path.exists) { // cannot dealias non-existing path
+        AbsolutePath(path.toNIO.toRealPath())
       } else {
         path
       }
+    }
 
     def exists: Boolean = {
       Files.exists(path.toNIO)
@@ -342,7 +345,7 @@ object MetalsEnrichments
     }
 
     def toAbsolutePath: AbsolutePath =
-      AbsolutePath(Paths.get(URI.create(value.stripPrefix("metals:"))))
+      AbsolutePath(Paths.get(URI.create(value.stripPrefix("metals:")))).dealias
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
