@@ -1462,9 +1462,14 @@ class MetalsLanguageServer(
     // remove cached symbols from Jars
     // that are not used
     val usedJars = mutable.HashSet.empty[AbsolutePath]
-    JdkSources(userConfig.javaHome).foreach { zip =>
-      usedJars += zip
-      addSourceJarSymbols(zip)
+    JdkSources(userConfig.javaHome) match {
+      case Some(zip) =>
+        usedJars += zip
+        addSourceJarSymbols(zip)
+      case None =>
+        scribe.warn(
+          s"Could not find java sources in ${userConfig.javaHome}. Java symbols will not be available."
+        )
     }
     for {
       item <- dependencySources.getItems.asScala

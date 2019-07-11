@@ -3,8 +3,6 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.Comparator
-import java.util.Comparator.comparing
 import scala.meta.io.AbsolutePath
 
 /**
