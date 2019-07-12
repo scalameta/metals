@@ -10,10 +10,11 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|assertion = : Boolean
+       |assertion = false : Boolean
        |Main arg
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(4)
   )
 
   check(
@@ -23,10 +24,11 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|message = : => Any
+       |message = ??? : => Any
        |Main arg1
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(4)
   )
 
   check(
@@ -36,10 +38,11 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|message = : => Any
+       |message = ??? : => Any
        |Main arg2
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(4)
   )
 
   def user: String =
@@ -60,9 +63,13 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|age = : Int
        |followers = : Int
+       |age = 0 : Int
+       |followers = 0 : Int
        |Main arg3
+       |User arg3
+       |Autofill with default valuesage = 0, followers = 0
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(7)
   )
 
   check(
@@ -75,9 +82,11 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|age = : Int
        |followers = : Int
+       |age = 0 : Int
+       |followers = 0 : Int
        |Main arg4
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(5)
   )
 
   check(
@@ -90,10 +99,12 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|address = : String
        |followers = : Int
+       |address = "" : String
+       |followers = 0 : Int
        |Main arg5
        |User arg5
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(6)
   )
 
   check(
@@ -119,8 +130,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|x = : Int
+       |x = 0 : Int
        |Main arg7
-       |:: scala.collection.immutable
        |""".stripMargin,
     topLines = Option(3)
   )
@@ -133,10 +144,11 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|suffix = : String
+       |suffix = "" : String
        |Main arg8
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(4)
   )
 
   check(
@@ -148,10 +160,11 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|end = : Int
+       |end = 0 : Int
        |Main arg9
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(4)
   )
 
   check(
@@ -162,6 +175,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|address = : String
+       |address = "" : String
+       |Autofill with default valuesname = "", age = 0, address = "", followers = 0
        |""".stripMargin
   )
 
@@ -173,6 +188,7 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|banana = : Int
+       |banana = 0 : Int
        |""".stripMargin
   )
 
@@ -206,8 +222,75 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|argument: Int
        |argument = : Int
+       |argument = argument : Int
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(3)
+  )
+
+  check(
+    "auto",
+    s"""|object Main {
+        |  def foo(argument : Int, other : String) : Int = argument
+        |  val number = 5
+        |  val hello = "" 
+        |  foo(argu@@)
+        |}
+        |""".stripMargin,
+    """|argument = : Int
+       |argument = number : Int
+       |Autofill with default valuesargument = number, other = hello
+       |""".stripMargin,
+    topLines = Some(3)
+  )
+
+  check(
+    "auto-same-name",
+    s"""|object Main {
+        |  def foo(argument : Int, other : String) : Int = argument
+        |  val number = 5
+        |  val argument = 123
+        |  val hello = "" 
+        |  foo(ot@@)
+        |}
+        |""".stripMargin,
+    """|other = : String
+       |other = hello : String
+       |Autofill with default valuesargument = argument, other = hello
+       |""".stripMargin,
+    topLines = Some(3)
+  )
+
+  check(
+    "auto-multiple",
+    s"""|object Main {
+        |  def foo(argument : Int) : Int = argument
+        |  val number = 1
+        |  val number2 = 2
+        |  val number4 = 4
+        |  val number8 = 8
+        |  foo(ar@@)
+        |}
+        |""".stripMargin,
+    """|argument = : Int
+       |argument = number : Int
+       |argument = number2 : Int
+       |argument = number4 : Int
+       |argument = number8 : Int
+       |""".stripMargin,
+    topLines = Some(5)
+  )
+
+  check(
+    "auto-default",
+    s"""|object Main {
+        |  def foo(argument : Int, other : String, isTrue: Boolean, opt : Option[String]) : Int = argument
+        |  foo(argu@@)
+        |}
+        |""".stripMargin,
+    """|argument = : Int
+       |argument = 0 : Int
+       |Autofill with default valuesargument = 0, other = "", isTrue = false, opt = None
+       |""".stripMargin
   )
 
 }
