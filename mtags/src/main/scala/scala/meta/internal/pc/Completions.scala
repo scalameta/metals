@@ -742,39 +742,34 @@ trait Completions { this: MetalsGlobal =>
         interpolator: InterpolationSplice,
         text: String
     ) extends CompletionPosition {
+
       val offset = if (lit.pos.focusEnd.line == pos.line) CURSOR.length else 0
-      val litpos = lit.pos.withEnd(lit.pos.end - offset)
-      val lrange = litpos.toLSP
+      val nameStart = pos.withStart(pos.start - interpolator.name.size)
+      val nameRange = nameStart.toLSP
       val hasClosingBrace = text.charAt(pos.point) == '}'
-      def write(out: StringBuilder, from: Int, to: Int): Unit = {
-        var i = from
-        while (i < to) {
-          text.charAt(i) match {
-            case '$' =>
-              if (i + 1 < to && text.charAt(i + 1).isLetter) {
-                out.append("\\$")
-              } else {
-                out.append("\\$\\$")
-              }
-            case ch =>
-              out.append(ch)
-          }
-          i += 1
-        }
+      val hasOpeningBrace = text.charAt(pos.start - interpolator.name.size - 1) == '{'
+
+      def additionalEdits(): List[l.TextEdit] = {
+        val interpolatorEdit =
+          if (text.charAt(lit.pos.start - 1) != 's')
+            List(new l.TextEdit(lit.pos.withEnd(lit.pos.start).toLSP, "s"))
+          else Nil
+        val dolarEdits = for {
+          i <- lit.pos.start to (lit.pos.end - CURSOR.length())
+          if text.charAt(i) == '$' && i != interpolator.dollar
+        } yield new l.TextEdit(pos.source.position(i).withEnd(i).toLSP, "$")
+        interpolatorEdit ++ dolarEdits
       }
+
       def newText(sym: Symbol): String = {
         val out = new StringBuilder()
-        out.append("s")
-        write(out, lit.pos.start, interpolator.dollar)
-        // Escape `$` for
-        out.append("\\$")
         val symbolName = sym.getterName.decoded
         val identifier = Identifier.backtickWrap(symbolName)
         val symbolNeedsBraces =
           interpolator.needsBraces ||
             identifier.startsWith("`") ||
             sym.isNonNullaryMethod
-        if (symbolNeedsBraces) {
+        if (symbolNeedsBraces && !hasOpeningBrace) {
           out.append('{')
         }
         out.append(identifier)
@@ -782,18 +777,23 @@ trait Completions { this: MetalsGlobal =>
         if (symbolNeedsBraces && !hasClosingBrace) {
           out.append('}')
         }
-        write(out, pos.point, lit.pos.end - CURSOR.length)
         out.toString
       }
+
       val filter =
         text.substring(lit.pos.start, pos.point - interpolator.name.length)
       override def contribute: List[Member] = {
         metalsScopeMembers(pos).collect {
           case s: ScopeMember
               if CompletionFuzzy.matches(interpolator.name, s.sym.name) =>
-            val edit = new l.TextEdit(lrange, newText(s.sym))
+            val edit = new l.TextEdit(nameRange, newText(s.sym))
             val filterText = filter + s.sym.name.decoded
-            new TextEditMember(filterText, edit, s.sym)
+            new TextEditMember(
+              filterText,
+              edit,
+              s.sym,
+              additionalTextEdits = additionalEdits()
+            )
         }
       }
     }

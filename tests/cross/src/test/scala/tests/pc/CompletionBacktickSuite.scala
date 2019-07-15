@@ -49,7 +49,7 @@ object CompletionBacktickSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object Main {
        |  val `type` = 42
-       |  s"Hello \${`type`$0}"
+       |  s"Hello ${`type`$0}"
        |}
        |""".stripMargin,
     filterText = "\"Hello $type"
@@ -64,7 +64,7 @@ object CompletionBacktickSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object Main {
        |  val `hello world` = 42
-       |  s"Hello \${`hello world`$0}"
+       |  s"Hello ${`hello world`$0}"
        |}
        |""".stripMargin,
     filterText = "\"Hello $hello world"
