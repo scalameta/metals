@@ -18,8 +18,17 @@ To use Metals in Emacs, place this snippet in your Emacs configuration to load
 `lsp-mode` along with its dependencies:
 
 ```el
+(require 'package)
+
 ;; Add melpa to your packages repositories
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
+;; Install use-package if not already installed
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
+(require 'use-package)
 
 ;; Enable defer and ensure by default for use-package
 (setq use-package-always-defer t
@@ -93,8 +102,17 @@ you want to use an alternative to lsp-mode.
 To configure Eglot with Metals:
 
 ```el
+(require 'package)
+
 ;; Add melpa-stable to your packages repositories
 (add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+
+;; Install use-package if not already installed
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
+(require 'use-package)
 
 ;; Enable defer and ensure by default for use-package
 (setq use-package-always-defer t
