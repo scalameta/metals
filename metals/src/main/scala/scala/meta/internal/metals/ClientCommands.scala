@@ -82,6 +82,7 @@ object ClientCommands {
 
   def all: List[Command] = List(
     RunDoctor,
+    ReloadDoctor,
     ToggleLogs,
     FocusDiagnostics,
     GotoLocation,
