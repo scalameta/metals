@@ -98,6 +98,39 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
           "sourcecode/ +"
         )
         server.assertTreeViewChildren(
+          s"libraries:",
+          """|animal-sniffer-annotations-1.17.jar -
+             |cats-core_2.12-1.5.0.jar -
+             |cats-kernel_2.12-1.5.0.jar -
+             |cats-macros_2.12-1.5.0.jar -
+             |charsets.jar -
+             |checker-qual-2.5.2.jar -
+             |circe-core_2.12-0.11.1.jar -
+             |circe-numbers_2.12-0.11.1.jar -
+             |error_prone_annotations-2.2.0.jar -
+             |failureaccess-1.0.1.jar -
+             |gson-2.7.jar -
+             |guava-27.1-jre.jar -
+             |j2objc-annotations-1.1.jar -
+             |jce.jar -
+             |jfr.jar -
+             |jsr305-3.0.2.jar -
+             |jsse.jar -
+             |listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar -
+             |machinist_2.12-0.6.6.jar -
+             |org.eclipse.lsp4j-0.5.0.jar -
+             |org.eclipse.lsp4j.generator-0.5.0.jar -
+             |org.eclipse.lsp4j.jsonrpc-0.5.0.jar -
+             |org.eclipse.xtend.lib-2.19.0.M1.jar -
+             |org.eclipse.xtend.lib.macro-2.19.0.M1.jar -
+             |org.eclipse.xtext.xbase.lib-2.19.0.M1.jar -
+             |resources.jar -
+             |rt.jar -
+             |scala-library-2.12.8.jar -
+             |scala-reflect-2.12.8.jar -
+             |sourcecode_2.12-0.1.7.jar -""".stripMargin
+        )
+        server.assertTreeViewChildren(
           s"libraries:${server.jar("scala-library")}!/scala/Some#",
           """|value val
              |isEmpty() method
@@ -153,8 +186,8 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |  Import build command
              |  Connect to build server command
              |  Projects (0)
-             |  Libraries (23)
-             |  Libraries (23)
+             |  Libraries (30)
+             |  Libraries (30)
              |    sourcecode_2.12-0.1.7.jar
              |    sourcecode_2.12-0.1.7.jar
              |      sourcecode/
@@ -208,8 +241,8 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |  Import build command
              |  Connect to build server command
              |  Projects (0)
-             |  Libraries (23)
-             |  Libraries (23)
+             |  Libraries (30)
+             |  Libraries (30)
              |    org.eclipse.lsp4j-0.5.0.jar
              |    org.eclipse.lsp4j.generator-0.5.0.jar
              |    org.eclipse.lsp4j.jsonrpc-0.5.0.jar
