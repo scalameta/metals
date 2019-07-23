@@ -85,7 +85,7 @@ functionality.
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
-  <td align=center>✅*</td>
+  <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
   <td align=center>✅</td>
@@ -188,8 +188,6 @@ code.
 
 **✅ Vim**: auto-import and snippets require
 [coc.nvim](https://github.com/neoclide/coc.nvim) client.
-
-**✅ Sublime**: no auto-import.
 
 Use code completions to explore APIs, implement interfaces, generate exhaustive
 pattern matches and more.
