@@ -1,0 +1,375 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Metals v0.5.0 · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Metals v0.5.0 · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/blog/2019/04/12/mercury.html"/><meta property="og:description" content="We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-140140828-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><script src="/metals/js/scrollSpy.js"></script><link rel="stylesheet" href="/metals/css/main.css"/><script src="/metals/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All Blog Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All Blog Posts</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/blog/2019/06/28/thorium.html">Metals v0.7.0 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/06/11/radium.html">Metals v0.6.1 - Radium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/04/26/mercury.html">Metals v0.5.1</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/blog/2019/04/12/mercury.html">Metals v0.5.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/06/iron.html">Metals v0.3 - Iron</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/04/12/mercury.html">Metals v0.5.0</a></h1><p class="post-meta">April 12, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener">Ólafur Páll Geirsson</a></p><div class="authorPhoto"><a href="https://twitter.com/olafurpg" target="_blank" rel="noreferrer noopener"><img src="https://avatars2.githubusercontent.com/u/1408093?s=460&amp;v=4" alt="Ólafur Páll Geirsson"/></a></div></div></header><div><span><p>We are excited to announce the release of Metals v0.5, codename &quot;Mercury&quot; 🎉
+This release introduces new features, performance improvements and bug fixes
+with highlights including:</p>
+<ul>
+<li>code completions</li>
+<li>parameter hints</li>
+<li>show type at point</li>
+<li>code folding</li>
+<li>document highlight</li>
+</ul>
+<p>Metals is a language server for Scala that works with VS Code, Atom, Vim,
+Sublime Text and Emacs. Metals is developed at the
+<a href="https://scala.epfl.ch/">Scala Center</a> along with contributors from the
+community.</p>
+<p>In this milestone we merged 76 PRs and closed 26 issues, full details:
+<a href="https://github.com/scalameta/metals/milestone/4?closed=1">https://github.com/scalameta/metals/milestone/4?closed=1</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="code-completions"></a><a href="#code-completions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Code completions</h2>
+<p>It's now possible to use code completions to explore APIs, implement interfaces,
+generate exhaustive pattern matches and more.</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/56036958-725bac00-5d2e-11e9-9cf7-46249125494a.gif" alt="2019-04-12 14 19 39"></p>
+<ul>
+<li><strong>Auto-import</strong>: symbols that are not in scope are automatically imported
+locally. Imports still need to be organized manually, we are exploring ways to
+automate this workflow in the future.</li>
+<li><strong>Override def</strong>: implement methods from the super class.</li>
+<li><strong>Exhaustive match</strong>: generate an exhaustive pattern match for sealed types.</li>
+<li><strong>String interpolator</strong>: automatically convert string literals into string
+interpolators.</li>
+<li><strong>Filename</strong>: complete classnames based on the enclosing file.</li>
+<li><strong>Documentation</strong>: read the docstring for method symbols by pressing
+ctrl+space in VS Code.</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="hover-aka-type-at-point"></a><a href="#hover-aka-type-at-point" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hover (aka. type at point)</h2>
+<p>It's now possible to see the expression type and symbol signature under the
+cursor.</p>
+<p><img src="https://i.imgur.com/2MfQvsM.gif" alt=""></p>
+<ul>
+<li><strong>Expression type</strong>: shows the non-generic type of the highlighted expression.</li>
+<li><strong>Symbol signature</strong>: shows the generic signature of symbol under the cursor
+along with its docstring, if available.</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="signature-help-aka-parameter-hints"></a><a href="#signature-help-aka-parameter-hints" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Signature help (aka. parameter hints)</h2>
+<p>It's now possible to view a method signature and overloads as you fill in
+arguments.</p>
+<p><img src="https://i.imgur.com/DAWIrHu.gif" alt=""></p>
+<h2><a class="anchor" aria-hidden="true" id="code-folding"></a><a href="#code-folding" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Code folding</h2>
+<p>It's now possible to fold ranges such as large expressions, import groups and
+comments.</p>
+<p><img src="https://camo.githubusercontent.com/3fdd7ae28907ac61c0a1ac5fdc07d085245957aa/68747470733a2f2f692e696d6775722e636f6d2f667149554a54472e676966" alt=""></p>
+<p>Big thanks to <a href="https://github.com/marek1840">@marek1840</a> for contributing this
+feature!</p>
+<h2><a class="anchor" aria-hidden="true" id="document-highlight"></a><a href="#document-highlight" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Document highlight</h2>
+<p>It's now possible to highlight references to the same symbol in the open file.</p>
+<p><img src="https://i.imgur.com/0uhc9P5.gif" alt=""></p>
+<p>Big thanks to <a href="https://github.com/tgodzik">@tgodzik</a> for contributing this
+feature!</p>
+<h2><a class="anchor" aria-hidden="true" id="faster-and-more-relevant-fuzzy-symbol-search"></a><a href="#faster-and-more-relevant-fuzzy-symbol-search" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Faster and more relevant fuzzy symbol search</h2>
+<p>Previously, fuzzy symbol search (<code>workspace/symbol</code> in LSP) always returned
+results from both the workspace and library dependencies. Now, fuzzy symbol
+search returns only results from the workspace unless the query contains a
+semicolon character <code>;</code>. For example:</p>
+<ul>
+<li>query &quot;Future&quot;: workspace only, with fallback to library dependencies if
+workspace contains 0 results</li>
+<li>queries &quot;Future;&quot; or &quot;;Future&quot; or &quot;Fut;ure&quot;: workspace + library dependencies.</li>
+</ul>
+<p><img src="https://i.imgur.com/w5yrK1w.gif" alt=""></p>
+<p>This change improves the quality for the search results since most often you
+want to navigate to symbols defined in the workspace. A nice side-effect is that
+workspace-only searches are faster because we avoid redundant work by not
+looking at library dependencies.</p>
+<p>In addition, this release introduces a new in-memory index for workspace-only
+symbol queries resulting in even better performance compared to the last
+release.</p>
+<h2><a class="anchor" aria-hidden="true" id="goto-definition-for-in-memory-edits"></a><a href="#goto-definition-for-in-memory-edits" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Goto definition for in-memory edits</h2>
+<p>Previously, goto definition worked only for identifiers that had been saved and
+successfully compiled in the build tool. Now, you can use goto definition for
+symbols that you just typed even if the source file hasn't been saved or
+contains type errors.</p>
+<p><img src="https://i.imgur.com/63PYPhX.gif" alt=""></p>
+<h2><a class="anchor" aria-hidden="true" id="standalone-scala-files-outside-a-build-tool"></a><a href="#standalone-scala-files-outside-a-build-tool" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Standalone Scala files outside a build tool</h2>
+<p>Previously, semantic features like goto definition worked only for sources that
+belong to a build project. Now, Metals provides completions, parameter hints,
+hover and definition for local symbols in standalone Scala files. The classpath
+for standalone Scala files includes the JDK and the Scala standard library so
+features like completion will not understand symbols from external library
+dependencies.</p>
+<p><strong>Known limitation</strong>: only syntax errors are published for standalone Scala
+files, the file must belong to a build in order to see type errors.</p>
+<h2><a class="anchor" aria-hidden="true" id="new-collaboration-with-virtuslab"></a><a href="#new-collaboration-with-virtuslab" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>New collaboration with VirtusLab</h2>
+<p>As part of a new collaboration between <a href="https://virtuslab.com/">VirtusLab</a> and
+the Scala Center, <a href="https://github.com/marek1840">Marek Żarnowski (@marek1840)</a>
+and <a href="https://github.com/tgodzik">Tomasz Godzik (@tgodzik)</a> will be contributing
+to Metals development for the coming months. They have already contributed
+several impressive pull requests:</p>
+<ul>
+<li><code>textDocument/foldingRange</code>
+<a href="https://github.com/scalameta/metals/pull/632">(#632)</a>: code folding that
+understands Scala syntax.</li>
+<li><code>textDocument/documentHighlight</code>
+<a href="https://github.com/scalameta/metals/pull/621">(#621)</a>: highlight occurrences
+of a symbol in the current file.</li>
+<li><code>textDocument/completion</code>
+<a href="https://github.com/scalameta/metals/pull/640">(#640)</a>: override def
+completions from without the need to type &quot;override def &quot;.</li>
+</ul>
+<p>It is our pleasure to welcome them to the team and we look forward to working
+together with them to improve the Scala editing experience :)</p>
+<h2><a class="anchor" aria-hidden="true" id="contributors"></a><a href="#contributors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributors</h2>
+<p>Big thanks to everybody who contributed to this release! In particular, big
+thanks to <a href="https://github.com/jvican/">@jvican</a> and
+<a href="https://github.com/gabro/">@gabro</a> for invaluable feedback both online and
+offline.</p>
+<pre><code class="hljs"><span class="hljs-meta">$</span> <span class="hljs-string">git shortlog -sn --no-merges v0.4.4..v0.5.0</span>
+<span class="hljs-meta">Ólafur</span> <span class="hljs-string">Páll Geirsson</span>
+<span class="hljs-attr">Marek</span> <span class="hljs-string">Żarnowski</span>
+<span class="hljs-attr">Johan</span> <span class="hljs-string">Muedsam</span>
+<span class="hljs-attr">JesusMtnez</span>
+<span class="hljs-attr">Tomasz</span> <span class="hljs-string">Godzik</span>
+<span class="hljs-attr">Tim</span> <span class="hljs-string">Nieradzik</span>
+<span class="hljs-attr">Ayoub</span> <span class="hljs-string">Benali</span>
+<span class="hljs-attr">Eric</span> <span class="hljs-string">Peters</span>
+<span class="hljs-attr">Alexey</span> <span class="hljs-string">Alekhin</span>
+<span class="hljs-attr">keiSunagawa</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="merged-prs"></a><a href="#merged-prs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Merged PRs</h2>
+<ul>
+<li>Implement goto definition fallback with the presentation compiler.
+<a href="https://github.com/scalameta/metals/pull/645">#645</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Generate exhaustive pattern match for sealed types.
+<a href="https://github.com/scalameta/metals/pull/643">#643</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Improve quality and performance of workspace/symbol, fixes #639.
+<a href="https://github.com/scalameta/metals/pull/642">#642</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Enable workspace query to match package object
+<a href="https://github.com/scalameta/metals/pull/641">#641</a>
+(<a href="https://github.com/mudsam">mudsam</a>)</li>
+<li>Make completions work on overr&lt;COMPLETE&gt; and def&lt;COMPLETE&gt;
+<a href="https://github.com/scalameta/metals/pull/640">#640</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Give CompletionPosition finer control over sorting, fixes #619.
+<a href="https://github.com/scalameta/metals/pull/638">#638</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Several UX improvements <a href="https://github.com/scalameta/metals/pull/637">#637</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Use fallback presentation compiler for missing build target.
+<a href="https://github.com/scalameta/metals/pull/634">#634</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix six bugs <a href="https://github.com/scalameta/metals/pull/633">#633</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Implement textDocument/foldingRange
+<a href="https://github.com/scalameta/metals/pull/632">#632</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Provide fuzzier type member matching and more polished sorting.
+<a href="https://github.com/scalameta/metals/pull/629">#629</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Sort symbols defined in the current file to the top, fixes #618.
+<a href="https://github.com/scalameta/metals/pull/628">#628</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Render @see as links. Improve inline link handling and update test cases.
+<a href="https://github.com/scalameta/metals/pull/627">#627</a>
+(<a href="https://github.com/mudsam">mudsam</a>)</li>
+<li>Disable macro-paradise compiler plugin, fixes #622.
+<a href="https://github.com/scalameta/metals/pull/625">#625</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Improve completion snippets, fixes #610.
+<a href="https://github.com/scalameta/metals/pull/623">#623</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Implement textDocument/documentHighlight
+<a href="https://github.com/scalameta/metals/pull/621">#621</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Handle exceptions when computing completion position.
+<a href="https://github.com/scalameta/metals/pull/616">#616</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Don't eagerly load presentation compiler during tests.
+<a href="https://github.com/scalameta/metals/pull/614">#614</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Eagerly load presentation compiler for open buffers.
+<a href="https://github.com/scalameta/metals/pull/605">#605</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Eagerly load Scalafmt during initialized
+<a href="https://github.com/scalameta/metals/pull/604">#604</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Complete filename when defining toplevel class/trait/object
+<a href="https://github.com/scalameta/metals/pull/603">#603</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Remove signature help fallback in hover.
+<a href="https://github.com/scalameta/metals/pull/602">#602</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix #599, don't insert import above generated parameter accessors
+<a href="https://github.com/scalameta/metals/pull/600">#600</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Several small fixes <a href="https://github.com/scalameta/metals/pull/597">#597</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Support navigation for library dependencies in Scala versions.
+<a href="https://github.com/scalameta/metals/pull/596">#596</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Implement hover (aka. type at point).
+<a href="https://github.com/scalameta/metals/pull/595">#595</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix auto-import position around definition annotations, fixes #593
+<a href="https://github.com/scalameta/metals/pull/594">#594</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Provide completions on <code>case</code> for valid subclasses.
+<a href="https://github.com/scalameta/metals/pull/592">#592</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Polish snippets when completing with existing parentheses and braces
+<a href="https://github.com/scalameta/metals/pull/590">#590</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Handle generic unapply signatures in signature help.
+<a href="https://github.com/scalameta/metals/pull/589">#589</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Explicitly set filter text for all completions.
+<a href="https://github.com/scalameta/metals/pull/588">#588</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add server property config to disable features.
+<a href="https://github.com/scalameta/metals/pull/587">#587</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add support for non-Lightbend compilers
+<a href="https://github.com/scalameta/metals/pull/586">#586</a>
+(<a href="https://github.com/tindzk">tindzk</a>)</li>
+<li>Fix signature help bug for tuple patterns.
+<a href="https://github.com/scalameta/metals/pull/585">#585</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Escape keyword identifier in packag prefixes.
+<a href="https://github.com/scalameta/metals/pull/584">#584</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Filter out ensuring and -&gt; extension methods from Predef.
+<a href="https://github.com/scalameta/metals/pull/583">#583</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Include method signature in completion item label.
+<a href="https://github.com/scalameta/metals/pull/581">#581</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Two completion improvements
+<a href="https://github.com/scalameta/metals/pull/579">#579</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Insert local import when completing workspace symbol.
+<a href="https://github.com/scalameta/metals/pull/578">#578</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update Sublime Text doc regarding Goto symbol in workspace
+<a href="https://github.com/scalameta/metals/pull/577">#577</a>
+(<a href="https://github.com/ayoub-benali">ayoub-benali</a>)</li>
+<li>Include <code>case</code> completion when writing partial function on tuples.
+<a href="https://github.com/scalameta/metals/pull/576">#576</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Restart the presentation compile more aggressively.
+<a href="https://github.com/scalameta/metals/pull/575">#575</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix #573, provide unique filter text for each interpolator completion item
+<a href="https://github.com/scalameta/metals/pull/574">#574</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix #569, remove completion items with <code>\_CURSOR\_</code> name.
+<a href="https://github.com/scalameta/metals/pull/572">#572</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Implement <code>override def</code> completions.
+<a href="https://github.com/scalameta/metals/pull/570">#570</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Make bloop server startup more robust, reuse sockets wherever possible.
+<a href="https://github.com/scalameta/metals/pull/566">#566</a>
+(<a href="https://github.com/mudsam">mudsam</a>)</li>
+<li>Implement type member selection in string interpolators.
+<a href="https://github.com/scalameta/metals/pull/563">#563</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update Atom info <a href="https://github.com/scalameta/metals/pull/561">#561</a>
+(<a href="https://github.com/laughedelic">laughedelic</a>)</li>
+<li>Improve string interpolator completions
+<a href="https://github.com/scalameta/metals/pull/560">#560</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Remove root package from completion results.
+<a href="https://github.com/scalameta/metals/pull/559">#559</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Resolve mtags from Sonatype Snapshots, fixes #554.
+<a href="https://github.com/scalameta/metals/pull/558">#558</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Disable <code>\(</code> as commit character.
+<a href="https://github.com/scalameta/metals/pull/557">#557</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Wrap identifiers in backticks when necessary.
+<a href="https://github.com/scalameta/metals/pull/556">#556</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Trigger parameter hints command after completion, if supported.
+<a href="https://github.com/scalameta/metals/pull/552">#552</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Cross-publish mtags for all supported Scala versions.
+<a href="https://github.com/scalameta/metals/pull/541">#541</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Implement completions and signature help.
+<a href="https://github.com/scalameta/metals/pull/527">#527</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+</ul>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/metals/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#code-completions">Code completions</a></li><li><a href="#hover-aka-type-at-point">Hover (aka. type at point)</a></li><li><a href="#signature-help-aka-parameter-hints">Signature help (aka. parameter hints)</a></li><li><a href="#code-folding">Code folding</a></li><li><a href="#document-highlight">Document highlight</a></li><li><a href="#faster-and-more-relevant-fuzzy-symbol-search">Faster and more relevant fuzzy symbol search</a></li><li><a href="#goto-definition-for-in-memory-edits">Goto definition for in-memory edits</a></li><li><a href="#standalone-scala-files-outside-a-build-tool">Standalone Scala files outside a build tool</a></li><li><a href="#new-collaboration-with-virtuslab">New collaboration with VirtusLab</a></li><li><a href="#contributors">Contributors</a></li><li><a href="#merged-prs">Merged PRs</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>

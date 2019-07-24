@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Integrating a new editor · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="&lt;p&gt;Metals is a language server implemented in Scala that communicates with a single&lt;/p&gt;
-"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Integrating a new editor · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="&lt;p&gt;Metals is a language server implemented in Scala that communicates with a single&lt;/p&gt;
-"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Integrating a new editor · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Metals is a language server implemented in Scala that communicates with a single"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Integrating a new editor · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="Metals is a language server implemented in Scala that communicates with a single"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
               (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
               (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
               m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -8,15 +6,44 @@
 
               ga('create', 'UA-140140828-1', 'auto');
               ga('send', 'pageview');
-            </script><link rel="stylesheet" href="/metals/css/custom.css"/><link rel="stylesheet" href="/metals/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class=""><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Contributing</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Text Editors</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/editors/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vscode.html">Visual Studio Code</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/atom.html">Atom</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vim.html">Vim</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/sublime.html">Sublime Text</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/emacs.html">Emacs</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Build Tools</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/bloop.html">Bloop</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/gradle.html">Gradle</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/maven.html">Maven</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/mill.html">Mill</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/sbt.html">sbt</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Contributing</h3><ul><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/new-build-tool.html">Integrating a new build tool</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/docs/editors/new-editor.html">Integrating a new editor</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/tree-view-protocol.html">Tree View Protocol</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/project-goals.html">Project Goals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/getting-started.html">Contributing to Metals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/updating-website.html">Contributing to the website</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/releasing.html">Making a release</a></li></ul></div></div></section></div><script>
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><script src="/metals/js/scrollSpy.js"></script><link rel="stylesheet" href="/metals/css/main.css"/><script src="/metals/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class=""><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Contributing</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Text Editors</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/docs/editors/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vscode.html">Visual Studio Code</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/atom.html">Atom</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vim.html">Vim</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/sublime.html">Sublime Text</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/emacs.html">Emacs</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Build Tools</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/bloop.html">Bloop</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/gradle.html">Gradle</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/maven.html">Maven</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/mill.html">Mill</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/sbt.html">sbt</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Contributing</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/new-build-tool.html">Integrating a new build tool</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/docs/editors/new-editor.html">Integrating a new editor</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/tree-view-protocol.html">Tree View Protocol</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/project-goals.html">Project Goals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/getting-started.html">Contributing to Metals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/updating-website.html">Contributing to the website</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/releasing.html">Making a release</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
             document.addEventListener('DOMContentLoaded', function() {
               createToggler('#navToggler', '#docsNav', 'docsSliderActive');
               createToggler('#tocToggler', 'body', 'tocActive');
 
-              const headings = document.querySelector('.toc-headings');
+              var headings = document.querySelector('.toc-headings');
               headings && headings.addEventListener('click', function(event) {
-                if (event.target.tagName === 'A') {
-                  document.body.classList.remove('tocActive');
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
                 }
               }, false);
 
@@ -49,7 +76,7 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <h2><a class="anchor" aria-hidden="true" id="starting-the-server"></a><a href="#starting-the-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting the server</h2>
 <p>Use <a href="https://github.com/coursier/coursier">Coursier</a> to obtain the JVM classpath
 of Metals:</p>
-<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.7.0+54-5447dca1-SNAPSHOT -o metals -f
+<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.7.0+57-05d0e46a-SNAPSHOT -o metals -f
 </code></pre>
 <p>(optional) It is recommended to enable JVM string de-duplication and provide
 generous stack size and memory options.</p>
@@ -58,7 +85,7 @@ generous stack size and memory options.</p>
   --java-opt -XX:+UseStringDeduplication  \
   --java-opt -Xss4m \
   --java-opt -Xms100m \
-  org.scalameta:metals_2.12:0.7.0+54-5447dca1-SNAPSHOT -o metals -f
+  org.scalameta:metals_2.12:0.7.0+57-05d0e46a-SNAPSHOT -o metals -f
 </code></pre>
 <p>See <a href="#metals-server-properties">Metals server properties</a> for additional system
 properties that are supported by the server.</p>
