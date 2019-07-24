@@ -13,6 +13,7 @@ jobs:
   include:
     # default stage is test
     - env: TEST="scalafmt+scalafix+docs"
+      before_script: nvm install 'lts/*' && nvm use 'lts/*'
       script:
         - ./bin/scalafmt --test
         - sbt scalafixCheck docs/docusaurusCreateSite
@@ -35,6 +36,7 @@ jobs:
       script:
         - sbt +cross/test
     - stage: release
+      before_script: nvm install 'lts/*' && nvm use 'lts/*'
       script:
         - git fetch --tags
         - sbt ci-release docs/docusaurusPublishGhpages
@@ -56,4 +58,3 @@ before_cache:
   - find $HOME/.sbt -name "*.lock" -type f -delete
   - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
   - rm -rf $HOME/.ivy2/local
-
