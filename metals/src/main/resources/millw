@@ -3,15 +3,19 @@
 # This is a wrapper script, that automatically download mill from GitHub release pages
 # You can give the required mill version with --mill-version parameter
 # If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
+#
+# Project page: https://github.com/lefou/millw
+#
+# If you want to improve this script, please also contribute your changes back!
+#
+# Licensed under the Apache License, Version 2.0
 
-DEFAULT_MILL_VERSION=0.3.6
+
+DEFAULT_MILL_VERSION=0.5.0
 
 set -e
 
-if [ -f ".mill-version" ] ; then
-  MILL_VERSION="$(head -n 1 .mill-version 2> /dev/null)"
-fi
-
+# Explicit commandline argument takes precedence over all other methods
 if [ "x$1" = "x--mill-version" ] ; then
   shift
   if [ "x$1" != "x" ] ; then
@@ -25,22 +29,72 @@ if [ "x$1" = "x--mill-version" ] ; then
   fi
 fi
 
+# Please note, that if a MILL_VERSION is already set in the environment,
+# We reuse it's value and skip searching for a value.
+
+# If not already set, read .mill-version file
 if [ "x${MILL_VERSION}" = "x" ] ; then
-  MILL_VERSION="${DEFAULT_MILL_VERSION}"
+  if [ -f ".mill-version" ] ; then
+    MILL_VERSION="$(head -n 1 .mill-version 2> /dev/null)"
+  fi
 fi
 
 MILL_DOWNLOAD_PATH="${HOME}/.mill/download"
 
+# If not already set, try to fetch newest from Github
+if [ "x${MILL_VERSION}" = "x" ] ; then
+  # TODO: try to load latest version from release page
+  echo "No mill version specified."
+  echo "You should provide a version via '.mill-version' file or --mill-version option."
+
+  mkdir -p "${MILL_DOWNLOAD_PATH}"
+  LANG=C touch -d '1 hour ago' "${MILL_DOWNLOAD_PATH}/.expire_latest"
+  if [ "${MILL_DOWNLOAD_PATH}/.latest" -nt "${MILL_DOWNLOAD_PATH}/.expire_latest" ] ; then
+    # we know a current latest version
+    MILL_VERSION="$(head -n 1 ${MILL_DOWNLOAD_PATH}/.latest 2> /dev/null)"
+  fi
+
+  if [ "x${MILL_VERSION}" = "x" ] ; then
+    # we don't know a current latest version
+    echo "Retrieving latest mill version ..."
+    LANG=C curl -s -i -f -I https://github.com/lihaoyi/mill/releases/latest 2> /dev/null  | grep Location: | sed s'/^.*tag\///' | tr -d '\r\n' > "${MILL_DOWNLOAD_PATH}/.latest" 
+    MILL_VERSION="$(head -n 1 ${MILL_DOWNLOAD_PATH}/.latest 2> /dev/null)"
+  fi
+
+  if [ "x${MILL_VERSION}" = "x" ] ; then
+    # Last resort
+    MILL_VERSION="${DEFAULT_MILL_VERSION}"
+    echo "Falling back to hardcoded mill version ${MILL_VERSION}"
+  else
+    echo "Using mill version is ${MILL_VERSION}"
+  fi
+fi
+
 MILL="${MILL_DOWNLOAD_PATH}/${MILL_VERSION}"
 
+# If not already downloaded, download it
 if [ ! -x "${MILL}" ] ; then
+  VERSION_PREFIX="$(echo -n $MILL_VERSION | cut -b -4)"
+  case $VERSION_PREFIX in
+    0.0. | 0.1. | 0.2. | 0.3. | 0.4. )
+      DOWNLOAD_SUFFIX=""
+      ;;
+    *)
+      DOWNLOAD_SUFFIX="-assembly"
+      ;;
+  esac
+  unset VERSION_PREFIX
+
   DOWNLOAD_FILE=$(mktemp mill.XXXX)
   # TODO: handle command not found
-  curl -L -o "${DOWNLOAD_FILE}" "https://github.com/lihaoyi/mill/releases/download/${MILL_VERSION%%-*}/${MILL_VERSION}"
+  echo "Downloading mill ${MILL_VERSION} from https://github.com/lihaoyi/mill/releases ..."
+  curl -L -o "${DOWNLOAD_FILE}" "https://github.com/lihaoyi/mill/releases/download/${MILL_VERSION%%-*}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
   chmod +x "${DOWNLOAD_FILE}"
   mkdir -p "${MILL_DOWNLOAD_PATH}"
   mv "${DOWNLOAD_FILE}" "${MILL}"
+
   unset DOWNLOAD_FILE
+  unset DOWNLOAD_SUFFIX
 fi
 
 unset MILL_DOWNLOAD_PATH

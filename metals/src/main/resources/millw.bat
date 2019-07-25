@@ -3,21 +3,23 @@
 rem This is a wrapper script, that automatically download mill from GitHub release pages
 rem You can give the required mill version with --mill-version parameter
 rem If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
+rem
+rem Project page: https://github.com/lefou/millw
+rem
+rem If you want to improve this script, please also contribute your changes back!
+rem
+rem Licensed under the Apache License, Version 2.0
 
 rem setlocal seems to be unavailable on Windows 95/98/ME
 rem but I don't think we need to support them in 2019
 setlocal enabledelayedexpansion
 
-set DEFAULT_MILL_VERSION=0.3.6
-
-if exist .mill-version (
-    set /p MILL_VERSION= < .mill-version
-)
+set "DEFAULT_MILL_VERSION=0.5.0"
 
 rem %~1% removes surrounding quotes
-if "%~1%"=="--mill-version" (
+if [%~1%]==[--mill-version] (
     rem shift command doesn't work within parentheses
-    if not "%~2%"=="" (
+    if not [%~2%]==[] (
         set MILL_VERSION=%~2%
     ) else (
         echo You specified --mill-version without a version.
@@ -27,18 +29,35 @@ if "%~1%"=="--mill-version" (
     )
 )
 
-if "%MILL_VERSION%"=="" (
+if [!MILL_VERSION!]==[] (
+  if exist .mill-version (
+      set /p MILL_VERSION=<.mill-version
+  )
+)
+
+if [!MILL_VERSION!]==[] (
     set MILL_VERSION=%DEFAULT_MILL_VERSION%
 )
 
 set MILL_DOWNLOAD_PATH=%USERPROFILE%\.mill\download
 
 rem without bat file extension, cmd doesn't seem to be able to run it
-set MILL=%MILL_DOWNLOAD_PATH%\%MILL_VERSION%.bat
+set MILL=%MILL_DOWNLOAD_PATH%\!MILL_VERSION!.bat
 
 if not exist "%MILL%" (
+    set VERSION_PREFIX=%MILL_VERSION:~0,4%
+    set DOWNLOAD_SUFFIX=-assembly
+    if [!VERSION_PREFIX!]==[0.0.] set DOWNLOAD_SUFFIX=
+    if [!VERSION_PREFIX!]==[0.1.] set DOWNLOAD_SUFFIX=
+    if [!VERSION_PREFIX!]==[0.2.] set DOWNLOAD_SUFFIX=
+    if [!VERSION_PREFIX!]==[0.3.] set DOWNLOAD_SUFFIX=
+    if [!VERSION_PREFIX!]==[0.4.] set DOWNLOAD_SUFFIX=
+    set VERSION_PREFIX=
+
     rem there seems to be no way to generate a unique temporary file path (on native Windows)
     set DOWNLOAD_FILE=%MILL%.tmp
+
+    echo Downloading mill %MILL_VERSION% from https://github.com/lihaoyi/mill/releases ...
 
     rem curl is bundled with recent Windows 10
     rem but I don't think we can expect all the users to have it in 2019
@@ -46,10 +65,16 @@ if not exist "%MILL%" (
     rem without /dynamic, github returns 403
     rem bitadmin is sometimes needlessly slow but it looks better with /priority foreground
     if not exist "%MILL_DOWNLOAD_PATH%" mkdir "%MILL_DOWNLOAD_PATH%"
-    bitsadmin /transfer millDownloadJob /dynamic /priority foreground "https://github.com/lihaoyi/mill/releases/download/%MILL_VERSION%/%MILL_VERSION%" "!DOWNLOAD_FILE!"
+    bitsadmin /transfer millDownloadJob /dynamic /priority foreground "https://github.com/lihaoyi/mill/releases/download/%MILL_VERSION%/%MILL_VERSION%!DOWNLOAD_SUFFIX!" "!DOWNLOAD_FILE!"
+    if not exist "!DOWNLOAD_FILE!" (
+        echo Could not download mill %MILL_VERSION%
+        exit 1
+    )
 
     move /y "!DOWNLOAD_FILE!" "%MILL%"
+
     set DOWNLOAD_FILE=
+    set DOWNLOAD_SUFFIX=
 )
 
 set MILL_DOWNLOAD_PATH=
