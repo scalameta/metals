@@ -127,7 +127,11 @@ class Fuzzy {
   def isExactMatch(query: String, filename: CharSequence): Boolean = {
     val sb = lastIndex(filename)
     val sa = sb - query.length()
-    exactMatch(query, filename, sa, sb)
+    if (sa < 0) {
+      false
+    } else {
+      exactMatch(query, filename, sa, sb)
+    }
   }
 
   private def lastIndex(symbol: CharSequence): Int = {
