@@ -7,14 +7,7 @@ import java.nio.file.Path
 
 case class MillBuildTool() extends BuildTool {
 
-  private val predefScript =
-    s"import $$ivy.`com.lihaoyi::mill-contrib-bloop:$version`".getBytes()
-
   private val predefScriptName = "predef.sc"
-
-  private lazy val predefScriptPath: Path = {
-    Files.write(tempDir.resolve(predefScriptName), predefScript)
-  }
 
   private lazy val embeddedMillWrapper: AbsolutePath = {
     val millWrapper =
@@ -32,11 +25,7 @@ case class MillBuildTool() extends BuildTool {
       userConfig: () => UserConfiguration,
       config: MetalsServerConfig
   ): List[String] = {
-    val cmd = List(
-      "--predef",
-      predefScriptPath.toString,
-      "mill.contrib.Bloop/install"
-    )
+
     import scala.meta.internal.jdk.CollectionConverters._
     val millVersionPath = workspace.resolve(".mill-version")
     val millVersion = if (millVersionPath.isFile) {
@@ -48,7 +37,11 @@ case class MillBuildTool() extends BuildTool {
     } else {
       version
     }
-
+    val cmd = List(
+      "--predef",
+      predefScriptPath(millVersion).toString,
+      "mill.contrib.Bloop/install"
+    )
     userConfig().millScript match {
       case Some(script) =>
         script :: cmd
@@ -62,11 +55,19 @@ case class MillBuildTool() extends BuildTool {
 
   override def minimumVersion: String = "0.4.0"
 
-  override def version: String = "0.4.2"
+  override def version: String = "0.5.0"
 
   override def toString(): String = "Mill"
 
   def executableName = "mill"
+
+  private def predefScript(millVersion: String) =
+    s"import $$ivy.`com.lihaoyi::mill-contrib-bloop:$millVersion`".getBytes()
+
+  private def predefScriptPath(millVersion: String): Path = {
+    Files.write(tempDir.resolve(predefScriptName), predefScript(millVersion))
+  }
+
 }
 
 object MillBuildTool {
