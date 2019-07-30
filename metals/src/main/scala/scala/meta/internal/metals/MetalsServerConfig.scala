@@ -148,7 +148,7 @@ object MetalsServerConfig {
         )
       case "emacs" =>
         base.copy(
-          isHttpEnabled = true
+          executeClientCommand = ExecuteClientCommandConfig.on
         )
       case _ =>
         base
