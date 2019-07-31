@@ -243,7 +243,6 @@ final class Doctor(
       val scala = target.info.asScalaBuildTarget
       val scalaVersion =
         scala.fold("<unknown>")(_.getScalaVersion)
-      val isSemanticdbEnabled = target.isSemanticdbEnabled
       val definition: String =
         if (ScalaVersions.isSupportedScalaVersion(scalaVersion)) {
           Icons.unicode.check
@@ -254,13 +253,18 @@ final class Doctor(
       // the future we may want to update the definition column to take the
       // existence of library sources into account.
       val completions: String = definition
+      val isSemanticdbNeeded = !target.isSemanticdbEnabled && target.isScalaTarget
       val references: String =
-        if (isSemanticdbEnabled) {
-          Icons.unicode.check
-        } else {
+        if (isSemanticdbNeeded) {
           Icons.unicode.alert
+        } else {
+          Icons.unicode.check
         }
       val center = "style='text-align: center'"
+      val recommenedFix =
+        if (target.isScalaTarget)
+          recommendation(scalaVersion, target.isSemanticdbEnabled, target)
+        else ""
       html.element("tr")(
         _.element("td")(_.text(target.info.getDisplayName))
           .element("td")(_.text(scalaVersion))
@@ -269,7 +273,7 @@ final class Doctor(
           .element("td", center)(_.text(completions))
           .element("td", center)(_.text(references))
           .element("td")(
-            _.raw(recommendation(scalaVersion, isSemanticdbEnabled, target))
+            _.raw(recommenedFix)
           )
       )
     }
