@@ -1548,8 +1548,10 @@ class MetalsLanguageServer(
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.toLanguage.isScala) {
+      val semanticDBDoc =
+        semanticdbs.textDocument(source).documentIncludingStale
       (for {
-        doc <- semanticdbs.textDocument(source).documentIncludingStale
+        doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
           source,
           position,
@@ -1583,7 +1585,9 @@ class MetalsLanguageServer(
             definitionResult(position, token)
           }
         case None =>
-          warnings.noSemanticdb(source)
+          if (semanticDBDoc.isEmpty) {
+            warnings.noSemanticdb(source)
+          }
           // Even if it failed to retrieve the symbol occurrence from semanticdb,
           // try to find its definitions from presentation compiler.
           definitionResult(position, token)
