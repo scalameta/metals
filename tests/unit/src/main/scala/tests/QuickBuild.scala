@@ -61,7 +61,8 @@ case class QuickBuild(
     libraryDependencies: Array[String],
     compilerPlugins: Array[String],
     scalacOptions: Array[String],
-    dependsOn: Array[String]
+    dependsOn: Array[String],
+    additionalSources: Array[String]
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
@@ -71,7 +72,8 @@ case class QuickBuild(
       orEmpty(libraryDependencies),
       orEmpty(compilerPlugins),
       orEmpty(scalacOptions),
-      orEmpty(dependsOn)
+      orEmpty(dependsOn),
+      orEmpty(additionalSources)
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
@@ -88,12 +90,12 @@ case class QuickBuild(
         .resolve(s"scala-$binaryVersion")
         .resolve(s"${testPrefix}classes")
     }
-    val sources = List(
+    val sources = (List(
       "src/main/java",
       "src/main/scala",
       s"src/main/scala-$binaryVersion",
       s"src/main/scala-$binaryVersion"
-    ).map(relpath => baseDirectory.resolve(relpath))
+    ) ++ additionalSources).map(relpath => baseDirectory.resolve(relpath))
     val allDependencies = Array(
       s"org.scala-lang:scala-library:$scalaVersion",
       s"org.scala-lang:scala-reflect:$scalaVersion"

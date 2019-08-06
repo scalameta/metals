@@ -1277,15 +1277,18 @@ class MetalsLanguageServer(
 
   private def indexWorkspaceSources(): Unit = {
     for {
-      (sourceDirectory, targets) <- buildTargets.sourceDirectoriesToBuildTargets
-      if sourceDirectory.isDirectory
-      source <- ListFiles(sourceDirectory)
+      (sourceItem, targets) <- buildTargets.sourceItemsToBuildTargets
+      sources = if (sourceItem.isDirectory) ListFiles(sourceItem)
+      else ArrayBuffer(sourceItem)
+      source <- sources
       if source.isScalaOrJava
     } {
       targets.asScala.foreach { target =>
         buildTargets.linkSourceFile(target, source)
       }
-      indexSourceFile(source, Some(sourceDirectory))
+      val sourceDirectory =
+        if (sourceItem.isDirectory) Some(sourceItem) else None
+      indexSourceFile(source, sourceDirectory)
     }
   }
 
@@ -1419,10 +1422,9 @@ class MetalsLanguageServer(
       for {
         item <- i.sources.getItems.asScala
         source <- item.getSources.asScala
-        if source.getUri.endsWith("/")
       } {
-        val directory = source.getUri.toAbsolutePath
-        buildTargets.addSourceDirectory(directory, item.getTarget)
+        val sourceItemPath = source.getUri.toAbsolutePath
+        buildTargets.addSourceItem(sourceItemPath, item.getTarget)
       }
       doctor.check()
     }
