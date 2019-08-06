@@ -286,7 +286,7 @@ final class BuildTargets() {
       .getOrElse(Iterable.empty)
   }
 
-  def inverseSourceDirectory(source: AbsolutePath): Option[AbsolutePath] =
+  def inverseSourceItem(source: AbsolutePath): Option[AbsolutePath] =
     sourceItems.find(dir => source.toNIO.startsWith(dir.toNIO))
 
   def isInverseDependency(

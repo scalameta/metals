@@ -1279,7 +1279,7 @@ class MetalsLanguageServer(
     for {
       (sourceItem, targets) <- buildTargets.sourceItemsToBuildTargets
       sources = if (sourceItem.isDirectory) ListFiles(sourceItem)
-      else ArrayBuffer(sourceItem)
+      else List(sourceItem)
       source <- sources
       if source.isScalaOrJava
     } {
@@ -1288,7 +1288,9 @@ class MetalsLanguageServer(
       }
       val sourceDirectory =
         if (sourceItem.isDirectory) Some(sourceItem) else None
-      indexSourceFile(source, sourceDirectory)
+      if (sourceItem.isDirectory || source.exists) {
+        indexSourceFile(source, sourceDirectory)
+      }
     }
   }
 
@@ -1299,7 +1301,13 @@ class MetalsLanguageServer(
       path <- paths.iterator
       if path.isScalaOrJava
     } {
-      indexSourceFile(path, buildTargets.inverseSourceDirectory(path))
+      val sourceDirectory = buildTargets.inverseSourceItem(path) match {
+        // if the source item is a file then the source directory is the parent
+        case Some(src) if src.isFile =>
+          Some(AbsolutePath(src.toNIO.getParent()))
+        case other => other
+      }
+      indexSourceFile(path, sourceDirectory)
     }
   }
 
