@@ -56,7 +56,8 @@ final class FileWatcher(
         path.createDirectories()
         if (isSourceItem) createdSourceDirectories.add(path)
       }
-      sourcesItemsToWatch.add(path.toNIO)
+      if (path.isFile) sourcesItemsToWatch.add(path.toNIO.getParent())
+      else sourcesItemsToWatch.add(path.toNIO)
     }
     // Watch the source directories for "goto definition" index.
     buildTargets.sourceItems.foreach(watch(_, isSourceItem = true))
