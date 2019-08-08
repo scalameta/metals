@@ -91,11 +91,11 @@ final class BuildTargets() {
   }
 
   def addSourceItem(
-      sourceItemPath: AbsolutePath,
+      sourceItem: AbsolutePath,
       buildTarget: BuildTargetIdentifier
   ): Unit = {
     val queue = sourceItemsToBuildTarget.getOrElseUpdate(
-      sourceItemPath,
+      sourceItem,
       new ConcurrentLinkedQueue()
     )
     queue.add(buildTarget)
@@ -275,19 +275,19 @@ final class BuildTargets() {
   }
 
   def sourceBuildTargets(
-      source: AbsolutePath
+      sourceItem: AbsolutePath
   ): Iterable[BuildTargetIdentifier] = {
     sourceItemsToBuildTarget
       .collectFirst {
-        case (sourceItem, buildTargets)
-            if source.toNIO.startsWith(sourceItem.toNIO) =>
+        case (source, buildTargets)
+            if sourceItem.toNIO.startsWith(source.toNIO) =>
           buildTargets.asScala
       }
       .getOrElse(Iterable.empty)
   }
 
   def inverseSourceItem(source: AbsolutePath): Option[AbsolutePath] =
-    sourceItems.find(dir => source.toNIO.startsWith(dir.toNIO))
+    sourceItems.find(item => source.toNIO.startsWith(item.toNIO))
 
   def isInverseDependency(
       query: BuildTargetIdentifier,

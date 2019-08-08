@@ -62,8 +62,8 @@ final class FileWatcher(
   }
 
   def restart(): Unit = {
-    val sourcesDirectoriesToWatch = new util.ArrayList[Path]()
-    val sourcesFilesToWatch = new util.ArrayList[Path]()
+    val sourceDirectoriesToWatch = new util.ArrayList[Path]()
+    val sourceFilesToWatch = new util.ArrayList[Path]()
     val createdSourceDirectories = new util.ArrayList[AbsolutePath]()
     def watch(path: AbsolutePath, isSource: Boolean): Unit = {
       if (!path.isDirectory && !path.isFile) {
@@ -73,10 +73,13 @@ final class FileWatcher(
           path
         }
         pathToCreate.createDirectories()
+        // this is a workaround for MacOS, it will continue watching
+        // directories even if they are removed, however it doesn't
+        // work on some other systems like Linux
         if (isSource) createdSourceDirectories.add(pathToCreate)
       }
-      if (path.isScalaOrJava) sourcesFilesToWatch.add(path.toNIO)
-      else sourcesDirectoriesToWatch.add(path.toNIO)
+      if (path.isScalaOrJava) sourceFilesToWatch.add(path.toNIO)
+      else sourceDirectoriesToWatch.add(path.toNIO)
     }
     // Watch the source directories for "goto definition" index.
     buildTargets.sourceItems.foreach(watch(_, isSource = true))
@@ -87,7 +90,7 @@ final class FileWatcher(
         isSource = false
       )
     }
-    startWatching(sourcesFilesToWatch, sourcesDirectoriesToWatch)
+    startWatching(sourceFilesToWatch, sourceDirectoriesToWatch)
     createdSourceDirectories.asScala.foreach(_.delete())
   }
 
@@ -107,7 +110,7 @@ final class FileWatcher(
     val fileWatcher = DirectoryWatcher
       .builder()
       .paths(files.map(_.getParent()))
-      .listener(new FileListener(files = files.asScala.toSet))
+      .listener(new FileListener(watched = files.asScala.toSet))
       .build()
     activeFileWatcher = Some(fileWatcher)
     fileWatching = fileWatcher.watchAsync(fileExecutor)
@@ -128,9 +131,9 @@ final class FileWatcher(
     }
   }
 
-  class FileListener(files: Set[Path]) extends DirectoryChangeListener {
+  class FileListener(watched: Set[Path]) extends DirectoryChangeListener {
     override def onEvent(event: DirectoryChangeEvent): Unit = {
-      if (!Files.isDirectory(event.path()) && files(event.path())) {
+      if (watched(event.path())) {
         didChangeWatchedFiles(event)
       }
     }

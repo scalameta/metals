@@ -1278,19 +1278,13 @@ class MetalsLanguageServer(
   private def indexWorkspaceSources(): Unit = {
     for {
       (sourceItem, targets) <- buildTargets.sourceItemsToBuildTargets
-      sources = if (sourceItem.isDirectory) ListFiles(sourceItem)
-      else List(sourceItem)
-      source <- sources
+      source <- ListFiles(sourceItem)
       if source.isScalaOrJava
     } {
       targets.asScala.foreach { target =>
         buildTargets.linkSourceFile(target, source)
       }
-      val sourceDirectory =
-        if (sourceItem.isDirectory) Some(sourceItem) else None
-      if (sourceItem.isDirectory || source.exists) {
-        indexSourceFile(source, sourceDirectory)
-      }
+      indexSourceFile(source, Some(sourceItem))
     }
   }
 
@@ -1301,22 +1295,16 @@ class MetalsLanguageServer(
       path <- paths.iterator
       if path.isScalaOrJava
     } {
-      val sourceDirectory = buildTargets.inverseSourceItem(path) match {
-        // if the source item is a file then the source directory is the parent
-        case Some(src) if src.isFile =>
-          Some(AbsolutePath(src.toNIO.getParent()))
-        case other => other
-      }
-      indexSourceFile(path, sourceDirectory)
+      indexSourceFile(path, buildTargets.inverseSourceItem(path))
     }
   }
 
   private def indexSourceFile(
       source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath]
+      sourceItem: Option[AbsolutePath]
   ): Unit = {
     try {
-      val reluri = source.toIdeallyRelativeURI(sourceDirectory)
+      val reluri = source.toIdeallyRelativeURI(sourceItem)
       val input = source.toInput
       val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
       SemanticdbDefinition.foreach(input) {
@@ -1330,7 +1318,7 @@ class MetalsLanguageServer(
               )
             }
           }
-          if (sourceDirectory.isDefined &&
+          if (sourceItem.isDefined &&
             !info.symbol.isPackage &&
             owner.isPackage) {
             definitionIndex.addToplevelSymbol(reluri, source, info.symbol)

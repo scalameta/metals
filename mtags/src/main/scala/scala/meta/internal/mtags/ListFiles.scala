@@ -39,8 +39,12 @@ object ListFiles {
       }
     }
 
-    val buf = ArrayBuffer.empty[AbsolutePath]
-    runForeach(trigram => { buf += trigram })
-    buf
+    if (root.isFile) {
+      ArrayBuffer(root)
+    } else {
+      val buf = ArrayBuffer.empty[AbsolutePath]
+      runForeach(file => { buf += file })
+      buf
+    }
   }
 }
