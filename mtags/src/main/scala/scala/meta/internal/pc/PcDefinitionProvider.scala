@@ -9,51 +9,55 @@ import scala.meta.pc.DefinitionResult
 
 class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
-  def definition(): DefinitionResult = {
-    if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
-      DefinitionResultImpl.empty
-    } else {
-      val unit = addCompilationUnit(
-        params.text(),
-        params.filename(),
-        None
-      )
-      val pos = unit.position(params.offset())
-      val tree = definitionTypedTreeAt(pos)
-      if (tree.symbol == null ||
-        tree.symbol == NoSymbol ||
-        tree.symbol.isErroneous ||
-        tree.symbol.isSynthetic) {
+  def definition(): DefinitionResult =
+    try {
+      if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
         DefinitionResultImpl.empty
-      } else if (tree.symbol.hasPackageFlag) {
-        DefinitionResultImpl(
-          semanticdbSymbol(tree.symbol),
-          ju.Collections.emptyList()
-        )
-      } else if (tree.symbol.pos != null &&
-        tree.symbol.pos.isDefined &&
-        tree.symbol.pos.source.eq(unit.source)) {
-        DefinitionResultImpl(
-          semanticdbSymbol(tree.symbol),
-          ju.Collections.singletonList(
-            new Location(params.filename(), tree.symbol.pos.toLSP)
-          )
-        )
       } else {
-        val res = new ju.ArrayList[Location]()
-        tree.symbol.alternatives.foreach { alternative =>
-          val sym = semanticdbSymbol(alternative)
-          if (sym.isGlobal) {
-            res.addAll(search.definition(sym))
-          }
-        }
-        DefinitionResultImpl(
-          semanticdbSymbol(tree.symbol),
-          res
+        val unit = addCompilationUnit(
+          params.text(),
+          params.filename(),
+          None
         )
+        val pos = unit.position(params.offset())
+        val tree = definitionTypedTreeAt(pos)
+        if (tree.symbol == null ||
+          tree.symbol == NoSymbol ||
+          tree.symbol.isErroneous ||
+          tree.symbol.isSynthetic) {
+          DefinitionResultImpl.empty
+        } else if (tree.symbol.hasPackageFlag) {
+          DefinitionResultImpl(
+            semanticdbSymbol(tree.symbol),
+            ju.Collections.emptyList()
+          )
+        } else if (tree.symbol.pos != null &&
+          tree.symbol.pos.isDefined &&
+          tree.symbol.pos.source.eq(unit.source)) {
+          DefinitionResultImpl(
+            semanticdbSymbol(tree.symbol),
+            ju.Collections.singletonList(
+              new Location(params.filename(), tree.symbol.pos.toLSP)
+            )
+          )
+        } else {
+          val res = new ju.ArrayList[Location]()
+          tree.symbol.alternatives.foreach { alternative =>
+            val sym = semanticdbSymbol(alternative)
+            if (sym.isGlobal) {
+              res.addAll(search.definition(sym))
+            }
+          }
+          DefinitionResultImpl(
+            semanticdbSymbol(tree.symbol),
+            res
+          )
+        }
       }
+    } catch {
+      case e: Throwable =>
+        DefinitionResultImpl.empty
     }
-  }
 
   def definitionTypedTreeAt(pos: Position): Tree = {
     def loop(tree: Tree): Tree = {
