@@ -16,26 +16,28 @@ case class GradleBuildTool() extends BuildTool {
       .map(s => scala.meta.Lit.String(s).syntax)
       .mkString("[", ",", "]")
 
+  private def additionalRepos =
+    if (BuildInfo.gradleBloopVersion.contains("+"))
+      """|maven{
+         |  url 'https://dl.bintray.com/scalacenter/releases'
+         |}""".stripMargin
+    else {
+      ""
+    }
+
   private val initScript =
     s"""
        |initscript {
-       |    repositories {
-       |        mavenCentral()
-       |        
-       |        // TODO - Remove
-       |        mavenLocal()
-       |        // This might be removed when updating gradle bloop version to a full one
-       |        maven{
-       |          url 'https://dl.bintray.com/scalacenter/releases'
-       |        }
-       |    }
-       |
-       |    dependencies {
-       |        classpath 'ch.epfl.scala:gradle-bloop_2.11:${BuildInfo.gradleBloopVersion}'
-       |    }
+       |  repositories{
+       |    $additionalRepos
+       |    mavenCentral()
+       |  }
+       |  dependencies {
+       |    classpath 'ch.epfl.scala:gradle-bloop_2.11:${BuildInfo.gradleBloopVersion}'
+       |  }
        |}
        |allprojects {
-       |    apply plugin: bloop.integrations.gradle.BloopPlugin
+       |  apply plugin: bloop.integrations.gradle.BloopPlugin
        |}
     """.stripMargin.getBytes()
 

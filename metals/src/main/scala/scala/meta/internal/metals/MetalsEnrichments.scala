@@ -33,6 +33,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.tokens.Token
 import scala.util.Properties
 import scala.{meta => m}
+import java.nio.file.StandardOpenOption
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -313,6 +314,16 @@ object MetalsEnrichments
       path.parent.createDirectories()
       Files.write(path.toNIO, text.getBytes(StandardCharsets.UTF_8))
     }
+
+    def appendText(text: String): Unit = {
+      path.parent.createDirectories()
+      Files.write(
+        path.toNIO,
+        text.getBytes(StandardCharsets.UTF_8),
+        StandardOpenOption.APPEND
+      )
+    }
+
   }
 
   implicit class XtensionString(value: String) {

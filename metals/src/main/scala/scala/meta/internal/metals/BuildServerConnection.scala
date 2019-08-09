@@ -21,9 +21,8 @@ import scala.concurrent.Future
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.util.Try
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
-import com.google.gson.JsonArray
+import scala.collection.JavaConverters._
+import com.google.gson.Gson
 
 /**
  * An actively running and initialized BSP connection.
@@ -135,19 +134,8 @@ object BuildServerConnection {
 
   final case class BloopExtraBuildParams(
       semanticdbVersion: String,
-      supportedScalaVersions: Seq[String]
-  ) {
-    def toJson: JsonObject = {
-      val gson = new JsonObject
-      gson.add("semanticdbVersion", new JsonPrimitive(semanticdbVersion))
-      val array = new JsonArray()
-      supportedScalaVersions.foreach(
-        version => array.add(new JsonPrimitive(version))
-      )
-      gson.add("supportedScalaVersions", array)
-      gson
-    }
-  }
+      supportedScalaVersions: java.util.List[String]
+  )
 
   /** Run build/initialize handshake */
   private def initialize(
@@ -156,7 +144,7 @@ object BuildServerConnection {
   ): InitializeBuildResult = {
     val extraParams = BloopExtraBuildParams(
       BuildInfo.scalametaVersion,
-      BuildInfo.supportedScalaVersions
+      BuildInfo.supportedScalaVersions.asJava
     )
     val initializeResult = server.buildInitialize {
       val params = new InitializeBuildParams(
@@ -168,7 +156,9 @@ object BuildServerConnection {
           Collections.singletonList("scala")
         )
       )
-      params.setData(extraParams.toJson)
+      val gson = new Gson
+      val data = gson.toJsonTree(extraParams)
+      params.setData(data)
       params
     }
     // Block on the `build/initialize` request because it should respond instantly

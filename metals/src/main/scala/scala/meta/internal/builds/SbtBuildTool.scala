@@ -51,7 +51,9 @@ case class SbtBuildTool(version: String) extends BuildTool {
           sbtArgs
         ).flatten
     }
+    removeLegacyGlobalPlugin()
     writeSbtMetalsPlugin(workspace, config)
+    gitignoreMetals(workspace)
     allArgs
   }
 
@@ -60,6 +62,32 @@ case class SbtBuildTool(version: String) extends BuildTool {
   ): Option[String] = SbtDigest.current(workspace)
   override val minimumVersion: String = "0.13.17"
   override val recommendedVersion: String = "1.2.8"
+
+  // We remove legacy metals.sbt file that was located in
+  // global sbt plugins and which adds the plugin to each projects
+  // and creates additional overhead.
+  private def removeLegacyGlobalPlugin(): Unit = {
+    def pluginsDirectory(version: String): AbsolutePath = {
+      AbsolutePath(System.getProperty("user.home"))
+        .resolve(".sbt")
+        .resolve(version)
+        .resolve("plugins")
+    }
+    val plugins =
+      if (version.startsWith("0.13")) pluginsDirectory("0.13")
+      else pluginsDirectory("1.0")
+
+    val metalsFile = plugins.resolve("metals.sbt")
+    Files.deleteIfExists(metalsFile.toNIO)
+  }
+
+  private def gitignoreMetals(workspace: AbsolutePath) = {
+    val gitignore = workspace.resolve(".gitignore")
+    val gitIgnoreContents = "project/metals.sbt"
+    if (gitignore.exists && !gitignore.readText.contains(gitIgnoreContents)) {
+      gitignore.appendText(s"\n$gitIgnoreContents\n")
+    }
+  }
 
   private def writeSbtMetalsPlugin(
       workspace: AbsolutePath,
@@ -71,21 +99,10 @@ case class SbtBuildTool(version: String) extends BuildTool {
     val projectDir = workspace.resolve("project")
     projectDir.toFile.mkdir()
     val metalsPluginfile = projectDir.resolve("metals.sbt")
-    if (metalsPluginfile.isFile && metalsPluginfile.readAllBytes.sameElements(
-        bytes
-      )) {
-      // Do nothing if the file is unchanged. If we write to the file unconditionally
-      // we risk triggering sbt re-compilation of global plugins that slows down
-      // build import greatly. If somebody validates it doesn't affect load times
-      // then feel free to remove this guard.
-      ()
-    } else {
+    val pluginFileShouldChange = !metalsPluginfile.isFile ||
+      !metalsPluginfile.readAllBytes.sameElements(bytes)
+    if (pluginFileShouldChange) {
       Files.write(metalsPluginfile.toNIO, bytes)
-    }
-    val gitignore = workspace.resolve(".gitignore")
-    val gitIgnoreContents = "project/metals.sbt"
-    if (gitignore.exists && !gitignore.readText.contains(gitIgnoreContents)) {
-      gitignore.writeText(s"\n$gitIgnoreContents\n")
     }
   }
 
@@ -121,7 +138,7 @@ object SbtBuildTool {
       ""
     }
     s"""|// DO NOT EDIT! This file is auto-generated.
-        |// This file enables sbt-bloop to created bloop config files.
+        |// This file enables sbt-bloop to create bloop config files.
         |$resolvers
         |addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "$bloopSbtVersion")
         |""".stripMargin
