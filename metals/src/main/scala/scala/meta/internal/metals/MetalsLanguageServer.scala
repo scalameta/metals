@@ -157,6 +157,8 @@ class MetalsLanguageServer(
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
   private var foldingRangeProvider: FoldingRangeProvider = _
+  private val packageProvider: PackageProvider =
+    new PackageProvider(buildTargets)
   private var compilers: Compilers = _
   var tables: Tables = _
   var statusBar: StatusBar = _
@@ -588,6 +590,12 @@ class MetalsLanguageServer(
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
     trees.didChange(path)
+
+    packageProvider
+      .workspaceEdit(path)
+      .map(new ApplyWorkspaceEditParams(_))
+      .foreach(languageClient.applyEdit)
+
     if (path.isDependencySource(workspace)) {
       CancelTokens { _ =>
         // trigger compilation in preparation for definition requests
