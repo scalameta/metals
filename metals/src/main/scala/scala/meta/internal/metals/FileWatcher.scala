@@ -37,59 +37,103 @@ final class FileWatcher(
     didChangeWatchedFiles: DirectoryChangeEvent => Unit
 ) extends Cancelable {
 
-  private val executor = Executors.newFixedThreadPool(1)
-  ThreadPools.discardRejectedRunnables("FileWatcher.executor", executor)
-  private var activeWatcher: Option[DirectoryWatcher] = None
-  private var watching: CompletableFuture[Void] = new CompletableFuture()
+  private val directoryExecutor = Executors.newFixedThreadPool(1)
+  private val fileExecutor = Executors.newFixedThreadPool(1)
+
+  ThreadPools.discardRejectedRunnables(
+    "FileWatcher.executor",
+    directoryExecutor
+  )
+  ThreadPools.discardRejectedRunnables("FileWatcher.fileExecutor", fileExecutor)
+
+  private var activeDirectoryWatcher: Option[DirectoryWatcher] = None
+  private var activeFileWatcher: Option[DirectoryWatcher] = None
+
+  private var directoryWatching: CompletableFuture[Void] =
+    new CompletableFuture()
+  private var fileWatching: CompletableFuture[Void] = new CompletableFuture()
 
   override def cancel(): Unit = {
     stopWatching()
-    executor.shutdown()
-    activeWatcher.foreach(_.close())
+    directoryExecutor.shutdown()
+    fileExecutor.shutdown()
+    activeDirectoryWatcher.foreach(_.close())
+    activeFileWatcher.foreach(_.close())
   }
 
   def restart(): Unit = {
-    val directoriesToWatch = new util.ArrayList[Path]()
+    val sourceDirectoriesToWatch = new util.ArrayList[Path]()
+    val sourceFilesToWatch = new util.ArrayList[Path]()
     val createdSourceDirectories = new util.ArrayList[AbsolutePath]()
-    def watch(dir: AbsolutePath, isSourceDirectory: Boolean): Unit = {
-      if (!dir.isDirectory) {
-        dir.createDirectories()
-        if (isSourceDirectory) createdSourceDirectories.add(dir)
+    def watch(path: AbsolutePath, isSource: Boolean): Unit = {
+      if (!path.isDirectory && !path.isFile) {
+        val pathToCreate = if (path.isScalaOrJava) {
+          AbsolutePath(path.toNIO.getParent())
+        } else {
+          path
+        }
+        pathToCreate.createDirectories()
+        // this is a workaround for MacOS, it will continue watching
+        // directories even if they are removed, however it doesn't
+        // work on some other systems like Linux
+        if (isSource) createdSourceDirectories.add(pathToCreate)
       }
-      directoriesToWatch.add(dir.toNIO)
+      if (path.isScalaOrJava) sourceFilesToWatch.add(path.toNIO)
+      else sourceDirectoriesToWatch.add(path.toNIO)
     }
     // Watch the source directories for "goto definition" index.
-    buildTargets.sourceDirectories.foreach(watch(_, isSourceDirectory = true))
+    buildTargets.sourceItems.foreach(watch(_, isSource = true))
     buildTargets.scalacOptions.foreach { item =>
       // Watch META-INF/semanticdb directories for "find references" index.
       watch(
         item.targetroot.resolve(Directories.semanticdb),
-        isSourceDirectory = false
+        isSource = false
       )
     }
-    startWatching(directoriesToWatch)
+    startWatching(sourceFilesToWatch, sourceDirectoriesToWatch)
     createdSourceDirectories.asScala.foreach(_.delete())
   }
 
-  private def startWatching(paths: util.List[Path]): Unit = {
+  private def startWatching(
+      files: util.List[Path],
+      directories: util.List[Path]
+  ): Unit = {
     stopWatching()
-    val watcher = DirectoryWatcher
+    val directoryWatcher = DirectoryWatcher
       .builder()
-      .paths(paths)
-      .listener(new Listener)
+      .paths(directories)
+      .listener(new DirectoryListener())
       .build()
-    activeWatcher = Some(watcher)
-    watching = watcher.watchAsync(executor)
+    activeDirectoryWatcher = Some(directoryWatcher)
+    directoryWatching = directoryWatcher.watchAsync(directoryExecutor)
+
+    val fileWatcher = DirectoryWatcher
+      .builder()
+      .paths(files.map(_.getParent()))
+      .listener(new FileListener(watched = files.asScala.toSet))
+      .build()
+    activeFileWatcher = Some(fileWatcher)
+    fileWatching = fileWatcher.watchAsync(fileExecutor)
   }
 
   private def stopWatching(): Unit = {
-    activeWatcher.foreach(_.close())
-    watching.cancel(false)
+    activeDirectoryWatcher.foreach(_.close())
+    activeFileWatcher.foreach(_.close())
+    fileWatching.cancel(false)
+    directoryWatching.cancel(false)
   }
 
-  class Listener extends DirectoryChangeListener {
+  class DirectoryListener extends DirectoryChangeListener {
     override def onEvent(event: DirectoryChangeEvent): Unit = {
       if (!Files.isDirectory(event.path())) {
+        didChangeWatchedFiles(event)
+      }
+    }
+  }
+
+  class FileListener(watched: Set[Path]) extends DirectoryChangeListener {
+    override def onEvent(event: DirectoryChangeEvent): Unit = {
+      if (watched(event.path())) {
         didChangeWatchedFiles(event)
       }
     }

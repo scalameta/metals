@@ -31,7 +31,7 @@ final class BuildTargets() {
     workspace = newWorkspace
   }
   private var tables: Option[Tables] = None
-  private val sourceDirectoriesToBuildTarget =
+  private val sourceItemsToBuildTarget =
     TrieMap.empty[AbsolutePath, ConcurrentLinkedQueue[BuildTargetIdentifier]]
   private val buildTargetInfo =
     TrieMap.empty[BuildTargetIdentifier, BuildTarget]
@@ -49,19 +49,19 @@ final class BuildTargets() {
   }
 
   def reset(): Unit = {
-    sourceDirectoriesToBuildTarget.values.foreach(_.clear())
-    sourceDirectoriesToBuildTarget.clear()
+    sourceItemsToBuildTarget.values.foreach(_.clear())
+    sourceItemsToBuildTarget.clear()
     buildTargetInfo.clear()
     scalacTargetInfo.clear()
     inverseDependencies.clear()
     buildTargetSources.clear()
     inverseDependencySources.clear()
   }
-  def sourceDirectories: Iterable[AbsolutePath] =
-    sourceDirectoriesToBuildTarget.keys
-  def sourceDirectoriesToBuildTargets
+  def sourceItems: Iterable[AbsolutePath] =
+    sourceItemsToBuildTarget.keys
+  def sourceItemsToBuildTargets
       : Iterator[(AbsolutePath, JIterable[BuildTargetIdentifier])] =
-    sourceDirectoriesToBuildTarget.iterator
+    sourceItemsToBuildTarget.iterator
   def scalacOptions: Iterable[ScalacOptionsItem] =
     scalacTargetInfo.values
 
@@ -90,12 +90,12 @@ final class BuildTargets() {
     ).flatten
   }
 
-  def addSourceDirectory(
-      directory: AbsolutePath,
+  def addSourceItem(
+      sourceItem: AbsolutePath,
       buildTarget: BuildTargetIdentifier
   ): Unit = {
-    val queue = sourceDirectoriesToBuildTarget.getOrElseUpdate(
-      directory,
+    val queue = sourceItemsToBuildTarget.getOrElseUpdate(
+      sourceItem,
       new ConcurrentLinkedQueue()
     )
     queue.add(buildTarget)
@@ -275,19 +275,19 @@ final class BuildTargets() {
   }
 
   def sourceBuildTargets(
-      source: AbsolutePath
+      sourceItem: AbsolutePath
   ): Iterable[BuildTargetIdentifier] = {
-    sourceDirectoriesToBuildTarget
+    sourceItemsToBuildTarget
       .collectFirst {
-        case (sourceDirectory, buildTargets)
-            if source.toNIO.startsWith(sourceDirectory.toNIO) =>
+        case (source, buildTargets)
+            if sourceItem.toNIO.startsWith(source.toNIO) =>
           buildTargets.asScala
       }
       .getOrElse(Iterable.empty)
   }
 
-  def inverseSourceDirectory(source: AbsolutePath): Option[AbsolutePath] =
-    sourceDirectories.find(dir => source.toNIO.startsWith(dir.toNIO))
+  def inverseSourceItem(source: AbsolutePath): Option[AbsolutePath] =
+    sourceItems.find(item => source.toNIO.startsWith(item.toNIO))
 
   def isInverseDependency(
       query: BuildTargetIdentifier,

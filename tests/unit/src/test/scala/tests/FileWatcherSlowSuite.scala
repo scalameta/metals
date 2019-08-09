@@ -13,6 +13,8 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
     RecursivelyDelete(workspace.resolve("c"))
     val JavaFileEvent =
       workspace.resolve("a/src/main/java/a/JavaFileEvent.java")
+    val SingleFileEvent =
+      workspace.resolve("a/weird/path/d/D.scala")
     Files.createDirectories(JavaFileEvent.toNIO.getParent)
     Files.createDirectories(workspace.resolve("a/src/main/scala").toNIO)
     Files.createDirectories(workspace.resolve("b/src/main/scala").toNIO)
@@ -22,13 +24,16 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
         """
           |/metals.json
           |{
-          |  "a": { },
+          |  "a": { "additionalSources" : ["weird/path/d/D.scala", "non/existent/one/e/E.scala"] },
           |  "b": { },
           |  "c": { "dependsOn": [ "a" ] }
           |}
           |/a/src/main/scala/A.scala
           |package a
           |object A
+          |/a/weird/path/d/D.scala
+          |package d
+          |object D
           |/b/src/main/scala/B.scala
           |package b
           |object B
@@ -37,6 +42,7 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
           |object C {
           |  println(a.ScalaFileEvent)
           |  println(new a.JavaFileEvent)
+          |  println(d.SingleFileEvent)
           |}
         """.stripMargin
       )
@@ -59,6 +65,17 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
         )
       }
       _ = {
+        // Should generate an event
+        FileWrites.write(
+          SingleFileEvent,
+          s"""
+             |package d
+             |object D
+             |object SingleFileEvent
+             |""".stripMargin
+        )
+      }
+      _ = {
         // Should not generate a event
         val CFileEvent =
           workspace.resolve("a/src/main/c/a/main.c")
@@ -76,23 +93,24 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = assertNoDiff(
         server.workspaceDefinitions,
-        """
-          |/b/src/main/scala/B.scala
-          |package b
-          |object B/*L1*/
-          |/c/src/main/scala/C.scala
-          |package c
-          |object C/*L1*/ {
-          |  println/*Predef.scala*/(a.ScalaFileEvent/*A.scala:3*/)
-          |  println/*Predef.scala*/(new a.JavaFileEvent/*JavaFileEvent.java:2*/)
-          |}
-          |""".stripMargin
+        """|/b/src/main/scala/B.scala
+           |package b
+           |object B/*L1*/
+           |/c/src/main/scala/C.scala
+           |package c
+           |object C/*L1*/ {
+           |  println/*Predef.scala*/(a.ScalaFileEvent/*A.scala:3*/)
+           |  println/*Predef.scala*/(new a.JavaFileEvent/*JavaFileEvent.java:2*/)
+           |  println/*Predef.scala*/(d.SingleFileEvent/*D.scala:3*/)
+           |}
+           |""".stripMargin
       )
       _ = assertIsNotDirectory(workspace.resolve("a/src/main/scala-2.12"))
       _ = assertIsNotDirectory(workspace.resolve("b/src/main/scala-2.12"))
       _ = assertIsNotDirectory(workspace.resolve("c/src/main/scala-2.12"))
       _ = assertIsNotDirectory(workspace.resolve("b/src/main/java"))
       _ = assertIsNotDirectory(workspace.resolve("c/src/main/java"))
+      _ = assertIsNotDirectory(workspace.resolve("a/non/existent/one/e"))
     } yield ()
   }
 }

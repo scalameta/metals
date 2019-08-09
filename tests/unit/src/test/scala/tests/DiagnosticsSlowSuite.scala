@@ -296,4 +296,33 @@ object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
     } yield ()
   }
 
+  testAsync("single-source") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": { 
+          |    "additionalSources" : [ "weird/path/A.scala" ] 
+          |  }
+          |}
+          |/a/weird/path/A.scala
+          |object A {
+          |  val n: Int = ""
+          |}
+        """.stripMargin
+      )
+      _ <- server.didOpen("a/weird/path/A.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/weird/path/A.scala:2:16: error: type mismatch;
+           | found   : String("")
+           | required: Int
+           |  val n: Int = ""
+           |               ^^
+           |""".stripMargin
+      )
+    } yield ()
+  }
 }

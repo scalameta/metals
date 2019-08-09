@@ -74,10 +74,14 @@ trait MtagsEnrichments {
     }
   }
   implicit class XtensionAbsolutePathMetals(file: AbsolutePath) {
-    def toIdeallyRelativeURI(directory: Option[AbsolutePath]): String =
-      directory match {
-        case Some(dir) =>
-          file.toRelative(dir).toURI(false).toString
+    def toIdeallyRelativeURI(sourceItemOpt: Option[AbsolutePath]): String =
+      sourceItemOpt match {
+        case Some(sourceItem) =>
+          if (sourceItem.isScalaOrJava) {
+            sourceItem.toNIO.getFileName().toString()
+          } else {
+            file.toRelative(sourceItem).toURI(false).toString
+          }
         case None =>
           file.toURI.toString
       }

@@ -1277,15 +1277,14 @@ class MetalsLanguageServer(
 
   private def indexWorkspaceSources(): Unit = {
     for {
-      (sourceDirectory, targets) <- buildTargets.sourceDirectoriesToBuildTargets
-      if sourceDirectory.isDirectory
-      source <- ListFiles(sourceDirectory)
+      (sourceItem, targets) <- buildTargets.sourceItemsToBuildTargets
+      source <- ListFiles(sourceItem)
       if source.isScalaOrJava
     } {
       targets.asScala.foreach { target =>
         buildTargets.linkSourceFile(target, source)
       }
-      indexSourceFile(source, Some(sourceDirectory))
+      indexSourceFile(source, Some(sourceItem))
     }
   }
 
@@ -1296,16 +1295,16 @@ class MetalsLanguageServer(
       path <- paths.iterator
       if path.isScalaOrJava
     } {
-      indexSourceFile(path, buildTargets.inverseSourceDirectory(path))
+      indexSourceFile(path, buildTargets.inverseSourceItem(path))
     }
   }
 
   private def indexSourceFile(
       source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath]
+      sourceItem: Option[AbsolutePath]
   ): Unit = {
     try {
-      val reluri = source.toIdeallyRelativeURI(sourceDirectory)
+      val reluri = source.toIdeallyRelativeURI(sourceItem)
       val input = source.toInput
       val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
       SemanticdbDefinition.foreach(input) {
@@ -1319,7 +1318,7 @@ class MetalsLanguageServer(
               )
             }
           }
-          if (sourceDirectory.isDefined &&
+          if (sourceItem.isDefined &&
             !info.symbol.isPackage &&
             owner.isPackage) {
             definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
@@ -1419,10 +1418,9 @@ class MetalsLanguageServer(
       for {
         item <- i.sources.getItems.asScala
         source <- item.getSources.asScala
-        if source.getUri.endsWith("/")
       } {
-        val directory = source.getUri.toAbsolutePath
-        buildTargets.addSourceDirectory(directory, item.getTarget)
+        val sourceItemPath = source.getUri.toAbsolutePath
+        buildTargets.addSourceItem(sourceItemPath, item.getTarget)
       }
       doctor.check()
     }

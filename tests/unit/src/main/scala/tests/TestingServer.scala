@@ -149,9 +149,11 @@ final class TestingServer(
   }
   def workspaceSources: Seq[AbsolutePath] = {
     for {
-      sourceDirectory <- server.buildTargets.sourceDirectories.toSeq
-      if sourceDirectory.isDirectory
-      source <- FileIO.listAllFilesRecursively(sourceDirectory)
+      sourceItem <- server.buildTargets.sourceItems.toSeq
+      if sourceItem.exists
+      source <- if (sourceItem.isScalaOrJava)
+        Seq(sourceItem)
+      else FileIO.listAllFilesRecursively(sourceItem)
     } yield source
   }
 
