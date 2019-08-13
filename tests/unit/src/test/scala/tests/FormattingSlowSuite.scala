@@ -316,7 +316,7 @@ object FormattingSlowSuite extends BaseSlowSuite("formatting") {
         )
         assertNoDiff(
           client.workspaceDiagnostics,
-          """|.scalafmt.conf:1:1: error: missing setting 'version'. To fix this problem, add the following line to .scalafmt.conf: 'version=2.0.0'.
+          """|.scalafmt.conf:1:1: error: missing setting 'version'. To fix this problem, add the following line to .scalafmt.conf: 'version=2.0.1'.
              |maxColumn=40
              |^^^^^^^^^^^^
              |""".stripMargin
