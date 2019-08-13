@@ -5,6 +5,8 @@ import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
+import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -14,6 +16,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.Buffers
@@ -66,6 +69,24 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   ): Unit = {
     clientCommands.addLast(params)
   }
+
+  override def applyEdit(
+      params: ApplyWorkspaceEditParams
+  ): CompletableFuture[ApplyWorkspaceEditResponse] = {
+    def applyEdits(uri: String, textEdits: java.util.List[TextEdit]): Unit = {
+      val path = AbsolutePath(uri)
+
+      val content = path.readText
+      val editedContent =
+        TextEdits.applyEdits(content, textEdits.asScala.toList)
+
+      path.writeText(editedContent)
+    }
+
+    params.getEdit.getChanges.forEach(applyEdits)
+    CompletableFuture.completedFuture(new ApplyWorkspaceEditResponse(true))
+  }
+
   def workspaceClientCommands: String = {
     clientCommands.asScala.map(_.getCommand).mkString("\n")
   }
