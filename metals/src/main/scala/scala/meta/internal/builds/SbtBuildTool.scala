@@ -132,7 +132,8 @@ object SbtBuildTool {
    * Contents of metals.sbt file that is installed in the workspace.
    */
   private def sbtPlugin(bloopSbtVersion: String): String = {
-    val resolvers = if (bloopSbtVersion.contains("+")) {
+    val isSnapshotVersion = bloopSbtVersion.contains("+")
+    val resolvers = if (isSnapshotVersion) {
       """resolvers += Resolver.bintrayRepo("scalacenter", "releases")"""
     } else {
       ""

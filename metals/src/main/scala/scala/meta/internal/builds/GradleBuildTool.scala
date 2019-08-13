@@ -16,14 +16,16 @@ case class GradleBuildTool() extends BuildTool {
       .map(s => scala.meta.Lit.String(s).syntax)
       .mkString("[", ",", "]")
 
-  private def additionalRepos =
-    if (BuildInfo.gradleBloopVersion.contains("+"))
+  private def additionalRepos = {
+    val isSnapshotVersion = BuildInfo.gradleBloopVersion.contains("+")
+    if (isSnapshotVersion)
       """|maven{
          |  url 'https://dl.bintray.com/scalacenter/releases'
          |}""".stripMargin
     else {
       ""
     }
+  }
 
   private val initScript =
     s"""
