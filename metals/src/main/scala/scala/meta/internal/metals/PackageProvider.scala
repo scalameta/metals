@@ -21,12 +21,12 @@ class PackageProvider(private val buildTargets: BuildTargets) {
       path.toFile.length() == 0 &&
       path.filename != "package.scala") {
       val sourceItem = buildTargets.inverseSourceItem(path)
-      val relativeDirectory = sourceItem
+      sourceItem
         .map(path.toRelative)
         .flatMap(relativePath => Option(relativePath.toNIO.getParent))
-        .map(_.toString)
-
-      relativeDirectory.map(_.replace("/", "."))
+        .map { parent =>
+          parent.iterator().asScala.mkString(".")
+        }
     } else {
       None
     }
