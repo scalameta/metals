@@ -121,9 +121,9 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |org.eclipse.lsp4j-0.5.0.jar -
              |org.eclipse.lsp4j.generator-0.5.0.jar -
              |org.eclipse.lsp4j.jsonrpc-0.5.0.jar -
-             |org.eclipse.xtend.lib-2.19.0.M1.jar -
-             |org.eclipse.xtend.lib.macro-2.19.0.M1.jar -
-             |org.eclipse.xtext.xbase.lib-2.19.0.M1.jar -
+             |org.eclipse.xtend.lib-2.19.0.M2.jar -
+             |org.eclipse.xtend.lib.macro-2.19.0.M2.jar -
+             |org.eclipse.xtext.xbase.lib-2.19.0.M2.jar -
              |resources.jar -
              |rt.jar -
              |scala-library-2.12.8.jar -
