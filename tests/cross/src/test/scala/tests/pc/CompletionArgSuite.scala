@@ -67,9 +67,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
        |followers = 0 : Int
        |Main arg3
        |User arg3
-       |Autofill with default valuesage = 0, followers = 0
        |""".stripMargin,
-    topLines = Option(7)
+    topLines = Option(6)
   )
 
   check(
@@ -176,8 +175,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|address = : String
        |address = "" : String
-       |Autofill with default valuesname = "", age = 0, address = "", followers = 0
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Option(2)
   )
 
   check(
@@ -228,40 +227,7 @@ object CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "auto",
-    s"""|object Main {
-        |  def foo(argument : Int, other : String) : Int = argument
-        |  val number = 5
-        |  val hello = "" 
-        |  foo(argu@@)
-        |}
-        |""".stripMargin,
-    """|argument = : Int
-       |argument = number : Int
-       |Autofill with default valuesargument = number, other = hello
-       |""".stripMargin,
-    topLines = Some(3)
-  )
-
-  check(
-    "auto-same-name",
-    s"""|object Main {
-        |  def foo(argument : Int, other : String) : Int = argument
-        |  val number = 5
-        |  val argument = 123
-        |  val hello = "" 
-        |  foo(ot@@)
-        |}
-        |""".stripMargin,
-    """|other = : String
-       |other = hello : String
-       |Autofill with default valuesargument = argument, other = hello
-       |""".stripMargin,
-    topLines = Some(3)
-  )
-
-  check(
-    "auto-multiple",
+    "named-multiple",
     s"""|object Main {
         |  def foo(argument : Int) : Int = argument
         |  val number = 1
@@ -280,17 +246,57 @@ object CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(5)
   )
 
-  check(
+  checkEditLine(
+    "auto",
+    s"""|object Main {
+        |  def foo(argument : Int, other : String) : Int = argument
+        |  val number = 5
+        |  val hello = "" 
+        |  ___ 
+        |}
+        |""".stripMargin,
+    "foo(auto@@)",
+    "foo(argument = ${1:number}, other = ${2:hello})"
+  )
+
+  checkEditLine(
+    "auto-multiple-type",
+    s"""|object Main {
+        |  def foo(argument : Int, other : String) : Int = argument
+        |  val number = 5
+        |  val argument = 123
+        |  val hello = "" 
+        |  ___
+        |}
+        |""".stripMargin,
+    "foo(auto@@)",
+    "foo(argument = ${1|argument,number|}, other = ${2:hello})"
+  )
+
+  checkEditLine(
     "auto-default",
     s"""|object Main {
         |  def foo(argument : Int, other : String, isTrue: Boolean, opt : Option[String]) : Int = argument
-        |  foo(argu@@)
+        |  ___
         |}
         |""".stripMargin,
-    """|argument = : Int
-       |argument = 0 : Int
-       |Autofill with default valuesargument = 0, other = "", isTrue = false, opt = None
-       |""".stripMargin
+    "foo(auto@@)",
+    "foo(argument = ${1:0}, other = ${2:\"\"}, isTrue = ${3:false}, opt = ${4:None})"
+  )
+
+  checkEditLine(
+    "auto-list",
+    s"""|object Main {
+        |  def foo(argument : List[String], other : List[Int]) : Int = 0
+        |  val list1 = List(1,2,3)
+        |  val list2 = List(3,2,1)
+        |  val list3 = List("")
+        |  val list4 = List("")
+        |  ___
+        |}
+        |""".stripMargin,
+    "foo(auto@@)",
+    "foo(argument = ${1|list4,list3|}, other = ${2|list2,list1|})"
   )
 
 }

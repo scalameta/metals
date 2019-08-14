@@ -935,13 +935,14 @@ trait Completions { this: MetalsGlobal =>
         isParamName(member.sym.name.toString().trim())
       }
 
-      private def defaultLiteral(paramType: Type) = paramType match {
-        case TypeRef(ThisType(pkg), cls, _) =>
-          val pkgName = pkg.name.toString
-          val clsName = cls.name.toString()
-          Arg.defaultValues.getOrElse(s"$pkgName.$clsName", "???")
-        case _ => "???"
-      }
+      private def defaultLiteral(paramType: Type) =
+        paramType.dealiasWiden match {
+          case TypeRef(ThisType(pkg), cls, _) =>
+            val pkgName = pkg.name.toString
+            val clsName = cls.name.toString()
+            Arg.defaultValues.getOrElse(s"$pkgName.$clsName", "???")
+          case _ => "???"
+        }
 
       private def matchingTypesInScope(
           paramType: Type
@@ -950,7 +951,8 @@ trait Completions { this: MetalsGlobal =>
           case CompletionResult.ScopeMembers(positionDelta, results, name) =>
             val allResults = results
               .filter(
-                mem => mem.sym.tpe == paramType && mem.sym.isTerm
+                mem =>
+                  mem.sym.tpe.toLongString == paramType.toLongString && mem.sym.isTerm
               )
               .map(_.sym.name.toString().trim())
             if (allResults.size == 0) List(defaultLiteral(paramType))
@@ -961,21 +963,21 @@ trait Completions { this: MetalsGlobal =>
       }
 
       private def findDefaultValue(param: Symbol): String = {
-        val dealiasedParam = param.tpe.dealiasWiden
-        val matchingType = matchingTypesInScope(dealiasedParam)
+        val matchingType = matchingTypesInScope(param.tpe)
         if (matchingType.size == 1) {
-          matchingType.head
+          s":${matchingType.head}"
         } else {
-          matchingType
-            .find(_ == param.name.toString())
-            .getOrElse(defaultLiteral(dealiasedParam))
+          s"|${matchingType.mkString(",")}|"
         }
       }
 
       private def fillAllFields(): List[TextEditMember] = {
         if (allParams.size > 1) {
-          val editText = allParams
-            .map(param => param.name + " = " + findDefaultValue(param))
+          val editText = allParams.zipWithIndex
+            .map {
+              case (param, index) =>
+                s"${param.name} = $${${index + 1}${findDefaultValue(param)}}"
+            }
             .mkString(", ")
           val edit = new l.TextEdit(editRange, editText)
           List(
@@ -983,8 +985,7 @@ trait Completions { this: MetalsGlobal =>
               filterText = prefix + "-autofill",
               edit = edit,
               methodSym,
-              label = Some("Autofill with default values"),
-              detail = Some(editText)
+              label = Some("Autofill with default values")
             )
           )
         } else {
@@ -994,8 +995,7 @@ trait Completions { this: MetalsGlobal =>
 
       private def findPossibleDefaults(): List[TextEditMember] = {
         params.flatMap { param =>
-          val paramType = param.tpe.dealiasWiden
-          val allMemebers = matchingTypesInScope(paramType)
+          val allMemebers = matchingTypesInScope(param.tpe)
           allMemebers.map { memberName =>
             val editText = param.name + " = " + memberName
             val edit = new l.TextEdit(editRange, editText)
@@ -1004,7 +1004,7 @@ trait Completions { this: MetalsGlobal =>
               edit = edit,
               completionsSymbol(s"$param=$memberName"),
               label = Some(editText),
-              detail = Some(" : " + paramType)
+              detail = Some(" : " + param.tpe)
             )
           }
         }
