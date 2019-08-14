@@ -56,7 +56,41 @@ object AddPackageSlowSuite extends BaseSlowSuite("add-package") {
       _ <- server.didOpen("a/src/main/scala/a/package.scala")
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/a/package.scala").readText,
-        ""
+        """|package object a {
+           |  
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("package-file-multi") {
+    cleanCompileCache("a")
+    RecursivelyDelete(workspace.resolve("a"))
+    Files.createDirectories(
+      workspace.resolve("a/src/main/scala/a/b/c").toNIO
+    )
+    for {
+      _ <- server.initialize(
+        """|/metals.json
+           |{
+           |  "a": { }
+           |}
+        """.stripMargin
+      )
+      _ = workspace
+        .resolve("a/src/main/scala/a/b/c/package.scala")
+        .toFile
+        .createNewFile()
+      _ <- server.didOpen("a/src/main/scala/a/b/c/package.scala")
+      _ = assertNoDiff(
+        workspace.resolve("a/src/main/scala/a/b/c/package.scala").readText,
+        """|package a.b
+           |
+           |package object c {
+           |  
+           |}
+           |""".stripMargin
       )
     } yield ()
   }

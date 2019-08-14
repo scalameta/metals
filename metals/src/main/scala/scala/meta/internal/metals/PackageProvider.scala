@@ -7,25 +7,43 @@ import org.eclipse.lsp4j.WorkspaceEdit
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+import java.nio.file.Path
 
 class PackageProvider(private val buildTargets: BuildTargets) {
 
   def workspaceEdit(path: AbsolutePath): Option[WorkspaceEdit] = {
-    packageName(path).map(workspaceEdit(path, _))
+    packageStatement(path).map(workspaceEdit(path, _))
   }
 
-  private def packageName(path: AbsolutePath): Option[String] = {
-    // package.scala file needs to be handled separately
-    // as its package name is different than package name of normal scala file
-    if (path.isScala &&
-      path.toFile.length() == 0 &&
-      path.filename != "package.scala") {
-      val sourceItem = buildTargets.inverseSourceItem(path)
-      sourceItem
+  private def packageStatement(path: AbsolutePath): Option[String] = {
+
+    def packageObjectStatement(path: Iterator[Path]): Option[String] = {
+      val pathList = path.toList
+      val packageDeclaration =
+        if (pathList.size > 1)
+          s"package ${pathList.dropRight(1).mkString(".")}\n\n"
+        else ""
+      pathList.lastOption.map { packageObjectName =>
+        s"""|${packageDeclaration}package object $packageObjectName {
+            |  
+            |}
+            |""".stripMargin
+      }
+    }
+
+    if (path.isScala && path.toFile.length() == 0) {
+      buildTargets
+        .inverseSourceItem(path)
         .map(path.toRelative)
         .flatMap(relativePath => Option(relativePath.toNIO.getParent))
-        .map { parent =>
-          parent.iterator().asScala.mkString(".")
+        .flatMap { parent =>
+          val pathIterator = parent.iterator().asScala
+          if (path.filename == "package.scala") {
+            packageObjectStatement(pathIterator)
+          } else {
+            val packageName = parent.iterator().asScala.mkString(".")
+            Some(s"package $packageName\n\n")
+          }
         }
     } else {
       None
@@ -34,13 +52,12 @@ class PackageProvider(private val buildTargets: BuildTargets) {
 
   private def workspaceEdit(
       path: AbsolutePath,
-      packageName: String
+      packageStatement: String
   ): WorkspaceEdit = {
     val textEdit = new TextEdit(
       new Range(new Position(0, 0), new Position(0, 0)),
-      s"package $packageName\n\n"
+      packageStatement
     )
-
     val textEdits = List(textEdit).asJava
     val changes = Map(path.toString -> textEdits).asJava
     new WorkspaceEdit(changes)
