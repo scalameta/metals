@@ -11,7 +11,7 @@ object SymlinkedProjectSuite extends BaseSlowSuite("symlinked-project") {
            |sbt.version=1.2.6
            |
            |/build.sbt
-           |scalaVersion := "2.12.8"
+           |scalaVersion := "2.12.9"
            |
            |/src/main/scala/Foo.scala
            |class Foo
@@ -31,7 +31,7 @@ object SymlinkedProjectSuite extends BaseSlowSuite("symlinked-project") {
            |object Bar/*L0*/{
            |  val foo/*L1*/ = new Foo/*Foo.scala:0*/
            |}
-           |        
+           |
            |""".stripMargin
       )
     }

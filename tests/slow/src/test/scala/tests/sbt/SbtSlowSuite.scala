@@ -29,7 +29,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
         """|/project/build.properties
            |sbt.version=1.2.6
            |/build.sbt
-           |scalaVersion := "2.12.8"
+           |scalaVersion := "2.12.9"
            |""".stripMargin
       )
       _ = assertNoDiff(
@@ -71,7 +71,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
         """|/project/build.properties
            |sbt.version=1.2.6
            |/build.sbt
-           |scalaVersion := "2.12.8"
+           |scalaVersion := "2.12.9"
            |""".stripMargin
       )
       _ = assertNoDiff(
@@ -100,7 +100,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
         """|/project/build.properties
            |sbt.version=1.2.6
            |/build.sbt
-           |scalaVersion := "2.12.8"
+           |scalaVersion := "2.12.9"
            |/src/main/scala/reload/Main.scala
            |package reload
            |object Main extends App {
@@ -180,7 +180,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
       _ <- server.didSave("build.sbt") { _ =>
-        """scalaVersion := "2.12.8" """
+        """scalaVersion := "2.12.9" """
       }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -201,7 +201,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
            |/project/build.properties
            |sbt.version=1.2.6
            |/build.sbt
-           |scalaVersion := "2.12.8"
+           |scalaVersion := "2.12.9"
            |lazy val a = project.settings(scalaVersion := "2.12.4")
            |lazy val b = project.settings(scalaVersion := "2.12.3")
            |lazy val c = project.settings(scalaVersion := "2.11.12")
@@ -255,7 +255,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
         client.showMessages.clear()
         client.clientCommands.clear()
       }
-      _ <- server.didSave("build.sbt")(_ => """scalaVersion := "2.12.8" """)
+      _ <- server.didSave("build.sbt")(_ => """scalaVersion := "2.12.9" """)
       _ = {
         assertNoDiff(
           client.workspaceClientCommands,
@@ -277,7 +277,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
           |/project/build.properties
           |sbt.version=1.2.6
           |/build.sbt
-          |scalaVersion := "2.12.8"
+          |scalaVersion := "2.12.9"
           |libraryDependencies +=
           |  // dependency won't resolve without the `bintray:scalacenter/releases` resolver
           |  // that is defined in the `custom-repositories` file.
@@ -303,7 +303,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
           |/project/build.properties
           |sbt.version=1.2.6
           |/build.sbt
-          |scalaVersion := "2.12.8"
+          |scalaVersion := "2.12.9"
           |/.jvmopts
           |-Xms1536M
           |-Xmx1536M
@@ -323,7 +323,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
           |/project/build.properties
           |sbt.version=1.2.6
           |/build.sbt
-          |scalaVersion := "2.12.8"
+          |scalaVersion := "2.12.9"
           |scalacOptions ++= List(
           |  "-Xfatal-warnings",
           |  "-Ywarn-unused"
@@ -354,7 +354,7 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
           |/project/build.properties
           |sbt.version=1.2.6
           |/build.sbt
-          |scalaVersion := "2.12.8"
+          |scalaVersion := "2.12.9"
           |""".stripMargin,
         expectError = true,
         preInitialized = () => {
