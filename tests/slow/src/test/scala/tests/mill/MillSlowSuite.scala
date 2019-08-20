@@ -25,7 +25,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.8"
           |}
         """.stripMargin
       )
@@ -45,11 +45,12 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didChange("build.sc") { text =>
-        text + """
-          |object bar extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
-         |}
-        """
+        text +
+          """|
+             |object bar extends ScalaModule {
+             |  def scalaVersion = "2.12.8"
+             |}
+             |""".stripMargin
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didSave("build.sc")(identity)
@@ -73,7 +74,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.8"
           |}
         """.stripMargin
       )
@@ -104,7 +105,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.8"
           |  /*DEPS*/
           |}
           |/foo/src/reload/Main.scala
@@ -147,7 +148,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.8"
           |  /*DIFF*/
           |}
         """.stripMargin,
@@ -192,7 +193,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
         """
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.8"
           |}
         """.stripMargin,
       }
@@ -215,7 +216,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.8"
           |  def scalacOptions = Seq("-Xfatal-warnings", "-Ywarn-unused")
           |}
           |/foo/src/Warning.scala
