@@ -390,7 +390,6 @@ lazy val unit = project
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
       "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
-      "org.scalameta" % "metac" % V.scalameta cross CrossVersion.full,
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "com.lihaoyi" %% "utest" % "0.6.0"
