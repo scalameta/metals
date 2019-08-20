@@ -402,7 +402,8 @@ lazy val unit = project
     buildInfoKeys := Seq[BuildInfoKey](
       "sourceroot" -> baseDirectory.in(ThisBuild).value,
       "targetDirectory" -> target.in(Test).value,
-      "testResourceDirectory" -> resourceDirectory.in(Test).value
+      "testResourceDirectory" -> resourceDirectory.in(Test).value,
+      "scalaVersion" -> scalaVersion.value
     )
   )
   .dependsOn(mtest, metals)
