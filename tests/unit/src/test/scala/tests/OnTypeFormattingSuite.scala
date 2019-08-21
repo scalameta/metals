@@ -2,22 +2,22 @@ package tests
 
 object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
 
-  val quot = """\u0022\u0022\u0022"""
+  val tripleQuote = """\u0022\u0022\u0022"""
 
   check(
     "correct-string",
     s"""
        |object Main {
-       |  val str = $quot
+       |  val str = '''
        |  #@@word
-       |$quot
+       |'''
        |}""".stripMargin,
     s"""
        |object Main {
-       |  val str = $quot
+       |  val str = '''
        |  #
        |  #word
-       |$quot
+       |'''
        |}""".stripMargin
   )
 
@@ -25,19 +25,19 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     "after-string",
     s"""
        |object Main {
-       |val a = $quot
+       |val a = '''
        |# this is
        |# a multiline
        |# string
-       |$quot@@
+       |'''@@
        |}""".stripMargin,
     s"""
        |object Main {
-       |val a = $quot
+       |val a = '''
        |# this is
        |# a multiline
        |# string
-       |$quot
+       |'''
        |
        |}""".stripMargin
   )
@@ -47,16 +47,16 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val abc = 123
-       |  val s = $quot example
-       |  word@@$quot
+       |  val s = ''' example
+       |  word@@'''
        |  abc.toInt
        |}""".stripMargin,
     s"""
        object Main {
        |  val abc = 123
-       |  val s = $quot example
+       |  val s = ''' example
        |  word
-       |  $quot
+       |  '''
        |  abc.toInt
        |}""".stripMargin
   )
@@ -65,21 +65,26 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     "far-indent-string",
     s"""
        |object Main {
-       |  val str = $quot#@@
-       |$quot
+       |  val str = '''#@@
+       |'''
        |}""".stripMargin,
     s"""
        |object Main {
-       |  val str = $quot#
+       |  val str = '''#
        |               #
-       |$quot
+       |'''
        |}""".stripMargin
   )
 
   def check(name: String, testCase: String, expectedCase: String): Unit = {
-    val test = testCase.replaceAll("#", "|")
+    def unmangle(string: String): String =
+      string
+        .replaceAll("#", "|")
+        .replaceAll("'''", tripleQuote)
+
+    val test = unmangle(testCase)
     val base = test.replaceAll("(@@)", "")
-    val expected = expectedCase.replaceAll("#", "|")
+    val expected = unmangle(expectedCase)
     testAsync(name) {
       for {
         _ <- server.initialize(
