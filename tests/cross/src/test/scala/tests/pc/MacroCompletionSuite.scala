@@ -134,7 +134,8 @@ object MacroCompletionSuite extends BaseCompletionSuite {
     """|toCharArray(): Array[Char]
        |""".stripMargin,
     compat = Map(
-      // NOTE(olafur): the presentation compiler returns empty results here in 2.13.0
+      // NOTE(olafur): the presentation compiler returns empty results here in 2.12.9 and 2.13.0
+      "2.12.9" -> "",
       "2.13" -> ""
     )
   )

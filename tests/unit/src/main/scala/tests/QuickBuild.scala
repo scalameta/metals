@@ -39,7 +39,7 @@ import scala.util.matching.Regex
  * A build is declared in metals.json and looks like this: {{{
  *   {
  *     "id": {
- *       "scalaVersion": "2.12.8",
+ *       "scalaVersion": "2.12.9",
  *       "libraryDependencies": [
  *         "org.scalatest::scalatest:3.0.5",
  *       ],

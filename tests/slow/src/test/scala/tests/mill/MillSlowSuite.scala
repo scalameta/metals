@@ -45,11 +45,12 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didChange("build.sc") { text =>
-        text + """
-          |object bar extends ScalaModule {
-          |  def scalaVersion = "2.12.8"
-         |}
-        """
+        text +
+          """|
+             |object bar extends ScalaModule {
+             |  def scalaVersion = "2.12.8"
+             |}
+             |""".stripMargin
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didSave("build.sc")(identity)

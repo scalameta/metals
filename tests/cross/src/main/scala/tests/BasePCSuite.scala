@@ -96,7 +96,8 @@ abstract class BasePCSuite extends BaseSuite {
           // but using the 2.11 stdlib would cause a lot tests to break for little benefit.
           // We can remove this switch once we drop support for 2.11
           BuildInfoVersions.scalaVersion match {
-            case v if v.startsWith("2.13") => BuildInfoVersions.scalaVersion
+            case v if v.startsWith("2.13") => v
+            case v if v.startsWith("2.12") => v
             case _ => BuildInfoVersions.scala212
           }
         )
