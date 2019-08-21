@@ -131,7 +131,7 @@ final class DocumentHighlightProvider(
       areParamsInObject: Boolean
   ): Set[String] = {
     val setterSuffix = "_="
-    val paramsDecriptor =
+    val paramsDescriptor =
       if (areParamsInObject) Descriptor.Term(className)
       else Descriptor.Type(className)
     Set(
@@ -154,11 +154,11 @@ final class DocumentHighlightProvider(
         Descriptor.Parameter(paramName)
       ),
       Symbols.Global(
-        Symbols.Global(packageName, paramsDecriptor),
+        Symbols.Global(packageName, paramsDescriptor),
         Descriptor.Method(paramName, "()")
       ),
       Symbols.Global(
-        Symbols.Global(packageName, paramsDecriptor),
+        Symbols.Global(packageName, paramsDescriptor),
         Descriptor.Method(paramName + setterSuffix, "()")
       )
     )

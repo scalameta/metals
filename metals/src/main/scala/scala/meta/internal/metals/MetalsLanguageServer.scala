@@ -153,6 +153,7 @@ class MetalsLanguageServer(
   private var definitionProvider: DefinitionProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
+  private var onTypeFormattingProvider: OnTypeFormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
@@ -317,6 +318,10 @@ class MetalsLanguageServer(
           Nil
       }
     )
+    onTypeFormattingProvider = new OnTypeFormattingProvider(
+      semanticdbs,
+      buffers
+    )
     referencesProvider = new ReferenceProvider(
       workspace,
       semanticdbs,
@@ -409,6 +414,9 @@ class MetalsLanguageServer(
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
       capabilities.setDocumentHighlightProvider(true)
+      capabilities.setDocumentOnTypeFormattingProvider(
+        new DocumentOnTypeFormattingOptions("\n")
+      )
       capabilities.setSignatureHelpProvider(
         new SignatureHelpOptions(List("(", "[").asJava)
       )
@@ -838,6 +846,16 @@ class MetalsLanguageServer(
       formattingProvider.format(
         params.getTextDocument.getUri.toAbsolutePath,
         token
+      )
+    }
+  /*in order to use onTypeFormatting in vscode, you'll have to set editor.formatOnType = true in settings*/
+  @JsonRequest("textDocument/onTypeFormatting")
+  def onTypeFormatting(
+      params: DocumentOnTypeFormattingParams
+  ): CompletableFuture[util.List[TextEdit]] =
+    CancelTokens.future { _ =>
+      onTypeFormattingProvider.format(
+        params
       )
     }
 
