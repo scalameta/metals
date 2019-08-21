@@ -9,6 +9,9 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Constant
 
+/*in order to use onTypeFormatting in vscode,
+you'll have to set editor.formatOnType = true in settings*/
+
 final class OnTypeFormattingProvider(
     semanticdbs: Semanticdbs,
     buffer: Buffers

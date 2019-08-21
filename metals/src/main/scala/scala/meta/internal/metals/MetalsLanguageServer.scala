@@ -848,7 +848,7 @@ class MetalsLanguageServer(
         token
       )
     }
-
+  /*in order to use onTypeFormatting in vscode, you'll have to set editor.formatOnType = true in settings*/
   @JsonRequest("textDocument/onTypeFormatting")
   def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
