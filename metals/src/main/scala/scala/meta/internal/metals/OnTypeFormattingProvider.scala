@@ -2,11 +2,10 @@ package scala.meta.internal.metals
 
 import org.eclipse.lsp4j.{DocumentOnTypeFormattingParams, Range, TextEdit}
 
-import scala.meta.internal.mtags.Semanticdbs
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Constant
 
@@ -61,15 +60,13 @@ final class OnTypeFormattingProvider(
         tokens.flatMap { tokens =>
           tokens.collectFirst {
             case token: Constant.String
-                if inToken(pos, token) && isMultilineString(
-                  sourceText,
-                  token
-                ) =>
+                if inToken(pos, token) &&
+                  isMultilineString(sourceText, token) =>
               new TextEdit(range, indent(sourceText, pos) + "|")
           }
         }
       } else None
     } else None
-    Future.successful(List(edit.orNull).asJava)
+    Future.successful(edit.toList.asJava)
   }
 }
