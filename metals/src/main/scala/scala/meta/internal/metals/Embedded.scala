@@ -120,24 +120,10 @@ object Embedded {
       s"mtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
       BuildInfo.metalsVersion
     )
-    val needsFullClasspath = !scalac.isSemanticdbEnabled
-    val dependency =
-      if (needsFullClasspath) pc
-      else pc.withTransitive(false)
-    val settings = downloadSettings(dependency)
+    val settings = downloadSettings(pc)
     val jars = CoursierSmall.fetch(settings)
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
-    val semanticdbJars =
-      if (needsFullClasspath) Nil
-      else {
-        scalac.getOptions.asScala.collect {
-          case opt
-              if opt.startsWith("-Xplugin:") &&
-                opt.contains("semanticdb-scalac") =>
-            Paths.get(opt.stripPrefix("-Xplugin:"))
-        }
-      }
-    val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
+    val allJars = Iterator(jars, scalaJars).flatten
     val allURLs = allJars.map(_.toUri.toURL).toArray
     // Share classloader for a subset of types.
     val parent =
