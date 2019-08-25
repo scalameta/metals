@@ -37,9 +37,8 @@ class MetalsGlobal(
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
 
-  override lazy val analyzer = new {
-    val global: compiler.type = compiler
-  } with InteractiveAnalyzer {
+  class MetalsInteractiveAnalyzer(val global: compiler.type)
+      extends InteractiveAnalyzer {
 
     /**
      * Disable blackbox macro expansion for better reliability and performance.
@@ -71,19 +70,17 @@ class MetalsGlobal(
       if (standardIsBlackbox(expandee.symbol)) expandee
       else super.pluginsMacroExpand(typer, expandee, mode, pt)
     }
-
   }
+  override lazy val analyzer = new MetalsInteractiveAnalyzer(compiler)
 
   def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
 
   def isJavaSymbol(sym: Symbol): Boolean =
     !sym.hasPackageFlag && sym.isJava
 
-  lazy val semanticdbOps: SemanticdbOps {
-    val global: compiler.type
-  } = new SemanticdbOps {
-    val global: compiler.type = compiler
-  }
+  class MetalsGlobalSemanticdbOps(val global: compiler.type)
+      extends SemanticdbOps
+  lazy val semanticdbOps = new MetalsGlobalSemanticdbOps(compiler)
 
   def semanticdbSymbol(symbol: Symbol): String = {
     import semanticdbOps._
