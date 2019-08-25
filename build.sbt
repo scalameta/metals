@@ -22,7 +22,6 @@ inThisBuild(
     scalacOptions ++= List(
       "-target:jvm-1.8",
       "-Yrangepos",
-      "-deprecation",
       // -Xlint is unusable because of
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused:imports"
@@ -198,7 +197,7 @@ lazy val mtags = project
     },
     buildInfoPackage := "scala.meta.internal.mtags",
     buildInfoKeys := Seq[BuildInfoKey](
-      "scalaCompilerVersion" -> V.scala212
+      "scalaCompilerVersion" -> scalaVersion.value
     )
   )
   .dependsOn(interfaces)

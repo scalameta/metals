@@ -180,7 +180,7 @@ class BaseSuite extends TestSuite {
   }
 
   private def scalaVersion: String =
-    mtags.BuildInfo.scalaCompilerVersion
+    Properties.versionNumberString
   private def scalaBinary(scalaVersion: String): String =
     scalaVersion.split("\\.").take(2).mkString(".")
   val compatProcess = Map.empty[String, String => String]

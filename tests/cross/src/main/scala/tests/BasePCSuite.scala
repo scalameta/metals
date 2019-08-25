@@ -12,7 +12,7 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.mtags
+import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
@@ -24,7 +24,6 @@ import scala.util.control.NonFatal
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import scala.collection.Seq
-import scala.meta.internal.mtags.BuildInfo
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
@@ -71,7 +70,7 @@ abstract class BasePCSuite extends BaseSuite {
     else {
       val testName =
         if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
-          s"${mtags.BuildInfo.scalaCompilerVersion}-$name"
+          s"${BuildInfo.scalaCompilerVersion}-$name"
         else name
       super.test(testName) {
         try {
