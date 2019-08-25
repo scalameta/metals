@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.logging.Level
 import java.util.logging.Logger
 import scala.tools.nsc.reporters.StoreReporter
+import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.NonFatal
 import scala.meta.pc.CancelToken
 import java.util.concurrent.CompletableFuture
@@ -200,16 +201,21 @@ class CompilerAccess(
     }, ec)
     // Task has timed out, cancel this request and shutdown the current compiler.
     sh.foreach { scheduler =>
-      scheduler.schedule[Unit]({ () =>
-        if (!result.isDone()) {
-          try {
-            result.cancel(false)
-            shutdownCurrentCompiler()
-          } catch {
-            case NonFatal(_) =>
+      scheduler.schedule[Unit](
+        { () =>
+          if (!result.isDone()) {
+            try {
+              result.cancel(false)
+              shutdownCurrentCompiler()
+            } catch {
+              case NonFatal(_) =>
+              case ShutdownReq =>
+            }
           }
-        }
-      }, config.timeoutDelay(), config.timeoutUnit())
+        },
+        config.timeoutDelay(),
+        config.timeoutUnit()
+      )
     }
 
     result
