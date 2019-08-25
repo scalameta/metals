@@ -9,110 +9,128 @@ functionality.
 
 <table>
 <thead>
-<tr>
-  <td>Editor</td>
-  <td align=center>Installation</td>
-  <td align=center>Build import</td>
-  <td align=center>Diagnostics</td>
-  <td align=center>Goto definition</td>
-  <td align=center>Completions</td>
-  <td align=center>Hover</td>
-  <td align=center>Parameter hints</td>
-  <td align=center>Find references</td>
-  <td align=center>Document symbols</td>
-  <td align=center>Workspace symbols</td>
-  <td align=center>Formatting</td>
-  <td align=center>Folding</td>
-  <td align=center>Highlight</td>
-  <td align=center>Metals Extensions</td>
-</tr>
+  <tr>
+    <td />
+    <td align="center">Visual Studio Code</td>
+    <td align="center">Atom</td>
+    <td align="center">Vim</td>
+    <td align="center">Sublime Text 3</td>
+    <td align="center">Emacs</td>
+  </tr>
 </thead>
 <tbody>
-<tr>
-  <td>Visual Studio Code</td>
-  <td align=center>Single click</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-</tr>
-<tr>
-  <td>Atom</td>
-  <td align=center>Single click</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅*</td>
-  <td align=center>✅</td>
-  <td align=center></td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center></td>
-  <td align=center>✅</td>
-  <td align=center> </td>
-  <td align=center>✅</td>
-  <td align=center>Status bar</td>
-</tr>
-<tr>
-  <td>Vim</td>
-  <td align=center>Few steps</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅*</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>Flat</td>
-  <td align=center>✅</td>
-  <td align=center></td>
-  <td align=center>✅*</td>
-  <td align=center>✅*</td>
-  <td align=center>Status bar</td>
-</tr>
-<tr>
-  <td>Sublime Text 3</td>
-  <td align=center>Few steps</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>Flat</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center> </td>
-  <td align=center>✅</td>
-  <td align=center></td>
-</tr>
-<tr>
-  <td>Emacs</td>
-  <td align=center>Few steps</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>✅</td>
-  <td align=center>Status bar</td>
-</tr>
+  <tr>
+    <td>Installation</td>
+    <td align="center">Single click</td>
+    <td align="center">Single click</td>
+    <td align="center">Few steps</td>
+    <td align="center">Few steps</td>
+    <td align="center">Few steps</td>
+  </tr>
+  <tr>
+    <td>Build import</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Diagnostics</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Goto definition</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Completions</td>
+    <td align="center">✅</td>
+    <td align="center">✅*</td>
+    <td align="center">✅*</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Hover</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Parameter hints</td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Find references</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Document symbols</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">Flat</td>
+    <td align="center">Flat</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Workspace symbols</td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Formatting</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Folding</td>
+    <td align="center">✅</td>
+    <td align="center"> </td>
+    <td align="center">✅*</td>
+    <td align="center"> </td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Highlight</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅*</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Metals Extensions</td>
+    <td align="center">✅</td>
+    <td align="center">Status bar</td>
+    <td align="center">Status bar</td>
+    <td align="center"></td>
+    <td align="center">Status bar</td>
+  </tr>
 </tbody>
 </table>
 
