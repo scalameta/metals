@@ -15,6 +15,7 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.concurrent.ExecutionContextExecutorService
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
@@ -58,7 +59,7 @@ class Compilers(
       "no build target: using presentation compiler with only scala-library"
     )
     configure(new ScalaPresentationCompiler()).newInstance(
-      s"metals-default-${Properties.versionNumberString}",
+      s"metals-default-${mtags.BuildInfo.scalaCompilerVersion}",
       PackageIndex.scalaLibrary.asJava,
       Nil.asJava
     )
@@ -279,8 +280,14 @@ class Compilers(
       info: ScalaBuildTarget
   ): PresentationCompiler = {
     val classpath = scalac.classpath.map(_.toNIO).toSeq
+    // The metals_2.12 artifact depends on mtags_2.12.x where "x" matches
+    // `mtags.BuildInfo.scalaCompilerVersion`. In the case when
+    // `info.getScalaVersion == mtags.BuildInfo.scalaCompilerVersion` then we
+    // skip fetching the mtags module from Maven.
+    val isCurrentScalaCompilerVersion =
+      ScalaVersions.dropVendorSuffix(info.getScalaVersion) == mtags.BuildInfo.scalaCompilerVersion
     val pc: PresentationCompiler =
-      if (ScalaVersions.dropVendorSuffix(info.getScalaVersion) == Properties.versionNumberString) {
+      if (isCurrentScalaCompilerVersion) {
         new ScalaPresentationCompiler()
       } else {
         embedded.presentationCompiler(info, scalac)

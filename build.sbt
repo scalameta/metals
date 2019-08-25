@@ -195,9 +195,14 @@ lazy val mtags = project
           if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
           otherwise = List("com.lihaoyi" %% "pprint" % "0.5.5")
         )
-    }
+    },
+    buildInfoPackage := "scala.meta.internal.mtags",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "scalaCompilerVersion" -> V.scala212
+    )
   )
   .dependsOn(interfaces)
+  .enablePlugins(BuildInfoPlugin)
 
 lazy val metals = project
   .settings(

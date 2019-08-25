@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.language.experimental.macros
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.mtags
 import scala.reflect.ClassTag
 import scala.util.Properties
 import utest.TestSuite
@@ -27,7 +28,7 @@ class BaseSuite extends TestSuite {
   def isJava8: Boolean =
     !Properties.isJavaAtLeast("9")
   def isScala211: Boolean =
-    Properties.versionNumberString.startsWith("2.11")
+    mtags.BuildInfo.scalaCompilerVersion.startsWith("2.11")
   def isWindows: Boolean =
     isAppveyor || isAzureWindows
   def hasJdkSources: Boolean = JdkSources().isDefined
@@ -179,7 +180,7 @@ class BaseSuite extends TestSuite {
   }
 
   private def scalaVersion: String =
-    Properties.versionNumberString
+    mtags.BuildInfo.scalaCompilerVersion
   private def scalaBinary(scalaVersion: String): String =
     scalaVersion.split("\\.").take(2).mkString(".")
   val compatProcess = Map.empty[String, String => String]
