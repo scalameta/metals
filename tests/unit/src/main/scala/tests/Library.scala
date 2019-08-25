@@ -5,9 +5,9 @@ import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex
+import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import scala.util.Properties
 
 case class Library(
     name: String,
@@ -86,7 +86,7 @@ object Library {
           new Dependency(
             "org.scala-lang",
             "scala-compiler",
-            Properties.versionNumberString
+            mtags.BuildInfo.scalaCompilerVersion
           ),
           new Dependency(
             "io.buoyant",

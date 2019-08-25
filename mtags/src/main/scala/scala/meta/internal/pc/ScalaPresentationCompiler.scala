@@ -15,6 +15,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.mtags.BuildInfo
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
@@ -22,7 +23,6 @@ import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 import scala.meta.pc.PresentationCompilerConfig
-import scala.util.Properties
 import java.util.concurrent.CompletableFuture
 import scala.meta.pc.DefinitionResult
 import scala.collection.Seq
@@ -151,8 +151,8 @@ case class ScalaPresentationCompiler(
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true
-    if (!Properties.versionNumberString.startsWith("2.11") &&
-      Properties.versionNumberString != "2.12.4") {
+    if (!BuildInfo.scalaCompilerVersion.startsWith("2.11") &&
+      BuildInfo.scalaCompilerVersion != "2.12.4") {
       settings.processArguments(
         List("-Ycache-plugin-class-loader:last-modified"),
         processAll = true

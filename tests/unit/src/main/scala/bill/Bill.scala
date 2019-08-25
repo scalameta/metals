@@ -33,10 +33,10 @@ import scala.reflect.io.AbstractFile
 import scala.reflect.io.VirtualFile
 import scala.tools.nsc
 import scala.tools.nsc.reporters.StoreReporter
-import scala.util.Properties
 import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
+import scala.meta.internal.mtags
 import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.io.AbsolutePath
 
@@ -85,7 +85,7 @@ object Bill {
     val target: BuildTarget = {
       val scalaTarget = new ScalaBuildTarget(
         "org.scala-lang",
-        Properties.versionNumberString,
+        mtags.BuildInfo.scalaCompilerVersion,
         "2.12",
         ScalaPlatform.JVM,
         scalaJars
@@ -183,7 +183,7 @@ object Bill {
               new Dependency(
                 "org.scala-lang",
                 "scala-library",
-                Properties.versionNumberString
+                mtags.BuildInfo.scalaCompilerVersion
               )
             )
           )

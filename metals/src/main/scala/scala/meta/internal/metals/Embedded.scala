@@ -7,6 +7,7 @@ import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.ServiceLoader
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
@@ -119,10 +120,24 @@ object Embedded {
       s"mtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
       BuildInfo.metalsVersion
     )
-    val settings = downloadSettings(pc)
+    val needsFullClasspath = !scalac.isSemanticdbEnabled
+    val dependency =
+      if (needsFullClasspath) pc
+      else pc.withTransitive(false)
+    val settings = downloadSettings(dependency)
     val jars = CoursierSmall.fetch(settings)
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
-    val allJars = Iterator(jars, scalaJars).flatten
+    val semanticdbJars =
+      if (needsFullClasspath) Nil
+      else {
+        scalac.getOptions.asScala.collect {
+          case opt
+              if opt.startsWith("-Xplugin:") &&
+                opt.contains("semanticdb-scalac") =>
+            Paths.get(opt.stripPrefix("-Xplugin:"))
+        }
+      }
+    val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
     val allURLs = allJars.map(_.toUri.toURL).toArray
     // Share classloader for a subset of types.
     val parent =

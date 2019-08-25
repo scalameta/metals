@@ -22,7 +22,6 @@ inThisBuild(
     scalacOptions ++= List(
       "-target:jvm-1.8",
       "-Yrangepos",
-      "-deprecation",
       // -Xlint is unusable because of
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused:imports"
@@ -195,9 +194,14 @@ lazy val mtags = project
           if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
           otherwise = List("com.lihaoyi" %% "pprint" % "0.5.5")
         )
-    }
+    },
+    buildInfoPackage := "scala.meta.internal.mtags",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "scalaCompilerVersion" -> scalaVersion.value
+    )
   )
   .dependsOn(interfaces)
+  .enablePlugins(BuildInfoPlugin)
 
 lazy val metals = project
   .settings(
