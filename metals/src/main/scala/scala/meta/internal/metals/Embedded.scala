@@ -7,7 +7,6 @@ import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.ServiceLoader
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration

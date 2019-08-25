@@ -418,9 +418,12 @@ def crossPublishLocal(scalaV: String) = Def.task[Unit] {
       ),
       state.value
     )
-  Project
+  val (s, _) = Project
     .extract(newState)
     .runTask(publishLocal.in(mtags), newState)
+  Project
+    .extract(s)
+    .runTask(publishLocal.in(interfaces), s)
 }
 lazy val slow = project
   .in(file("tests/slow"))
