@@ -22,7 +22,6 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
-import scala.tools.nsc.Properties
 import scala.concurrent.Future
 
 /**

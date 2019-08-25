@@ -23,7 +23,6 @@ import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 import scala.meta.pc.PresentationCompilerConfig
-import scala.util.Properties
 import java.util.concurrent.CompletableFuture
 import scala.meta.pc.DefinitionResult
 import scala.collection.Seq
