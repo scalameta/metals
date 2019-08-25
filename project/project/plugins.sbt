@@ -1,1 +1,1 @@
-addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.1.0-M13-4")
+addSbtPlugin("io.get-coursier" % "sbt-coursier" % "2.0.0-RC3-3")
