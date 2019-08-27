@@ -122,7 +122,7 @@ class Messages(icons: Icons) {
     def learnMoreUrl: String = Urls.docs("import-build")
     def params(tool: BuildTool): ShowMessageRequestParams = {
       def toFixMessage =
-        s"To fix this problem, upgrade to $tool ${tool.minimumVersion} "
+        s"To fix this problem, upgrade to $tool ${tool.recommendedVersion} "
       val params = new ShowMessageRequestParams()
       params.setMessage(
         s"Automatic build import is not supported for $tool ${tool.version}. $toFixMessage"
@@ -272,10 +272,10 @@ class Messages(icons: Icons) {
     def title: String =
       "Add ';' to search library dependencies"
     def detail: String =
-      """|The workspace/symbol feature ("Go to symbol in workspace") allows you to search for 
+      """|The workspace/symbol feature ("Go to symbol in workspace") allows you to search for
          |classes, traits and objects that are defined in your workspace as well as library dependencies.
          |
-         |By default, a query searches only for symbols defined in this workspace. Include a semicolon 
+         |By default, a query searches only for symbols defined in this workspace. Include a semicolon
          |character `;` in the query to search for symbols in library dependencies.
          |
          |Examples:

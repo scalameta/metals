@@ -132,6 +132,8 @@ case class GradleBuildTool() extends BuildTool {
 
   override def minimumVersion: String = "3.0.0"
 
+  override def recommendedVersion: String = version
+
   override def toString: String = "Gradle"
 
   def executableName = "gradle"

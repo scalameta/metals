@@ -18,6 +18,8 @@ abstract class BuildTool {
 
   def minimumVersion: String
 
+  def recommendedVersion: String
+
   protected lazy val tempDir = {
     val dir = Files.createTempDirectory("metals")
     dir.toFile.deleteOnExit()
