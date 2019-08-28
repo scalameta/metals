@@ -935,28 +935,17 @@ trait Completions { this: MetalsGlobal =>
         isParamName(member.sym.name.toString().trim())
       }
 
-      private def defaultLiteral(paramType: Type) =
-        paramType.dealiasWiden match {
-          case TypeRef(ThisType(pkg), cls, _) =>
-            val pkgName = pkg.name.toString
-            val clsName = cls.name.toString()
-            Arg.defaultValues.getOrElse(s"$pkgName.$clsName", "???")
-          case _ => "???"
-        }
-
       private def matchingTypesInScope(
           paramType: Type
       ): List[String] = {
         completions match {
           case CompletionResult.ScopeMembers(positionDelta, results, name) =>
-            val allResults = results
+            results
               .filter(
                 mem =>
                   mem.sym.tpe.toLongString == paramType.toLongString && mem.sym.isTerm
               )
               .map(_.sym.name.toString().trim())
-            if (allResults.size == 0) List(defaultLiteral(paramType))
-            else allResults
           case _ =>
             Nil
         }
@@ -966,8 +955,10 @@ trait Completions { this: MetalsGlobal =>
         val matchingType = matchingTypesInScope(param.tpe)
         if (matchingType.size == 1) {
           s":${matchingType.head}"
-        } else {
+        } else if (matchingType.size > 1) {
           s"|${matchingType.mkString(",")}|"
+        } else {
+          ":???"
         }
       }
 
@@ -1013,21 +1004,6 @@ trait Completions { this: MetalsGlobal =>
       override def contribute: List[Member] = {
         params.map(param => new NamedArgMember(param)) ::: findPossibleDefaults() ::: fillAllFields()
       }
-    }
-
-    object Arg {
-      val defaultValues = Map(
-        "scala.Int" -> "0",
-        "scala.Long" -> "0l",
-        "scala.Short" -> "0",
-        "scala.Byte" -> "0",
-        "scala.Double" -> "0.0",
-        "scala.Float" -> "0.0f",
-        "scala.Boolean" -> "false",
-        "lang.String" -> "\"\"",
-        "scala.Char" -> "''",
-        "scala.Option" -> "None"
-      )
     }
 
     /**

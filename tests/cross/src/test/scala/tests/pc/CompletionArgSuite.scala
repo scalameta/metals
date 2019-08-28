@@ -10,11 +10,10 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|assertion = : Boolean
-       |assertion = false : Boolean
        |Main arg
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(3)
   )
 
   check(
@@ -24,11 +23,10 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|message = : => Any
-       |message = ??? : => Any
        |Main arg1
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(3)
   )
 
   check(
@@ -38,11 +36,10 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|message = : => Any
-       |message = ??? : => Any
        |Main arg2
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(3)
   )
 
   def user: String =
@@ -63,12 +60,10 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|age = : Int
        |followers = : Int
-       |age = 0 : Int
-       |followers = 0 : Int
        |Main arg3
        |User arg3
        |""".stripMargin,
-    topLines = Option(6)
+    topLines = Option(4)
   )
 
   check(
@@ -81,11 +76,9 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|age = : Int
        |followers = : Int
-       |age = 0 : Int
-       |followers = 0 : Int
        |Main arg4
        |""".stripMargin,
-    topLines = Option(5)
+    topLines = Option(3)
   )
 
   check(
@@ -98,12 +91,10 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|address = : String
        |followers = : Int
-       |address = "" : String
-       |followers = 0 : Int
        |Main arg5
        |User arg5
        |""".stripMargin,
-    topLines = Option(6)
+    topLines = Option(4)
   )
 
   check(
@@ -129,10 +120,9 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|x = : Int
-       |x = 0 : Int
        |Main arg7
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(2)
   )
 
   check(
@@ -143,11 +133,10 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|suffix = : String
-       |suffix = "" : String
        |Main arg8
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(3)
   )
 
   check(
@@ -159,11 +148,10 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|end = : Int
-       |end = 0 : Int
        |Main arg9
        |:: scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(4)
+    topLines = Option(3)
   )
 
   check(
@@ -174,9 +162,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|address = : String
-       |address = "" : String
        |""".stripMargin,
-    topLines = Option(2)
+    topLines = Option(1)
   )
 
   check(
@@ -187,7 +174,6 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|banana = : Int
-       |banana = 0 : Int
        |""".stripMargin
   )
 
@@ -274,14 +260,15 @@ object CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
-    "auto-default",
+    "auto-not-found",
     s"""|object Main {
-        |  def foo(argument : Int, other : String, isTrue: Boolean, opt : Option[String]) : Int = argument
+        |  val number = 234
+        |  def foo(argument : Int = 123, other : String = "", isTrue: Boolean, opt : Option[String]) : Int = argument
         |  ___
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1:0}, other = ${2:\"\"}, isTrue = ${3:false}, opt = ${4:None})"
+    "foo(argument = ${1:number}, other = ${2:???}, isTrue = ${3:???}, opt = ${4:???})"
   )
 
   checkEditLine(
