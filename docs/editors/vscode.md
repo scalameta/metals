@@ -42,10 +42,11 @@ variables.
 
 ## Configure Java version
 
-The VS Code plugin uses by default the `JAVA_HOME` environment variable (via
+The VS Code plugin uses
 [`find-java-home`](https://www.npmjs.com/package/find-java-home)) to locate the
-`java` executable. Metals only works with Java 8 so this executable cannot point
-to another version such as Java 11.
+`java` executable for Java 8. If you have JAVA_HOME set it will use that first.
+Metals also works with Java 11, but currently its location needs to be
+explicitly overriden in settings.
 
 To override the default Java home location, update the "Java Home" variable to
 in the settings menu.
@@ -53,7 +54,7 @@ in the settings menu.
 ![Java Home setting](https://i.imgur.com/sKrPKk2.png)
 
 If this setting is defined, the VS Code plugin uses the custom path instead of
-the `JAVA_HOME` environment variable.
+searching for Java home.
 
 ### macOS
 
