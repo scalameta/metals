@@ -103,7 +103,7 @@ functionality.
     <td>Formatting</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
