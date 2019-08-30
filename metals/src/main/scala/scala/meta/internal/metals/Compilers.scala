@@ -57,16 +57,20 @@ class Compilers(
     scribe.info(
       "no build target: using presentation compiler with only scala-library"
     )
-    configure(new ScalaPresentationCompiler()).newInstance(
+    val compiler = configure(new ScalaPresentationCompiler()).newInstance(
       s"metals-default-${mtags.BuildInfo.scalaCompilerVersion}",
       PackageIndex.scalaLibrary.asJava,
       Nil.asJava
     )
+    ramboCancelable = Cancelable(() => compiler.shutdown())
+    compiler
   }
+  var ramboCancelable = Cancelable.empty
 
   override def cancel(): Unit = {
     Cancelable.cancelEach(cache.values)(_.shutdown())
     cache.clear()
+    ramboCancelable.cancel()
   }
   def restartAll(): Unit = {
     val count = cache.size

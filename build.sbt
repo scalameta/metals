@@ -86,6 +86,7 @@ inThisBuild(
     ),
     testFrameworks := List(),
     resolvers += Resolver.sonatypeRepo("public"),
+    dependencyOverrides += V.guava,
     // faster publishLocal:
     publishArtifact.in(packageDoc) := sys.env.contains("CI"),
     publishArtifact.in(packageSrc) := sys.env.contains("CI"),
@@ -150,6 +151,8 @@ lazy val V = new {
   def supportedScalaVersions =
     Seq(scala213, "2.12.8", scala212) ++ deprecatedScalaVersions
   def deprecatedScalaVersions = Seq("2.12.7", scala211)
+  def guava = "com.google.guava" % "guava" % "28.0-jre"
+  def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.0"
 }
 
 skip.in(publish) := true
@@ -160,7 +163,7 @@ lazy val interfaces = project
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     libraryDependencies ++= List(
-      "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.7.1"
+      V.lsp4j
     ),
     crossVersion := CrossVersion.disabled
   )
@@ -212,7 +215,7 @@ lazy val metals = project
       // Java dependencies
       // =================
       // for bloom filters
-      "com.google.guava" % "guava" % "27.0.1-jre",
+      V.guava,
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.9",
       // for file watching
@@ -233,7 +236,7 @@ lazy val metals = project
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       // for LSP
-      "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.5.0",
+      V.lsp4j,
       // for producing SemanticDB from Java source files
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9",
       // for finding paths of global log/cache directories
