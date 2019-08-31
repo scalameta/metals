@@ -28,13 +28,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |option map f getOrElse ifEmpty
        |```""".stripMargin
 
-  checkDoc(
-    "curry",
-    """
-      |object a {
-      |  Option(1).fold("")(_ => @@)
-      |}
-    """.stripMargin,
+  val foldOlderDocs1 =
     """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
        | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
        | expression `ifEmpty`.
@@ -50,18 +44,27 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |                       ^^^^^^^^^^^
        |  @param ifEmpty the expression to evaluate if empty.
        |  @param f the function to apply if nonempty.
-       |""".stripMargin,
+       |""".stripMargin
+
+  checkDoc(
+    "curry",
+    """
+      |object a {
+      |  Option(1).fold("")(_ => @@)
+      |}
+    """.stripMargin,
+    s"""$foldLatestDocs
+       |**Parameters**
+       |- `ifEmpty`: the expression to evaluate if empty.
+       |- `f`: the function to apply if nonempty.
+       |fold[B](ifEmpty: => B)(f: Int => B): B
+       |                       ^^^^^^^^^^^
+       |  @param ifEmpty the expression to evaluate if empty.
+       |  @param f the function to apply if nonempty.
+    """.stripMargin,
     compat = Map(
-      "2.12.9" ->
-        s"""$foldLatestDocs
-           |**Parameters**
-           |- `ifEmpty`: the expression to evaluate if empty.
-           |- `f`: the function to apply if nonempty.
-           |fold[B](ifEmpty: => B)(f: Int => B): B
-           |                       ^^^^^^^^^^^
-           |  @param ifEmpty the expression to evaluate if empty.
-           |  @param f the function to apply if nonempty.
-      """.stripMargin,
+      "2.12.8" -> foldOlderDocs1,
+      "2.12.7" -> foldOlderDocs1,
       "2.13" ->
         s"""$foldLatestDocs
            |**Parameters**
@@ -71,17 +74,11 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |                       ^^^^^^^^^^^
            |  @param ifEmpty the expression to evaluate if empty.
            |  @param f the function to apply if nonempty.
-      """.stripMargin
+        """.stripMargin
     )
   )
 
-  checkDoc(
-    "curry2",
-    """
-      |object a {
-      |  Option(1).fold("@@")
-      |}
-    """.stripMargin,
+  val foldOlderDocs2 =
     """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
        | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
        | expression `ifEmpty`.
@@ -97,18 +94,27 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |        ^^^^^^^^^^^^^
        |  @param ifEmpty String the expression to evaluate if empty.
        |  @param f the function to apply if nonempty.
-       |""".stripMargin,
+       |""".stripMargin
+
+  checkDoc(
+    "curry2",
+    """
+      |object a {
+      |  Option(1).fold("@@")
+      |}
+    """.stripMargin,
+    s"""|$foldLatestDocs
+        |**Parameters**
+        |- `ifEmpty`: the expression to evaluate if empty.
+        |- `f`: the function to apply if nonempty.
+        |fold[B](ifEmpty: => B)(f: Int => B): B
+        |        ^^^^^^^^^^^^^
+        |  @param ifEmpty String the expression to evaluate if empty.
+        |  @param f the function to apply if nonempty.
+        |""".stripMargin,
     compat = Map(
-      "2.12.9" ->
-        s"""|$foldLatestDocs
-            |**Parameters**
-            |- `ifEmpty`: the expression to evaluate if empty.
-            |- `f`: the function to apply if nonempty.
-            |fold[B](ifEmpty: => B)(f: Int => B): B
-            |        ^^^^^^^^^^^^^
-            |  @param ifEmpty String the expression to evaluate if empty.
-            |  @param f the function to apply if nonempty.
-            |""".stripMargin,
+      "2.12.8" -> foldOlderDocs2,
+      "2.12.7" -> foldOlderDocs2,
       "2.13" ->
         s"""|$foldLatestDocs
             |**Parameters**

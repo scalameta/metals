@@ -616,6 +616,11 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |isDefined: Boolean
        |""".stripMargin
 
+  val isDefinedOlderDocs =
+    """|> Returns true if the option is an instance of [scala.Some](scala.Some), false otherwise.
+       |isDefined: Boolean
+       |""".stripMargin
+
   check(
     "scala12",
     """
@@ -623,12 +628,11 @@ object CompletionDocSuite extends BaseCompletionSuite {
       |  Option(1).isDefined@@
       |}
     """.stripMargin,
-    """|> Returns true if the option is an instance of [scala.Some](scala.Some), false otherwise.
-       |isDefined: Boolean
-       |""".stripMargin,
+    isDefinedLatestDocs,
     includeDocs = true,
     compat = Map(
-      "2.12.9" -> isDefinedLatestDocs,
+      "2.12.8" -> isDefinedOlderDocs,
+      "2.12.7" -> isDefinedOlderDocs,
       "2.13" -> isDefinedLatestDocs
     )
   )
