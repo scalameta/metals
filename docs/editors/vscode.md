@@ -123,6 +123,19 @@ without opening the sidebar.
 As you type, the symbol outline is also visible at the top of the file.
 ![Document Symbols Outline](https://i.imgur.com/L217n4q.png)
 
+## Enable onTypeFormatting for multiline string formatting
+
+![pipes](https://i.imgur.com/iXGYOf0.gif)
+
+To properly support adding `|` in multiline strings we are using the
+`onTypeFormatting` method. To enable the functionality you need to enable
+`onTypeFormatting` inside Visual Studio Code.
+
+This needs to be done in settings by checking
+`Editor: Format On Type`:
+
+![on-type](https://i.imgur.com/4eVvSP5.gif)
+
 ## Coming from IntelliJ
 
 Install the
