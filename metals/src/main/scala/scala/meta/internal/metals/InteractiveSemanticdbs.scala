@@ -19,7 +19,6 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.tokenizers.PlatformTokenizerCache
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.tools.nsc.interactive.Global
 
 /**
  * Produces SemanticDBs on-demand by using the presentation compiler.
@@ -45,11 +44,6 @@ final class InteractiveSemanticdbs(
     with Semanticdbs {
   import messages._
   private val activeDocument = new AtomicReference[Option[String]](None)
-  // Not ConcurrentHashMap since it can hit on deadlocks inside computeIfAbsent
-  // when the "if absent" function is slow.
-  private val globalCache = Collections.synchronizedMap(
-    new java.util.HashMap[BuildTargetIdentifier, Global]()
-  )
   private val textDocumentCache = Collections.synchronizedMap(
     new java.util.HashMap[AbsolutePath, s.TextDocument]()
   )
@@ -67,8 +61,6 @@ final class InteractiveSemanticdbs(
 
   def reset(): Unit = {
     textDocumentCache.clear()
-    globalCache.values.asScala.foreach(_.askShutdown())
-    globalCache.clear()
   }
 
   override def cancel(): Unit = {
