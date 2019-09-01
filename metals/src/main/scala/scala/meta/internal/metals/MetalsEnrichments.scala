@@ -216,8 +216,6 @@ object MetalsEnrichments
   }
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
-    def filename: String = path.toNIO.getFileName.toString
-
     def sourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
 
     /**

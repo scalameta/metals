@@ -1,7 +1,9 @@
 package scala.meta.internal.builds
-import java.nio.file.Files
+
 import java.security.MessageDigest
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.mtags.ListFiles
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 object MavenDigest extends Digestable {
   override protected def digestWorkspace(
@@ -9,12 +11,11 @@ object MavenDigest extends Digestable {
       digest: MessageDigest
   ): Boolean = {
     Digest.digestFile(workspace.resolve("pom.xml"), digest)
-    Files.walk(workspace.toNIO).allMatch { file =>
-      if (file.getFileName.toString == "pom.xml") {
-        Digest.digestFile(AbsolutePath(file), digest)
-      } else {
-        true
+    ListFiles.foreach(workspace) { file =>
+      if (file.filename == "pom.xml") {
+        Digest.digestFile(file, digest)
       }
     }
+    true
   }
 }

@@ -1,10 +1,12 @@
 package scala.meta.internal.builds
+
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.mtags.ListFiles
+import scala.meta.internal.jdk.CollectionConverters._
 import java.security.MessageDigest
 import java.nio.file.Files
 import java.util.stream.Collectors
 import java.nio.file.Path
-import scala.meta.internal.jdk.CollectionConverters._
 
 object GradleDigest extends Digestable {
   override protected def digestWorkspace(
@@ -24,9 +26,10 @@ object GradleDigest extends Digestable {
   }
 
   def digestBuildSrc(path: AbsolutePath, digest: MessageDigest): Boolean = {
-    Files.walk(path.toNIO).allMatch { file =>
-      Digest.digestFile(AbsolutePath(file), digest)
+    ListFiles.foreach(path) { file =>
+      Digest.digestFile(file, digest)
     }
+    true
   }
 
   def digestSubProjects(
