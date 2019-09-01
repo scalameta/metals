@@ -1304,7 +1304,7 @@ class MetalsLanguageServer(
   private def indexWorkspaceSources(): Unit = {
     for {
       (sourceItem, targets) <- buildTargets.sourceItemsToBuildTargets
-      source <- ListFiles(sourceItem)
+      source <- WalkFiles(sourceItem)
       if source.isScalaOrJava
     } {
       targets.asScala.foreach { target =>

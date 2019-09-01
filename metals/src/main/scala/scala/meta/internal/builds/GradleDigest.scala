@@ -1,7 +1,7 @@
 package scala.meta.internal.builds
 
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.mtags.ListFiles
+import scala.meta.internal.mtags.WalkFiles
 import scala.meta.internal.jdk.CollectionConverters._
 import java.security.MessageDigest
 import java.nio.file.Files
@@ -26,7 +26,7 @@ object GradleDigest extends Digestable {
   }
 
   def digestBuildSrc(path: AbsolutePath, digest: MessageDigest): Boolean = {
-    ListFiles.foreach(path) { file =>
+    WalkFiles.foreach(path) { file =>
       Digest.digestFile(file, digest)
     }
     true

@@ -53,7 +53,7 @@ final case class OnDemandSymbolIndex(
   override def addSourceJar(jar: AbsolutePath): Unit = tryRun {
     if (sourceJars.addEntry(jar)) {
       FileIO.withJarFileSystem(jar, create = false) { root =>
-        ListFiles.foreach(root) { source =>
+        WalkFiles.foreach(root) { source =>
           if (source.toLanguage.isScala) {
             try {
               addSourceFile(source, None)

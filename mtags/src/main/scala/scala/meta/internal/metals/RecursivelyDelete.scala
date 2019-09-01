@@ -31,10 +31,13 @@ object RecursivelyDelete {
               exc: IOException
           ): FileVisitResult = {
             val stream = Files.list(dir)
-            if (!stream.iterator().hasNext) {
-              Files.delete(dir)
+            try {
+              if (!stream.iterator().hasNext) {
+                Files.delete(dir)
+              }
+            } finally {
+              stream.close()
             }
-            stream.close()
             super.postVisitDirectory(dir, exc)
           }
         }

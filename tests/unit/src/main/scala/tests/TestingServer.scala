@@ -850,7 +850,10 @@ final class TestingServer(
             dir: Path,
             exc: IOException
         ): FileVisitResult = {
-          val isEmpty = !Files.list(dir).iterator().hasNext
+          val ls = Files.list(dir)
+          val isEmpty =
+            try !ls.iterator().hasNext
+            finally ls.close()
           if (isEmpty) {
             Files.delete(dir)
           }
