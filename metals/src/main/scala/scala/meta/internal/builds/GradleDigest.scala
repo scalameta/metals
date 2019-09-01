@@ -24,7 +24,7 @@ object GradleDigest extends Digestable {
   }
 
   def digestBuildSrc(path: AbsolutePath, digest: MessageDigest): Boolean = {
-    Files.walk(path.toNIO).iterator().asScala.forall { file =>
+    Files.walk(path.toNIO).allMatch { file =>
       Digest.digestFile(AbsolutePath(file), digest)
     }
   }
