@@ -7,6 +7,7 @@ import java.nio.file.Path
 import scala.meta.internal.jdk.CollectionConverters._
 
 object GradleDigest extends Digestable {
+
   override protected def digestWorkspace(
       workspace: AbsolutePath,
       digest: MessageDigest
@@ -24,8 +25,10 @@ object GradleDigest extends Digestable {
   }
 
   def digestBuildSrc(path: AbsolutePath, digest: MessageDigest): Boolean = {
-    Files.walk(path.toNIO).iterator().asScala.forall { file =>
-      Digest.digestFile(AbsolutePath(file), digest)
+    walkDirectory(path.toNIO) { stream =>
+      stream.allMatch { file =>
+        Digest.digestFile(AbsolutePath(file), digest)
+      }
     }
   }
 
@@ -33,19 +36,24 @@ object GradleDigest extends Digestable {
       workspace: AbsolutePath,
       digest: MessageDigest
   ): Boolean = {
-    val (subprojects, dirs) = Files
-      .list(workspace.toNIO)
-      .filter(Files.isDirectory(_))
-      .collect(Collectors.toList[Path])
-      .asScala
-      .partition { file =>
-        Files
-          .list(file)
-          .anyMatch { path =>
-            val stringPath = path.toString
-            stringPath.endsWith(".gradle") || stringPath.endsWith("gradle.kts")
-          }
+    val allDirectories = listFiles(workspace.toNIO) { stream =>
+      stream
+        .filter(Files.isDirectory(_))
+        .collect(Collectors.toList[Path])
+        .asScala
+    }
+
+    val (subprojects, dirs) = allDirectories.partition { dir =>
+      listFiles(dir) { stream =>
+        stream.anyMatch { path =>
+          val stringPath = path.toString
+          stringPath.endsWith(".gradle") || stringPath.endsWith(
+            "gradle.kts"
+          )
+        }
       }
+    }
+
     /*
        If a dir contains a gradle file we need to treat is as a workspace
      */

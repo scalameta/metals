@@ -13,6 +13,7 @@ import scala.meta.tokens.Token
 import scala.util.control.NonFatal
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.xml.Node
+import java.nio.file.Path
 
 case class Digest(
     md5: String,
@@ -20,7 +21,32 @@ case class Digest(
     millis: Long
 )
 
-object Digest {
+trait ClosableOperations {
+  protected def listFiles[T](
+      directory: Path
+  )(function: (java.util.stream.Stream[Path]) => T): T =
+    withClosedStream(directory, Files.list(directory), function)
+
+  protected def walkDirectory[T](
+      directory: Path
+  )(function: (java.util.stream.Stream[Path]) => T): T =
+    withClosedStream(directory, Files.walk(directory), function)
+
+  private def withClosedStream[T](
+      directory: Path,
+      producer: => java.util.stream.Stream[Path],
+      function: (java.util.stream.Stream[Path]) => T
+  ): T = {
+    val stream = producer
+    try {
+      function(stream)
+    } finally {
+      stream.close()
+    }
+  }
+}
+
+object Digest extends ClosableOperations {
 
   /**
    * Bump up this version if parameters outside of the sbt sources themselves require
@@ -62,8 +88,10 @@ object Digest {
   ): Boolean = {
     if (!path.isDirectory) true
     else {
-      Files.list(path.toNIO).iterator().asScala.forall { file =>
-        digestFile(AbsolutePath(file), digest)
+      listFiles(path.toNIO) {
+        _.allMatch { file =>
+          digestFile(AbsolutePath(file), digest)
+        }
       }
     }
   }
@@ -176,7 +204,7 @@ object Digest {
   }
 }
 
-trait Digestable {
+trait Digestable extends ClosableOperations {
   def current(workspace: AbsolutePath): Option[String] = {
     if (!workspace.isDirectory) None
     else {
@@ -197,4 +225,5 @@ trait Digestable {
       absolutePath: AbsolutePath,
       digest: MessageDigest
   ): Boolean
+
 }

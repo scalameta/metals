@@ -1,12 +1,10 @@
 package scala.meta.internal.builds
 
-import java.nio.file.{Files, Path}
 import java.security.MessageDigest
-
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.builds.Digest.digestScala
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
+import java.nio.file.Path
 
 object SbtDigest extends Digestable {
   val sbtExtension = "sbt"
@@ -29,7 +27,7 @@ object SbtDigest extends Digestable {
     if (!path.isDirectory) {
       true
     } else {
-      Files.list(path.toNIO).iterator().asScala.forall(digestSbtFile(digest))
+      listFiles(path.toNIO) { _.allMatch(digestSbtFile(digest)) }
     }
   }
 
