@@ -27,9 +27,7 @@ object SbtDigest extends Digestable {
     if (!path.isDirectory) {
       true
     } else {
-      var success = true
-      ListFiles.foreach(path)(file => success &= digestSbtFile(digest)(file))
-      success
+      ListFiles.forall(path)(file => digestSbtFile(digest)(file))
     }
   }
 
