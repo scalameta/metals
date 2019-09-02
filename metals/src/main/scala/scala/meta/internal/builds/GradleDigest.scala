@@ -1,9 +1,8 @@
 package scala.meta.internal.builds
 
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.mtags.WalkFiles
 import java.security.MessageDigest
-import scala.meta.internal.mtags.ListFiles
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
 
 object GradleDigest extends Digestable {
   override protected def digestWorkspace(
@@ -23,33 +22,28 @@ object GradleDigest extends Digestable {
   }
 
   def digestBuildSrc(path: AbsolutePath, digest: MessageDigest): Boolean = {
-    WalkFiles.foreach(path) { file =>
+    path.listRecursive.forall { file =>
       Digest.digestFile(file, digest)
     }
-    true
   }
 
   def digestSubProjects(
       workspace: AbsolutePath,
       digest: MessageDigest
   ): Boolean = {
-    val directories = ListFiles(workspace).filter(_.isDirectory)
+    val directories = workspace.list.filter(_.isDirectory).toList
 
     val (subprojects, dirs) = directories.partition { file =>
-      ListFiles
-        .exists(file) { path =>
-          val stringPath = path.toString
-          stringPath.endsWith(".gradle") || stringPath.endsWith("gradle.kts")
-        }
+      file.list.exists { path =>
+        val stringPath = path.toString
+        stringPath.endsWith(".gradle") || stringPath.endsWith("gradle.kts")
+      }
     }
     /*
        If a dir contains a gradle file we need to treat is as a workspace
      */
     val isSuccessful = subprojects.forall { file =>
-      digestWorkspace(
-        file,
-        digest
-      )
+      digestWorkspace(file, digest)
     }
 
     /*

@@ -20,7 +20,6 @@ import scala.util.control.NonFatal
 import scala.util.Properties
 import java.nio.file.FileSystems
 import java.net.URI
-import scala.meta.internal.mtags.ListFiles
 
 /**
  * An index to lookup classfiles contained in a given classpath.
@@ -137,7 +136,7 @@ class PackageIndex() {
     for {
       pkg <- Files.newDirectoryStream(dir).iterator().asScala
       symbol = pkg.toString.stripPrefix("/packages/").replace('.', '/') + "/"
-      absoluteModuleLink <- ListFiles(AbsolutePath(pkg))
+      absoluteModuleLink <- AbsolutePath(pkg).list
     } {
       val moduleLink = absoluteModuleLink.toNIO
       val module =

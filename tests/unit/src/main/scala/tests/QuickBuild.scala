@@ -21,7 +21,6 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 import scala.util.matching.Regex
-import scala.meta.internal.mtags.ListFiles
 
 /**
  * A basic build tool for faster testing.
@@ -269,11 +268,9 @@ object QuickBuild {
       update(workspace.resolve("metals.json"))
       val bloopDirectory = workspace.resolve(".bloop").toNIO
       Files.createDirectories(bloopDirectory)
-      ListFiles.foreach(AbsolutePath(bloopDirectory)) { path =>
-        if (path.extension == "json") {
-          update(path)
-        }
-      }
+      AbsolutePath(bloopDirectory).list
+        .filter(_.extension == "json")
+        .foreach(json => update(json))
       MD5.bytesToHex(digest.digest())
     }
     if (oldDigest == newDigest) None
@@ -297,11 +294,9 @@ object QuickBuild {
           }
           val bloopDirectory = workspace.resolve(".bloop").toNIO
           Files.createDirectories(bloopDirectory)
-          ListFiles.foreach(AbsolutePath(bloopDirectory)) { path =>
-            if (path.extension == "json") {
-              path.delete()
-            }
-          }
+          AbsolutePath(bloopDirectory).list
+            .filter(_.extension == "json")
+            .foreach(json => json.delete())
           val bloopProjects = projects.map(_.toBloop(workspace))
           val byName = bloopProjects.map(p => p.name -> p).toMap
           val fullClasspathProjects = bloopProjects.map { p =>

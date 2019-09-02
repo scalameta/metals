@@ -5,7 +5,6 @@ import java.security.MessageDigest
 import scala.meta.internal.builds.Digest.digestScala
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.mtags.ListFiles
 
 object SbtDigest extends Digestable {
 
@@ -20,14 +19,11 @@ object SbtDigest extends Digestable {
     Digest.digestDirectory(project.resolve("project"), digest)
   }
 
-  def digestSbtFiles(
-      path: AbsolutePath,
-      digest: MessageDigest
-  ): Boolean = {
-    if (!path.isDirectory) {
-      true
+  def digestSbtFiles(path: AbsolutePath, digest: MessageDigest): Boolean = {
+    if (path.isDirectory) {
+      path.list.forall(file => digestSbtFile(digest)(file))
     } else {
-      ListFiles.forall(path)(file => digestSbtFile(digest)(file))
+      true
     }
   }
 

@@ -294,19 +294,11 @@ object MetalsEnrichments
       }
     }
 
-    def exists: Boolean = {
-      Files.exists(path.toNIO)
-    }
-
     def touch(): Unit = {
       if (!path.exists) {
-        parent.createDirectories()
+        path.parent.createDirectories()
         Files.createFile(path.toNIO)
       }
-    }
-
-    def parent: AbsolutePath = {
-      AbsolutePath(path.toNIO.getParent)
     }
 
     def createDirectories(): AbsolutePath = {
@@ -318,10 +310,9 @@ object MetalsEnrichments
     }
 
     def writeText(text: String): Unit = {
-      parent.createDirectories()
+      path.parent.createDirectories()
       Files.write(path.toNIO, text.getBytes(StandardCharsets.UTF_8))
     }
-
   }
 
   implicit class XtensionString(value: String) {
