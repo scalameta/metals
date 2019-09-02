@@ -92,6 +92,9 @@ example, for a v3.3.0 release, we create both v3.3.1 and v3.4.0.</li>
 <li><p>While waiting for Travis, draft the release notes:</p>
 <ul>
 <li>Copy <code>website/blog/2018-12-06-iron.md</code> as a template</li>
+<li>You might use <code>.bin/release_notes.py</code> script to generate merged PRs list. It
+requires the official Github library (<code>pip install PyGithub</code>) and you will
+also need to fill in tag names.</li>
 <li>Open a PR to the repo</li>
 <li><a href="https://github.com/scalameta/metals/releases/new">https://github.com/scalameta/metals/releases/new</a>.</li>
 </ul></li>
