@@ -1,4 +1,4 @@
-def localSnapshotVersion = "0.7.1-SNAPSHOT"
+def localSnapshotVersion = "0.7.3-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def crossSetting[A](

@@ -33,6 +33,9 @@ title: Making a release
 - While waiting for Travis, draft the release notes:
 
   - Copy `website/blog/2018-12-06-iron.md` as a template
+  - You might use `.bin/release_notes.py` script to generate merged PRs list. It
+    requires the official Github library (`pip install PyGithub`) and you will
+    also need to fill in tag names.
   - Open a PR to the repo
   - https://github.com/scalameta/metals/releases/new.
 
