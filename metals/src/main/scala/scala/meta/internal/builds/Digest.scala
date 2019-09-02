@@ -13,7 +13,7 @@ import scala.meta.tokens.Token
 import scala.util.control.NonFatal
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.xml.Node
-import scala.meta.internal.mtags.ListFiles
+import scala.meta.internal.mtags.JFiles
 
 case class Digest(
     md5: String,
@@ -63,11 +63,9 @@ object Digest {
   ): Boolean = {
     if (!path.isDirectory) true
     else {
-      var success = true
-      ListFiles.foreach(path) { file =>
-        success &= digestFile(file, digest)
+      JFiles.list(path).forall { file =>
+        digestFile(file, digest)
       }
-      success
     }
   }
 

@@ -168,6 +168,11 @@ lazy val interfaces = project
     crossVersion := CrossVersion.disabled
   )
 
+val genyVersion = Def.setting {
+  if (scalaVersion.value.startsWith("2.11")) "0.1.6"
+  else "0.1.8"
+}
+
 lazy val mtags = project
   .settings(
     moduleName := "mtags",
@@ -185,6 +190,7 @@ lazy val mtags = project
       "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
       "org.jsoup" % "jsoup" % "1.11.3", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.6.0", // for streaming hashing when indexing classpaths
+      "com.lihaoyi" %% "geny" % genyVersion.value,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     libraryDependencies ++= {
