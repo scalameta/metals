@@ -34,8 +34,13 @@ final class BuildTools(
     dir.isDirectory && {
       val ls = Files.list(dir.toNIO)
       val hasJsonFile =
-        ls.iterator().asScala.exists(_.getFileName.toString.endsWith(".json"))
-      ls.close()
+        try {
+          ls.iterator()
+            .asScala
+            .exists(_.getFileName.toString.endsWith(".json"))
+        } finally {
+          ls.close()
+        }
       hasJsonFile
     }
   }

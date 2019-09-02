@@ -1,15 +1,13 @@
 package scala.meta.internal.builds
 
-import java.nio.file.{Files, Path}
 import java.security.MessageDigest
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.builds.Digest.digestScala
-import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.mtags.ListFiles
 
 object SbtDigest extends Digestable {
-  val sbtExtension = "sbt"
 
   override protected def digestWorkspace(
       workspace: AbsolutePath,
@@ -29,14 +27,14 @@ object SbtDigest extends Digestable {
     if (!path.isDirectory) {
       true
     } else {
-      Files.list(path.toNIO).iterator().asScala.forall(digestSbtFile(digest))
+      var success = true
+      ListFiles.foreach(path)(file => success &= digestSbtFile(digest)(file))
+      success
     }
   }
 
-  private def digestSbtFile(digest: MessageDigest)(filePath: Path) = {
-    val path = AbsolutePath(filePath)
-    def ext = PathIO.extension(path.toNIO)
-    if (path.isFile && ext == sbtExtension) {
+  private def digestSbtFile(digest: MessageDigest)(path: AbsolutePath) = {
+    if (path.isFile && path.extension == "sbt") {
       digestScala(path, digest)
     } else {
       true

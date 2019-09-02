@@ -178,7 +178,7 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
     if (Files.isDirectory(path)) {
       val ls = Files.list(path)
       try ls.collect(Collectors.toList()).asScala
-      finally ls.close
+      finally ls.close()
     } else {
       Nil
     }
