@@ -117,6 +117,7 @@ case class GradleBuildTool() extends BuildTool {
       initScriptPath.toString,
       "bloopInstall"
     )
+
     userConfig().gradleScript match {
       case Some(script) =>
         script :: cmd
