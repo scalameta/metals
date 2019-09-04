@@ -131,8 +131,7 @@ To properly support adding `|` in multiline strings we are using the
 `onTypeFormatting` method. To enable the functionality you need to enable
 `onTypeFormatting` inside Visual Studio Code.
 
-This needs to be done in settings by checking
-`Editor: Format On Type`:
+This needs to be done in settings by checking `Editor: Format On Type`:
 
 ![on-type](https://i.imgur.com/4eVvSP5.gif)
 
