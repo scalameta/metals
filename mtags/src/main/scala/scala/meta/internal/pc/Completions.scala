@@ -243,6 +243,12 @@ trait Completions { this: MetalsGlobal =>
         }
     }
 
+  def completionsSymbol(name: String): Symbol = {
+    definitions.ScalaPackage
+      .newErrorSymbol(TermName(name))
+      .setInfo(NoType)
+  }
+
   def detailString(r: Member, history: ShortenedNames): String = {
     if (!r.sym.hasPackageFlag) {
       // Compute type parameters based on the qualifier.
@@ -403,8 +409,7 @@ trait Completions { this: MetalsGlobal =>
           CompletionPosition.None
         }
       } else {
-
-        CompletionPosition.Arg(ident, apply, pos, text)
+        CompletionPosition.Arg(ident, apply, pos, text, completions)
       }
     }
 
@@ -869,8 +874,14 @@ trait Completions { this: MetalsGlobal =>
       text.charAt(openDelim) == '{'
     }
 
-    case class Arg(ident: Ident, apply: Apply, pos: Position, text: String)
-        extends CompletionPosition {
+    case class Arg(
+        ident: Ident,
+        apply: Apply,
+        pos: Position,
+        text: String,
+        completions: CompletionResult
+    ) extends CompletionPosition {
+      val editRange = pos.withStart(ident.pos.start).withEnd(pos.start).toLSP
       val method = typedTreeAt(apply.fun.pos)
       val methodSym = method.symbol
       lazy val baseParams: List[Symbol] =
@@ -889,24 +900,25 @@ trait Completions { this: MetalsGlobal =>
             param.name
         }
         .toSet
-      lazy val params: List[Symbol] = {
-        val prefix = ident.name.toString.stripSuffix(CURSOR)
-        baseParams.iterator
-          .filterNot { param =>
-            isNamed(param.name) ||
-            param.name.containsChar('$') // exclude synthetic parameters
-          }
-          .filter(param => param.name.startsWith(prefix))
-          .toList
+      val prefix = ident.name.toString.stripSuffix(CURSOR)
+      lazy val allParams: List[Symbol] = {
+        baseParams.iterator.filterNot { param =>
+          isNamed(param.name) ||
+          param.name.containsChar('$') // exclude synthetic parameters
+        }.toList
       }
+      lazy val params = allParams.filter(param => param.name.startsWith(prefix))
       lazy val isParamName = params.iterator
         .map(_.name)
         .filterNot(isNamed)
         .map(_.toString().trim())
         .toSet
+
       override def isCandidate(member: Member): Boolean = true
+
       def isName(m: Member): Boolean =
         isParamName(m.sym.nameString.trim())
+
       override def compare(o1: Member, o2: Member): Int = {
         val byName = -java.lang.Boolean.compare(isName(o1), isName(o2))
         if (byName != 0) byName
@@ -917,12 +929,80 @@ trait Completions { this: MetalsGlobal =>
           )
         }
       }
+
       override def isPrioritized(member: Member): Boolean = {
         member.isInstanceOf[NamedArgMember] ||
         isParamName(member.sym.name.toString().trim())
       }
+
+      private def matchingTypesInScope(
+          paramType: Type
+      ): List[String] = {
+        completions match {
+          case CompletionResult.ScopeMembers(positionDelta, results, name) =>
+            results
+              .filter(
+                mem =>
+                  mem.sym.tpe.toLongString == paramType.toLongString && mem.sym.isTerm
+              )
+              .map(_.sym.name.toString().trim())
+          case _ =>
+            Nil
+        }
+      }
+
+      private def findDefaultValue(param: Symbol): String = {
+        val matchingType = matchingTypesInScope(param.tpe)
+        if (matchingType.size == 1) {
+          s":${matchingType.head}"
+        } else if (matchingType.size > 1) {
+          s"|${matchingType.mkString(",")}|"
+        } else {
+          ":???"
+        }
+      }
+
+      private def fillAllFields(): List[TextEditMember] = {
+        if (allParams.size > 1) {
+          val editText = allParams.zipWithIndex
+            .map {
+              case (param, index) =>
+                s"${param.name} = $${${index + 1}${findDefaultValue(param)}}"
+            }
+            .mkString(", ")
+          val edit = new l.TextEdit(editRange, editText)
+          List(
+            new TextEditMember(
+              filterText = prefix + "-autofill",
+              edit = edit,
+              methodSym,
+              label = Some("Autofill with default values")
+            )
+          )
+        } else {
+          List.empty
+        }
+      }
+
+      private def findPossibleDefaults(): List[TextEditMember] = {
+        params.flatMap { param =>
+          val allMemebers = matchingTypesInScope(param.tpe)
+          allMemebers.map { memberName =>
+            val editText = param.name + " = " + memberName
+            val edit = new l.TextEdit(editRange, editText)
+            new TextEditMember(
+              filterText = param.name.toString(),
+              edit = edit,
+              completionsSymbol(s"$param=$memberName"),
+              label = Some(editText),
+              detail = Some(" : " + param.tpe)
+            )
+          }
+        }
+      }
+
       override def contribute: List[Member] = {
-        params.map(param => new NamedArgMember(param))
+        params.map(param => new NamedArgMember(param)) ::: findPossibleDefaults() ::: fillAllFields()
       }
     }
 
@@ -1143,9 +1223,7 @@ trait Completions { this: MetalsGlobal =>
             editRange,
             "match {\n\tcase$0\n}"
           ),
-          definitions.ScalaPackage
-            .newErrorSymbol(TermName("match"))
-            .setInfo(NoType),
+          completionsSymbol("match"),
           label = Some("match"),
           command = metalsConfig.completionCommand().asScala
         )
