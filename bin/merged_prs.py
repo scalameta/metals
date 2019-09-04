@@ -27,6 +27,6 @@ for line in stdoutput.split("\n"):
 for pr in all_prs:
     pull = repo.get_pull(pr)
     print ("- %s" % pull.title)
-    print ("[\#%s](%s)" % (pull.number, pull.url))
+    print ("[\#%s](%s)" % (pull.number, pull.html_url))
     print ("([%s](https://github.com/%s))" % (pull.user.login, pull.user.login))
 
