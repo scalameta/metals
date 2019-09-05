@@ -144,7 +144,7 @@ object Embedded {
       case opt
           if opt.startsWith("-Xplugin:") &&
             opt.contains("semanticdb-scalac") &&
-            opt.contains(BuildInfo.scalametaVersion) =>
+            opt.contains(BuildInfo.semanticdbVersion) =>
         Paths.get(opt.stripPrefix("-Xplugin:"))
     }
     val dependency =
