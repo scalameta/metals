@@ -42,6 +42,9 @@
       "editors/atom": {
         "title": "Atom"
       },
+      "editors/eclipse": {
+        "title": "Eclipse"
+      },
       "editors/emacs": {
         "title": "Emacs"
       },
