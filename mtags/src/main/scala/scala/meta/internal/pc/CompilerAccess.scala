@@ -121,6 +121,12 @@ class CompilerAccess(
     } catch {
       case InterruptException() =>
         default
+      case ShutdownReq =>
+        retryWithCleanCompiler(
+          thunk,
+          default,
+          "an error in the Scala compiler"
+        )
       case NonFatal(e) =>
         val isParadiseRelated = e.getStackTrace
           .exists(_.getClassName.startsWith("org.scalamacros"))
