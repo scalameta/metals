@@ -99,7 +99,8 @@ final class Embedded(
 
 object Embedded {
   def downloadSettings(
-      dependency: Dependency
+      dependency: Dependency,
+      scalaVersion: String
   ): Settings =
     new coursiersmall.Settings()
       .withTtl(Some(Duration.Inf))
@@ -108,6 +109,25 @@ object Embedded {
         List(
           coursiersmall.Repository.SonatypeReleases,
           coursiersmall.Repository.SonatypeSnapshots
+        )
+      )
+      .withForceVersions(
+        List(
+          new Dependency(
+            "org.scala-lang",
+            "scala-library",
+            scalaVersion
+          ),
+          new Dependency(
+            "org.scala-lang",
+            "scala-compiler",
+            scalaVersion
+          ),
+          new Dependency(
+            "org.scala-lang",
+            "scala-reflect",
+            scalaVersion
+          )
         )
       )
 
@@ -120,23 +140,19 @@ object Embedded {
       s"mtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
       BuildInfo.metalsVersion
     )
-    val needsFullClasspath = !scalac.isSemanticdbEnabled
+    val semanticdbJars = scalac.getOptions.asScala.collect {
+      case opt
+          if opt.startsWith("-Xplugin:") &&
+            opt.contains("semanticdb-scalac") &&
+            opt.contains(BuildInfo.semanticdbVersion) =>
+        Paths.get(opt.stripPrefix("-Xplugin:"))
+    }
     val dependency =
-      if (needsFullClasspath) pc
+      if (semanticdbJars.isEmpty) pc
       else pc.withTransitive(false)
-    val settings = downloadSettings(dependency)
+    val settings = downloadSettings(dependency, info.getScalaVersion())
     val jars = CoursierSmall.fetch(settings)
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
-    val semanticdbJars =
-      if (needsFullClasspath) Nil
-      else {
-        scalac.getOptions.asScala.collect {
-          case opt
-              if opt.startsWith("-Xplugin:") &&
-                opt.contains("semanticdb-scalac") =>
-            Paths.get(opt.stripPrefix("-Xplugin:"))
-        }
-      }
     val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
     val allURLs = allJars.map(_.toUri.toURL).toArray
     // Share classloader for a subset of types.
@@ -153,33 +169,15 @@ object Embedded {
         "ch.epfl.scala",
         "bloop-frontend_2.12",
         bloopVersion
-      )
-    ).withForceVersions(
-        List(
-          new Dependency(
-            "org.scala-lang",
-            "scala-library",
-            BuildInfo.scala212
-          ),
-          new Dependency(
-            "org.scala-lang",
-            "scala-compiler",
-            BuildInfo.scala212
-          ),
-          new Dependency(
-            "org.scala-lang",
-            "scala-reflect",
-            BuildInfo.scala212
-          )
+      ),
+      BuildInfo.scala212
+    ).addRepositories(
+      List(
+        new coursiersmall.Repository.Maven(
+          "https://dl.bintray.com/scalacenter/releases"
         )
       )
-      .addRepositories(
-        List(
-          new coursiersmall.Repository.Maven(
-            "https://dl.bintray.com/scalacenter/releases"
-          )
-        )
-      )
+    )
 
     // java9+ compatability
     val parent: ClassLoader = try {
