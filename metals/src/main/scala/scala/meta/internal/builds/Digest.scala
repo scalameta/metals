@@ -7,11 +7,9 @@ import java.security.MessageDigest
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import scala.meta.tokens.Token
 import scala.util.control.NonFatal
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.xml.Node
 import scala.meta.internal.mtags.ListFiles
 
@@ -163,9 +161,7 @@ object Digest {
       val input = file.toInput
       val tokens = input.tokenize.get
       tokens.foreach {
-        case _: Token.Space | _: Token.Tab | _: Token.CR | _: Token.LF |
-            _: Token.LFLF | _: Token.FF | _: Token.Comment | _: Token.BOF |
-            _: Token.EOF => // Do nothing
+        case token if token.isWhiteSpaceOrComment => // Do nothing
         case token =>
           val bytes = StandardCharsets.UTF_8.encode(token.pos.text)
           digest.update(token.productPrefix.getBytes())

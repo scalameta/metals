@@ -8,17 +8,35 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Constant
+import scala.meta.tokens.Tokens
 
 /*in order to use onTypeFormatting in vscode,
 you'll have to set editor.formatOnType = true in settings*/
-
 final class OnTypeFormattingProvider(
     semanticdbs: Semanticdbs,
     buffer: Buffers
 )(implicit ec: ExecutionContext) {
 
-  val tripleQuote = """\u0022\u0022\u0022"""
-  val space = " "
+  private val tripleQuote = """\u0022\u0022\u0022"""
+  private val space = " "
+  private val stripMargin = "stripMargin"
+
+  private def isFinishedByStripMargin(
+      stringTokenIndex: Int,
+      tokens: Tokens
+  ): Boolean = {
+    var methodIndex = stringTokenIndex + 1
+
+    while (tokens(methodIndex).isWhiteSpaceOrComment ||
+      tokens(methodIndex).isInstanceOf[Token.Dot]) methodIndex += 1
+
+    tokens(methodIndex) match {
+      case token: Token.Ident if token.value == stripMargin =>
+        true
+      case other =>
+        false
+    }
+  }
 
   private def indent(toInput: String, pos: meta.Position): String = {
     val beforePos = toInput.substring(0, pos.start)
@@ -60,16 +78,23 @@ final class OnTypeFormattingProvider(
       if (pipeInScope(pos, sourceText)) {
         val tokens =
           Input.VirtualFile(source.toString(), sourceText).tokenize.toOption
-        tokens.flatMap { tokens =>
-          tokens.collectFirst {
-            case token: Constant.String
-                if inToken(pos, token) &&
-                  isMultilineString(sourceText, token) =>
-              new TextEdit(range, indent(sourceText, pos) + "|")
+        tokens.flatMap { tokens: Tokens =>
+          val tokenIndex = tokens.indexWhere {
+            case token: Constant.String =>
+              inToken(pos, token) &&
+                isMultilineString(sourceText, token)
+            case _ => false
+          }
+
+          if (isFinishedByStripMargin(tokenIndex, tokens)) {
+            Some(new TextEdit(range, indent(sourceText, pos) + "|"))
+          } else {
+            None
           }
         }
       } else None
     } else None
     Future.successful(edit.toList.asJava)
   }
+
 }

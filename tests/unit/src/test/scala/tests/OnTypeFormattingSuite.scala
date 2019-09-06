@@ -10,14 +10,31 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |object Main {
        |  val str = '''
        |  #@@word
-       |'''
+       |  '''.stripMargin
        |}""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
        |  #
        |  #word
-       |'''
+       |  '''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "correct-no-dot",
+    s"""
+       |object Main {
+       |  val str = '''
+       |  #@@word
+       |  ''' stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  #
+       |  #word
+       |  ''' stripMargin
        |}""".stripMargin
   )
 
@@ -29,7 +46,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |# this is
        |# a multiline
        |# string
-       |'''@@
+       |'''.stripMargin@@
        |}""".stripMargin,
     s"""
        |object Main {
@@ -37,7 +54,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |# this is
        |# a multiline
        |# string
-       |'''
+       |'''.stripMargin
        |
        |}""".stripMargin
   )
@@ -48,7 +65,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |object Main {
        |  val abc = 123
        |  val s = ''' example
-       |  word@@'''
+       |  word@@'''.stripMargin
        |  abc.toInt
        |}""".stripMargin,
     s"""
@@ -56,7 +73,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |  val abc = 123
        |  val s = ''' example
        |  word
-       |  '''
+       |  '''.stripMargin
        |  abc.toInt
        |}""".stripMargin
   )
@@ -66,13 +83,13 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = '''#@@
-       |'''
+       |'''.stripMargin
        |}""".stripMargin,
     s"""
        |object Main {
        |  val str = '''#
        |               #
-       |'''
+       |'''.stripMargin
        |}""".stripMargin
   )
 
