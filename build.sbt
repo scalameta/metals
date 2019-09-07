@@ -165,7 +165,11 @@ lazy val interfaces = project
     libraryDependencies ++= List(
       V.lsp4j
     ),
-    crossVersion := CrossVersion.disabled
+    crossVersion := CrossVersion.disabled,
+    javacOptions in (Compile / doc) ++= List(
+      "-tag",
+      "implNote:a:Implementation Note:"
+    )
   )
 
 lazy val mtags = project
