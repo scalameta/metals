@@ -116,6 +116,102 @@ Once configured, the command can be called from the command palette.
 
 You can optionally register a key binding for the command.
 
+## Tweaking Sublime Text for a better productivity
+
+This paragraph contains a few tips & trick that can improve your daily productivity with metals.
+
+### LSP client tweaks
+
+Default settings of the LSP client are insufficient to enable the full power of metals. 
+The first step is a fixing problem with insufficient information in the code completion popup.
+To fix it, open "Preferences > Preferences: LSP Settings" and add the following setting:
+
+```json
+{
+  // ...
+  "prefer_label_over_filter_text": true,
+}
+```
+
+![Better code completion](https://i.imgur.com/2Rcfauz.gif)
+
+Next two steps are optional. If you prefer to have only enabled metals completion without mixing them with
+default Sublime's engine set following setting in the "Preferences > Preferences: LSP Settings":
+
+```json
+{
+  // ...
+  "only_show_lsp_completions": true,
+}
+```
+
+Also, if you prefer to show symbol references in Sublime's quick panel instead of the bottom panel
+set following setting in the "Preferences > Preferences: LSP Settings":
+
+```json
+{
+  // ...
+  "show_references_in_quick_panel": true,
+}
+```
+
+![Symbol references in the popup](https://i.imgur.com/7tSiEfX.gif
+)
+
+### Additional key mappings 
+
+You can set a few optional key mappings for enable useful action shortcuts and perform some tweaks for the completion popup.
+
+#### Keymaping for formatting document via scalafmt
+
+Open "Preferences > Key Binding" and register `ctrl+alt+l` to trigger formating document.
+definition.
+
+```json
+[
+  // ...
+  {
+    "keys": ["ctrl+alt+l"],
+    "command": "lsp_format_document"
+  }
+]
+```
+![Add key mapping for formatting document via scalafmt](https://i.imgur.com/wVjC1Ij.gif)
+
+
+### Add key mapping for Goto symbol in workspace
+
+This an optional step if you want to have a shortcut to looking up symbols in the workspace.
+Open "Preferences > Key Binding" and add:
+
+```json
+[
+  // ...
+  { 
+    "keys": ["ctrl+t"], 
+    "command": "show_overlay",
+    "args": {"overlay": "command_palette", "command": "lsp_workspace_symbols" }
+  }
+]
+```
+
+### Fixing problem with lack of auto import class after completion
+
+When you hit "Enter" in the popup, LSP client will complete the class without importing it.
+Normally, this action (complete with import) is mapped to "Tab" key, but you can easy remap to use also "Enter" key.
+Open "Preferences > Key Binding" and add:
+
+```json
+[ 
+  // ...
+  { "keys": ["enter"], "command": "commit_completion", "context": [{ "key": "auto_complete_visible" } ] },
+  { "keys": ["tab"], "command": "commit_completion", "context": [{ "key": "auto_complete_visible" } ] }
+]
+```
+
+
+![Import after Enter key was hit](https://i.imgur.com/RDYx9mB.gif)
+
 ## Known issues
 
 - The Sublime Text client uses an alert window for `window/showMessage` that
