@@ -118,11 +118,11 @@ You can optionally register a key binding for the command.
 
 ## Tweaking Sublime Text for a better productivity
 
-This paragraph contains a few tips & trick that can improve your daily productivity with metals.
+This paragraph contains a few tips & trick that can improve your daily productivity with Metals.
 
 ### LSP client tweaks
 
-Default settings of the LSP client are insufficient to enable the full power of metals. 
+Default settings of the LSP client are insufficient to enable the full power of Metals. 
 The first step is a fixing problem with insufficient information in the code completion popup.
 To fix it, open "Preferences > Preferences: LSP Settings" and add the following setting:
 
@@ -135,8 +135,9 @@ To fix it, open "Preferences > Preferences: LSP Settings" and add the following 
 
 ![Better code completion](https://i.imgur.com/2Rcfauz.gif)
 
-Next two steps are optional. If you prefer to have only enabled metals completion without mixing them with
-default Sublime's engine set following setting in the "Preferences > Preferences: LSP Settings":
+The next two steps are optional. If you prefer to only enable Metals completions
+(without mixing them with the default ones from Sublime) set following setting
+in the "Preferences > Preferences: LSP Settings":
 
 ```json
 {
@@ -181,7 +182,7 @@ definition.
 
 ### Add key mapping for Goto symbol in workspace
 
-This an optional step if you want to have a shortcut to looking up symbols in the workspace.
+This an optional step if you want to have a shortcut for looking up symbols in the workspace.
 Open "Preferences > Key Binding" and add:
 
 ```json
@@ -195,10 +196,11 @@ Open "Preferences > Key Binding" and add:
 ]
 ```
 
-### Fixing problem with lack of auto import class after completion
+### Enabling auto-import on completion
 
-When you hit "Enter" in the popup, LSP client will complete the class without importing it.
-Normally, this action (complete with import) is mapped to "Tab" key, but you can easy remap to use also "Enter" key.
+Metals can complete symbols from your workspace scope and automatically import them.
+By default, however, if you hit "Enter" to select a completion, the LSP client will
+complete the class without importing it, but you can easy remap to use also "Enter" key.
 Open "Preferences > Key Binding" and add:
 
 ```json
