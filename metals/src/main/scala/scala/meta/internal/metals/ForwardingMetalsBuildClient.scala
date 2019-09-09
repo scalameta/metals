@@ -1,17 +1,14 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.CompileReport
-import ch.epfl.scala.bsp4j.TaskDataKind
-import ch.epfl.scala.bsp4j.TaskFinishParams
-import ch.epfl.scala.bsp4j.TaskProgressParams
-import ch.epfl.scala.bsp4j.TaskStartParams
-import ch.epfl.scala.{bsp4j => b}
-import com.google.gson.JsonObject
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+
+import ch.epfl.scala.bsp4j._
+import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonObject
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.{lsp4j => l}
+
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -24,6 +21,7 @@ final class ForwardingMetalsBuildClient(
     languageClient: MetalsLanguageClient,
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
+    buildTargetClasses: BuildTargetClasses,
     config: MetalsServerConfig,
     statusBar: StatusBar,
     time: Time,
@@ -93,18 +91,19 @@ final class ForwardingMetalsBuildClient(
         }
         for {
           task <- params.asCompileTask
-          info <- buildTargets.info(task.getTarget)
+          target = task.getTarget
+          info <- buildTargets.info(target)
         } {
-          diagnostics.onStartCompileBuildTarget(task.getTarget)
+          diagnostics.onStartCompileBuildTarget(target)
           // cancel ongoing compilation for the current target, if any.
-          compilations.remove(task.getTarget).foreach(_.promise.cancel())
+          compilations.remove(target).foreach(_.promise.cancel())
 
           val name = info.getDisplayName
           val promise = Promise[CompileReport]()
           val isNoOp = params.getMessage.startsWith("Start no-op compilation")
           val compilation = Compilation(new Timer(time), promise, isNoOp)
-
           compilations(task.getTarget) = compilation
+
           statusBar.trackFuture(
             s"Compiling $name",
             promise.future,
@@ -139,6 +138,8 @@ final class ForwardingMetalsBuildClient(
             scribe.info(s"time: compiled $name in ${compilation.timer}")
           }
           if (isSuccess) {
+            buildTargetClasses.rebuildIndex(target)
+
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
               statusBar.addMessage(message)

@@ -1,12 +1,12 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.{bsp4j => b}
+
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.meta.internal.metals.BuildTargetClasses.Classes
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.semanticdb.Scala.Descriptor
-import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb.Scala.{Descriptor, Symbols}
 
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
@@ -14,62 +14,78 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 final class BuildTargetClasses(
     buildServer: () => Option[BuildServerConnection]
 )(implicit val ec: ExecutionContext) {
-  private val index = new TrieMap[b.BuildTargetIdentifier, Classes]()
+  private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
 
-  def main(target: b.BuildTargetIdentifier): TrieMap[String, b.ScalaMainClass] =
-    classesOf(target).main
+  val rebuildIndex: BatchedFunction[b.BuildTargetIdentifier, Unit] =
+    BatchedFunction.fromFuture(fetchClasses)
 
-  val onCompiled: BatchedFunction[b.BuildTargetIdentifier, Unit] =
-    BatchedFunction.fromFuture(fetchMainClassesFor)
+  def classesOf(target: b.BuildTargetIdentifier): Classes = {
+    index.getOrElseUpdate(target, new Classes)
+  }
 
-  private def fetchMainClassesFor(
+  private def fetchClasses(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {
-    targets.foreach { target =>
-      classesOf(target).clear()
-    }
-
     buildServer() match {
       case Some(connection) =>
-        val parameters = new b.ScalaMainClassesParams(targets.asJava)
-        val task = for {
-          result <- connection.mainClasses(parameters).asScala
-          _ = cacheMainClasses(result)
-        } yield ()
+        val targetsList = targets.asJava
 
-        task
+        val updateMainClasses = connection
+          .mainClasses(new b.ScalaMainClassesParams(targetsList))
+          .thenAccept(cacheMainClasses)
+          .asScala
+
+        val updateTestSuites = connection
+          .testSuites(new b.ScalaTestClassesParams(targetsList))
+          .thenAccept(cacheTestSuites)
+          .asScala
+
+        for {
+          _ <- updateMainClasses
+          _ <- updateTestSuites
+        } yield ()
       case None =>
         Future.successful(())
     }
   }
 
-  private def classesOf(target: b.BuildTargetIdentifier): Classes =
-    index.getOrElseUpdate(target, new Classes)
-
   private def cacheMainClasses(result: b.ScalaMainClassesResult): Unit = {
-    def createObjectSymbol(className: String): String = {
-      val symbol = className.replaceAll("\\.", "/")
-      val isInsideEmptyPackage = !className.contains(".")
-      if (isInsideEmptyPackage) {
-        Symbols.Global(Symbols.EmptyPackage, Descriptor.Term(symbol))
-      } else {
-        symbol
-      }
-    }
-
     for {
       item <- result.getItems.asScala
       target = item.getTarget
       aClass <- item.getClasses.asScala
       objectSymbol = createObjectSymbol(aClass.getClassName)
-    } classesOf(target).main.put(objectSymbol, aClass)
+    } classesOf(target).mainClasses.put(objectSymbol, aClass)
   }
 
-  final class Classes {
-    val main = new TrieMap[String, b.ScalaMainClass]()
+  private def cacheTestSuites(result: b.ScalaTestClassesResult): Unit = {
+    for {
+      item <- result.getItems.asScala
+      target = item.getTarget
+      className <- item.getClasses.asScala
+      objectSymbol = createObjectSymbol(className)
+    } classesOf(target).testSuites.put(objectSymbol, className)
+  }
 
-    def clear(): Unit = {
-      main.clear()
+  private def createObjectSymbol(className: String): String = {
+    val symbol = className.replaceAll("\\.", "/")
+    val isInsideEmptyPackage = !className.contains(".")
+    if (isInsideEmptyPackage) {
+      Symbols.Global(Symbols.EmptyPackage, Descriptor.Term(symbol))
+    } else {
+      symbol + "."
+    }
+  }
+}
+
+object BuildTargetClasses {
+  final class Classes {
+    val mainClasses = new TrieMap[String, b.ScalaMainClass]()
+    val testSuites = new TrieMap[String, String]()
+
+    def invalidate(): Unit = {
+      mainClasses.clear()
+      testSuites.clear()
     }
   }
 }
