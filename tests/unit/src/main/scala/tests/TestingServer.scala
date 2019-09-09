@@ -1,8 +1,8 @@
 package tests
 
 import java.io.IOException
-import java.net.URLClassLoader
 import java.net.URI
+import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -13,40 +13,16 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
-import com.google.gson.JsonParser
-import org.eclipse.lsp4j.ClientCapabilities
-import org.eclipse.lsp4j.CodeLensParams
-import org.eclipse.lsp4j.CompletionList
-import org.eclipse.lsp4j.CompletionParams
-import org.eclipse.lsp4j.DidChangeConfigurationParams
-import org.eclipse.lsp4j.DidChangeTextDocumentParams
-import org.eclipse.lsp4j.DidCloseTextDocumentParams
-import org.eclipse.lsp4j.DidOpenTextDocumentParams
-import org.eclipse.lsp4j.DidSaveTextDocumentParams
-import org.eclipse.lsp4j.DocumentFormattingParams
-import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
-import org.eclipse.lsp4j.DocumentSymbolParams
-import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j.FoldingRangeCapabilities
-import org.eclipse.lsp4j.FoldingRangeRequestParams
-import org.eclipse.lsp4j.FormattingOptions
-import org.eclipse.lsp4j.InitializeParams
-import org.eclipse.lsp4j.InitializedParams
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.ReferenceContext
-import org.eclipse.lsp4j.ReferenceParams
-import org.eclipse.lsp4j.TextDocumentClientCapabilities
-import org.eclipse.lsp4j.TextDocumentContentChangeEvent
-import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.lsp4j.TextDocumentItem
-import org.eclipse.lsp4j.TextDocumentPositionParams
-import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
-import org.eclipse.lsp4j.WorkspaceClientCapabilities
-import org.eclipse.lsp4j.WorkspaceFolder
+
+import ch.epfl.scala.bsp4j.DebugSessionParams
+import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import org.eclipse.lsp4j._
 import org.eclipse.{lsp4j => l}
 import org.scalactic.source.Position
 import tests.MetalsTestEnrichments._
+import tests.debug.TestDebugger
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -56,30 +32,18 @@ import scala.concurrent.Future
 import scala.meta.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Debug
-import scala.meta.internal.metals.DidFocusResult
-import scala.meta.internal.metals.WindowStateDidChangeParams
-import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLanguageServer
-import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.internal.metals.ProgressTicks
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.tvp.TreeViewChildrenParams
+import scala.meta.internal.tvp.TreeViewProvider
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.{meta => m}
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
-
-import scala.meta.internal.tvp.TreeViewProvider
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -103,6 +67,7 @@ final class TestingServer(
     time: Time,
     newBloopClassloader: () => URLClassLoader
 )(implicit ex: ExecutionContextExecutorService) {
+  import JsonParser._
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,
@@ -283,15 +248,26 @@ final class TestingServer(
   def toPath(filename: String): AbsolutePath =
     TestingServer.toPath(workspace, filename)
 
-  def executeCommand(command: String): Future[Unit] = {
+  def executeCommand(command: String, params: Object*): Future[Any] = {
     Debug.printEnclosing()
     server
-      .executeCommand(
-        new ExecuteCommandParams(command, Collections.emptyList())
-      )
+      .executeCommand(new ExecuteCommandParams(command, params.asJava))
       .asScala
-      .ignoreValue
   }
+
+  def startDebugging(
+      a: String,
+      kind: String,
+      parameter: AnyRef
+  ): Future[TestDebugger] = {
+    val targets = List(new b.BuildTargetIdentifier(buildTarget(a)))
+    val params = new DebugSessionParams(targets.asJava, kind, parameter.toJson)
+
+    executeCommand(ServerCommands.StartDebugAdapter.id, params)
+      .map(_.asInstanceOf[URI])
+      .map(TestDebugger(_)(ex))
+  }
+
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
     server.didFocus(toPath(filename).toURI.toString).asScala
   }
@@ -364,7 +340,7 @@ final class TestingServer(
 
   def didChangeConfiguration(config: String): Future[Unit] = {
     val wrapped = UserConfiguration.toWrappedJson(config)
-    val json = new JsonParser().parse(wrapped)
+    val json = wrapped.toJson
     server
       .didChangeConfiguration(new DidChangeConfigurationParams(json))
       .asScala

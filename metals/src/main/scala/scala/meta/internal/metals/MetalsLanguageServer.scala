@@ -1,5 +1,8 @@
 package scala.meta.internal.metals
 
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.net.ServerSocket
 import java.net.URI
 import java.net.URLClassLoader
 import java.nio.charset.Charset
@@ -12,20 +15,19 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import ch.epfl.scala.bsp4j.DependencySourcesParams
-import ch.epfl.scala.bsp4j.DependencySourcesResult
-import ch.epfl.scala.bsp4j.ScalacOptionsParams
-import ch.epfl.scala.bsp4j.SourcesParams
+
+import ch.epfl.scala.{bsp4j => b}
+import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
-import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j._
 import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -38,6 +40,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.debug.DebugServer
 import scala.meta.internal.tvp._
 import scala.meta.internal.mtags._
 import scala.meta.internal.semanticdb.Scala._
@@ -46,6 +49,7 @@ import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
+import scala.util.Failure
 import scala.util.Success
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonObject
@@ -1028,7 +1032,10 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("workspace/executeCommand")
-  def executeCommand(params: ExecuteCommandParams): CompletableFuture[Object] =
+  def executeCommand(
+      params: ExecuteCommandParams
+  ): CompletableFuture[Object] = {
+    import JsonParser._
     params.getCommand match {
       case ServerCommands.ScanWorkspaceSources() =>
         Future {
@@ -1099,10 +1106,60 @@ class MetalsLanguageServer(
             )
           )
         }.asJavaObject
+      case ServerCommands.StartDebugAdapter() =>
+        val args = params.getArguments.asScala
+        args match {
+          case Seq(param) =>
+            param.as[b.DebugSessionParams] match {
+              case Failure(exception) =>
+                Future.failed(exception).asJavaObject
+              case Success(parameters) =>
+                val proxyServer = new ServerSocket(0)
+
+                val awaitClient = () => {
+                  Future(proxyServer.accept()).withTimeout(10, TimeUnit.SECONDS)
+                }
+
+                val connectToServer = () => {
+                  val debugSession = buildServer
+                    .map(_.startDebugSession(parameters).asScala)
+                    .getOrElse(
+                      Future
+                        .failed(new IllegalStateException("No build server"))
+                    )
+
+                  debugSession
+                    .withTimeout(10, TimeUnit.SECONDS)
+                    .map(uri => {
+                      val socket = new Socket()
+
+                      val address =
+                        new InetSocketAddress(uri.getHost, uri.getPort)
+                      val timeout = TimeUnit.SECONDS.toMillis(10).toInt
+                      socket.connect(address, timeout)
+
+                      socket
+                    })
+                }
+
+                val server = DebugServer.create(awaitClient, connectToServer)
+                server.listen.andThen { case _ => proxyServer.close() }
+                cancelables.add(server)
+
+                val host = InetAddresses.toUriString(proxyServer.getInetAddress)
+                val port = proxyServer.getLocalPort
+                Future(URI.create(s"tcp://$host:$port")).asJavaObject
+            }
+          case _ =>
+            val argExample = ServerCommands.StartDebugAdapter.arguments
+            val msg = s"Invalid arguments: $args. Expecting: $argExample"
+            Future.failed(new IllegalArgumentException(msg)).asJavaObject
+        }
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
     }
+  }
 
   @JsonRequest("metals/treeViewChildren")
   def treeViewChildren(
@@ -1278,13 +1335,13 @@ class MetalsLanguageServer(
         workspaceBuildTargets <- build.server.workspaceBuildTargets().asScala
         ids = workspaceBuildTargets.getTargets.map(_.getId)
         scalacOptions <- build.server
-          .buildTargetScalacOptions(new ScalacOptionsParams(ids))
+          .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
           .asScala
         sources <- build.server
-          .buildTargetSources(new SourcesParams(ids))
+          .buildTargetSources(new b.SourcesParams(ids))
           .asScala
         dependencySources <- build.server
-          .buildTargetDependencySources(new DependencySourcesParams(ids))
+          .buildTargetDependencySources(new b.DependencySourcesParams(ids))
           .asScala
       } yield {
         ImportedBuild(
@@ -1504,7 +1561,7 @@ class MetalsLanguageServer(
   }
 
   private def indexDependencySources(
-      dependencySources: DependencySourcesResult
+      dependencySources: b.DependencySourcesResult
   ): Unit = {
     // Track used Jars so that we can
     // remove cached symbols from Jars

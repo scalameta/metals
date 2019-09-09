@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.URI
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
@@ -77,6 +78,14 @@ case class BuildServerConnection(
       params: ScalaTestClassesParams
   ): CompletableFuture[ScalaTestClassesResult] = {
     register(server.buildTargetScalaTestClasses(params))
+  }
+
+  def startDebugSession(params: DebugSessionParams): CompletableFuture[URI] = {
+    register(
+      server
+        .startDebugSession(params)
+        .thenApply(address => URI.create(address.getUri))
+    )
   }
 
   private val cancelled = new AtomicBoolean(false)
