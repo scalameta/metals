@@ -20,6 +20,7 @@ import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
+import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j._
 import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
@@ -105,6 +106,8 @@ class MetalsLanguageServer(
   var buildServer = Option.empty[BuildServerConnection]
   private val buildTargetClasses = new BuildTargetClasses(() => buildServer)
   private val openTextDocument = new AtomicReference[AbsolutePath]()
+  private val openDocumentBuildTarget =
+    new AtomicReference[b.BuildTargetIdentifier]()
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
@@ -245,7 +248,8 @@ class MetalsLanguageServer(
       statusBar,
       time,
       report => compilers.didCompile(report),
-      () => treeView
+      () => treeView,
+      buildTarget => openDocumentBuildTarget.get() == buildTarget
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -598,6 +602,10 @@ class MetalsLanguageServer(
     val path = params.getTextDocument.getUri.toAbsolutePath
     openedFiles.add(path)
     openTextDocument.set(path)
+    buildTargets
+      .inverseSources(path)
+      .foreach(openDocumentBuildTarget.set)
+
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
     // Update in-memory buffer contents from LSP client
@@ -1493,6 +1501,18 @@ class MetalsLanguageServer(
     ) {
       indexDependencySources(i.dependencySources)
     }
+
+    val openDocument = openTextDocument.get()
+    if (openDocument != null) {
+      buildTargets
+        .inverseSources(openDocument)
+        .foreach(openDocumentBuildTarget.set)
+    }
+
+    val targets = buildTargets.all.map(_.info.getId).toSeq
+    buildTargetClasses
+      .rebuildIndex(targets)
+      .foreach(_ => languageClient.refreshModel())
   }
 
   private def indexDependencySources(

@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import scala.meta.internal.tvp._
+import scala.meta.internal.metals.MetalsEnrichments._
 
 trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
 
@@ -33,6 +34,12 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
 
   @JsonNotification("metals/executeClientCommand")
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
+
+  final def refreshModel(): Unit = {
+    val command = ClientCommands.RefreshModel.id
+    val params = new ExecuteCommandParams(command, Nil.asJava)
+    metalsExecuteClientCommand(params)
+  }
 
   /**
    * Opens an input box to ask the user for input.
