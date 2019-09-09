@@ -481,6 +481,16 @@ object MetalsEnrichments
       promise.tryFailure(new CancellationException())
   }
 
+  implicit class XtensionToken(token: Token) {
+    def isWhiteSpaceOrComment = token match {
+      case _: Token.Space | _: Token.Tab | _: Token.CR | _: Token.LF |
+          _: Token.LFLF | _: Token.FF | _: Token.Comment | _: Token.BOF |
+          _: Token.EOF =>
+        true
+      case _ => false
+    }
+  }
+
   implicit class XtensionTreeTokenStream(tree: Tree) {
     def leadingTokens: Iterator[Token] = tree.origin match {
       case Origin.Parsed(input, _, pos) =>
