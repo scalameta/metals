@@ -10,7 +10,7 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.{lsp4j => l}
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.Promise
+import scala.concurrent.{ExecutionContext, Promise}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp._
 
@@ -26,8 +26,10 @@ final class ForwardingMetalsBuildClient(
     statusBar: StatusBar,
     time: Time,
     didCompile: CompileReport => Unit,
-    treeViewProvider: () => TreeViewProvider
-) extends MetalsBuildClient
+    treeViewProvider: () => TreeViewProvider,
+    isCurrentlyOpened: b.BuildTargetIdentifier => Boolean
+)(implicit ec: ExecutionContext)
+    extends MetalsBuildClient
     with Cancelable {
 
   private case class Compilation(
@@ -138,7 +140,10 @@ final class ForwardingMetalsBuildClient(
             scribe.info(s"time: compiled $name in ${compilation.timer}")
           }
           if (isSuccess) {
-            buildTargetClasses.rebuildIndex(target)
+            buildTargetClasses
+              .rebuildIndex(target)
+              .filter(_ => isCurrentlyOpened(target))
+              .foreach(_ => languageClient.refreshModel())
 
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
