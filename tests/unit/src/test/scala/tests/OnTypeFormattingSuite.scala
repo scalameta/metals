@@ -2,8 +2,6 @@ package tests
 
 object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
 
-  val tripleQuote = """\u0022\u0022\u0022"""
-
   check(
     "correct-string",
     s"""
@@ -18,6 +16,71 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |  #
        |  #word
        |  '''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "interpolated-string",
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s'''
+       |  #$$number
+       |  #@@word
+       |  '''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s'''
+       |  #$$number
+       |  #
+       |  #word
+       |  '''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "multi-interpolated",
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val other = s'''
+       |  #$$number
+       |  #word
+       |  '''.stripMargin
+       |  val str = s'''
+       |  #$$number
+       |  #@@word
+       |  '''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val other = s'''
+       |  #$$number
+       |  #word
+       |  '''.stripMargin
+       |  val str = s'''
+       |  #$$number
+       |  #
+       |  #word
+       |  '''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "interpolated-single-quotes",
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"#@@$$number".stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val number = 102
+       |  val str = s"#
+       |  $$number".stripMargin
        |}""".stripMargin
   )
 
@@ -94,6 +157,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
   )
 
   def check(name: String, testCase: String, expectedCase: String): Unit = {
+    val tripleQuote = """\u0022\u0022\u0022"""
     def unmangle(string: String): String =
       string
         .replaceAll("#", "|")
