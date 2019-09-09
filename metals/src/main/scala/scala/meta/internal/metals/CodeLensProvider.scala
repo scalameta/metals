@@ -78,46 +78,37 @@ object CodeLensProvider {
 
     final def commands(
         target: b.BuildTargetIdentifier,
-        data: A
+        arg: A
     ): List[l.Command] = {
-      val arg = argument(target, data)
+      val params = new b.DebugSessionParams(
+        List(target).asJava,
+        dataKind,
+        data(arg).toJson
+      )
 
       names.map { name =>
-        new l.Command(name, StartDebugSession.id, singletonList(arg))
+        new l.Command(name, StartDebugSession.id, singletonList(params))
       }
     }
 
-    protected def argument(
-        target: b.BuildTargetIdentifier,
-        data: A
-    ): DebugSessionParameters
+    protected def data(data: A): AnyRef
   }
 
   final object MainClassLensFactory extends CommandFactory[b.ScalaMainClass] {
     val names: List[String] = List("run")
-    val dataKind: String = b.RunParamsDataKind.SCALA_MAIN_CLASS
+    val dataKind: String = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
 
-    override protected def argument(
-        target: b.BuildTargetIdentifier,
-        data: b.ScalaMainClass
-    ): DebugSessionParameters = {
-      DebugSessionParameters(singletonList(target), dataKind, data.toJson)
+    override protected def data(arg: b.ScalaMainClass): AnyRef = {
+      arg
     }
   }
 
   final object TestSuitesLensFactory extends CommandFactory[String] {
     val names: List[String] = List("test")
-    val dataKind: String = b.TestParamsDataKind.SCALA_TEST
+    val dataKind: String = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
 
-    override protected def argument(
-        target: b.BuildTargetIdentifier,
-        data: String
-    ): DebugSessionParameters = {
-      val testParams = new b.ScalaTestParams(
-        singletonList(new b.ScalaTestClassesItem(target, singletonList(data)))
-      )
-
-      DebugSessionParameters(singletonList(target), dataKind, testParams.toJson)
+    override protected def data(arg: String): AnyRef = {
+      Seq(arg).asJava
     }
   }
 }

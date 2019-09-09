@@ -1,8 +1,8 @@
 package tests
 
 import java.io.IOException
-import java.net.URLClassLoader
 import java.net.URI
+import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -13,7 +13,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
-import com.google.gson.JsonParser
+import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeLensParams
 import org.eclipse.lsp4j.CompletionList
@@ -46,6 +46,7 @@ import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
 import tests.MetalsTestEnrichments._
+import tests.debug.TestDebugger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -78,6 +79,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import scala.meta.internal.tvp.TreeViewProvider
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import scala.meta.internal.metals.ServerCommands
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -101,6 +103,8 @@ final class TestingServer(
     time: Time,
     newBloopClassloader: () => URLClassLoader
 )(implicit ex: ExecutionContextExecutorService) {
+  import scala.meta.internal.metals.JsonParser._
+
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,
@@ -281,15 +285,27 @@ final class TestingServer(
   def toPath(filename: String): AbsolutePath =
     TestingServer.toPath(workspace, filename)
 
-  def executeCommand(command: String): Future[Unit] = {
+  def executeCommand(command: String, params: Object*): Future[Any] = {
     Debug.printEnclosing()
     server
-      .executeCommand(
-        new ExecuteCommandParams(command, Collections.emptyList())
-      )
+      .executeCommand(new ExecuteCommandParams(command, params.asJava))
       .asScala
-      .ignoreValue
   }
+
+  def startDebugging(
+      a: String,
+      kind: String,
+      parameter: AnyRef
+  ): Future[TestDebugger] = {
+    val targets = List(new b.BuildTargetIdentifier(buildTarget(a)))
+    val params =
+      new b.DebugSessionParams(targets.asJava, kind, parameter.toJson)
+
+    executeCommand(ServerCommands.StartDebugAdapter.id, params)
+      .map(_.asInstanceOf[URI])
+      .map(TestDebugger(_)(ex))
+  }
+
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
     server.didFocus(toPath(filename).toURI.toString).asScala
   }
@@ -362,10 +378,8 @@ final class TestingServer(
 
   def didChangeConfiguration(config: String): Future[Unit] = {
     val wrapped = UserConfiguration.toWrappedJson(config)
-    val json = new JsonParser().parse(wrapped)
-    server
-      .didChangeConfiguration(new DidChangeConfigurationParams(json))
-      .asScala
+    val params = new DidChangeConfigurationParams(wrapped.toJson)
+    server.didChangeConfiguration(params).asScala
   }
 
   def completionList(

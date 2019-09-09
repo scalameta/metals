@@ -95,7 +95,7 @@ object ServerCommands {
         |```json
         |{
         |  "targets": ["mybuild://workspace/foo/?id=foo"],
-        |   dataKind: "${b.RunParamsDataKind.SCALA_MAIN_CLASS}",
+        |   dataKind: "${b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS}",
         |   data: {
         |      className: "com.foo.App"
         |   }
