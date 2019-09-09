@@ -2,9 +2,6 @@ package tests
 import scala.concurrent.Future
 
 object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
-  override def isTestSuiteEnabled: Boolean =
-    false // TODO enable once bloop supports main class request
-
   testAsync("run") {
     for {
       _ <- server.initialize(
@@ -96,12 +93,48 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
     } yield ()
   }
 
+  testAsync("remove-stale-lenses") {
+    for {
+      _ <- server.initialize(
+        """|/metals.json
+           |{
+           |  "a": { }
+           |}
+           |
+           |/a/src/main/scala/Main.scala
+           |object Main {
+           |  def main(args: Array[String]): Unit = {}
+           |}""".stripMargin
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Main.scala",
+        """<<run>>
+          |object Main {
+          |  def main(args: Array[String]): Unit = {}
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/Main.scala")(
+        text => text.replace("object Main", "class Main")
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Main.scala",
+        """class Main {
+          |  def main(args: Array[String]): Unit = {}
+          |}
+          |""".stripMargin
+      )
+
+    } yield ()
+  }
+
   private def assertCodeLenses(
       filename: String,
       expected: String
   ): Future[Unit] =
     for {
       _ <- server.didOpen(filename)
+      _ <- server.didSave(filename)(x => x) // first compilation could have not yet persisted analysis
       obtained <- server.codeLenses(filename)
     } yield {
       assertNoDiff(obtained, expected)

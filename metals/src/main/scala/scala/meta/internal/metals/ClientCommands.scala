@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.{bsp4j => b}
+
 /**
  * Optional commands that metals expects the client to implement.
  */
@@ -51,14 +53,25 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  val RunMain = Command(
-    "metals-main-run",
-    "run",
-    "Runs main method",
-    """|Array of strings of length 2 where
-       |- first array element is a build target identifier URI
-       |- second array element is the name of the class containing the main method 
-       |Example: `["mybuild://workspace/foo/?id=foo", "com.app.Main"]`
+  val StartDebugSession = Command(
+    "metals-debug-session-start",
+    "Start debug session",
+    s"""|Starts a debug session. The address of a new Debug Adapter can be obtained 
+        | by using the ${ServerCommands.StartDebugAdapter.id} metals server command
+        | with the same arguments as provided to this command.
+    """.stripMargin,
+    s"""|DebugSessionParameters object. It should be forwarded
+        |to the ${ServerCommands.StartDebugAdapter.id} command as is.
+        |
+        |Example:
+        |```json
+        |{
+        |  "targets": ["mybuild://workspace/foo/?id=foo"],
+        |   dataKind: "${b.RunParamsDataKind.SCALA_MAIN_CLASS}",
+        |   data: {
+        |      className: "com.foo.App"
+        |   }
+        |}```
     """.stripMargin
   )
 

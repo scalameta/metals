@@ -239,6 +239,7 @@ class MetalsLanguageServer(
       languageClient,
       diagnostics,
       buildTargets,
+      buildTargetClasses,
       config,
       statusBar,
       time,
@@ -289,6 +290,7 @@ class MetalsLanguageServer(
       buildTargetClasses,
       buffers,
       buildTargets,
+      compilations,
       semanticdbs
     )
     definitionProvider = new DefinitionProvider(
@@ -410,6 +412,7 @@ class MetalsLanguageServer(
         )
       )
       capabilities.setFoldingRangeProvider(true)
+      capabilities.setCodeLensProvider(new CodeLensOptions(false))
       capabilities.setDefinitionProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
@@ -979,9 +982,10 @@ class MetalsLanguageServer(
   def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
-    CancelTokens { _ =>
-      scribe.warn("textDocument/codeLens is not supported.")
-      null
+    CancelTokens.apply { _ =>
+      codeLensProvider
+        .findLenses(params.getTextDocument.getUri.toAbsolutePath)
+        .asJava
     }
 
   @JsonRequest("textDocument/foldingRange")
