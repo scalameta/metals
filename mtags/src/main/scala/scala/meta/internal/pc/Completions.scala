@@ -951,14 +951,24 @@ trait Completions { this: MetalsGlobal =>
         }
       }
 
+      def canUseSnippets = metalsConfig.isCompletionItemSnippetEnabled()
+
       private def findDefaultValue(param: Symbol): String = {
         val matchingType = matchingTypesInScope(param.tpe)
-        if (matchingType.size == 1) {
-          s":${matchingType.head}"
-        } else if (matchingType.size > 1) {
-          s"|${matchingType.mkString(",")}|"
+        if (canUseSnippets) {
+          if (matchingType.size == 1) {
+            s":${matchingType.head}"
+          } else if (matchingType.size > 1) {
+            s"|${matchingType.mkString(",")}|"
+          } else {
+            ":???"
+          }
         } else {
-          ":???"
+          if (matchingType.size == 1) {
+            matchingType.head
+          } else {
+            "???"
+          }
         }
       }
 
@@ -967,7 +977,12 @@ trait Completions { this: MetalsGlobal =>
           val editText = allParams.zipWithIndex
             .map {
               case (param, index) =>
-                s"${param.name} = $${${index + 1}${findDefaultValue(param)}}"
+                val default = findDefaultValue(param)
+                val value =
+                  if (canUseSnippets)
+                    s"$${${index + 1}$default}"
+                  else default
+                s"${param.name} = $value"
             }
             .mkString(", ")
           val edit = new l.TextEdit(editRange, editText)

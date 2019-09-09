@@ -345,10 +345,21 @@ class MetalsLanguageServer(
       interactiveSemanticdbs.toFileOnDisk
     )
     foldingRangeProvider = FoldingRangeProvider(trees, buffers, params)
+
+    val snippetsSupported = params
+      .getCapabilities()
+      .getTextDocument()
+      .getCompletion()
+      .getCompletionItem()
+      .getSnippetSupport()
+
+    val updatedCompilerConfig =
+      config.compilers.copy(isCompletionItemSnippetEnabled = snippetsSupported)
+
     compilers = register(
       new Compilers(
         workspace,
-        config,
+        config.copy(compilers = updatedCompilerConfig),
         () => userConfig,
         buildTargets,
         buffers,
