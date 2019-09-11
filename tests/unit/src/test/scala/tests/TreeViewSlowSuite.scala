@@ -126,8 +126,8 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |org.eclipse.xtext.xbase.lib-2.19.0.jar -
              |resources.jar -
              |rt.jar -
-             |scala-library-2.12.9.jar -
-             |scala-reflect-2.12.9.jar -
+             |scala-library-2.12.10.jar -
+             |scala-reflect-2.12.10.jar -
              |sourcecode_2.12-0.1.7.jar -""".stripMargin
         )
         server.assertTreeViewChildren(

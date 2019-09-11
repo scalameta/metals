@@ -30,7 +30,7 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
            |    mavenCentral()
            |}
            |dependencies {
-           |    implementation 'org.scala-lang:scala-library:2.12.9'
+           |    implementation 'org.scala-lang:scala-library:2.12.10'
            |}
            |""".stripMargin
       )
@@ -78,7 +78,7 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
            |    mavenCentral()
            |}
            |dependencies {
-           |    implementation 'org.scala-lang:scala-reflect:2.12.9'
+           |    implementation 'org.scala-lang:scala-reflect:2.12.10'
            |}
            |""".stripMargin
       )
@@ -107,7 +107,7 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
            |    mavenCentral()
            |}
            |dependencies {
-           |    implementation 'org.scala-lang:scala-library:2.12.9'
+           |    implementation 'org.scala-lang:scala-library:2.12.10'
            |}
            |""".stripMargin
       )
@@ -142,7 +142,7 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
            |    mavenCentral()
            |}
            |dependencies {
-           |    implementation 'org.scala-lang:scala-library:2.12.9'
+           |    implementation 'org.scala-lang:scala-library:2.12.10'
            |}
            |/src/main/scala/reload/Main.scala
            |package reload
@@ -199,7 +199,7 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
            |    mavenCentral()
            |}
            |dependencies {
-           |    implementation 'org.scala-lang:scala-library:2.12.9'
+           |    implementation 'org.scala-lang:scala-library:2.12.10'
            |}
            |""".stripMargin
       }
@@ -317,7 +317,7 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
           |    mavenCentral()
           |}
           |dependencies {
-          |    implementation 'org.scala-lang:scala-library:2.12.9'
+          |    implementation 'org.scala-lang:scala-library:2.12.10'
           |}
           |tasks.withType(ScalaCompile) {
           |    scalaCompileOptions.additionalParameters = [
