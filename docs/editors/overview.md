@@ -144,7 +144,7 @@ functionality.
     <td align="center">Status bar</td>
     <td align="center"></td>
     <td align="center">Status bar</td>
-    <td align="center"></td>
+    <td align="center">Status bar, Slow task</td>
   </tr>
 </tbody>
 </table>
