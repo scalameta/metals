@@ -58,7 +58,7 @@ case class SbtBuildTool(version: String) extends BuildTool {
       workspace: AbsolutePath
   ): Option[String] = SbtDigest.current(workspace)
   override val minimumVersion: String = "0.13.17"
-  override val recommendedVersion: String = "1.3.0"
+  override val recommendedVersion: String = "1.2.8"
 
   private def writeSbtMetalsPlugin(config: MetalsServerConfig): Unit = {
     val plugins =
