@@ -92,8 +92,8 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
-<td>0.7.2+17-94b1cf89-SNAPSHOT</td>
-<td>05 Sep 2019 13:05</td>
+<td>0.1.0-M1+262-eb1c8e2c-SNAPSHOT</td>
+<td>09 Sep 2019 15:04</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>
@@ -178,6 +178,72 @@ in this location.</p>
 <p>Once configured, the command can be called from the command palette.</p>
 <p><img src="https://i.imgur.com/LViPc95.png" alt="Import build command"></p>
 <p>You can optionally register a key binding for the command.</p>
+<h2><a class="anchor" aria-hidden="true" id="tweaking-sublime-text-for-a-better-productivity"></a><a href="#tweaking-sublime-text-for-a-better-productivity" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Tweaking Sublime Text for a better productivity</h2>
+<p>This paragraph contains a few tips &amp; trick that can improve your daily productivity with Metals.</p>
+<h3><a class="anchor" aria-hidden="true" id="lsp-client-tweaks"></a><a href="#lsp-client-tweaks" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>LSP client tweaks</h3>
+<p>Default settings of the LSP client are insufficient to enable the full power of Metals.
+The first step is a fixing problem with insufficient information in the code completion popup.
+To fix it, open &quot;Preferences &gt; Preferences: LSP Settings&quot; and add the following setting:</p>
+<pre><code class="hljs css language-json">{
+  // ...
+  "prefer_label_over_filter_text": true,
+}
+</code></pre>
+<p><img src="https://i.imgur.com/2Rcfauz.gif" alt="Better code completion"></p>
+<p>The next two steps are optional. If you prefer to only enable Metals completions
+(without mixing them with the default ones from Sublime) set following setting
+in the &quot;Preferences &gt; Preferences: LSP Settings&quot;:</p>
+<pre><code class="hljs css language-json">{
+  // ...
+  "only_show_lsp_completions": true,
+}
+</code></pre>
+<p>Also, if you prefer to show symbol references in Sublime's quick panel instead of the bottom panel
+set following setting in the &quot;Preferences &gt; Preferences: LSP Settings&quot;:</p>
+<pre><code class="hljs css language-json">{
+  // ...
+  "show_references_in_quick_panel": true,
+}
+</code></pre>
+<p><img src="https://i.imgur.com/7tSiEfX.gif" alt="Symbol references in the popup"></p>
+<h3><a class="anchor" aria-hidden="true" id="additional-key-mappings"></a><a href="#additional-key-mappings" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Additional key mappings</h3>
+<p>You can set a few optional key mappings for enable useful action shortcuts and perform some tweaks for the completion popup.</p>
+<h4><a class="anchor" aria-hidden="true" id="keymaping-for-formatting-document-via-scalafmt"></a><a href="#keymaping-for-formatting-document-via-scalafmt" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Keymaping for formatting document via scalafmt</h4>
+<p>Open &quot;Preferences &gt; Key Binding&quot; and register <code>ctrl+alt+l</code> to trigger formating document.
+definition.</p>
+<pre><code class="hljs css language-json">[
+  // ...
+  {
+    <span class="hljs-attr">"keys"</span>: [<span class="hljs-string">"ctrl+alt+l"</span>],
+    <span class="hljs-attr">"command"</span>: <span class="hljs-string">"lsp_format_document"</span>
+  }
+]
+</code></pre>
+<p><img src="https://i.imgur.com/wVjC1Ij.gif" alt="Add key mapping for formatting document via scalafmt"></p>
+<h3><a class="anchor" aria-hidden="true" id="add-key-mapping-for-goto-symbol-in-workspace"></a><a href="#add-key-mapping-for-goto-symbol-in-workspace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Add key mapping for Goto symbol in workspace</h3>
+<p>This an optional step if you want to have a shortcut for looking up symbols in the workspace.
+Open &quot;Preferences &gt; Key Binding&quot; and add:</p>
+<pre><code class="hljs css language-json">[
+  // ...
+  { 
+    <span class="hljs-attr">"keys"</span>: [<span class="hljs-string">"ctrl+t"</span>], 
+    <span class="hljs-attr">"command"</span>: <span class="hljs-string">"show_overlay"</span>,
+    <span class="hljs-attr">"args"</span>: {<span class="hljs-attr">"overlay"</span>: <span class="hljs-string">"command_palette"</span>, <span class="hljs-attr">"command"</span>: <span class="hljs-string">"lsp_workspace_symbols"</span> }
+  }
+]
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="enabling-auto-import-on-completion"></a><a href="#enabling-auto-import-on-completion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Enabling auto-import on completion</h3>
+<p>Metals can complete symbols from your workspace scope and automatically import them.
+By default, however, if you hit &quot;Enter&quot; to select a completion, the LSP client will
+complete the class without importing it, but you can easy remap to use also &quot;Enter&quot; key.
+Open &quot;Preferences &gt; Key Binding&quot; and add:</p>
+<pre><code class="hljs css language-json">[ 
+  // ...
+  { <span class="hljs-attr">"keys"</span>: [<span class="hljs-string">"enter"</span>], <span class="hljs-attr">"command"</span>: <span class="hljs-string">"commit_completion"</span>, <span class="hljs-attr">"context"</span>: [{ <span class="hljs-attr">"key"</span>: <span class="hljs-string">"auto_complete_visible"</span> } ] },
+  { <span class="hljs-attr">"keys"</span>: [<span class="hljs-string">"tab"</span>], <span class="hljs-attr">"command"</span>: <span class="hljs-string">"commit_completion"</span>, <span class="hljs-attr">"context"</span>: [{ <span class="hljs-attr">"key"</span>: <span class="hljs-string">"auto_complete_visible"</span> } ] }
+]
+</code></pre>
+<p><img src="https://i.imgur.com/RDYx9mB.gif" alt="Import after Enter key was hit"></p>
 <h2><a class="anchor" aria-hidden="true" id="known-issues"></a><a href="#known-issues" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Known issues</h2>
 <ul>
 <li>The Sublime Text client uses an alert window for <code>window/showMessage</code> that
@@ -192,7 +258,7 @@ systems like git.</p>
 .metals/
 .bloop/
 </code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/vim.html"><span class="arrow-prev">← </span><span>Vim</span></a><a class="docs-next button" href="/metals/docs/editors/emacs.html"><span>Emacs</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-the-plugin">Installing the plugin</a></li><li><a href="#importing-a-build">Importing a build</a></li><li><a href="#find-symbol-references">Find symbol references</a></li><li><a href="#goto-symbol-in-workspace">Goto symbol in workspace</a></li><li><a href="#manually-trigger-build-import">Manually trigger build import</a></li><li><a href="#known-issues">Known issues</a></li><li><a href="#gitignore-metals-and-bloop">Gitignore <code>.metals/</code> and <code>.bloop/</code></a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/vim.html"><span class="arrow-prev">← </span><span>Vim</span></a><a class="docs-next button" href="/metals/docs/editors/emacs.html"><span>Emacs</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-the-plugin">Installing the plugin</a></li><li><a href="#importing-a-build">Importing a build</a></li><li><a href="#find-symbol-references">Find symbol references</a></li><li><a href="#goto-symbol-in-workspace">Goto symbol in workspace</a></li><li><a href="#manually-trigger-build-import">Manually trigger build import</a></li><li><a href="#tweaking-sublime-text-for-a-better-productivity">Tweaking Sublime Text for a better productivity</a><ul class="toc-headings"><li><a href="#lsp-client-tweaks">LSP client tweaks</a></li><li><a href="#additional-key-mappings">Additional key mappings</a></li><li><a href="#add-key-mapping-for-goto-symbol-in-workspace">Add key mapping for Goto symbol in workspace</a></li><li><a href="#enabling-auto-import-on-completion">Enabling auto-import on completion</a></li></ul></li><li><a href="#known-issues">Known issues</a></li><li><a href="#gitignore-metals-and-bloop">Gitignore <code>.metals/</code> and <code>.bloop/</code></a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
