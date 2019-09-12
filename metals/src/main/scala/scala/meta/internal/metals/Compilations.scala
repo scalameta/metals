@@ -1,11 +1,14 @@
 package scala.meta.internal.metals
+
 import ch.epfl.scala.{bsp4j => b}
+
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import scala.util.Failure
+import scala.util.Success
 
 final class Compilations(
     buildTargets: BuildTargets,
@@ -33,7 +36,7 @@ final class Compilations(
     lastCompile.contains(buildTarget)
 
   def compileTargets(
-      targets: Seq[BuildTargetIdentifier]
+      targets: Seq[b.BuildTargetIdentifier]
   ): Future[b.CompileResult] = {
     compileBatch(targets)
   }
@@ -89,19 +92,15 @@ final class Compilations(
     val params = new b.CompileParams(targets.asJava)
     targets.foreach(target => isCompiling(target) = true)
     val compilation = connection.compile(params)
-    val task = for {
-      result <- compilation.asScala
-      _ <- {
+
+    val result = compilation.asScala.andThen {
+      case Failure(_) =>
+        isCompiling.clear()
+      case Success(_) =>
         lastCompile = isCompiling.keySet
         isCompiling.clear()
-        if (result.isOK) classes.onCompiled(targets)
-        else Future.successful(())
-      }
-    } yield result
+    }
 
-    CancelableFuture(
-      task,
-      Cancelable(() => compilation.cancel(false))
-    )
+    CancelableFuture(result, Cancelable(() => compilation.cancel(false)))
   }
 }
