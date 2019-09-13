@@ -66,6 +66,31 @@ object CompletionSnippetSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
+    "type-empty",
+    """
+      |object Main {
+      |  type MyType = List[Int]
+      |  def list : MT@@
+      |}
+      |""".stripMargin,
+    """|MyType
+       |""".stripMargin
+  )
+
+  checkSnippet(
+    "type-new-empty",
+    """
+      |object Main {
+      |  class Gen[T]
+      |  type MyType = Gen[Int]
+      |  new MT@@
+      |}
+      |""".stripMargin,
+    """|MyType
+       |""".stripMargin
+  )
+
+  checkSnippet(
     "type",
     s"""|object Main {
         |  val x: scala.IndexedSe@@
