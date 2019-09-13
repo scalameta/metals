@@ -92,10 +92,11 @@ class CompletionProvider(
           else if (completion.isNew &&
             r.sym.dealiased.requiresTemplateCurlyBraces) " {}"
           else ""
+
         val typeSuffix =
           if (!isSnippet) ""
-          else if (completion.isType && r.sym.dealiased.hasTypeParams) "[$0]"
-          else if (completion.isNew && r.sym.dealiased.hasTypeParams) "[$0]"
+          else if (completion.isType && r.sym.hasTypeParams) "[$0]"
+          else if (completion.isNew && r.sym.hasTypeParams) "[$0]"
           else ""
         val suffix = typeSuffix + templateSuffix
 
