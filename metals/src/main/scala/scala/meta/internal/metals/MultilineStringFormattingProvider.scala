@@ -1,8 +1,10 @@
 package scala.meta.internal.metals
 
-import org.eclipse.lsp4j.{DocumentOnTypeFormattingParams, Range, TextEdit}
-
-import scala.concurrent.{ExecutionContext, Future}
+import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
+import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.TextEdit
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
@@ -45,6 +47,24 @@ final class MultilineStringFormattingProvider(
     val lastPipe = sourceText.lastIndexBetween('|', upperBound = start)
     val lastNewline = sourceText.lastIndexBetween('\n', upperBound = lastPipe)
     space * (lastPipe - lastNewline - 1)
+  }
+
+  private def indent(
+      sourceText: String,
+      start: Int,
+      position: Position
+  ): TextEdit = {
+    val defaultIndent = indent(sourceText, start)
+    val existingSpaces = position.getCharacter()
+    val addedSpaces = defaultIndent.drop(existingSpaces)
+    val startChar = defaultIndent.size - addedSpaces.size
+    position.setCharacter(startChar)
+    val endChar = startChar + Math.max(0, existingSpaces - defaultIndent.size)
+    val endPosition = new Position(position.getLine(), endChar)
+    new TextEdit(
+      new Range(position, endPosition),
+      addedSpaces + "|"
+    )
   }
 
   private def isMultilineString(text: String, token: Token) = {
@@ -132,7 +152,7 @@ final class MultilineStringFormattingProvider(
     val doc = params.getTextDocument()
     val newlineAdded = params.getCh() == "\n"
     withToken(doc, range, newlineAdded) { (sourceText, position) =>
-      List(new TextEdit(range, indent(sourceText, position.start) + "|"))
+      List(indent(sourceText, position.start, params.getPosition))
     }
   }
 

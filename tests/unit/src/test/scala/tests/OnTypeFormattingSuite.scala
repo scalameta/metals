@@ -80,7 +80,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |object Main {
        |  val number = 102
        |  val str = s"|
-       |$$number".stripMargin
+       |  $$number".stripMargin
        |}""".stripMargin
   )
 
@@ -118,7 +118,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |  | a multiline
        |  | string
        |  '''.stripMargin
-       |
+       |  
        |}""".stripMargin
   )
 
@@ -136,7 +136,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |  val abc = 123
        |  val s = ''' example
        |  word
-       |'''.stripMargin
+       |  '''.stripMargin
        |  abc.toInt
        |}""".stripMargin
   )
@@ -146,17 +146,41 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = '''|@@
-       |'''.stripMargin
+       |  '''.stripMargin
        |}""".stripMargin,
     s"""
        |object Main {
        |  val str = '''|
        |               |
-       |'''.stripMargin
+       |  '''.stripMargin
        |}""".stripMargin
   )
 
-  def check(name: String, testCase: String, expectedCase: String): Unit = {
+  // this can be caused by the client if scala syntax is recognized inside a string
+  check(
+    "weird-indent",
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |object A{@@
+       |  '''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |object A{
+       |  |
+       |  '''.stripMargin
+       |}""".stripMargin,
+    " " * 4
+  )
+
+  def check(
+      name: String,
+      testCase: String,
+      expectedCase: String,
+      autoIndent: String = "  "
+  ): Unit = {
     val tripleQuote = """\u0022\u0022\u0022"""
     def unmangle(string: String): String =
       string.replaceAll("'''", tripleQuote)
@@ -176,7 +200,8 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
         _ <- server.onTypeFormatting(
           "a/src/main/scala/a/Main.scala",
           test,
-          expected
+          expected,
+          autoIndent
         )
       } yield ()
     }
