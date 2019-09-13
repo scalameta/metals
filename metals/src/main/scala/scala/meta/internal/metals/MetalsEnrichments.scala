@@ -324,7 +324,7 @@ object MetalsEnrichments
 
   }
 
-  implicit class XtensionStringUriProtocol(value: String) {
+  implicit class XtensionString(value: String) {
 
     /** Returns true if this is a Scala.js or Scala Native target
      *
@@ -340,6 +340,18 @@ object MetalsEnrichments
       isCompilerPlugin("nscplugin", "scala-native") ||
       isCompilerPlugin("scalajs-compiler", "scala-js") ||
       value.startsWith("-P:scalajs:")
+    }
+
+    def lastIndexBetween(
+        char: Char,
+        lowerBound: Int = 0,
+        upperBound: Int = value.size
+    ) = {
+      var index = upperBound
+      while (index > lowerBound && value(index) != char) {
+        index -= 1
+      }
+      index
     }
 
     def toAbsolutePath: AbsolutePath =

@@ -7,14 +7,14 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = '''
-       |  #@@word
+       |  |@@word
        |  '''.stripMargin
        |}""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
-       |  #
-       |  #word
+       |  |
+       |  |word
        |  '''.stripMargin
        |}""".stripMargin
   )
@@ -25,17 +25,17 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |object Main {
        |  val number = 102
        |  val str = s'''
-       |  #$$number
-       |  #@@word
+       |  |$$number
+       |  |@@word
        |  '''.stripMargin
        |}""".stripMargin,
     s"""
        |object Main {
        |  val number = 102
        |  val str = s'''
-       |  #$$number
-       |  #
-       |  #word
+       |  |$$number
+       |  |
+       |  |word
        |  '''.stripMargin
        |}""".stripMargin
   )
@@ -46,25 +46,25 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |object Main {
        |  val number = 102
        |  val other = s'''
-       |  #$$number
-       |  #word
+       |  |$$number
+       |  |word
        |  '''.stripMargin
        |  val str = s'''
-       |  #$$number
-       |  #@@word
+       |  |$$number
+       |  |@@word
        |  '''.stripMargin
        |}""".stripMargin,
     s"""
        |object Main {
        |  val number = 102
        |  val other = s'''
-       |  #$$number
-       |  #word
+       |  |$$number
+       |  |word
        |  '''.stripMargin
        |  val str = s'''
-       |  #$$number
-       |  #
-       |  #word
+       |  |$$number
+       |  |
+       |  |word
        |  '''.stripMargin
        |}""".stripMargin
   )
@@ -74,13 +74,13 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val number = 102
-       |  val str = s"#@@$$number".stripMargin
+       |  val str = s"|@@$$number".stripMargin
        |}""".stripMargin,
     s"""
        |object Main {
        |  val number = 102
-       |  val str = s"#
-       |  $$number".stripMargin
+       |  val str = s"|
+       |$$number".stripMargin
        |}""".stripMargin
   )
 
@@ -89,14 +89,14 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = '''
-       |  #@@word
+       |  |@@word
        |  ''' stripMargin
        |}""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
-       |  #
-       |  #word
+       |  |
+       |  |word
        |  ''' stripMargin
        |}""".stripMargin
   )
@@ -105,19 +105,19 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     "after-string",
     s"""
        |object Main {
-       |val a = '''
-       |# this is
-       |# a multiline
-       |# string
-       |'''.stripMargin@@
+       |  val a = '''
+       |  | this is
+       |  | a multiline
+       |  | string
+       |  '''.stripMargin@@
        |}""".stripMargin,
     s"""
        |object Main {
-       |val a = '''
-       |# this is
-       |# a multiline
-       |# string
-       |'''.stripMargin
+       |  val a = '''
+       |  | this is
+       |  | a multiline
+       |  | string
+       |  '''.stripMargin
        |
        |}""".stripMargin
   )
@@ -136,7 +136,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
        |  val abc = 123
        |  val s = ''' example
        |  word
-       |  '''.stripMargin
+       |'''.stripMargin
        |  abc.toInt
        |}""".stripMargin
   )
@@ -145,13 +145,13 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
     "far-indent-string",
     s"""
        |object Main {
-       |  val str = '''#@@
+       |  val str = '''|@@
        |'''.stripMargin
        |}""".stripMargin,
     s"""
        |object Main {
-       |  val str = '''#
-       |               #
+       |  val str = '''|
+       |               |
        |'''.stripMargin
        |}""".stripMargin
   )
@@ -159,9 +159,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
   def check(name: String, testCase: String, expectedCase: String): Unit = {
     val tripleQuote = """\u0022\u0022\u0022"""
     def unmangle(string: String): String =
-      string
-        .replaceAll("#", "|")
-        .replaceAll("'''", tripleQuote)
+      string.replaceAll("'''", tripleQuote)
 
     val test = unmangle(testCase)
     val base = test.replaceAll("(@@)", "")
@@ -177,7 +175,7 @@ object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ <- server.onTypeFormatting(
           "a/src/main/scala/a/Main.scala",
-          test, // bez @@
+          test,
           expected
         )
       } yield ()

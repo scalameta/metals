@@ -10,10 +10,14 @@ import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Constant
 import scala.meta.tokens.Tokens
 import scala.meta.tokens.Token.Interpolation
+import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.Position
 
 /*in order to use onTypeFormatting in vscode,
-you'll have to set editor.formatOnType = true in settings*/
-final class OnTypeFormattingProvider(
+you'll have to set editor.formatOnType = true
+and editor.formatOnPaste = true in settings*/
+final class MultilineStringFormattingProvider(
     semanticdbs: Semanticdbs,
     buffer: Buffers
 )(implicit ec: ExecutionContext) {
@@ -37,13 +41,10 @@ final class OnTypeFormattingProvider(
     }
   }
 
-  private def indent(toInput: String, pos: meta.Position): String = {
-    val beforePos = toInput.substring(0, pos.start)
-    val lastPipe = beforePos.lastIndexOf("|")
-    val lastNewline = beforePos.lastIndexOf("\n", lastPipe)
-    val indent = beforePos.substring(beforePos.lastIndexOf("\n")).length
-    val length = toInput.substring(lastNewline, lastPipe).length
-    space * (length - indent)
+  private def indent(sourceText: String, start: Int): String = {
+    val lastPipe = sourceText.lastIndexBetween('|', upperBound = start)
+    val lastNewline = sourceText.lastIndexBetween('\n', upperBound = lastPipe)
+    space * (lastPipe - lastNewline - 1)
   }
 
   private def isMultilineString(text: String, token: Token) = {
@@ -57,13 +58,19 @@ final class OnTypeFormattingProvider(
     pos.start >= token.start && pos.end <= token.end
   }
 
-  private def pipeInScope(pos: meta.Position, text: String): Boolean = {
-    val firstNewline = text.substring(0, pos.start).lastIndexOf("\n")
-    val lastNewline =
-      text.substring(0, firstNewline).lastIndexOf("\n")
-    text
-      .substring(lastNewline + 1, pos.start)
-      .contains("|")
+  private def pipeInScope(
+      pos: meta.Position,
+      text: String,
+      newlineAdded: Boolean
+  ): Boolean = {
+    val newLineBeforePos =
+      text.lastIndexBetween('\n', upperBound = pos.start - 1)
+    val pipeSearchStop =
+      if (newlineAdded)
+        text.lastIndexBetween('\n', upperBound = newLineBeforePos - 1)
+      else newLineBeforePos
+    val lastPipe = text.lastIndexBetween('|', pipeSearchStop, pos.start)
+    lastPipe > pipeSearchStop
   }
 
   private def multilineStringInTokens(
@@ -95,30 +102,53 @@ final class OnTypeFormattingProvider(
     shouldAddPipes
   }
 
-  def format(
-      params: DocumentOnTypeFormattingParams
-  ): Future[java.util.List[TextEdit]] = {
-    val source = params.getTextDocument.getUri.toAbsolutePath
-    val range = new Range(params.getPosition, params.getPosition)
-
-    val edit = if (source.exists) {
+  private def withToken(
+      textId: TextDocumentIdentifier,
+      range: Range,
+      newlineAdded: Boolean
+  )(
+      fn: (String, meta.Position) => List[TextEdit]
+  ): Future[List[TextEdit]] = Future {
+    val source = textId.getUri.toAbsolutePath
+    if (source.exists) {
       val sourceText = buffer.get(source).getOrElse("")
-      val pos = params.getPosition.toMeta(
+      val pos = range.getStart.toMeta(
         Input.VirtualFile(source.toString(), sourceText)
       )
-      if (pipeInScope(pos, sourceText)) {
+      if (pipeInScope(pos, sourceText, newlineAdded)) {
         val tokens =
           Input.VirtualFile(source.toString(), sourceText).tokenize.toOption
-        tokens.flatMap { tokens: Tokens =>
-          if (multilineStringInTokens(tokens, pos, sourceText)) {
-            Some(new TextEdit(range, indent(sourceText, pos) + "|"))
-          } else {
-            None
-          }
-        }
-      } else None
-    } else None
-    Future.successful(edit.toList.asJava)
+        tokens.toList
+          .filter(multilineStringInTokens(_, pos, sourceText))
+          .flatMap(_ => fn(sourceText, pos))
+      } else Nil
+    } else Nil
   }
 
+  def format(
+      params: DocumentOnTypeFormattingParams
+  ): Future[List[TextEdit]] = {
+    val range = new Range(params.getPosition, params.getPosition)
+    val doc = params.getTextDocument()
+    val newlineAdded = params.getCh() == "\n"
+    withToken(doc, range, newlineAdded) { (sourceText, position) =>
+      List(new TextEdit(range, indent(sourceText, position.start) + "|"))
+    }
+  }
+
+  def format(
+      params: DocumentRangeFormattingParams
+  ): Future[List[TextEdit]] = {
+    val source = params.getTextDocument.getUri.toAbsolutePath
+    val range = params.getRange()
+    val doc = params.getTextDocument()
+    withToken(doc, range, newlineAdded = false) { (sourceText, position) =>
+      val newText = indent(sourceText, position.start) + "|"
+      val lines = (range.getStart().getLine() + 1) to range.getEnd().getLine()
+      lines.map { line =>
+        val pos = new Position(line, 0)
+        new TextEdit(new Range(pos, pos), newText)
+      }.toList
+    }
+  }
 }

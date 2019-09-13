@@ -153,7 +153,8 @@ class MetalsLanguageServer(
   private var definitionProvider: DefinitionProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
-  private var onTypeFormattingProvider: OnTypeFormattingProvider = _
+  private var multilineStringFormattingProvider
+      : MultilineStringFormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
@@ -318,7 +319,7 @@ class MetalsLanguageServer(
           Nil
       }
     )
-    onTypeFormattingProvider = new OnTypeFormattingProvider(
+    multilineStringFormattingProvider = new MultilineStringFormattingProvider(
       semanticdbs,
       buffers
     )
@@ -417,6 +418,7 @@ class MetalsLanguageServer(
       capabilities.setDocumentOnTypeFormattingProvider(
         new DocumentOnTypeFormattingOptions("\n")
       )
+      capabilities.setDocumentRangeFormattingProvider(true)
       capabilities.setSignatureHelpProvider(
         new SignatureHelpOptions(List("(", "[").asJava)
       )
@@ -848,15 +850,25 @@ class MetalsLanguageServer(
         token
       )
     }
-  /*in order to use onTypeFormatting in vscode, you'll have to set editor.formatOnType = true in settings*/
+
   @JsonRequest("textDocument/onTypeFormatting")
   def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens.future { _ =>
-      onTypeFormattingProvider.format(
-        params
-      )
+      multilineStringFormattingProvider
+        .format(params)
+        .map(_.asJava)
+    }
+
+  @JsonRequest("textDocument/rangeFormatting")
+  def rangeFormatting(
+      params: DocumentRangeFormattingParams
+  ): CompletableFuture[util.List[TextEdit]] =
+    CancelTokens.future { _ =>
+      multilineStringFormattingProvider
+        .format(params)
+        .map(_.asJava)
     }
 
   @JsonRequest("textDocument/rename")

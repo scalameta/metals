@@ -45,9 +45,7 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
-import org.scalactic.source.Position
 import tests.MetalsTestEnrichments._
-
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -78,8 +76,8 @@ import scala.meta.io.RelativePath
 import scala.{meta => m}
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-
 import scala.meta.internal.tvp.TreeViewProvider
+import org.eclipse.lsp4j.DocumentRangeFormattingParams
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -173,7 +171,7 @@ final class TestingServer(
   }
   def assertReferenceDefinitionDiff(
       expectedDiff: String
-  )(implicit pos: Position): Unit = {
+  ): Unit = {
     DiffAssertions.assertNoDiffOrPrintObtained(
       workspaceReferences().diff,
       expectedDiff,
@@ -398,23 +396,6 @@ final class TestingServer(
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
 
-  def typeFormat(
-      filename: String,
-      query: String,
-      root: AbsolutePath
-  ): Future[String] = {
-    for {
-      (text, params) <- onTypeParams(filename, query, root)
-      multiline <- server.onTypeFormatting(params).asScala
-    } yield {
-      TestMultilineStrings.renderAsString(
-        text,
-        params,
-        multiline.asScala.toList
-      )
-    }
-  }
-
   def onTypeFormatting(
       filename: String,
       query: String,
@@ -422,7 +403,36 @@ final class TestingServer(
       root: AbsolutePath = workspace
   ): Future[Unit] = {
     for {
-      format <- typeFormat(filename, query, root)
+      (text, params) <- onTypeParams(filename, query, root)
+      multiline <- server.onTypeFormatting(params).asScala
+      format = TextEdits.applyEdits(
+        textContents(filename),
+        multiline.asScala.toList
+      )
+    } yield {
+      DiffAssertions.assertNoDiffOrPrintObtained(
+        format,
+        expected,
+        "obtained",
+        "expected"
+      )
+    }
+  }
+
+  def rangeFormatting(
+      filename: String,
+      query: String,
+      expected: String,
+      paste: String,
+      root: AbsolutePath = workspace
+  ): Future[Unit] = {
+    for {
+      (text, params) <- rangeFormattingParams(filename, query, paste, root)
+      multiline <- server.rangeFormatting(params).asScala
+      format = TextEdits.applyEdits(
+        textContents(filename),
+        multiline.asScala.toList
+      )
     } yield {
       DiffAssertions.assertNoDiffOrPrintObtained(
         format,
@@ -463,14 +473,17 @@ final class TestingServer(
       .mkString("\n")
   }
 
-  private def offsetParams(
+  private def positionFromString[T](
       filename: String,
       original: String,
-      root: AbsolutePath
-  ): Future[(String, TextDocumentPositionParams)] = {
+      root: AbsolutePath,
+      replaceWith: String = ""
+  )(
+      fn: (String, TextDocumentIdentifier, l.Position) => T
+  ): Future[T] = {
     val offset = original.indexOf("@@")
     if (offset < 0) sys.error(s"missing @@\n$original")
-    val text = original.replaceAllLiterally("@@", "")
+    val text = original.replaceAllLiterally("@@", replaceWith)
     val input = m.Input.String(text)
     val path = root.resolve(filename)
     path.touch()
@@ -478,45 +491,55 @@ final class TestingServer(
     for {
       _ <- didChange(filename)(_ => text)
     } yield {
-      (
+      fn(
         text,
-        new TextDocumentPositionParams(
-          path.toTextDocumentIdentifier,
-          pos.toLSP.getStart
-        )
+        path.toTextDocumentIdentifier,
+        pos.toLSP.getStart
       )
     }
   }
+
+  private def offsetParams(
+      filename: String,
+      original: String,
+      root: AbsolutePath
+  ): Future[(String, TextDocumentPositionParams)] =
+    positionFromString(filename, original, root) {
+      case (text, textId, start) =>
+        (text, new TextDocumentPositionParams(textId, start))
+    }
 
   private def onTypeParams(
       filename: String,
       original: String,
       root: AbsolutePath
   ): Future[(String, DocumentOnTypeFormattingParams)] = {
-    val preOffset = original.indexOf("@@")
-    val preNewline = original.substring(0, preOffset).lastIndexOf("\n")
-    val whitespace = original
-      .substring(preNewline + 1, preOffset + 1)
-      .takeWhile(_.isWhitespace)
-    val offset = preOffset + whitespace.length + 1
-    if (preOffset < 0) sys.error(s"missing @@\n$original")
-    if (offset < 0) sys.error(s"missing @@\n$original")
-    val trueOriginal = original.substring(0, preOffset + 2) + "\n" + whitespace + original
-      .substring(preOffset + 2)
-    val text = trueOriginal.replaceAllLiterally("@@", "")
-    val input = m.Input.String(text)
-    val path = root.resolve(filename)
-    path.touch()
-    val pos = m.Position.Range(input, offset, offset)
-    val documentParams = new DocumentOnTypeFormattingParams(
-      pos.toLSP.getStart,
-      "\n"
-    )
-    documentParams.setTextDocument(path.toTextDocumentIdentifier)
-    for {
-      _ <- didChange(filename)(_ => text)
-    } yield {
-      (text, documentParams)
+    positionFromString(filename, original, root, replaceWith = "\n") {
+      case (text, textId, start) =>
+        start.setLine(start.getLine() + 1) // + newline
+        start.setCharacter(0)
+        val params = new DocumentOnTypeFormattingParams(start, "\n")
+        params.setTextDocument(textId)
+        (text, params)
+    }
+  }
+
+  private def rangeFormattingParams(
+      filename: String,
+      original: String,
+      paste: String,
+      root: AbsolutePath
+  ): Future[(String, DocumentRangeFormattingParams)] = {
+    positionFromString(filename, original, root, replaceWith = paste) {
+      case (text, textId, start) =>
+        val lines = paste.count(_ == '\n')
+        val char = paste.reverse.takeWhile(_ != '\n').size
+        val end = new l.Position(start.getLine() + lines, char)
+        val range = new l.Range(start, end)
+        val params = new DocumentRangeFormattingParams()
+        params.setRange(range)
+        params.setTextDocument(textId)
+        (text, params)
     }
   }
 
