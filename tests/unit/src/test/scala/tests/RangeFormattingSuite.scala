@@ -62,7 +62,7 @@ object RangeFormattingSuite extends BaseSlowSuite("rangeFormatting") {
   )
 
   check(
-    "not-valid",
+    "without-stripmargin",
     s"""
        |object Main {
        |  val str = '''

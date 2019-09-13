@@ -41,22 +41,9 @@ final class MultilineStringFormattingProvider(
     }
   }
 
-  private def findChar(
-      sourceText: String,
-      char: Char,
-      currentPos: Int,
-      stop: Int = 0
-  ) = {
-    var start = currentPos
-    while (start > stop && sourceText(start) != char) {
-      start -= 1
-    }
-    start
-  }
-
   private def indent(sourceText: String, start: Int): String = {
-    val lastPipe = findChar(sourceText, '|', start)
-    val lastNewline = findChar(sourceText, '\n', lastPipe)
+    val lastPipe = sourceText.lastIndexBetween('|', upperBound = start)
+    val lastNewline = sourceText.lastIndexBetween('\n', upperBound = lastPipe)
     space * (lastPipe - lastNewline - 1)
   }
 
@@ -76,11 +63,14 @@ final class MultilineStringFormattingProvider(
       text: String,
       newlineAdded: Boolean
   ): Boolean = {
-    val firstNewline = findChar(text, '\n', pos.start - 1)
-    val stop =
-      if (newlineAdded) findChar(text, '\n', firstNewline - 1) else firstNewline
-    val lastPipe = findChar(text, '|', pos.start, stop)
-    lastPipe > stop
+    val newLineBeforePos =
+      text.lastIndexBetween('\n', upperBound = pos.start - 1)
+    val pipeSearchStop =
+      if (newlineAdded)
+        text.lastIndexBetween('\n', upperBound = newLineBeforePos - 1)
+      else newLineBeforePos
+    val lastPipe = text.lastIndexBetween('|', pipeSearchStop, pos.start)
+    lastPipe > pipeSearchStop
   }
 
   private def multilineStringInTokens(
@@ -128,11 +118,9 @@ final class MultilineStringFormattingProvider(
       if (pipeInScope(pos, sourceText, newlineAdded)) {
         val tokens =
           Input.VirtualFile(source.toString(), sourceText).tokenize.toOption
-        tokens.toList.flatMap { tokens: Tokens =>
-          if (multilineStringInTokens(tokens, pos, sourceText))
-            fn(sourceText, pos)
-          else Nil
-        }
+        tokens.toList
+          .filter(multilineStringInTokens(_, pos, sourceText))
+          .flatMap(_ => fn(sourceText, pos))
       } else Nil
     } else Nil
   }
@@ -141,11 +129,9 @@ final class MultilineStringFormattingProvider(
       params: DocumentOnTypeFormattingParams
   ): Future[List[TextEdit]] = {
     val range = new Range(params.getPosition, params.getPosition)
-    withToken(
-      params.getTextDocument(),
-      range,
-      params.getCh() == "\n"
-    ) { (sourceText, position) =>
+    val doc = params.getTextDocument()
+    val newlineAdded = params.getCh() == "\n"
+    withToken(doc, range, newlineAdded) { (sourceText, position) =>
       List(new TextEdit(range, indent(sourceText, position.start) + "|"))
     }
   }
@@ -155,12 +141,8 @@ final class MultilineStringFormattingProvider(
   ): Future[List[TextEdit]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     val range = params.getRange()
-
-    withToken(
-      params.getTextDocument(),
-      range,
-      newlineAdded = false
-    ) { (sourceText, position) =>
+    val doc = params.getTextDocument()
+    withToken(doc, range, newlineAdded = false) { (sourceText, position) =>
       val newText = indent(sourceText, position.start) + "|"
       val lines = (range.getStart().getLine() + 1) to range.getEnd().getLine()
       lines.map { line =>

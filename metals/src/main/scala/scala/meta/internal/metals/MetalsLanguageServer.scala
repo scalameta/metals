@@ -857,9 +857,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens.future { _ =>
       multilineStringFormattingProvider
-        .format(
-          params
-        )
+        .format(params)
         .map(_.asJava)
     }
 
@@ -869,9 +867,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[TextEdit]] =
     CancelTokens.future { _ =>
       multilineStringFormattingProvider
-        .format(
-          params
-        )
+        .format(params)
         .map(_.asJava)
     }
 
