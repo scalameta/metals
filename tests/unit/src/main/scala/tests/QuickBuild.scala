@@ -39,7 +39,7 @@ import scala.meta.internal.mtags.ListFiles
  * A build is declared in metals.json and looks like this: {{{
  *   {
  *     "id": {
- *       "scalaVersion": "2.12.9",
+ *       "scalaVersion": "2.12.10",
  *       "libraryDependencies": [
  *         "org.scalatest::scalatest:3.0.5",
  *       ],

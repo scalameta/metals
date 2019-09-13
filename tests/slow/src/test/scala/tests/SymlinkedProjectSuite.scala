@@ -11,7 +11,7 @@ object SymlinkedProjectSuite extends BaseSlowSuite("symlinked-project") {
            |sbt.version=1.2.6
            |
            |/build.sbt
-           |scalaVersion := "2.12.9"
+           |scalaVersion := "2.12.10"
            |
            |/src/main/scala/Foo.scala
            |class Foo

@@ -137,9 +137,9 @@ commands += Command.command("save-expect") { s =>
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val scala212 = "2.12.9"
+  val scala212 = "2.12.10"
   val scala213 = "2.13.0"
-  val scalameta = "4.2.2"
+  val scalameta = "4.2.3"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4"
   val bloop = "1.3.2"
@@ -149,7 +149,7 @@ lazy val V = new {
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
-    Seq(scala213, "2.12.8", scala212) ++ deprecatedScalaVersions
+    Seq(scala213, "2.12.8", "2.12.9", scala212) ++ deprecatedScalaVersions
   def deprecatedScalaVersions = Seq("2.12.7", scala211)
   def guava = "com.google.guava" % "guava" % "28.0-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.0"

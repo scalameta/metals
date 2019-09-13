@@ -9,7 +9,7 @@ object Corpus {
   def scala(): AbsolutePath = {
     download(
       "scala-sources.zip",
-      "https://github.com/scala/scala/archive/v2.12.9.zip"
+      "https://github.com/scala/scala/archive/v2.12.10.zip"
     )
   }
   def fastparse(): AbsolutePath = {

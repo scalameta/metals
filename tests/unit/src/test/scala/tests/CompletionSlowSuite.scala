@@ -100,9 +100,9 @@ object CompletionSlowSuite extends BaseCompletionSlowSuite("completion") {
     ""
   )
 
-  // FIXME(gabro): the tests don't pass with 2.12.9, although the plugins seem to work fine when
+  // FIXME(gabro): the tests don't pass with 2.12.10, although the plugins seem to work fine when
   // tested manually
-  if (BuildInfo.scalaVersion != "2.12.9") {
+  if (BuildInfo.scalaVersion != "2.12.10") {
     checkPlugin(
       "kind-projector",
       """

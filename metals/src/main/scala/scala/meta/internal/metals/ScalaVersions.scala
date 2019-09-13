@@ -20,7 +20,7 @@ object ScalaVersions {
     }
 
   val isLatestScalaVersion: Set[String] =
-    Set(BuildInfo.scala213, "2.12.9", BuildInfo.scala211)
+    Set(BuildInfo.scala213, BuildInfo.scala212, BuildInfo.scala211)
 
   def recommendedVersion(scalaVersion: String): String = BuildInfo.scala212
 
