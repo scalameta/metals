@@ -38,7 +38,9 @@ class DocumentSymbolProvider(trees: Trees) {
     )
     def symbols(tree: Tree): util.List[DocumentSymbol] = {
       apply(tree)
-      owner.getChildren
+      val a = owner.getChildren
+      a.asScala.foreach(a => scribe.warn(a.toString()))
+      a
     }
 
     def addChild(
@@ -107,6 +109,11 @@ class DocumentSymbolProvider(trees: Trees) {
           } else continue()
         case _: Source | _: Template | _: Term.Block =>
           continue()
+        case t: Term.Try =>
+          if (t.expr.children.nonEmpty || t.catchp.nonEmpty || t.finallyp.nonEmpty) {
+            addChild("try", SymbolKind.Module, t.pos, t.pos, "")
+            newOwner()
+          } else continue()
         case t: Defn.Class =>
           addChild(
             t.name.value,
