@@ -55,7 +55,7 @@ class CompilerAccess(
       sh.foreach { scheduler =>
         scheduler.schedule[Unit](() => {
           if (compiler.presentationCompilerThread.isAlive) {
-            compiler.presentationCompilerThread.stop()
+            compiler.presentationCompilerThread.interrupt()
           }
         }, 2, TimeUnit.SECONDS)
       }
