@@ -193,5 +193,4 @@ final class DefinitionProvider(
       }
     }
   }
-
 }

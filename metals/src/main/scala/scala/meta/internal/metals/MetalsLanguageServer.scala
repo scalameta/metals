@@ -151,6 +151,8 @@ class MetalsLanguageServer(
   private var bspServers: BspServers = _
   private var codeLensProvider: CodeLensProvider = _
   private var definitionProvider: DefinitionProvider = _
+  private var semanticDBIndexer: SemanticDBIndexer = _
+  private var implementationProvider: ImplementationProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
   private var multilineStringFormattingProvider
@@ -329,6 +331,13 @@ class MetalsLanguageServer(
       buffers,
       definitionProvider
     )
+    implementationProvider = new ImplementationProvider(
+      semanticdbs,
+      workspace,
+      definitionProvider
+    )
+    semanticDBIndexer =
+      new SemanticDBIndexer(referencesProvider, implementationProvider)
     documentHighlightProvider = new DocumentHighlightProvider(
       definitionProvider,
       semanticdbs
@@ -412,6 +421,7 @@ class MetalsLanguageServer(
       )
       capabilities.setFoldingRangeProvider(true)
       capabilities.setDefinitionProvider(true)
+      capabilities.setImplementationProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
       capabilities.setDocumentHighlightProvider(true)
@@ -753,11 +763,11 @@ class MetalsLanguageServer(
       CompletableFuture.completedFuture {
         event.eventType() match {
           case EventType.DELETE =>
-            referencesProvider.onDelete(event.path())
+            semanticDBIndexer.onDelete(event.path())
           case EventType.CREATE | EventType.MODIFY =>
-            referencesProvider.onChange(event.path())
+            semanticDBIndexer.onChange(event.path())
           case EventType.OVERFLOW =>
-            referencesProvider.onOverflow(event.path())
+            semanticDBIndexer.onOverflow(event.path())
         }
       }
     } else {
@@ -802,8 +812,7 @@ class MetalsLanguageServer(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens { _ =>
-      scribe.warn("textDocument/implementation is not supported.")
-      null
+      implementationProvider.implementation(position).asJava
     }
 
   @JsonRequest("textDocument/hover")
@@ -1449,7 +1458,7 @@ class MetalsLanguageServer(
       buildTargets.reset()
       interactiveSemanticdbs.reset()
       buildClient.reset()
-      referencesProvider.reset()
+      semanticDBIndexer.reset()
       treeView.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
@@ -1475,7 +1484,7 @@ class MetalsLanguageServer(
       "indexed workspace SemanticDBs",
       config.statistics.isIndex
     ) {
-      referencesProvider.onScalacOptions(i.scalacOptions)
+      semanticDBIndexer.onScalacOptions(i.scalacOptions)
     }
     timedThunk(
       "indexed workspace sources",

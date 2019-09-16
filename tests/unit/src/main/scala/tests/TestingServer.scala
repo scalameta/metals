@@ -612,7 +612,33 @@ final class TestingServer(
       (text, params) <- offsetParams(filename, query, root)
       highlights <- server.documentHighlights(params).asScala
     } yield {
-      TestHighlights.renderAsString(text, highlights.asScala.toList)
+      TestRanges.renderHighlightsAsString(text, highlights.asScala.toList)
+    }
+  }
+
+  def assertImplementation(
+      filename: String,
+      query: String,
+      expected: String
+  ): Future[Unit] = {
+    for {
+      implementations <- implementation(filename, query)
+    } yield {
+      DiffAssertions.assertNoDiffOrPrintObtained(
+        implementations,
+        expected,
+        "obtained",
+        "expected"
+      )
+    }
+  }
+
+  def implementation(filename: String, query: String) = {
+    for {
+      (text, params) <- offsetParams(filename, query, workspace)
+      implemtees <- server.implementation(params).asScala
+    } yield {
+      TestRanges.renderLocationsAsString(text, implemtees.asScala.toList)
     }
   }
 
