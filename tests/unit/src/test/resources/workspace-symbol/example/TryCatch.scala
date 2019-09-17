@@ -6,5 +6,7 @@ class TryCatch/*example.TryCatch#*/ {
     x + 2
   } catch {
     case t: Throwable =>
+  } finally {
+    val text = ""
   }
 }

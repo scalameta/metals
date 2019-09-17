@@ -38,9 +38,7 @@ class DocumentSymbolProvider(trees: Trees) {
     )
     def symbols(tree: Tree): util.List[DocumentSymbol] = {
       apply(tree)
-      val a = owner.getChildren
-      a.asScala.foreach(a => scribe.warn(a.toString()))
-      a
+      owner.getChildren
     }
 
     def addChild(
@@ -107,13 +105,35 @@ class DocumentSymbolProvider(trees: Trees) {
             addChild(s"new $name", SymbolKind.Interface, t.pos, selection, "")
             newOwner()
           } else continue()
-        case _: Source | _: Template | _: Term.Block =>
+        case _: Source | _: Template =>
           continue()
-        case t: Term.Try =>
-          if (t.expr.children.nonEmpty || t.catchp.nonEmpty || t.finallyp.nonEmpty) {
-            addChild("try", SymbolKind.Module, t.pos, t.pos, "")
+        case block: Term.Block =>
+          if (owner.getName() == "try") {
+            if (owner.getChildren().isEmpty()) {
+              continue()
+            } else {
+              val blockPos = block.stats.head.pos
+              addChild("finally", SymbolKind.Struct, block.pos, block.pos, "")
+              newOwner()
+            }
+          } else {
+            continue()
+          }
+        case t: Case =>
+          if (owner.getName() == "try" && owner
+              .getChildren()
+              .asScala
+              .forall(_.getName() != "catch"))
+            addChild("catch", SymbolKind.Struct, t.pos, t.pos, "")
+        case t: Term
+            if t.isInstanceOf[Term.Try] || t
+              .isInstanceOf[Term.TryWithHandler] =>
+          if (t.children.nonEmpty) {
+            addChild("try", SymbolKind.Struct, t.pos, t.pos, "")
             newOwner()
-          } else continue()
+          } else {
+            continue()
+          }
         case t: Defn.Class =>
           addChild(
             t.name.value,
