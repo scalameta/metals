@@ -92,7 +92,8 @@ object ReferenceSlowSuite extends BaseSlowSuite("reference") {
     } yield ()
   }
 
-  testAsync("edit-distance") {
+  // NOTE(olafurpg) ignored because it's flaky
+  ignore("edit-distance") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
