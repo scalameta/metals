@@ -233,6 +233,20 @@ object CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
+    "auto-no-show",
+    s"""|object Main {
+        |  def foo(argument : Int, other : String) : Int = argument
+        |  val number = 5
+        |  val hello = "" 
+        |  val relevant = 123
+        |  ___ 
+        |}
+        |""".stripMargin,
+    "foo(rele@@)",
+    "foo(relevant)"
+  )
+
+  checkEditLine(
     "auto",
     s"""|object Main {
         |  def foo(argument : Int, other : String) : Int = argument
@@ -246,9 +260,27 @@ object CompletionArgSuite extends BaseCompletionSuite {
   )
 
   checkEditLine(
+    "auto-inheritance",
+    s"""|object Main {
+        |  trait Animal
+        |  class Dog extends Animal
+        |
+        |  trait Furniture
+        |  class Chair extends Furniture
+        |  def foo(animal: Animal, furniture: Furniture) : Int = 42
+        |  val dog = new Dog()
+        |  val chair = new Chair()
+        |  ___ 
+        |}
+        |""".stripMargin,
+    "foo(auto@@)",
+    "foo(animal = ${1:dog}, furniture = ${2:chair})"
+  )
+
+  checkEditLine(
     "auto-multiple-type",
     s"""|object Main {
-        |  def foo(argument : Int, other : String) : Int = argument
+        |  def foo(argument : Int, other : String, last : String = "") : Int = argument
         |  val number = 5
         |  val argument = 123
         |  val hello = "" 
@@ -256,14 +288,14 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1|argument,number|}, other = ${2:hello})"
+    "foo(argument = ${1|???,argument,number|}, other = ${2:hello})"
   )
 
   checkEditLine(
     "auto-not-found",
     s"""|object Main {
         |  val number = 234
-        |  def foo(argument : Int = 123, other : String = "", isTrue: Boolean, opt : Option[String]) : Int = argument
+        |  def foo(argument : Int, other : String, isTrue: Boolean, opt : Option[String]) : Int = argument
         |  ___
         |}
         |""".stripMargin,
@@ -283,7 +315,7 @@ object CompletionArgSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "foo(auto@@)",
-    "foo(argument = ${1|list4,list3|}, other = ${2|list2,list1|})"
+    "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})"
   )
 
 }

@@ -941,11 +941,12 @@ trait Completions { this: MetalsGlobal =>
         completions match {
           case CompletionResult.ScopeMembers(positionDelta, results, name) =>
             results
-              .filter(
-                mem =>
-                  mem.sym.tpe.toLongString == paramType.toLongString && mem.sym.isTerm
-              )
-              .map(_.sym.name.toString().trim())
+              .collect {
+                case mem if mem.sym.tpe <:< paramType && mem.sym.isTerm =>
+                  mem.sym.name.toString().trim()
+              }
+              // None and Nil are always in scope
+              .filter(name => name != "Nil" && name != "None")
           case _ =>
             Nil
         }
@@ -956,24 +957,29 @@ trait Completions { this: MetalsGlobal =>
         if (matchingType.size == 1) {
           s":${matchingType.head}"
         } else if (matchingType.size > 1) {
-          s"|${matchingType.mkString(",")}|"
+          s"|???,${matchingType.mkString(",")}|"
         } else {
           ":???"
         }
       }
 
       private def fillAllFields(): List[TextEditMember] = {
-        if (allParams.size > 1) {
+        val suffix = "autofill"
+        val shouldShow =
+          allParams.exists(param => param.name.startsWith(prefix))
+        val isExplicitlyCalled = suffix.startsWith(prefix)
+        val hasParamsToFill = allParams.count(!_.hasDefault) > 1
+        if ((shouldShow || isExplicitlyCalled) && hasParamsToFill) {
           val editText = allParams.zipWithIndex
-            .map {
-              case (param, index) =>
+            .collect {
+              case (param, index) if !param.hasDefault =>
                 s"${param.name} = $${${index + 1}${findDefaultValue(param)}}"
             }
             .mkString(", ")
           val edit = new l.TextEdit(editRange, editText)
           List(
             new TextEditMember(
-              filterText = prefix + "-autofill",
+              filterText = s"$prefix-$suffix",
               edit = edit,
               methodSym,
               label = Some("Autofill with default values")
