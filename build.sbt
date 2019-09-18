@@ -205,7 +205,17 @@ lazy val mtags = project
     buildInfoPackage := "scala.meta.internal.mtags",
     buildInfoKeys := Seq[BuildInfoKey](
       "scalaCompilerVersion" -> scalaVersion.value
-    )
+    ),
+    unmanagedSourceDirectories in Compile ++= {
+      val sourceDir = (sourceDirectory in Compile).value
+      scalaVersion.value.split('.') match {
+        case Array(epic, major, patch) =>
+          List(
+            sourceDir / s"scala-$epic.$major",
+            sourceDir / s"scala-$epic.$major.$patch"
+          )
+      }
+    }
   )
   .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
