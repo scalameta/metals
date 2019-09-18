@@ -1,7 +1,7 @@
 /*example(Package):19*/package example
 
 /*example.StructuralTypes(Module):19*/object StructuralTypes {
-  /*example.StructuralTypes.User(Field):7*/type User = {
+  /*example.StructuralTypes.User(TypeParameter):7*/type User = {
     def name: String
     def age: Int
   }
