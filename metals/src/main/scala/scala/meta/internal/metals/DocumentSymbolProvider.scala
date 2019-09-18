@@ -223,7 +223,7 @@ class DocumentSymbolProvider(trees: Trees) {
         case t: Defn.Type =>
           addChild(
             t.name.value,
-            SymbolKind.Field,
+            SymbolKind.TypeParameter,
             t.pos,
             t.name.pos,
             t.body.syntax
@@ -231,7 +231,7 @@ class DocumentSymbolProvider(trees: Trees) {
         case t: Decl.Type =>
           addChild(
             t.name.value,
-            SymbolKind.Field,
+            SymbolKind.TypeParameter,
             t.pos,
             t.name.pos,
             ""
