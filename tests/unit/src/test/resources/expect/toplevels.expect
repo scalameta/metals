@@ -26,6 +26,7 @@ example/PatternMatching.scala -> example/PatternMatching#
 example/ReflectiveInvocation.scala -> example/ReflectiveInvocation#
 example/Scalalib.scala -> example/Scalalib#
 example/StructuralTypes.scala -> example/StructuralTypes.
+example/TryCatch.scala -> example/TryCatch#
 example/TypeParameters.scala -> example/TypeParameters#
 example/VarArgs.scala -> example/VarArgs#
 example/Vars.scala -> example/Vars.
