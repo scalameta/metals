@@ -5,9 +5,20 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
   check(
     "basic",
     """|package a
-       |trait Livin@@gObject
-       |abstract class <<Animal>> extends LivingObject
+       |trait Livin@@gBeing
+       |abstract class <<Animal>> extends LivingBeing
        |class <<Dog>> extends Animal
+       |class <<Cat>> extends Animal
+       |""".stripMargin
+  )
+
+  check(
+    "advanced",
+    """|package a
+       |trait Livin@@gBeing
+       |trait <<MadeOfAtoms>> extends LivingBeing
+       |abstract class <<Animal>> extends LivingBeing
+       |class <<Dog>> extends Animal with MadeOfAtoms
        |class <<Cat>> extends Animal
        |""".stripMargin
   )
@@ -15,13 +26,13 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
   check(
     "nested",
     """|package a
-       |trait LivingObject
-       |abstract class Ani@@mal extends LivingObject
+       |trait LivingBeing
+       |abstract class Ani@@mal extends LivingBeing
        |object outer{
        |  object inner{  
        |    class <<Dog>> extends Animal
        |    class <<Cat>> extends Animal
-       |    class Unrelated extends LivingObject
+       |    class Unrelated extends LivingBeing
        |  }
        |}
        |""".stripMargin
@@ -32,7 +43,7 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
   //   "anon",
   //   """|package a
   //      |trait Livin@@gObject
-  //      |abstract class <<Animal>> extends LivingObject
+  //      |abstract class <<Animal>> extends LivingBeing
   //      |object Main{
   //      |  val animal = new <<Animal>>{ val field : Int = 123 }
   //      |}
@@ -53,7 +64,7 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
       """.stripMargin
         )
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-        _ <- server.assertImplementation(
+        _ <- server.verifyImplementation(
           "a/src/main/scala/a/Main.scala",
           edit,
           expected

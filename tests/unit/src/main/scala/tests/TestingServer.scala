@@ -616,7 +616,7 @@ final class TestingServer(
     }
   }
 
-  def assertImplementation(
+  def verifyImplementation(
       filename: String,
       query: String,
       expected: String
@@ -636,9 +636,9 @@ final class TestingServer(
   def implementation(filename: String, query: String) = {
     for {
       (text, params) <- offsetParams(filename, query, workspace)
-      implemtees <- server.implementation(params).asScala
+      implementations <- server.implementation(params).asScala
     } yield {
-      TestRanges.renderLocationsAsString(text, implemtees.asScala.toList)
+      TestRanges.renderLocationsAsString(text, implementations.asScala.toList)
     }
   }
 

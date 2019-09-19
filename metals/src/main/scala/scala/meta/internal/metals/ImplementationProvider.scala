@@ -9,21 +9,23 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.TypeRef
-import scala.collection.concurrent.TrieMap
+import scala.meta.internal.semanticdb.Signature
+import scala.meta.internal.semanticdb.TextDocument
+import java.util.concurrent.ConcurrentHashMap
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
     workspace: AbsolutePath,
     definitionProvider: DefinitionProvider
 ) {
-  private val implementations: TrieMap[String, Set[ClassLocation]] =
-    TrieMap.empty
+  private val implementations =
+    new ConcurrentHashMap[String, Set[ClassLocation]]
 
-  def reset(): Unit = {
+  def clear(): Unit = {
     implementations.clear()
   }
 
-  def implementation(params: TextDocumentPositionParams): List[Location] = {
+  def implementations(params: TextDocumentPositionParams): List[Location] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     val result = semanticdbs.textDocument(source)
     for {
@@ -34,54 +36,55 @@ final class ImplementationProvider(
         doc
       )
       occ <- positionOccurrence.occurrence.toList
-      defn <- findImplementation(occ.symbol)
-      range <- defn.symbol.range
+      impl <- findImplementation(occ.symbol)
+      range <- impl.symbol.range
       revised <- positionOccurrence.distance.toRevised(range.toLSP)
-      path = workspace.toNIO.resolve(Paths.get(defn.uri))
+      path = workspace.toNIO.resolve(Paths.get(impl.uri))
       uri = path.toUri.toString
     } yield new Location(uri, revised)
-  }
-
-  private def findImplementation(symbol: String): Set[ClassLocation] = {
-    def findAllImpl(symbol: String): Set[ClassLocation] = {
-      implementations.get(symbol) match {
-        case None => Set.empty
-        case Some(set) =>
-          set ++ set
-            .flatMap(
-              loc => findAllImpl(loc.symbol.symbol)
-            )
-      }
-    }
-    findAllImpl(symbol)
   }
 
   def onChange(docs: TextDocuments): Unit = {
     docs.documents.foreach { doc =>
       doc.symbols.foreach { thisSymbol =>
-        thisSymbol.signature match {
-          case ClassSignature(typeParameters, parents, self, declarations) =>
-            parents.collect {
-              case TypeRef(_, symbol, _) =>
-                doc.occurrences
-                  .find(
-                    occ =>
-                      occ.symbol == thisSymbol.symbol && occ.role.isDefinition
-                  )
-                  .foreach { occ =>
-                    val children =
-                      implementations.getOrElse(symbol, Set.empty)
-                    implementations.put(
-                      symbol,
-                      children + ClassLocation(occ, doc.uri)
-                    )
-                  }
-            }
-          case _ =>
-        }
+        doc.occurrences
+          .find(
+            occ => occ.symbol == thisSymbol.symbol && occ.role.isDefinition
+          )
+          .foreach(occ => addFromSignature(thisSymbol.signature, occ, doc))
       }
     }
   }
 
-  case class ClassLocation(symbol: SymbolOccurrence, uri: String)
+  private def findImplementation(symbol: String): Set[ClassLocation] = {
+    def findAllImpl(symbol: String): Set[ClassLocation] = {
+      val directImpl = implementations.getOrDefault(symbol, Set.empty)
+      directImpl ++ directImpl
+        .flatMap(
+          loc => findAllImpl(loc.symbol.symbol)
+        )
+    }
+    findAllImpl(symbol)
+  }
+
+  private def addFromSignature(
+      signature: Signature,
+      occ: SymbolOccurrence,
+      doc: TextDocument
+  ): Unit = {
+    signature match {
+      case classSig: ClassSignature =>
+        classSig.parents.collect {
+          case TypeRef(_, symbol, _) =>
+            val loc = ClassLocation(occ, doc.uri)
+            implementations.compute(symbol, { (_, set) =>
+              if (set == null) Set(loc)
+              else set + loc
+            })
+        }
+      case _ =>
+    }
+  }
+
+  private case class ClassLocation(symbol: SymbolOccurrence, uri: String)
 }

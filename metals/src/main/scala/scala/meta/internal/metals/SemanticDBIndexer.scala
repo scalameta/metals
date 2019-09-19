@@ -19,10 +19,12 @@ class SemanticDBIndexer(
       onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
     }
   }
+
   def reset(): Unit = {
     referenceProvider.reset()
-    implementationProvider.reset()
+    implementationProvider.clear()
   }
+
   def onDelete(file: Path): Unit = {
     referenceProvider.onDelete(file)
   }
@@ -54,9 +56,9 @@ class SemanticDBIndexer(
 
   def onChange(file: Path): Unit = {
     if (file.isSemanticdb) {
-      val td = TextDocuments.parseFrom(Files.readAllBytes(file))
-      referenceProvider.onChange(td, file)
-      implementationProvider.onChange(td)
+      val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
+      referenceProvider.onChange(doc, file)
+      implementationProvider.onChange(doc)
     } else {
       scribe.warn(s"not semanticdb file: $file")
     }
