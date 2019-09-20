@@ -12,79 +12,109 @@ import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.TextDocument
 import java.util.concurrent.ConcurrentHashMap
+import java.nio.file.Path
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
     workspace: AbsolutePath,
+    buffer: Buffers,
     definitionProvider: DefinitionProvider
 ) {
-  private val implementations =
-    new ConcurrentHashMap[String, Set[ClassLocation]]
-
-  def clear(): Unit = {
-    implementations.clear()
-  }
+  private val implementationsInPath =
+    new ConcurrentHashMap[Path, Map[String, Set[ClassLocation]]]
 
   def implementations(params: TextDocumentPositionParams): List[Location] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    val result = semanticdbs.textDocument(source)
+
+    def findSemanticdb(fileSource: AbsolutePath) =
+      semanticdbs
+        .textDocument(fileSource)
+        .documentIncludingStale
+        .toList
+
     for {
-      doc <- result.documentIncludingStale.toList
+      currentDoc <- findSemanticdb(source)
       positionOccurrence = definitionProvider.positionOccurrence(
         source,
         params,
-        doc
+        currentDoc
       )
       occ <- positionOccurrence.occurrence.toList
-      impl <- findImplementation(occ.symbol)
+      (file, locations) <- findImplementation(occ.symbol).groupBy(_.file)
+      fileSource = AbsolutePath(file)
+      doc <- findSemanticdb(fileSource)
+      distance = TokenEditDistance.fromBuffer(fileSource, doc.text, buffer)
+      impl <- locations
       range <- impl.symbol.range
-      revised <- positionOccurrence.distance.toRevised(range.toLSP)
-      path = workspace.toNIO.resolve(Paths.get(impl.uri))
-      uri = path.toUri.toString
+      revised <- distance.toRevised(range.toLSP)
+      uri = impl.file.toUri.toString
     } yield new Location(uri, revised)
   }
 
-  def onChange(docs: TextDocuments): Unit = {
-    docs.documents.foreach { doc =>
-      doc.symbols.foreach { thisSymbol =>
-        doc.occurrences
-          .find(
-            occ => occ.symbol == thisSymbol.symbol && occ.role.isDefinition
-          )
-          .foreach(occ => addFromSignature(thisSymbol.signature, occ, doc))
-      }
-    }
-  }
-
   private def findImplementation(symbol: String): Set[ClassLocation] = {
-    def findAllImpl(symbol: String): Set[ClassLocation] = {
-      val directImpl = implementations.getOrDefault(symbol, Set.empty)
-      directImpl ++ directImpl
-        .flatMap(
-          loc => findAllImpl(loc.symbol.symbol)
-        )
-    }
-    findAllImpl(symbol)
+    val directImpl = for {
+      (_, symbols) <- implementationsInPath.asScala
+      symbolImpls <- symbols.get(symbol).toList
+      impl <- symbolImpls
+    } yield impl
+    directImpl.toSet ++ directImpl
+      .flatMap(
+        loc => findImplementation(loc.symbol.symbol)
+      )
   }
 
-  private def addFromSignature(
+  def clear(): Unit = {
+    implementationsInPath.clear()
+  }
+
+  def onDelete(path: Path): Unit = {
+    implementationsInPath.remove(path)
+  }
+
+  def onChange(docs: TextDocuments, path: Path): Unit = {
+    implementationsInPath.compute(
+      path, { (_, _) =>
+        computeInheritance(docs)
+      }
+    )
+  }
+
+  private def computeInheritance(docs: TextDocuments) = {
+    val allParents = for {
+      doc <- docs.documents
+      thisSymbol <- doc.symbols
+      occ <- doc.occurrences
+        .find(
+          occ => occ.symbol == thisSymbol.symbol && occ.role.isDefinition
+        )
+        .toList
+      parent <- parentsFromSignature(thisSymbol.signature, occ, doc).toList
+    } yield parent
+
+    allParents.groupBy(_._1).map {
+      case (symbol, locations) =>
+        symbol -> locations.map(_._2).toSet
+    }
+  }
+
+  private def parentsFromSignature(
       signature: Signature,
       occ: SymbolOccurrence,
       doc: TextDocument
-  ): Unit = {
+  ) = {
+    val filePath = workspace.toNIO.resolve(Paths.get(doc.uri))
+    val loc = ClassLocation(occ, filePath)
     signature match {
       case classSig: ClassSignature =>
-        classSig.parents.collect {
+        val allLocations = classSig.parents.collect {
           case TypeRef(_, symbol, _) =>
-            val loc = ClassLocation(occ, doc.uri)
-            implementations.compute(symbol, { (_, set) =>
-              if (set == null) Set(loc)
-              else set + loc
-            })
+            symbol -> loc
         }
+        allLocations
       case _ =>
+        Seq.empty
     }
   }
 
-  private case class ClassLocation(symbol: SymbolOccurrence, uri: String)
+  private case class ClassLocation(symbol: SymbolOccurrence, file: Path)
 }

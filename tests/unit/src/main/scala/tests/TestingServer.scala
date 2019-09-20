@@ -616,29 +616,38 @@ final class TestingServer(
     }
   }
 
-  def verifyImplementation(
+  def assertImplementation(
       filename: String,
       query: String,
-      expected: String
+      expected: Map[String, String],
+      base: Map[String, String]
   ): Future[Unit] = {
     for {
-      implementations <- implementation(filename, query)
+      implementations <- implementation(filename, query, base)
     } yield {
-      DiffAssertions.assertNoDiffOrPrintObtained(
-        implementations,
-        expected,
-        "obtained",
-        "expected"
-      )
+      implementations.foreach {
+        case (file, obtained) =>
+          val expectedImpl = expected(file)
+          DiffAssertions.assertNoDiffOrPrintObtained(
+            obtained,
+            expectedImpl,
+            "obtained",
+            "expected"
+          )
+      }
     }
   }
 
-  def implementation(filename: String, query: String) = {
+  def implementation(
+      filename: String,
+      query: String,
+      base: Map[String, String]
+  ): Future[Map[String, String]] = {
     for {
-      (text, params) <- offsetParams(filename, query, workspace)
+      (_, params) <- offsetParams(filename, query, workspace)
       implementations <- server.implementation(params).asScala
     } yield {
-      TestRanges.renderLocationsAsString(text, implementations.asScala.toList)
+      TestRanges.renderLocationsAsString(base, implementations.asScala.toList)
     }
   }
 

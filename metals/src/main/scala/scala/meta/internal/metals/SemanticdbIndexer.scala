@@ -6,15 +6,13 @@ import java.nio.file.Files
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import scala.meta.internal.semanticdb.TextDocuments
 
-class SemanticDBIndexer(
+class SemanticdbIndexer(
     referenceProvider: ReferenceProvider,
     implementationProvider: ImplementationProvider
 ) {
 
   def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
-    for {
-      item <- scalacOptions.getItems.asScala
-    } {
+    for (item <- scalacOptions.getItems.asScala) {
       val targetroot = item.targetroot
       onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
     }
@@ -27,6 +25,7 @@ class SemanticDBIndexer(
 
   def onDelete(file: Path): Unit = {
     referenceProvider.onDelete(file)
+    implementationProvider.onDelete(file)
   }
 
   /**
@@ -36,18 +35,14 @@ class SemanticDBIndexer(
    * and re-index all of its `*.semanticdb` children.
    */
   def onOverflow(path: Path): Unit = {
-    path.semanticdbRoot match {
-      case Some(root) =>
-        onChangeDirectory(root)
-      case None =>
-    }
+    path.semanticdbRoot.foreach(onChangeDirectory(_))
   }
 
   def onChangeDirectory(dir: Path): Unit = {
     if (Files.isDirectory(dir)) {
       val stream = Files.walk(dir)
       try {
-        stream.forEach(file => if (file.toFile().isFile()) onChange(file))
+        stream.forEach(onChange(_))
       } finally {
         stream.close()
       }
@@ -55,12 +50,14 @@ class SemanticDBIndexer(
   }
 
   def onChange(file: Path): Unit = {
-    if (file.isSemanticdb) {
-      val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
-      referenceProvider.onChange(doc, file)
-      implementationProvider.onChange(doc)
-    } else {
-      scribe.warn(s"not semanticdb file: $file")
+    if (!Files.isDirectory(file)) {
+      if (file.isSemanticdb) {
+        val doc = TextDocuments.parseFrom(Files.readAllBytes(file))
+        referenceProvider.onChange(doc, file)
+        implementationProvider.onChange(doc, file)
+      } else {
+        scribe.warn(s"not a semanticdb file: $file")
+      }
     }
   }
 }

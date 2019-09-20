@@ -15,11 +15,16 @@ object TestRanges extends RangeReplace {
   }
 
   def renderLocationsAsString(
-      code: String,
+      sourceFiles: Map[String, String],
       locations: List[Location]
-  ): String = {
-    locations.foldLeft(code) { (base, highlight) =>
-      replaceInRange(base, highlight.getRange)
-    }
+  ): Map[String, String] = {
+    val resolved = for {
+      (file, code) <- sourceFiles.toSeq
+      validLocations = locations.filter(_.getUri().contains(file))
+    } yield
+      file -> validLocations.foldLeft(code) { (base, location) =>
+        replaceInRange(base, location.getRange)
+      }
+    resolved.toMap
   }
 }

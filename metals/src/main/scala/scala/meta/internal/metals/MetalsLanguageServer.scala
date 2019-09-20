@@ -151,7 +151,7 @@ class MetalsLanguageServer(
   private var bspServers: BspServers = _
   private var codeLensProvider: CodeLensProvider = _
   private var definitionProvider: DefinitionProvider = _
-  private var semanticDBIndexer: SemanticDBIndexer = _
+  private var semanticDBIndexer: SemanticdbIndexer = _
   private var implementationProvider: ImplementationProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
@@ -334,10 +334,11 @@ class MetalsLanguageServer(
     implementationProvider = new ImplementationProvider(
       semanticdbs,
       workspace,
+      buffers,
       definitionProvider
     )
     semanticDBIndexer =
-      new SemanticDBIndexer(referencesProvider, implementationProvider)
+      new SemanticdbIndexer(referencesProvider, implementationProvider)
     documentHighlightProvider = new DocumentHighlightProvider(
       definitionProvider,
       semanticdbs
