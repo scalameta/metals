@@ -48,8 +48,6 @@ case classes remain.
 - [IntelliJ IDEA](https://www.jetbrains.com/help/idea/discover-intellij-idea-for-scala.html):
   the most widely used IDE for Scala using a re-implementation of the Scala
   typechecker.
-- [ENSIME](http://ensime.org): brings Scala and Java IDE-like features to
-  editors like Emacs and Sublime Text using the Scala Presentation Compiler.
 - [Scala IDE](http://scala-ide.org/): Eclipse-based IDE using the Scala
   Presentation Compiler.
 
