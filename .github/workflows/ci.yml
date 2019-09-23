@@ -1,37 +1,42 @@
 name: CI
 on: [push, pull_request]
 jobs:
-  scalafmt:
+  Scalafmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v2
       - name: Formatting
         run: ./bin/scalafmt --test
-  scalafix:
+  Scalafix:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v2
       - name: Linting
         run: csbt scalafixCheck
-  docusaurus:
+  Docusaurus:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v2
       - name: Website
         run: csbt docs/docusaurusCreateSite
-  build:
+  Build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: [sbt, mill, gradle, maven, feature]
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v2
+      - name: Run command
+        run: csbt 'slow/testOnly -- tests.${{ matrix.tool }}'
+  Test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         command:
-          - "'slow/testOnly tests.sbt'"
-          - "'slow/testOnly tests.mill'"
-          - "'slow/testOnly tests.gradle'"
-          - "'slow/testOnly tests.maven'"
-          - "'slow/testOnly tests.feature'"
           - "'unit/test'"
           - "'+cross/test'"
     steps:
