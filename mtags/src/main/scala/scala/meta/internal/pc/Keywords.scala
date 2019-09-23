@@ -116,7 +116,7 @@ trait Keywords { this: MetalsGlobal =>
   private def isBlock(enclosing: List[Tree]): Boolean =
     enclosing match {
       case Ident(_) :: Block(_, _) :: _ => true
-      case other => false
+      case _ => false
     }
 
   private def isExpression(enclosing: List[Tree]): Boolean =
