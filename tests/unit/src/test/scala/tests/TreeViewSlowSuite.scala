@@ -127,8 +127,7 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |rt.jar -
              |scala-library-2.12.10.jar -
              |scala-reflect-2.12.10.jar -
-             |sourcecode_2.12-0.1.7.jar -""".stripMargin,
-          ignoreLinesMatching = line => line.contains("jfr.jar")
+             |sourcecode_2.12-0.1.7.jar -""".stripMargin
         )
         server.assertTreeViewChildren(
           s"libraries:${server.jar("scala-library")}!/scala/Some#",
@@ -186,8 +185,8 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |  Import build command
              |  Connect to build server command
              |  Projects (0)
-             |  Libraries (30)
-             |  Libraries (30)
+             |  Libraries (29)
+             |  Libraries (29)
              |    sourcecode_2.12-0.1.7.jar
              |    sourcecode_2.12-0.1.7.jar
              |      sourcecode/
@@ -241,8 +240,8 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |  Import build command
              |  Connect to build server command
              |  Projects (0)
-             |  Libraries (30)
-             |  Libraries (30)
+             |  Libraries (29)
+             |  Libraries (29)
              |    org.eclipse.lsp4j-0.5.0.jar
              |    org.eclipse.lsp4j.generator-0.5.0.jar
              |    org.eclipse.lsp4j.jsonrpc-0.5.0.jar

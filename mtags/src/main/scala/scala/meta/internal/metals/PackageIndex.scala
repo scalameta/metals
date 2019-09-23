@@ -191,7 +191,7 @@ object PackageIndex {
           Classpath(v).entries
       }.toList
       entry <- entries
-      if entry.isFile
+      if entry.isFile && !entry.toNIO.endsWith("jfr.jar")
     } yield entry
 
   def scalaLibrary: Seq[Path] = {
