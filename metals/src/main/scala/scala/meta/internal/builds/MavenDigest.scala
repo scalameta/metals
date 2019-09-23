@@ -9,7 +9,6 @@ object MavenDigest extends Digestable {
       workspace: AbsolutePath,
       digest: MessageDigest
   ): Boolean = {
-    Digest.digestFile(workspace.resolve("pom.xml"), digest)
     workspace.listRecursive.forall {
       case file if file.filename == "pom.xml" =>
         Digest.digestFile(file, digest)
