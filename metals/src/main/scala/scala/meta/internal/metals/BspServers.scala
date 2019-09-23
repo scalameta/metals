@@ -123,11 +123,9 @@ final class BspServers(
   private def findJsonFiles(): List[AbsolutePath] = {
     val buf = List.newBuilder[AbsolutePath]
     def visit(dir: AbsolutePath): Unit =
-      if (dir.isDirectory) {
-        dir.list.foreach { p =>
-          if (p.extension == "json") {
-            buf += p
-          }
+      dir.list.foreach { p =>
+        if (p.extension == "json") {
+          buf += p
         }
       }
     visit(workspace.resolve(".bsp"))
