@@ -37,8 +37,8 @@ jobs:
     strategy:
       matrix:
         command:
-          - "'unit/test'"
-          - "'+cross/test'"
+          - "unit/test"
+          - "+cross/test"
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v2

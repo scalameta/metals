@@ -113,7 +113,6 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |guava-27.1-jre.jar -
              |j2objc-annotations-1.1.jar -
              |jce.jar -
-             |jfr.jar -
              |jsr305-3.0.2.jar -
              |jsse.jar -
              |listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar -
@@ -128,7 +127,8 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |rt.jar -
              |scala-library-2.12.10.jar -
              |scala-reflect-2.12.10.jar -
-             |sourcecode_2.12-0.1.7.jar -""".stripMargin
+             |sourcecode_2.12-0.1.7.jar -""".stripMargin,
+          ignoreLinesMatching = line => line.contains("jfr.jar")
         )
         server.assertTreeViewChildren(
           s"libraries:${server.jar("scala-library")}!/scala/Some#",

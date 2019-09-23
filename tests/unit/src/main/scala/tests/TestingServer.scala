@@ -831,7 +831,8 @@ final class TestingServer(
 
   def assertTreeViewChildren(
       uri: String,
-      expected: String
+      expected: String,
+      ignoreLinesMatching: String => Boolean = _ => false
   )(implicit line: sourcecode.Line, file: sourcecode.File): Unit = {
     val viewId: String = TreeViewProvider.Build
     val result =
@@ -848,6 +849,7 @@ final class TestingServer(
         }
         s"${node.label}${icon}${collapse}"
       }
+      .filterNot(ignoreLinesMatching)
       .mkString("\n")
     DiffAssertions.assertNoDiff(obtained, expected, "obtained", "expected")
   }
