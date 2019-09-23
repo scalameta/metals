@@ -11,7 +11,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.xml.Node
-import scala.meta.internal.mtags.ListFiles
 
 case class Digest(
     md5: String,
@@ -61,11 +60,9 @@ object Digest {
   ): Boolean = {
     if (!path.isDirectory) true
     else {
-      var success = true
-      ListFiles.foreach(path) { file =>
-        success &= digestFile(file, digest)
+      path.list.forall { file =>
+        digestFile(file, digest)
       }
-      success
     }
   }
 
@@ -122,7 +119,7 @@ object Digest {
       chldrenSuccessful.forall(p => p)
     }
     try {
-      val xml = XML.loadFile(file.toNIO.toFile())
+      val xml = XML.loadFile(file.toNIO.toFile)
       digestElement(xml)
       xml.text.split("\\s+").foreach(word => digest.update(word.getBytes))
       true

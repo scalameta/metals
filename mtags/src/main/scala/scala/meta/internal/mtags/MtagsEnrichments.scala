@@ -3,6 +3,7 @@ package scala.meta.internal.mtags
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util
@@ -10,6 +11,7 @@ import java.util.Optional
 import java.util.concurrent.CancellationException
 import java.util.logging.Level
 import java.util.logging.Logger
+import geny.Generator
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
@@ -57,7 +59,9 @@ trait MtagsEnrichments {
     def isClassfile: Boolean = filename.endsWith(".class")
     def filename: String = file.getFileName().toString()
     def toLanguage: Language = {
-      filenameToLanguage(file.getFileName.toString)
+      val filename = file.getFileName
+      if (filename == null) Language.UNKNOWN_LANGUAGE
+      else filenameToLanguage(filename.toString)
     }
     def semanticdbRoot: Option[Path] = {
       val end = Paths.get("META-INF").resolve("semanticdb")
@@ -358,5 +362,33 @@ trait MtagsEnrichments {
     def isEnum: Boolean = (properties & p.ENUM.value) != 0
     def isVar: Boolean = (properties & p.VAR.value) != 0
     def isVal: Boolean = (properties & p.VAL.value) != 0
+  }
+
+  implicit class XtensionStream[A](stream: java.util.stream.Stream[A]) {
+    import scala.collection.JavaConverters._
+    def asScala: Generator[A] = {
+      Generator.selfClosing((stream.iterator.asScala, () => stream.close()))
+    }
+  }
+
+  implicit class XtensionAbsolutePath(path: AbsolutePath) {
+    def parent: AbsolutePath = {
+      AbsolutePath(path.toNIO.getParent)
+    }
+
+    def exists: Boolean = {
+      Files.exists(path.toNIO)
+    }
+
+    def list: Generator[AbsolutePath] = {
+      if (path.isDirectory) Files.list(path.toNIO).asScala.map(AbsolutePath(_))
+      else Generator()
+    }
+
+    def listRecursive: Generator[AbsolutePath] = {
+      if (path.isDirectory) Files.walk(path.toNIO).asScala.map(AbsolutePath(_))
+      else if (path.isFile) Generator(path)
+      else Generator()
+    }
   }
 }

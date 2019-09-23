@@ -1,16 +1,16 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 /**
  * Locates zip file on disk that contains the source code for the JDK.
  */
 object JdkSources {
-  private val sources = Paths.get("src.zip")
-  private val libSources = Paths.get("lib").resolve(sources)
+  private val sources = RelativePath(Paths.get("src.zip"))
+  private val libSources = RelativePath(Paths.get("lib")).resolve(sources)
 
   def apply(userJavaHome: Option[String] = None): Option[AbsolutePath] = {
     candidates(userJavaHome).headOption
@@ -23,33 +23,32 @@ object JdkSources {
   }
 
   private def candidates(userJavaHome: Option[String]): List[AbsolutePath] = {
-    def isJdkCandidate(path: Path): Boolean = {
-      def containsJre = Files.exists(path.resolve("jre"))
-      val name = path.getFileName.toString
+    def isJdkCandidate(path: AbsolutePath): Boolean = {
+      def containsJre = path.resolve("jre").exists
+      val name = path.filename.toString
       name.contains("jdk") || containsJre //e.g. jdk-8, java-openjdk-11
     }
 
     for {
       javaHomeString <- userJavaHome.orElse(defaultJavaHome).toList
-      javaHome = Paths.get(javaHomeString)
+      javaHome = AbsolutePath(Paths.get(javaHomeString))
       jdkHome = {
         if (isJdkCandidate(javaHome)) {
           Nil
         } else {
           // In case java.home points to the JRE instead of the JDK,
           // try to find jdk among its siblings
-          Files
-            .list(javaHome.getParent)
+          javaHome.parent.list
             .filter(isJdkCandidate)
-            .toArray[Path](size => new Array(size))
-            .sortBy(_.getFileName)
+            .toArray[AbsolutePath]
+            .sortBy(_.filename)
             .toList
         }
       }
-      jdk <- jdkHome ++ List(javaHome.getParent, javaHome)
+      jdk <- jdkHome ++ List(javaHome.parent, javaHome)
       src <- List(sources, libSources).map(jdk.resolve)
-      if Files.isRegularFile(src)
-    } yield AbsolutePath(src)
+      if src.isFile
+    } yield src
   }
 
   def getOrThrow(): AbsolutePath = {

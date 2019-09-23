@@ -2,8 +2,8 @@ package scala.meta.internal.builds
 
 import java.nio.file.Files
 import java.util.Properties
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
  * Detects what build tool is used in this workspace.
@@ -31,18 +31,7 @@ final class BuildTools(
     bspGlobalDirectories.exists(hasJsonFile)
   }
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
-    dir.isDirectory && {
-      val ls = Files.list(dir.toNIO)
-      val hasJsonFile =
-        try {
-          ls.iterator()
-            .asScala
-            .exists(_.getFileName.toString.endsWith(".json"))
-        } finally {
-          ls.close()
-        }
-      hasJsonFile
-    }
+    dir.list.exists(_.extension == "json")
   }
   // Returns true if there's a build.sbt file or project/build.properties with sbt.version
   def isSbt: Boolean = {

@@ -20,7 +20,6 @@ import scala.tools.scalap.scalax.rules.scalasig.SymbolInfoSymbol
 import scala.meta.internal.scalacp.SymlinkChildren
 import scala.meta.internal.scalacp.Synthetics
 import scala.util.control.NonFatal
-import java.util.stream.Collectors
 import scala.meta.internal.javacp.Javacp
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
@@ -95,17 +94,16 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
     def list(root: AbsolutePath): Unit = {
       val dir =
         if (symbol == Scala.Symbols.RootPackage) root
-        else {
-          root.resolve(Symbol(symbol).enclosingPackage.value)
-        }
-      listPath(dir.toNIO).foreach { path =>
-        if (Files.isDirectory(path)) {
-          buf ++= dummyClassfiles(root.toNIO, path)
-        } else if (isClassfile(path)) {
+        else root.resolve(Symbol(symbol).enclosingPackage.value)
+
+      dir.list.foreach {
+        case path if path.isDirectory =>
+          buf ++= dummyClassfiles(root.toNIO, path.toNIO)
+
+        case path if isClassfile(path.toNIO) =>
           try {
-            val abspath = AbsolutePath(path)
-            val node = abspath.toClassNode
-            classfileSymbols(path, node, index, { i =>
+            val node = path.toClassNode
+            classfileSymbols(path.toNIO, node, index, { i =>
               if (isRelevant(i)) {
                 buf += TreeViewSymbolInformation(i.symbol, i.kind, i.properties)
               }
@@ -114,7 +112,8 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
             case NonFatal(ex) =>
               scribe.warn(s"error: can't convert $path in $in", ex)
           }
-        }
+
+        case _ =>
       }
 
     }
@@ -174,15 +173,6 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
   private def isClassfile(path: Path): Boolean = {
     PathIO.extension(path) == "class" && Files.size(path) > 0
   }
-  private def listPath(path: Path): Seq[Path] = {
-    if (Files.isDirectory(path)) {
-      val ls = Files.list(path)
-      try ls.collect(Collectors.toList()).asScala
-      finally ls.close()
-    } else {
-      Nil
-    }
-  }
 
   private def classfileSymbols(
       path: Path,
@@ -224,7 +214,6 @@ class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
           }
         }
     }
-    Nil
   }
 
 }

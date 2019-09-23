@@ -14,7 +14,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 import scala.util.Try
-import scala.meta.internal.mtags.ListFiles
 
 /**
  * Implements BSP server discovery, named "BSP Connection Protocol" in the spec.
@@ -124,11 +123,9 @@ final class BspServers(
   private def findJsonFiles(): List[AbsolutePath] = {
     val buf = List.newBuilder[AbsolutePath]
     def visit(dir: AbsolutePath): Unit =
-      if (dir.isDirectory) {
-        ListFiles.foreach(dir) { p =>
-          if (p.extension == "json") {
-            buf += p
-          }
+      dir.list.foreach { p =>
+        if (p.extension == "json") {
+          buf += p
         }
       }
     visit(workspace.resolve(".bsp"))

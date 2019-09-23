@@ -55,8 +55,10 @@ final class BloopServers(
       maxRetries: Int = defaultRetries
   ): Future[Option[BuildServerConnection]] = {
     newServerUnsafe().map(Option(_)).recoverWith {
-      case NonFatal(_) if maxRetries > 0 =>
-        scribe.warn(s"BSP retry ${defaultRetries - maxRetries + 1}")
+      case NonFatal(e) if maxRetries > 0 =>
+        val retry = defaultRetries - maxRetries + 1
+        val cause = e.getMessage
+        scribe.warn(s"BSP retry $retry due to: $cause", e)
         newServer(maxRetries - 1)
     }
   }
