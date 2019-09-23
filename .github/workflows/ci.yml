@@ -1,17 +1,31 @@
 name: CI
-
-on: [push]
-
+on: [push, pull_request]
 jobs:
-  build:
-
+  lint:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v1
-    - name: Run a one-line script
-      run: echo Hello, world!
-    - name: Run a multi-line script
-      run: |
-        echo Add other actions to build,
-        echo test, and deploy your project.
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v2
+      - name: Formatting
+        run: ./bin/scalafmt --test
+      - name: Scalafix
+        run: csbt scalafixCheck
+      - name: Documentation
+        run: csbt docs/docusaurusCreateSite
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        command:
+          - "slow/testOnly tests.sbt"
+          - "slow/testOnly tests.mill"
+          - "slow/testOnly tests.gradle"
+          - "slow/testOnly tests.maven"
+          - "slow/testOnly tests.feature"
+          - "unit/test"
+          - "+cross/test"
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v2
+      - name: Compile
+        run: csbt '${{ matrix.command }}'
