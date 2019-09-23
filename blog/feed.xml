@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Thu, 12 Sep 2019 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Mon, 23 Sep 2019 06:00:00 GMT</lastBuildDate>
         <docs>http://blogs.law.harvard.edu/tech/rss</docs>
         <generator>Feed for Node.js</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2019 Metals</copyright>
+        <item>
+            <title><![CDATA[Metals v0.7.6 - Thorium]]></title>
+            <link>http://scalameta.org/metals/blog/2019/09/23/thorium.html</link>
+            <guid>http://scalameta.org/metals/blog/2019/09/23/thorium.html</guid>
+            <pubDate>Mon, 23 Sep 2019 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>We are excited to announce the release of Metals v0.7.6, which will most likely be the last release before the v0.8.0 one. This release includes support for new Scala versions (2.12.10, 2.13.1) and a couple of fixes. It also adds a new formatting on ...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.7.5 - Thorium]]></title>
             <link>http://scalameta.org/metals/blog/2019/09/12/thorium.html</link>

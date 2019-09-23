@@ -1,0 +1,168 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Metals v0.7.6 - Thorium · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="We are excited to announce the release of Metals v0.7.6, which will most likely"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Metals v0.7.6 - Thorium · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/blog/2019/09/23/thorium.html"/><meta property="og:description" content="We are excited to announce the release of Metals v0.7.6, which will most likely"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-140140828-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><script src="/metals/js/scrollSpy.js"></script><link rel="stylesheet" href="/metals/css/main.css"/><script src="/metals/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All Blog Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All Blog Posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/metals/blog/2019/09/23/thorium.html">Metals v0.7.6 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/09/12/thorium.html">Metals v0.7.5 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/09/02/thorium.html">Metals v0.7.2 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/06/28/thorium.html">Metals v0.7.0 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/06/11/radium.html">Metals v0.6.1 - Radium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/04/26/mercury.html">Metals v0.5.1</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/04/12/mercury.html">Metals v0.5.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/06/iron.html">Metals v0.3 - Iron</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2019/09/23/thorium.html">Metals v0.7.6 - Thorium</a></h1><p class="post-meta">September 23, 2019</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/TomekGodzik" target="_blank" rel="noreferrer noopener">Tomasz Godzik</a></p><div class="authorPhoto"><a href="https://twitter.com/TomekGodzik" target="_blank" rel="noreferrer noopener"><img src="https://github.com/tgodzik.png" alt="Tomasz Godzik"/></a></div></div></header><div><span><p>We are excited to announce the release of Metals v0.7.6, which will most likely
+be the last release before the v0.8.0 one. This release includes support for new
+Scala versions (2.12.10, 2.13.1) and a couple of fixes. It also adds a new
+formatting on paste feature for multiline strings.</p>
+<p>Metals is a language server for Scala that works with VS Code, Atom, Vim,
+Sublime Text and Emacs. Metals is developed at the
+<a href="https://scala.epfl.ch/">Scala Center</a> and <a href="https://virtuslab.com">VirtusLab</a>
+along with contributors from the community.</p>
+<p>In this release we merged 11 PRs and closed 5 issues, full details:
+<a href="https://github.com/scalameta/metals/milestone/18?closed=1">https://github.com/scalameta/metals/milestone/18?closed=1</a></p>
+<h2><a class="anchor" aria-hidden="true" id="tl-dr"></a><a href="#tl-dr" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>TL;DR</h2>
+<p>Check out the website and give Metals a try: <a href="https://scalameta.org/metals/">https://scalameta.org/metals/</a></p>
+<ul>
+<li>add support for Scala 2.12.10 and 2.13.1</li>
+<li>formatting on paste for multiline strings</li>
+<li>fixes for autofill feature</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="add-support-for-scala-21210-and-2131"></a><a href="#add-support-for-scala-21210-and-2131" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Add support for Scala 2.12.10 and 2.13.1</h2>
+<p>Thanks to @gabro's continuing effort we were able to add support for both new
+Scala versions. Those versions fix a couple of important regressions and are now
+available to use with Metals!</p>
+<h2><a class="anchor" aria-hidden="true" id="formatting-on-paste-for-multiline-strings"></a><a href="#formatting-on-paste-for-multiline-strings" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Formatting on paste for multiline strings</h2>
+<p>Whenever text is pasted into a multiline string with <code>|</code> it will be properly
+formatted by Metals:</p>
+<p><img src="https://i.imgur.com/yJLAIxQ.gif" alt="format-on-paste"></p>
+<p>To enable this feature you need to enable formatting on paste in your editor of
+choice. In Visual Studio Code it can be done via modifying a checkbox:</p>
+<p><img src="https://i.imgur.com/OaBxwer.png" alt="format-on-paste"></p>
+<h2><a class="anchor" aria-hidden="true" id="fixes-for-autofill-feature"></a><a href="#fixes-for-autofill-feature" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fixes for autofill feature</h2>
+<p>After releasing the experimental autofill feature we addressed feedback by:</p>
+<ul>
+<li>not filling in the default arguments</li>
+<li>adding <code>???</code> as a first option when alternative values are available to avoid
+mistakes</li>
+<li>add subtypes as valid values</li>
+<li>only show autofill option when using named parameters or by explicitly typing
+<code>autofill...</code></li>
+</ul>
+<p>Let us know if you have any further feedback!</p>
+<h2><a class="anchor" aria-hidden="true" id="contributors"></a><a href="#contributors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributors</h2>
+<p>Big thanks to everybody who contributed to this release!</p>
+<pre><code class="hljs">$ git shortlog -sn --no-merges v0<span class="hljs-number">.7</span><span class="hljs-number">.5</span>..v0<span class="hljs-number">.7</span><span class="hljs-number">.6</span>
+Tomasz Godzik
+Marek Żarnowski
+Gabriele Petronella
+Ólafur Páll Geirsson
+Sam Halliday
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="merged-prs"></a><a href="#merged-prs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Merged PRs</h2>
+<h2><a class="anchor" aria-hidden="true" id="v076-https-githubcom-scalameta-metals-tree-v076-2019-09-23"></a><a href="#v076-https-githubcom-scalameta-metals-tree-v076-2019-09-23" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a href="https://github.com/scalameta/metals/tree/v0.7.6">v0.7.6</a> (2019-09-23)</h2>
+<p><a href="https://github.com/scalameta/metals/compare/v0.7.5...v0.7.6">Full Changelog</a></p>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>replace java streams with generators
+<a href="https://github.com/scalameta/metals/pull/938">#938</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>ENSIME is not an alternative
+<a href="https://github.com/scalameta/metals/pull/936">#936</a>
+(<a href="https://github.com/fommil">fommil</a>)</li>
+<li>Swap field to type parameter for scala Type
+<a href="https://github.com/scalameta/metals/pull/933">#933</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Refactor autofill option <a href="https://github.com/scalameta/metals/pull/932">#932</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Make sure we continue searching for symbols in try.
+<a href="https://github.com/scalameta/metals/pull/930">#930</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Disable flaky test. <a href="https://github.com/scalameta/metals/pull/918">#918</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix indentation when adding pipes in multiline string.
+<a href="https://github.com/scalameta/metals/pull/922">#922</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Remove dealias to properly support type
+<a href="https://github.com/scalameta/metals/pull/921">#921</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Simplify testing when calculating position and automatically add pipes when
+copy pasting input <a href="https://github.com/scalameta/metals/pull/919">#919</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Add Scala 2.12.10 support and use 2.12.10 on Metals
+<a href="https://github.com/scalameta/metals/pull/913">#913</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Update <code>isCompiled</code> status of the build target regardless of the compilation
+result <a href="https://github.com/scalameta/metals/pull/907">#907</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+</ul>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/metals/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#tl-dr">TL;DR</a></li><li><a href="#add-support-for-scala-21210-and-2131">Add support for Scala 2.12.10 and 2.13.1</a></li><li><a href="#formatting-on-paste-for-multiline-strings">Formatting on paste for multiline strings</a></li><li><a href="#fixes-for-autofill-feature">Fixes for autofill feature</a></li><li><a href="#contributors">Contributors</a></li><li><a href="#merged-prs">Merged PRs</a></li><li><a href="#v076-https-githubcom-scalameta-metals-tree-v076-2019-09-23"><a href="https://github.com/scalameta/metals/tree/v0.7.6">v0.7.6</a> (2019-09-23)</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
