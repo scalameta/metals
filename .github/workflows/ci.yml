@@ -54,4 +54,4 @@ jobs:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v2
       - name: Run command
-        run: csbt ${{ matrix.command }}
+        run: java -jar sbt-launch.jar ${{ matrix.command }}
