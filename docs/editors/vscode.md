@@ -123,7 +123,7 @@ without opening the sidebar.
 As you type, the symbol outline is also visible at the top of the file.
 ![Document Symbols Outline](https://i.imgur.com/L217n4q.png)
 
-## Enable onTypeFormatting for multiline string formatting
+## Enable on type formatting for multiline string formatting
 
 ![pipes](https://i.imgur.com/iXGYOf0.gif)
 
@@ -134,6 +134,18 @@ To properly support adding `|` in multiline strings we are using the
 This needs to be done in settings by checking `Editor: Format On Type`:
 
 ![on-type](https://i.imgur.com/4eVvSP5.gif)
+
+## Enable formatting on paste for multiline strings
+
+Whenever text is paste into a multiline string with `|` it will be properly
+formatted by Metals:
+
+![format-on-paste](https://i.imgur.com/yJLAIxQ.gif)
+
+To enable this feature you need to enable formatting on paste in Visual Studio
+Code by checking `Editor: Format On PAste`:
+
+![format-on-paste](https://i.imgur.com/OaBxwer.png)
 
 ## Coming from IntelliJ
 
