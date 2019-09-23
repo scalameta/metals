@@ -347,7 +347,7 @@ object CompletionKeywordSuite extends BaseCompletionSuite {
       |package foo
       |
       |class Foo {
-      |  protected def@@
+      |  protected de@@
       |}
     """.stripMargin,
     "def"

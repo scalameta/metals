@@ -78,6 +78,7 @@ trait Keywords { this: MetalsGlobal =>
     enclosing match {
       case Ident(_) :: Template(_, _, _) :: _ => true
       case Ident(_) :: ValOrDefDef(_, _, _, _) :: _ => true
+      case Template(_, _, _) :: _ => true
       case _ => false
     }
 
