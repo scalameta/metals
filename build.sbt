@@ -146,9 +146,7 @@ inThisBuild(
               githubActionsPartition(
                 baseDirectory.in(ThisBuild).value /
                   "tests" / "slow" / "src" / "test" / "scala" / "tests"
-              ),
-              // TODO: re-enable Maven tests https://github.com/scalameta/metals/issues/943
-              "exclude" -> Arr(Obj("test" -> Str("maven")))
+              )
             )
           )
         )

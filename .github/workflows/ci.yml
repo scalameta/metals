@@ -128,11 +128,6 @@
                         "gradle",
                         "sbt",
                         "feature"
-                    ],
-                    "exclude": [
-                        {
-                            "test": "maven"
-                        }
                     ]
                 }
             }
