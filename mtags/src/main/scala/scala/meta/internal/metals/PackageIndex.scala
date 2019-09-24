@@ -191,6 +191,8 @@ object PackageIndex {
           Classpath(v).entries
       }.toList
       entry <- entries
+      // jfr.jar is not available in all JDK installations causing tests to fail
+      // on different computers.
       if entry.isFile && !entry.toNIO.endsWith("jfr.jar")
     } yield entry
 
