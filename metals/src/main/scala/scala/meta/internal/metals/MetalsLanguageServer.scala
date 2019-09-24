@@ -1,8 +1,5 @@
 package scala.meta.internal.metals
 
-import java.net.InetSocketAddress
-import java.net.Socket
-import java.net.ServerSocket
 import java.net.URI
 import java.net.URLClassLoader
 import java.nio.charset.Charset
@@ -15,9 +12,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-
 import ch.epfl.scala.{bsp4j => b}
-import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
@@ -27,7 +22,6 @@ import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
-
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -1126,9 +1120,13 @@ class MetalsLanguageServer(
               case Failure(exception) =>
                 Future.failed(exception).asJavaObject
               case Success(parameters) =>
-                val (uri, server) = DebugServer.start(parameters, buildServer)
-                cancelables.add(server)
-                Future(uri).asJavaObject
+                DebugServer.start(parameters, buildServer) match {
+                  case Failure(exception) =>
+                    Future.failed(exception).asJavaObject
+                  case Success(server) =>
+                    cancelables.add(server)
+                    Future(server.session).asJavaObject
+                }
             }
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
