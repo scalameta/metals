@@ -7,5 +7,6 @@ addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.9.0")
 addSbtCoursier
 
 libraryDependencies += "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
+libraryDependencies += "com.lihaoyi" %% "ujson" % "0.7.5"
 
 resolvers += Resolver.sonatypeRepo("public")

@@ -1,3 +1,4 @@
+import ujson._
 def localSnapshotVersion = "0.7.6-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
@@ -103,25 +104,59 @@ inThisBuild(
         .mkString(" ")
     },
     resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
-    ciMatrix := Map(
-      "scalaVersions" ->
-        V.supportedScalaVersions.mkString("[\"", "\",\"", "\"]"),
-      "tests" -> {
-        val tests = baseDirectory.in(ThisBuild).value /
-          "tests" / "unit" / "src" / "test" / "scala" / "tests"
-        println(IO.listFiles(tests).toSeq)
-        val grouped = IO
-          .listFiles(tests)
-          .iterator
-          .filter(_.isDirectory)
-          .map(_.toPath.getFileName.toString)
-          .grouped(7)
-          .map { group =>
-            group.mkString("{", ",", "}")
-          }
-        grouped.mkString("[\"", "\",\"", "\"]"),
+    githubActionsWorkflow := {
+      val testsDir = baseDirectory.in(ThisBuild).value /
+        "tests" / "unit" / "src" / "test" / "scala" / "tests"
+      val tests = IO
+        .listFiles(testsDir)
+        .iterator
+        .filter(_.isDirectory)
+        .map(_.toPath.getFileName.toString)
+        .grouped(7)
+        .map { group =>
+          group.mkString("{", ",", "}")
+        }
+      def job(name: String, run: String, matrix: Obj = Obj()): Obj = {
+        val result = Obj(
+          "runs-on" -> "ubuntu-latest",
+          "steps" -> Arr(
+            Obj("uses" -> Str("actions/checkout@v1")),
+            Obj("uses" -> Str("olafurpg/setup-scala@v2")),
+            Obj("name" -> Str(name), "run" -> Str(run))
+          )
+        )
+        result.value ++= matrix.value
+        result
       }
-    )
+      def matrix(key: String, values: Seq[String]) = Obj(
+        "strategy" -> Obj(
+          "fail-fast" -> Bool(false),
+          "matrix" -> Obj(key -> values.map(Str(_)))
+        )
+      )
+      Obj(
+        "name" -> Str("CI"),
+        "on" -> Arr(Str("push"), Str("pull_request")),
+        "jobs" -> Obj(
+          "Scalafmt" -> job("Formatting", "./bin/scalafmt --test"),
+          "Scalafix" -> job(
+            "Linting",
+            "csbt scalafixCheck githubActionsCheck"
+          ),
+          "Docusaurus" -> job("Website", "csbt docs/docusaurusCreateSite"),
+          "UnitTest" -> job(
+            "Run tests",
+            "csbt 'unit/testOnly -- tests.${{ matrix.test }}'",
+            matrix("test" -> tests)
+          ),
+          "PresentationCompiler" -> job(
+            "Run tests",
+            "csbt ++${{  matrix.scala }} cross/test",
+            matrix("scala" -> V.supportedScalaVersions)
+          )
+        )
+      )
+    }
   )
 )
 

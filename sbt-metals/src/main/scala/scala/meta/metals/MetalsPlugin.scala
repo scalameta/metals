@@ -3,6 +3,7 @@ package scala.meta.metals {
   import sbt._
   import sbt.Keys._
   import scala.meta.internal.sbtmetals.BuildInfo
+  import java.nio.file.Files
 
   object MetalsPlugin extends AutoPlugin {
     override def trigger = allRequirements
