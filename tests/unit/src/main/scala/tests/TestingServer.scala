@@ -18,7 +18,36 @@ import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CodeLensParams
+import org.eclipse.lsp4j.CompletionList
+import org.eclipse.lsp4j.CompletionParams
+import org.eclipse.lsp4j.DidChangeConfigurationParams
+import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.DidCloseTextDocumentParams
+import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DidSaveTextDocumentParams
+import org.eclipse.lsp4j.DocumentFormattingParams
+import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
+import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.FoldingRangeCapabilities
+import org.eclipse.lsp4j.FoldingRangeRequestParams
+import org.eclipse.lsp4j.FormattingOptions
+import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.ReferenceContext
+import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.TextDocumentClientCapabilities
+import org.eclipse.lsp4j.TextDocumentContentChangeEvent
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
 import org.scalactic.source.Position
 import tests.MetalsTestEnrichments._
@@ -32,9 +61,19 @@ import scala.concurrent.Future
 import scala.meta.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Debug
+import scala.meta.internal.metals.DidFocusResult
+import scala.meta.internal.metals.WindowStateDidChangeParams
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageServer
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.internal.metals._
+import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
@@ -67,7 +106,7 @@ final class TestingServer(
     time: Time,
     newBloopClassloader: () => URLClassLoader
 )(implicit ex: ExecutionContextExecutorService) {
-  import JsonParser._
+  import scala.meta.internal.metals.JsonParser._
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,
@@ -250,7 +289,9 @@ final class TestingServer(
 
   def executeCommand(command: String, params: Object*): Future[Any] = {
     Debug.printEnclosing()
-    val args = params.map(_.toJson.asInstanceOf[Object]).asJava
+    val args: java.util.List[Object] =
+      params.map(_.toJson.asInstanceOf[Object]).asJava
+
     server.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
 
