@@ -65,15 +65,3 @@ jobs:
       - uses: olafurpg/setup-scala@v2
       - name: Run command
         run: csbt 'unit/testOnly -- tests.${{ matrix.command }}'
-  Windows:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        command:
-          - "unit/test"
-    steps:
-      - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v2
-      - name: Run command
-        run: java -jar sbt-launch.jar ${{ matrix.command }}
-
