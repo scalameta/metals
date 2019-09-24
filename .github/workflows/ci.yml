@@ -1,6 +1,62 @@
 ---
 {
    "jobs": {
+      "Docusaurus": {
+         "runs-on": "ubuntu-latest",
+         "steps": [
+            {
+               "uses": "actions/checkout@v1"
+            },
+            {
+               "uses": "olafurpg/setup-scala@v2"
+            },
+            {
+               "name": "Website",
+               "run": "csbt docs/docusaurusCreateSite"
+            }
+         ]
+      },
+      "PresentationCompiler": {
+         "matrix": {
+            "scala": [
+               "2.13.0",
+               "2.13.1",
+               "2.12.8",
+               "2.12.9",
+               "2.12.10",
+               "2.12.7",
+               "2.11.12"
+            ]
+         },
+         "runs-on": "ubuntu-latest",
+         "steps": [
+            {
+               "uses": "actions/checkout@v1"
+            },
+            {
+               "uses": "olafurpg/setup-scala@v2"
+            },
+            {
+               "name": "Run tests",
+               "run": "csbt ++${{  matrix.scala }} cross/test"
+            }
+         ]
+      },
+      "Scalafix": {
+         "runs-on": "ubuntu-latest",
+         "steps": [
+            {
+               "uses": "actions/checkout@v1"
+            },
+            {
+               "uses": "olafurpg/setup-scala@v2"
+            },
+            {
+               "name": "Linting",
+               "run": "csbt scalafixCheck"
+            }
+         ]
+      },
       "Scalafmt": {
          "runs-on": "ubuntu-latest",
          "steps": [
@@ -13,6 +69,28 @@
             {
                "name": "Formatting",
                "run": "./bin/scalafmt --test"
+            }
+         ]
+      },
+      "UnitTests": {
+         "matrix": {
+            "test": [
+               "{foldingrange,filewatch,hover,metals,references,statusbar,completions}",
+               "{ansi,workspacesymbol,bsp,builds,applyedit,compile,definition}",
+               "{http,formatting,documentsymbol,documenthighlight,codelens,tvp,mtags}"
+            ]
+         },
+         "runs-on": "ubuntu-latest",
+         "steps": [
+            {
+               "uses": "actions/checkout@v1"
+            },
+            {
+               "uses": "olafurpg/setup-scala@v2"
+            },
+            {
+               "name": "Run tests",
+               "run": "csbt 'unit/testOnly -- tests.${{ matrix.test }}'"
             }
          ]
       }
