@@ -7,15 +7,15 @@ import java.nio.charset.StandardCharsets
 import scala.meta.io.AbsolutePath
 import scala.collection.JavaConverters._
 import com.google.gson.JsonElement
+import java.io.FileNotFoundException
 
 abstract class BuildInfo(filename: String) {
   private def readResource(filename: String): JsonObject = {
-    val text = new String(
-      InputStreamIO.readBytes(
-        this.getClass().getResourceAsStream(s"/$filename-buildinfo.json")
-      ),
-      StandardCharsets.UTF_8
-    )
+    val path = s"/$filename-buildinfo.json"
+    val resource = this.getClass().getResourceAsStream(path)
+    if (resource == null) throw new FileNotFoundException(path)
+    val text =
+      new String(InputStreamIO.readBytes(resource), StandardCharsets.UTF_8)
     new JsonParser().parse(text).getAsJsonObject()
   }
   lazy val json = readResource(filename)
