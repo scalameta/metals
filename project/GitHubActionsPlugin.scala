@@ -44,7 +44,7 @@ object GitHubActionsPlugin extends AutoPlugin {
     ) = Obj(
       "strategy" -> Obj.apply(
         "fail-fast" -> Bool(false),
-        (("matrix" -> Obj(key -> values.map(Str(_)))) +: extra): _*
+        "matrix" -> Obj(key -> values.map(Str(_)), extra: _*)
       )
     )
     def githubActionsPartition(
