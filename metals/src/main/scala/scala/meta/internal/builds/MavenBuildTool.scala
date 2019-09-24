@@ -2,28 +2,18 @@ package scala.meta.internal.builds
 
 import scala.meta.internal.metals.{MetalsServerConfig, UserConfiguration}
 import scala.meta.io.AbsolutePath
-import scala.tools.nsc.Properties
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JavaBinary
 
 case class MavenBuildTool() extends BuildTool {
 
   private lazy val embeddedMavenLauncher: AbsolutePath = {
-    val mavenWrapper =
-      if (Properties.isWin) "mvnw.cmd"
-      else "mvnw"
-    val out = BuildTool.copyFromResource(tempDir, mavenWrapper)
-    out.toFile.setExecutable(true)
-    Set(
-      s"maven-wrapper.jar",
-      "maven-wrapper.properties",
-      "MavenWrapperDownloader.java"
-    ).foreach { fileName =>
-      BuildTool.copyFromResource(
-        tempDir,
-        s"mvn/wrapper/$fileName",
-        Some(s".mvn/wrapper/$fileName")
-      )
-    }
+    val out = BuildTool.copyFromResource(tempDir, "maven-wrapper.jar")
+    AbsolutePath(out)
+  }
+
+  private def writeProperties(): AbsolutePath = {
+    val out = BuildTool.copyFromResource(tempDir, "maven-wrapper.properties")
     AbsolutePath(out)
   }
 
@@ -35,14 +25,30 @@ case class MavenBuildTool() extends BuildTool {
     import scala.meta.internal.metals.BuildInfo
     val command =
       List(
-        s"ch.epfl.scala:maven-bloop_2.10:${BuildInfo.bloopVersion}:bloopInstall",
-        "-DdownloadSources=true"
+        s"ch.epfl.scala:maven-bloop_2.10:${BuildInfo.bloopVersion}:bloopInstall"
       )
     userConfig().mavenScript match {
       case Some(script) =>
         script :: command
       case None =>
-        embeddedMavenLauncher.toString() :: command
+        writeProperties()
+        val javaArgs = List[String](
+          JavaBinary(userConfig().javaHome),
+          "-Dfile.encoding=UTF-8",
+          s"-Dmaven.multiModuleProjectDirectory=$workspace",
+          s"-Dmaven.home=$tempDir",
+          "-DdownloadSources=true"
+        )
+
+        val jarArgs = List(
+          "-jar",
+          embeddedMavenLauncher.toString()
+        )
+        List(
+          javaArgs,
+          jarArgs,
+          command
+        ).flatten
     }
   }
 
