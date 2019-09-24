@@ -113,9 +113,8 @@ inThisBuild(
         .filter(_.isDirectory)
         .map(_.toPath.getFileName.toString)
         .grouped(7)
-        .map { group =>
-          group.mkString("{", ",", "}")
-        }
+        .map(_.mkString("{", ",", "}"))
+        .toSeq
       def job(name: String, run: String, matrix: Obj = Obj()): Obj = {
         val result = Obj(
           "runs-on" -> "ubuntu-latest",
@@ -138,21 +137,27 @@ inThisBuild(
         "name" -> Str("CI"),
         "on" -> Arr(Str("push"), Str("pull_request")),
         "jobs" -> Obj(
-          "Scalafmt" -> job("Formatting", "./bin/scalafmt --test"),
+          "Scalafmt" -> job(
+            "Formatting",
+            "./bin/scalafmt --test"
+          ),
           "Scalafix" -> job(
             "Linting",
             "csbt scalafixCheck githubActionsCheck"
           ),
-          "Docusaurus" -> job("Website", "csbt docs/docusaurusCreateSite"),
-          "UnitTest" -> job(
+          "Docusaurus" -> job(
+            "Website",
+            "csbt docs/docusaurusCreateSite"
+          ),
+          "Metals" -> job(
             "Run tests",
             "csbt 'unit/testOnly -- tests.${{ matrix.test }}'",
-            matrix("test" -> tests)
+            matrix("test", tests)
           ),
-          "PresentationCompiler" -> job(
+          "Mtags" -> job(
             "Run tests",
             "csbt ++${{  matrix.scala }} cross/test",
-            matrix("scala" -> V.supportedScalaVersions)
+            matrix("scala", V.supportedScalaVersions)
           )
         )
       )
