@@ -27,7 +27,7 @@ object GitHubActionsPlugin extends AutoPlugin {
     githubActionsWorkflow := ujson.Obj(),
     githubActionsCheck := {
       githubActionsGenerate.value
-      val exit = List("git", "diff", "--exit-code").!
+      val exit = List("git", "diff", ".github/workflows", "--exit-code").!
       require(
         exit == 0,
         "build is not in sync with the CI matrix. " +
