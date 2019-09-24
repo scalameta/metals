@@ -287,9 +287,8 @@ final class TestingServer(
 
   def executeCommand(command: String, params: Object*): Future[Any] = {
     Debug.printEnclosing()
-    server
-      .executeCommand(new ExecuteCommandParams(command, params.asJava))
-      .asScala
+    val args = params.map(_.toJson.asInstanceOf[Object]).asJava
+    server.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
 
   def startDebugging(

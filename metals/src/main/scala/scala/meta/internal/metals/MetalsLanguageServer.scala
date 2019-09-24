@@ -1121,7 +1121,7 @@ class MetalsLanguageServer(
       case ServerCommands.StartDebugAdapter() =>
         val args = params.getArguments.asScala
         args match {
-          case Seq(param) =>
+          case Seq(param: JsonElement) =>
             param.as[b.DebugSessionParams] match {
               case Failure(exception) =>
                 Future.failed(exception).asJavaObject

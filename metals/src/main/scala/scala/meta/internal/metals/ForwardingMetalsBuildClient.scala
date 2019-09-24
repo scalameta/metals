@@ -10,7 +10,8 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.{lsp4j => l}
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ExecutionContext, Promise}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp._
 

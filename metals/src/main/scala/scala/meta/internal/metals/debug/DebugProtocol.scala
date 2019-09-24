@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.debug
 
+import com.google.gson.JsonElement
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
@@ -11,13 +12,16 @@ private[debug] object DebugProtocol {
 
   object RestartRequest {
     def unapply(request: RequestMessage): Option[RequestMessage] = {
-      if (request.getMethod == "disconnect") {
-        request.getParams.as[DisconnectArguments] match {
-          case Success(args) if args.getRestart => Some(request)
+      if (request.getMethod != "disconnect") None
+      else {
+        request.getParams match {
+          case json: JsonElement =>
+            json.as[DisconnectArguments] match {
+              case Success(args) if args.getRestart => Some(request)
+              case _ => None
+            }
           case _ => None
         }
-      } else {
-        None
       }
     }
   }

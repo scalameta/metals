@@ -1,21 +1,18 @@
 package scala.meta.internal.metals
-import com.google.gson.{Gson, JsonElement, JsonObject}
 
-import scala.reflect.{ClassTag, classTag}
-import scala.util.{Failure, Success, Try}
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+
+import scala.reflect.ClassTag
+import scala.reflect.classTag
+import scala.util.Try
 
 sealed trait JsonParser {
-  implicit class Parsable(data: Any) {
+  implicit class Parsable(json: JsonElement) {
     def as[A: ClassTag]: Try[A] = {
-      data match {
-        case json: JsonElement =>
-          val targetType = classTag[A].runtimeClass.asInstanceOf[Class[A]]
-          Try(JsonParser.gson.fromJson(json, targetType))
-        case value: A =>
-          Success(value)
-        case _ =>
-          Failure(new IllegalArgumentException(s"Cannot convert [$data]"))
-      }
+      val targetType = classTag[A].runtimeClass.asInstanceOf[Class[A]]
+      Try(JsonParser.gson.fromJson(json, targetType))
     }
   }
 
