@@ -1,9 +1,15 @@
 package scala.meta.internal.metals.debug
 
+import java.net.InetSocketAddress
+import java.net.ServerSocket
 import java.net.Socket
-
+import java.net.URI
+import java.util.concurrent.TimeUnit
+import ch.epfl.scala.bsp4j.DebugSessionParams
+import com.google.common.net.InetAddresses
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 
 final class DebugServer(connect: () => Future[Proxy])(
@@ -37,11 +43,38 @@ final class DebugServer(connect: () => Future[Proxy])(
 }
 
 object DebugServer {
-  def create(
-      awaitClient: () => Future[Socket],
-      connectToServer: () => Future[Socket]
-  )(implicit ec: ExecutionContext): DebugServer = {
+  import scala.meta.internal.metals.MetalsEnrichments._
+
+  def start(
+      parameters: DebugSessionParams,
+      buildServer: => Option[BuildServerConnection]
+  )(implicit ec: ExecutionContext): (URI, DebugServer) = {
+    val proxyServer = new ServerSocket(0)
+    val host = InetAddresses.toUriString(proxyServer.getInetAddress)
+    val port = proxyServer.getLocalPort
+    val uri = URI.create(s"tcp://$host:$port")
+
+    val awaitClient = () => Future(proxyServer.accept())
+
+    val connectToServer = () => {
+      buildServer
+        .map(_.startDebugSession(parameters).asScala)
+        .getOrElse(Future.failed(new IllegalStateException("No build server")))
+        .map { uri =>
+          val socket = new Socket()
+
+          val address = new InetSocketAddress(uri.getHost, uri.getPort)
+          val timeout = TimeUnit.SECONDS.toMillis(10).toInt
+          socket.connect(address, timeout)
+
+          socket
+        }
+    }
+
     val proxyFactory = () => Proxy.open(awaitClient, connectToServer)
-    new DebugServer(proxyFactory)
+    val server = new DebugServer(proxyFactory)
+    server.listen.andThen { case _ => proxyServer.close() }
+
+    (uri, server)
   }
 }

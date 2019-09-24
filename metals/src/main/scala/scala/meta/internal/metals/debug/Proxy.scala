@@ -1,10 +1,8 @@
 package scala.meta.internal.metals.debug
 
 import java.net.Socket
-
+import java.util.concurrent.TimeUnit
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
-import org.eclipse.lsp4j.jsonrpc.messages.Message
-
 import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -62,6 +60,8 @@ private[debug] final class Proxy(client: RemoteEndpoint, server: RemoteEndpoint)
 }
 
 private[debug] object Proxy {
+  import scala.meta.internal.metals.MetalsEnrichments._
+
   sealed trait ExitStatus
   case object Terminated extends ExitStatus
   case object Restarted extends ExitStatus
@@ -71,8 +71,12 @@ private[debug] object Proxy {
       connectToServer: () => Future[Socket]
   )(implicit ec: ExecutionContext): Future[Proxy] = {
     for {
-      client <- awaitClient().map(new RemoteEndpoint(_))
-      server <- connectToServer().map(new RemoteEndpoint(_))
+      client <- awaitClient()
+        .map(new RemoteEndpoint(_))
+        .withTimeout(10, TimeUnit.SECONDS)
+      server <- connectToServer()
+        .map(new RemoteEndpoint(_))
+        .withTimeout(10, TimeUnit.SECONDS)
     } yield new Proxy(client, server)
   }
 }

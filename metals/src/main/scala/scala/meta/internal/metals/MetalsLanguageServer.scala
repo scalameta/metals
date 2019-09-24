@@ -1126,41 +1126,9 @@ class MetalsLanguageServer(
               case Failure(exception) =>
                 Future.failed(exception).asJavaObject
               case Success(parameters) =>
-                val proxyServer = new ServerSocket(0)
-
-                val awaitClient = () => {
-                  Future(proxyServer.accept()).withTimeout(10, TimeUnit.SECONDS)
-                }
-
-                val connectToServer = () => {
-                  val debugSession = buildServer
-                    .map(_.startDebugSession(parameters).asScala)
-                    .getOrElse(
-                      Future
-                        .failed(new IllegalStateException("No build server"))
-                    )
-
-                  debugSession
-                    .withTimeout(10, TimeUnit.SECONDS)
-                    .map(uri => {
-                      val socket = new Socket()
-
-                      val address =
-                        new InetSocketAddress(uri.getHost, uri.getPort)
-                      val timeout = TimeUnit.SECONDS.toMillis(10).toInt
-                      socket.connect(address, timeout)
-
-                      socket
-                    })
-                }
-
-                val server = DebugServer.create(awaitClient, connectToServer)
-                server.listen.andThen { case _ => proxyServer.close() }
+                val (uri, server) = DebugServer.start(parameters, buildServer)
                 cancelables.add(server)
-
-                val host = InetAddresses.toUriString(proxyServer.getInetAddress)
-                val port = proxyServer.getLocalPort
-                Future(URI.create(s"tcp://$host:$port")).asJavaObject
+                Future(uri).asJavaObject
             }
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
