@@ -50,12 +50,12 @@ final class CodeLensProvider(
           commands = {
             val main = classes.mainClasses
               .get(symbol)
-              .map(MainClassLensFactory.commands(target, _))
-              .getOrElse(Nil)
+              .map(MainClassLensFactory.command(target, _))
+              .toList
             val tests = classes.testSuites
               .get(symbol)
-              .map(TestSuitesLensFactory.commands(target, _))
-              .getOrElse(Nil)
+              .map(TestSuitesLensFactory.command(target, _))
+              .toList
             main ++ tests
           }
           if commands.nonEmpty
@@ -73,29 +73,24 @@ final class CodeLensProvider(
 object CodeLensProvider {
   import JsonParser._
   sealed trait CommandFactory[A] {
-    protected def names: List[String]
+    protected def name: String
     protected def dataKind: String
 
-    final def commands(
-        target: b.BuildTargetIdentifier,
-        arg: A
-    ): List[l.Command] = {
+    final def command(target: b.BuildTargetIdentifier, arg: A): l.Command = {
       val params = new b.DebugSessionParams(
         List(target).asJava,
         dataKind,
         data(arg).toJson
       )
 
-      names.map { name =>
-        new l.Command(name, StartDebugSession.id, singletonList(params))
-      }
+      new l.Command(name, StartDebugSession.id, singletonList(params))
     }
 
     protected def data(data: A): AnyRef
   }
 
   final object MainClassLensFactory extends CommandFactory[b.ScalaMainClass] {
-    val names: List[String] = List("run")
+    val name = "run"
     val dataKind: String = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
 
     override protected def data(arg: b.ScalaMainClass): AnyRef = {
@@ -104,7 +99,7 @@ object CodeLensProvider {
   }
 
   final object TestSuitesLensFactory extends CommandFactory[String] {
-    val names: List[String] = List("test")
+    val name = "test"
     val dataKind: String = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
 
     override protected def data(arg: String): AnyRef = {
