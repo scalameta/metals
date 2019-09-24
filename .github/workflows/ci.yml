@@ -24,9 +24,13 @@
                 "fail-fast": false,
                 "matrix": {
                     "test": [
-                        "{ansi,applyedit,bsp,builds,codelens,compile,completions}",
-                        "{definition,documenthighlight,documentsymbol,filewatch,foldingrange,formatting,hover}",
-                        "{http,metals,mtags,references,statusbar,tvp,workspacesymbol}"
+                        "{ansi,applyedit,bsp}",
+                        "{builds,codelens,compile}",
+                        "{completions,definition,documenthighlight}",
+                        "{documentsymbol,filewatch,foldingrange}",
+                        "{formatting,hover,http}",
+                        "{metals,mtags,references}",
+                        "{statusbar,tvp,workspacesymbol}"
                     ]
                 }
             }

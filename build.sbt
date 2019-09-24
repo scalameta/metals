@@ -117,7 +117,7 @@ inThisBuild(
               githubActionsPartition(
                 baseDirectory.in(ThisBuild).value /
                   "tests" / "unit" / "src" / "test" / "scala" / "tests",
-                partitionCount = Some(3)
+                partitionCount = Some(7)
               )
             )
           ),
