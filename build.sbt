@@ -102,7 +102,10 @@ inThisBuild(
         }
         .mkString(" ")
     },
-    resolvers += Resolver.bintrayRepo("scalacenter", "releases")
+    resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
+    ciMatrix := Map(
+      "ciMatrix" -> V.supportedScalaVersions.mkString("[\"", "\",\"", "\"]")
+    )
   )
 )
 
