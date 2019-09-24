@@ -45,7 +45,8 @@ final class ImplementationProvider(
       doc <- findSemanticdb(fileSource)
       distance = TokenEditDistance.fromBuffer(fileSource, doc.text, buffer)
       impl <- locations
-      range <- impl.symbol.range
+      implOccurence <- impl.definition(doc)
+      range <- implOccurence.range
       revised <- distance.toRevised(range.toLSP)
       uri = impl.file.toUri.toString
     } yield new Location(uri, revised)
@@ -59,7 +60,7 @@ final class ImplementationProvider(
     } yield impl
     directImpl.toSet ++ directImpl
       .flatMap(
-        loc => findImplementation(loc.symbol.symbol)
+        loc => findImplementation(loc.symbol)
       )
   }
 
@@ -79,16 +80,17 @@ final class ImplementationProvider(
     )
   }
 
-  private def computeInheritance(docs: TextDocuments) = {
+  private def computeInheritance(
+      docs: TextDocuments
+  ): Map[String, Set[ClassLocation]] = {
     val allParents = for {
       doc <- docs.documents
       thisSymbol <- doc.symbols
-      occ <- doc.occurrences
-        .find(
-          occ => occ.symbol == thisSymbol.symbol && occ.role.isDefinition
-        )
-        .toList
-      parent <- parentsFromSignature(thisSymbol.signature, occ, doc).toList
+      parent <- parentsFromSignature(
+        thisSymbol.symbol,
+        thisSymbol.signature,
+        doc
+      ).toList
     } yield parent
 
     allParents.groupBy(_._1).map {
@@ -98,17 +100,17 @@ final class ImplementationProvider(
   }
 
   private def parentsFromSignature(
+      symbol: String,
       signature: Signature,
-      occ: SymbolOccurrence,
       doc: TextDocument
-  ) = {
+  ): Seq[(String, ClassLocation)] = {
     val filePath = workspace.toNIO.resolve(Paths.get(doc.uri))
-    val loc = ClassLocation(occ, filePath)
+    val loc = ClassLocation(symbol, filePath)
     signature match {
       case classSig: ClassSignature =>
         val allLocations = classSig.parents.collect {
-          case TypeRef(_, symbol, _) =>
-            symbol -> loc
+          case t: TypeRef =>
+            t.symbol -> loc
         }
         allLocations
       case _ =>
@@ -116,5 +118,18 @@ final class ImplementationProvider(
     }
   }
 
-  private case class ClassLocation(symbol: SymbolOccurrence, file: Path)
+  private case class ClassLocation(symbol: String, file: Path) {
+    private var definitionOccurence: Option[SymbolOccurrence] = None
+
+    def definition(semanticDb: TextDocument): Option[SymbolOccurrence] =
+      synchronized {
+        definitionOccurence.orElse {
+          val foundOcc = semanticDb.occurrences.find(
+            occ => occ.role.isDefinition && occ.symbol == symbol
+          )
+          definitionOccurence = foundOcc
+          foundOcc
+        }
+      }
+  }
 }
