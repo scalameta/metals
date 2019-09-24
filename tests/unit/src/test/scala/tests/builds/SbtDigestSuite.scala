@@ -1,4 +1,5 @@
-package tests.builds
+package tests
+package builds
 
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.io.AbsolutePath

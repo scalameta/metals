@@ -1,4 +1,5 @@
-package tests.builds
+package tests
+package builds
 
 import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.SbtOpts

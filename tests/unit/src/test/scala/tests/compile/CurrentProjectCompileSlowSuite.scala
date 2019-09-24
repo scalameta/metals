@@ -1,4 +1,5 @@
-package tests.compile
+package tests
+package compile
 
 object CurrentProjectCompileSlowSuite extends BaseSlowSuite("current-project") {
   testAsync("basic") {

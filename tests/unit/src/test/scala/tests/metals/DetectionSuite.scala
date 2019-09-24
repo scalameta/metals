@@ -1,4 +1,5 @@
-package tests.metals
+package tests
+package metals
 import scala.meta.internal.builds.BuildTools
 import scala.meta.io.AbsolutePath
 

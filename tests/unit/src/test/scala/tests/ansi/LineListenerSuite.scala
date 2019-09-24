@@ -1,4 +1,5 @@
-package tests.ansi
+package tests
+package ansi
 
 import scala.meta.internal.ansi.LineListener
 import scala.collection.mutable

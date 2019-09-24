@@ -1,4 +1,5 @@
-package tests.tvp
+package tests
+package tvp
 
 import scala.meta.internal.tvp.TreeViewProvider
 

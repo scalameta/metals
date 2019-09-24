@@ -1,4 +1,5 @@
-package tests.statusbar
+package tests
+package statusbar
 import scala.meta.internal.metals.Icons
 
 object StatusBarSlowSuite extends BaseSlowSuite("status-bar") {

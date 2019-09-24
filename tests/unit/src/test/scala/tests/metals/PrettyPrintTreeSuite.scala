@@ -1,4 +1,5 @@
-package tests.metals
+package tests
+package metals
 
 object PrettyPrintTreeSuite extends BaseSuite {
   def check(name: String, tree: PrettyPrintTree, expected: String): Unit = {

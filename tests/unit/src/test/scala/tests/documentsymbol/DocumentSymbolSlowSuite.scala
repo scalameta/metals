@@ -1,4 +1,5 @@
-package tests.documentsymbol
+package tests
+package documentsymbol
 
 object DocumentSymbolSlowSuite extends BaseSlowSuite("documentSymbol") {
 

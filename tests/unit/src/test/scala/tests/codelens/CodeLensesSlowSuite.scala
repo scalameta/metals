@@ -1,4 +1,5 @@
-package tests.codelens
+package tests
+package codelens
 import scala.concurrent.Future
 
 object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {

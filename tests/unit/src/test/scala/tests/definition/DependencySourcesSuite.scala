@@ -1,4 +1,5 @@
-package tests.definition
+package tests
+package definition
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.meta.internal.metals.DependencySources

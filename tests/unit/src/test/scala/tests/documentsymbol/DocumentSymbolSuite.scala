@@ -1,4 +1,5 @@
-package tests.documentsymbol
+package tests
+package documentsymbol
 
 import scala.meta.internal.metals.DocumentSymbolProvider
 import scala.meta.internal.metals.MetalsEnrichments._

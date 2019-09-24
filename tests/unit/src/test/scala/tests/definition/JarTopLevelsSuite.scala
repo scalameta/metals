@@ -1,4 +1,5 @@
-package tests.definition
+package tests
+package definition
 
 import scala.collection.concurrent.TrieMap
 

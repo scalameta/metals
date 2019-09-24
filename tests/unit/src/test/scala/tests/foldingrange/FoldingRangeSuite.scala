@@ -1,4 +1,5 @@
-package tests.foldingrange
+package tests
+package foldingrange
 
 import java.nio.file.Paths
 import java.util

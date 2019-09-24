@@ -1,4 +1,5 @@
-package tests.statusbar
+package tests
+package statusbar
 
 import scala.concurrent.Promise
 import scala.meta.internal.io.PathIO

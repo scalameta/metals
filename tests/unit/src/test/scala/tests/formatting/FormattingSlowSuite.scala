@@ -1,4 +1,5 @@
-package tests.formatting
+package tests
+package formatting
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive

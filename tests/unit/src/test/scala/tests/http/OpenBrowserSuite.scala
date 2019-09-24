@@ -1,4 +1,5 @@
-package tests.http
+package tests
+package http
 
 import scala.meta.internal.metals.Urls
 import scala.meta.internal.metals.ServerCommands

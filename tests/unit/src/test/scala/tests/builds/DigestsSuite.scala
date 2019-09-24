@@ -1,4 +1,5 @@
-package tests.builds
+package tests
+package builds
 import scala.meta.internal.builds.Digest
 import scala.meta.internal.builds.Digest.Status._
 import scala.meta.internal.builds.Digests

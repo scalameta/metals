@@ -1,4 +1,5 @@
-package tests.metals
+package tests
+package metals
 
 import com.google.gson.JsonParser
 import java.util.Properties

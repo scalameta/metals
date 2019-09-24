@@ -1,4 +1,5 @@
-package tests.metals
+package tests
+package metals
 
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.metals.ScalaVersions

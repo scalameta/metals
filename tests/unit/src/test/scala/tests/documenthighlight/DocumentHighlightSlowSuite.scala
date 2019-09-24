@@ -1,4 +1,5 @@
-package tests.documenthighlight
+package tests
+package documenthighlight
 
 object DocumentHighlightSlowSuite extends BaseSlowSuite("documentHighlight") {
 

@@ -1,4 +1,5 @@
-package tests.filewatch
+package tests
+package filewatch
 
 import java.nio.file.Files
 import scala.meta.internal.metals.RecursivelyDelete

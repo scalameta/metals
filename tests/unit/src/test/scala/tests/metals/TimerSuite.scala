@@ -1,4 +1,5 @@
-package tests.metals
+package tests
+package metals
 
 import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.Timer

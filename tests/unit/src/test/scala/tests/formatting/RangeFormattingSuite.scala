@@ -1,4 +1,5 @@
-package tests.formatting
+package tests
+package formatting
 
 object RangeFormattingSuite extends BaseSlowSuite("rangeFormatting") {
 

@@ -1,4 +1,5 @@
-package tests.hover
+package tests
+package hover
 
 import scala.meta.internal.metals.Directories
 

@@ -1,4 +1,5 @@
-package tests.foldingrange
+package tests
+package foldingrange
 
 import scala.concurrent.Future
 

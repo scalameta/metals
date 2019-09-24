@@ -1,4 +1,5 @@
-package tests.compile
+package tests
+package compile
 
 import org.scalactic.source.Position
 import scala.concurrent.Future

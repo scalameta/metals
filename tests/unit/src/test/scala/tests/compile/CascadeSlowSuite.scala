@@ -1,4 +1,5 @@
-package tests.compile
+package tests
+package compile
 
 import scala.meta.internal.metals.ServerCommands
 

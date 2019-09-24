@@ -1,4 +1,5 @@
-package tests.builds
+package tests
+package builds
 
 object QuickBuildSuite extends BaseSlowSuite("quick-build") {
   testAsync("basic") {

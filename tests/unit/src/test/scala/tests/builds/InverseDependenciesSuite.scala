@@ -1,4 +1,5 @@
-package tests.builds
+package tests
+package builds
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.collection.mutable

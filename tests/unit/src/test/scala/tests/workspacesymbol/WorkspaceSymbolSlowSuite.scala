@@ -1,4 +1,5 @@
-package tests.workspacesymbol
+package tests
+package workspacesymbol
 
 import java.nio.file.Files
 import org.eclipse.lsp4j.SymbolInformation

@@ -1,4 +1,5 @@
-package tests.workspacesymbol
+package tests
+package workspacesymbol
 
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.inputs._

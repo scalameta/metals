@@ -1,4 +1,5 @@
-package tests.bsp
+package tests
+package bsp
 
 import scala.meta.internal.metals.ServerCommands
 

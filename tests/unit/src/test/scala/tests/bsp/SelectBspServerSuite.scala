@@ -1,4 +1,5 @@
-package tests.bsp
+package tests
+package bsp
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import scala.meta.internal.metals.Messages

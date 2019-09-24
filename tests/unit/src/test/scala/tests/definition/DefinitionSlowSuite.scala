@@ -1,4 +1,5 @@
-package tests.definition
+package tests
+package definition
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration

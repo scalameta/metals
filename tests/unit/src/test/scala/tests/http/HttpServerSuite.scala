@@ -1,4 +1,5 @@
-package tests.http
+package tests
+package http
 
 import java.net.InetSocketAddress
 import java.net.ServerSocket

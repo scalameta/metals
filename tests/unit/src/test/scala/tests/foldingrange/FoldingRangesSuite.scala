@@ -1,4 +1,5 @@
-package tests.foldingrange
+package tests
+package foldingrange
 
 import org.eclipse.lsp4j.FoldingRange
 import scala.meta.internal.metals.FoldingRanges

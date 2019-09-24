@@ -1,4 +1,5 @@
-package tests.completions
+package tests
+package completions
 
 import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}

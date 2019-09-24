@@ -1,4 +1,5 @@
-package tests.bsp
+package tests
+package bsp
 
 import bill._
 import scala.concurrent.Future

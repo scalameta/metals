@@ -1,4 +1,5 @@
-package tests.metals
+package tests
+package metals
 
 import java.nio.file.Files
 import java.nio.file.FileAlreadyExistsException

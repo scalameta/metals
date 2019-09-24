@@ -1,4 +1,5 @@
-package tests.applyedit
+package tests
+package applyedit
 
 import java.nio.file.Files
 

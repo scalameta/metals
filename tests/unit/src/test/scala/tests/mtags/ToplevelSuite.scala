@@ -1,4 +1,5 @@
-package tests.mtags
+package tests
+package mtags
 
 import java.nio.charset.StandardCharsets
 import scala.collection.mutable.ListBuffer

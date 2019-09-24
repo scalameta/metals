@@ -1,4 +1,5 @@
-package tests.compile
+package tests
+package compile
 
 object WindowStateDidChangeSlowSuite
     extends BaseSlowSuite("window-state-did-change") {
