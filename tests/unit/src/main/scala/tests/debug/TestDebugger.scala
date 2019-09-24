@@ -58,7 +58,7 @@ final class TestDebugger(connect: IDebugProtocolClient => ServerConnection)(
   }
 
   /**
-   * Not waiting for exited because TODO
+   * Not waiting for exited because it might not be sent
    */
   def awaitCompletion: Future[Unit] = {
     for {
