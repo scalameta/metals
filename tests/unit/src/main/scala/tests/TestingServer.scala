@@ -65,6 +65,7 @@ import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.Semanticdbs
@@ -104,7 +105,6 @@ final class TestingServer(
     newBloopClassloader: () => URLClassLoader
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
-
   val server = new MetalsLanguageServer(
     ex,
     buffers = buffers,
@@ -287,7 +287,9 @@ final class TestingServer(
 
   def executeCommand(command: String, params: Object*): Future[Any] = {
     Debug.printEnclosing()
-    val args = params.map(_.toJson.asInstanceOf[Object]).asJava
+    val args: java.util.List[Object] =
+      params.map(_.toJson.asInstanceOf[Object]).asJava
+
     server.executeCommand(new ExecuteCommandParams(command, args)).asScala
   }
 
