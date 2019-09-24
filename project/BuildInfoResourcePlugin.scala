@@ -23,7 +23,7 @@ object BuildInfoResourcePlugin extends AutoPlugin {
     buildInfoResourceFilename := thisProject.value.id + "-buildinfo.json",
     resourceGenerators.in(Compile) += Def.taskDyn[Seq[File]] {
       cache.synchronized {
-        val key = thisProject.value.id
+        val key = thisProject.value.id + scalaVersion.value
         cache.get(key) match {
           case Some(value) if value.isFile => Def.task(List(value))
           case _ => generateResource(key)

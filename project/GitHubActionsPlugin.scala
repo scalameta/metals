@@ -21,18 +21,27 @@ object GitHubActionsPlugin extends AutoPlugin {
     lazy val githubActionsWorkflow = settingKey[ujson.Obj](
       "Settings to describe the CI build matrix."
     )
-    def githubActionsJob(
+    def githubActionsStep(
         name: String,
         run: String,
         matrix: Obj = Obj()
     ): Obj = {
+      githubActionsSteps(List(name -> run), matrix)
+    }
+    def githubActionsSteps(
+        namedSteps: List[(String, String)],
+        matrix: Obj = Obj()
+    ): Obj = {
+      val steps =
+        Obj("uses" -> Str("actions/checkout@v1")) +:
+          Obj("uses" -> Str("olafurpg/setup-scala@v2")) +:
+          namedSteps.map {
+            case (name, run) =>
+              Obj("name" -> Str(name), "run" -> Str(run))
+          }
       val result = Obj(
         "runs-on" -> "ubuntu-latest",
-        "steps" -> Arr(
-          Obj("uses" -> Str("actions/checkout@v1")),
-          Obj("uses" -> Str("olafurpg/setup-scala@v2")),
-          Obj("name" -> Str(name), "run" -> Str(run))
-        )
+        "steps" -> Arr(steps.value)
       )
       result.value ++= matrix.value
       result
@@ -55,6 +64,7 @@ object GitHubActionsPlugin extends AutoPlugin {
         .listFiles(dir)
         .filter(_.isDirectory)
         .map(_.toPath.getFileName.toString)
+        .sorted
       val count = partitionCount.getOrElse(names.length)
       require(names.nonEmpty, "no tests to partition!")
       val groupSizes = math.ceil(names.length.toDouble / count).toInt
@@ -69,11 +79,12 @@ object GitHubActionsPlugin extends AutoPlugin {
     githubActionsCheck := {
       githubActionsGenerate.value
       val exit = List("git", "diff", "--exit-code", ".github/workflows").!
-      require(
-        exit == 0,
-        "build is not in sync with the CI matrix. " +
-          "Run 'sbt githubActionsGenerate' to fix this problem."
-      )
+      if (exit != 0) {
+        throw new RuntimeException(
+          "build is not in sync with the CI matrix. " +
+            "Run 'sbt githubActionsGenerate' to fix this problem."
+        ) with sbt.internal.util.FeedbackProvidedException
+      }
     },
     githubActionsGenerate := {
       val workflow = githubActionsWorkflow.in(ThisBuild).value

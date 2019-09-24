@@ -6,51 +6,6 @@
         "pull_request"
     ],
     "jobs": {
-        "Scalafmt": {
-            "runs-on": "ubuntu-latest",
-            "steps": [
-                {
-                    "uses": "actions/checkout@v1"
-                },
-                {
-                    "uses": "olafurpg/setup-scala@v2"
-                },
-                {
-                    "name": "Formatting",
-                    "run": "./bin/scalafmt --test"
-                }
-            ]
-        },
-        "Scalafix": {
-            "runs-on": "ubuntu-latest",
-            "steps": [
-                {
-                    "uses": "actions/checkout@v1"
-                },
-                {
-                    "uses": "olafurpg/setup-scala@v2"
-                },
-                {
-                    "name": "Linting",
-                    "run": "csbt scalafixCheck githubActionsCheck"
-                }
-            ]
-        },
-        "Docusaurus": {
-            "runs-on": "ubuntu-latest",
-            "steps": [
-                {
-                    "uses": "actions/checkout@v1"
-                },
-                {
-                    "uses": "olafurpg/setup-scala@v2"
-                },
-                {
-                    "name": "Website",
-                    "run": "csbt docs/docusaurusCreateSite"
-                }
-            ]
-        },
         "Metals": {
             "runs-on": "ubuntu-latest",
             "steps": [
@@ -69,9 +24,9 @@
                 "fail-fast": false,
                 "matrix": {
                     "test": [
-                        "{foldingrange,filewatch,hover,metals,references,statusbar,completions}",
-                        "{ansi,workspacesymbol,bsp,builds,applyedit,compile,definition}",
-                        "{http,formatting,documentsymbol,documenthighlight,codelens,tvp,mtags}"
+                        "{ansi,applyedit,bsp,builds,codelens,compile,completions}",
+                        "{definition,documenthighlight,documentsymbol,filewatch,foldingrange,formatting,hover}",
+                        "{http,metals,mtags,references,statusbar,tvp,workspacesymbol}"
                     ]
                 }
             }
@@ -123,14 +78,67 @@
                 "fail-fast": false,
                 "matrix": {
                     "test": [
-                        "mill",
-                        "maven",
+                        "feature",
                         "gradle",
-                        "sbt",
-                        "feature"
+                        "maven",
+                        "mill",
+                        "sbt"
                     ]
                 }
             }
+        },
+        "Scalafmt": {
+            "runs-on": "ubuntu-latest",
+            "steps": [
+                {
+                    "uses": "actions/checkout@v1"
+                },
+                {
+                    "uses": "olafurpg/setup-scala@v2"
+                },
+                {
+                    "name": "Run Scalafmt",
+                    "run": "./bin/scalafmt --test"
+                }
+            ]
+        },
+        "Scalafix": {
+            "runs-on": "ubuntu-latest",
+            "steps": [
+                {
+                    "uses": "actions/checkout@v1"
+                },
+                {
+                    "uses": "olafurpg/setup-scala@v2"
+                },
+                {
+                    "name": "Run Scalafix",
+                    "run": "csbt scalafixCheck"
+                }
+            ]
+        },
+        "Miscellaneous": {
+            "runs-on": "ubuntu-latest",
+            "steps": [
+                {
+                    "uses": "actions/checkout@v1"
+                },
+                {
+                    "uses": "olafurpg/setup-scala@v2"
+                },
+                {
+                    "name": "Run Scalafix",
+                    "run": "csbt scalafixCheck"
+                },
+                {
+                    "name": "Generate Website",
+                    "run": "csbt docs/docusaurusCreateSite"
+                },
+                {
+                    "name": "Check Build Matrix",
+                    "run": "csbt githubActions"
+                }
+            ]
         }
     }
 }

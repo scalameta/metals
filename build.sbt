@@ -109,19 +109,7 @@ inThisBuild(
         "name" -> Str("CI"),
         "on" -> Arr(Str("push"), Str("pull_request")),
         "jobs" -> Obj(
-          "Scalafmt" -> githubActionsJob(
-            "Formatting",
-            "./bin/scalafmt --test"
-          ),
-          "Scalafix" -> githubActionsJob(
-            "Linting",
-            "csbt scalafixCheck githubActionsCheck"
-          ),
-          "Docusaurus" -> githubActionsJob(
-            "Website",
-            "csbt docs/docusaurusCreateSite"
-          ),
-          "Metals" -> githubActionsJob(
+          "Metals" -> githubActionsStep(
             "Run tests",
             "csbt 'unit/testOnly -- tests.${{ matrix.test }}'",
             githubActionsMatrix(
@@ -133,12 +121,12 @@ inThisBuild(
               )
             )
           ),
-          "Mtags" -> githubActionsJob(
+          "Mtags" -> githubActionsStep(
             "Run tests",
             "csbt ++${{  matrix.scala }} cross/test",
             githubActionsMatrix("scala", V.supportedScalaVersions)
           ),
-          "Build" -> githubActionsJob(
+          "Build" -> githubActionsStep(
             "Run tests",
             "csbt 'slow/testOnly -- tests.${{ matrix.test }}'",
             githubActionsMatrix(
@@ -147,6 +135,21 @@ inThisBuild(
                 baseDirectory.in(ThisBuild).value /
                   "tests" / "slow" / "src" / "test" / "scala" / "tests"
               )
+            )
+          ),
+          "Scalafmt" -> githubActionsStep(
+            "Run Scalafmt",
+            "./bin/scalafmt --test"
+          ),
+          "Scalafix" -> githubActionsStep(
+            "Run Scalafix",
+            "csbt scalafixCheck"
+          ),
+          "Miscellaneous" -> githubActionsSteps(
+            List(
+              "Run Scalafix" -> "csbt scalafixCheck",
+              "Generate Website" -> "csbt docs/docusaurusCreateSite",
+              "Check Build Matrix" -> "csbt githubActions"
             )
           )
         )
@@ -364,7 +367,7 @@ lazy val `sbt-metals` = project
     ),
     buildInfoResourceValue := {
       val paths = V.supportedScalaVersions.mkString(java.io.File.pathSeparator)
-      s"""|scalametaVersion=V.scalameta
+      s"""|scalametaVersion=${V.scalameta}
           |supportedScalaVersions=${paths}
           |""".stripMargin
     }
