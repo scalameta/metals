@@ -140,7 +140,7 @@
                 },
                 {
                     "name": "Check Build Matrix",
-                    "run": "csbt githubActions"
+                    "run": "csbt githubActionsCheck"
                 }
             ]
         }
