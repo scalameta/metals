@@ -140,9 +140,9 @@ inThisBuild(
           ),
           "Build" -> githubActionsJob(
             "Run tests",
-            "csbt 'unit/testOnly -- tests.${{ matrix.test }}'",
+            "csbt 'slow/testOnly -- tests.${{ matrix.test }}'",
             githubActionsMatrix(
-              "build",
+              "test",
               githubActionsPartition(
                 baseDirectory.in(ThisBuild).value /
                   "tests" / "slow" / "src" / "test" / "scala" / "tests"
