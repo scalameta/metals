@@ -104,7 +104,23 @@ inThisBuild(
     },
     resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
     ciMatrix := Map(
-      "ciMatrix" -> V.supportedScalaVersions.mkString("[\"", "\",\"", "\"]")
+      "scalaVersions" ->
+        V.supportedScalaVersions.mkString("[\"", "\",\"", "\"]"),
+      "tests" -> {
+        val tests = baseDirectory.in(ThisBuild).value /
+          "tests" / "unit" / "src" / "test" / "scala" / "tests"
+        println(IO.listFiles(tests).toSeq)
+        val grouped = IO
+          .listFiles(tests)
+          .iterator
+          .filter(_.isDirectory)
+          .map(_.toPath.getFileName.toString)
+          .grouped(7)
+          .map { group =>
+            group.mkString("{", ",", "}")
+          }
+        grouped.mkString("[\"", "\",\"", "\"]"),
+      }
     )
   )
 )

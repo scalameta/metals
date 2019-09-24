@@ -19,12 +19,14 @@ object CiMatrixPlugin extends AutoPlugin {
     TaskKey[Unit]("generateCiMatrix") := {
       val cross: Map[String, String] = ciMatrix.in(ThisBuild).value
       val base = baseDirectory.in(ThisBuild).value
-      val ci = base / "ci.json"
+      val ci = base / "ci"
+      Files.createDirectories(ci.toPath)
+      val out = ci / "build.json"
       val json = cross
         .map { case (k, v) => s""""$k": $v""" }
-        .mkString("{\n", ",\n  ", "\n}")
-      Files.write(ci.toPath, json.getBytes(StandardCharsets.UTF_8))
-      println(s"write: $ci")
+        .mkString("{\n  ", ",\n  ", "\n}")
+      Files.write(out.toPath, json.getBytes(StandardCharsets.UTF_8))
+      println(s"write: $out")
     }
   )
 
