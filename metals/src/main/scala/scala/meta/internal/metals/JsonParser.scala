@@ -8,7 +8,9 @@ import scala.reflect.ClassTag
 import scala.reflect.classTag
 import scala.util.Try
 
-sealed trait JsonParser {
+object JsonParser {
+  private val gson = new Gson()
+
   implicit class Parsable(json: JsonElement) {
     def as[A: ClassTag]: Try[A] = {
       val targetType = classTag[A].runtimeClass.asInstanceOf[Class[A]]
@@ -25,8 +27,4 @@ sealed trait JsonParser {
       data.toJson.getAsJsonObject
     }
   }
-}
-
-object JsonParser extends JsonParser {
-  private val gson = new Gson()
 }
