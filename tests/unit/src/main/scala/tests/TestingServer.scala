@@ -304,8 +304,7 @@ final class TestingServer(
     val params = new DebugSessionParams(targets.asJava, kind, parameter.toJson)
 
     executeCommand(ServerCommands.StartDebugAdapter.id, params)
-      .map(_.asInstanceOf[URI])
-      .map(TestDebugger(_)(ex))
+      .collect { case uri: URI => TestDebugger(uri) }
   }
 
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
