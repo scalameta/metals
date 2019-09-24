@@ -36,6 +36,7 @@ jobs:
   PresentationCompiler:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         scala:
           - "2.13.0"
@@ -52,6 +53,7 @@ jobs:
   Metals:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         command:
           - '{ansi,applyedit,bsp,builds,codelens}'
