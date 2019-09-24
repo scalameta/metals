@@ -18,7 +18,7 @@ case class InputFile(
   def input: Input.VirtualFile = file.toInput
   def isScala: Boolean = PathIO.extension(file.toNIO) == "scala"
   def expectPath(name: String): AbsolutePath =
-    AbsolutePath(BuildInfo.testResourceDirectory)
+    BuildInfo.testResourceDirectory
       .resolve(name)
       .resolve(sourceDirectoryRelativePath)
   def slurpExpected(name: String): Option[String] = {

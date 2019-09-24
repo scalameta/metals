@@ -37,10 +37,14 @@ object GitHubActionsPlugin extends AutoPlugin {
       result.value ++= matrix.value
       result
     }
-    def githubActionsMatrix(key: String, values: Seq[String]) = Obj(
-      "strategy" -> Obj(
+    def githubActionsMatrix(
+        key: String,
+        values: Seq[String],
+        extra: (String, ujson.Value)*
+    ) = Obj(
+      "strategy" -> Obj.apply(
         "fail-fast" -> Bool(false),
-        "matrix" -> Obj(key -> values.map(Str(_)))
+        (("matrix" -> Obj(key -> values.map(Str(_)))) +: extra): _*
       )
     )
     def githubActionsPartition(

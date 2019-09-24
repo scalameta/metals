@@ -26,7 +26,7 @@ object Corpus {
   }
   private def download(name: String, url: String): AbsolutePath = {
     val zip =
-      AbsolutePath(BuildInfo.targetDirectory).resolve(name)
+      BuildInfo.targetDirectory.resolve(name)
     Files.createDirectories(zip.toNIO.getParent)
     if (!zip.isFile) {
       val in = new URL(url).openStream()

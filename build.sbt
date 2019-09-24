@@ -146,7 +146,9 @@ inThisBuild(
               githubActionsPartition(
                 baseDirectory.in(ThisBuild).value /
                   "tests" / "slow" / "src" / "test" / "scala" / "tests"
-              )
+              ),
+              // TODO: re-enable Maven tests https://github.com/scalameta/metals/issues/943
+              "exclude" -> Arr(Obj("test" -> Str("maven")))
             )
           )
         )
@@ -257,13 +259,14 @@ lazy val mtags = project
           otherwise = List("com.lihaoyi" %% "pprint" % "0.5.5")
         )
     },
-    buildInfoPackage := "scala.meta.internal.mtags",
-    buildInfoKeys := Seq[BuildInfoKey](
-      "scalaCompilerVersion" -> scalaVersion.value
+    buildInfoResourceValue := buildInfoResourceJson(
+      Obj(
+        "scalaCompilerVersion" -> scalaVersion.value
+      )
     )
   )
   .dependsOn(interfaces)
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoResourcePlugin)
 
 lazy val metals = project
   .settings(
@@ -319,26 +322,31 @@ lazy val metals = project
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
-    buildInfoPackage := "scala.meta.internal.metals",
-    buildInfoKeys := Seq[BuildInfoKey](
-      "localSnapshotVersion" -> localSnapshotVersion,
-      "metalsVersion" -> version.value,
-      "bspVersion" -> V.bsp,
-      "bloopVersion" -> V.bloop,
-      "sbtBloopVersion" -> V.sbtBloop,
-      "gradleBloopVersion" -> V.gradleBloop,
-      "scalametaVersion" -> V.scalameta,
-      "semanticdbVersion" -> V.semanticdb,
-      "scalafmtVersion" -> V.scalafmt,
-      "supportedScalaVersions" -> V.supportedScalaVersions,
-      "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
-      "scala211" -> V.scala211,
-      "scala212" -> V.scala212,
-      "scala213" -> V.scala213
+    buildInfoResourceValue := buildInfoResourceJson(
+      Obj(
+        "localSnapshotVersion" -> Str(localSnapshotVersion),
+        "metalsVersion" -> Str(version.value),
+        "bspVersion" -> Str(V.bsp),
+        "bloopVersion" -> Str(V.bloop),
+        "sbtBloopVersion" -> Str(V.sbtBloop),
+        "gradleBloopVersion" -> Str(V.gradleBloop),
+        "scalametaVersion" -> Str(V.scalameta),
+        "semanticdbVersion" -> Str(V.semanticdb),
+        "scalafmtVersion" -> Str(V.scalafmt),
+        "supportedScalaVersions" -> Arr(
+          V.supportedScalaVersions.map(Str(_)): _*
+        ),
+        "deprecatedScalaVersions" -> Arr(
+          V.deprecatedScalaVersions.map(Str(_)): _*
+        ),
+        "scala211" -> Str(V.scala211),
+        "scala212" -> Str(V.scala212),
+        "scala213" -> Str(V.scala213)
+      )
     )
   )
   .dependsOn(mtags)
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoResourcePlugin)
 
 lazy val `sbt-metals` = project
   .settings(
@@ -356,14 +364,14 @@ lazy val `sbt-metals` = project
       "-Ywarn-unused-import",
       "-Ywarn-unused:imports"
     ),
-    buildInfoPackage := "scala.meta.internal.sbtmetals",
-    buildInfoKeys := Seq[BuildInfoKey](
-      "metalsVersion" -> version.value,
-      "supportedScalaVersions" -> V.supportedScalaVersions,
-      "scalametaVersion" -> V.scalameta
-    )
+    buildInfoResourceValue := {
+      val paths = V.supportedScalaVersions.mkString(java.io.File.pathSeparator)
+      s"""|scalametaVersion=V.scalameta
+          |supportedScalaVersions=${paths}
+          |""".stripMargin
+    }
   )
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoResourcePlugin)
   .disablePlugins(ScalafixPlugin)
 
 lazy val input = project
@@ -411,16 +419,16 @@ lazy val mtest = project
       scalaVersion.value,
       if211 = List("-Ywarn-unused:imports")
     ),
-    buildInfoPackage := "tests",
-    buildInfoObject := "BuildInfoVersions",
-    buildInfoKeys := Seq[BuildInfoKey](
-      "scala211" -> V.scala211,
-      "scala212" -> V.scala212,
-      "scalaVersion" -> scalaVersion.value
+    buildInfoResourceValue := buildInfoResourceJson(
+      Obj(
+        "scala211" -> Str(V.scala211),
+        "scala212" -> Str(V.scala212),
+        "scalaVersion" -> Str(scalaVersion.value)
+      )
     )
   )
   .dependsOn(mtags)
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoResourcePlugin)
 
 lazy val cross = project
   .in(file("tests/cross"))
@@ -460,19 +468,22 @@ lazy val unit = project
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "com.lihaoyi" %% "utest" % "0.6.0"
     ),
-    buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),
     compile.in(Compile) :=
       compile.in(Compile).dependsOn(compile.in(input, Test)).value,
-    buildInfoKeys := Seq[BuildInfoKey](
-      "sourceroot" -> baseDirectory.in(ThisBuild).value,
-      "targetDirectory" -> target.in(Test).value,
-      "testResourceDirectory" -> resourceDirectory.in(Test).value,
-      "scalaVersion" -> scalaVersion.value
+    buildInfoResourceValue := buildInfoResourceJson(
+      Obj(
+        "sourceroot" -> Str(baseDirectory.in(ThisBuild).value.toString),
+        "targetDirectory" -> Str(target.in(Test).value.toString),
+        "testResourceDirectory" -> Str(
+          resourceDirectory.in(Test).value.toString
+        ),
+        "scalaVersion" -> Str(scalaVersion.value)
+      )
     )
   )
   .dependsOn(mtest, metals)
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoResourcePlugin)
 
 def crossPublishLocal(scalaV: String) = Def.task[Unit] {
   // Runs `publishLocal` for mtags with $scalaV.

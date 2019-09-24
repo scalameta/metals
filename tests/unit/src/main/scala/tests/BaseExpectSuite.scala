@@ -1,7 +1,6 @@
 package tests
 
 import scala.meta.internal.symtab.GlobalSymbolTable
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.io.Classpath
 
@@ -24,9 +23,7 @@ abstract class BaseExpectSuite(val suiteName: String) extends BaseSuite {
       includeJdk = true
     )
   }
-  final lazy val sourceroot: AbsolutePath =
-    AbsolutePath(BuildInfo.sourceroot)
   final lazy val classpath =
-    new SemanticdbClasspath(sourceroot, input.classpath)
+    new SemanticdbClasspath(BuildInfo.sourceroot, input.classpath)
   def saveExpect(): Unit
 }

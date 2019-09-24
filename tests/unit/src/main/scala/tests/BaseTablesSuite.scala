@@ -19,7 +19,8 @@ abstract class BaseTablesSuite extends BaseSuite {
     tables.connect()
   }
   override def utestAfterEach(path: Seq[String]): Unit = {
-    tables.cancel()
+    if (tables != null)
+      tables.cancel()
     RecursivelyDelete(workspace)
   }
 }

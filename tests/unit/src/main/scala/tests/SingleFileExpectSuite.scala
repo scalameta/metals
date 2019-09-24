@@ -45,5 +45,5 @@ abstract class SingleFileExpectSuite(filename: String)
 
 object SingleFileExpectSuite {
   def expectRoot: AbsolutePath =
-    AbsolutePath(BuildInfo.testResourceDirectory).resolve("expect")
+    BuildInfo.testResourceDirectory.resolve("expect")
 }

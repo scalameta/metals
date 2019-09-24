@@ -16,7 +16,7 @@ abstract class DirectoryExpectSuite(directoryName: String)
   def testCases(): List[ExpectTestCase]
 
   final lazy val expectRoot: AbsolutePath =
-    AbsolutePath(BuildInfo.testResourceDirectory).resolve(directoryName)
+    BuildInfo.testResourceDirectory.resolve(directoryName)
   final def test(unitTest: ExpectTestCase): Unit = {
     val testName =
       unitTest.input.file.toNIO.getFileName.toString.stripSuffix(".scala")

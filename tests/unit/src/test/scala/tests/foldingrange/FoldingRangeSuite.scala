@@ -18,7 +18,7 @@ object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
     new FoldingRangeProvider(trees, buffers, foldOnlyLines = false)
 
   override def testCases(): List[ExpectTestCase] = {
-    val inputDirectory = AbsolutePath(testResourceDirectory)
+    val inputDirectory = testResourceDirectory
       .resolve("foldingRange")
       .resolve("input")
     val customInput = InputProperties.fromDirectory(inputDirectory)
