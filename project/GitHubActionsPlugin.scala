@@ -1,12 +1,13 @@
-import sbt._
-import sbt.Keys._
 import java.nio.file.Files
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import scala.util.Properties
-import scala.sys.process._
 import java.net.URL
+import sbt._
+import sbt.Keys._
+import scala.sys.process._
+import scala.util.Properties
 import scala.util.control.NonFatal
+import ujson._
 
 object GitHubActionsPlugin extends AutoPlugin {
 
@@ -20,6 +21,42 @@ object GitHubActionsPlugin extends AutoPlugin {
     lazy val githubActionsWorkflow = settingKey[ujson.Obj](
       "Settings to describe the CI build matrix."
     )
+    def githubActionsJob(
+        name: String,
+        run: String,
+        matrix: Obj = Obj()
+    ): Obj = {
+      val result = Obj(
+        "runs-on" -> "ubuntu-latest",
+        "steps" -> Arr(
+          Obj("uses" -> Str("actions/checkout@v1")),
+          Obj("uses" -> Str("olafurpg/setup-scala@v2")),
+          Obj("name" -> Str(name), "run" -> Str(run))
+        )
+      )
+      result.value ++= matrix.value
+      result
+    }
+    def githubActionsMatrix(key: String, values: Seq[String]) = Obj(
+      "strategy" -> Obj(
+        "fail-fast" -> Bool(false),
+        "matrix" -> Obj(key -> values.map(Str(_)))
+      )
+    )
+    def githubActionsPartition(
+        dir: File,
+        partitionCount: Option[Int] = None
+    ): List[String] = {
+      val names = IO
+        .listFiles(dir)
+        .filter(_.isDirectory)
+        .map(_.toPath.getFileName.toString)
+      val count = partitionCount.getOrElse(names.length)
+      require(names.nonEmpty, "no tests to partition!")
+      val groupSizes = math.ceil(names.length.toDouble / count).toInt
+      if (groupSizes == 1) names.toList
+      else names.grouped(groupSizes).map(_.mkString("{", ",", "}")).toList
+    }
   }
   import autoImport._
 

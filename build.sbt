@@ -105,59 +105,49 @@ inThisBuild(
     },
     resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
     githubActionsWorkflow := {
-      val testsDir = baseDirectory.in(ThisBuild).value /
-        "tests" / "unit" / "src" / "test" / "scala" / "tests"
-      val tests = IO
-        .listFiles(testsDir)
-        .iterator
-        .filter(_.isDirectory)
-        .map(_.toPath.getFileName.toString)
-        .grouped(7)
-        .map(_.mkString("{", ",", "}"))
-        .toSeq
-      def job(name: String, run: String, matrix: Obj = Obj()): Obj = {
-        val result = Obj(
-          "runs-on" -> "ubuntu-latest",
-          "steps" -> Arr(
-            Obj("uses" -> Str("actions/checkout@v1")),
-            Obj("uses" -> Str("olafurpg/setup-scala@v2")),
-            Obj("name" -> Str(name), "run" -> Str(run))
-          )
-        )
-        result.value ++= matrix.value
-        result
-      }
-      def matrix(key: String, values: Seq[String]) = Obj(
-        "strategy" -> Obj(
-          "fail-fast" -> Bool(false),
-          "matrix" -> Obj(key -> values.map(Str(_)))
-        )
-      )
       Obj(
         "name" -> Str("CI"),
         "on" -> Arr(Str("push"), Str("pull_request")),
         "jobs" -> Obj(
-          "Scalafmt" -> job(
+          "Scalafmt" -> githubActionsJob(
             "Formatting",
             "./bin/scalafmt --test"
           ),
-          "Scalafix" -> job(
+          "Scalafix" -> githubActionsJob(
             "Linting",
             "csbt scalafixCheck githubActionsCheck"
           ),
-          "Docusaurus" -> job(
+          "Docusaurus" -> githubActionsJob(
             "Website",
             "csbt docs/docusaurusCreateSite"
           ),
-          "Metals" -> job(
+          "Metals" -> githubActionsJob(
             "Run tests",
             "csbt 'unit/testOnly -- tests.${{ matrix.test }}'",
-            matrix("test", tests)
+            githubActionsMatrix(
+              "test",
+              githubActionsPartition(
+                baseDirectory.in(ThisBuild).value /
+                  "tests" / "unit" / "src" / "test" / "scala" / "tests",
+                partitionCount = Some(3)
+              )
+            )
           ),
-          "Mtags" -> job(
+          "Mtags" -> githubActionsJob(
             "Run tests",
             "csbt ++${{  matrix.scala }} cross/test",
-            matrix("scala", V.supportedScalaVersions)
+            githubActionsMatrix("scala", V.supportedScalaVersions)
+          ),
+          "Build" -> githubActionsJob(
+            "Run tests",
+            "csbt 'unit/testOnly -- tests.${{ matrix.test }}'",
+            githubActionsMatrix(
+              "build",
+              githubActionsPartition(
+                baseDirectory.in(ThisBuild).value /
+                  "tests" / "slow" / "src" / "test" / "scala" / "tests"
+              )
+            )
           )
         )
       )

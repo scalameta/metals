@@ -104,6 +104,33 @@
                     ]
                 }
             }
+        },
+        "Build": {
+            "runs-on": "ubuntu-latest",
+            "steps": [
+                {
+                    "uses": "actions/checkout@v1"
+                },
+                {
+                    "uses": "olafurpg/setup-scala@v2"
+                },
+                {
+                    "name": "Run tests",
+                    "run": "csbt 'unit/testOnly -- tests.${{ matrix.test }}'"
+                }
+            ],
+            "strategy": {
+                "fail-fast": false,
+                "matrix": {
+                    "build": [
+                        "mill",
+                        "maven",
+                        "gradle",
+                        "sbt",
+                        "feature"
+                    ]
+                }
+            }
         }
     }
 }
