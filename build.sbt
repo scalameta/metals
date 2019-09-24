@@ -519,8 +519,7 @@ lazy val slow = project
       .in(Test)
       .dependsOn(
         publishLocal.in(`sbt-metals`),
-        crossPublishLocal(V.scala211),
-        crossPublishLocal(V.scala213)
+        crossPublishLocal(V.scala211).dependsOn(crossPublishLocal(V.scala213))
       )
       .value
   )
