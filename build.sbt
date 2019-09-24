@@ -149,7 +149,7 @@ inThisBuild(
             List(
               "Run Scalafix" -> "csbt scalafixCheck",
               "Generate Website" -> "csbt docs/docusaurusCreateSite",
-              "Check Build Matrix" -> "csbt githubActions"
+              "Check Build Matrix" -> "csbt githubActionsCheck"
             )
           )
         )
