@@ -27,7 +27,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tool: [sbt, mill, gradle, maven, feature]
+        tool:
+          - sbt
+          - mill
+          - gradle
+          - maven
+          - feature
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v2
@@ -39,10 +44,11 @@ jobs:
       fail-fast: false
       matrix:
         scala:
+          - "2.13.1"
           - "2.13.0"
-          - "2.12.8"
-          - "2.12.9"
           - "2.12.10"
+          - "2.12.9"
+          - "2.12.8"
           - "2.12.7"
           - "2.11.12"
     steps:
@@ -56,10 +62,10 @@ jobs:
       fail-fast: false
       matrix:
         command:
-          - '{ansi,applyedit,bsp,builds,codelens}'
-          - '{compile,completions,metals,definition,documenthighlight}'
-          - '{documentsymbol,filewatch,foldingrange,formatting,hover}'
-          - '{http,mtags,references,statusbar,tvp,workspacesymbol}'
+          - "{ansi,applyedit,bsp,builds,codelens}"
+          - "{compile,completions,metals,definition,documenthighlight}"
+          - "{documentsymbol,filewatch,foldingrange,formatting,hover}"
+          - "{http,mtags,references,statusbar,tvp,workspacesymbol}"
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v2
