@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.util.Collections._
 
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 
 import scala.concurrent.ExecutionContext
@@ -50,11 +51,11 @@ final class CodeLensProvider(
           commands = {
             val main = classes.mainClasses
               .get(symbol)
-              .map(MainClassLensFactory.command(target, _))
+              .map(RunCommandFactory.command(target, _))
               .toList
             val tests = classes.testSuites
               .get(symbol)
-              .map(TestSuitesLensFactory.command(target, _))
+              .map(TestCommandFactory.command(target, _))
               .toList
             main ++ tests
           }
@@ -72,38 +73,34 @@ final class CodeLensProvider(
 
 object CodeLensProvider {
   import JsonParser._
-  sealed trait CommandFactory[A] {
-    protected def name: String
-    protected def dataKind: String
 
-    final def command(target: b.BuildTargetIdentifier, arg: A): l.Command = {
+  val RunCommandFactory =
+    new CommandFactory[b.ScalaMainClass](
+      "run",
+      b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+      mainClass => mainClass.toJson
+    )
+
+  val TestCommandFactory =
+    new CommandFactory[String](
+      "test",
+      b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+      suite => singletonList(suite).toJson
+    )
+
+  final class CommandFactory[A](
+      name: String,
+      dataKind: String,
+      serialize: A => JsonElement
+  ) {
+    def command(target: b.BuildTargetIdentifier, data: A): l.Command = {
       val params = new b.DebugSessionParams(
         List(target).asJava,
         dataKind,
-        data(arg).toJson
+        serialize(data)
       )
 
       new l.Command(name, StartDebugSession.id, singletonList(params))
-    }
-
-    protected def data(data: A): AnyRef
-  }
-
-  final object MainClassLensFactory extends CommandFactory[b.ScalaMainClass] {
-    val name = "run"
-    val dataKind: String = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
-
-    override protected def data(arg: b.ScalaMainClass): AnyRef = {
-      arg
-    }
-  }
-
-  final object TestSuitesLensFactory extends CommandFactory[String] {
-    val name = "test"
-    val dataKind: String = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
-
-    override protected def data(arg: String): AnyRef = {
-      Seq(arg).asJava
     }
   }
 }
