@@ -50,18 +50,173 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |""".stripMargin
   )
 
+  check(
+    "basic-value",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait Math{
+       |  def ze@@ro: Double
+       |}
+       |object WeirdMath extends Math{
+       |  val <<zero>> = -1.0
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "basic-var",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait Math{
+       |  def ze@@ro: Double
+       |}
+       |object WeirdMath extends Math{
+       |  var <<zero>> = -1.0
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "nested",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait Math{
+       |  def ze@@ro: Double
+       |}
+       |class Universe{
+       |  object WeirdMath extends Math{
+       |    def <<zero>> = {
+       |      val a = 1.1
+       |      val b = 3.2
+       |      a + b
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "basic-method",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait LivingBeing{
+       |  def s@@ound: String
+       |}
+       |abstract class Animal extends LivingBeing{}
+       |class Dog extends Animal{
+       |  def <<sound>> = "woof"
+       |  def other = 123
+       |}
+       |class Cat extends Animal{
+       |  override def <<sound>> = "woof"
+       |  def another(str : Long) = 123
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "basic-method-params",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait LivingBeing{
+       |  def sound: Int
+       |  def s@@ound(times : Int): Int = 1
+       |  def sound(start : Long): Int =  1
+       |}
+       |abstract class Animal extends LivingBeing{}
+       |class Dog extends Animal{
+       |  def sound = 1
+       |  def sound(times : Long) = 1
+       |  def <<sound>>(times : Int) = 1
+       |}
+       |class Cat extends Animal{
+       |  override def <<sound>>(times : Int) = 1
+       |  override def sound = 1
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "long-method-params",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait A{
+       |  def z@@ero(a : Int, b : Option[String])(c : Long, d: Double): Double = 0.0
+       |  def zero(a : Long, b : Option[String])(c : Long, d: Double): Double = 0.0
+       |}
+       |class B extends A{
+       |  def zero(a : Long, b : Option[String])(c : Long, d: Double): Double = 0.6
+       |  def <<zero>>(a : Int, b : Option[String])(c : Long, d: Double): Double = 0.5
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "generic-method",
+    """|/a/src/main/scala/a/Main.scala
+       |trait LivingObject {
+       |  def so@@und[T](t: T): T
+       |}
+       |abstract class Animal extends LivingObject
+       |object Cat extends Animal {
+       |  override def <<sound>>[O](t: O): O = t
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "generic-impl",
+    """|/a/src/main/scala/a/Main.scala
+       |trait Math[T] {
+       |  def zer@@o(t: T): T
+       |}
+       |object IntegerMath extends Math[Int] {
+       |  override def <<zero>>(t: Int): Int = 0
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "generic-advanced",
+    """|/a/src/main/scala/a/A.scala
+       |trait A[S, R, T] {
+       |  def meth@@od(s: S, r: R, t: T): T
+       |}
+       |/a/src/main/scala/a/B.scala
+       |trait B[O] extends A[Int, O, Double]{
+       |  def <<method>>(s: Int, r: O, t: Double): Double = ??? 
+       |}
+       |/a/src/main/scala/a/C.scala
+       |class C extends B[Long] {
+       |  override def <<method>>(s: Int, r: Long, t: Double): Double = ???
+       |}
+       |""".stripMargin
+  )
+
+  // TODO check type parameters and return
+
   // TODO needs scalameta update
   // check(
   //   "anon",
   //   """|/a/src/main/scala/a/Main.scala
   //      |package a
-  //      |trait Livin@@gObject
-  //      |abstract class <<Animal>> extends LivingBeing
+  //      |trait A@@nimal
   //      |object Main{
-  //      |  val animal = new <<Animal>>{ val field : Int = 123 }
+  //      |  val animal = new <<Animal>>{ def field(d : String) : Int = 123 }
   //      |}
   //      |""".stripMargin
   // )
+
+  check(
+    "anon-method",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait Animal{ def soun@@d : String}
+       |object Main{
+       |  val animal = new Animal{ def <<sound>> = "|unknown|" }
+       |}
+       |""".stripMargin
+  )
 
   def check(name: String, input: String): Unit = {
     val files = FileLayout.mapFromString(input)
