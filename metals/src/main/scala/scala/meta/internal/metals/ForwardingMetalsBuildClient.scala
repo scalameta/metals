@@ -28,7 +28,7 @@ final class ForwardingMetalsBuildClient(
     time: Time,
     didCompile: CompileReport => Unit,
     treeViewProvider: () => TreeViewProvider,
-    isCurrentlyOpened: b.BuildTargetIdentifier => Boolean
+    isCurrentlyFocused: b.BuildTargetIdentifier => Boolean
 )(implicit ec: ExecutionContext)
     extends MetalsBuildClient
     with Cancelable {
@@ -143,7 +143,7 @@ final class ForwardingMetalsBuildClient(
           if (isSuccess) {
             buildTargetClasses
               .rebuildIndex(target)
-              .filter(_ => isCurrentlyOpened(target))
+              .filter(_ => isCurrentlyFocused(target))
               .foreach(_ => languageClient.refreshModel())
 
             if (hasReportedError.contains(target)) {

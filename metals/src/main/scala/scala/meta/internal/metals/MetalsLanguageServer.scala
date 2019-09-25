@@ -99,13 +99,13 @@ class MetalsLanguageServer(
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
   var focusedDocument = Option.empty[AbsolutePath]
+  private val focusedDocumentBuildTarget =
+    new AtomicReference[b.BuildTargetIdentifier]()
   private val definitionIndex = newSymbolIndex()
   private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer = Option.empty[BuildServerConnection]
   private val buildTargetClasses = new BuildTargetClasses(() => buildServer)
   private val openTextDocument = new AtomicReference[AbsolutePath]()
-  private val openDocumentBuildTarget =
-    new AtomicReference[b.BuildTargetIdentifier]()
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
@@ -247,7 +247,7 @@ class MetalsLanguageServer(
       time,
       report => compilers.didCompile(report),
       () => treeView,
-      buildTarget => openDocumentBuildTarget.get() == buildTarget
+      buildTarget => focusedDocumentBuildTarget.get() == buildTarget
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -600,9 +600,6 @@ class MetalsLanguageServer(
     val path = params.getTextDocument.getUri.toAbsolutePath
     openedFiles.add(path)
     openTextDocument.set(path)
-    buildTargets
-      .inverseSources(path)
-      .foreach(openDocumentBuildTarget.set)
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -633,6 +630,10 @@ class MetalsLanguageServer(
   def didFocus(uri: String): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
     focusedDocument = Some(path)
+    buildTargets
+      .inverseSources(path)
+      .foreach(focusedDocumentBuildTarget.set)
+
     // unpublish diagnostic for dependencies
     interactiveSemanticdbs.didFocus(path)
     Future(treeView.didFocusTextDocument(path))
@@ -1525,11 +1526,10 @@ class MetalsLanguageServer(
       indexDependencySources(i.dependencySources)
     }
 
-    val openDocument = openTextDocument.get()
-    if (openDocument != null) {
+    focusedDocument.foreach { doc =>
       buildTargets
-        .inverseSources(openDocument)
-        .foreach(openDocumentBuildTarget.set)
+        .inverseSources(doc)
+        .foreach(focusedDocumentBuildTarget.set)
     }
 
     val targets = buildTargets.all.map(_.info.getId).toSeq
