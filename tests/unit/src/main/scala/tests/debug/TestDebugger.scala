@@ -4,23 +4,33 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
 import java.util.Collections
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-
 import org.eclipse.lsp4j.debug._
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import tests.debug.TestDebugger.Prefix
-
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.language.implicitConversions
 import scala.meta.internal.metals.MetalsEnrichments._
 
 final class TestDebugger(connect: IDebugProtocolClient => ServerConnection)(
     implicit ec: ExecutionContext
 ) extends IDebugProtocolClient
     with AutoCloseable {
+
+  /**
+   * Converts java future to scala one, adding a timeout to prevent the test hanging
+   */
+  private[this] implicit def toScalaFuture[A](
+      f: CompletableFuture[A]
+  ): Future[A] = {
+    f.asScala.withTimeout(10, TimeUnit.SECONDS)
+  }
+
   @volatile protected var server: ServerConnection = connect(this)
 
   private var terminationPromise = Promise[Unit]()
@@ -30,13 +40,13 @@ final class TestDebugger(connect: IDebugProtocolClient => ServerConnection)(
   def initialize: Future[Capabilities] = {
     val arguments = new InitializeRequestArguments
     arguments.setAdapterID("test-adapter")
-    server.initialize(arguments).asScala
+    server.initialize(arguments)
   }
 
   def launch: Future[Unit] = {
     for {
-      _ <- server.launch(Collections.emptyMap()).asScala
-      _ <- server.configurationDone(new ConfigurationDoneArguments).asScala
+      _ <- server.launch(Collections.emptyMap())
+      _ <- server.configurationDone(new ConfigurationDoneArguments)
     } yield ()
   }
 
@@ -44,7 +54,7 @@ final class TestDebugger(connect: IDebugProtocolClient => ServerConnection)(
     val args = new DisconnectArguments
     args.setRestart(true)
     for {
-      _ <- server.disconnect(args).asScala
+      _ <- server.disconnect(args)
       _ <- awaitCompletion
     } yield {
       terminationPromise = Promise()
@@ -54,7 +64,7 @@ final class TestDebugger(connect: IDebugProtocolClient => ServerConnection)(
   }
 
   def disconnect: Future[Unit] = {
-    server.disconnect(new DisconnectArguments).asScala.ignoreValue
+    server.disconnect(new DisconnectArguments).map(_ => ())
   }
 
   /**

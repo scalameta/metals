@@ -134,7 +134,7 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
   ): Future[Unit] =
     for {
       _ <- server.didOpen(filename)
-      _ <- server.didSave(filename)(x => x) // first compilation could have not yet persisted analysis
+      _ <- server.didOpen(filename) // first compilation could have not yet persisted analysis
       obtained <- server.codeLenses(filename)
     } yield {
       assertNoDiff(obtained, expected)
