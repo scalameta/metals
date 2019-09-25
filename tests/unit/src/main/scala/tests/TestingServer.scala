@@ -81,6 +81,7 @@ import com.google.gson.JsonPrimitive
 import scala.meta.internal.tvp.TreeViewProvider
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.debug.DebugSession
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -377,8 +378,8 @@ final class TestingServer(
   }
 
   def didChangeConfiguration(config: String): Future[Unit] = {
-    val wrapped = UserConfiguration.toWrappedJson(config)
-    val params = new DidChangeConfigurationParams(wrapped.toJson)
+    val json = UserConfiguration.parse(config)
+    val params = new DidChangeConfigurationParams(json)
     server.didChangeConfiguration(params).asScala
   }
 

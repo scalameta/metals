@@ -87,8 +87,8 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     CompletableFuture.completedFuture(new ApplyWorkspaceEditResponse(true))
   }
 
-  def workspaceClientCommands: String = {
-    clientCommands.asScala.map(_.getCommand).mkString("\n")
+  def workspaceClientCommands: List[String] = {
+    clientCommands.asScala.toList.map(_.getCommand)
   }
   def statusBarHistory: String = {
     statusParams.asScala

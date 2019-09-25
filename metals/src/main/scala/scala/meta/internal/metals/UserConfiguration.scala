@@ -184,7 +184,9 @@ object UserConfiguration {
     }
   }
 
-  def toWrappedJson(config: String): String =
-    s"""{"metals": $config}"""
+  def parse(config: String): JsonObject = {
+    import JsonParser._
+    s"""{"metals": $config}""".parseJson.getAsJsonObject
+  }
 
 }
