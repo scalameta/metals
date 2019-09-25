@@ -288,6 +288,7 @@ final class TestingServer(
 
   def executeCommand(command: String, params: Object*): Future[Any] = {
     Debug.printEnclosing()
+    scribe.info(s"Executing command [$command]")
     val args: java.util.List[Object] =
       params.map(_.toJson.asInstanceOf[Object]).asJava
 
