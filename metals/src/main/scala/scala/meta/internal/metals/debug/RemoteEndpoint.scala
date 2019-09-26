@@ -29,6 +29,7 @@ private[debug] final class RemoteEndpoint(socket: Socket)
   }
 
   override def cancel(): Unit = {
+    source.close()
     socket.close()
   }
 }
@@ -36,7 +37,7 @@ private[debug] final class RemoteEndpoint(socket: Socket)
 private[debug] object RemoteEndpoint {
   private val handler = new DebugMessageJsonHandler(Collections.emptyMap())
 
-  private def messageSource(socket: Socket): MessageProducer = {
+  private def messageSource(socket: Socket): StreamMessageProducer = {
     new StreamMessageProducer(socket.getInputStream, handler)
   }
 

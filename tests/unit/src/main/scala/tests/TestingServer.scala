@@ -46,7 +46,6 @@ import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
 import tests.MetalsTestEnrichments._
-import tests.debug.TestDebugger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -82,6 +81,7 @@ import scala.meta.internal.tvp.TreeViewProvider
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.DebugSession
+import scala.meta.internal.metals.debug.TestDebugger
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
