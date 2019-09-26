@@ -8,8 +8,6 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 import scala.meta.internal.metals.MetalsEnrichments._
 
 object DebugProtocolSuite extends BaseSlowSuite("debug-protocol") {
-  private val mainFile = "a/src/main/scala/a/Main.scala"
-
   testAsync("start") {
     for {
       _ <- server.initialize(
@@ -17,7 +15,7 @@ object DebugProtocolSuite extends BaseSlowSuite("debug-protocol") {
            |{
            |  "a": {}
            |}
-           |/$mainFile
+           |/a/src/main/scala/a/Main.scala
            |package a
            |object Main {
            |  def main(args: Array[String]) = {
@@ -44,7 +42,7 @@ object DebugProtocolSuite extends BaseSlowSuite("debug-protocol") {
            |{
            |  "a": {}
            |}
-           |/$mainFile
+           |/a/src/main/scala/a/Main.scala
            |package a
            |object Main {
            |  def main(args: Array[String]) = { 
@@ -72,7 +70,7 @@ object DebugProtocolSuite extends BaseSlowSuite("debug-protocol") {
            |{
            |  "a": {}
            |}
-           |/$mainFile
+           |/a/src/main/scala/a/Main.scala
            |package a
            |object Main {
            |  def main(args: Array[String]) = {
@@ -91,7 +89,9 @@ object DebugProtocolSuite extends BaseSlowSuite("debug-protocol") {
       _ <- debugger.launch
       _ <- debugger.awaitOutput("Foo\n").withTimeout(5, SECONDS)
 
-      _ <- server.didSave(mainFile)(_.replaceAll("Foo", "Bar"))
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")(
+        _.replaceAll("Foo", "Bar")
+      )
       _ <- debugger.restart
 
       _ <- debugger.initialize
