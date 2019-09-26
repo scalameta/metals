@@ -137,6 +137,28 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
   )
 
   check(
+    "on-usage",
+    """|/a/src/main/scala/a/Animals.scala
+       |package a
+       |trait Animal{
+       |  def sound: Int
+       |}
+       |class Dog extends Animal{
+       |  def <<sound>> = 1
+       |}
+       |class Cat extends Animal{
+       |  def <<sound>> = 2
+       |}
+       |/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val animal : Animal = new Dog()
+       |  animal.sou@@nd
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "long-method-params",
     """|/a/src/main/scala/a/Main.scala
        |package a

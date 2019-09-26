@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import java.nio.file.Paths
@@ -22,10 +23,12 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.util.Try
 import scala.util.Success
+import scala.meta.internal.mtags.GlobalSymbolIndex
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
     workspace: AbsolutePath,
+    index: GlobalSymbolIndex,
     buffer: Buffers,
     definitionProvider: DefinitionProvider
 ) {
@@ -57,6 +60,15 @@ final class ImplementationProvider(
         .documentIncludingStale
         .toList
 
+    def findSemanticDbForSymbol(symbol: String): List[TextDocument] = {
+      for {
+        symbolDefinition <- index.definition(MSymbol(symbol)).toList
+        document <- findSemanticdb(symbolDefinition.path)
+      } yield {
+        document
+      }
+    }
+
     for {
       currentDoc <- findSemanticdb(source)
       positionOccurrence = definitionProvider.positionOccurrence(
@@ -65,11 +77,14 @@ final class ImplementationProvider(
         currentDoc
       )
       occ <- positionOccurrence.occurrence.toList
-      plainSym <- findSymbol(currentDoc, occ.symbol).toList
+      definitionDocument <- if (currentDoc.definesSymbol(occ.symbol))
+        List(currentDoc)
+      else findSemanticDbForSymbol(occ.symbol).toList
+      plainSym <- findSymbol(definitionDocument, occ.symbol).toList
       sym = plainSym.copy(
-        signature = enrichSignature(plainSym.signature, currentDoc)
+        signature = enrichSignature(plainSym.signature, definitionDocument)
       )
-      classSym <- classFromSymbol(sym, currentDoc).toList
+      classSym <- classFromSymbol(sym, definitionDocument).toList
       (file, locations) <- findImplementation(classSym.symbol).groupBy(_.file)
       fileSource = AbsolutePath(file)
       doc <- findSemanticdb(fileSource)
@@ -239,6 +254,7 @@ final class ImplementationProvider(
     }
 
     val classInfo = findSymbol(semanticDb, classSymbol.symbol)
+
     val validMethods = for {
       info <- classInfo.toList
       asSeenFrom = classSymbol

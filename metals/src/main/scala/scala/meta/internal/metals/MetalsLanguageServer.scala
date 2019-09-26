@@ -334,6 +334,7 @@ class MetalsLanguageServer(
     implementationProvider = new ImplementationProvider(
       semanticdbs,
       workspace,
+      definitionIndex,
       buffers,
       definitionProvider
     )
