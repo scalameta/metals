@@ -1117,18 +1117,15 @@ class MetalsLanguageServer(
         val args = params.getArguments.asScala
         args match {
           case Seq(param: JsonElement) =>
-            param.as[b.DebugSessionParams] match {
-              case Failure(exception) =>
-                Future.failed(exception).asJavaObject
-              case Success(parameters) =>
-                DebugServer.start(parameters, buildServer) match {
-                  case Failure(exception) =>
-                    Future.failed(exception).asJavaObject
-                  case Success(server) =>
-                    cancelables.add(server)
-                    Future(server.session).asJavaObject
-                }
-            }
+            val session = param
+              .as[b.DebugSessionParams]
+              .flatMap(DebugServer.start(_, buildServer))
+              .map { server =>
+                cancelables.add(server)
+                server.session
+              }
+
+            Future.fromTry(session).asJavaObject
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
