@@ -1,11 +1,11 @@
 package scala.meta.internal.metals
 
 import java.util.Collections._
-
 import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
-
+import org.eclipse.lsp4j
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.CodeLensProvider._
@@ -51,11 +51,11 @@ final class CodeLensProvider(
           commands = {
             val main = classes.mainClasses
               .get(symbol)
-              .map(RunCommandFactory.command(target, _))
+              .map(mainCommand(target, _))
               .toList
             val tests = classes.testSuites
               .get(symbol)
-              .map(TestCommandFactory.command(target, _))
+              .map(testCommand(target, _))
               .toList
             main ++ tests
           }
@@ -74,33 +74,35 @@ final class CodeLensProvider(
 object CodeLensProvider {
   import JsonParser._
 
-  val RunCommandFactory =
-    new CommandFactory[b.ScalaMainClass](
-      "run",
-      b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-      mainClass => mainClass.toJson
-    )
+  def testCommand(
+      target: b.BuildTargetIdentifier,
+      suite: String
+  ): lsp4j.Command = {
+    val name = "test"
+    val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
+    val data = singletonList(suite).toJson
 
-  val TestCommandFactory =
-    new CommandFactory[String](
-      "test",
-      b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-      suite => singletonList(suite).toJson
-    )
+    command(target, name, dataKind, data)
+  }
 
-  final class CommandFactory[A](
+  def mainCommand(
+      target: b.BuildTargetIdentifier,
+      main: ScalaMainClass
+  ): lsp4j.Command = {
+    val name = "run"
+    val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+    val data = main.toJson
+
+    command(target, name, dataKind, data)
+  }
+
+  private def command(
+      target: b.BuildTargetIdentifier,
       name: String,
       dataKind: String,
-      serialize: A => JsonElement
-  ) {
-    def command(target: b.BuildTargetIdentifier, data: A): l.Command = {
-      val params = new b.DebugSessionParams(
-        List(target).asJava,
-        dataKind,
-        serialize(data)
-      )
-
-      new l.Command(name, StartDebugSession.id, singletonList(params))
-    }
+      data: JsonElement
+  ): l.Command = {
+    val params = new b.DebugSessionParams(List(target).asJava, dataKind, data)
+    new l.Command(name, StartDebugSession.id, singletonList(params))
   }
 }
