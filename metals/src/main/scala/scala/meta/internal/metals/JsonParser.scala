@@ -10,13 +10,13 @@ import scala.util.Try
 object JsonParser {
   private val gson = new Gson()
 
-  implicit class Serialized(string: String) {
+  implicit class XtensionSerializedJson(string: String) {
     def parseJson: JsonElement = {
       new com.google.gson.JsonParser().parse(string)
     }
   }
 
-  implicit class Serializable(data: Any) {
+  implicit class XtensionSerializableToJson(data: Any) {
     def toJson: JsonElement = {
       JsonParser.gson.toJsonTree(data)
     }
@@ -26,7 +26,7 @@ object JsonParser {
     }
   }
 
-  implicit class Deserializable(json: JsonElement) {
+  implicit class XtensionSerializedAsJson(json: JsonElement) {
     def as[A: ClassTag]: Try[A] = {
       val targetType = classTag[A].runtimeClass.asInstanceOf[Class[A]]
       Try(JsonParser.gson.fromJson(json, targetType))
