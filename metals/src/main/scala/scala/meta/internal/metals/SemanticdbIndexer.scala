@@ -5,6 +5,7 @@ import MetalsEnrichments._
 import java.nio.file.Files
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import scala.meta.internal.semanticdb.TextDocuments
+import scala.meta.internal.implementation.ImplementationProvider
 
 class SemanticdbIndexer(
     referenceProvider: ReferenceProvider,

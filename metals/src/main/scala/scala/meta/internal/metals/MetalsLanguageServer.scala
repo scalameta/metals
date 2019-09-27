@@ -35,6 +35,7 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration.Duration
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
+import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp._
@@ -335,6 +336,7 @@ class MetalsLanguageServer(
       semanticdbs,
       workspace,
       definitionIndex,
+      buildTargets,
       buffers,
       definitionProvider
     )

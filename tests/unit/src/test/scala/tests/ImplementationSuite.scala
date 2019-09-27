@@ -198,6 +198,22 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |""".stripMargin
   )
 
+  // TODO test higher kinded types plus parametrized
+  check(
+    "generic-impl-type",
+    """|/a/src/main/scala/a/Main.scala
+       |trait Math[T] {
+       |  def zer@@o(t: T): T
+       |}
+       |object IntegerMath extends Math[Int] {
+       |  type P = Int
+       |  type T = Double
+       |  def <<zero>>(t: P): P = 0
+       |  def zero(t: T): T = 0
+       |}
+       |""".stripMargin
+  )
+
   check(
     "generic-advanced",
     """|/a/src/main/scala/a/A.scala
@@ -215,7 +231,15 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |""".stripMargin
   )
 
-  // TODO check type parameters and return
+  check(
+    "java-classes",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |class MyException extends Exce@@ption
+       |class <<NewException>> extends RuntimeException
+       |class <<NewException2>> extends RuntimeException
+       |""".stripMargin
+  )
 
   // TODO needs scalameta update
   // check(
