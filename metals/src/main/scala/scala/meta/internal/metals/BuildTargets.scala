@@ -7,6 +7,7 @@ import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.annotation.tailrec
@@ -175,6 +176,10 @@ final class BuildTargets() {
       buildTarget: BuildTargetIdentifier
   ): Option[BuildTarget] =
     buildTargetInfo.get(buildTarget)
+  def scalaInfo(
+      buildTarget: BuildTargetIdentifier
+  ): Option[ScalaBuildTarget] =
+    info(buildTarget).flatMap(_.asScalaBuildTarget)
 
   def scalacOptions(
       buildTarget: BuildTargetIdentifier
@@ -188,11 +193,25 @@ final class BuildTargets() {
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
     val buildTargets = sourceBuildTargets(source)
-    buildTargets // prioritize JVM targets over JS/Native
-      .find(x => scalacOptions(x).exists(_.isJVM))
-      .orElse(buildTargets.headOption)
-      .orElse(tables.flatMap(_.dependencySources.getBuildTarget(source)))
-      .orElse(inferBuildTarget(source))
+    if (buildTargets.isEmpty) {
+      tables
+        .flatMap(_.dependencySources.getBuildTarget(source))
+        .orElse(inferBuildTarget(source))
+    } else {
+      Some(buildTargets.maxBy { t =>
+        var score = 1
+
+        val isSupportedScalaVersion = scalaInfo(t).exists(
+          t => ScalaVersions.isSupportedScalaVersion(t.getScalaVersion())
+        )
+        if (isSupportedScalaVersion) score <<= 2
+
+        val isJVM = scalacOptions(t).exists(_.isJVM)
+        if (isJVM) score <<= 1
+
+        score
+      })
+    }
   }
 
   /**

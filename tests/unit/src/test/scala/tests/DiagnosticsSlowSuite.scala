@@ -304,7 +304,7 @@ object DiagnosticsSlowSuite extends BaseSlowSuite("diagnostics") {
           |/metals.json
           |{
           |  "a": { 
-          |    "additionalSources" : [ "weird/path/A.scala" ] 
+          |    "additionalSources" : [ "a/weird/path/A.scala" ]
           |  }
           |}
           |/a/weird/path/A.scala

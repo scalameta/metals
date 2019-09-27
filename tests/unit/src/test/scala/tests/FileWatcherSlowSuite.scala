@@ -24,7 +24,7 @@ object FileWatcherSlowSuite extends BaseSlowSuite("file-watcher") {
         """
           |/metals.json
           |{
-          |  "a": { "additionalSources" : ["weird/path/d/D.scala", "non/existent/one/e/E.scala"] },
+          |  "a": { "additionalSources" : ["a/weird/path/d/D.scala", "non/existent/one/e/E.scala"] },
           |  "b": { },
           |  "c": { "dependsOn": [ "a" ] }
           |}

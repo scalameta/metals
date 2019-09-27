@@ -15,6 +15,7 @@ import java.nio.file.Paths
 import java.security.MessageDigest
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -89,12 +90,14 @@ case class QuickBuild(
         .resolve(s"scala-$binaryVersion")
         .resolve(s"${testPrefix}classes")
     }
-    val sources = (List(
+    val extraSources =
+      additionalSources.map(relpath => workspace.resolve(relpath).toNIO).toList
+    val sources = extraSources ::: List(
       "src/main/java",
       "src/main/scala",
       s"src/main/scala-$binaryVersion",
       s"src/main/scala-$binaryVersion"
-    ) ++ additionalSources).map(relpath => baseDirectory.resolve(relpath))
+    ).map(relpath => baseDirectory.resolve(relpath))
     val allDependencies = Array(
       s"org.scala-lang:scala-library:$scalaVersion",
       s"org.scala-lang:scala-reflect:$scalaVersion"
@@ -107,7 +110,10 @@ case class QuickBuild(
     )
     val (dependencySources, classpath) =
       allJars.partition(_.getFileName.toString.endsWith("-sources.jar"))
-    val allPlugins = s"org.scalameta:::semanticdb-scalac:${V.semanticdbVersion}" :: compilerPlugins.toList
+    val allPlugins =
+      if (ScalaVersions.isSupportedScalaVersion(scalaVersion))
+        s"org.scalameta:::semanticdb-scalac:${V.semanticdbVersion}" :: compilerPlugins.toList
+      else compilerPlugins.toList
     val pluginDependencies = allPlugins.map(
       plugin =>
         QuickBuild
