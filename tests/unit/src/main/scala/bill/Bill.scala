@@ -104,8 +104,8 @@ object Bill {
       result
     }
     val reporter = new StoreReporter
-    val out = AbsolutePath(workspace.resolve("out"))
-    Files.createDirectories(out.toNIO)
+    val out = AbsolutePath(workspace.resolve("out.jar"))
+    Files.createDirectories(out.toNIO.getParent())
     lazy val g = {
       val settings = new nsc.Settings()
       settings.classpath.value =
