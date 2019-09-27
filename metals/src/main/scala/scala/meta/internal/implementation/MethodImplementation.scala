@@ -118,7 +118,8 @@ object MethodImplementation {
         )
         val returnTypesEqual =
           typesAreEqual(sig1.returnType, sig2.returnType)(newContext)
-        val enrichedSig = enrichSignature(sig2, context.semanticDb)
+        val enrichedSig =
+          enrichSignature(sig2, findSymbol(context.semanticDb, _))
         returnTypesEqual && paramsAreEqual(
           sig1.parameterLists,
           enrichedSig.parameterLists

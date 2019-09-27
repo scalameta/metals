@@ -235,7 +235,7 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
     "java-classes",
     """|/a/src/main/scala/a/Main.scala
        |package a
-       |class MyException extends Exce@@ption
+       |class <<MyException>> extends Exce@@ption
        |class <<NewException>> extends RuntimeException
        |class <<NewException2>> extends RuntimeException
        |""".stripMargin
