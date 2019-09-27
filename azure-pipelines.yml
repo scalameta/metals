@@ -1,6 +1,0 @@
-jobs:
-- job: Linux
-  pool:
-    vmImage: 'Ubuntu-16.04'
-  steps:
-  - script: ./sbt unit/test

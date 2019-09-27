@@ -113,7 +113,6 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |guava-27.1-jre.jar -
              |j2objc-annotations-1.1.jar -
              |jce.jar -
-             |jfr.jar -
              |jsr305-3.0.2.jar -
              |jsse.jar -
              |listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar -
@@ -186,8 +185,8 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |  Import build command
              |  Connect to build server command
              |  Projects (0)
-             |  Libraries (30)
-             |  Libraries (30)
+             |  Libraries (29)
+             |  Libraries (29)
              |    sourcecode_2.12-0.1.7.jar
              |    sourcecode_2.12-0.1.7.jar
              |      sourcecode/
@@ -241,8 +240,8 @@ object TreeViewSlowSuite extends BaseSlowSuite("tree-view") {
              |  Import build command
              |  Connect to build server command
              |  Projects (0)
-             |  Libraries (30)
-             |  Libraries (30)
+             |  Libraries (29)
+             |  Libraries (29)
              |    org.eclipse.lsp4j-0.5.0.jar
              |    org.eclipse.lsp4j.generator-0.5.0.jar
              |    org.eclipse.lsp4j.jsonrpc-0.5.0.jar
