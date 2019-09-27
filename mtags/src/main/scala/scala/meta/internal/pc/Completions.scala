@@ -938,11 +938,17 @@ trait Completions { this: MetalsGlobal =>
       private def matchingTypesInScope(
           paramType: Type
       ): List[String] = {
+
+        def notNothingOrNull(mem: ScopeMember): Boolean = {
+          !(mem.sym.tpe =:= definitions.NothingTpe || mem.sym.tpe =:= definitions.NullTpe)
+        }
+
         completions match {
           case CompletionResult.ScopeMembers(positionDelta, results, name) =>
             results
               .collect {
-                case mem if mem.sym.tpe <:< paramType && mem.sym.isTerm =>
+                case mem
+                    if mem.sym.tpe <:< paramType && notNothingOrNull(mem) && mem.sym.isTerm =>
                   mem.sym.name.toString().trim()
               }
               // None and Nil are always in scope

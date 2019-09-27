@@ -295,6 +295,8 @@ object CompletionArgSuite extends BaseCompletionSuite {
     "auto-not-found",
     s"""|object Main {
         |  val number = 234
+        |  val nothing = throw new Exception
+        |  val nll = null
         |  def foo(argument : Int, other : String, isTrue: Boolean, opt : Option[String]) : Int = argument
         |  ___
         |}
