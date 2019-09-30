@@ -33,18 +33,19 @@ final class BuildTargetClasses(
 
         val updateMainClasses = connection
           .mainClasses(new b.ScalaMainClassesParams(targetsList))
-          .thenAccept(cacheMainClasses)
           .asScala
+          .map(cacheMainClasses)
 
         val updateTestClasses = connection
           .testClasses(new b.ScalaTestClassesParams(targetsList))
-          .thenAccept(cacheTestClasses)
           .asScala
+          .map(cacheTestClasses)
 
         for {
           _ <- updateMainClasses
           _ <- updateTestClasses
         } yield ()
+
       case None =>
         Future.successful(())
     }
@@ -56,7 +57,9 @@ final class BuildTargetClasses(
       target = item.getTarget
       aClass <- item.getClasses.asScala
       objectSymbol = createObjectSymbol(aClass.getClassName)
-    } classesOf(target).mainClasses.put(objectSymbol, aClass)
+    } {
+      classesOf(target).mainClasses.put(objectSymbol, aClass)
+    }
   }
 
   private def cacheTestClasses(result: b.ScalaTestClassesResult): Unit = {
@@ -65,7 +68,9 @@ final class BuildTargetClasses(
       target = item.getTarget
       className <- item.getClasses.asScala
       objectSymbol = createObjectSymbol(className)
-    } classesOf(target).testClasses.put(objectSymbol, className)
+    } {
+      classesOf(target).testClasses.put(objectSymbol, className)
+    }
   }
 
   private def createObjectSymbol(className: String): String = {
