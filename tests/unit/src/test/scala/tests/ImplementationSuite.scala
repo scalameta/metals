@@ -255,19 +255,56 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
   )
 
   check(
+    "lib-type",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  type T = S@@eq[Int]
+       |  class <<ABC>> extends T {
+       |    def apply(idx: Int): Int = ???
+       |    def iterator: Iterator[Int] = ???
+       |    def length: Int = ???
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "unrelated-invo",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  trait A {
+       |    def str: String
+       |  }
+       |  trait B extends A {}
+       |  class C extends B {
+       |    def <<str>> = ""
+       |  }
+       |  val b: B = new C
+       |  b.st@@r
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "local-advanced",
     """|/a/src/main/scala/a/Parent.scala
+       |package a
        |class Parent
        |/a/src/main/scala/a/A.scala
+       |package a
        |object A {
        |  type Adult = Parent
        |}
        |/a/src/main/scala/a/B.scala
+       |package a
        |object B {
        |  type O@@ld = A.Adult
        |
        |}
        |/a/src/main/scala/a/Responsible.scala
+       |package a
        |class <<Responsible>> extends B.Old
        |class <<Other>> extends Parent
        |""".stripMargin
@@ -285,6 +322,21 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |  class StringStringTwo extends StringTwo[String] {
        |    def <<ab>>(a: String) = ""
        |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "higher-kinded",
+    """|/a/src/main/scala/a/Higher.scala
+       |package a
+       |trait Higher[F[_]] {
+       |  def fun@@c(a: F[_])
+       |}
+       |/a/src/main/scala/a/HigherList.scala
+       |package a
+       |class HigherList extends Higher[List] {
+       |  def <<func>>(a: List[_]): Unit = ???
        |}
        |""".stripMargin
   )

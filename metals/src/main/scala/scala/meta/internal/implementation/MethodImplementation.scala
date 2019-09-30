@@ -12,6 +12,7 @@ import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.ClassSignature
+import scala.meta.internal.semanticdb.ExistentialType
 
 object MethodImplementation {
 
@@ -80,10 +81,12 @@ object MethodImplementation {
   private def typesAreEqual(
       typeParent: Type,
       typeChild: Type
-  )(implicit context: Context) = {
+  )(implicit context: Context): Boolean = {
     (typeParent, typeChild) match {
       case (tp: TypeRef, tc: TypeRef) =>
         symbolsAreEqual(tp.symbol, tc.symbol)
+      case (tp: ExistentialType, tc: ExistentialType) =>
+        typesAreEqual(tp.tpe, tc.tpe)
       case _ => false
     }
   }
@@ -118,7 +121,7 @@ object MethodImplementation {
         )
         val returnTypesEqual =
           typesAreEqual(sig1.returnType, sig2.returnType)(newContext)
-        val enrichedSig =
+        lazy val enrichedSig =
           enrichSignature(sig2, findSymbol(context.semanticDb, _))
         returnTypesEqual && paramsAreEqual(
           sig1.parameterLists,
