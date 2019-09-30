@@ -1,12 +1,13 @@
 package scala.meta.internal.metals
 
 import ch.epfl.scala.{bsp4j => b}
-
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.meta.internal.metals.BuildTargetClasses.Classes
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.semanticdb.Scala.{Descriptor, Symbols}
+import scala.meta.internal.semanticdb.Scala.Descriptor
+import scala.meta.internal.semanticdb.Scala.Symbols
 
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
@@ -35,14 +36,14 @@ final class BuildTargetClasses(
           .thenAccept(cacheMainClasses)
           .asScala
 
-        val updateTestSuites = connection
-          .testSuites(new b.ScalaTestClassesParams(targetsList))
-          .thenAccept(cacheTestSuites)
+        val updateTestClasses = connection
+          .testClasses(new b.ScalaTestClassesParams(targetsList))
+          .thenAccept(cacheTestClasses)
           .asScala
 
         for {
           _ <- updateMainClasses
-          _ <- updateTestSuites
+          _ <- updateTestClasses
         } yield ()
       case None =>
         Future.successful(())
@@ -58,13 +59,13 @@ final class BuildTargetClasses(
     } classesOf(target).mainClasses.put(objectSymbol, aClass)
   }
 
-  private def cacheTestSuites(result: b.ScalaTestClassesResult): Unit = {
+  private def cacheTestClasses(result: b.ScalaTestClassesResult): Unit = {
     for {
       item <- result.getItems.asScala
       target = item.getTarget
       className <- item.getClasses.asScala
       objectSymbol = createObjectSymbol(className)
-    } classesOf(target).testSuites.put(objectSymbol, className)
+    } classesOf(target).testClasses.put(objectSymbol, className)
   }
 
   private def createObjectSymbol(className: String): String = {
@@ -81,11 +82,11 @@ final class BuildTargetClasses(
 object BuildTargetClasses {
   final class Classes {
     val mainClasses = new TrieMap[String, b.ScalaMainClass]()
-    val testSuites = new TrieMap[String, String]()
+    val testClasses = new TrieMap[String, String]()
 
     def invalidate(): Unit = {
       mainClasses.clear()
-      testSuites.clear()
+      testClasses.clear()
     }
   }
 }

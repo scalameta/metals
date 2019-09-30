@@ -53,7 +53,7 @@ final class CodeLensProvider(
               .get(symbol)
               .map(mainCommand(target, _))
               .toList
-            val tests = classes.testSuites
+            val tests = classes.testClasses
               .get(symbol)
               .map(testCommand(target, _))
               .toList
@@ -76,11 +76,11 @@ object CodeLensProvider {
 
   def testCommand(
       target: b.BuildTargetIdentifier,
-      suite: String
+      className: String
   ): lsp4j.Command = {
     val name = "test"
     val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
-    val data = singletonList(suite).toJson
+    val data = singletonList(className).toJson
 
     command(target, name, dataKind, data)
   }

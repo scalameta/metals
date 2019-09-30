@@ -74,7 +74,7 @@ case class BuildServerConnection(
     register(server.buildTargetScalaMainClasses(params))
   }
 
-  def testSuites(
+  def testClasses(
       params: ScalaTestClassesParams
   ): CompletableFuture[ScalaTestClassesResult] = {
     register(server.buildTargetScalaTestClasses(params))
