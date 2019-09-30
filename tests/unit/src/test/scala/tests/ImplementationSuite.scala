@@ -241,6 +241,54 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |""".stripMargin
   )
 
+  check(
+    "local-classes",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  trait Fo@@od
+       |  type Eatable = Food
+       |  type Tasty = Eatable
+       |  class <<Pizza>> extends Tasty
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "local-advanced",
+    """|/a/src/main/scala/a/Parent.scala
+       |class Parent
+       |/a/src/main/scala/a/A.scala
+       |object A {
+       |  type Adult = Parent
+       |}
+       |/a/src/main/scala/a/B.scala
+       |object B {
+       |  type O@@ld = A.Adult
+       |
+       |}
+       |/a/src/main/scala/a/Responsible.scala
+       |class <<Responsible>> extends B.Old
+       |class <<Other>> extends Parent
+       |""".stripMargin
+  )
+
+  check(
+    "type-with-params",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  trait Two[A, B] {
+       |    def a@@b(a: A): B
+       |  }
+       |  type StringTwo[A] = Two[String, A]
+       |  class StringStringTwo extends StringTwo[String] {
+       |    def <<ab>>(a: String) = ""
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   // TODO needs scalameta update
   // check(
   //   "anon",

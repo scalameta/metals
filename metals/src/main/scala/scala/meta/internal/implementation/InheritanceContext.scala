@@ -1,50 +1,54 @@
 package scala.meta.internal.implementation
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.symtab.GlobalSymbolTable
+import java.nio.file.Path
+import scala.collection.mutable
 
-trait InheritanceContext {
-  def findSymbol(symbol: String): Option[SymbolInformation]
-  def typeMapping(symbol: String): Option[String] = None
-  def reverseTypeMapping(symbol: String): Option[String] = None
-  def inheritance: Map[String, Set[ClassLocation]] = Map.empty
-}
+case class LocalClassDefinitions(
+    inheritance: Map[String, Set[ClassLocation]]
+)
 
-case class LocalInheritanceContext(semanticDb: TextDocument)
-    extends InheritanceContext {
+case class InheritanceContext(
+    findSymbol: String => Option[SymbolInformation],
+    private val inheritance: Map[String, Set[ClassLocation]]
+) {
+  def allClassSymbols = inheritance.keySet
 
-  def findSymbol(symbol: String): Option[SymbolInformation] = {
-    semanticDb.symbols.find(_.symbol == symbol)
+  def getLocations(symbol: String): Set[ClassLocation] = {
+    inheritance.getOrElse(symbol, Set.empty)
+  }
+
+  def withClasspathContext(
+      classpathInheritance: Map[String, Set[ClassLocation]],
+      findGlobalSymbol: String => Option[SymbolInformation]
+  ): InheritanceContext = {
+    val newInheritance = mutable.Map
+      .empty[String, Set[ClassLocation]] ++ inheritance
+    for { (symbol, locations) <- classpathInheritance } {
+      val newLocations = newInheritance.getOrElse(symbol, Set.empty) ++ locations
+      newInheritance += symbol -> newLocations
+    }
+    this.copy(
+      findSymbol = findGlobalSymbol,
+      inheritance = newInheritance.toMap
+    )
   }
 }
 
-case class GlobalInheritanceContext(
-    symtab: GlobalSymbolTable,
-    typeMappings: Map[String, String],
-    reverseTypeMappings: Map[String, String],
-    override val inheritance: Map[String, Set[ClassLocation]]
-) extends InheritanceContext {
+object InheritanceContext {
 
-  private def dealias(
-      typeMap: Map[String, String],
-      symbol: String
-  ): Option[String] = {
-    if (typeMap.contains(symbol)) {
-      var sym = symbol
-      while (typeMap.contains(sym)) sym = typeMap(sym)
-      Some(sym)
-    } else None
-  }
-
-  override def reverseTypeMapping(symbol: String): Option[String] = {
-    dealias(reverseTypeMappings, symbol)
-  }
-
-  override def typeMapping(symbol: String): Option[String] = {
-    dealias(typeMappings, symbol)
-  }
-
-  def findSymbol(symbol: String): Option[SymbolInformation] = {
-    symtab.info(symbol)
+  def fromDefinitions(
+      findSymbol: String => Option[SymbolInformation],
+      localDefinitions: Map[Path, LocalClassDefinitions]
+  ): InheritanceContext = {
+    val inheritance = mutable.Map
+      .empty[String, Set[ClassLocation]]
+    for {
+      (_, definitions) <- localDefinitions
+      (symbol, locations) <- definitions.inheritance
+    } {
+      val updated = inheritance.getOrElse(symbol, Set.empty) ++ locations
+      inheritance += symbol -> updated
+    }
+    InheritanceContext(findSymbol, inheritance.toMap)
   }
 }

@@ -7,6 +7,7 @@ import scala.util.Try
 import scala.util.Success
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.internal.semanticdb.Scope
 
 private[implementation] trait IndexLocation
 
@@ -85,20 +86,20 @@ private[implementation] object ClassLocation {
       symbol: String,
       file: Option[Path],
       typeRef: TypeRef,
-      classSignature: ClassSignature
+      typeParameters: Option[Scope]
   ): ClassLocation = {
-    val asSeenFrom = calculateAsSeenFrom(typeRef, classSignature)
+    val asSeenFrom = calculateAsSeenFrom(typeRef, typeParameters)
     ClassLocation(symbol, file, asSeenFrom)
   }
 
   def calculateAsSeenFrom(
       parentType: TypeRef,
-      classSignature: ClassSignature
+      typeParameters: Option[Scope]
   ) = {
     parentType.typeArguments.zipWithIndex.flatMap {
       case (arg: TypeRef, ind) =>
         // create mapping dependent on order - this way we don't need parent information here
-        classSignature.typeParameters match {
+        typeParameters match {
           case Some(sc) =>
             val indInClass = sc.symlinks.indexOf(arg.symbol)
             if (indInClass >= 0)
