@@ -81,13 +81,13 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
            |}
            |
            |/b/src/main/scala/Main.scala
-           |object Main {}
+           |object Main
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala") // compile `a` to populate its cache
       _ <- assertCodeLenses(
         "b/src/main/scala/Main.scala",
-        """|object Main {}
+        """|object Main
            |""".stripMargin
       )
     } yield ()
@@ -125,6 +125,30 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
           |""".stripMargin
       )
 
+    } yield ()
+  }
+
+  testAsync("non-ascii") {
+    for {
+      _ <- server.initialize(
+        """|/metals.json
+           |{
+           |  "a": { }
+           |}
+           |
+           |/a/src/main/scala/Main.scala
+           |object :: {
+           |  def main(args: Array[String]): Unit = {}
+           |}""".stripMargin
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Main.scala",
+        """<<run>>
+          |object :: {
+          |  def main(args: Array[String]): Unit = {}
+          |}
+          |""".stripMargin
+      )
     } yield ()
   }
 

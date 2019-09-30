@@ -80,12 +80,9 @@ final class BuildTargetClasses(
   }
 
   private def createObjectSymbol(className: String): String = {
-    val symbol = className.replaceAll("\\.", "/")
-    val isInsideEmptyPackage = !className.contains(".")
-    if (isInsideEmptyPackage) {
-      Symbols.Global(Symbols.EmptyPackage, Descriptor.Term(symbol))
-    } else {
-      symbol + "."
+    import scala.reflect.NameTransformer
+    className.split("\\.").foldLeft(Symbols.EmptyPackage) { (owner, name) =>
+      Symbols.Global(owner, Descriptor.Term(NameTransformer.decode(name)))
     }
   }
 }
