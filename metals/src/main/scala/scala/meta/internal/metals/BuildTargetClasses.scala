@@ -24,12 +24,18 @@ final class BuildTargetClasses(
     index.getOrElseUpdate(target, new Classes)
   }
 
+  def invalidate(target: b.BuildTargetIdentifier): Unit = {
+    classesOf(target).invalidate()
+  }
+
   private def fetchClasses(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {
     buildServer() match {
       case Some(connection) =>
         val targetsList = targets.asJava
+
+        targetsList.forEach(invalidate)
 
         val updateMainClasses = connection
           .mainClasses(new b.ScalaMainClassesParams(targetsList))
