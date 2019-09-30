@@ -64,7 +64,6 @@ import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
-import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.Semanticdbs
@@ -80,8 +79,8 @@ import com.google.gson.JsonPrimitive
 import scala.meta.internal.tvp.TreeViewProvider
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.debug.DebugSession
 import scala.meta.internal.metals.debug.TestDebugger
+import scala.meta.internal.metals.DebugSession
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.

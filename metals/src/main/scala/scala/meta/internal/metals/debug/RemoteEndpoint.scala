@@ -2,14 +2,12 @@ package scala.meta.internal.metals.debug
 
 import java.net.Socket
 import java.util.Collections
-
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageProducer
 import org.eclipse.lsp4j.jsonrpc.debug.json.DebugMessageJsonHandler
 import org.eclipse.lsp4j.jsonrpc.json.StreamMessageConsumer
 import org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
-
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.debug.RemoteEndpoint._
 

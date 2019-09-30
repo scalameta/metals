@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.debug
 
 import java.net.Socket
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext
@@ -9,15 +9,19 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
-import Proxy._
+import scala.meta.internal.metals.debug.DebugProxy._
 
-private[debug] final class Proxy(client: RemoteEndpoint, server: RemoteEndpoint)(
-    implicit ec: ExecutionContext
-) {
+private[debug] final class DebugProxy(
+    sessionName: String,
+    client: RemoteEndpoint,
+    server: RemoteEndpoint
+)(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
+  private val cancelled = new AtomicBoolean()
 
   lazy val listen: Future[ExitStatus] = {
+    scribe.info(s"Starting debug proxy for [$sessionName]")
     listenToServer()
     listenToClient()
 
@@ -32,7 +36,9 @@ private[debug] final class Proxy(client: RemoteEndpoint, server: RemoteEndpoint)
     Future(server.listen(handleServerMessage)).andThen { case _ => cancel() }
   }
 
-  private def handleClientMessage: MessageConsumer = {
+  private val handleClientMessage: MessageConsumer = {
+    case _ if cancelled.get() =>
+    // ignore
     case RestartRequest(message) =>
       // set the status first, since the server can kill the connection
       exitStatus.trySuccess(Restarted)
@@ -44,6 +50,8 @@ private[debug] final class Proxy(client: RemoteEndpoint, server: RemoteEndpoint)
   }
 
   private val handleServerMessage: MessageConsumer = {
+    case _ if cancelled.get() =>
+    // ignore
     case OutputNotification() if outputTerminated =>
     // ignore. When restarting, the output keeps getting printed for a short while after the
     // output window gets refreshed resulting in stale messages being printed on top, before
@@ -54,29 +62,27 @@ private[debug] final class Proxy(client: RemoteEndpoint, server: RemoteEndpoint)
   }
 
   def cancel(): Unit = {
-    exitStatus.trySuccess(Terminated)
-    Cancelable.cancelAll(client, server)
+    if (cancelled.compareAndSet(false, true)) {
+      scribe.info(s"Canceling debug proxy for [$sessionName]")
+      exitStatus.trySuccess(Terminated)
+      Cancelable.cancelAll(List(client, server))
+    }
   }
 }
 
-private[debug] object Proxy {
-  import scala.meta.internal.metals.MetalsEnrichments._
-
+private[debug] object DebugProxy {
   sealed trait ExitStatus
   case object Terminated extends ExitStatus
   case object Restarted extends ExitStatus
 
   def open(
+      name: String,
       awaitClient: () => Future[Socket],
       connectToServer: () => Future[Socket]
-  )(implicit ec: ExecutionContext): Future[Proxy] = {
+  )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
-      client <- awaitClient()
-        .map(new RemoteEndpoint(_))
-        .withTimeout(10, TimeUnit.SECONDS)
-      server <- connectToServer()
-        .map(new RemoteEndpoint(_))
-        .withTimeout(10, TimeUnit.SECONDS)
-    } yield new Proxy(client, server)
+      server <- connectToServer().map(new RemoteEndpoint(_))
+      client <- awaitClient().map(new RemoteEndpoint(_))
+    } yield new DebugProxy(name, client, server)
   }
 }

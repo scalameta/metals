@@ -22,10 +22,6 @@ object Cancelable {
     cancelAll(iterable.map(elem => Cancelable(() => fn(elem))))
   }
 
-  def cancelAll(cancelables: Cancelable*): Unit = {
-    cancelAll(cancelables)
-  }
-
   def cancelAll(iterable: Iterable[Cancelable]): Unit = {
     var errors = ListBuffer.empty[Throwable]
     iterable.foreach { cancelable =>

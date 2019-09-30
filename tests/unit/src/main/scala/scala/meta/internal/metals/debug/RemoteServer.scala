@@ -22,8 +22,6 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.internal.metals.Cancelable
 import scala.reflect.ClassTag
-import scala.util.Failure
-import scala.util.Success
 import scala.meta.internal.metals.JsonParser._
 import scala.reflect.classTag
 
@@ -89,11 +87,8 @@ private[debug] final class RemoteServer(
   private def notify[A: ClassTag](msg: Notification, f: A => Unit): Unit = {
     msg.getParams match {
       case json: JsonElement =>
-        json.as[A] match {
-          case Success(value) =>
-            f(value)
-          case Failure(e) =>
-            scribe.error(s"Could not deserialize notification [msg]", e)
+        json.as[A].map(f).recover {
+          case e => scribe.error(s"Could not handle notification [msg]", e)
         }
       case _ =>
         scribe.error(s"Not a json: ${msg.getParams}")
@@ -125,7 +120,11 @@ private[debug] final class RemoteServer(
       }
     }
 
-    response.withTimeout(30, TimeUnit.SECONDS).asJava
+    response.onTimeout(90, TimeUnit.SECONDS)(logTimeout(endpoint)).asJava
+  }
+
+  private def logTimeout(endpoint: String): Unit = {
+    scribe.error(s"Timeout when waiting for a response to $endpoint request")
   }
 
   override def cancel(): Unit = {

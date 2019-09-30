@@ -141,10 +141,9 @@ final class ForwardingMetalsBuildClient(
             scribe.info(s"time: compiled $name in ${compilation.timer}")
           }
           if (isSuccess) {
-            buildTargetClasses
-              .rebuildIndex(target)
-              .filter(_ => isCurrentlyFocused(target))
-              .foreach(_ => languageClient.refreshModel())
+            buildTargetClasses.rebuildIndex(target).foreach { _ =>
+              if (isCurrentlyFocused(target)) languageClient.refreshModel()
+            }
 
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.

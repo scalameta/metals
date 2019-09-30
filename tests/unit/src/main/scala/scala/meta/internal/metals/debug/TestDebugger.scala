@@ -107,10 +107,12 @@ final class TestDebugger(connect: RemoteServer.Listener => RemoteServer)(
 }
 
 object TestDebugger {
+  private val timeout = TimeUnit.SECONDS.toMillis(60).toInt
+
   def apply(uri: URI)(implicit ec: ExecutionContext): TestDebugger = {
     def connect(listener: RemoteServer.Listener): RemoteServer = {
       val socket = new Socket()
-      socket.connect(new InetSocketAddress(uri.getHost, uri.getPort), 2000)
+      socket.connect(new InetSocketAddress(uri.getHost, uri.getPort), timeout)
       RemoteServer(socket, listener)
     }
 
