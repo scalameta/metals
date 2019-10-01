@@ -126,8 +126,8 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |abstract class Animal extends LivingBeing{}
        |class Dog extends Animal{
        |  def sound = 1
-       |  def sound(times : Long) = 1
-       |  def <<sound>>(times : Int) = 1
+       |  override def sound(times : Long) = 1
+       |  override def <<sound>>(times : Int) = 1
        |}
        |class Cat extends Animal{
        |  override def <<sound>>(times : Int) = 1
@@ -167,8 +167,8 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |  def zero(a : Long, b : Option[String])(c : Long, d: Double): Double = 0.0
        |}
        |class B extends A{
-       |  def zero(a : Long, b : Option[String])(c : Long, d: Double): Double = 0.6
-       |  def <<zero>>(a : Int, b : Option[String])(c : Long, d: Double): Double = 0.5
+       |  override def zero(a : Long, b : Option[String])(c : Long, d: Double): Double = 0.6
+       |  override def <<zero>>(a : Int, b : Option[String])(c : Long, d: Double): Double = 0.5
        |}
        |""".stripMargin
   )
@@ -198,7 +198,6 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |""".stripMargin
   )
 
-  // TODO test higher kinded types plus parametrized
   check(
     "generic-impl-type",
     """|/a/src/main/scala/a/Main.scala
@@ -270,6 +269,19 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
   )
 
   check(
+    "lib-alias",
+    """|/a/src/main/scala/a/A.scala
+       |package a
+       |trait A {
+       |  def met@@hod(ex: java.lang.Exception) = 0
+       |}
+       |class B extends A {
+       |  override def <<method>>(ex: Exception): Int = 1
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "unrelated-invo",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -307,6 +319,29 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |package a
        |class <<Responsible>> extends B.Old
        |class <<Other>> extends Parent
+       |""".stripMargin
+  )
+
+  check(
+    "local-type-alias",
+    """|/a/src/main/scala/a/Parent.scala
+       |package a
+       |class Parent{
+       |  def m@@ethod(a : Parent.Name) = "<adult>"
+       |}
+       |object Parent{ 
+       |  type Name = String
+       |}
+       |/a/src/main/scala/a/Names.scala
+       |package a
+       |object Names {
+       |  type Basic = String
+       |}
+       |/a/src/main/scala/a/Father.scala
+       |package a
+       |class Father extends Parent {
+       |  override def <<method>>(a : Names.Basic) = "<father>"
+       |}
        |""".stripMargin
   )
 

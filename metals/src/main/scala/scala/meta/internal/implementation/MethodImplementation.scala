@@ -1,13 +1,10 @@
 package scala.meta.internal.implementation
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Type
 import scala.meta.internal.semanticdb.Scope
 import scala.meta.internal.semanticdb.ValueSignature
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Scala.Descriptor
-import scala.meta.internal.semanticdb.TypeSignature
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Signature
@@ -21,10 +18,11 @@ object MethodImplementation {
   def find(
       parentSymbol: SymbolInformation,
       parentClassSymbol: SymbolInformation,
+      inheritanceContext: InheritanceContext,
       classLocation: ClassLocation,
-      currentDocument: TextDocument
-  ): Option[SymbolOccurrence] = {
-    val classSymbolInfo = findSymbol(currentDocument, classLocation.symbol)
+      findSymbolInCurrentContext: String => Option[SymbolInformation]
+  ): Option[String] = {
+    val classSymbolInfo = findSymbolInCurrentContext(classLocation.symbol)
 
     def createAsSeenFrom(info: SymbolInformation) = {
       classLocation
@@ -48,13 +46,15 @@ object MethodImplementation {
       classSignature = symbolInfo.signature.asInstanceOf[ClassSignature]
       declarations <- classSignature.declarations.toIterable
       methodSymbol <- declarations.symlinks
-      methodSymbolInfo <- findSymbol(currentDocument, methodSymbol)
+      methodSymbolInfo <- findSymbolInCurrentContext(methodSymbol)
       asSeenFrom = createAsSeenFrom(symbolInfo)
-      aliasMappings = aliasTypeMappings(declarations, currentDocument)
-      context = Context(currentDocument, aliasMappings, asSeenFrom)
+      context = Context(
+        findSymbolInCurrentContext,
+        inheritanceContext.findSymbol,
+        asSeenFrom
+      )
       if isOverridenMethod(methodSymbolInfo)(context)
-      occ <- findDefOccurence(currentDocument, methodSymbol)
-    } yield occ
+    } yield methodSymbol
     validMethods.headOption
   }
 
@@ -62,17 +62,17 @@ object MethodImplementation {
       symParent: String,
       symChild: String
   )(implicit context: Context) = {
-    (symParent.desc, symChild.desc) match {
+    val dealiasedChild = dealiasClass(symChild, context.findSymbol)
+    val dealiasedParent = dealiasClass(symParent, context.findSymbolInParent)
+    (dealiasedParent.desc, dealiasedChild.desc) match {
       case (Descriptor.TypeParameter(tp), Descriptor.TypeParameter(tc)) =>
-        context.asSeenFrom.getOrElse(tp, tp) == context.aliasMappings
-          .getOrElse(tc, tc)
+        context.asSeenFrom.getOrElse(tp, tp) == tc
       case (Descriptor.TypeParameter(tp), Descriptor.Type(tc)) =>
-        context.asSeenFrom.getOrElse(tp, tp) == context.aliasMappings
-          .getOrElse(tc, tc)
+        context.asSeenFrom.getOrElse(tp, tp) == tc
       case (Descriptor.Parameter(tp), Descriptor.Parameter(tc)) =>
         tp == tc
       case (Descriptor.Type(tp), Descriptor.Type(tc)) =>
-        tp == tc
+        context.asSeenFrom.getOrElse(tp, tp) == tc
       case _ =>
         false
     }
@@ -122,7 +122,7 @@ object MethodImplementation {
         val returnTypesEqual =
           typesAreEqual(sig1.returnType, sig2.returnType)(newContext)
         lazy val enrichedSig =
-          enrichSignature(sig2, findSymbol(context.semanticDb, _))
+          addParameterSignatures(sig2, context.findSymbol)
         returnTypesEqual && paramsAreEqual(
           sig1.parameterLists,
           enrichedSig.parameterLists
@@ -145,32 +145,9 @@ object MethodImplementation {
     mappings.toMap
   }
 
-  private def aliasTypeMappings(
-      declarations: Scope,
-      currentDocument: TextDocument
-  ): Map[String, String] = {
-    declarations.symlinks
-      .map(sym => (sym, sym.desc))
-      .flatMap {
-        case (sym, Descriptor.Type(t)) =>
-          findSymbol(currentDocument, sym).map(_.signature).flatMap {
-            case ts: TypeSignature =>
-              ts.lowerBound match {
-                case tr: TypeRef =>
-                  Some(t -> tr.symbol.desc.name.toString())
-                case _ =>
-                  None
-              }
-            case _ => None
-          }
-        case _ => None
-      }
-      .toMap
-  }
-
   private case class Context(
-      semanticDb: TextDocument,
-      aliasMappings: Map[String, String],
+      findSymbol: String => Option[SymbolInformation],
+      findSymbolInParent: String => Option[SymbolInformation],
       asSeenFrom: Map[String, String]
   ) {
     def addAsSeenFrom(asSeenFrom: Map[String, String]) = {

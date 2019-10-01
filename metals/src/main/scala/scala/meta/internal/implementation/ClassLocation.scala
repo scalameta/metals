@@ -9,10 +9,6 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.Scope
 
-private[implementation] trait IndexLocation
-
-private[implementation] case class TypeMapping(alias: String, original: String)
-
 private[implementation] case class ClassLocation(
     symbol: String,
     file: Option[Path],

@@ -7,46 +7,58 @@ import scala.collection.concurrent.TrieMap
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.collection.mutable
+import java.nio.file.Path
 
 final class GlobalClassTable(
     buildTargets: BuildTargets
 ) {
 
+  type ImplementationCache = Map[Path, Map[String, Set[ClassLocation]]]
+
   private val buildTargetsIndexes =
     TrieMap.empty[BuildTargetIdentifier, GlobalSymbolTable]
 
-  // TODO test if we should also forward aliases here
-  def indexFor(
+  def globalContextFor(
       source: AbsolutePath,
-      context: InheritanceContext
-  ): Option[InheritanceContext] = synchronized {
+      implementationsInPath: ImplementationCache
+  ): Option[InheritanceContext] = {
+    for {
+      symtab <- globalSymbolTableFor(source)
+    } yield {
+      calculateIndex(symtab, implementationsInPath)
+    }
+  }
+
+  def globalSymbolTableFor(
+      source: AbsolutePath
+  ): Option[GlobalSymbolTable] = synchronized {
     for {
       buildTargetId <- buildTargets.inverseSources(source)
-      index <- calculateIndex(buildTargetId, context)
+      scalaTarget <- buildTargets.scalaTarget(buildTargetId)
+      classpath = new Classpath(scalaTarget.classpath)
     } yield {
-      index
+      buildTargetsIndexes.getOrElseUpdate(
+        buildTargetId,
+        GlobalSymbolTable(classpath, includeJdk = true)
+      )
     }
   }
 
   private def calculateIndex(
-      buildTargetId: BuildTargetIdentifier,
-      context: InheritanceContext
-  ): Option[InheritanceContext] = {
-    for {
-      scalaTarget <- buildTargets.scalaTarget(buildTargetId)
-      classpath = new Classpath(scalaTarget.classpath)
-      symTab = buildTargetsIndexes.getOrElseUpdate(
-        buildTargetId,
-        GlobalSymbolTable(classpath, includeJdk = true)
-      )
-    } yield {
-      val symbolsInformation = for {
-        classSymbol <- context.allClassSymbols
-        classInfo <- symTab.info(classSymbol)
-      } yield classInfo
+      symTab: GlobalSymbolTable,
+      implementationsInPath: ImplementationCache
+  ): InheritanceContext = {
+    val context = InheritanceContext.fromDefinitions(
+      symTab.info,
+      implementationsInPath.toMap
+    )
+    val symbolsInformation = for {
+      classSymbol <- context.allClassSymbols
+      classInfo <- symTab.info(classSymbol)
+    } yield classInfo
 
-      calculateInheritance(symbolsInformation, context, symTab)
-    }
+    calculateInheritance(symbolsInformation, context, symTab)
+
   }
 
   private def calculateInheritance(
@@ -76,7 +88,7 @@ final class GlobalClassTable(
       case (symbol, locations) =>
         symbol -> locations.map(_._2).toSet
     }
-    context.withClasspathContext(inheritance, symTab.info(_))
+    context.withClasspathContext(inheritance)
   }
 
 }
