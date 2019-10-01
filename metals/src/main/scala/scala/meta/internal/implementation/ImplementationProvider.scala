@@ -80,6 +80,7 @@ final class ImplementationProvider(
 
   def implementations(params: TextDocumentPositionParams): List[Location] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
+    lazy val global = globalTable.globalSymbolTableFor(source)
     val locations = for {
       currentDocument <- findSemanticdb(source).toIterable
       positionOccurrence = definitionProvider.positionOccurrence(
@@ -89,11 +90,23 @@ final class ImplementationProvider(
       )
       symbolOccurrence <- positionOccurrence.occurrence.toIterable
     } yield {
+      // 1. Search locally for symbol
+      // 2. Search inside workspace
+      // 3. Search classpath via GlobalSymbolTable
+      def symbolSearch(symbol: String): Option[SymbolInformation] = {
+        findSymbol(currentDocument, symbol)
+          .orElse(findClassDef(symbol))
+          .orElse(global.flatMap(_.info(symbol)))
+      }
+      val sym = symbolOccurrence.symbol
+      val dealiased =
+        if (sym.desc.isType) dealiasClass(sym, symbolSearch _) else sym
+
       val definitionDocument =
-        if (currentDocument.definesSymbol(symbolOccurrence.symbol)) {
+        if (currentDocument.definesSymbol(dealiased)) {
           Some(currentDocument)
         } else {
-          findSemanticDbForSymbol(symbolOccurrence.symbol)
+          findSemanticDbForSymbol(dealiased)
         }
 
       val inheritanceContext = definitionDocument match {
@@ -106,15 +119,6 @@ final class ImplementationProvider(
         // symbol is in workspace,
         // we might need to search different places for related symbols
         case Some(textDocument) =>
-          lazy val global = globalTable.globalSymbolTableFor(source)
-          // 1. Search locally for symbol
-          // 2. Search inside workspace
-          // 3. Search classpath via GlobalSymbolTable
-          def symbolSearch(symbol: String) =
-            findSymbol(textDocument, symbol)
-              .orElse(findClassDef(symbol))
-              .orElse(global.flatMap(_.info(symbol)))
-
           Some(
             InheritanceContext.fromDefinitions(
               symbolSearch,

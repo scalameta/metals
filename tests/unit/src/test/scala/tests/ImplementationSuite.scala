@@ -282,6 +282,21 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
   )
 
   check(
+    "type-alias-global",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  type NewSeq = Seq[Int]
+       |  class <<ABC>> extends New@@Seq {
+       |    def apply(idx: Int): Int = ???
+       |    def iterator: Iterator[Int] = ???
+       |    def length: Int = ???
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "unrelated-invo",
     """|/a/src/main/scala/a/Main.scala
        |package a
