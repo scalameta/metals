@@ -5,5 +5,6 @@ package scala.meta.internal.metals
  * capabilities" in the initialize response.
  */
 case class MetalsExperimental(
-    treeViewProvider: java.lang.Boolean = true
+    treeViewProvider: java.lang.Boolean = true,
+    supportsDebugging: java.lang.Boolean = true
 )
