@@ -68,10 +68,11 @@ final case class OnDemandSymbolIndex(
                 }
               case _ =>
             }
-          }
-          catch {
+          } catch {
             case e: Exception =>
-              ret = Failure(new Exception(jar.toNIO.toAbsolutePath.normalize().toString))
+              ret = Failure(
+                new Exception(jar.toNIO.toAbsolutePath.normalize().toString)
+              )
           }
         }
       }

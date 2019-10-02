@@ -1554,7 +1554,8 @@ class MetalsLanguageServer(
             // Nothing in cache, read top level symbols and store them in cache
             val tempIndex = OnDemandSymbolIndex()
             tempIndex.addSourceJar(path).recover {
-              case e => scribe.warn(s"Jar (${e.getMessage}) corrupted, skipping")
+              case e =>
+                scribe.warn(s"Jar (${e.getMessage}) corrupted, skipping")
             }
             tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
             tempIndex.toplevels
