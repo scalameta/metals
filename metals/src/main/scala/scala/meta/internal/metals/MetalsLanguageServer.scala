@@ -1090,6 +1090,7 @@ class MetalsLanguageServer(
           val log = workspace.resolve(Directories.log)
           val linesCount = log.readText.lines.size
           val pos = new l.Position(linesCount, 0)
+
           languageClient.metalsExecuteClientCommand(
             new ExecuteCommandParams(
               ClientCommands.GotoLocation.id,
@@ -1552,7 +1553,9 @@ class MetalsLanguageServer(
           case None =>
             // Nothing in cache, read top level symbols and store them in cache
             val tempIndex = OnDemandSymbolIndex()
-            tempIndex.addSourceJar(path)
+            tempIndex.addSourceJar(path).recover {
+              case e => scribe.warn(s"Jar (${e.getMessage}) corrupted, skipping")
+            }
             tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
             tempIndex.toplevels
         }
