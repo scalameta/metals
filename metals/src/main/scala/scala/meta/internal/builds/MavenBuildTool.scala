@@ -25,7 +25,7 @@ case class MavenBuildTool() extends BuildTool {
     import scala.meta.internal.metals.BuildInfo
     val command =
       List(
-        s"ch.epfl.scala:maven-bloop_2.10:${BuildInfo.bloopVersion}:bloopInstall",
+        s"ch.epfl.scala:maven-bloop_2.10:${BuildInfo.mavenBloopVersion}:bloopInstall",
         "-DdownloadSources=true"
       )
     userConfig().mavenScript match {

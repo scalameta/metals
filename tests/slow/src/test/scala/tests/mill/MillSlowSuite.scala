@@ -25,7 +25,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.10"
           |}
         """.stripMargin
       )
@@ -48,7 +48,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
         text +
           """|
              |object bar extends ScalaModule {
-             |  def scalaVersion = "2.12.9"
+             |  def scalaVersion = "2.12.10"
              |}
              |""".stripMargin
       }
@@ -74,7 +74,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.10"
           |}
         """.stripMargin
       )
@@ -105,7 +105,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.10"
           |  /*DEPS*/
           |}
           |/foo/src/reload/Main.scala
@@ -148,7 +148,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.10"
           |  /*DIFF*/
           |}
         """.stripMargin,
@@ -193,7 +193,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
         """
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.10"
           |}
         """.stripMargin,
       }
@@ -216,7 +216,7 @@ object MillSlowSuite extends BaseImportSuite("mill-import") {
           |/build.sc
           |import mill._, scalalib._
           |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.9"
+          |  def scalaVersion = "2.12.10"
           |  def scalacOptions = Seq("-Xfatal-warnings", "-Ywarn-unused")
           |}
           |/foo/src/Warning.scala
