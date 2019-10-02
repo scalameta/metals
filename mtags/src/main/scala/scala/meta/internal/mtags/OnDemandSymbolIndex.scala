@@ -51,9 +51,9 @@ final case class OnDemandSymbolIndex(
 
   // Traverses all source files in the given jar file and records
   // all non-trivial toplevel Scala symbols.
-  override def addSourceJar(jar: AbsolutePath): Unit = {
-    FileIO.withJarFileSystem(jar, create = false) { root =>
-      try {
+  override def addSourceJar(jar: AbsolutePath): Unit = tryRun {
+    if (sourceJars.addEntry(jar)) {
+      FileIO.withJarFileSystem(jar, create = false) { root =>
         root.listRecursive.foreach {
           case source if source.isScala =>
             try addSourceFile(source, None)
@@ -62,10 +62,6 @@ final case class OnDemandSymbolIndex(
             }
           case _ =>
         }
-      } catch {
-        case e: NoSuchFileException =>
-          val error = new Exception(s"Corrupted jar [$jar]", e)
-          onError(error)
       }
     }
   }
