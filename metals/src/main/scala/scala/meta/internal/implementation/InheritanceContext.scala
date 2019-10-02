@@ -18,8 +18,7 @@ case class InheritanceContext(
   def withClasspathContext(
       classpathInheritance: Map[String, Set[ClassLocation]]
   ): InheritanceContext = {
-    val newInheritance = mutable.Map
-      .empty[String, Set[ClassLocation]] ++ inheritance
+    val newInheritance = mutable.Map(inheritance.toSeq: _*)
     for { (symbol, locations) <- classpathInheritance } {
       val newLocations = newInheritance.getOrElse(symbol, Set.empty) ++ locations
       newInheritance += symbol -> newLocations

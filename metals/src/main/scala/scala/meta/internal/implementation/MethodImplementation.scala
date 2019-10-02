@@ -10,6 +10,19 @@ import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.ExistentialType
+import scala.meta.internal.semanticdb.RepeatedType
+import scala.meta.internal.semanticdb.IntersectionType
+import scala.meta.internal.semanticdb.AnnotatedType
+import scala.meta.internal.semanticdb.UniversalType
+import scala.meta.internal.semanticdb.UnionType
+import scala.meta.internal.semanticdb.Type.Empty
+import scala.meta.internal.semanticdb.StructuralType
+import scala.meta.internal.semanticdb.ConstantType
+import scala.meta.internal.semanticdb.SingleType
+import scala.meta.internal.semanticdb.ThisType
+import scala.meta.internal.semanticdb.SuperType
+import scala.meta.internal.semanticdb.WithType
+import scala.meta.internal.semanticdb.ByNameType
 
 object MethodImplementation {
 
@@ -73,9 +86,17 @@ object MethodImplementation {
         tp == tc
       case (Descriptor.Type(tp), Descriptor.Type(tc)) =>
         context.asSeenFrom.getOrElse(tp, tp) == tc
-      case _ =>
-        false
+      case (Descriptor.Term(tp), Descriptor.Term(tc)) =>
+        tp == tc
+      case _ => false
     }
+  }
+
+  private def allTypesAreEqual(
+      typesParent: Seq[Type],
+      typesChild: Seq[Type]
+  )(implicit context: Context): Boolean = {
+    typesParent.zip(typesChild).forall { case (p, c) => typesAreEqual(p, c) }
   }
 
   private def typesAreEqual(
@@ -83,11 +104,40 @@ object MethodImplementation {
       typeChild: Type
   )(implicit context: Context): Boolean = {
     (typeParent, typeChild) match {
+      case (tp: SingleType, tc: SingleType) =>
+        typesAreEqual(tp.prefix, tc.prefix) &&
+          symbolsAreEqual(tp.symbol, tc.symbol)
+      case (tp: SuperType, tc: SuperType) =>
+        typesAreEqual(tp.prefix, tc.prefix) &&
+          symbolsAreEqual(tp.symbol, tc.symbol)
       case (tp: TypeRef, tc: TypeRef) =>
+        symbolsAreEqual(tp.symbol, tc.symbol)
+      case (tp: AnnotatedType, tc: AnnotatedType) =>
+        typesAreEqual(tp.tpe, tc.tpe)
+      case (tp: UniversalType, tc: UniversalType) =>
+        typesAreEqual(tp.tpe, tc.tpe)
+      case (tp: ThisType, tc: ThisType) =>
         symbolsAreEqual(tp.symbol, tc.symbol)
       case (tp: ExistentialType, tc: ExistentialType) =>
         typesAreEqual(tp.tpe, tc.tpe)
-      case _ => false
+      case (tp: RepeatedType, tc: RepeatedType) =>
+        typesAreEqual(tp.tpe, tc.tpe)
+      case (tp: IntersectionType, tc: IntersectionType) =>
+        allTypesAreEqual(tp.types, tc.types)
+      case (tp: WithType, tc: WithType) =>
+        allTypesAreEqual(tp.types, tc.types)
+      case (tp: UnionType, tc: UnionType) =>
+        allTypesAreEqual(tp.types, tc.types)
+      case (tp: StructuralType, tc: StructuralType) =>
+        typesAreEqual(tp.tpe, tc.tpe)
+      case (tp: ByNameType, tc: ByNameType) =>
+        typesAreEqual(tp.tpe, tc.tpe)
+      case (tp: ConstantType, tc: ConstantType) =>
+        tp.constant == tc.constant
+      case (Empty, Empty) => true
+      case other =>
+        pprint.log(other)
+        false
     }
   }
 

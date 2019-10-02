@@ -391,6 +391,60 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |""".stripMargin
   )
 
+  check(
+    "vararg",
+    """|/a/src/main/scala/a/A.scala
+       |package a
+       |trait A {
+       |  def method(a: String): Unit
+       |  def me@@thod(a: String*): Unit
+       |}
+       |class B extends A {
+       |  def method(a: String): Unit = ???
+       |  def <<method>>(a: String*): Unit = ???
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "structural",
+    """|/a/src/main/scala/a/A.scala
+       |package a
+       |trait A {
+       |  def me@@thod(a: String with Int): Unit
+       |}
+       |class B extends A {
+       |  def <<method>>(a: String with Int): Unit = ???
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "by-name",
+    """|/a/src/main/scala/a/A.scala
+       |package a
+       |trait A {
+       |  def me@@thod(a: => String): Unit
+       |}
+       |class B extends A {
+       |  def <<method>>(a: => String ): Unit = ???
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "object",
+    """|/a/src/main/scala/a/A.scala
+       |package a
+       |trait A {
+       |  def me@@thod(param: a.C.type): Unit
+       |}
+       |class B extends A {
+       |  def <<method>>(param: a.C.type): Unit = ???
+       |}
+       |object C
+       |""".stripMargin
+  )
   // TODO needs scalameta update
   // check(
   //   "anon",
