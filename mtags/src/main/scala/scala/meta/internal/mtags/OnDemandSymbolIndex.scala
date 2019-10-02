@@ -54,18 +54,13 @@ final case class OnDemandSymbolIndex(
   override def addSourceJar(jar: AbsolutePath): Unit = tryRun {
     if (sourceJars.addEntry(jar)) {
       FileIO.withJarFileSystem(jar, create = false) { root =>
-        try {
-          root.listRecursive.foreach {
-            case source if source.isScala =>
-              try addSourceFile(source, None)
-              catch {
-                case NonFatal(e) => onError.lift(IndexError(source, e))
-              }
-            case _ =>
-          }
-        } catch {
-          case e: NoSuchFileException =>
-            onError(e)
+        root.listRecursive.foreach {
+          case source if source.isScala =>
+            try addSourceFile(source, None)
+            catch {
+              case NonFatal(e) => onError.lift(IndexError(source, e))
+            }
+          case _ =>
         }
       }
     }
