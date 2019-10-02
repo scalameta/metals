@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
+import java.nio.file.NoSuchFileException
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
@@ -50,19 +51,21 @@ final case class OnDemandSymbolIndex(
 
   // Traverses all source files in the given jar file and records
   // all non-trivial toplevel Scala symbols.
-  override def addSourceJar(jar: AbsolutePath): Unit = tryRun {
-    if (sourceJars.addEntry(jar)) {
-      FileIO.withJarFileSystem(jar, create = false) { root =>
+  override def addSourceJar(jar: AbsolutePath): Unit = {
+    FileIO.withJarFileSystem(jar, create = false) { root =>
+      try {
         root.listRecursive.foreach {
           case source if source.isScala =>
-            try {
-              addSourceFile(source, None)
-            } catch {
-              case NonFatal(e) =>
-                onError.lift(IndexError(source, e))
+            try addSourceFile(source, None)
+            catch {
+              case NonFatal(e) => onError.lift(IndexError(source, e))
             }
           case _ =>
         }
+      } catch {
+        case e: NoSuchFileException =>
+          val error = new Exception(s"Corrupted jar [$jar]", e)
+          onError(error)
       }
     }
   }
