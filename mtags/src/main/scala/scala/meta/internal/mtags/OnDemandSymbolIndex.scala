@@ -56,7 +56,7 @@ final case class OnDemandSymbolIndex(
       FileIO.withJarFileSystem(jar, create = false) { root =>
         root.listRecursive.foreach {
           case source if source.isScala =>
-            try addSourceFile(source, None )
+            try addSourceFile(source, None)
             catch {
               case NonFatal(e) => onError.lift(IndexError(source, e))
             }
