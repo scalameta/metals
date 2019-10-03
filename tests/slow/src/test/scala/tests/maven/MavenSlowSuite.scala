@@ -36,9 +36,7 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage,
-          // we don't have semanticDB plugin yet
-          CheckDoctor.allProjectsMisconfigured
+          progressMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -81,9 +79,7 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage,
-          // we don't have semanticDB plugin yet
-          CheckDoctor.allProjectsMisconfigured
+          progressMessage
         ).mkString("\n")
       )
       _ = client.messageRequests.clear() // restart
@@ -170,9 +166,7 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
         client.workspaceMessageRequests,
         List(
           importBuildMessage,
-          progressMessage,
-          // we don't have semanticDB plugin yet
-          CheckDoctor.allProjectsMisconfigured
+          progressMessage
         ).mkString("\n")
       )
       _ = assertStatus(_.isInstalled)
@@ -194,6 +188,9 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
            |/src/main/scala/warning/Warning.scala
            |import scala.concurrent.Future // unused
            |object Warning
+           |object A{
+           |  object B
+           |}
            |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
@@ -203,8 +200,16 @@ object MavenSlowSuite extends BaseImportSuite("maven-import") {
         """
           |src/main/scala/warning/Warning.scala:1:1: error: Unused import
           |import scala.concurrent.Future // unused
-          |^^^^^^^
+          |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         """.stripMargin
+      )
+      // we should still have references despite fatal warning
+      _ = assertNoDiff(
+        server.workspaceReferences().references.map(_.symbol).mkString("\n"),
+        """|_empty_/A.
+           |_empty_/A.B.
+           |_empty_/Warning.
+           |""".stripMargin
       )
     } yield ()
   }

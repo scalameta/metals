@@ -56,8 +56,6 @@ To run the unit tests open an sbt shell and run `unit/test`
 
 ```sh
 sbt
-# Run once in the beginning and run again for every change in the sbt plugin.
-> sbt-metals/publishLocal
 # (recommended) run specific test suite, great for edit/test/debug workflows.
 > metals/testOnly -- tests.DefinitionSuite
 # run unit tests, modestly fast but still a bit too slow for edit/test/debug workflows.
@@ -71,8 +69,8 @@ sbt
 ### Manually testing a `SlowSuite`
 
 Every test suite that extends `SlowSuite` generates a workspace directory under
-`tests/unit/target/e2e/$suitename/$testname`.  To debug why a `SlowSuite` might
-be failing, run the test once and then open it directly in your editor.  For
+`tests/unit/target/e2e/$suitename/$testname`. To debug why a `SlowSuite` might
+be failing, run the test once and then open it directly in your editor. For
 example, for the test case `"deprecated-scala"` in `WarningsSlowSuite` run the
 following command:
 

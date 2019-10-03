@@ -25,7 +25,8 @@ case class MavenBuildTool() extends BuildTool {
     import scala.meta.internal.metals.BuildInfo
     val command =
       List(
-        s"ch.epfl.scala:maven-bloop_2.10:${BuildInfo.bloopVersion}:bloopInstall"
+        s"ch.epfl.scala:maven-bloop_2.10:${BuildInfo.mavenBloopVersion}:bloopInstall",
+        "-DdownloadSources=true"
       )
     userConfig().mavenScript match {
       case Some(script) =>
@@ -36,8 +37,7 @@ case class MavenBuildTool() extends BuildTool {
           JavaBinary(userConfig().javaHome),
           "-Dfile.encoding=UTF-8",
           s"-Dmaven.multiModuleProjectDirectory=$workspace",
-          s"-Dmaven.home=$tempDir",
-          "-DdownloadSources=true"
+          s"-Dmaven.home=$tempDir"
         )
 
         val jarArgs = List(
