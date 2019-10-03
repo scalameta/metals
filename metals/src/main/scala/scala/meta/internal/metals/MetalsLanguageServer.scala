@@ -1291,7 +1291,9 @@ class MetalsLanguageServer(
           workspaceBuildTargets,
           scalacOptions,
           sources,
-          dependencySources
+          dependencySources,
+          build.version,
+          build.name
         )
       }
     }
@@ -1460,7 +1462,7 @@ class MetalsLanguageServer(
         val sourceItemPath = source.getUri.toAbsolutePath
         buildTargets.addSourceItem(sourceItemPath, item.getTarget)
       }
-      doctor.check()
+      doctor.check(i.bspServerName, i.bspServerVersion)
     }
     timedThunk("started file watcher", config.statistics.isIndex) {
       fileWatcher.restart()
