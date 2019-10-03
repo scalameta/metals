@@ -62,7 +62,7 @@ final class BuildTargetClasses(
       item <- result.getItems.asScala
       target = item.getTarget
       aClass <- item.getClasses.asScala
-      objectSymbol = createObjectSymbol(aClass.getClassName)
+      objectSymbol = createObjectSymbol(aClass.getClassName, isObject = true)
     } {
       classesOf(target).mainClasses.put(objectSymbol, aClass)
     }
@@ -73,17 +73,31 @@ final class BuildTargetClasses(
       item <- result.getItems.asScala
       target = item.getTarget
       className <- item.getClasses.asScala
-      objectSymbol = createObjectSymbol(className)
+      // TODO: handle test frameworks like utest that use Scala object's for test suites.
+      objectSymbol = createObjectSymbol(className, isObject = false)
     } {
       classesOf(target).testClasses.put(objectSymbol, className)
     }
   }
 
-  private def createObjectSymbol(className: String): String = {
+  private def createObjectSymbol(
+      className: String,
+      isObject: Boolean
+  ): String = {
     import scala.reflect.NameTransformer
-    className.split("\\.").foldLeft(Symbols.EmptyPackage) { (owner, name) =>
-      Symbols.Global(owner, Descriptor.Term(NameTransformer.decode(name)))
+    val isEmptyPackage = !className.contains(".")
+    val root =
+      if (isEmptyPackage) Symbols.EmptyPackage
+      else Symbols.RootPackage
+    val names = className.stripSuffix("$").split("\\.")
+    val prefix = names.dropRight(1).foldLeft(root) { (owner, name) =>
+      Symbols.Global(owner, Descriptor.Package(NameTransformer.decode(name)))
     }
+    val name = NameTransformer.decode(names.last)
+    val descriptor =
+      if (isObject) Descriptor.Term(name)
+      else Descriptor.Type(name)
+    Symbols.Global(prefix, desc = descriptor)
   }
 }
 
