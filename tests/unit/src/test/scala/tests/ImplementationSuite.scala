@@ -286,7 +286,8 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
     """|/a/src/main/scala/a/Main.scala
        |package a
        |object Main {
-       |  type NewSeq = Seq[Int]
+       |  type NewSeqInt[T <: Int] = Seq[T]
+       |  type NewSeq = NewSeqInt[Int]
        |  class <<ABC>> extends New@@Seq {
        |    def apply(idx: Int): Int = ???
        |    def iterator: Iterator[Int] = ???
@@ -445,6 +446,22 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |object C
        |""".stripMargin
   )
+
+  check(
+    "libraries",
+    """|/a/src/main/scala/a/A.scala
+       |package a
+       |import org.scalatest.FunSuite
+       |import org.scalatest.WordSpecLike
+       |import org.scalatest.Matchers
+       |import org.scalatest.BeforeAndAfterAll
+       |
+       |class <<ZigZagTest>> extends WordSpecLike with Matchers with Before@@AndAfterAll {}
+       |class <<ZigZagTest2>> extends WordSpecLike with Matchers with BeforeAndAfterAll {}
+       |class <<ZigZagTest3>> extends WordSpecLike with Matchers with BeforeAndAfterAll {}
+       |""".stripMargin
+  )
+
   // TODO needs scalameta update
   // check(
   //   "anon",
@@ -495,7 +512,13 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
       for {
         _ <- server.initialize(
           s"""/metals.json
-             |{"a":{}}
+             |{"a":
+             |  {
+             |    "libraryDependencies": [
+             |      "org.scalatest::scalatest:3.0.5"
+             |    ]
+             |  }
+             |}
              |${input
                .replaceAll("(<<|>>|@@)", "")}""".stripMargin
         )

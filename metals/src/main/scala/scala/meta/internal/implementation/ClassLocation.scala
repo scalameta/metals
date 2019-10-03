@@ -15,14 +15,11 @@ private[implementation] case class ClassLocation(
     private val asSeenFrom: Option[Map[String, String]]
 ) {
 
-  def asSeenFromMap: Map[String, String] = asSeenFrom match {
-    case Some(v) => v
-    case None => Map.empty
-  }
+  def asSeenFromMap: Map[String, String] = asSeenFrom.getOrElse(Map.empty)
 
   def translateAsSeenFrom(other: ClassLocation): ClassLocation = {
     val newASF = other.asSeenFrom match {
-      case None => other.asSeenFrom
+      case None => this.asSeenFrom
       case Some(parentASF) =>
         asSeenFrom match {
           case None => Some(parentASF)

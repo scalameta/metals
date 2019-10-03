@@ -24,6 +24,8 @@ import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TypeSignature
 import scala.collection.mutable
+import scala.meta.internal.symtab.GlobalSymbolTable
+import scala.util.control.NonFatal
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
@@ -96,7 +98,7 @@ final class ImplementationProvider(
       def symbolSearch(symbol: String): Option[SymbolInformation] = {
         findSymbol(currentDocument, symbol)
           .orElse(findClassDef(symbol))
-          .orElse(global.flatMap(_.info(symbol)))
+          .orElse(global.flatMap(_.safeInfo(symbol)))
       }
       val sym = symbolOccurrence.symbol
       val dealiased =
@@ -127,7 +129,7 @@ final class ImplementationProvider(
           )
       }
       symbolLocationsFromContext(
-        symbolOccurrence.symbol,
+        dealiased,
         source,
         inheritanceContext
       )
@@ -135,7 +137,7 @@ final class ImplementationProvider(
     locations.flatten.toList
   }
 
-  def symbolLocationsFromContext(
+  private def symbolLocationsFromContext(
       symbol: String,
       source: AbsolutePath,
       inheritanceContext: Option[InheritanceContext]
@@ -144,7 +146,7 @@ final class ImplementationProvider(
     def findImplementationSymbol(
         parentSymbolInfo: SymbolInformation,
         implDocument: TextDocument,
-        classSymbol: SymbolInformation,
+        symbolClass: SymbolInformation,
         classContext: InheritanceContext,
         implReal: ClassLocation
     ): Option[String] = {
@@ -155,11 +157,11 @@ final class ImplementationProvider(
         def localSearch(symbol: String): Option[SymbolInformation] = {
           findSymbol(implDocument, symbol)
             .orElse(findClassDef(symbol))
-            .orElse(global.flatMap(_.info(symbol)))
+            .orElse(global.flatMap(_.safeInfo(symbol)))
         }
         MethodImplementation.find(
           parentSymbolInfo,
-          classSymbol,
+          symbolClass,
           classContext,
           implReal,
           localSearch
@@ -173,17 +175,17 @@ final class ImplementationProvider(
       classContext <- inheritanceContext.toIterable
       plainParentSymbol <- classContext.findSymbol(symbol).toIterable
       parentSymbol = addParameterSignatures(plainParentSymbol, classContext)
-      classSymbol <- classFromSymbol(parentSymbol, classContext.findSymbol)
-      (file, locations) <- findImplementation(classSymbol.symbol, classContext)
+      symbolClass <- classFromSymbol(parentSymbol, classContext.findSymbol)
+      (file, locations) <- findImplementation(symbolClass.symbol, classContext)
       implPath = AbsolutePath(file)
       implDocument <- findSemanticdb(implPath).toIterable
       distance = fromBuffer(implPath, implDocument.text, buffer)
       implLocation <- locations
-      implReal = implLocation.toRealNames(classSymbol, translateKey = true)
+      implReal = implLocation.toRealNames(symbolClass, translateKey = true)
       implSymbol <- findImplementationSymbol(
         parentSymbol,
         implDocument,
-        classSymbol,
+        symbolClass,
         classContext,
         implReal
       )
@@ -247,6 +249,15 @@ final class ImplementationProvider(
 }
 
 object ImplementationProvider {
+
+  implicit class XtensionGlobalSymbolTable(symtab: GlobalSymbolTable) {
+    def safeInfo(symbol: String): Option[SymbolInformation] =
+      try {
+        symtab.info(symbol)
+      } catch {
+        case NonFatal(_) => None
+      }
+  }
 
   def dealiasClass(
       symbol: String,

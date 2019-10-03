@@ -135,9 +135,7 @@ object MethodImplementation {
       case (tp: ConstantType, tc: ConstantType) =>
         tp.constant == tc.constant
       case (Empty, Empty) => true
-      case other =>
-        pprint.log(other)
-        false
+      case _ => false
     }
   }
 

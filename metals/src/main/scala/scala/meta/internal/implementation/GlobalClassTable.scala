@@ -13,6 +13,8 @@ final class GlobalClassTable(
     buildTargets: BuildTargets
 ) {
 
+  import ImplementationProvider._
+
   type ImplementationCache = Map[Path, Map[String, Set[ClassLocation]]]
 
   private val buildTargetsIndexes =
@@ -49,12 +51,12 @@ final class GlobalClassTable(
       implementationsInPath: ImplementationCache
   ): InheritanceContext = {
     val context = InheritanceContext.fromDefinitions(
-      symTab.info,
+      symTab.safeInfo,
       implementationsInPath.toMap
     )
     val symbolsInformation = for {
       classSymbol <- context.allClassSymbols
-      classInfo <- symTab.info(classSymbol)
+      classInfo <- symTab.safeInfo(classSymbol)
     } yield classInfo
 
     calculateInheritance(symbolsInformation, context, symTab)
@@ -81,7 +83,7 @@ final class GlobalClassTable(
         )
       }
       results ++= allParents
-      infos = (allParents.map(_._1) -- calculated).flatMap(symTab.info)
+      infos = (allParents.map(_._1) -- calculated).flatMap(symTab.safeInfo)
     }
 
     val inheritance = results.groupBy(_._1).map {
