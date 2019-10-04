@@ -1582,7 +1582,7 @@ class MetalsLanguageServer(
           case None =>
             // Nothing in cache, read top level symbols and store them in cache
             val tempIndex = OnDemandSymbolIndex(onError = {
-              case e: Throwable =>
+              case NonFatal(e) =>
                 scribe.warn(s"Error when reading source jar [$path]", e)
             })
             tempIndex.addSourceJar(path)
@@ -1620,7 +1620,6 @@ class MetalsLanguageServer(
       val semanticDBDoc =
         semanticdbs.textDocument(source).documentIncludingStale
       (for {
-        doc <- semanticDBDoc
         doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
           source,
