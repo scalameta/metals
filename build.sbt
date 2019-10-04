@@ -145,6 +145,7 @@ lazy val V = new {
   val bloop = "1.3.3"
   val sbtBloop = bloop
   val gradleBloop = bloop
+  val mavenBloop = "1.3.2"
   val scalafmt = "2.0.1"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
@@ -282,6 +283,7 @@ lazy val metals = project
       "bloopVersion" -> V.bloop,
       "sbtBloopVersion" -> V.sbtBloop,
       "gradleBloopVersion" -> V.gradleBloop,
+      "mavenBloopVersion" -> V.mavenBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,
@@ -294,32 +296,6 @@ lazy val metals = project
   )
   .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin)
-
-lazy val `sbt-metals` = project
-  .settings(
-    sbtPlugin := true,
-    crossScalaVersions := List(V.scala212, V.scala210),
-    sbtVersion in pluginCrossBuild := {
-      scalaBinaryVersion.value match {
-        case "2.10" => "0.13.17"
-        case "2.12" => "1.0.4"
-      }
-    },
-    libraryDependencies --= libraryDependencies.in(ThisBuild).value,
-    scalacOptions --= Seq(
-      "-Yrangepos",
-      "-Ywarn-unused-import",
-      "-Ywarn-unused:imports"
-    ),
-    buildInfoPackage := "scala.meta.internal.sbtmetals",
-    buildInfoKeys := Seq[BuildInfoKey](
-      "metalsVersion" -> version.value,
-      "supportedScalaVersions" -> V.supportedScalaVersions,
-      "scalametaVersion" -> V.scalameta
-    )
-  )
-  .enablePlugins(BuildInfoPlugin)
-  .disablePlugins(ScalafixPlugin)
 
 lazy val input = project
   .in(file("tests/input"))
@@ -430,7 +406,7 @@ lazy val unit = project
   .enablePlugins(BuildInfoPlugin)
 
 def crossPublishLocal(scalaV: String) = Def.task[Unit] {
-  // Runs `publishLocal` for mtags with $scalaV.
+  // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
   val newState = Project
     .extract(state.value)
     .appendWithSession(
@@ -442,10 +418,15 @@ def crossPublishLocal(scalaV: String) = Def.task[Unit] {
   val (s, _) = Project
     .extract(newState)
     .runTask(publishLocal.in(mtags), newState)
-  Project
-    .extract(s)
-    .runTask(publishLocal.in(interfaces), s)
 }
+
+def publishMtags =
+  publishLocal
+    .in(interfaces)
+    .dependsOn(
+      crossPublishLocal(V.scala211)
+        .dependsOn(crossPublishLocal(V.scala213))
+    )
 lazy val slow = project
   .in(file("tests/slow"))
   .settings(
@@ -453,7 +434,6 @@ lazy val slow = project
     testOnly.in(Test) := testOnly
       .in(Test)
       .dependsOn(
-        publishLocal.in(`sbt-metals`),
         crossPublishLocal(V.scala211),
         crossPublishLocal(V.scala213)
       )
@@ -461,7 +441,6 @@ lazy val slow = project
     test.in(Test) := test
       .in(Test)
       .dependsOn(
-        publishLocal.in(`sbt-metals`),
         crossPublishLocal(V.scala211),
         crossPublishLocal(V.scala213)
       )

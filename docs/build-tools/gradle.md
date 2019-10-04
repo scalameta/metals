@@ -93,5 +93,5 @@ plugin in Bloop config.
 
 This is much more complex than in case of the automatic installation, so it is
 recommended to only do manual installation when having problems with the
-automatic one. You can also always try to reach us on the Metals gitter channel
+automatic one. You can also always try to reach us on the [Metals gitter channel](https://gitter.im/scalameta/metals)
 in case of any problems.

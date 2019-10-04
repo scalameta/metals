@@ -171,7 +171,7 @@ case class QuickBuild(
     C.Project(
       id,
       baseDirectory,
-      Some(workspace.toNIO),
+      Some(baseDirectory),
       sources,
       dependsOn.toList,
       classpath,

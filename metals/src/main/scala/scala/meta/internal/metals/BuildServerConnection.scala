@@ -18,6 +18,8 @@ import scala.concurrent.Future
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import scala.collection.JavaConverters._
+import com.google.gson.Gson
 
 /**
  * An actively running and initialized BSP connection.
@@ -138,13 +140,22 @@ object BuildServerConnection {
     )
   }
 
+  final case class BloopExtraBuildParams(
+      semanticdbVersion: String,
+      supportedScalaVersions: java.util.List[String]
+  )
+
   /** Run build/initialize handshake */
   private def initialize(
       workspace: AbsolutePath,
       server: MetalsBuildServer
   ): InitializeBuildResult = {
-    val initializeResult = server.buildInitialize(
-      new InitializeBuildParams(
+    val extraParams = BloopExtraBuildParams(
+      BuildInfo.scalametaVersion,
+      BuildInfo.supportedScalaVersions.asJava
+    )
+    val initializeResult = server.buildInitialize {
+      val params = new InitializeBuildParams(
         "Metals",
         BuildInfo.metalsVersion,
         BuildInfo.bspVersion,
@@ -153,7 +164,11 @@ object BuildServerConnection {
           Collections.singletonList("scala")
         )
       )
-    )
+      val gson = new Gson
+      val data = gson.toJsonTree(extraParams)
+      params.setData(data)
+      params
+    }
     // Block on the `build/initialize` request because it should respond instantly
     // and we want to fail fast if the connection is not
     val result =
