@@ -2,31 +2,70 @@ package tests
 import scala.concurrent.Future
 
 object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
-  override def isTestSuiteEnabled: Boolean =
-    false // TODO enable once bloop supports main class request
+  check("main")(
+    """<<run>>
+      |object Main {
+      |  def main(args: Array[String]): Unit = {}
+      |}
+      |""".stripMargin
+  )
 
-  testAsync("run") {
+  check("non-ascii")(
+    """<<run>>
+      |object :: {
+      |  def main(args: Array[String]): Unit = {}
+      |}
+      |""".stripMargin
+  )
+
+  check("test-suite-class", library = "org.scalatest::scalatest:3.0.5")(
+    """|<<test>>
+       |class Foo extends org.scalatest.FunSuite {
+       |  test("foo") {}
+       |}
+       |""".stripMargin
+  )
+
+  check("test-suite-object", library = "com.lihaoyi::utest:0.7.1")(
+    """|<<test>>
+       |object Foo extends utest.TestSuite {
+       |  val tests = utest.Tests {}
+       |}
+       |""".stripMargin
+  )
+
+  def check(name: String, library: String = "")(expected: String): Unit =
+    testAsync(name) {
+      val original = expected.replaceAll("<<.*>>", "")
+      val dependencies =
+        if (library.isEmpty) ""
+        else s""""libraryDependencies": [ "$library" ]"""
+
+      for {
+        _ <- server.initialize(
+          s"""|/metals.json
+              |{
+              |  "a": { $dependencies }
+              |}
+              |
+              |/a/src/main/scala/Foo.scala
+              |$original
+              |""".stripMargin
+        )
+        _ <- assertCodeLenses("a/src/main/scala/Foo.scala", expected)
+      } yield ()
+    }
+
+  private def assertCodeLenses(
+      relativeFile: String,
+      expected: String
+  ): Future[Unit] = {
+    val path = server.toPath(relativeFile)
     for {
-      _ <- server.initialize(
-        """|/metals.json
-           |{
-           |  "a": { }
-           |}
-           |
-           |/a/src/main/scala/Main.scala
-           |object Main {
-           |  def main(args: Array[String]): Unit = {}
-           |}""".stripMargin
-      )
-      _ <- assertCodeLenses(
-        "a/src/main/scala/Main.scala",
-        """<<run>>
-          |object Main {
-          |  def main(args: Array[String]): Unit = {}
-          |}
-          |""".stripMargin
-      )
-    } yield ()
+      _ <- server.server.compilations.compileFiles(List(path))
+      _ <- server.server.compilations.compileFiles(List(path))
+      obtained <- server.codeLenses(relativeFile)
+    } yield assertNoDiff(obtained, expected)
   }
 
   testAsync("run-many-main-files") {
@@ -84,26 +123,50 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
            |}
            |
            |/b/src/main/scala/Main.scala
-           |object Main {}
+           |object Main
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala") // compile `a` to populate its cache
       _ <- assertCodeLenses(
         "b/src/main/scala/Main.scala",
-        """|object Main {}
+        """|object Main
            |""".stripMargin
       )
     } yield ()
   }
 
-  private def assertCodeLenses(
-      filename: String,
-      expected: String
-  ): Future[Unit] =
+  testAsync("remove-stale-lenses") {
     for {
-      _ <- server.didOpen(filename)
-      obtained <- server.codeLenses(filename)
-    } yield {
-      assertNoDiff(obtained, expected)
-    }
+      _ <- server.initialize(
+        """|/metals.json
+           |{
+           |  "a": { }
+           |}
+           |
+           |/a/src/main/scala/Main.scala
+           |object Main {
+           |  def main(args: Array[String]): Unit = {}
+           |}""".stripMargin
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Main.scala",
+        """<<run>>
+          |object Main {
+          |  def main(args: Array[String]): Unit = {}
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/Main.scala")(
+        text => text.replace("object Main", "class Main")
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Main.scala",
+        """class Main {
+          |  def main(args: Array[String]): Unit = {}
+          |}
+          |""".stripMargin
+      )
+
+    } yield ()
+  }
 }

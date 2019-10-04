@@ -12,10 +12,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import ch.epfl.scala.bsp4j.DependencySourcesParams
-import ch.epfl.scala.bsp4j.DependencySourcesResult
-import ch.epfl.scala.bsp4j.ScalacOptionsParams
-import ch.epfl.scala.bsp4j.SourcesParams
+import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
@@ -38,6 +35,7 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.debug.DebugServer
 import scala.meta.internal.tvp._
 import scala.meta.internal.mtags._
 import scala.meta.internal.semanticdb.Scala._
@@ -101,6 +99,8 @@ class MetalsLanguageServer(
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
   var focusedDocument = Option.empty[AbsolutePath]
+  private val focusedDocumentBuildTarget =
+    new AtomicReference[b.BuildTargetIdentifier]()
   private val definitionIndex = newSymbolIndex()
   private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer = Option.empty[BuildServerConnection]
@@ -243,11 +243,13 @@ class MetalsLanguageServer(
       languageClient,
       diagnostics,
       buildTargets,
+      buildTargetClasses,
       config,
       statusBar,
       time,
       report => compilers.didCompile(report),
-      () => treeView
+      () => treeView,
+      buildTarget => focusedDocumentBuildTarget.get() == buildTarget
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -293,6 +295,7 @@ class MetalsLanguageServer(
       buildTargetClasses,
       buffers,
       buildTargets,
+      compilations,
       semanticdbs
     )
     definitionProvider = new DefinitionProvider(
@@ -424,6 +427,7 @@ class MetalsLanguageServer(
         )
       )
       capabilities.setFoldingRangeProvider(true)
+      capabilities.setCodeLensProvider(new CodeLensOptions(false))
       capabilities.setDefinitionProvider(true)
       capabilities.setImplementationProvider(true)
       capabilities.setHoverProvider(true)
@@ -609,6 +613,7 @@ class MetalsLanguageServer(
     val path = params.getTextDocument.getUri.toAbsolutePath
     openedFiles.add(path)
     openTextDocument.set(path)
+
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
     // Update in-memory buffer contents from LSP client
@@ -638,6 +643,10 @@ class MetalsLanguageServer(
   def didFocus(uri: String): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
     focusedDocument = Some(path)
+    buildTargets
+      .inverseSources(path)
+      .foreach(focusedDocumentBuildTarget.set)
+
     // unpublish diagnostic for dependencies
     interactiveSemanticdbs.didFocus(path)
     Future(treeView.didFocusTextDocument(path))
@@ -1004,9 +1013,10 @@ class MetalsLanguageServer(
   def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
-    CancelTokens { _ =>
-      scribe.warn("textDocument/codeLens is not supported.")
-      null
+    CancelTokens.future { _ =>
+      codeLensProvider
+        .findLenses(params.getTextDocument.getUri.toAbsolutePath)
+        .map(_.asJava)
     }
 
   @JsonRequest("textDocument/foldingRange")
@@ -1041,7 +1051,10 @@ class MetalsLanguageServer(
   }
 
   @JsonRequest("workspace/executeCommand")
-  def executeCommand(params: ExecuteCommandParams): CompletableFuture[Object] =
+  def executeCommand(
+      params: ExecuteCommandParams
+  ): CompletableFuture[Object] = {
+    import JsonParser._
     params.getCommand match {
       case ServerCommands.ScanWorkspaceSources() =>
         Future {
@@ -1112,10 +1125,29 @@ class MetalsLanguageServer(
             )
           )
         }.asJavaObject
+      case ServerCommands.StartDebugAdapter() =>
+        val args = params.getArguments.asScala
+        args match {
+          case Seq(param: JsonElement) =>
+            val session = Future
+              .fromTry(param.as[b.DebugSessionParams])
+              .flatMap(DebugServer.start(_, buildServer))
+              .map { server =>
+                cancelables.add(server)
+                DebugSession(server.sessionName, server.uri.toString)
+              }
+
+            session.asJavaObject
+          case _ =>
+            val argExample = ServerCommands.StartDebugAdapter.arguments
+            val msg = s"Invalid arguments: $args. Expecting: $argExample"
+            Future.failed(new IllegalArgumentException(msg)).asJavaObject
+        }
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
     }
+  }
 
   @JsonRequest("metals/treeViewChildren")
   def treeViewChildren(
@@ -1291,13 +1323,13 @@ class MetalsLanguageServer(
         workspaceBuildTargets <- build.server.workspaceBuildTargets().asScala
         ids = workspaceBuildTargets.getTargets.map(_.getId)
         scalacOptions <- build.server
-          .buildTargetScalacOptions(new ScalacOptionsParams(ids))
+          .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
           .asScala
         sources <- build.server
-          .buildTargetSources(new SourcesParams(ids))
+          .buildTargetSources(new b.SourcesParams(ids))
           .asScala
         dependencySources <- build.server
-          .buildTargetDependencySources(new DependencySourcesParams(ids))
+          .buildTargetDependencySources(new b.DependencySourcesParams(ids))
           .asScala
       } yield {
         ImportedBuild(
@@ -1502,10 +1534,21 @@ class MetalsLanguageServer(
     ) {
       indexDependencySources(i.dependencySources)
     }
+
+    focusedDocument.foreach { doc =>
+      buildTargets
+        .inverseSources(doc)
+        .foreach(focusedDocumentBuildTarget.set)
+    }
+
+    val targets = buildTargets.all.map(_.info.getId).toSeq
+    buildTargetClasses
+      .rebuildIndex(targets)
+      .foreach(_ => languageClient.refreshModel())
   }
 
   private def indexDependencySources(
-      dependencySources: DependencySourcesResult
+      dependencySources: b.DependencySourcesResult
   ): Unit = {
     // Track used Jars so that we can
     // remove cached symbols from Jars

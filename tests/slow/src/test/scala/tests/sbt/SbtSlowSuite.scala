@@ -246,22 +246,17 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = {
-        assertNoDiff(
-          client.workspaceClientCommands,
-          List(
-            ClientCommands.ReloadDoctor.id,
-            ClientCommands.RunDoctor.id
-          ).mkString("\n")
-        )
+        val expected = ClientCommands.ReloadDoctor.id :: ClientCommands.RunDoctor.id :: Nil
+        val actual = client.workspaceClientCommands
+        assert(actual.startsWith(expected))
         client.showMessages.clear()
         client.clientCommands.clear()
       }
       _ <- server.didSave("build.sbt")(_ => """scalaVersion := "2.12.10" """)
       _ = {
-        assertNoDiff(
-          client.workspaceClientCommands,
-          ClientCommands.ReloadDoctor.id
-        )
+        val expected = ClientCommands.ReloadDoctor.id :: Nil
+        val actual = client.workspaceClientCommands
+        assert(actual.startsWith(expected))
         assertNoDiff(
           client.workspaceShowMessages,
           CheckDoctor.problemsFixed.getMessage

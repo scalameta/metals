@@ -1,6 +1,5 @@
 package tests
 
-import com.google.gson.JsonParser
 import java.util.Properties
 import scala.meta.internal.metals.UserConfiguration
 
@@ -11,8 +10,7 @@ object UserConfigurationSuite extends BaseSuite {
       props: Map[String, String] = Map.empty
   )(fn: Either[List[String], UserConfiguration] => Unit): Unit = {
     test(name) {
-      val wrapped = UserConfiguration.toWrappedJson(original)
-      val json = new JsonParser().parse(wrapped).getAsJsonObject
+      val json = UserConfiguration.parse(original)
       val jprops = new Properties()
       // java11 ambiguous .putAll via Properties/Hashtable, use .put
       props.foreach { case (k, v) => jprops.put(k, v) }

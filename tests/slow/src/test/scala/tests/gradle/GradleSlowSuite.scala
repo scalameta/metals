@@ -293,13 +293,9 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = {
-        assertNoDiff(
-          client.workspaceClientCommands,
-          List(
-            ClientCommands.ReloadDoctor.id,
-            ClientCommands.RunDoctor.id
-          ).mkString("\n")
-        )
+        val expected = ClientCommands.ReloadDoctor.id :: ClientCommands.RunDoctor.id :: Nil
+        val actual = client.workspaceClientCommands
+        assert(actual.startsWith(expected))
       }
     } yield ()
   }

@@ -1,12 +1,17 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
+
 import javax.annotation.Nullable
 import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
+
 import scala.meta.internal.tvp._
+import scala.meta.internal.metals.MetalsEnrichments._
 
 trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
 
@@ -34,6 +39,12 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
   @JsonNotification("metals/executeClientCommand")
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
 
+  final def refreshModel(): Unit = {
+    val command = ClientCommands.RefreshModel.id
+    val params = new ExecuteCommandParams(command, Nil.asJava)
+    metalsExecuteClientCommand(params)
+  }
+
   /**
    * Opens an input box to ask the user for input.
    *
@@ -44,6 +55,11 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
   def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult]
+
+  final def showMessage(messageType: MessageType, message: String): Unit = {
+    val params = new MessageParams(messageType, message)
+    showMessage(params)
+  }
 
   def shutdown(): Unit = {}
 

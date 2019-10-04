@@ -1,50 +1,109 @@
 package scala.meta.internal.metals
-import java.util
+
 import java.util.Collections._
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.meta.internal.metals.ClientCommands.StartDebugSession
+import scala.meta.internal.metals.CodeLensProvider._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.io.AbsolutePath
 
 final class CodeLensProvider(
-    classes: BuildTargetClasses,
+    buildTargetClasses: BuildTargetClasses,
     buffers: Buffers,
     buildTargets: BuildTargets,
+    compilations: Compilations,
     semanticdbs: Semanticdbs
-) {
-  def findLenses(path: AbsolutePath): util.List[l.CodeLens] = {
-    buildTargets.inverseSources(path) match {
-      case Some(buildTarget) if classes.main(buildTarget).nonEmpty =>
-        findLenses(path, buildTarget).asJava
-      case _ =>
-        emptyList[l.CodeLens]()
-    }
+)(implicit ec: ExecutionContext) {
+  // code lenses will be refreshed after compilation or when workspace gets indexed
+  def findLenses(path: AbsolutePath): Future[Seq[l.CodeLens]] = {
+    val lenses = buildTargets
+      .inverseSources(path)
+      .filterNot(compilations.isCurrentlyCompiling)
+      .map { buildTarget =>
+        for {
+          classes <- buildTargetClasses.classesOf(buildTarget)
+        } yield codeLenses(path, buildTarget, classes)
+      }
+
+    lenses.getOrElse(Future.successful(Nil))
   }
 
-  private def findLenses(
+  private def codeLenses(
       path: AbsolutePath,
-      buildTarget: b.BuildTargetIdentifier
-  ): List[l.CodeLens] = {
+      target: b.BuildTargetIdentifier,
+      classes: BuildTargetClasses.Classes
+  ): Seq[l.CodeLens] = {
     semanticdbs.textDocument(path).documentIncludingStale match {
+      case _ if classes.isEmpty =>
+        Nil
       case Some(textDocument) =>
         val distance =
           TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
-        val mainClasses = classes.main(buildTarget)
 
-        val lenses = for {
+        for {
           occurrence <- textDocument.occurrences
-          if mainClasses.contains(occurrence.symbol)
-          mainClass = mainClasses(occurrence.symbol)
+          if occurrence.role.isDefinition
+          symbol = occurrence.symbol
+          commands = {
+            val main = classes.mainClasses
+              .get(symbol)
+              .map(mainCommand(target, _))
+              .toList
+            val tests = classes.testClasses
+              .get(symbol)
+              .map(testCommand(target, _))
+              .toList
+            main ++ tests
+          }
+          if commands.nonEmpty
           range <- occurrence.range
             .flatMap(r => distance.toRevised(r.toLSP))
             .toList
-          arguments = List(buildTarget.getUri, mainClass.getClassName)
-        } yield
-          new l.CodeLens(range, ClientCommands.RunMain.toLSP(arguments), null)
-        lenses.toList
+          command <- commands
+        } yield new l.CodeLens(range, command, null)
       case _ =>
         Nil
     }
+  }
+}
+
+object CodeLensProvider {
+  import scala.meta.internal.metals.JsonParser._
+
+  def testCommand(
+      target: b.BuildTargetIdentifier,
+      className: String
+  ): l.Command = {
+    val name = "test"
+    val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
+    val data = singletonList(className).toJson
+
+    command(target, name, dataKind, data)
+  }
+
+  def mainCommand(
+      target: b.BuildTargetIdentifier,
+      main: b.ScalaMainClass
+  ): l.Command = {
+    val name = "run"
+    val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+    val data = main.toJson
+
+    command(target, name, dataKind, data)
+  }
+
+  private def command(
+      target: b.BuildTargetIdentifier,
+      name: String,
+      dataKind: String,
+      data: JsonElement
+  ): l.Command = {
+    val params = new b.DebugSessionParams(List(target).asJava, dataKind, data)
+    new l.Command(name, StartDebugSession.id, singletonList(params))
   }
 }

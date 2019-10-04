@@ -13,6 +13,8 @@ import java.util
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
 import scala.collection.convert.DecorateAsJava
@@ -20,6 +22,8 @@ import scala.collection.convert.DecorateAsScala
 import scala.compat.java8.FutureConverters
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.Promise
 import scala.meta.Tree
 import scala.meta.inputs.Input
@@ -146,6 +150,23 @@ object MetalsEnrichments
         case e =>
           scribe.error(s"Unexpected error while $doingWhat", e)
           throw e
+      }
+    }
+
+    def withTimeout(length: Int, unit: TimeUnit)(
+        implicit ec: ExecutionContext
+    ): Future[A] = {
+      Future(Await.result(future, FiniteDuration(length, unit)))
+    }
+
+    def onTimeout(length: Int, unit: TimeUnit)(
+        action: => Unit
+    )(implicit ec: ExecutionContext): Future[A] = {
+      // schedule action to execute on timeout
+      future.withTimeout(length, unit).recoverWith {
+        case e: TimeoutException =>
+          action
+          Future.failed(e)
       }
     }
   }
@@ -526,5 +547,4 @@ object MetalsEnrichments
     def findFirstTrailing(predicate: Token => Boolean): Option[Token] =
       trailingTokens.find(predicate)
   }
-
 }
