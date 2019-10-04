@@ -1582,7 +1582,7 @@ class MetalsLanguageServer(
           case None =>
             // Nothing in cache, read top level symbols and store them in cache
             val tempIndex = OnDemandSymbolIndex(onError = {
-              case e: Throwable =>
+              case NonFatal(e) =>
                 scribe.warn(s"Error when reading source jar [$path]", e)
             })
             tempIndex.addSourceJar(path)
