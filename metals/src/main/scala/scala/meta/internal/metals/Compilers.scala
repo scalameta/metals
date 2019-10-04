@@ -190,9 +190,7 @@ class Compilers(
           )
         )
         .asScala
-        .map(h => {
-          h.asScala
-        })
+        .map(_.asScala)
     }.getOrElse {
       Future.successful(Option.empty)
     }
