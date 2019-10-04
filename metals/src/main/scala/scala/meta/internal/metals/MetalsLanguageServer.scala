@@ -412,7 +412,6 @@ class MetalsLanguageServer(
       )
       capabilities.setFoldingRangeProvider(true)
       capabilities.setDefinitionProvider(true)
-      capabilities.setTypeDefinitionProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
       capabilities.setDocumentHighlightProvider(true)
@@ -791,10 +790,11 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
-      params: TextDocumentPositionParams
+      position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens.future { token =>
-      typeDefinition(params, token)
+    CancelTokens { _ =>
+      scribe.warn("textDocument/typeDefinition is not supported.")
+      null
     }
 
   @JsonRequest("textDocument/implementation")
@@ -887,36 +887,6 @@ class MetalsLanguageServer(
     CancelTokens { _ =>
       referencesResult(params).locations.asJava
     }
-
-  def typeDefinition(
-      params: TextDocumentPositionParams,
-      token: CancelToken
-  ): Future[java.util.List[Location]] = {
-    compilers
-      .getLocation(params, token, interactiveSemanticdbs)
-      .flatMap {
-        case Some(loc) =>
-          Future(List(loc).asJava)
-        case None =>
-          definitionOrReferences(params, token)
-            .map(_.locations.asScala.headOption)
-            .flatMap {
-              case Some(loc) =>
-                typeDefinition(
-                  new TextDocumentPositionParams(
-                    params.getTextDocument,
-                    loc.getRange.getStart
-                  ),
-                  token
-                )
-              case _ =>
-                Future({
-                  List().map(_.asInstanceOf[Location]).asJava
-                })
-            }
-      }
-
-  }
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
@@ -1120,6 +1090,7 @@ class MetalsLanguageServer(
           val log = workspace.resolve(Directories.log)
           val linesCount = log.readText.lines.size
           val pos = new l.Position(linesCount, 0)
+
           languageClient.metalsExecuteClientCommand(
             new ExecuteCommandParams(
               ClientCommands.GotoLocation.id,
@@ -1581,11 +1552,11 @@ class MetalsLanguageServer(
           case Some(toplevels) => toplevels
           case None =>
             // Nothing in cache, read top level symbols and store them in cache
-            val tempIndex = OnDemandSymbolIndex(onError = {
-              case NonFatal(e) =>
-                scribe.warn(s"Error when reading source jar [$path]", e)
-            })
-            tempIndex.addSourceJar(path)
+            val tempIndex = OnDemandSymbolIndex()
+            tempIndex.addSourceJar(path).recover {
+              case e =>
+                scribe.warn(s"Jar (${e.getMessage}) corrupted, skipping")
+            }
             tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
             tempIndex.toplevels
         }

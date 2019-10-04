@@ -2,15 +2,16 @@ package scala.meta.internal.mtags
 
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
+
 import scala.collection.concurrent.TrieMap
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.io.{ListFiles => _}
-import scala.meta.internal.io._
+import scala.meta.internal.io.{ListFiles => _, _}
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 /**
@@ -51,19 +52,32 @@ final case class OnDemandSymbolIndex(
 
   // Traverses all source files in the given jar file and records
   // all non-trivial toplevel Scala symbols.
-  override def addSourceJar(jar: AbsolutePath): Unit = tryRun {
-    if (sourceJars.addEntry(jar)) {
-      FileIO.withJarFileSystem(jar, create = false) { root =>
-        root.listRecursive.foreach {
-          case source if source.isScala =>
-            try addSourceFile(source, None)
-            catch {
-              case NonFatal(e) => onError.lift(IndexError(source, e))
+  override def addSourceJar(jar: AbsolutePath): Try[Unit] = {
+    var ret: Try[Unit] = Success()
+    tryRun {
+      if (sourceJars.addEntry(jar)) {
+        FileIO.withJarFileSystem(jar, create = false) { root =>
+          try {
+            root.listRecursive.foreach {
+              case source if source.isScala =>
+                try {
+                  addSourceFile(source, None)
+                } catch {
+                  case NonFatal(e) =>
+                    onError.lift(IndexError(source, e))
+                }
+              case _ =>
             }
-          case _ =>
+          } catch {
+            case e: Exception =>
+              ret = Failure(
+                new Exception(jar.toNIO.toAbsolutePath.normalize().toString)
+              )
+          }
         }
       }
     }
+    ret
   }
 
   // Used to add cached toplevel symbols to index
