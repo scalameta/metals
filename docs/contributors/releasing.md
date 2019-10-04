@@ -51,6 +51,8 @@ title: Making a release
     yet available on Maven Central run:
     `./bin/test-release.sh $VERSION -r sonatype:public`
 
+- Make sure all docs are up to date.
+
 - Upgrade downstream projects:
 
   - https://github.com/scalameta/metals-vscode:

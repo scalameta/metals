@@ -328,6 +328,9 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
           |/src/main/scala/warning/Warning.scala
           |import scala.concurrent.Future // unused
           |object Warning
+          |object A{
+          |  object B
+          |}
           |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
@@ -339,6 +342,14 @@ object GradleSlowSuite extends BaseImportSuite("gradle-import") {
           |import scala.concurrent.Future // unused
           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         """.stripMargin
+      )
+      // we should still have references despite fatal warning
+      _ = assertNoDiff(
+        server.workspaceReferences().references.map(_.symbol).mkString("\n"),
+        """|_empty_/A.
+           |_empty_/A.B.
+           |_empty_/Warning.
+           |""".stripMargin
       )
     } yield ()
   }

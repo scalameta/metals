@@ -159,6 +159,7 @@ case class QuickBuild(
     C.Project(
       id,
       baseDirectory,
+      Some(baseDirectory),
       sources,
       dependsOn.toList,
       classpath,
