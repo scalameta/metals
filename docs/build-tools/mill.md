@@ -16,7 +16,7 @@ finished you should be able edit and compile your code.
 
 ## Manual installation
 
-Manual instalation is not recommended, but it's pretty easy to do. There are
+Manual installation is not recommended, but it's pretty easy to do. There are
 only two steps involved.
 
 First add one import line to your `build.sc` file or in any other file it

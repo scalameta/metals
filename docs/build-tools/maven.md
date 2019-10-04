@@ -7,7 +7,8 @@ Maven is one of the most common build tools in the JVM ecosystem and it also
 allows for using scala through the
 [scala-maven-plugin](https://davidb.github.io/scala-maven-plugin/usage.html).
 The [scalor-maven-plugin](https://github.com/random-maven/scalor-maven-plugin)
-is not currently supported and requires a new plugin for bloop to be implemented.
+is not currently supported and requires a new plugin for bloop to be
+implemented.
 
 ## Automatic installation
 
@@ -20,7 +21,14 @@ be added later. Most features should work without it, however some require
 SemanticDB files to be provided alongside compiled data. To do that we need a
 couple of steps that are explained in the manual installation section.
 
-## Manual instalation
+## Manual installation
+
+For current Metals snapshots all you need to run the manual installation is:
+
+`mvn ch.epfl.scala:maven-bloop_2.10:@BLOOP_VERSION@:bloopInstall -DdownloadSources=true`
+
+However, for all versions before and including 0.7.6 we need a couple more
+steps.
 
 First, we need to add a couple of options to the Scala compiler in the
 configuration section:

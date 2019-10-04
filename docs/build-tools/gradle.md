@@ -4,10 +4,9 @@ title: Gradle
 ---
 
 Gradle is a build tool that can be used easily with a large number of
-programming languages including Scala. With it you can easily define your
-builds for Groovy or Kotlin, which enables for a high degree of customization.
-You can look up all the possible features on the
-[Gradle website](https://gradle.org/).
+programming languages including Scala. With it you can easily define your builds
+for Groovy or Kotlin, which enables for a high degree of customization. You can
+look up all the possible features on the [Gradle website](https://gradle.org/).
 
 ## Automatic installation
 
@@ -45,9 +44,15 @@ allprojects {
 ```
 
 Now we can run `gradle bloopInstall`, which will create a Bloop configuration
-files. This will enable us to work with Metals and most features will work, but
-for everything to work properly we need to also add the SemanticDB plugin. This
-can be done by adding a couple of options to the scala compiler:
+files.
+
+This will enable us to work with Metals and all features should work.
+
+However, for all versions before and including 0.7.6 we need a couple more
+steps.
+
+First, we need to add the SemanticDB plugin. This can be done by adding a couple
+of options to the Scala compiler:
 
 ```groovy
 allprojects {
@@ -93,5 +98,6 @@ plugin in Bloop config.
 
 This is much more complex than in case of the automatic installation, so it is
 recommended to only do manual installation when having problems with the
-automatic one. You can also always try to reach us on the [Metals gitter channel](https://gitter.im/scalameta/metals)
-in case of any problems.
+automatic one. You can also always try to reach us on the
+[Metals gitter channel](https://gitter.im/scalameta/metals) in case of any
+problems.
