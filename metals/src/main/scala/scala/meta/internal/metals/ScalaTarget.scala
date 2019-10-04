@@ -8,4 +8,14 @@ case class ScalaTarget(info: BuildTarget, scalac: ScalacOptionsItem) {
   def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled
 
   def isScalaTarget = info.getLanguageIds().contains("scala")
+
+  def classpath = {
+    scalac
+      .getClasspath()
+      .asScala
+      .toList
+      .filter(_.endsWith(".jar"))
+      .map(_.toAbsolutePath)
+  }
+
 }

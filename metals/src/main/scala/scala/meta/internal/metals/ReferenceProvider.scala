@@ -1,14 +1,9 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
 import scala.collection.concurrent.TrieMap
@@ -34,14 +29,7 @@ final class ReferenceProvider(
 ) {
   var referencedPackages = BloomFilters.create(10000)
   val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
-  def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
-    for {
-      item <- scalacOptions.getItems.asScala
-    } {
-      val targetroot = item.targetroot
-      onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
-    }
-  }
+
   def reset(): Unit = {
     index.clear()
   }
@@ -49,64 +37,30 @@ final class ReferenceProvider(
     index.remove(file)
   }
 
-  /**
-   * Handle EventType.OVERFLOW, meaning we lost file events for a given path.
-   *
-   * We walk up the file tree to the parent `META-INF/semanticdb` parent directory
-   * and re-index all of its `*.semanticdb` children.
-   */
-  def onOverflow(path: Path): Unit = {
-    path.semanticdbRoot match {
-      case Some(root) =>
-        onChangeDirectory(root)
-      case None =>
-    }
-  }
-  def onChangeDirectory(dir: Path): Unit = {
-    if (Files.isDirectory(dir)) {
-      Files.walkFileTree(
-        dir,
-        new SimpleFileVisitor[Path] {
-          override def visitFile(
-              file: Path,
-              attrs: BasicFileAttributes
-          ): FileVisitResult = {
-            onChange(file)
-            super.visitFile(file, attrs)
-          }
+  def onChange(docs: TextDocuments, file: Path): Unit = {
+    val count = docs.documents.foldLeft(0)(_ + _.occurrences.length)
+    val syntheticsCount = docs.documents.foldLeft(0)(_ + _.synthetics.length)
+    val bloom = BloomFilter.create(
+      Funnels.stringFunnel(StandardCharsets.UTF_8),
+      Integer.valueOf((count + syntheticsCount) * 2),
+      0.01
+    )
+    index(file) = bloom
+    docs.documents.foreach { d =>
+      d.occurrences.foreach { o =>
+        if (o.symbol.endsWith("/")) {
+          referencedPackages.put(o.symbol)
         }
-      )
-    }
-  }
-  def onChange(file: Path): Unit = {
-    if (file.isSemanticdb) {
-      val td = TextDocuments.parseFrom(Files.readAllBytes(file))
-      val count = td.documents.foldLeft(0)(_ + _.occurrences.length)
-      val syntheticsCount = td.documents.foldLeft(0)(_ + _.synthetics.length)
-      val bloom = BloomFilter.create(
-        Funnels.stringFunnel(StandardCharsets.UTF_8),
-        Integer.valueOf((count + syntheticsCount) * 2),
-        0.01
-      )
-      index(file) = bloom
-      td.documents.foreach { d =>
-        d.occurrences.foreach { o =>
-          if (o.symbol.endsWith("/")) {
-            referencedPackages.put(o.symbol)
-          }
-          bloom.put(o.symbol)
-        }
-        d.synthetics.foreach { synthetic =>
-          Synthetics.foreachSymbol(synthetic) { sym =>
-            bloom.put(sym)
-            Synthetics.Continue
-          }
+        bloom.put(o.symbol)
+      }
+      d.synthetics.foreach { synthetic =>
+        Synthetics.foreachSymbol(synthetic) { sym =>
+          bloom.put(sym)
+          Synthetics.Continue
         }
       }
-      resizeReferencedPackages()
-    } else {
-      scribe.warn(s"not semanticdb file: $file")
     }
+    resizeReferencedPackages()
   }
 
   def references(params: ReferenceParams): ReferencesResult = {
