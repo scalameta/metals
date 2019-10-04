@@ -10,6 +10,7 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.concurrent.ExecutionContextExecutorService
@@ -154,6 +155,28 @@ class Compilers(
         .asScala
     }.getOrElse(Future.successful(new CompletionList()))
 
+  def getLocation(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+      interactiveSemanticdbs: InteractiveSemanticdbs
+  ): Future[Option[Location]] =
+    withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
+      pc.getLocation(
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
+        .map(h => {
+          h.asScala
+        })
+    }.getOrElse {
+      Future.successful(Option.empty)
+    }
+
   def hover(
       params: TextDocumentPositionParams,
       token: CancelToken,
@@ -169,7 +192,9 @@ class Compilers(
           )
         )
         .asScala
-        .map(_.asScala)
+        .map(h => {
+          h.asScala
+        })
     }.getOrElse {
       Future.successful(Option.empty)
     }

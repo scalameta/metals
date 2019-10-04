@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MarkedString
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
@@ -10,6 +11,53 @@ import scala.meta.internal.jdk.CollectionConverters._
 
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
+
+  def getTree: Option[Tree] = {
+    if (params.isWhitespace) {
+      None
+    } else {
+      val unit = addCompilationUnit(
+        code = params.text(),
+        filename = params.filename(),
+        cursor = None
+      )
+      val pos = unit.position(params.offset())
+      Some(typedHoverTreeAt(pos))
+    }
+  }
+
+  def getTypeSymbol: Option[Symbol] = {
+    getTree match {
+      case Some(tree)
+          if tree.symbol.isTypeSymbol || tree.symbol.isMethod || tree.symbol.isConstructor =>
+        Some(tree.symbol)
+      case Some(tree) if tree.tpe.isDefined =>
+        Some(tree.tpe.typeSymbol)
+      case Some(tree) if tree.children.nonEmpty =>
+        Some(tree.children.head.tpe.typeSymbol)
+      case Some(tree) =>
+        val expTree = expandRangeToEnclosingApply(tree.pos)
+        if (expTree.tpe.isDefined) Some(expTree.tpe.typeSymbol)
+        else None
+      case _ => None
+    }
+  }
+
+  def getLocation: Option[Location] = {
+    val symOption = getTypeSymbol
+    symOption match {
+      case Some(symbol) =>
+        compiler.search
+          .definition(compiler.semanticdbSymbol(symbol))
+          .asScala
+          .map(loc => {
+            val (uri, range) = (loc.getUri, loc.getRange)
+            new Location(loc.getUri, loc.getRange)
+          })
+          .headOption
+      case _ => None
+    }
+  }
 
   def hover(): Option[Hover] = {
     if (params.isWhitespace) {
@@ -163,6 +211,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       pos: Position,
       range: Position
   ): Option[Hover] = {
+    tpe.typeSymbol
     if (tpe == null || tpe.isErroneous || tpe == NoType) None
     else if (symbol == null || symbol == NoSymbol || symbol.isErroneous) None
     else if (symbol.info.finalResultType.isInstanceOf[ClassInfoType]) None

@@ -412,6 +412,7 @@ class MetalsLanguageServer(
       )
       capabilities.setFoldingRangeProvider(true)
       capabilities.setDefinitionProvider(true)
+      capabilities.setTypeDefinitionProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
       capabilities.setDocumentHighlightProvider(true)
@@ -790,11 +791,10 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
-      position: TextDocumentPositionParams
+      params: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ =>
-      scribe.warn("textDocument/typeDefinition is not supported.")
-      null
+    CancelTokens.future { token =>
+      typeDefinition(params, token)
     }
 
   @JsonRequest("textDocument/implementation")
@@ -887,6 +887,36 @@ class MetalsLanguageServer(
     CancelTokens { _ =>
       referencesResult(params).locations.asJava
     }
+
+  def typeDefinition(
+      params: TextDocumentPositionParams,
+      token: CancelToken
+  ): Future[java.util.List[Location]] = {
+    compilers
+      .getLocation(params, token, interactiveSemanticdbs)
+      .flatMap {
+        case Some(loc) =>
+          Future(List(loc).asJava)
+        case None =>
+          definitionOrReferences(params, token)
+            .map(_.locations.asScala.headOption)
+            .flatMap {
+              case Some(loc) =>
+                typeDefinition(
+                  new TextDocumentPositionParams(
+                    params.getTextDocument,
+                    loc.getRange.getStart
+                  ),
+                  token
+                )
+              case _ =>
+                Future({
+                  List().map(_.asInstanceOf[Location]).asJava
+                })
+            }
+      }
+
+  }
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
@@ -1590,6 +1620,7 @@ class MetalsLanguageServer(
       val semanticDBDoc =
         semanticdbs.textDocument(source).documentIncludingStale
       (for {
+        doc <- semanticDBDoc
         doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
           source,
