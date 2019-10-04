@@ -1,16 +1,11 @@
 package scala.meta.pc;
 
-import org.eclipse.lsp4j.Location;
-import org.eclipse.lsp4j.CompletionItem;
-import org.eclipse.lsp4j.CompletionList;
-import org.eclipse.lsp4j.Hover;
-import org.eclipse.lsp4j.SignatureHelp;
+import org.eclipse.lsp4j.*;
 
 import java.nio.file.Path;
-import java.util.concurrent.CompletableFuture;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -56,6 +51,11 @@ public abstract class PresentationCompiler {
      * Returns the type of the expression at the given position along with the symbol of the referenced symbol.
      */
     public abstract CompletableFuture<Optional<Hover>> hover(OffsetParams params);
+
+    /**
+     * Returns location of the expression's type definition at the given position.
+     */
+    public abstract CompletableFuture<Optional<Location>> getLocation(OffsetParams params);
 
     /**
      * Returns the definition of the symbol at the given position.
