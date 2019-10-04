@@ -17,7 +17,7 @@ class DelegatingGlobalSymbolIndex(var underlying: GlobalSymbolIndex)
   ): Unit = {
     underlying.addSourceFile(file, sourceDirectory)
   }
-  def addSourceJar(jar: AbsolutePath): Unit = {
+  def addSourceJar(jar: AbsolutePath): scala.util.Try[Unit] = {
     underlying.addSourceJar(jar)
   }
 }

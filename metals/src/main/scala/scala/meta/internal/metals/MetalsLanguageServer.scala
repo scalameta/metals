@@ -1621,6 +1621,7 @@ class MetalsLanguageServer(
         semanticdbs.textDocument(source).documentIncludingStale
       (for {
         doc <- semanticDBDoc
+        doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
           source,
           position,

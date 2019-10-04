@@ -1,6 +1,7 @@
 package scala.meta.internal.mtags
 
 import scala.meta.io.AbsolutePath
+import scala.util.Try
 
 /**
  * An index to lookup the definition of global symbols.
@@ -79,7 +80,7 @@ trait GlobalSymbolIndex {
    *                   such as tokenization failure due to an unclosed
    *                   literal.
    */
-  def addSourceJar(jar: AbsolutePath): Unit
+  def addSourceJar(jar: AbsolutePath): Try[Unit]
 
 }
 
