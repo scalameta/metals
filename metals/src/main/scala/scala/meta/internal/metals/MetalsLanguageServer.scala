@@ -1000,10 +1000,10 @@ class MetalsLanguageServer(
   def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
-    CancelTokens.apply { _ =>
+    CancelTokens.future { _ =>
       codeLensProvider
         .findLenses(params.getTextDocument.getUri.toAbsolutePath)
-        .asJava
+        .map(_.asJava)
     }
 
   @JsonRequest("textDocument/foldingRange")

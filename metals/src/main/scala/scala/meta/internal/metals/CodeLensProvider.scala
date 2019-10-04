@@ -2,11 +2,10 @@ package scala.meta.internal.metals
 
 import java.util.Collections._
 import ch.epfl.scala.{bsp4j => b}
-import ch.epfl.scala.bsp4j.ScalaMainClass
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
-import org.eclipse.lsp4j
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.CodeLensProvider._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -21,25 +20,27 @@ final class CodeLensProvider(
     semanticdbs: Semanticdbs
 )(implicit ec: ExecutionContext) {
   // code lenses will be refreshed after compilation or when workspace gets indexed
-  def findLenses(path: AbsolutePath): Seq[l.CodeLens] = {
+  def findLenses(path: AbsolutePath): Future[Seq[l.CodeLens]] = {
     val lenses = buildTargets
       .inverseSources(path)
       .filterNot(compilations.isCurrentlyCompiling)
       .map { buildTarget =>
-        val classes = buildTargetClasses.classesOf(buildTarget)
-        val lenses = findLenses(path, buildTarget, classes)
-        lenses
+        for {
+          classes <- buildTargetClasses.classesOf(buildTarget)
+        } yield codeLenses(path, buildTarget, classes)
       }
 
-    lenses.getOrElse(Nil)
+    lenses.getOrElse(Future.successful(Nil))
   }
 
-  private def findLenses(
+  private def codeLenses(
       path: AbsolutePath,
       target: b.BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes
   ): Seq[l.CodeLens] = {
     semanticdbs.textDocument(path).documentIncludingStale match {
+      case _ if classes.isEmpty =>
+        Nil
       case Some(textDocument) =>
         val distance =
           TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
@@ -72,12 +73,12 @@ final class CodeLensProvider(
 }
 
 object CodeLensProvider {
-  import JsonParser._
+  import scala.meta.internal.metals.JsonParser._
 
   def testCommand(
       target: b.BuildTargetIdentifier,
       className: String
-  ): lsp4j.Command = {
+  ): l.Command = {
     val name = "test"
     val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
     val data = singletonList(className).toJson
@@ -87,8 +88,8 @@ object CodeLensProvider {
 
   def mainCommand(
       target: b.BuildTargetIdentifier,
-      main: ScalaMainClass
-  ): lsp4j.Command = {
+      main: b.ScalaMainClass
+  ): l.Command = {
     val name = "run"
     val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
     val data = main.toJson

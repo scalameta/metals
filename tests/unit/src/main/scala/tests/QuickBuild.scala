@@ -13,6 +13,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
+import bloop.config.Config
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
@@ -156,6 +157,17 @@ case class QuickBuild(
       )
     }
     val javaHome = Option(System.getProperty("java.home")).map(Paths.get(_))
+
+    val testFrameworks = {
+      val frameworks = libraryDependencies
+        .map(lib => lib.take(lib.lastIndexOf(":")))
+        .flatMap(QuickBuild.supportedTestFrameworks.get)
+        .toList
+
+      if (frameworks.isEmpty) None
+      else Some(Config.Test(frameworks, Config.TestOptions.empty))
+    }
+
     C.Project(
       id,
       baseDirectory,
@@ -194,7 +206,7 @@ case class QuickBuild(
       ),
       java = Some(C.Java(Nil)),
       sbt = None,
-      test = None,
+      test = testFrameworks,
       platform = Some(C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None)),
       resolution = Some(C.Resolution(resolution)),
       resources = None
@@ -203,6 +215,10 @@ case class QuickBuild(
 }
 
 object QuickBuild {
+  val supportedTestFrameworks = Map(
+    "org.scalatest::scalatest" -> Config.TestFramework.ScalaTest,
+    "com.lihaoyi::utest" -> Config.TestFramework(List("utest.runner.Framework"))
+  )
 
   /**
    * Bump up this version in case the JSON generation algorithm changes

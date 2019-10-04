@@ -2,28 +2,70 @@ package tests
 import scala.concurrent.Future
 
 object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
-  testAsync("run") {
+  check("main")(
+    """<<run>>
+      |object Main {
+      |  def main(args: Array[String]): Unit = {}
+      |}
+      |""".stripMargin
+  )
+
+  check("non-ascii")(
+    """<<run>>
+      |object :: {
+      |  def main(args: Array[String]): Unit = {}
+      |}
+      |""".stripMargin
+  )
+
+  check("test-suite-class", library = "org.scalatest::scalatest:3.0.5")(
+    """|<<test>>
+       |class Foo extends org.scalatest.FunSuite {
+       |  test("foo") {}
+       |}
+       |""".stripMargin
+  )
+
+  check("test-suite-object", library = "com.lihaoyi::utest:0.7.1")(
+    """|<<test>>
+       |object Foo extends utest.TestSuite {
+       |  val tests = utest.Tests {}
+       |}
+       |""".stripMargin
+  )
+
+  def check(name: String, library: String = "")(expected: String): Unit =
+    testAsync(name) {
+      val original = expected.replaceAll("<<.*>>", "")
+      val dependencies =
+        if (library.isEmpty) ""
+        else s""""libraryDependencies": [ "$library" ]"""
+
+      for {
+        _ <- server.initialize(
+          s"""|/metals.json
+              |{
+              |  "a": { $dependencies }
+              |}
+              |
+              |/a/src/main/scala/Foo.scala
+              |$original
+              |""".stripMargin
+        )
+        _ <- assertCodeLenses("a/src/main/scala/Foo.scala", expected)
+      } yield ()
+    }
+
+  private def assertCodeLenses(
+      relativeFile: String,
+      expected: String
+  ): Future[Unit] = {
+    val path = server.toPath(relativeFile)
     for {
-      _ <- server.initialize(
-        """|/metals.json
-           |{
-           |  "a": { }
-           |}
-           |
-           |/a/src/main/scala/Main.scala
-           |object Main {
-           |  def main(args: Array[String]): Unit = {}
-           |}""".stripMargin
-      )
-      _ <- assertCodeLenses(
-        "a/src/main/scala/Main.scala",
-        """<<run>>
-          |object Main {
-          |  def main(args: Array[String]): Unit = {}
-          |}
-          |""".stripMargin
-      )
-    } yield ()
+      _ <- server.server.compilations.compileFiles(List(path))
+      _ <- server.server.compilations.compileFiles(List(path))
+      obtained <- server.codeLenses(relativeFile)
+    } yield assertNoDiff(obtained, expected)
   }
 
   testAsync("run-many-main-files") {
@@ -127,40 +169,4 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
 
     } yield ()
   }
-
-  testAsync("non-ascii") {
-    for {
-      _ <- server.initialize(
-        """|/metals.json
-           |{
-           |  "a": { }
-           |}
-           |
-           |/a/src/main/scala/Main.scala
-           |object :: {
-           |  def main(args: Array[String]): Unit = {}
-           |}""".stripMargin
-      )
-      _ <- assertCodeLenses(
-        "a/src/main/scala/Main.scala",
-        """<<run>>
-          |object :: {
-          |  def main(args: Array[String]): Unit = {}
-          |}
-          |""".stripMargin
-      )
-    } yield ()
-  }
-
-  private def assertCodeLenses(
-      filename: String,
-      expected: String
-  ): Future[Unit] =
-    for {
-      _ <- server.didOpen(filename)
-      _ <- server.didOpen(filename) // first compilation could have not yet persisted analysis
-      obtained <- server.codeLenses(filename)
-    } yield {
-      assertNoDiff(obtained, expected)
-    }
 }
