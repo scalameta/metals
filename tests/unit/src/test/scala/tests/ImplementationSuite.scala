@@ -485,6 +485,19 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |""".stripMargin
   )
 
+  check(
+    "macro-annotation",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |@JsonCodec sealed trait Ani@@mal
+       |object Animal {
+       |  case object <<Dog>> extends Animal
+       |  case object <<Cat>> extends Animal
+       |}
+       |""".stripMargin
+  )
+
   def check(name: String, input: String): Unit = {
     val files = FileLayout.mapFromString(input)
     val (filename, edit) = files
@@ -514,8 +527,12 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
           s"""/metals.json
              |{"a":
              |  {
+             |    "compilerPlugins": [
+             |      "org.scalamacros:::paradise:2.1.1"
+             |    ],
              |    "libraryDependencies": [
-             |      "org.scalatest::scalatest:3.0.5"
+             |      "org.scalatest::scalatest:3.0.5",
+             |      "io.circe::circe-generic:0.12.0"
              |    ]
              |  }
              |}
