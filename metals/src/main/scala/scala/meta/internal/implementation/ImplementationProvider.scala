@@ -196,7 +196,7 @@ final class ImplementationProvider(
         classContext,
         implReal
       )
-      implOccurence <- findDefOccurence(implDocument, implSymbol)
+      implOccurence <- findDefOccurence(implDocument, implSymbol, source)
       range <- implOccurence.range
       revised <- distance.toRevised(range.toLSP)
     } yield new Location(file.toUri.toString, revised)
@@ -362,11 +362,20 @@ object ImplementationProvider {
 
   def findDefOccurence(
       semanticDb: TextDocument,
-      symbol: String
+      symbol: String,
+      source: AbsolutePath
   ): Option[SymbolOccurrence] = {
-    semanticDb.occurrences.find(
-      occ => occ.role.isDefinition && occ.symbol == symbol
-    )
+    def isDefinitionOccurrence(occ: SymbolOccurrence) =
+      occ.role.isDefinition && occ.symbol == symbol
+
+    semanticDb.occurrences
+      .find(isDefinitionOccurrence)
+      .orElse(
+        Mtags
+          .allToplevels(source.toInput)
+          .occurrences
+          .find(isDefinitionOccurrence)
+      )
   }
 
   def isClassLike(info: SymbolInformation) =
