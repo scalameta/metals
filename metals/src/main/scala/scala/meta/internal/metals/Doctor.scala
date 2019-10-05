@@ -9,6 +9,7 @@ import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.builds.BuildTool
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -25,6 +26,8 @@ final class Doctor(
     messages: Messages
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
+  private var bspServerName: Option[String] = None
+  private var bspServerVersion: Option[String] = None
 
   /** Returns a full HTML page for the HTTP client. */
   def problemsHtmlPage(url: String): String = {
@@ -79,7 +82,9 @@ final class Doctor(
   }
 
   /** Checks if there are any potential problems and if any, notifies the user. */
-  def check(): Unit = {
+  def check(serverName: String, serverVersion: String): Unit = {
+    bspServerName = Some(serverName)
+    bspServerVersion = Some(serverVersion)
     val summary = problemSummary
     executeReloadDoctor(summary)
     summary match {
@@ -109,6 +114,16 @@ final class Doctor(
       scala: ScalaTarget
   ): String = {
 
+    val minimumBloopVersion = "1.3.3"
+    def isUnsupportedBloopVersion =
+      bspServerVersion.exists(
+        version =>
+          !BuildTool.isCompatibleVersion(
+            minimumBloopVersion,
+            version
+          )
+      )
+
     def isMaven: Boolean = workspace.resolve("pom.xml").isFile
     def hint() =
       if (isMaven)
@@ -117,7 +132,12 @@ final class Doctor(
       else s"run 'Build import' to enable code navigation."
 
     if (!isSemanticdbEnabled) {
-      if (isSupportedScalaVersion(scalaVersion)) {
+      if (bspServerName.contains("Bloop") && isUnsupportedBloopVersion) {
+        s"""|The installed Bloop server version is ${bspServerVersion.get} while Metals requires at least Bloop version $minimumBloopVersion,
+            |To fix this problem please update your Bloop server.""".stripMargin
+      } else if (isSupportedScalaVersion(
+          scalaVersion
+        )) {
         hint().capitalize
       } else if (isSupportedScalaBinaryVersion(scalaVersion)) {
         s"Upgrade to Scala ${recommendedVersion(scalaVersion)} and " + hint()

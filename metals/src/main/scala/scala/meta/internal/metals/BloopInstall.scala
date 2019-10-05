@@ -20,7 +20,7 @@ import scala.meta.io.AbsolutePath
 import scala.util.Success
 
 /**
- * Runs `sbt/gradle bloopInstall` processes.
+ * Runs `sbt/gradle/mill/mvn bloopInstall` processes.
  *
  * Handles responsibilities like:
  * - install metals

@@ -30,7 +30,8 @@ case class BuildServerConnection(
     server: MetalsBuildServer,
     cancelables: List[Cancelable],
     initializeResult: InitializeBuildResult,
-    name: String
+    name: String,
+    version: String
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -136,7 +137,8 @@ object BuildServerConnection {
       server,
       stopListening :: onShutdown,
       result,
-      name
+      name,
+      result.getVersion()
     )
   }
 
