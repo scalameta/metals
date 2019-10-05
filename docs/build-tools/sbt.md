@@ -34,7 +34,7 @@ generate the Bloop JSON files directly from your sbt shell. This approach may
 speed up build import by avoiding Metals from starting sbt in a separate
 process.
 
-### For current snapshots
+### For latest SNAPSHOT
 
 First, install the Bloop plugin globally or inside your `project` directory:
 
