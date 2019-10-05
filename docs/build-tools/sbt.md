@@ -29,10 +29,38 @@ sbt builds without Bloop.
 > manual installation requires several independent steps that makes it harder to
 > stay up-to-date with the latest Metals version.
 
-Instead of using automatic build import, you can manually install sbt-metals and
+Instead of using automatic build import, you can manually install sbt-bloop and
 generate the Bloop JSON files directly from your sbt shell. This approach may
 speed up build import by avoiding Metals from starting sbt in a separate
 process.
+
+### For latest SNAPSHOT
+
+First, install the Bloop plugin globally or inside your `project` directory:
+
+```scala
+// One of:
+//   ~/.sbt/0.13/plugins/plugins.sbt
+//   ~/.sbt/1.0/plugins/plugins.sbt
+resolvers += Resolver.sonatypeRepo("snapshots")
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "@BLOOP_VERSION@")
+```
+
+Next, run:
+
+```
+sbt "set bloopExportJarClassifiers := Some(Set(\"source\"))" bloopInstall
+```
+
+to generate the Bloop JSON configuration files. You can also set
+`bloopExportJarClassifiers` setting inside your main build.sbt file, but using
+the above command will do it automatically for you in the current sbt session.
+
+Finally, once `bloopInstall` is finished, execute the "Connect to build server"
+command (id: `build.connect`) command to tell Metals to establish a connections
+with the Bloop build server.
+
+### For versions up to 0.7.6
 
 First, install the Bloop and Metals plugins globally
 
@@ -48,9 +76,9 @@ addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "@BLOOP_VERSION@")
 Next, run `sbt metalsEnable bloopInstall` to generate the Bloop JSON
 configuration files.
 
-Finally, once `bloopInstall` is finished, execute the "Import build" command
-(id: `build.import`) command to tell Metals to establish a connections with the
-Bloop build server.
+Finally, once `bloopInstall` is finished, execute the "Connect to build server"
+command (id: `build.connect`) command to tell Metals to establish a connections
+with the Bloop build server.
 
 For more information about sbt-bloop, consult the
 [Bloop website](https://scalacenter.github.io/bloop/docs/build-tools/sbt).
