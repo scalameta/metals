@@ -6,5 +6,5 @@ package scala.meta.internal.metals
  */
 case class MetalsExperimental(
     treeViewProvider: java.lang.Boolean = true,
-    supportsDebugging: java.lang.Boolean = true
+    debuggingProvider: java.lang.Boolean = true
 )
