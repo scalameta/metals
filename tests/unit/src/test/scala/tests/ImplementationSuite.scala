@@ -41,7 +41,7 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |trait LivingBeing
        |abstract class Ani@@mal extends LivingBeing
        |object outer{
-       |  object inner{  
+       |  object inner{
        |    class <<Dog>> extends Animal
        |    class <<Cat>> extends Animal
        |    class Unrelated extends LivingBeing
@@ -221,7 +221,7 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |}
        |/a/src/main/scala/a/B.scala
        |trait B[O] extends A[Int, O, Double]{
-       |  def <<method>>(s: Int, r: O, t: Double): Double = ??? 
+       |  def <<method>>(s: Int, r: O, t: Double): Double = ???
        |}
        |/a/src/main/scala/a/C.scala
        |class C extends B[Long] {
@@ -345,7 +345,7 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |class Parent{
        |  def m@@ethod(a : Parent.Name) = "<adult>"
        |}
-       |object Parent{ 
+       |object Parent{
        |  type Name = String
        |}
        |/a/src/main/scala/a/Names.scala
@@ -490,7 +490,8 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
-       |@JsonCodec sealed trait Ani@@mal
+       |trait Living@@Being
+       |@JsonCodec sealed trait <<Animal>> extends LivingBeing
        |object Animal {
        |  case object <<Dog>> extends Animal
        |  case object <<Cat>> extends Animal
