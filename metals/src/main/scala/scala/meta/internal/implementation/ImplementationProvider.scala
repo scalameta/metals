@@ -26,6 +26,7 @@ import scala.meta.internal.semanticdb.TypeSignature
 import scala.collection.mutable
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.util.control.NonFatal
+import scala.meta.internal.mtags.Mtags
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
@@ -90,7 +91,13 @@ final class ImplementationProvider(
         params,
         currentDocument
       )
-      symbolOccurrence <- positionOccurrence.occurrence.toIterable
+      symbolOccurrence <- {
+        lazy val mtagsOccurrence = Mtags
+          .allToplevels(source.toInput)
+          .occurrences
+          .find(_.encloses(params.getPosition))
+        positionOccurrence.occurrence.orElse(mtagsOccurrence).toIterable
+      }
     } yield {
       // 1. Search locally for symbol
       // 2. Search inside workspace
