@@ -97,7 +97,7 @@ final class DefinitionProvider(
             .allToplevels(source.toInput)
             .occurrences
             .find(
-              _.encloses(queryPosition, includeLastCharacter)
+              _.encloses(dirtyPosition.getPosition, includeLastCharacter)
             )
         )
     } yield occurrence
