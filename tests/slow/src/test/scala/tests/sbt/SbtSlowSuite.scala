@@ -417,6 +417,8 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
         """|.iml
            |
            |project/metals.sbt
+           |.bloop/*
+           |.metals/*
            |""".stripMargin
       )
     } yield ()
@@ -446,7 +448,10 @@ object SbtSlowSuite extends BaseImportSuite("sbt-import") {
       _ = assertNoDiff(
         workspace.resolve(".gitignore").readText,
         """|project/metals.sbt
-           |""".stripMargin
+
+           |.bloop/*
+           |.metals/*
+          """.stripMargin
       )
     } yield ()
   }

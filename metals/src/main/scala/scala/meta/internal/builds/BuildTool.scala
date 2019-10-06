@@ -4,6 +4,7 @@ import java.nio.file.{Files, Path}
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import scala.meta.internal.metals.MetalsEnrichments._
 
 abstract class BuildTool {
   def args(
@@ -29,6 +30,15 @@ abstract class BuildTool {
   def redirectErrorOutput: Boolean = false
 
   def executableName: String
+
+  def gitignore(workspace: AbsolutePath, paths: List[String]): Unit = {
+    val gitignore = workspace.resolve(".gitignore")
+    if (gitignore.exists) {
+      paths
+        .filterNot(gitignore.readText.contains)
+        .foreach(path => gitignore.appendText(s"\n$path"))
+    }
+  }
 
 }
 
