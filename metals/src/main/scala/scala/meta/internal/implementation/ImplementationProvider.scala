@@ -26,6 +26,7 @@ import scala.meta.internal.semanticdb.TypeSignature
 import scala.collection.mutable
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.util.control.NonFatal
+import scala.meta.internal.mtags.Mtags
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
@@ -90,7 +91,13 @@ final class ImplementationProvider(
         params,
         currentDocument
       )
-      symbolOccurrence <- positionOccurrence.occurrence.toIterable
+      symbolOccurrence <- {
+        lazy val mtagsOccurrence = Mtags
+          .allToplevels(source.toInput)
+          .occurrences
+          .find(_.encloses(params.getPosition))
+        positionOccurrence.occurrence.orElse(mtagsOccurrence).toIterable
+      }
     } yield {
       // 1. Search locally for symbol
       // 2. Search inside workspace
@@ -189,7 +196,7 @@ final class ImplementationProvider(
         classContext,
         implReal
       )
-      implOccurence <- findDefOccurence(implDocument, implSymbol)
+      implOccurence <- findDefOccurence(implDocument, implSymbol, source)
       range <- implOccurence.range
       revised <- distance.toRevised(range.toLSP)
     } yield new Location(file.toUri.toString, revised)
@@ -355,11 +362,20 @@ object ImplementationProvider {
 
   def findDefOccurence(
       semanticDb: TextDocument,
-      symbol: String
+      symbol: String,
+      source: AbsolutePath
   ): Option[SymbolOccurrence] = {
-    semanticDb.occurrences.find(
-      occ => occ.role.isDefinition && occ.symbol == symbol
-    )
+    def isDefinitionOccurrence(occ: SymbolOccurrence) =
+      occ.role.isDefinition && occ.symbol == symbol
+
+    semanticDb.occurrences
+      .find(isDefinitionOccurrence)
+      .orElse(
+        Mtags
+          .allToplevels(source.toInput)
+          .occurrences
+          .find(isDefinitionOccurrence)
+      )
   }
 
   def isClassLike(info: SymbolInformation) =

@@ -41,7 +41,7 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |trait LivingBeing
        |abstract class Ani@@mal extends LivingBeing
        |object outer{
-       |  object inner{  
+       |  object inner{
        |    class <<Dog>> extends Animal
        |    class <<Cat>> extends Animal
        |    class Unrelated extends LivingBeing
@@ -221,7 +221,7 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |}
        |/a/src/main/scala/a/B.scala
        |trait B[O] extends A[Int, O, Double]{
-       |  def <<method>>(s: Int, r: O, t: Double): Double = ??? 
+       |  def <<method>>(s: Int, r: O, t: Double): Double = ???
        |}
        |/a/src/main/scala/a/C.scala
        |class C extends B[Long] {
@@ -345,7 +345,7 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |class Parent{
        |  def m@@ethod(a : Parent.Name) = "<adult>"
        |}
-       |object Parent{ 
+       |object Parent{
        |  type Name = String
        |}
        |/a/src/main/scala/a/Names.scala
@@ -485,6 +485,20 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
        |""".stripMargin
   )
 
+  check(
+    "macro-annotation",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |trait Living@@Being
+       |@JsonCodec sealed trait <<Animal>> extends LivingBeing
+       |object Animal {
+       |  case object <<Dog>> extends Animal
+       |  case object <<Cat>> extends Animal
+       |}
+       |""".stripMargin
+  )
+
   def check(name: String, input: String): Unit = {
     val files = FileLayout.mapFromString(input)
     val (filename, edit) = files
@@ -514,8 +528,12 @@ object ImplementationSuite extends BaseSlowSuite("implementation") {
           s"""/metals.json
              |{"a":
              |  {
+             |    "compilerPlugins": [
+             |      "org.scalamacros:::paradise:2.1.1"
+             |    ],
              |    "libraryDependencies": [
-             |      "org.scalatest::scalatest:3.0.5"
+             |      "org.scalatest::scalatest:3.0.5",
+             |      "io.circe::circe-generic:0.12.0"
              |    ]
              |  }
              |}

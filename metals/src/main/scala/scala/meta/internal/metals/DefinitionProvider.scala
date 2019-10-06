@@ -88,10 +88,10 @@ final class DefinitionProvider(
     // Find matching symbol occurrence in SemanticDB snapshot
     val occurrence = for {
       queryPosition <- snapshotPosition.toPosition(dirtyPosition.getPosition)
-      occurrence <- snapshot.occurrences.find(
-        _.encloses(queryPosition, includeLastCharacter)
-      )
+      occurrence <- snapshot.occurrences
+        .find(_.encloses(queryPosition, includeLastCharacter))
     } yield occurrence
+
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
   }
 
