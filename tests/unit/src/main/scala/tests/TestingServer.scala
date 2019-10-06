@@ -736,6 +736,7 @@ final class TestingServer(
     val input = path.toInputFromBuffers(buffers)
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
+    var last = List[String]()
     input.tokenize.get.foreach { token =>
       val params = token.toPositionParams(identifier)
       val definition = server.definitionOrReferences(params).asJava.get()
@@ -756,12 +757,14 @@ final class TestingServer(
           else s"$filename:${location.getRange.getStart.getLine}"
         }
       }
+      last = symbols
       val occurrence = if (token.isIdentifier) {
         if (definition.symbol.isPackage) None // ignore packages
         else if (symbols.isEmpty) Some("<no symbol>")
         else Some(Symbols.Multi(symbols.sorted))
       } else {
         if (symbols.isEmpty) None // OK, expected
+        else if (last == symbols) None //OK, expected
         else Some(s"unexpected: ${Symbols.Multi(symbols.sorted)}")
       }
       occurrences ++= occurrence.map { symbol =>

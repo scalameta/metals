@@ -29,8 +29,7 @@ final class DocumentHighlightProvider(
       positionOccurrence = definitionProvider.positionOccurrence(
         source,
         params,
-        doc,
-        includeLastCharacter = true
+        doc
       )
       occ <- positionOccurrence.occurrence.toList
       alternatives = findAllAlternatives(doc, occ)
