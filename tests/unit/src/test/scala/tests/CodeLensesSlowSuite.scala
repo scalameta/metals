@@ -2,7 +2,7 @@ package tests
 import scala.concurrent.Future
 
 object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
-  check("main")(
+  check("empty-package")(
     """<<run>>
       |object Main {
       |  def main(args: Array[String]): Unit = {}
@@ -10,8 +10,25 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
       |""".stripMargin
   )
 
+  check("class")(
+    """class Main {
+      |  def main(args: Array[String]): Unit = {}
+      |}
+      |""".stripMargin
+  )
+
+  check("main")(
+    """package foo
+      |<<run>>
+      |object Main {
+      |  def main(args: Array[String]): Unit = {}
+      |}
+      |""".stripMargin
+  )
+
   check("non-ascii")(
-    """<<run>>
+    """package foo.bar
+      |<<run>>
       |object :: {
       |  def main(args: Array[String]): Unit = {}
       |}
@@ -19,7 +36,8 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
   )
 
   check("test-suite-class", library = "org.scalatest::scalatest:3.0.5")(
-    """|<<test>>
+    """|package foo.bar
+       |<<test>>
        |class Foo extends org.scalatest.FunSuite {
        |  test("foo") {}
        |}
@@ -27,46 +45,13 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
   )
 
   check("test-suite-object", library = "com.lihaoyi::utest:0.7.1")(
-    """|<<test>>
+    """|package foo.bar
+       |<<test>>
        |object Foo extends utest.TestSuite {
        |  val tests = utest.Tests {}
        |}
        |""".stripMargin
   )
-
-  def check(name: String, library: String = "")(expected: String): Unit =
-    testAsync(name) {
-      val original = expected.replaceAll("<<.*>>", "")
-      val dependencies =
-        if (library.isEmpty) ""
-        else s""""libraryDependencies": [ "$library" ]"""
-
-      for {
-        _ <- server.initialize(
-          s"""|/metals.json
-              |{
-              |  "a": { $dependencies }
-              |}
-              |
-              |/a/src/main/scala/Foo.scala
-              |$original
-              |""".stripMargin
-        )
-        _ <- assertCodeLenses("a/src/main/scala/Foo.scala", expected)
-      } yield ()
-    }
-
-  private def assertCodeLenses(
-      relativeFile: String,
-      expected: String
-  ): Future[Unit] = {
-    val path = server.toPath(relativeFile)
-    for {
-      _ <- server.server.compilations.compileFiles(List(path))
-      _ <- server.server.compilations.compileFiles(List(path))
-      obtained <- server.codeLenses(relativeFile)
-    } yield assertNoDiff(obtained, expected)
-  }
 
   testAsync("run-many-main-files") {
     for {
@@ -77,11 +62,13 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
            |}
            |
            |/a/src/main/scala/Foo.scala
+           |package foo.bar
            |object Foo {
            |  def main(args: Array[String]): Unit = {}
            |}
            |
            |/a/src/main/scala/Bar.scala
+           |package foo.bar
            |object Bar {
            |  def main(args: Array[String]): Unit = {}
            |}
@@ -90,19 +77,21 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
       _ <- server.didOpen("a/src/main/scala/Foo.scala") // compile `a` to populate its cache
       _ <- assertCodeLenses(
         "a/src/main/scala/Foo.scala",
-        """<<run>>
-          |object Foo {
-          |  def main(args: Array[String]): Unit = {}
-          |}
-          |""".stripMargin
+        """|package foo.bar
+           |<<run>>
+           |object Foo {
+           |  def main(args: Array[String]): Unit = {}
+           |}
+           |""".stripMargin
       )
       _ <- assertCodeLenses(
         "a/src/main/scala/Bar.scala",
-        """<<run>>
-          |object Bar {
-          |  def main(args: Array[String]): Unit = {}
-          |}
-          |""".stripMargin
+        """|package foo.bar
+           |<<run>>
+           |object Bar {
+           |  def main(args: Array[String]): Unit = {}
+           |}
+           |""".stripMargin
       )
     } yield ()
   }
@@ -168,5 +157,52 @@ object CodeLensesSlowSuite extends BaseSlowSuite("codeLenses") {
       )
 
     } yield ()
+  }
+
+  def check(name: String, library: String = "")(expected: String): Unit = {
+    testAsync(name) {
+      val original = expected.replaceAll("<<.*>>\\W", "")
+
+      val sourceFile = {
+        val file = """package (.*).*""".r
+          .findFirstMatchIn(original)
+          .map(_.group(1))
+          .map(packageName => packageName.replaceAll("\\.", "/"))
+          .map(packageDir => s"$packageDir/Foo.scala")
+          .getOrElse("Foo.scala")
+
+        s"a/src/main/scala/$file"
+      }
+
+      val dependencies =
+        if (library.isEmpty) ""
+        else s""""libraryDependencies": [ "$library" ]"""
+
+      for {
+        _ <- server.initialize(
+          s"""|/metals.json
+              |{
+              |  "a": { $dependencies }
+              |}
+              |
+              |/$sourceFile
+              |$original
+              |""".stripMargin
+        )
+        _ <- assertCodeLenses(sourceFile, expected)
+      } yield ()
+    }
+  }
+
+  private def assertCodeLenses(
+      relativeFile: String,
+      expected: String
+  ): Future[Unit] = {
+    val path = server.toPath(relativeFile)
+    for {
+      _ <- server.server.compilations.compileFiles(List(path))
+      _ <- server.server.compilations.compileFiles(List(path))
+      obtained <- server.codeLenses(relativeFile)
+    } yield assertNoDiff(obtained, expected)
   }
 }
