@@ -13,13 +13,15 @@ object ScalaVersions {
   private val _isSupportedScalaVersion: Set[String] =
     BuildInfo.supportedScalaVersions.toSet
   def isSupportedScalaVersion(version: String): Boolean =
-    _isSupportedScalaVersion(dropVendorSuffix(version))
+    _isSupportedScalaVersion(dropVendorSuffix(version)) || isDotty(version)
   def isDeprecatedScalaVersion(version: String): Boolean =
     _isDeprecatedScalaVersion(dropVendorSuffix(version))
   def isSupportedScalaBinaryVersion(scalaVersion: String): Boolean =
     Set("2.13", "2.12", "2.11").exists { binaryVersion =>
       scalaVersion.startsWith(binaryVersion)
     }
+
+  def isDotty(version: String) = version.startsWith("0.")
 
   val isLatestScalaVersion: Set[String] =
     Set(BuildInfo.scala213, BuildInfo.scala212, BuildInfo.scala211)

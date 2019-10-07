@@ -29,7 +29,6 @@ inThisBuild(
     addCompilerPlugin(
       "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
     ),
-    scalacOptions += s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -160,7 +159,8 @@ lazy val V = new {
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
-    nonDeprecatedScalaVersions ++ deprecatedScalaVersions
+    nonDeprecatedScalaVersions ++ deprecatedScalaVersions ++ dottyVersions
+  def dottyVersions = Seq("0.21.0-bin-20191213-3130729-NIGHTLY")
   def deprecatedScalaVersions = Seq("2.12.8", "2.12.9", scala211)
   def nonDeprecatedScalaVersions = Seq("2.13.0", scala213, scala212)
   def guava = "com.google.guava" % "guava" % "28.2-jre"
@@ -191,6 +191,20 @@ val genyVersion = Def.setting {
   if (scalaVersion.value.startsWith("2.11")) "0.1.6"
   else "0.4.2"
 }
+
+lazy val dtags = project
+  .settings(
+    scalaVersion := "0.21.0-bin-20191213-3130729-NIGHTLY",
+    moduleName := "dtags",
+    libraryDependencies := List(
+      "ch.epfl.lamp" % "dotty-compiler_0.21" % "0.21.0-bin-20191213-3130729-NIGHTLY",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8"
+    ),
+    scalacOptions ++= Seq(
+      "-language:implicitConversions"
+    )
+  )
+  .dependsOn(interfaces)
 
 lazy val mtags = project
   .settings(

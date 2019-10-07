@@ -1,5 +1,7 @@
 package scala.meta.pc;
 
+import java.net.URI;
+
 /**
  * Parameters for a presentation compiler request at a given offset in a single source file.
  */

@@ -62,7 +62,11 @@ final class Embedded(
     val classloader = presentationCompilers.getOrElseUpdate(
       ScalaVersions.dropVendorSuffix(info.getScalaVersion),
       statusBar.trackSlowTask("Preparing presentation compiler") {
-        Embedded.newPresentationCompilerClassLoader(info, scalac)
+        if (ScalaVersions.isDotty(info.getScalaVersion())) {
+          Embedded.newDottyPresentationCompilerClassLoader(info, scalac)
+        } else {
+          Embedded.newPresentationCompilerClassLoader(info, scalac)
+        }
       }
     )
     serviceLoader(
@@ -115,8 +119,7 @@ object Embedded {
       s"mdoc_${scalaBinaryVersion}",
       BuildInfo.mdocVersion
     )
-    val settings = fetchSettings(mdoc, scalaVersion)
-    val jars = fetchSettings(mdoc, scalaVersion).fetch()
+    val jars = fetchSettings(mdoc, Some(scalaVersion)).fetch()
     val parent =
       new MdocClassLoader(this.getClass.getClassLoader)
     val urls = jars.iterator.asScala.map(_.toURI().toURL()).toArray
@@ -125,24 +128,30 @@ object Embedded {
 
   def fetchSettings(
       dep: Dependency,
-      scalaVersion: String
+      scalaVersionOpt: Option[String]
   ): Fetch = {
-    val resolutionParams = ResolutionParams
-      .create()
-      .forceVersions(
-        List(
-          Dependency.of("org.scala-lang", "scala-library", scalaVersion),
-          Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
-          Dependency.of("org.scala-lang", "scala-reflect", scalaVersion)
-        ).map(d => (d.getModule, d.getVersion)).toMap.asJava
-      )
 
-    Fetch
+    val resolutionParams = scalaVersionOpt.map { scalaVersion =>
+      ResolutionParams
+        .create()
+        .forceVersions(
+          List(
+            Dependency.of("org.scala-lang", "scala-library", scalaVersion),
+            Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
+            Dependency.of("org.scala-lang", "scala-reflect", scalaVersion)
+          ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+        )
+    }
+
+    val fetch = Fetch
       .create()
       .addRepositories(repositories: _*)
       .withDependencies(dep)
-      .withResolutionParams(resolutionParams)
       .withMainArtifacts()
+
+    resolutionParams.fold(fetch) { params =>
+      fetch.withResolutionParams(params)
+    }
   }
 
   def newPresentationCompilerClassLoader(
@@ -166,13 +175,33 @@ object Embedded {
     val dep =
       if (semanticdbJars.isEmpty) pc
       else pc.withTransitive(false)
-    val jars = fetchSettings(dep, info.getScalaVersion())
+    val jars = fetchSettings(dep, Some(info.getScalaVersion()))
       .fetch()
       .asScala
       .map(_.toPath)
 
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
     val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
+    val allURLs = allJars.map(_.toUri.toURL).toArray
+    // Share classloader for a subset of types.
+    val parent =
+      new PresentationCompilerClassLoader(this.getClass.getClassLoader)
+    new URLClassLoader(allURLs, parent)
+  }
+
+  def newDottyPresentationCompilerClassLoader(
+      info: ScalaBuildTarget,
+      scalac: ScalacOptionsItem
+  ): URLClassLoader = {
+    val pc = Dependency.of(
+      "org.scalameta",
+      s"dtags_0.21", // TODO ${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}
+      BuildInfo.metalsVersion
+    )
+    val jars =
+      fetchSettings(pc, None).fetch().asScala.map(_.toPath)
+    val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
+    val allJars = jars ++ scalaJars
     val allURLs = allJars.map(_.toUri.toURL).toArray
     // Share classloader for a subset of types.
     val parent =
