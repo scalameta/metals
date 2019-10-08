@@ -74,8 +74,7 @@ final class DefinitionProvider(
   def positionOccurrence(
       source: AbsolutePath,
       dirtyPosition: TextDocumentPositionParams,
-      snapshot: TextDocument,
-      includeLastCharacter: Boolean = false
+      snapshot: TextDocument
   ): ResolvedSymbolOccurrence = {
     // Convert dirty buffer position to snapshot position in "source"
     val sourceDistance =
@@ -89,7 +88,7 @@ final class DefinitionProvider(
     val occurrence = for {
       queryPosition <- snapshotPosition.toPosition(dirtyPosition.getPosition)
       occurrence <- snapshot.occurrences
-        .find(_.encloses(queryPosition, includeLastCharacter))
+        .find(_.encloses(queryPosition, true))
     } yield occurrence
 
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
