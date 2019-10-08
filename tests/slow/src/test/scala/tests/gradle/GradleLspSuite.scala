@@ -1,11 +1,8 @@
 package tests.gradle
 
-import scala.concurrent.Future
 import scala.meta.internal.builds.GradleDigest
-import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.GradleBuildTool
 import tests.BaseImportSuite
@@ -225,79 +222,6 @@ object GradleLspSuite extends BaseImportSuite("gradle-import") {
         |    implementation 'org.scala-lang:scala-library:$version'
         |}
         |""".stripMargin
-  }
-
-  testAsync("different-scala") {
-    cleanWorkspace()
-    for {
-      _ <- server.initialize(
-        s"""
-           |/build.gradle
-           |${projectWithVersion("2.12.7")}
-           |/a/build.gradle
-           |${projectWithVersion("2.12.4")}
-           |/b/build.gradle
-           |${projectWithVersion("2.12.3")}
-           |/c/build.gradle
-           |${projectWithVersion("2.11.12")}
-           |/d/build.gradle
-           |${projectWithVersion("2.11.8")}
-           |/e/build.gradle
-           |${projectWithVersion("2.10.7")}
-           |/f/build.gradle
-           |${projectWithVersion(V.scala212)}
-           |/g/build.gradle
-           |${projectWithVersion(V.scala213)}
-           |/settings.gradle
-           |include 'a'
-           |include 'b'
-           |include 'c'
-           |include 'd'
-           |include 'e'
-           |include 'f'
-           |include 'g'
-           |/a/src/main/scala/a/A.scala
-           |package a
-           |object A // 2.12.4
-           |/b/src/main/scala/a/A.scala
-           |package a // 2.12.3
-           |object A
-           |/c/src/main/scala/a/A.scala
-           |package a
-           |object A // 2.11.12
-           |/d/src/main/scala/a/A.scala
-           |package a
-           |object A // 2.11.8
-           |/e/src/main/scala/a/A.scala
-           |package a
-           |object A // 2.10.7
-           |/f/src/main/scala/a/A.scala
-           |package a
-           |object A // ${V.scala212}
-           |/g/src/main/scala/a/A.scala
-           |package a
-           |object A // ${V.scala213}
-           |""".stripMargin,
-        expectError = true
-      )
-      _ = assertStatus(_.isInstalled)
-      _ = assertNoDiff(
-        client.messageRequests.peekLast(),
-        // only 3 projects since no empty test targets are created for gradle
-        CheckDoctor.multipleMisconfiguredProjects(4)
-      )
-      _ <- Future.sequence(
-        ('a' to 'f')
-          .map(project => s"$project/src/main/scala/a/A.scala")
-          .map(file => server.didOpen(file))
-      )
-      _ = assertNoDiff(client.workspaceDiagnostics, "")
-      _ = {
-        val expected = ClientCommands.ReloadDoctor.id :: ClientCommands.RunDoctor.id :: Nil
-        val actual = client.workspaceClientCommands
-        assert(actual.startsWith(expected))
-      }
-    } yield ()
   }
 
   testAsync("fatal-warnings") {
