@@ -116,6 +116,16 @@ class BaseSuite extends TestSuite {
   override def utestAfterAll(): Unit = afterAll()
 
   override def utestFormatter: Formatter = new Formatter {
+    import utest.framework._
+    import utest.ufansi
+    override def formatSummary(
+        topLevelName: String,
+        results: HTree[String, Result]
+    ): Option[ufansi.Str] = {
+      val result = super.formatSummary(topLevelName, results)
+      result.foreach(println)
+      result
+    }
     override def exceptionMsgColor: Attrs = Attrs.Empty
     override def exceptionStackFrameHighlighter(
         s: StackTraceElement
