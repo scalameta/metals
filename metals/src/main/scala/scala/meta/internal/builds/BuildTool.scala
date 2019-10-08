@@ -34,8 +34,9 @@ abstract class BuildTool {
   def gitignore(workspace: AbsolutePath, paths: List[String]): Unit = {
     val gitignore = workspace.resolve(".gitignore")
     if (gitignore.exists) {
+      val gitignoreContent = gitignore.readText
       paths
-        .filterNot(gitignore.readText.contains)
+        .filterNot(gitignoreContent.contains)
         .foreach(path => gitignore.appendText(s"\n$path"))
     }
   }
