@@ -72,7 +72,6 @@ final class Warnings(
             s"$doesntWorkBecause the SemanticDB file '$targetfile' doesn't exist. " +
               s"There can be many reasons for this error. "
           )
-          statusBar.addMessage(s"${icons.alert}No SemanticDB")
         }
       }
     }
