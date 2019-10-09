@@ -427,8 +427,8 @@ def publishMtags =
       crossPublishLocal(V.scala211)
         .dependsOn(crossPublishLocal(V.scala213))
     )
-lazy val slow = project
-  .in(file("tests/slow"))
+lazy val lsp = project
+  .in(file("tests/lsp"))
   .settings(
     testSettings,
     testOnly.in(Test) := testOnly

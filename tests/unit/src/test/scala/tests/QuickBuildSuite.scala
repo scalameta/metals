@@ -1,6 +1,6 @@
 package tests
 
-object QuickBuildSuite extends BaseSlowSuite("quick-build") {
+object QuickBuildSuite extends BaseLspSuite("quick-build") {
   testAsync("basic") {
     cleanCompileCache("b")
     for {

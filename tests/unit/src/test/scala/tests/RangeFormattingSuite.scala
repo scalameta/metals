@@ -1,6 +1,6 @@
 package tests
 
-object RangeFormattingSuite extends BaseSlowSuite("rangeFormatting") {
+object RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
 
   check(
     "lines",
