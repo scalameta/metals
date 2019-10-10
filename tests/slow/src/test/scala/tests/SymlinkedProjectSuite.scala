@@ -3,7 +3,7 @@ import java.nio.file.Files
 import java.util.UUID
 import scala.meta.io.AbsolutePath
 
-object SymlinkedProjectSuite extends BaseSlowSuite("symlinked-project") {
+object SymlinkedProjectSuite extends BaseLspSuite("symlinked-project") {
   testAsync("definitions-from-other-file") {
     for {
       _ <- server.initialize(

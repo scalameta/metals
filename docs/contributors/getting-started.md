@@ -66,12 +66,12 @@ sbt
 > test
 ```
 
-### Manually testing a `SlowSuite`
+### Manually testing a `LspSuite`
 
-Every test suite that extends `SlowSuite` generates a workspace directory under
-`tests/unit/target/e2e/$suitename/$testname`. To debug why a `SlowSuite` might
+Every test suite that extends `LspSuite` generates a workspace directory under
+`tests/unit/target/e2e/$suitename/$testname`. To debug why a `LspSuite` might
 be failing, run the test once and then open it directly in your editor. For
-example, for the test case `"deprecated-scala"` in `WarningsSlowSuite` run the
+example, for the test case `"deprecated-scala"` in `WarningsLspSuite` run the
 following command:
 
 ```

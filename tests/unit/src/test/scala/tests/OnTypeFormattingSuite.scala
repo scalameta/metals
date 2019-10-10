@@ -1,6 +1,6 @@
 package tests
 
-object OnTypeFormattingSuite extends BaseSlowSuite("onTypeFormatting") {
+object OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
 
   check(
     "correct-string",

@@ -1,7 +1,7 @@
 package tests
 import scala.concurrent.Future
 
-object ImplementationSuite extends BaseSlowSuite("implementation") {
+object ImplementationSuite extends BaseLspSuite("implementation") {
 
   check(
     "basic",

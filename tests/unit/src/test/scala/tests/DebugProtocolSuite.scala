@@ -6,7 +6,7 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import scala.meta.internal.metals.MetalsEnrichments._
 
-object DebugProtocolSuite extends BaseSlowSuite("debug-protocol") {
+object DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
   testAsync("start") {
     for {
       _ <- server.initialize(
