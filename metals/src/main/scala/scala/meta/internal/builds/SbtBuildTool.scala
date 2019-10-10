@@ -84,6 +84,7 @@ case class SbtBuildTool(version: String) extends BuildTool {
       workspace: AbsolutePath,
       config: MetalsServerConfig
   ): Unit = {
+    if (!config.bloopGenerateSbt) return
     val bytes = SbtBuildTool
       .sbtPlugin(config.bloopSbtVersion)
       .getBytes(StandardCharsets.UTF_8)
