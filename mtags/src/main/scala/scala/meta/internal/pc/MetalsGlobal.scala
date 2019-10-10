@@ -351,7 +351,7 @@ class MetalsGlobal(
     }
   }
 
-  // NOTE(olafur): see compiler plugin test cases in `CompletionSlowSuite`
+  // NOTE(olafur): see compiler plugin test cases in `CompletionLspSuite`
   // why this override is necessary. Compiler plugins like kind-projector
   // use `TypingTransformer`, which produces contexts that break completions.
   // We whitelist a set of known compiler phases which `addContext` was designed

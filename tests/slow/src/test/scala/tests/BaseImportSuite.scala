@@ -47,7 +47,7 @@ abstract class BaseImportSuite(suiteName: String)
       maxDuration: Duration
   )(run: => Future[Unit]): Unit = {
     if (isWindows) {
-      // Skip SbtSlowSuite on Windows because they're flaky due to likely the small
+      // Skip SbtLspSuite on Windows because they're flaky due to likely the small
       // available memory on Appveyor CI machines.
       ignore(name)(())
     } else {
