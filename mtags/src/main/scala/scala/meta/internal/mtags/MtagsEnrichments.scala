@@ -24,6 +24,7 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.trees.Origin
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
@@ -34,6 +35,7 @@ import scala.util.control.NonFatal
 import scala.{meta => m}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import scala.meta.io.RelativePath
+import java.net.URI
 
 object MtagsEnrichments extends MtagsEnrichments
 trait MtagsEnrichments {
@@ -120,6 +122,20 @@ trait MtagsEnrichments {
   }
 
   implicit class XtensionAbsolutePathMetals(file: AbsolutePath) {
+
+    // Using [[Files.isSymbolicLink]] is not enough.
+    // It will be false when one of the parents is a symlink (e.g. /dir/link/file.txt)
+    def dealias: AbsolutePath = {
+      if (file.exists) { // cannot dealias non-existing path
+        AbsolutePath(file.toNIO.toRealPath())
+      } else {
+        file
+      }
+    }
+
+    def readText: String = {
+      FileIO.slurp(file, StandardCharsets.UTF_8)
+    }
 
     def filename: String = file.toNIO.filename
 
@@ -486,5 +502,66 @@ trait MtagsEnrichments {
       else if (path.isFile) Generator(path)
       else Generator()
     }
+  }
+
+  implicit class XtensionToken(token: m.Token) {
+    def isWhiteSpaceOrComment: Boolean = token match {
+      case _: m.Token.Space | _: m.Token.Tab | _: m.Token.CR | _: m.Token.LF |
+          _: m.Token.LFLF | _: m.Token.FF | _: m.Token.Comment |
+          _: m.Token.BOF | _: m.Token.EOF =>
+        true
+      case _ => false
+    }
+  }
+
+  implicit class XtensionStringMtags(value: String) {
+
+    def toAbsolutePath: AbsolutePath =
+      AbsolutePath(Paths.get(URI.create(value.stripPrefix("metals:")))).dealias
+    def lastIndexBetween(
+        char: Char,
+        lowerBound: Int = 0,
+        upperBound: Int = value.size
+    ): Int = {
+      var index = upperBound
+      while (index > lowerBound && value(index) != char) {
+        index -= 1
+      }
+      index
+    }
+  }
+
+  implicit class XtensionPositionLspInverse(pos: l.Position) {
+    def toMeta(input: m.Input): m.Position = {
+      m.Position.Range(
+        input,
+        pos.getLine,
+        pos.getCharacter,
+        pos.getLine,
+        pos.getCharacter
+      )
+    }
+  }
+
+  implicit class XtensionTreeTokenStream(tree: m.Tree) {
+    def leadingTokens: Iterator[m.Token] = tree.origin match {
+      case Origin.Parsed(input, _, pos) =>
+        val tokens = input.tokenize.get
+        tokens.slice(0, pos.start - 1).reverseIterator
+      case _ => Iterator.empty
+    }
+
+    def trailingTokens: Iterator[m.Token] = tree.origin match {
+      case Origin.Parsed(input, _, pos) =>
+        val tokens = input.tokenize.get
+        tokens.slice(pos.end + 1, tokens.length).iterator
+      case _ => Iterator.empty
+    }
+
+    def findFirstLeading(predicate: m.Token => Boolean): Option[m.Token] =
+      leadingTokens.find(predicate)
+
+    def findFirstTrailing(predicate: m.Token => Boolean): Option[m.Token] =
+      trailingTokens.find(predicate)
   }
 }

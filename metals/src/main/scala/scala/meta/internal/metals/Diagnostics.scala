@@ -82,12 +82,21 @@ final class Diagnostics(
       pos: m.Position,
       shortMessage: String
   ): Unit = {
-    syntaxError(path) = new Diagnostic(
-      pos.toLSP,
-      shortMessage,
-      DiagnosticSeverity.Error,
-      "scalameta"
+    pprint.log(path)
+    pprint.log(shortMessage)
+    onSyntaxError(
+      path,
+      new Diagnostic(
+        pos.toLSP,
+        shortMessage,
+        DiagnosticSeverity.Error,
+        "scalameta"
+      )
     )
+  }
+
+  def onSyntaxError(path: AbsolutePath, d: Diagnostic): Unit = {
+    syntaxError(path) = d
     publishDiagnostics(path)
   }
 

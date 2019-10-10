@@ -17,7 +17,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     } else {
       val unit = addCompilationUnit(
         code = params.text(),
-        filename = params.filename(),
+        filename = params.uri().toString(),
         cursor = None
       )
       val pos = unit.position(params.offset())

@@ -10,6 +10,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 
 case class InputFile(
     file: AbsolutePath,
+    code: String,
     sourceDirectory: AbsolutePath,
     semanticdbRelativePath: RelativePath
 ) {

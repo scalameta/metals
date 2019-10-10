@@ -218,7 +218,7 @@ final class ReferenceProvider(
           .textDocument(scalaPath)
           .documentIncludingStale
           .iterator
-        semanticdbDistance = TokenEditDistance.fromBuffer(
+        semanticdbDistance = Buffers.tokenEditDistance(
           scalaPath,
           semanticdb.text,
           buffers

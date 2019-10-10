@@ -7,7 +7,7 @@ import org.eclipse.{lsp4j => l}
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.KwMatch
@@ -178,7 +178,13 @@ final class FoldingRangeExtractor(
           endToken <- lastCase.findFirstTrailing(_.is[Token.RightBrace])
           tryPos = Position
             .Range(tree.pos.input, startToken.pos.end, endToken.pos.end)
-        } yield tryPos
+        } yield {
+          Position.Range(
+            tree.pos.input,
+            startToken.pos.end,
+            endToken.pos.end
+          )
+        }
 
       case For(endPosition) =>
         val start = tree.pos.start + 3

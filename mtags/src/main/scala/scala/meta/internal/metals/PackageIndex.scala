@@ -13,13 +13,13 @@ import java.util.logging.Logger
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.util.control.NonFatal
 import scala.util.Properties
 import java.nio.file.FileSystems
 import java.net.URI
+import scala.meta.internal.jdk.CollectionConverters._
 
 /**
  * An index to lookup classfiles contained in a given classpath.

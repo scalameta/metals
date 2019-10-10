@@ -11,6 +11,7 @@ import scala.meta.pc.CancelToken
 import tests.BaseCompletionSuite
 import scala.meta.internal.pc.InterruptException
 import munit.Location
+import java.net.URI
 
 class CancelCompletionSuite extends BaseCompletionSuite {
 
@@ -39,7 +40,15 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       val (code, offset) = params(query)
       val token = new AlwaysCancelToken
       try {
-        pc.complete(CompilerOffsetParams("A.scala", code, offset, token)).get()
+        pc.complete(
+            CompilerOffsetParams(
+              URI.create("file://A.scala"),
+              code,
+              offset,
+              token
+            )
+          )
+          .get()
         fail("Expected completion request to be interrupted")
       } catch {
         case InterruptException() =>
@@ -49,7 +58,12 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       // assert that regular completion works as expected.
       val completion = pc
         .complete(
-          CompilerOffsetParams("A.scala", code, offset, EmptyCancelToken)
+          CompilerOffsetParams(
+            URI.create("file://A.scala"),
+            code,
+            offset,
+            EmptyCancelToken
+          )
         )
         .get()
       val obtained = completion.getItems.asScala

@@ -20,6 +20,7 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import tests.Library
 import tests.TestingSymbolSearch
+import java.net.URI
 
 @State(Scope.Benchmark)
 abstract class CompletionBench {
@@ -121,7 +122,14 @@ abstract class CompletionBench {
 
   def scopeComplete(pc: PresentationCompiler): CompletionList = {
     val code = "import Java\n"
-    pc.complete(CompilerOffsetParams("A.scala", code, code.length - 2)).get()
+    pc.complete(
+        CompilerOffsetParams(
+          URI.create("file://A.scala"),
+          code,
+          code.length - 2
+        )
+      )
+      .get()
   }
 }
 

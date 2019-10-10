@@ -6,6 +6,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.TextEdits
 import munit.Location
+import java.nio.file.Paths
 
 class AutoImportsSuite extends BaseCodeActionSuite {
 
@@ -134,7 +135,12 @@ class AutoImportsSuite extends BaseCodeActionSuite {
     val result = pc
       .autoImports(
         symbol,
-        CompilerOffsetParams("file:/" + filename, code, offset, cancelToken)
+        CompilerOffsetParams(
+          Paths.get(filename).toUri(),
+          code,
+          offset,
+          cancelToken
+        )
       )
       .get()
     result.asScala.toList

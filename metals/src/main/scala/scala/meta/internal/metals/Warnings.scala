@@ -33,9 +33,8 @@ final class Warnings(
     val isReported: Option[Unit] = for {
       buildTarget <- buildTargets.inverseSources(path)
       info <- buildTargets.scalaTarget(buildTarget)
-      scalacOptions <- buildTargets.scalacOptions(buildTarget)
     } yield {
-      if (!scalacOptions.isSemanticdbEnabled) {
+      if (!info.isSemanticdbEnabled) {
         if (isSupportedScalaVersion(info.scalaVersion)) {
           logger.error(
             s"$doesntWorkBecause the SemanticDB compiler plugin is not enabled for the build target ${info.displayName}."
@@ -51,7 +50,7 @@ final class Warnings(
           )
         }
       } else {
-        if (!scalacOptions.isSourcerootDeclared) {
+        if (!info.isSourcerootDeclared) {
           val option = workspace.sourcerootOption
           logger.error(
             s"$doesntWorkBecause the build target ${info.displayName} is missing the compiler option $option. " +
@@ -65,7 +64,7 @@ final class Warnings(
           )
           statusBar.addMessage(icons.info + tryAgain)
         } else {
-          val targetfile = scalacOptions.getClassDirectory.toAbsolutePath
+          val targetfile = info.classDirectory.toAbsolutePath
             .resolve(SemanticdbClasspath.fromScala(path.toRelative(workspace)))
           logger.error(
             s"$doesntWorkBecause the SemanticDB file '$targetfile' doesn't exist. " +

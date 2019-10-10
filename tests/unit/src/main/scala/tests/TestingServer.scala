@@ -120,7 +120,7 @@ final class TestingServer(
     ex,
     buffers = buffers,
     redirectSystemOut = false,
-    config = config,
+    defaultConfig = config,
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
@@ -1167,20 +1167,23 @@ final class TestingServer(
       .mkString("\n")
   }
 
-  def documentSymbols(uri: String): String = {
+  def documentSymbols(uri: String): Future[String] = {
     val path = toPath(uri)
     val input = path.toInputFromBuffers(buffers)
     val identifier = path.toTextDocumentIdentifier
     val params = new DocumentSymbolParams(identifier)
-    val documentSymbols = server.documentSymbolResult(params).asScala
-    val symbols = documentSymbols.toSymbolInformation(uri)
-    val textDocument = s.TextDocument(
-      schema = s.Schema.SEMANTICDB4,
-      language = s.Language.SCALA,
-      text = input.text,
-      occurrences = symbols.map(_.toSymbolOccurrence)
-    )
-    Semanticdbs.printTextDocument(textDocument)
+    for {
+      documentSymbols <- server.documentSymbolResult(params)
+    } yield {
+      val symbols = documentSymbols.asScala.toSymbolInformation(uri)
+      val textDocument = s.TextDocument(
+        schema = s.Schema.SEMANTICDB4,
+        language = s.Language.SCALA,
+        text = input.text,
+        occurrences = symbols.map(_.toSymbolOccurrence)
+      )
+      Semanticdbs.printTextDocument(textDocument)
+    }
   }
 
   def buildTarget(displayName: String): String = {

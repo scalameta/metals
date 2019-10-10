@@ -22,7 +22,7 @@ object Main {
       ec,
       redirectSystemOut = true,
       charset = StandardCharsets.UTF_8,
-      config = config
+      defaultConfig = config
     )
     try {
       scribe.info(s"Starting Metals server with configuration: $config")

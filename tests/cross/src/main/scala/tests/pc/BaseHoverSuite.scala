@@ -6,6 +6,7 @@ import tests.TestHovers
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments._
 import munit.Location
+import java.nio.file.Paths
 
 abstract class BaseHoverSuite
     extends BasePCSuite
@@ -33,7 +34,7 @@ abstract class BaseHoverSuite
       val (code, offset) = params(codeOriginal, filename)
       val hover = pc
         .hover(
-          CompilerOffsetParams(filename, code, offset)
+          CompilerOffsetParams(Paths.get(filename).toUri(), code, offset)
         )
         .get()
       val obtained: String = renderAsString(code, hover.asScala, includeRange)

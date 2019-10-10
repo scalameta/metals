@@ -61,7 +61,11 @@ final class Embedded(
     val classloader = presentationCompilers.getOrElseUpdate(
       ScalaVersions.dropVendorSuffix(info.getScalaVersion),
       statusBar.trackSlowTask("Preparing presentation compiler") {
-        Embedded.newPresentationCompilerClassLoader(info, scalac)
+        if (ScalaVersions.isScala3Version(info.getScalaVersion())) {
+          Embedded.newDottyPresentationCompilerClassLoader(info, scalac)
+        } else {
+          Embedded.newPresentationCompilerClassLoader(info, scalac)
+        }
       }
     )
     serviceLoader(
@@ -214,9 +218,35 @@ object Embedded {
       .fetch()
       .asScala
       .map(_.toPath)
-
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
     val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
+    val allURLs = allJars.map(_.toUri.toURL).toArray
+    // Share classloader for a subset of types.
+    val parent =
+      new PresentationCompilerClassLoader(this.getClass.getClassLoader)
+    new URLClassLoader(allURLs, parent)
+  }
+
+  def newDottyPresentationCompilerClassLoader(
+      info: ScalaBuildTarget,
+      scalac: ScalacOptionsItem
+  ): URLClassLoader = {
+    val pc = Dependency.of(
+      "org.scalameta",
+      s"dtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
+      BuildInfo.metalsVersion
+    )
+    val settings = Fetch
+      .create()
+      .addRepositories(repositories: _*)
+      .withDependencies(pc)
+      .withMainArtifacts()
+    val jars = settings
+      .fetch()
+      .asScala
+      .map(_.toPath)
+    val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
+    val allJars = Iterator(jars, scalaJars).flatten
     val allURLs = allJars.map(_.toUri.toURL).toArray
     // Share classloader for a subset of types.
     val parent =

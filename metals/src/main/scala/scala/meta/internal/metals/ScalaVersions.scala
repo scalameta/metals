@@ -13,17 +13,23 @@ object ScalaVersions {
     BuildInfo.deprecatedScalaVersions.toSet
   private val _isSupportedScalaVersion: Set[String] =
     BuildInfo.supportedScalaVersions.toSet
+
   def isSupportedScalaVersion(version: String): Boolean =
     _isSupportedScalaVersion(dropVendorSuffix(version))
+
   def isDeprecatedScalaVersion(version: String): Boolean =
     _isDeprecatedScalaVersion(dropVendorSuffix(version))
+
   def isSupportedScalaBinaryVersion(scalaVersion: String): Boolean =
     BuildInfo.supportedScalaBinaryVersions.exists { binaryVersion =>
       scalaVersion.startsWith(binaryVersion)
     }
 
+  def isScala3Version(scalaVersion: String): Boolean =
+    scalaVersion.startsWith("0.")
+
   val isLatestScalaVersion: Set[String] =
-    Set(BuildInfo.scala212, BuildInfo.scala213)
+    Set(BuildInfo.scala212, BuildInfo.scala213, BuildInfo.scala3)
 
   def latestBinaryVersionFor(scalaVersion: String): Option[String] = {
     val binaryVersion = scalaBinaryVersionFromFullVersion(scalaVersion)
@@ -35,7 +41,11 @@ object ScalaVersions {
 
   def recommendedVersion(scalaVersion: String): String = {
     latestBinaryVersionFor(scalaVersion).getOrElse {
-      BuildInfo.scala212
+      if (isScala3Version(scalaVersion)) {
+        BuildInfo.scala3
+      } else {
+        BuildInfo.scala212
+      }
     }
   }
 

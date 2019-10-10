@@ -27,10 +27,6 @@ inThisBuild(
       // https://github.com/scala/bug/issues/10448
       "-Ywarn-unused:imports"
     ),
-    addCompilerPlugin(
-      "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
-    ),
-    scalacOptions += s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -149,6 +145,7 @@ lazy val V = new {
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
   val bloop = "1.4.0-RC1-192-72a856b6"
+  val scala3 = "0.22.0-RC1"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -164,11 +161,13 @@ lazy val V = new {
       .collect { case Some((a, b)) => s"$a.$b" }
       .toList
       .distinct
-  def supportedScalaVersions =
-    nonDeprecatedScalaVersions ++ deprecatedScalaVersions
   def deprecatedScalaVersions =
     Seq(scala211, "2.12.8", "2.12.9", "2.13.0")
   def nonDeprecatedScalaVersions = Seq(scala213, scala212, "2.12.10")
+  def scala2Versions =
+  nonDeprecatedScalaVersions ++ deprecatedScalaVersions
+  def scala3Versions = Seq(scala3)
+  def supportedScalaVersions = scala2Versions ++ scala3Versions
   def guava = "com.google.guava" % "guava" % "29.0-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
@@ -198,11 +197,34 @@ val genyVersion = Def.setting {
   else "0.4.2"
 }
 
+lazy val dtags = project
+  .settings(
+    scalaVersion := V.scala3,
+    crossVersion := CrossVersion.full,
+    moduleName := "dtags",
+    libraryDependencies := List(
+      "ch.epfl.lamp" % "dotty-compiler_0.22" % V.scala3,
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.8"
+    ),
+    scalacOptions ++= Seq(
+      "-language:implicitConversions"
+    ),
+    scalacOptions --= Seq(
+      "-Yrangepos",
+      "-Ywarn-unused:imports",
+      "-sourceroot",
+      baseDirectory.in(ThisBuild).value.toString,
+      "-Ysemanticdb"
+    )
+  )
+  .dependsOn(interfaces)
+  .disablePlugins(ScalafixPlugin)
+
 lazy val mtags = project
   .settings(
     moduleName := "mtags",
     crossVersion := CrossVersion.full,
-    crossScalaVersions := V.supportedScalaVersions,
+    crossScalaVersions := V.scala2Versions,
     scalacOptions ++= crossSetting(
       scalaVersion.value,
       if211 = List("-Xexperimental", "-Ywarn-unused-import")
@@ -211,7 +233,10 @@ lazy val mtags = project
       scalaVersion.value,
       if211 = List("-Ywarn-unused:imports")
     ),
+    addCompilerPlugin(scalafixSemanticdb),
     libraryDependencies ++= List(
+      // for token edit-distance used by goto definition
+      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       "com.thoughtworks.qdox" % "qdox" % "2.0.0", // for java mtags
       "org.jsoup" % "jsoup" % "1.13.1", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.7.1", // for streaming hashing when indexing classpaths
@@ -264,8 +289,6 @@ lazy val metals = project
       "com.zaxxer" % "nuprocess" % "2.0.0",
       "net.java.dev.jna" % "jna" % "4.5.2",
       "net.java.dev.jna" % "jna-platform" % "4.5.2",
-      // for token edit-distance used by goto definition
-      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.1",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
@@ -321,7 +344,8 @@ lazy val metals = project
       "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
-      "scala213" -> V.scala213
+      "scala213" -> V.scala213,
+      "scala3" -> V.scala3
     ),
     mainClass in GraalVMNativeImage := Some(
       "scala.meta.internal.pantsbuild.BloopPants"
@@ -344,7 +368,8 @@ lazy val metals = project
         "--allow-incomplete-classpath",
         "-H:+ReportExceptionStackTraces"
       )
-    }
+    },
+    addCompilerPlugin(scalafixSemanticdb)
   )
   .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin, GraalVMNativeImagePlugin)
@@ -362,6 +387,7 @@ lazy val input = project
       "io.circe" %% "circe-derivation-annotations" % "0.9.0-M5"
     ),
     scalacOptions += "-P:semanticdb:synthetics:on",
+    addCompilerPlugin(scalafixSemanticdb),
     addCompilerPlugin(
       "org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full
     )
@@ -406,7 +432,8 @@ lazy val mtest = project
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
       "scalaVersion" -> scalaVersion.value
-    )
+    ),
+    addCompilerPlugin(scalafixSemanticdb)
   )
   .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin)
@@ -434,7 +461,8 @@ lazy val cross = project
     scalacOptions --= crossSetting(
       scalaVersion.value,
       if211 = List("-Ywarn-unused:imports")
-    )
+    ),
+    addCompilerPlugin(scalafixSemanticdb)
   )
   .dependsOn(mtest, mtags)
 
@@ -456,7 +484,8 @@ lazy val unit = project
       "targetDirectory" -> target.in(Test).value,
       "testResourceDirectory" -> resourceDirectory.in(Test).value,
       "scalaVersion" -> scalaVersion.value
-    )
+    ),
+    addCompilerPlugin(scalafixSemanticdb)
   )
   .dependsOn(mtest, metals)
   .enablePlugins(BuildInfoPlugin)
@@ -484,12 +513,14 @@ def publishMtags =
       crossPublishLocal(V.scala211)
         .dependsOn(crossPublishLocal(V.scala213))
     )
+
 lazy val slow = project
   .in(file("tests/slow"))
   .settings(
     testSettings,
     testOnly.in(Test) := testOnly.in(Test).dependsOn(publishMtags).evaluated,
-    test.in(Test) := test.in(Test).dependsOn(publishMtags).value
+    test.in(Test) := test.in(Test).dependsOn(publishMtags).value,
+    addCompilerPlugin(scalafixSemanticdb)
   )
   .dependsOn(unit)
 
@@ -505,7 +536,8 @@ lazy val bench = project
       "org.spire-math" %% "clouseau" % "0.2.2"
     ),
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
-    buildInfoPackage := "bench"
+    buildInfoPackage := "bench",
+    addCompilerPlugin(scalafixSemanticdb)
   )
   .dependsOn(unit)
   .enablePlugins(JmhPlugin)

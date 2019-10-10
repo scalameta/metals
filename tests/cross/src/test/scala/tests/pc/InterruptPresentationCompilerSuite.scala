@@ -14,6 +14,7 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.OffsetParams
 import java.util.concurrent.atomic.AtomicReference
 import munit.Location
+import java.net.URI
 
 class InterruptPresentationCompilerSuite extends BasePCSuite {
   class InterruptSymbolIndex
@@ -53,7 +54,12 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       try {
         val result = act(
           pc,
-          CompilerOffsetParams("A.scala", code, offset, interrupt.token.get())
+          CompilerOffsetParams(
+            URI.create("file://A.scala"),
+            code,
+            offset,
+            interrupt.token.get()
+          )
         ).get()
         fail(s"Expected cancellation exception. Obtained $result")
       } catch {

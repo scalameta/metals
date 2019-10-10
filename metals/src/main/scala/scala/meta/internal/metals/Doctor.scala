@@ -142,7 +142,7 @@ final class Doctor(
       } else if (isSupportedScalaVersion(
           scalaVersion
         )) {
-        hint().capitalize
+        hint.capitalize
       } else if (isSupportedScalaBinaryVersion(scalaVersion)) {
         val recommended = recommendedVersion(scalaVersion)
         val isRecommenedVersionNewer =
@@ -152,10 +152,15 @@ final class Doctor(
         } else {
           s"Scala $scalaVersion is not yet supported"
         }
+
       } else {
-        s"Code navigation is not supported for this compiler version, change to " +
-          s"Scala ${BuildInfo.scala213} or ${BuildInfo.scala212} and " +
-          s"run 'Build import' to enable code navigation."
+        val versionToUpgradeTo =
+          if (ScalaVersions.isScala3Version(scalaVersion)) {
+            s"Scala3 ${BuildInfo.scala3}"
+          } else {
+            s"Scala ${BuildInfo.scala213} or ${BuildInfo.scala212}"
+          }
+        s"Code navigation is not supported for this compiler version, upgrade to " + versionToUpgradeTo + " and " + hint
       }
     } else {
       val messages = ListBuffer.empty[String]

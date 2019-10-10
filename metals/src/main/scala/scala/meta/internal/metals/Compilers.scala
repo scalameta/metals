@@ -24,11 +24,19 @@ import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.concurrent.Future
-import java.{util => ju}
 import scala.meta.pc.AutoImportsResult
 import org.eclipse.lsp4j.TextEdit
 import scala.util.Try
 import scala.meta.internal.pc.EmptySymbolSearch
+import org.eclipse.lsp4j.FoldingRange
+import java.{util => ju}
+import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import org.eclipse.lsp4j.FoldingRangeRequestParams
+import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.DocumentSymbol
+import java.nio.file.Paths
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -46,7 +54,8 @@ class Compilers(
     embedded: Embedded,
     statusBar: StatusBar,
     sh: ScheduledExecutorService,
-    initializeParams: Option[InitializeParams]
+    initializeParams: Option[InitializeParams],
+    diagnostics: Diagnostics
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -105,7 +114,7 @@ class Compilers(
           loadCompiler(target).foreach { pc =>
             pc.hover(
               CompilerOffsetParams(
-                "Main.scala",
+                Paths.get("Main.scala").toUri(),
                 "object Ma\n",
                 "object Ma".length()
               )
@@ -114,6 +123,71 @@ class Compilers(
         }
       }
     }
+
+  def foldingRange(
+      params: FoldingRangeRequestParams,
+      token: CancelToken
+  ): Future[ju.List[FoldingRange]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    pc.foldingRange(
+        CompilerVirtualFileParams(path.toNIO.toUri, input.value)
+      )
+      .asScala
+  }
+
+  def onTypeFormatting(
+      params: DocumentOnTypeFormattingParams
+  ): Future[ju.List[TextEdit]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    pc.onTypeFormatting(params, input.value).asScala
+  }
+
+  def rangeFormatting(
+      params: DocumentRangeFormattingParams
+  ): Future[ju.List[TextEdit]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    pc.rangeFormatting(params, input.value).asScala
+  }
+
+  def documentSymbol(
+      params: DocumentSymbolParams
+  ): Future[ju.List[DocumentSymbol]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    pc.documentSymbols(
+        CompilerVirtualFileParams(path.toNIO.toUri, input.value)
+      )
+      .asScala
+  }
+
+  def didClose(path: AbsolutePath): Unit = {
+    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
+    pc.didClose(path.toNIO.toUri())
+  }
+
+  def didChange(path: AbsolutePath): Unit = {
+    val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
+    val input = path.toInputFromBuffers(buffers)
+    for {
+      ds <- pc
+        .didChange(CompilerVirtualFileParams(path.toNIO.toUri(), input.value))
+        .asScala
+    } {
+      ds.asScala.headOption match {
+        case None =>
+          diagnostics.onNoSyntaxError(path)
+        case Some(diagnostic) =>
+          diagnostics.onSyntaxError(path, diagnostic)
+      }
+    }
+  }
 
   def didCompile(report: CompileReport): Unit = {
     if (report.getErrors > 0) {

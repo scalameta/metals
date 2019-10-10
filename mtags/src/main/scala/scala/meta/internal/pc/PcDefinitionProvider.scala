@@ -15,7 +15,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     } else {
       val unit = addCompilationUnit(
         params.text(),
-        params.filename(),
+        params.uri().toString(),
         None
       )
       val pos = unit.position(params.offset())
@@ -36,7 +36,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         DefinitionResultImpl(
           semanticdbSymbol(tree.symbol),
           ju.Collections.singletonList(
-            new Location(params.filename(), tree.symbol.pos.toLSP)
+            new Location(params.uri().toString(), tree.symbol.pos.toLSP)
           )
         )
       } else {

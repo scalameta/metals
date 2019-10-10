@@ -6,6 +6,7 @@ import tests.BaseCodeActionSuite
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.jdk.CollectionConverters._
+import java.net.URI
 
 class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
 
@@ -676,7 +677,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
     val (code, _, offset) = params(original)
     val result = pc
       .implementAbstractMembers(
-        CompilerOffsetParams("file:/" + filename, code, offset, cancelToken)
+        CompilerOffsetParams(URI.create(filename), code, offset, cancelToken)
       )
       .get()
     result.asScala.toList

@@ -5,7 +5,7 @@ import tests.BaseCompletionSuite
 class CompletionFilenameSuite extends BaseCompletionSuite {
 
   check(
-    "class",
+    "class".only,
     """|
        |class M@@
        |""".stripMargin,
