@@ -20,9 +20,7 @@ class Footer extends React.Component {
           {this.props.config.footerIcon && (
             <a href={this.props.config.baseUrl} className="nav-home">
               <img
-                src={`${this.props.config.baseUrl}${
-                  this.props.config.footerIcon
-                }`}
+                src={`${this.props.config.baseUrl}${this.props.config.footerIcon}`}
                 alt={this.props.config.title}
                 width="66"
                 height="58"
@@ -53,6 +51,13 @@ class Footer extends React.Component {
             <h5>Social</h5>
             <a href="https://github.com/scalameta/metals" target="_blank">
               <img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&label=stars&logo=github&style=social" />
+            </a>
+            <a href="https://scala-lang-slack.herokuapp.com/" target="_blank">
+              <script
+                async
+                defer
+                src="https://scala-lang-slack.herokuapp.com/slackin.js"
+              ></script>
             </a>
             <a href="https://gitter.im/scalameta/metals" target="_blank">
               <img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&style=social" />
