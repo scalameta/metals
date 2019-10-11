@@ -23,35 +23,35 @@ jobs:
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt 'slow/testOnly -- tests.sbt'"
       before_script:
-        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.2/install.py
         - python install.py --dest bloop-server
         - bloop-server/bloop server &>/dev/null &
       script:
         - sbt 'slow/testOnly -- tests.sbt'
     - env: TEST="sbt 'slow/testOnly -- tests.mill'"
       before_script:
-        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.2/install.py
         - python install.py --dest bloop-server
         - bloop-server/bloop server &>/dev/null &
       script:
         - sbt 'slow/testOnly -- tests.mill'
     - env: TEST="sbt 'slow/testOnly -- tests.gradle'"
       before_script:
-        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.2/install.py
         - python install.py --dest bloop-server
         - bloop-server/bloop server &>/dev/null &
       script:
         - sbt 'slow/testOnly -- tests.gradle'
     - env: TEST="sbt 'slow/testOnly -- tests.maven'"
       before_script:
-        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.2/install.py
         - python install.py --dest bloop-server
         - bloop-server/bloop server &>/dev/null &
       script:
         - sbt 'slow/testOnly -- tests.maven'
     - env: TEST="sbt 'slow/testOnly -- tests.feature'"
       before_script:
-        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.2/install.py
         - python install.py --dest bloop-server
         - bloop-server/bloop server &>/dev/null &
       script:
@@ -59,7 +59,7 @@ jobs:
     - env: TEST="sbt +cross/test"
       before_script:
         - nvm install 'lts/*' && nvm use 'lts/*'
-        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.2/install.py
         - python install.py --dest bloop-server
         - bloop-server/bloop server &>/dev/null &
       script:
