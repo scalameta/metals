@@ -9,34 +9,62 @@ stages:
   - name: release
     if: (branch = master AND type = push) OR (tag IS present)
 
+before_install:
+  - mkdir bloop-server
+
 jobs:
   include:
     # default stage is test
     - env: TEST="scalafmt+scalafix+docs"
-      before_script: nvm install 'lts/*' && nvm use 'lts/*'
+      before_script:
+      - nvm install 'lts/*' && nvm use 'lts/*'
       script:
         - ./bin/scalafmt --test
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt 'slow/testOnly -- tests.sbt'"
+      before_script:
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - python install.py --dest bloop-server
+        - bloop-server/bloop server &>/dev/null &
       script:
         - sbt 'slow/testOnly -- tests.sbt'
     - env: TEST="sbt 'slow/testOnly -- tests.mill'"
+      before_script:
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - python install.py --dest bloop-server
+        - bloop-server/bloop server &>/dev/null &
       script:
         - sbt 'slow/testOnly -- tests.mill'
     - env: TEST="sbt 'slow/testOnly -- tests.gradle'"
+      before_script:
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - python install.py --dest bloop-server
+        - bloop-server/bloop server &>/dev/null &
       script:
         - sbt 'slow/testOnly -- tests.gradle'
     - env: TEST="sbt 'slow/testOnly -- tests.maven'"
+      before_script:
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - python install.py --dest bloop-server
+        - bloop-server/bloop server &>/dev/null &
       script:
         - sbt 'slow/testOnly -- tests.maven'
     - env: TEST="sbt 'slow/testOnly -- tests.feature'"
+      before_script:
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - python install.py --dest bloop-server
+        - bloop-server/bloop server &>/dev/null &
       script:
         - sbt 'slow/testOnly -- tests.feature'
     - env: TEST="sbt +cross/test"
+      before_script:
+        - nvm install 'lts/*' && nvm use 'lts/*'
+        - wget https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - python install.py --dest bloop-server
+        - bloop-server/bloop server &>/dev/null &
       script:
         - sbt +cross/test
     - stage: release
-      before_script: nvm install 'lts/*' && nvm use 'lts/*'
       script:
         - git fetch --tags
         - sbt ci-release docs/docusaurusPublishGhpages
