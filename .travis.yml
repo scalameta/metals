@@ -9,6 +9,13 @@ stages:
   - name: release
     if: (branch = master AND type = push) OR (tag IS present)
 
+before_install:
+  - mkdir bloop-server
+  - mkdir -p ~/.cache/metals
+  - touch -f ~/.cache/metals/lsp.trace.json
+  - mkdir -p ~/.cache/metals
+  - touch -f ~/.cache/metals/bsp.trace.json
+
 jobs:
   include:
     # default stage is test
@@ -18,8 +25,17 @@ jobs:
         - ./bin/scalafmt --test
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt 'slow/testOnly -- tests.sbt'"
+      before_script:
+        - wget
+          https://github.com/scalacenter/bloop/releases/download/v1.3.4/install.py
+        - python install.py --dest bloop-server
+        - bloop-server/bloop server &>bloop-server/bloop.log &
       script:
         - sbt 'slow/testOnly -- tests.sbt'
+      after_script:
+        - cat bloop-server/bloop.log
+        - cat ~/.cache/metals/lsp.trace.json
+        - cat ~/.cache/metals/bsp.trace.json
     - env: TEST="sbt 'slow/testOnly -- tests.mill'"
       script:
         - sbt 'slow/testOnly -- tests.mill'
