@@ -248,16 +248,6 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
         client.showMessages.clear()
         client.clientCommands.clear()
       }
-      _ <- server.didSave("build.sbt")(_ => """scalaVersion := "2.12.10" """)
-      _ = {
-        val expected = ClientCommands.ReloadDoctor.id :: Nil
-        val actual = client.workspaceClientCommands
-        assert(actual.startsWith(expected))
-        assertNoDiff(
-          client.workspaceShowMessages,
-          CheckDoctor.problemsFixed.getMessage
-        )
-      }
     } yield ()
   }
 

@@ -12,8 +12,6 @@ stages:
 before_install:
   - mkdir bloop-server
   - mkdir -p ~/.cache/metals
-  - touch -f ~/.cache/metals/lsp.trace.json
-  - mkdir -p ~/.cache/metals
   - touch -f ~/.cache/metals/bsp.trace.json
 
 jobs:
@@ -31,26 +29,13 @@ jobs:
         - python install.py --dest bloop-server
         - bloop-server/bloop server &>bloop-server/bloop.log &
       script:
-        - sbt 'slow/testOnly -- tests.sbt'
+        - sbt 'slow/testOnly -- tests.sbt.SbtLspSuite.supported-scala'
       after_script:
+        - bloop-server/bloop compile -c
+          tests/slow/target/e2e/sbt-import/supported-scala/.bloop/ -p  b c d e f
+          g
         - cat bloop-server/bloop.log
-        - cat ~/.cache/metals/lsp.trace.json
         - cat ~/.cache/metals/bsp.trace.json
-    - env: TEST="sbt 'slow/testOnly -- tests.mill'"
-      script:
-        - sbt 'slow/testOnly -- tests.mill'
-    - env: TEST="sbt 'slow/testOnly -- tests.gradle'"
-      script:
-        - sbt 'slow/testOnly -- tests.gradle'
-    - env: TEST="sbt 'slow/testOnly -- tests.maven'"
-      script:
-        - sbt 'slow/testOnly -- tests.maven'
-    - env: TEST="sbt 'slow/testOnly -- tests.feature'"
-      script:
-        - sbt 'slow/testOnly -- tests.feature'
-    - env: TEST="sbt +cross/test"
-      script:
-        - sbt +cross/test
     - stage: release
       before_script: nvm install 'lts/*' && nvm use 'lts/*'
       script:
