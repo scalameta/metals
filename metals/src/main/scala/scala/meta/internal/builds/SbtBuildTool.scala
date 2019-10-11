@@ -52,7 +52,6 @@ case class SbtBuildTool(version: String) extends BuildTool {
     }
     removeLegacyGlobalPlugin()
     writeSbtMetalsPlugin(workspace, config)
-    gitignore(workspace, List("project/metals.sbt"))
     allArgs
   }
 

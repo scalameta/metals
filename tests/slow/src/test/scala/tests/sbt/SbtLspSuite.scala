@@ -13,7 +13,6 @@ import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.MetalsEnrichments._
 
 object SbtLspSuite extends BaseImportSuite("sbt-import") {
 
@@ -387,71 +386,6 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
       _ = assertNoDiff(
         client.workspaceShowMessages,
         IncompatibleBuildToolVersion.params(SbtBuildTool("0.13.15")).getMessage
-      )
-    } yield ()
-  }
-
-  testAsync("gitignore") {
-    cleanWorkspace()
-    for {
-      _ <- server.initialize(
-        """|/project/build.properties
-           |sbt.version=1.2.6
-           |/build.sbt
-           |scalaVersion := "2.12.8"
-           |/.gitignore
-           |.iml
-           |""".stripMargin
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage
-        ).mkString("\n")
-      )
-      _ = client.messageRequests.clear()
-      _ = assertStatus(_.isInstalled)
-      _ = assertNoDiff(
-        workspace.resolve(".gitignore").readText,
-        """|.iml
-           |
-           |project/metals.sbt
-           |.bloop/*
-           |.metals/*
-           |""".stripMargin
-      )
-    } yield ()
-  }
-
-  testAsync("gitignore-existing") {
-    cleanWorkspace()
-    for {
-      _ <- server.initialize(
-        """|/project/build.properties
-           |sbt.version=1.2.6
-           |/build.sbt
-           |scalaVersion := "2.12.8"
-           |/.gitignore
-           |project/metals.sbt
-           |""".stripMargin
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage
-        ).mkString("\n")
-      )
-      _ = client.messageRequests.clear()
-      _ = assertStatus(_.isInstalled)
-      _ = assertNoDiff(
-        workspace.resolve(".gitignore").readText,
-        """|project/metals.sbt
-
-           |.bloop/*
-           |.metals/*
-          """.stripMargin
       )
     } yield ()
   }

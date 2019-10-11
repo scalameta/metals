@@ -82,7 +82,6 @@ final class BloopInstall(
     // window/showMessageRequest, meaning the "cancel build import" button
     // stays forever in view even after successful build import. In newer
     // VS Code versions the message is hidden after a delay.
-    buildTool.gitignore(workspace, List(".bloop/*", ".metals/*"))
     val taskResponse =
       languageClient.metalsSlowTask(
         Messages.bloopInstallProgress(buildTool.executableName)
