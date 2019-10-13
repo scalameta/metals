@@ -159,6 +159,12 @@ object ServerCommands {
     "Open the Metals channel on Gitter to discuss with other Metals users."
   )
 
+  val ChatOnDiscord = Command(
+    OpenBrowser("https://discord.gg/RFpSVth"),
+    "Chat on Discord",
+    "Open the Scalameta server on Discord to discuss with other Metals users."
+  )
+
   val ReadVscodeDocumentation = Command(
     OpenBrowser("https://scalameta.org/metals/docs/editors/vscode.html"),
     "Read Metals documentation",
