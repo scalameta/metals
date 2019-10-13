@@ -196,8 +196,8 @@ final class ImplementationProvider(
         classContext,
         implReal
       )
-      implOccurence <- findDefOccurence(implDocument, implSymbol, source)
-      range <- implOccurence.range
+      implOccurrence <- findDefOccurrence(implDocument, implSymbol, source)
+      range <- implOccurrence.range
       revised <- distance.toRevised(range.toLSP)
     } yield new Location(file.toUri.toString, revised)
   }
@@ -360,7 +360,7 @@ object ImplementationProvider {
     }
   }
 
-  def findDefOccurence(
+  def findDefOccurrence(
       semanticDb: TextDocument,
       symbol: String,
       source: AbsolutePath
