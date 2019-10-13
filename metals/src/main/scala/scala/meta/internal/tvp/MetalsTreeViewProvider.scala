@@ -204,6 +204,7 @@ class MetalsTreeViewProvider(
           echoCommand(ServerCommands.ReadVscodeDocumentation, "book"),
           echoCommand(ServerCommands.ReadBloopDocumentation, "book"),
           echoCommand(ServerCommands.ChatOnGitter, "gitter"),
+          echoCommand(ServerCommands.ChatOnDiscord, "discord"),
           echoCommand(ServerCommands.OpenIssue, "issue-opened"),
           echoCommand(ServerCommands.MetalsGithub, "github"),
           echoCommand(ServerCommands.BloopGithub, "github"),
