@@ -82,6 +82,67 @@ object RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
        |}""".stripMargin
   )
 
+  check(
+    "with-pipe",
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |@@
+       |  '''.stripMargin
+       |}""".stripMargin,
+    s"""| |single line
+        |""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |single line
+       |  |
+       |  '''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "with-pipes",
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |@@
+       |  '''.stripMargin
+       |}""".stripMargin,
+    s"""| |first line
+        | |second line
+        | | different indent""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |first line
+       |  |second line
+       |  | different indent
+       |  '''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "with-pipes-skip-line",
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |@@
+       |  '''.stripMargin
+       |}""".stripMargin,
+    s"""| |first line
+        |
+        | |second line""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |first line
+       |  |
+       |  |second line
+       |  '''.stripMargin
+       |}""".stripMargin
+  )
+
   def check(
       name: String,
       testCase: String,
