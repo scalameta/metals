@@ -478,6 +478,7 @@ class MetalsLanguageServer(
       capabilities.setCodeLensProvider(new CodeLensOptions(false))
       capabilities.setDefinitionProvider(true)
       capabilities.setImplementationProvider(true)
+      capabilities.setTypeDefinitionProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
       val renameOptions = new RenameOptions()
@@ -889,11 +890,12 @@ class MetalsLanguageServer(
 
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
-      position: TextDocumentPositionParams
+      params: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ =>
-      scribe.warn("textDocument/typeDefinition is not supported.")
-      null
+    CancelTokens.future { token =>
+      compilers
+        .typeDefinition(params, token, interactiveSemanticdbs)
+        .map(_.asJava)
     }
 
   @JsonRequest("textDocument/implementation")

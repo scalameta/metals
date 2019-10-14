@@ -11,6 +11,7 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.concurrent.ExecutionContextExecutorService
@@ -150,6 +151,29 @@ class Compilers(
     withPC(params, None) { (pc, pos) =>
       pc.complete(CompilerOffsetParams.fromPos(pos, token)).asScala
     }.getOrElse(Future.successful(new CompletionList()))
+
+  def typeDefinition(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+      interactiveSemanticdbs: InteractiveSemanticdbs
+  ): Future[List[Location]] = {
+    val locations = withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
+      pc.typeDefinition(
+          CompilerOffsetParams(
+            pos.input.syntax,
+            pos.input.text,
+            pos.start,
+            token
+          )
+        )
+        .asScala
+        .map(_.asScala.toList)
+    }
+
+    locations.getOrElse {
+      Future.successful(List())
+    }
+  }
 
   def autoImports(
       params: TextDocumentPositionParams,

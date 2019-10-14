@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import scala.meta.internal.jdk.CollectionConverters._
@@ -23,7 +24,10 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.util.control.NonFatal
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import org.eclipse.{lsp4j => l}
 import scala.collection.Seq
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.metals.TextEdits
 import scala.meta.pc.PresentationCompiler
 
 abstract class BasePCSuite extends BaseSuite {
@@ -140,4 +144,71 @@ abstract class BasePCSuite extends BaseSuite {
   def sortLines(stableOrder: Boolean, string: String): String =
     if (stableOrder) string
     else string.linesIterator.toList.sorted.mkString("\n")
+
+  def prepareDefinition(
+      original: String,
+      uri: String
+  ): (String, Int, l.Range) = {
+    import scala.meta.inputs.Position
+    import scala.meta.inputs.Input
+    import scala.meta.internal.mtags.MtagsEnrichments._
+
+    val (code, offset) = params(
+      original
+        .replaceAllLiterally("<<", "")
+        .replaceAllLiterally(">>", ""),
+      uri
+    )
+    val offsetRange = Position.Range(Input.String(code), offset, offset).toLSP
+    (code, offset, offsetRange)
+  }
+
+  def locationsToCode(
+      code: String,
+      uri: String,
+      offsetRange: l.Range,
+      locations: java.util.List[l.Location]
+  ) = {
+    val edits = locations.asScala.toList.flatMap { location =>
+      if (location.getUri == uri) {
+        List(
+          new l.TextEdit(
+            new l.Range(
+              location.getRange.getStart,
+              location.getRange.getStart
+            ),
+            "<<"
+          ),
+          new l.TextEdit(
+            new l.Range(
+              location.getRange.getEnd,
+              location.getRange.getEnd
+            ),
+            ">>"
+          )
+        )
+      } else {
+        val filename = location.getUri
+        val comment = s"/*$filename*/"
+        if (code.contains(comment)) {
+          Nil
+        } else {
+          List(new l.TextEdit(offsetRange, comment))
+        }
+      }
+    }
+    TextEdits.applyEdits(code, edits)
+  }
+
+  def obtainedAndExpected(
+      fun: CompilerOffsetParams => CompletableFuture[
+        java.util.List[l.Location]
+      ]
+  )(original: String, uri: String): (String, String) = {
+    val (code, offset, offsetRange) = prepareDefinition(original, uri)
+    val locations = fun(CompilerOffsetParams(uri, code, offset)).get()
+    val obtained = locationsToCode(code, uri, offsetRange, locations)
+    val expected = original.replaceAllLiterally("@@", "")
+    (obtained, expected)
+  }
 }

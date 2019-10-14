@@ -10,21 +10,16 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
+
   import compiler._
 
   def hover(): Option[Hover] = {
     if (params.isWhitespace) {
       None
     } else {
-      val unit = addCompilationUnit(
-        code = params.text(),
-        filename = params.filename(),
-        cursor = None
-      )
-      val pos = unit.position(params.offset())
-      val tree = typedHoverTreeAt(pos)
+      val (unit, pos, tree) = createCompilationUnit(params)
       tree match {
-        case i @ Import(qual, selectors) =>
+        case i @ Import(_, selectors) =>
           for {
             member <- i.selector(pos)
             hover <- toHover(member, pos)
@@ -123,38 +118,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
    *   expanded = List(1).map(_.toString)
    * }}}
    */
-  def expandRangeToEnclosingApply(pos: Position): Tree = {
-    def tryTail(enclosing: List[Tree]): Option[Tree] = enclosing match {
-      case Nil => None
-      case head :: tail =>
-        head match {
-          case TreeApply(qual, _) if qual.pos.includes(pos) =>
-            tryTail(tail).orElse(Some(head))
-          case New(_) =>
-            tail match {
-              case Nil => None
-              case Select(_, _) :: next =>
-                tryTail(next)
-              case _ =>
-                None
-            }
-          case _ =>
-            None
-        }
-    }
-    lastVisistedParentTrees match {
-      case head :: tail =>
-        tryTail(tail) match {
-          case Some(value) =>
-            typedTreeAt(value.pos)
-          case None =>
-            head
-        }
-      case _ =>
-        EmptyTree
-    }
-  }
-
   def toHover(
       symbol: Symbol,
       pos: Position
@@ -230,46 +193,5 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     // Strip case modifier off non-class symbols like synthetic apply/copy.
     if (sym.isCase && !sym.isClass) mask &= ~gf.CASE
     sym.flagString(mask)
-  }
-
-  private def typedHoverTreeAt(pos: Position): Tree = {
-    val typedTree = typedTreeAt(pos)
-    typedTree match {
-      case Import(qual, se) if qual.pos.includes(pos) =>
-        qual.findSubtree(pos)
-      case Apply(fun, args)
-          if !fun.pos.includes(pos) &&
-            !isForSynthetic(typedTree) =>
-        // Looks like a named argument, try the arguments.
-        val arg = args.collectFirst {
-          case arg if treePos(arg).includes(pos) =>
-            arg match {
-              case Block(_, expr) if treePos(expr).includes(pos) =>
-                // looks like a desugaring of named arguments in different order from definition-site.
-                expr
-              case a => a
-            }
-        }
-        arg.getOrElse(typedTree)
-      case t => t
-    }
-  }
-
-  lazy val isForName: Set[Name] = Set[Name](
-    nme.map,
-    nme.withFilter,
-    nme.flatMap,
-    nme.foreach
-  )
-  def isForSynthetic(gtree: Tree): Boolean = {
-    def isForComprehensionSyntheticName(select: Select): Boolean = {
-      select.pos == select.qualifier.pos && isForName(select.name)
-    }
-    gtree match {
-      case Apply(fun, List(_: Function)) => isForSynthetic(fun)
-      case TypeApply(fun, _) => isForSynthetic(fun)
-      case gtree: Select if isForComprehensionSyntheticName(gtree) => true
-      case _ => false
-    }
   }
 }

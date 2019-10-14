@@ -862,6 +862,43 @@ final class TestingServer(
     }
   }
 
+  def assertTypeDefinition(
+      filename: String,
+      query: String,
+      expected: l.Location
+  ): Future[Unit] = {
+    def locationToString(loc: l.Location): String = {
+      val (uri, start, end) =
+        (loc.getUri, loc.getRange.getStart, loc.getRange.getEnd)
+      s"$uri [${start.getLine}:${start.getCharacter} -> ${end.getLine}:${end.getCharacter}]"
+    }
+
+    for {
+      typeDefinitions <- typeDefinition(filename, query)
+    } yield {
+      typeDefinitions.foreach(
+        location =>
+          DiffAssertions.assertNoDiff(
+            locationToString(location),
+            locationToString(expected)
+          )
+      )
+    }
+  }
+
+  def typeDefinition(
+      filename: String,
+      query: String
+  ): Future[List[l.Location]] = {
+    for {
+      (_, params) <- offsetParams(filename, query, workspace)
+      definitions <- server.typeDefinition(params).asScala
+
+    } yield {
+      definitions.asScala.toList
+    }
+  }
+
   def references(
       filename: String,
       substring: String
@@ -1108,8 +1145,10 @@ final class TestingServer(
 
   def textContents(filename: String): String =
     toPath(filename).toInputFromBuffers(buffers).text
+
   def textContentsOnDisk(filename: String): String =
     toPath(filename).toInput.text
+
   def bufferContents(filename: String): String =
     buffers
       .get(toPath(filename))
