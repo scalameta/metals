@@ -27,6 +27,7 @@ import scala.collection.mutable
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.util.control.NonFatal
 import scala.meta.internal.mtags.Mtags
+import java.util.concurrent.ConcurrentLinkedQueue
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
@@ -81,7 +82,9 @@ final class ImplementationProvider(
     }
   }
 
-  def implementations(params: TextDocumentPositionParams): List[Location] = {
+  def implementations(
+      params: TextDocumentPositionParams
+  ): List[Location] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     lazy val global = globalTable.globalSymbolTableFor(source)
     val locations = for {
@@ -177,13 +180,15 @@ final class ImplementationProvider(
     }
 
     import TokenEditDistance.fromBuffer
-
+    val allLocations = new ConcurrentLinkedQueue[Location]
     for {
       classContext <- inheritanceContext.toIterable
       plainParentSymbol <- classContext.findSymbol(symbol).toIterable
       parentSymbol = addParameterSignatures(plainParentSymbol, classContext)
       symbolClass <- classFromSymbol(parentSymbol, classContext.findSymbol)
-      (file, locations) <- findImplementation(symbolClass.symbol, classContext)
+      locationsByFile = findImplementation(symbolClass.symbol, classContext)
+      file <- locationsByFile.keySet.toArray.par
+      locations = locationsByFile(file)
       implPath = AbsolutePath(file)
       implDocument <- findSemanticdb(implPath).toIterable
       distance = fromBuffer(implPath, implDocument.text, buffer)
@@ -199,7 +204,8 @@ final class ImplementationProvider(
       implOccurrence <- findDefOccurrence(implDocument, implSymbol, source)
       range <- implOccurrence.range
       revised <- distance.toRevised(range.toLSP)
-    } yield new Location(file.toUri.toString, revised)
+    } { allLocations.add(new Location(file.toUri.toString, revised)) }
+    allLocations.asScala
   }
 
   private def findSemanticdb(fileSource: AbsolutePath): Option[TextDocument] =
