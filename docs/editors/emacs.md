@@ -14,7 +14,7 @@ Metals works in Emacs thanks to the the
 
 ## Installation
 
-To use Metals in Emacs, place this snippet in your Emacs configuration to load
+To use Metals in Emacs, place this snippet in your Emacs configuration (for example .emacs.d/init.el) to load
 `lsp-mode` along with its dependencies:
 
 ```el
@@ -22,6 +22,8 @@ To use Metals in Emacs, place this snippet in your Emacs configuration to load
 
 ;; Add melpa to your packages repositories
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
+(package-initialize)
 
 ;; Install use-package if not already installed
 (unless (package-installed-p 'use-package)
