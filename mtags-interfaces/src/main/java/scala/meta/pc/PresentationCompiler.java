@@ -16,11 +16,10 @@ import org.eclipse.lsp4j.FoldingRange;
 
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.concurrent.CompletableFuture;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Optional;
-import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -66,6 +65,11 @@ public abstract class PresentationCompiler {
      * Returns the type of the expression at the given position along with the symbol of the referenced symbol.
      */
     public abstract CompletableFuture<Optional<Hover>> hover(OffsetParams params);
+
+    /**
+     * Returns location of the expression's type definition at the given position.
+     */
+    public abstract CompletableFuture<List<Location>> typeDefinition(OffsetParams params);
 
     /**
      * Returns the definition of the symbol at the given position.
