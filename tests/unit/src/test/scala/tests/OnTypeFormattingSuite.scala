@@ -175,6 +175,23 @@ object OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     " " * 4
   )
 
+  check(
+    "last",
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |word
+       |  '''.stripMargin
+       |}@@""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |word
+       |  '''.stripMargin
+       |}
+       |""".stripMargin
+  )
+
   def check(
       name: String,
       testCase: String,
