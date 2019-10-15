@@ -1,5 +1,6 @@
 package tests
 import java.nio.file.Files
+import java.util.Comparator
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
@@ -85,6 +86,13 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
       .resolve("e2e")
       .resolve(suiteName)
       .resolve(name.replace(' ', '-'))
+
+    if (path.isDirectory) {
+      val files = Files.walk(path.toNIO)
+      try files.sorted(Comparator.reverseOrder()).forEach(Files.delete(_))
+      finally files.close()
+    }
+
     Files.createDirectories(path.toNIO)
     path
   }

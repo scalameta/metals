@@ -1013,10 +1013,10 @@ class MetalsLanguageServer(
   def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
-    CancelTokens.future { _ =>
+    CancelTokens { _ =>
       codeLensProvider
         .findLenses(params.getTextDocument.getUri.toAbsolutePath)
-        .map(_.asJava)
+        .asJava
     }
 
   @JsonRequest("textDocument/foldingRange")
@@ -1316,6 +1316,7 @@ class MetalsLanguageServer(
   private def connectToNewBuildServer(
       build: BuildServerConnection
   ): Future[BuildChange] = {
+    scribe.info(s"Connected to Build server v${build.version}")
     cancelables.add(build)
     compilers.cancel()
     buildServer = Some(build)

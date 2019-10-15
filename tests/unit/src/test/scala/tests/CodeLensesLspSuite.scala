@@ -159,6 +159,39 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
+  testAsync("keep-after-error") {
+    for {
+      _ <- server.initialize(
+        """|/metals.json
+           |{ "a": { } }
+           |
+           |/a/src/main/scala/Main.scala
+           |object Main {
+           |  def main(args: Array[String]): Unit = ???
+           |}""".stripMargin
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Main.scala",
+        """<<run>>
+          |object Main {
+          |  def main(args: Array[String]): Unit = ???
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/Main.scala")(
+        text => text.replace("}", "")
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Main.scala",
+        """<<run>>
+          |object Main {
+          |  def main(args: Array[String]): Unit = ???
+          |
+          |""".stripMargin
+      )
+    } yield ()
+  }
+
   def check(name: String, library: String = "")(expected: String): Unit = {
     ignore(name) {
       val original = expected.replaceAll("<<.*>>\\W", "")
@@ -198,11 +231,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       relativeFile: String,
       expected: String
   ): Future[Unit] = {
-    val path = server.toPath(relativeFile)
-    for {
-      _ <- server.server.compilations.compileFiles(List(path))
-      _ <- server.server.compilations.compileFiles(List(path))
-      obtained <- server.codeLenses(relativeFile)
-    } yield assertNoDiff(obtained, expected)
+    for (obtained <- server.codeLenses(relativeFile))
+      yield assertNoDiff(obtained, expected)
   }
 }

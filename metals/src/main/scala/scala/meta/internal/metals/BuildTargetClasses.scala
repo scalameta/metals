@@ -1,11 +1,9 @@
 package scala.meta.internal.metals
 
-import java.util.concurrent.CancellationException
 import ch.epfl.scala.{bsp4j => b}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.meta.internal.metals.BuildTargetClasses.Classes
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -17,18 +15,17 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 final class BuildTargetClasses(
     buildServer: () => Option[BuildServerConnection]
 )(implicit val ec: ExecutionContext) {
-  private val index = TrieMap.empty[b.BuildTargetIdentifier, Promise[Classes]]
+  private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
 
   val rebuildIndex: BatchedFunction[b.BuildTargetIdentifier, Unit] =
     BatchedFunction.fromFuture(fetchClasses)
 
-  def classesOf(target: b.BuildTargetIdentifier): Future[Classes] = {
-    index.getOrElseUpdate(target, Promise()).future
+  def classesOf(target: b.BuildTargetIdentifier): Classes = {
+    index.getOrElse(target, new Classes)
   }
 
   def invalidate(target: b.BuildTargetIdentifier): Unit = {
-    val previous = index.put(target, Promise())
-    previous.foreach(_.tryFailure(new CancellationException()))
+    index.put(target, new Classes)
   }
 
   private def fetchClasses(
@@ -55,10 +52,7 @@ final class BuildTargetClasses(
           _ <- updateTestClasses
         } yield {
           classes.foreach {
-            case (id, classes) =>
-              index
-                .getOrElseUpdate(id, Promise())
-                .success(classes)
+            case (id, classes) => index.put(id, classes)
           }
         }
 

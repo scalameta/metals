@@ -12,7 +12,9 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeLensParams
@@ -463,7 +465,24 @@ final class TestingServer(
     val path = toPath(filename)
     val uri = path.toURI.toString
     val params = new CodeLensParams(new TextDocumentIdentifier(uri))
+
+    val modelRefreshed = new CountDownLatch(2)
+
     for {
+      _ <- server
+        .didFocus(uri)
+        .asScala // model is refreshed only for focused document
+      _ <- {
+        client.refreshModelHandler = _ => modelRefreshed.countDown()
+        // bloop does not publish an analysis for the first compilation
+        Future.sequence(
+          List(
+            server.compilations.compileFiles(List(path)),
+            server.compilations.compileFiles(List(path))
+          )
+        )
+      }
+      _ <- Future(modelRefreshed.await(5, TimeUnit.SECONDS))
       lenses <- server.codeLens(params).asScala
       textEdits = CodeLensesTextEdits(lenses.asScala)
     } yield TextEdits.applyEdits(textContents(filename), textEdits)

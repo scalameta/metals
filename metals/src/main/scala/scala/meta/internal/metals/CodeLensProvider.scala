@@ -5,7 +5,6 @@ import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.CodeLensProvider._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -20,17 +19,16 @@ final class CodeLensProvider(
     semanticdbs: Semanticdbs
 )(implicit ec: ExecutionContext) {
   // code lenses will be refreshed after compilation or when workspace gets indexed
-  def findLenses(path: AbsolutePath): Future[Seq[l.CodeLens]] = {
+  def findLenses(path: AbsolutePath): Seq[l.CodeLens] = {
     val lenses = buildTargets
       .inverseSources(path)
       .filterNot(compilations.isCurrentlyCompiling)
       .map { buildTarget =>
-        for {
-          classes <- buildTargetClasses.classesOf(buildTarget)
-        } yield codeLenses(path, buildTarget, classes)
+        val classes = buildTargetClasses.classesOf(buildTarget)
+        codeLenses(path, buildTarget, classes)
       }
 
-    lenses.getOrElse(Future.successful(Nil))
+    lenses.getOrElse(Nil)
   }
 
   private def codeLenses(
