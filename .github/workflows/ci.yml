@@ -6,6 +6,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: olafurpg/setup-scala@v4
-    - run: sbt unit/test
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v4
+      - run: bin/travis/test.sh 'unit/test'
