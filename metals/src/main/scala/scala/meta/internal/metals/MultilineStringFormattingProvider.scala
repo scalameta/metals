@@ -86,7 +86,7 @@ final class MultilineStringFormattingProvider(
       if (newlineAdded)
         text.lastIndexBetween('\n', upperBound = newLineBeforePos - 1)
       else newLineBeforePos
-    val lastPipe = text.lastIndexBetween('|', pipeSearchStop, pos.start)
+    val lastPipe = text.lastIndexBetween('|', pipeSearchStop, pos.start - 1)
     lastPipe > pipeSearchStop
   }
 
