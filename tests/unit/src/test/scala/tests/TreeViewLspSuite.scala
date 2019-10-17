@@ -99,35 +99,35 @@ object TreeViewLspSuite extends BaseLspSuite("tree-view") {
         )
         server.assertTreeViewChildren(
           s"libraries:",
-          """|animal-sniffer-annotations-1.17.jar -
-             |cats-core_2.12-1.5.0.jar -
-             |cats-kernel_2.12-1.5.0.jar -
-             |cats-macros_2.12-1.5.0.jar -
+          """|animal-sniffer-annotations.jar -
+             |cats-core_2.12.jar -
+             |cats-kernel_2.12.jar -
+             |cats-macros_2.12.jar -
              |charsets.jar -
-             |checker-qual-2.5.2.jar -
-             |circe-core_2.12-0.11.1.jar -
-             |circe-numbers_2.12-0.11.1.jar -
-             |error_prone_annotations-2.2.0.jar -
-             |failureaccess-1.0.1.jar -
-             |gson-2.7.jar -
-             |guava-27.1-jre.jar -
-             |j2objc-annotations-1.1.jar -
+             |checker-qual.jar -
+             |circe-core_2.12.jar -
+             |circe-numbers_2.12.jar -
+             |error_prone_annotations.jar -
+             |failureaccess.jar -
+             |gson.jar -
+             |guava.jar -
+             |j2objc-annotations.jar -
              |jce.jar -
-             |jsr305-3.0.2.jar -
+             |jsr305.jar -
              |jsse.jar -
-             |listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar -
-             |machinist_2.12-0.6.6.jar -
-             |org.eclipse.lsp4j-0.5.0.jar -
-             |org.eclipse.lsp4j.generator-0.5.0.jar -
-             |org.eclipse.lsp4j.jsonrpc-0.5.0.jar -
-             |org.eclipse.xtend.lib-2.19.0.jar -
-             |org.eclipse.xtend.lib.macro-2.19.0.jar -
-             |org.eclipse.xtext.xbase.lib-2.19.0.jar -
+             |listenablefuture.jar -
+             |machinist_2.12.jar -
+             |org.eclipse.lsp4j.jar -
+             |org.eclipse.lsp4j.generator.jar -
+             |org.eclipse.lsp4j.jsonrpc.jar -
+             |org.eclipse.xtend.lib.jar -
+             |org.eclipse.xtend.lib.macro.jar -
+             |org.eclipse.xtext.xbase.lib.jar -
              |resources.jar -
              |rt.jar -
-             |scala-library-2.12.10.jar -
-             |scala-reflect-2.12.10.jar -
-             |sourcecode_2.12-0.1.7.jar -""".stripMargin
+             |scala-library.jar -
+             |scala-reflect.jar -
+             |sourcecode_2.12.jar -""".stripMargin
         )
         server.assertTreeViewChildren(
           s"libraries:${server.jar("scala-library")}!/scala/Some#",
