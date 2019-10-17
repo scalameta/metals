@@ -1055,7 +1055,8 @@ class MetalsLanguageServer(
       params: ExecuteCommandParams
   ): CompletableFuture[Object] = {
     import JsonParser._
-    params.getCommand match {
+    val command = Option(params.getCommand).getOrElse("")
+    command.stripPrefix("metals.") match {
       case ServerCommands.ScanWorkspaceSources() =>
         Future {
           indexWorkspaceSources()
