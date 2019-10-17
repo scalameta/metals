@@ -899,7 +899,9 @@ final class TestingServer(
           case None => ""
           case Some(i) => " " + i
         }
-        s"${node.label}${icon}${collapse}"
+        val libraryName =
+          node.label.replaceAll("-(\\d+\\.)+.*\\.jar", ".jar")
+        s"${libraryName}${icon}${collapse}"
       }
       .mkString("\n")
     DiffAssertions.assertNoDiff(obtained, expected, "obtained", "expected")
