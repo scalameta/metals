@@ -8,4 +8,4 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: olafurpg/setup-scala@v4
-    - run: sbt unit/test
+    - run: bin/test.sh unit/test
