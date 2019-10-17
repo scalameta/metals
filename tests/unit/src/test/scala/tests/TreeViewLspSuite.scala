@@ -3,6 +3,7 @@ package tests
 import scala.meta.internal.tvp.TreeViewProvider
 
 object TreeViewLspSuite extends BaseLspSuite("tree-view") {
+
   testAsync("projects") {
     cleanWorkspace()
     for {
@@ -441,6 +442,65 @@ object TreeViewLspSuite extends BaseLspSuite("tree-view") {
              |""".stripMargin
         )
       }
+    } yield ()
+  }
+
+  // see https://github.com/scalameta/metals/issues/846
+  val noOp = "no-op"
+  testAsync(noOp) {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {},
+          |  "b": {}
+          |}
+          |/a/src/main/scala/a/First.scala
+          |package a
+          |class First
+          |/b/src/main/scala/b/Second.scala
+          |package b
+          |class Second {
+          |  def a = 1
+          |  val b = 2
+          |}
+          |""".stripMargin
+      )
+      // Trigger a compilation of Second.scala
+      _ <- server.didOpen("b/src/main/scala/b/Second.scala")
+      _ = server.assertTreeViewChildren(
+        s"projects:${server.buildTarget("b")}",
+        "b/ +"
+      )
+
+      // shutdown and restart a new LSP server
+      _ = this.utestAfterEach(List(noOp))
+      _ = this.utestBeforeEach(List(noOp))
+      _ <- server.initialize("")
+
+      // This request triggers a no-op background compilation in the "b" project
+      // but immediately returns an empty result since the class directory
+      // contains no `*.class` files yet. This is Bloop-specific behavior
+      // and may be not an issue with other clients.
+      _ = server.assertTreeViewChildren(
+        s"projects:${server.buildTarget("b")}",
+        ""
+      )
+
+      // Trigger a compilation in an unrelated project to ensure that the
+      // background compilation of project "b" has completed.
+      _ <- server.didOpen("a/src/main/scala/a/First.scala")
+
+      // Assert that the tree view for "b" has been updated due to the trggered
+      // background compilation of project "b" has completed, even if it was a
+      // no-op.
+      _ = server.assertTreeViewChildren(
+        s"projects:${server.buildTarget("b")}",
+        "b/ +"
+      )
+
     } yield ()
   }
 }
