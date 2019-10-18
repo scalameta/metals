@@ -78,6 +78,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import scala.meta.internal.tvp.TreeViewProvider
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import scala.concurrent.Promise
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.DebugSession
@@ -459,13 +460,44 @@ final class TestingServer(
     }
   }
 
-  def codeLenses(filename: String): Future[String] = {
+  def codeLenses(filename: String)(maxRetries: Int): Future[String] = {
     val path = toPath(filename)
     val uri = path.toURI.toString
     val params = new CodeLensParams(new TextDocumentIdentifier(uri))
+
+    // see https://github.com/scalacenter/bloop/issues/1067
+    // because bloop does not notify us when we can access the main/test classes,
+    // we have to try until we finally get them.
+    // Following handler runs on the refresh-model notification from the server
+    // (basically once the compilation finishes and classes are fetched)
+    // it retries the compilation until we finally can get desired lenses
+    // or fails if it could nat be achieved withing [[maxRetries]] number of tries
+    var retries = maxRetries
+    val codeLenses = Promise[List[l.CodeLens]]()
+    val handler = { () =>
+      for {
+        lenses <- server.codeLens(params).asScala.map(_.asScala)
+      } {
+        if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
+        else if (retries > 0) {
+          retries -= 1
+          server.compilations.compileFiles(List(path))
+        } else {
+          val error = s"Could not fetch any code lenses in $maxRetries tries"
+          codeLenses.tryFailure(new NoSuchElementException(error))
+        }
+      }
+    }
+
     for {
-      lenses <- server.codeLens(params).asScala
-      textEdits = CodeLensesTextEdits(lenses.asScala)
+      _ <- server
+        .didFocus(uri)
+        .asScala // model is refreshed only for focused document
+      _ = client.refreshModelHandler = handler
+      // first compilation, to trigger the handler
+      _ <- server.compilations.compileFiles(List(path))
+      lenses <- codeLenses.future
+      textEdits = CodeLensesTextEdits(lenses)
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
 

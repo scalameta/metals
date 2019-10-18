@@ -115,12 +115,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
            |object Main
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala") // compile `a` to populate its cache
-      _ <- assertCodeLenses(
-        "b/src/main/scala/Main.scala",
-        """|object Main
-           |""".stripMargin
-      )
+      _ <- assertNoCodeLenses("b/src/main/scala/Main.scala")
     } yield ()
   }
 
@@ -148,19 +143,46 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(
         text => text.replace("object Main", "class Main")
       )
-      _ <- assertCodeLenses(
-        "a/src/main/scala/Main.scala",
-        """class Main {
-          |  def main(args: Array[String]): Unit = {}
-          |}
-          |""".stripMargin
-      )
+      _ <- assertNoCodeLenses("a/src/main/scala/Main.scala")
 
     } yield ()
   }
 
+  testAsync("keep-after-error") {
+    for {
+      _ <- server.initialize(
+        """|/metals.json
+           |{ "a": { } }
+           |
+           |/a/src/main/scala/Main.scala
+           |object Main {
+           |  def main(args: Array[String]): Unit = ???
+           |}""".stripMargin
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Main.scala",
+        """<<run>>
+          |object Main {
+          |  def main(args: Array[String]): Unit = ???
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/Main.scala")(
+        text => text.replace("}", "")
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Main.scala",
+        """<<run>>
+          |object Main {
+          |  def main(args: Array[String]): Unit = ???
+          |
+          |""".stripMargin
+      )
+    } yield ()
+  }
+
   def check(name: String, library: String = "")(expected: String): Unit = {
-    ignore(name) {
+    testAsync(name) {
       val original = expected.replaceAll("<<.*>>\\W", "")
 
       val sourceFile = {
@@ -196,13 +218,24 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
 
   private def assertCodeLenses(
       relativeFile: String,
-      expected: String
+      expected: String,
+      maxRetries: Int = 4
   ): Future[Unit] = {
-    val path = server.toPath(relativeFile)
-    for {
-      _ <- server.server.compilations.compileFiles(List(path))
-      _ <- server.server.compilations.compileFiles(List(path))
-      obtained <- server.codeLenses(relativeFile)
-    } yield assertNoDiff(obtained, expected)
+    val obtained = server.codeLenses(relativeFile)(maxRetries).recover {
+      case _: NoSuchElementException =>
+        server.textContents(relativeFile)
+    }
+
+    obtained.map(assertNoDiff(_, expected))
+  }
+
+  private def assertNoCodeLenses(
+      relativeFile: String,
+      maxRetries: Int = 4
+  ): Future[Unit] = {
+    server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
+      case _: NoSuchElementException => Future.unit
+      case e => Future.failed(e)
+    }
   }
 }

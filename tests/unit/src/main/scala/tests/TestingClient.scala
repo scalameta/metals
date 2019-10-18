@@ -35,6 +35,7 @@ import scala.meta.internal.builds.GradleBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MillBuildTool
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.NoopLanguageClient
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 
@@ -64,10 +65,22 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       None
   }
 
+  private var refreshedOnIndex = false
+  var refreshModelHandler: () => Unit = () => {}
+
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
     clientCommands.addLast(params)
+    params.getCommand match {
+      case ClientCommands.RefreshModel.id =>
+        if (refreshedOnIndex) {
+          refreshModelHandler()
+        } else {
+          refreshedOnIndex = true
+        }
+      case _ =>
+    }
   }
 
   override def applyEdit(

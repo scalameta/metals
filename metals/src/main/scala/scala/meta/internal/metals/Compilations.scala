@@ -8,12 +8,15 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 
 final class Compilations(
     buildTargets: BuildTargets,
     classes: BuildTargetClasses,
     workspace: () => AbsolutePath,
-    buildServer: () => Option[BuildServerConnection]
+    buildServer: () => Option[BuildServerConnection],
+    languageClient: MetalsLanguageClient,
+    isCurrentlyFocused: b.BuildTargetIdentifier => Boolean
 )(implicit ec: ExecutionContext) {
 
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
@@ -92,14 +95,28 @@ final class Compilations(
     targets.foreach(target => isCompiling(target) = true)
     val compilation = connection.compile(params)
 
-    val result = compilation.asScala.andThen {
+    val result = compilation.asScala
+      .andThen {
+        case result =>
+          updateCompiledTargetState(result)
+
+          // See https://github.com/scalacenter/bloop/issues/1067
+          classes.rebuildIndex(targets).foreach { _ =>
+            if (targets.exists(isCurrentlyFocused)) {
+              languageClient.refreshModel()
+            }
+          }
+      }
+
+    CancelableFuture(result, Cancelable(() => compilation.cancel(false)))
+  }
+
+  private def updateCompiledTargetState(result: Try[b.CompileResult]): Unit =
+    result match {
       case Failure(_) =>
         isCompiling.clear()
       case Success(_) =>
         lastCompile = isCompiling.keySet
         isCompiling.clear()
     }
-
-    CancelableFuture(result, Cancelable(() => compilation.cancel(false)))
-  }
 }
