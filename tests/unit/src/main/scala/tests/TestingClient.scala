@@ -281,9 +281,3 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   }
 
 }
-
-object TestingClient {
-  trait Listener {
-    def onRefreshModel(): Unit
-  }
-}
