@@ -87,12 +87,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
       .resolve(suiteName)
       .resolve(name.replace(' ', '-'))
 
-    if (path.isDirectory) {
-      val files = Files.walk(path.toNIO)
-      try files.sorted(Comparator.reverseOrder()).forEach(Files.delete(_))
-      finally files.close()
-    }
-
+    RecursivelyDelete(path)
     Files.createDirectories(path.toNIO)
     path
   }
