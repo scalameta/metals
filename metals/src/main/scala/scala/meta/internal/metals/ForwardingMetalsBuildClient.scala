@@ -47,8 +47,11 @@ final class ForwardingMetalsBuildClient(
     new ConcurrentHashMap[BuildTargetIdentifier, java.lang.Boolean]()
   )
 
+  val updatedTreeViews = ConcurrentHashSet.empty[BuildTargetIdentifier]
+
   def reset(): Unit = {
     cancel()
+    updatedTreeViews.clear()
   }
 
   override def cancel(): Unit = {
@@ -149,8 +152,14 @@ final class ForwardingMetalsBuildClient(
               // Only report success compilation if it fixes a previous compile error.
               statusBar.addMessage(message)
             }
-            if (!compilation.isNoOp) {
-              treeViewProvider().onBuildTargetDidCompile(report.getTarget())
+            if (!compilation.isNoOp || !updatedTreeViews.contains(target)) {
+              // By default, skip `onBuildTargetDidCompile` notifications on no-op
+              // compilations to reduce noisy traffic to the client. However, we
+              // send the notification if it's the first successful compilation of
+              // that target to fix
+              // https://github.com/scalameta/metals/issues/846.
+              updatedTreeViews.add(target)
+              treeViewProvider().onBuildTargetDidCompile(target)
             }
             hasReportedError.remove(target)
           } else {
