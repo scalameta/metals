@@ -76,6 +76,18 @@ final case class OnDemandSymbolIndex(
     }
   }
 
+  def retryOnException[T](action: () => T, count: Int = 3): T = {
+    val ret = try {
+      action()
+    } catch {
+      case NonFatal(_) if count >= 1 =>
+        retryOnException(action, count - 1)
+      case NonFatal(e) =>
+        throw e
+    }
+    ret
+  }
+
   // Enters nontrivial toplevel symbols for Scala source files.
   // All other symbols can be inferred on the fly.
   override def addSourceFile(
@@ -84,7 +96,8 @@ final case class OnDemandSymbolIndex(
   ): Unit = tryRun {
     indexedSources += 1
     val path = source.toIdeallyRelativeURI(sourceDirectory)
-    val text = FileIO.slurp(source, StandardCharsets.UTF_8)
+    val text =
+      retryOnException(() => FileIO.slurp(source, StandardCharsets.UTF_8))
     val input = Input.VirtualFile(path, text)
     val sourceToplevels = mtags.toplevels(input)
     sourceToplevels.foreach { toplevel =>
