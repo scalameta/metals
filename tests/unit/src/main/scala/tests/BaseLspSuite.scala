@@ -1,6 +1,5 @@
 package tests
 import java.nio.file.Files
-import java.util.Comparator
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
