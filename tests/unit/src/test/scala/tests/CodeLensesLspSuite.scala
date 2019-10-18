@@ -35,24 +35,23 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       |""".stripMargin
   )
 
-  // broken when being run on a fresh Bloop instance
-  // check("test-suite-class", library = "org.scalatest::scalatest:3.0.5")(
-  //   """|package foo.bar
-  //      |<<test>>
-  //      |class Foo extends org.scalatest.FunSuite {
-  //      |  test("foo") {}
-  //      |}
-  //      |""".stripMargin
-  // )
+  check("test-suite-class", library = "org.scalatest::scalatest:3.0.5")(
+    """|package foo.bar
+       |<<test>>
+       |class Foo extends org.scalatest.FunSuite {
+       |  test("foo") {}
+       |}
+       |""".stripMargin
+  )
 
-  // check("test-suite-object", library = "com.lihaoyi::utest:0.7.1")(
-  //   """|package foo.bar
-  //      |<<test>>
-  //      |object Foo extends utest.TestSuite {
-  //      |  val tests = utest.Tests {}
-  //      |}
-  //      |""".stripMargin
-  // )
+  check("test-suite-object", library = "com.lihaoyi::utest:0.7.1")(
+    """|package foo.bar
+       |<<test>>
+       |object Foo extends utest.TestSuite {
+       |  val tests = utest.Tests {}
+       |}
+       |""".stripMargin
+  )
 
   testAsync("run-many-main-files") {
     for {
@@ -161,7 +160,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   }
 
   def check(name: String, library: String = "")(expected: String): Unit = {
-    testAsync(name) {
+    ignore(name) {
       val original = expected.replaceAll("<<.*>>\\W", "")
 
       val sourceFile = {

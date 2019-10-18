@@ -739,7 +739,10 @@ final class TestingServer(
     var last = List[String]()
     input.tokenize.get.foreach { token =>
       val params = token.toPositionParams(identifier)
-      val definition = server.definitionOrReferences(params).asJava.get()
+      val definition = server
+        .definitionOrReferences(params, definitionOnly = true)
+        .asJava
+        .get()
       definition.definition.foreach { path =>
         if (path.isDependencySource(workspace)) {
           readonlySources(path.toNIO.getFileName.toString) = path
