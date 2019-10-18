@@ -40,8 +40,8 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
     if (server != null) {
       server.server.cancelAll()
     }
-    ex.shutdownNow()
-    sh.shutdownNow()
+    ex.shutdown()
+    sh.shutdown()
   }
 
   def assertConnectedToBuildServer(
