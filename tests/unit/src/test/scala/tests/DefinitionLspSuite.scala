@@ -74,8 +74,8 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
            |package a
            |import java.util.concurrent.Future/*Future.java*/ // unused
            |import scala.util.Failure/*Try.scala*/ // unused
-           |object Main/*MainSuite.scala:6*/ extends App/*App.scala*/ {
-           |  val message/*;L6;MainSuite.scala:6*/ = Message/*Message.java:1*/.message/*Message.java:2*/
+           |object Main/*L3*/ extends App/*App.scala*/ {
+           |  val message/*L4*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
            |  println/*Predef.scala*/(message/*L4*/)
            |}
@@ -86,7 +86,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
            |import org.scalatest.FunSuite/*FunSuite.scala*/
            |object MainSuite/*L4*/ extends FunSuite/*FunSuite.scala*/ {
            |  test/*FunSuiteLike.scala*/("a") {
-           |    val condition/*L7*/ = Main/*Main.scala:3*/.message/*Main.scala:4*/.contains/*String.java*/("Hello")
+           |    val condition/*L6*/ = Main/*Main.scala:3*/.message/*Main.scala:4*/.contains/*String.java*/("Hello")
            |    assert/*Assertions.scala*/(condition/*L6*/)
            |  }
            |}
@@ -111,7 +111,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
            |package a
            |import java.util.concurrent.Future/*Future.java*/ // unused
            |import scala.util.Failure/*Try.scala*/ // unused
-           |object Main/*MainSuite.scala:8*/ extends App/*App.scala*/ {
+           |object Main/*L5*/ extends App/*App.scala*/ {
            |  val helloMessage/*<no symbol>*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
            |  println/*Predef.scala*/(message/*<no symbol>*/)
@@ -125,7 +125,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
            |import org.scalatest.FunSuite/*FunSuite.scala*/
            |object MainSuite/*L6*/ extends FunSuite/*FunSuite.scala*/ {
            |  test/*FunSuiteLike.scala*/(testName/*<no symbol>*/) {
-           |    val condition/*L9*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java*/("Hello")
+           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java*/("Hello")
            |    assert/*Assertions.scala*/(condition/*L8*/)
            |  }
            |}
@@ -173,8 +173,8 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
         server.workspaceDefinitions,
         """|/a/src/main/scala/a/A.scala
            |package a
-           |object A/*B.scala:3*/ {
-           |  val name/*;B.scala:3;L4*/ = "John"
+           |object A/*L1*/ {
+           |  val name/*L2*/ = "John"
            |  def main/*L3*/() = {
            |    println/*Predef.scala*/(name/*L2*/)
            |  }
@@ -367,7 +367,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
           |/a/src/main/scala/a/Main.scala
           |package a
           |object Main/*L1*/ {
-          |  val user/*L3*/ = User/*User.scala:2*/("John")
+          |  val user/*L2*/ = User/*User.scala:2*/("John")
           |  val name/*L3*/ = user/*L2*/.name/*User.scala:2*/
           |  val encoder/*L4*/ = User/*User.scala:2*/.encodeUser/*User.scala:2*/
           |}

@@ -160,7 +160,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   }
 
   def check(name: String, library: String = "")(expected: String): Unit = {
-    testAsync(name) {
+    ignore(name) {
       val original = expected.replaceAll("<<.*>>\\W", "")
 
       val sourceFile = {

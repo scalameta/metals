@@ -1642,7 +1642,8 @@ class MetalsLanguageServer(
    */
   def definitionOrReferences(
       position: TextDocumentPositionParams,
-      token: CancelToken = EmptyCancelToken
+      token: CancelToken = EmptyCancelToken,
+      definitionOnly: Boolean = false
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.toLanguage.isScala) {
@@ -1658,7 +1659,7 @@ class MetalsLanguageServer(
         occ <- positionOccurrence.occurrence
       } yield occ) match {
         case Some(occ) =>
-          if (occ.role.isDefinition) {
+          if (occ.role.isDefinition && !definitionOnly) {
             val referenceContext = new ReferenceContext(false)
             val refParams = new ReferenceParams(referenceContext)
             refParams.setTextDocument(position.getTextDocument())
