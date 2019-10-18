@@ -66,7 +66,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   }
 
   private var refreshedOnIndex = false
-  var refreshModelHandler: Unit => Unit = identity
+  var refreshModelHandler: () => Unit = () => {}
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams

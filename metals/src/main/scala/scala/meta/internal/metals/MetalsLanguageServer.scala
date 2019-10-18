@@ -117,7 +117,9 @@ class MetalsLanguageServer(
     buildTargets,
     buildTargetClasses,
     () => workspace,
-    () => buildServer
+    () => buildServer,
+    languageClient,
+    buildTarget => focusedDocumentBuildTarget.get() == buildTarget
   )
   private val fileWatcher = register(
     new FileWatcher(
@@ -248,8 +250,7 @@ class MetalsLanguageServer(
       statusBar,
       time,
       report => compilers.didCompile(report),
-      () => treeView,
-      buildTarget => focusedDocumentBuildTarget.get() == buildTarget
+      () => treeView
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -1014,9 +1015,9 @@ class MetalsLanguageServer(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
-      codeLensProvider
-        .findLenses(params.getTextDocument.getUri.toAbsolutePath)
-        .asJava
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      val lenses = codeLensProvider.findLenses(path)
+      lenses.asJava
     }
 
   @JsonRequest("textDocument/foldingRange")

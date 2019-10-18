@@ -115,12 +115,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
            |object Main
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala") // compile `a` to populate its cache
-      _ <- assertCodeLenses(
-        "b/src/main/scala/Main.scala",
-        """|object Main
-           |""".stripMargin
-      )
+      _ <- assertNoCodeLenses("b/src/main/scala/Main.scala")
     } yield ()
   }
 
@@ -148,13 +143,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       _ <- server.didSave("a/src/main/scala/Main.scala")(
         text => text.replace("object Main", "class Main")
       )
-      _ <- assertCodeLenses(
-        "a/src/main/scala/Main.scala",
-        """class Main {
-          |  def main(args: Array[String]): Unit = {}
-          |}
-          |""".stripMargin
-      )
+      _ <- assertNoCodeLenses("a/src/main/scala/Main.scala")
 
     } yield ()
   }
@@ -229,9 +218,24 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
 
   private def assertCodeLenses(
       relativeFile: String,
-      expected: String
+      expected: String,
+      maxRetries: Int = 4
   ): Future[Unit] = {
-    for (obtained <- server.codeLenses(relativeFile))
-      yield assertNoDiff(obtained, expected)
+    val obtained = server.codeLenses(relativeFile)(maxRetries).recover {
+      case _: NoSuchElementException =>
+        server.textContents(relativeFile)
+    }
+
+    obtained.map(assertNoDiff(_, expected))
+  }
+
+  private def assertNoCodeLenses(
+      relativeFile: String,
+      maxRetries: Int = 4
+  ): Future[Unit] = {
+    server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
+      case _: NoSuchElementException => Future.unit
+      case e => Future.failed(e)
+    }
   }
 }

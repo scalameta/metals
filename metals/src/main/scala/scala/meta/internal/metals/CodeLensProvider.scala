@@ -22,7 +22,6 @@ final class CodeLensProvider(
   def findLenses(path: AbsolutePath): Seq[l.CodeLens] = {
     val lenses = buildTargets
       .inverseSources(path)
-      .filterNot(compilations.isCurrentlyCompiling)
       .map { buildTarget =>
         val classes = buildTargetClasses.classesOf(buildTarget)
         codeLenses(path, buildTarget, classes)

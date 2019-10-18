@@ -27,8 +27,7 @@ final class ForwardingMetalsBuildClient(
     statusBar: StatusBar,
     time: Time,
     didCompile: CompileReport => Unit,
-    treeViewProvider: () => TreeViewProvider,
-    isCurrentlyFocused: b.BuildTargetIdentifier => Boolean
+    treeViewProvider: () => TreeViewProvider
 )(implicit ec: ExecutionContext)
     extends MetalsBuildClient
     with Cancelable {
@@ -141,10 +140,6 @@ final class ForwardingMetalsBuildClient(
             scribe.info(s"time: compiled $name in ${compilation.timer}")
           }
           if (isSuccess) {
-            buildTargetClasses.rebuildIndex(target).foreach { _ =>
-              if (isCurrentlyFocused(target)) languageClient.refreshModel()
-            }
-
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
               statusBar.addMessage(message)
