@@ -272,11 +272,7 @@ class MetalsLanguageServer(
     bloopServers = new BloopServers(
       sh,
       workspace,
-      buildClient,
-      config,
-      config.icons,
-      embedded,
-      statusBar
+      buildClient
     )
     bspServers = new BspServers(
       workspace,
