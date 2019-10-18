@@ -33,6 +33,7 @@ jobs:
       script: sbt +cross/test
     - stage: release
       script:
+        - nvm install 'lts/*' && nvm use 'lts/*'
         - git fetch --tags
         - sbt ci-release docs/docusaurusPublishGhpages
 
