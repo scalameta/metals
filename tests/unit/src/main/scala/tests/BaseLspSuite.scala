@@ -86,7 +86,6 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
       .resolve(suiteName)
       .resolve(name.replace(' ', '-'))
 
-    RecursivelyDelete(path)
     Files.createDirectories(path.toNIO)
     path
   }

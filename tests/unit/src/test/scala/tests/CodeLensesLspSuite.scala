@@ -54,6 +54,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   )
 
   testAsync("run-many-main-files") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """|/metals.json
@@ -98,6 +99,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
 
   // Tests, whether main class in one project does not affect other class with same name in other project
   testAsync("run-multi-module") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """|/metals.json
@@ -120,6 +122,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   }
 
   testAsync("remove-stale-lenses") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """|/metals.json
@@ -149,6 +152,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   }
 
   testAsync("keep-after-error") {
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         """|/metals.json
@@ -183,6 +187,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
 
   def check(name: String, library: String = "")(expected: String): Unit = {
     testAsync(name) {
+      cleanWorkspace()
       val original = expected.replaceAll("<<.*>>\\W", "")
 
       val sourceFile = {
