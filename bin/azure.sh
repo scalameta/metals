@@ -6,4 +6,4 @@ source ~/.jabba/jabba.sh
 jabba install adopt@1.8.0-222
 jabba use adopt@1.8.0-222
 java -version
-bin/test.sh unit/test
+sbt unit/test
