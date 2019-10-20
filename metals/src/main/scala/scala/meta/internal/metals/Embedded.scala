@@ -6,16 +6,13 @@ import com.geirsson.coursiersmall
 import com.geirsson.coursiersmall.Dependency
 import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
-import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.ServiceLoader
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
-import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
-import scala.util.control.NonFatal
 import com.geirsson.coursiersmall.CoursierSmall
 
 /**
@@ -28,45 +25,11 @@ import com.geirsson.coursiersmall.CoursierSmall
 final class Embedded(
     icons: Icons,
     statusBar: StatusBar,
-    userConfig: () => UserConfiguration,
-    newBloopClassloader: () => URLClassLoader
+    userConfig: () => UserConfiguration
 ) extends Cancelable {
 
   override def cancel(): Unit = {
     presentationCompilers.clear()
-  }
-
-  /**
-   * Fetches jars for bloop-frontend and creates a new orphan classloader.
-   */
-  lazy val bloopJars: Option[URLClassLoader] = {
-    statusBar.trackSlowTask("Downloading Bloop") {
-      try {
-        Some(newBloopClassloader())
-      } catch {
-        case NonFatal(e) =>
-          scribe.error(
-            "Failed to classload bloop, compilation will not work",
-            e
-          )
-          None
-      }
-    }
-  }
-
-  /**
-   * Returns local path to a `bloop.py` script that we can call as `python bloop.py`.
-   *
-   * We don't `sys.process("bloop", ...)` directly because that requires bloop to be
-   * available on the PATH of the forked process and that didn't work while testing
-   * on Windows (even if `bloop` worked fine in the git bash).
-   */
-  lazy val bloopPy: AbsolutePath = {
-    val embeddedBloopClient = this.getClass.getResourceAsStream("/bloop.py")
-    val out = Files.createTempDirectory("metals").resolve("bloop.py")
-    out.toFile.deleteOnExit()
-    Files.copy(embeddedBloopClient, out)
-    AbsolutePath(out)
   }
 
   private val presentationCompilers: TrieMap[String, URLClassLoader] =
@@ -159,39 +122,5 @@ object Embedded {
     val parent =
       new PresentationCompilerClassLoader(this.getClass.getClassLoader)
     new URLClassLoader(allURLs, parent)
-  }
-
-  def newBloopClassloader(
-      bloopVersion: String = BuildInfo.bloopVersion
-  ): URLClassLoader = {
-    val settings = downloadSettings(
-      new Dependency(
-        "ch.epfl.scala",
-        "bloop-frontend_2.12",
-        bloopVersion
-      ),
-      BuildInfo.scala212
-    ).addRepositories(
-      List(
-        new coursiersmall.Repository.Maven(
-          "https://dl.bintray.com/scalacenter/releases"
-        )
-      )
-    )
-
-    // java9+ compatability
-    val parent: ClassLoader = try {
-      val parentClassLoaderMethod =
-        classOf[ClassLoader].getMethod("getPlatformClassLoader")
-      parentClassLoaderMethod.invoke(null).asInstanceOf[ClassLoader]
-    } catch {
-      case _: NoSuchMethodException => null
-    }
-
-    val jars = CoursierSmall.fetch(settings)
-    // Don't make Bloop classloader a child of our classloader.
-    val classloader =
-      new URLClassLoader(jars.iterator.map(_.toUri.toURL).toArray, parent)
-    classloader
   }
 }

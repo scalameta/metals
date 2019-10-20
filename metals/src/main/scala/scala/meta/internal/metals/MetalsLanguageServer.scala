@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.net.URI
-import java.net.URLClassLoader
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.nio.file._
@@ -58,9 +57,7 @@ class MetalsLanguageServer(
     progressTicks: ProgressTicks = ProgressTicks.braille,
     bspGlobalDirectories: List[AbsolutePath] =
       BspServers.globalInstallDirectories,
-    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
-    newBloopClassloader: () => URLClassLoader = () =>
-      Embedded.newBloopClassloader()
+    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
 ) extends Cancelable {
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -187,8 +184,7 @@ class MetalsLanguageServer(
       new Embedded(
         config.icons,
         statusBar,
-        () => userConfig,
-        newBloopClassloader
+        () => userConfig
       )
     )
     LanguageClientLogger.languageClient = Some(languageClient)

@@ -2,7 +2,6 @@ package tests
 
 import java.io.IOException
 import java.net.URI
-import java.net.URLClassLoader
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -102,8 +101,7 @@ final class TestingServer(
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
-    time: Time,
-    newBloopClassloader: () => URLClassLoader
+    time: Time
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
   val server = new MetalsLanguageServer(
@@ -114,8 +112,7 @@ final class TestingServer(
     progressTicks = ProgressTicks.none,
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
-    time = time,
-    newBloopClassloader = newBloopClassloader
+    time = time
   )
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
