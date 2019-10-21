@@ -5,9 +5,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.BloopProtocol
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsLogger
@@ -23,7 +21,6 @@ import scala.util.control.NonFatal
  */
 abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   MetalsLogger.updateDefaultFormat()
-  def protocol: BloopProtocol = BloopProtocol.auto
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration = UserConfiguration()
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default
@@ -61,7 +58,6 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
     workspace = createWorkspace(name)
     val buffers = Buffers()
     val config = serverConfig.copy(
-      bloopProtocol = protocol,
       executeClientCommand = ExecuteClientCommandConfig.on,
       icons = this.icons
     )
@@ -73,8 +69,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
       config,
       bspGlobalDirectories,
       sh,
-      time,
-      () => Embedded.newBloopClassloader()
+      time
     )(ex)
     server.server.userConfig = this.userConfig
   }
@@ -86,7 +81,6 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
       .resolve(suiteName)
       .resolve(name.replace(' ', '-'))
 
-    RecursivelyDelete(path)
     Files.createDirectories(path.toNIO)
     path
   }

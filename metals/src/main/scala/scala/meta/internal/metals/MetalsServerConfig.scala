@@ -22,7 +22,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param icons what icon set to use for messages.
  */
 final case class MetalsServerConfig(
-    bloopProtocol: BloopProtocol = BloopProtocol.default,
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
     slowTask: SlowTaskConfig = SlowTaskConfig.default,
@@ -75,7 +74,6 @@ final case class MetalsServerConfig(
 ) {
   override def toString: String =
     List[String](
-      s"bloop-protocol=$bloopProtocol",
       s"glob-syntax=$globSyntax",
       s"status-bar=$statusBar",
       s"slow-task=$slowTask",
