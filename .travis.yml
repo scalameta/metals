@@ -14,20 +14,20 @@ jobs:
     # default stage is test
     - env: TEST="scalafmt+scalafix+docs"
       before_script:
-        - nvm install 'lts/*' && nvm use 'lts/*'
+      - nvm install 'lts/*' && nvm use 'lts/*'
       script:
         - ./bin/scalafmt --test
         - sbt scalafixCheck docs/docusaurusCreateSite
     - env: TEST="sbt 'slow/testOnly -- tests.sbt'"
-      script: sbt 'slow/testOnly -- tests.sbt'
+      script: bin/test.sh 'slow/testOnly -- tests.sbt'
     - env: TEST="sbt 'slow/testOnly -- tests.mill'"
-      script: sbt 'slow/testOnly -- tests.mill'
+      script: bin/test.sh 'slow/testOnly -- tests.mill'
     - env: TEST="sbt 'slow/testOnly -- tests.gradle'"
-      script: sbt 'slow/testOnly -- tests.gradle'
+      script: bin/test.sh 'slow/testOnly -- tests.gradle'
     - env: TEST="sbt 'slow/testOnly -- tests.maven'"
-      script: sbt 'slow/testOnly -- tests.maven'
+      script: bin/test.sh 'slow/testOnly -- tests.maven'
     - env: TEST="sbt 'slow/testOnly -- tests.feature'"
-      script: sbt 'slow/testOnly -- tests.feature'
+      script: bin/test.sh 'slow/testOnly -- tests.feature'
     - env: TEST="sbt +cross/test"
       before_script: nvm install 'lts/*' && nvm use 'lts/*'
       script: sbt +cross/test
