@@ -45,7 +45,6 @@ import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
-import com.google.gson.JsonObject
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -199,6 +198,8 @@ class MetalsLanguageServer(
   private def updateWorkspaceDirectory(params: InitializeParams): Unit = {
     workspace = AbsolutePath(Paths.get(URI.create(params.getRootUri))).dealias
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
+    val clientExperimentalCapabilities =
+      ClientExperimentalCapabilities.from(params.getCapabilities)
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, config))
     buildTargets.setTables(tables)
@@ -284,12 +285,13 @@ class MetalsLanguageServer(
         interactiveSemanticdbs
       )
     )
-    codeLensProvider = new CodeLensProvider(
+    codeLensProvider = CodeLensProvider(
       buildTargetClasses,
       buffers,
       buildTargets,
       compilations,
-      semanticdbs
+      semanticdbs,
+      clientExperimentalCapabilities
     )
     definitionProvider = new DefinitionProvider(
       workspace,
@@ -381,7 +383,7 @@ class MetalsLanguageServer(
       tables,
       messages
     )
-    if (isTreeViewSupported(params)) {
+    if (clientExperimentalCapabilities.treeViewProvider) {
       treeView = new MetalsTreeViewProvider(
         () => workspace,
         languageClient,
@@ -453,16 +455,6 @@ class MetalsLanguageServer(
       capabilities.setExperimental(MetalsExperimental())
       new InitializeResult(capabilities)
     }).asJava
-  }
-
-  private def isTreeViewSupported(params: InitializeParams): Boolean = {
-    params.getCapabilities() != null &&
-    params.getCapabilities().getExperimental() != null && {
-      params.getCapabilities().getExperimental() match {
-        case json: JsonObject => json.has("treeViewProvider")
-        case _ => false
-      }
-    }
   }
 
   private def registerNiceToHaveFilePatterns(): Unit = {

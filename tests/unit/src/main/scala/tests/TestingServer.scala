@@ -73,11 +73,10 @@ import scala.meta.internal.tvp.TreeViewChildrenParams
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.{meta => m}
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
 import scala.meta.internal.tvp.TreeViewProvider
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import scala.concurrent.Promise
+import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.DebugSession
@@ -250,13 +249,15 @@ final class TestingServer(
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
-    val experimental = new JsonObject()
-    experimental.add("treeViewProvider", new JsonPrimitive(true))
+    val experimental = new ClientExperimentalCapabilities(
+      debuggingProvider = true,
+      treeViewProvider = true
+    )
     params.setCapabilities(
       new ClientCapabilities(
         workspaceCapabilities,
         textDocumentCapabilities,
-        experimental
+        experimental.toJson
       )
     )
     params.setWorkspaceFolders(
