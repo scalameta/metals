@@ -73,7 +73,7 @@ following settings.
 
 " Configuration for vim-plug
 Plug 'derekwyatt/vim-scala'
-Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " Configuration for vim-scala
 au BufRead,BufNewFile *.sbt set filetype=scala
