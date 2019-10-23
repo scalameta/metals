@@ -11,13 +11,18 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.io.AbsolutePath
 
-final class CodeLensProvider(
+trait CodeLensProvider {
+  def findLenses(path: AbsolutePath): Seq[l.CodeLens]
+}
+
+final class DebugCodeLensProvider(
     buildTargetClasses: BuildTargetClasses,
     buffers: Buffers,
     buildTargets: BuildTargets,
     compilations: Compilations,
     semanticdbs: Semanticdbs
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext)
+    extends CodeLensProvider {
   // code lenses will be refreshed after compilation or when workspace gets indexed
   def findLenses(path: AbsolutePath): Seq[l.CodeLens] = {
     val lenses = buildTargets
@@ -71,6 +76,28 @@ final class CodeLensProvider(
 
 object CodeLensProvider {
   import scala.meta.internal.metals.JsonParser._
+
+  private val Empty: CodeLensProvider = (_: AbsolutePath) => Nil
+
+  def apply(
+      buildTargetClasses: BuildTargetClasses,
+      buffers: Buffers,
+      buildTargets: BuildTargets,
+      compilations: Compilations,
+      semanticdbs: Semanticdbs,
+      capabilities: ClientExperimentalCapabilities
+  )(implicit ec: ExecutionContext): CodeLensProvider = {
+    if (!capabilities.debuggingProvider) Empty
+    else {
+      new DebugCodeLensProvider(
+        buildTargetClasses,
+        buffers,
+        buildTargets,
+        compilations,
+        semanticdbs
+      )
+    }
+  }
 
   def testCommand(
       target: b.BuildTargetIdentifier,
