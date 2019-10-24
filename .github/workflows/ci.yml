@@ -3,9 +3,79 @@ on:
   push:
   pull_request:
 jobs:
-  build:
+  windows:
+    name: Windows unit tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: sbt unit/test 
+        run: bin/test.sh "unit/test"
+        shell: bash
+  linux:
+    name: Linux unit tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: olafurpg/setup-scala@v4
-    - run: bin/test.sh unit/test
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: sbt unit/test
+        run: bin/test.sh unit/test
+  sbt:
+    name: Sbt integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: sbt 'slow/testOnly -- tests.sbt'
+        run: bin/test.sh 'slow/testOnly -- tests.sbt'
+  maven:
+    name: Maven integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: sbt 'slow/testOnly -- tests.maven'
+        run: bin/test.sh 'slow/testOnly -- tests.maven'
+  gradle:
+    name: Gradle integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: sbt 'slow/testOnly -- tests.gradle'
+        run: bin/test.sh 'slow/testOnly -- tests.gradle'
+  mill:
+    name: Mill integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: sbt bin/test.sh 'slow/testOnly -- tests.mill'
+        run: bin/test.sh 'slow/testOnly -- tests.mill'
+  feature:
+    name: Slow tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: sbt 'slow/testOnly -- tests.feature'
+        run: bin/test.sh 'slow/testOnly -- tests.feature'
+  cross:
+    name: Scala cross tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: sbt +cross/test
+        run: sbt +cross/test
+  checks:
+    name: Scalafmt/Scalacheck/Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - uses: actions/setup-node@v1
+      - name: scalafmt & scalafix & docusaurus
+        run: |
+          ./bin/scalafmt --test
+          sbt scalafixCheck docs/docusaurusCreateSite
