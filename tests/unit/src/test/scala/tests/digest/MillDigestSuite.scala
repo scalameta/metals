@@ -1,4 +1,5 @@
 package tests
+package digest
 
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.MillDigest
