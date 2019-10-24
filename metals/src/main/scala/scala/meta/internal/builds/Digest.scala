@@ -24,7 +24,7 @@ object Digest {
    * Bump up this version if parameters outside of the sbt sources themselves require
    * re-running `bloopInstall`. For example a SemanticDB or Bloop version upgrade.
    */
-  val version: String = "v4"
+  val version: String = "v5"
   sealed abstract class Status(val value: Int)
       extends Product
       with Serializable {
@@ -182,6 +182,8 @@ trait Digestable {
       if (System.getProperty("metals.testing") == null) {
         digest.update(Digest.version.getBytes(StandardCharsets.UTF_8))
       }
+
+      digest.update(workspace.toString.getBytes(StandardCharsets.UTF_8))
 
       val isSuccess = digestWorkspace(workspace, digest)
       if (isSuccess) Some(MD5.bytesToHex(digest.digest()))
