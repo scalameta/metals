@@ -42,7 +42,7 @@ trait BaseDigestSuite extends BaseSuite {
       )
       val rootDigest = digestCurrent(root)
       RecursivelyDelete(root)
-      val altDigest = digestCurrent(FileLayout.fromString(altLayout))
+      val altDigest = digestCurrent(FileLayout.fromString(altLayout, root))
       (rootDigest, altDigest) match {
         case (None, None) => ()
         case (Some(x), Some(y)) =>
