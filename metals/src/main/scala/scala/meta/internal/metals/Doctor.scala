@@ -114,7 +114,7 @@ final class Doctor(
       scala: ScalaTarget
   ): String = {
 
-    val minimumBloopVersion = "1.3.3"
+    val minimumBloopVersion = "1.3.5"
     def isUnsupportedBloopVersion =
       bspServerVersion.exists(
         version =>
