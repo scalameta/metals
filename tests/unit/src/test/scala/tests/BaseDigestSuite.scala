@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.RecursivelyDelete
 
 trait BaseDigestSuite extends BaseSuite {
 
@@ -10,20 +11,22 @@ trait BaseDigestSuite extends BaseSuite {
       name: String,
       layout: String,
       altLayout: String
-  ) = check(name, layout, altLayout, isEqual = true)
+  )(implicit file: sourcecode.File, line: sourcecode.Line) =
+    check(name, layout, altLayout, isEqual = true)
 
   def checkDiff(
       name: String,
       layout: String,
       altLayout: String
-  ) = check(name, layout, altLayout, isEqual = false)
+  )(implicit file: sourcecode.File, line: sourcecode.Line) =
+    check(name, layout, altLayout, isEqual = false)
 
   private def check(
       name: String,
       layout: String,
       altLayout: String,
       isEqual: Boolean = true
-  ): Unit = {
+  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
     test(name) {
       val root = FileLayout.fromString(layout)
       val altRoot = FileLayout.fromString(altLayout)
@@ -37,7 +40,10 @@ trait BaseDigestSuite extends BaseSuite {
         digestCurrent(altRoot),
         "Second layout should be equal when run twice"
       )
-      (digestCurrent(root), digestCurrent(altRoot)) match {
+      val rootDigest = digestCurrent(root)
+      RecursivelyDelete(root)
+      val altDigest = digestCurrent(FileLayout.fromString(altLayout))
+      (rootDigest, altDigest) match {
         case (None, None) => ()
         case (Some(x), Some(y)) =>
           if (isEqual) {
