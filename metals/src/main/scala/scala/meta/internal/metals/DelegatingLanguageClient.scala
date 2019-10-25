@@ -12,10 +12,8 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.UnregistrationParams
 import scala.meta.internal.tvp._
 
-class DelegatingLanguageClient(
-    var underlying: MetalsLanguageClient,
-    config: MetalsServerConfig
-) extends MetalsLanguageClient {
+class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
+    extends MetalsLanguageClient {
 
   override def shutdown(): Unit = {
     underlying.shutdown()

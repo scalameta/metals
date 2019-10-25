@@ -12,19 +12,6 @@ import scala.meta.internal.tvp._
 import scala.meta.internal.metals.MetalsEnrichments._
 
 trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
-  @volatile private var debuggingSupported = true
-
-  final def configure(capabilities: ClientExperimentalCapabilities): Unit = {
-    debuggingSupported = capabilities.debuggingProvider
-  }
-
-  final def refreshModel(): Unit = {
-    if (debuggingSupported) {
-      val command = ClientCommands.RefreshModel.id
-      val params = new ExecuteCommandParams(command, Nil.asJava)
-      metalsExecuteClientCommand(params)
-    }
-  }
 
   /**
    * Display message in the editor "status bar", which should be displayed somewhere alongside the buffer.
@@ -49,6 +36,12 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
 
   @JsonNotification("metals/executeClientCommand")
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
+
+  final def refreshModel(): Unit = {
+    val command = ClientCommands.RefreshModel.id
+    val params = new ExecuteCommandParams(command, Nil.asJava)
+    metalsExecuteClientCommand(params)
+  }
 
   /**
    * Opens an input box to ask the user for input.

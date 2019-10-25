@@ -12,7 +12,6 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeLensParams
@@ -498,7 +497,7 @@ final class TestingServer(
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
       _ <- server.compilations.compileFiles(List(path))
-      lenses <- codeLenses.future.withTimeout(30, TimeUnit.SECONDS)
+      lenses <- codeLenses.future
       textEdits = CodeLensesTextEdits(lenses)
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }

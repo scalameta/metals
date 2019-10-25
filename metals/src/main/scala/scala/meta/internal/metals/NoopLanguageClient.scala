@@ -39,9 +39,6 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   override def metalsTreeViewDidChange(
       params: TreeViewDidChangeParams
   ): Unit = ()
-  // override def metalsTreeViewNodeReveal(
-  //     params: TreeViewNodeRevealResult
-  // ): Unit = ()
 }
 
 object NoopLanguageClient extends NoopLanguageClient

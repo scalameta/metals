@@ -41,7 +41,7 @@ import scala.util.Try
 final class MetalsHttpClient(
     workspace: AbsolutePath,
     url: () => String,
-    _underlying: MetalsLanguageClient,
+    initial: MetalsLanguageClient,
     triggerReload: () => Unit,
     charset: Charset,
     icons: Icons,
@@ -49,7 +49,7 @@ final class MetalsHttpClient(
     sh: ScheduledExecutorService,
     config: MetalsServerConfig
 )(implicit ec: ExecutionContext)
-    extends DelegatingLanguageClient(_underlying, config) {
+    extends DelegatingLanguageClient(initial) {
 
   override def metalsInputBox(
       params: MetalsInputBoxParams
