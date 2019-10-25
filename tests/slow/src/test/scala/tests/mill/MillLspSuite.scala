@@ -3,9 +3,6 @@ package tests.mill
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.ServerCommands
-import java.util.concurrent.TimeUnit
-import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.meta.internal.builds.MillBuildTool
 import tests.BaseImportSuite
 
@@ -66,37 +63,6 @@ object MillLspSuite extends BaseImportSuite("mill-import") {
     }
   }
 
-  testAsync("force-command") {
-    cleanWorkspace()
-    for {
-      _ <- server.initialize(
-        """
-          |/build.sc
-          |import mill._, scalalib._
-          |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.10"
-          |}
-        """.stripMargin
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        List(
-          // Project has no .bloop directory so user is asked to "import via bloop"
-          importBuildMessage,
-          progressMessage
-        ).mkString("\n")
-      )
-      _ = client.messageRequests.clear() // restart
-      _ <- server.executeCommand(ServerCommands.ImportBuild.id)
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        List(
-          progressMessage
-        ).mkString("\n")
-      )
-    } yield ()
-  }
-
   testAsync("new-dependency") {
     cleanWorkspace()
     for {
@@ -129,41 +95,6 @@ object MillLspSuite extends BaseImportSuite("mill-import") {
         }
         .recover { case e => scribe.error("compile", e) }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
-    } yield ()
-  }
-
-  testAsync("cancel") {
-    client.slowTaskHandler = params => {
-      if (params == bloopInstallProgress("mill")) {
-        Thread.sleep(TimeUnit.SECONDS.toMillis(2))
-        Some(MetalsSlowTaskResult(cancel = true))
-      } else {
-        None
-      }
-    }
-    cleanWorkspace()
-    for {
-      _ <- server.initialize(
-        """
-          |/build.sc
-          |import mill._, scalalib._
-          |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.10"
-          |  /*DIFF*/
-          |}
-        """.stripMargin,
-        expectError = true
-      )
-      _ = assertStatus(!_.isInstalled)
-      _ = client.slowTaskHandler = _ => None
-      _ <- server.didSave("build.sc")(_ + "\n// comment \n")
-      _ = assertNoDiff(client.workspaceShowMessages, "")
-      _ = assertStatus(!_.isInstalled)
-      _ <- server.didSave("build.sc") { text =>
-        val a = text.replace("/*DIFF*/", "def test = 123"); println(a); a
-      }
-      _ = assertNoDiff(client.workspaceShowMessages, "")
-      _ = assertStatus(_.isInstalled)
     } yield ()
   }
 
