@@ -200,6 +200,8 @@ class MetalsLanguageServer(
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
     val clientExperimentalCapabilities =
       ClientExperimentalCapabilities.from(params.getCapabilities)
+
+    languageClient.configure(clientExperimentalCapabilities)
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, config))
     buildTargets.setTables(tables)

@@ -12,6 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeLensParams
@@ -100,7 +101,8 @@ final class TestingServer(
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
-    time: Time
+    time: Time,
+    experimentalCapabilities: Option[ClientExperimentalCapabilities]
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
   val server = new MetalsLanguageServer(
@@ -249,9 +251,11 @@ final class TestingServer(
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
-    val experimental = new ClientExperimentalCapabilities(
-      debuggingProvider = true,
-      treeViewProvider = true
+    val experimental = experimentalCapabilities.getOrElse(
+      new ClientExperimentalCapabilities(
+        debuggingProvider = true,
+        treeViewProvider = true
+      )
     )
     params.setCapabilities(
       new ClientCapabilities(
@@ -494,7 +498,7 @@ final class TestingServer(
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
       _ <- server.compilations.compileFiles(List(path))
-      lenses <- codeLenses.future
+      lenses <- codeLenses.future.withTimeout(30, TimeUnit.SECONDS)
       textEdits = CodeLensesTextEdits(lenses)
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }
