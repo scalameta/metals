@@ -68,6 +68,10 @@ final class BloopServers(
         clientOut,
         clientIn,
         List(
+          Cancelable { () =>
+            clientOut.flush()
+            clientOut.close()
+          },
           Cancelable(() => job.cancel(true))
         ),
         "Bloop"
