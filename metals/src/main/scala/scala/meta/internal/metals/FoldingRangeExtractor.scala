@@ -37,7 +37,8 @@ final class FoldingRangeExtractor(
               pos
             case None => enclosing
           }
-        case _ => enclosing
+        case _ =>
+          enclosing
       }
 
       val (importGroups, otherChildren) = extractImports(tree.children)
@@ -112,7 +113,8 @@ final class FoldingRangeExtractor(
       if (tokens.hasNext) {
         tokens.next() match {
           case token: Token.Comment => findLastConsecutiveComment(token)
-          case _: Token.Space | _: Token.LF => findLastConsecutiveComment(acc)
+          case _: Token.Space | _: Token.LF | _: Token.CR =>
+            findLastConsecutiveComment(acc)
           case _ => acc
         }
       } else acc
@@ -173,8 +175,8 @@ final class FoldingRangeExtractor(
           startToken <- term.expr.findFirstTrailing(_.is[Token.KwCatch])
           lastCase <- term.catchp.lastOption
           endToken <- lastCase.findFirstTrailing(_.is[Token.RightBrace])
-        } yield
-          Position.Range(tree.pos.input, startToken.pos.end, endToken.pos.end)
+        } yield Position
+          .Range(tree.pos.input, startToken.pos.end, endToken.pos.end)
 
       case For(endPosition) =>
         val start = tree.pos.start + 3

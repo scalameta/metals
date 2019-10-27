@@ -3,15 +3,15 @@ on:
   push:
   pull_request:
 jobs:
-  # windows:
-  #   name: Windows unit tests
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v1
-  #     - uses: olafurpg/setup-scala@v5
-  #     - name: Run unit tests
-  #       run: bin/test.sh "unit/test"
-  #       shell: bash
+  windows:
+    name: Windows unit tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: Run unit tests
+        run: bin/test.sh "unit/test"
+        shell: bash
   linux:
     name: Linux unit tests
     runs-on: ubuntu-latest

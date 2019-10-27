@@ -12,7 +12,6 @@ import scala.meta.io.AbsolutePath
 object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
   private val buffers = Buffers()
   private val trees = TestingTrees(buffers)
-
   private val foldingRangeProvider =
     new FoldingRangeProvider(trees, buffers, foldOnlyLines = false)
 
@@ -21,8 +20,13 @@ object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
       .resolve("foldingRange")
       .resolve("input")
     val customInput = InputProperties.fromDirectory(inputDirectory)
-    customInput.allFiles.map { file =>
-      ExpectTestCase(file, () => obtainFrom(file))
+    customInput.allFiles.flatMap { file =>
+      val ignored = Set("PatternMatching.scala")
+      if (BaseSuite.isWindows && ignored(file.file.toFile.getName())) {
+        None
+      } else {
+        Some(ExpectTestCase(file, () => obtainFrom(file)))
+      }
     }
   }
 

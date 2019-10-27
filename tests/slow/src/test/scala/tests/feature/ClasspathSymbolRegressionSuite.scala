@@ -13,17 +13,6 @@ object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   override def afterAll(): Unit = {
     RecursivelyDelete(tmp)
   }
-  override def check(
-      query: String,
-      expected: String
-  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
-    if (isWindows) {
-      // Ignored on Appveyor because the JDK classpath is different.
-      ignore(query)(())
-    } else {
-      super.check(query, expected)
-    }
-  }
 
   check(
     "scala.None",
