@@ -21,6 +21,7 @@ object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
       .resolve("input")
     val customInput = InputProperties.fromDirectory(inputDirectory)
     customInput.allFiles.flatMap { file =>
+      // pos endLine is sometimes line before on windows
       val ignored = Set("PatternMatching.scala")
       if (BaseSuite.isWindows && ignored(file.file.toFile.getName())) {
         None

@@ -205,9 +205,9 @@ class BaseSuite extends TestSuite {
   }
 }
 
-object BaseSuite{
+object BaseSuite {
 
-  def isWindows: Boolean = 
-    System.getProperty("os.name").toLowerCase().contains("win")  
+  def isWindows: Boolean =
+    System.getProperty("os.name").toLowerCase().contains("win")
 
 }

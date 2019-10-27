@@ -98,9 +98,17 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   def cleanDatabase(): Unit = {
     RecursivelyDelete(workspace.resolve(".metals").resolve("metals.h2.db"))
   }
-  def cleanWorkspace(): Unit = {
-    RecursivelyDelete(workspace)
-    Files.createDirectories(workspace.toNIO)
+  def cleanWorkspace(retry: Int = 4): Unit = {
+    if (retry > 0) {
+      try {
+        RecursivelyDelete(workspace)
+        Files.createDirectories(workspace.toNIO)
+      } catch {
+        case NonFatal(_) =>
+          Thread.sleep(1000)
+          cleanWorkspace(retry - 1)
+      }
+    }
   }
 
   def flakyTest(name: String, maxRetries: Int = 3)(

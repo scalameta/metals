@@ -25,7 +25,7 @@ object DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
     """
       |object Main {
       |  val abc = 123
-      |  abc.<<toInt@@>>
+      |  abc.<<to@@Int>>
       |  134l.toInt
       |}""".stripMargin
   )
