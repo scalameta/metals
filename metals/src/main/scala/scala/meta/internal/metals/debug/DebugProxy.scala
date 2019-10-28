@@ -7,6 +7,7 @@ import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
 import scala.meta.internal.metals.debug.DebugProxy._
@@ -81,8 +82,19 @@ private[debug] object DebugProxy {
       connectToServer: () => Future[Socket]
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
-      server <- connectToServer().map(new RemoteEndpoint(_))
-      client <- awaitClient().map(new RemoteEndpoint(_))
+      server <- connectToServer()
+        .map(new SocketEndpoint(_))
+        .map(endpoint => withLogger(endpoint, "dap-server"))
+      client <- awaitClient()
+        .map(new SocketEndpoint(_))
+        .map(endpoint => withLogger(endpoint, "dap-client"))
     } yield new DebugProxy(name, client, server)
+  }
+
+  private def withLogger(
+      endpoint: RemoteEndpoint,
+      name: String
+  ): RemoteEndpoint = {
+    new EndpointLogger(endpoint, GlobalTrace.setup(name))
   }
 }
