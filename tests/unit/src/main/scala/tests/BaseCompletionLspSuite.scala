@@ -29,19 +29,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
   )(implicit file: sourcecode.File, line: sourcecode.Line): Future[Unit] = {
     withCompletion(query, project) { list =>
       val completion = server.formatCompletion(list, includeDetail, filter)
-      val obtained =
-        if (isWindows) {
-          // HACK(olafur) we don't have access to the JDK sources on Appveyor
-          // and the completion tests assert against the signatures of String.substring
-          // which has parameters `beginIndex` and `endIndex`. This hack can be removed
-          // if we figure out how to access JDK sources on Appveyor.
-          completion
-            .replaceAllLiterally("x$1", "beginIndex")
-            .replaceAllLiterally("x$2", "endIndex")
-        } else {
-          completion
-        }
-      assertNoDiff(obtained, expected)
+      assertNoDiff(completion, expected)
     }
   }
 

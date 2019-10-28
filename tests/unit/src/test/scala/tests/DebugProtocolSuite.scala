@@ -5,8 +5,23 @@ import java.util.concurrent.TimeUnit.SECONDS
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.concurrent.duration.Duration
+import scala.concurrent.Future
 
 object DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
+
+  override def testAsync(
+      name: String,
+      maxDuration: Duration = Duration("3min")
+  )(run: => Future[Unit]): Unit = {
+    if (BaseSuite.isWindows) {
+      // Currently not working on Windows
+      ignore(name) {}
+    } else {
+      super.testAsync(name, maxDuration)(run)
+    }
+  }
+
   testAsync("start") {
     for {
       _ <- server.initialize(

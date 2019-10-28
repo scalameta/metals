@@ -29,14 +29,7 @@ class BaseSuite extends TestSuite {
     !Properties.isJavaAtLeast("9")
   def isScala211: Boolean =
     mtags.BuildInfo.scalaCompilerVersion.startsWith("2.11")
-  def isWindows: Boolean =
-    isAppveyor || isAzureWindows
   def hasJdkSources: Boolean = JdkSources().isDefined
-  def isAppveyor: Boolean =
-    "True" == System.getenv("APPVEYOR")
-  def isAzureWindows: Boolean =
-    isAzure &&
-      "Windows_NT".equalsIgnoreCase(System.getenv("AGENT_OS"))
   def isAzureLinux: Boolean =
     isAzure &&
       "Linux".equalsIgnoreCase(System.getenv("AGENT_OS"))
@@ -210,4 +203,11 @@ class BaseSuite extends TestSuite {
       .getOrElse(default)
     postProcess(result)
   }
+}
+
+object BaseSuite {
+
+  def isWindows: Boolean =
+    System.getProperty("os.name").toLowerCase().contains("win")
+
 }

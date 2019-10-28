@@ -99,8 +99,15 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
     RecursivelyDelete(workspace.resolve(".metals").resolve("metals.h2.db"))
   }
   def cleanWorkspace(): Unit = {
-    RecursivelyDelete(workspace)
-    Files.createDirectories(workspace.toNIO)
+    if (workspace.isDirectory) {
+      try {
+        RecursivelyDelete(workspace)
+        Files.createDirectories(workspace.toNIO)
+      } catch {
+        case NonFatal(_) =>
+          scribe.warn(s"Unable to delete workspace $workspace")
+      }
+    }
   }
 
   def flakyTest(name: String, maxRetries: Int = 3)(

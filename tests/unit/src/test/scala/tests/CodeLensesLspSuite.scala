@@ -3,36 +3,36 @@ import scala.concurrent.Future
 
 object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
-    """<<run>>
-      |object Main {
-      |  def main(args: Array[String]): Unit = {}
-      |}
-      |""".stripMargin
+    """|<<run>>
+       |object Main {
+       |  def main(args: Array[String]): Unit = {}
+       |}
+       |""".stripMargin
   )
 
   check("class")(
-    """class Main {
-      |  def main(args: Array[String]): Unit = {}
-      |}
-      |""".stripMargin
+    """|class Main {
+       |  def main(args: Array[String]): Unit = {}
+       |}
+       |""".stripMargin
   )
 
   check("main")(
-    """package foo
-      |<<run>>
-      |object Main {
-      |  def main(args: Array[String]): Unit = {}
-      |}
-      |""".stripMargin
+    """|package foo
+       |<<run>>
+       |object Main {
+       |  def main(args: Array[String]): Unit = {}
+       |}
+       |""".stripMargin
   )
 
   check("non-ascii")(
-    """package foo.bar
-      |<<run>>
-      |object :: {
-      |  def main(args: Array[String]): Unit = {}
-      |}
-      |""".stripMargin
+    """|package foo.bar
+       |<<run>>
+       |object :: {
+       |  def main(args: Array[String]): Unit = {}
+       |}
+       |""".stripMargin
   )
 
   check("test-suite-class", library = "org.scalatest::scalatest:3.0.5")(
@@ -188,7 +188,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   def check(name: String, library: String = "")(expected: String): Unit = {
     testAsync(name) {
       cleanWorkspace()
-      val original = expected.replaceAll("<<.*>>\\W", "")
+      val original = expected.replaceAll("<<.*>>\\W+", "")
 
       val sourceFile = {
         val file = """package (.*).*""".r

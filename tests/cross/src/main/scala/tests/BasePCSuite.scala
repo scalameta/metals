@@ -66,23 +66,20 @@ abstract class BasePCSuite extends BaseSuite {
   override def test(name: String)(fun: => Any): Unit = {
     // We are unable to infer the JDK jars on Appveyor
     // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
-    if (isWindows || (requiresJdkSources && !hasJdkSources)) ignore(name)(())
-    else {
-      val testName =
-        if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
-          s"${BuildInfo.scalaCompilerVersion}-$name"
-        else name
-      super.test(testName) {
-        try {
-          fun
-        } catch {
-          case NonFatal(e)
-              if e.getMessage != null &&
-                e.getMessage.contains("x$1") &&
-                !hasJdkSources =>
-            // ignore failing test if jdk sources are missing
-            ()
-        }
+    val testName =
+      if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
+        s"${BuildInfo.scalaCompilerVersion}-$name"
+      else name
+    super.test(testName) {
+      try {
+        fun
+      } catch {
+        case NonFatal(e)
+            if e.getMessage != null &&
+              e.getMessage.contains("x$1") &&
+              !hasJdkSources =>
+          // ignore failing test if jdk sources are missing
+          ()
       }
     }
   }

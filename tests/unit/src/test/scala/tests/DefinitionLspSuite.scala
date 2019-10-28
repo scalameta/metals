@@ -1,7 +1,5 @@
 package tests
 
-import scala.concurrent.Future
-import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
@@ -10,18 +8,6 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
     super.serverConfig.copy(
       statistics = new StatisticsConfig("diagnostics")
     )
-
-  override def testAsync(
-      name: String,
-      maxDuration: Duration = Duration("3min")
-  )(run: => Future[Unit]): Unit = {
-    if (isWindows) {
-      // src.zip is missing on Appveyor which breaks definition tests.
-      ignore(name) {}
-    } else {
-      super.testAsync(name, maxDuration)(run)
-    }
-  }
 
   testAsync("definition") {
     for {

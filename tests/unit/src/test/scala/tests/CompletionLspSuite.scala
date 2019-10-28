@@ -2,10 +2,22 @@ package tests
 
 import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.concurrent.duration.Duration
 
 object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
-  override def isTestSuiteEnabled: Boolean = !isAppveyor
+  override def testAsync(
+      name: String,
+      maxDuration: Duration = Duration("10min")
+  )(
+      run: => Future[Unit]
+  ): Unit = {
+    if (BaseSuite.isWindows) {
+      ignore(name)(run)
+    } else {
+      super.testAsync(name, maxDuration)(run)
+    }
+  }
 
   testAsync("basic-212") {
     basicTest(V.scala212)
@@ -135,78 +147,77 @@ object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     )
   }
 
-  if (!isAppveyor)
-    test("symbol-prefixes") {
-      cleanWorkspace()
-      for {
-        _ <- server.initialize(
-          """/metals.json
-            |{
-            |  "a": {}
-            |}
-            |/a/src/main/scala/a/A.scala
-            |package a
-            |
-            |abstract class Base {
-            |  def set: scala.collection.mutable.Set[Int]
-            |  def list: java.util.List[Int]
-            |  def failure: scala.util.Failure[Int]
-            |}
-            |object Main extends Base {
-            |  // @@
-            |}
-            |""".stripMargin
-        )
-        _ <- assertCompletion(
-          "override def set@@",
-          """|def set: mutable.Set[Int]
-             |""".stripMargin,
-          includeDetail = false
-        )
-        _ <- assertCompletion(
-          "override def list@@",
-          """|def list: ju.List[Int]
-             |""".stripMargin,
-          includeDetail = false
-        )
-        _ <- assertCompletion(
-          "override def failure@@",
-          """|def failure: Failure[Int]
-             |""".stripMargin,
-          includeDetail = false
-        )
-        _ <- server.didChangeConfiguration(
-          """{
-            |  "symbol-prefixes": {
-            |    "scala/util/": "u"
-            |  }
-            |}
-            |""".stripMargin
-        )
-        // The new config has been picked up.
-        _ <- assertCompletion(
-          "override def failure@@",
-          """|def failure: u.Failure[Int]
-             |""".stripMargin,
-          includeDetail = false
-        )
-        // The default settings are no longer enabled.
-        _ <- assertCompletion(
-          "override def set@@",
-          """|def set: scala.collection.mutable.Set[Int]
-             |""".stripMargin,
-          includeDetail = false
-        )
-        _ <- assertCompletion(
-          "override def list@@",
-          """|def list: java.util.List[Int]
-             |""".stripMargin,
-          includeDetail = false
-        )
-      } yield ()
-    }
+  test("symbol-prefixes") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |abstract class Base {
+          |  def set: scala.collection.mutable.Set[Int]
+          |  def list: java.util.List[Int]
+          |  def failure: scala.util.Failure[Int]
+          |}
+          |object Main extends Base {
+          |  // @@
+          |}
+          |""".stripMargin
+      )
+      _ <- assertCompletion(
+        "override def set@@",
+        """|def set: mutable.Set[Int]
+           |""".stripMargin,
+        includeDetail = false
+      )
+      _ <- assertCompletion(
+        "override def list@@",
+        """|def list: ju.List[Int]
+           |""".stripMargin,
+        includeDetail = false
+      )
+      _ <- assertCompletion(
+        "override def failure@@",
+        """|def failure: Failure[Int]
+           |""".stripMargin,
+        includeDetail = false
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "symbol-prefixes": {
+          |    "scala/util/": "u"
+          |  }
+          |}
+          |""".stripMargin
+      )
+      // The new config has been picked up.
+      _ <- assertCompletion(
+        "override def failure@@",
+        """|def failure: u.Failure[Int]
+           |""".stripMargin,
+        includeDetail = false
+      )
+      // The default settings are no longer enabled.
+      _ <- assertCompletion(
+        "override def set@@",
+        """|def set: scala.collection.mutable.Set[Int]
+           |""".stripMargin,
+        includeDetail = false
+      )
+      _ <- assertCompletion(
+        "override def list@@",
+        """|def list: java.util.List[Int]
+           |""".stripMargin,
+        includeDetail = false
+      )
+    } yield ()
+  }
 
-  testAsync("rambo") {
+  flakyTest("rambo") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
