@@ -7,6 +7,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.reflect.internal.{Flags => gf}
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.util.control.NonFatal
 
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
@@ -32,7 +33,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           val expanded = expandRangeToEnclosingApply(pos)
           if (expanded != null &&
             expanded.tpe != null &&
-            tree.symbol != null) {
+            tree.symbol != null &&
+            expanded.symbol != null) {
             val symbol =
               if (expanded.symbol.isConstructor) expanded.symbol
               else tree.symbol
@@ -101,11 +103,15 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       case Import(q, _) => q
       case t => t
     }
-    val tree = qual(tree0)
-    val pre = stabilizedType(tree)
-    val memberType = pre.memberType(symbol)
-    if (memberType.isErroneous) symbol.info
-    else memberType
+    try {
+      val tree = qual(tree0)
+      val pre = stabilizedType(tree)
+      val memberType = pre.memberType(symbol)
+      if (memberType.isErroneous) symbol.info
+      else memberType
+    } catch {
+      case NonFatal(_) => symbol.info
+    }
   }
 
   /**
