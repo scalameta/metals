@@ -2,16 +2,20 @@ package tests
 
 import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.concurrent.duration.Duration
 
 object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
-  override def flakyTest(name: String, maxRetries: Int = 3)(
+  override def testAsync(
+      name: String,
+      maxDuration: Duration = Duration("10min")
+  )(
       run: => Future[Unit]
   ): Unit = {
     if (BaseSuite.isWindows) {
       ignore(name)(run)
     } else {
-      super.flakyTest(name, maxRetries)(run)
+      super.testAsync(name, maxDuration)(run)
     }
   }
 

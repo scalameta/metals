@@ -1,5 +1,5 @@
 package tests
-import _root_.scala.concurrent.duration.Duration
+import scala.concurrent.duration.Duration
 import scala.concurrent.Future
 
 object BuildTargetsLspSuite
