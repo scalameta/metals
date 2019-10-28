@@ -35,7 +35,7 @@ object ImplementationSuite extends BaseLspSuite("implementation") {
   )
 
   check(
-    "nested",
+    "inside-object",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |trait LivingBeing

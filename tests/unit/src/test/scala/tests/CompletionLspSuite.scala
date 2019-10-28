@@ -213,7 +213,7 @@ object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     } yield ()
   }
 
-  testAsync("rambo") {
+  flakyTest("rambo") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
