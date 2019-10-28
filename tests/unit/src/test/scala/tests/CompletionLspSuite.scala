@@ -5,6 +5,16 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
+  override def flakyTest(name: String, maxRetries: Int = 3)(
+      run: => Future[Unit]
+  ): Unit = {
+    if (BaseSuite.isWindows) {
+      ignore(name)(run)
+    } else {
+      super.flakyTest(name, maxRetries)(run)
+    }
+  }
+
   testAsync("basic-212") {
     basicTest(V.scala212)
   }
