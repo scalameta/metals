@@ -160,8 +160,7 @@ lazy val V = new {
 
 skip.in(publish) := true
 
-lazy val interfaces = project
-  .in(file("mtags-interfaces"))
+lazy val interfaces = (projectMatrix in file("mtags-interfaces"))
   .settings(
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
@@ -174,13 +173,14 @@ lazy val interfaces = project
       "implNote:a:Implementation Note:"
     )
   )
+  .jvmPlatform(scalaVersions = V.supportedScalaVersions)
 
 val genyVersion = Def.setting {
   if (scalaVersion.value.startsWith("2.11")) "0.1.6"
   else "0.1.8"
 }
 
-lazy val mtags = project
+lazy val mtags = (projectMatrix in file("mtags"))
   .settings(
     moduleName := "mtags",
     crossVersion := CrossVersion.full,
@@ -216,6 +216,7 @@ lazy val mtags = project
       "scalaCompilerVersion" -> scalaVersion.value
     )
   )
+  .jvmPlatform(scalaVersions = V.supportedScalaVersions)
   .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
 
@@ -295,7 +296,7 @@ lazy val metals = project
       "scala213" -> V.scala213
     )
   )
-  .dependsOn(mtags)
+  .dependsOn(mtags.jvm("2.12.8"))
   .enablePlugins(BuildInfoPlugin)
 
 lazy val input = project
@@ -351,7 +352,7 @@ lazy val mtest = project
       "scalaVersion" -> scalaVersion.value
     )
   )
-  .dependsOn(mtags)
+  .dependsOn(mtags.jvm("2.12.8"))
   .enablePlugins(BuildInfoPlugin)
 
 lazy val cross = project
@@ -379,7 +380,7 @@ lazy val cross = project
       if211 = List("-Ywarn-unused:imports")
     )
   )
-  .dependsOn(mtest, mtags)
+  .dependsOn(mtest, mtags.jvm("2.12.8"))
 
 lazy val unit = project
   .in(file("tests/unit"))
@@ -406,28 +407,6 @@ lazy val unit = project
   .dependsOn(mtest, metals)
   .enablePlugins(BuildInfoPlugin)
 
-def crossPublishLocal(scalaV: String) = Def.task[Unit] {
-  // Runs `publishLocal` for mtags with `scalaVersion := $scalaV`
-  val newState = Project
-    .extract(state.value)
-    .appendWithSession(
-      List(
-        scalaVersion.in(mtags) := scalaV
-      ),
-      state.value
-    )
-  val (s, _) = Project
-    .extract(newState)
-    .runTask(publishLocal.in(mtags), newState)
-}
-
-def publishMtags =
-  publishLocal
-    .in(interfaces)
-    .dependsOn(
-      crossPublishLocal(V.scala211)
-        .dependsOn(crossPublishLocal(V.scala213))
-    )
 lazy val slow = project
   .in(file("tests/slow"))
   .settings(
@@ -435,15 +414,17 @@ lazy val slow = project
     testOnly.in(Test) := testOnly
       .in(Test)
       .dependsOn(
-        crossPublishLocal(V.scala211),
-        crossPublishLocal(V.scala213)
+        V.supportedScalaVersions.map { version =>
+          publishLocal.in(mtags.jvm(version))
+        }: _*
       )
       .evaluated,
     test.in(Test) := test
       .in(Test)
       .dependsOn(
-        crossPublishLocal(V.scala211),
-        crossPublishLocal(V.scala213)
+        V.supportedScalaVersions.map { version =>
+          publishLocal.in(mtags.jvm(version))
+        }: _*
       )
       .value
   )
