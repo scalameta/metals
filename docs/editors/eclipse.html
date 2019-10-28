@@ -64,7 +64,8 @@
             });
         </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/editors/eclipse.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 class="postHeaderTitle">Eclipse</h1></header><article><div><span><p>Metals works with Eclipse thanks to the
 <a href="https://github.com/scalameta/metals-eclipse"><code>metals-eclipse</code></a> plugin.</p>
-<p><strong>Notice</strong> Eclipse integration is still under development and might lack some of the features</p>
+<p><strong>Notice</strong> Eclipse integration is still under development and might lack some of
+the features</p>
 <p><img src="https://i.imgur.com/SxD6PcJ.gif" alt="Eclipse demo"></p>
 <h2><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h2>
 <p><strong>Java 8 or 11 provided by OpenJDK or Oracle</strong>. Eclipse OpenJ9 is not
@@ -76,12 +77,18 @@ tested on Ubuntu+Windows.</p>
 Note that 2.11.x support is deprecated and it will be removed in future releases.
 It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <h2><a class="anchor" aria-hidden="true" id="installing-the-plugin"></a><a href="#installing-the-plugin" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing the plugin</h2>
-<p>In you eclipse installation go to install new software and point the repository to:</p>
+<p>In you eclipse installation go to install new software and point the repository
+to:</p>
 <pre><code class="hljs"><span class="hljs-symbol">http:</span>//scalameta<span class="hljs-meta">.org</span>/metals-eclipse/update/
 </code></pre>
 <p><img src="https://i.imgur.com/PHqyJNL.gif" alt="Install plugin"></p>
 <h2><a class="anchor" aria-hidden="true" id="running-commands"></a><a href="#running-commands" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Running commands</h2>
-<p>All commands including <code>Import build</code> can be run currently via browser interface under <code>http://127.0.0.1:5031/</code>. We recommend having it open to import the build that is required for Metals to work properly.</p>
+<p>All commands including <code>Import build</code> can be run currently via browser interface
+under <code>http://127.0.0.1:5031/</code>. We recommend having it open to import the build
+that is required for Metals to work properly.</p>
+<p>Additionally, import build message should pop out when opening a new workspace
+or it can be run via Metals Tree View that needs to be activated separately.
+These features currently still need some polishing, but are usable.</p>
 <h2><a class="anchor" aria-hidden="true" id="gitignore-project-metalssbt-metals-and-bloop"></a><a href="#gitignore-project-metalssbt-metals-and-bloop" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Gitignore <code>project/metals.sbt</code> <code>.metals/</code> and <code>.bloop/</code></h2>
 <p>The Metals server places logs and other files in the <code>.metals/</code> directory. The
 Bloop compile server places logs and compilation artifacts in the <code>.bloop</code>
