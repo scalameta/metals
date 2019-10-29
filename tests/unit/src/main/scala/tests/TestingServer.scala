@@ -81,6 +81,8 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.DebugSession
 import scala.util.matching.Regex
+import org.eclipse.lsp4j.RenameParams
+import scala.meta.internal.metals.TextEdits
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -662,6 +664,51 @@ final class TestingServer(
       highlights <- server.documentHighlights(params).asScala
     } yield {
       TestRanges.renderHighlightsAsString(text, highlights.asScala.toList)
+    }
+  }
+
+  def assertRename(
+      filename: String,
+      query: String,
+      expected: Map[String, String],
+      base: Map[String, String],
+      newName: String
+  ): Future[Unit] = {
+    for {
+      renames <- rename(filename, query, base, newName)
+    } yield {
+      renames.foreach {
+        case (file, obtained) =>
+          val expectedImpl = expected(file)
+          DiffAssertions.assertNoDiffOrPrintObtained(
+            obtained,
+            expectedImpl,
+            "obtained",
+            "expected"
+          )
+      }
+    }
+  }
+
+  def rename(
+      filename: String,
+      query: String,
+      base: Map[String, String],
+      newName: String
+  ): Future[Map[String, String]] = {
+    for {
+      (_, params) <- offsetParams(filename, query, workspace)
+      renameParams = new RenameParams
+      _ = renameParams.setNewName(newName)
+      _ = renameParams.setPosition(params.getPosition())
+      _ = renameParams.setTextDocument(params.getTextDocument())
+      renames <- server.rename(renameParams).asScala
+    } yield {
+      TestRanges.renderEditAsStrings(base, renames).map {
+        case (file, code) if !buffers.contains(workspace.resolve(file)) =>
+          file -> workspace.resolve(file).readText
+        case other => other
+      }
     }
   }
 

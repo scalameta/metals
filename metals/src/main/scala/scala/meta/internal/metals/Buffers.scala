@@ -11,4 +11,5 @@ case class Buffers(map: TrieMap[AbsolutePath, String] = TrieMap.empty) {
   def put(key: AbsolutePath, value: String): Unit = map.put(key, value)
   def get(key: AbsolutePath): Option[String] = map.get(key)
   def remove(key: AbsolutePath): Unit = map.remove(key)
+  def contains(key: AbsolutePath): Boolean = map.contains(key)
 }

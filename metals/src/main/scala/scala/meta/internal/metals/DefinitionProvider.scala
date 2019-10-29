@@ -17,6 +17,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
+import scala.meta.internal.semanticdb.SymbolOccurrence
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -70,6 +71,29 @@ final class DefinitionProvider(
       case None => ju.Collections.emptyList()
       case Some(destination) => destination.locations
     }
+
+  def symbolOccurence(
+      source: AbsolutePath,
+      dirtyPosition: TextDocumentPositionParams
+  ): Option[(SymbolOccurrence, TextDocument)] = {
+    for {
+      currentDocument <- semanticdbs
+        .textDocument(source)
+        .documentIncludingStale
+      posOcc = positionOccurrence(
+        source,
+        dirtyPosition,
+        currentDocument
+      )
+      symbolOccurrence <- {
+        lazy val mtagsOccurrence = Mtags
+          .allToplevels(source.toInput)
+          .occurrences
+          .find(_.encloses(dirtyPosition.getPosition))
+        posOcc.occurrence.orElse(mtagsOccurrence)
+      }
+    } yield (symbolOccurrence, currentDocument)
+  }
 
   def positionOccurrence(
       source: AbsolutePath,

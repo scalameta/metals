@@ -9,6 +9,7 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.CancelToken
 import scala.collection.Seq
+import scala.meta.internal.metals.TextEdits
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 

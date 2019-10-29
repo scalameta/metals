@@ -41,6 +41,7 @@ import scala.meta.internal.tvp.TreeViewDidChangeParams
 import java.util.concurrent.ConcurrentHashMap
 import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.decorations.PublishDecorationsParams
+import scala.meta.internal.metals.TextEdits
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -110,6 +111,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   def workspaceClientCommands: List[String] = {
     clientCommands.asScala.toList.map(_.getCommand)
   }
+
   def statusBarHistory: String = {
     statusParams.asScala
       .map { params =>

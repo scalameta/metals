@@ -24,9 +24,7 @@ private[implementation] case class ClassLocation(
         asSeenFrom match {
           case None => Some(parentASF)
           case Some(childASF) =>
-            Some(parentASF.map {
-              case (key, value) => key -> childASF.getOrElse(value, value)
-            })
+            Some(AsSeenFrom.translateAsSeenFrom(childASF, parentASF))
         }
     }
     this.copy(asSeenFrom = newASF)
@@ -39,22 +37,7 @@ private[implementation] case class ClassLocation(
   ): ClassLocation = {
     classInfo.signature match {
       case clsSig: ClassSignature =>
-        val newASF = for {
-          typeScope <- clsSig.typeParameters.toList
-          asf <- asSeenFrom.toList
-          (key, value) <- asf
-        } yield {
-          val translated = if (translateKey) key else value
-          Try(translated.toInt) match {
-            case Success(ind) if typeScope.symlinks.size > ind =>
-              if (translateKey)
-                typeScope.symlinks(ind).desc.name.toString() -> value
-              else
-                key -> typeScope.symlinks(ind).desc.name.toString()
-            case _ =>
-              key -> value
-          }
-        }
+        val newASF = AsSeenFrom.toRealNames(clsSig, translateKey, asSeenFrom)
         ClassLocation(symbol, file, newASF.toMap)
       case other => this
     }
@@ -81,8 +64,19 @@ private[implementation] object ClassLocation {
       typeRef: TypeRef,
       typeParameters: Option[Scope]
   ): ClassLocation = {
-    val asSeenFrom = calculateAsSeenFrom(typeRef, typeParameters)
+    val asSeenFrom = AsSeenFrom.calculateAsSeenFrom(typeRef, typeParameters)
     ClassLocation(symbol, file, asSeenFrom)
+  }
+}
+object AsSeenFrom {
+
+  def translateAsSeenFrom(
+      childASF: Map[String, String],
+      parentASF: Map[String, String]
+  ): Map[String, String] = {
+    parentASF.map {
+      case (key, value) => key -> childASF.getOrElse(value, value)
+    }
   }
 
   def calculateAsSeenFrom(
@@ -105,4 +99,30 @@ private[implementation] object ClassLocation {
       case other => None
     }.toMap
   }
+
+  // Translate postion based names to real names in the class
+  def toRealNames(
+      classSig: ClassSignature,
+      translateKey: Boolean,
+      asSeenFrom: Option[Map[String, String]]
+  ): Map[String, String] = {
+    val newASF = for {
+      typeScope <- classSig.typeParameters.toList
+      asf <- asSeenFrom.toList
+      (key, value) <- asf
+    } yield {
+      val translated = if (translateKey) key else value
+      Try(translated.toInt) match {
+        case Success(ind) if typeScope.symlinks.size > ind =>
+          if (translateKey)
+            typeScope.symlinks(ind).desc.name.toString() -> value
+          else
+            key -> typeScope.symlinks(ind).desc.name.toString()
+        case _ =>
+          key -> value
+      }
+    }
+    newASF.toMap
+  }
+
 }

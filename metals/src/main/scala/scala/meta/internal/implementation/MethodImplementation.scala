@@ -28,7 +28,35 @@ object MethodImplementation {
 
   import ImplementationProvider._
 
-  def find(
+  def findParent(
+      childSymbol: SymbolInformation,
+      childClassSig: ClassSignature,
+      parentClassSig: ClassSignature,
+      asSeenFromMap: Map[String, String],
+      findSymbol: String => Option[SymbolInformation]
+  ): Option[String] = {
+    val validMethods = for {
+      declarations <- parentClassSig.declarations.toIterable
+      methodSymbol <- declarations.symlinks
+      methodSymbolInfo <- findSymbol(methodSymbol)
+      asSeenFrom = AsSeenFrom.toRealNames(
+        parentClassSig,
+        translateKey = true,
+        Some(asSeenFromMap)
+      )
+      context = Context(
+        findSymbol,
+        findSymbol,
+        asSeenFrom
+      )
+      if isOverridenMethod(methodSymbolInfo, childSymbol, findParent = true)(
+        context
+      )
+    } yield methodSymbol
+    validMethods.headOption
+  }
+
+  def findInherited(
       parentSymbol: SymbolInformation,
       parentClassSymbol: SymbolInformation,
       inheritanceContext: InheritanceContext,
@@ -41,16 +69,6 @@ object MethodImplementation {
       classLocation
         .toRealNames(info, translateKey = false)
         .asSeenFromMap
-    }
-
-    def isOverridenMethod(
-        methodSymbolInfo: SymbolInformation
-    )(implicit context: Context): Boolean = {
-      (methodSymbolInfo.kind.isField || methodSymbolInfo.kind.isMethod) &&
-      methodSymbolInfo.displayName == parentSymbol.displayName &&
-      signaturesEqual(parentSymbol.signature, methodSymbolInfo.signature)(
-        context
-      )
     }
 
     val validMethods = for {
@@ -66,9 +84,33 @@ object MethodImplementation {
         inheritanceContext.findSymbol,
         asSeenFrom
       )
-      if isOverridenMethod(methodSymbolInfo)(context)
+      if isOverridenMethod(methodSymbolInfo, parentSymbol)(context)
     } yield methodSymbol
     validMethods.headOption
+  }
+
+  private def isOverridenMethod(
+      methodSymbolInfo: SymbolInformation,
+      otherSymbol: SymbolInformation,
+      findParent: Boolean = false
+  )(implicit context: Context): Boolean = {
+    val isVisiblySame = (methodSymbolInfo.kind.isField || methodSymbolInfo.kind.isMethod) &&
+      methodSymbolInfo.displayName == otherSymbol.displayName
+    if (findParent) {
+      isVisiblySame && signaturesEqual(
+        methodSymbolInfo.signature,
+        otherSymbol.signature
+      )(
+        context
+      )
+    } else {
+      isVisiblySame && signaturesEqual(
+        otherSymbol.signature,
+        methodSymbolInfo.signature
+      )(
+        context
+      )
+    }
   }
 
   private def symbolsAreEqual(
@@ -169,11 +211,13 @@ object MethodImplementation {
         )
         val returnTypesEqual =
           typesAreEqual(sig1.returnType, sig2.returnType)(newContext)
-        lazy val enrichedSig =
+        lazy val enrichedSig1 =
+          addParameterSignatures(sig1, context.findSymbol)
+        lazy val enrichedSig2 =
           addParameterSignatures(sig2, context.findSymbol)
         returnTypesEqual && paramsAreEqual(
-          sig1.parameterLists,
-          enrichedSig.parameterLists
+          enrichedSig1.parameterLists,
+          enrichedSig2.parameterLists
         )(newContext)
       case (v1: ValueSignature, v2: ValueSignature) =>
         typesAreEqual(v1.tpe, v2.tpe)
