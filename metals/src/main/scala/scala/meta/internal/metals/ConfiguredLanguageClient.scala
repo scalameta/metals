@@ -102,7 +102,7 @@ final class ConfiguredLanguageClient(
       params.getCommand match {
         case _ if config.executeClientCommand.isOff =>
         // ignore
-        case ClientCommands.RefreshModel.id if !debuggingSupported =>
+        case ClientCommands.RefreshModel() if !debuggingSupported =>
         // ignore
         case _ =>
           underlying.metalsExecuteClientCommand(params)
