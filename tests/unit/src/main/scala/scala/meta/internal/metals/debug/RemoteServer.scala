@@ -32,7 +32,7 @@ private[debug] final class RemoteServer(
     extends IDebugProtocolServer
     with Cancelable {
 
-  private val remote = new RemoteEndpoint(socket)
+  private val remote = new SocketEndpoint(socket)
   private val ongoing = new TrieMap[String, Response => Unit]()
   private val id = new AtomicInteger(0)
   lazy val listening: Future[Unit] = Future(listen())
