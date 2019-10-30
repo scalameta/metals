@@ -2,18 +2,17 @@ package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import com.geirsson.coursiersmall
-import com.geirsson.coursiersmall.Dependency
-import com.geirsson.coursiersmall.Settings
 import java.net.URLClassLoader
 import java.nio.file.Paths
 import java.util.ServiceLoader
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.pc.PresentationCompiler
-import com.geirsson.coursiersmall.CoursierSmall
+import coursierapi.MavenRepository
+import coursierapi.Dependency
+import coursierapi.Fetch
+import coursierapi.Repository
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -61,44 +60,59 @@ final class Embedded(
 }
 
 object Embedded {
-  def downloadSettings(
+  def fetchSettings(
       dependency: Dependency,
       scalaVersion: String
-  ): Settings =
-    new coursiersmall.Settings()
-      .withTtl(Some(Duration.Inf))
-      .withDependencies(List(dependency))
+  ): Fetch = {
+    val fetch = Fetch
+      .create()
+      .withDependencies(List(dependency): _*)
+      .addRepositories(
+        Repository.defaults().asScala.toList: _*
+      )
       .addRepositories(
         List(
-          coursiersmall.Repository.SonatypeReleases,
-          coursiersmall.Repository.SonatypeSnapshots
-        )
+          Repository.central(),
+          Repository.ivy2Local()
+        ): _*
       )
-      .withForceVersions(
+      .withDependencies(
         List(
-          new Dependency(
+          Dependency.of(
             "org.scala-lang",
             "scala-library",
             scalaVersion
           ),
-          new Dependency(
+          Dependency.of(
             "org.scala-lang",
             "scala-compiler",
             scalaVersion
           ),
-          new Dependency(
+          Dependency.of(
             "org.scala-lang",
             "scala-reflect",
             scalaVersion
           )
-        )
+        ): _*
       )
+
+    val envRepos = System
+      .getenv("COURSIER_REPOSITORIES")
+    if (envRepos.nonEmpty)
+      fetch.addRepositories(
+        envRepos
+          .split("""|""")
+          .map(MavenRepository.of)
+          .toList: _*
+      )
+    else fetch
+  }
 
   def newPresentationCompilerClassLoader(
       info: ScalaBuildTarget,
       scalac: ScalacOptionsItem
   ): URLClassLoader = {
-    val pc = new Dependency(
+    val pc = Dependency.of(
       "org.scalameta",
       s"mtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
       BuildInfo.metalsVersion
@@ -113,8 +127,8 @@ object Embedded {
     val dependency =
       if (semanticdbJars.isEmpty) pc
       else pc.withTransitive(false)
-    val settings = downloadSettings(dependency, info.getScalaVersion())
-    val jars = CoursierSmall.fetch(settings)
+    val fetch = fetchSettings(dependency, info.getScalaVersion())
+    val jars = fetch.fetch().asScala.map(_.toPath)
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
     val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
     val allURLs = allJars.map(_.toUri.toURL).toArray
