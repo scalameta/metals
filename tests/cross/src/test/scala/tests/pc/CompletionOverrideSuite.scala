@@ -271,6 +271,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     """|def self: _root_.a.c.Conflict
        |def selfArg: Option[_root_.a.c.Conflict]
        |def selfPath: Inner
+       |Implement all members
        |""".stripMargin,
     includeDetail = false
   )

@@ -1,18 +1,20 @@
 package scala.meta.internal.pc
 
-import java.net.URI
 import java.lang.StringBuilder
-import org.eclipse.{lsp4j => l}
-import scala.meta.internal.semanticdb.Scala._
-import scala.collection.mutable
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.util.control.NonFatal
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.collection.mutable.ListBuffer
-import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import java.net.URI
 import java.nio.file.Paths
 import java.util.logging.Level
+
+import org.eclipse.{lsp4j => l}
+
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tokenizers.Chars
+import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import scala.util.control.NonFatal
 
 /**
  * Utility methods for completions.
@@ -1035,7 +1037,8 @@ trait Completions { this: MetalsGlobal =>
      * @param t the enclosing template for the class/object/trait we are implementing.
      * @param pos the position of the completion request, points to `_CURSOR_`.
      * @param text the text of the original source code without `_CURSOR_`.
-     * @param defn the method (either `val` or `def`) that we are implementing.
+     * @param start the position start of the completion.
+     * @param isCandidate the determination of whether the symbol will be a possible completion item.
      */
     case class Override(
         name: Name,
@@ -1047,9 +1050,9 @@ trait Completions { this: MetalsGlobal =>
     ) extends CompletionPosition {
       val prefix: String = name.toString.stripSuffix(CURSOR)
       val typed: Tree = typedTreeAt(t.pos)
-      val isDecl = typed.tpe.decls.toSet
+      val isDecl: Set[Symbol] = typed.tpe.decls.toSet
       val range: l.Range = pos.withStart(start).withEnd(pos.point).toLSP
-      val lineStart: Int = pos.source.lineToOffset(pos.line - 1)
+      val lineStart: RunId = pos.source.lineToOffset(pos.line - 1)
 
       // Returns all the symbols of all transitive supertypes in the enclosing scope.
       // For example:
@@ -1207,16 +1210,47 @@ trait Completions { this: MetalsGlobal =>
       }
 
       override def contribute: List[Member] = {
-        if (start < 0) Nil
-        else {
-          typed.tpe.members.iterator
+        if (start < 0) {
+          Nil
+        } else {
+
+          val overrideMembers = typed.tpe.members.iterator.toList
             .filter(isOverridableMethod)
             .map(OverrideCandidate.apply)
-            .filter { candidate =>
-              CompletionFuzzy.matchesSubCharacters(prefix, candidate.filterText)
-            }
+
+          val overrideDefMembers: List[OverrideDefMember] =
+            overrideMembers
+              .filter { candidate =>
+                CompletionFuzzy.matchesSubCharacters(
+                  prefix,
+                  candidate.filterText
+                )
+              }
+              .map(_.toMember)
+              .toList
+
+          val allAbstractMembers = overrideMembers
             .map(_.toMember)
+            .filter(_.sym.isAbstract)
             .toList
+            .map(_.edit.getNewText)
+
+          if (allAbstractMembers.length > 1 && overrideDefMembers.length > 1) {
+            val implementAll: TextEditMember = new TextEditMember(
+              prefix,
+              new l.TextEdit(
+                range,
+                allAbstractMembers.reverse.mkString("\n")
+              ),
+              completionsSymbol("implement"),
+              label = Some("Implement all members"),
+              detail = Some(s" (${allAbstractMembers.length} total)")
+            )
+
+            implementAll :: overrideDefMembers
+          } else {
+            overrideDefMembers
+          }
         }
       }
     }
