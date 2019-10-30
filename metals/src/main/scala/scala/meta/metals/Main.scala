@@ -8,7 +8,6 @@ import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsLanguageServer
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.ConfiguredLanguageClient
 import scala.util.control.NonFatal
 
 object Main {
@@ -35,9 +34,8 @@ object Main {
         .setRemoteInterface(classOf[MetalsLanguageClient])
         .setLocalService(server)
         .create()
-      val underlyingClient = launcher.getRemoteProxy
-      val client = new ConfiguredLanguageClient(underlyingClient, config)(ec)
-      server.connectToLanguageClient(client)
+      val clientProxy = launcher.getRemoteProxy
+      server.connectToLanguageClient(clientProxy)
       launcher.startListening().get()
     } catch {
       case NonFatal(e) =>

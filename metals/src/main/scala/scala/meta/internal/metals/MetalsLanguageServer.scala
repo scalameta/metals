@@ -105,8 +105,7 @@ class MetalsLanguageServer(
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
-  private val languageClient =
-    new DelegatingLanguageClient(NoopLanguageClient, config)
+  private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
   val compilations: Compilations = new Compilations(
@@ -171,7 +170,7 @@ class MetalsLanguageServer(
   var treeView: TreeViewProvider = NoopTreeViewProvider
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
-    languageClient.underlying = client
+    languageClient.underlying = new ConfiguredLanguageClient(client, config)(ec)
     statusBar = new StatusBar(
       () => languageClient,
       time,
@@ -200,6 +199,8 @@ class MetalsLanguageServer(
     MetalsLogger.setupLspLogger(workspace, redirectSystemOut)
     val clientExperimentalCapabilities =
       ClientExperimentalCapabilities.from(params.getCapabilities)
+
+    languageClient.configure(clientExperimentalCapabilities)
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, config))
     buildTargets.setTables(tables)

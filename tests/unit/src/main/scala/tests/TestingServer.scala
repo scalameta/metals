@@ -100,7 +100,8 @@ final class TestingServer(
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
     sh: ScheduledExecutorService,
-    time: Time
+    time: Time,
+    experimentalCapabilities: Option[ClientExperimentalCapabilities]
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
   val server = new MetalsLanguageServer(
@@ -249,9 +250,11 @@ final class TestingServer(
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
-    val experimental = new ClientExperimentalCapabilities(
-      debuggingProvider = true,
-      treeViewProvider = true
+    val experimental = experimentalCapabilities.getOrElse(
+      new ClientExperimentalCapabilities(
+        debuggingProvider = true,
+        treeViewProvider = true
+      )
     )
     params.setCapabilities(
       new ClientCapabilities(

@@ -4,9 +4,15 @@ import scala.meta.internal.builds.Digest
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.SlowTaskConfig
 
 abstract class BaseImportSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
+
+  // enables support for bloop install (a slow task)
+  override val serverConfig = {
+    super.serverConfig.copy(slowTask = SlowTaskConfig.on)
+  }
 
   def buildTool: BuildTool
 

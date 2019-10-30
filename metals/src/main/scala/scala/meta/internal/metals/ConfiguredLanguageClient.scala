@@ -18,10 +18,17 @@ import scala.meta.internal.metals.MetalsEnrichments._
  * from window/logMessage are always visible in the UI while in VS Code the logs are hidden by default.
  */
 final class ConfiguredLanguageClient(
-    _underlying: MetalsLanguageClient,
+    initial: MetalsLanguageClient,
     config: MetalsServerConfig
 )(implicit ec: ExecutionContext)
-    extends DelegatingLanguageClient(_underlying, config) {
+    extends DelegatingLanguageClient(initial) {
+
+  @volatile private var debuggingSupported = true
+
+  override def configure(capabilities: ClientExperimentalCapabilities): Unit = {
+    debuggingSupported = capabilities.debuggingProvider
+    super.configure(capabilities)
+  }
 
   override def shutdown(): Unit = {
     underlying = NoopLanguageClient
@@ -93,7 +100,12 @@ final class ConfiguredLanguageClient(
       params: ExecuteCommandParams
   ): Unit = {
     if (config.executeClientCommand.isOn) {
-      underlying.metalsExecuteClientCommand(params)
+      params.getCommand match {
+        case ClientCommands.RefreshModel() if !debuggingSupported =>
+        // ignore
+        case _ =>
+          underlying.metalsExecuteClientCommand(params)
+      }
     }
   }
 

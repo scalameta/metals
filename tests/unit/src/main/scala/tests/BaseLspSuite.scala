@@ -6,6 +6,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsLogger
@@ -32,6 +33,9 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   var server: TestingServer = _
   var client: TestingClient = _
   var workspace: AbsolutePath = _
+
+  protected def experimentalCapabilities
+      : Option[ClientExperimentalCapabilities] = None
 
   override def afterAll(): Unit = {
     if (server != null) {
@@ -69,7 +73,8 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
       config,
       bspGlobalDirectories,
       sh,
-      time
+      time,
+      experimentalCapabilities
     )(ex)
     server.server.userConfig = this.userConfig
   }
