@@ -15,6 +15,8 @@ import scala.meta.internal.tvp._
  * or log messages are published during shutdown.
  */
 abstract class NoopLanguageClient extends MetalsLanguageClient {
+  override def configure(capabilities: ClientExperimentalCapabilities): Unit =
+    ()
   override def metalsStatus(params: MetalsStatusParams): Unit = ()
   override def metalsSlowTask(
       params: MetalsSlowTaskParams

@@ -25,8 +25,9 @@ final class ConfiguredLanguageClient(
 
   @volatile private var debuggingSupported = true
 
-  def configure(capabilities: ClientExperimentalCapabilities): Unit = {
+  override def configure(capabilities: ClientExperimentalCapabilities): Unit = {
     debuggingSupported = capabilities.debuggingProvider
+    super.configure(capabilities)
   }
 
   override def shutdown(): Unit = {

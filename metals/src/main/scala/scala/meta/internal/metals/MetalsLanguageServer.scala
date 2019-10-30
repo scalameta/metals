@@ -200,13 +200,7 @@ class MetalsLanguageServer(
     val clientExperimentalCapabilities =
       ClientExperimentalCapabilities.from(params.getCapabilities)
 
-    languageClient.underlying match {
-      case client: ConfiguredLanguageClient =>
-        client.configure(clientExperimentalCapabilities)
-      case _ =>
-        scribe.debug("Client proxy is not configurable")
-    }
-
+    languageClient.configure(clientExperimentalCapabilities)
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, config))
     buildTargets.setTables(tables)
