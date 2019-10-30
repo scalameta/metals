@@ -33,8 +33,11 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 (require 'use-package)
 
 ;; Enable defer and ensure by default for use-package
+;; Keep auto-save/backup files separate from source code:  https://github.com/scalameta/metals/issues/1027
 (setq use-package-always-defer t
-      use-package-always-ensure t)
+      use-package-always-ensure t
+      backup-directory-alist `((".*" . ,temporary-file-directory))
+      auto-save-file-transforms `((".*" ,temporary-file-directory t)))
 
 ;; Enable scala-mode and sbt-mode
 (use-package scala-mode
@@ -48,7 +51,10 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
   (substitute-key-definition
    'minibuffer-complete-word
    'self-insert-command
-   minibuffer-local-completion-map))
+   minibuffer-local-completion-map)
+   ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
+   (setq sbt:program-options '("-Dsbt.supershell=false"))
+)
 
 ;; Enable nice rendering of diagnostics like compile errors.
 (use-package flycheck
