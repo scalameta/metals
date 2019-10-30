@@ -100,8 +100,6 @@ final class ConfiguredLanguageClient(
   ): Unit = {
     if (config.executeClientCommand.isOn) {
       params.getCommand match {
-        case _ if config.executeClientCommand.isOff =>
-        // ignore
         case ClientCommands.RefreshModel() if !debuggingSupported =>
         // ignore
         case _ =>
