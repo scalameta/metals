@@ -3,12 +3,13 @@ package tests
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Mtags
+import scala.meta.io.AbsolutePath
 
 /**
  * Assert the symbols emitted by ScalaToplevelMtags is a subset of ScalaMtags
  */
 class ScalaToplevelSuite extends BaseSuite {
-  val testClasspath = Library.all.flatMap(_.sources.entries)
+  val testClasspath: List[AbsolutePath] = Library.all.flatMap(_.sources.entries)
   testClasspath.foreach { entry =>
     test(entry.toNIO.getFileName.toString) {
       FileIO.withJarFileSystem(entry, create = false) { root =>

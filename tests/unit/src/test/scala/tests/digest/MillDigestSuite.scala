@@ -105,7 +105,7 @@ object MillDigestSuite extends BaseDigestSuite {
     """.stripMargin
   )
 
-  def project(name: String) =
+  def project(name: String): String =
     s"""
        |import mill._, scalalib._
        |object $name extends ScalaModule {

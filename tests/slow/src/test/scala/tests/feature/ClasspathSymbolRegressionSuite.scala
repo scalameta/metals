@@ -7,7 +7,7 @@ import tests.BaseWorkspaceSymbolSuite
 import tests.Library
 
 object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
-  var tmp = AbsolutePath(Files.createTempDirectory("metals"))
+  var tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
   override def libraries: List[Library] = Library.all
   def workspace: AbsolutePath = tmp
   override def afterAll(): Unit = {

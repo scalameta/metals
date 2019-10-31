@@ -9,7 +9,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     indexScalaLibrary()
   }
 
-  val foldLatestDocs =
+  val foldLatestDocs: String =
     """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
        | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
        | expression `ifEmpty`.
@@ -28,7 +28,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |option map f getOrElse ifEmpty
        |```""".stripMargin
 
-  val foldOlderDocs1 =
+  val foldOlderDocs1: String =
     """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
        | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
        | expression `ifEmpty`.
@@ -78,7 +78,7 @@ object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     )
   )
 
-  val foldOlderDocs2 =
+  val foldOlderDocs2: String =
     """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
        | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
        | expression `ifEmpty`.

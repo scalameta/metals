@@ -7,7 +7,8 @@ import scala.meta.internal.metals.BuildTargets
 
 object InverseDependenciesSuite extends BaseSuite {
   class Graph(val root: String) {
-    val inverseDependencies = mutable.Map.empty[String, ListBuffer[String]]
+    val inverseDependencies: mutable.Map[String, ListBuffer[String]] =
+      mutable.Map.empty[String, ListBuffer[String]]
     def dependsOn(project: String, dependency: String): this.type = {
       val dependencies =
         inverseDependencies.getOrElseUpdate(dependency, ListBuffer.empty)

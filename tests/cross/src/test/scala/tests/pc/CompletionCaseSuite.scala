@@ -6,7 +6,7 @@ import tests.BaseCompletionSuite
 
 object CompletionCaseSuite extends BaseCompletionSuite {
 
-  def paramHint = Some("param-hint")
+  def paramHint: Option[String] = Some("param-hint")
 
   override def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(

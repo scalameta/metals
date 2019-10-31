@@ -2,6 +2,7 @@ package tests.feature
 
 import tests.BaseCompletionLspSuite
 import scala.meta.internal.metals.BuildInfo
+import scala.concurrent.Future
 
 object DefinitionCrossLspSuite
     extends BaseCompletionLspSuite("definition-cross") {
@@ -14,7 +15,7 @@ object DefinitionCrossLspSuite
     basicDefinitionTest(BuildInfo.scala213)
   }
 
-  def basicDefinitionTest(scalaVersion: String) = {
+  def basicDefinitionTest(scalaVersion: String): Future[Unit] = {
     cleanDatabase()
     for {
       _ <- server.initialize(

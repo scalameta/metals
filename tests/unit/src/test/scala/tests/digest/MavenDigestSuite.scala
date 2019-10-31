@@ -145,13 +145,14 @@ object MavenDigestSuite extends BaseDigestSuite {
     """.stripMargin
   )
 
-  def projectString = """
-                        |<project>
-                        |<modelVersion>4.0.0</modelVersion>
-                        |<groupId>com.mycompany.app</groupId>
-                        |<artifactId>my-app</artifactId>
-                        |<version>1</version>
-                        |</project>
+  def projectString: String =
+    """
+      |<project>
+      |<modelVersion>4.0.0</modelVersion>
+      |<groupId>com.mycompany.app</groupId>
+      |<artifactId>my-app</artifactId>
+      |<version>1</version>
+      |</project>
   """.stripMargin
 
   checkDiff(
