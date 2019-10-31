@@ -7,7 +7,7 @@ import ch.epfl.scala.{bsp4j => b}
  */
 object ClientCommands {
 
-  val EchoCommand: Command = Command(
+  val EchoCommand = new Command(
     "metals-echo-command",
     "Echo command",
     """A client command that should be forwarded back to the Metals server.
@@ -19,7 +19,7 @@ object ClientCommands {
       """`string`, the command ID to execute on the client.""".stripMargin
   )
 
-  val RunDoctor: Command = Command(
+  val RunDoctor = new Command(
     "metals-doctor-run",
     "Run doctor",
     """Focus on a window displaying troubleshooting help from the Metals doctor.""".stripMargin,
@@ -27,7 +27,7 @@ object ClientCommands {
       """`string`, the HTML to display in the focused window.""".stripMargin
   )
 
-  val ReloadDoctor: Command = Command(
+  val ReloadDoctor = new Command(
     "metals-doctor-reload",
     "Reload doctor",
     """Reload the HTML contents of an open Doctor window, if any. Should be ignored if there is no open doctor window.""".stripMargin,
@@ -35,7 +35,7 @@ object ClientCommands {
       """`string`, the HTML to display in the focused window.""".stripMargin
   )
 
-  val ToggleLogs: Command = Command(
+  val ToggleLogs = new Command(
     "metals-logs-toggle",
     "Toggle logs",
     """|Focus or remove focus on the output logs reported by the server via `window/logMessage`.
@@ -44,7 +44,7 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  val FocusDiagnostics: Command = Command(
+  val FocusDiagnostics = new Command(
     "metals-diagnostics-focus",
     "Open problems",
     """|Focus on the window that lists all published diagnostics.
@@ -53,7 +53,7 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  val StartDebugSession: Command = Command(
+  val StartDebugSession = new Command(
     "metals-debug-session-start",
     "Start debug session",
     s"""|Starts a debug session. The address of a new Debug Adapter can be obtained 
@@ -75,7 +75,7 @@ object ClientCommands {
     """.stripMargin
   )
 
-  val RefreshModel: Command = Command(
+  val RefreshModel = new Command(
     "metals-model-refresh",
     "Refresh model",
     """|Notifies the client that the model has been updated and it 
@@ -83,7 +83,7 @@ object ClientCommands {
        |""".stripMargin
   )
 
-  val GotoLocation: Command = Command(
+  val GotoLocation = new Command(
     "metals-goto-location",
     "Goto location",
     "Move the cursor focus to the provided location",

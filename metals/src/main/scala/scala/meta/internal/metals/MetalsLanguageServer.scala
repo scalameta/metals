@@ -94,7 +94,7 @@ class MetalsLanguageServer(
   private val fingerprints = new MutableMd5Fingerprints
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
-  var focusedDocument: Option[AbsolutePath] = Option.empty[AbsolutePath]
+  var focusedDocument: Option[AbsolutePath] = None
   private val focusedDocumentBuildTarget =
     new AtomicReference[b.BuildTargetIdentifier]()
   private val definitionIndex = newSymbolIndex()
