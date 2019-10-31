@@ -8,7 +8,7 @@ import scala.meta.internal.metals.BuildInfo
 class RequirementsModifier extends StringModifier {
   override val name: String = "requirements"
 
-  def supportedScalaVersions =
+  def supportedScalaVersions: String =
     BuildInfo.supportedScalaVersions.dropRight(1).mkString(", ") +
       s" and ${BuildInfo.supportedScalaVersions.last}"
 

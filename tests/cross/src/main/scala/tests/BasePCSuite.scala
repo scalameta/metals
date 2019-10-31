@@ -24,6 +24,7 @@ import scala.util.control.NonFatal
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import scala.collection.Seq
+import scala.meta.pc.PresentationCompiler
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
@@ -46,13 +47,13 @@ abstract class BasePCSuite extends BaseSuite {
   )
   val executorService: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
-  val pc = new ScalaPresentationCompiler()
+  val pc: PresentationCompiler = new ScalaPresentationCompiler()
     .withSearch(search)
     .withConfiguration(config)
     .withExecutorService(executorService)
     .withScheduledExecutorService(executorService)
     .newInstance("", myclasspath.asJava, scalacOptions.asJava)
-  val tmp = AbsolutePath(Files.createTempDirectory("metals"))
+  val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
   override def utestAfterAll(): Unit = {
     executorService.shutdown()
   }

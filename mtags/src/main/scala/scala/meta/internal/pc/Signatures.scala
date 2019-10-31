@@ -253,7 +253,8 @@ trait Signatures { this: MetalsGlobal =>
     def isTypeParameters: Boolean = gtpe.typeParams.nonEmpty
     def implicitParams: Option[List[Symbol]] =
       gtpe.paramss.lastOption.filter(_.headOption.exists(_.isImplicit))
-    val implicitEvidenceTermParams = mutable.Set.empty[Symbol]
+    private val implicitEvidenceTermParams =
+      mutable.Set.empty[Symbol]
     val implicitEvidencesByTypeParam
         : collection.Map[Symbol, ListBuffer[String]] = {
       val result = mutable.Map.empty[Symbol, ListBuffer[String]]

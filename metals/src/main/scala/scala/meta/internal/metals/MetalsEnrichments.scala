@@ -369,7 +369,7 @@ object MetalsEnrichments
         char: Char,
         lowerBound: Int = 0,
         upperBound: Int = value.size
-    ) = {
+    ): Int = {
       var index = upperBound
       while (index > lowerBound && value(index) != char) {
         index -= 1
@@ -517,7 +517,7 @@ object MetalsEnrichments
   }
 
   implicit class XtensionToken(token: Token) {
-    def isWhiteSpaceOrComment = token match {
+    def isWhiteSpaceOrComment: Boolean = token match {
       case _: Token.Space | _: Token.Tab | _: Token.CR | _: Token.LF |
           _: Token.LFLF | _: Token.FF | _: Token.Comment | _: Token.BOF |
           _: Token.EOF =>

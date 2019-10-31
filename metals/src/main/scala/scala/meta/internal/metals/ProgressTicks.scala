@@ -16,7 +16,7 @@ object ProgressTicks {
   }
 
   object dots extends ProgressTicks {
-    val value = Array(
+    val value: Array[String] = Array(
       "   ",
       ".  ",
       ".. ",

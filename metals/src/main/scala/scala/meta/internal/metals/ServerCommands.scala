@@ -8,7 +8,7 @@ import ch.epfl.scala.{bsp4j => b}
  */
 object ServerCommands {
 
-  val ImportBuild = Command(
+  val ImportBuild: Command = Command(
     "build-import",
     "Import build",
     """Import the latest changes from the build to for example pick up new library dependencies.
@@ -18,7 +18,7 @@ object ServerCommands {
       |""".stripMargin
   )
 
-  val ConnectBuildServer = Command(
+  val ConnectBuildServer: Command = Command(
     "build-connect",
     "Connect to build server",
     """Establish a new connection to the build server and reindex the workspace.
@@ -28,13 +28,13 @@ object ServerCommands {
       |""".stripMargin
   )
 
-  val DisconnectBuildServer = Command(
+  val DisconnectBuildServer: Command = Command(
     "build-disconnect",
     "Disconnect to build server",
     """Unconditionally cancel existing build server connection without reconnecting"""
   )
 
-  val ScanWorkspaceSources = Command(
+  val ScanWorkspaceSources: Command = Command(
     "sources-scan",
     "Scan sources",
     """|Walk all files in the workspace and index where symbols are defined.
@@ -47,7 +47,7 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val RunDoctor = Command(
+  val RunDoctor: Command = Command(
     "doctor-run",
     "Run doctor",
     """|Open the Metals doctor to troubleshoot potential problems with the build.
@@ -57,7 +57,7 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val CascadeCompile = Command(
+  val CascadeCompile: Command = Command(
     "compile-cascade",
     "Cascade compile",
     """|Compile the current open files along with all build targets in this workspace that depend on those files.
@@ -69,13 +69,13 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val CancelCompile = Command(
+  val CancelCompile: Command = Command(
     "compile-cancel",
     "Cancel compilation",
     """Cancel the currently ongoing compilation, if any."""
   )
 
-  val BspSwitch = Command(
+  val BspSwitch: Command = Command(
     "bsp-switch",
     "Switch build server",
     """|Prompt the user to select a new build server to connect to.
@@ -86,7 +86,7 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val StartDebugAdapter = Command(
+  val StartDebugAdapter: Command = Command(
     "debug-adapter-start",
     "Start debug adapter",
     "Start debug adapter",
@@ -103,7 +103,7 @@ object ServerCommands {
     """.stripMargin
   )
 
-  val PresentationCompilerRestart = Command(
+  val PresentationCompilerRestart: Command = Command(
     "presentation-compiler-restart",
     "Restart presentation compiler",
     """|Restart running presentation compiler instances.
@@ -114,7 +114,7 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val GotoLocation = Command(
+  val GotoLocation: Command = Command(
     "goto",
     "Goto location",
     """|Move the cursor to the definition of the argument symbol.
@@ -129,55 +129,55 @@ object ServerCommands {
   val OpenBrowser: Regex = "browser-open-url:(.*)".r
   def OpenBrowser(url: String): String = s"browser-open-url:$url"
 
-  val GotoLog = Command(
+  val GotoLog: Command = Command(
     "goto-log",
     "Check logs",
     "Open the Metals logs to troubleshoot issues."
   )
 
-  val OpenIssue = Command(
+  val OpenIssue: Command = Command(
     OpenBrowser("https://github.com/scalameta/metals/issues/new/choose"),
     "Open issue on GitHub",
     "Open the Metals repository on GitHub to ask a question, report a bug or request a new feature."
   )
 
-  val MetalsGithub = Command(
+  val MetalsGithub: Command = Command(
     OpenBrowser("https://github.com/scalameta/metals"),
     "Metals on GitHub",
     "Open the Metals repository on GitHub"
   )
 
-  val BloopGithub = Command(
+  val BloopGithub: Command = Command(
     OpenBrowser("https://github.com/scalacenter/bloop"),
     "Bloop on GitHub",
     "Open the Metals repository on GitHub"
   )
 
-  val ChatOnGitter = Command(
+  val ChatOnGitter: Command = Command(
     OpenBrowser("https://gitter.im/scalameta/metals"),
     "Chat on Gitter",
     "Open the Metals channel on Gitter to discuss with other Metals users."
   )
 
-  val ChatOnDiscord = Command(
+  val ChatOnDiscord: Command = Command(
     OpenBrowser("https://discord.gg/RFpSVth"),
     "Chat on Discord",
     "Open the Scalameta server on Discord to discuss with other Metals users."
   )
 
-  val ReadVscodeDocumentation = Command(
+  val ReadVscodeDocumentation: Command = Command(
     OpenBrowser("https://scalameta.org/metals/docs/editors/vscode.html"),
     "Read Metals documentation",
     "Open the Metals website to read the full instructions on how to use Metals with VS Code."
   )
 
-  val ReadBloopDocumentation = Command(
+  val ReadBloopDocumentation: Command = Command(
     OpenBrowser("https://scalacenter.github.io/bloop/"),
     "Read Bloop documentation",
     "Open the Bloop website to read the full instructions on how to install and use Bloop."
   )
 
-  val ScalametaTwitter = Command(
+  val ScalametaTwitter: Command = Command(
     OpenBrowser("https://twitter.com/scalameta"),
     "Scalameta on Twitter",
     "Stay up to date with the latest release announcements and learn new Scala code editing tricks."

@@ -94,19 +94,20 @@ class MetalsLanguageServer(
   private val fingerprints = new MutableMd5Fingerprints
   private val mtags = new Mtags
   var workspace: AbsolutePath = _
-  var focusedDocument = Option.empty[AbsolutePath]
+  var focusedDocument: Option[AbsolutePath] = Option.empty[AbsolutePath]
   private val focusedDocumentBuildTarget =
     new AtomicReference[b.BuildTargetIdentifier]()
   private val definitionIndex = newSymbolIndex()
   private val symbolDocs = new Docstrings(definitionIndex)
-  var buildServer = Option.empty[BuildServerConnection]
+  var buildServer: Option[BuildServerConnection] =
+    Option.empty[BuildServerConnection]
   private val buildTargetClasses = new BuildTargetClasses(() => buildServer)
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
-  var userConfig = UserConfiguration()
+  var userConfig: UserConfiguration = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
   val compilations: Compilations = new Compilations(
     buildTargets,
@@ -130,7 +131,7 @@ class MetalsLanguageServer(
     BatchedFunction.fromFuture[AbsolutePath, BuildChange](
       onBuildChangedUnbatched
     )
-  val pauseables = Pauseable.fromPausables(
+  val pauseables: Pauseable = Pauseable.fromPausables(
     onBuildChanged :: parseTrees :: compilations.pauseables
   )
 

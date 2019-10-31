@@ -67,7 +67,10 @@ case class MavenBuildTool() extends BuildTool {
 }
 
 object MavenBuildTool {
-  def isMavenRelatedPath(workspace: AbsolutePath, path: AbsolutePath) = {
+  def isMavenRelatedPath(
+      workspace: AbsolutePath,
+      path: AbsolutePath
+  ): Boolean = {
     path.toNIO.startsWith(workspace.toNIO) && path.filename == "pom.xml"
   }
 }

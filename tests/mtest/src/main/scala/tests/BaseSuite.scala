@@ -186,7 +186,8 @@ class BaseSuite extends TestSuite {
     Properties.versionNumberString
   private def scalaBinary(scalaVersion: String): String =
     scalaVersion.split("\\.").take(2).mkString(".")
-  val compatProcess = Map.empty[String, String => String]
+  val compatProcess: Map[String, String => String] =
+    Map.empty[String, String => String]
 
   def getExpected(
       default: String,

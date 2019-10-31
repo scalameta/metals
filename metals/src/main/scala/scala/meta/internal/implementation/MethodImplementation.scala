@@ -198,7 +198,7 @@ object MethodImplementation {
       findSymbolInParent: String => Option[SymbolInformation],
       asSeenFrom: Map[String, String]
   ) {
-    def addAsSeenFrom(asSeenFrom: Map[String, String]) = {
+    def addAsSeenFrom(asSeenFrom: Map[String, String]): Context = {
       this.copy(asSeenFrom = this.asSeenFrom ++ asSeenFrom)
     }
   }

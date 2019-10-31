@@ -231,10 +231,10 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
     def isConstructor: Boolean =
       sym.isMethod && (sym.name == "<init>" || sym.name == "$init$")
     def isPackageObject: Boolean = sym.name == "package"
-    def isTypeParam = sym.isType && sym.isParam
-    def isAnonymousClass = sym.name.contains("$anon")
-    def isAnonymousFunction = sym.name.contains("$anonfun")
-    def isSyntheticConstructor = sym match {
+    def isTypeParam: Boolean = sym.isType && sym.isParam
+    def isAnonymousClass: Boolean = sym.name.contains("$anon")
+    def isAnonymousFunction: Boolean = sym.name.contains("$anonfun")
+    def isSyntheticConstructor: Boolean = sym match {
       case sym: SymbolInfoSymbol =>
         val owner = sym.symbolInfo.owner
         sym.isConstructor && (owner.isModuleClass || owner.isTrait)

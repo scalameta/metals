@@ -36,7 +36,8 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
 ) extends PresentationCompiler {
-  val logger = Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
+  val logger: Logger =
+    Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
   override def withExecutorService(

@@ -255,7 +255,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  lazy val isForName = Set[Name](
+  lazy val isForName: Set[Name] = Set[Name](
     nme.map,
     nme.withFilter,
     nme.flatMap,

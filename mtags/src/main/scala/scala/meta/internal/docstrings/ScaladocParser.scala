@@ -657,7 +657,7 @@ object ScaladocParser {
 
     /** listStyle ::= '-' spc | '1.' spc | 'I.' spc | 'i.' spc | 'A.' spc | 'a.' spc
      * Characters used to build lists and their constructors */
-    val listStyles =
+    val listStyles: Map[String, Seq[Block] => Block] =
       Map[String, (Seq[Block] => Block)]( // TODO Should this be defined at some list companion?
         "- " -> (UnorderedList(_)),
         "1. " -> (OrderedList(_, "decimal")),
@@ -668,7 +668,7 @@ object ScaladocParser {
       )
 
     /** Checks if the current line is formed with more than one space and one the listStyles */
-    def checkList =
+    def checkList: Boolean =
       (countWhitespace > 0) && (listStyles.keys exists {
         checkSkipInitWhitespace(_)
       })
@@ -1063,8 +1063,8 @@ object ScaladocParser {
 
     /* INLINES */
 
-    val OPEN_TAG = "^<([A-Za-z]+)( [^>]*)?(/?)>$".r
-    val CLOSE_TAG = "^</([A-Za-z]+)>$".r
+    val OPEN_TAG: Regex = "^<([A-Za-z]+)( [^>]*)?(/?)>$".r
+    val CLOSE_TAG: Regex = "^</([A-Za-z]+)>$".r
     private def readHTMLFrom(begin: HtmlTag): String = {
       val list = mutable.ListBuffer.empty[String]
       val stack = mutable.ListBuffer.empty[String]
@@ -1417,9 +1417,9 @@ object ScaladocParser {
       count
     }
 
-    def jumpWhitespace() = jumpUntil(!isWhitespace(char))
+    def jumpWhitespace(): Int = jumpUntil(!isWhitespace(char))
 
-    def jumpWhitespaceOrNewLine() = jumpUntil(!isWhitespaceOrNewLine(char))
+    def jumpWhitespaceOrNewLine(): Int = jumpUntil(!isWhitespaceOrNewLine(char))
 
     /* READERS */
 
@@ -1458,9 +1458,9 @@ object ScaladocParser {
 
     /* CHARS CLASSES */
 
-    def isWhitespace(c: Char) = c == ' ' || c == '\t'
+    def isWhitespace(c: Char): Boolean = c == ' ' || c == '\t'
 
-    def isWhitespaceOrNewLine(c: Char) = isWhitespace(c) || c == '\n'
+    def isWhitespaceOrNewLine(c: Char): Boolean = isWhitespace(c) || c == '\n'
   }
 
 }

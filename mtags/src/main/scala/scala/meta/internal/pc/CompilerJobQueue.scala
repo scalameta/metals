@@ -67,7 +67,7 @@ object CompilerJobQueue {
     def reject(): Unit = {
       result.completeExceptionally(new CancellationException("rejected"))
     }
-    val start = System.nanoTime()
+    val start: Long = System.nanoTime()
     def run(): Unit = {
       if (!result.isDone()) {
         _run()

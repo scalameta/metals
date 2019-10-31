@@ -12,7 +12,8 @@ import scribe.writer.FileWriter
 
 object MetalsLogger {
 
-  val workspaceLogPath = RelativePath(".metals").resolve("metals.log")
+  val workspaceLogPath: RelativePath =
+    RelativePath(".metals").resolve("metals.log")
 
   def updateDefaultFormat(): Unit = {
     Logger.root
@@ -98,7 +99,7 @@ object MetalsLogger {
   def newFileWriter(logfile: AbsolutePath): FileWriter =
     FileWriter().path(_ => logfile.toNIO).autoFlush
 
-  def defaultFormat = formatter"$levelPaddedRight $message$newLine"
+  def defaultFormat: Formatter = formatter"$levelPaddedRight $message$newLine"
 
   def silent: LoggerSupport = new LoggerSupport {
     override def log[M](record: LogRecord[M]): Unit = ()

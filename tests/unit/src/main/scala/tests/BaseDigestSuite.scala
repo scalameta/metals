@@ -11,14 +11,14 @@ trait BaseDigestSuite extends BaseSuite {
       name: String,
       layout: String,
       altLayout: String
-  )(implicit file: sourcecode.File, line: sourcecode.Line) =
+  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit =
     check(name, layout, altLayout, isEqual = true)
 
   def checkDiff(
       name: String,
       layout: String,
       altLayout: String
-  )(implicit file: sourcecode.File, line: sourcecode.Line) =
+  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit =
     check(name, layout, altLayout, isEqual = false)
 
   private def check(

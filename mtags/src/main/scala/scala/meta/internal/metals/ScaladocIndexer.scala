@@ -19,7 +19,7 @@ class ScaladocIndexer(
     input: Input.VirtualFile,
     fn: SymbolDocumentation => Unit
 ) extends ScalaMtags(input) {
-  val defines = mutable.Map.empty[String, String]
+  val defines: mutable.Map[String, String] = mutable.Map.empty[String, String]
   override def visitOccurrence(
       occ: SymbolOccurrence,
       sinfo: SymbolInformation,

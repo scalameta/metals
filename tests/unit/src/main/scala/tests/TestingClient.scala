@@ -47,8 +47,10 @@ import scala.meta.internal.tvp.TreeViewDidChangeParams
  */
 final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     extends NoopLanguageClient {
-  val diagnostics = TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
-  val diagnosticsCount = TrieMap.empty[AbsolutePath, AtomicInteger]
+  val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
+    TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
+  val diagnosticsCount: TrieMap[AbsolutePath, AtomicInteger] =
+    TrieMap.empty[AbsolutePath, AtomicInteger]
   val messageRequests = new ConcurrentLinkedDeque[String]()
   val showMessages = new ConcurrentLinkedQueue[MessageParams]()
   val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()

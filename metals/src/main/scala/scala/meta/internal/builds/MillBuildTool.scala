@@ -73,7 +73,10 @@ case class MillBuildTool() extends BuildTool {
 }
 
 object MillBuildTool {
-  def isMillRelatedPath(workspace: AbsolutePath, path: AbsolutePath) = {
+  def isMillRelatedPath(
+      workspace: AbsolutePath,
+      path: AbsolutePath
+  ): Boolean = {
     val filename = path.toNIO.getFileName.toString
     filename.endsWith(".sc")
   }

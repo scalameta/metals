@@ -14,6 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp._
+import java.{util => ju}
 
 /**
  * A build client that forwards notifications from the build server to the language client.
@@ -46,7 +47,8 @@ final class ForwardingMetalsBuildClient(
     new ConcurrentHashMap[BuildTargetIdentifier, java.lang.Boolean]()
   )
 
-  val updatedTreeViews = ConcurrentHashSet.empty[BuildTargetIdentifier]
+  val updatedTreeViews: ju.Set[BuildTargetIdentifier] =
+    ConcurrentHashSet.empty[BuildTargetIdentifier]
 
   def reset(): Unit = {
     cancel()

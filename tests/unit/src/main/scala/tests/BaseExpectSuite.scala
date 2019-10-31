@@ -10,9 +10,9 @@ import scala.meta.io.Classpath
  * Exposes useful methods to lookup metadata about the input project.
  */
 abstract class BaseExpectSuite(val suiteName: String) extends BaseSuite {
-  lazy val input = InputProperties.default()
+  lazy val input: InputProperties = InputProperties.default()
 
-  lazy val symtab = {
+  lazy val symtab: GlobalSymbolTable = {
     val bootClasspath =
       sys.props
         .collectFirst {

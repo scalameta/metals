@@ -4,7 +4,7 @@ case class PrettyPrintTree(
     value: String,
     children: List[PrettyPrintTree] = Nil
 ) {
-  def isEmpty = value.isEmpty() && children.isEmpty
+  def isEmpty: Boolean = value.isEmpty() && children.isEmpty
   def render(indent: String, sb: StringBuilder): Unit = {
     if (!isEmpty) {
       sb.append(indent)
@@ -24,5 +24,5 @@ case class PrettyPrintTree(
 }
 
 object PrettyPrintTree {
-  def empty = PrettyPrintTree("")
+  def empty: PrettyPrintTree = PrettyPrintTree("")
 }

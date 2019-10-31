@@ -26,7 +26,7 @@ class Messages(icons: Icons) {
       "See the logs for more details. "
   )
 
-  def bloopInstallProgress(buildToolExecName: String) =
+  def bloopInstallProgress(buildToolExecName: String): MetalsSlowTaskParams =
     MetalsSlowTaskParams(s"$buildToolExecName bloopInstall")
   def dontShowAgain: MessageActionItem =
     new MessageActionItem("Don't show again")
@@ -70,7 +70,7 @@ class Messages(icons: Icons) {
 
   }
 
-  val PartialNavigation = MetalsStatusParams(
+  val PartialNavigation: MetalsStatusParams = MetalsStatusParams(
     "$(info) Partial navigation",
     tooltip =
       "This external library source has compile errors. " +

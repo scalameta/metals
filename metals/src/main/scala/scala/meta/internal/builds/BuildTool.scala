@@ -20,7 +20,7 @@ abstract class BuildTool {
 
   def recommendedVersion: String
 
-  protected lazy val tempDir = {
+  protected lazy val tempDir: Path = {
     val dir = Files.createTempDirectory("metals")
     dir.toFile.deleteOnExit()
     dir

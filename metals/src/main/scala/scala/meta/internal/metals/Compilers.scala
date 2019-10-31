@@ -23,6 +23,7 @@ import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.concurrent.Future
+import java.{util => ju}
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -47,9 +48,10 @@ class Compilers(
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
   // function is expensive, which is the case here.
-  val jcache = Collections.synchronizedMap(
-    new java.util.HashMap[BuildTargetIdentifier, PresentationCompiler]
-  )
+  val jcache: ju.Map[BuildTargetIdentifier, PresentationCompiler] =
+    Collections.synchronizedMap(
+      new java.util.HashMap[BuildTargetIdentifier, PresentationCompiler]
+    )
   private val cache = jcache.asScala
 
   // The "rambo" compiler is used for source files that don't belong to a build target.

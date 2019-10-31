@@ -25,7 +25,7 @@ import java.net.URI
  * An index to lookup classfiles contained in a given classpath.
  */
 class PackageIndex() {
-  val logger = Logger.getLogger(classOf[PackageIndex].getName)
+  val logger: Logger = Logger.getLogger(classOf[PackageIndex].getName)
   val packages = new util.HashMap[String, util.Set[String]]()
   private val isVisited = new util.HashSet[AbsolutePath]()
   private val enterPackage =

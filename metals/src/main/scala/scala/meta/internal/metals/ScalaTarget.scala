@@ -3,13 +3,14 @@ package scala.meta.internal.metals
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
 
 case class ScalaTarget(info: BuildTarget, scalac: ScalacOptionsItem) {
   def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled
 
-  def isScalaTarget = info.getLanguageIds().contains("scala")
+  def isScalaTarget: Boolean = info.getLanguageIds().contains("scala")
 
-  def classpath = {
+  def classpath: List[AbsolutePath] = {
     scalac
       .getClasspath()
       .asScala

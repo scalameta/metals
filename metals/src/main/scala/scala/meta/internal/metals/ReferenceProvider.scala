@@ -27,8 +27,9 @@ final class ReferenceProvider(
     buffers: Buffers,
     definition: DefinitionProvider
 ) {
-  var referencedPackages = BloomFilters.create(10000)
-  val index = TrieMap.empty[Path, BloomFilter[CharSequence]]
+  var referencedPackages: BloomFilter[CharSequence] = BloomFilters.create(10000)
+  val index: TrieMap[Path, BloomFilter[CharSequence]] =
+    TrieMap.empty[Path, BloomFilter[CharSequence]]
 
   def reset(): Unit = {
     index.clear()

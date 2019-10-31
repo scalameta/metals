@@ -104,7 +104,7 @@ case class SbtBuildTool(version: String) extends BuildTool {
 
 object SbtBuildTool {
 
-  def isSbtRelatedPath(workspace: AbsolutePath, path: AbsolutePath) = {
+  def isSbtRelatedPath(workspace: AbsolutePath, path: AbsolutePath): Boolean = {
     val project = workspace.toNIO.resolve("project")
     val isToplevel = Set(
       workspace.toNIO,
