@@ -2,9 +2,6 @@ package bill
 
 import ch.epfl.scala.bsp4j._
 import ch.epfl.scala.{bsp4j => b}
-import com.geirsson.coursiersmall.CoursierSmall
-import com.geirsson.coursiersmall.Dependency
-import com.geirsson.coursiersmall.Settings
 import com.google.gson.GsonBuilder
 import java.io.File
 import java.io.PrintStream
@@ -20,11 +17,15 @@ import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.stream.Collectors
+import coursierapi.Dependency
+import coursierapi.Fetch
+import coursierapi.MavenRepository
+import coursierapi.Repository
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.Future
-import scala.meta.internal.metals.{BuildInfo, MetalsLogger, RecursivelyDelete}
+import scala.meta.internal.metals.{BuildInfo, RecursivelyDelete, MetalsLogger}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.reflect.internal.util.BatchSourceFile
@@ -176,18 +177,36 @@ object Bill {
     override def buildTargetDependencySources(
         params: DependencySourcesParams
     ): CompletableFuture[DependencySourcesResult] = {
-      CompletableFuture.completedFuture {
-        val sources = CoursierSmall.fetch(
-          new Settings().withDependencies(
-            List(
-              new Dependency(
-                "org.scala-lang",
-                "scala-library",
-                mtags.BuildInfo.scalaCompilerVersion
-              )
+      val dependency = Dependency.of(
+        "org.scala-lang",
+        "scala-library",
+        mtags.BuildInfo.scalaCompilerVersion
+      )
+
+      val repositories =
+        Repository.defaults().asScala ++
+          List(
+            Repository.central(),
+            Repository.ivy2Local(),
+            MavenRepository.of(
+              "https://oss.sonatype.org/content/repositories/releases/"
+            ),
+            MavenRepository.of(
+              "https://oss.sonatype.org/content/repositories/snapshots/"
             )
           )
-        )
+
+      CompletableFuture.completedFuture {
+        val sources = Fetch
+          .create()
+          .withDependencies(
+            dependency
+          )
+          .addRepositories(repositories: _*)
+          .fetch()
+          .map(_.toPath)
+          .asScala
+
         new DependencySourcesResult(
           List(
             new DependencySourcesItem(

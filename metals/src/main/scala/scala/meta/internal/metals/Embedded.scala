@@ -9,10 +9,11 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.pc.PresentationCompiler
-import coursierapi.MavenRepository
 import coursierapi.Dependency
 import coursierapi.Fetch
+import coursierapi.MavenRepository
 import coursierapi.Repository
+import coursierapi.ResolutionParams
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -64,19 +65,22 @@ object Embedded {
       dependency: Dependency,
       scalaVersion: String
   ): Fetch = {
-    val fetch = Fetch
-      .create()
-      .withDependencies(List(dependency): _*)
-      .addRepositories(
-        Repository.defaults().asScala.toList: _*
-      )
-      .addRepositories(
+    val repositories =
+      Repository.defaults().asScala ++
         List(
           Repository.central(),
-          Repository.ivy2Local()
-        ): _*
-      )
-      .withDependencies(
+          Repository.ivy2Local(),
+          MavenRepository.of(
+            "https://oss.sonatype.org/content/repositories/releases/"
+          ),
+          MavenRepository.of(
+            "https://oss.sonatype.org/content/repositories/snapshots/"
+          )
+        )
+
+    val resolutionParams = ResolutionParams
+      .create()
+      .forceVersions(
         List(
           Dependency.of(
             "org.scala-lang",
@@ -93,19 +97,19 @@ object Embedded {
             "scala-reflect",
             scalaVersion
           )
-        ): _*
+        ).map(d => (d.getModule, d.getVersion)).toMap.asJava
       )
 
-    val envRepos = System
-      .getenv("COURSIER_REPOSITORIES")
-    if (envRepos.nonEmpty)
-      fetch.addRepositories(
-        envRepos
-          .split("""|""")
-          .map(MavenRepository.of)
-          .toList: _*
+    Fetch
+      .create()
+      .addRepositories(
+        repositories: _*
       )
-    else fetch
+      .withDependencies(
+        dependency
+      )
+      .withResolutionParams(resolutionParams)
+      .withMainArtifacts()
   }
 
   def newPresentationCompilerClassLoader(
@@ -127,8 +131,11 @@ object Embedded {
     val dependency =
       if (semanticdbJars.isEmpty) pc
       else pc.withTransitive(false)
-    val fetch = fetchSettings(dependency, info.getScalaVersion())
-    val jars = fetch.fetch().asScala.map(_.toPath)
+    val jars = fetchSettings(dependency, info.getScalaVersion())
+      .fetch()
+      .asScala
+      .map(_.toPath)
+
     val scalaJars = info.getJars.asScala.map(_.toAbsolutePath.toNIO)
     val allJars = Iterator(jars, scalaJars, semanticdbJars).flatten
     val allURLs = allJars.map(_.toUri.toURL).toArray

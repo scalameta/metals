@@ -273,8 +273,6 @@ lazy val metals = project
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % "0.0.13",
-      // undeclared transitive dependency of coursier-small
-      "org.scala-lang.modules" %% "scala-xml" % "1.1.1",
       // for logging
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations

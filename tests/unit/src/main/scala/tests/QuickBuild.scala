@@ -2,7 +2,6 @@ package tests
 
 import bloop.config.ConfigEncoderDecoders._
 import bloop.config.{Config => C}
-import com.geirsson.{coursiersmall => s}
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -16,6 +15,7 @@ import java.security.MessageDigest
 import bloop.config.Config
 import coursierapi.Dependency
 import coursierapi.Fetch
+import coursierapi.Repository
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
@@ -246,29 +246,38 @@ object QuickBuild {
       scalaVersion: String,
       scalaBinaryVersion: String,
       sources: Boolean = false
-  ): List[Path] = {
+  ): List[Path] =
     fetchDependencies(
       dependencies.iterator
         .map(d => toDependency(d, scalaVersion, scalaBinaryVersion))
         .toList,
       sources
     )
-  }
   def fetchDependencies(
       dependencies: List[Dependency],
       sources: Boolean = false
-  ): List[Path] =
+  ): List[Path] = {
+    val classifiers =
+      if (sources) Set("sources").asJava
+      else Set.empty[String].asJava
+
+    val repositories =
+      Repository.defaults().asScala ++
+        List(Repository.central(), Repository.ivy2Local())
+
     Fetch
       .create()
+      .withRepositories(repositories: _*)
       .withDependencies(dependencies: _*)
       .withClassifiers(
-        if (sources) Set("sources", "_").asJava
-        else Set[String]().asJava
+        classifiers
       )
+      .withMainArtifacts()
       .fetch()
       .map(_.toPath)
       .asScala
       .toList
+  }
 
   val Full: Regex = "(.+):::(.+):(.+)".r
   val Half: Regex = "(.+)::(.+):(.+)".r
