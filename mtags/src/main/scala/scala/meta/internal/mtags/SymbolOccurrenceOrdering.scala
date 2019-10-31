@@ -23,7 +23,15 @@ object SymbolOccurrenceOrdering {
               a.startCharacter,
               b.startCharacter
             )
-            byCharacter
+            if (byCharacter != 0) {
+              byCharacter
+            } else {
+              val byEnd = Integer.compare(
+                a.endCharacter,
+                b.endCharacter
+              )
+              byEnd
+            }
           }
         }
       }

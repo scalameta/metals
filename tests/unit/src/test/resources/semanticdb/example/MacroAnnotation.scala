@@ -2,7 +2,7 @@ package example
 
 import io.circe.derivation.annotations.JsonCodec/*io.circe.derivation.annotations.JsonCodec.*//*io.circe.derivation.annotations.JsonCodec#*/
 
-@JsonCodec/*example.MacroAnnotation#*/
+@/*local27*/JsonCodec/*example.MacroAnnotation#*/
 // FIXME: https://github.com/scalameta/scalameta/issues/1789/*java.lang.Object#`<init>`().*/
 case class MacroAnnotation(
     name/*example.MacroAnnotation#name.*/: String/*scala.Predef.String#*/

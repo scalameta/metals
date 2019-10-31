@@ -141,6 +141,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
           |sbt.version=1.2.6
           |/build.sbt
           |version := "1.0"
+          |scalaVersion := "2.12.10"
           |""".stripMargin,
         expectError = true
       )
