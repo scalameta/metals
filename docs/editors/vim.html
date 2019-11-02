@@ -134,14 +134,14 @@ installed, be sure to update to the latest version with <code>:PlugUpdate</code>
 <p>We need to tell <code>coc.nvim</code> that our LSP server is going to be <code>metals</code>. In order
 to do so, we need to run <code>:CocConfig</code> and input our configuration. Here's the
 recommended default:</p>
-<pre><code class="hljs css language-jsonc"><span class="hljs-string">//</span> vim:    ~<span class="hljs-string">/.vim/coc-settings.json</span>
-<span class="hljs-string">//</span> neovim: ~<span class="hljs-string">/.config/nvim/coc-settings.json</span>
+<pre><code class="hljs css language-jsonc"><span class="hljs-comment">// vim:    ~/.vim/coc-settings.json</span>
+<span class="hljs-comment">// neovim: ~/.config/nvim/coc-settings.json</span>
 {
-  <span class="hljs-string">"languageserver"</span>: {
-    <span class="hljs-string">"metals"</span>: {
-      <span class="hljs-string">"command"</span>: <span class="hljs-string">"metals-vim"</span>,
-      <span class="hljs-string">"rootPatterns"</span>: [<span class="hljs-string">"build.sbt"</span>],
-      <span class="hljs-string">"filetypes"</span>: [<span class="hljs-string">"scala"</span>, <span class="hljs-string">"sbt"</span>]
+  <span class="hljs-attr">"languageserver"</span>: {
+    <span class="hljs-attr">"metals"</span>: {
+      <span class="hljs-attr">"command"</span>: <span class="hljs-string">"metals-vim"</span>,
+      <span class="hljs-attr">"rootPatterns"</span>: [<span class="hljs-string">"build.sbt"</span>],
+      <span class="hljs-attr">"filetypes"</span>: [<span class="hljs-string">"scala"</span>, <span class="hljs-string">"sbt"</span>]
     }
   }
 }
@@ -169,8 +169,8 @@ binary does not exist yet.</p>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
-<td>0.7.6+177-220578cd-SNAPSHOT</td>
-<td>30 Oct 2019 15:34</td>
+<td>0.7.6+178-cf0a20d0-SNAPSHOT</td>
+<td>02 Nov 2019 16:32</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>

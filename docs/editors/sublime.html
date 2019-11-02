@@ -92,8 +92,8 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
-<td>0.7.6+177-220578cd-SNAPSHOT</td>
-<td>30 Oct 2019 15:34</td>
+<td>0.7.6+178-cf0a20d0-SNAPSHOT</td>
+<td>02 Nov 2019 16:32</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>
@@ -118,7 +118,7 @@ Text LSP client.</p>
 <p>Next, open &quot;Preferences &gt; Key Binding&quot; and register <code>F12</code> to trigger goto
 definition.</p>
 <pre><code class="hljs css language-json">[
-  // ...
+  <span class="hljs-comment">// ...</span>
   {
     <span class="hljs-attr">"keys"</span>: [<span class="hljs-string">"f12"</span>],
     <span class="hljs-attr">"command"</span>: <span class="hljs-string">"lsp_symbol_definition"</span>
@@ -141,7 +141,7 @@ take everything from 10 seconds in small cached builds up to 10-15 minutes in
 large uncached builds.</p>
 <p>For more detailed information about what is happening behind the scenes during
 <code>sbt bloopInstall</code>:</p>
-<pre><code class="hljs">tail -f .metals/metals<span class="hljs-selector-class">.log</span>
+<pre><code class="hljs">tail -f .metals/metals.<span class="hljs-built_in">log</span>
 </code></pre>
 <p>Once the import step completes, compilation starts for your open <code>*.scala</code>
 files. Once the sources have compiled successfully, you can navigate the the
@@ -160,7 +160,7 @@ build import when changing <code>build.sbt</code>. To learn about Sublime Text c
 <p>Update the contents of your <code>*.sublime-commands</code> file to include the following
 command.</p>
 <pre><code class="hljs css language-json">[
-  // ...
+  <span class="hljs-comment">// ...</span>
   {
     <span class="hljs-attr">"caption"</span>: <span class="hljs-string">"Metals: Import Build"</span>,
     <span class="hljs-attr">"command"</span>: <span class="hljs-string">"lsp_execute"</span>,
@@ -185,8 +185,8 @@ in this location.</p>
 The first step is a fixing problem with insufficient information in the code completion popup.
 To fix it, open &quot;Preferences &gt; Preferences: LSP Settings&quot; and add the following setting:</p>
 <pre><code class="hljs css language-json">{
-  // ...
-  "prefer_label_over_filter_text": true,
+  <span class="hljs-comment">// ...</span>
+  <span class="hljs-attr">"prefer_label_over_filter_text"</span>: <span class="hljs-literal">true</span>,
 }
 </code></pre>
 <p><img src="https://i.imgur.com/2Rcfauz.gif" alt="Better code completion"></p>
@@ -194,15 +194,15 @@ To fix it, open &quot;Preferences &gt; Preferences: LSP Settings&quot; and add t
 (without mixing them with the default ones from Sublime) set following setting
 in the &quot;Preferences &gt; Preferences: LSP Settings&quot;:</p>
 <pre><code class="hljs css language-json">{
-  // ...
-  "only_show_lsp_completions": true,
+  <span class="hljs-comment">// ...</span>
+  <span class="hljs-attr">"only_show_lsp_completions"</span>: <span class="hljs-literal">true</span>,
 }
 </code></pre>
 <p>Also, if you prefer to show symbol references in Sublime's quick panel instead of the bottom panel
 set following setting in the &quot;Preferences &gt; Preferences: LSP Settings&quot;:</p>
 <pre><code class="hljs css language-json">{
-  // ...
-  "show_references_in_quick_panel": true,
+  <span class="hljs-comment">// ...</span>
+  <span class="hljs-attr">"show_references_in_quick_panel"</span>: <span class="hljs-literal">true</span>,
 }
 </code></pre>
 <p><img src="https://i.imgur.com/7tSiEfX.gif" alt="Symbol references in the popup"></p>
@@ -212,7 +212,7 @@ set following setting in the &quot;Preferences &gt; Preferences: LSP Settings&qu
 <p>Open &quot;Preferences &gt; Key Binding&quot; and register <code>ctrl+alt+l</code> to trigger formating document.
 definition.</p>
 <pre><code class="hljs css language-json">[
-  // ...
+  <span class="hljs-comment">// ...</span>
   {
     <span class="hljs-attr">"keys"</span>: [<span class="hljs-string">"ctrl+alt+l"</span>],
     <span class="hljs-attr">"command"</span>: <span class="hljs-string">"lsp_format_document"</span>
@@ -224,7 +224,7 @@ definition.</p>
 <p>This an optional step if you want to have a shortcut for looking up symbols in the workspace.
 Open &quot;Preferences &gt; Key Binding&quot; and add:</p>
 <pre><code class="hljs css language-json">[
-  // ...
+  <span class="hljs-comment">// ...</span>
   { 
     <span class="hljs-attr">"keys"</span>: [<span class="hljs-string">"ctrl+t"</span>], 
     <span class="hljs-attr">"command"</span>: <span class="hljs-string">"show_overlay"</span>,
@@ -238,7 +238,7 @@ By default, however, if you hit &quot;Enter&quot; to select a completion, the LS
 complete the class without importing it, but you can easy remap to use also &quot;Enter&quot; key.
 Open &quot;Preferences &gt; Key Binding&quot; and add:</p>
 <pre><code class="hljs css language-json">[ 
-  // ...
+  <span class="hljs-comment">// ...</span>
   { <span class="hljs-attr">"keys"</span>: [<span class="hljs-string">"enter"</span>], <span class="hljs-attr">"command"</span>: <span class="hljs-string">"commit_completion"</span>, <span class="hljs-attr">"context"</span>: [{ <span class="hljs-attr">"key"</span>: <span class="hljs-string">"auto_complete_visible"</span> } ] },
   { <span class="hljs-attr">"keys"</span>: [<span class="hljs-string">"tab"</span>], <span class="hljs-attr">"command"</span>: <span class="hljs-string">"commit_completion"</span>, <span class="hljs-attr">"context"</span>: [{ <span class="hljs-attr">"key"</span>: <span class="hljs-string">"auto_complete_visible"</span> } ] }
 ]
