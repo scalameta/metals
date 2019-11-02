@@ -27,7 +27,6 @@ final class ConfiguredLanguageClient(
 
   override def configure(capabilities: ClientExperimentalCapabilities): Unit = {
     debuggingSupported = capabilities.debuggingProvider
-    super.configure(capabilities)
   }
 
   override def shutdown(): Unit = {
