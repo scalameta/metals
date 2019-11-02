@@ -48,7 +48,8 @@ trait Completions { this: MetalsGlobal =>
       val detail: String
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
 
-  val packageSymbols = mutable.Map.empty[String, Option[Symbol]]
+  val packageSymbols: mutable.Map[String, Option[Symbol]] =
+    mutable.Map.empty[String, Option[Symbol]]
   def packageSymbolFromString(symbol: String): Option[Symbol] = {
     packageSymbols.getOrElseUpdate(symbol, {
       val fqn = symbol.stripSuffix("/").replace('/', '.')
@@ -144,7 +145,7 @@ trait Completions { this: MetalsGlobal =>
     relevance
   }
 
-  lazy val isEvilMethod = Set[Name](
+  lazy val isEvilMethod: Set[Name] = Set[Name](
     termNames.notifyAll_,
     termNames.notify_,
     termNames.wait_,
@@ -354,7 +355,8 @@ trait Completions { this: MetalsGlobal =>
 
     // Default implementation for `compare` delegates to the `isPrioritized` method
     // which groups prioritized members with first and non-prioritized second.
-    final lazy val cache = mutable.Map.empty[Symbol, Boolean]
+    final lazy val cache: mutable.Map[Symbol, Boolean] =
+      mutable.Map.empty[Symbol, Boolean]
     final def isPrioritizedCached(m: Member): Boolean =
       cache.getOrElseUpdate(m.sym, isPrioritized(m))
 
@@ -699,7 +701,7 @@ trait Completions { this: MetalsGlobal =>
         cursor: Position,
         text: String
     ) extends CompletionPosition {
-      val pos = ident.pos.withEnd(cursor.point).toLSP
+      val pos: l.Range = ident.pos.withEnd(cursor.point).toLSP
       def newText(sym: Symbol): String = {
         new StringBuilder()
           .append('{')
@@ -710,7 +712,7 @@ trait Completions { this: MetalsGlobal =>
           .append('}')
           .toString
       }
-      val filter =
+      val filter: String =
         text.substring(ident.pos.start - 1, cursor.point - query.length)
       override def contribute: List[Member] = {
         metalsTypeMembers(ident.pos).collect {
@@ -748,11 +750,15 @@ trait Completions { this: MetalsGlobal =>
         text: String
     ) extends CompletionPosition {
 
-      val offset = if (lit.pos.focusEnd.line == pos.line) CURSOR.length else 0
-      val nameStart = pos.withStart(pos.start - interpolator.name.size)
+      val offset: Int =
+        if (lit.pos.focusEnd.line == pos.line) CURSOR.length else 0
+      val nameStart: Position =
+        pos.withStart(pos.start - interpolator.name.size)
       val nameRange = nameStart.toLSP
-      val hasClosingBrace = text.charAt(pos.point) == '}'
-      val hasOpeningBrace = text.charAt(pos.start - interpolator.name.size - 1) == '{'
+      val hasClosingBrace: Boolean = text.charAt(pos.point) == '}'
+      val hasOpeningBrace: Boolean = text.charAt(
+        pos.start - interpolator.name.size - 1
+      ) == '{'
 
       def additionalEdits(): List[l.TextEdit] = {
         val interpolatorEdit =
@@ -785,7 +791,7 @@ trait Completions { this: MetalsGlobal =>
         out.toString
       }
 
-      val filter =
+      val filter: String =
         text.substring(lit.pos.start, pos.point - interpolator.name.length)
       override def contribute: List[Member] = {
         metalsScopeMembers(pos).collect {
@@ -822,7 +828,7 @@ trait Completions { this: MetalsGlobal =>
         pos: Position,
         editRange: l.Range
     ) extends CompletionPosition {
-      val query = toplevel.name.toString().stripSuffix(CURSOR)
+      val query: String = toplevel.name.toString().stripSuffix(CURSOR)
       override def contribute: List[Member] = {
         try {
           val name = Paths
@@ -881,8 +887,9 @@ trait Completions { this: MetalsGlobal =>
         text: String,
         completions: CompletionResult
     ) extends CompletionPosition {
-      val editRange = pos.withStart(ident.pos.start).withEnd(pos.start).toLSP
-      val method = typedTreeAt(apply.fun.pos)
+      val editRange: l.Range =
+        pos.withStart(ident.pos.start).withEnd(pos.start).toLSP
+      val method: Tree = typedTreeAt(apply.fun.pos)
       val methodSym = method.symbol
       lazy val baseParams: List[Symbol] =
         if (method.tpe == null) Nil
@@ -890,7 +897,7 @@ trait Completions { this: MetalsGlobal =>
           method.tpe.paramss.headOption
             .getOrElse(methodSym.paramss.flatten)
         }
-      lazy val isNamed = apply.args.iterator
+      lazy val isNamed: Set[Name] = apply.args.iterator
         .filterNot(_ == ident)
         .zip(baseParams.iterator)
         .map {
@@ -900,15 +907,16 @@ trait Completions { this: MetalsGlobal =>
             param.name
         }
         .toSet
-      val prefix = ident.name.toString.stripSuffix(CURSOR)
+      val prefix: String = ident.name.toString.stripSuffix(CURSOR)
       lazy val allParams: List[Symbol] = {
         baseParams.iterator.filterNot { param =>
           isNamed(param.name) ||
           param.name.containsChar('$') // exclude synthetic parameters
         }.toList
       }
-      lazy val params = allParams.filter(param => param.name.startsWith(prefix))
-      lazy val isParamName = params.iterator
+      lazy val params: List[Symbol] =
+        allParams.filter(param => param.name.startsWith(prefix))
+      lazy val isParamName: Set[String] = params.iterator
         .map(_.name)
         .filterNot(isNamed)
         .map(_.toString().trim())
@@ -1035,11 +1043,11 @@ trait Completions { this: MetalsGlobal =>
         start: Int,
         isCandidate: Symbol => Boolean
     ) extends CompletionPosition {
-      val prefix = name.toString.stripSuffix(CURSOR)
-      val typed = typedTreeAt(t.pos)
+      val prefix: String = name.toString.stripSuffix(CURSOR)
+      val typed: Tree = typedTreeAt(t.pos)
       val isDecl = typed.tpe.decls.toSet
-      val range = pos.withStart(start).withEnd(pos.point).toLSP
-      val lineStart = pos.source.lineToOffset(pos.line - 1)
+      val range: l.Range = pos.withStart(start).withEnd(pos.point).toLSP
+      val lineStart: Int = pos.source.lineToOffset(pos.line - 1)
 
       // Returns all the symbols of all transitive supertypes in the enclosing scope.
       // For example:
@@ -1084,21 +1092,22 @@ trait Completions { this: MetalsGlobal =>
         isCandidate(sym)
       }
 
-      val context = doLocateContext(pos)
-      val baseAutoImport = autoImportPosition(pos, text)
-      val autoImport = baseAutoImport.getOrElse(
+      val context: Context = doLocateContext(pos)
+      val baseAutoImport: Option[AutoImportPosition] =
+        autoImportPosition(pos, text)
+      val autoImport: AutoImportPosition = baseAutoImport.getOrElse(
         AutoImportPosition(lineStart, inferIndent(lineStart, text))
       )
-      val importContext =
+      val importContext: Context =
         if (baseAutoImport.isDefined)
           doLocateImportContext(pos, baseAutoImport)
         else context
-      val re = renamedSymbols(context)
-      val owners = this.parentSymbols(context)
+      val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
+      val owners: scala.collection.Set[Symbol] = this.parentSymbols(context)
 
       private case class OverrideCandidate(sym: Symbol) {
-        val memberType = typed.tpe.memberType(sym)
-        val info =
+        val memberType: Type = typed.tpe.memberType(sym)
+        val info: Type =
           if (memberType.isErroneous) sym.info
           else {
             memberType match {
@@ -1127,34 +1136,34 @@ trait Completions { this: MetalsGlobal =>
           printLongType = false
         )
 
-        val overrideKeyword =
+        val overrideKeyword: String =
           if (!sym.isAbstract || text.startsWith("o", start)) "override "
           // Don't insert `override` keyword if the supermethod is abstract and the
           // user did not explicitly type starting with o . See:
           // https://github.com/scalameta/metals/issues/565#issuecomment-472761240
           else ""
 
-        val lzy =
+        val lzy: String =
           if (sym.isLazy) "lazy "
           else ""
 
-        val keyword = if (sym.isStable) "val " else "def "
+        val keyword: String = if (sym.isStable) "val " else "def "
 
-        val asciOverrideDef = {
+        val asciOverrideDef: String = {
           if (sym.isAbstract) s"${keyword}"
           else s"${overrideKeyword}${keyword}"
         }
 
-        val overrideDef = metalsConfig.overrideDefFormat() match {
+        val overrideDef: String = metalsConfig.overrideDefFormat() match {
           case OverrideDefFormat.Unicode =>
             if (sym.isAbstract) "🔼 "
             else "⏫ "
           case _ => asciOverrideDef
         }
 
-        val name = Identifier(sym.name)
+        val name: String = Identifier(sym.name)
 
-        val filterText = s"${overrideKeyword}${lzy}${keyword}${name}"
+        val filterText: String = s"${overrideKeyword}${lzy}${keyword}${name}"
 
         // if we had no val or def then filter will be empty
         def toMember = new OverrideDefMember(
@@ -1289,8 +1298,8 @@ trait Completions { this: MetalsGlobal =>
         text: String,
         parent: Tree
     ) extends CompletionPosition {
-      val context = doLocateContext(pos)
-      val parents = selector match {
+      val context: Context = doLocateContext(pos)
+      val parents: Parents = selector match {
         case EmptyTree =>
           val typedParent = typedTreeAt(parent.pos)
           typedParent match {
@@ -1662,9 +1671,10 @@ trait Completions { this: MetalsGlobal =>
         case _ => definitions.tupleType(tpes)
       }
     )
-    val isParent = Set(selector.typeSymbol, selector.typeSymbol.companion)
-      .filterNot(_ == NoSymbol)
-    val isBottom = Set[Symbol](
+    val isParent: Set[Symbol] =
+      Set(selector.typeSymbol, selector.typeSymbol.companion)
+        .filterNot(_ == NoSymbol)
+    val isBottom: Set[Symbol] = Set[Symbol](
       definitions.NullClass,
       definitions.NothingClass
     )

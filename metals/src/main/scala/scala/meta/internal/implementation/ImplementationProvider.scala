@@ -384,7 +384,7 @@ object ImplementationProvider {
       )
   }
 
-  def isClassLike(info: SymbolInformation) =
+  def isClassLike(info: SymbolInformation): Boolean =
     info.isObject || info.isClass || info.isTrait || info.isType
 
   def addParameterSignatures(

@@ -5,23 +5,26 @@ import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.SlowTaskConfig
+import scala.meta.internal.metals.MetalsServerConfig
 
 abstract class BaseImportSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
 
   // enables support for bloop install (a slow task)
-  override val serverConfig = {
+  override val serverConfig: MetalsServerConfig = {
     super.serverConfig.copy(slowTask = SlowTaskConfig.on)
   }
 
   def buildTool: BuildTool
 
-  def importBuildMessage = ImportBuild.params(buildTool.toString()).getMessage
+  def importBuildMessage: String =
+    ImportBuild.params(buildTool.toString()).getMessage
 
-  def importBuildChangesMessage =
+  def importBuildChangesMessage: String =
     ImportBuildChanges.params(buildTool.toString()).getMessage
 
-  def progressMessage = bloopInstallProgress(buildTool.executableName).message
+  def progressMessage: String =
+    bloopInstallProgress(buildTool.executableName).message
 
   def currentDigest(workspace: AbsolutePath): Option[String]
 

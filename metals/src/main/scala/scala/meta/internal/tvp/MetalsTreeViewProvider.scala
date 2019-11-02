@@ -25,7 +25,8 @@ class MetalsTreeViewProvider(
     doCompile: BuildTargetIdentifier => Unit,
     sh: ScheduledExecutorService
 ) extends TreeViewProvider {
-  val ticks = TrieMap.empty[String, ScheduledFuture[_]]
+  private val ticks =
+    TrieMap.empty[String, ScheduledFuture[_]]
   private val isVisible = TrieMap.empty[String, Boolean].withDefaultValue(false)
   private val isCollapsed = TrieMap.empty[BuildTargetIdentifier, Boolean]
   private val pendingProjectUpdates =

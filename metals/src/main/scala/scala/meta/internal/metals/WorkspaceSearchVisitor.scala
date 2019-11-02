@@ -77,7 +77,7 @@ class WorkspaceSearchVisitor(
       Integer.compare(x.getName().length(), y.getName().length())
     }
   }
-  val isVisited = mutable.Set.empty[AbsolutePath]
+  val isVisited: mutable.Set[AbsolutePath] = mutable.Set.empty[AbsolutePath]
   def definition(
       pkg: String,
       filename: String,

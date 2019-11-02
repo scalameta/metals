@@ -16,9 +16,11 @@ case class TreeViewNode(
     @Nullable collapseState: String = null
 ) {
   def isDirectory: Boolean = label.endsWith("/")
-  def isCollapsed = collapseState == MetalsTreeItemCollapseState.collapsed
-  def isExpanded = collapseState == MetalsTreeItemCollapseState.expanded
-  def isNoCollapse = collapseState == MetalsTreeItemCollapseState.none
+  def isCollapsed: Boolean =
+    collapseState == MetalsTreeItemCollapseState.collapsed
+  def isExpanded: Boolean =
+    collapseState == MetalsTreeItemCollapseState.expanded
+  def isNoCollapse: Boolean = collapseState == MetalsTreeItemCollapseState.none
 }
 
 object TreeViewNode {

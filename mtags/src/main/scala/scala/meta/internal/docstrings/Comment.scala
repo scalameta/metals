@@ -126,7 +126,7 @@ abstract class Comment {
   /** A short description used in the entity-view and search results */
   def shortDescription: Option[Text]
 
-  override def toString =
+  override def toString: String =
     body.toString + "\n" +
       (authors map ("@author " + _.toString)).mkString("\n") +
       (result map ("@return " + _.toString)).mkString("\n") +

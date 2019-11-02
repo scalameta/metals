@@ -19,7 +19,7 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
  * Handles both javadoc and scaladoc.
  */
 class Docstrings(index: GlobalSymbolIndex) {
-  val cache = TrieMap.empty[String, SymbolDocumentation]
+  val cache = new TrieMap[String, SymbolDocumentation]()
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
   def documentation(symbol: String): Optional[SymbolDocumentation] = {

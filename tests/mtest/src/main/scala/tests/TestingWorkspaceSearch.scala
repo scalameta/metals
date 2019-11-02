@@ -12,7 +12,7 @@ object TestingWorkspaceSearch {
 }
 
 class TestingWorkspaceSearch {
-  val inputs = mutable.Map.empty[String, String]
+  val inputs: mutable.Map[String, String] = mutable.Map.empty[String, String]
   def search(query: WorkspaceSymbolQuery, visitor: SymbolSearchVisitor): Unit =
     for {
       (path, text) <- inputs

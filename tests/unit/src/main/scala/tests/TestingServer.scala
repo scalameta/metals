@@ -80,6 +80,7 @@ import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.DebugSession
+import scala.util.matching.Regex
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -815,7 +816,7 @@ final class TestingServer(
     )
   }
 
-  val Docstring = " *\\/?\\*.*".r
+  val Docstring: Regex = " *\\/?\\*.*".r
   def workspaceDefinitions: String = {
     buffers.open.toSeq
       .sortBy(_.toURI.toString)

@@ -11,12 +11,13 @@ import scala.util.Success
 object UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
 
-  override val experimentalCapabilities = Some(
-    new ClientExperimentalCapabilities(
-      debuggingProvider = false,
-      treeViewProvider = false
+  override val experimentalCapabilities: Some[ClientExperimentalCapabilities] =
+    Some(
+      new ClientExperimentalCapabilities(
+        debuggingProvider = false,
+        treeViewProvider = false
+      )
     )
-  )
 
   testAsync("no-code-lenses") {
     for {

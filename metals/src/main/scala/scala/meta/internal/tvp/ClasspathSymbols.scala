@@ -32,8 +32,10 @@ import scala.collection.concurrent.TrieMap
  * Extracts SemanticDB symbols from `*.class` files in jars.
  */
 class ClasspathSymbols(isStatisticsEnabled: Boolean = false) {
-  val cache = TrieMap
-    .empty[AbsolutePath, TrieMap[String, Array[TreeViewSymbolInformation]]]
+  private val cache = TrieMap.empty[
+    AbsolutePath,
+    TrieMap[String, Array[TreeViewSymbolInformation]]
+  ]
 
   def clearCache(path: AbsolutePath): Unit = {
     cache.remove(path)

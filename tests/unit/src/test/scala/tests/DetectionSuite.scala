@@ -8,7 +8,7 @@ object DetectionSuite extends BaseSuite {
       layout: String,
       testFunction: AbsolutePath => Boolean,
       isTrue: Boolean = true
-  ) = {
+  ): Unit = {
     val workspace = FileLayout.fromString(layout)
     workspace.toFile.deleteOnExit()
     val isSbt = testFunction(workspace)

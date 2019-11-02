@@ -88,7 +88,7 @@ private[implementation] object ClassLocation {
   def calculateAsSeenFrom(
       parentType: TypeRef,
       typeParameters: Option[Scope]
-  ) = {
+  ): Map[String, String] = {
     parentType.typeArguments.zipWithIndex.flatMap {
       case (arg: TypeRef, ind) =>
         // create mapping dependent on order - this way we don't need parent information here

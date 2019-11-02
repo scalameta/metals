@@ -30,7 +30,7 @@ object MillDigest extends Digestable {
       var current: String = "",
       var prefix: String = ""
   ) {
-    def processingFileImport = hadFile && hadImport
+    def processingFileImport: Boolean = hadFile && hadImport
   }
 
   // find all `import $file.path`

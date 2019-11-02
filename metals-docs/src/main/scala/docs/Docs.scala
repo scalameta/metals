@@ -4,8 +4,8 @@ import java.nio.file.Paths
 import scala.meta.internal.metals.{BuildInfo => V}
 
 object Docs {
-  lazy val snapshot = Snapshot.latest("snapshots")
-  lazy val release = Snapshot.latest("releases")
+  lazy val snapshot: Snapshot = Snapshot.latest("snapshots")
+  lazy val release: Snapshot = Snapshot.latest("releases")
   def releasesResolverTable: String = {
     <table>
       <thead>
@@ -47,7 +47,7 @@ object Docs {
     </table>
   }.toString
 
-  lazy val stableVersion = V.metalsVersion.replaceFirst("\\+.*", "")
+  lazy val stableVersion: String = V.metalsVersion.replaceFirst("\\+.*", "")
   def main(args: Array[String]): Unit = {
     val out = Paths.get("website", "target", "docs")
     val settings = mdoc

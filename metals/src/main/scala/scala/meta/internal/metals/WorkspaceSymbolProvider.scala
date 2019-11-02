@@ -27,8 +27,9 @@ final class WorkspaceSymbolProvider(
     fileOnDisk: AbsolutePath => AbsolutePath,
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
 )(implicit ec: ExecutionContext) {
-  val inWorkspace = TrieMap.empty[Path, WorkspaceSymbolsIndex]
-  var inDependencies =
+  val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
+    TrieMap.empty[Path, WorkspaceSymbolsIndex]
+  var inDependencies: ClasspathSearch =
     ClasspathSearch.fromClasspath(Nil, isReferencedPackage, bucketSize)
 
   def search(query: String): Seq[l.SymbolInformation] = {

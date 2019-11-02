@@ -66,7 +66,7 @@ import scala.meta.io.AbsolutePath
  */
 object Bill {
   class Server() extends BuildServer with ScalaBuildServer {
-    val languages = Collections.singletonList("scala")
+    val languages: util.List[String] = Collections.singletonList("scala")
     var client: BuildClient = _
     override def onConnectWithClient(server: BuildClient): Unit =
       client = server
@@ -104,9 +104,9 @@ object Bill {
       result
     }
     val reporter = new StoreReporter
-    val out = AbsolutePath(workspace.resolve("out.jar"))
+    val out: AbsolutePath = AbsolutePath(workspace.resolve("out.jar"))
     Files.createDirectories(out.toNIO.getParent())
-    lazy val g = {
+    lazy val g: nsc.Global = {
       val settings = new nsc.Settings()
       settings.classpath.value =
         myClasspath.map(_.toString).mkString(File.pathSeparator)

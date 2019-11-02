@@ -315,6 +315,7 @@ lazy val input = project
       "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
     )
   )
+  .disablePlugins(ScalafixPlugin)
 
 lazy val testSettings: Seq[Def.Setting[_]] = List(
   skip.in(publish) := true,

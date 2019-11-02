@@ -142,7 +142,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeDocs = true
   )
-  def predefDocString =
+  def predefDocString: String =
     """|
        |> The `Predef` object provides definitions that are accessible in all Scala
        | compilation units without explicit qualification.
@@ -602,7 +602,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true
   )
 
-  val isDefinedLatestDocs =
+  val isDefinedLatestDocs: String =
     """|> Returns true if the option is an instance of [scala.Some](scala.Some), false otherwise.
        |
        |This is equivalent to:
@@ -616,7 +616,7 @@ object CompletionDocSuite extends BaseCompletionSuite {
        |isDefined: Boolean
        |""".stripMargin
 
-  val isDefinedOlderDocs =
+  val isDefinedOlderDocs: String =
     """|> Returns true if the option is an instance of [scala.Some](scala.Some), false otherwise.
        |isDefined: Boolean
        |""".stripMargin

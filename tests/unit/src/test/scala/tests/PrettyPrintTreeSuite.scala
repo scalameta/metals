@@ -9,7 +9,7 @@ object PrettyPrintTreeSuite extends BaseSuite {
   def t(
       value: String,
       children: PrettyPrintTree*
-  ) = PrettyPrintTree(value, children.toList)
+  ): PrettyPrintTree = PrettyPrintTree(value, children.toList)
 
   check(
     "shallow",

@@ -27,8 +27,8 @@ class ClasspathTreeView[Value, Key](
     toplevels: () => Iterator[Value],
     loadSymbols: (Key, String) => Iterator[TreeViewSymbolInformation]
 ) {
-  val rootUri = scheme + ":"
-  def root = TreeViewNode(
+  val rootUri: String = scheme + ":"
+  def root: TreeViewNode = TreeViewNode(
     viewId,
     rootUri,
     title + s" (${toplevels().size})",
@@ -175,7 +175,7 @@ class ClasspathTreeView[Value, Key](
     override def toString(): String = toUri
     def withSymbol(newSymbol: String): NodeUri =
       copy(symbol = newSymbol)
-    val isRoot = symbol == Symbols.RootPackage
+    val isRoot: Boolean = symbol == Symbols.RootPackage
     def isDescendent(child: String): Boolean =
       if (isRoot) true
       else child.startsWith(symbol)

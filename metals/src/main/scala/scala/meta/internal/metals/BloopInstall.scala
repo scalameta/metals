@@ -222,9 +222,10 @@ object BloopInstall {
       joinErrorWithInfo: Boolean
   ) extends NuAbstractProcessHandler {
     var response: Option[CompletableFuture[_]] = None
-    val completeProcess = Promise[BloopInstallResult]()
+    val completeProcess: Promise[BloopInstallResult] =
+      Promise[BloopInstallResult]()
     val stdout = new LineListener(line => scribe.info(line))
-    val stderr =
+    val stderr: LineListener =
       if (joinErrorWithInfo) stdout
       else new LineListener(line => scribe.error(line))
 

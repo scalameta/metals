@@ -11,7 +11,7 @@ import tests.BaseImportSuite
 
 object MavenLspSuite extends BaseImportSuite("maven-import") {
 
-  val buildTool = MavenBuildTool()
+  val buildTool: MavenBuildTool = MavenBuildTool()
 
   val defaultPom = new String(
     InputStreamIO.readBytes(
@@ -173,7 +173,7 @@ object MavenLspSuite extends BaseImportSuite("maven-import") {
     } yield ()
   }
 
-  val scalacArgs =
+  val scalacArgs: String =
     """|<arg>-Xfatal-warnings</arg>
        |<arg>-Ywarn-unused</arg>
        |""".stripMargin

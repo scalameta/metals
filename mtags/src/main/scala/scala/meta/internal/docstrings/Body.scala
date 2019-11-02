@@ -61,9 +61,9 @@ final case class ColumnOption(option: Char) {
   require(option == 'L' || option == 'C' || option == 'R')
 }
 object ColumnOption {
-  val ColumnOptionLeft = ColumnOption('L')
-  val ColumnOptionCenter = ColumnOption('C')
-  val ColumnOptionRight = ColumnOption('R')
+  val ColumnOptionLeft: ColumnOption = ColumnOption('L')
+  val ColumnOptionCenter: ColumnOption = ColumnOption('C')
+  val ColumnOptionRight: ColumnOption = ColumnOption('R')
 }
 final case class Row(cells: Seq[Cell])
 final case class Cell(blocks: Seq[Block])
@@ -96,11 +96,11 @@ final case class HtmlTag(data: String) extends Inline {
       (false, None)
   }
 
-  def canClose(open: HtmlTag) = {
+  def canClose(open: HtmlTag): Boolean = {
     isEnd && tagName == open.tagName
   }
 
-  def close = tagName collect {
+  def close: Option[HtmlTag] = tagName collect {
     case name if !HtmlTag.TagsNotToClose(name) && !data.endsWith(s"</$name>") =>
       HtmlTag(s"</$name>")
   }

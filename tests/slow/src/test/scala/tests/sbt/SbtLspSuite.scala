@@ -16,7 +16,7 @@ import scala.meta.io.AbsolutePath
 
 object SbtLspSuite extends BaseImportSuite("sbt-import") {
 
-  val buildTool = SbtBuildTool("")
+  val buildTool: SbtBuildTool = SbtBuildTool("")
 
   override def currentDigest(
       workspace: AbsolutePath

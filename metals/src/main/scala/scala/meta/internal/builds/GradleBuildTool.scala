@@ -99,7 +99,10 @@ case class GradleBuildTool() extends BuildTool {
 }
 
 object GradleBuildTool {
-  def isGradleRelatedPath(workspace: AbsolutePath, path: AbsolutePath) = {
+  def isGradleRelatedPath(
+      workspace: AbsolutePath,
+      path: AbsolutePath
+  ): Boolean = {
     val buildSrc = workspace.toNIO.resolve("buildSrc")
     val filename = path.toNIO.getFileName.toString
     path.toNIO.startsWith(buildSrc) ||

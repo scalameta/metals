@@ -20,12 +20,13 @@ import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.io.VirtualFile
 import tests.InputProperties
 import tests.Library
+import scala.tools.nsc.interactive.Global
 
 @State(Scope.Benchmark)
 class MetalsBench {
 
   MetalsLogger.updateDefaultFormat()
-  val inputs = InputProperties.default()
+  val inputs: InputProperties = InputProperties.default()
   val classpath = new SemanticdbClasspath(inputs.sourceroot, inputs.classpath)
   val documents: List[(AbsolutePath, TextDocument)] =
     inputs.scalaFiles.map { input =>
@@ -40,10 +41,10 @@ class MetalsBench {
       )
     }
 
-  val jdk = Classpath(JdkSources().toList)
-  val fullClasspath = jdk ++ inputs.dependencySources
+  val jdk: Classpath = Classpath(JdkSources().toList)
+  val fullClasspath: Classpath = jdk ++ inputs.dependencySources
 
-  val inflated = Inflated.jars(fullClasspath)
+  val inflated: Inflated = Inflated.jars(fullClasspath)
 
   val scalaDependencySources: Inflated = {
     val result = inflated.filter(_.path.endsWith(".scala"))
@@ -57,7 +58,7 @@ class MetalsBench {
     result
   }
 
-  val megaSources = Classpath(
+  val megaSources: Classpath = Classpath(
     Library.all
       .flatMap(_.sources.entries)
       .filter(_.toNIO.getFileName.toString.endsWith(".jar"))
@@ -113,7 +114,7 @@ class MetalsBench {
     }
   }
 
-  lazy val global = InteractiveSemanticdb.newCompiler()
+  lazy val global: Global = InteractiveSemanticdb.newCompiler()
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
