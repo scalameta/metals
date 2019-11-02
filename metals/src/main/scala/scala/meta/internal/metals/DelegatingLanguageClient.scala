@@ -37,8 +37,12 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.applyEdit(params)
   }
 
-  override def configure(capabilities: ClientExperimentalCapabilities): Unit = {
-    underlying.configure(capabilities)
+  def configure(capabilities: ClientExperimentalCapabilities): Unit = {
+    underlying match {
+      case client: ConfiguredLanguageClient =>
+        client.configure(capabilities)
+      case _ =>
+    }
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {

@@ -13,8 +13,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 
 trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
 
-  def configure(capabilities: ClientExperimentalCapabilities): Unit
-
   /**
    * Display message in the editor "status bar", which should be displayed somewhere alongside the buffer.
    *
