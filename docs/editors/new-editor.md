@@ -347,6 +347,12 @@ To enable Metals extensions, start the main process with the system property
 Metals implements several custom JSON-RPC endpoints related to rendering tree
 views in the editor client, the [Tree View Protocol](tree-view-protocol.md).
 
+### Decoration Protocol
+
+Metals implements an LSP extension called the "Decoration Protocol" to rendering
+inline non-editable text in the editor, the
+[Decoration Protocol](decoration-protocol.md).
+
 ### `metals/slowTask`
 
 The Metals slow task request is sent from the server to the client to notify the
@@ -369,6 +375,8 @@ _Request_:
 interface MetalsSlowTaskParams {
   /** The name of this slow task */
   message: string;
+  /** If true, don't open the logs output. */
+  noLogs?: boolean;
 }
 ```
 

@@ -10,8 +10,12 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import scala.meta.internal.tvp._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.decorations.DecorationClient
 
-trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
+trait MetalsLanguageClient
+    extends LanguageClient
+    with TreeViewClient
+    with DecorationClient {
 
   /**
    * Display message in the editor "status bar", which should be displayed somewhere alongside the buffer.
@@ -81,7 +85,10 @@ case class MetalsStatusParams(
     @Nullable command: String = null
 )
 
-case class MetalsSlowTaskParams(message: String)
+case class MetalsSlowTaskParams(
+    message: String,
+    noLogs: java.lang.Boolean = null
+)
 case class MetalsSlowTaskResult(cancel: Boolean)
 
 case class MetalsInputBoxParams(

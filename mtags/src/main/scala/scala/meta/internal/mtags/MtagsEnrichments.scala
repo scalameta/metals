@@ -98,6 +98,15 @@ trait MtagsEnrichments {
         case _ => false
       }
     }
+    def isWorksheet: Boolean = {
+      filename.endsWith(".worksheet.sc")
+    }
+    def isScalaOrScalaScript: Boolean = {
+      extension match {
+        case "scala" | "sc" => true
+        case _ => false
+      }
+    }
     def isScala: Boolean = {
       toLanguage == Language.SCALA
     }

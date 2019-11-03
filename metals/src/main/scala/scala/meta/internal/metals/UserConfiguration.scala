@@ -25,7 +25,9 @@ case class UserConfiguration(
     scalafmtConfigPath: RelativePath =
       UserConfiguration.default.scalafmtConfigPath,
     symbolPrefixes: Map[String, String] =
-      UserConfiguration.default.symbolPrefixes
+      UserConfiguration.default.symbolPrefixes,
+    screenWidth: Int = 120,
+    worksheetCancelTimeout: Int = 4
 )
 object UserConfiguration {
 

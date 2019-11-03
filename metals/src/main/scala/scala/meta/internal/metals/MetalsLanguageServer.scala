@@ -45,6 +45,10 @@ import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
+import scala.meta.internal.worksheets.MetalsWorksheetProvider
+import scala.meta.internal.worksheets.NoopWorksheetProvider
+import scala.meta.internal.worksheets.WorksheetProvider
+import scala.meta.internal.decorations.PublishDecorationsParams
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -131,8 +135,15 @@ class MetalsLanguageServer(
     BatchedFunction.fromFuture[AbsolutePath, BuildChange](
       onBuildChangedUnbatched
     )
+  private val onWorksheetChanged =
+    BatchedFunction.fromFuture[AbsolutePath, Unit](
+      onWorksheetChangedUnbatched
+    )
   val pauseables: Pauseable = Pauseable.fromPausables(
-    onBuildChanged :: parseTrees :: compilations.pauseables
+    onWorksheetChanged ::
+      onBuildChanged ::
+      parseTrees ::
+      compilations.pauseables
   )
 
   // These can't be instantiated until we know the workspace root directory.
@@ -169,6 +180,7 @@ class MetalsLanguageServer(
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
+  var worksheetProvider: WorksheetProvider = NoopWorksheetProvider
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = new ConfiguredLanguageClient(client, config)(ec)
@@ -385,6 +397,19 @@ class MetalsLanguageServer(
       tables,
       messages
     )
+    if (clientExperimentalCapabilities.decorationProvider) {
+      worksheetProvider = register(
+        new MetalsWorksheetProvider(
+          workspace,
+          buffers,
+          buildTargets,
+          languageClient,
+          () => userConfig,
+          sh,
+          statusBar
+        )
+      )
+    }
     if (clientExperimentalCapabilities.treeViewProvider) {
       treeView = new MetalsTreeViewProvider(
         () => workspace,
@@ -622,7 +647,11 @@ class MetalsLanguageServer(
       }
     } else {
       compilers.load(List(path))
-      compilations.compileFiles(List(path)).ignoreValue.asJava
+      val compile = for {
+        _ <- compilations.compileFiles(List(path))
+        _ <- onWorksheetChanged(List(path))
+      } yield ()
+      compile.asJava
     }
   }
 
@@ -784,7 +813,8 @@ class MetalsLanguageServer(
         List(
           Future(reindexWorkspaceSources(paths)),
           compilations.compileFiles(paths).ignoreValue,
-          onBuildChanged(paths).ignoreValue
+          onBuildChanged(paths).ignoreValue,
+          onWorksheetChanged(paths).ignoreValue
         )
       )
       .ignoreValue
@@ -1608,6 +1638,31 @@ class MetalsLanguageServer(
         }
       }
     )
+  }
+
+  private def onWorksheetChangedUnbatched(
+      paths: Seq[AbsolutePath]
+  ): Future[Unit] = {
+    val worksheets = paths.distinct.filter(_.isWorksheet)
+    if (worksheets.isEmpty) {
+      Future.successful(())
+    } else {
+      // Sequentially evaluate the worksheet requests.
+      worksheets.foldLeft(Future.successful(())) {
+        case (before, worksheet) =>
+          before.flatMap { _ =>
+            worksheetProvider
+              .decorations(worksheet, EmptyCancelToken)
+              .map { options =>
+                val params = new PublishDecorationsParams(
+                  worksheet.toURI.toString(),
+                  options
+                )
+                languageClient.metalsDecorationRangesDidChange(params)
+              }
+          }
+      }
+    }
   }
 
   private def onBuildChangedUnbatched(

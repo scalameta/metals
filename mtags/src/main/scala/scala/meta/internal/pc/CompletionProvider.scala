@@ -394,25 +394,23 @@ class CompletionProvider(
       }
 
       val latestParentTrees = getLastVisitedParentTrees(pos)
-      val completion =
-        completionPosition(
-          pos,
-          params.text(),
-          editRange,
-          completions,
-          latestParentTrees
-        )
+      val completion = completionPosition(
+        pos,
+        params.text(),
+        editRange,
+        completions,
+        latestParentTrees
+      )
       val query = completions.name.toString
-      val items =
-        filterInteresting(
-          matchingResults,
-          kind,
-          query,
-          pos,
-          completion,
-          editRange,
-          latestParentTrees
-        )
+      val items = filterInteresting(
+        matchingResults,
+        kind,
+        query,
+        pos,
+        completion,
+        editRange,
+        latestParentTrees
+      )
       params.checkCanceled()
       (items, completion, editRange, query)
     } catch {
@@ -521,9 +519,7 @@ class CompletionProvider(
           else Nil
       }
     } catch {
-      case NonFatal(_) =>
-        logger.warning(s"no such symbol: $classfile")
-        Nil
+      case NonFatal(_) => Nil
     }
   }
 

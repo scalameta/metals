@@ -63,11 +63,11 @@ final class Compilations(
     def isCompilable(path: AbsolutePath): Boolean =
       path.isScalaOrJava && !path.isDependencySource(workspace())
 
-    val targets =
-      paths.filter(isCompilable).flatMap(buildTargets.inverseSources).distinct
+    val compilablePaths = paths.filter(isCompilable)
+    val targets = compilablePaths.flatMap(buildTargets.inverseSources).distinct
 
-    if (targets.isEmpty && paths.nonEmpty) {
-      scribe.warn(s"no build target for: ${paths.mkString("\n  ")}")
+    if (targets.isEmpty && compilablePaths.nonEmpty) {
+      scribe.warn(s"no build target for: ${compilablePaths.mkString("\n  ")}")
     }
 
     targets

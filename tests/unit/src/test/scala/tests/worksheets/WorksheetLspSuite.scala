@@ -1,0 +1,213 @@
+package tests.worksheets
+import tests.BaseLspSuite
+import scala.meta.internal.metals.ClientExperimentalCapabilities
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.MetalsSlowTaskResult
+import scala.concurrent.Promise
+
+object WorksheetLspSuite extends BaseLspSuite("worksheet") {
+  override def experimentalCapabilities
+      : Option[ClientExperimentalCapabilities] =
+    Some(ClientExperimentalCapabilities(decorationProvider = true))
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(screenWidth = 40, worksheetCancelTimeout = 1)
+  testAsync("completion") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {"libraryDependencies": ["com.lihaoyi::sourcecode:0.1.8"]}}
+          |/a/src/main/scala/foo/Main.worksheet.sc
+          |identity(42)
+          |sourcecode.File.generate.value.takeRight(17)
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      identity <- server.completion(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        "identity@@"
+      )
+      _ = assertNoDiff(identity, "identity[A](x: A): A")
+      generate <- server.completion(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        "generate@@"
+      )
+      _ = assertNoDiff(generate, "generate: File")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|identity(42) // 42
+           |sourcecode.File.generate.value.takeRight(17) // "Main.worksheet.sc"
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("render") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/Main.worksheet.sc
+          |import java.nio.file.Files
+          |val name = "Susan"
+          |val greeting = s"Hello $name"
+          |println(greeting + "\nHow are you?")
+          |1.to(10).toVector
+          |val List(a, b) = List(42, 10)
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|
+           |import java.nio.file.Files
+           |val name = "Susan" // "Susan"
+           |val greeting = s"Hello $name" // "Hello Susan"
+           |println(greeting + "\nHow are you?") // Hello Susan
+           |1.to(10).toVector // Vector(1,2,3,4,5,6,7,8,
+           |val List(a, b) = List(42, 10) // a=42, b=10
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceDecorationHoverMessage,
+        """|import java.nio.file.Files
+           |val name = "Susan"
+           |name: String = "Susan"
+           |val greeting = s"Hello $name"
+           |greeting: String = "Hello Susan"
+           |println(greeting + "\nHow are you?")
+           |// Hello Susan
+           |// How are you?
+           |1.to(10).toVector
+           |res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+           |val List(a, b) = List(42, 10)
+           |a: Int = 42
+           |b: Int = 10
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("cancel") {
+    val cancelled = Promise[Unit]()
+    client.slowTaskHandler = { params =>
+      cancelled.trySuccess(())
+      Some(MetalsSlowTaskResult(cancel = true))
+    }
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/Main.worksheet.sc
+          |println(42)
+          |Stream.from(10).last
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
+      _ <- cancelled.future
+      _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
+        _.replaceAllLiterally("Stream", "// Stream")
+      )
+      _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
+        _.replaceAllLiterally("42", "43")
+      )
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|
+           |println(43) // 43
+           |// Stream.from(10).last
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("crash") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/Main.worksheet.sc
+          |val x = 42
+          |???
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|
+           |val x = 42
+           |???
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/Main.worksheet.sc:2:1: error: scala.NotImplementedError: an implementation is missing
+           |	at scala.Predef$.$qmark$qmark$qmark(Predef.scala:288)
+           |	at repl.Session$App.<init>(Main.worksheet.sc:11)
+           |	at repl.Session$.app(Main.worksheet.sc:3)
+           |
+           |???
+           |^^^
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("dependsOn") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}, "b": {"dependsOn": ["a"]}}
+          |/a/src/main/scala/core/Lib.scala
+          |package core
+          |case object Lib
+          |/b/src/main/scala/core/Lib2.scala
+          |package core
+          |case object Lib2
+          |/b/src/main/scala/foo/Main.worksheet.sc
+          |println(core.Lib)
+          |println(core.Lib2)
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/core/Lib.scala")
+      _ <- server.didOpen("b/src/main/scala/core/Lib2.scala")
+      _ <- server.didOpen("b/src/main/scala/foo/Main.worksheet.sc")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|println(core.Lib) // Lib
+           |println(core.Lib2) // Lib2
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  testAsync("no-worksheet") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/Main.sc
+          |identity(42)
+          |val x: Int = ""
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.sc")
+      _ = assertNoDiagnostics()
+      identity <- server.completion(
+        "a/src/main/scala/Main.sc",
+        "identity@@"
+      )
+      // completions work despite error
+      _ = assertNoDiff(identity, "identity[A](x: A): A")
+      // decorations do not appear for non ".worksheet.sc" files.
+      _ = assertNoDiff(client.workspaceDecorations, "")
+    } yield ()
+  }
+}
