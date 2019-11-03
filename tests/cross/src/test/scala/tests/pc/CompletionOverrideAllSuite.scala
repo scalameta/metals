@@ -27,6 +27,10 @@ object CompletionOverrideAllSuite extends BaseCompletionSuite {
     filter = _.contains("Implement")
   )
 
+  // Note: ckipp01 the indentation for the completions on the edits
+  // look a bit odd, but it seems the tests aren't respecting the actual
+  // indentation as these all work locally as expected, and when the actual
+  // indent is added, the necessary indent is unnecessarily doubled
   checkEdit(
     "simple-edit",
     """|package example
@@ -328,10 +332,10 @@ object CompletionOverrideAllSuite extends BaseCompletionSuite {
        |}
        |object Main {
        |  val x = new Foo {
-       |   def foo: int = 3
-       |   var bar: int = 2
-       |   val car: Int = 1
-       |   def@@
+       |    def foo: int = 3
+       |    var bar: int = 2
+       |    val car: Int = 1
+       |    def@@
        |  }
        |}
        |""".stripMargin,
@@ -347,10 +351,10 @@ object CompletionOverrideAllSuite extends BaseCompletionSuite {
        |}
        |object Main {
        |  val x = new Foo {
-       |   def foo: int = 3
-       |   var bar: int = 2
-       |   val car: Int = 1
-       |   def foo2: Int = ${0:???}
+       |    def foo: int = 3
+       |    var bar: int = 2
+       |    val car: Int = 1
+       |    def foo2: Int = ${0:???}
        |var bar2: Int = ${0:???}
        |val car2: Int = ${0:???}
        |  }

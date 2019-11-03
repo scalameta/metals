@@ -15,6 +15,7 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tokenizers.Chars
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.util.control.NonFatal
+import scala.collection.immutable.Nil
 
 /**
  * Utility methods for completions.
@@ -1217,6 +1218,7 @@ trait Completions { this: MetalsGlobal =>
           val overrideMembers = typed.tpe.members.iterator.toList
             .filter(isOverridableMethod)
             .map(OverrideCandidate.apply)
+            .map(_.toMember)
 
           val overrideDefMembers: List[OverrideDefMember] =
             overrideMembers
@@ -1226,21 +1228,17 @@ trait Completions { this: MetalsGlobal =>
                   candidate.filterText
                 )
               }
-              .map(_.toMember)
-              .toList
 
           val allAbstractMembers = overrideMembers
-            .map(_.toMember)
             .filter(_.sym.isAbstract)
-            .toList
-            .map(_.edit.getNewText)
+            .map(_.edit)
 
           if (allAbstractMembers.length > 1 && overrideDefMembers.length > 1) {
             val implementAll: TextEditMember = new TextEditMember(
               prefix,
               new l.TextEdit(
                 range,
-                allAbstractMembers.reverse.mkString("\n")
+                allAbstractMembers.map(_.getNewText).reverse.mkString(s"\n")
               ),
               completionsSymbol("implement"),
               label = Some("Implement all members"),
