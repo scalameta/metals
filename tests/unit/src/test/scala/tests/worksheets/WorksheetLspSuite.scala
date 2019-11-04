@@ -210,4 +210,42 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
       _ = assertNoDiff(client.workspaceDecorations, "")
     } yield ()
   }
+
+  testAsync("update-classpath") {
+    client.slowTaskHandler = _ => None
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/a/Util.scala
+          |package a
+          |object Util {
+          |  def increase(n: Int): Int = n + 1
+          |}
+          |/a/src/main/scala/a/Main.worksheet.sc
+          |a.Util.increase(1)
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Util.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Main.worksheet.sc")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """
+          |a.Util.increase(1) // 2
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/a/Util.scala")(
+        _.replaceAllLiterally("n + 1", "n + 2")
+      )
+      _ <- server.didSave("a/src/main/scala/a/Main.worksheet.sc")(identity)
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """
+          |a.Util.increase(1) // 3
+          |""".stripMargin
+      )
+    } yield ()
+  }
 }

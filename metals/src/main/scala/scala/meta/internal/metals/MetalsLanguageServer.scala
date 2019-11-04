@@ -261,7 +261,8 @@ class MetalsLanguageServer(
       statusBar,
       time,
       report => compilers.didCompile(report),
-      () => treeView
+      () => treeView,
+      () => worksheetProvider
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -654,7 +655,6 @@ class MetalsLanguageServer(
       compile.asJava
     }
   }
-
   @JsonNotification("metals/didFocusTextDocument")
   def didFocus(uri: String): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
@@ -1517,6 +1517,7 @@ class MetalsLanguageServer(
       buildClient.reset()
       semanticDBIndexer.reset()
       treeView.reset()
+      worksheetProvider.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
       for {

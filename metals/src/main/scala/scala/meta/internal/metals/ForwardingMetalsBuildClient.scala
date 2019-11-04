@@ -15,6 +15,7 @@ import scala.concurrent.Promise
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp._
 import java.{util => ju}
+import scala.meta.internal.worksheets.WorksheetProvider
 
 /**
  * A build client that forwards notifications from the build server to the language client.
@@ -28,7 +29,8 @@ final class ForwardingMetalsBuildClient(
     statusBar: StatusBar,
     time: Time,
     didCompile: CompileReport => Unit,
-    treeViewProvider: () => TreeViewProvider
+    treeViewProvider: () => TreeViewProvider,
+    worksheetProvider: () => WorksheetProvider
 )(implicit ec: ExecutionContext)
     extends MetalsBuildClient
     with Cancelable {
@@ -157,6 +159,7 @@ final class ForwardingMetalsBuildClient(
               // https://github.com/scalameta/metals/issues/846.
               updatedTreeViews.add(target)
               treeViewProvider().onBuildTargetDidCompile(target)
+              worksheetProvider().onBuildTargetDidCompile(target)
             }
             hasReportedError.remove(target)
           } else {

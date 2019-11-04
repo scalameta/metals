@@ -64,15 +64,20 @@ class MetalsWorksheetProvider(
   private val contexts = new TrieMap[BuildTargetIdentifier, Context]()
   private val reporter = new StoreReporter()
 
-  def clear(): Unit = {
-    jobs.shutdown()
-    contexts.values.foreach { context =>
-      context.compiler.global.close()
-    }
-    contexts.clear()
+  override def onBuildTargetDidCompile(target: BuildTargetIdentifier): Unit = {
+    clearBuildTarget(target)
+  }
+
+  private def clearBuildTarget(target: BuildTargetIdentifier): Unit = {
+    contexts.remove(target).foreach(_.compiler.global.close())
+  }
+
+  override def reset(): Unit = {
+    contexts.keysIterator.foreach(clearBuildTarget)
   }
   def cancel(): Unit = {
-    clear()
+    jobs.shutdown()
+    reset()
   }
 
   override def decorations(
@@ -84,14 +89,13 @@ class MetalsWorksheetProvider(
     } else {
       reporter.reset()
       val result = new CompletableFuture[Array[DecorationOptions]]()
+      def completeEmptyResult() = result.complete(Array.empty)
       token.onCancel().asScala.foreach {
-        case java.lang.Boolean.TRUE =>
-          // Don't publish any
-          result.complete(Array.empty)
+        case java.lang.Boolean.TRUE => completeEmptyResult()
         case _ =>
       }
       def runEvaluation(): Unit = {
-        cancelables.add(Cancelable(() => result.complete(Array.empty)))
+        cancelables.add(Cancelable(() => completeEmptyResult()))
         statusBar.trackFuture(
           s"Evaluting ${path.filename}",
           result.asScala,
@@ -123,13 +127,17 @@ class MetalsWorksheetProvider(
         () => {
           try runEvaluation()
           catch {
-            case NonFatal(_) | InterruptException() =>
+            case e @ (NonFatal(_) | InterruptException()) =>
+              scribe.error(s"worksheet: $path", e)
               () // allow job queue to process next worksheet evaluation request.
+            case e: Throwable =>
+              scribe.error("foo", e)
           }
         }
       )
       result.asScala.recover {
-        case NonFatal(_) | InterruptException() =>
+        case e @ (NonFatal(_) | InterruptException()) =>
+          scribe.error(s"worksheet: $path", e)
           // Clear all decorations when evaluation fails.
           Array.empty
       }

@@ -3,11 +3,11 @@ package scala.meta.internal.metals
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
+import scala.meta.internal.async.ConcurrentQueue
 
 /**
  * Helper to batch multiple asynchronous requests and ensure only one request is active at a time.
@@ -60,13 +60,6 @@ final class BatchedFunction[A, B](
 
   private val queue = new ConcurrentLinkedQueue[Request]()
   private case class Request(arguments: Seq[A], result: Promise[B])
-  private def clearQueue(destination: ListBuffer[Request]): Unit = {
-    var request = queue.poll()
-    while (request != null) {
-      destination += request
-      request = queue.poll()
-    }
-  }
 
   private val lock = new AtomicBoolean()
   private def unlock(): Unit = {
@@ -90,9 +83,8 @@ final class BatchedFunction[A, B](
     //      - instantly if job queue is empty or unexpected exception
     //      - asynchronously once `fn` completes if job que is non-empty
     //   - all pending requests in job queue will be completed
-    val requests = ListBuffer.empty[Request]
+    val requests = ConcurrentQueue.pollAll(queue)
     try {
-      clearQueue(requests)
       if (requests.nonEmpty) {
         val args = requests.flatMap(_.arguments)
         val result = fn(args)
