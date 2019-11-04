@@ -28,7 +28,7 @@ import mdoc.document.Statement
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.BuildInfo
-import org.eclipse.lsp4j.PublishDiagnosticsParams
+import ch.epfl.scala.bsp4j.PublishDiagnosticsParams
 import scala.meta.internal.pc.CompilerJobQueue
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.ExecutionContext
@@ -40,6 +40,7 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.pc.InterruptException
 import scala.util.control.NonFatal
 import java.util.concurrent.Executors
+import scala.meta.internal.metals.Diagnostics
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.
@@ -52,10 +53,12 @@ class MetalsWorksheetProvider(
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
-    statusBar: StatusBar
+    statusBar: StatusBar,
+    diagnostics: Diagnostics
 )(implicit ec: ExecutionContext)
     extends WorksheetProvider
     with Cancelable {
+  private val commentHeader = " // "
   // Worksheet evaluation happens on a single threaded job queue. Jobs are
   // prioritized using the same order as completion/hover requests:
   // first-come last-out.
@@ -80,6 +83,7 @@ class MetalsWorksheetProvider(
   override def reset(): Unit = {
     contexts.keysIterator.foreach(clearBuildTarget)
   }
+
   def cancel(): Unit = {
     jobs.shutdown()
     threadStopper.shutdown()
@@ -202,15 +206,95 @@ class MetalsWorksheetProvider(
     )
   }
 
+  private def renderDecoration(statement: Statement): DecorationOptions = {
+    val pos = statement.position
+    val range = new l.Range(
+      new l.Position(pos.startLine, pos.startColumn),
+      new l.Position(pos.endLine, pos.endColumn)
+    )
+    val margin = math.max(
+      20,
+      userConfig().screenWidth - statement.position.endColumn
+    )
+    val isEmptyValue = isUnitType(statement) || statement.binders.isEmpty
+    val contentText: String = Iterator[Iterator[Char]](
+      commentHeader.iterator, {
+        if (isEmptyValue) {
+          if (statement.out.isEmpty()) "".iterator
+          else statement.out.linesIterator.next().toCharArray().iterator
+        } else {
+          val isSingle = statement.binders.lengthCompare(1) == 0
+          for {
+            (binder, i) <- statement.binders.iterator.zipWithIndex
+            text <- Iterator[Iterator[Char]](
+              if (isSingle) List.empty[Char].iterator
+              else {
+                val comma = if (i == 0) "" else ", "
+                s"${comma}${binder.name}=".iterator
+              },
+              pprint.PPrinter.BlackWhite
+                .tokenize(
+                  binder.value,
+                  width = margin
+                )
+                .map(_.getChars)
+                .filterNot(_.iterator.forall(_.isWhitespace))
+                .flatMap(_.iterator)
+                .filter {
+                  case '\n' => false
+                  case _ => true
+                }
+                .take(margin)
+            )
+            char <- text
+          } yield char
+        }
+      }
+    ).flatten.mkString
+    val hoverMessage: String = Iterator[Iterator[String]](
+      if (isEmptyValue) {
+        List.empty[String].iterator
+      } else {
+        for {
+          binder <- statement.binders.iterator
+          text <- Iterator(
+            "\n",
+            binder.name,
+            ": ",
+            binder.tpe.render(TPrintColors.BlackWhite),
+            " = "
+          ) ++ pprint.PPrinter.BlackWhite
+            .tokenize(binder.value, width = 100)
+            .map(_.plainText)
+        } yield text
+      },
+      statement.out.linesIterator.flatMap { line =>
+        Iterator("\n// ", line)
+      }
+    ).flatten.mkString
+    DecorationOptions(
+      range,
+      new l.MarkedString("scala", hoverMessage),
+      ThemableDecorationInstanceRenderOptions(
+        after = ThemableDecorationAttachmentRenderOptions(
+          contentText,
+          color = "green",
+          fontStyle = "italic"
+        )
+      )
+    )
+  }
+
+  private val WorksheetDialect = dialects.Sbt1
+
   private def evaluateWorksheet(
       path: AbsolutePath,
       token: CancelToken
   ): Array[DecorationOptions] = {
-    val commentHeader = " // "
     val input = path.toInputFromBuffers(buffers)
     val decorations = for {
       ctx <- getContext(path)
-      source <- dialects.Sbt1(input).parse[Source].toOption
+      source <- WorksheetDialect(input).parse[Source].toOption
     } yield {
       val sectionInput = SectionInput(
         path.toInputFromBuffers(buffers),
@@ -229,89 +313,11 @@ class MetalsWorksheetProvider(
       val decorations = for {
         section <- rendered.sections.iterator
         statement <- section.section.statements
-      } yield {
-        val pos = statement.position
-        val range = new l.Range(
-          new l.Position(pos.startLine, pos.startColumn),
-          new l.Position(pos.endLine, pos.endColumn)
-        )
-        val margin = math.max(
-          20,
-          userConfig().screenWidth - statement.position.endColumn
-        )
-        val isEmptyValue = isUnitType(statement) || statement.binders.isEmpty
-        val contentText: String = Iterator[Iterator[Char]](
-          commentHeader.iterator, {
-            if (isEmptyValue) {
-              if (statement.out.isEmpty()) "".iterator
-              else statement.out.linesIterator.next().toCharArray().iterator
-            } else {
-              val isSingle = statement.binders.lengthCompare(1) == 0
-              for {
-                (binder, i) <- statement.binders.iterator.zipWithIndex
-                text <- Iterator[Iterator[Char]](
-                  if (isSingle) List.empty[Char].iterator
-                  else {
-                    val comma = if (i == 0) "" else ", "
-                    s"$comma${binder.name}=".iterator
-                  },
-                  pprint.PPrinter.BlackWhite
-                    .tokenize(
-                      binder.value,
-                      width = margin
-                    )
-                    .map(_.getChars)
-                    .filterNot(_.iterator.forall(_.isWhitespace))
-                    .flatMap(_.iterator)
-                    .filter {
-                      case '\n' => false
-                      case _ => true
-                    }
-                    .take(margin)
-                )
-                char <- text
-              } yield char
-            }
-          }
-        ).flatten.mkString
-        val hoverMessage: String = Iterator[Iterator[String]](
-          if (isEmptyValue) {
-            List.empty[String].iterator
-          } else {
-            for {
-              binder <- statement.binders.iterator
-              text <- Iterator(
-                "\n",
-                binder.name,
-                ": ",
-                binder.tpe.render(TPrintColors.BlackWhite),
-                " = "
-              ) ++ pprint.PPrinter.BlackWhite
-                .tokenize(binder.value, width = 100)
-                .map(_.plainText)
-            } yield text
-          },
-          statement.out.linesIterator.flatMap { line =>
-            Iterator("\n// ", line)
-          }
-        ).flatten.mkString
-        DecorationOptions(
-          range,
-          new l.MarkedString("scala", hoverMessage),
-          ThemableDecorationInstanceRenderOptions(
-            after = ThemableDecorationAttachmentRenderOptions(
-              contentText,
-              color = "green",
-              fontStyle = "italic"
-            )
-          )
-        )
-      }
-      languageClient.publishDiagnostics(
-        new PublishDiagnosticsParams(
-          path.toURI.toString(),
-          reporter.diagnostics.toSeq.asJava
-        )
+      } yield renderDecoration(statement)
+      diagnostics.onPublishDiagnostics(
+        path,
+        reporter.diagnostics.toSeq,
+        isReset = true
       )
       decorations
         .filterNot(_.renderOptions.after.contentText == commentHeader)

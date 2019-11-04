@@ -19,6 +19,7 @@ import scala.tools.nsc.interactive.InteractiveAnalyzer
 import scala.tools.nsc.reporters.Reporter
 import scala.util.control.NonFatal
 import scala.collection.mutable
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.reflect.internal.util.ScriptSourceFile
 
 class MetalsGlobal(
@@ -386,7 +387,7 @@ class MetalsGlobal(
     }
     val unit = newCompilationUnit(codeWithCursor, filename)
     val source =
-      if (filename.endsWith(".sc"))
+      if (filename.isScalaScript)
         ScriptSourceFile(unit.source.file, unit.source.content)
       else unit.source
     val richUnit = new RichCompilationUnit(source)

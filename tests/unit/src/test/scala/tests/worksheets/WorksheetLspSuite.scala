@@ -248,4 +248,42 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
       )
     } yield ()
   }
+
+  testAsync("syntax-error") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{"a": {}}
+          |/a/src/main/scala/a/Main.worksheet.sc
+          |val x: Int = ""
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.worksheet.sc")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Main.worksheet.sc:1:14: error: type mismatch;
+           | found   : String("")
+           | required: Int
+           |val x: Int = ""
+           |             ^^
+           |""".stripMargin
+      )
+      _ <- server.didChange("a/src/main/scala/a/Main.worksheet.sc")(
+        _.replaceAllLiterally("val x", "def y = \nval x")
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Main.worksheet.sc:2:1: error: illegal start of simple expression
+           |val x: Int = ""
+           |^^^
+           |a/src/main/scala/a/Main.worksheet.sc:2:14: error: type mismatch;
+           | found   : String("")
+           | required: Int
+           |val x: Int = ""
+           |             ^^
+           |""".stripMargin
+      )
+    } yield ()
+  }
 }

@@ -51,8 +51,8 @@ final class Trees(buffers: Buffers, diagnostics: Diagnostics) {
   private def dialect(path: AbsolutePath): Option[Dialect] = {
     Option(PathIO.extension(path.toNIO)).collect {
       case "scala" => dialects.Scala
-      case "sbt" => dialects.Sbt
-      case "sc" => dialects.Sbt
+      case "sbt" => dialects.Sbt1
+      case "sc" => dialects.Sbt1
     }
   }
 }

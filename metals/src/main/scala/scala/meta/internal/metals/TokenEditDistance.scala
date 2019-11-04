@@ -42,6 +42,8 @@ final class TokenEditDistance private (
    *   nearest token in the original document instead.
    */
   def toRevised(range: l.Range): Option[l.Range] = {
+    pprint.log(isNoMatch)
+    pprint.log(isUnchanged)
     if (isUnchanged) Some(range)
     else if (isNoMatch) None
     else {
@@ -270,8 +272,9 @@ object TokenEditDistance {
       doNothingWhenUnchanged: Boolean = true
   ): TokenEditDistance = {
     val isScala =
-      originalInput.path.endsWith(".scala") &&
-        revisedInput.path.endsWith(".scala")
+      originalInput.path.isScalaFilename &&
+        revisedInput.path.isScalaFilename
+
     if (!isScala) {
       // Ignore non-scala Files.
       unchanged

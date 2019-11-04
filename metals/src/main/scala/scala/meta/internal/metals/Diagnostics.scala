@@ -112,21 +112,33 @@ final class Diagnostics(
       params: bsp4j.PublishDiagnosticsParams
   ): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
+    onPublishDiagnostics(
+      path,
+      params.getDiagnostics().asScala.map(_.toLSP),
+      params.getReset()
+    )
+  }
+
+  def onPublishDiagnostics(
+      path: AbsolutePath,
+      diagnostics: Seq[Diagnostic],
+      isReset: Boolean
+  ): Unit = {
     val isSamePathAsLastDiagnostic = path == lastPublished.get()
     lastPublished.set(path)
-    val queue = diagnostics.getOrElseUpdate(
+    val queue = this.diagnostics.getOrElseUpdate(
       path,
       new ConcurrentLinkedQueue[Diagnostic]()
     )
-    if (params.getReset) {
+    if (isReset) {
       queue.clear()
       snapshots.remove(path)
     }
-    if (queue.isEmpty && !params.getDiagnostics.isEmpty) {
+    if (queue.isEmpty && !diagnostics.isEmpty) {
       snapshots(path) = path.toInput
     }
-    params.getDiagnostics.asScala.foreach { buildDiagnostic =>
-      queue.add(buildDiagnostic.toLSP)
+    diagnostics.foreach { diagnostic =>
+      queue.add(diagnostic)
     }
 
     // NOTE(olafur): we buffer up several diagnostics for the same path before forwarding
@@ -136,7 +148,7 @@ final class Diagnostics(
     // Notification 2: [1, 2]
     // Notification 3: [1, 2, 3]
     // Notification N: [1, ..., N]
-    if (params.getReset || !isSamePathAsLastDiagnostic) {
+    if (isReset || !isSamePathAsLastDiagnostic) {
       publishDiagnosticsBuffer()
       publishDiagnostics(path, queue)
     } else {
