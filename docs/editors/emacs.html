@@ -92,8 +92,11 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 (<span class="hljs-name">require</span> 'use-package)
 
 <span class="hljs-comment">;; Enable defer and ensure by default for use-package</span>
+<span class="hljs-comment">;; Keep auto-save/backup files separate from source code:  https://github.com/scalameta/metals/issues/1027</span>
 (<span class="hljs-name">setq</span> use-package-always-defer <span class="hljs-literal">t</span>
-      use-package-always-ensure <span class="hljs-literal">t</span>)
+      use-package-always-ensure <span class="hljs-literal">t</span>
+      backup-directory-alist `((<span class="hljs-string">".*"</span> . ,temporary-file-directory))
+      auto-save-file-name-transforms `((<span class="hljs-string">".*"</span> ,temporary-file-directory <span class="hljs-literal">t</span>)))
 
 <span class="hljs-comment">;; Enable scala-mode and sbt-mode</span>
 (<span class="hljs-name">use-package</span> scala-mode
@@ -107,7 +110,10 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
   (<span class="hljs-name">substitute-key-definition</span>
    'minibuffer-complete-word
    'self-insert-command
-   minibuffer-local-completion-map))
+   minibuffer-local-completion-map)
+   <span class="hljs-comment">;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152</span>
+   (<span class="hljs-name">setq</span> sbt<span class="hljs-symbol">:program-options</span> '(<span class="hljs-string">"-Dsbt.supershell=false"</span>))
+)
 
 <span class="hljs-comment">;; Enable nice rendering of diagnostics like compile errors.</span>
 (<span class="hljs-name">use-package</span> flycheck
@@ -144,8 +150,8 @@ not exist yet.</p>
 <td><code>-r sonatype:releases</code></td>
 </tr>
 <tr>
-<td>0.7.6+184-6af2b9f2-SNAPSHOT</td>
-<td>04 Nov 2019 12:17</td>
+<td>0.7.6+186-a813b38a-SNAPSHOT</td>
+<td>04 Nov 2019 14:59</td>
 <td><code>-r sonatype:snapshots</code></td>
 </tr>
 </tbody>
