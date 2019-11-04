@@ -28,7 +28,6 @@ import mdoc.document.Statement
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.BuildInfo
-import ch.epfl.scala.bsp4j.PublishDiagnosticsParams
 import scala.meta.internal.pc.CompilerJobQueue
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.ExecutionContext
@@ -217,61 +216,8 @@ class MetalsWorksheetProvider(
       userConfig().screenWidth - statement.position.endColumn
     )
     val isEmptyValue = isUnitType(statement) || statement.binders.isEmpty
-    val contentText: String = Iterator[Iterator[Char]](
-      commentHeader.iterator, {
-        if (isEmptyValue) {
-          if (statement.out.isEmpty()) "".iterator
-          else statement.out.linesIterator.next().toCharArray().iterator
-        } else {
-          val isSingle = statement.binders.lengthCompare(1) == 0
-          for {
-            (binder, i) <- statement.binders.iterator.zipWithIndex
-            text <- Iterator[Iterator[Char]](
-              if (isSingle) List.empty[Char].iterator
-              else {
-                val comma = if (i == 0) "" else ", "
-                s"${comma}${binder.name}=".iterator
-              },
-              pprint.PPrinter.BlackWhite
-                .tokenize(
-                  binder.value,
-                  width = margin
-                )
-                .map(_.getChars)
-                .filterNot(_.iterator.forall(_.isWhitespace))
-                .flatMap(_.iterator)
-                .filter {
-                  case '\n' => false
-                  case _ => true
-                }
-                .take(margin)
-            )
-            char <- text
-          } yield char
-        }
-      }
-    ).flatten.mkString
-    val hoverMessage: String = Iterator[Iterator[String]](
-      if (isEmptyValue) {
-        List.empty[String].iterator
-      } else {
-        for {
-          binder <- statement.binders.iterator
-          text <- Iterator(
-            "\n",
-            binder.name,
-            ": ",
-            binder.tpe.render(TPrintColors.BlackWhite),
-            " = "
-          ) ++ pprint.PPrinter.BlackWhite
-            .tokenize(binder.value, width = 100)
-            .map(_.plainText)
-        } yield text
-      },
-      statement.out.linesIterator.flatMap { line =>
-        Iterator("\n// ", line)
-      }
-    ).flatten.mkString
+    val contentText = renderContentText(statement, margin, isEmptyValue)
+    val hoverMessage = renderHoverMessage(statement, margin, isEmptyValue)
     DecorationOptions(
       range,
       new l.MarkedString("scala", hoverMessage),
@@ -283,6 +229,71 @@ class MetalsWorksheetProvider(
         )
       )
     )
+  }
+
+  private def renderHoverMessage(
+      statement: Statement,
+      margin: Int,
+      isEmptyValue: Boolean
+  ): String = {
+    val out = new StringBuilder()
+    if (!isEmptyValue) {
+      statement.binders.iterator.foreach { binder =>
+        out
+          .append("\n")
+          .append(binder.name)
+          .append(": ")
+          .append(binder.tpe.render(TPrintColors.BlackWhite))
+          .append(" = ")
+        pprint.PPrinter.BlackWhite
+          .tokenize(binder.value, width = 100)
+          .foreach(text => out.appendAll(text.getChars))
+      }
+    }
+    statement.out.linesIterator.foreach { line =>
+      out.append("\n// ").append(line)
+    }
+    out.toString()
+  }
+
+  private def renderContentText(
+      statement: Statement,
+      margin: Int,
+      isEmptyValue: Boolean
+  ): String = {
+    val out = new StringBuilder()
+    out.append(commentHeader)
+    if (isEmptyValue) {
+      if (!statement.out.isEmpty()) {
+        out.append(statement.out.linesIterator.next())
+      }
+    } else {
+      val isSingle = statement.binders.lengthCompare(1) == 0
+      statement.binders.iterator.zipWithIndex.foreach {
+        case (binder, i) =>
+          if (!isSingle) {
+            out
+              .append(if (i == 0) "" else ", ")
+              .append(binder.name)
+              .append("=")
+          }
+          val truncatedLine = pprint.PPrinter.BlackWhite
+            .tokenize(
+              binder.value,
+              width = margin
+            )
+            .map(_.getChars)
+            .filterNot(_.iterator.forall(_.isWhitespace))
+            .flatMap(_.iterator)
+            .filter {
+              case '\n' => false
+              case _ => true
+            }
+            .take(margin)
+          out.appendAll(truncatedLine)
+      }
+    }
+    out.toString()
   }
 
   private val WorksheetDialect = dialects.Sbt1
