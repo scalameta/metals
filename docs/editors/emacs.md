@@ -37,7 +37,7 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 (setq use-package-always-defer t
       use-package-always-ensure t
       backup-directory-alist `((".*" . ,temporary-file-directory))
-      auto-save-file-transforms `((".*" ,temporary-file-directory t)))
+      auto-save-file-name-transforms `((".*" ,temporary-file-directory t)))
 
 ;; Enable scala-mode and sbt-mode
 (use-package scala-mode
