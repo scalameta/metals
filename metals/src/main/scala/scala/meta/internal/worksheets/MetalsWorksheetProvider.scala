@@ -84,7 +84,7 @@ class MetalsWorksheetProvider(
       path: AbsolutePath,
       token: CancelToken
   ): Future[Array[DecorationOptions]] = {
-    if (path.extension != "sc") {
+    if (!path.isWorksheet) {
       Future.successful(Array.empty)
     } else {
       reporter.reset()
