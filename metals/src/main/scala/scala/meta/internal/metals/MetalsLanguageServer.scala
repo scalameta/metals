@@ -402,7 +402,6 @@ class MetalsLanguageServer(
           buildTargets,
           languageClient,
           () => userConfig,
-          sh,
           statusBar
         )
       )

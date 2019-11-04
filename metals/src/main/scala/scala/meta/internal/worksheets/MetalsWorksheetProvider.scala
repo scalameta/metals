@@ -39,6 +39,7 @@ import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.pc.InterruptException
 import scala.util.control.NonFatal
+import java.util.concurrent.Executors
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.
@@ -51,7 +52,6 @@ class MetalsWorksheetProvider(
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
-    sh: ScheduledExecutorService,
     statusBar: StatusBar
 )(implicit ec: ExecutionContext)
     extends WorksheetProvider
@@ -59,7 +59,12 @@ class MetalsWorksheetProvider(
   // Worksheet evaluation happens on a single threaded job queue. Jobs are
   // prioritized using the same order as completion/hover requests:
   // first-come last-out.
-  private val jobs = CompilerJobQueue()
+  private lazy val jobs = CompilerJobQueue()
+  // Executor for stopping threads. We don't reuse the scheduled executor from
+  // MetalsLanguageServer because this exector service may occasionally block
+  // and we don't want to block on other features like the status bar.
+  private lazy val threadStopper: ScheduledExecutorService =
+    Executors.newSingleThreadScheduledExecutor()
   private val cancelables = new MutableCancelable()
   private val contexts = new TrieMap[BuildTargetIdentifier, Context]()
   private val reporter = new StoreReporter()
@@ -77,6 +82,7 @@ class MetalsWorksheetProvider(
   }
   def cancel(): Unit = {
     jobs.shutdown()
+    threadStopper.shutdown()
     reset()
   }
 
@@ -84,64 +90,56 @@ class MetalsWorksheetProvider(
       path: AbsolutePath,
       token: CancelToken
   ): Future[Array[DecorationOptions]] = {
-    if (!path.isWorksheet) {
-      Future.successful(Array.empty)
-    } else {
-      reporter.reset()
-      val result = new CompletableFuture[Array[DecorationOptions]]()
-      def completeEmptyResult() = result.complete(Array.empty)
-      token.onCancel().asScala.foreach {
-        case java.lang.Boolean.TRUE => completeEmptyResult()
-        case _ =>
-      }
-      def runEvaluation(): Unit = {
-        cancelables.add(Cancelable(() => completeEmptyResult()))
-        statusBar.trackFuture(
-          s"Evaluting ${path.filename}",
-          result.asScala,
-          showTimer = true
-        )
-        token.checkCanceled()
-        // NOTE(olafurpg) Run evaluation in a custom thread so that we can
-        // `Thread.stop()` it in case of infinite loop. I'm not aware of any
-        // other JVM APIs that allow killing a runnable even in the face of
-        // infinite loops.
-        val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
-          override def run(): Unit = {
-            result.complete(evaluateWorksheet(path, token))
-          }
-        }
-        cancelables.add(
-          Cancelable(() => {
-            if (thread.isAlive) {
-              thread.stop()
-            }
-          })
-        )
-        stopThreadOnCancel(path, result, thread)
-        thread.start()
-        thread.join()
-      }
-      jobs.submit(
-        result,
-        () => {
-          try runEvaluation()
-          catch {
-            case e @ (NonFatal(_) | InterruptException()) =>
-              scribe.error(s"worksheet: $path", e)
-              () // allow job queue to process next worksheet evaluation request.
-            case e: Throwable =>
-              scribe.error("foo", e)
-          }
-        }
-      )
-      result.asScala.recover {
-        case e @ (NonFatal(_) | InterruptException()) =>
-          scribe.error(s"worksheet: $path", e)
-          // Clear all decorations when evaluation fails.
-          Array.empty
-      }
+    reporter.reset()
+    val result = new CompletableFuture[Array[DecorationOptions]]()
+    def completeEmptyResult() = result.complete(Array.empty)
+    token.onCancel().asScala.foreach {
+      case java.lang.Boolean.TRUE => completeEmptyResult()
+      case _ =>
     }
+    val onError: PartialFunction[Throwable, Array[DecorationOptions]] = {
+      case NonFatal(e) =>
+        scribe.error(s"worksheet: $path", e)
+        Array.empty
+      case InterruptException() =>
+        Array.empty
+    }
+    def runEvaluation(): Unit = {
+      cancelables.add(Cancelable(() => completeEmptyResult()))
+      statusBar.trackFuture(
+        s"Evaluting ${path.filename}",
+        result.asScala,
+        showTimer = true
+      )
+      token.checkCanceled()
+      // NOTE(olafurpg) Run evaluation in a custom thread so that we can
+      // `Thread.stop()` it in case of infinite loop. I'm not aware of any
+      // other JVM APIs that allow killing a runnable even in the face of
+      // infinite loops.
+      val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
+        override def run(): Unit = {
+          result.complete(evaluateWorksheet(path, token))
+        }
+      }
+      cancelables.add(
+        Cancelable(() => {
+          if (thread.isAlive) {
+            thread.stop()
+          }
+        })
+      )
+      stopThreadOnCancel(path, result, thread)
+      thread.start()
+      thread.join()
+    }
+    jobs.submit(
+      result,
+      () => {
+        try runEvaluation()
+        catch onError
+      }
+    )
+    result.asScala.recover(onError)
   }
 
   /**
@@ -179,7 +177,8 @@ class MetalsWorksheetProvider(
           val cancel = languageClient.metalsSlowTask(
             new MetalsSlowTaskParams(
               s"Evaluating worksheet '${path.filename}'",
-              noLogs = true
+              noLogs = true,
+              secondsElapsed = userConfig().worksheetCancelTimeout
             )
           )
           cancel.asScala.foreach { c =>
@@ -187,7 +186,7 @@ class MetalsWorksheetProvider(
               // User has requested to cancel a running program. first line of
               // defense is `Thread.interrupt()`. Fingers crossed it's enough.
               result.complete(Array.empty)
-              sh.schedule(stopThread, 1, TimeUnit.SECONDS)
+              threadStopper.schedule(stopThread, 1, TimeUnit.SECONDS)
               scribe.warn(s"thread interrupt: ${thread.getName()}")
               thread.interrupt()
             }
@@ -196,7 +195,7 @@ class MetalsWorksheetProvider(
         }
       }
     }
-    sh.schedule(
+    threadStopper.schedule(
       promptUserToCancel,
       userConfig().worksheetCancelTimeout,
       TimeUnit.SECONDS
