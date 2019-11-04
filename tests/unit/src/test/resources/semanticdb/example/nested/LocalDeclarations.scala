@@ -10,13 +10,13 @@ object LocalDeclarations/*example.nested.LocalDeclarations.*/ {
   def create/*example.nested.LocalDeclarations.create().*/(): LocalDeclarations/*example.nested.LocalDeclarations#*/ = {
     def bar/*local0*/(): Unit/*scala.Unit#*/ = ()
 
-    val x/*local1*/ = new {
+    val x/*local1*/ = new /*local3*/{
       val x/*local2*/ = 2
     }
 
-    val y/*local4*/ = new Foo/*example.nested.Foo#*/ /*java.lang.Object#`<init>`().*/{}
+    val y/*local4*/ = new /*local5*/Foo/*example.nested.Foo#*/ /*java.lang.Object#`<init>`().*/{}
 
-    new LocalDeclarations/*example.nested.LocalDeclarations#*/ /*java.lang.Object#`<init>`().*/with Foo/*example.nested.Foo#*/ {
+    new /*local6*/LocalDeclarations/*example.nested.LocalDeclarations#*/ /*java.lang.Object#`<init>`().*/with Foo/*example.nested.Foo#*/ {
       override def foo/*local7*/(): Unit/*scala.Unit#*/ = bar/*local0*/()
     }
 

@@ -283,8 +283,8 @@ object GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ = assertStatus(_.isInstalled)
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
-        // only 3 projects since no empty test targets are created for gradle
-        CheckDoctor.multipleMisconfiguredProjects(4)
+        // only main projects since no empty test targets are created for gradle
+        CheckDoctor.multipleMisconfiguredProjects(5)
       )
       _ <- Future.sequence(
         ('a' to 'f')

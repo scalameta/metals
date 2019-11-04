@@ -462,17 +462,16 @@ object ImplementationSuite extends BaseLspSuite("implementation") {
        |""".stripMargin
   )
 
-  // TODO needs scalameta update
-  // check(
-  //   "anon",
-  //   """|/a/src/main/scala/a/Main.scala
-  //      |package a
-  //      |trait A@@nimal
-  //      |object Main{
-  //      |  val animal = new <<Animal>>{ def field(d : String) : Int = 123 }
-  //      |}
-  //      |""".stripMargin
-  // )
+  check(
+    "anon",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait A@@nimal
+       |object Main{
+       |  val animal = new <<>>Animal{ def field(d : String) : Int = 123 }
+       |}
+       |""".stripMargin
+  )
 
   check(
     "anon-method",
