@@ -16,7 +16,8 @@ final class Compilations(
     workspace: () => AbsolutePath,
     buildServer: () => Option[BuildServerConnection],
     languageClient: MetalsLanguageClient,
-    isCurrentlyFocused: b.BuildTargetIdentifier => Boolean
+    isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
+    compileWorksheets: Seq[AbsolutePath] => Future[Unit]
 )(implicit ec: ExecutionContext) {
 
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
@@ -45,13 +46,19 @@ final class Compilations(
 
   def compileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
     val targets = expand(paths)
-    compileBatch(targets)
+    for {
+      result <- compileBatch(targets)
+      _ <- compileWorksheets(paths)
+    } yield result
   }
 
   def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
     val targets =
       expand(paths).flatMap(buildTargets.inverseDependencies).distinct
-    cascadeBatch(targets)
+    for {
+      result <- cascadeBatch(targets)
+      _ <- compileWorksheets(paths)
+    } yield result
   }
 
   def cancel(): Unit = {

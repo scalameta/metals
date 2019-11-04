@@ -119,7 +119,8 @@ class MetalsLanguageServer(
     () => workspace,
     () => buildServer,
     languageClient,
-    buildTarget => focusedDocumentBuildTarget.get() == buildTarget
+    buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
+    worksheets => onWorksheetChanged(worksheets)
   )
   private val fileWatcher = register(
     new FileWatcher(
@@ -135,13 +136,8 @@ class MetalsLanguageServer(
     BatchedFunction.fromFuture[AbsolutePath, BuildChange](
       onBuildChangedUnbatched
     )
-  private val onWorksheetChanged =
-    BatchedFunction.fromFuture[AbsolutePath, Unit](
-      onWorksheetChangedUnbatched
-    )
   val pauseables: Pauseable = Pauseable.fromPausables(
-    onWorksheetChanged ::
-      onBuildChanged ::
+    onBuildChanged ::
       parseTrees ::
       compilations.pauseables
   )
@@ -624,6 +620,7 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
+    focusedDocument = Some(path)
     openedFiles.add(path)
     openTextDocument.set(path)
 
@@ -648,11 +645,7 @@ class MetalsLanguageServer(
       }
     } else {
       compilers.load(List(path))
-      val compile = for {
-        _ <- compilations.compileFiles(List(path))
-        _ <- onWorksheetChanged(List(path))
-      } yield ()
-      compile.asJava
+      compilations.compileFiles(List(path)).ignoreValue.asJava
     }
   }
   @JsonNotification("metals/didFocusTextDocument")
@@ -676,10 +669,11 @@ class MetalsLanguageServer(
       buildTargets.inverseSources(path) match {
         case Some(target) =>
           val isAffectedByCurrentCompilation =
-            buildTargets.isInverseDependency(
-              target,
-              compilations.currentlyCompiling.toList
-            )
+            path.isWorksheet ||
+              buildTargets.isInverseDependency(
+                target,
+                compilations.currentlyCompiling.toList
+              )
           def isAffectedByLastCompilation: Boolean =
             !compilations.wasPreviouslyCompiled(target) &&
               buildTargets.isInverseDependency(
@@ -813,8 +807,7 @@ class MetalsLanguageServer(
         List(
           Future(reindexWorkspaceSources(paths)),
           compilations.compileFiles(paths).ignoreValue,
-          onBuildChanged(paths).ignoreValue,
-          onWorksheetChanged(paths).ignoreValue
+          onBuildChanged(paths).ignoreValue
         )
       )
       .ignoreValue
@@ -1641,28 +1634,28 @@ class MetalsLanguageServer(
     )
   }
 
-  private def onWorksheetChangedUnbatched(
+  private def onWorksheetChanged(
       paths: Seq[AbsolutePath]
   ): Future[Unit] = {
-    val worksheets = paths.distinct.filter(_.isWorksheet)
-    if (worksheets.isEmpty) {
-      Future.successful(())
-    } else {
-      // Sequentially evaluate the worksheet requests.
-      worksheets.foldLeft(Future.successful(())) {
-        case (before, worksheet) =>
-          before.flatMap { _ =>
-            worksheetProvider
-              .decorations(worksheet, EmptyCancelToken)
-              .map { options =>
-                val params = new PublishDecorationsParams(
-                  worksheet.toURI.toString(),
-                  options
-                )
-                languageClient.metalsDecorationRangesDidChange(params)
-              }
-          }
-      }
+    val activeWorksheet = paths.find { path =>
+      focusedDocument.contains(path) &&
+      path.isWorksheet
+    }
+    activeWorksheet match {
+      case None => Future.successful(())
+      case Some(worksheet) =>
+        for {
+          decorations <- worksheetProvider.decorations(
+            worksheet,
+            EmptyCancelToken
+          )
+        } yield {
+          val params = new PublishDecorationsParams(
+            worksheet.toURI.toString(),
+            decorations
+          )
+          languageClient.metalsDecorationRangesDidChange(params)
+        }
     }
   }
 
