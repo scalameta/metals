@@ -40,6 +40,7 @@ import scala.meta.internal.pc.InterruptException
 import scala.util.control.NonFatal
 import java.util.concurrent.Executors
 import scala.meta.internal.metals.Diagnostics
+import pprint.PPrinter.BlackWhite
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.
@@ -205,32 +206,6 @@ class MetalsWorksheetProvider(
     )
   }
 
-  private def renderDecoration(statement: Statement): DecorationOptions = {
-    val pos = statement.position
-    val range = new l.Range(
-      new l.Position(pos.startLine, pos.startColumn),
-      new l.Position(pos.endLine, pos.endColumn)
-    )
-    val margin = math.max(
-      20,
-      userConfig().screenWidth - statement.position.endColumn
-    )
-    val isEmptyValue = isUnitType(statement) || statement.binders.isEmpty
-    val contentText = renderContentText(statement, margin, isEmptyValue)
-    val hoverMessage = renderHoverMessage(statement, margin, isEmptyValue)
-    DecorationOptions(
-      range,
-      new l.MarkedString("scala", hoverMessage),
-      ThemableDecorationInstanceRenderOptions(
-        after = ThemableDecorationAttachmentRenderOptions(
-          contentText,
-          color = "green",
-          fontStyle = "italic"
-        )
-      )
-    )
-  }
-
   private def renderHoverMessage(
       statement: Statement,
       margin: Int,
@@ -245,7 +220,7 @@ class MetalsWorksheetProvider(
           .append(": ")
           .append(binder.tpe.render(TPrintColors.BlackWhite))
           .append(" = ")
-        pprint.PPrinter.BlackWhite
+        BlackWhite
           .tokenize(binder.value, width = 100)
           .foreach(text => out.appendAll(text.getChars))
       }
@@ -277,11 +252,8 @@ class MetalsWorksheetProvider(
               .append(binder.name)
               .append("=")
           }
-          val truncatedLine = pprint.PPrinter.BlackWhite
-            .tokenize(
-              binder.value,
-              width = margin
-            )
+          val truncatedLine = BlackWhite
+            .tokenize(binder.value, width = margin)
             .map(_.getChars)
             .filterNot(_.iterator.forall(_.isWhitespace))
             .flatMap(_.iterator)
@@ -296,45 +268,80 @@ class MetalsWorksheetProvider(
     out.toString()
   }
 
-  private val WorksheetDialect = dialects.Sbt1
-
   private def evaluateWorksheet(
       path: AbsolutePath,
       token: CancelToken
   ): Array[DecorationOptions] = {
     val input = path.toInputFromBuffers(buffers)
+    // NOTE(olafurpg): the sbt dialects is the closest available syntax to worksheets.
+    val WorksheetDialect = dialects.Sbt1
     val decorations = for {
       ctx <- getContext(path)
       source <- WorksheetDialect(input).parse[Source].toOption
-    } yield {
-      val sectionInput = SectionInput(
-        path.toInputFromBuffers(buffers),
-        source,
-        Modifier.Default()
-      )
-      val sectionInputs = List(sectionInput)
-      val instrumented = Instrumenter.instrument(sectionInputs)
-      val rendered = MarkdownCompiler.buildDocument(
-        ctx.compiler,
-        ctx.reporter,
-        sectionInputs,
-        instrumented,
-        path.toString
-      )
-      val decorations = for {
-        section <- rendered.sections.iterator
-        statement <- section.section.statements
-      } yield renderDecoration(statement)
-      diagnostics.onPublishDiagnostics(
-        path,
-        reporter.diagnostics.toSeq,
-        isReset = true
-      )
-      decorations
-        .filterNot(_.renderOptions.after.contentText == commentHeader)
-        .toArray
-    }
+    } yield renderDecorations(path, ctx, source)
     decorations.getOrElse(Array.empty)
+  }
+
+  private def renderDecorations(
+      path: AbsolutePath,
+      ctx: Context,
+      source: Source
+  ): Array[DecorationOptions] = {
+    val sectionInput = SectionInput(
+      path.toInputFromBuffers(buffers),
+      source,
+      Modifier.Default()
+    )
+    val sectionInputs = List(sectionInput)
+    val instrumented = Instrumenter.instrument(sectionInputs)
+    val rendered = MarkdownCompiler.buildDocument(
+      ctx.compiler,
+      ctx.reporter,
+      sectionInputs,
+      instrumented,
+      path.toString
+    )
+
+    val decorations = for {
+      section <- rendered.sections.iterator
+      statement <- section.section.statements
+    } yield renderDecoration(statement)
+
+    diagnostics.onPublishDiagnostics(
+      path,
+      reporter.diagnostics.toSeq,
+      isReset = true
+    )
+
+    decorations
+      .filterNot(_.renderOptions.after.contentText == commentHeader)
+      .toArray
+  }
+
+  private def renderDecoration(statement: Statement): DecorationOptions = {
+    val pos = statement.position
+    val range = new l.Range(
+      new l.Position(pos.startLine, pos.startColumn),
+      new l.Position(pos.endLine, pos.endColumn)
+    )
+    val margin = math.max(
+      20,
+      userConfig().screenWidth - statement.position.endColumn
+    )
+    val isEmptyValue = isUnitType(statement) || statement.binders.isEmpty
+    val contentText = renderContentText(statement, margin, isEmptyValue)
+    val hoverMessage = renderHoverMessage(statement, margin, isEmptyValue)
+    DecorationOptions(
+      range,
+      new l.MarkedString("scala", hoverMessage),
+      ThemableDecorationInstanceRenderOptions(
+        after = ThemableDecorationAttachmentRenderOptions(
+          contentText,
+          color = "green",
+          fontStyle = "italic"
+        )
+      )
+    )
   }
 
   private def getContext(path: AbsolutePath): Option[Context] = {
@@ -366,7 +373,8 @@ class MetalsWorksheetProvider(
     val compiler = MarkdownCompiler.fromClasspath(classpath, options)
     Context(settings, reporter, compiler)
   }
-  def isUnitType(statement: Statement): Boolean = {
+
+  private def isUnitType(statement: Statement): Boolean = {
     statement.binders match {
       case head :: Nil => head.value == ()
       case _ => false
