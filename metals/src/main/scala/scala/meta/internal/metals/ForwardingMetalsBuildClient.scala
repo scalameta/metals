@@ -30,7 +30,7 @@ final class ForwardingMetalsBuildClient(
     time: Time,
     didCompile: CompileReport => Unit,
     treeViewProvider: () => TreeViewProvider,
-    worksheetProvider: () => WorksheetProvider
+    worksheetProvider: () => Option[WorksheetProvider]
 )(implicit ec: ExecutionContext)
     extends MetalsBuildClient
     with Cancelable {
@@ -159,7 +159,7 @@ final class ForwardingMetalsBuildClient(
               // https://github.com/scalameta/metals/issues/846.
               updatedTreeViews.add(target)
               treeViewProvider().onBuildTargetDidCompile(target)
-              worksheetProvider().onBuildTargetDidCompile(target)
+              worksheetProvider().foreach(_.onBuildTargetDidCompile(target))
             }
             hasReportedError.remove(target)
           } else {

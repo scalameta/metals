@@ -45,8 +45,7 @@ import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
-import scala.meta.internal.worksheets.MetalsWorksheetProvider
-import scala.meta.internal.worksheets.NoopWorksheetProvider
+import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.decorations.PublishDecorationsParams
 
@@ -176,7 +175,7 @@ class MetalsLanguageServer(
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
-  var worksheetProvider: WorksheetProvider = NoopWorksheetProvider
+  var worksheetProvider: Option[WorksheetProvider] = None
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = new ConfiguredLanguageClient(client, config)(ec)
@@ -395,15 +394,17 @@ class MetalsLanguageServer(
       messages
     )
     if (clientExperimentalCapabilities.decorationProvider) {
-      worksheetProvider = register(
-        new MetalsWorksheetProvider(
-          workspace,
-          buffers,
-          buildTargets,
-          languageClient,
-          () => userConfig,
-          statusBar,
-          diagnostics
+      worksheetProvider = Some(
+        register(
+          new WorksheetProvider(
+            workspace,
+            buffers,
+            buildTargets,
+            languageClient,
+            () => userConfig,
+            statusBar,
+            diagnostics
+          )
         )
       )
     }
@@ -1510,7 +1511,7 @@ class MetalsLanguageServer(
       buildClient.reset()
       semanticDBIndexer.reset()
       treeView.reset()
-      worksheetProvider.reset()
+      worksheetProvider.foreach(_.reset())
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
       for {
@@ -1637,27 +1638,20 @@ class MetalsLanguageServer(
   private def onWorksheetChanged(
       paths: Seq[AbsolutePath]
   ): Future[Unit] = {
-    val activeWorksheet = paths.find { path =>
-      focusedDocument.contains(path) &&
-      path.isWorksheet
+    for {
+      worksheet <- paths.find { path =>
+        focusedDocument.contains(path) &&
+        path.isWorksheet
+      }
+      provider <- worksheetProvider
+    } yield {
+      provider.decorations(worksheet, EmptyCancelToken).map { decorations =>
+        val params =
+          new PublishDecorationsParams(worksheet.toURI.toString(), decorations)
+        languageClient.metalsDecorationRangesDidChange(params)
+      }
     }
-    activeWorksheet match {
-      case None => Future.successful(())
-      case Some(worksheet) =>
-        for {
-          decorations <- worksheetProvider.decorations(
-            worksheet,
-            EmptyCancelToken
-          )
-        } yield {
-          val params = new PublishDecorationsParams(
-            worksheet.toURI.toString(),
-            decorations
-          )
-          languageClient.metalsDecorationRangesDidChange(params)
-        }
-    }
-  }
+  }.getOrElse(Future.successful(()))
 
   private def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
