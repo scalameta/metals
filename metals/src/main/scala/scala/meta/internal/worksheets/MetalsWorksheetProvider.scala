@@ -41,6 +41,8 @@ import scala.util.control.NonFatal
 import java.util.concurrent.Executors
 import scala.meta.internal.metals.Diagnostics
 import pprint.PPrinter.BlackWhite
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.Time
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.
@@ -109,6 +111,10 @@ class MetalsWorksheetProvider(
         Array.empty
     }
     def runEvaluation(): Unit = {
+      val timer = new Timer(Time.system)
+      result.asScala.foreach { _ =>
+        scribe.info(s"time: evaluated worksheet '${path.filename}' in $timer")
+      }
       cancelables.add(Cancelable(() => completeEmptyResult()))
       statusBar.trackFuture(
         s"Evaluting ${path.filename}",
@@ -366,7 +372,7 @@ class MetalsWorksheetProvider(
       target: BuildTargetIdentifier,
       info: ScalaTarget
   ): Context = {
-    scribe.info(s"worksheet: new compiler for $target")
+    scribe.info(s"worksheet: new compiler for ${target.getUri()}")
     val settings = Settings.default(workspace)
     val classpath = Classpath(info.fullClasspath).syntax
     val options = info.scalac.getOptions().asScala.mkString(" ")
