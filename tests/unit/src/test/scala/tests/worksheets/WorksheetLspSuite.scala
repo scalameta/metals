@@ -19,7 +19,7 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
           |{"a": {"libraryDependencies": ["com.lihaoyi::sourcecode:0.1.8"]}}
           |/a/src/main/scala/foo/Main.worksheet.sc
           |identity(42)
-          |sourcecode.File.generate.value.takeRight(17)
+          |val name = sourcecode.Name.generate.value
           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
@@ -32,12 +32,12 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
         "a/src/main/scala/foo/Main.worksheet.sc",
         "generate@@"
       )
-      _ = assertNoDiff(generate, "generate: File")
+      _ = assertNoDiff(generate, "generate: Name")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|identity(42) // 42
-           |sourcecode.File.generate.value.takeRight(17) // "Main.worksheet.sc"
+           |val name = sourcecode.Name.generate.value // "name"
            |""".stripMargin
       )
     } yield ()
