@@ -349,9 +349,8 @@ views in the editor client, the [Tree View Protocol](tree-view-protocol.md).
 
 ### Decoration Protocol
 
-Metals implements an LSP extension called the "Decoration Protocol" to display
-non-editable text in the editor, the
-[Decoration Protocol](decoration-protocol.md).
+Metals implements an LSP extension to display non-editable text in the editor,
+see the [Decoration Protocol](decoration-protocol.md).
 
 ### `metals/slowTask`
 
