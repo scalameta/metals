@@ -1234,11 +1234,22 @@ trait Completions { this: MetalsGlobal =>
             .map(_.edit)
 
           if (allAbstractMembers.length > 1 && overrideDefMembers.length > 1) {
+            val necessaryIndent = if (metalsConfig.isMagicIndentClient()) {
+              ""
+            } else {
+              val amount =
+                allAbstractMembers.head.getRange.getStart.getCharacter
+              " " * amount
+            }
+
             val implementAll: TextEditMember = new TextEditMember(
               prefix,
               new l.TextEdit(
                 range,
-                allAbstractMembers.map(_.getNewText).reverse.mkString(s"\n")
+                allAbstractMembers
+                  .map(_.getNewText)
+                  .reverse
+                  .mkString(s"\n${necessaryIndent}")
               ),
               completionsSymbol("implement"),
               label = Some("Implement all members"),

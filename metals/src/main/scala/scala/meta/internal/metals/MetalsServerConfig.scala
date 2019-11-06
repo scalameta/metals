@@ -14,6 +14,8 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param slowTask how to handle metals/slowTask requests.
  * @param showMessage how to handle window/showMessage notifications.
  * @param showMessageRequest how to handle window/showMessageRequest requests.
+ * @param isMagicIndentClient if the client defaults to adding the identation of the reference
+ *                            line that the operation started on (relevant for multiline textEdits)
  * @param isNoInitialized set true if the editor client doesn't call the `initialized`
  *                        notification for some reason, see https://github.com/natebosch/vim-lsc/issues/113
  * @param isHttpEnabled whether to start the Metals HTTP client interface. This is needed
@@ -30,6 +32,10 @@ final case class MetalsServerConfig(
     showMessage: ShowMessageConfig = ShowMessageConfig.default,
     showMessageRequest: ShowMessageRequestConfig =
       ShowMessageRequestConfig.default,
+    isMagicIndentClient: Boolean = MetalsServerConfig.binaryOption(
+      "metals.magic-indent-client",
+      default = false
+    ),
     isNoInitialized: Boolean = MetalsServerConfig.binaryOption(
       "metals.no-initialized",
       default = false
@@ -105,6 +111,7 @@ object MetalsServerConfig {
           statusBar = StatusBarConfig.on,
           slowTask = SlowTaskConfig.on,
           icons = Icons.vscode,
+          isMagicIndentClient = true,
           executeClientCommand = ExecuteClientCommandConfig.on,
           globSyntax = GlobSyntaxConfig.vscode,
           compilers = base.compilers.copy(
@@ -125,6 +132,7 @@ object MetalsServerConfig {
         base.copy(
           statusBar = StatusBarConfig.showMessage,
           isHttpEnabled = true,
+          isMagicIndentClient = true,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
@@ -149,6 +157,10 @@ object MetalsServerConfig {
       case "emacs" =>
         base.copy(
           executeClientCommand = ExecuteClientCommandConfig.on
+        )
+      case "atom" =>
+        base.copy(
+          isMagicIndentClient = true
         )
       case _ =>
         base

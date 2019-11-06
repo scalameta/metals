@@ -17,6 +17,7 @@ case class PresentationCompilerConfigImpl(
     isCompletionItemDetailEnabled: Boolean = true,
     isCompletionItemDocumentationEnabled: Boolean = true,
     isHoverDocumentationEnabled: Boolean = true,
+    isMagicIndentClient: Boolean = false,
     isSignatureHelpDocumentationEnabled: Boolean = true,
     isCompletionItemResolve: Boolean = true,
     timeoutDelay: Long = 20,
