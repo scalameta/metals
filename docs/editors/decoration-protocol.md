@@ -1,6 +1,7 @@
 ---
 id: decoration-protocol
-title: Decoration Protocol
+sidebar_label: Decoration Protocol
+title: Decoration Protocol v0.1.0
 ---
 
 Metals implements a Language Server Protocol extension called the "Decoration
@@ -108,3 +109,7 @@ export interface PublishDecorationsParams {
   options: DecorationOptions[];
 }
 ```
+
+## Changelog
+
+- v0.1.0: First release with basic support for worksheets.
