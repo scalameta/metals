@@ -105,10 +105,10 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.metalsDecorationTypeDidChange(params)
   }
 
-  override def metalsDecorationRangesDidChange(
+  override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
-    underlying.metalsDecorationRangesDidChange(params)
+    underlying.metalsPublishDecorations(params)
   }
 
 }

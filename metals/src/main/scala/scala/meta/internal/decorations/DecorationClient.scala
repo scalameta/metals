@@ -11,7 +11,7 @@ trait DecorationClient {
       params: DecorationTypeDidChange
   ): Unit
   @JsonNotification("metals/publishDecorations")
-  def metalsDecorationRangesDidChange(
+  def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit
 }

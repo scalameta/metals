@@ -194,7 +194,7 @@ final class MetalsHttpClient(
       params: DecorationTypeDidChange
   ): Unit = ()
 
-  override def metalsDecorationRangesDidChange(
+  override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = ()
 

@@ -129,11 +129,11 @@ final class ConfiguredLanguageClient(
     }
   }
 
-  override def metalsDecorationRangesDidChange(
+  override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
     if (clientCapabilities.decorationProvider) {
-      underlying.metalsDecorationRangesDidChange(params)
+      underlying.metalsPublishDecorations(params)
     }
   }
 

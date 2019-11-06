@@ -1648,7 +1648,7 @@ class MetalsLanguageServer(
       provider.decorations(worksheet, EmptyCancelToken).map { decorations =>
         val params =
           new PublishDecorationsParams(worksheet.toURI.toString(), decorations)
-        languageClient.metalsDecorationRangesDidChange(params)
+        languageClient.metalsPublishDecorations(params)
       }
     }
   }.getOrElse(Future.successful(()))

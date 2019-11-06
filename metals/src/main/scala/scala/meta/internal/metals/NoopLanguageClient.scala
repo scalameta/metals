@@ -44,7 +44,7 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   override def metalsDecorationTypeDidChange(
       params: DecorationTypeDidChange
   ): Unit = ()
-  override def metalsDecorationRangesDidChange(
+  override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = ()
 }

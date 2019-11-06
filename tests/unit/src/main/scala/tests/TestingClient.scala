@@ -276,7 +276,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     treeViewChanges.add(params)
   }
 
-  override def metalsDecorationRangesDidChange(
+  override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
     val path = params.uri.toAbsolutePath
