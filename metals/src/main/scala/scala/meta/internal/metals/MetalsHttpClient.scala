@@ -17,7 +17,6 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
-import scala.meta.internal.decorations.DecorationTypeDidChange
 import scala.meta.internal.decorations.PublishDecorationsParams
 
 /**
@@ -189,10 +188,6 @@ final class MetalsHttpClient(
     triggerReload()
     underlying.logMessage(message)
   }
-
-  override def metalsDecorationTypeDidChange(
-      params: DecorationTypeDidChange
-  ): Unit = ()
 
   override def metalsPublishDecorations(
       params: PublishDecorationsParams

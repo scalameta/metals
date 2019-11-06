@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.DiagnosticSeverity
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 
-class StoreReporter() extends ConsoleReporter(System.out) {
+class MdocStoreReporter() extends ConsoleReporter(System.out) {
   val diagnostics: mutable.LinkedHashSet[Diagnostic] =
     mutable.LinkedHashSet.empty[Diagnostic]
 

@@ -199,13 +199,7 @@ class MetalsTreeViewProvider(
   ): MetalsTreeViewChildrenResult = {
     val children: Array[TreeViewNode] = params.viewId match {
       case Help =>
-        pprint.log(BuildInfo.metalsVersion)
         Array(
-          TreeViewNode(
-            Help,
-            "",
-            s"Metals Version ${BuildInfo.metalsVersion}"
-          ),
           echoCommand(ServerCommands.RunDoctor, "bug"),
           echoCommand(ServerCommands.GotoLog, "bug"),
           echoCommand(ServerCommands.ReadVscodeDocumentation, "book"),

@@ -10,7 +10,7 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
       : Option[ClientExperimentalCapabilities] =
     Some(ClientExperimentalCapabilities(decorationProvider = true))
   override def userConfig: UserConfiguration =
-    super.userConfig.copy(screenWidth = 40, worksheetCancelTimeout = 1)
+    super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
   testAsync("completion") {
     for {
       _ <- server.initialize(

@@ -11,7 +11,6 @@ import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.UnregistrationParams
 import scala.meta.internal.tvp._
-import scala.meta.internal.decorations.DecorationTypeDidChange
 import scala.meta.internal.decorations.PublishDecorationsParams
 
 class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
@@ -97,12 +96,6 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
       params: TreeViewDidChangeParams
   ): Unit = {
     underlying.metalsTreeViewDidChange(params)
-  }
-
-  override def metalsDecorationTypeDidChange(
-      params: DecorationTypeDidChange
-  ): Unit = {
-    underlying.metalsDecorationTypeDidChange(params)
   }
 
   override def metalsPublishDecorations(

@@ -71,7 +71,7 @@ class WorksheetProvider(
     Executors.newSingleThreadScheduledExecutor()
   private val cancelables = new MutableCancelable()
   private val contexts = new TrieMap[BuildTargetIdentifier, Context]()
-  private val reporter = new StoreReporter()
+  private val reporter = new MdocStoreReporter()
 
   def onBuildTargetDidCompile(target: BuildTargetIdentifier): Unit = {
     clearBuildTarget(target)
@@ -331,7 +331,7 @@ class WorksheetProvider(
     )
     val margin = math.max(
       20,
-      userConfig().screenWidth - statement.position.endColumn
+      userConfig().worksheetScreenWidth - statement.position.endColumn
     )
     val isEmptyValue = isUnitType(statement) || statement.binders.isEmpty
     val contentText = renderContentText(statement, margin, isEmptyValue)

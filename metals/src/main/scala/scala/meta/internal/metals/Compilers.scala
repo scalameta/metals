@@ -194,7 +194,7 @@ class Compilers(
       .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
     target match {
       case None =>
-        if (path.isScalaOrScalaScript) Some(ramboCompiler)
+        if (path.isScalaFilename) Some(ramboCompiler)
         else None
       case Some(value) => loadCompiler(value)
     }

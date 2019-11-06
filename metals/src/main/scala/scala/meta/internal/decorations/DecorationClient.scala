@@ -6,21 +6,11 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.MarkedString
 
 trait DecorationClient {
-  @JsonNotification("metals/decorationTypeDidChange")
-  def metalsDecorationTypeDidChange(
-      params: DecorationTypeDidChange
-  ): Unit
   @JsonNotification("metals/publishDecorations")
   def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit
 }
-
-case class DecorationTypeDidChange(
-    @Nullable wholeLine: java.lang.Boolean = null,
-    @Nullable rangeBehavior: java.lang.Integer = null,
-    @Nullable overviewRulerLane: java.lang.Integer = null
-)
 
 case class DecorationOptions(
     range: Range,
