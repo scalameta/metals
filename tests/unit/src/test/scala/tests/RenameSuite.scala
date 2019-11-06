@@ -3,7 +3,7 @@ import scala.concurrent.Future
 
 object RenameSuite extends BaseLspSuite("rename") {
 
-  check(
+  renamed(
     "basic",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -19,7 +19,39 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "otherRename"
   )
 
-  check(
+  renamed(
+    "unapply",
+    """|/a/src/main/scala/a/Main.scala
+       |object <<F@@oo>> {
+       |  def unapply(s: String): Option[String] = Some("")
+       |}
+       |
+       |object Main{
+       |  "foo" match {
+       |    case <<Foo>>(s) => ()
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "Bar"
+  )
+
+  renamed(
+    "unapply-param",
+    """|/a/src/main/scala/a/Main.scala
+       |object Foo {
+       |  def unapply(<<nam@@e>>: String): Option[String] = Some(<<name>>)
+       |}
+       |
+       |object Main{
+       |  "foo" match {
+       |    case Foo(name) => ()
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "str"
+  )
+
+  renamed(
     "local",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -33,7 +65,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "otherRename"
   )
 
-  check(
+  renamed(
     "method",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -46,7 +78,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "truth"
   )
 
-  check(
+  renamed(
     "self-type",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -61,7 +93,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "Animal"
   )
 
-  check(
+  renamed(
     "method-inheritance",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -76,7 +108,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "truth"
   )
 
-  check(
+  renamed(
     "long-inheritance",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -95,7 +127,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "truth"
   )
 
-  check(
+  renamed(
     "multiple-inheritance",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -114,7 +146,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "truth"
   )
 
-  check(
+  renamed(
     "apply",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -128,7 +160,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "name"
   )
 
-  check(
+  same(
     "colon-bad",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -139,12 +171,10 @@ object RenameSuite extends BaseLspSuite("rename") {
        |  val user = new User()
        |  "" <<::>> user
        |}
-       |""".stripMargin,
-    newName = "SHOULD_NOT_BE_RENAMED",
-    notRenamed = true
+       |""".stripMargin
   )
 
-  check(
+  renamed(
     "colon-good",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -159,7 +189,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "method:"
   )
 
-  check(
+  same(
     "unary-bad",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -168,14 +198,12 @@ object RenameSuite extends BaseLspSuite("rename") {
        |}
        |object Main{
        |  val user = new User()
-       |  "" <<@@!>> user
+       |  <<@@!>>user
        |}
-       |""".stripMargin,
-    newName = "SHOULD_NOT_BE_RENAMED",
-    notRenamed = true
+       |""".stripMargin
   )
 
-  check(
+  same(
     "unary-bad2",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -184,26 +212,22 @@ object RenameSuite extends BaseLspSuite("rename") {
        |}
        |object Main{
        |  val user = new User()
-       |  "" <<!>> user
+       |  <<!>>user
        |}
-       |""".stripMargin,
-    newName = "SHOULD_NOT_BE_RENAMED",
-    notRenamed = true
+       |""".stripMargin
   )
 
-  check(
+  same(
     "java-classes",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |class MyException extends Exce@@ption
        |class NewException extends RuntimeException
        |class NewException2 extends RuntimeException
-       |""".stripMargin,
-    newName = "SHOULD_NOT_BE_RENAMED",
-    notRenamed = true
+       |""".stripMargin
   )
 
-  check(
+  renamed(
     "inheritance",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -214,7 +238,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "Tree"
   )
 
-  check(
+  renamed(
     "companion",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -224,7 +248,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "Tree"
   )
 
-  check(
+  renamed(
     "companion2",
     """|/a/src/main/scala/a/Main.scala
        |package a
@@ -234,7 +258,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "Tree"
   )
 
-  check(
+  renamed(
     "many-files",
     """|/a/src/main/scala/a/A.scala
        |package a
@@ -270,7 +294,7 @@ object RenameSuite extends BaseLspSuite("rename") {
     )
   )
 
-  check(
+  renamed(
     "anon",
     """|/a/src/main/scala/a/Main.scala
        |trait Methodable[T] {
@@ -291,7 +315,7 @@ object RenameSuite extends BaseLspSuite("rename") {
   )
 
   // currently not working due to issues in SemanticDB
-  // check(
+  // renamed(
   //   "macro-annotation",
   //   """|/a/src/main/scala/a/Main.scala
   //      |package a
@@ -305,8 +329,7 @@ object RenameSuite extends BaseLspSuite("rename") {
   //      |""".stripMargin,
   //   newName = "Tree"
   // )
-
-  // check(
+  // renamed(
   //   "classof",
   //   """|/a/src/main/scala/a/Main.scala
   //      |package a
@@ -317,6 +340,25 @@ object RenameSuite extends BaseLspSuite("rename") {
   //      |""".stripMargin,
   //   newName = "Animal"
   // )
+
+  def renamed(
+      name: String,
+      input: String,
+      newName: String,
+      nonOpened: Set[String] = Set.empty
+  ): Unit =
+    check(name, input, newName, notRenamed = false, nonOpened = nonOpened)
+
+  def same(
+      name: String,
+      input: String
+  ): Unit =
+    check(
+      name,
+      input,
+      "SHOULD_NOT_BE_RENAMED",
+      notRenamed = true
+    )
 
   def check(
       name: String,
@@ -331,7 +373,9 @@ object RenameSuite extends BaseLspSuite("rename") {
       case (file, code) =>
         file -> {
           if (!notRenamed) {
-            code.replaceAll("<<.*>>", newName).replaceAll("##", "")
+            code
+              .replaceAll("\\<\\<\\S*\\>\\>", newName)
+              .replaceAll("##", "")
           } else {
             code.replaceAll(allMarkersRegex, "")
           }
