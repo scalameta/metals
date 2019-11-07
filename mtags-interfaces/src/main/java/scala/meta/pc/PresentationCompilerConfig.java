@@ -60,9 +60,10 @@ public interface PresentationCompilerConfig {
     boolean isHoverDocumentationEnabled();
 
     /**
-     * Returns true if the client inserts magic indentation on a multline textEdit.
+     * True if the client defaults to adding the identation of the reference
+     * line that the operation started on (relevant for multiline textEdits)
      */
-    boolean isMagicIndentClient();
+    boolean snippetVscodeIndent();
 
     /**
      * Returns true if the <code>SignatureHelp.documentation</code> field should be populated.

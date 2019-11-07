@@ -36,7 +36,7 @@ abstract class BasePCSuite extends BaseSuite {
   def scalacOptions: Seq[String] = Nil
   def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(
-      isMagicIndentClient = false
+      snippetVscodeIndent = false
     )
   val myclasspath: Seq[Path] = extraClasspath ++ scalaLibrary.toList
   val index = new DelegatingGlobalSymbolIndex(OnDemandSymbolIndex())

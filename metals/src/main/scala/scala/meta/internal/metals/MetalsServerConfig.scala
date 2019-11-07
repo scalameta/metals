@@ -14,7 +14,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param slowTask how to handle metals/slowTask requests.
  * @param showMessage how to handle window/showMessage notifications.
  * @param showMessageRequest how to handle window/showMessageRequest requests.
- * @param isMagicIndentClient if the client defaults to adding the identation of the reference
+ * @param snippetVscodeIndent if the client defaults to adding the identation of the reference
  *                            line that the operation started on (relevant for multiline textEdits)
  * @param isNoInitialized set true if the editor client doesn't call the `initialized`
  *                        notification for some reason, see https://github.com/natebosch/vim-lsc/issues/113
@@ -32,9 +32,9 @@ final case class MetalsServerConfig(
     showMessage: ShowMessageConfig = ShowMessageConfig.default,
     showMessageRequest: ShowMessageRequestConfig =
       ShowMessageRequestConfig.default,
-    isMagicIndentClient: Boolean = MetalsServerConfig.binaryOption(
-      "metals.magic-indent-client",
-      default = false
+    snippetVscodeIndent: Boolean = MetalsServerConfig.binaryOption(
+      "metals.snippet-vscode-indent",
+      default = true
     ),
     isNoInitialized: Boolean = MetalsServerConfig.binaryOption(
       "metals.no-initialized",
@@ -111,7 +111,6 @@ object MetalsServerConfig {
           statusBar = StatusBarConfig.on,
           slowTask = SlowTaskConfig.on,
           icons = Icons.vscode,
-          isMagicIndentClient = true,
           executeClientCommand = ExecuteClientCommandConfig.on,
           globSyntax = GlobSyntaxConfig.vscode,
           compilers = base.compilers.copy(
@@ -126,13 +125,15 @@ object MetalsServerConfig {
           statusBar = StatusBarConfig.logMessage,
           // Not strictly needed, but helpful while this integration matures.
           isHttpEnabled = true,
-          icons = Icons.unicode
+          icons = Icons.unicode,
+          compilers = base.compilers.copy(
+            snippetVscodeIndent = false
+          )
         )
       case "coc.nvim" =>
         base.copy(
           statusBar = StatusBarConfig.showMessage,
           isHttpEnabled = true,
-          isMagicIndentClient = true,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
@@ -151,16 +152,16 @@ object MetalsServerConfig {
           isExitOnShutdown = true,
           compilers = base.compilers.copy(
             // Avoid showing the method signature twice because it's already visible in the label.
-            isCompletionItemDetailEnabled = false
+            isCompletionItemDetailEnabled = false,
+            snippetVscodeIndent = false
           )
         )
       case "emacs" =>
         base.copy(
-          executeClientCommand = ExecuteClientCommandConfig.on
-        )
-      case "atom" =>
-        base.copy(
-          isMagicIndentClient = true
+          executeClientCommand = ExecuteClientCommandConfig.on,
+          compilers = base.compilers.copy(
+            snippetVscodeIndent = false
+          )
         )
       case _ =>
         base

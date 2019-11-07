@@ -72,9 +72,9 @@ object Configs {
           "metals.hover.documentation",
           default = true
         ),
-        isMagicIndentClient = MetalsServerConfig.binaryOption(
-          "metals.magic-indent-client",
-          default = false
+        snippetVscodeIndent = MetalsServerConfig.binaryOption(
+          "metals.snippet-vscode-indent",
+          default = true
         ),
         isSignatureHelpDocumentationEnabled = MetalsServerConfig.binaryOption(
           "metals.signature-help.documentation",
