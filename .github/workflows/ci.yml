@@ -7,23 +7,53 @@ jobs:
     name: Windows unit tests
     runs-on: windows-latest
     steps:
+      - uses: actions/cache@v1
+        with:
+          path: ${%LOCALAPPDATA%\Coursier\Cache\v1}
+          key: ${{ runner.os }}-coursier-ci
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - name: Run unit tests
         run: bin/test.sh "unit/test"
         shell: bash
+      - uses: actions/cache@v1
+        with:
+          path: ${%LOCALAPPDATA%\Coursier\Cache\v1}
+          key: ${{ runner.os }}-coursier-ci
+          restore-keys: |
+            ${{ runner.os }}-coursier-
   linux:
     name: Linux unit tests
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-ci
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - name: Run unit tests
         run: bin/test.sh unit/test
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-ci
+          restore-keys: |
+            ${{ runner.os }}-coursier-
   sbt:
     name: Sbt integration
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/jars/*') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - name: Run Sbt tests
@@ -32,6 +62,18 @@ jobs:
     name: Maven integration
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/cache@v1
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/jars/*') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - name: Run Maven tests
@@ -40,6 +82,12 @@ jobs:
     name: Gradle integration
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/jars/*') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - name: Run Gradle tests
@@ -48,6 +96,12 @@ jobs:
     name: Mill integration
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/jars/*') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - name: Run Mill tests
@@ -56,6 +110,12 @@ jobs:
     name: Slow tests
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/jars/*') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - name: Run slow tests
@@ -64,6 +124,12 @@ jobs:
     name: Scala cross tests
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/jars/*') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - name: Run cross tests
@@ -72,6 +138,12 @@ jobs:
     name: Scalafmt/Scalacheck/Docs
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/jars/*') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - uses: actions/setup-node@v1
