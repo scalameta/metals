@@ -63,7 +63,7 @@ public interface PresentationCompilerConfig {
      * True if the client defaults to adding the identation of the reference
      * line that the operation started on (relevant for multiline textEdits)
      */
-    boolean snippetVscodeIndent();
+    boolean snippetAutoIndent();
 
     /**
      * Returns true if the <code>SignatureHelp.documentation</code> field should be populated.

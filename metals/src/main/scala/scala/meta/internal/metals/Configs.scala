@@ -72,8 +72,8 @@ object Configs {
           "metals.hover.documentation",
           default = true
         ),
-        snippetVscodeIndent = MetalsServerConfig.binaryOption(
-          "metals.snippet-vscode-indent",
+        snippetAutoIndent = MetalsServerConfig.binaryOption(
+          "metals.snippet-auto-indent",
           default = true
         ),
         isSignatureHelpDocumentationEnabled = MetalsServerConfig.binaryOption(

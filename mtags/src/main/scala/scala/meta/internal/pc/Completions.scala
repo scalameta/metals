@@ -1234,7 +1234,7 @@ trait Completions { this: MetalsGlobal =>
             .map(_.edit)
 
           if (allAbstractMembers.length > 1 && overrideDefMembers.length > 1) {
-            val necessaryIndent = if (metalsConfig.snippetVscodeIndent()) {
+            val necessaryIndent = if (metalsConfig.snippetAutoIndent()) {
               ""
             } else {
               val amount =
