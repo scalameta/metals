@@ -18,32 +18,28 @@ jobs:
       - name: Run unit tests
         run: bin/test.sh "unit/test"
         shell: bash
-      - uses: actions/cache@v1
-        with:
-          path: ${%LOCALAPPDATA%\Coursier\Cache\v1}
-          key: ${{ runner.os }}-coursier-ci
-          restore-keys: |
-            ${{ runner.os }}-coursier-
   linux:
     name: Linux unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/cache@v1
         with:
-          path: ~/.cache/coursier/v1
-          key: ${{ runner.os }}-coursier-ci
+          path: ~/.cache/coursier/v1/https/repo1.maven.org/maven2/com
+          key: ${{ runner.os }}-coursier-com-ci
           restore-keys: |
-            ${{ runner.os }}-coursier-
+            ${{ runner.os }}-coursier-com
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1/https/repo1.maven.org/maven2/org
+          key: ${{ runner.os }}-coursier-org-ci
+          restore-keys: |
+            ${{ runner.os }}-coursier-org
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
       - name: Run unit tests
         run: bin/test.sh unit/test
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/coursier/v1
-          key: ${{ runner.os }}-coursier-ci
-          restore-keys: |
-            ${{ runner.os }}-coursier-
+      - name: List cache dir
+        run: du -sch ~/.cache/coursier/v1/https/repo1.maven.org/maven2/*|sort -h
   sbt:
     name: Sbt integration
     runs-on: ubuntu-latest
