@@ -12,6 +12,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|package pkg
+       |
        |import java.nio.file.Files
        |object Main {
        |  val x = Files
@@ -70,6 +71,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|package `import-conflict`
+       |
        |import java.nio.file.Files
        |object Main {
        |  val java = 42
@@ -88,6 +90,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|package `import-conflict2`
+       |
        |import _root_.java.nio.file.Files
        |object java
        |object Main {
@@ -103,6 +106,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |object Main extends CompletableFutur@@
       |""".stripMargin,
     """package pkg
+      |
       |import java.util.concurrent.CompletableFuture
       |object Main extends CompletableFuture
       |""".stripMargin
@@ -114,6 +118,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |object Main extends CompletableFu@@ture
       |""".stripMargin,
     """package pkg
+      |
       |import java.util.concurrent.CompletableFuture
       |object Main extends CompletableFuture
       |""".stripMargin
@@ -261,6 +266,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|package pkg
+       |
        |import java.nio.file.Files
        |object Main {
        |  List(1).collect {
@@ -284,6 +290,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|package pkg
+       |
        |import java.nio.file.Files
        |object Main {
        |  for {
@@ -310,6 +317,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|package pkg
+       |
        |import java.nio.file.Files
        |object Main {
        |  for {
@@ -337,6 +345,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|package pkg
+       |
        |import java.nio.file.Files
        |object Main {
        |  for {
@@ -392,6 +401,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|package annotationclass
+       |
        |import scala.collection.mutable
        |object Main {
        |  @deprecated("", "")
@@ -410,6 +420,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|package annotationtrait
+       |
        |import scala.collection.mutable
        |object Main {
        |  @deprecated("", "")
@@ -427,6 +438,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |)
        |""".stripMargin,
     """|package classparam
+       |
        |import scala.concurrent.Future
        |case class Foo(
        |  name: Future[String]
@@ -446,6 +458,7 @@ object CompletionWorkspaceSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|package docstring
+       |
        |import scala.concurrent.Future
        |/**
        | * Hello

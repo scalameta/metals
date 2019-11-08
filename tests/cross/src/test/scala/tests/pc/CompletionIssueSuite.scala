@@ -53,6 +53,7 @@ object CompletionIssueSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """
       |package a
+      |
       |import a.A.Nested.NestedLeaf
       |object A {
       |  object Nested{
@@ -130,7 +131,7 @@ object CompletionIssueSuite extends BaseCompletionSuite {
        |object Main {
        |  Array(1, 1,10)
        |  .map(_ + 1) // comment breaks completions
-       |  .fil@@ 
+       |  .fil@@
        |}
        |""".stripMargin,
     """|filter(p: Int => Boolean): Array[Int]
@@ -146,7 +147,7 @@ object CompletionIssueSuite extends BaseCompletionSuite {
        |object Main {
        |  Array(1, 1,10)
        |  .map(_ + 1) // comment breaks completions
-       |  . fil@@ 
+       |  . fil@@
        |}
        |""".stripMargin,
     """|filter(p: Int => Boolean): Array[Int]
@@ -162,7 +163,7 @@ object CompletionIssueSuite extends BaseCompletionSuite {
        |object Main {
        |  Array(1, 1,10)
        |  .map(_ + 1) /* comment breaks completions */
-       |  .fil@@ 
+       |  .fil@@
        |}
        |""".stripMargin,
     """|filter(p: Int => Boolean): Array[Int]
