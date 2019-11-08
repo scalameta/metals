@@ -95,16 +95,25 @@ const Features = props => {
     {
       title: "Accurate diagnostics",
       content:
-        "Compile on file save and see errors from the build tool, no more spurious red squiggles or switching focus to the console.",
+        "Compile on file save and see errors from the build tool inside the editor, no more switching focus to the console.",
       image: "https://i.imgur.com/JYLQGrc.gif",
       imageAlign: "right"
+    },
+    {
+      title: "Rich build tool support",
+      content:
+        `The build tools sbt, Gradle, Maven and Mill are supported thanks to <a href="https://scalacenter.github.io/bloop/">Bloop</a>. ` +
+        `Hot incremental compilation in the Bloop build server ensures compile errors appear as quickly as possible.`,
+      image:
+        "https://user-images.githubusercontent.com/1408093/68486864-dd9f2b00-01f6-11ea-9291-d3a7ce6ef225.png",
+      imageAlign: "left"
     },
     {
       title: "Goto definition",
       content:
         "Jump to symbol definitions in your project sources and Scala/Java library dependencies.",
       image: "https://i.imgur.com/bCIhFof.gif",
-      imageAlign: "left"
+      imageAlign: "right"
     },
     {
       title: "Completions",
@@ -112,33 +121,33 @@ const Features = props => {
         "Explore new library APIs, implement interfaces, generate exhaustive matches and more.",
       image:
         "https://user-images.githubusercontent.com/1408093/56036958-725bac00-5d2e-11e9-9cf7-46249125494a.gif",
-      imageAlign: "right"
+      imageAlign: "left"
     },
     {
       title: "Hover (aka. type at point)",
       content: "See the expression type and symbol signature under the cursor.",
       image: "https://i.imgur.com/2MfQvsM.gif",
-      imageAlign: "left"
+      imageAlign: "right"
     },
     {
       title: "Signature help (aka. parameter hints)",
       content:
         "View a method signature and method overloads as you fill in the arguments.",
       image: "https://i.imgur.com/DAWIrHu.gif",
-      imageAlign: "right"
+      imageAlign: "left"
     },
     {
       title: "Find symbol references",
       content: "Find all usages of a symbol in the workspace.",
       image:
         "https://user-images.githubusercontent.com/1408093/51089190-75fc8880-1769-11e9-819c-95262205e95c.png",
-      imageAlign: "left"
+      imageAlign: "right"
     },
     {
       title: "Fuzzy symbol search",
       content: "Search for symbols in the workspace or library dependencies.",
       image: "https://i.imgur.com/w5yrK1w.gif",
-      imageAlign: "right"
+      imageAlign: "left"
     }
   ];
   return (
