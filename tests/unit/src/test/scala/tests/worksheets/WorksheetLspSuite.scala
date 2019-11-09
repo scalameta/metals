@@ -23,6 +23,7 @@ object WorksheetLspSuite extends BaseLspSuite("worksheet") {
           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
       identity <- server.completion(
         "a/src/main/scala/foo/Main.worksheet.sc",
         "identity@@"
