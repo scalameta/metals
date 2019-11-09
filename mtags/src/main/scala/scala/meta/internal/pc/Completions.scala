@@ -1231,14 +1231,23 @@ trait Completions { this: MetalsGlobal =>
 
           val allAbstractMembers = overrideMembers
             .filter(_.sym.isAbstract)
-            .map(_.edit)
+
+          val (allAbstractEdits, allAbstractImports) =
+            allAbstractMembers.foldLeft(
+              (List.empty[l.TextEdit], Set.empty[l.TextEdit])
+            ) { (editsAndImports, overrideDefMember) =>
+              val edits = overrideDefMember.edit :: editsAndImports._1
+              val imports = overrideDefMember.autoImports.toSet ++ editsAndImports
+                ._2
+              (edits, imports)
+            }
 
           if (allAbstractMembers.length > 1 && overrideDefMembers.length > 1) {
             val necessaryIndent = if (metalsConfig.snippetAutoIndent()) {
               ""
             } else {
               val amount =
-                allAbstractMembers.head.getRange.getStart.getCharacter
+                allAbstractEdits.head.getRange.getStart.getCharacter
               " " * amount
             }
 
@@ -1246,14 +1255,14 @@ trait Completions { this: MetalsGlobal =>
               prefix,
               new l.TextEdit(
                 range,
-                allAbstractMembers
+                allAbstractEdits
                   .map(_.getNewText)
-                  .reverse
                   .mkString(s"\n${necessaryIndent}")
               ),
               completionsSymbol("implement"),
               label = Some("Implement all members"),
-              detail = Some(s" (${allAbstractMembers.length} total)")
+              detail = Some(s" (${allAbstractMembers.length} total)"),
+              additionalTextEdits = allAbstractImports.toList
             )
 
             implementAll :: overrideDefMembers

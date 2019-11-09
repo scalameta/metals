@@ -685,6 +685,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     """|var hello1: Int
        |val hello2: Int
        |def hello3: Int
+       |Implement all members
        |""".stripMargin,
     includeDetail = false
   )
