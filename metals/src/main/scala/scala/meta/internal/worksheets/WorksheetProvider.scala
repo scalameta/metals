@@ -61,7 +61,7 @@ class WorksheetProvider(
     extends Cancelable {
 
   private val commentHeader = " // "
-  // The smallest column width that worksheet values will used for rendering
+  // The smallest column width that worksheet values will use for rendering
   // worksheet decorations.
   private val minimumMargin = 20
   // Worksheet evaluation happens on a single threaded job queue. Jobs are
