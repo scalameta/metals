@@ -59,7 +59,11 @@ class WorksheetProvider(
     diagnostics: Diagnostics
 )(implicit ec: ExecutionContext)
     extends Cancelable {
+
   private val commentHeader = " // "
+  // The smallest column width that worksheet values will used for rendering
+  // worksheet decorations.
+  private val minimumMargin = 20
   // Worksheet evaluation happens on a single threaded job queue. Jobs are
   // prioritized using the same order as completion/hover requests:
   // first-come last-out.
@@ -98,9 +102,10 @@ class WorksheetProvider(
     reporter.reset()
     val result = new CompletableFuture[Array[DecorationOptions]]()
     def completeEmptyResult() = result.complete(Array.empty)
-    token.onCancel().asScala.foreach {
-      case java.lang.Boolean.TRUE => completeEmptyResult()
-      case _ =>
+    token.onCancel().asScala.foreach { isCancelled =>
+      if (isCancelled) {
+        completeEmptyResult()
+      }
     }
     val onError: PartialFunction[Throwable, Array[DecorationOptions]] = {
       case NonFatal(e) =>
@@ -186,7 +191,7 @@ class WorksheetProvider(
           val cancel = languageClient.metalsSlowTask(
             new MetalsSlowTaskParams(
               s"Evaluating worksheet '${path.filename}'",
-              noLogs = true,
+              quietLogs = true,
               secondsElapsed = userConfig().worksheetCancelTimeout
             )
           )
@@ -330,7 +335,7 @@ class WorksheetProvider(
       new l.Position(pos.endLine, pos.endColumn)
     )
     val margin = math.max(
-      20,
+      minimumMargin,
       userConfig().worksheetScreenWidth - statement.position.endColumn
     )
     val isEmptyValue = isUnitType(statement) || statement.binders.isEmpty
@@ -355,7 +360,7 @@ class WorksheetProvider(
       info <- buildTargets.scalaTarget(target)
       scala <- info.info.asScalaBuildTarget
       scalaVersion = scala.getScalaVersion
-      isSupported = ScalaVersions.isSupportedScalaVersion(scalaVersion)
+      isSupported = ScalaVersions.isCurrentScalaCompilerVersion(scalaVersion)
       _ = {
         if (!isSupported) {
           scribe.warn(

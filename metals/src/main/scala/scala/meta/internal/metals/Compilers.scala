@@ -259,10 +259,8 @@ class Compilers(
     // `mtags.BuildInfo.scalaCompilerVersion`. In the case when
     // `info.getScalaVersion == mtags.BuildInfo.scalaCompilerVersion` then we
     // skip fetching the mtags module from Maven.
-    val isCurrentScalaCompilerVersion =
-      ScalaVersions.dropVendorSuffix(info.getScalaVersion) == mtags.BuildInfo.scalaCompilerVersion
     val pc: PresentationCompiler =
-      if (isCurrentScalaCompilerVersion) {
+      if (ScalaVersions.isCurrentScalaCompilerVersion(info.getScalaVersion())) {
         new ScalaPresentationCompiler()
       } else {
         embedded.presentationCompiler(info, scalac)

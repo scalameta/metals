@@ -42,8 +42,6 @@ final class TokenEditDistance private (
    *   nearest token in the original document instead.
    */
   def toRevised(range: l.Range): Option[l.Range] = {
-    pprint.log(isNoMatch)
-    pprint.log(isUnchanged)
     if (isUnchanged) Some(range)
     else if (isNoMatch) None
     else {

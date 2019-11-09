@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.meta.internal.mtags
+
 object ScalaVersions {
 
   /** Non-Lightbend compilers often use a suffix, such as `-bin-typelevel-4` */
@@ -24,4 +26,6 @@ object ScalaVersions {
 
   def recommendedVersion(scalaVersion: String): String = BuildInfo.scala212
 
+  def isCurrentScalaCompilerVersion(version: String): Boolean =
+    ScalaVersions.dropVendorSuffix(version) == mtags.BuildInfo.scalaCompilerVersion
 }

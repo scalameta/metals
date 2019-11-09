@@ -374,8 +374,12 @@ _Request_:
 interface MetalsSlowTaskParams {
   /** The name of this slow task */
   message: string;
-  /** If true, don't open the logs output. */
-  noLogs?: boolean;
+  /**
+   * If true, the log output from this task does not need to be displayed to the user.
+   *
+   * In VS Code, the Metals "Output channel" is not toggled when this flag is true.
+   */
+  quietLogs?: boolean;
 }
 ```
 
