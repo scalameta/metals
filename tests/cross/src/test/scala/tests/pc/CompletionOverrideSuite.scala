@@ -634,7 +634,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     // NOTE(olafur) assert completion items are empty because it's not possible to
-    // override vars.
+    // override concrete vars.
     ""
   )
 
@@ -649,8 +649,58 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     // NOTE(olafur) assert completion items are empty because it's not possible to
-    // override vars.
+    // override concrete vars.
     ""
+  )
+
+  check(
+    "abstract-var",
+    """|package m
+       |abstract class Val {
+       |  var hello1: Int
+       |}
+       |class Main extends Val {
+       |  override var hello@@
+       }
+       |""".stripMargin,
+    "var hello1: Int",
+    includeDetail = false,
+    filterText = "override var hello1"
+  )
+
+  check(
+    "abstract-var-val",
+    """|package m
+       |abstract class Val {
+       |  var hello1: Int
+       |  val hello2: Int
+       |  def hello3: Int
+       |}
+       |class Main extends Val {
+       |  override val hello@@
+       }
+       |""".stripMargin,
+    // NOTE(gabro): we inlcude also var and def completions despite the user typed a val
+    """|var hello1: Int
+       |val hello2: Int
+       |def hello3: Int
+       |""".stripMargin,
+    includeDetail = false
+  )
+
+  check(
+    "abstract-var-def",
+    """|package m
+       |abstract class Val {
+       |  var hello1: Int
+       |  val hello2: Int
+       |  def hello3: Int
+       |}
+       |class Main extends Val {
+       |  override def hello@@
+       }
+       |""".stripMargin,
+    "def hello3: Int"
   )
 
   check(
