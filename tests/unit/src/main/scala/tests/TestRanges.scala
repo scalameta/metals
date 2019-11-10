@@ -31,17 +31,22 @@ object TestRanges extends RangeReplace {
     resolved.toMap
   }
 
-  def renderEditAsStrings(
-      sourceFiles: Map[String, String],
+  def renderEditAsString(
+      file: String,
+      code: String,
       workspaceEdit: WorkspaceEdit
-  ): Map[String, String] = {
-    val resolved = for {
-      (file, code) <- sourceFiles.toSeq
-      (_, validLocations) <- workspaceEdit
-        .getChanges()
+  ): Option[String] = {
+    for {
+      validLocations <- workspaceEdit
+        .getDocumentChanges()
         .asScala
-        .find(_._1.contains(file))
-    } yield file -> TextEdits.applyEdits(code, validLocations.asScala.toList)
-    sourceFiles ++ resolved.toMap
+        .find(
+          change =>
+            change.isLeft && change.getLeft.getTextDocument.getUri
+              .contains(file)
+        )
+    } yield
+      TextEdits.applyEdits(code, validLocations.getLeft.getEdits.asScala.toList)
+
   }
 }

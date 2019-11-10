@@ -21,12 +21,18 @@ import org.eclipse.lsp4j.Location
 import scala.meta.internal.metals.MetalsLanguageClient
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.{Range => LSPRange}
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => LSPEither}
 import scala.meta.internal.metals.Buffers
 import java.net.URI
 import java.nio.file.Paths
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ReferencesResult
+import org.eclipse.lsp4j.TextDocumentEdit
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.ResourceOperation
+import org.eclipse.lsp4j.RenameFile
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
@@ -39,6 +45,22 @@ final class RenameProvider(
     buffers: Buffers,
     compilations: Compilations
 ) {
+
+  def prepareRename(params: TextDocumentPositionParams): Option[LSPRange] = {
+    if (!compilations.currentlyCompiling.isEmpty) {
+      client.showMessage(isCompiling)
+      None
+    } else {
+      val source = params.getTextDocument.getUri.toAbsolutePath
+      val symbolOccurence =
+        definitionProvider.symbolOccurence(source, params)
+      for {
+        (occurence, semanticDb) <- symbolOccurence
+        if canRenameSymbol(occurence.symbol, None)
+        range <- occurence.range
+      } yield range.toLSP
+    }
+  }
 
   def rename(params: RenameParams): WorkspaceEdit = {
     if (!compilations.currentlyCompiling.isEmpty) {
@@ -59,9 +81,9 @@ final class RenameProvider(
 
       val allReferences = for {
         (occurence, semanticDb) <- symbolOccurence.toIterable
-        if canRenameSymbol(occurence.symbol, params.getNewName())
+        if canRenameSymbol(occurence.symbol, Option(params.getNewName()))
         parentSymbols = implementationProvider
-          .symbolParent(occurence.symbol, semanticDb)
+          .topMethodParents(occurence.symbol, semanticDb)
         txtParams <- if (parentSymbols.isEmpty) List(textParams)
         else parentSymbols.map(toTextParams)
         currentReferences = referenceProvider.references(
@@ -76,19 +98,21 @@ final class RenameProvider(
         loc <- refResult.locations
       } yield loc
 
-      val isApply =
-        symbolOccurence.exists(occ => occ._1.symbol.desc.name.value == "apply")
+      def isOccurence(fn: String => Boolean): Boolean = {
+        symbolOccurence.exists {
+          case (occ, _) => fn(occ.symbol)
+        }
+      }
 
       val allChanges = for {
         (uri, locs) <- allReferences.toList.distinct.groupBy(_.getUri())
       } yield {
         val textEdits = for (loc <- locs) yield {
-          textEdit(isApply, loc, params.getNewName())
+          textEdit(isOccurence, loc, params.getNewName())
         }
         Seq(uri -> textEdits.toList)
       }
       val fileChanges = allChanges.flatten.toMap
-
       val (openedEdits, closedEdits) = fileChanges.partition {
         case (file, edits) =>
           val path = AbsolutePath(Paths.get(new URI(file)))
@@ -97,12 +121,45 @@ final class RenameProvider(
 
       changeClosedFiles(closedEdits)
 
-      new WorkspaceEdit(
-        openedEdits.map {
-          case (file, edits) => file -> edits.asJava
-        }.asJava
-      )
+      val edits = documentEdits(openedEdits)
+      val renames =
+        fileRenames(isOccurence, fileChanges.keySet, params.getNewName())
+      new WorkspaceEdit((edits ++ renames).asJava)
     }
+  }
+
+  private def documentEdits(
+      openedEdits: Map[String, List[TextEdit]]
+  ): List[LSPEither[TextDocumentEdit, ResourceOperation]] = {
+    openedEdits.map {
+      case (file, edits) =>
+        val textId = new VersionedTextDocumentIdentifier()
+        textId.setUri(file)
+        val ed = new TextDocumentEdit(textId, edits.asJava)
+        LSPEither.forLeft[TextDocumentEdit, ResourceOperation](ed)
+    }.toList
+  }
+
+  private def fileRenames(
+      isOccurence: (String => Boolean) => Boolean,
+      fileChanges: Set[String],
+      newName: String
+  ): Option[LSPEither[TextDocumentEdit, ResourceOperation]] = {
+    fileChanges
+      .find { file =>
+        isOccurence(str => {
+          (str.desc.isType || str.desc.isTerm) && file.endsWith(
+            str.desc.name.value + ".scala"
+          )
+        })
+      }
+      .map { file =>
+        val newFile =
+          file.replaceAll("/[^/]+\\.scala$", s"/$newName.scala")
+        LSPEither.forRight[TextDocumentEdit, ResourceOperation](
+          new RenameFile(file, newFile)
+        )
+      }
   }
 
   private def companionReferences(sym: String): List[ReferencesResult] = {
@@ -157,41 +214,43 @@ final class RenameProvider(
     }
   }
 
-  private def canRenameSymbol(symbol: String, newName: String) = {
+  private def canRenameSymbol(symbol: String, newName: Option[String]) = {
     val forbiddenMethods = Set("equals", "hashCode", "unapply", "unary_!", "!")
     val desc = symbol.desc
     val name = desc.name.value
     val isForbidden = forbiddenMethods(name)
     if (isForbidden) {
-      client.logMessage(forbiddenRename(name, newName))
+      client.showMessage(forbiddenRename(name, newName))
     }
-    val colonNotAllowed = name.endsWith(":") && !newName.endsWith(":")
+    val colonNotAllowed = name.endsWith(":") && newName.exists(!_.endsWith(":"))
     if (colonNotAllowed) {
-      forbiddenColonRename(name, newName)
+      client.showMessage(forbiddenColonRename(name, newName))
     }
     symbolIsLocal(symbol) && (!desc.isMethod || (!colonNotAllowed && !isForbidden))
   }
 
   private def symbolIsLocal(symbol: String): Boolean = {
 
-    lazy val isFromWorkspace = index
-      .definition(MSymbol(symbol))
-      .exists { definition =>
-        workspace.toNIO.getFileSystem == definition.path.toNIO.getFileSystem &&
-        !definition.path.toNIO
-          .startsWith(
-            workspace.resolve(Directories.readonly).toNIO
-          )
-      }
+    def isFromWorkspace =
+      index
+        .definition(MSymbol(symbol))
+        .exists { definition =>
+          workspace.toNIO.getFileSystem == definition.path.toNIO.getFileSystem &&
+          !definition.path.toNIO
+            .startsWith(
+              workspace.resolve(Directories.readonly).toNIO
+            )
+        }
 
     symbol.startsWith("local") || isFromWorkspace
   }
 
   private def textEdit(
-      isApply: Boolean,
+      isOccurence: (String => Boolean) => Boolean,
       loc: Location,
       newName: String
   ): TextEdit = {
+    val isApply = isOccurence(str => str.desc.name.value == "apply")
     lazy val default = new TextEdit(
       loc.getRange(),
       newName
@@ -251,9 +310,13 @@ final class RenameProvider(
     )
   }
 
-  private def forbiddenRename(old: String, name: String): MessageParams = {
+  private def forbiddenRename(
+      old: String,
+      name: Option[String]
+  ): MessageParams = {
+    val renamed = name.map(n => s"to $n").getOrElse("")
     val message =
-      s"""|Cannot rename to $name since it will change the semantics and 
+      s"""|Cannot rename $old $renamed since it will change the semantics and 
           |and might break your code""".stripMargin
     new MessageParams(MessageType.Error, message)
   }
@@ -265,9 +328,13 @@ final class RenameProvider(
     new MessageParams(MessageType.Error, message)
   }
 
-  private def forbiddenColonRename(old: String, name: String): MessageParams = {
+  private def forbiddenColonRename(
+      old: String,
+      name: Option[String]
+  ): MessageParams = {
+    val renamed = name.map(n => s"to $n").getOrElse("")
     val message =
-      s"""|Cannot rename from $old to $name since it will change the semantics and 
+      s"""|Cannot rename from $old $renamed since it will change the semantics and 
           |and might break your code. 
           |Only rename to names ending with `:` is allowed.""".stripMargin
     new MessageParams(MessageType.Error, message)

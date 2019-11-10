@@ -465,7 +465,9 @@ class MetalsLanguageServer(
       capabilities.setImplementationProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
-      capabilities.setRenameProvider(true)
+      val renameOptions = new RenameOptions()
+      renameOptions.setPrepareProvider(true)
+      capabilities.setRenameProvider(renameOptions)
       capabilities.setDocumentHighlightProvider(true)
       capabilities.setDocumentOnTypeFormattingProvider(
         new DocumentOnTypeFormattingOptions("\n")
@@ -916,6 +918,14 @@ class MetalsLanguageServer(
       multilineStringFormattingProvider
         .format(params)
         .map(_.asJava)
+    }
+
+  @JsonRequest("textDocument/prepareRename")
+  def prepareRename(
+      params: TextDocumentPositionParams
+  ): CompletableFuture[l.Range] =
+    CancelTokens { _ =>
+      renameProvider.prepareRename(params).getOrElse(null)
     }
 
   @JsonRequest("textDocument/rename")

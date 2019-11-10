@@ -83,6 +83,8 @@ import scala.meta.internal.metals.DebugSession
 import scala.util.matching.Regex
 import org.eclipse.lsp4j.RenameParams
 import scala.meta.internal.metals.TextEdits
+import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.RenameFile
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -671,14 +673,18 @@ final class TestingServer(
       filename: String,
       query: String,
       expected: Map[String, String],
-      base: Map[String, String],
+      files: Set[String],
       newName: String
   ): Future[Unit] = {
     for {
-      renames <- rename(filename, query, base, newName)
+      renames <- rename(filename, query, files, newName)
     } yield {
       renames.foreach {
         case (file, obtained) =>
+          assert(
+            expected.contains(file),
+            s"Unexpected file obtained from renames: $file"
+          )
           val expectedImpl = expected(file)
           DiffAssertions.assertNoDiffOrPrintObtained(
             obtained,
@@ -693,23 +699,62 @@ final class TestingServer(
   def rename(
       filename: String,
       query: String,
-      base: Map[String, String],
+      files: Set[String],
       newName: String
   ): Future[Map[String, String]] = {
     for {
       (_, params) <- offsetParams(filename, query, workspace)
+      prepare <- server.prepareRename(params).asScala
       renameParams = new RenameParams
       _ = renameParams.setNewName(newName)
       _ = renameParams.setPosition(params.getPosition())
       _ = renameParams.setTextDocument(params.getTextDocument())
-      renames <- server.rename(renameParams).asScala
-    } yield {
-      TestRanges.renderEditAsStrings(base, renames).map {
-        case (file, code) if !buffers.contains(workspace.resolve(file)) =>
-          file -> workspace.resolve(file).readText
-        case other => other
+      renames <- if (prepare != null) {
+        server.rename(renameParams).asScala
+      } else {
+        Future.successful(new WorkspaceEdit)
       }
+    } yield {
+      files.map { file =>
+        val path = workspace.resolve(file)
+        if (!buffers.contains(path)) {
+          file -> path.readText
+        } else {
+          val code = buffers.get(path).get
+          if (renames
+              .getDocumentChanges() == null) {
+            file -> code
+          } else {
+            val renamed = renameFile(file, renames)
+            renamed -> TestRanges
+              .renderEditAsString(file, code, renames)
+              .getOrElse(code)
+          }
+        }
+      }.toMap
     }
+  }
+
+  private def renameFile(file: String, renames: WorkspaceEdit) = {
+    renames
+      .getDocumentChanges()
+      .asScala
+      .collect {
+        case either if either.isRight() =>
+          val rename = either.getRight().asInstanceOf[RenameFile]
+          if (rename.getOldUri().contains(file)) {
+            rename
+              .getNewUri()
+              .toAbsolutePath
+              .toRelative(workspace)
+              .toString
+              .replace('\\', '/')
+          } else {
+            file
+          }
+      }
+      .headOption
+      .getOrElse(file)
   }
 
   def assertImplementation(

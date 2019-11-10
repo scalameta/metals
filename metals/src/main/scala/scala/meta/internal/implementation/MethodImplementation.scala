@@ -28,7 +28,7 @@ object MethodImplementation {
 
   import ImplementationProvider._
 
-  def findParent(
+  def findParentSymbol(
       childSymbol: SymbolInformation,
       childClassSig: ClassSignature,
       parentClassSig: ClassSignature,

@@ -20,6 +20,23 @@ object RenameSuite extends BaseLspSuite("rename") {
   )
 
   renamed(
+    "across-targets",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val <<toRename>> = 123
+       |}
+       |/b/src/main/scala/b/Main2.scala
+       |package b
+       |import a.Main
+       |object Main2{
+       |  val toRename = Main.<<toR@@ename>>
+       |}
+       |""".stripMargin,
+    newName = "otherRename"
+  )
+
+  renamed(
     "unapply",
     """|/a/src/main/scala/a/Main.scala
        |object <<F@@oo>> {
@@ -245,7 +262,9 @@ object RenameSuite extends BaseLspSuite("rename") {
        |class <<Main>>{}
        |object <<M@@ain>>
        |""".stripMargin,
-    newName = "Tree"
+    newName = "Tree",
+    fileRenames =
+      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
   )
 
   renamed(
@@ -255,7 +274,9 @@ object RenameSuite extends BaseLspSuite("rename") {
        |class <<Ma@@in>>{}
        |object <<Main>>
        |""".stripMargin,
-    newName = "Tree"
+    newName = "Tree",
+    fileRenames =
+      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
   )
 
   renamed(
@@ -314,6 +335,39 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "renamed"
   )
 
+  renamed(
+    "java-unchanged",
+    """|/a/src/main/java/a/Other.java
+       |package a;
+       |public class Other{
+       |
+       |}
+       |/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val other = new <<Oth@@er>>()
+       |}
+       |""".stripMargin,
+    newName = "Renamed"
+  )
+
+  renamed(
+    "compile-error",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val <<toRename>> : Int = 123
+       |}
+       |/a/src/main/scala/a/Main2.scala
+       |package a
+       |object Main2{
+       |  val toRename = Main.<<toR@@ename>>
+       |}
+       |""".stripMargin,
+    newName = "otherRename",
+    breakingChange = (str: String) => str.replaceAll("Int", "String")
+  )
+
   // currently not working due to issues in SemanticDB
   // renamed(
   //   "macro-annotation",
@@ -345,9 +399,19 @@ object RenameSuite extends BaseLspSuite("rename") {
       name: String,
       input: String,
       newName: String,
-      nonOpened: Set[String] = Set.empty
+      nonOpened: Set[String] = Set.empty,
+      breakingChange: String => String = identity[String],
+      fileRenames: Map[String, String] = Map.empty
   ): Unit =
-    check(name, input, newName, notRenamed = false, nonOpened = nonOpened)
+    check(
+      name,
+      input,
+      newName,
+      notRenamed = false,
+      nonOpened = nonOpened,
+      breakingChange,
+      fileRenames
+    )
 
   def same(
       name: String,
@@ -365,25 +429,24 @@ object RenameSuite extends BaseLspSuite("rename") {
       input: String,
       newName: String,
       notRenamed: Boolean = false,
-      nonOpened: Set[String] = Set.empty
+      nonOpened: Set[String] = Set.empty,
+      breakingChange: String => String = identity[String],
+      fileRenames: Map[String, String] = Map.empty
   ): Unit = {
     val allMarkersRegex = "(<<|>>|@@|##.*##)"
     val files = FileLayout.mapFromString(input)
     val expectedFiles = files.map {
       case (file, code) =>
-        file -> {
-          if (!notRenamed) {
+        fileRenames.getOrElse(file, file) -> {
+          val expected = if (!notRenamed) {
             code
               .replaceAll("\\<\\<\\S*\\>\\>", newName)
               .replaceAll("##", "")
           } else {
             code.replaceAll(allMarkersRegex, "")
           }
+          "\n" + breakingChange(expected)
         }
-    }
-    val base = files.map {
-      case (fileName, code) =>
-        fileName -> code.replaceAll(allMarkersRegex, "")
     }
 
     val (filename, edit) = files
@@ -394,13 +457,17 @@ object RenameSuite extends BaseLspSuite("rename") {
         )
       }
 
+    val openedFiles = files.keySet
+      .filterNot(file => nonOpened.contains(file))
+
     testAsync(name) {
       cleanWorkspace()
+      val fullInput = input.replaceAll(allMarkersRegex, "")
       for {
         _ <- server.initialize(
           s"""/metals.json
-             |{"a":
-             |  {
+             |{
+             |  "a" : {
              |    "compilerPlugins": [
              |      "org.scalamacros:::paradise:2.1.1"
              |    ],
@@ -408,22 +475,42 @@ object RenameSuite extends BaseLspSuite("rename") {
              |      "org.scalatest::scalatest:3.0.5",
              |      "io.circe::circe-generic:0.12.0"
              |    ]
+             |  },
+             |  "b" : {
+             |    dependsOn: [ "a" ]
              |  }
              |}
-             |${input.replaceAll(allMarkersRegex, "")}""".stripMargin
+             |$fullInput""".stripMargin
         )
-        _ <- Future.sequence(
-          files
-            .filterNot(file => nonOpened.contains(file._1))
+        _ <- Future.sequence {
+          openedFiles
             .map { file =>
-              server.didOpen(s"${file._1}")
+              server.didOpen(file)
             }
-        )
+        }
+        // possible breaking changes for testing
+        _ <- Future.sequence {
+          openedFiles
+            .map { file =>
+              server.didSave(file) { code =>
+                breakingChange(code)
+              }
+            }
+        }
+        // chnage the code to make sure edit distance is being used
+        _ <- Future.sequence {
+          openedFiles
+            .map { file =>
+              server.didChange(file) { code =>
+                "\n" + code
+              }
+            }
+        }
         _ <- server.assertRename(
           filename,
-          edit.replaceAll("(<<|>>)", ""),
+          edit.replaceAll("(<<|>>|##.*##)", ""),
           expectedFiles,
-          base.toMap,
+          files.toMap.keySet,
           newName
         )
       } yield ()

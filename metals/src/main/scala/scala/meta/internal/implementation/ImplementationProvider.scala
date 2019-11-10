@@ -140,7 +140,7 @@ final class ImplementationProvider(
     locations.flatten.toList
   }
 
-  def symbolParent(
+  def topMethodParents(
       symbol: String,
       textDocument: TextDocument
   ): Seq[Location] = {
@@ -159,6 +159,7 @@ final class ImplementationProvider(
         }
       }
     }
+
     val results = for {
       currentInfo <- findSymbol(textDocument, symbol)
       if (!isClassLike(currentInfo))
@@ -166,14 +167,14 @@ final class ImplementationProvider(
     } yield {
       classInfo.signature match {
         case sig: ClassSignature =>
-          methodInClassSignature(sig, currentInfo)
+          methodInParentSignature(sig, currentInfo)
         case _ => Nil
       }
     }
     results.getOrElse(Seq.empty)
   }
 
-  private def methodInClassSignature(
+  private def methodInParentSignature(
       sig: ClassSignature,
       childInfo: SymbolInformation,
       childASF: Map[String, String] = Map.empty
@@ -188,13 +189,13 @@ final class ImplementationProvider(
         val asSeenFrom = AsSeenFrom.translateAsSeenFrom(childASF, parentASF)
         search(parentSym.symbol).map(_.signature) match {
           case Some(parenClassSig: ClassSignature) =>
-            val fromParent = methodInClassSignature(
+            val fromParent = methodInParentSignature(
               parenClassSig,
               childInfo,
               asSeenFrom
             )
             if (fromParent.isEmpty) {
-              locationFromCurrent(
+              locationFromClass(
                 childInfo,
                 sig,
                 parenClassSig,
@@ -212,15 +213,15 @@ final class ImplementationProvider(
     }
   }
 
-  private def locationFromCurrent(
+  private def locationFromClass(
       childInfo: SymbolInformation,
       sig: ClassSignature,
       parenClassSig: ClassSignature,
       asSeenFrom: Map[String, String],
       search: String => Option[SymbolInformation],
       parentTextDocument: Option[TextDocument]
-  ) = {
-    val foundSymbol = MethodImplementation.findParent(
+  ): Option[Location] = {
+    val matchingSymbol = MethodImplementation.findParentSymbol(
       childInfo,
       sig,
       parenClassSig,
@@ -228,7 +229,7 @@ final class ImplementationProvider(
       search
     )
     for {
-      symbol <- foundSymbol
+      symbol <- matchingSymbol
       parentDoc <- parentTextDocument
       source = workspace.resolve(parentDoc.uri)
       implOccurrence <- findDefOccurrence(
