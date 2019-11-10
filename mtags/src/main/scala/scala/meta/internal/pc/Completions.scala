@@ -452,7 +452,7 @@ trait Completions { this: MetalsGlobal =>
           pos,
           text,
           valdef.pos.start,
-          _.isStable
+          _ => true
         )
       case (m @ Match(_, Nil)) :: parent :: _ =>
         CompletionPosition.CaseKeyword(m.selector, editRange, pos, text, parent)
@@ -1076,6 +1076,13 @@ trait Completions { this: MetalsGlobal =>
         isVisited
       }
 
+      // NOTE(gabro): sym.isVar does not work consistently across Scala versions
+      // Specifically, it behaves differently between 2.11 and 2.12/2.13
+      // This check is borrowed from
+      // https://github.com/scala/scala/blob/f389823ef0416612a0058a80c1fe85948ff5fc0a/src/reflect/scala/reflect/internal/Symbols.scala#L2645
+      def isVarSetter(sym: Symbol): Boolean =
+        !sym.isStable && !sym.isLazy && sym.isAccessor
+
       // Returns true if this symbol is a method that we can override.
       def isOverridableMethod(sym: Symbol): Boolean = {
         sym.isMethod &&
@@ -1087,7 +1094,7 @@ trait Completions { this: MetalsGlobal =>
         !sym.isEffectivelyFinal &&
         !sym.name.endsWith(CURSOR) &&
         !sym.isConstructor &&
-        !sym.isMutable &&
+        (!isVarSetter(sym) || (isVarSetter(sym) && sym.isAbstract)) &&
         !sym.isSetter &&
         isCandidate(sym)
       }
@@ -1147,10 +1154,13 @@ trait Completions { this: MetalsGlobal =>
           if (sym.isLazy) "lazy "
           else ""
 
-        val keyword: String = if (sym.isStable) "val " else "def "
+        val keyword: String =
+          if (isVarSetter(sym)) "var "
+          else if (sym.isStable) "val "
+          else "def "
 
         val asciOverrideDef: String = {
-          if (sym.isAbstract) s"${keyword}"
+          if (sym.isAbstract) keyword
           else s"${overrideKeyword}${keyword}"
         }
 
