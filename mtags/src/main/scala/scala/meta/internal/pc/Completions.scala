@@ -1096,7 +1096,11 @@ trait Completions { this: MetalsGlobal =>
       val baseAutoImport: Option[AutoImportPosition] =
         autoImportPosition(pos, text)
       val autoImport: AutoImportPosition = baseAutoImport.getOrElse(
-        AutoImportPosition(lineStart, inferIndent(lineStart, text), false)
+        AutoImportPosition(
+          lineStart,
+          inferIndent(lineStart, text),
+          padTop = false
+        )
       )
       val importContext: Context =
         if (baseAutoImport.isDefined)

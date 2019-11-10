@@ -10,7 +10,7 @@ trait AutoImports { this: MetalsGlobal =>
    * @param offset the offset where to place the import.
    * @param indent the indentation at which to place the import.
    * @param padTop whether the import needs to be padded on top
-   *               in the case that it is the first one after the pacage def
+   *               in the case that it is the first one after the package def
    */
   case class AutoImportPosition(
       offset: Int,
@@ -54,20 +54,22 @@ trait AutoImports { this: MetalsGlobal =>
           case Some(pkg)
               if pkg.symbol != rootMirror.EmptyPackage ||
                 pkg.stats.headOption.exists(_.isInstanceOf[Import]) =>
-            val lastImport: (Tree, Boolean) = pkg.stats
+            val lastImport = pkg.stats
               .takeWhile(_.isInstanceOf[Import])
-              .lastOption // if there are no imports, return true to pad top of import
-              .fold[(Tree, Boolean)]((pkg.pid, true))((tree => (tree, false)))
+              .lastOption
+
+            val padTop = lastImport.isEmpty
+            val lastImportOrPkg = lastImport.getOrElse(pkg.pid)
 
             Some(
               new AutoImportPosition(
-                pos.source.lineToOffset(lastImport._1.pos.focusEnd.line),
+                pos.source.lineToOffset(lastImportOrPkg.pos.focusEnd.line),
                 text,
-                lastImport._2
+                padTop
               )
             )
           case _ =>
-            Some(AutoImportPosition(0, 0, false))
+            Some(AutoImportPosition(0, 0, padTop = false))
         }
     }
   }
