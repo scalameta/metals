@@ -59,7 +59,8 @@ trait Signatures { this: MetalsGlobal =>
         pos,
         scope,
         importPosition.offset,
-        importPosition.indent
+        importPosition.indent,
+        importPosition.padTop
       )
       (tpeString, edits)
     }
@@ -175,7 +176,8 @@ trait Signatures { this: MetalsGlobal =>
         pos: Position,
         context: Context,
         lineStart: Int,
-        inferIndent: => Int
+        inferIndent: => Int,
+        padTop: Boolean
     ): List[l.TextEdit] = {
       val toImport = mutable.Map.empty[Symbol, List[ShortName]]
       val isRootSymbol = Set[Symbol](
@@ -192,6 +194,9 @@ trait Signatures { this: MetalsGlobal =>
       }
       if (toImport.nonEmpty) {
         val indent = " " * inferIndent
+        val topPadding =
+          if (padTop) "\n"
+          else ""
         val scope = new ShortenedNames(context)
         val formatted = toImport.toSeq
           .sortBy {
@@ -208,7 +213,7 @@ trait Signatures { this: MetalsGlobal =>
                 else importNames.mkString
               s"${indent}import ${scope.fullname(owner)}.${name}"
           }
-          .mkString("", "\n", "\n")
+          .mkString(topPadding, "\n", "\n")
         val startPos = pos.withPoint(lineStart).focus
         new l.TextEdit(startPos.toLSP, formatted) :: Nil
       } else {

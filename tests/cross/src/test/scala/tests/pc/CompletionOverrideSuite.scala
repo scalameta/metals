@@ -346,6 +346,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
        |""".stripMargin,
     // Ensure we don't insert `_root_` prefix for import because `val java = 42` is local.
     """|package jutil
+       |
        |import java.{util => ju}
        |abstract class JUtil {
        |  def foo: java.util.List[Int]

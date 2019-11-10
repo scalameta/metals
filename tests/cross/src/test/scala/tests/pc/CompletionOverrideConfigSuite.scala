@@ -30,6 +30,7 @@ object CompletionOverrideConfigSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|package a
+       |
        |import a.{Weekday => w}
        |object Weekday {
        |  case class Monday()
@@ -54,6 +55,7 @@ object CompletionOverrideConfigSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|package b
+       |
        |import java.util.{function => f}
        |class Package {
        |  def function: java.util.function.Function[Int, String]
