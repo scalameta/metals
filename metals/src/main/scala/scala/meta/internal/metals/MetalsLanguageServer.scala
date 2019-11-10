@@ -381,7 +381,8 @@ class MetalsLanguageServer(
         ),
         embedded,
         statusBar,
-        sh
+        sh,
+        Option(params)
       )
     )
     doctor = new Doctor(

@@ -65,6 +65,11 @@ public interface PresentationCompilerConfig {
     boolean isSignatureHelpDocumentationEnabled();
 
     /**
+     * Returns true if completions can contain snippets.
+     */
+    boolean isCompletionSnippetsEnabled();
+
+    /**
      * The maximum delay for requests to respond.
      *
      * After the given delay, every request to completions/hover/signatureHelp

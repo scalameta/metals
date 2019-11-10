@@ -509,6 +509,16 @@ object MetalsEnrichments
         )
       } yield hierarchicalDocumentSymbolSupport.booleanValue).getOrElse(false)
 
+    def supportsCompletionSnippets: Boolean =
+      (for {
+        params <- initializeParams
+        capabilities <- Option(params.getCapabilities)
+        textDocument <- Option(capabilities.getTextDocument)
+        completion <- Option(textDocument.getCompletion)
+        completionItem <- Option(completion.getCompletionItem)
+        snippetSupport <- Option(completionItem.getSnippetSupport())
+      } yield snippetSupport.booleanValue).getOrElse(false)
+
   }
 
   implicit class XtensionPromise[T](promise: Promise[T]) {

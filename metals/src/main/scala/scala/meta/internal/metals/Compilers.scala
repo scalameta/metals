@@ -6,6 +6,7 @@ import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
+import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
@@ -40,7 +41,8 @@ class Compilers(
     search: SymbolSearch,
     embedded: Embedded,
     statusBar: StatusBar,
-    sh: ScheduledExecutorService
+    sh: ScheduledExecutorService,
+    initializeParams: Option[InitializeParams]
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   val plugins = new CompilerPlugins()
@@ -247,7 +249,11 @@ class Compilers(
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
       .withConfiguration(
-        config.compilers.copy(_symbolPrefixes = userConfig().symbolPrefixes)
+        config.compilers.copy(
+          _symbolPrefixes = userConfig().symbolPrefixes,
+          isCompletionSnippetsEnabled =
+            initializeParams.supportsCompletionSnippets
+        )
       )
 
   def newCompiler(

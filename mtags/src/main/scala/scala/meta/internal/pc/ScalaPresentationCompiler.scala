@@ -85,7 +85,8 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[CompletionList] =
     access.withInterruptableCompiler(emptyCompletion, params.token) { global =>
-      new CompletionProvider(global, params).completions()
+      new CompletionProvider(global, params, config.isCompletionSnippetsEnabled)
+        .completions()
     }
 
   // NOTE(olafur): hover and signature help use a "shared" compiler instance because
