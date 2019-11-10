@@ -38,6 +38,9 @@ import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.NoopLanguageClient
 import scala.meta.internal.tvp.TreeViewDidChangeParams
+import java.util.concurrent.ConcurrentHashMap
+import scala.meta.internal.decorations.DecorationOptions
+import scala.meta.internal.decorations.PublishDecorationsParams
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -57,6 +60,8 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   val logMessages = new ConcurrentLinkedQueue[MessageParams]()
   val treeViewChanges = new ConcurrentLinkedQueue[TreeViewDidChangeParams]()
   val clientCommands = new ConcurrentLinkedDeque[ExecuteCommandParams]()
+  val decorations =
+    new ConcurrentHashMap[AbsolutePath, Array[DecorationOptions]]()
   var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
     _: MetalsSlowTaskParams =>
       None
@@ -269,6 +274,48 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       params: TreeViewDidChangeParams
   ): Unit = {
     treeViewChanges.add(params)
+  }
+
+  override def metalsPublishDecorations(
+      params: PublishDecorationsParams
+  ): Unit = {
+    val path = params.uri.toAbsolutePath
+    decorations.put(path, params.options)
+  }
+
+  def workspaceDecorations: String = {
+    workspaceDecorations(isHover = false)
+  }
+  def workspaceDecorationHoverMessage: String = {
+    workspaceDecorations(isHover = true)
+  }
+  private def workspaceDecorations(isHover: Boolean): String = {
+    val isSingle = decorations.size() == 1
+    val out = new StringBuilder()
+    decorations.asScala.foreach {
+      case (path, decorations) =>
+        if (!isSingle) {
+          out
+            .append("/")
+            .append(path.toRelative(workspace).toURI(false).toString())
+            .append("\n")
+        }
+        val input = path.toInputFromBuffers(buffers)
+        input.text.lines.zipWithIndex.foreach {
+          case (line, i) =>
+            out.append(line)
+            decorations
+              .filter(_.range.getEnd().getLine() == i)
+              .foreach { decoration =>
+                out.append(
+                  if (isHover) decoration.hoverMessage.getValue()
+                  else decoration.renderOptions.after.contentText
+                )
+              }
+            out.append("\n")
+        }
+    }
+    out.toString()
   }
 
   def workspaceTreeViewChanges: String = {

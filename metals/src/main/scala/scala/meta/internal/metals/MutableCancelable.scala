@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentLinkedQueue
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.async.ConcurrentQueue
 
 /** Open collection of cancelables that should cancel together */
 final class MutableCancelable extends Cancelable {
@@ -16,5 +16,7 @@ final class MutableCancelable extends Cancelable {
     }
     this
   }
-  override def cancel(): Unit = Cancelable.cancelAll(toCancel.asScala)
+  override def cancel(): Unit = {
+    Cancelable.cancelAll(ConcurrentQueue.pollAll(toCancel))
+  }
 }

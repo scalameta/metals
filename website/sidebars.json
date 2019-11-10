@@ -21,6 +21,7 @@
       "build-tools/new-build-tool",
       "editors/new-editor",
       "editors/tree-view-protocol",
+      "editors/decoration-protocol",
       "contributors/project-goals",
       "contributors/getting-started",
       "contributors/updating-website",

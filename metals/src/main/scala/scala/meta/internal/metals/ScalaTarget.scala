@@ -10,7 +10,14 @@ case class ScalaTarget(info: BuildTarget, scalac: ScalacOptionsItem) {
 
   def isScalaTarget: Boolean = info.getLanguageIds().contains("scala")
 
-  def classpath: List[AbsolutePath] = {
+  def fullClasspath: List[AbsolutePath] = {
+    scalac
+      .getClasspath()
+      .asScala
+      .toList
+      .map(_.toAbsolutePath)
+  }
+  def jarClasspath: List[AbsolutePath] = {
     scalac
       .getClasspath()
       .asScala

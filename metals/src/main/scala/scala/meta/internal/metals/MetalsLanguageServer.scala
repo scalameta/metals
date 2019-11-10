@@ -45,6 +45,9 @@ import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
+import scala.meta.internal.worksheets.WorksheetProvider
+import scala.meta.internal.worksheets.WorksheetProvider
+import scala.meta.internal.decorations.PublishDecorationsParams
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -115,7 +118,8 @@ class MetalsLanguageServer(
     () => workspace,
     () => buildServer,
     languageClient,
-    buildTarget => focusedDocumentBuildTarget.get() == buildTarget
+    buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
+    worksheets => onWorksheetChanged(worksheets)
   )
   private val fileWatcher = register(
     new FileWatcher(
@@ -132,7 +136,9 @@ class MetalsLanguageServer(
       onBuildChangedUnbatched
     )
   val pauseables: Pauseable = Pauseable.fromPausables(
-    onBuildChanged :: parseTrees :: compilations.pauseables
+    onBuildChanged ::
+      parseTrees ::
+      compilations.pauseables
   )
 
   // These can't be instantiated until we know the workspace root directory.
@@ -169,6 +175,7 @@ class MetalsLanguageServer(
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
+  var worksheetProvider: Option[WorksheetProvider] = None
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = new ConfiguredLanguageClient(client, config)(ec)
@@ -249,7 +256,8 @@ class MetalsLanguageServer(
       statusBar,
       time,
       report => compilers.didCompile(report),
-      () => treeView
+      () => treeView,
+      () => worksheetProvider
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)
@@ -385,6 +393,21 @@ class MetalsLanguageServer(
       tables,
       messages
     )
+    if (clientExperimentalCapabilities.decorationProvider) {
+      worksheetProvider = Some(
+        register(
+          new WorksheetProvider(
+            workspace,
+            buffers,
+            buildTargets,
+            languageClient,
+            () => userConfig,
+            statusBar,
+            diagnostics
+          )
+        )
+      )
+    }
     if (clientExperimentalCapabilities.treeViewProvider) {
       treeView = new MetalsTreeViewProvider(
         () => workspace,
@@ -598,6 +621,7 @@ class MetalsLanguageServer(
   @JsonNotification("textDocument/didOpen")
   def didOpen(params: DidOpenTextDocumentParams): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
+    focusedDocument = Some(path)
     openedFiles.add(path)
     openTextDocument.set(path)
 
@@ -625,7 +649,6 @@ class MetalsLanguageServer(
       compilations.compileFiles(List(path)).ignoreValue.asJava
     }
   }
-
   @JsonNotification("metals/didFocusTextDocument")
   def didFocus(uri: String): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
@@ -647,10 +670,11 @@ class MetalsLanguageServer(
       buildTargets.inverseSources(path) match {
         case Some(target) =>
           val isAffectedByCurrentCompilation =
-            buildTargets.isInverseDependency(
-              target,
-              compilations.currentlyCompiling.toList
-            )
+            path.isWorksheet ||
+              buildTargets.isInverseDependency(
+                target,
+                compilations.currentlyCompiling.toList
+              )
           def isAffectedByLastCompilation: Boolean =
             !compilations.wasPreviouslyCompiled(target) &&
               buildTargets.isInverseDependency(
@@ -1487,6 +1511,7 @@ class MetalsLanguageServer(
       buildClient.reset()
       semanticDBIndexer.reset()
       treeView.reset()
+      worksheetProvider.foreach(_.reset())
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
       for {
@@ -1609,6 +1634,24 @@ class MetalsLanguageServer(
       }
     )
   }
+
+  private def onWorksheetChanged(
+      paths: Seq[AbsolutePath]
+  ): Future[Unit] = {
+    for {
+      worksheet <- paths.find { path =>
+        focusedDocument.contains(path) &&
+        path.isWorksheet
+      }
+      provider <- worksheetProvider
+    } yield {
+      provider.decorations(worksheet, EmptyCancelToken).map { decorations =>
+        val params =
+          new PublishDecorationsParams(worksheet.toURI.toString(), decorations)
+        languageClient.metalsPublishDecorations(params)
+      }
+    }
+  }.getOrElse(Future.successful(()))
 
   private def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]

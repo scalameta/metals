@@ -145,15 +145,7 @@ class Compilers(
       token: CancelToken
   ): Future[CompletionList] =
     withPC(params, None) { (pc, pos) =>
-      pc.complete(
-          CompilerOffsetParams(
-            pos.input.syntax,
-            pos.input.text,
-            pos.start,
-            token
-          )
-        )
-        .asScala
+      pc.complete(CompilerOffsetParams.fromPos(pos, token)).asScala
     }.getOrElse(Future.successful(new CompletionList()))
 
   def hover(
@@ -162,14 +154,7 @@ class Compilers(
       interactiveSemanticdbs: InteractiveSemanticdbs
   ): Future[Option[Hover]] =
     withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
-      pc.hover(
-          CompilerOffsetParams(
-            pos.input.syntax,
-            pos.input.text,
-            pos.start,
-            token
-          )
-        )
+      pc.hover(CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map(_.asScala)
     }.getOrElse {
@@ -180,14 +165,7 @@ class Compilers(
       token: CancelToken
   ): Future[DefinitionResult] =
     withPC(params, None) { (pc, pos) =>
-      pc.definition(
-          CompilerOffsetParams(
-            pos.input.syntax,
-            pos.input.text,
-            pos.start,
-            token
-          )
-        )
+      pc.definition(CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map { c =>
           DefinitionResult(
@@ -204,15 +182,7 @@ class Compilers(
       interactiveSemanticdbs: InteractiveSemanticdbs
   ): Future[SignatureHelp] =
     withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
-      pc.signatureHelp(
-          CompilerOffsetParams(
-            pos.input.syntax,
-            pos.input.text,
-            pos.start,
-            token
-          )
-        )
-        .asScala
+      pc.signatureHelp(CompilerOffsetParams.fromPos(pos, token)).asScala
     }.getOrElse(Future.successful(new SignatureHelp()))
 
   def loadCompiler(
@@ -224,7 +194,7 @@ class Compilers(
       .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
     target match {
       case None =>
-        if (path.toLanguage.isScala) Some(ramboCompiler)
+        if (path.isScalaFilename) Some(ramboCompiler)
         else None
       case Some(value) => loadCompiler(value)
     }
@@ -289,10 +259,8 @@ class Compilers(
     // `mtags.BuildInfo.scalaCompilerVersion`. In the case when
     // `info.getScalaVersion == mtags.BuildInfo.scalaCompilerVersion` then we
     // skip fetching the mtags module from Maven.
-    val isCurrentScalaCompilerVersion =
-      ScalaVersions.dropVendorSuffix(info.getScalaVersion) == mtags.BuildInfo.scalaCompilerVersion
     val pc: PresentationCompiler =
-      if (isCurrentScalaCompilerVersion) {
+      if (ScalaVersions.isCurrentScalaCompilerVersion(info.getScalaVersion())) {
         new ScalaPresentationCompiler()
       } else {
         embedded.presentationCompiler(info, scalac)

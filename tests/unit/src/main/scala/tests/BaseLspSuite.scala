@@ -16,6 +16,7 @@ import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+import scala.meta.internal.metals.SlowTaskConfig
 
 /**
  * Full end to end integration tests against a full metals language server.
@@ -24,7 +25,8 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   MetalsLogger.updateDefaultFormat()
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration = UserConfiguration()
-  def serverConfig: MetalsServerConfig = MetalsServerConfig.default
+  def serverConfig: MetalsServerConfig =
+    MetalsServerConfig.default.copy(slowTask = SlowTaskConfig.on)
   def time: Time = Time.system
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())

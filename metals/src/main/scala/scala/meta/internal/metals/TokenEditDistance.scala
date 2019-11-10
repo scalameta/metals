@@ -270,8 +270,9 @@ object TokenEditDistance {
       doNothingWhenUnchanged: Boolean = true
   ): TokenEditDistance = {
     val isScala =
-      originalInput.path.endsWith(".scala") &&
-        revisedInput.path.endsWith(".scala")
+      originalInput.path.isScalaFilename &&
+        revisedInput.path.isScalaFilename
+
     if (!isScala) {
       // Ignore non-scala Files.
       unchanged

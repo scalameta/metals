@@ -17,6 +17,7 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import scala.meta.internal.decorations.PublishDecorationsParams
 
 /**
  * Editor client that implement dialogue UIs like window/showMessageRequest.
@@ -187,6 +188,10 @@ final class MetalsHttpClient(
     triggerReload()
     underlying.logMessage(message)
   }
+
+  override def metalsPublishDecorations(
+      params: PublishDecorationsParams
+  ): Unit = ()
 
   // =======
   // Helpers

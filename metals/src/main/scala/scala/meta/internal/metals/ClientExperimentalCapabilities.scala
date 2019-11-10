@@ -3,15 +3,13 @@ import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 
 final case class ClientExperimentalCapabilities(
-    debuggingProvider: java.lang.Boolean,
-    treeViewProvider: java.lang.Boolean
+    debuggingProvider: java.lang.Boolean = false,
+    treeViewProvider: java.lang.Boolean = false,
+    decorationProvider: java.lang.Boolean = false
 )
 
 object ClientExperimentalCapabilities {
-  val Default = new ClientExperimentalCapabilities(
-    debuggingProvider = false,
-    treeViewProvider = false
-  )
+  val Default = new ClientExperimentalCapabilities()
 
   def from(
       capabilities: l.ClientCapabilities

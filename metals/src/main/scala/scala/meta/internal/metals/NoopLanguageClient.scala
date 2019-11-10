@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.meta.internal.tvp._
+import scala.meta.internal.decorations.PublishDecorationsParams
 
 /**
  * A language client that ignores all requests.
@@ -38,6 +39,9 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   }
   override def metalsTreeViewDidChange(
       params: TreeViewDidChangeParams
+  ): Unit = ()
+  override def metalsPublishDecorations(
+      params: PublishDecorationsParams
   ): Unit = ()
 }
 

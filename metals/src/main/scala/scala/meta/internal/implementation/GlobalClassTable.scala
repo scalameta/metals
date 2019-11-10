@@ -37,7 +37,7 @@ final class GlobalClassTable(
     for {
       buildTargetId <- buildTargets.inverseSources(source)
       scalaTarget <- buildTargets.scalaTarget(buildTargetId)
-      classpath = new Classpath(scalaTarget.classpath)
+      classpath = new Classpath(scalaTarget.jarClasspath)
     } yield {
       buildTargetsIndexes.getOrElseUpdate(
         buildTargetId,

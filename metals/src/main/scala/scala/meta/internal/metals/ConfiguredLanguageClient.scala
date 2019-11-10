@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.decorations.PublishDecorationsParams
 
 /**
  * Delegates requests/notifications to the underlying language client according to the user configuration.
@@ -23,10 +24,10 @@ final class ConfiguredLanguageClient(
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
-  @volatile private var debuggingSupported = true
+  private var clientCapabilities = ClientExperimentalCapabilities.Default
 
   override def configure(capabilities: ClientExperimentalCapabilities): Unit = {
-    debuggingSupported = capabilities.debuggingProvider
+    clientCapabilities = capabilities
   }
 
   override def shutdown(): Unit = {
@@ -100,8 +101,9 @@ final class ConfiguredLanguageClient(
   ): Unit = {
     if (config.executeClientCommand.isOn) {
       params.getCommand match {
-        case ClientCommands.RefreshModel() if !debuggingSupported =>
-        // ignore
+        case ClientCommands.RefreshModel()
+            if !clientCapabilities.debuggingProvider =>
+          () // ignore
         case _ =>
           underlying.metalsExecuteClientCommand(params)
       }
@@ -115,6 +117,14 @@ final class ConfiguredLanguageClient(
       underlying.metalsInputBox(params)
     } else {
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
+    }
+  }
+
+  override def metalsPublishDecorations(
+      params: PublishDecorationsParams
+  ): Unit = {
+    if (clientCapabilities.decorationProvider) {
+      underlying.metalsPublishDecorations(params)
     }
   }
 

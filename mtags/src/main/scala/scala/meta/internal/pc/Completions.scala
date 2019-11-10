@@ -877,6 +877,8 @@ trait Completions { this: MetalsGlobal =>
         }
         start
       }
+      text.length > openDelim &&
+      openDelim >= 0 &&
       text.charAt(openDelim) == '{'
     }
 
