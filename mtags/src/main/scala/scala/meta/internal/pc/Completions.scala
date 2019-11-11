@@ -19,6 +19,9 @@ import scala.meta.internal.tokenizers.Chars
  */
 trait Completions { this: MetalsGlobal =>
 
+  val clientSupportsSnippets: Boolean =
+    metalsConfig.isCompletionSnippetsEnabled()
+
   /**
    * A member for symbols on the classpath that are not in scope, produced via workspace/symbol.
    */
@@ -765,11 +768,11 @@ trait Completions { this: MetalsGlobal =>
           if (text.charAt(lit.pos.start - 1) != 's')
             List(new l.TextEdit(lit.pos.withEnd(lit.pos.start).toLSP, "s"))
           else Nil
-        val dolarEdits = for {
+        val dollarEdits = for {
           i <- lit.pos.start to (lit.pos.end - CURSOR.length())
           if text.charAt(i) == '$' && i != interpolator.dollar
         } yield new l.TextEdit(pos.source.position(i).withEnd(i).toLSP, "$")
-        interpolatorEdit ++ dolarEdits
+        interpolatorEdit ++ dollarEdits
       }
 
       def newText(sym: Symbol): String = {
@@ -793,6 +796,7 @@ trait Completions { this: MetalsGlobal =>
 
       val filter: String =
         text.substring(lit.pos.start, pos.point - interpolator.name.length)
+
       override def contribute: List[Member] = {
         metalsScopeMembers(pos).collect {
           case s: ScopeMember
@@ -985,7 +989,7 @@ trait Completions { this: MetalsGlobal =>
           allParams.exists(param => param.name.startsWith(prefix))
         val isExplicitlyCalled = suffix.startsWith(prefix)
         val hasParamsToFill = allParams.count(!_.hasDefault) > 1
-        if ((shouldShow || isExplicitlyCalled) && hasParamsToFill) {
+        if ((shouldShow || isExplicitlyCalled) && hasParamsToFill && clientSupportsSnippets) {
           val editText = allParams.zipWithIndex
             .collect {
               case (param, index) if !param.hasDefault =>
@@ -1202,7 +1206,11 @@ trait Completions { this: MetalsGlobal =>
         private def signature = printer.defaultMethodSignature()
         private def edit = new l.TextEdit(
           range,
-          s"$filterText$signature = $${0:???}"
+          if (clientSupportsSnippets) {
+            s"$filterText$signature = $${0:???}"
+          } else {
+            s"$filterText$signature = ???"
+          }
         )
       }
 
@@ -1259,7 +1267,11 @@ trait Completions { this: MetalsGlobal =>
           "match",
           new l.TextEdit(
             editRange,
-            "match {\n\tcase$0\n}"
+            if (clientSupportsSnippets) {
+              "match {\n\tcase$0\n}"
+            } else {
+              "match"
+            }
           ),
           completionsSymbol("match"),
           label = Some("match"),
@@ -1273,7 +1285,11 @@ trait Completions { this: MetalsGlobal =>
               tail
                 .map(_.edit.getNewText())
                 .mkString(
-                  s"match {\n\t${head.edit.getNewText} $$0\n\t",
+                  if (clientSupportsSnippets) {
+                    s"match {\n\t${head.edit.getNewText} $$0\n\t"
+                  } else {
+                    s"match {\n\t${head.edit.getNewText}\n\t"
+                  },
                   "\n\t",
                   "\n}"
                 )
@@ -1408,7 +1424,10 @@ trait Completions { this: MetalsGlobal =>
         if (definitions.isTupleType(parents.selector)) {
           result += new TextEditMember(
             "case () =>",
-            new l.TextEdit(editRange, "case ($0) =>"),
+            new l.TextEdit(
+              editRange,
+              if (clientSupportsSnippets) "case ($0) =>" else "case () =>"
+            ),
             parents.selector.typeSymbol,
             label = Some(s"case ${parents.selector} =>"),
             command = metalsConfig.parameterHintsCommand().asScala
@@ -1466,8 +1485,10 @@ trait Completions { this: MetalsGlobal =>
         val label = s"case $pattern =>"
         new TextEditMember(
           filterText = label,
-          edit =
-            new l.TextEdit(editRange, label + (if (isSnippet) " $0" else "")),
+          edit = new l.TextEdit(
+            editRange,
+            label + (if (isSnippet && clientSupportsSnippets) " $0" else "")
+          ),
           sym = sym,
           label = Some(label),
           additionalTextEdits = autoImports
@@ -1482,7 +1503,8 @@ trait Completions { this: MetalsGlobal =>
           s"case _: $name",
           new l.TextEdit(
             editRange,
-            if (isSnippet) s"case $${0:_}: $name$suffix => "
+            if (isSnippet && clientSupportsSnippets)
+              s"case $${0:_}: $name$suffix => "
             else s"case _: $name$suffix =>"
           ),
           sym,

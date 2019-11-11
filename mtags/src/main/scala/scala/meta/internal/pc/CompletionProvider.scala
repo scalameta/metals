@@ -16,8 +16,7 @@ import org.eclipse.{lsp4j => l}
 
 class CompletionProvider(
     val compiler: MetalsGlobal,
-    params: OffsetParams,
-    clientSupportsSnippets: Boolean
+    params: OffsetParams
 ) {
   import compiler._
 
@@ -45,6 +44,8 @@ class CompletionProvider(
     )
     val pos = unit.position(params.offset)
     val isSnippet = isSnippetEnabled(pos, params.text())
+    val clientSupportsSnippets =
+      compiler.metalsConfig.isCompletionSnippetsEnabled()
     val (i, completion, editRange, query) = safeCompletionsAt(pos)
     val start = inferIdentStart(pos, params.text())
     val end = inferIdentEnd(pos, params.text())
