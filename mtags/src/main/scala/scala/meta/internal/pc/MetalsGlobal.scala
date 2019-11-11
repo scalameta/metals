@@ -573,11 +573,11 @@ class MetalsGlobal(
 
     def snippetCursor: String = sym.paramss match {
       case Nil =>
-        "$0"
+        if (clientSupportsSnippets) "$0" else ""
       case Nil :: Nil =>
-        "()$0"
+        if (clientSupportsSnippets) "()$0" else "()"
       case _ =>
-        "($0)"
+        if (clientSupportsSnippets) "($0)" else ""
     }
 
     def isDefined: Boolean =

@@ -44,6 +44,8 @@ class CompletionProvider(
     )
     val pos = unit.position(params.offset)
     val isSnippet = isSnippetEnabled(pos, params.text())
+    val clientSupportsSnippets =
+      compiler.metalsConfig.isCompletionSnippetsEnabled()
     val (i, completion, editRange, query) = safeCompletionsAt(pos)
     val start = inferIdentStart(pos, params.text())
     val end = inferIdentEnd(pos, params.text())
@@ -88,13 +90,13 @@ class CompletionProvider(
           item.setDetail(detail)
         }
         val templateSuffix =
-          if (!isSnippet) ""
+          if (!isSnippet || !clientSupportsSnippets) ""
           else if (completion.isNew &&
             r.sym.dealiased.requiresTemplateCurlyBraces) " {}"
           else ""
 
         val typeSuffix =
-          if (!isSnippet) ""
+          if (!isSnippet || !clientSupportsSnippets) ""
           else if (completion.isType && r.sym.hasTypeParams) "[$0]"
           else if (completion.isNew && r.sym.hasTypeParams) "[$0]"
           else ""
@@ -111,7 +113,11 @@ class CompletionProvider(
             item.setFilterText(symbolName)
         }
 
-        item.setInsertTextFormat(InsertTextFormat.Snippet)
+        if (clientSupportsSnippets) {
+          item.setInsertTextFormat(InsertTextFormat.Snippet)
+        } else {
+          item.setInsertTextFormat(InsertTextFormat.PlainText)
+        }
 
         r match {
           case i: TextEditMember =>
@@ -151,7 +157,9 @@ class CompletionProvider(
                 case head :: Nil if head.forall(_.isImplicit) =>
                   () // Don't set ($0) snippet for implicit-only params.
                 case _ =>
-                  item.setTextEdit(textEdit(baseLabel + "($0)"))
+                  if (clientSupportsSnippets) {
+                    item.setTextEdit(textEdit(baseLabel + "($0)"))
+                  }
                   metalsConfig
                     .parameterHintsCommand()
                     .asScala

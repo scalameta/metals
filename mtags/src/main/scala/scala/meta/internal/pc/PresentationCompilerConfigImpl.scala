@@ -19,6 +19,7 @@ case class PresentationCompilerConfigImpl(
     isHoverDocumentationEnabled: Boolean = true,
     snippetAutoIndent: Boolean = true,
     isSignatureHelpDocumentationEnabled: Boolean = true,
+    isCompletionSnippetsEnabled: Boolean = true,
     isCompletionItemResolve: Boolean = true,
     timeoutDelay: Long = 20,
     timeoutUnit: TimeUnit = TimeUnit.SECONDS
