@@ -110,6 +110,9 @@ trait MtagsEnrichments {
     def isScala: Boolean = {
       toLanguage == Language.SCALA
     }
+    def isJava: Boolean = {
+      toLanguage == Language.JAVA
+    }
     def isSemanticdb: Boolean = {
       file.toNIO.getFileName.toString.endsWith(".semanticdb")
     }

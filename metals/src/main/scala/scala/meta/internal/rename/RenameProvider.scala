@@ -234,7 +234,11 @@ final class RenameProvider(
       index
         .definition(MSymbol(symbol))
         .exists { definition =>
-          definition.path.isWorkspaceSource(workspace)
+          val isLocal = definition.path.isWorkspaceSource(workspace)
+          if (isLocal && definition.path.isJava) {
+            client.showMessage(javaSymbol(symbol.desc.name.value))
+          }
+          isLocal
         }
 
     symbol.startsWith("local") || isFromWorkspace
@@ -303,6 +307,15 @@ final class RenameProvider(
       new TextDocumentIdentifier(location.getUri()),
       location.getRange().getStart()
     )
+  }
+
+  private def javaSymbol(
+      old: String
+  ): MessageParams = {
+    val message =
+      s"""|Definition of $old is contained in a java file.
+          |Rename will only work inside of Scala files.""".stripMargin
+    new MessageParams(MessageType.Warning, message)
   }
 
   private def forbiddenRename(

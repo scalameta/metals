@@ -255,12 +255,13 @@ object MetalsEnrichments
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
       isLocalFileSystem(workspace) &&
-        !isInReadonlyDirectory(workspace)
+        !isInReadonlyDirectory(workspace) &&
+        path.toNIO.startsWith(workspace.toNIO)
 
-    def isLocalFileSystem(workspace: AbsolutePath) =
+    def isLocalFileSystem(workspace: AbsolutePath): Boolean =
       workspace.toNIO.getFileSystem == path.toNIO.getFileSystem
 
-    def isInReadonlyDirectory(workspace: AbsolutePath) =
+    def isInReadonlyDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO
       )
