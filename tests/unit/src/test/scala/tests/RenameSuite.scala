@@ -368,32 +368,50 @@ object RenameSuite extends BaseLspSuite("rename") {
     breakingChange = (str: String) => str.replaceAll("Int", "String")
   )
 
-  // currently not working due to issues in SemanticDB
-  // renamed(
-  //   "macro-annotation",
-  //   """|/a/src/main/scala/a/Main.scala
-  //      |package a
-  //      |import io.circe.generic.JsonCodec
-  //      |trait LivingBeing
-  //      |@JsonCodec sealed trait <<An@@imal>> extends LivingBeing
-  //      |object Animal {
-  //      |  case object Dog extends <<Animal>>
-  //      |  case object Cat extends <<Animal>>
-  //      |}
-  //      |""".stripMargin,
-  //   newName = "Tree"
-  // )
-  // renamed(
-  //   "classof",
-  //   """|/a/src/main/scala/a/Main.scala
-  //      |package a
-  //      |trait <<A@@BC>>
-  //      |object Main{
-  //      |  val a = classOf[<<A@@BC>>]
-  //      |}
-  //      |""".stripMargin,
-  //   newName = "Animal"
-  // )
+  // tests currently not working correctly due to issues in SemanticDB
+  // issue https://github.com/scalameta/scalameta/issues/1636
+  renamed(
+    "params",
+    """|/a/src/main/scala/a/Main.scala
+       |case class Name(<<va@@lue>>: String)
+       |
+       |object Main {
+       |  val name1 = Name(value = "42")
+       |   .copy(<<value>> = "43")
+       |   .<<value>>
+       |  val name2 = new Name(value = "44")
+       |}
+       |""".stripMargin,
+    newName = "name"
+  )
+
+  same(
+    "macro-annotation",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |trait LivingBeing
+       |@JsonCodec sealed trait <<An@@imal>> extends LivingBeing
+       |object Animal {
+       |  case object Dog extends <<Animal>>
+       |  case object Cat extends <<Animal>>
+       |}
+       |""".stripMargin
+  )
+
+  renamed(
+    "type-params",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait <<A@@BC>>
+       |class CBD[T <: <<AB@@C>>]
+       |object Main{
+       |  val a = classOf[ABC]
+       |  val b = new CBD[<<ABC>>]
+       |}
+       |""".stripMargin,
+    newName = "Animal"
+  )
 
   def renamed(
       name: String,

@@ -250,10 +250,20 @@ object MetalsEnrichments
       }
     }
     def isDependencySource(workspace: AbsolutePath): Boolean =
-      workspace.toNIO.getFileSystem == path.toNIO.getFileSystem &&
-        path.toNIO.startsWith(
-          workspace.resolve(Directories.readonly).toNIO
-        )
+      isLocalFileSystem(workspace) &&
+        isInReadonlyDirectory(workspace)
+
+    def isWorkspaceSource(workspace: AbsolutePath): Boolean =
+      isLocalFileSystem(workspace) &&
+        !isInReadonlyDirectory(workspace)
+
+    def isLocalFileSystem(workspace: AbsolutePath) =
+      workspace.toNIO.getFileSystem == path.toNIO.getFileSystem
+
+    def isInReadonlyDirectory(workspace: AbsolutePath) =
+      path.toNIO.startsWith(
+        workspace.resolve(Directories.readonly).toNIO
+      )
 
     /**
      * Writes zip file contents to disk under $workspace/.metals/readonly.

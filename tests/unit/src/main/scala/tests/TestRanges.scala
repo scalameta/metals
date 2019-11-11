@@ -42,11 +42,14 @@ object TestRanges extends RangeReplace {
         .asScala
         .find(
           change =>
-            change.isLeft && change.getLeft.getTextDocument.getUri
-              .contains(file)
+            change.isLeft &&
+              change.getLeft.getTextDocument.getUri.contains(file)
         )
     } yield
-      TextEdits.applyEdits(code, validLocations.getLeft.getEdits.asScala.toList)
+      TextEdits.applyEdits(
+        code,
+        validLocations.getLeft.getEdits.asScala.toList
+      )
 
   }
 }

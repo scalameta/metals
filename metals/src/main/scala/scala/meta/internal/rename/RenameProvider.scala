@@ -16,7 +16,6 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.metals.Directories
 import org.eclipse.lsp4j.Location
 import scala.meta.internal.metals.MetalsLanguageClient
 import org.eclipse.lsp4j.MessageParams
@@ -235,11 +234,7 @@ final class RenameProvider(
       index
         .definition(MSymbol(symbol))
         .exists { definition =>
-          workspace.toNIO.getFileSystem == definition.path.toNIO.getFileSystem &&
-          !definition.path.toNIO
-            .startsWith(
-              workspace.resolve(Directories.readonly).toNIO
-            )
+          definition.path.isWorkspaceSource(workspace)
         }
 
     symbol.startsWith("local") || isFromWorkspace
