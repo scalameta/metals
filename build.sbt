@@ -42,6 +42,12 @@ inThisBuild(
         url("https://github.com/laughedelic")
       ),
       Developer(
+        "ckipp01",
+        "Chris Kipp",
+        "ckipp@pm.me",
+        url("https://wiki.chronica.xyz")
+      ),
+      Developer(
         "gabro",
         "Gabriele Petronella",
         "gabriele@buildo.io",
