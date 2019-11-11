@@ -34,7 +34,10 @@ abstract class BasePCSuite extends BaseSuite {
   val scalaLibrary: Seq[Path] = PackageIndex.scalaLibrary
   def extraClasspath: Seq[Path] = Nil
   def scalacOptions: Seq[String] = Nil
-  def config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
+  def config: PresentationCompilerConfig =
+    PresentationCompilerConfigImpl().copy(
+      snippetAutoIndent = false
+    )
   val myclasspath: Seq[Path] = extraClasspath ++ scalaLibrary.toList
   val index = new DelegatingGlobalSymbolIndex(OnDemandSymbolIndex())
   val indexer = new Docstrings(index)

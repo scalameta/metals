@@ -271,6 +271,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     """|def self: _root_.a.c.Conflict
        |def selfArg: Option[_root_.a.c.Conflict]
        |def selfPath: Inner
+       |Implement all members
        |""".stripMargin,
     includeDetail = false
   )
@@ -684,6 +685,7 @@ object CompletionOverrideSuite extends BaseCompletionSuite {
     """|var hello1: Int
        |val hello2: Int
        |def hello3: Int
+       |Implement all members
        |""".stripMargin,
     includeDetail = false
   )

@@ -14,6 +14,8 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param slowTask how to handle metals/slowTask requests.
  * @param showMessage how to handle window/showMessage notifications.
  * @param showMessageRequest how to handle window/showMessageRequest requests.
+ * @param snippetAutoIndent if the client defaults to adding the identation of the reference
+ *                          line that the operation started on (relevant for multiline textEdits)
  * @param isNoInitialized set true if the editor client doesn't call the `initialized`
  *                        notification for some reason, see https://github.com/natebosch/vim-lsc/issues/113
  * @param isHttpEnabled whether to start the Metals HTTP client interface. This is needed
@@ -30,6 +32,10 @@ final case class MetalsServerConfig(
     showMessage: ShowMessageConfig = ShowMessageConfig.default,
     showMessageRequest: ShowMessageRequestConfig =
       ShowMessageRequestConfig.default,
+    snippetAutoIndent: Boolean = MetalsServerConfig.binaryOption(
+      "metals.snippet-auto-indent",
+      default = true
+    ),
     isNoInitialized: Boolean = MetalsServerConfig.binaryOption(
       "metals.no-initialized",
       default = false
@@ -119,7 +125,10 @@ object MetalsServerConfig {
           statusBar = StatusBarConfig.logMessage,
           // Not strictly needed, but helpful while this integration matures.
           isHttpEnabled = true,
-          icons = Icons.unicode
+          icons = Icons.unicode,
+          compilers = base.compilers.copy(
+            snippetAutoIndent = false
+          )
         )
       case "coc.nvim" =>
         base.copy(
@@ -143,12 +152,16 @@ object MetalsServerConfig {
           isExitOnShutdown = true,
           compilers = base.compilers.copy(
             // Avoid showing the method signature twice because it's already visible in the label.
-            isCompletionItemDetailEnabled = false
+            isCompletionItemDetailEnabled = false,
+            snippetAutoIndent = false
           )
         )
       case "emacs" =>
         base.copy(
-          executeClientCommand = ExecuteClientCommandConfig.on
+          executeClientCommand = ExecuteClientCommandConfig.on,
+          compilers = base.compilers.copy(
+            snippetAutoIndent = false
+          )
         )
       case _ =>
         base
