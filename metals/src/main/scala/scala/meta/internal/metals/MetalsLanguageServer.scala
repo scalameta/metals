@@ -48,6 +48,7 @@ import com.google.gson.JsonPrimitive
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.decorations.PublishDecorationsParams
+import scala.meta.internal.rename.RenameProvider
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -158,6 +159,7 @@ class MetalsLanguageServer(
   private var definitionProvider: DefinitionProvider = _
   private var semanticDBIndexer: SemanticdbIndexer = _
   private var implementationProvider: ImplementationProvider = _
+  private var renameProvider: RenameProvider = _
   private var documentHighlightProvider: DocumentHighlightProvider = _
   private var formattingProvider: FormattingProvider = _
   private var multilineStringFormattingProvider
@@ -348,6 +350,17 @@ class MetalsLanguageServer(
       buffers,
       definitionProvider
     )
+    renameProvider = new RenameProvider(
+      referencesProvider,
+      implementationProvider,
+      definitionProvider,
+      semanticdbs,
+      definitionIndex,
+      workspace,
+      languageClient,
+      buffers,
+      compilations
+    )
     semanticDBIndexer =
       new SemanticdbIndexer(referencesProvider, implementationProvider)
     documentHighlightProvider = new DocumentHighlightProvider(
@@ -452,6 +465,9 @@ class MetalsLanguageServer(
       capabilities.setImplementationProvider(true)
       capabilities.setHoverProvider(true)
       capabilities.setReferencesProvider(true)
+      val renameOptions = new RenameOptions()
+      renameOptions.setPrepareProvider(true)
+      capabilities.setRenameProvider(renameOptions)
       capabilities.setDocumentHighlightProvider(true)
       capabilities.setDocumentOnTypeFormattingProvider(
         new DocumentOnTypeFormattingOptions("\n")
@@ -904,13 +920,20 @@ class MetalsLanguageServer(
         .map(_.asJava)
     }
 
+  @JsonRequest("textDocument/prepareRename")
+  def prepareRename(
+      params: TextDocumentPositionParams
+  ): CompletableFuture[l.Range] =
+    CancelTokens { _ =>
+      renameProvider.prepareRename(params).getOrElse(null)
+    }
+
   @JsonRequest("textDocument/rename")
   def rename(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
     CancelTokens { _ =>
-      scribe.warn("textDocument/rename is not supported.")
-      null
+      renameProvider.rename(params)
     }
 
   @JsonRequest("textDocument/references")

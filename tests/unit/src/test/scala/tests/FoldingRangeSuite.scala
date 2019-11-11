@@ -8,6 +8,7 @@ import tests.BuildInfo.testResourceDirectory
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FoldingRangeProvider
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.TextEdits
 
 object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
   private val buffers = Buffers()

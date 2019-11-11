@@ -1,4 +1,4 @@
-package tests
+package scala.meta.internal.metals
 
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.TextEdit

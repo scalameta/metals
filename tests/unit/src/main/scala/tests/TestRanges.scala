@@ -2,6 +2,9 @@ package tests
 
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.WorkspaceEdit
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.TextEdits
 
 object TestRanges extends RangeReplace {
 
@@ -26,5 +29,27 @@ object TestRanges extends RangeReplace {
         replaceInRange(base, location.getRange)
       }
     resolved.toMap
+  }
+
+  def renderEditAsString(
+      file: String,
+      code: String,
+      workspaceEdit: WorkspaceEdit
+  ): Option[String] = {
+    for {
+      validLocations <- workspaceEdit
+        .getDocumentChanges()
+        .asScala
+        .find(
+          change =>
+            change.isLeft &&
+              change.getLeft.getTextDocument.getUri.contains(file)
+        )
+    } yield
+      TextEdits.applyEdits(
+        code,
+        validLocations.getLeft.getEdits.asScala.toList
+      )
+
   }
 }

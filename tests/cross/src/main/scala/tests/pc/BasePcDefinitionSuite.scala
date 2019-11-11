@@ -4,9 +4,9 @@ import tests.BasePCSuite
 import scala.meta.internal.metals.CompilerOffsetParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
-import tests.TextEdits
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.metals.TextEdits
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
   def check(

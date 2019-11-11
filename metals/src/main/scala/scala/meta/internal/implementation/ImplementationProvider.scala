@@ -88,26 +88,19 @@ final class ImplementationProvider(
     val source = params.getTextDocument.getUri.toAbsolutePath
     lazy val global = globalTable.globalSymbolTableFor(source)
     val locations = for {
-      currentDocument <- findSemanticdb(source).toIterable
-      positionOccurrence = definitionProvider.positionOccurrence(
-        source,
-        params,
-        currentDocument
-      )
-      symbolOccurrence <- {
-        lazy val mtagsOccurrence = Mtags
-          .allToplevels(source.toInput)
-          .occurrences
-          .find(_.encloses(params.getPosition))
-        positionOccurrence.occurrence.orElse(mtagsOccurrence).toIterable
-      }
+      (symbolOccurrence, currentDocument) <- definitionProvider
+        .symbolOccurence(
+          source,
+          params
+        )
+        .toIterable
     } yield {
       // 1. Search locally for symbol
       // 2. Search inside workspace
       // 3. Search classpath via GlobalSymbolTable
       def symbolSearch(symbol: String): Option[SymbolInformation] = {
         findSymbol(currentDocument, symbol)
-          .orElse(findClassDef(symbol))
+          .orElse(findSymbolDef(symbol))
           .orElse(global.flatMap(_.safeInfo(symbol)))
       }
       val sym = symbolOccurrence.symbol
@@ -147,6 +140,113 @@ final class ImplementationProvider(
     locations.flatten.toList
   }
 
+  def topMethodParents(
+      symbol: String,
+      textDocument: TextDocument
+  ): Seq[Location] = {
+
+    def findClassInfo(owner: String) = {
+      if (owner.nonEmpty) {
+        findSymbol(textDocument, owner)
+      } else {
+        textDocument.symbols.find {
+          case sym =>
+            sym.signature match {
+              case sig: ClassSignature =>
+                sig.declarations.exists(_.symlinks.contains(symbol))
+              case _ => false
+            }
+        }
+      }
+    }
+
+    val results = for {
+      currentInfo <- findSymbol(textDocument, symbol)
+      if (!isClassLike(currentInfo))
+      classInfo <- findClassInfo(symbol.owner)
+    } yield {
+      classInfo.signature match {
+        case sig: ClassSignature =>
+          methodInParentSignature(sig, currentInfo)
+        case _ => Nil
+      }
+    }
+    results.getOrElse(Seq.empty)
+  }
+
+  private def methodInParentSignature(
+      sig: ClassSignature,
+      childInfo: SymbolInformation,
+      childASF: Map[String, String] = Map.empty
+  ): Seq[Location] = {
+    sig.parents.flatMap {
+      case parentSym: TypeRef =>
+        val parentTextDocument = findSemanticDbForSymbol(parentSym.symbol)
+        def search(symbol: String) =
+          parentTextDocument.flatMap(findSymbol(_, symbol))
+        val parentASF =
+          AsSeenFrom.calculateAsSeenFrom(parentSym, sig.typeParameters)
+        val asSeenFrom = AsSeenFrom.translateAsSeenFrom(childASF, parentASF)
+        search(parentSym.symbol).map(_.signature) match {
+          case Some(parenClassSig: ClassSignature) =>
+            val fromParent = methodInParentSignature(
+              parenClassSig,
+              childInfo,
+              asSeenFrom
+            )
+            if (fromParent.isEmpty) {
+              locationFromClass(
+                childInfo,
+                sig,
+                parenClassSig,
+                asSeenFrom,
+                search,
+                parentTextDocument
+              )
+            } else {
+              fromParent
+            }
+          case _ => Nil
+        }
+
+      case _ => Nil
+    }
+  }
+
+  private def locationFromClass(
+      childInfo: SymbolInformation,
+      sig: ClassSignature,
+      parenClassSig: ClassSignature,
+      asSeenFrom: Map[String, String],
+      search: String => Option[SymbolInformation],
+      parentTextDocument: Option[TextDocument]
+  ): Option[Location] = {
+    val matchingSymbol = MethodImplementation.findParentSymbol(
+      childInfo,
+      sig,
+      parenClassSig,
+      asSeenFrom,
+      search
+    )
+    for {
+      symbol <- matchingSymbol
+      parentDoc <- parentTextDocument
+      source = workspace.resolve(parentDoc.uri)
+      implOccurrence <- findDefOccurrence(
+        parentDoc,
+        symbol,
+        source
+      )
+      range <- implOccurrence.range
+      distance = TokenEditDistance.fromBuffer(
+        source,
+        parentDoc.text,
+        buffer
+      )
+      revised <- distance.toRevised(range.toLSP)
+    } yield new Location(source.toNIO.toUri().toString(), revised)
+  }
+
   private def symbolLocationsFromContext(
       symbol: String,
       source: AbsolutePath,
@@ -166,10 +266,10 @@ final class ImplementationProvider(
         lazy val global = globalTable.globalSymbolTableFor(source)
         def localSearch(symbol: String): Option[SymbolInformation] = {
           findSymbol(implDocument, symbol)
-            .orElse(findClassDef(symbol))
+            .orElse(findSymbolDef(symbol))
             .orElse(global.flatMap(_.safeInfo(symbol)))
         }
-        MethodImplementation.find(
+        MethodImplementation.findInherited(
           parentSymbolInfo,
           symbolClass,
           classContext,
@@ -233,7 +333,7 @@ final class ImplementationProvider(
     }
   }
 
-  private def findClassDef(symbol: String): Option[SymbolInformation] = {
+  private def findSymbolDef(symbol: String): Option[SymbolInformation] = {
     findSemanticDbForSymbol(symbol).flatMap(findSymbol(_, symbol))
   }
 
@@ -415,10 +515,14 @@ object ImplementationProvider {
       findSymbol: String => Option[SymbolInformation]
   ): MethodSignature = {
     val allParams = signature.parameterLists.map { scope =>
-      val hardlinks = scope.symlinks.flatMap { sym =>
-        findSymbol(sym)
+      if (scope.symlinks.size > scope.hardlinks.size) {
+        val hardlinks = scope.symlinks.flatMap { sym =>
+          findSymbol(sym)
+        }
+        scope.copy(hardlinks = hardlinks)
+      } else {
+        scope
       }
-      scope.copy(hardlinks = hardlinks)
     }
     signature.copy(parameterLists = allParams)
   }
