@@ -152,8 +152,7 @@ object MetalsServerConfig {
           isExitOnShutdown = true,
           compilers = base.compilers.copy(
             // Avoid showing the method signature twice because it's already visible in the label.
-            isCompletionItemDetailEnabled = false,
-            snippetAutoIndent = false
+            isCompletionItemDetailEnabled = false
           )
         )
       case "emacs" =>
