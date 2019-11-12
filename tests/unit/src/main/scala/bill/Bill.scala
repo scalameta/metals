@@ -19,8 +19,6 @@ import java.util.concurrent.Executors
 import java.util.stream.Collectors
 import coursierapi.Dependency
 import coursierapi.Fetch
-import coursierapi.MavenRepository
-import coursierapi.Repository
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -37,6 +35,7 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.io.AbsolutePath
@@ -183,26 +182,13 @@ object Bill {
         mtags.BuildInfo.scalaCompilerVersion
       )
 
-      val repositories =
-        Repository.defaults().asScala ++
-          List(
-            Repository.central(),
-            Repository.ivy2Local(),
-            MavenRepository.of(
-              "https://oss.sonatype.org/content/repositories/releases/"
-            ),
-            MavenRepository.of(
-              "https://oss.sonatype.org/content/repositories/snapshots/"
-            )
-          )
-
       CompletableFuture.completedFuture {
         val sources = Fetch
           .create()
           .withDependencies(
             dependency
           )
-          .addRepositories(repositories: _*)
+          .addRepositories(Embedded.repositories: _*)
           .fetch()
           .map(_.toPath)
           .asScala

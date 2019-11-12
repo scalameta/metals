@@ -61,22 +61,23 @@ final class Embedded(
 }
 
 object Embedded {
+  lazy val repositories =
+    Repository.defaults().asScala ++
+      List(
+        Repository.central(),
+        Repository.ivy2Local(),
+        MavenRepository.of(
+          "https://oss.sonatype.org/content/repositories/releases/"
+        ),
+        MavenRepository.of(
+          "https://oss.sonatype.org/content/repositories/snapshots/"
+        )
+      )
+
   def fetchSettings(
       dependency: Dependency,
       scalaVersion: String
   ): Fetch = {
-    val repositories =
-      Repository.defaults().asScala ++
-        List(
-          Repository.central(),
-          Repository.ivy2Local(),
-          MavenRepository.of(
-            "https://oss.sonatype.org/content/repositories/releases/"
-          ),
-          MavenRepository.of(
-            "https://oss.sonatype.org/content/repositories/snapshots/"
-          )
-        )
 
     val resolutionParams = ResolutionParams
       .create()
