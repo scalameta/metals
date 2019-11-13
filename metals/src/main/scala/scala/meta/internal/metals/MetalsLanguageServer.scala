@@ -159,6 +159,7 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var codeLensProvider: CodeLensProvider = _
+  private var codeActionProvider: CodeActionProvider = _
   private var definitionProvider: DefinitionProvider = _
   private var semanticDBIndexer: SemanticdbIndexer = _
   private var implementationProvider: ImplementationProvider = _
@@ -404,6 +405,7 @@ class MetalsLanguageServer(
         Option(params)
       )
     )
+    codeActionProvider = new CodeActionProvider(compilers)
     doctor = new Doctor(
       workspace,
       buildTargets,
@@ -495,6 +497,7 @@ class MetalsLanguageServer(
       capabilities.setWorkspaceSymbolProvider(true)
       capabilities.setDocumentSymbolProvider(true)
       capabilities.setDocumentFormattingProvider(true)
+      capabilities.setCodeActionProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       if (config.isNoInitialized) {
         sh.schedule(
@@ -1089,9 +1092,8 @@ class MetalsLanguageServer(
   def codeAction(
       params: CodeActionParams
   ): CompletableFuture[util.List[CodeAction]] =
-    CancelTokens { _ =>
-      scribe.warn("textDocument/codeAction is not supported.")
-      null
+    CancelTokens.future { token =>
+      codeActionProvider.codeActions(params, token).map(_.asJava)
     }
 
   @JsonRequest("textDocument/codeLens")
