@@ -7,7 +7,7 @@ import scala.meta.internal.metals.PackageIndex
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 case class Library(
     name: String,
@@ -30,71 +30,28 @@ object Library {
       .withMainArtifacts()
       .withClassifiers(Set("sources", "_").asJava)
       .withDependencies(
-        Dependency.of(
-          "org.scalameta",
-          "scalameta_2.12",
-          "4.1.4"
-        ),
-        Dependency.of(
-          "com.lihaoyi",
-          "scalaparse_2.12",
-          "2.1.0"
-        ),
-        Dependency.of(
-          "com.lihaoyi",
-          "acyclic_2.12",
-          "0.1.8"
-        ),
-        Dependency.of(
-          "com.typesafe.akka",
-          "akka-testkit_2.12",
-          "2.5.19"
-        ),
-        Dependency.of(
-          "com.typesafe.akka",
-          "akka-stream_2.12",
-          "2.5.19"
-        ),
-        Dependency.of(
-          "com.typesafe.akka",
-          "akka-cluster_2.12",
-          "2.5.19"
-        ),
-        Dependency.of(
-          "org.apache.spark",
-          "spark-sql_2.11",
-          "2.2.1"
-        ),
-        Dependency.of(
-          "org.eclipse.jetty",
-          "jetty-servlet",
-          "9.3.11.v20160721"
-        ),
-        Dependency.of(
-          "org.apache.kafka",
-          "kafka_2.12",
-          "1.0.0"
-        ),
-        Dependency.of(
-          "org.apache.flink",
-          "flink-parent",
-          "1.4.1"
-        ),
-        Dependency.of(
-          "io.grpc",
-          "grpc-all",
-          "1.10.0"
-        ),
-        Dependency.of(
-          "org.scala-lang",
-          "scala-compiler",
-          mtags.BuildInfo.scalaCompilerVersion
-        ),
-        Dependency.of(
-          "io.buoyant",
-          "linkerd-core_2.12",
-          "1.4.3"
-        )
+        List(
+          Dependency.of("com.lihaoyi", "acyclic_2.12", "0.1.8"),
+          Dependency.of("com.lihaoyi", "scalaparse_2.12", "2.1.0"),
+          Dependency
+            .of("com.typesafe.akka", "akka-cluster_2.12", "2.5.19"),
+          Dependency.of("com.typesafe.akka", "akka-stream_2.12", "2.5.19"),
+          Dependency
+            .of("com.typesafe.akka", "akka-testkit_2.12", "2.5.19"),
+          Dependency.of("io.buoyant", s"linkerd-core_2.12", "1.4.3"),
+          Dependency.of("io.grpc", "grpc-all", "1.10.0"),
+          Dependency.of("org.apache.flink", "flink-parent", "1.4.1"),
+          Dependency.of("org.apache.kafka", "kafka_2.12", "1.0.0"),
+          Dependency.of("org.apache.spark", "spark-sql_2.11", "2.2.1"),
+          Dependency
+            .of("org.eclipse.jetty", "jetty-servlet", "9.3.11.v20160721"),
+          Dependency.of("org.scalameta", "scalameta_2.12", "4.1.4"),
+          Dependency.of(
+            "org.scala-lang",
+            "scala-compiler",
+            mtags.BuildInfo.scalaCompilerVersion
+          )
+        ): _*
       )
     val jars = fetch
       .fetch()

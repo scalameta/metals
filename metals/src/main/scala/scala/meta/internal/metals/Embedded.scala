@@ -61,8 +61,8 @@ final class Embedded(
 }
 
 object Embedded {
-  lazy val repositories =
-    Repository.defaults().asScala ++
+  lazy val repositories: List[Repository] =
+    Repository.defaults().asScala.toList ++
       List(
         Repository.central(),
         Repository.ivy2Local(),
@@ -75,7 +75,7 @@ object Embedded {
       )
 
   def fetchSettings(
-      dependency: Dependency,
+      dep: Dependency,
       scalaVersion: String
   ): Fetch = {
 
@@ -83,32 +83,16 @@ object Embedded {
       .create()
       .forceVersions(
         List(
-          Dependency.of(
-            "org.scala-lang",
-            "scala-library",
-            scalaVersion
-          ),
-          Dependency.of(
-            "org.scala-lang",
-            "scala-compiler",
-            scalaVersion
-          ),
-          Dependency.of(
-            "org.scala-lang",
-            "scala-reflect",
-            scalaVersion
-          )
+          Dependency.of("org.scala-lang", "scala-library", scalaVersion),
+          Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
+          Dependency.of("org.scala-lang", "scala-reflect", scalaVersion)
         ).map(d => (d.getModule, d.getVersion)).toMap.asJava
       )
 
     Fetch
       .create()
-      .addRepositories(
-        repositories: _*
-      )
-      .withDependencies(
-        dependency
-      )
+      .addRepositories(repositories: _*)
+      .withDependencies(dep)
       .withResolutionParams(resolutionParams)
       .withMainArtifacts()
   }
@@ -117,9 +101,11 @@ object Embedded {
       info: ScalaBuildTarget,
       scalac: ScalacOptionsItem
   ): URLClassLoader = {
+    val scala_version = ScalaVersions
+      .dropVendorSuffix(info.getScalaVersion)
     val pc = Dependency.of(
       "org.scalameta",
-      s"mtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
+      s"mtags_$scala_version",
       BuildInfo.metalsVersion
     )
     val semanticdbJars = scalac.getOptions.asScala.collect {
@@ -129,10 +115,10 @@ object Embedded {
             opt.contains(BuildInfo.semanticdbVersion) =>
         Paths.get(opt.stripPrefix("-Xplugin:"))
     }
-    val dependency =
+    val dep =
       if (semanticdbJars.isEmpty) pc
       else pc.withTransitive(false)
-    val jars = fetchSettings(dependency, info.getScalaVersion())
+    val jars = fetchSettings(dep, info.getScalaVersion())
       .fetch()
       .asScala
       .map(_.toPath)

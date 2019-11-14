@@ -258,8 +258,8 @@ object QuickBuild {
       sources: Boolean = false
   ): List[Path] = {
     val classifiers =
-      if (sources) Set("sources").asJava
-      else Set.empty[String].asJava
+      if (sources) Set("sources")
+      else Set.empty[String]
 
     val repositories =
       Repository.defaults().asScala ++
@@ -269,9 +269,7 @@ object QuickBuild {
       .create()
       .withRepositories(repositories: _*)
       .withDependencies(dependencies: _*)
-      .withClassifiers(
-        classifiers
-      )
+      .withClassifiers(classifiers.asJava)
       .withMainArtifacts()
       .fetch()
       .map(_.toPath)

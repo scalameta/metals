@@ -23,7 +23,9 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.Future
-import scala.meta.internal.metals.{BuildInfo, RecursivelyDelete, MetalsLogger}
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.reflect.internal.util.BatchSourceFile
@@ -176,7 +178,7 @@ object Bill {
     override def buildTargetDependencySources(
         params: DependencySourcesParams
     ): CompletableFuture[DependencySourcesResult] = {
-      val dependency = Dependency.of(
+      val scalaLib = Dependency.of(
         "org.scala-lang",
         "scala-library",
         mtags.BuildInfo.scalaCompilerVersion
@@ -185,9 +187,7 @@ object Bill {
       CompletableFuture.completedFuture {
         val sources = Fetch
           .create()
-          .withDependencies(
-            dependency
-          )
+          .withDependencies(scalaLib)
           .addRepositories(Embedded.repositories: _*)
           .fetch()
           .map(_.toPath)
