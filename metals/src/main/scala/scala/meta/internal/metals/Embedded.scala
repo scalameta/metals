@@ -14,6 +14,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.pc.PresentationCompiler
 import com.geirsson.coursiersmall.CoursierSmall
+import scala.meta.internal.worksheets.MdocClassLoader
+import mdoc.interfaces.Mdoc
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -32,6 +34,22 @@ final class Embedded(
     presentationCompilers.clear()
   }
 
+  private val mdocs: TrieMap[String, URLClassLoader] =
+    TrieMap.empty
+  def mdoc(info: ScalaBuildTarget): Mdoc = {
+    val classloader = mdocs.getOrElseUpdate(
+      info.getScalaBinaryVersion(),
+      statusBar.trackSlowTask("Preparing worksheets") {
+        Embedded.newMdocClassLoader(info)
+      }
+    )
+    serviceLoader(
+      classOf[Mdoc],
+      "mdoc.internal.worksheets.Mdoc",
+      classloader
+    )
+  }
+
   private val presentationCompilers: TrieMap[String, URLClassLoader] =
     TrieMap.empty
   def presentationCompiler(
@@ -44,19 +62,30 @@ final class Embedded(
         Embedded.newPresentationCompilerClassLoader(info, scalac)
       }
     )
-    val services =
-      ServiceLoader.load(classOf[PresentationCompiler], classloader).iterator()
+    serviceLoader(
+      classOf[PresentationCompiler],
+      classOf[ScalaPresentationCompiler].getName(),
+      classloader
+    )
+  }
+
+  private def serviceLoader[T](
+      cls: Class[T],
+      className: String,
+      classloader: URLClassLoader
+  ): T = {
+    val services = ServiceLoader.load(cls, classloader).iterator()
     if (services.hasNext) services.next()
     else {
-      // NOTE(olafur): ServiceLoader doesn't find the presentation compiler service
-      // on Appveyor for some reason, I'm unable to reproduce on my computer. Here below
-      // we fallback to manual classloading.
-      val cls =
-        classloader.loadClass(classOf[ScalaPresentationCompiler].getName)
+      // NOTE(olafur): ServiceLoader doesn't find the service on Appveyor for
+      // some reason, I'm unable to reproduce on my computer. Here below we
+      // fallback to manual classloading.
+      val cls = classloader.loadClass(className)
       val ctor = cls.getDeclaredConstructor()
       ctor.setAccessible(true)
-      ctor.newInstance().asInstanceOf[PresentationCompiler]
+      ctor.newInstance().asInstanceOf[T]
     }
+
   }
 }
 
@@ -93,6 +122,19 @@ object Embedded {
           )
         )
       )
+
+  def newMdocClassLoader(info: ScalaBuildTarget): URLClassLoader = {
+    val mdoc = new Dependency(
+      "org.scalameta",
+      s"mdoc_${info.getScalaBinaryVersion()}",
+      BuildInfo.mdocVersion
+    )
+    val settings = downloadSettings(mdoc, info.getScalaVersion())
+    val jars = CoursierSmall.fetch(settings)
+    val parent =
+      new MdocClassLoader(this.getClass.getClassLoader)
+    new URLClassLoader(jars.map(_.toUri().toURL()).toArray, parent)
+  }
 
   def newPresentationCompilerClassLoader(
       info: ScalaBuildTarget,
