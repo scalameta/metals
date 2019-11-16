@@ -417,7 +417,8 @@ class MetalsLanguageServer(
             languageClient,
             () => userConfig,
             statusBar,
-            diagnostics
+            diagnostics,
+            embedded
           )
         )
       )
