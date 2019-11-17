@@ -112,11 +112,12 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
            |{"a": {"scalaVersion": "$scalaVersion"}}
            |/a/src/main/scala/Main.worksheet.sc
            |println(42)
-           |Stream.from(10).foreach(i => Thread.sleep(i))
+           |Stream.from(10).last
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ <- cancelled.future
+      _ = client.slowTaskHandler = (_ => None)
       _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
         _.replaceAllLiterally("Stream", "// Stream")
       )
@@ -127,7 +128,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         client.workspaceDecorations,
         """|
            |println(43) // 43
-           |// Stream.from(10).foreach(i => Thread.sleep(i))
+           |// Stream.from(10).last
            |""".stripMargin
       )
     } yield ()
