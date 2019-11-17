@@ -56,7 +56,7 @@ class WorksheetProvider(
   // Worksheet evaluation happens on a single threaded job queue. Jobs are
   // prioritized using the same order as completion/hover requests:
   // first-come last-out.
-  private lazy val jobs = CompilerJobQueue()
+  private val jobs = CompilerJobQueue()
   // Executor for stopping threads. We don't reuse the scheduled executor from
   // MetalsLanguageServer because this exector service may occasionally block
   // and we don't want to block on other features like the status bar.
@@ -78,6 +78,7 @@ class WorksheetProvider(
   }
 
   def cancel(): Unit = {
+    cancelables.cancel()
     jobs.shutdown()
     threadStopper.shutdown()
     reset()
@@ -102,6 +103,7 @@ class WorksheetProvider(
         Array.empty
     }
     def runEvaluation(): Unit = {
+      cancelables.cancel() // Cancel previous worksheet evaluations.
       val timer = new Timer(Time.system)
       result.asScala.foreach { _ =>
         scribe.info(s"time: evaluated worksheet '${path.filename}' in $timer")
@@ -122,14 +124,7 @@ class WorksheetProvider(
           result.complete(evaluateWorksheet(path, token))
         }
       }
-      cancelables.add(
-        Cancelable(() => {
-          if (thread.isAlive) {
-            thread.stop()
-          }
-        })
-      )
-      stopThreadOnCancel(path, result, thread)
+      interruptThreadOnCancel(path, result, thread)
       thread.start()
       thread.join()
     }
@@ -150,7 +145,7 @@ class WorksheetProvider(
    * First tries `Thread.interrupt()` with fallback to `Thread.stop()` after
    * one second if interruption doesn't work.
    */
-  private def stopThreadOnCancel(
+  private def interruptThreadOnCancel(
       path: AbsolutePath,
       result: CompletableFuture[Array[DecorationOptions]],
       thread: Thread
@@ -160,19 +155,14 @@ class WorksheetProvider(
       def run(): Unit = {
         if (thread.isAlive()) {
           scribe.warn(s"thread stop: ${thread.getName()}")
-          Cancelable.cancelAll(
-            List(
-              Cancelable(() => thread.stop()),
-              cancelables
-            )
-          )
+          thread.stop()
         }
       }
     }
     // If the program is running for more than
     // `userConfig().worksheetCancelTimeout`, then display a prompt for the user
     // to cancel the program.
-    val promptUserToCancel = new Runnable {
+    val interruptThread = new Runnable {
       def run(): Unit = {
         if (!result.isDone()) {
           val cancel = languageClient.metalsSlowTask(
@@ -197,7 +187,7 @@ class WorksheetProvider(
       }
     }
     threadStopper.schedule(
-      promptUserToCancel,
+      interruptThread,
       userConfig().worksheetCancelTimeout,
       TimeUnit.SECONDS
     )
