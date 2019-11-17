@@ -33,6 +33,7 @@ import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.{meta => m}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import scala.meta.io.RelativePath
 
 object MtagsEnrichments extends MtagsEnrichments
 trait MtagsEnrichments {
@@ -77,6 +78,12 @@ trait MtagsEnrichments {
       root(file)
     }
   }
+
+  implicit class XtensionRelativePathMetals(file: RelativePath) {
+    def filename: String = file.toNIO.filename
+    def isScalaFilename: Boolean = filename.isScalaFilename
+  }
+
   implicit class XtensionAbsolutePathMetals(file: AbsolutePath) {
 
     def filename: String = file.toNIO.filename
@@ -102,10 +109,7 @@ trait MtagsEnrichments {
       filename.endsWith(".worksheet.sc")
     }
     def isScalaFilename: Boolean = {
-      extension match {
-        case "scala" | "sc" => true
-        case _ => false
-      }
+      filename.isScalaFilename
     }
     def isScala: Boolean = {
       toLanguage == Language.SCALA

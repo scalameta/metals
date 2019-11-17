@@ -57,7 +57,7 @@ object SemanticdbClasspath {
     }
   }
   def fromScala(path: RelativePath): RelativePath = {
-    require(path.toNIO.toLanguage.isScala, path.toString)
+    require(path.isScalaFilename, path.toString)
     val semanticdbSibling = path.resolveSibling(_ + ".semanticdb")
     val semanticdbPrefix = RelativePath("META-INF").resolve("semanticdb")
     semanticdbPrefix.resolve(semanticdbSibling)

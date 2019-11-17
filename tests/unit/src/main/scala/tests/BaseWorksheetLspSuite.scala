@@ -296,4 +296,27 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       )
     } yield ()
   }
+
+  testAsync("definition") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/src/main/scala/Main.worksheet.sc
+           |val message = "Hello World!"
+           |println(message)
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/Main.worksheet.sc
+           |val message/*L0*/ = "Hello World!"
+           |println/*Predef.scala*/(message/*L0*/)
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }
