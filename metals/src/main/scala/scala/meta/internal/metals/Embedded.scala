@@ -23,6 +23,7 @@ import mdoc.interfaces.Mdoc
  * - sbt-launch.jar
  * - bloop.py
  * - ch.epfl.scala:bloop-frontend
+ * - mdoc
  */
 final class Embedded(
     icons: Icons,
@@ -32,6 +33,7 @@ final class Embedded(
 
   override def cancel(): Unit = {
     presentationCompilers.clear()
+    mdocs.clear()
   }
 
   private val mdocs: TrieMap[String, URLClassLoader] =
