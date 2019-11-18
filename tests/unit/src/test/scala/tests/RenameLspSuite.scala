@@ -1,7 +1,7 @@
 package tests
 import scala.concurrent.Future
 
-object RenameSuite extends BaseLspSuite("rename") {
+object RenameLspSuite extends BaseLspSuite("rename") {
 
   renamed(
     "basic",
