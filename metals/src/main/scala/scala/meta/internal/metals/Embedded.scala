@@ -31,13 +31,16 @@ final class Embedded(
     userConfig: () => UserConfiguration
 ) extends Cancelable {
 
+  private val mdocs: TrieMap[String, URLClassLoader] =
+    TrieMap.empty
+  private val presentationCompilers: TrieMap[String, URLClassLoader] =
+    TrieMap.empty
+
   override def cancel(): Unit = {
     presentationCompilers.clear()
     mdocs.clear()
   }
 
-  private val mdocs: TrieMap[String, URLClassLoader] =
-    TrieMap.empty
   def mdoc(info: ScalaBuildTarget): Mdoc = {
     val classloader = mdocs.getOrElseUpdate(
       info.getScalaBinaryVersion(),
@@ -52,8 +55,6 @@ final class Embedded(
     )
   }
 
-  private val presentationCompilers: TrieMap[String, URLClassLoader] =
-    TrieMap.empty
   def presentationCompiler(
       info: ScalaBuildTarget,
       scalac: ScalacOptionsItem

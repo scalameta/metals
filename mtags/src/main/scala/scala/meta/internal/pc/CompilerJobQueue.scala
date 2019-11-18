@@ -72,11 +72,11 @@ object CompilerJobQueue {
   def apply(): CompilerJobQueue = {
     new CompilerJobQueue(() => {
       val singleThreadExecutor = new ThreadPoolExecutor(
-        1,
-        1,
-        0,
-        TimeUnit.MILLISECONDS,
-        new LastInFirstOutBlockingQueue
+        /* corePoolSize */ 1,
+        /* maximumPoolSize */ 1,
+        /* keepAliveTime */ 0,
+        /* unit */ TimeUnit.MILLISECONDS,
+        /* workQueue */ new LastInFirstOutBlockingQueue
       )
       singleThreadExecutor.setRejectedExecutionHandler((r, _) => {
         r match {
