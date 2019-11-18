@@ -1,7 +1,7 @@
 package tests
 import scala.concurrent.Future
 
-object RenameSuite extends BaseLspSuite("rename") {
+object RenameLspSuite extends BaseLspSuite("rename") {
 
   renamed(
     "basic",
@@ -277,6 +277,29 @@ object RenameSuite extends BaseLspSuite("rename") {
     newName = "Tree",
     fileRenames =
       Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
+  )
+
+  renamed(
+    "filename-exact-match",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object <<Ma@@in>>
+       |object TheMain
+       |""".stripMargin,
+    newName = "Tree",
+    fileRenames =
+      Map("a/src/main/scala/a/Main.scala" -> "a/src/main/scala/a/Tree.scala")
+  )
+
+  renamed(
+    "filename-exact-match-2",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main
+       |object <<The@@Main>>
+       |""".stripMargin,
+    newName = "Tree",
+    fileRenames = Map.empty
   )
 
   renamed(
