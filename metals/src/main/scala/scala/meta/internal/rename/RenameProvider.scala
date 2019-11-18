@@ -148,7 +148,7 @@ final class RenameProvider(
       .find { file =>
         isOccurence(str => {
           (str.desc.isType || str.desc.isTerm) &&
-            Paths.get(file).filename == str.desc.name.value + ".scala"
+            Paths.get(new URI(file)).filename == str.desc.name.value + ".scala"
         })
       }
       .map { file =>
