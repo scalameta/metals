@@ -177,7 +177,7 @@ class WorksheetProvider(
               // User has requested to cancel a running program. first line of
               // defense is `Thread.interrupt()`. Fingers crossed it's enough.
               result.complete(Array.empty)
-              threadStopper.schedule(stopThread, 1, TimeUnit.SECONDS)
+              threadStopper.schedule(stopThread, 3, TimeUnit.SECONDS)
               scribe.warn(s"thread interrupt: ${thread.getName()}")
               thread.interrupt()
             }
