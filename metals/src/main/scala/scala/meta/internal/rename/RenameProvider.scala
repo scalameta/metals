@@ -32,7 +32,6 @@ import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.RenameFile
-import java.io.File
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
@@ -149,7 +148,7 @@ final class RenameProvider(
       .find { file =>
         isOccurence(str => {
           (str.desc.isType || str.desc.isTerm) &&
-            new File(file).getName() == str.desc.name.value + ".scala"
+            Paths.get(file).filename == str.desc.name.value + ".scala"
         })
       }
       .map { file =>
