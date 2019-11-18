@@ -323,7 +323,7 @@ final class RenameProvider(
   ): MessageParams = {
     val renamed = name.map(n => s"to $n").getOrElse("")
     val message =
-      s"""|Cannot rename $old $renamed since it will change the semantics and
+      s"""|Cannot rename from $old to $renamed since it will change the semantics
           |and might break your code""".stripMargin
     new MessageParams(MessageType.Error, message)
   }
@@ -341,7 +341,7 @@ final class RenameProvider(
   ): MessageParams = {
     val renamed = name.map(n => s"to $n").getOrElse("")
     val message =
-      s"""|Cannot rename from $old $renamed since it will change the semantics and
+      s"""|Cannot rename from $old to $renamed since it will change the semantics and
           |and might break your code.
           |Only rename to names ending with `:` is allowed.""".stripMargin
     new MessageParams(MessageType.Error, message)
