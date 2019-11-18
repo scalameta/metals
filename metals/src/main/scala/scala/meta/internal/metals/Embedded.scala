@@ -60,7 +60,7 @@ final class Embedded(
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
       ScalaVersions.dropVendorSuffix(info.getScalaVersion),
-      statusBar.trackSlowTask("Downloading presentation compiler") {
+      statusBar.trackSlowTask("Preparing presentation compiler") {
         Embedded.newPresentationCompilerClassLoader(info, scalac)
       }
     )
