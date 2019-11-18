@@ -441,20 +441,8 @@ lazy val slow = project
   .in(file("tests/slow"))
   .settings(
     testSettings,
-    testOnly.in(Test) := testOnly
-      .in(Test)
-      .dependsOn(
-        crossPublishLocal(V.scala211),
-        crossPublishLocal(V.scala213)
-      )
-      .evaluated,
-    test.in(Test) := test
-      .in(Test)
-      .dependsOn(
-        crossPublishLocal(V.scala211),
-        crossPublishLocal(V.scala213)
-      )
-      .value
+    testOnly.in(Test) := testOnly.in(Test).dependsOn(publishMtags).evaluated,
+    test.in(Test) := test.in(Test).dependsOn(publishMtags).value
   )
   .dependsOn(unit)
 
