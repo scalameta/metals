@@ -32,6 +32,7 @@ import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.RenameFile
+import java.io.File
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
@@ -147,9 +148,8 @@ final class RenameProvider(
     fileChanges
       .find { file =>
         isOccurence(str => {
-          (str.desc.isType || str.desc.isTerm) && file.endsWith(
-            str.desc.name.value + ".scala"
-          )
+          (str.desc.isType || str.desc.isTerm) &&
+            new File(file).getName() == str.desc.name.value + ".scala"
         })
       }
       .map { file =>
@@ -324,14 +324,14 @@ final class RenameProvider(
   ): MessageParams = {
     val renamed = name.map(n => s"to $n").getOrElse("")
     val message =
-      s"""|Cannot rename $old $renamed since it will change the semantics and 
+      s"""|Cannot rename $old $renamed since it will change the semantics and
           |and might break your code""".stripMargin
     new MessageParams(MessageType.Error, message)
   }
 
   private def isCompiling: MessageParams = {
     val message =
-      s"""|Cannot rename while the code is compiling 
+      s"""|Cannot rename while the code is compiling
           |since it could produce incorrect results.""".stripMargin
     new MessageParams(MessageType.Error, message)
   }
@@ -342,8 +342,8 @@ final class RenameProvider(
   ): MessageParams = {
     val renamed = name.map(n => s"to $n").getOrElse("")
     val message =
-      s"""|Cannot rename from $old $renamed since it will change the semantics and 
-          |and might break your code. 
+      s"""|Cannot rename from $old $renamed since it will change the semantics and
+          |and might break your code.
           |Only rename to names ending with `:` is allowed.""".stripMargin
     new MessageParams(MessageType.Error, message)
   }
