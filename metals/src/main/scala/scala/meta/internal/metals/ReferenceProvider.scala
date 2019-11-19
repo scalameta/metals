@@ -67,7 +67,7 @@ final class ReferenceProvider(
   def references(
       params: ReferenceParams,
       checkMatchesText: Boolean = false,
-      includeSynthetics: Boolean = true
+      includeSynthetics: SymbolOccurrence => Boolean = _ => true
   ): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
@@ -86,7 +86,7 @@ final class ReferenceProvider(
               alternatives,
               params.getContext.isIncludeDeclaration,
               checkMatchesText,
-              includeSynthetics
+              includeSynthetics(occurrence)
             )
             ReferencesResult(occurrence.symbol, locations)
           case None =>

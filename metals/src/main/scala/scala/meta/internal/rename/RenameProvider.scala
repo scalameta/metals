@@ -94,7 +94,7 @@ final class RenameProvider(
             toReferenceParams(txtParams, includeDeclaration = isLocal),
             // local symbol will not contain a proper name
             checkMatchesText = !isLocal,
-            includeSynthetics = false
+            includeSynthetics = _.symbol.desc.name.value == "apply"
           )
           .locations
         definitionLocation = {
