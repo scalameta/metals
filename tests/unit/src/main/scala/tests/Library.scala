@@ -25,33 +25,28 @@ object Library {
   def cats: Seq[AbsolutePath] =
     fetch("org.typelevel", "cats-core_2.12", "2.0.0-M4")
   def all: List[Library] = {
+    val dependencyTuples = List(
+      ("com.lihaoyi", "acyclic_2.12", "0.1.8"),
+      ("com.lihaoyi", "scalaparse_2.12", "2.1.0"),
+      ("com.typesafe.akka", "akka-cluster_2.12", "2.5.19"),
+      ("com.typesafe.akka", "akka-stream_2.12", "2.5.19"),
+      ("com.typesafe.akka", "akka-testkit_2.12", "2.5.19"),
+      ("io.buoyant", s"linkerd-core_2.12", "1.4.3"),
+      ("io.grpc", "grpc-all", "1.10.0"),
+      ("org.apache.flink", "flink-parent", "1.4.1"),
+      ("org.apache.kafka", "kafka_2.12", "1.0.0"),
+      ("org.apache.spark", "spark-sql_2.11", "2.2.1"),
+      ("org.eclipse.jetty", "jetty-servlet", "9.3.11.v20160721"),
+      ("org.scalameta", "scalameta_2.12", "4.1.4"),
+      ("org.scala-lang", "scala-compiler", mtags.BuildInfo.scalaCompilerVersion)
+    )
+
     val fetch = Fetch
       .create()
       .withMainArtifacts()
       .withClassifiers(Set("sources", "_").asJava)
       .withDependencies(
-        List(
-          Dependency.of("com.lihaoyi", "acyclic_2.12", "0.1.8"),
-          Dependency.of("com.lihaoyi", "scalaparse_2.12", "2.1.0"),
-          Dependency
-            .of("com.typesafe.akka", "akka-cluster_2.12", "2.5.19"),
-          Dependency.of("com.typesafe.akka", "akka-stream_2.12", "2.5.19"),
-          Dependency
-            .of("com.typesafe.akka", "akka-testkit_2.12", "2.5.19"),
-          Dependency.of("io.buoyant", s"linkerd-core_2.12", "1.4.3"),
-          Dependency.of("io.grpc", "grpc-all", "1.10.0"),
-          Dependency.of("org.apache.flink", "flink-parent", "1.4.1"),
-          Dependency.of("org.apache.kafka", "kafka_2.12", "1.0.0"),
-          Dependency.of("org.apache.spark", "spark-sql_2.11", "2.2.1"),
-          Dependency
-            .of("org.eclipse.jetty", "jetty-servlet", "9.3.11.v20160721"),
-          Dependency.of("org.scalameta", "scalameta_2.12", "4.1.4"),
-          Dependency.of(
-            "org.scala-lang",
-            "scala-compiler",
-            mtags.BuildInfo.scalaCompilerVersion
-          )
-        ): _*
+        dependencyTuples.map(t => Dependency.of(t._1, t._2, t._3)): _*
       )
     val jars = fetch
       .fetch()

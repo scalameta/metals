@@ -101,11 +101,11 @@ object Embedded {
       info: ScalaBuildTarget,
       scalac: ScalacOptionsItem
   ): URLClassLoader = {
-    val scala_version = ScalaVersions
+    val scalaVersion = ScalaVersions
       .dropVendorSuffix(info.getScalaVersion)
     val pc = Dependency.of(
       "org.scalameta",
-      s"mtags_$scala_version",
+      s"mtags_$scalaVersion",
       BuildInfo.metalsVersion
     )
     val semanticdbJars = scalac.getOptions.asScala.collect {
