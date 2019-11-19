@@ -472,6 +472,18 @@ object RenameLspSuite extends BaseLspSuite("rename") {
     newName = "Animal"
   )
 
+  renamed(
+    "implicit-param",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object A {
+       |  implicit val <<some@@Name>>: Int = 1
+       |  def m[A](implicit a: A): A = a
+       |  m[Int]
+       |}""".stripMargin,
+    newName = "anotherName"
+  )
+
   def renamed(
       name: String,
       input: String,
