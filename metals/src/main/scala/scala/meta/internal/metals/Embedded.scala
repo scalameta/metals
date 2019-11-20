@@ -112,11 +112,12 @@ object Embedded {
       s"mdoc_${info.getScalaBinaryVersion()}",
       BuildInfo.mdocVersion
     )
-    val settings = downloadSettings(mdoc, info.getScalaVersion())
+    val settings = fetchSettings(mdoc, info.getScalaVersion())
     val jars = fetchSettings(mdoc, info.getScalaVersion()).fetch()
     val parent =
       new MdocClassLoader(this.getClass.getClassLoader)
-    new URLClassLoader(jars.map(_.toUri().toURL()).toArray, parent)
+    val urls = jars.iterator.asScala.map(_.toURI().toURL()).toArray
+    new URLClassLoader(urls, parent)
   }
 
   def fetchSettings(
