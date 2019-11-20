@@ -408,7 +408,13 @@ class MetalsLanguageServer(
         Option(params)
       )
     )
-    codeActionProvider = new CodeActionProvider(compilers)
+    codeActionProvider = new CodeActionProvider(
+      compilers,
+      trees,
+      buffers,
+      semanticdbs,
+      symbolSearch
+    )
     doctor = new Doctor(
       workspace,
       buildTargets,
