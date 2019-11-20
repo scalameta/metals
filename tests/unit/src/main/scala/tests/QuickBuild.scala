@@ -2,7 +2,6 @@ package tests
 
 import bloop.config.ConfigEncoderDecoders._
 import bloop.config.{Config => C}
-import com.geirsson.{coursiersmall => s}
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -14,6 +13,9 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
 import bloop.config.Config
+import coursierapi.Dependency
+import coursierapi.Fetch
+import coursierapi.Repository
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
@@ -229,13 +231,13 @@ object QuickBuild {
       module: String,
       scalaVersion: String,
       scalaBinaryVersion: String
-  ): s.Dependency = module match {
+  ): Dependency = module match {
     case Full(org, name, version) =>
-      new s.Dependency(org, s"${name}_$scalaVersion", version)
+      Dependency.of(org, s"${name}_$scalaVersion", version)
     case Half(org, name, version) =>
-      new s.Dependency(org, s"${name}_$scalaBinaryVersion", version)
+      Dependency.of(org, s"${name}_$scalaBinaryVersion", version)
     case Java(org, name, version) =>
-      new s.Dependency(org, name, version)
+      Dependency.of(org, name, version)
     case _ =>
       throw new IllegalArgumentException(module)
   }
@@ -244,23 +246,37 @@ object QuickBuild {
       scalaVersion: String,
       scalaBinaryVersion: String,
       sources: Boolean = false
-  ): List[Path] = {
+  ): List[Path] =
     fetchDependencies(
       dependencies.iterator
         .map(d => toDependency(d, scalaVersion, scalaBinaryVersion))
         .toList,
       sources
     )
-  }
   def fetchDependencies(
-      dependencies: List[s.Dependency],
+      dependencies: List[Dependency],
       sources: Boolean = false
   ): List[Path] = {
-    val settings = new s.Settings()
-      .withDependencies(dependencies)
-      .withClassifiers(if (sources) List("sources", "_") else List())
-    s.CoursierSmall.fetch(settings)
+    val classifiers =
+      if (sources) Set("sources")
+      else Set.empty[String]
+
+    val repositories =
+      Repository.defaults().asScala ++
+        List(Repository.central(), Repository.ivy2Local())
+
+    Fetch
+      .create()
+      .withRepositories(repositories: _*)
+      .withDependencies(dependencies: _*)
+      .withClassifiers(classifiers.asJava)
+      .withMainArtifacts()
+      .fetch()
+      .map(_.toPath)
+      .asScala
+      .toList
   }
+
   val Full: Regex = "(.+):::(.+):(.+)".r
   val Half: Regex = "(.+)::(.+):(.+)".r
   val Java: Regex = "(.+):(.+):(.+)".r

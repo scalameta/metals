@@ -2,9 +2,6 @@ package bill
 
 import ch.epfl.scala.bsp4j._
 import ch.epfl.scala.{bsp4j => b}
-import com.geirsson.coursiersmall.CoursierSmall
-import com.geirsson.coursiersmall.Dependency
-import com.geirsson.coursiersmall.Settings
 import com.google.gson.GsonBuilder
 import java.io.File
 import java.io.PrintStream
@@ -20,11 +17,15 @@ import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.stream.Collectors
+import coursierapi.Dependency
+import coursierapi.Fetch
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.Future
-import scala.meta.internal.metals.{BuildInfo, MetalsLogger, RecursivelyDelete}
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.reflect.internal.util.BatchSourceFile
@@ -36,6 +37,7 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.ClasspathLoader
 import scala.meta.io.AbsolutePath
@@ -176,18 +178,21 @@ object Bill {
     override def buildTargetDependencySources(
         params: DependencySourcesParams
     ): CompletableFuture[DependencySourcesResult] = {
+      val scalaLib = Dependency.of(
+        "org.scala-lang",
+        "scala-library",
+        mtags.BuildInfo.scalaCompilerVersion
+      )
+
       CompletableFuture.completedFuture {
-        val sources = CoursierSmall.fetch(
-          new Settings().withDependencies(
-            List(
-              new Dependency(
-                "org.scala-lang",
-                "scala-library",
-                mtags.BuildInfo.scalaCompilerVersion
-              )
-            )
-          )
-        )
+        val sources = Fetch
+          .create()
+          .withDependencies(scalaLib)
+          .addRepositories(Embedded.repositories: _*)
+          .fetch()
+          .map(_.toPath)
+          .asScala
+
         new DependencySourcesResult(
           List(
             new DependencySourcesItem(
