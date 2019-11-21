@@ -274,6 +274,18 @@ Possible values:
   compiler.
 - `on`: log verbose debugging information for the presentation compiler.
 
+### `-Dmetals.snippet-auto-indent`
+
+Certain editors will automatically insert identation equal to that of the reference 
+line that the operation started on. This is relevant in the case of multiline textEdits
+such as the "implement all methods" completion.
+
+Possible values:
+
+- `on`: (default): the client automatically adds in the indentation. This is the case for
+  VS Code, Atom, Sublime, and coc.nvim.
+- `off`: the client does not add any indentation when receiving a multi-line textEdit
+
 ### `-Dbloop.embedded.version`
 
 Version number of the embedded Bloop server. Default value is

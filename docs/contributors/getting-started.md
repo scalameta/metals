@@ -11,7 +11,7 @@ Whenever you are stuck or unsure, please open an issue or
 
 You will need the following applications installed:
 
-- Java 8, make sure `JAVA_HOME` points to a Java 8 installation and not Java 11.
+- Java 8 - Make sure `JAVA_HOME` points to a Java 8 installation and not Java 11.
 - `git`
 - `sbt` (for building a local version of the server)
 
@@ -21,16 +21,22 @@ You will need the following applications installed:
 - `mtags` source file indexer for Java and Scala, it's a dependency of the
   `metals` project but kept in a separate module so it can be used by other
   projects like [Metabrowse](https://github.com/scalameta/metabrowse).
+- `mtags-interfaces` - java interfaces for the presentation compiler.
+- `tests/cross` - tests targeting cross builds for common features such as
+  hover, compleltions, signatures etc.
 - `tests/input` example Scala code that is used as testing data for unit tests.
 - `tests/unit` moderately fast-running unit tests.
 - `tests/slow` slow integration tests.
 - `test-workspace` demo project for manually testing Metals through an editor.
+- `docs` documentation markdown for the Metals website.
+- `metals-docs` methods used for generating documentation across multiple pages in `docs`.
+- `website` holds the static site configuraton, style and blogs posts for the Metals website.
 
 ## Git hooks
 
 This git repository has a pre-push hook to run Scalafmt.
 
-The CI also uses Scalafix to assert that there a no unused imports, to
+The CI also uses Scalafix to assert that there a no unused imports. To
 automatically remove unused imports run `sbt scalafixAll`. We don't run
 Scalafix as a pre-push git hook since starting sbt takes a long time.
 
@@ -56,9 +62,9 @@ To run the unit tests open an sbt shell and run `unit/test`
 
 ```sh
 sbt
-# (recommended) run specific test suite, great for edit/test/debug workflows.
+# (recommended) run a specific test suite, great for edit/test/debug workflows.
 > metals/testOnly -- tests.DefinitionSuite
-# run unit tests, modestly fast but still a bit too slow for edit/test/debug workflows.
+# run unit tests, moderately fast but still a bit too slow for edit/test/debug workflows.
 > unit/test
 # run slow integration tests, takes several minutes.
 > slow/test
@@ -89,7 +95,7 @@ editor in a small demo build.
 
 ### Visual Studio Code
 
-Install the Metals extension from the Marketplace, search for "Metals".
+Install the Metals extension from the Marketplace by searching for "Metals".
 
 [Click here to install the Metals VS Code plugin](vscode:extension/scalameta.metals)
 
@@ -113,7 +119,7 @@ script using the locally published version.
 
 ```sh
 coursier bootstrap \
-  --java-opt -Dmetals.client=vim-lsc \
+  --java-opt -Dmetals.client=coc.nvim \
   org.scalameta:metals_2.12:@LOCAL_VERSION@ \ # double-check version here
   -r bintray:scalacenter/releases \
   -o /usr/local/bin/metals-vim -f
@@ -123,7 +129,7 @@ Finally, start vim with the local Metals version
 
 ```sh
 cd test-workspace # any directory you want to manually test Metals
-new-metals-vim && vim build.sbt
+new-metals-vim && vim build.sbt # remember to have the script in your $PATH
 ```
 
 When you make changes in the Metals Scala codebase, run `sbt publishLocal`, quit
@@ -163,5 +169,5 @@ tail -f ~/Library/Caches/org.scalameta.metals/lsp.trace.json
 tail -f ~/.cache/metals/lsp.trace.json
 ```
 
-The traces are very verbose so it is recommended to delete the files if you are
+The traces are very verbose so it's recommended to delete the files if you are
 not interested in debugging the JSON communication.

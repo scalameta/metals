@@ -4,7 +4,7 @@ title: Mill
 ---
 
 Mill is one of the newest build tools developed by Li Haoyi in order to create
-something simpler and more intuitive than most of other today's build tools.
+something simpler and more intuitive than most of the other build tools today.
 There is an extensive documentation on the
 [Mill website](http://www.lihaoyi.com/mill/).
 
@@ -26,9 +26,9 @@ depends on:
 
 Remember to replace the `VERSION` with your mill version.
 
-After adding the line you should be able to generate Bloop config files needed
+After adding the line you should be able to generate the Bloop config files needed
 to work with Metals using the below command:
 
 `mill mill.contrib.Bloop/install`
 
-Afterwards just can just open Metals and start working on your code.
+Afterwards, you can just open Metals and start working on your code.

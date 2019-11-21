@@ -69,7 +69,7 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 
 ;; lsp-mode supports snippets, but in order for them to work you need to use yasnippet
 ;; If you don't want to use snippets set lsp-enable-snippet to nil in your lsp-mode settings
-::   to avoid odd behavior with snippets and indentation
+;;   to avoid odd behavior with snippets and indentation
 (use-package yasnippet)
 
 ;; Add company-lsp backend for metals

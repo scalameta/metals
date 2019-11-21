@@ -149,10 +149,6 @@ functionality.
 </tbody>
 </table>
 
-> Metals is a new project with limited features. If you are learning Scala or
-> are looking for a rich IDE experience it is recommended to use IntelliJ
-> instead.
-
 ## Installation
 
 **Single click**: Metals is easy to install and requires minimal configuration
@@ -160,9 +156,6 @@ out-of-the-box.
 
 **Few steps**: installing Metals requires a few custom steps and minimal
 configuration to work.
-
-**Compile from source**: installing Metals requires building an editor plugin
-from source.
 
 ## Build import
 
@@ -345,7 +338,7 @@ extensions, see [integrating a new editor](new-editor.md).
 
 Metals does not support the following features:
 
-- Rename symbol
+- Rename symbol 
 - Organize imports
 - Run test
 - Debugging

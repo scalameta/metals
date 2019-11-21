@@ -46,14 +46,14 @@ Server in project" command.
 
 This starts the Metal language server but no functionality will work because the
 build has not been imported. The first time you enable Language Server in a
-project you must open a `*.scala` file, then it will prompt you to "Import changes".
-This step is required for compile errors and goto definition to work and while it
-is running, no Metals functionality will work.
+project you must open a `*.scala` file, and then it will prompt you to "Import changes".
+This step is required for compile errors and goto definition to work. While it's
+running, no Metals functionality will work.
 
 This step can take a long time, especially the first time you run it in a new
-workspace. The exact time depends on the complexity of the build and if library
+workspace. The exact time depends on the complexity of the build and if the library
 dependencies are cached or need to be downloaded. For example, this step can
-take everything from 10 seconds in small cached builds up to 10-15 minutes in
+take anywhere from 10 seconds in small cached builds up to 10-15 minutes in
 large uncached builds.
 
 For more detailed information about what is happening behind the scenes during
@@ -69,14 +69,14 @@ sources with "Goto definition" by pressing `F12`.
 
 ## Find symbol references
 
-The default key binding is `shift+F12`. If you use vim-binding, you need to be
+The default key binding is `shift+F12`. If you use vim-bindings, you need to be
 in insert-mode.
 
 ![Find references](https://i.imgur.com/BJDkczD.gif)
 
 ## Goto symbol in workspace
 
-You can search for symbols in dependency source using the command palette   
+You can search for symbols in your dependency source using the command palette   
 
 ![workspace symbols](https://i.imgur.com/8X0XNi2.gif)
 
@@ -136,7 +136,7 @@ To fix it, open "Preferences > Preferences: LSP Settings" and add the following 
 ![Better code completion](https://i.imgur.com/2Rcfauz.gif)
 
 The next two steps are optional. If you prefer to only enable Metals completions
-(without mixing them with the default ones from Sublime) set following setting
+(without mixing them with the default ones from Sublime) set the following setting
 in the "Preferences > Preferences: LSP Settings":
 
 ```json

@@ -19,10 +19,10 @@ In addition to Docusaurus, we preprocess the markdown files using:
 
 - [sbt-docusaurus](https://olafurpg.github.io/sbt-docusaurus/), to publish the
   Docusaurus page to GitHub from the sbt shell.
-- [mdoc](https://github.com/olafurpg/mdoc), to type-check and interpret Scala
+- [mdoc](https://github.com/scalameta/mdoc), to type-check and interpret Scala
   code fences.
 
-The first step is then to preprocess the markdown files. You can do it with:
+The first step is to then preprocess the markdown files. You can do it with:
 
 ```sh
 sbt

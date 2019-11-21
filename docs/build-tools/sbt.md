@@ -52,7 +52,7 @@ Next, run:
 sbt "set bloopExportJarClassifiers := Some(Set(\"source\"))" bloopInstall
 ```
 
-to generate the Bloop JSON configuration files. You can also set
+to generate the Bloop JSON configuration files. You can also set the 
 `bloopExportJarClassifiers` setting inside your main build.sbt file, but using
 the above command will do it automatically for you in the current sbt session.
 

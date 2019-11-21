@@ -12,7 +12,7 @@ want Metals to have in the future.
 - [**Robust navigation**](#robust-navigation): goto definition should work
   everywhere, including for external Scala/Java dependencies.
 - [**Low CPU and memory usage**](#low-cpu-and-memory-usage): indexing should run
-  in the background and not get in your way from coding.
+  in the background and not get in the way of your coding.
 
 We acknowledge that simple installation and robust navigation alone is not
 enough to make a great language server. A great language server should also

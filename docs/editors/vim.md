@@ -16,8 +16,8 @@ Metals works with most LSP clients for Vim:
   but limited functionality (no auto-import, cancellation and no prompt for
   build import).
 
-In this page, we use `coc.nvim` (Conquer Of Completion) since it offers a richer
-user experience but the same steps can be adapted to use Metals with other LSP
+In this page, we use and recommend `coc.nvim` (Conquer Of Completion) since it offers a richer
+user experience. However, the same steps can be adapted to use Metals with other LSP
 clients.
 
 ![Vim demo](https://i.imgur.com/jMMEmCC.gif)
@@ -38,14 +38,14 @@ VIM - Vi IMproved 8.1
 
 # If using Neovim
 nvim --version | head
-NVIM v0.3.7
+NVIM v0.4.3
 ```
 
 ## Installing yarn
 
 `coc.nvim` requires [Node.js](https://nodejs.org/en/download/) in order to work.
 It also uses [Yarn](https://yarnpkg.com/en/docs/install#debian-stable) to manage
-extensions but you could opt-out of it and use `vim-plug` instead for example.
+extensions but you could opt-out of it and use `vim-plug` instead.
 
 For convenience we recommend installing both:
 
@@ -65,7 +65,7 @@ plugins:
   highlighting Scala and sbt source files.
 
 Assuming [`vim-plug`](https://github.com/junegunn/vim-plug) is used (another
-plugin manager like vundle works too), update `~/.vimrc` to include the
+plugin manager like vundle works too), update your `~/.vimrc` to include the
 following settings.
 
 ```vim
@@ -103,9 +103,9 @@ recommended default:
 ```
 
 `coc.nvim` uses [jsonc](https://code.visualstudio.com/docs/languages/json) as
-configuration file format. It's basically json with comments support.
+a configuration file format. It's basically json with comment support.
 
-In order to get comments highlighting, please add:
+In order to get comment highlighting, please add:
 
 ```vim
 autocmd FileType json syntax match Comment +\/\/.\+$+
@@ -113,7 +113,7 @@ autocmd FileType json syntax match Comment +\/\/.\+$+
 
 ### Generating metals binary
 
-If you now start Vim in a Scala project then it will fail since the `metals-vim`
+If you now start Vim in a Scala project, it will fail since the `metals-vim`
 binary does not exist yet.
 
 ```scala mdoc:bootstrap:metals-vim coc.nvim
@@ -129,7 +129,7 @@ usage with the `coc.nvim` client.
 
 ### LSP commands key mapping
 
-`coc.nvim` doesn't come with a default key mapping for LSP commands, you need to
+`coc.nvim` doesn't come with a default key mapping for LSP commands, so you need to
 configure it yourself.
 
 Here's a recommended configuration:
@@ -279,8 +279,8 @@ This command works only for sbt builds at the moment.
 ## Manually connect with build server
 
 To manually tell Metals to establish a connection with the build server, call
-the command below. This command works only at the moment if there is a `.bloop/`
-directory containing JSON files.
+the command below. This command works only if there is a `.bloop/` directory 
+containing JSON files.
 
 ```vim
 :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-connect' })

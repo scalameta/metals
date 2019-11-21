@@ -14,7 +14,7 @@ from the [VS Code API](https://code.visualstudio.com/api/references/vscode-api).
 
 ### Decoration
 
-A "decoration" represents non-editable code that is display in the text editor
+A "decoration" represents non-editable code that is displayed in the text editor
 alongside editable code. The GIF below demonstrates an example of green
 decorations that are formatted as comments, which contain the evaluated code.
 
