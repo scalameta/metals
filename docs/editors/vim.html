@@ -75,8 +75,8 @@ client written in Rust.</li>
 but limited functionality (no auto-import, cancellation and no prompt for
 build import).</li>
 </ul>
-<p>In this page, we use <code>coc.nvim</code> (Conquer Of Completion) since it offers a richer
-user experience but the same steps can be adapted to use Metals with other LSP
+<p>In this page, we use and recommend <code>coc.nvim</code> (Conquer Of Completion) since it offers a richer
+user experience. However, the same steps can be adapted to use Metals with other LSP
 clients.</p>
 <p><img src="https://i.imgur.com/jMMEmCC.gif" alt="Vim demo"></p>
 <h2><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h2>
@@ -97,12 +97,12 @@ VIM - Vi IMproved 8.1
 
 <span class="hljs-comment"># If using Neovim</span>
 nvim --version | head
-NVIM v0.3.7
+NVIM v0.4.3
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="installing-yarn"></a><a href="#installing-yarn" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing yarn</h2>
 <p><code>coc.nvim</code> requires <a href="https://nodejs.org/en/download/">Node.js</a> in order to work.
 It also uses <a href="https://yarnpkg.com/en/docs/install#debian-stable">Yarn</a> to manage
-extensions but you could opt-out of it and use <code>vim-plug</code> instead for example.</p>
+extensions but you could opt-out of it and use <code>vim-plug</code> instead.</p>
 <p>For convenience we recommend installing both:</p>
 <pre><code class="hljs css language-sh">curl -sL install-node.now.sh/lts | sh
 curl --compressed -o- -L https://yarnpkg.com/install.sh | bash
@@ -117,7 +117,7 @@ Protocol client to communicate with the Metals language server.</li>
 highlighting Scala and sbt source files.</li>
 </ul>
 <p>Assuming <a href="https://github.com/junegunn/vim-plug"><code>vim-plug</code></a> is used (another
-plugin manager like vundle works too), update <code>~/.vimrc</code> to include the
+plugin manager like vundle works too), update your <code>~/.vimrc</code> to include the
 following settings.</p>
 <pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
 
@@ -147,12 +147,12 @@ recommended default:</p>
 }
 </code></pre>
 <p><code>coc.nvim</code> uses <a href="https://code.visualstudio.com/docs/languages/json">jsonc</a> as
-configuration file format. It's basically json with comments support.</p>
-<p>In order to get comments highlighting, please add:</p>
+a configuration file format. It's basically json with comment support.</p>
+<p>In order to get comment highlighting, please add:</p>
 <pre><code class="hljs css language-vim"><span class="hljs-keyword">autocmd</span> FileType json <span class="hljs-keyword">syntax</span> <span class="hljs-keyword">match</span> Comment +\/\/.\+$+
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="generating-metals-binary"></a><a href="#generating-metals-binary" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Generating metals binary</h3>
-<p>If you now start Vim in a Scala project then it will fail since the <code>metals-vim</code>
+<p>If you now start Vim in a Scala project, it will fail since the <code>metals-vim</code>
 binary does not exist yet.</p>
 <p>Next, build a <code>metals-vim</code> binary for the latest Metals release using the
 <a href="https://github.com/coursier/coursier">Coursier</a> command-line interface.</p>
@@ -169,8 +169,8 @@ binary does not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.7.6+240-971c03ca-SNAPSHOT</td>
-          <td>20 Nov 2019 12:13</td>
+          <td>0.7.6+244-bafe189e-SNAPSHOT</td>
+          <td>22 Nov 2019 11:28</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
@@ -227,7 +227,7 @@ to learn how to speed up build import.</p>
 re-import the build.</p>
 <p><img src="https://i.imgur.com/hxOKfr0.png" alt="Import sbt changes"></p>
 <h3><a class="anchor" aria-hidden="true" id="lsp-commands-key-mapping"></a><a href="#lsp-commands-key-mapping" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>LSP commands key mapping</h3>
-<p><code>coc.nvim</code> doesn't come with a default key mapping for LSP commands, you need to
+<p><code>coc.nvim</code> doesn't come with a default key mapping for LSP commands, so you need to
 configure it yourself.</p>
 <p>Here's a recommended configuration:</p>
 <pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
@@ -341,8 +341,8 @@ This command works only for sbt builds at the moment.</p>
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="manually-connect-with-build-server"></a><a href="#manually-connect-with-build-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manually connect with build server</h2>
 <p>To manually tell Metals to establish a connection with the build server, call
-the command below. This command works only at the moment if there is a <code>.bloop/</code>
-directory containing JSON files.</p>
+the command below. This command works only if there is a <code>.bloop/</code> directory
+containing JSON files.</p>
 <pre><code class="hljs css language-vim">:<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'build-connect'</span> })
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="show-document-symbols"></a><a href="#show-document-symbols" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Show document symbols</h2>
