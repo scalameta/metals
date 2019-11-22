@@ -99,7 +99,8 @@ object ServerCommands {
         |   data: {
         |      className: "com.foo.App"
         |   }
-        |}```
+        |}
+        |```
     """.stripMargin
   )
 

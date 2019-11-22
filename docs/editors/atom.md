@@ -12,15 +12,19 @@ Metals works with Atom thanks to the
 
 ```
 
-## Installing the package
+## Installing the packages
 
-Install the package by searching for "ide-scala" or run the following command.
+Once the requirements are satisfied, we can now proceed to install the following packages:
+
+- [`ide-scala`](https://atom.io/packages/ide-scala): Protocol client to communicate with Metals. Install the package by searching for "ide-scala" or run the following command.
 
 ```sh
 apm install ide-scala
 ```
 
 [![Install Metals package](https://img.shields.io/badge/metals-atom-brightgreen.png)](atom://settings-view/show-package?package=ide-scala)
+
+- [`language-scala`](https://atom.io/packages/language-scala): for syntax highlighting Scala and sbt source files.
 
 ```scala mdoc:editor:atom
 

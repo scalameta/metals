@@ -11,7 +11,7 @@ protocol should work with Metals.
 There are two options for integrating Metals with a new build tool:
 
 - [via Bloop](#bloop-build-server): emit Bloop JSON configuration files and use
-  the Bloop build server. The benefit of this approach is that it is simple to
+  the Bloop build server. The benefit of this approach is that it's simple to
   implement but has the downside that compilation happens outside of your build
   tool.
 - [via custom build server](#custom-build-server): add Build Server Protocol
@@ -31,7 +31,7 @@ compiler plugin enabled.
 Make sure to declare the compiler option `"-P:semanticdb:sourceroot:$WORKSPACE"`
 where `$WORKSPACE` is the absolute path to the workspace root directory. By
 default, the sourceroot is inferred from the working directory of the compiler
-process but it's better to explicitly declare it. If the sourceroot is
+process, but it's better to explicitly declare it. If the sourceroot is
 misconfigured, then Metals is unable to find the SemanticDB files created by the
 compiler plugin.
 

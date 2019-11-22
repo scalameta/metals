@@ -17,7 +17,7 @@ the features
 
 ## Installing the plugin
 
-In you eclipse installation go to install new software and point the repository
+In your eclipse installation go to install new software and point the repository
 to:
 
 ```
@@ -28,12 +28,12 @@ http://scalameta.org/metals-eclipse/update/
 
 ## Running commands
 
-All commands including `Import build` can be run currently via browser interface
-under `http://127.0.0.1:5031/`. We recommend having it open to import the build
+All commands including `Import build` can be run currently via the browser interface
+located at `http://127.0.0.1:5031/`. We recommend having it open to import the build
 that is required for Metals to work properly.
 
-Additionally, import build message should pop out when opening a new workspace
-or it can be run via Metals Tree View that needs to be activated separately.
+Additionally, the import build message should pop out when opening a new workspace,
+or it can be run via Metals Tree View which needs to be activated separately.
 These features currently still need some polishing, but are usable.
 
 ```scala mdoc:generic
