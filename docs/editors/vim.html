@@ -143,7 +143,9 @@ recommended default:</p>
       <span class="hljs-attr">"rootPatterns"</span>: [<span class="hljs-string">"build.sbt"</span>],
       <span class="hljs-attr">"filetypes"</span>: [<span class="hljs-string">"scala"</span>, <span class="hljs-string">"sbt"</span>]
     }
-  }
+  },
+  <span class="hljs-comment">// Needed for type formatting on multiline strings</span>
+  <span class="hljs-attr">"coc.preferences.formatOnType"</span>: <span class="hljs-literal">true</span>
 }
 </code></pre>
 <p><code>coc.nvim</code> uses <a href="https://code.visualstudio.com/docs/languages/json">jsonc</a> as
@@ -169,8 +171,8 @@ binary does not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.7.6+244-bafe189e-SNAPSHOT</td>
-          <td>22 Nov 2019 11:28</td>
+          <td>0.7.6+244-8014e5ae-SNAPSHOT</td>
+          <td>24 Nov 2019 20:03</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
@@ -301,6 +303,19 @@ configure it yourself.</p>
 <span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">k</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocPrev<span class="hljs-symbol">&lt;CR&gt;</span>
 <span class="hljs-comment">" Resume latest coc list</span>
 <span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">p</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocListResume<span class="hljs-symbol">&lt;CR&gt;</span>
+
+<span class="hljs-comment">" Notify coc.nvim that &lt;enter&gt; has been pressed.</span>
+<span class="hljs-comment">" Currently used for the formatOnType feature.</span>
+<span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span><span class="hljs-symbol">&lt;expr&gt;</span> <span class="hljs-symbol">&lt;cr&gt;</span> <span class="hljs-built_in">pumvisible</span>() ? coc#_select_confirm()
+      \: <span class="hljs-string">"\&lt;C-g&gt;u\&lt;CR&gt;\&lt;c-r&gt;=coc#on_enter()\&lt;CR&gt;"</span>
+
+<span class="hljs-comment">" Metals specific commands</span>
+<span class="hljs-comment">" Start Metals Doctor</span>
+command! -nargs=<span class="hljs-number">0</span> MetalsDoctor :<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'doctor-run'</span> })
+<span class="hljs-comment">" Manually start build import</span>
+command! -nargs=<span class="hljs-number">0</span> MetalsImport :<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'build-import'</span> })
+<span class="hljs-comment">" Manually connect with the build server</span>
+command! -nargs=<span class="hljs-number">0</span> MetalsConnect :<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'build-connect'</span> })
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="learn-more-about-cocnvim"></a><a href="#learn-more-about-cocnvim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Learn more about coc.nvim</h2>
 <p>For comprehensive documentation about <code>coc.nvim</code>, run the following command.</p>
@@ -326,24 +341,25 @@ open buffer.</p>
 </code></pre>
 <p>This step clean ups resources that are used by the server.</p>
 <h2><a class="anchor" aria-hidden="true" id="run-doctor"></a><a href="#run-doctor" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Run doctor</h2>
-<p>To troubleshoot problems with your build workspace execute the following
-command.</p>
-<pre><code class="hljs css language-vim">:<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'doctor-run'</span> })
+<p>To troubleshoot problems with your build workspace, make sure the below snippet
+is in your <code>.vimrc</code> which will allow you to issue a <code>:MetalsDoctor</code> command.</p>
+<pre><code class="hljs css language-vim">command! -nargs=<span class="hljs-number">0</span> MetalsDoctor :<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'doctor-run'</span> })
 </code></pre>
 <p>This command opens your browser with a table like this.</p>
 <p><img src="https://i.imgur.com/yelm0jd.png" alt="Run Doctor"></p>
 <p>Note: the binary <code>metals-vim</code> needs to be built using <code>-Dmetals.http=true</code> for
 this command to work.</p>
 <h2><a class="anchor" aria-hidden="true" id="manually-start-build-import"></a><a href="#manually-start-build-import" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manually start build import</h2>
-<p>To manually start the <code>sbt bloopInstall</code> step, call the following command below.
+<p>To manually start the <code>sbt bloopInstall</code> step, make sure the below snippet
+is in your <code>.vimrc</code> and issue the <code>:MetalsInstall</code> command.
 This command works only for sbt builds at the moment.</p>
-<pre><code class="hljs css language-vim">:<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'build-import'</span> })
+<pre><code class="hljs css language-vim">command! -nargs=<span class="hljs-number">0</span> MetalsImport :<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'build-import'</span> })
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="manually-connect-with-build-server"></a><a href="#manually-connect-with-build-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manually connect with build server</h2>
-<p>To manually tell Metals to establish a connection with the build server, call
-the command below. This command works only if there is a <code>.bloop/</code> directory
-containing JSON files.</p>
-<pre><code class="hljs css language-vim">:<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'build-connect'</span> })
+<p>To manually tell Metals to establish a connection with the build server, make sure
+the snippet below is in your <code>.vimrc</code> and issue the <code>:MetalsConnect</code> command.
+This command works only if there is a <code>.bloop/</code> directory containing JSON files.</p>
+<pre><code class="hljs css language-vim">command! -nargs=<span class="hljs-number">0</span> MetalsConnect :<span class="hljs-keyword">call</span> CocRequestAsync(<span class="hljs-string">'metals'</span>, <span class="hljs-string">'workspace/executeCommand'</span>, { <span class="hljs-string">'command'</span>: <span class="hljs-string">'build-connect'</span> })
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="show-document-symbols"></a><a href="#show-document-symbols" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Show document symbols</h2>
 <p>Run <code>:CocList outline</code> to show a symbol outline for the current file or use the
