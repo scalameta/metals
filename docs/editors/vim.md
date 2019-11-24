@@ -98,7 +98,9 @@ recommended default:
       "rootPatterns": ["build.sbt"],
       "filetypes": ["scala", "sbt"]
     }
-  }
+  },
+  // Needed for type formatting on multiline strings
+  "coc.preferences.formatOnType": true
 }
 ```
 
@@ -206,6 +208,19 @@ nnoremap <silent> <space>j  :<C-u>CocNext<CR>
 nnoremap <silent> <space>k  :<C-u>CocPrev<CR>
 " Resume latest coc list
 nnoremap <silent> <space>p  :<C-u>CocListResume<CR>
+
+" Notify coc.nvim that <enter> has been pressed.
+" Currently used for the formatOnType feature.
+inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
+      \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+
+" Metals specific commands
+" Start Metals Doctor
+command! -nargs=0 MetalsDoctor :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'doctor-run' })
+" Manually start build import
+command! -nargs=0 MetalsImport :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-import' })
+" Manually connect with the build server
+command! -nargs=0 MetalsConnect :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-connect' })
 ```
 
 ## Learn more about coc.nvim
@@ -253,11 +268,11 @@ This step clean ups resources that are used by the server.
 
 ## Run doctor
 
-To troubleshoot problems with your build workspace execute the following
-command.
+To troubleshoot problems with your build workspace, make sure the below snippet
+is in your `.vimrc` which will allow you to issue a `:MetalsDoctor` command.
 
 ```vim
-:call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'doctor-run' })
+command! -nargs=0 MetalsDoctor :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'doctor-run' })
 ```
 
 This command opens your browser with a table like this.
@@ -269,21 +284,22 @@ this command to work.
 
 ## Manually start build import
 
-To manually start the `sbt bloopInstall` step, call the following command below.
+To manually start the `sbt bloopInstall` step, make sure the below snippet
+is in your `.vimrc` and issue the `:MetalsInstall` command.
 This command works only for sbt builds at the moment.
 
 ```vim
-:call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-import' })
+command! -nargs=0 MetalsImport :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-import' })
 ```
 
 ## Manually connect with build server
 
-To manually tell Metals to establish a connection with the build server, call
-the command below. This command works only if there is a `.bloop/` directory 
-containing JSON files.
+To manually tell Metals to establish a connection with the build server, make sure
+the snippet below is in your `.vimrc` and issue the `:MetalsConnect` command.
+This command works only if there is a `.bloop/` directory containing JSON files.
 
 ```vim
-:call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-connect' })
+command! -nargs=0 MetalsConnect :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-connect' })
 ```
 
 ## Show document symbols
