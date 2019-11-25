@@ -393,8 +393,8 @@ lazy val unit = project
   .settings(
     testSettings,
     libraryDependencies ++= List(
-      "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
-      "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
+      "io.get-coursier" %% "coursier" % "2.0.0-RC2-2", // for jars
+      "io.get-coursier" %% "coursier-cache" % "2.0.0-RC2-2",
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "com.lihaoyi" %% "utest" % "0.6.0"

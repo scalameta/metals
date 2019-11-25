@@ -4,8 +4,6 @@ addSbtPlugin("com.geirsson" % "sbt-ci-release" % "1.3.1")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.0.0")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.9.0")
 
-addSbtCoursier
-
 libraryDependencies += "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
 
 resolvers += Resolver.sonatypeRepo("public")
