@@ -163,7 +163,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.8.0"
-  val coursier = "2.0.0-RC2-2"
+  val coursier = "2.0.0-RC5-2"
 }
 
 skip.in(publish) := true
