@@ -46,8 +46,8 @@ import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
 import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.decorations.PublishDecorationsParams
+import scala.meta.internal.worksheets.DecorationWorksheetPublisher
+import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.internal.rename.RenameProvider
 
 class MetalsLanguageServer(
@@ -177,7 +177,7 @@ class MetalsLanguageServer(
   private var doctor: Doctor = _
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
-  var worksheetProvider: Option[WorksheetProvider] = None
+  var worksheetProvider: WorksheetProvider = _
 
   def connectToLanguageClient(client: MetalsLanguageClient): Unit = {
     languageClient.underlying = new ConfiguredLanguageClient(client, config)(ec)
@@ -407,22 +407,25 @@ class MetalsLanguageServer(
       tables,
       messages
     )
-    if (clientExperimentalCapabilities.decorationProvider) {
-      worksheetProvider = Some(
-        register(
-          new WorksheetProvider(
-            workspace,
-            buffers,
-            buildTargets,
-            languageClient,
-            () => userConfig,
-            statusBar,
-            diagnostics,
-            embedded
-          )
+    val worksheetPublisher =
+      if (clientExperimentalCapabilities.decorationProvider)
+        new DecorationWorksheetPublisher()
+      else
+        new WorkspaceEditWorksheetPublisher()
+    worksheetProvider =
+      register(
+        new WorksheetProvider(
+          workspace,
+          buffers,
+          buildTargets,
+          languageClient,
+          () => userConfig,
+          statusBar,
+          diagnostics,
+          embedded,
+          worksheetPublisher
         )
       )
-    }
     if (clientExperimentalCapabilities.treeViewProvider) {
       treeView = new MetalsTreeViewProvider(
         () => workspace,
@@ -1536,7 +1539,7 @@ class MetalsLanguageServer(
       buildClient.reset()
       semanticDBIndexer.reset()
       treeView.reset()
-      worksheetProvider.foreach(_.reset())
+      worksheetProvider.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
       for {
@@ -1663,20 +1666,13 @@ class MetalsLanguageServer(
   private def onWorksheetChanged(
       paths: Seq[AbsolutePath]
   ): Future[Unit] = {
-    for {
-      worksheet <- paths.find { path =>
-        focusedDocument.contains(path) &&
-        path.isWorksheet
-      }
-      provider <- worksheetProvider
-    } yield {
-      provider.decorations(worksheet, EmptyCancelToken).map { decorations =>
-        val params =
-          new PublishDecorationsParams(worksheet.toURI.toString(), decorations)
-        languageClient.metalsPublishDecorations(params)
-      }
-    }
-  }.getOrElse(Future.successful(()))
+    paths.find { path =>
+      focusedDocument.contains(path) &&
+      path.isWorksheet
+    }.fold(Future.successful(())) (
+      worksheetProvider.evaluateAndPublish(_, EmptyCancelToken)
+    )
+  }
 
   private def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
