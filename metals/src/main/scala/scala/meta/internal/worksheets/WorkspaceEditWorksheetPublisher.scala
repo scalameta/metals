@@ -26,7 +26,7 @@ class WorkspaceEditWorksheetPublisher() extends WorksheetPublisher {
       .map(renderEdit(_, source))
 
     new WorkspaceEdit(
-        Map(path.toString -> (edits.asJava)).asJava
+      Map(path.toURI.toString -> (edits.asJava)).asJava
     )
   }
 
@@ -36,9 +36,8 @@ class WorkspaceEditWorksheetPublisher() extends WorksheetPublisher {
   }
 
   private def renderEdit(statement: EvaluatedWorksheetStatement, source: Input): TextEdit = {
-      val previousEditEnd = locatePreviousEdit(statement, source)
       val startPosition = new Position(statement.position.endLine, statement.position.endColumn)
-      val endPosition = previousEditEnd.getOrElse(startPosition)
+      val endPosition = locatePreviousEdit(statement, source).getOrElse(startPosition)
       //trim to fix empty new line at start from Mdoc
       val alignedMessage = alignMessage(statement.details().trim(), statement.position.endColumn)
       
