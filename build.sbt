@@ -163,6 +163,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.8.0"
+  val coursier = "2.0.0-RC5-2"
 }
 
 skip.in(publish) := true
@@ -335,7 +336,7 @@ lazy val mtest = project
     skip.in(publish) := true,
     crossScalaVersions := V.supportedScalaVersions,
     libraryDependencies ++= List(
-      "io.get-coursier" %% "coursier" % "2.0.0-RC2-2",
+      "io.get-coursier" %% "coursier" % V.coursier,
       "org.scalameta" %% "testkit" % V.scalameta
     ) ++ crossSetting(
       scalaVersion.value,
@@ -393,8 +394,7 @@ lazy val unit = project
   .settings(
     testSettings,
     libraryDependencies ++= List(
-      "io.get-coursier" %% "coursier" % coursier.util.Properties.version, // for jars
-      "io.get-coursier" %% "coursier-cache" % coursier.util.Properties.version,
+      "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "com.lihaoyi" %% "utest" % "0.6.0"
