@@ -6,6 +6,10 @@ import scala.meta.io.AbsolutePath
 
 trait WorksheetPublisher {
 
-    def publish(languageClient: MetalsLanguageClient, path: AbsolutePath, worksheet: EvaluatedWorksheet): Unit
+  def publish(
+      languageClient: MetalsLanguageClient,
+      path: AbsolutePath,
+      worksheet: EvaluatedWorksheet
+  ): Unit
 
 }

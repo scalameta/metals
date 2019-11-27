@@ -412,20 +412,19 @@ class MetalsLanguageServer(
         new DecorationWorksheetPublisher()
       else
         new WorkspaceEditWorksheetPublisher()
-    worksheetProvider =
-      register(
-        new WorksheetProvider(
-          workspace,
-          buffers,
-          buildTargets,
-          languageClient,
-          () => userConfig,
-          statusBar,
-          diagnostics,
-          embedded,
-          worksheetPublisher
-        )
+    worksheetProvider = register(
+      new WorksheetProvider(
+        workspace,
+        buffers,
+        buildTargets,
+        languageClient,
+        () => userConfig,
+        statusBar,
+        diagnostics,
+        embedded,
+        worksheetPublisher
       )
+    )
     if (clientExperimentalCapabilities.treeViewProvider) {
       treeView = new MetalsTreeViewProvider(
         () => workspace,
@@ -1666,12 +1665,14 @@ class MetalsLanguageServer(
   private def onWorksheetChanged(
       paths: Seq[AbsolutePath]
   ): Future[Unit] = {
-    paths.find { path =>
-      focusedDocument.contains(path) &&
-      path.isWorksheet
-    }.fold(Future.successful(())) (
-      worksheetProvider.evaluateAndPublish(_, EmptyCancelToken)
-    )
+    paths
+      .find { path =>
+        focusedDocument.contains(path) &&
+        path.isWorksheet
+      }
+      .fold(Future.successful(()))(
+        worksheetProvider.evaluateAndPublish(_, EmptyCancelToken)
+      )
   }
 
   private def onBuildChangedUnbatched(

@@ -13,35 +13,43 @@ import scala.meta.io.AbsolutePath
 
 class DecorationWorksheetPublisher() extends WorksheetPublisher {
 
-    override def publish(languageClient: MetalsLanguageClient, path: AbsolutePath, worksheet: EvaluatedWorksheet): Unit = {
-       (render _ andThen publish(languageClient, path)) (worksheet)
-    }
+  override def publish(
+      languageClient: MetalsLanguageClient,
+      path: AbsolutePath,
+      worksheet: EvaluatedWorksheet
+  ): Unit = {
+    (render _ andThen publish(languageClient, path))(worksheet)
+  }
 
-    private def render(worksheet: EvaluatedWorksheet): Array[DecorationOptions] = {
-        worksheet
-        .statements()
-        .iterator()
-        .asScala
-        .map { s =>
-          new DecorationOptions(
-            toLsp(s.position()),
-            new MarkedString("scala", s.details()),
-            ThemableDecorationInstanceRenderOptions(
-              after = ThemableDecorationAttachmentRenderOptions(
-                s.summary(),
-                color = "green",
-                fontStyle = "italic"
-              )
+  private def render(
+      worksheet: EvaluatedWorksheet
+  ): Array[DecorationOptions] = {
+    worksheet
+      .statements()
+      .iterator()
+      .asScala
+      .map { s =>
+        new DecorationOptions(
+          toLsp(s.position()),
+          new MarkedString("scala", s.details()),
+          ThemableDecorationInstanceRenderOptions(
+            after = ThemableDecorationAttachmentRenderOptions(
+              s.summary(),
+              color = "green",
+              fontStyle = "italic"
             )
           )
-        }
-        .toArray
-    }
+        )
+      }
+      .toArray
+  }
 
-    private def publish(languageClient: MetalsLanguageClient, path: AbsolutePath)(decorations: Array[DecorationOptions]): Unit = {
-      val params =
-        new PublishDecorationsParams(path.toURI.toString(), decorations)
-      languageClient.metalsPublishDecorations(params)
-    }
+  private def publish(languageClient: MetalsLanguageClient, path: AbsolutePath)(
+      decorations: Array[DecorationOptions]
+  ): Unit = {
+    val params =
+      new PublishDecorationsParams(path.toURI.toString(), decorations)
+    languageClient.metalsPublishDecorations(params)
+  }
 
 }

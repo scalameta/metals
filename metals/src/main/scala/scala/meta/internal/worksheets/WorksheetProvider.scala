@@ -86,7 +86,9 @@ class WorksheetProvider(
       path: AbsolutePath,
       token: CancelToken
   ): Future[Unit] = {
-    evaluateAsync(path, token).map(_.foreach(publisher.publish(languageClient, path, _)))
+    evaluateAsync(path, token).map(
+      _.foreach(publisher.publish(languageClient, path, _))
+    )
   }
 
   def evaluateAsync(
