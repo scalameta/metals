@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - uses: olafurpg/setup-scala@v7
       - name: Run unit tests
         run: bin/test.sh "unit/test"
         shell: bash
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - uses: olafurpg/setup-scala@v7
       - name: Run unit tests
         run: bin/test.sh unit/test
   sbt:
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - uses: olafurpg/setup-scala@v7
       - name: Run Sbt tests
         run: bin/test.sh 'slow/testOnly -- tests.sbt'
   maven:
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - uses: olafurpg/setup-scala@v7
       - name: Run Maven tests
         run: bin/test.sh 'slow/testOnly -- tests.maven'
   gradle:
@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - uses: olafurpg/setup-scala@v7
       - name: Run Gradle tests
         run: bin/test.sh 'slow/testOnly -- tests.gradle'
   mill:
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - uses: olafurpg/setup-scala@v7
       - name: Run Mill tests
         run: bin/test.sh 'slow/testOnly -- tests.mill'
   feature:
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - uses: olafurpg/setup-scala@v7
       - name: Run slow tests
         run: bin/test.sh 'slow/testOnly -- tests.feature'
   cross:
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - uses: olafurpg/setup-scala@v7
       - name: Run cross tests
         run: sbt +cross/test
   checks:
@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - uses: olafurpg/setup-scala@v7
       - uses: actions/setup-node@v1
       - name: Scalafmt & Scalafix & Docusaurus
         run: |
