@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.TextEdits
+import java.net.URI
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -95,7 +96,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       params: ApplyWorkspaceEditParams
   ): CompletableFuture[ApplyWorkspaceEditResponse] = {
     def applyEdits(uri: String, textEdits: java.util.List[TextEdit]): Unit = {
-      val path = AbsolutePath(uri)
+      val path = AbsolutePath.fromAbsoluteUri(URI.create(uri))
 
       val content = path.readText
       val editedContent =

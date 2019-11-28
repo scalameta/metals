@@ -10,8 +10,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import mdoc.interfaces.EvaluatedWorksheetStatement
 import scala.meta.inputs.Input
 import org.eclipse.lsp4j.{Position, Range}
+import scala.meta.internal.metals.Buffers
 
-class WorkspaceEditWorksheetPublisher() extends WorksheetPublisher {
+class WorkspaceEditWorksheetPublisher(buffers: Buffers) extends WorksheetPublisher {
 
   override def publish(
       languageClient: MetalsLanguageClient,
@@ -24,7 +25,7 @@ class WorkspaceEditWorksheetPublisher() extends WorksheetPublisher {
   private def render(
       path: AbsolutePath
   )(worksheet: EvaluatedWorksheet): WorkspaceEdit = {
-    val source = path.toInput
+    val source = path.toInputFromBuffers(buffers)
     val edits =
       worksheet.statements.asScala
         .map(renderEdit(_, source))
@@ -60,9 +61,9 @@ class WorkspaceEditWorksheetPublisher() extends WorksheetPublisher {
   }
 
   private def alignMessage(message: String, statementEndColumn: Int): String = {
-    val messageOpening = "  /*> "
+    val messageOpening = "  /*>  "
     val messageEnding = "  */"
-    val intendation = List.fill(statementEndColumn)(" ").reduce(_ + _) + "   * "
+    val intendation = List.fill(statementEndColumn)(" ").reduce(_ + _) + "   *   "
     messageOpening +
       message.split("\n").mkString("\n" + intendation) +
       messageEnding

@@ -411,7 +411,7 @@ class MetalsLanguageServer(
       if (clientExperimentalCapabilities.decorationProvider)
         new DecorationWorksheetPublisher()
       else
-        new WorkspaceEditWorksheetPublisher()
+        new WorkspaceEditWorksheetPublisher(buffers)
     worksheetProvider = register(
       new WorksheetProvider(
         workspace,
