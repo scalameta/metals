@@ -12,7 +12,8 @@ import scala.meta.inputs.Input
 import org.eclipse.lsp4j.{Position, Range}
 import scala.meta.internal.metals.Buffers
 
-class WorkspaceEditWorksheetPublisher(buffers: Buffers) extends WorksheetPublisher {
+class WorkspaceEditWorksheetPublisher(buffers: Buffers)
+    extends WorksheetPublisher {
 
   override def publish(
       languageClient: MetalsLanguageClient,
@@ -63,7 +64,9 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers) extends WorksheetPublish
   private def alignMessage(message: String, statementEndColumn: Int): String = {
     val messageOpening = "  /*>  "
     val messageEnding = "  */"
-    val intendation = List.fill(statementEndColumn)(" ").reduce(_ + _) + "   *   "
+    val intendation = List
+      .fill(statementEndColumn)(" ")
+      .reduce(_ + _) + "   *   "
     messageOpening +
       message.split("\n").mkString("\n" + intendation) +
       messageEnding

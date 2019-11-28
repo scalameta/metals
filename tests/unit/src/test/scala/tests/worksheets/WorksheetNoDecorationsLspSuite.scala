@@ -3,20 +3,21 @@ package tests.worksheets
 import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
 
-object WorksheetNoDecorationsLspSuite extends BaseLspSuite("worksheet-no-decorations") {
+object WorksheetNoDecorationsLspSuite
+    extends BaseLspSuite("worksheet-no-decorations") {
 
-  testAsync("one-liners"){
+  testAsync("one-liners") {
     for {
       _ <- server.initialize(
-          s"""
-             |/metals.json
-             |{
-             |  "a": { }
-             |}
-             |/a/src/main/scala/foo/Main.worksheet.sc
-             |val x = 1
-             |val foo = "bar"
-             |""".stripMargin
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |val x = 1
+           |val foo = "bar"
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
       _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
@@ -30,18 +31,18 @@ object WorksheetNoDecorationsLspSuite extends BaseLspSuite("worksheet-no-decorat
     } yield ()
   }
 
-  testAsync("multiline-value"){
+  testAsync("multiline-value") {
     for {
       _ <- server.initialize(
-          s"""
-             |/metals.json
-             |{
-             |  "a": { }
-             |}
-             |/a/src/main/scala/foo/Main.worksheet.sc
-             |val foo = {println("foo is printed"); "metals"}
-             |val bar = 42
-             |""".stripMargin
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |val foo = {println("foo is printed"); "metals"}
+           |val bar = 42
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
       _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
@@ -56,19 +57,19 @@ object WorksheetNoDecorationsLspSuite extends BaseLspSuite("worksheet-no-decorat
     } yield ()
   }
 
-  testAsync("new-edits"){
+  testAsync("new-edits") {
     for {
       _ <- server.initialize(
-          s"""
-             |/metals.json
-             |{
-             |  "a": { }
-             |}
-             |/a/src/main/scala/foo/Main.worksheet.sc
-             |val foo = "meta ls"  /*>  foo: String = "metals"
-             |                                                  *   // foo is printed  */
-             |val bar = 43  /*>  bar: Int = 42  */
-             |""".stripMargin
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |val foo = "meta ls"  /*>  foo: String = "metals"
+           |                                                  *   // foo is printed  */
+           |val bar = 43  /*>  bar: Int = 42  */
+           |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
       _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
