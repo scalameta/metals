@@ -239,6 +239,8 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
         client.messageRequests.peekLast(),
         CheckDoctor.multipleMisconfiguredProjects(8)
       )
+      sourceJars <- server.buildTargetSourceJars("a")
+      _ = assert(sourceJars.nonEmpty) // source jars should not be empty
       _ <- Future.sequence(
         ('a' to 'f')
           .map(project => s"$project/src/main/scala/a/A.scala")

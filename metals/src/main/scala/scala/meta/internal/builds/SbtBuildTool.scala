@@ -25,7 +25,7 @@ case class SbtBuildTool(version: String) extends BuildTool {
       config: MetalsServerConfig
   ): List[String] = {
     val sbtArgs = List[String](
-      "set bloopExportJarClassifiers := Some(Set(\"source\"))",
+      "set bloopExportJarClassifiers in Global := Some(Set(\"sources\"))",
       "bloopInstall"
     )
     val allArgs = userConfig().sbtScript match {

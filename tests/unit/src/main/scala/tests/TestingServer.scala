@@ -165,6 +165,31 @@ final class TestingServer(
     } yield source
   }
 
+  def buildTargetSourceJars(buildTarget: String): Future[Seq[String]] = {
+    server.buildServer match {
+      case Some(build) =>
+        for {
+          workspaceBuildTargets <- build.server.workspaceBuildTargets().asScala
+          ids = workspaceBuildTargets.getTargets
+            .map(_.getId)
+            .asScala
+            .filter(_.getUri().contains(s"?id=$buildTarget"))
+          dependencySources <- build.server
+            .buildTargetDependencySources(
+              new b.DependencySourcesParams(ids.asJava)
+            )
+            .asScala
+        } yield
+          dependencySources
+            .getItems()
+            .asScala
+            .flatMap(_.getSources().asScala)
+            .toSeq
+      case None =>
+        Future.successful(Seq.empty)
+    }
+  }
+
   def assertReferenceDefinitionBijection(): Unit = {
     val compare = workspaceReferences()
     assert(compare.definition.nonEmpty)
