@@ -59,7 +59,7 @@ class PackageProvider(private val buildTargets: BuildTargets) {
       packageStatement
     )
     val textEdits = List(textEdit).asJava
-    val changes = Map(path.toString -> textEdits).asJava
+    val changes = Map(path.toURI.toString -> textEdits).asJava
     new WorkspaceEdit(changes)
   }
 }
