@@ -153,7 +153,7 @@ lazy val V = new {
   val gradleBloop = bloop
   val mavenBloop = bloop
   val scalafmt = "2.0.1"
-  val mdoc = "2.0.0"
+  val mdoc = "2.0.2"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
@@ -269,7 +269,7 @@ lazy val metals = project
       // Scala dependencies
       // ==================
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
-      "org.scalameta" %% "mdoc" % V.mdoc,
+      "org.scalameta" % "mdoc-interfaces" % V.mdoc,
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
@@ -287,6 +287,7 @@ lazy val metals = project
     buildInfoKeys := Seq[BuildInfoKey](
       "localSnapshotVersion" -> localSnapshotVersion,
       "metalsVersion" -> version.value,
+      "mdocVersion" -> V.mdoc,
       "bspVersion" -> V.bsp,
       "bloopVersion" -> V.bloop,
       "sbtBloopVersion" -> V.sbtBloop,

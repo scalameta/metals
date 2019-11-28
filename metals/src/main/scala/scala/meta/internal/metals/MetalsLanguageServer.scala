@@ -417,7 +417,8 @@ class MetalsLanguageServer(
             languageClient,
             () => userConfig,
             statusBar,
-            diagnostics
+            diagnostics,
+            embedded
           )
         )
       )
@@ -1701,7 +1702,7 @@ class MetalsLanguageServer(
       definitionOnly: Boolean = false
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
-    if (source.toLanguage.isScala) {
+    if (source.isScalaFilename) {
       val semanticDBDoc =
         semanticdbs.textDocument(source).documentIncludingStale
       (for {
@@ -1762,7 +1763,7 @@ class MetalsLanguageServer(
       token: CancelToken = EmptyCancelToken
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
-    if (source.toLanguage.isScala) {
+    if (source.isScalaFilename) {
       val result = timedThunk("definition", config.statistics.isDefinition)(
         definitionProvider.definition(source, position, token)
       )

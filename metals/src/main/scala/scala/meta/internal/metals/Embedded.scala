@@ -14,6 +14,8 @@ import coursierapi.Fetch
 import coursierapi.MavenRepository
 import coursierapi.Repository
 import coursierapi.ResolutionParams
+import scala.meta.internal.worksheets.MdocClassLoader
+import mdoc.interfaces.Mdoc
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -21,6 +23,7 @@ import coursierapi.ResolutionParams
  * - sbt-launch.jar
  * - bloop.py
  * - ch.epfl.scala:bloop-frontend
+ * - mdoc
  */
 final class Embedded(
     icons: Icons,
@@ -28,35 +31,64 @@ final class Embedded(
     userConfig: () => UserConfiguration
 ) extends Cancelable {
 
-  override def cancel(): Unit = {
-    presentationCompilers.clear()
-  }
-
+  private val mdocs: TrieMap[String, URLClassLoader] =
+    TrieMap.empty
   private val presentationCompilers: TrieMap[String, URLClassLoader] =
     TrieMap.empty
+
+  override def cancel(): Unit = {
+    presentationCompilers.clear()
+    mdocs.clear()
+  }
+
+  def mdoc(info: ScalaBuildTarget): Mdoc = {
+    val classloader = mdocs.getOrElseUpdate(
+      info.getScalaBinaryVersion(),
+      statusBar.trackSlowTask("Preparing worksheets") {
+        Embedded.newMdocClassLoader(info)
+      }
+    )
+    serviceLoader(
+      classOf[Mdoc],
+      "mdoc.internal.worksheets.Mdoc",
+      classloader
+    )
+  }
+
   def presentationCompiler(
       info: ScalaBuildTarget,
       scalac: ScalacOptionsItem
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
       ScalaVersions.dropVendorSuffix(info.getScalaVersion),
-      statusBar.trackSlowTask("Downloading presentation compiler") {
+      statusBar.trackSlowTask("Preparing presentation compiler") {
         Embedded.newPresentationCompilerClassLoader(info, scalac)
       }
     )
-    val services =
-      ServiceLoader.load(classOf[PresentationCompiler], classloader).iterator()
+    serviceLoader(
+      classOf[PresentationCompiler],
+      classOf[ScalaPresentationCompiler].getName(),
+      classloader
+    )
+  }
+
+  private def serviceLoader[T](
+      cls: Class[T],
+      className: String,
+      classloader: URLClassLoader
+  ): T = {
+    val services = ServiceLoader.load(cls, classloader).iterator()
     if (services.hasNext) services.next()
     else {
-      // NOTE(olafur): ServiceLoader doesn't find the presentation compiler service
-      // on Appveyor for some reason, I'm unable to reproduce on my computer. Here below
-      // we fallback to manual classloading.
-      val cls =
-        classloader.loadClass(classOf[ScalaPresentationCompiler].getName)
+      // NOTE(olafur): ServiceLoader doesn't find the service on Appveyor for
+      // some reason, I'm unable to reproduce on my computer. Here below we
+      // fallback to manual classloading.
+      val cls = classloader.loadClass(className)
       val ctor = cls.getDeclaredConstructor()
       ctor.setAccessible(true)
-      ctor.newInstance().asInstanceOf[PresentationCompiler]
+      ctor.newInstance().asInstanceOf[T]
     }
+
   }
 }
 
@@ -74,11 +106,24 @@ object Embedded {
         )
       )
 
+  def newMdocClassLoader(info: ScalaBuildTarget): URLClassLoader = {
+    val mdoc = Dependency.of(
+      "org.scalameta",
+      s"mdoc_${info.getScalaBinaryVersion()}",
+      BuildInfo.mdocVersion
+    )
+    val settings = fetchSettings(mdoc, info.getScalaVersion())
+    val jars = fetchSettings(mdoc, info.getScalaVersion()).fetch()
+    val parent =
+      new MdocClassLoader(this.getClass.getClassLoader)
+    val urls = jars.iterator.asScala.map(_.toURI().toURL()).toArray
+    new URLClassLoader(urls, parent)
+  }
+
   def fetchSettings(
       dep: Dependency,
       scalaVersion: String
   ): Fetch = {
-
     val resolutionParams = ResolutionParams
       .create()
       .forceVersions(

@@ -6,6 +6,7 @@ import java.{util => ju}
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * A thread pool executor to execute jobs on a single thread in a last-in-first-out order.
@@ -26,39 +27,66 @@ import java.util.concurrent.CancellationException
  *   - CompletableFuture[T] can be returned to lsp4j, for non-blocking JSON-RPC request handling.
  *   - CompletableFuture[T] can be converted to Scala Futures for easier composition.
  */
-class CompilerJobQueue(val executor: ThreadPoolExecutor) {
-  override def toString(): String = s"CompilerJobQueue($executor)"
-  def shutdown(): Unit = executor.shutdown()
+class CompilerJobQueue(newExecutor: () => ThreadPoolExecutor) {
+  private val myExecutor = new AtomicReference[ThreadPoolExecutor]()
+  def executor(): ThreadPoolExecutor = {
+    val result = myExecutor.get()
+    if (result != null) {
+      if (result.isShutdown()) {
+        myExecutor.compareAndSet(result, null)
+        executor()
+      } else {
+        result
+      }
+    } else {
+      val next = newExecutor()
+      val isSet = myExecutor.compareAndSet(null, next)
+      if (!isSet) {
+        next.shutdown()
+      }
+      myExecutor.get()
+    }
+  }
+  override def toString(): String = s"CompilerJobQueue(${myExecutor.get()})"
+  def shutdown(): Unit = {
+    val ex = myExecutor.get()
+    if (ex != null) {
+      ex.shutdown()
+      myExecutor.compareAndSet(ex, null)
+    }
+  }
   def submit(fn: () => Unit): Unit = {
     submit(new CompletableFuture[Unit](), fn)
   }
   def submit(result: CompletableFuture[_], fn: () => Unit): Unit = {
-    executor.execute(new CompilerJobQueue.Job(result, fn))
+    executor().execute(new CompilerJobQueue.Job(result, fn))
   }
   // The implementation of `Executors.newSingleThreadExecutor()` uses finalize.
   override def finalize(): Unit = {
-    executor.shutdown()
+    shutdown()
   }
 }
 
 object CompilerJobQueue {
 
   def apply(): CompilerJobQueue = {
-    val singleThreadExecutor = new ThreadPoolExecutor(
-      1,
-      1,
-      0,
-      TimeUnit.MILLISECONDS,
-      new LastInFirstOutBlockingQueue
-    )
-    singleThreadExecutor.setRejectedExecutionHandler((r, _) => {
-      r match {
-        case j: Job =>
-          j.reject()
-        case _ =>
-      }
+    new CompilerJobQueue(() => {
+      val singleThreadExecutor = new ThreadPoolExecutor(
+        /* corePoolSize */ 1,
+        /* maximumPoolSize */ 1,
+        /* keepAliveTime */ 0,
+        /* unit */ TimeUnit.MILLISECONDS,
+        /* workQueue */ new LastInFirstOutBlockingQueue
+      )
+      singleThreadExecutor.setRejectedExecutionHandler((r, _) => {
+        r match {
+          case j: Job =>
+            j.reject()
+          case _ =>
+        }
+      })
+      singleThreadExecutor
     })
-    new CompilerJobQueue(singleThreadExecutor)
   }
 
   /** Runnable with a timestamp and attached completable future. */
