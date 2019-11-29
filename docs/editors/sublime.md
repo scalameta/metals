@@ -120,22 +120,9 @@ You can optionally register a key binding for the command.
 
 This paragraph contains a few tips & trick that can improve your daily productivity with Metals.
 
-### LSP client tweaks
+### Optional LSP client tweaks
 
-Default settings of the LSP client are insufficient to enable the full power of Metals. 
-The first step is a fixing problem with insufficient information in the code completion popup.
-To fix it, open "Preferences > Preferences: LSP Settings" and add the following setting:
-
-```json
-{
-  // ...
-  "prefer_label_over_filter_text": true,
-}
-```
-
-![Better code completion](https://i.imgur.com/2Rcfauz.gif)
-
-The next two steps are optional. If you prefer to only enable Metals completions
+If you prefer to only enable Metals completions
 (without mixing them with the default ones from Sublime) set the following setting
 in the "Preferences > Preferences: LSP Settings":
 
