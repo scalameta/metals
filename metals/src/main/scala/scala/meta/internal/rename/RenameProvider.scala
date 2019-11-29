@@ -33,6 +33,8 @@ import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.RenameFile
 import java.util.concurrent.ConcurrentLinkedQueue
 import scala.meta.internal.async.ConcurrentQueue
+import scala.meta.internal.semanticdb.Synthetic
+import scala.meta.internal.semanticdb.SelectTree
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
@@ -78,6 +80,14 @@ final class RenameProvider(
       val symbolOccurence =
         definitionProvider.symbolOccurence(source, textParams)
 
+      def includeSynthetic(syn: Synthetic) = {
+        syn.tree match {
+          case SelectTree(qualifier, id) =>
+            id.exists(_.symbol.contains(".apply()"))
+          case _ => false
+        }
+      }
+
       val allReferences = for {
         (occurence, semanticDb) <- symbolOccurence.toIterable
         if canRenameSymbol(occurence.symbol, Option(params.getNewName()))
@@ -94,7 +104,7 @@ final class RenameProvider(
             toReferenceParams(txtParams, includeDeclaration = isLocal),
             // local symbol will not contain a proper name
             checkMatchesText = !isLocal,
-            includeSynthetics = _.symbol.desc.name.value == "apply"
+            includeSynthetics = includeSynthetic
           )
           .locations
         definitionLocation = {

@@ -20,6 +20,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+import scala.meta.internal.semanticdb.Synthetic
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -67,7 +68,7 @@ final class ReferenceProvider(
   def references(
       params: ReferenceParams,
       checkMatchesText: Boolean = false,
-      includeSynthetics: SymbolOccurrence => Boolean = _ => true
+      includeSynthetics: Synthetic => Boolean = _ => true
   ): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
@@ -86,7 +87,7 @@ final class ReferenceProvider(
               alternatives,
               params.getContext.isIncludeDeclaration,
               checkMatchesText,
-              includeSynthetics(occurrence)
+              includeSynthetics
             )
             ReferencesResult(occurrence.symbol, locations)
           case None =>
@@ -200,7 +201,7 @@ final class ReferenceProvider(
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
       checkMatchesText: Boolean,
-      includeSynthetics: Boolean
+      includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
     if (occ.symbol.isLocal) {
@@ -258,7 +259,7 @@ final class ReferenceProvider(
       uri: String,
       isIncludeDeclaration: Boolean,
       checkMatchesText: Boolean,
-      includeSynthetics: Boolean
+      includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -282,13 +283,13 @@ final class ReferenceProvider(
     } {
       add(range)
     }
-    if (includeSynthetics) {
-      for {
-        synthetic <- snapshot.synthetics
-        if Synthetics.existsSymbol(synthetic)(isSymbol)
-        range <- synthetic.range.toList
-      } add(range)
-    }
+    for {
+      synthetic <- snapshot.synthetics
+      if Synthetics.existsSymbol(synthetic)(isSymbol) && includeSynthetics(
+        synthetic
+      )
+      range <- synthetic.range.toList
+    } add(range)
 
     buf.result()
   }
