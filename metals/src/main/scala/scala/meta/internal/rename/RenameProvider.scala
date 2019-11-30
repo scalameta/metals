@@ -32,6 +32,8 @@ import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.RenameFile
+import java.util.concurrent.ConcurrentLinkedQueue
+import scala.meta.internal.async.ConcurrentQueue
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
@@ -44,6 +46,8 @@ final class RenameProvider(
     buffers: Buffers,
     compilations: Compilations
 ) {
+
+  private var awaitingSave = new ConcurrentLinkedQueue[() => Unit]
 
   def prepareRename(params: TextDocumentPositionParams): Option[LSPRange] = {
     if (!compilations.currentlyCompiling.isEmpty) {
@@ -118,13 +122,17 @@ final class RenameProvider(
           buffers.contains(path)
       }
 
-      changeClosedFiles(closedEdits)
+      awaitingSave.add(() => changeClosedFiles(closedEdits))
 
       val edits = documentEdits(openedEdits)
       val renames =
         fileRenames(isOccurence, fileChanges.keySet, params.getNewName())
       new WorkspaceEdit((edits ++ renames).asJava)
     }
+  }
+
+  def runSave(): Unit = synchronized {
+    ConcurrentQueue.pollAll(awaitingSave).foreach(waiting => waiting())
   }
 
   private def documentEdits(
