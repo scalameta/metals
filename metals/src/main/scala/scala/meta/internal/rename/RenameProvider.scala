@@ -82,7 +82,7 @@ final class RenameProvider(
 
       def includeSynthetic(syn: Synthetic) = {
         syn.tree match {
-          case SelectTree(qualifier, id) =>
+          case SelectTree(_, id) =>
             id.exists(_.symbol.desc.name.toString == "apply")
           case _ => false
         }
