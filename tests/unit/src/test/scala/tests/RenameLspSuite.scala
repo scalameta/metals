@@ -169,6 +169,7 @@ object RenameLspSuite extends BaseLspSuite("rename") {
        |package a
        |object User{
        |  def <<ap@@ply>>(name : String) = name
+       |  def apply(name : String, age: Int) = name
        |}
        |object Main{
        |  val toRename = User##.##<<>>("abc")
