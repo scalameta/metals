@@ -739,6 +739,8 @@ final class TestingServer(
       } else {
         Future.successful(new WorkspaceEdit)
       }
+      // save current file to simulate user saving in the editor
+      _ <- didSave(filename)(identity)
     } yield {
       files.map { file =>
         val path = workspace.resolve(file)

@@ -750,7 +750,13 @@ class MetalsLanguageServer(
     // read file from disk, we only remove files from buffers on didClose.
     buffers.put(path, path.toInput.text)
     Future
-      .sequence(List(parseTrees(path), onChange(List(path))))
+      .sequence(
+        List(
+          Future(renameProvider.runSave()),
+          parseTrees(path),
+          onChange(List(path))
+        )
+      )
       .ignoreValue
       .asJava
   }
