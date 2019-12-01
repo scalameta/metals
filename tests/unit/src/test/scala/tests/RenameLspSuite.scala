@@ -391,6 +391,36 @@ object RenameLspSuite extends BaseLspSuite("rename") {
     breakingChange = (str: String) => str.replaceAll("Int", "String")
   )
 
+  renamed(
+    "macro-annotation",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |trait LivingBeing
+       |@JsonCodec sealed trait <<An@@imal>> extends LivingBeing
+       |object <<Animal>> {
+       |  case object Dog extends <<Animal>>
+       |  case object Cat extends <<Animal>>
+       |}
+       |""".stripMargin,
+    "Tree"
+  )
+
+  renamed(
+    "macro-annotation2",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |trait <<LivingBeing>>
+       |@JsonCodec sealed trait Animal extends <<Livi@@ngBeing>>
+       |object Animal {
+       |  case object Dog extends Animal
+       |  case object Cat extends Animal
+       |}
+       |""".stripMargin,
+    "Tree"
+  )
+
   // tests currently not working correctly due to issues in SemanticDB
   // issue https://github.com/scalameta/scalameta/issues/1636
   renamed(
@@ -406,20 +436,6 @@ object RenameLspSuite extends BaseLspSuite("rename") {
        |}
        |""".stripMargin,
     newName = "name"
-  )
-
-  same(
-    "macro-annotation",
-    """|/a/src/main/scala/a/Main.scala
-       |package a
-       |import io.circe.generic.JsonCodec
-       |trait LivingBeing
-       |@JsonCodec sealed trait <<An@@imal>> extends LivingBeing
-       |object Animal {
-       |  case object Dog extends <<Animal>>
-       |  case object Cat extends <<Animal>>
-       |}
-       |""".stripMargin
   )
 
   renamed(

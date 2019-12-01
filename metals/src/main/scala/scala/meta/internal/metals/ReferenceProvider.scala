@@ -64,7 +64,10 @@ final class ReferenceProvider(
     resizeReferencedPackages()
   }
 
-  def references(params: ReferenceParams): ReferencesResult = {
+  def references(
+      params: ReferenceParams,
+      strictCheck: Boolean = false
+  ): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
@@ -80,7 +83,8 @@ final class ReferenceProvider(
               distance,
               occurrence,
               alternatives,
-              params.getContext.isIncludeDeclaration
+              params.getContext.isIncludeDeclaration,
+              strictCheck
             )
             ReferencesResult(occurrence.symbol, locations)
           case None =>
@@ -192,7 +196,8 @@ final class ReferenceProvider(
       distance: TokenEditDistance,
       occ: SymbolOccurrence,
       alternatives: Set[String],
-      isIncludeDeclaration: Boolean
+      isIncludeDeclaration: Boolean,
+      strictCheck: Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
     if (occ.symbol.isLocal) {
@@ -201,7 +206,8 @@ final class ReferenceProvider(
         isSymbol,
         distance,
         params.getTextDocument.getUri,
-        isIncludeDeclaration
+        isIncludeDeclaration,
+        strictCheck
       )
     } else {
       val results: Iterator[Location] = for {
@@ -226,7 +232,8 @@ final class ReferenceProvider(
             isSymbol,
             semanticdbDistance,
             uri,
-            isIncludeDeclaration
+            isIncludeDeclaration,
+            strictCheck
           )
         } catch {
           case NonFatal(e) =>
@@ -244,7 +251,8 @@ final class ReferenceProvider(
       isSymbol: Set[String],
       distance: TokenEditDistance,
       uri: String,
-      isIncludeDeclaration: Boolean
+      isIncludeDeclaration: Boolean,
+      strictCheck: Boolean
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -262,8 +270,12 @@ final class ReferenceProvider(
       if isSymbol(reference.symbol)
       if !reference.role.isDefinition || isIncludeDeclaration
       range <- reference.range.toList
-    } add(range)
-
+      if !strictCheck || reference.symbol.contains(
+        findName(range, snapshot.text)
+      )
+    } {
+      add(range)
+    }
     for {
       synthetic <- snapshot.synthetics
       if Synthetics.existsSymbol(synthetic)(isSymbol)
@@ -271,6 +283,17 @@ final class ReferenceProvider(
     } add(range)
 
     buf.result()
+  }
+
+  private def findName(range: s.Range, text: String): String = {
+    var i = 0
+    var max = 0
+    while (max < range.startLine) {
+      if (text.charAt(i) == '\n') max += 1
+      i += 1
+    }
+    text
+      .substring(i + range.startCharacter, i + range.endCharacter)
   }
 
   private def resizeReferencedPackages(): Unit = {
