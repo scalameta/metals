@@ -66,7 +66,7 @@ final class ReferenceProvider(
 
   def references(
       params: ReferenceParams,
-      strictCheck: Boolean = false
+      checkMatchesText: Boolean = false
   ): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
@@ -84,7 +84,7 @@ final class ReferenceProvider(
               occurrence,
               alternatives,
               params.getContext.isIncludeDeclaration,
-              strictCheck
+              checkMatchesText
             )
             ReferencesResult(occurrence.symbol, locations)
           case None =>
@@ -197,7 +197,7 @@ final class ReferenceProvider(
       occ: SymbolOccurrence,
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
-      strictCheck: Boolean
+      checkMatchesText: Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
     if (occ.symbol.isLocal) {
@@ -207,7 +207,7 @@ final class ReferenceProvider(
         distance,
         params.getTextDocument.getUri,
         isIncludeDeclaration,
-        strictCheck
+        checkMatchesText
       )
     } else {
       val results: Iterator[Location] = for {
@@ -233,7 +233,7 @@ final class ReferenceProvider(
             semanticdbDistance,
             uri,
             isIncludeDeclaration,
-            strictCheck
+            checkMatchesText
           )
         } catch {
           case NonFatal(e) =>
@@ -252,7 +252,7 @@ final class ReferenceProvider(
       distance: TokenEditDistance,
       uri: String,
       isIncludeDeclaration: Boolean,
-      strictCheck: Boolean
+      checkMatchesText: Boolean
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -270,7 +270,7 @@ final class ReferenceProvider(
       if isSymbol(reference.symbol)
       if !reference.role.isDefinition || isIncludeDeclaration
       range <- reference.range.toList
-      if !strictCheck || reference.symbol.contains(
+      if !checkMatchesText || reference.symbol.contains(
         findName(range, snapshot.text)
       )
     } {

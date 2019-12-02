@@ -87,7 +87,7 @@ final class DefinitionProvider(
         currentDocument
       )
       symbolOccurrence <- {
-        lazy val mtagsOccurrence =
+        def mtagsOccurrence =
           fromMtags(source, dirtyPosition.getPosition())
         posOcc.occurrence.orElse(mtagsOccurrence)
       }

@@ -83,23 +83,27 @@ final class RenameProvider(
         if canRenameSymbol(occurence.symbol, Option(params.getNewName()))
         parentSymbols = implementationProvider
           .topMethodParents(occurence.symbol, semanticDb)
-        txtParams <- if (parentSymbols.isEmpty) List(textParams)
-        else parentSymbols.map(toTextParams)
+        txtParams <- {
+          if (parentSymbols.isEmpty) List(textParams)
+          else parentSymbols.map(toTextParams)
+        }
         isLocal = occurence.symbol.isLocal
         currentReferences = referenceProvider
           .references(
             // we can't get definition by name for local symbols
             toReferenceParams(txtParams, includeDeclaration = isLocal),
             // local symbol will not contain a proper name
-            strictCheck = !isLocal
+            checkMatchesText = !isLocal
           )
           .locations
-        definitionLocation = if (parentSymbols.isEmpty)
-          definitionProvider
-            .fromSymbol(occurence.symbol)
-            .asScala
-            .filter(_.getUri().isScalaFilename)
-        else parentSymbols
+        definitionLocation = {
+          if (parentSymbols.isEmpty)
+            definitionProvider
+              .fromSymbol(occurence.symbol)
+              .asScala
+              .filter(_.getUri().isScalaFilename)
+          else parentSymbols
+        }
         companionRefs = companionReferences(occurence.symbol)
         implReferences = implementations(
           txtParams,

@@ -392,7 +392,7 @@ object RenameLspSuite extends BaseLspSuite("rename") {
   )
 
   renamed(
-    "macro-annotation",
+    "macro",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
@@ -407,7 +407,7 @@ object RenameLspSuite extends BaseLspSuite("rename") {
   )
 
   renamed(
-    "macro-annotation2",
+    "macro2",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
@@ -421,8 +421,27 @@ object RenameLspSuite extends BaseLspSuite("rename") {
     "Tree"
   )
 
+  renamed(
+    "macro3",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |trait LivingBeing
+       |@JsonCodec sealed trait <<Animal>> extends LivingBeing
+       |case object Dog extends <<Animal>>
+       |case object Cat extends <<Animal>>
+       |/a/src/main/scala/a/Use.scala
+       |package a
+       |object Use {
+       |  val dog : <<An@@imal>> = Dog
+       |}
+       |""".stripMargin,
+    "Tree"
+  )
+
   // tests currently not working correctly due to issues in SemanticDB
-  // issue https://github.com/scalameta/scalameta/issues/1636
+  // issue https://github.com/scalameta/scalameta/issues/1169
+  // possibly issue https://github.com/scalameta/scalameta/issues/1845
   renamed(
     "params",
     """|/a/src/main/scala/a/Main.scala
@@ -438,6 +457,7 @@ object RenameLspSuite extends BaseLspSuite("rename") {
     newName = "name"
   )
 
+  // https://github.com/scalameta/scalameta/issues/1909
   renamed(
     "type-params",
     """|/a/src/main/scala/a/Main.scala
