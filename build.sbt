@@ -246,7 +246,7 @@ lazy val metals = project
       "org.jboss.xnio" % "xnio-nio" % "3.6.5.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "5.2.1",
-      "com.h2database" % "h2" % "1.4.197",
+      "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "1.2.4",
       "net.java.dev.jna" % "jna" % "4.5.1",
