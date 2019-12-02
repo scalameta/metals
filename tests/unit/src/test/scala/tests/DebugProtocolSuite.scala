@@ -10,18 +10,6 @@ import scala.concurrent.Future
 
 object DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
 
-  override def testAsync(
-      name: String,
-      maxDuration: Duration = Duration("3min")
-  )(run: => Future[Unit]): Unit = {
-    if (BaseSuite.isWindows) {
-      // Currently not working on Windows
-      ignore(name) {}
-    } else {
-      super.testAsync(name, maxDuration)(run)
-    }
-  }
-
   testAsync("start") {
     for {
       _ <- server.initialize(
