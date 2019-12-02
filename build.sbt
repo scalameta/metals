@@ -320,7 +320,7 @@ lazy val input = project
     ),
     scalacOptions += "-P:semanticdb:synthetics:on",
     addCompilerPlugin(
-      "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
+      "org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full
     )
   )
   .disablePlugins(ScalafixPlugin)
@@ -375,7 +375,7 @@ lazy val cross = project
       "org.typelevel" %% "kind-projector" % "0.10.3"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, major)) if major <= 12 =>
-        List("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+        List("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
       case _ => Nil
     }),
     crossScalaVersions := V.supportedScalaVersions,
