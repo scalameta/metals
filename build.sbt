@@ -216,7 +216,7 @@ lazy val mtags = project
         crossSetting(
           scalaVersion.value,
           if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.5")
+          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.6")
         )
     },
     buildInfoPackage := "scala.meta.internal.mtags",
@@ -278,7 +278,7 @@ lazy val metals = project
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.5.5",
+      "com.lihaoyi" %% "pprint" % "0.5.6",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
