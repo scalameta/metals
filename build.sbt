@@ -273,7 +273,7 @@ lazy val metals = project
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "io.get-coursier" % "interface" % "0.0.13",
+      "io.get-coursier" % "interface" % "0.0.14",
       // for logging
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
