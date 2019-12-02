@@ -202,7 +202,7 @@ lazy val mtags = project
       if211 = List("-Ywarn-unused:imports")
     ),
     libraryDependencies ++= List(
-      "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
+      "com.thoughtworks.qdox" % "qdox" % "2.0-M10", // for java mtags
       "org.jsoup" % "jsoup" % "1.11.3", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.6.0", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
@@ -262,7 +262,7 @@ lazy val metals = project
       // for DAP
       V.dap4j,
       // for producing SemanticDB from Java source files
-      "com.thoughtworks.qdox" % "qdox" % "2.0-M9",
+      "com.thoughtworks.qdox" % "qdox" % "2.0-M10",
       // for finding paths of global log/cache directories
       "io.github.soc" % "directories" % "11",
       // ==================
