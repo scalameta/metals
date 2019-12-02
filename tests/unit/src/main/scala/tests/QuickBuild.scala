@@ -1,12 +1,9 @@
 package tests
 
-import bloop.config.ConfigEncoderDecoders._
 import bloop.config.{Config => C}
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.google.gson.stream.MalformedJsonException
-import io.circe.syntax._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -281,12 +278,7 @@ object QuickBuild {
   val Half: Regex = "(.+)::(.+):(.+)".r
   val Java: Regex = "(.+):(.+):(.+)".r
   def parseJson(text: String): JsonObject = {
-    try new JsonParser().parse(text).getAsJsonObject
-    catch {
-      case _: MalformedJsonException =>
-        val Left(e) = io.circe.parser.parse(text)
-        throw e
-    }
+    new JsonParser().parse(text).getAsJsonObject
   }
 
   def newDigest(workspace: AbsolutePath): Option[(AbsolutePath, String)] = {
@@ -346,10 +338,9 @@ object QuickBuild {
               classpath = (p.classpath ++ fullClasspath).distinct
             )
           }
-          fullClasspathProjects.foreach { bloop =>
-            val out = bloopDirectory.resolve(bloop.name + ".json")
-            val json = C.File(V.bloopVersion, bloop).asJson.spaces2
-            Files.write(out, json.getBytes(StandardCharsets.UTF_8))
+          fullClasspathProjects.foreach { project =>
+            val out = bloopDirectory.resolve(project.name + ".json")
+            bloop.config.write(C.File(V.bloopVersion, project), out)
           }
           Files.createDirectories(digestFile.toNIO.getParent)
           Files.write(digestFile.toNIO, digest.getBytes(StandardCharsets.UTF_8))
