@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.file.Files
 import java.net.URI
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
@@ -143,6 +144,7 @@ object BuildServerConnection {
   }
 
   final case class BloopExtraBuildParams(
+      clientClassesRootDir: String,
       semanticdbVersion: String,
       supportedScalaVersions: java.util.List[String]
   )
@@ -152,7 +154,10 @@ object BuildServerConnection {
       workspace: AbsolutePath,
       server: MetalsBuildServer
   ): InitializeBuildResult = {
+    val clientClassesDirectory =
+      workspace.resolve(Directories.bloopClientClasses)
     val extraParams = BloopExtraBuildParams(
+      Files.createDirectories(clientClassesDirectory.toNIO).toUri.toString,
       BuildInfo.scalametaVersion,
       BuildInfo.supportedScalaVersions.asJava
     )

@@ -2,6 +2,8 @@ package scala.meta.internal.metals
 import scala.meta.io.RelativePath
 
 object Directories {
+  def bloopClientClassesDirectory: RelativePath =
+    RelativePath(".metals").resolve("bloop-out")
   def database: RelativePath =
     RelativePath(".metals").resolve("metals.h2.db")
   def readonly: RelativePath =
