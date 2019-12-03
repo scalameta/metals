@@ -474,35 +474,34 @@ object RenameLspSuite extends BaseLspSuite("rename") {
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty
   ): Unit = {
-    val allMarkersRegex = "(<<|>>|@@|##.*##)"
-    val files = FileLayout.mapFromString(input)
-    val expectedFiles = files.map {
-      case (file, code) =>
-        fileRenames.getOrElse(file, file) -> {
-          val expected = if (!notRenamed) {
-            code
-              .replaceAll("\\<\\<\\S*\\>\\>", newName)
-              .replaceAll("##", "")
-          } else {
-            code.replaceAll(allMarkersRegex, "")
-          }
-          "\n" + breakingChange(expected)
-        }
-    }
-
-    val (filename, edit) = files
-      .find(_._2.contains("@@"))
-      .getOrElse {
-        throw new IllegalArgumentException(
-          "No `@@` was defined that specifies cursor position"
-        )
-      }
-
-    val openedFiles = files.keySet
-      .filterNot(file => nonOpened.contains(file))
-
     testAsync(name) {
       cleanWorkspace()
+      val allMarkersRegex = "(<<|>>|@@|##.*##)"
+      val files = FileLayout.mapFromString(input)
+      val expectedFiles = files.map {
+        case (file, code) =>
+          fileRenames.getOrElse(file, file) -> {
+            val expected = if (!notRenamed) {
+              code
+                .replaceAll("\\<\\<\\S*\\>\\>", newName)
+                .replaceAll("##", "")
+            } else {
+              code.replaceAll(allMarkersRegex, "")
+            }
+            "\n" + breakingChange(expected)
+          }
+      }
+
+      val (filename, edit) = files
+        .find(_._2.contains("@@"))
+        .getOrElse {
+          throw new IllegalArgumentException(
+            "No `@@` was defined that specifies cursor position"
+          )
+        }
+
+      val openedFiles = files.keySet
+        .filterNot(file => nonOpened.contains(file))
       val fullInput = input.replaceAll(allMarkersRegex, "")
       for {
         _ <- server.initialize(
@@ -524,28 +523,25 @@ object RenameLspSuite extends BaseLspSuite("rename") {
              |$fullInput""".stripMargin
         )
         _ <- Future.sequence {
-          openedFiles
-            .map { file =>
-              server.didOpen(file)
-            }
+          openedFiles.map { file =>
+            server.didOpen(file)
+          }
         }
         // possible breaking changes for testing
         _ <- Future.sequence {
-          openedFiles
-            .map { file =>
-              server.didSave(file) { code =>
-                breakingChange(code)
-              }
+          openedFiles.map { file =>
+            server.didSave(file) { code =>
+              breakingChange(code)
             }
+          }
         }
         // chnage the code to make sure edit distance is being used
         _ <- Future.sequence {
-          openedFiles
-            .map { file =>
-              server.didChange(file) { code =>
-                "\n" + code
-              }
+          openedFiles.map { file =>
+            server.didChange(file) { code =>
+              "\n" + code
             }
+          }
         }
         _ <- server.assertRename(
           filename,
