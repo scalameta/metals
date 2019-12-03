@@ -121,7 +121,7 @@ object MacroCompletionSuite extends BaseCompletionSuite {
         """|fold[X](fa: Int => X, fb: String => X): X
            |""".stripMargin,
       // NOTE(tgodzik): the presentation compiler returns empty results here in 2.12.9
-      "2.12.9" -> ""
+      "2.13.0" -> ""
     )
   )
 
@@ -136,8 +136,8 @@ object MacroCompletionSuite extends BaseCompletionSuite {
     """|toCharArray(): Array[Char]
        |""".stripMargin,
     compat = Map(
-      // NOTE(olafur): the presentation compiler returns empty results here in 2.12.9 and 2.13.0
-      "2.13.0" -> ""
+      // NOTE(tgodzik): the presentation compiler returns empty results here in 2.12.9
+      "2.12.9" -> ""
     )
   )
 
