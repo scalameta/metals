@@ -423,21 +423,35 @@ object RenameLspSuite extends BaseLspSuite("rename") {
   )
 
   renamed(
-    "macro3",
+    "macro",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |import io.circe.generic.JsonCodec
        |trait LivingBeing
        |@JsonCodec sealed trait <<Animal>> extends LivingBeing
-       |case object Dog extends <<Animal>>
-       |case object Cat extends <<Animal>>
+       |object <<Animal>>{
+       |  case object Dog extends <<Animal>>
+       |  case object Cat extends <<Animal>>
+       |}
        |/a/src/main/scala/a/Use.scala
        |package a
        |object Use {
-       |  val dog : <<An@@imal>> = Dog
+       |  val dog : <<An@@imal>> = <<Animal>>.Dog
        |}
        |""".stripMargin,
     "Tree"
+  )
+
+  renamed(
+    "implicit-param",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object A {
+       |  implicit val <<some@@Name>>: Int = 1
+       |  def m[A](implicit a: A): A = a
+       |  m[Int]
+       |}""".stripMargin,
+    newName = "anotherName"
   )
 
   // tests currently not working correctly due to issues in SemanticDB
@@ -471,18 +485,6 @@ object RenameLspSuite extends BaseLspSuite("rename") {
        |}
        |""".stripMargin,
     newName = "Animal"
-  )
-
-  renamed(
-    "implicit-param",
-    """|/a/src/main/scala/a/Main.scala
-       |package a
-       |object A {
-       |  implicit val <<some@@Name>>: Int = 1
-       |  def m[A](implicit a: A): A = a
-       |  m[Int]
-       |}""".stripMargin,
-    newName = "anotherName"
   )
 
   def renamed(

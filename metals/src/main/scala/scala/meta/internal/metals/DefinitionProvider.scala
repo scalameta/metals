@@ -112,13 +112,11 @@ final class DefinitionProvider(
       queryPosition <- snapshotPosition.toPosition(dirtyPosition.getPosition)
       occurrence <- snapshot.occurrences
         .find(_.encloses(queryPosition, true))
+        // In case of macros we might need to get the postion from the presentation compiler
+        .orElse(fromMtags(source, queryPosition))
     } yield occurrence
 
-    // In case of macros we might need to get the postion from the presentation compiler
-    val sureOccurence =
-      occurrence.orElse(fromMtags(source, dirtyPosition.getPosition()))
-
-    ResolvedSymbolOccurrence(sourceDistance, sureOccurence)
+    ResolvedSymbolOccurrence(sourceDistance, occurrence)
   }
 
   def definitionFromSnapshot(
