@@ -20,6 +20,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+import scala.meta.internal.semanticdb.Synthetic
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -66,7 +67,8 @@ final class ReferenceProvider(
 
   def references(
       params: ReferenceParams,
-      checkMatchesText: Boolean = false
+      checkMatchesText: Boolean = false,
+      includeSynthetics: Synthetic => Boolean = _ => true
   ): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
@@ -84,7 +86,8 @@ final class ReferenceProvider(
               occurrence,
               alternatives,
               params.getContext.isIncludeDeclaration,
-              checkMatchesText
+              checkMatchesText,
+              includeSynthetics
             )
             ReferencesResult(occurrence.symbol, locations)
           case None =>
@@ -197,7 +200,8 @@ final class ReferenceProvider(
       occ: SymbolOccurrence,
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
-      checkMatchesText: Boolean
+      checkMatchesText: Boolean,
+      includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
     if (occ.symbol.isLocal) {
@@ -207,7 +211,8 @@ final class ReferenceProvider(
         distance,
         params.getTextDocument.getUri,
         isIncludeDeclaration,
-        checkMatchesText
+        checkMatchesText,
+        includeSynthetics
       )
     } else {
       val results: Iterator[Location] = for {
@@ -233,7 +238,8 @@ final class ReferenceProvider(
             semanticdbDistance,
             uri,
             isIncludeDeclaration,
-            checkMatchesText
+            checkMatchesText,
+            includeSynthetics
           )
         } catch {
           case NonFatal(e) =>
@@ -252,7 +258,8 @@ final class ReferenceProvider(
       distance: TokenEditDistance,
       uri: String,
       isIncludeDeclaration: Boolean,
-      checkMatchesText: Boolean
+      checkMatchesText: Boolean,
+      includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -278,7 +285,9 @@ final class ReferenceProvider(
     }
     for {
       synthetic <- snapshot.synthetics
-      if Synthetics.existsSymbol(synthetic)(isSymbol)
+      if Synthetics.existsSymbol(synthetic)(isSymbol) && includeSynthetics(
+        synthetic
+      )
       range <- synthetic.range.toList
     } add(range)
 
