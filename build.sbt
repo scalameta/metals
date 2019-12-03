@@ -370,7 +370,7 @@ lazy val cross = project
     libraryDependencies ++= List(
       "com.chuusai" %% "shapeless" % "2.3.3",
       "org.typelevel" %% "cats-core" % "2.0.0",
-      "com.github.mpilquist" %% "simulacrum" % "0.19.0",
+      "org.typelevel" %% "simulacrum" % "1.0.0",
       "com.olegpy" %% "better-monadic-for" % "0.3.0",
       "org.typelevel" %% "kind-projector" % "0.10.3"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
