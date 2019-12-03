@@ -243,7 +243,7 @@ lazy val metals = project
       "io.methvin" % "directory-watcher" % "0.8.3",
       // for http client
       "io.undertow" % "undertow-core" % "2.0.28.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.6.5.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.6.9.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "5.2.4",
       "com.h2database" % "h2" % "1.4.197",
