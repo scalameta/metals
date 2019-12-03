@@ -30,11 +30,8 @@ class BaseSuite extends TestSuite {
   def isScala211: Boolean =
     mtags.BuildInfo.scalaCompilerVersion.startsWith("2.11")
   def hasJdkSources: Boolean = JdkSources().isDefined
-  def isAzureLinux: Boolean =
-    isAzure &&
-      "Linux".equalsIgnoreCase(System.getenv("AGENT_OS"))
-  def isAzure: Boolean =
-    "True".equalsIgnoreCase(System.getenv("TF_BUILD"))
+  def isWindows: Boolean =
+    Properties.isWin
   def isCI: Boolean =
     "true".equalsIgnoreCase(System.getenv("CI"))
   def beforeAll(): Unit = ()
