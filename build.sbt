@@ -275,8 +275,8 @@ lazy val metals = project
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % "0.0.14",
       // for logging
-      "com.outr" %% "scribe" % "2.6.0",
-      "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "2.7.10",
+      "com.outr" %% "scribe-slf4j" % "2.7.10", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.5.6",
       // for producing SemanticDB from Scala source files

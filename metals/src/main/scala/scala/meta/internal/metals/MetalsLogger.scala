@@ -99,7 +99,7 @@ object MetalsLogger {
   def newFileWriter(logfile: AbsolutePath): FileWriter =
     FileWriter().path(_ => logfile.toNIO).autoFlush
 
-  def defaultFormat: Formatter = formatter"$levelPaddedRight $message$newLine"
+  def defaultFormat: Formatter = formatter"$levelPaddedRight $message"
 
   def silent: LoggerSupport = new LoggerSupport {
     override def log[M](record: LogRecord[M]): Unit = ()
