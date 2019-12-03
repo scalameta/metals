@@ -249,8 +249,8 @@ lazy val metals = project
       "com.h2database" % "h2" % "1.4.197",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "1.2.4",
-      "net.java.dev.jna" % "jna" % "4.5.2",
-      "net.java.dev.jna" % "jna-platform" % "4.5.2",
+      "net.java.dev.jna" % "jna" % "5.5.0",
+      "net.java.dev.jna" % "jna-platform" % "5.5.0",
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       // for BSP
