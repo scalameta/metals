@@ -27,7 +27,6 @@ import java.net.URI
 import java.nio.file.Paths
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Compilations
-import scala.meta.internal.metals.ReferencesResult
 import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.ResourceOperation
@@ -76,9 +75,6 @@ final class RenameProvider(
         params.getPosition()
       )
 
-      val refParams =
-        toReferenceParams(params.getTextDocument(), params.getPosition())
-
       val symbolOccurence =
         definitionProvider.symbolOccurence(source, textParams)
 
@@ -87,18 +83,33 @@ final class RenameProvider(
         if canRenameSymbol(occurence.symbol, Option(params.getNewName()))
         parentSymbols = implementationProvider
           .topMethodParents(occurence.symbol, semanticDb)
-        txtParams <- if (parentSymbols.isEmpty) List(textParams)
-        else parentSymbols.map(toTextParams)
-        currentReferences = referenceProvider.references(
-          toReferenceParams(txtParams)
-        )
+        txtParams <- {
+          if (parentSymbols.isEmpty) List(textParams)
+          else parentSymbols.map(toTextParams)
+        }
+        isLocal = occurence.symbol.isLocal
+        currentReferences = referenceProvider
+          .references(
+            // we can't get definition by name for local symbols
+            toReferenceParams(txtParams, includeDeclaration = isLocal),
+            // local symbol will not contain a proper name
+            checkMatchesText = !isLocal
+          )
+          .locations
+        definitionLocation = {
+          if (parentSymbols.isEmpty)
+            definitionProvider
+              .fromSymbol(occurence.symbol)
+              .asScala
+              .filter(_.getUri().isScalaFilename)
+          else parentSymbols
+        }
         companionRefs = companionReferences(occurence.symbol)
         implReferences = implementations(
           txtParams,
           !occurence.symbol.desc.isType
         )
-        refResult <- currentReferences +: (implReferences ++ companionRefs)
-        loc <- refResult.locations
+        loc <- currentReferences ++ implReferences ++ companionRefs ++ definitionLocation
       } yield loc
 
       def isOccurence(fn: String => Boolean): Boolean = {
@@ -168,11 +179,17 @@ final class RenameProvider(
       }
   }
 
-  private def companionReferences(sym: String): List[ReferencesResult] = {
+  private def companionReferences(sym: String): Seq[Location] = {
     val results = for {
       companionSymbol <- companion(sym).toIterable
-      loc <- definitionProvider.fromSymbol(companionSymbol).asScala
-    } yield referenceProvider.references(toReferenceParams(loc))
+      loc <- definitionProvider
+        .fromSymbol(companionSymbol)
+        .asScala
+      if loc.getUri().isScalaFilename
+      companionLocs <- referenceProvider
+        .references(toReferenceParams(loc, includeDeclaration = false))
+        .locations :+ loc
+    } yield companionLocs
     results.toList
   }
 
@@ -208,13 +225,13 @@ final class RenameProvider(
   private def implementations(
       textParams: TextDocumentPositionParams,
       shouldCheckImplementation: Boolean
-  ) = {
+  ): Seq[Location] = {
     if (shouldCheckImplementation) {
-      for (loc <- implementationProvider.implementations(textParams))
-        yield {
-          val locParams = toReferenceParams(loc)
-          referenceProvider.references(locParams)
-        }
+      for {
+        implLoc <- implementationProvider.implementations(textParams)
+        locParams = toReferenceParams(implLoc, includeDeclaration = true)
+        loc <- referenceProvider.references(locParams).locations
+      } yield loc
     } else {
       Nil
     }
@@ -286,27 +303,40 @@ final class RenameProvider(
 
   private def toReferenceParams(
       textDoc: TextDocumentIdentifier,
-      pos: Position
+      pos: Position,
+      includeDeclaration: Boolean
   ): ReferenceParams = {
     val referenceParams = new ReferenceParams()
     referenceParams.setPosition(pos)
     referenceParams.setTextDocument(textDoc)
     val context = new ReferenceContext()
-    context.setIncludeDeclaration(true)
+    context.setIncludeDeclaration(includeDeclaration)
     referenceParams.setContext(context)
     referenceParams
   }
 
-  private def toReferenceParams(location: Location): ReferenceParams = {
+  private def toReferenceParams(
+      location: Location,
+      includeDeclaration: Boolean
+  ): ReferenceParams = {
     val textDoc = new TextDocumentIdentifier()
     textDoc.setUri(location.getUri())
-    toReferenceParams(textDoc, location.getRange().getStart())
+    toReferenceParams(
+      textDoc,
+      location.getRange().getStart(),
+      includeDeclaration
+    )
   }
 
   private def toReferenceParams(
-      params: TextDocumentPositionParams
+      params: TextDocumentPositionParams,
+      includeDeclaration: Boolean
   ): ReferenceParams = {
-    toReferenceParams(params.getTextDocument(), params.getPosition())
+    toReferenceParams(
+      params.getTextDocument(),
+      params.getPosition(),
+      includeDeclaration
+    )
   }
 
   private def toTextParams(location: Location): TextDocumentPositionParams = {
