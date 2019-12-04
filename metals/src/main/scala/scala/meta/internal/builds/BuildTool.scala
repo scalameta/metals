@@ -69,7 +69,7 @@ object BuildTool {
       this.getClass.getResourceAsStream(s"/$filePath")
     val outFile = tempDir.resolve(destination.getOrElse(filePath))
     Files.createDirectories(outFile.getParent)
-    Files.copy(embeddedFile, outFile)
+    Files.copy(embeddedFile, outFile, StandardCopyOption.REPLACE_EXISTING)
     outFile
   }
 }
