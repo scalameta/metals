@@ -129,6 +129,16 @@ object UserConfiguration {
             .filter(_.nonEmpty)
         }
       )
+    def getIntKey(key: String): Option[Int] =
+      getStringKey(key).flatMap { value =>
+        Try(value.toInt) match {
+          case Failure(exception) =>
+            errors += s"Not a number: '$value'"
+            None
+          case Success(value) =>
+            Some(value)
+        }
+      }
     def getStringMap(key: String): Option[Map[String, String]] =
       getKey(
         key, { value =>
@@ -168,6 +178,12 @@ object UserConfiguration {
     errors ++= symbolPrefixes.keys.flatMap { sym =>
       Symbol.validated(sym).left.toOption
     }
+    val worksheetScreenWidth =
+      getIntKey("worksheet-screen-width")
+        .getOrElse(default.worksheetScreenWidth)
+    val worksheetCancelTimeout =
+      getIntKey("worksheet-cancel-timeout")
+        .getOrElse(default.worksheetCancelTimeout)
 
     if (errors.isEmpty) {
       Right(
@@ -178,7 +194,9 @@ object UserConfiguration {
           mavenScript,
           millScript,
           scalafmtConfigPath,
-          symbolPrefixes
+          symbolPrefixes,
+          worksheetScreenWidth,
+          worksheetCancelTimeout
         )
       )
     } else {
