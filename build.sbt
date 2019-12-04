@@ -230,6 +230,7 @@ lazy val mtags = project
 lazy val metals = project
   .settings(
     fork.in(Compile, run) := true,
+    mainClass.in(Compile) := Some("scala.meta.metals.Main"),
     // As a general rule of thumb, we try to keep Scala dependencies to a minimum.
     libraryDependencies ++= List(
       // =================
