@@ -18,6 +18,7 @@ import scala.meta.io.AbsolutePath
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import org.eclipse.lsp4j.Position
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -86,10 +87,8 @@ final class DefinitionProvider(
         currentDocument
       )
       symbolOccurrence <- {
-        lazy val mtagsOccurrence = Mtags
-          .allToplevels(source.toInput)
-          .occurrences
-          .find(_.encloses(dirtyPosition.getPosition))
+        def mtagsOccurrence =
+          fromMtags(source, dirtyPosition.getPosition())
         posOcc.occurrence.orElse(mtagsOccurrence)
       }
     } yield (symbolOccurrence, currentDocument)
@@ -115,7 +114,11 @@ final class DefinitionProvider(
         .find(_.encloses(queryPosition, true))
     } yield occurrence
 
-    ResolvedSymbolOccurrence(sourceDistance, occurrence)
+    // In case of macros we might need to get the postion from the presentation compiler
+    val sureOccurence =
+      occurrence.orElse(fromMtags(source, dirtyPosition.getPosition()))
+
+    ResolvedSymbolOccurrence(sourceDistance, sureOccurence)
   }
 
   def definitionFromSnapshot(
@@ -144,6 +147,13 @@ final class DefinitionProvider(
     }
 
     result.getOrElse(DefinitionResult.empty(occurrence.fold("")(_.symbol)))
+  }
+
+  private def fromMtags(source: AbsolutePath, dirtyPos: Position) = {
+    Mtags
+      .allToplevels(source.toInput)
+      .occurrences
+      .find(_.encloses(dirtyPos))
   }
 
   private case class DefinitionDestination(

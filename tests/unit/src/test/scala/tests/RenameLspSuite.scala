@@ -169,6 +169,7 @@ object RenameLspSuite extends BaseLspSuite("rename") {
        |package a
        |object User{
        |  def <<ap@@ply>>(name : String) = name
+       |  def apply(name : String, age: Int) = name
        |}
        |object Main{
        |  val toRename = User##.##<<>>("abc")
@@ -391,8 +392,57 @@ object RenameLspSuite extends BaseLspSuite("rename") {
     breakingChange = (str: String) => str.replaceAll("Int", "String")
   )
 
+  renamed(
+    "macro",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |trait LivingBeing
+       |@JsonCodec sealed trait <<An@@imal>> extends LivingBeing
+       |object <<Animal>> {
+       |  case object Dog extends <<Animal>>
+       |  case object Cat extends <<Animal>>
+       |}
+       |""".stripMargin,
+    "Tree"
+  )
+
+  renamed(
+    "macro2",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |trait <<LivingBeing>>
+       |@JsonCodec sealed trait Animal extends <<Livi@@ngBeing>>
+       |object Animal {
+       |  case object Dog extends Animal
+       |  case object Cat extends Animal
+       |}
+       |""".stripMargin,
+    "Tree"
+  )
+
+  renamed(
+    "macro3",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |import io.circe.generic.JsonCodec
+       |trait LivingBeing
+       |@JsonCodec sealed trait <<Animal>> extends LivingBeing
+       |case object Dog extends <<Animal>>
+       |case object Cat extends <<Animal>>
+       |/a/src/main/scala/a/Use.scala
+       |package a
+       |object Use {
+       |  val dog : <<An@@imal>> = Dog
+       |}
+       |""".stripMargin,
+    "Tree"
+  )
+
   // tests currently not working correctly due to issues in SemanticDB
-  // issue https://github.com/scalameta/scalameta/issues/1636
+  // issue https://github.com/scalameta/scalameta/issues/1169
+  // possibly issue https://github.com/scalameta/scalameta/issues/1845
   renamed(
     "params",
     """|/a/src/main/scala/a/Main.scala
@@ -408,20 +458,7 @@ object RenameLspSuite extends BaseLspSuite("rename") {
     newName = "name"
   )
 
-  same(
-    "macro-annotation",
-    """|/a/src/main/scala/a/Main.scala
-       |package a
-       |import io.circe.generic.JsonCodec
-       |trait LivingBeing
-       |@JsonCodec sealed trait <<An@@imal>> extends LivingBeing
-       |object Animal {
-       |  case object Dog extends <<Animal>>
-       |  case object Cat extends <<Animal>>
-       |}
-       |""".stripMargin
-  )
-
+  // https://github.com/scalameta/scalameta/issues/1909
   renamed(
     "type-params",
     """|/a/src/main/scala/a/Main.scala
@@ -434,6 +471,18 @@ object RenameLspSuite extends BaseLspSuite("rename") {
        |}
        |""".stripMargin,
     newName = "Animal"
+  )
+
+  renamed(
+    "implicit-param",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object A {
+       |  implicit val <<some@@Name>>: Int = 1
+       |  def m[A](implicit a: A): A = a
+       |  m[Int]
+       |}""".stripMargin,
+    newName = "anotherName"
   )
 
   def renamed(
@@ -474,35 +523,34 @@ object RenameLspSuite extends BaseLspSuite("rename") {
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty
   ): Unit = {
-    val allMarkersRegex = "(<<|>>|@@|##.*##)"
-    val files = FileLayout.mapFromString(input)
-    val expectedFiles = files.map {
-      case (file, code) =>
-        fileRenames.getOrElse(file, file) -> {
-          val expected = if (!notRenamed) {
-            code
-              .replaceAll("\\<\\<\\S*\\>\\>", newName)
-              .replaceAll("##", "")
-          } else {
-            code.replaceAll(allMarkersRegex, "")
-          }
-          "\n" + breakingChange(expected)
-        }
-    }
-
-    val (filename, edit) = files
-      .find(_._2.contains("@@"))
-      .getOrElse {
-        throw new IllegalArgumentException(
-          "No `@@` was defined that specifies cursor position"
-        )
-      }
-
-    val openedFiles = files.keySet
-      .filterNot(file => nonOpened.contains(file))
-
     testAsync(name) {
       cleanWorkspace()
+      val allMarkersRegex = "(<<|>>|@@|##.*##)"
+      val files = FileLayout.mapFromString(input)
+      val expectedFiles = files.map {
+        case (file, code) =>
+          fileRenames.getOrElse(file, file) -> {
+            val expected = if (!notRenamed) {
+              code
+                .replaceAll("\\<\\<\\S*\\>\\>", newName)
+                .replaceAll("##", "")
+            } else {
+              code.replaceAll(allMarkersRegex, "")
+            }
+            "\n" + breakingChange(expected)
+          }
+      }
+
+      val (filename, edit) = files
+        .find(_._2.contains("@@"))
+        .getOrElse {
+          throw new IllegalArgumentException(
+            "No `@@` was defined that specifies cursor position"
+          )
+        }
+
+      val openedFiles = files.keySet
+        .filterNot(file => nonOpened.contains(file))
       val fullInput = input.replaceAll(allMarkersRegex, "")
       for {
         _ <- server.initialize(
@@ -524,28 +572,25 @@ object RenameLspSuite extends BaseLspSuite("rename") {
              |$fullInput""".stripMargin
         )
         _ <- Future.sequence {
-          openedFiles
-            .map { file =>
-              server.didOpen(file)
-            }
+          openedFiles.map { file =>
+            server.didOpen(file)
+          }
         }
         // possible breaking changes for testing
         _ <- Future.sequence {
-          openedFiles
-            .map { file =>
-              server.didSave(file) { code =>
-                breakingChange(code)
-              }
+          openedFiles.map { file =>
+            server.didSave(file) { code =>
+              breakingChange(code)
             }
+          }
         }
         // chnage the code to make sure edit distance is being used
         _ <- Future.sequence {
-          openedFiles
-            .map { file =>
-              server.didChange(file) { code =>
-                "\n" + code
-              }
+          openedFiles.map { file =>
+            server.didChange(file) { code =>
+              "\n" + code
             }
+          }
         }
         _ <- server.assertRename(
           filename,

@@ -20,6 +20,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+import scala.meta.internal.semanticdb.Synthetic
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -64,7 +65,11 @@ final class ReferenceProvider(
     resizeReferencedPackages()
   }
 
-  def references(params: ReferenceParams): ReferencesResult = {
+  def references(
+      params: ReferenceParams,
+      checkMatchesText: Boolean = false,
+      includeSynthetics: Synthetic => Boolean = _ => true
+  ): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
@@ -80,7 +85,9 @@ final class ReferenceProvider(
               distance,
               occurrence,
               alternatives,
-              params.getContext.isIncludeDeclaration
+              params.getContext.isIncludeDeclaration,
+              checkMatchesText,
+              includeSynthetics
             )
             ReferencesResult(occurrence.symbol, locations)
           case None =>
@@ -192,7 +199,9 @@ final class ReferenceProvider(
       distance: TokenEditDistance,
       occ: SymbolOccurrence,
       alternatives: Set[String],
-      isIncludeDeclaration: Boolean
+      isIncludeDeclaration: Boolean,
+      checkMatchesText: Boolean,
+      includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
     if (occ.symbol.isLocal) {
@@ -201,7 +210,9 @@ final class ReferenceProvider(
         isSymbol,
         distance,
         params.getTextDocument.getUri,
-        isIncludeDeclaration
+        isIncludeDeclaration,
+        checkMatchesText,
+        includeSynthetics
       )
     } else {
       val results: Iterator[Location] = for {
@@ -226,7 +237,9 @@ final class ReferenceProvider(
             isSymbol,
             semanticdbDistance,
             uri,
-            isIncludeDeclaration
+            isIncludeDeclaration,
+            checkMatchesText,
+            includeSynthetics
           )
         } catch {
           case NonFatal(e) =>
@@ -244,7 +257,9 @@ final class ReferenceProvider(
       isSymbol: Set[String],
       distance: TokenEditDistance,
       uri: String,
-      isIncludeDeclaration: Boolean
+      isIncludeDeclaration: Boolean,
+      checkMatchesText: Boolean,
+      includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
     def add(range: s.Range): Unit = {
@@ -262,15 +277,32 @@ final class ReferenceProvider(
       if isSymbol(reference.symbol)
       if !reference.role.isDefinition || isIncludeDeclaration
       range <- reference.range.toList
-    } add(range)
-
+      if !checkMatchesText || reference.symbol.contains(
+        findName(range, snapshot.text)
+      )
+    } {
+      add(range)
+    }
     for {
       synthetic <- snapshot.synthetics
-      if Synthetics.existsSymbol(synthetic)(isSymbol)
+      if Synthetics.existsSymbol(synthetic)(isSymbol) && includeSynthetics(
+        synthetic
+      )
       range <- synthetic.range.toList
     } add(range)
 
     buf.result()
+  }
+
+  private def findName(range: s.Range, text: String): String = {
+    var i = 0
+    var max = 0
+    while (max < range.startLine) {
+      if (text.charAt(i) == '\n') max += 1
+      i += 1
+    }
+    text
+      .substring(i + range.startCharacter, i + range.endCharacter)
   }
 
   private def resizeReferencedPackages(): Unit = {

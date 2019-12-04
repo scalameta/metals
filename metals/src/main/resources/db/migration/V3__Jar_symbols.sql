@@ -1,7 +1,7 @@
 -- Indexed jars, the MD5 digest of path, modified time and size as key
 create table indexed_jar(
   id int auto_increment,
-  md5 varchar primary key,
+  md5 varchar primary key
 );
 -- Top Level Symbols per jar, allow for multiple jars with same symbols and paths
 create table toplevel_symbol(

@@ -49,6 +49,7 @@ import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.rename.RenameProvider
+import ch.epfl.scala.bsp4j.CompileReport
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -60,7 +61,8 @@ class MetalsLanguageServer(
     progressTicks: ProgressTicks = ProgressTicks.braille,
     bspGlobalDirectories: List[AbsolutePath] =
       BspServers.globalInstallDirectories,
-    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    sh: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
+    isReliableFileWatcher: Boolean = true
 ) extends Cancelable {
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
@@ -257,7 +259,10 @@ class MetalsLanguageServer(
       config,
       statusBar,
       time,
-      report => compilers.didCompile(report),
+      report => {
+        didCompileTarget(report)
+        compilers.didCompile(report)
+      },
       () => treeView,
       () => worksheetProvider
     )
@@ -759,6 +764,25 @@ class MetalsLanguageServer(
       )
       .ignoreValue
       .asJava
+  }
+
+  def didCompileTarget(report: CompileReport): Unit = {
+    if (!isReliableFileWatcher) {
+      // NOTE(olafur) this step is exclusively used when running tests on
+      // non-Linux computers to avoid flaky failures caused by delayed file
+      // watching notifications. The SemanticDB indexer depends on file watching
+      // notifications to pick up `*.semanticdb` file updates and there's no
+      // reliable way to await until those notifications appear.
+      for {
+        item <- buildTargets.scalacOptions(report.getTarget())
+        semanticdb = item.targetroot.resolve(Directories.semanticdb)
+        generatedFile <- semanticdb.listRecursive
+      } {
+        val event =
+          new DirectoryChangeEvent(EventType.MODIFY, generatedFile.toNIO, 1)
+        didChangeWatchedFiles(event)
+      }
+    }
   }
 
   @JsonNotification("workspace/didChangeConfiguration")

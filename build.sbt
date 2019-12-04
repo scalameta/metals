@@ -160,9 +160,9 @@ lazy val V = new {
     Seq("2.13.0", scala213, scala212) ++ deprecatedScalaVersions
   def deprecatedScalaVersions = Seq("2.12.8", "2.12.9", scala211)
   def guava = "com.google.guava" % "guava" % "28.1-jre"
-  def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.0"
+  def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.1"
   def dap4j =
-    "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.8.0"
+    "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.8.1"
   val coursier = "2.0.0-RC5-2"
 }
 
@@ -203,7 +203,7 @@ lazy val mtags = project
     ),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M10", // for java mtags
-      "org.jsoup" % "jsoup" % "1.11.3", // for extracting HTML from javadocs
+      "org.jsoup" % "jsoup" % "1.12.1", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.6.0", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
@@ -240,13 +240,13 @@ lazy val metals = project
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.9",
       // for file watching
-      "io.methvin" % "directory-watcher" % "0.8.3",
+      "io.methvin" % "directory-watcher" % "0.8.0",
       // for http client
       "io.undertow" % "undertow-core" % "2.0.28.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.6.5.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.6.9.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.1.0",
-      "com.h2database" % "h2" % "1.4.197",
+      "org.flywaydb" % "flyway-core" % "5.2.4",
+      "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "1.2.4",
       "net.java.dev.jna" % "jna" % "4.5.2",
@@ -273,7 +273,7 @@ lazy val metals = project
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "io.get-coursier" % "interface" % "0.0.13",
+      "io.get-coursier" % "interface" % "0.0.14",
       // for logging
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
@@ -342,7 +342,7 @@ lazy val mtest = project
     ) ++ crossSetting(
       scalaVersion.value,
       if211 = List("com.lihaoyi" %% "utest" % "0.6.8"),
-      otherwise = List("com.lihaoyi" %% "utest" % "0.6.9")
+      otherwise = List("com.lihaoyi" %% "utest" % "0.7.1")
     ),
     scalacOptions ++= crossSetting(
       scalaVersion.value,
@@ -370,7 +370,7 @@ lazy val cross = project
     libraryDependencies ++= List(
       "com.chuusai" %% "shapeless" % "2.3.3",
       "org.typelevel" %% "cats-core" % "2.0.0",
-      "com.github.mpilquist" %% "simulacrum" % "0.19.0",
+      "org.typelevel" %% "simulacrum" % "1.0.0",
       "com.olegpy" %% "better-monadic-for" % "0.3.0",
       "org.typelevel" %% "kind-projector" % "0.10.3"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
@@ -398,7 +398,7 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
-      "com.lihaoyi" %% "utest" % "0.6.9"
+      "com.lihaoyi" %% "utest" % "0.7.1"
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),
@@ -466,7 +466,7 @@ lazy val docs = project
     moduleName := "metals-docs",
     mdoc := run.in(Compile).evaluated,
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.11.3"
+      "org.jsoup" % "jsoup" % "1.12.1"
     )
   )
   .dependsOn(metals)
