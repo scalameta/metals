@@ -1662,14 +1662,16 @@ class MetalsLanguageServer(
       if !isVisited.contains(sourceUri)
     } {
       isVisited.add(sourceUri)
+      val path = sourceUri.toAbsolutePath
       try {
-        val path = sourceUri.toAbsolutePath
         buildTargets.addDependencySource(path, item.getTarget)
         if (path.isJar) {
           usedJars += path
           addSourceJarSymbols(path)
+        } else if (path.isDirectory) {
+          definitionIndex.addSourceDirectory(path)
         } else {
-          scribe.warn(s"unexpected dependency directory: $path")
+          scribe.warn(s"unexpected dependency: $path")
         }
       } catch {
         case NonFatal(e) =>
