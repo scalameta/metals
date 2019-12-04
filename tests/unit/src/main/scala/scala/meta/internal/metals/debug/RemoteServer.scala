@@ -34,7 +34,7 @@ private[debug] final class RemoteServer(
 
   private val remote = new SocketEndpoint(socket)
   private val ongoing = new TrieMap[String, Response => Unit]()
-  private val id = new AtomicInteger(0)
+  private val id = new AtomicInteger(1)
   lazy val listening: Future[Unit] = Future(listen())
 
   override def initialize(
@@ -73,7 +73,7 @@ private[debug] final class RemoteServer(
       case notification: Notification =>
         notification.getMethod match {
           case "output" =>
-            notify[OutputEventArguments](notification, listener.onOutput)
+            notify(notification, listener.onOutput)
           case "terminated" =>
             listener.onTerminated()
           case _ =>
@@ -115,6 +115,8 @@ private[debug] final class RemoteServer(
           Future[Void](null).asInstanceOf[Future[B]]
         case json: JsonElement =>
           Future.fromTry(json.as[B])
+        case _ if response.getError != null =>
+          Future.failed(new IllegalStateException(response.getError.getMessage))
         case result =>
           Future.failed(new IllegalStateException(s"not a json: $result"))
       }
