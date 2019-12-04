@@ -1,4 +1,5 @@
 package tests
+
 import scala.meta.internal.builds.BuildTools
 import scala.meta.io.AbsolutePath
 
@@ -20,9 +21,24 @@ object DetectionSuite extends BaseSuite {
   def checkNotSbt(name: String, layout: String): Unit = {
     checkSbt(name, layout, isTrue = false)
   }
+
   def checkSbt(name: String, layout: String, isTrue: Boolean = true): Unit = {
     test(s"sbt-$name") {
-      check(layout, new BuildTools(_, Nil).isSbt, isTrue)
+      check(
+        layout,
+        p => BuildTools.default(p).isSbt,
+        isTrue
+      )
+    }
+  }
+
+  def checkPants(name: String, layout: String, isTrue: Boolean = true): Unit = {
+    test(s"pants-$name") {
+      check(
+        layout,
+        p => BuildTools.default(p).isPants,
+        isTrue
+      )
     }
   }
 
@@ -72,6 +88,24 @@ object DetectionSuite extends BaseSuite {
        |""".stripMargin
   )
 
+  checkPants(
+    "pants.ini",
+    """|/pants.ini
+       |[scala]
+       |version: custom
+       |suffix_version: 2.12
+       |""".stripMargin
+  )
+
+  checkNotSbt(
+    "pants.ini",
+    """|/pants.ini
+       |[scala]
+       |version: custom
+       |suffix_version: 2.12
+       |""".stripMargin
+  )
+
   /**------------ Gradle ------------**/
   def checkNotGradle(name: String, layout: String): Unit = {
     checkGradle(name, layout, isTrue = false)
@@ -82,7 +116,11 @@ object DetectionSuite extends BaseSuite {
       isTrue: Boolean = true
   ): Unit = {
     test(s"gradle-$name") {
-      check(layout, new BuildTools(_, Nil).isGradle, isTrue)
+      check(
+        layout,
+        p => BuildTools.default(p).isGradle,
+        isTrue
+      )
     }
   }
 
@@ -124,7 +162,11 @@ object DetectionSuite extends BaseSuite {
       isTrue: Boolean = true
   ): Unit = {
     test(s"maven-$name") {
-      check(layout, new BuildTools(_, Nil).isMaven, isTrue)
+      check(
+        layout,
+        p => BuildTools.default(p).isMaven,
+        isTrue
+      )
     }
   }
 
