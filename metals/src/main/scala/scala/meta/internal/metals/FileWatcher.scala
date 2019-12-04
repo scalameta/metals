@@ -106,6 +106,7 @@ final class FileWatcher(
       .builder()
       .paths(directories)
       .listener(new DirectoryListener())
+      .fileHashing(false)
       .build()
     activeDirectoryWatcher = Some(directoryWatcher)
     directoryWatching = directoryWatcher.watchAsync(directoryExecutor)
