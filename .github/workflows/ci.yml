@@ -74,6 +74,8 @@ jobs:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v7
       - uses: actions/setup-node@v1
+      - run: git fetch --depth=10000
+      - run: git fetch --tags
       - name: Scalafmt & Scalafix & Docusaurus
         run: |
           ./bin/scalafmt --test
