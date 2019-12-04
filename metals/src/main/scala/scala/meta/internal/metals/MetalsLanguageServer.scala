@@ -1270,35 +1270,42 @@ class MetalsLanguageServer(
         .orNull
     }.asJava
 
-  private def slowConnectToBuildServer(
-      forceImport: Boolean
-  ): Future[BuildChange] = {
+  private def supportedBuildTool(): Option[BuildTool] =
     buildTools.loadSupported match {
       case Some(buildTool) =>
-        if (BuildTool.isCompatibleVersion(
-            buildTool.minimumVersion,
-            buildTool.version
-          )) {
-          buildTool.digest(workspace) match {
-            case None =>
-              scribe.warn(s"Skipping build import, no checksum.")
-              Future.successful(BuildChange.None)
-            case Some(digest) =>
-              slowConnectToBuildServer(forceImport, buildTool, digest)
-          }
+        val isCompatibleVersion = BuildTool.isCompatibleVersion(
+          buildTool.minimumVersion,
+          buildTool.version
+        )
+        if (isCompatibleVersion) {
+          Some(buildTool)
         } else {
-          scribe.warn(
-            s"Skipping build import for unsupported $buildTool version ${buildTool.version}"
-          )
+          scribe.warn(s"Unsupported $buildTool version ${buildTool.version}")
           languageClient.showMessage(
             messages.IncompatibleBuildToolVersion.params(buildTool)
           )
-          Future.successful(BuildChange.None)
+          None
         }
       case None =>
         if (!buildTools.isAutoConnectable) {
           warnings.noBuildTool()
         }
+        None
+    }
+
+  private def slowConnectToBuildServer(
+      forceImport: Boolean
+  ): Future[BuildChange] = {
+    supportedBuildTool match {
+      case Some(buildTool) =>
+        buildTool.digest(workspace) match {
+          case None =>
+            scribe.warn(s"Skipping build import, no checksum.")
+            Future.successful(BuildChange.None)
+          case Some(digest) =>
+            slowConnectToBuildServer(forceImport, buildTool, digest)
+        }
+      case None =>
         Future.successful(BuildChange.None)
     }
   }
