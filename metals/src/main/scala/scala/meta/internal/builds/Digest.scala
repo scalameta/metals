@@ -3,11 +3,10 @@ package scala.meta.internal.builds
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.security.MessageDigest
-
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.mtags.MD5
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.xml.Node
@@ -186,7 +185,6 @@ trait Digestable {
       }
 
       digest.update(workspace.toString.getBytes(StandardCharsets.UTF_8))
-
       val isSuccess = digestWorkspace(workspace, digest)
       if (isSuccess) Some(MD5.bytesToHex(digest.digest()))
       else None

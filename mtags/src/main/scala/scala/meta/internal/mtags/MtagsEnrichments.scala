@@ -57,6 +57,17 @@ trait MtagsEnrichments {
     else Language.UNKNOWN_LANGUAGE
   }
   implicit class XtensionPathMetals(file: Path) {
+    def enclosingSourceDirectory: Option[Path] = {
+      def loop(p: Path): Option[Path] =
+        if (p.endsWith("java") || p.endsWith("scala")) Some(p)
+        else {
+          Option(p.getParent()) match {
+            case None => None
+            case Some(parent) => loop(parent)
+          }
+        }
+      loop(file)
+    }
     def isClassfile: Boolean = filename.endsWith(".class")
     def filename: String = file.getFileName().toString()
     def toLanguage: Language = {
@@ -106,6 +117,9 @@ trait MtagsEnrichments {
         case Language.SCALA | Language.JAVA => true
         case _ => false
       }
+    }
+    def isScalaScript: Boolean = {
+      filename.endsWith(".sc")
     }
     def isWorksheet: Boolean = {
       filename.endsWith(".worksheet.sc")
@@ -395,6 +409,10 @@ trait MtagsEnrichments {
   }
 
   implicit class XtensionAbsolutePath(path: AbsolutePath) {
+    def isEmptyDirectory: Boolean = {
+      path.isDirectory &&
+      !path.list.exists(_ => true)
+    }
     def parent: AbsolutePath = {
       AbsolutePath(path.toNIO.getParent)
     }
