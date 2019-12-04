@@ -29,6 +29,7 @@ inThisBuild(
     addCompilerPlugin(
       "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
     ),
+    scalacOptions += s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
