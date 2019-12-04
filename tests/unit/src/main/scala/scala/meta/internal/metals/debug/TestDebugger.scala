@@ -59,7 +59,7 @@ final class TestDebugger(connect: RemoteServer.Listener => Debugger)(
   def awaitOutput(prefix: String, seconds: Int = 5): Future[Unit] = {
     ifNotFailed {
       output
-        .awaitPrefix(prefix)
+        .awaitPrefix(prefix.replaceAll("\n", System.lineSeparator()))
         .withTimeout(seconds, TimeUnit.SECONDS)
         .recoverWith {
           case timeout: TimeoutException =>
