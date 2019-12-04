@@ -1655,10 +1655,13 @@ class MetalsLanguageServer(
           s"Could not find java sources in ${userConfig.javaHome}. Java symbols will not be available."
         )
     }
+    val isVisited = new ju.HashSet[String]()
     for {
       item <- dependencySources.getItems.asScala
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
+      if !isVisited.contains(sourceUri)
     } {
+      isVisited.add(sourceUri)
       try {
         val path = sourceUri.toAbsolutePath
         buildTargets.addDependencySource(path, item.getTarget)
