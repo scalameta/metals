@@ -1556,6 +1556,10 @@ class MetalsLanguageServer(
           "classpath symbol index",
           workspaceSymbols.inDependencies.packages
         )
+        logMemory(
+          "build targets",
+          buildTargets
+        )
       }
     }
     tracked
