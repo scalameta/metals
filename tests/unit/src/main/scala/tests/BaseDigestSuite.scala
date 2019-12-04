@@ -2,10 +2,12 @@ package tests
 
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.RecursivelyDelete
+import scala.meta.internal.metals.UserConfiguration
 
 trait BaseDigestSuite extends BaseSuite {
 
   def digestCurrent(root: AbsolutePath): Option[String]
+  def userConfig = new UserConfiguration()
 
   def checkSame(
       name: String,

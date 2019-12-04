@@ -1,11 +1,12 @@
 package scala.meta.internal.builds
 
-import scala.meta.internal.metals.{MetalsServerConfig, UserConfiguration}
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.JavaBinary
 
-case class MavenBuildTool() extends BuildTool {
+case class MavenBuildTool(userConfig: () => UserConfiguration)
+    extends BloopPluginBuildTool {
 
   private lazy val embeddedMavenLauncher: AbsolutePath = {
     val out = BuildTool.copyFromResource(tempDir, "maven-wrapper.jar")
@@ -17,11 +18,7 @@ case class MavenBuildTool() extends BuildTool {
     AbsolutePath(out)
   }
 
-  def args(
-      workspace: AbsolutePath,
-      userConfig: () => UserConfiguration,
-      config: MetalsServerConfig
-  ): List[String] = {
+  def args(workspace: AbsolutePath): List[String] = {
     import scala.meta.internal.metals.BuildInfo
     val command =
       List(

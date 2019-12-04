@@ -5,7 +5,11 @@ import java.util.Properties
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 
-case class SbtBuildTool(version: String) extends BuildTool {
+case class SbtBuildTool(
+    version: String,
+    userConfig: () => UserConfiguration,
+    config: MetalsServerConfig
+) extends BloopPluginBuildTool {
 
   /**
    * Returns path to a local copy of sbt-launch.jar.
@@ -19,11 +23,7 @@ case class SbtBuildTool(version: String) extends BuildTool {
     AbsolutePath(out)
   }
 
-  override def args(
-      workspace: AbsolutePath,
-      userConfig: () => UserConfiguration,
-      config: MetalsServerConfig
-  ): List[String] = {
+  override def args(workspace: AbsolutePath): List[String] = {
     val sbtArgs = List[String](
       "set bloopExportJarClassifiers in Global := Some(Set(\"sources\"))",
       "bloopInstall"
@@ -55,9 +55,8 @@ case class SbtBuildTool(version: String) extends BuildTool {
     allArgs
   }
 
-  override def digest(
-      workspace: AbsolutePath
-  ): Option[String] = SbtDigest.current(workspace)
+  override def digest(workspace: AbsolutePath): Option[String] =
+    SbtDigest.current(workspace)
   override val minimumVersion: String = "0.13.17"
   override val recommendedVersion: String = "1.2.8"
 
@@ -136,7 +135,11 @@ object SbtBuildTool {
         |""".stripMargin
   }
 
-  def apply(workspace: AbsolutePath): SbtBuildTool = {
+  def apply(
+      workspace: AbsolutePath,
+      userConfig: () => UserConfiguration,
+      config: MetalsServerConfig
+  ): SbtBuildTool = {
     val props = new Properties()
     val buildproperties =
       workspace.resolve("project").resolve("build.properties")
@@ -148,7 +151,7 @@ object SbtBuildTool {
         finally in.close()
         Option(props.getProperty("sbt.version"))
       }
-    SbtBuildTool(version.getOrElse(unknown))
+    SbtBuildTool(version.getOrElse(unknown), userConfig, config)
   }
 
   private def unknown = "<unknown>"

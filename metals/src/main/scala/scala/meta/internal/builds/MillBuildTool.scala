@@ -1,11 +1,12 @@
 package scala.meta.internal.builds
-import scala.meta.internal.metals.{MetalsServerConfig, UserConfiguration}
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.util.Properties
 import java.nio.file.Files
 import java.nio.file.Path
 
-case class MillBuildTool() extends BuildTool {
+case class MillBuildTool(userConfig: () => UserConfiguration)
+    extends BloopPluginBuildTool {
 
   private val predefScriptName = "predef.sc"
 
@@ -20,11 +21,7 @@ case class MillBuildTool() extends BuildTool {
 
   override def redirectErrorOutput: Boolean = true
 
-  override def args(
-      workspace: AbsolutePath,
-      userConfig: () => UserConfiguration,
-      config: MetalsServerConfig
-  ): List[String] = {
+  override def args(workspace: AbsolutePath): List[String] = {
 
     import scala.meta.internal.jdk.CollectionConverters._
     val millVersionPath = workspace.resolve(".mill-version")

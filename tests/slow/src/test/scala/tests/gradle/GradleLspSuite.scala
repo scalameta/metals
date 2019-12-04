@@ -12,7 +12,7 @@ import tests.BaseImportSuite
 
 object GradleLspSuite extends BaseImportSuite("gradle-import") {
 
-  val buildTool: GradleBuildTool = GradleBuildTool()
+  val buildTool: GradleBuildTool = GradleBuildTool(() => userConfig)
 
   override def currentDigest(
       workspace: AbsolutePath

@@ -1,5 +1,8 @@
 package tests
+
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.MetalsServerConfig
 
 object SbtVersionSuite extends BaseSuite {
   def check(
@@ -8,7 +11,11 @@ object SbtVersionSuite extends BaseSuite {
   ): Unit = {
     test(expected) {
       val root = FileLayout.fromString(layout)
-      val obtained = SbtBuildTool(root).version
+      val obtained = SbtBuildTool(
+        root,
+        () => UserConfiguration(),
+        MetalsServerConfig.default
+      ).version
       assertNoDiff(obtained, expected)
     }
   }

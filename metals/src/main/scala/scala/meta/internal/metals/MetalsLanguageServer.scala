@@ -216,7 +216,12 @@ class MetalsLanguageServer(
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, config))
     buildTargets.setTables(tables)
-    buildTools = new BuildTools(workspace, bspGlobalDirectories)
+    buildTools = new BuildTools(
+      workspace,
+      bspGlobalDirectories,
+      () => userConfig,
+      config
+    )
     fileSystemSemanticdbs = new FileSystemSemanticdbs(
       buildTargets,
       charset,
