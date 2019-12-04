@@ -44,6 +44,8 @@ final class BuildTargets() {
     TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
   private val inverseDependencySources =
     TrieMap.empty[AbsolutePath, BuildTargetIdentifier]
+  private val isSourceRoot =
+    ConcurrentHashSet.empty[AbsolutePath]
 
   def setTables(newTables: Tables): Unit = {
     tables = Some(newTables)
@@ -57,6 +59,7 @@ final class BuildTargets() {
     inverseDependencies.clear()
     buildTargetSources.clear()
     inverseDependencySources.clear()
+    isSourceRoot.clear()
   }
   def sourceItems: Iterable[AbsolutePath] =
     sourceItemsToBuildTarget.keys
@@ -333,6 +336,19 @@ final class BuildTargets() {
     inverseDependencySources.get(sourceJar)
   }
 
+  def addSourceRoot(root: AbsolutePath): Unit = {
+    isSourceRoot.add(root)
+  }
+  def sourceRoots: Iterable[AbsolutePath] = {
+    isSourceRoot.asScala
+  }
+
+  def isInsideSourceRoot(path: AbsolutePath): Boolean = {
+    !isSourceRoot.contains(path) &&
+    isSourceRoot.asScala.exists { root =>
+      path.toNIO.startsWith(root.toNIO)
+    }
+  }
 }
 
 object BuildTargets {
