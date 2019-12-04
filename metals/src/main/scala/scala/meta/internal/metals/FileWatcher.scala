@@ -120,7 +120,10 @@ final class FileWatcher(
   }
 
   private def stopWatching(): Unit = {
-    activeDirectoryWatcher.foreach(_.close())
+    try activeDirectoryWatcher.foreach(_.close())
+    catch {
+      case _: ju.ConcurrentModificationException => // ignore, can happen
+    }
     activeFileWatcher.foreach(_.close())
     fileWatching.cancel(false)
     directoryWatching.cancel(false)
