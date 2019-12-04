@@ -1419,10 +1419,10 @@ class MetalsLanguageServer(
     }
     for {
       i <- statusBar.trackFuture("Importing build", importedBuild)
-      _ <- profiledIndexWorkspace { () =>
-        indexWorkspace(i)
-      }
-      _ = indexingPromise.trySuccess(())
+      _ <- profiledIndexWorkspace(
+        () => indexWorkspace(i),
+        () => indexingPromise.trySuccess(())
+      )
       _ <- Future.sequence[Unit, List](
         compilations
           .cascadeCompileFiles(buffers.open.toSeq)
@@ -1523,16 +1523,16 @@ class MetalsLanguageServer(
   }
 
   def profiledIndexWorkspace(
-      thunk: () => Unit
+      thunk: () => Unit,
+      onFinally: () => Unit
   ): Future[Unit] = {
     val tracked = statusBar.trackFuture(
       s"Indexing",
       Future {
         timedThunk("indexed workspace", onlyIf = true) {
           try thunk()
-          catch {
-            case NonFatal(e) =>
-              scribe.error("unexpected error indexing workspace", e)
+          finally {
+            onFinally()
           }
         }
       }
