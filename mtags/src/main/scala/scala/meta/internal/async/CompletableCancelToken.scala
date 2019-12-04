@@ -1,4 +1,4 @@
-package tests
+package scala.meta.internal.async
 
 import java.util.concurrent.CompletableFuture
 import scala.meta.pc.CancelToken
