@@ -32,6 +32,8 @@ abstract class BuildTool {
 
   def recommendedVersion: String
 
+  def onBuildTargets(workspace: AbsolutePath, targets: BuildTargets): Unit = ()
+
   protected lazy val tempDir: Path = {
     val dir = Files.createTempDirectory("metals")
     dir.toFile.deleteOnExit()
