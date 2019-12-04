@@ -85,7 +85,6 @@ import org.eclipse.lsp4j.RenameParams
 import scala.meta.internal.metals.TextEdits
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.RenameFile
-import scala.util.Properties
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -119,7 +118,7 @@ final class TestingServer(
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
     time = time,
-    isReliableFileWatcher = Properties.isLinux
+    isReliableFileWatcher = false // relying on the file watcher causes flaky test failures.
   )
   server.connectToLanguageClient(client)
   private val readonlySources = TrieMap.empty[String, AbsolutePath]
