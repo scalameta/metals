@@ -10,6 +10,8 @@ import scala.meta.RelativePath
 import scala.meta.internal.mtags.Symbol
 import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Try
+import scala.util.Failure
+import scala.util.Success
 
 /**
  * Configuration that the user can override via workspace/didChangeConfiguration.
@@ -22,20 +24,15 @@ case class UserConfiguration(
     gradleScript: Option[String] = None,
     mavenScript: Option[String] = None,
     millScript: Option[String] = None,
-    scalafmtConfigPath: RelativePath =
-      UserConfiguration.default.scalafmtConfigPath,
+    scalafmtConfigPath: RelativePath = RelativePath(".scalafmt.conf"),
     symbolPrefixes: Map[String, String] =
-      UserConfiguration.default.symbolPrefixes,
+      PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
     worksheetScreenWidth: Int = 120,
     worksheetCancelTimeout: Int = 4
 )
 object UserConfiguration {
 
-  object default {
-    def scalafmtConfigPath: RelativePath = RelativePath(".scalafmt.conf")
-    def symbolPrefixes: Map[String, String] =
-      PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap
-  }
+  def default: UserConfiguration = UserConfiguration()
 
   def options: List[UserConfigurationOption] = List(
     UserConfigurationOption(
