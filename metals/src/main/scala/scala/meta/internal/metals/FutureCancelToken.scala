@@ -6,14 +6,21 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.pc.CancelToken
 import scala.compat.java8.FutureConverters._
+import scala.util.Success
+import scala.util.Failure
 
 /**
  * A cancel token backed by a Scala future.
  */
-case class FutureCancelToken(f: Future[Unit])(implicit ec: ExecutionContext)
+case class FutureCancelToken(f: Future[Boolean])(implicit ec: ExecutionContext)
     extends CancelToken {
   var isCancelled: Boolean = false
-  f.onComplete(_ => isCancelled = true)
+  f.onComplete {
+    case Failure(exception) =>
+      isCancelled = true
+    case Success(cancel) =>
+      isCancelled = cancel
+  }
 
   override def checkCanceled(): Unit = {
     if (isCancelled) {
@@ -22,5 +29,12 @@ case class FutureCancelToken(f: Future[Unit])(implicit ec: ExecutionContext)
   }
 
   override def onCancel(): CompletionStage[lang.Boolean] =
-    f.map(_ => java.lang.Boolean.TRUE).toJava
+    f.map(cancel => java.lang.Boolean.valueOf(cancel)).toJava
+}
+
+object FutureCancelToken {
+  def fromUnit(
+      f: Future[Unit]
+  )(implicit ec: ExecutionContext): FutureCancelToken =
+    FutureCancelToken(f.map(_ => true))
 }
