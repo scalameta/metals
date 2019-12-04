@@ -421,7 +421,8 @@ def crossPublishLocal(scalaV: String) = Def.task[Unit] {
     .extract(state.value)
     .appendWithSession(
       List(
-        scalaVersion.in(mtags) := scalaV
+        scalaVersion.in(mtags) := scalaV,
+        useSuperShell.in(ThisBuild) := false
       ),
       state.value
     )
