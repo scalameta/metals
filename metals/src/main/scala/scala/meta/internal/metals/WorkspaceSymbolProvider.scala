@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import java.nio.file.Path
 import java.nio.file.Files
-import java.util.concurrent.CancellationException
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
@@ -14,6 +13,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 import scala.util.control.NonFatal
+import scala.meta.internal.pc.InterruptException
 
 /**
  * Implements workspace/symbol for both workspace sources and dependency classpath.
@@ -41,7 +41,7 @@ final class WorkspaceSymbolProvider(
     try {
       searchUnsafe(query, token)
     } catch {
-      case _: CancellationException =>
+      case InterruptException() =>
         Nil
     }
   }
