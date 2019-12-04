@@ -1181,7 +1181,7 @@ class MetalsLanguageServer(
       case ServerCommands.GotoLog() =>
         Future {
           val log = workspace.resolve(Directories.log)
-          val linesCount = log.readText.lines.size
+          val linesCount = log.readText.linesIterator.size
           val pos = new l.Position(linesCount, 0)
           languageClient.metalsExecuteClientCommand(
             new ExecuteCommandParams(
