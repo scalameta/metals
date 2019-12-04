@@ -12,6 +12,7 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
+import java.util.zip.ZipError
 
 /**
  * An implementation of GlobalSymbolIndex with fast indexing and low memory usage.
@@ -65,17 +66,22 @@ final case class OnDemandSymbolIndex(
   // Traverses all source files in the given jar file and records
   // all non-trivial toplevel Scala symbols.
   override def addSourceJar(jar: AbsolutePath): Unit = tryRun {
-    if (sourceJars.addEntry(jar)) {
-      FileIO.withJarFileSystem(jar, create = false) { root =>
-        root.listRecursive.foreach {
-          case source if source.isScala =>
-            try addSourceFile(source, None)
-            catch {
-              case NonFatal(e) => onError.lift(IndexError(source, e))
-            }
-          case _ =>
+    try {
+      if (sourceJars.addEntry(jar)) {
+        FileIO.withJarFileSystem(jar, create = false) { root =>
+          root.listRecursive.foreach {
+            case source if source.isScala =>
+              try addSourceFile(source, None)
+              catch {
+                case NonFatal(e) => onError.lift(IndexError(source, e))
+              }
+            case _ =>
+          }
         }
       }
+    } catch {
+      case e: ZipError =>
+        onError(InvalidJarException(jar, e))
     }
   }
 
