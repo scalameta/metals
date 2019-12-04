@@ -46,10 +46,10 @@ import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
 import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
+import java.{util => ju}
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1705,11 +1705,15 @@ class MetalsLanguageServer(
           case None =>
             // Nothing in cache, read top level symbols and store them in cache
             val tempIndex = OnDemandSymbolIndex(onError = {
+              case e: InvalidJarException =>
+                scribe.warn(s"invalid jar: ${e.path}")
               case NonFatal(e) =>
-                scribe.warn(s"Error when reading source jar [$path]", e)
+                scribe.warn(s"jar error: $path", e)
             })
             tempIndex.addSourceJar(path)
-            tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
+            if (tempIndex.toplevels.nonEmpty) {
+              tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
+            }
             tempIndex.toplevels
         }
       }
