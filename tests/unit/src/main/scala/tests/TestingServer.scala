@@ -329,16 +329,18 @@ final class TestingServer(
   }
 
   def startDebugging(
-      a: String,
+      target: String,
       kind: String,
       parameter: AnyRef
   ): Future[TestDebugger] = {
-    val targets = List(new b.BuildTargetIdentifier(buildTarget(a)))
+    val targets = List(new b.BuildTargetIdentifier(buildTarget(target)))
     val params =
       new b.DebugSessionParams(targets.asJava, kind, parameter.toJson)
 
-    executeCommand(ServerCommands.StartDebugAdapter.id, params)
-      .collect { case DebugSession(_, uri) => TestDebugger(URI.create(uri)) }
+    executeCommand(ServerCommands.StartDebugAdapter.id, params).collect {
+      case DebugSession(_, uri) =>
+        TestDebugger(URI.create(uri))
+    }
   }
 
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
