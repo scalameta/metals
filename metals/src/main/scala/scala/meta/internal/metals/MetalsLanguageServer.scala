@@ -1595,6 +1595,9 @@ class MetalsLanguageServer(
         buildTargets.addSourceItem(sourceItemPath, item.getTarget)
       }
       doctor.check(i.bspServerName, i.bspServerVersion)
+      buildTools
+        .loadSupported()
+        .foreach(_.onBuildTargets(workspace, buildTargets))
     }
     timedThunk("started file watcher", config.statistics.isIndex) {
       fileWatcher.restart()
