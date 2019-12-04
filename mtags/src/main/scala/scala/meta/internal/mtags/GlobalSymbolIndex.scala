@@ -81,6 +81,9 @@ trait GlobalSymbolIndex {
    */
   def addSourceJar(jar: AbsolutePath): Unit
 
+  /** The same as `addSourceJar` except for directories */
+  def addSourceDirectory(dir: AbsolutePath): Unit
+
 }
 
 case class SymbolDefinition(

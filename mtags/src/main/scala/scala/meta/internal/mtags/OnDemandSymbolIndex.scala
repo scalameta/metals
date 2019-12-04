@@ -49,6 +49,19 @@ final case class OnDemandSymbolIndex(
     catch onErrorOption
   }
 
+  override def addSourceDirectory(dir: AbsolutePath): Unit = tryRun {
+    if (sourceJars.addEntry(dir)) {
+      dir.listRecursive.foreach {
+        case source if source.isScala =>
+          try addSourceFile(source, Some(dir))
+          catch {
+            case NonFatal(e) => onError.lift(IndexError(source, e))
+          }
+        case _ =>
+      }
+    }
+  }
+
   // Traverses all source files in the given jar file and records
   // all non-trivial toplevel Scala symbols.
   override def addSourceJar(jar: AbsolutePath): Unit = tryRun {
