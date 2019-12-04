@@ -847,6 +847,8 @@ class MetalsLanguageServer(
             semanticDBIndexer.onOverflow(event.path())
         }
       }
+    } else if (path.isBuild) {
+      onBuildChanged(List(path)).ignoreValue.asJava
     } else {
       CompletableFuture.completedFuture(())
     }

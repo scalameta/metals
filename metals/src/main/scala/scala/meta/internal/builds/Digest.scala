@@ -95,6 +95,8 @@ object Digest {
       digestGeneralJvm(path, digest)
     } else if (isXml) {
       digestXml(path, digest)
+    } else if (path.isBuild) {
+      digestFileBytes(path, digest)
     } else {
       true
     }

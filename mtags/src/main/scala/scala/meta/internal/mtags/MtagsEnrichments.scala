@@ -99,6 +99,8 @@ trait MtagsEnrichments {
         case None =>
           file.toURI.toString
       }
+    def isBuild: Boolean =
+      file.toNIO.endsWith("BUILD")
     def isScalaOrJava: Boolean = {
       toLanguage match {
         case Language.SCALA | Language.JAVA => true
