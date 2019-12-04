@@ -15,6 +15,7 @@ jobs:
     - stage: release
       script:
         - nvm install 'lts/*' && nvm use 'lts/*'
+        - git fetch --unshallow
         - git fetch --tags
         - sbt ci-release docs/docusaurusPublishGhpages
 
