@@ -89,7 +89,7 @@ final class BuildTargets() {
       for {
         target <- all
         classpathEntry <- target.scalac.classpath
-        if classpathEntry.extension == "jar"
+        if classpathEntry.isJar
         if isVisited.add(classpathEntry)
       } yield classpathEntry,
       PackageIndex.bootClasspath.iterator
