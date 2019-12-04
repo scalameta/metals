@@ -15,10 +15,9 @@ object GradleDigest extends Digestable {
     } else {
       true
     }
-    buildSrcDigest && Digest.digestDirectory(workspace, digest) && digestSubProjects(
-      workspace,
-      digest
-    )
+    buildSrcDigest &&
+    Digest.digestDirectory(workspace, digest) &&
+    digestSubProjects(workspace, digest)
   }
 
   def digestBuildSrc(path: AbsolutePath, digest: MessageDigest): Boolean = {
