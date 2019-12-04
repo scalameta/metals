@@ -371,7 +371,7 @@ lazy val cross = project
       "com.chuusai" %% "shapeless" % "2.3.3",
       "org.typelevel" %% "cats-core" % "2.0.0",
       "org.typelevel" %% "simulacrum" % "1.0.0",
-      "com.olegpy" %% "better-monadic-for" % "0.3.0",
+      "com.olegpy" %% "better-monadic-for" % "0.3.1",
       "org.typelevel" %% "kind-projector" % "0.10.3"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, major)) if major <= 12 =>
