@@ -5,23 +5,20 @@ on:
       - master
   pull_request:
 jobs:
-  windows:
-    name: Windows unit tests
-    runs-on: windows-latest
+  unit:
+    name: ${{ matrix.os }} tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
     steps:
       - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v7
-      - name: Run unit tests
-        run: bin/test.sh "unit/test"
-        shell: bash
-  linux:
-    name: Linux unit tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
+
       - uses: olafurpg/setup-scala@v7
       - name: Run unit tests
         run: bin/test.sh unit/test
+        shell: bash
   sbt:
     name: Sbt integration
     runs-on: ubuntu-latest

@@ -169,6 +169,8 @@ final class BspServers(
 object BspServers {
   def globalInstallDirectories: List[AbsolutePath] = {
     val dirs = ProjectDirectories.fromPath("bsp")
-    List(dirs.dataLocalDir, dirs.dataDir).distinct.map(AbsolutePath(_))
+    List(dirs.dataLocalDir, dirs.dataDir).distinct
+      .map(path => Try(AbsolutePath(path)).toOption)
+      .flatten
   }
 }

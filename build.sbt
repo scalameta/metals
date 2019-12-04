@@ -145,11 +145,11 @@ lazy val V = new {
   val scala211 = "2.11.12"
   val scala212 = "2.12.10"
   val scala213 = "2.13.1"
-  val scalameta = "4.2.5"
+  val scalameta = "4.3.0"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
-  val bloop = "1.3.5"
-  val sbtBloop = bloop
+  val bloop = "1.3.4+251-1d81dfe5"
+  val sbtBloop = "1.3.5"
   val gradleBloop = bloop
   val mavenBloop = bloop
   val scalafmt = "2.0.1"
@@ -159,10 +159,10 @@ lazy val V = new {
   def supportedScalaVersions =
     Seq("2.13.0", scala213, scala212) ++ deprecatedScalaVersions
   def deprecatedScalaVersions = Seq("2.12.8", "2.12.9", scala211)
-  def guava = "com.google.guava" % "guava" % "28.0-jre"
-  def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.0"
+  def guava = "com.google.guava" % "guava" % "28.1-jre"
+  def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.1"
   def dap4j =
-    "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.8.0"
+    "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.8.1"
   val coursier = "2.0.0-RC5-2"
 }
 
@@ -202,8 +202,8 @@ lazy val mtags = project
       if211 = List("-Ywarn-unused:imports")
     ),
     libraryDependencies ++= List(
-      "com.thoughtworks.qdox" % "qdox" % "2.0-M9", // for java mtags
-      "org.jsoup" % "jsoup" % "1.11.3", // for extracting HTML from javadocs
+      "com.thoughtworks.qdox" % "qdox" % "2.0-M10", // for java mtags
+      "org.jsoup" % "jsoup" % "1.12.1", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.6.0", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
@@ -216,7 +216,7 @@ lazy val mtags = project
         crossSetting(
           scalaVersion.value,
           if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.5")
+          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.6")
         )
     },
     buildInfoPackage := "scala.meta.internal.mtags",
@@ -242,27 +242,27 @@ lazy val metals = project
       // for file watching
       "io.methvin" % "directory-watcher" % "0.8.0",
       // for http client
-      "io.undertow" % "undertow-core" % "2.0.13.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.6.5.Final",
+      "io.undertow" % "undertow-core" % "2.0.28.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.6.9.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "5.2.1",
-      "com.h2database" % "h2" % "1.4.197",
+      "org.flywaydb" % "flyway-core" % "5.2.4",
+      "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "1.2.4",
-      "net.java.dev.jna" % "jna" % "4.5.1",
-      "net.java.dev.jna" % "jna-platform" % "4.5.1",
+      "net.java.dev.jna" % "jna" % "4.5.2",
+      "net.java.dev.jna" % "jna-platform" % "4.5.2",
       // for token edit-distance used by goto definition
       "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
-      "ch.epfl.scala" %% "bloop-launcher-core" % V.bloop,
+      "ch.epfl.scala" %% "bloop-launcher" % V.bloop,
       // for LSP
       V.lsp4j,
       // for DAP
       V.dap4j,
       // for producing SemanticDB from Java source files
-      "com.thoughtworks.qdox" % "qdox" % "2.0-M9",
+      "com.thoughtworks.qdox" % "qdox" % "2.0-M10",
       // for finding paths of global log/cache directories
       "io.github.soc" % "directories" % "11",
       // ==================
@@ -273,12 +273,12 @@ lazy val metals = project
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "io.get-coursier" % "interface" % "0.0.13",
+      "io.get-coursier" % "interface" % "0.0.14",
       // for logging
       "com.outr" %% "scribe" % "2.6.0",
       "com.outr" %% "scribe-slf4j" % "2.6.0", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.5.5",
+      "com.lihaoyi" %% "pprint" % "0.5.6",
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
@@ -320,7 +320,7 @@ lazy val input = project
     ),
     scalacOptions += "-P:semanticdb:synthetics:on",
     addCompilerPlugin(
-      "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
+      "org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full
     )
   )
   .disablePlugins(ScalafixPlugin)
@@ -342,7 +342,7 @@ lazy val mtest = project
     ) ++ crossSetting(
       scalaVersion.value,
       if211 = List("com.lihaoyi" %% "utest" % "0.6.8"),
-      otherwise = List("com.lihaoyi" %% "utest" % "0.6.9")
+      otherwise = List("com.lihaoyi" %% "utest" % "0.7.1")
     ),
     scalacOptions ++= crossSetting(
       scalaVersion.value,
@@ -369,13 +369,13 @@ lazy val cross = project
     testSettings,
     libraryDependencies ++= List(
       "com.chuusai" %% "shapeless" % "2.3.3",
-      "org.typelevel" %% "cats-core" % "2.0.0-M4",
-      "com.github.mpilquist" %% "simulacrum" % "0.19.0",
-      "com.olegpy" %% "better-monadic-for" % "0.3.1",
+      "org.typelevel" %% "cats-core" % "2.0.0",
+      "org.typelevel" %% "simulacrum" % "1.0.0",
+      "com.olegpy" %% "better-monadic-for" % "0.3.0",
       "org.typelevel" %% "kind-projector" % "0.10.3"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, major)) if major <= 12 =>
-        List("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+        List("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
       case _ => Nil
     }),
     crossScalaVersions := V.supportedScalaVersions,
@@ -398,7 +398,7 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
-      "com.lihaoyi" %% "utest" % "0.6.0"
+      "com.lihaoyi" %% "utest" % "0.7.1"
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),
@@ -466,7 +466,7 @@ lazy val docs = project
     moduleName := "metals-docs",
     mdoc := run.in(Compile).evaluated,
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.11.3"
+      "org.jsoup" % "jsoup" % "1.12.1"
     )
   )
   .dependsOn(metals)
