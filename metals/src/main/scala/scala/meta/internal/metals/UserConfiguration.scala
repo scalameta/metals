@@ -12,6 +12,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
+import scala.meta.internal.pantsbuild.PantsConfiguration
 
 /**
  * Configuration that the user can override via workspace/didChangeConfiguration.
@@ -29,7 +30,7 @@ case class UserConfiguration(
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
     worksheetScreenWidth: Int = 120,
     worksheetCancelTimeout: Int = 4,
-    pantsTargets: Option[String] = None
+    pantsTargets: Option[List[String]] = None
 )
 object UserConfiguration {
 
@@ -195,7 +196,16 @@ object UserConfiguration {
       getIntKey("worksheet-cancel-timeout")
         .getOrElse(default.worksheetCancelTimeout)
     val pantsTargets =
-      getStringKey("pants-targets")
+      getKey[List[String]](
+        "pants-targets", { value =>
+          PantsConfiguration.pantsTargetsFromGson(value) match {
+            case Left(e) =>
+              errors += e
+              None
+            case Right(value) => Some(value)
+          }
+        }
+      )
 
     if (errors.isEmpty) {
       Right(

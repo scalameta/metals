@@ -34,10 +34,7 @@ case class PantsBuildTool(
   }
 
   private def pantsTargets(): List[String] =
-    userConfig().pantsTargets match {
-      case None => Nil
-      case Some(target) => target.split(" ").toList
-    }
+    userConfig().pantsTargets.getOrElse(Nil)
 
   override def onBuildTargets(
       workspace: AbsolutePath,

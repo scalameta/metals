@@ -8,7 +8,7 @@ object PantsDigestSuite extends BaseDigestSuite {
   override def digestCurrent(
       root: AbsolutePath
   ): Option[String] = {
-    val userConfig = new UserConfiguration(pantsTargets = Option("::"))
+    val userConfig = new UserConfiguration(pantsTargets = Option(List("::")))
     new PantsDigest(() => userConfig).current(root)
   }
 

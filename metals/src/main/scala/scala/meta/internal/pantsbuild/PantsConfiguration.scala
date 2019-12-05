@@ -4,6 +4,9 @@ import scala.meta.io.AbsolutePath
 import scala.collection.mutable
 import java.net.URI
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import com.google.gson.JsonElement
+import com.google.gson.JsonArray
+import scala.collection.JavaConverters._
 
 object PantsConfiguration {
 
@@ -34,6 +37,42 @@ object PantsConfiguration {
     workspace.resolve(target.substring(0, target.lastIndexOf(':')))
   }
 
+  def pantsTargetsFromGson(
+      elem: JsonElement,
+      original: Option[JsonElement] = None
+  ): Either[String, List[String]] = {
+    def typeMismatch =
+      "Unexpected 'pants-targets' configuration. " +
+        "Expected a string or a list of strings." +
+        s" Obtained: ${original.getOrElse(elem)}"
+    if (elem.isJsonPrimitive()) {
+      val array = new JsonArray()
+      array.add(elem)
+      pantsTargetsFromGson(array, Some(elem))
+    } else if (elem.isJsonArray()) {
+      val parsed = elem.getAsJsonArray().asScala.map { e =>
+        if (e.isJsonPrimitive() && e.getAsJsonPrimitive().isString()) {
+          Right(e.getAsString().split(" +").toList)
+        } else {
+          Left(elem)
+        }
+      }
+      val notStrings = parsed.collect {
+        case Left(e) => e
+      }
+      if (notStrings.nonEmpty) {
+        Left(typeMismatch)
+      } else {
+        Right(parsed.collect { case Right(x) => x }.toList.flatten)
+      }
+    } else {
+      Left(typeMismatch)
+    }
+  }
+
+  def targetsFromSpaceSeparatedString(string: String): List[String] =
+    string.split(" +").filter(_.nonEmpty).toList
+
   /**
    * Returns the toplevel directories that enclose all of the target.
    *
@@ -47,9 +86,9 @@ object PantsConfiguration {
    */
   def sourceRoots(
       workspace: AbsolutePath,
-      pantsTargets: String
+      pantsTargets: List[String]
   ): List[AbsolutePath] = {
-    val parts = pantsTargets.split(" ").map(_.replaceFirst("/?:.*", "")).sorted
+    val parts = pantsTargets.map(_.replaceFirst("/?:.*", "")).sorted
     if (parts.isEmpty) return Nil
     val buf = mutable.ListBuffer.empty[String]
     var current = parts(0)

@@ -26,7 +26,7 @@ class PantsDigest(userConfig: () => UserConfiguration) extends Digestable {
   private def digestBuildFiles(
       workspace: AbsolutePath,
       digest: MessageDigest,
-      pantsTargets: String
+      pantsTargets: List[String]
   ): Boolean = {
     var isOk = true
     for {
