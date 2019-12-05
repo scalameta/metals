@@ -303,7 +303,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
             .append("\n")
         }
         val input = path.toInputFromBuffers(buffers)
-        input.text.lines.zipWithIndex.foreach {
+        input.text.linesIterator.zipWithIndex.foreach {
           case (line, i) =>
             out.append(line)
             decorations

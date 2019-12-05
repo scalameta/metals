@@ -1000,7 +1000,7 @@ final class TestingServer(
       isIgnored: String => Boolean = _ => true
   )(implicit sourcecodeLine: sourcecode.Line, file: sourcecode.File): String = {
     val path = toPath(filename)
-    val line = path.toInput.value.lines.zipWithIndex
+    val line = path.toInput.value.linesIterator.zipWithIndex
       .collectFirst {
         case (text, line) if text.contains(linePattern) =>
           line
