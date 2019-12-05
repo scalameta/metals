@@ -3,12 +3,12 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributeView
 import java.sql.{Connection, PreparedStatement, Statement}
-
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JdbcEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.mtags.MD5
+import java.util.zip.ZipError
 
 /**
  * Handles caching of Jar Top Level Symbols in H2
@@ -25,23 +25,28 @@ final class JarTopLevels(conn: () => Connection) {
    */
   def getTopLevels(
       path: AbsolutePath
-  ): Option[TrieMap[String, AbsolutePath]] = {
-    val fs = PlatformFileIO.newJarFileSystem(path, create = false)
-    val toplevels = TrieMap[String, AbsolutePath]()
-    conn()
-      .query(
-        """select ts.symbol, ts.path
-          |from indexed_jar ij
-          |left join toplevel_symbol ts
-          |on ij.id=ts.jar
-          |where ij.md5=?""".stripMargin
-      ) { _.setString(1, getMD5Digest(path)) } { rs =>
-        if (rs.getString(1) != null && rs.getString(2) != null)
-          toplevels(rs.getString(1)) = AbsolutePath(fs.getPath(rs.getString(2)))
-      }
-      .headOption
-      .map(_ => toplevels)
-  }
+  ): Option[TrieMap[String, AbsolutePath]] =
+    try {
+      val fs = PlatformFileIO.newJarFileSystem(path, create = false)
+      val toplevels = TrieMap[String, AbsolutePath]()
+      conn()
+        .query(
+          """select ts.symbol, ts.path
+            |from indexed_jar ij
+            |left join toplevel_symbol ts
+            |on ij.id=ts.jar
+            |where ij.md5=?""".stripMargin
+        ) { _.setString(1, getMD5Digest(path)) } { rs =>
+          if (rs.getString(1) != null && rs.getString(2) != null)
+            toplevels(rs.getString(1)) =
+              AbsolutePath(fs.getPath(rs.getString(2)))
+        }
+        .headOption
+        .map(_ => toplevels)
+    } catch {
+      case _: ZipError =>
+        None
+    }
 
   /**
    * Stores the top level symbols for the Jar

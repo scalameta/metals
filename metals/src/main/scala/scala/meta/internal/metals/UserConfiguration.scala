@@ -10,6 +10,8 @@ import scala.meta.RelativePath
 import scala.meta.internal.mtags.Symbol
 import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Try
+import scala.util.Failure
+import scala.util.Success
 
 /**
  * Configuration that the user can override via workspace/didChangeConfiguration.
@@ -22,20 +24,15 @@ case class UserConfiguration(
     gradleScript: Option[String] = None,
     mavenScript: Option[String] = None,
     millScript: Option[String] = None,
-    scalafmtConfigPath: RelativePath =
-      UserConfiguration.default.scalafmtConfigPath,
+    scalafmtConfigPath: RelativePath = RelativePath(".scalafmt.conf"),
     symbolPrefixes: Map[String, String] =
-      UserConfiguration.default.symbolPrefixes,
+      PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
     worksheetScreenWidth: Int = 120,
     worksheetCancelTimeout: Int = 4
 )
 object UserConfiguration {
 
-  object default {
-    def scalafmtConfigPath: RelativePath = RelativePath(".scalafmt.conf")
-    def symbolPrefixes: Map[String, String] =
-      PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap
-  }
+  def default: UserConfiguration = UserConfiguration()
 
   def options: List[UserConfigurationOption] = List(
     UserConfigurationOption(
@@ -129,6 +126,16 @@ object UserConfiguration {
             .filter(_.nonEmpty)
         }
       )
+    def getIntKey(key: String): Option[Int] =
+      getStringKey(key).flatMap { value =>
+        Try(value.toInt) match {
+          case Failure(exception) =>
+            errors += s"Not a number: '$value'"
+            None
+          case Success(value) =>
+            Some(value)
+        }
+      }
     def getStringMap(key: String): Option[Map[String, String]] =
       getKey(
         key, { value =>
@@ -168,6 +175,12 @@ object UserConfiguration {
     errors ++= symbolPrefixes.keys.flatMap { sym =>
       Symbol.validated(sym).left.toOption
     }
+    val worksheetScreenWidth =
+      getIntKey("worksheet-screen-width")
+        .getOrElse(default.worksheetScreenWidth)
+    val worksheetCancelTimeout =
+      getIntKey("worksheet-cancel-timeout")
+        .getOrElse(default.worksheetCancelTimeout)
 
     if (errors.isEmpty) {
       Right(
@@ -178,7 +191,9 @@ object UserConfiguration {
           mavenScript,
           millScript,
           scalafmtConfigPath,
-          symbolPrefixes
+          symbolPrefixes,
+          worksheetScreenWidth,
+          worksheetCancelTimeout
         )
       )
     } else {

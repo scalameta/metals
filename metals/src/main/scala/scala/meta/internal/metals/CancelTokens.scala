@@ -33,7 +33,7 @@ object CancelTokens {
         super.cancel(mayInterruptIfRunning)
       }
     }
-    fn(FutureCancelToken(token.future)).onComplete {
+    fn(FutureCancelToken.fromUnit(token.future)).onComplete {
       case Failure(exception) =>
         result.completeExceptionally(exception)
       case Success(value) =>

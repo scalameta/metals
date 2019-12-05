@@ -1,23 +1,18 @@
 package scala.meta.internal.metals
 
-import java.nio.ByteBuffer
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import com.zaxxer.nuprocess.NuAbstractProcessHandler
-import com.zaxxer.nuprocess.NuProcess
 import com.zaxxer.nuprocess.NuProcessBuilder
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.meta.internal.ansi.LineListener
 import scala.meta.internal.builds.Digest
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import scala.util.Success
+import scala.meta.internal.process.ProcessHandler
+import scala.meta.internal.process.ExitCodes
 
 /**
  * Runs `sbt/gradle/mill/mvn bloopInstall` processes.
@@ -50,16 +45,21 @@ final class BloopInstall(
   override def toString: String = s"BloopInstall($workspace)"
 
   def runUnconditionally(buildTool: BuildTool): Future[BloopInstallResult] = {
-    val args = buildTool.args(workspace, userConfig, config)
-    scribe.info(s"running '${args.mkString(" ")}'")
-    val result = runArgumentsUnconditionally(buildTool, args)
-    result.foreach { e =>
-      if (e.isFailed) {
-        // Record the exact command that failed to help troubleshooting.
-        scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
+    buildTool.bloopInstall(
+      workspace,
+      languageClient,
+      args => {
+        scribe.info(s"running '${args.mkString(" ")}'")
+        val process = runArgumentsUnconditionally(buildTool, args)
+        process.foreach { e =>
+          if (e.isFailed) {
+            // Record the exact command that failed to help troubleshooting.
+            scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
+          }
+        }
+        process
       }
-    }
-    result
+    )
   }
 
   private def runArgumentsUnconditionally(
@@ -68,7 +68,7 @@ final class BloopInstall(
   ): Future[BloopInstallResult] = {
     persistChecksumStatus(Status.Started, buildTool)
     val elapsed = new Timer(time)
-    val handler = new BloopInstall.ProcessHandler(
+    val handler = ProcessHandler(
       joinErrorWithInfo = buildTool.redirectErrorOutput
     )
     val pb = new NuProcessBuilder(handler, args.asJava)
@@ -92,7 +92,11 @@ final class BloopInstall(
       scribe.info(
         s"time: ran '${buildTool.executableName} bloopInstall' in $elapsed"
       )
-      result
+      result match {
+        case ExitCodes.Success => BloopInstallResult.Installed
+        case ExitCodes.Cancel => BloopInstallResult.Cancelled
+        case _ => BloopInstallResult.Failed(result)
+      }
     }
     statusBar.trackFuture(
       s"Running ${buildTool.executableName} bloopInstall",
@@ -101,19 +105,20 @@ final class BloopInstall(
     taskResponse.asScala.foreach { item =>
       if (item.cancel) {
         scribe.info("user cancelled build import")
-        handler.completeProcess.complete(
-          Success(BloopInstallResult.Cancelled)
-        )
-        BloopInstall.destroyProcess(runningProcess)
+        handler.completeProcess.trySuccess(ExitCodes.Cancel)
+        ProcessHandler.destroyProcess(runningProcess)
       }
     }
     cancelables
-      .add(() => BloopInstall.destroyProcess(runningProcess))
+      .add(() => ProcessHandler.destroyProcess(runningProcess))
       .add(() => taskResponse.cancel(false))
 
-    processFuture.foreach(
-      _.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))
-    )
+    processFuture.foreach { result =>
+      try result.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))
+      catch {
+        case _: InterruptedException =>
+      }
+    }
     processFuture
   }
 
@@ -198,65 +203,4 @@ final class BloopInstall(
     }
   }
 
-}
-
-object BloopInstall {
-
-  /**
-   * First tries to destroy the process gracefully, with fallback to forcefully.
-   */
-  private def destroyProcess(process: NuProcess): Unit = {
-    process.destroy(false)
-    val exit = process.waitFor(2, TimeUnit.SECONDS)
-    if (exit == Integer.MIN_VALUE) {
-      // timeout exceeded, kill process forcefully.
-      process.destroy(true)
-      process.waitFor(2, TimeUnit.SECONDS)
-    }
-  }
-
-  /**
-   * Converts running system processing into Future[BloopInstallResult].
-   */
-  private class ProcessHandler(
-      joinErrorWithInfo: Boolean
-  ) extends NuAbstractProcessHandler {
-    var response: Option[CompletableFuture[_]] = None
-    val completeProcess: Promise[BloopInstallResult] =
-      Promise[BloopInstallResult]()
-    val stdout = new LineListener(line => scribe.info(line))
-    val stderr: LineListener =
-      if (joinErrorWithInfo) stdout
-      else new LineListener(line => scribe.error(line))
-
-    override def onStart(nuProcess: NuProcess): Unit = {
-      nuProcess.closeStdin(false)
-    }
-
-    override def onExit(statusCode: Int): Unit = {
-      stdout.flushIfNonEmpty()
-      stderr.flushIfNonEmpty()
-      if (!completeProcess.isCompleted) {
-        if (statusCode == 0) {
-          completeProcess.trySuccess(BloopInstallResult.Installed)
-        } else {
-          completeProcess.trySuccess(BloopInstallResult.Failed(statusCode))
-        }
-      }
-      scribe.info(s"build tool exit: $statusCode")
-      response.foreach(_.cancel(false))
-    }
-
-    override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
-      if (!closed) {
-        stdout.appendBytes(buffer)
-      }
-    }
-
-    override def onStderr(buffer: ByteBuffer, closed: Boolean): Unit = {
-      if (!closed) {
-        stderr.appendBytes(buffer)
-      }
-    }
-  }
 }

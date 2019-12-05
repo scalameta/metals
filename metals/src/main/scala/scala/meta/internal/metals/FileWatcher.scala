@@ -10,6 +10,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+import java.{util => ju}
 
 /**
  * Handles file watching of interesting files in this build.
@@ -62,7 +63,7 @@ final class FileWatcher(
   }
 
   def restart(): Unit = {
-    val sourceDirectoriesToWatch = new util.ArrayList[Path]()
+    val sourceDirectoriesToWatch = new util.LinkedHashSet[Path]()
     val sourceFilesToWatch = new util.ArrayList[Path]()
     val createdSourceDirectories = new util.ArrayList[AbsolutePath]()
     def watch(path: AbsolutePath, isSource: Boolean): Unit = {
@@ -78,10 +79,16 @@ final class FileWatcher(
         // work on some other systems like Linux
         if (isSource) createdSourceDirectories.add(pathToCreate)
       }
-      if (path.isScalaOrJava) sourceFilesToWatch.add(path.toNIO)
-      else sourceDirectoriesToWatch.add(path.toNIO)
+      if (buildTargets.isInsideSourceRoot(path)) {
+        () // Do nothing, already covered by a source root
+      } else if (path.isScalaOrJava) {
+        sourceDirectoriesToWatch.add(path.toNIO.getParent())
+      } else {
+        sourceDirectoriesToWatch.add(path.toNIO)
+      }
     }
     // Watch the source directories for "goto definition" index.
+    buildTargets.sourceRoots.foreach(watch(_, isSource = true))
     buildTargets.sourceItems.foreach(watch(_, isSource = true))
     buildTargets.scalacOptions.foreach { item =>
       val targetroot = item.targetroot
@@ -93,34 +100,35 @@ final class FileWatcher(
         )
       }
     }
-    startWatching(sourceFilesToWatch, sourceDirectoriesToWatch)
-    createdSourceDirectories.asScala.foreach(_.delete())
+    startWatching(new ju.ArrayList(sourceDirectoriesToWatch))
+    createdSourceDirectories.asScala.foreach { dir =>
+      if (dir.isEmptyDirectory) {
+        dir.delete()
+      }
+    }
   }
 
-  private def startWatching(
-      files: util.List[Path],
-      directories: util.List[Path]
-  ): Unit = {
+  private def startWatching(directories: util.List[Path]): Unit = {
     stopWatching()
     val directoryWatcher = DirectoryWatcher
       .builder()
       .paths(directories)
       .listener(new DirectoryListener())
+      // File hashing is necessary for correctness, see:
+      // https://github.com/scalameta/metals/pull/1153
+      .fileHashing(true)
       .build()
     activeDirectoryWatcher = Some(directoryWatcher)
     directoryWatching = directoryWatcher.watchAsync(directoryExecutor)
-
-    val fileWatcher = DirectoryWatcher
-      .builder()
-      .paths(files.map(_.getParent()))
-      .listener(new FileListener(watched = files.asScala.toSet))
-      .build()
-    activeFileWatcher = Some(fileWatcher)
-    fileWatching = fileWatcher.watchAsync(fileExecutor)
   }
 
   private def stopWatching(): Unit = {
-    activeDirectoryWatcher.foreach(_.close())
+    try activeDirectoryWatcher.foreach(_.close())
+    catch {
+      // safe to ignore because we're closing the file watcher and
+      // this error won't affect correctness of Metals.
+      case _: ju.ConcurrentModificationException =>
+    }
     activeFileWatcher.foreach(_.close())
     fileWatching.cancel(false)
     directoryWatching.cancel(false)

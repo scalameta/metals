@@ -1,16 +1,28 @@
 package scala.meta.internal.builds
 
 import java.nio.file.{Files, Path}
-import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 import scala.util.Try
+import java.nio.file.StandardCopyOption
+import scala.meta.internal.metals.BloopInstallResult
+import scala.concurrent.Future
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.MetalsLanguageClient
 
 abstract class BuildTool {
-  def args(
+
+  /**
+   * Export the build to Bloop
+   *
+   * This operation should be roughly equivalent to running `sbt bloopInstall`
+   * and should work for both updating an existing Bloop build or creating a new
+   * Bloop build.
+   */
+  def bloopInstall(
       workspace: AbsolutePath,
-      userConfig: () => UserConfiguration,
-      config: MetalsServerConfig
-  ): List[String]
+      languageClient: MetalsLanguageClient,
+      systemProcess: List[String] => Future[BloopInstallResult]
+  ): Future[BloopInstallResult]
 
   def digest(workspace: AbsolutePath): Option[String]
 
@@ -19,6 +31,8 @@ abstract class BuildTool {
   def minimumVersion: String
 
   def recommendedVersion: String
+
+  def onBuildTargets(workspace: AbsolutePath, targets: BuildTargets): Unit = ()
 
   protected lazy val tempDir: Path = {
     val dir = Files.createTempDirectory("metals")
@@ -55,7 +69,7 @@ object BuildTool {
       this.getClass.getResourceAsStream(s"/$filePath")
     val outFile = tempDir.resolve(destination.getOrElse(filePath))
     Files.createDirectories(outFile.getParent)
-    Files.copy(embeddedFile, outFile)
+    Files.copy(embeddedFile, outFile, StandardCopyOption.REPLACE_EXISTING)
     outFile
   }
 }

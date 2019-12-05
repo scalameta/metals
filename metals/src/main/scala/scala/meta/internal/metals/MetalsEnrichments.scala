@@ -241,7 +241,7 @@ object MetalsEnrichments
     def sourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
 
     /**
-     * Resolve each path segment individually to prevent jjkjjk
+     * Resolve each path segment individually to prevent FileSystem mismatch errors.
      */
     def resolveZipPath(zipPath: Path): AbsolutePath = {
       zipPath.iterator().asScala.foldLeft(path) {

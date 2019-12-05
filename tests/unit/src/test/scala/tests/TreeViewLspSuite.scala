@@ -492,8 +492,9 @@ object TreeViewLspSuite extends BaseLspSuite("tree-view") {
       // Trigger a compilation in an unrelated project to ensure that the
       // background compilation of project "b" has completed.
       _ <- server.didOpen("a/src/main/scala/a/First.scala")
+      _ <- server.didSave("a/src/main/scala/a/First.scala")(identity)
 
-      // Assert that the tree view for "b" has been updated due to the trggered
+      // Assert that the tree view for "b" has been updated due to the triggered
       // background compilation of project "b" has completed, even if it was a
       // no-op.
       _ = server.assertTreeViewChildren(

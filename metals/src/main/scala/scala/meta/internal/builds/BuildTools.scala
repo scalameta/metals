@@ -4,6 +4,10 @@ import java.nio.file.Files
 import java.util.Properties
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.io.PathIO
+import scala.concurrent.ExecutionContext
 
 /**
  * Detects what build tool is used in this workspace.
@@ -19,8 +23,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
  */
 final class BuildTools(
     workspace: AbsolutePath,
-    bspGlobalDirectories: List[AbsolutePath]
-) {
+    bspGlobalDirectories: List[AbsolutePath],
+    userConfig: () => UserConfiguration,
+    config: MetalsServerConfig
+)(implicit ec: ExecutionContext) {
   def isAutoConnectable: Boolean =
     isBloop || isBsp
   def isBloop: Boolean = {
@@ -56,6 +62,15 @@ final class BuildTools(
   def isPants: Boolean = workspace.resolve("pants.ini").isFile
   def isBazel: Boolean = workspace.resolve("WORKSPACE").isFile
 
+  def allAvailable: List[BuildTool] = {
+    List(
+      SbtBuildTool(version = "", userConfig, config),
+      GradleBuildTool(userConfig),
+      MavenBuildTool(userConfig),
+      MillBuildTool(userConfig)
+    )
+  }
+
   def all: List[String] = {
     val buf = List.newBuilder[String]
     if (isBloop) buf += "Bloop"
@@ -71,12 +86,13 @@ final class BuildTools(
     all.isEmpty
   }
   def loadSupported(): Option[BuildTool] = {
-    if (isSbt) Some(SbtBuildTool(workspace))
-    else if (isGradle) Some(GradleBuildTool())
-    else if (isMaven) Some(MavenBuildTool())
-    else if (isMill) Some(MillBuildTool())
+    if (isSbt) Some(SbtBuildTool(workspace, userConfig, config))
+    else if (isGradle) Some(GradleBuildTool(userConfig))
+    else if (isMaven) Some(MavenBuildTool(userConfig))
+    else if (isMill) Some(MillBuildTool(userConfig))
     else None
   }
+
   override def toString: String = {
     val names = all.mkString("+")
     if (names.isEmpty) "<no build tool>"
@@ -89,4 +105,14 @@ final class BuildTools(
     else if (isMill) MillBuildTool.isMillRelatedPath(workspace, path)
     else false
   }
+}
+
+object BuildTools {
+  def default(workspace: AbsolutePath = PathIO.workingDirectory): BuildTools =
+    new BuildTools(
+      workspace,
+      Nil,
+      () => UserConfiguration(),
+      MetalsServerConfig.default
+    )(ExecutionContext.global)
 }

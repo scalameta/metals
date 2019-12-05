@@ -46,10 +46,10 @@ import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
 import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
+import java.{util => ju}
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -216,7 +216,12 @@ class MetalsLanguageServer(
     buildTargets.setWorkspaceDirectory(workspace)
     tables = register(new Tables(workspace, time, config))
     buildTargets.setTables(tables)
-    buildTools = new BuildTools(workspace, bspGlobalDirectories)
+    buildTools = new BuildTools(
+      workspace,
+      bspGlobalDirectories,
+      () => userConfig,
+      config
+    )
     fileSystemSemanticdbs = new FileSystemSemanticdbs(
       buildTargets,
       charset,
@@ -842,6 +847,8 @@ class MetalsLanguageServer(
             semanticDBIndexer.onOverflow(event.path())
         }
       }
+    } else if (path.isBuild) {
+      onBuildChanged(List(path)).ignoreValue.asJava
     } else {
       CompletableFuture.completedFuture(())
     }
@@ -1263,35 +1270,42 @@ class MetalsLanguageServer(
         .orNull
     }.asJava
 
-  private def slowConnectToBuildServer(
-      forceImport: Boolean
-  ): Future[BuildChange] = {
+  private def supportedBuildTool(): Option[BuildTool] =
     buildTools.loadSupported match {
       case Some(buildTool) =>
-        if (BuildTool.isCompatibleVersion(
-            buildTool.minimumVersion,
-            buildTool.version
-          )) {
-          buildTool.digest(workspace) match {
-            case None =>
-              scribe.warn(s"Skipping build import, no checksum.")
-              Future.successful(BuildChange.None)
-            case Some(digest) =>
-              slowConnectToBuildServer(forceImport, buildTool, digest)
-          }
+        val isCompatibleVersion = BuildTool.isCompatibleVersion(
+          buildTool.minimumVersion,
+          buildTool.version
+        )
+        if (isCompatibleVersion) {
+          Some(buildTool)
         } else {
-          scribe.warn(
-            s"Skipping build import for unsupported $buildTool version ${buildTool.version}"
-          )
+          scribe.warn(s"Unsupported $buildTool version ${buildTool.version}")
           languageClient.showMessage(
             messages.IncompatibleBuildToolVersion.params(buildTool)
           )
-          Future.successful(BuildChange.None)
+          None
         }
       case None =>
         if (!buildTools.isAutoConnectable) {
           warnings.noBuildTool()
         }
+        None
+    }
+
+  private def slowConnectToBuildServer(
+      forceImport: Boolean
+  ): Future[BuildChange] = {
+    supportedBuildTool match {
+      case Some(buildTool) =>
+        buildTool.digest(workspace) match {
+          case None =>
+            scribe.warn(s"Skipping build import, no checksum.")
+            Future.successful(BuildChange.None)
+          case Some(digest) =>
+            slowConnectToBuildServer(forceImport, buildTool, digest)
+        }
+      case None =>
         Future.successful(BuildChange.None)
     }
   }
@@ -1412,10 +1426,10 @@ class MetalsLanguageServer(
     }
     for {
       i <- statusBar.trackFuture("Importing build", importedBuild)
-      _ <- profiledIndexWorkspace { () =>
-        indexWorkspace(i)
-      }
-      _ = indexingPromise.trySuccess(())
+      _ <- profiledIndexWorkspace(
+        () => indexWorkspace(i),
+        () => indexingPromise.trySuccess(())
+      )
       _ <- Future.sequence[Unit, List](
         compilations
           .cascadeCompileFiles(buffers.open.toSeq)
@@ -1516,16 +1530,16 @@ class MetalsLanguageServer(
   }
 
   def profiledIndexWorkspace(
-      thunk: () => Unit
+      thunk: () => Unit,
+      onFinally: () => Unit
   ): Future[Unit] = {
     val tracked = statusBar.trackFuture(
       s"Indexing",
       Future {
         timedThunk("indexed workspace", onlyIf = true) {
           try thunk()
-          catch {
-            case NonFatal(e) =>
-              scribe.error("unexpected error indexing workspace", e)
+          finally {
+            onFinally()
           }
         }
       }
@@ -1548,6 +1562,10 @@ class MetalsLanguageServer(
         logMemory(
           "classpath symbol index",
           workspaceSymbols.inDependencies.packages
+        )
+        logMemory(
+          "build targets",
+          buildTargets
         )
       }
     }
@@ -1577,6 +1595,9 @@ class MetalsLanguageServer(
         buildTargets.addSourceItem(sourceItemPath, item.getTarget)
       }
       doctor.check(i.bspServerName, i.bspServerVersion)
+      buildTools
+        .loadSupported()
+        .foreach(_.onBuildTargets(workspace, buildTargets))
     }
     timedThunk("started file watcher", config.statistics.isIndex) {
       fileWatcher.restart()
@@ -1634,18 +1655,23 @@ class MetalsLanguageServer(
           s"Could not find java sources in ${userConfig.javaHome}. Java symbols will not be available."
         )
     }
+    val isVisited = new ju.HashSet[String]()
     for {
       item <- dependencySources.getItems.asScala
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
+      if !isVisited.contains(sourceUri)
     } {
+      isVisited.add(sourceUri)
+      val path = sourceUri.toAbsolutePath
       try {
-        val path = sourceUri.toAbsolutePath
         buildTargets.addDependencySource(path, item.getTarget)
         if (path.isJar) {
           usedJars += path
           addSourceJarSymbols(path)
+        } else if (path.isDirectory) {
+          definitionIndex.addSourceDirectory(path)
         } else {
-          scribe.warn(s"unexpected dependency directory: $path")
+          scribe.warn(s"unexpected dependency: $path")
         }
       } catch {
         case NonFatal(e) =>
@@ -1679,11 +1705,15 @@ class MetalsLanguageServer(
           case None =>
             // Nothing in cache, read top level symbols and store them in cache
             val tempIndex = OnDemandSymbolIndex(onError = {
+              case e: InvalidJarException =>
+                scribe.warn(s"invalid jar: ${e.path}")
               case NonFatal(e) =>
-                scribe.warn(s"Error when reading source jar [$path]", e)
+                scribe.warn(s"jar error: $path", e)
             })
             tempIndex.addSourceJar(path)
-            tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
+            if (tempIndex.toplevels.nonEmpty) {
+              tables.jarSymbols.putTopLevels(path, tempIndex.toplevels)
+            }
             tempIndex.toplevels
         }
       }

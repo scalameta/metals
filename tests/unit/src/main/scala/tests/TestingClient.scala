@@ -4,7 +4,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
-
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.Diagnostic
@@ -31,10 +30,6 @@ import scala.meta.io.AbsolutePath
 import tests.MetalsTestEnrichments._
 import tests.TestOrderings._
 import scala.meta.inputs.Input
-import scala.meta.internal.builds.GradleBuildTool
-import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.builds.MavenBuildTool
-import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.NoopLanguageClient
 import scala.meta.internal.tvp.TreeViewDidChangeParams
@@ -42,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.builds.BuildTools
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -218,12 +214,10 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     def isSameMessage(
         createParams: String => ShowMessageRequestParams
     ): Boolean = {
-      Set(
-        GradleBuildTool(),
-        SbtBuildTool(""),
-        MavenBuildTool(),
-        MillBuildTool()
-      ).map(tool => createParams(tool.toString()))
+      BuildTools
+        .default()
+        .allAvailable
+        .map(tool => createParams(tool.toString()))
         .contains(params)
     }
     CompletableFuture.completedFuture {

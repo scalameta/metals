@@ -119,6 +119,7 @@ final class TestingServer(
     bspGlobalDirectories = bspGlobalDirectories,
     sh = sh,
     time = time,
+    // relying on the macOS/Windows file watchers causes flaky test failures.
     isReliableFileWatcher = Properties.isLinux
   )
   server.connectToLanguageClient(client)

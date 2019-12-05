@@ -197,8 +197,8 @@ final class StatusBar(
       timer.elapsedSeconds > 10 ||
         firstShow.exists(_.elapsedSeconds > 5)
     def isStale: Boolean = this match {
-      case Message(_) => (firstShow.isDefined && !isRecent) || isOutdated
-      case Progress(_, job, _, _) => job.isCompleted
+      case _: Message => (firstShow.isDefined && !isRecent) || isOutdated
+      case p: Progress => p.job.isCompleted
     }
   }
   private case class Message(params: MetalsStatusParams) extends Item

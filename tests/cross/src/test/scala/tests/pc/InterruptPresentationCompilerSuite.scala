@@ -2,7 +2,7 @@ package tests.pc
 
 import java.util.concurrent.CompletableFuture
 import scala.meta.internal.metals.CompilerOffsetParams
-import tests.CompletableCancelToken
+import scala.meta.internal.async.CompletableCancelToken
 import tests.DelegatingGlobalSymbolIndex
 import tests.BasePCSuite
 import scala.meta.internal.mtags.SymbolDefinition

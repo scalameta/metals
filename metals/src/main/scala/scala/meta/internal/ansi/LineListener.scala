@@ -6,6 +6,10 @@ import java.nio.charset.StandardCharsets
 import java.nio.CharBuffer
 import scala.collection.mutable
 
+object LineListener {
+  def info: LineListener = new LineListener(line => scribe.info(line))
+}
+
 /**
  * Converts a stream of strings (with potential ANSI codes and newlines) into a callback for indvidual lines
  * where each individual line has no newline \n characters.

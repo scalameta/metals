@@ -99,11 +99,16 @@ trait MtagsEnrichments {
         case None =>
           file.toURI.toString
       }
+    def isBuild: Boolean =
+      file.filename.startsWith("BUILD")
     def isScalaOrJava: Boolean = {
       toLanguage match {
         case Language.SCALA | Language.JAVA => true
         case _ => false
       }
+    }
+    def isScalaScript: Boolean = {
+      filename.endsWith(".sc")
     }
     def isWorksheet: Boolean = {
       filename.endsWith(".worksheet.sc")
@@ -393,6 +398,10 @@ trait MtagsEnrichments {
   }
 
   implicit class XtensionAbsolutePath(path: AbsolutePath) {
+    def isEmptyDirectory: Boolean = {
+      path.isDirectory &&
+      !path.list.exists(_ => true)
+    }
     def parent: AbsolutePath = {
       AbsolutePath(path.toNIO.getParent)
     }

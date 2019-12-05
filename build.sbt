@@ -29,6 +29,7 @@ inThisBuild(
     addCompilerPlugin(
       "org.scalameta" % "semanticdb-scalac" % V.scalameta cross CrossVersion.full
     ),
+    scalacOptions += s"-P:semanticdb:sourceroot:${baseDirectory.in(ThisBuild).value}",
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -206,6 +207,7 @@ lazy val mtags = project
       "org.jsoup" % "jsoup" % "1.12.1", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.6.0", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     libraryDependencies ++= {
@@ -230,6 +232,7 @@ lazy val mtags = project
 lazy val metals = project
   .settings(
     fork.in(Compile, run) := true,
+    mainClass.in(Compile) := Some("scala.meta.metals.Main"),
     // As a general rule of thumb, we try to keep Scala dependencies to a minimum.
     libraryDependencies ++= List(
       // =================
@@ -420,7 +423,8 @@ def crossPublishLocal(scalaV: String) = Def.task[Unit] {
     .extract(state.value)
     .appendWithSession(
       List(
-        scalaVersion.in(mtags) := scalaV
+        scalaVersion.in(mtags) := scalaV,
+        useSuperShell.in(ThisBuild) := false
       ),
       state.value
     )

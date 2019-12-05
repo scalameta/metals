@@ -31,8 +31,14 @@ final class BloopServers(
 
   def newServer(): Future[Option[BuildServerConnection]] = {
     val launcherInOutPipe = Pipe.open()
-    val launcherIn = Channels.newInputStream(launcherInOutPipe.source())
-    val clientOut = Channels.newOutputStream(launcherInOutPipe.sink())
+    val launcherIn = new QuietInputStream(
+      Channels.newInputStream(launcherInOutPipe.source()),
+      "Bloop InputStream"
+    )
+    val clientOut = new QuietOutputStream(
+      Channels.newOutputStream(launcherInOutPipe.sink()),
+      "Bloop OutputStream"
+    )
 
     val clientInOutPipe = Pipe.open()
     val clientIn = Channels.newInputStream(clientInOutPipe.source())

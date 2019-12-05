@@ -44,6 +44,10 @@ final class BuildTargets() {
     TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
   private val inverseDependencySources =
     TrieMap.empty[AbsolutePath, BuildTargetIdentifier]
+  private val isSourceRoot =
+    ConcurrentHashSet.empty[AbsolutePath]
+  private val buildTargetInference =
+    new ConcurrentLinkedQueue[AbsolutePath => Seq[BuildTargetIdentifier]]()
 
   def setTables(newTables: Tables): Unit = {
     tables = Some(newTables)
@@ -57,6 +61,8 @@ final class BuildTargets() {
     inverseDependencies.clear()
     buildTargetSources.clear()
     inverseDependencySources.clear()
+    isSourceRoot.clear()
+    buildTargetInference.clear()
   }
   def sourceItems: Iterable[AbsolutePath] =
     sourceItemsToBuildTarget.keys
@@ -84,7 +90,7 @@ final class BuildTargets() {
       for {
         target <- all
         classpathEntry <- target.scalac.classpath
-        if classpathEntry.extension == "jar"
+        if classpathEntry.isJar
         if isVisited.add(classpathEntry)
       } yield classpathEntry,
       PackageIndex.bootClasspath.iterator
@@ -215,6 +221,15 @@ final class BuildTargets() {
   }
 
   /**
+   * Add custom fallback handler to recover from "no build target" errors.
+   */
+  def addBuildTargetInference(
+      fn: AbsolutePath => Seq[BuildTargetIdentifier]
+  ): Unit = {
+    buildTargetInference.add(fn)
+  }
+
+  /**
    * Tries to guess what build target this readonly file belongs to from the symbols it defines.
    *
    * By default, we rely on carefully recording what build target produced what
@@ -236,9 +251,23 @@ final class BuildTargets() {
    */
   def inferBuildTarget(
       source: AbsolutePath
-  ): Option[BuildTargetIdentifier] =
-    if (!source.isDependencySource(workspace)) None
-    else Try(unsafeInferBuildTarget(source)).getOrElse(None)
+  ): Option[BuildTargetIdentifier] = {
+    if (source.isDependencySource(workspace)) {
+      Try(unsafeInferBuildTarget(source)).getOrElse(None)
+    } else {
+      val fromInference =
+        buildTargetInference.asScala.flatMap(fn => fn(source))
+      if (fromInference.nonEmpty) {
+        fromInference.foreach { target =>
+          addSourceItem(source, target)
+        }
+        inverseSources(source)
+      } else {
+        None
+      }
+    }
+  }
+
   private def unsafeInferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
@@ -333,6 +362,19 @@ final class BuildTargets() {
     inverseDependencySources.get(sourceJar)
   }
 
+  def addSourceRoot(root: AbsolutePath): Unit = {
+    isSourceRoot.add(root)
+  }
+  def sourceRoots: Iterable[AbsolutePath] = {
+    isSourceRoot.asScala
+  }
+
+  def isInsideSourceRoot(path: AbsolutePath): Boolean = {
+    !isSourceRoot.contains(path) &&
+    isSourceRoot.asScala.exists { root =>
+      path.toNIO.startsWith(root.toNIO)
+    }
+  }
 }
 
 object BuildTargets {

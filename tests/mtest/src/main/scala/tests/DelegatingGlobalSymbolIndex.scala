@@ -20,4 +20,7 @@ class DelegatingGlobalSymbolIndex(var underlying: GlobalSymbolIndex)
   def addSourceJar(jar: AbsolutePath): Unit = {
     underlying.addSourceJar(jar)
   }
+  def addSourceDirectory(dir: AbsolutePath): Unit = {
+    underlying.addSourceDirectory(dir)
+  }
 }
