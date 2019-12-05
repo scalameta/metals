@@ -43,7 +43,7 @@ abstract class BasePCSuite extends BaseSuite {
   val indexer = new Docstrings(index)
   val workspace = new TestingWorkspaceSearch
   val search = new TestingSymbolSearch(
-    ClasspathSearch.fromClasspath(myclasspath, _ => 0),
+    ClasspathSearch.fromClasspath(myclasspath),
     new Docstrings(index),
     workspace,
     index

@@ -377,11 +377,6 @@ class MetalsLanguageServer(
       config.statistics,
       buildTargets,
       definitionIndex,
-      pkg => {
-        val mightContain =
-          referencesProvider.referencedPackages.mightContain(pkg)
-        if (mightContain) 0 else 1
-      },
       interactiveSemanticdbs.toFileOnDisk
     )
     foldingRangeProvider = FoldingRangeProvider(trees, buffers, params)

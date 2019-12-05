@@ -15,7 +15,6 @@ object TestingWorkspaceSymbolProvider {
       buildTargets: BuildTargets = new BuildTargets,
       statistics: StatisticsConfig = StatisticsConfig.default,
       index: OnDemandSymbolIndex = OnDemandSymbolIndex(),
-      isReferencedPackage: String => Int = _ => 0,
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): WorkspaceSymbolProvider = {
     new WorkspaceSymbolProvider(
@@ -23,7 +22,6 @@ object TestingWorkspaceSymbolProvider {
       statistics = statistics,
       buildTargets = new BuildTargets,
       index = index,
-      isReferencedPackage,
       _.toFileOnDisk(workspace),
       bucketSize = bucketSize
     )
