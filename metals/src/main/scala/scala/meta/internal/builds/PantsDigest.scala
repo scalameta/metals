@@ -28,14 +28,11 @@ class PantsDigest(userConfig: () => UserConfiguration) extends Digestable {
       digest: MessageDigest,
       pantsTargets: List[String]
   ): Boolean = {
-    var isOk = true
-    for {
-      root <- PantsConfiguration.sourceRoots(workspace, pantsTargets)
-      buildFile <- root.listRecursive.filter(_.toNIO.endsWith("BUILD"))
-    } {
-      isOk &= Digest.digestFile(buildFile, digest)
+    PantsConfiguration.sourceRoots(workspace, pantsTargets).forall { root =>
+      root.listRecursive.filter(_.toNIO.endsWith("BUILD")).forall { buildFile =>
+        Digest.digestFile(buildFile, digest)
+      }
     }
-    isOk
   }
 
 }

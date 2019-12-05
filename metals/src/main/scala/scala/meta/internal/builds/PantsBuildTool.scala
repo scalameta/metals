@@ -70,7 +70,8 @@ case class PantsBuildTool(
   def bloopInstall(
       workspace: AbsolutePath,
       languageClient: MetalsLanguageClient,
-      systemProcess: List[String] => Future[BloopInstallResult]
+      // Not used: we call metals/slowTask directly
+      _unused: List[String] => Future[BloopInstallResult]
   ): Future[BloopInstallResult] = {
     pantsTargets() match {
       case Nil =>
