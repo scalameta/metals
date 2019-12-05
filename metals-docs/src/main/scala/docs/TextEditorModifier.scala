@@ -12,6 +12,11 @@ class TextEditorModifier extends StringModifier {
       input: Input,
       reporter: Reporter
   ): String = {
+    val autoImportNote = if (editor == "emacs") {
+      """Type "Import build" or press `Tab` and select "Import build""""
+    } else {
+      """Click "Import build""""
+    }
     val sections = input.text.split("---+").lift.andThen(_.filterNot(_.isEmpty))
     val sbtLauncher = sections(0).getOrElse(
       """
@@ -24,7 +29,7 @@ class TextEditorModifier extends StringModifier {
        |## Importing a build
        |
        |The first time you open Metals in a new workspace it prompts you to import the build.
-       |Click "Import build" to start the installation step.
+       |${autoImportNote} to start the installation step.
        |
        |![Import build](${Image.importBuild(editor)})
        |
