@@ -105,30 +105,37 @@ object MarkdownGenerator {
   }
 
   private def blocksToMarkdown(blocks: Seq[Block], listLevel: Int = 0): String =
-    blocks.map(block => blockToMarkdown(block)).mkString("\n")
+    blocks.map(block => blockToMarkdown(block, listLevel)).mkString("\n")
 
-  private def blockToMarkdown(block: Block, listLevel: Int = 0): String =
+  private def listBlockIndent(b: Block, bullet: Char, listLevel: Int): String =
+    b match {
+      case _: OrderedList | _: UnorderedList =>
+        ""
+      case _ =>
+        s"""${"\t" * listLevel}${bullet} """
+    }
+
+  private def listBlocksIndent(
+      blocks: Seq[Block],
+      bullet: Char,
+      listLevel: Int
+  ): String =
+    blocks
+      .map(
+        (b: Block) =>
+          s"${this.listBlockIndent(b, bullet, listLevel)}${this
+            .blockToMarkdown(b, listLevel + 1)}"
+      )
+      .mkString
+
+  private def blockToMarkdown(block: Block, listLevel: Int): String =
     block match {
       case Title(text, level) =>
         s"""${"#" * level} ${inlineToMarkdown(text)}"""
       case UnorderedList(blocks) =>
-        blocks.map {
-          case o: OrderedList =>
-            blockToMarkdown(o, listLevel + 1)
-          case u: UnorderedList =>
-            blockToMarkdown(u, listLevel + 1)
-          case x =>
-            s"""${"\t" * listLevel}- ${blockToMarkdown(x, listLevel + 1)}"""
-        }.mkString
+        this.listBlocksIndent(blocks, '-', listLevel)
       case OrderedList(blocks, _) =>
-        blocks.map {
-          case o @ OrderedList(items, style) =>
-            blockToMarkdown(o, listLevel + 1)
-          case u @ UnorderedList(items) =>
-            blockToMarkdown(u, listLevel + 1)
-          case x =>
-            s"""${"\t" * listLevel}* ${blockToMarkdown(x, listLevel + 1)}"""
-        }.mkString
+        this.listBlocksIndent(blocks, '*', listLevel)
       case Paragraph(text) =>
         s"${inlineToMarkdown(text)}\n"
       case Code(data) =>
