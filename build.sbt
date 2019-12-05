@@ -282,6 +282,9 @@ lazy val metals = project
       "com.outr" %% "scribe-slf4j" % "2.7.10", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.5.6",
+      // For exporting Pants builds.
+      "com.lihaoyi" %% "ujson" % "0.7.5",
+      "ch.epfl.scala" %% "bloop-config" % V.bloop,
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full

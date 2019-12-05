@@ -51,6 +51,14 @@ jobs:
       - uses: olafurpg/setup-scala@v7
       - name: Run Mill tests
         run: bin/test.sh 'slow/testOnly -- tests.mill'
+  pants:
+    name: Pants integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: olafurpg/setup-scala@v5
+      - name: Run Pants tests
+        run: bin/test.sh 'slow/testOnly -- tests.pants'
   feature:
     name: Slow tests
     runs-on: ubuntu-latest

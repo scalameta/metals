@@ -45,7 +45,8 @@ private[debug] final class DebugProxy(
       exitStatus.trySuccess(Restarted)
       outputTerminated = true
       server.consume(message)
-
+    case null =>
+      () // do nothing
     case message =>
       server.consume(message)
   }

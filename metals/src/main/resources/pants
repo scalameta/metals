@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# Copyright 2015 Pants project contributors (see CONTRIBUTORS.md).
+# Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+# =============================== NOTE ===============================
+# This ./pants bootstrap script comes from the pantsbuild/setup
+# project and is intended to be checked into your code repository so
+# that any developer can check out your code and be building it with
+# Pants with no prior setup needed.
+#
+# You can learn more here: https://www.pantsbuild.org/install.html
+# ====================================================================
+
+set -eou pipefail
+
+PYTHON_BIN_NAME="${PYTHON:-unspecified}"
+
+PANTS_HOME="${PANTS_HOME:-${XDG_CACHE_HOME:-$HOME/.cache}/pants/setup}"
+PANTS_BOOTSTRAP="${PANTS_HOME}/bootstrap-$(uname -s)-$(uname -m)"
+
+VENV_VERSION=${VENV_VERSION:-16.4.3}
+
+VENV_PACKAGE=virtualenv-${VENV_VERSION}
+VENV_TARBALL=${VENV_PACKAGE}.tar.gz
+
+COLOR_RED="\x1b[31m"
+COLOR_GREEN="\x1b[32m"
+COLOR_RESET="\x1b[0m"
+
+function log() {
+  echo -e "$@" 1>&2
+}
+
+function die() {
+  (($# > 0)) && log "${COLOR_RED}$*${COLOR_RESET}"
+  exit 1
+}
+
+function green() {
+  (($# > 0)) && log "${COLOR_GREEN}$*${COLOR_RESET}"
+}
+
+function tempdir {
+  mktemp -d "$1"/pants.XXXXXX
+}
+
+function get_exe_path_or_die {
+  exe="$1"
+  if ! command -v "${exe}"; then
+    die "Could not find ${exe}. Please ensure ${exe} is on your PATH."
+  fi
+}
+
+function get_pants_ini_config_value {
+  if [[ ! -f 'pants.ini' ]]; then
+    return 0
+  fi
+  config_key="$1"
+  valid_delimiters="[:=]"
+  optional_space="[[:space:]]*"
+  prefix="^${config_key}${optional_space}${valid_delimiters}${optional_space}"
+  sed -ne "/${prefix}/ s#${prefix}##p" pants.ini
+}
+
+function get_python_major_minor_version {
+  python_exe="$1"
+  "$python_exe" <<EOF
+import sys
+major_minor_version = ''.join(str(version_num) for version_num in sys.version_info[0:2])
+print(major_minor_version)
+EOF
+}
+
+# The high-level flow:
+# 1.) Resolve the Pants version from pants.ini or from the latest stable
+#     release to PyPi, so that we know what to name the venv folder and which
+#     Python versions we can use.
+# 2.) Resolve the Python interpreter, first reading from the env var $PYTHON,
+#     then reading from pants.ini, then determining the default based off of
+#     which Python versions the Pants version supports.
+# 3.) Check if the venv (virtual environment) already exists via a naming/path convention,
+#     and create the venv if not found.
+# 4.) Execute Pants with the resolved Python interpreter and venv.
+#
+# After that, Pants itself will handle making sure any requested plugins
+# are installed and up to date.
+
+function determine_pants_version {
+  pants_version="$(get_pants_ini_config_value 'pants_version')"
+  if [[ -n "${pants_version}" ]]; then
+    echo "${pants_version}"
+  else
+    curl -sSL https://pypi.python.org/pypi/pantsbuild.pants/json |
+      python -c "import json, sys; print(json.load(sys.stdin)['info']['version'])"
+  fi
+}
+
+function determine_default_python_exe {
+  pants_version="$1"
+  pants_major_version="$(echo "${pants_version}" | cut -d '.' -f1)"
+  pants_minor_version="$(echo "${pants_version}" | cut -d '.' -f2)"
+  if [[ "${pants_major_version}" -eq 1 && "${pants_minor_version}" -le 14 ]]; then
+    supported_python_versions=('2.7')
+    supported_message='2.7'
+  elif [[ "${pants_major_version}" -eq 1 && "${pants_minor_version}" -eq 15 ]]; then
+    supported_python_versions=('3.6' '2.7')
+    supported_message='2.7 or 3.6'
+  elif [[ "${pants_major_version}" -eq 1 && "${pants_minor_version}" -eq 16 ]]; then
+    supported_python_versions=('3.6' '3.7' '2.7')
+    supported_message='2.7, 3.6, or 3.7'
+  elif [[ "${pants_major_version}" -eq 1 && "${pants_minor_version}" -eq 17 ]]; then
+    supported_python_versions=('3.6' '3.7' '3.8' '3.9')
+    supported_message='3.6+'
+  else
+    supported_python_versions=('3.9' '3.8' '3.7' '3.6')
+    supported_message='3.6+'
+  fi
+  for version in "${supported_python_versions[@]}"; do
+    command -v "python${version}" && return 0
+  done
+  die "No valid Python interpreter found. For this Pants version, Pants requires Python ${supported_message}."
+}
+
+function determine_python_exe {
+  pants_version="$1"
+  if [[ "${PYTHON_BIN_NAME}" != 'unspecified' ]]; then
+    python_bin_name="${PYTHON_BIN_NAME}"
+  else
+    interpreter_version="$(get_pants_ini_config_value 'pants_runtime_python_version')"
+    if [[ -n "${interpreter_version}" ]]; then
+      python_bin_name="python${interpreter_version}"
+    else
+      python_bin_name="$(determine_default_python_exe "${pants_version}")"
+    fi
+  fi
+  get_exe_path_or_die "${python_bin_name}"
+}
+
+# TODO(John Sirois): GC race loser tmp dirs leftover from bootstrap_XXX
+# functions.  Any tmp dir w/o a symlink pointing to it can go.
+
+function bootstrap_venv {
+  if [[ ! -d "${PANTS_BOOTSTRAP}/${VENV_PACKAGE}" ]]; then
+    (
+      mkdir -p "${PANTS_BOOTSTRAP}"
+      staging_dir=$(tempdir "${PANTS_BOOTSTRAP}")
+      cd "${staging_dir}"
+      curl -LO "https://pypi.io/packages/source/v/virtualenv/${VENV_TARBALL}"
+      tar -xzf "${VENV_TARBALL}"
+      ln -s "${staging_dir}/${VENV_PACKAGE}" "${staging_dir}/latest"
+      mv "${staging_dir}/latest" "${PANTS_BOOTSTRAP}/${VENV_PACKAGE}"
+    ) 1>&2
+  fi
+  echo "${PANTS_BOOTSTRAP}/${VENV_PACKAGE}"
+}
+
+function bootstrap_pants {
+  pants_version="$1"
+  python="$2"
+
+  pants_requirement="pantsbuild.pants==${pants_version}"
+  python_major_minor_version="$(get_python_major_minor_version "${python}")"
+  target_folder_name="${pants_version}_py${python_major_minor_version}"
+
+  if [[ ! -d "${PANTS_BOOTSTRAP}/${target_folder_name}" ]]; then
+    (
+      venv_path="$(bootstrap_venv)"
+      staging_dir=$(tempdir "${PANTS_BOOTSTRAP}")
+      "${python}" "${venv_path}/virtualenv.py" --no-download "${staging_dir}/install"
+      "${staging_dir}/install/bin/pip" install -U pip
+      "${staging_dir}/install/bin/pip" install "${pants_requirement}"
+      ln -s "${staging_dir}/install" "${staging_dir}/${target_folder_name}"
+      mv "${staging_dir}/${target_folder_name}" "${PANTS_BOOTSTRAP}/${target_folder_name}"
+      green "New virtual environment successfully created at ${PANTS_BOOTSTRAP}/${target_folder_name}."
+    ) 1>&2
+  fi
+  echo "${PANTS_BOOTSTRAP}/${target_folder_name}"
+}
+
+# Ensure we operate from the context of the ./pants buildroot.
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+pants_version="$(determine_pants_version)"
+python="$(determine_python_exe "${pants_version}")"
+pants_dir="$(bootstrap_pants "${pants_version}" "${python}")"
+
+
+# We set the env var no_proxy to '*', to work around an issue with urllib using non
+# async-signal-safe syscalls after we fork a process that has already spawned threads.
+#
+# See https://blog.phusion.nl/2017/10/13/why-ruby-app-servers-break-on-macos-high-sierra-and-what-can-be-done-about-it/
+export no_proxy='*'
+
+exec "${pants_dir}/bin/python" "${pants_dir}/bin/pants" "$@"

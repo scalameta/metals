@@ -67,7 +67,8 @@ final class BuildTools(
       SbtBuildTool(version = "", userConfig, config),
       GradleBuildTool(userConfig),
       MavenBuildTool(userConfig),
-      MillBuildTool(userConfig)
+      MillBuildTool(userConfig),
+      PantsBuildTool(userConfig)
     )
   }
 
@@ -90,6 +91,7 @@ final class BuildTools(
     else if (isGradle) Some(GradleBuildTool(userConfig))
     else if (isMaven) Some(MavenBuildTool(userConfig))
     else if (isMill) Some(MillBuildTool(userConfig))
+    else if (isPants) Some(PantsBuildTool(userConfig))
     else None
   }
 
@@ -103,6 +105,7 @@ final class BuildTools(
     else if (isGradle) GradleBuildTool.isGradleRelatedPath(workspace, path)
     else if (isMaven) MavenBuildTool.isMavenRelatedPath(workspace, path)
     else if (isMill) MillBuildTool.isMillRelatedPath(workspace, path)
+    else if (isPants) PantsBuildTool.isPantsRelatedPath(workspace, path)
     else false
   }
 }

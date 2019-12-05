@@ -12,6 +12,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
+import scala.meta.internal.pantsbuild.PantsConfiguration
 
 /**
  * Configuration that the user can override via workspace/didChangeConfiguration.
@@ -28,7 +29,8 @@ case class UserConfiguration(
     symbolPrefixes: Map[String, String] =
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
     worksheetScreenWidth: Int = 120,
-    worksheetCancelTimeout: Int = 4
+    worksheetCancelTimeout: Int = 4,
+    pantsTargets: Option[List[String]] = None
 )
 object UserConfiguration {
 
@@ -90,6 +92,18 @@ object UserConfiguration {
       """Optional custom path to the .scalafmt.conf file.
         |Should be relative to the workspace root directory and use forward slashes / for file
         |separators (even on Windows).
+        |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "pants-targets",
+      """empty string `""`.""",
+      "src::",
+      "Pants targets",
+      """The pants targets to export.
+        |
+        |Space separated list of Pants targets to export, for example
+        |`src/main/scala:: src/main/java::`. Syntax such as `src/{main,test}::`
+        |is not supported.
         |""".stripMargin
     )
   )
@@ -181,6 +195,17 @@ object UserConfiguration {
     val worksheetCancelTimeout =
       getIntKey("worksheet-cancel-timeout")
         .getOrElse(default.worksheetCancelTimeout)
+    val pantsTargets =
+      getKey[List[String]](
+        "pants-targets", { value =>
+          PantsConfiguration.pantsTargetsFromGson(value) match {
+            case Left(e) =>
+              errors += e
+              None
+            case Right(value) => Some(value)
+          }
+        }
+      )
 
     if (errors.isEmpty) {
       Right(
@@ -193,7 +218,8 @@ object UserConfiguration {
           scalafmtConfigPath,
           symbolPrefixes,
           worksheetScreenWidth,
-          worksheetCancelTimeout
+          worksheetCancelTimeout,
+          pantsTargets
         )
       )
     } else {
