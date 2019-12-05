@@ -1,10 +1,10 @@
-package tests
+package tests.digest
 
 import scala.meta.internal.builds.PantsDigest
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
-object PantsDigestSuite extends BaseDigestSuite {
+object PantsDigestSuite extends tests.BaseDigestSuite {
   override def digestCurrent(
       root: AbsolutePath
   ): Option[String] = {
