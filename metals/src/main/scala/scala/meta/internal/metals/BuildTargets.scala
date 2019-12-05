@@ -62,6 +62,7 @@ final class BuildTargets() {
     buildTargetSources.clear()
     inverseDependencySources.clear()
     isSourceRoot.clear()
+    buildTargetInference.clear()
   }
   def sourceItems: Iterable[AbsolutePath] =
     sourceItemsToBuildTarget.keys
