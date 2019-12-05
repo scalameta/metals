@@ -7,8 +7,7 @@ import scala.meta.pc.SymbolSearchVisitor
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 class ClasspathSearch(
-    val packages: Array[CompressedPackageIndex],
-    packagePriority: String => Int
+    val packages: Array[CompressedPackageIndex]
 ) {
   // The maximum number of non-exact matches that we return for classpath queries.
   // Generic queries like "Str" can returns several thousand results, so we need
@@ -77,21 +76,19 @@ class ClasspathSearch(
 
 object ClasspathSearch {
   def empty: ClasspathSearch =
-    new ClasspathSearch(Array.empty, _ => 0)
+    new ClasspathSearch(Array.empty)
   def fromPackages(
       packages: PackageIndex,
-      packagePriority: String => Int,
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): ClasspathSearch = {
     val map = CompressedPackageIndex.fromPackages(packages, bucketSize)
-    new ClasspathSearch(map, packagePriority)
+    new ClasspathSearch(map)
   }
   def fromClasspath(
       classpath: collection.Seq[Path],
-      packagePriority: String => Int,
       bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
   ): ClasspathSearch = {
     val packages = PackageIndex.fromClasspath(classpath)
-    fromPackages(packages, packagePriority, bucketSize)
+    fromPackages(packages, bucketSize)
   }
 }

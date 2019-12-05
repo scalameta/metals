@@ -110,7 +110,7 @@ abstract class CompletionBench {
 
   def newSearch(): SymbolSearch = {
     require(libraries.nonEmpty)
-    new TestingSymbolSearch(ClasspathSearch.fromClasspath(classpath, _ => 0))
+    new TestingSymbolSearch(ClasspathSearch.fromClasspath(classpath))
   }
 
   def newPC(search: SymbolSearch = newSearch()): PresentationCompiler = {

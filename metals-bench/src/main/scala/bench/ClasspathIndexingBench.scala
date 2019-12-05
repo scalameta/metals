@@ -29,7 +29,7 @@ class ClasspathIndexingBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Unit = {
-    ClasspathSearch.fromClasspath(classpath, _ => 1)
+    ClasspathSearch.fromClasspath(classpath)
   }
 
 }
