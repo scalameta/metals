@@ -123,7 +123,9 @@ final class FileWatcher(
   private def stopWatching(): Unit = {
     try activeDirectoryWatcher.foreach(_.close())
     catch {
-      case _: ju.ConcurrentModificationException => // ignore, can happen
+      // safe to ignore because we're closing the file watcher and
+      // this error won't affect correctness of Metals.
+      case _: ju.ConcurrentModificationException =>
     }
     activeFileWatcher.foreach(_.close())
     fileWatching.cancel(false)

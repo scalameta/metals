@@ -57,17 +57,6 @@ trait MtagsEnrichments {
     else Language.UNKNOWN_LANGUAGE
   }
   implicit class XtensionPathMetals(file: Path) {
-    def enclosingSourceDirectory: Option[Path] = {
-      def loop(p: Path): Option[Path] =
-        if (p.endsWith("java") || p.endsWith("scala")) Some(p)
-        else {
-          Option(p.getParent()) match {
-            case None => None
-            case Some(parent) => loop(parent)
-          }
-        }
-      loop(file)
-    }
     def isClassfile: Boolean = filename.endsWith(".class")
     def filename: String = file.getFileName().toString()
     def toLanguage: Language = {
@@ -111,7 +100,7 @@ trait MtagsEnrichments {
           file.toURI.toString
       }
     def isBuild: Boolean =
-      file.toNIO.endsWith("BUILD")
+      file.filename.startsWith("BUILD")
     def isScalaOrJava: Boolean = {
       toLanguage match {
         case Language.SCALA | Language.JAVA => true
