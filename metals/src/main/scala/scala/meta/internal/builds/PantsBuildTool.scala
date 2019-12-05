@@ -43,6 +43,9 @@ case class PantsBuildTool(
     buildTargets.addBuildTargetInference { source =>
       // Fallback to `./pants --owner-of=$source list` when hitting on "no build target"
       if (source.isScalaScript) {
+        // Convert Scala script name into a `*.scala` filename to find out what
+        // target it should belong to. Pants doesn't support Scala scripts so
+        // using the script name unchanged would return no targets.
         BloopPants
           .pantsOwnerOf(
             workspace,

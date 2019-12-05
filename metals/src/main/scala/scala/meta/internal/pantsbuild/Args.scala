@@ -42,7 +42,7 @@ case class Args(
        |  --[no-]cache (default=false)
        |    If enabled, cache the result from `./pants export`
        |  --[no-]compile (default=$isCompile)
-       |    If ena, do not run `./pants compile`
+       |    If enabled, do not run `./pants export-classpath`
        |  --max-file-count (default=$maxFileCount)
        |    The export process fails fast if the number of exported source files exceeds this threshold.
        |""".stripMargin
