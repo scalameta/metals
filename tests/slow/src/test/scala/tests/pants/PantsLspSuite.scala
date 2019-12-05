@@ -34,7 +34,7 @@ object PantsLspSuite extends BaseImportSuite("pants") {
       workspace: AbsolutePath
   ): Option[String] = {
     new PantsDigest(
-      () => UserConfiguration(pantsTargets = Option(s"src::"))
+      () => UserConfiguration(pantsTargets = Option(List("src::")))
     ).current(workspace)
   }
 
