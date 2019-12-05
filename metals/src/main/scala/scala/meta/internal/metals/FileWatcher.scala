@@ -114,7 +114,9 @@ final class FileWatcher(
       .builder()
       .paths(directories)
       .listener(new DirectoryListener())
-      .fileHashing(false)
+      // File hashing is necessary for correctness, see:
+      // https://github.com/scalameta/metals/pull/1153
+      .fileHashing(true)
       .build()
     activeDirectoryWatcher = Some(directoryWatcher)
     directoryWatching = directoryWatcher.watchAsync(directoryExecutor)
