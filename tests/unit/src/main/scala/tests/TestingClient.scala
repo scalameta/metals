@@ -308,7 +308,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
               .filter(_.range.getEnd().getLine() == i)
               .foreach { decoration =>
                 out.append(
-                  if (isHover) decoration.hoverMessage.getValue()
+                  if (isHover) "\n" + decoration.hoverMessage.getValue()
                   else decoration.renderOptions.after.contentText
                 )
               }

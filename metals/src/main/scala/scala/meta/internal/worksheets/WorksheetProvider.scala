@@ -32,6 +32,8 @@ import scala.meta.internal.metals.Embedded
 import mdoc.interfaces.Mdoc
 import mdoc.interfaces.EvaluatedWorksheet
 import MdocToLspUtils._
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Hover
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.
@@ -91,7 +93,16 @@ class WorksheetProvider(
     )
   }
 
-  def evaluateAsync(
+  /**
+   * Fallback hover for results.
+   * While for the actual code hover's provided by Compilers,
+   * for evaluated results hover's provided here
+   */
+  def hover(path: AbsolutePath, position: Position): Option[Hover] = {
+    publisher.hover(path, position)
+  }
+
+  private def evaluateAsync(
       path: AbsolutePath,
       token: CancelToken
   ): Future[Option[EvaluatedWorksheet]] = {

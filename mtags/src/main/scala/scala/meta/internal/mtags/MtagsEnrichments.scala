@@ -310,6 +310,23 @@ trait MtagsEnrichments {
         range.getEnd.getLine,
         range.getEnd.getCharacter
       )
+    def encloses(position: l.Position): Boolean = {
+      range.getStart.getLine <= position.getLine &&
+      range.getStart.getLine >= position.getLine &&
+      range.getStart.getCharacter <= position.getCharacter &&
+      range.getEnd.getCharacter > position.getCharacter
+    }
+    def copy(
+        startLine: Int = range.getStart().getLine(),
+        startCharacter: Int = range.getStart().getCharacter(),
+        endLine: Int = range.getEnd().getLine(),
+        endCharacter: Int = range.getEnd().getCharacter()
+    ) =
+      new l.Range(
+        new l.Position(startLine, startCharacter),
+        new l.Position(endLine, endCharacter)
+      )
+
   }
 
   implicit class XtensionOptionalJava[T](opt: Optional[T]) {

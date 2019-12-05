@@ -10,8 +10,12 @@ import MdocToLspUtils._
 import org.eclipse.lsp4j.MarkedString
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.io.AbsolutePath
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Hover
 
 class DecorationWorksheetPublisher() extends WorksheetPublisher {
+
+  val commentHeader = " // "
 
   override def publish(
       languageClient: MetalsLanguageClient,
@@ -20,6 +24,10 @@ class DecorationWorksheetPublisher() extends WorksheetPublisher {
   ): Unit = {
     (render _ andThen publish(languageClient, path))(worksheet)
   }
+
+  override def hover(path: AbsolutePath, position: Position): Option[Hover] =
+    //publish'ed Decorations handle hover, so nothing to return here
+    None
 
   private def render(
       worksheet: EvaluatedWorksheet
@@ -34,7 +42,7 @@ class DecorationWorksheetPublisher() extends WorksheetPublisher {
           new MarkedString("scala", s.details()),
           ThemableDecorationInstanceRenderOptions(
             after = ThemableDecorationAttachmentRenderOptions(
-              s.summary(),
+              commentHeader + s.summary(),
               color = "green",
               fontStyle = "italic"
             )

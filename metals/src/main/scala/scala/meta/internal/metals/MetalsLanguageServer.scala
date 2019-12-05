@@ -903,7 +903,15 @@ class MetalsLanguageServer(
     CancelTokens.future { token =>
       compilers
         .hover(params, token, interactiveSemanticdbs)
-        .map(_.orNull)
+        .map(
+          _.orElse {
+            val path = params.getTextDocument.getUri.toAbsolutePath
+            if (path.isWorksheet)
+              worksheetProvider.hover(path, params.getPosition())
+            else
+              None
+          }.orNull
+        )
     }
 
   @JsonRequest("textDocument/documentHighlight")
