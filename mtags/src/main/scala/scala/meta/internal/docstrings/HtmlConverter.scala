@@ -71,8 +71,8 @@ object HtmlConverter {
     node match {
       case t: TextNode => t.getWholeText
       case e: Element =>
-        processHtmlElement(node.asInstanceOf[Element])
-      case x =>
+        processHtmlElement(e)
+      case _ =>
         println(s"unknown element - $node")
         ""
     }
@@ -120,7 +120,7 @@ object HtmlConverter {
                 nodeText
           }
           .mkString
-      case x =>
+      case _ =>
         ""
     }
   }
