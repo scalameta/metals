@@ -31,7 +31,7 @@ import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Embedded
 import mdoc.interfaces.Mdoc
 import mdoc.interfaces.EvaluatedWorksheet
-import MdocToLspUtils._
+import MdocEnrichments._
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Hover
 
@@ -222,7 +222,7 @@ class WorksheetProvider(
   }.map { worksheet =>
     diagnostics.onPublishDiagnostics(
       path,
-      worksheet.diagnostics().iterator().asScala.map(toLsp).toSeq,
+      worksheet.diagnostics().iterator().asScala.map(_.toLsp).toSeq,
       isReset = true
     )
     worksheet

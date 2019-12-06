@@ -6,7 +6,7 @@ import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.decorations.ThemableDecorationInstanceRenderOptions
 import scala.meta.internal.decorations.ThemableDecorationAttachmentRenderOptions
-import MdocToLspUtils._
+import MdocEnrichments._
 import org.eclipse.lsp4j.MarkedString
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.io.AbsolutePath
@@ -22,7 +22,8 @@ class DecorationWorksheetPublisher() extends WorksheetPublisher {
       path: AbsolutePath,
       worksheet: EvaluatedWorksheet
   ): Unit = {
-    (render _ andThen publish(languageClient, path))(worksheet)
+    val rendered = render(worksheet)
+    publish(languageClient, path, rendered)
   }
 
   override def hover(path: AbsolutePath, position: Position): Option[Hover] =
@@ -38,7 +39,7 @@ class DecorationWorksheetPublisher() extends WorksheetPublisher {
       .asScala
       .map { s =>
         new DecorationOptions(
-          toLsp(s.position()),
+          s.position().toLsp,
           new MarkedString("scala", s.details()),
           ThemableDecorationInstanceRenderOptions(
             after = ThemableDecorationAttachmentRenderOptions(
@@ -52,7 +53,9 @@ class DecorationWorksheetPublisher() extends WorksheetPublisher {
       .toArray
   }
 
-  private def publish(languageClient: MetalsLanguageClient, path: AbsolutePath)(
+  private def publish(
+      languageClient: MetalsLanguageClient,
+      path: AbsolutePath,
       decorations: Array[DecorationOptions]
   ): Unit = {
     val params =

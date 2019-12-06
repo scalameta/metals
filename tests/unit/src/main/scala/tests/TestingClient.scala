@@ -37,11 +37,8 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.TextEdits
-<<<<<<< HEAD
 import scala.meta.internal.builds.BuildTools
-=======
 import java.net.URI
->>>>>>> Added Worksheet support for non-VS Code editors
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.

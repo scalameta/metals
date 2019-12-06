@@ -27,7 +27,8 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
       path: AbsolutePath,
       worksheet: EvaluatedWorksheet
   ): Unit = {
-    (render(path) _ andThen publish(path, languageClient))(worksheet)
+    val rendered = render(path, worksheet)
+    publish(languageClient, path, rendered)
   }
 
   override def hover(path: AbsolutePath, position: Position): Option[Hover] = {
@@ -53,8 +54,9 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
   }
 
   private def render(
-      path: AbsolutePath
-  )(worksheet: EvaluatedWorksheet): RenderResult = {
+      path: AbsolutePath,
+      worksheet: EvaluatedWorksheet
+  ): RenderResult = {
     val source = path.toInputFromBuffers(buffers)
     val editsWithDetails =
       worksheet.statements.asScala
@@ -66,7 +68,9 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
       ed =>
         HoverMessage(
           ed.range
-            .copy(endCharacter = ed.range.getEnd.getCharacter + ed.text.length),
+            .copy(
+              endCharacter = ed.range.getStart.getCharacter + ed.text.length
+            ),
           ed.details
         )
     )
@@ -76,9 +80,10 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
   }
 
   private def publish(
+      languageClient: MetalsLanguageClient,
       path: AbsolutePath,
-      languageClient: MetalsLanguageClient
-  )(rendered: RenderResult): Unit = {
+      rendered: RenderResult
+  ): Unit = {
     hoverMessages = hoverMessages.updated(path, rendered.hovers)
 
     val params = new ApplyWorkspaceEditParams(
@@ -119,7 +124,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
       statement: EvaluatedWorksheetStatement,
       source: Input
   ): Option[Position] = {
-    val editPattern = """\A\s*/\*>[\S\s]*?\*/""".r
+    val editPattern = """\A\s*/\*>.*?\*/""".r
     val offset = source.lineToOffset(statement.position.endLine) + statement.position.endColumn
     val text = source.text.drop(offset)
     editPattern

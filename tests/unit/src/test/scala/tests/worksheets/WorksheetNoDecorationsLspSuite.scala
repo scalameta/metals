@@ -3,7 +3,6 @@ package tests.worksheets
 import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
 import tests.TestHovers
-import cats.implicits._
 import scala.concurrent.Future
 
 object WorksheetNoDecorationsLspSuite
@@ -91,16 +90,21 @@ object WorksheetNoDecorationsLspSuite
       query: String,
       expected: String*
   ): Future[Unit] = {
-    "@@".r
-      .findAllMatchIn(query)
-      .map { m =>
-        val before = query.substring(0, m.start).replaceAllLiterally("@@", "")
-        val after = query.substring(m.end).replaceAllLiterally("@@", "")
-        before + "@@" + after
+    val queriesAndExpected =
+      "@@".r
+        .findAllMatchIn(query)
+        .map { m =>
+          val before = query.substring(0, m.start).replaceAllLiterally("@@", "")
+          val after = query.substring(m.end).replaceAllLiterally("@@", "")
+          before + "@@" + after
+        }
+        .toList
+        .zip(expected.toList)
+
+    Future
+      .traverse(queriesAndExpected) {
+        case (q, e) => server.assertHover(filename, q, e)
       }
-      .toList
-      .zip(expected.toList)
-      .traverse { case (q, e) => server.assertHover(filename, q, e) }
       .map(_ => ())
   }
 
