@@ -8,31 +8,42 @@ import scala.meta.inputs.Position
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 class BaseTypeDefinitionLspSuite extends BaseLspSuite("typeDefinition") {
-  def check(name: String)(
-      json: String = """{"a":{}}""",
-      query: String
-  ): Unit = {
+  def check(
+      name: String
+  )(query: String, expectedLocs: List[String] = Nil): Unit = {
     testAsync(name) {
       cleanWorkspace()
-      val code = query.replaceAll("@@<<>>", "")
+      val code =
+        query
+          .replaceAll("(@@)?(<<)?(>>)?", "")
+          .replaceAll("""\/\*[^\*]+\*\/""", "")
+      val files = query.lines
+        .filter(_.startsWith("/"))
+        .filter(_.filter(!_.isWhitespace) != "/metals.json")
+        .map(_.stripPrefix("/"))
+
       for {
         _ <- server.initialize(
-          s"""/metals.json
-             |$json
-             |/a/src/main/scala/a/Main.scala
-             |$code
-             |""".stripMargin
+          s"""${code.trim}""".stripMargin
         )
-        _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-        _ <- checkTypeDefinition(query)
+        _ <- Future.sequence(files.map(server.didOpen))
+        expected = expectedLocs.flatMap(
+          TestingServer.locationFromString(_, workspace)
+        )
+        _ <- server.assertTypeDefinition(
+          queryStr = query,
+          expectedLocs = expected,
+          root = workspace
+        )
+        _ = assertNoDiagnostics()
+        _ = if (!server.server.isInitialized.get())
+          fail("Build tool not initialized")
       } yield ()
     }
   }
 
   def prepareDefinition(original: String): String =
-    original
-      .replaceAllLiterally("<<", "")
-      .replaceAllLiterally(">>", "")
+    original.replaceAll("(<<)?(>>)?", "")
 
   def locationsToCode(
       code: String,
@@ -87,11 +98,14 @@ class BaseTypeDefinitionLspSuite extends BaseLspSuite("typeDefinition") {
     locationsF.map(l => locationsToCode(code, uri, offsetRange, l))
   }
 
-  def checkTypeDefinition(query: String): Future[Unit] = {
+  def checkTypeDefinition(
+      query: String,
+      name: String = "Main.scala"
+  ): Future[Unit] = {
     val obtainedF =
-      obtainedAndExpected(query, workspace.toURI.resolve("Main.scala").toString)
+      obtainedAndExpected(query, workspace.toURI.resolve(name).toString)
 
     val expected = query
-    obtainedF.map(assertNoDiff(_, expected))
+    obtainedF.map(o => assertNoDiff(o, expected))
   }
 }

@@ -5,59 +5,111 @@ import org.eclipse.{lsp4j => l}
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.tokenizers.Api
 
-class TypeDefinitionProvider(val compiler: MetalsGlobal) {
+class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
   import compiler._
 
-  def typedTree(params: OffsetParams): Option[Tree] = {
-    if (params.isWhitespace) {
+  val ignoredTags: List[String] = List(
+    "val",
+    "var"
+  )
+
+  def tree(params: OffsetParams): Option[Tree] =
+    if (params.isWhitespace)
       None
-    } else {
-      val (unit, pos, tree) = createCompilationUnit(params)
-      Some(tree)
+    else {
+      Some(createCompilationUnit(params)._3)
     }
-  }
+
+  def lineAndCharacterToOffset(
+      pos: compiler.Position,
+      line: Int,
+      char: Int
+  ): Int =
+    pos.source.lineToOffset(line) + char
 
   def typeSymbol(params: OffsetParams): Option[Symbol] = {
-    typedTree(params).flatMap {
-      case tree if tree.symbol.isMethod =>
-        Some(tree.symbol.asMethod.returnType.typeSymbol)
-      case tree if tree.symbol.isTypeSymbol =>
-        Some(tree.symbol)
-      case tree if tree.tpe.isDefined =>
-        Some(tree.tpe.typeSymbol)
-      case tree if tree.children.nonEmpty =>
-        Some(tree.children.head.tpe.typeSymbol)
-      case vd: compiler.ValDef if vd.rhs.tpe != null =>
-        Some(vd.rhs.tpe.typeSymbol)
-      case tree =>
-        val expTree = expandRangeToEnclosingApply(tree.pos)
-        if (expTree.tpe != null && expTree.tpe.isDefined)
-          Some(expTree.tpe.typeSymbol)
-        else None
-      case _ => None
-    }
+    tree(params)
+      .flatMap {
+        case vd: ValDef =>
+          val (rStart, rEnd) = (vd.pos.start, vd.pos.end)
+          val tokens = vd.pos.source.content
+            .slice(rStart, rEnd)
+            .mkString
+            .tokenize
+            .get
+            .tokens
+          val curToken = tokens
+            .dropWhile(_.pos.end < params.offset() - vd.pos.start)
+            .head
+
+          if (ignoredTags.contains(curToken.text))
+            None
+          else
+            Some(vd)
+        case t: Tree => Some(t)
+      }
+      .flatMap {
+        case sel: Select
+            if sel.symbol.asMethod.returnType.typeSymbol.isTypeParameter =>
+          Some(sel.tpe.typeSymbol)
+        case app @ Apply(fun, args) if args.nonEmpty =>
+          val (rStart, rEnd) = (fun.pos.start, args.last.pos.end)
+
+          val txt = app.pos.source.content
+            .slice(rStart, rEnd)
+            .fold("")(_ + _.toString)
+            .toString
+          val tokens = txt.tokenize.get.tokens.toList
+            .filter(t => {
+              val (pStart, pEnd) =
+                (app.pos.start + t.pos.start, app.pos.start + t.pos.end)
+              pStart <= params.offset && pEnd >= params.offset
+            })
+          tokens.headOption match {
+            case Some(t) =>
+              app.symbol.asMethod.paramLists.flatten
+                .find(_.nameString.trim == t.text)
+                .map(_.tpe.typeSymbol)
+            case _ => None
+          }
+        case tree: Tree if tree.symbol.isMethod =>
+          Some(tree.symbol.asMethod.returnType.typeSymbol)
+        case tree: Tree if tree.symbol.isTypeSymbol =>
+          Some(tree.symbol)
+        case tree: Tree if tree.tpe.isDefined =>
+          Some(tree.tpe.typeSymbol)
+        case tree: Tree if tree.children.nonEmpty =>
+          Some(tree.children.head.tpe.typeSymbol)
+        case vd: compiler.ValDef if vd.rhs.tpe != null =>
+          Some(vd.rhs.tpe.typeSymbol)
+        case tree: Tree =>
+          val expTree = expandRangeToEnclosingApply(tree.pos)
+          if (expTree.tpe != null && expTree.tpe.isDefined)
+            Some(expTree.tpe.typeSymbol)
+          else None
+        case _ => None
+      }
   }
 
-  def typeDefinition(params: OffsetParams): List[l.Location] = {
-    typeSymbol(params).map {
-      case sym if sym.isMethod && !sym.isAccessor =>
-        val mSym = sym.asMethod
-        getSymbolDefinition(mSym.returnType.typeSymbol)
-      case sym =>
-        getSymbolDefinition(sym.tpe.typeSymbol)
-      case _ => Nil
-    }
-  }.getOrElse(Nil)
+  def typeDefinition(params: OffsetParams): List[l.Location] =
+    typeSymbol(params)
+      .collect {
+        case sym => getSymbolDefinition(sym)
+      }
+      .toList
+      .flatten
 
   private def getSymbolDefinition(sym: Symbol): List[l.Location] = {
     val file = sym.pos.source.file
-    val uri = try {
-      file.toURL.toURI.toString
-    } catch {
-      case _: NullPointerException =>
-        sym.pos.source.path
-    }
+    val uri =
+      try {
+        file.toURL.toURI.toString
+      } catch {
+        case _: NullPointerException =>
+          sym.pos.source.path
+      }
 
     try {
       if (file != null || compiler.unitOfFile.contains(file)) {
@@ -83,5 +135,13 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) {
       val typeSym = semanticdbSymbol(sym)
       search.definition(typeSym).asScala.toList
     }
+  }
+
+  object Xtensions {
+
+    implicit class XtensionPosition(pos: Position) {
+      def includes(point: Int): Boolean = pos.start <= point && pos.end >= point
+    }
+
   }
 }

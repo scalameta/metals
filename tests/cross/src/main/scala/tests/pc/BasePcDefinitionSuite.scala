@@ -3,9 +3,9 @@ package tests.pc
 import tests.BasePCSuite
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
-  val test: (String, String) => (String, String) = obtainedAndExpected(
-    params => pc.definition(params).thenApply(_.locations())
-  )
+  val test: (String, String) => (String, String) =
+    obtainedAndExpected(params => pc.definition(params).thenApply(_.locations())
+    )
 
   def check(
       name: String,
