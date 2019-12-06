@@ -26,6 +26,8 @@ import scala.meta.pc.PresentationCompilerConfig
 import java.util.concurrent.CompletableFuture
 import scala.meta.pc.DefinitionResult
 import scala.collection.Seq
+import java.{util => ju}
+import scala.meta.pc.AutoImportsResult
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -81,11 +83,23 @@ case class ScalaPresentationCompiler(
     items.setIsIncomplete(true)
     items
   }
+
   override def complete(
       params: OffsetParams
   ): CompletableFuture[CompletionList] =
     access.withInterruptableCompiler(emptyCompletion, params.token) { global =>
       new CompletionProvider(global, params).completions()
+    }
+
+  override def autoImports(
+      name: String,
+      params: OffsetParams
+  ): CompletableFuture[ju.List[AutoImportsResult]] =
+    access.withInterruptableCompiler(
+      List.empty[AutoImportsResult].asJava,
+      params.token
+    ) { global =>
+      new AutoImportsProvider(global, name, params).autoImports().asJava
     }
 
   // NOTE(olafur): hover and signature help use a "shared" compiler instance because

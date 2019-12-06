@@ -29,34 +29,25 @@ object QuickFix {
           diagnostic: l.Diagnostic,
           name: String
       ): Future[Seq[CodeAction]] = {
-
-        // TODO(gabro): this is hack. Instead of computing the auto-imports for a name at a range,
-        // we run completions starting from the end of the range, and filter the completions that
-        // match exactly the name we're looking for
-        val completionParams = new l.CompletionParams(
-          params.getTextDocument(),
-          params.getRange().getEnd()
-        )
-        compilers.completions(completionParams, token).map { completions =>
-          scribe.info(completions.getItems().toString())
-          scribe.info(name)
-          completions.getItems().asScala.collect {
-            case completionItem if completionItem.getFilterText() == name =>
-              val pkg = completionItem.getDetail().trim()
-              val edit = new l.WorkspaceEdit()
+        compilers
+          .autoImports(params, name, token)
+          .map { imports =>
+            imports.asScala.map { i =>
               val uri = params.getTextDocument().getUri()
-              val changes = Map(uri -> completionItem.getAdditionalTextEdits())
+              val edit = new l.WorkspaceEdit(Map(uri -> i.edits).asJava)
 
               val codeAction = new l.CodeAction()
-              codeAction.setTitle(s"Import '$name' from package '$pkg'")
+
+              codeAction.setTitle(
+                s"Import '$name' from package '${i.packageName}'"
+              )
               codeAction.setKind(l.CodeActionKind.QuickFix)
               codeAction.setDiagnostics(List(diagnostic).asJava)
-
-              edit.setChanges(changes.asJava)
               codeAction.setEdit(edit)
+
               codeAction
+            }
           }
-        }
       }
 
       Future
