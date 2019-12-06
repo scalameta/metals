@@ -863,26 +863,86 @@ final class TestingServer(
   }
 
   def assertTypeDefinition(
-      filename: String,
-      query: String,
-      expected: l.Location
+      filenameStr: String = "",
+      queryStr: String,
+      expectedLocs: List[l.Location] = Nil,
+      root: AbsolutePath
   ): Future[Unit] = {
-    def locationToString(loc: l.Location): String = {
-      val (uri, start, end) =
-        (loc.getUri, loc.getRange.getStart, loc.getRange.getEnd)
-      s"$uri [${start.getLine}:${start.getCharacter} -> ${end.getLine}:${end.getCharacter}]"
-    }
+    val fMap =
+      FileLayout.mapFromString(queryStr).filter(_._1.endsWith(".scala"))
+
+    val (filename, query, uri) = if (filenameStr.isEmpty) {
+      val uriRegex = """^[^/]*/\*([^*]+)\*/[^/]*$""".r
+
+      fMap.find(_._2.contains("@@")) match {
+        case Some(file) =>
+          val (filename, content) = file
+          (
+            filename,
+            content.replaceAll("""/\*[^\*]*\*/""", ""),
+            content.lines.find(_.contains("@@")).collect {
+              case uriRegex(uri) => uri
+            }
+          )
+        case _ => (filenameStr, queryStr, None)
+      }
+    } else (filenameStr, queryStr, None)
+
+    val extractedExp = if (expectedLocs.isEmpty) {
+      fMap
+        .filter(_._2.lines.exists(l => l.matches(".*<<[^>]+>>.*")))
+        .map(t => {
+          val (filename, content) = t
+
+          val lines = content.lines.toList
+          val range = lines.indices.find(lines(_).contains("<<")) match {
+            case Some(startLine) =>
+              val startStr: String = lines(startLine)
+              val startChar: Int = startStr.indexOf("<<")
+              val startPos = new l.Position(startLine, startChar)
+              val endPos =
+                if (!startStr.contains(">>"))
+                  lines.indices.find(lines(_).contains(">>")) match {
+                    case Some(endLine) =>
+                      val endStr = lines(endLine)
+                      val endChar = endStr.indexOf(">>")
+                      new l.Position(endLine, endChar)
+                    case _ => new l.Position()
+                  }
+                else new l.Position(startLine, startStr.indexOf(">>") - 2)
+              new l.Range(startPos, endPos)
+            case _ => new l.Range()
+          }
+          new l.Location(filename, range)
+        })
+        .toList
+    } else Nil
 
     for {
-      typeDefinitions <- typeDefinition(filename, query)
-    } yield {
-      typeDefinitions.foreach(
-        location =>
-          DiffAssertions.assertNoDiff(
-            locationToString(location),
-            locationToString(expected)
-          )
+      typeDefinitions <- typeDefinition(
+        filename,
+        query.replaceAll("(<<)?(>>)?", "")
       )
+    } yield {
+      uri.map(TestingServer.uriToRelative(_, root).stripPrefix("/")) match {
+        case Some(uriStr) =>
+          typeDefinitions
+            .map(o =>
+              TestingServer.uriToRelative(o.getUri, root).stripPrefix("/")
+            )
+            .map(o => DiffAssertions.assertNoDiff(o, uriStr))
+        case None =>
+          val obtained = typeDefinitions
+            .map(TestingServer.locationToString(_, root).stripPrefix("/"))
+            .sorted
+            .mkString("\n")
+          val expected = (expectedLocs ++ extractedExp)
+            .map(TestingServer.locationToString(_, root).stripPrefix("/"))
+            .sorted
+            .mkString("\n")
+          DiffAssertions.assertNoDiff(obtained, expected)
+      }
+
     }
   }
 
@@ -1206,5 +1266,55 @@ object TestingServer {
       .getOrElse {
         throw new IllegalArgumentException(s"no such file: $filename")
       }
+  }
+
+  def uriToRelative(uri: String, root: AbsolutePath): String =
+    uri.stripPrefix(root.toURI.toString)
+
+  def locationToString(loc: l.Location, root: AbsolutePath): String = {
+    def locationToRelative(loc: l.Location, root: AbsolutePath): Location = {
+      val uri = uriToRelative(loc.getUri, root)
+      new l.Location(uri, loc.getRange)
+    }
+
+    val (uri, start, end) =
+      (
+        locationToRelative(loc, root).getUri,
+        loc.getRange.getStart,
+        loc.getRange.getEnd
+      )
+    s"$uri [${start.getLine}:${start.getCharacter} -> ${end.getLine}:${end.getCharacter}]"
+  }
+
+  def locationFromString(
+      str: String,
+      root: AbsolutePath
+  ): Option[l.Location] = {
+    val regex =
+      """\s*([^\s]+)\s* \[([0-9]+):([0-9]+)\s* ->\s* ([0-9]+):([0-9]+)\]\s*""".r
+
+    def createLocation(
+        uri: String,
+        begin: (Int, Int),
+        end: (Int, Int)
+    ): l.Location = {
+      val startPos = new l.Position(begin._1, begin._2)
+      val endPos = new l.Position(end._1, end._2)
+
+      new l.Location(uri, new l.Range(startPos, endPos))
+    }
+
+    str match {
+      case regex(uri, startL, startC, endL, endC) =>
+        Some(
+          createLocation(
+            root.toURI.resolve(uri).toString.replaceFirst("/", "///"),
+            (startL.toInt, startC.toInt),
+            (endL.toInt, endC.toInt)
+          )
+        )
+      case _ =>
+        None
+    }
   }
 }

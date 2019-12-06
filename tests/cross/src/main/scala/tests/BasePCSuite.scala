@@ -168,7 +168,7 @@ abstract class BasePCSuite extends BaseSuite {
       uri: String,
       offsetRange: l.Range,
       locations: java.util.List[l.Location]
-  ) = {
+  ): String = {
     val edits = locations.asScala.toList.flatMap { location =>
       if (location.getUri == uri) {
         List(
