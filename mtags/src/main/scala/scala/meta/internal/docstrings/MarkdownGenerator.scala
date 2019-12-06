@@ -39,16 +39,12 @@ object MarkdownGenerator {
       toMarkdown(c.body),
       if (c.constructor.nonEmpty)
         "\n" + c.constructor
-          .map(
-            body => "**Constructor:** " + blocksToMarkdown(body.blocks)
-          )
+          .map(body => "**Constructor:** " + blocksToMarkdown(body.blocks))
           .mkString("\n")
       else "",
       if (c.deprecated.nonEmpty)
         "\n" + c.deprecated
-          .map(
-            body => "**Deprecated:** " ++ blocksToMarkdown(body.blocks)
-          )
+          .map(body => "**Deprecated:** " ++ blocksToMarkdown(body.blocks))
           .mkString("\n")
       else "",
       if (c.example.nonEmpty)
@@ -65,16 +61,15 @@ object MarkdownGenerator {
       if (c.typeParams.nonEmpty)
         "\n**Type Parameters**\n" +
           c.typeParams
-            .map(
-              tuple => s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
+            .map(tuple =>
+              s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
             )
             .mkString
       else
         "",
       if (c.valueParams.nonEmpty)
         "\n**Parameters**\n" + c.valueParams
-          .map(
-            tuple => s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
+          .map(tuple => s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
           )
           .mkString
       else
@@ -86,11 +81,10 @@ object MarkdownGenerator {
       else "",
       if (c.throws.nonEmpty)
         "\n**Throws**\n" + c.throws
-          .map(
-            tuple =>
-              s"- `${tuple._1}`: " + tuple._2.summary
-                .map(inlineToMarkdown)
-                .getOrElse("") + blocksToMarkdown(tuple._2.blocks)
+          .map(tuple =>
+            s"- `${tuple._1}`: " + tuple._2.summary
+              .map(inlineToMarkdown)
+              .getOrElse("") + blocksToMarkdown(tuple._2.blocks)
           )
           .mkString("", "\n", "\n")
       else "",
@@ -121,10 +115,9 @@ object MarkdownGenerator {
       listLevel: Int
   ): String =
     blocks
-      .map(
-        (b: Block) =>
-          s"${this.listBlockIndent(b, bullet, listLevel)}${this
-            .blockToMarkdown(b, listLevel + 1)}"
+      .map((b: Block) =>
+        s"${this.listBlockIndent(b, bullet, listLevel)}${this
+          .blockToMarkdown(b, listLevel + 1)}"
       )
       .mkString
 

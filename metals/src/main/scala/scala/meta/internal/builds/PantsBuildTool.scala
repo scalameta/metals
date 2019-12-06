@@ -51,8 +51,8 @@ case class PantsBuildTool(
             workspace,
             source.resolveSibling(_.stripSuffix(".sc") + ".scala")
           )
-          .map(
-            target => PantsConfiguration.toBloopBuildTarget(workspace, target)
+          .map(target =>
+            PantsConfiguration.toBloopBuildTarget(workspace, target)
           )
       } else if (source.isScalaOrJava) {
         BloopPants.bloopAddOwnerOf(workspace, source)

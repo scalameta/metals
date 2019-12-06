@@ -27,9 +27,10 @@ object SourceCompletion {
       path: String,
       query: String
   ): SourceCompletion = {
-    val text = FileIO.withJarFileSystem(zip, create = false, close = true)(
-      root => FileIO.slurp(root.resolve(path), StandardCharsets.UTF_8)
-    )
+    val text =
+      FileIO.withJarFileSystem(zip, create = false, close = true)(root =>
+        FileIO.slurp(root.resolve(path), StandardCharsets.UTF_8)
+      )
     fromPath(path, text, query)
   }
   def fromResourcePath(path: String, query: String): SourceCompletion = {

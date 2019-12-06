@@ -57,8 +57,8 @@ class MetalsTreeViewProvider(
     uri => new BuildTargetIdentifier(uri),
     _.info.getDisplayName(),
     _.info.getBaseDirectory, { () =>
-      buildTargets.all.filter(
-        target => buildTargets.buildTargetSources(target.info.getId()).nonEmpty
+      buildTargets.all.filter(target =>
+        buildTargets.buildTargetSources(target.info.getId()).nonEmpty
       )
     }, { (id, symbol) =>
       doCompile(id)
@@ -296,12 +296,11 @@ class MetalsTreeViewProvider(
     for {
       compilation <- compilations().get(id)
       info <- buildTargets.info(id)
-    } yield
-      TreeViewNode(
-        Compile,
-        id.getUri,
-        s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)"
-      )
+    } yield TreeViewNode(
+      Compile,
+      id.getUri,
+      s"${info.getDisplayName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)"
+    )
   }
 
   private def ongoingCompilationNode: TreeViewNode = {

@@ -143,8 +143,8 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
           |}
           |""".stripMargin
       )
-      _ <- server.didSave("a/src/main/scala/Main.scala")(
-        text => text.replace("object Main", "class Main")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(text =>
+        text.replace("object Main", "class Main")
       )
       _ <- assertNoCodeLenses("a/src/main/scala/Main.scala")
 
@@ -171,8 +171,8 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
           |}
           |""".stripMargin
       )
-      _ <- server.didSave("a/src/main/scala/Main.scala")(
-        text => text.replace("}", "")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(text =>
+        text.replace("}", "")
       )
       _ <- assertCodeLenses(
         "a/src/main/scala/Main.scala",

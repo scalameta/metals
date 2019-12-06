@@ -116,12 +116,11 @@ final class Doctor(
 
     val minimumBloopVersion = "1.3.5"
     def isUnsupportedBloopVersion =
-      bspServerVersion.exists(
-        version =>
-          !BuildTool.isCompatibleVersion(
-            minimumBloopVersion,
-            version
-          )
+      bspServerVersion.exists(version =>
+        !BuildTool.isCompatibleVersion(
+          minimumBloopVersion,
+          version
+        )
       )
 
     def isMaven: Boolean = workspace.resolve("pom.xml").isFile

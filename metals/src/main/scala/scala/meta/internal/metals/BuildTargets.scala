@@ -207,8 +207,8 @@ final class BuildTargets() {
       Some(buildTargets.maxBy { t =>
         var score = 1
 
-        val isSupportedScalaVersion = scalaInfo(t).exists(
-          t => ScalaVersions.isSupportedScalaVersion(t.getScalaVersion())
+        val isSupportedScalaVersion = scalaInfo(t).exists(t =>
+          ScalaVersions.isSupportedScalaVersion(t.getScalaVersion())
         )
         if (isSupportedScalaVersion) score <<= 2
 

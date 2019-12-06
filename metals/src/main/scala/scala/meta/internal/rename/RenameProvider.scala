@@ -214,12 +214,11 @@ final class RenameProvider(
         None
     }
 
-    termOrType.map(
-      name =>
-        Symbols.Global(
-          sym.owner,
-          name
-        )
+    termOrType.map(name =>
+      Symbols.Global(
+        sym.owner,
+        name
+      )
     )
   }
 

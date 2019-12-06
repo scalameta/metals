@@ -427,9 +427,7 @@ private class BloopPants(
     // Warn about unfamiliar configurations.
     val knownConfigs = sourcesConfigs ::: libraryDependencyConfigs
     val unknownConfigs = libraryDependencies
-      .flatMap(
-        lib => lib.obj.keys.toSet -- knownConfigs
-      )
+      .flatMap(lib => lib.obj.keys.toSet -- knownConfigs)
       .distinct
     if (unknownConfigs.nonEmpty) {
       val kinds = unknownConfigs.mkString(",")

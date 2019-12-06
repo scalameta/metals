@@ -60,9 +60,7 @@ case class BuildServerConnection(
 
   private def register[T](e: CompletableFuture[T]): CompletableFuture[T] = {
     ongoingRequests.add(
-      Cancelable(
-        () => Try(e.completeExceptionally(new InterruptedException()))
-      )
+      Cancelable(() => Try(e.completeExceptionally(new InterruptedException())))
     )
     e
   }
