@@ -251,7 +251,7 @@ lazy val metals = project
       "org.flywaydb" % "flyway-core" % "6.1.0",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
-      "com.zaxxer" % "nuprocess" % "1.2.4",
+      "com.zaxxer" % "nuprocess" % "1.2.5",
       "net.java.dev.jna" % "jna" % "4.5.2",
       "net.java.dev.jna" % "jna-platform" % "4.5.2",
       // for token edit-distance used by goto definition
