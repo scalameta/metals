@@ -451,6 +451,7 @@ lazy val slow = project
 
 lazy val bench = project
   .in(file("metals-bench"))
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     fork.in(run) := true,
     skip.in(publish) := true,
@@ -458,7 +459,9 @@ lazy val bench = project
     libraryDependencies ++= List(
       // for measuring memory usage
       "org.spire-math" %% "clouseau" % "0.2.2"
-    )
+    ),
+    buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
+    buildInfoPackage := "bench"
   )
   .dependsOn(unit)
   .enablePlugins(JmhPlugin)
