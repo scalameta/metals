@@ -205,7 +205,7 @@ lazy val mtags = project
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0-M10", // for java mtags
       "org.jsoup" % "jsoup" % "1.12.1", // for extracting HTML from javadocs
-      "org.lz4" % "lz4-java" % "1.6.0", // for streaming hashing when indexing classpaths
+      "org.lz4" % "lz4-java" % "1.7.0", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
