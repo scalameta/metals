@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function bloop_version {
-  grep "val bloop" build.sbt | sed 's|[^0-9.]||g'
+  grep "val bloop" build.sbt | sed -n 's/.*"\(.*\)".*/\1/p'
 }
 
 curl -Lo coursier https://git.io/coursier-cli && chmod +x coursier
