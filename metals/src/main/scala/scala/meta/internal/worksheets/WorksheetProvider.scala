@@ -1,7 +1,6 @@
 package scala.meta.internal.worksheets
 
 import scala.meta._
-import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
@@ -9,9 +8,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Cancelable
 import scala.collection.concurrent.TrieMap
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import org.eclipse.{lsp4j => l}
-import scala.meta.internal.decorations.ThemableDecorationInstanceRenderOptions
-import scala.meta.internal.decorations.ThemableDecorationAttachmentRenderOptions
 import scala.concurrent.Future
 import scala.meta.pc.CancelToken
 import scala.meta.internal.metals.UserConfiguration
@@ -33,8 +29,11 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Embedded
-import mdoc.{interfaces => i}
 import mdoc.interfaces.Mdoc
+import mdoc.interfaces.EvaluatedWorksheet
+import MdocEnrichments._
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Hover
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.
@@ -49,7 +48,8 @@ class WorksheetProvider(
     userConfig: () => UserConfiguration,
     statusBar: StatusBar,
     diagnostics: Diagnostics,
-    embedded: Embedded
+    embedded: Embedded,
+    publisher: WorksheetPublisher
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -84,23 +84,41 @@ class WorksheetProvider(
     reset()
   }
 
-  def decorations(
+  def evaluateAndPublish(
       path: AbsolutePath,
       token: CancelToken
-  ): Future[Array[DecorationOptions]] = {
-    val result = new CompletableFuture[Array[DecorationOptions]]()
-    def completeEmptyResult() = result.complete(Array.empty)
+  ): Future[Unit] = {
+    evaluateAsync(path, token).map(
+      _.foreach(publisher.publish(languageClient, path, _))
+    )
+  }
+
+  /**
+   * Fallback hover for results.
+   * While for the actual code hover's provided by Compilers,
+   * for evaluated results hover's provided here
+   */
+  def hover(path: AbsolutePath, position: Position): Option[Hover] = {
+    publisher.hover(path, position)
+  }
+
+  private def evaluateAsync(
+      path: AbsolutePath,
+      token: CancelToken
+  ): Future[Option[EvaluatedWorksheet]] = {
+    val result = new CompletableFuture[Option[EvaluatedWorksheet]]()
+    def completeEmptyResult() = result.complete(None)
     token.onCancel().asScala.foreach { isCancelled =>
       if (isCancelled) {
         completeEmptyResult()
       }
     }
-    val onError: PartialFunction[Throwable, Array[DecorationOptions]] = {
+    val onError: PartialFunction[Throwable, Option[EvaluatedWorksheet]] = {
       case NonFatal(e) =>
         scribe.error(s"worksheet: $path", e)
-        Array.empty
+        None
       case InterruptException() =>
-        Array.empty
+        None
     }
     def runEvaluation(): Unit = {
       cancelables.cancel() // Cancel previous worksheet evaluations.
@@ -147,7 +165,7 @@ class WorksheetProvider(
    */
   private def interruptThreadOnCancel(
       path: AbsolutePath,
-      result: CompletableFuture[Array[DecorationOptions]],
+      result: CompletableFuture[Option[EvaluatedWorksheet]],
       thread: Thread
   ): Unit = {
     // Last resort, if everything else fails we use `Thread.stop()`.
@@ -176,7 +194,7 @@ class WorksheetProvider(
             if (c.cancel && thread.isAlive()) {
               // User has requested to cancel a running program. first line of
               // defense is `Thread.interrupt()`. Fingers crossed it's enough.
-              result.complete(Array.empty)
+              result.complete(None)
               threadStopper.schedule(stopThread, 3, TimeUnit.SECONDS)
               scribe.warn(s"thread interrupt: ${thread.getName()}")
               thread.interrupt()
@@ -196,65 +214,18 @@ class WorksheetProvider(
   private def evaluateWorksheet(
       path: AbsolutePath,
       token: CancelToken
-  ): Array[DecorationOptions] = {
-    val decorations = for {
+  ): Option[EvaluatedWorksheet] = {
+    for {
       mdoc <- getMdoc(path)
       input = path.toInputFromBuffers(buffers)
     } yield mdoc.evaluateWorksheet(input.path, input.value)
-    decorations match {
-      case None => Array.empty
-      case Some(worksheet) =>
-        diagnostics.onPublishDiagnostics(
-          path,
-          worksheet.diagnostics().iterator().asScala.map(toLsp).toSeq,
-          isReset = true
-        )
-        worksheet
-          .statements()
-          .iterator()
-          .asScala
-          .map { s =>
-            new DecorationOptions(
-              toLsp(s.position()),
-              new l.MarkedString("scala", s.details()),
-              ThemableDecorationInstanceRenderOptions(
-                after = ThemableDecorationAttachmentRenderOptions(
-                  s.summary(),
-                  color = "green",
-                  fontStyle = "italic"
-                )
-              )
-            )
-          }
-          .toArray
-    }
-  }
-
-  private def toLsp(p: i.RangePosition): l.Range = {
-    new l.Range(
-      new l.Position(
-        p.startLine(),
-        p.startColumn()
-      ),
-      new l.Position(
-        p.endLine(),
-        p.endColumn()
-      )
-    ),
-  }
-  private def toLsp(d: i.Diagnostic): l.Diagnostic = {
-    new l.Diagnostic(
-      toLsp(d.position()),
-      d.message(),
-      d.severity() match {
-        case i.DiagnosticSeverity.Info => l.DiagnosticSeverity.Information
-        case i.DiagnosticSeverity.Warning => l.DiagnosticSeverity.Warning
-        case i.DiagnosticSeverity.Error => l.DiagnosticSeverity.Error
-        case _ => l.DiagnosticSeverity.Error
-      },
-      "mdoc"
+  }.map { worksheet =>
+    diagnostics.onPublishDiagnostics(
+      path,
+      worksheet.diagnostics().iterator().asScala.map(_.toLsp).toSeq,
+      isReset = true
     )
-
+    worksheet
   }
 
   private def getMdoc(path: AbsolutePath): Option[Mdoc] = {
