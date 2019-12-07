@@ -41,10 +41,9 @@ object MavenLspSuite extends BaseImportSuite("maven-import") {
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
-      _ <- server.didChange("pom.xml")(
-        _ =>
-          defaultPom
-            .replace("<!--URL-->", "<!--Your comment--><!--MARKER-->")
+      _ <- server.didChange("pom.xml")(_ =>
+        defaultPom
+          .replace("<!--URL-->", "<!--Your comment--><!--MARKER-->")
       )
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didSave("pom.xml")(identity)

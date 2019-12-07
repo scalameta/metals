@@ -61,19 +61,20 @@ final class JarTopLevels(conn: () => Connection) {
   ): Int = {
     // Add jar to H2
     var jarStmt: PreparedStatement = null
-    val jar = try {
-      jarStmt = conn().prepareStatement(
-        s"insert into indexed_jar (md5) values (?)",
-        Statement.RETURN_GENERATED_KEYS
-      )
-      jarStmt.setString(1, getMD5Digest(path))
-      jarStmt.executeUpdate()
-      val rs = jarStmt.getGeneratedKeys
-      rs.next()
-      rs.getInt("id")
-    } finally {
-      if (jarStmt != null) jarStmt.close()
-    }
+    val jar =
+      try {
+        jarStmt = conn().prepareStatement(
+          s"insert into indexed_jar (md5) values (?)",
+          Statement.RETURN_GENERATED_KEYS
+        )
+        jarStmt.setString(1, getMD5Digest(path))
+        jarStmt.executeUpdate()
+        val rs = jarStmt.getGeneratedKeys
+        rs.next()
+        rs.getInt("id")
+      } finally {
+        if (jarStmt != null) jarStmt.close()
+      }
 
     // Add symbols for jar to H2
     var symbolStmt: PreparedStatement = null

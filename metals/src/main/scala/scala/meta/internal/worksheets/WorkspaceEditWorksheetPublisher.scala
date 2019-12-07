@@ -43,14 +43,13 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
         .toOriginal(position.getLine(), position.getCharacter())
         .toPosition(position)
       message <- getHoverMessage(snapshotPosition, messages.hovers)
-    } yield
-      new Hover(
-        List(
-          JEither.forRight[String, MarkedString](
-            new MarkedString("scala", message)
-          )
-        ).asJava
-      )
+    } yield new Hover(
+      List(
+        JEither.forRight[String, MarkedString](
+          new MarkedString("scala", message)
+        )
+      ).asJava
+    )
   }
 
   private def render(
@@ -64,15 +63,14 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
 
     val edits =
       editsWithDetails.map(ed => new TextEdit(ed.range, ed.text)).toList
-    val hovers = editsWithDetails.map(
-      ed =>
-        HoverMessage(
-          ed.range
-            .copy(
-              endCharacter = ed.range.getStart.getCharacter + ed.text.length
-            ),
-          ed.details
-        )
+    val hovers = editsWithDetails.map(ed =>
+      HoverMessage(
+        ed.range
+          .copy(
+            endCharacter = ed.range.getStart.getCharacter + ed.text.length
+          ),
+        ed.details
+      )
     )
     val hoverMap = HoverMap(updateWithEdits(source.text, edits), hovers)
 

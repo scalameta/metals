@@ -24,10 +24,9 @@ object TestRanges extends RangeReplace {
     val resolved = for {
       (file, code) <- sourceFiles.toSeq
       validLocations = locations.filter(_.getUri().contains(file))
-    } yield
-      file -> validLocations.foldLeft(code) { (base, location) =>
-        replaceInRange(base, location.getRange)
-      }
+    } yield file -> validLocations.foldLeft(code) { (base, location) =>
+      replaceInRange(base, location.getRange)
+    }
     resolved.toMap
   }
 
@@ -40,16 +39,14 @@ object TestRanges extends RangeReplace {
       validLocations <- workspaceEdit
         .getDocumentChanges()
         .asScala
-        .find(
-          change =>
-            change.isLeft &&
-              change.getLeft.getTextDocument.getUri.contains(file)
+        .find(change =>
+          change.isLeft &&
+            change.getLeft.getTextDocument.getUri.contains(file)
         )
-    } yield
-      TextEdits.applyEdits(
-        code,
-        validLocations.getLeft.getEdits.asScala.toList
-      )
+    } yield TextEdits.applyEdits(
+      code,
+      validLocations.getLeft.getEdits.asScala.toList
+    )
 
   }
 }

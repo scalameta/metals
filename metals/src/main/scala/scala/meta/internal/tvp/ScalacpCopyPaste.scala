@@ -413,8 +413,8 @@ class ScalacpCopyPaste(node: ScalaSigNode) {
                 parent.parent.foreach { grandParent =>
                   val classMembers = grandParent.children
                   val accessor =
-                    classMembers.find(
-                      m => m.isParamAccessor && m.symbolName == sym.symbolName
+                    classMembers.find(m =>
+                      m.isParamAccessor && m.symbolName == sym.symbolName
                     )
                   accessor.foreach { accessor =>
                     val isStable = {

@@ -114,11 +114,10 @@ case class QuickBuild(
       if (ScalaVersions.isSupportedScalaVersion(scalaVersion))
         s"org.scalameta:::semanticdb-scalac:${V.semanticdbVersion}" :: compilerPlugins.toList
       else compilerPlugins.toList
-    val pluginDependencies = allPlugins.map(
-      plugin =>
-        QuickBuild
-          .toDependency(plugin, scalaVersion, binaryVersion)
-          .withTransitive(false)
+    val pluginDependencies = allPlugins.map(plugin =>
+      QuickBuild
+        .toDependency(plugin, scalaVersion, binaryVersion)
+        .withTransitive(false)
     )
     val pluginJars = QuickBuild.fetchDependencies(pluginDependencies)
     val plugins = pluginJars.map(jar => s"-Xplugin:$jar")

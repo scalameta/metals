@@ -20,6 +20,8 @@ import scala.meta._
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+import java.io.OutputStream
+import java.io.OutputStreamWriter
 
 /**
  * Implement text formatting using Scalafmt
@@ -244,14 +246,20 @@ final class FormattingProvider(
       super.missingVersion(config, defaultVersion)
     }
 
-    override def downloadWriter(): PrintWriter = {
+    def downloadOutputStreamWriter(): OutputStreamWriter =
+      new OutputStreamWriter(downloadOutputStream())
+
+    def downloadOutputStream(): OutputStream = {
       downloadingScalafmt.trySuccess(())
       downloadingScalafmt = Promise()
       statusBar.trackSlowFuture(
         "Loading Scalafmt",
         downloadingScalafmt.future
       )
-      new PrintWriter(System.out)
+      System.out
+    }
+    override def downloadWriter(): PrintWriter = {
+      new PrintWriter(downloadOutputStream())
     }
   }
 }

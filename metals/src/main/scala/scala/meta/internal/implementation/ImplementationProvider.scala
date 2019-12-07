@@ -412,9 +412,7 @@ object ImplementationProvider {
       symbol: String
   ): Option[SymbolInformation] = {
     semanticDb.symbols
-      .find(
-        sym => sym.symbol == symbol
-      )
+      .find(sym => sym.symbol == symbol)
   }
 
   def parentsFromSignature(

@@ -182,12 +182,11 @@ final class TestingServer(
               new b.DependencySourcesParams(ids.asJava)
             )
             .asScala
-        } yield
-          dependencySources
-            .getItems()
-            .asScala
-            .flatMap(_.getSources().asScala)
-            .toSeq
+        } yield dependencySources
+          .getItems()
+          .asScala
+          .flatMap(_.getSources().asScala)
+          .toSeq
       case None =>
         Future.successful(Seq.empty)
     }
@@ -257,12 +256,10 @@ final class TestingServer(
       params.setPosition(ref.location.getRange.getStart)
       params.setTextDocument(new TextDocumentIdentifier(ref.location.getUri))
       val obtainedLocations = server.referencesResult(params)
-      references ++= obtainedLocations.locations.map(
-        l => newRef(obtainedLocations.symbol, l)
+      references ++= obtainedLocations.locations.map(l =>
+        newRef(obtainedLocations.symbol, l)
       )
-      definition ++= expectedLocations.map(
-        l => newRef(ref.symbol, l)
-      )
+      definition ++= expectedLocations.map(l => newRef(ref.symbol, l))
     }
     WorkspaceSymbolReferences(
       references.result().distinct,
