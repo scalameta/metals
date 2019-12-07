@@ -38,6 +38,7 @@ import scala.meta.tokens.Token
 import scala.util.Properties
 import scala.{meta => m}
 import java.nio.file.StandardOpenOption
+import scala.util.control.NonFatal
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -344,7 +345,27 @@ object MetalsEnrichments
 
     def writeText(text: String): Unit = {
       path.parent.createDirectories()
-      Files.write(path.toNIO, text.getBytes(StandardCharsets.UTF_8))
+      val tmp = Files.createTempFile("metals", path.filename)
+      // Write contents first to a temporary file and then try to
+      // atomically move the file to the destination. The atomic move
+      // reduces the risk that another tool will concurrently read the
+      // file contents during a half-complete file write.
+      Files.write(
+        tmp,
+        text.getBytes(StandardCharsets.UTF_8),
+        StandardOpenOption.TRUNCATE_EXISTING
+      )
+      try {
+        Files.move(
+          tmp,
+          path.toNIO,
+          StandardCopyOption.REPLACE_EXISTING,
+          StandardCopyOption.ATOMIC_MOVE
+        )
+      } catch {
+        case NonFatal(_) =>
+          Files.move(tmp, path.toNIO, StandardCopyOption.REPLACE_EXISTING)
+      }
     }
 
     def appendText(text: String): Unit = {
