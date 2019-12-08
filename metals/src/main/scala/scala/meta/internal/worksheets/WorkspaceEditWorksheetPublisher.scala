@@ -143,7 +143,7 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
   private def updateWithEdits(text: String, edits: List[TextEdit]): String = {
     val editsMap = edits.map(e => e.getRange().getStart().getLine() -> e).toMap
 
-    text.lines.zipWithIndex
+    text.linesIterator.zipWithIndex
       .map {
         case (line, i) =>
           editsMap.get(i) match {

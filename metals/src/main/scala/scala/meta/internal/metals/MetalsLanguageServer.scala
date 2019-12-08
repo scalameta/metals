@@ -35,9 +35,10 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.DebugServer
-import scala.meta.internal.tvp._
 import scala.meta.internal.mtags._
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semver.SemVer
+import scala.meta.internal.tvp._
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
@@ -1289,7 +1290,7 @@ class MetalsLanguageServer(
   private def supportedBuildTool(): Option[BuildTool] =
     buildTools.loadSupported match {
       case Some(buildTool) =>
-        val isCompatibleVersion = BuildTool.isCompatibleVersion(
+        val isCompatibleVersion = SemVer.isCompatibleVersion(
           buildTool.minimumVersion,
           buildTool.version
         )
