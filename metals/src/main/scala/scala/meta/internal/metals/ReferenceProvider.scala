@@ -113,24 +113,6 @@ final class ReferenceProvider(
           info.symbol.owner,
           Descriptor.Type(info.displayName)
         )
-    // Returns true if `info` is a synthetic `copy` or `apply` of the occurrence class symbol.
-    def isCopyOrApplyMethod(info: SymbolInformation): Boolean =
-      info.isMethod &&
-        isCopyOrApply(info.displayName) &&
-        occ.symbol == (Symbol(info.symbol) match {
-          case GlobalSymbol(
-              GlobalSymbol(owner, Descriptor.Term(obj)),
-              Descriptor.Method("apply", _)
-              ) =>
-            Symbols.Global(owner.value, Descriptor.Type(obj))
-          case GlobalSymbol(
-              GlobalSymbol(owner, Descriptor.Type(obj)),
-              Descriptor.Method("copy", _)
-              ) =>
-            Symbols.Global(owner.value, Descriptor.Type(obj))
-          case _ =>
-            ""
-        })
     // Returns true if `info` is a parameter of a synthetic `copy` or `apply` matching the occurrence field symbol.
     def isCopyOrApplyParam(info: SymbolInformation): Boolean =
       info.isParameter &&
@@ -180,8 +162,7 @@ final class ReferenceProvider(
       if {
         isVarSetter(info) ||
         isCompanionObject(info) ||
-        isCopyOrApplyParam(info) ||
-        isCopyOrApplyMethod(info)
+        isCopyOrApplyParam(info)
       }
     } yield info.symbol
     val isCandidate = candidates.toSet

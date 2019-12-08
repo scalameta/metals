@@ -20,6 +20,20 @@ object RenameLspSuite extends BaseLspSuite("rename") {
   )
 
   renamed(
+    "case",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |case class <<User>>(name : String)
+       |object Main{
+       |  val user = <<U@@ser>>.apply("James")
+       |  val user2 = <<U@@ser>>(name = "Roger")
+       |  user.copy(name = "")
+       |}
+       |""".stripMargin,
+    newName = "Login"
+  )
+
+  renamed(
     "across-targets",
     """|/a/src/main/scala/a/Main.scala
        |package a
