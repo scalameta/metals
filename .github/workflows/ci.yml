@@ -12,12 +12,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+    env:
+      JAVA_OPTS: -Xss4m -Xms1G -Xmx8G -XX:ReservedCodeCacheSize=1024m -XX:+TieredCompilation -XX:+CMSClassUnloadingEnabled -Dfile.encoding=UTF-8 -Djna.nosys=true
     steps:
       - uses: actions/checkout@v1
-
       - uses: olafurpg/setup-scala@v7
       - name: Run unit tests
-        run: bin/test.sh unit/test
+        run: |
+          rm .jvmopts
+          bin/test.sh unit/test
         shell: bash
   sbt:
     name: Sbt integration
