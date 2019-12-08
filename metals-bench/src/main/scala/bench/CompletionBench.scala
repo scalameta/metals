@@ -42,7 +42,7 @@ abstract class CompletionBench {
       "akka-2.5.19/akka-cluster/src/main/scala/akka/cluster/ClusterDaemon.scala"
     val scala = Corpus.scala()
     val typers =
-      "scala-2.12.8/src/compiler/scala/tools/nsc/typechecker/Typers.scala"
+      s"scala-${bench.BuildInfo.scalaVersion}/src/compiler/scala/tools/nsc/typechecker/Typers.scala"
     val fastparse = Corpus.fastparse()
     val exprs =
       "fastparse-2.1.0/scalaparse/src/scalaparse/Exprs.scala"
