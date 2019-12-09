@@ -6,7 +6,7 @@ on:
   pull_request:
 jobs:
   unit:
-    name: ${{ matrix.os }} tests
+    name: ${{ matrix.os }} unit tests
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -60,12 +60,12 @@ jobs:
       - name: Run Pants tests
         run: bin/test.sh 'slow/testOnly -- tests.pants'
   feature:
-    name: Slow tests
+    name: LSP integration tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v7
-      - name: Run slow tests
+      - name: Run LSP tests
         run: bin/test.sh 'slow/testOnly -- tests.feature'
   cross:
     name: Scala cross tests
@@ -76,7 +76,7 @@ jobs:
       - name: Run cross tests
         run: sbt +cross/test
   checks:
-    name: Scalafmt/Scalacheck/Docs
+    name: Scalafmt/Scalafix/Docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
