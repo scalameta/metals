@@ -20,6 +20,11 @@ public interface SymbolSearch {
     List<Location> definition(String symbol);
 
     /**
+     * Returns the file where the symbol is defined, if any.
+     */
+    Optional<VirtualFile> definitionSource(String symbol);
+
+    /**
      * Runs fuzzy symbol search for the given query.
      *
      * @param query the text query, for example "ArrDeq" that could match "java.util.ArrayDeque".

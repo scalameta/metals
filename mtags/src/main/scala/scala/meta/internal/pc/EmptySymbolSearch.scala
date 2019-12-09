@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.Location
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc.VirtualFile
 
 object EmptySymbolSearch extends SymbolSearch {
   override def search(
@@ -18,6 +19,10 @@ object EmptySymbolSearch extends SymbolSearch {
 
   def definition(symbol: String): ju.List[Location] = {
     ju.Collections.emptyList()
+  }
+
+  override def definitionSource(symbol: String): ju.Optional[VirtualFile] = {
+    ju.Optional.empty()
   }
 
   override def documentation(symbol: String): Optional[SymbolDocumentation] =

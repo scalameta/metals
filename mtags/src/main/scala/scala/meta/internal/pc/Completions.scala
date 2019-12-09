@@ -16,6 +16,8 @@ import scala.meta.internal.tokenizers.Chars
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.util.control.NonFatal
 import scala.collection.immutable.Nil
+import scala.meta.inputs.Input
+import scala.meta.internal.mtags.Mtags
 
 /**
  * Utility methods for completions.
@@ -1298,10 +1300,45 @@ trait Completions { this: MetalsGlobal =>
         val importPos = autoImportPosition(pos, text)
         val context = doLocateImportContext(pos, importPos)
         val subclasses = ListBuffer.empty[Symbol]
+
         tpe.typeSymbol.foreachKnownDirectSubClass { sym =>
           subclasses += sym
         }
-        val sortedSubclasses = subclasses.result().sortBy(sym => (sym.pos.line, sym.pos.column))
+        val subclassesResult = subclasses.result()
+
+        // sort subclasses by declaration order
+        // see: https://github.com/scalameta/metals-feature-requests/issues/49
+        val sortedSubclasses =
+          if (subclassesResult.forall(_.pos.isDefined)) {
+            // if all the symbols of subclasses' position is defined
+            // we can sort those symbols by declaration order
+            // based on their position information quite cheaply
+            subclassesResult.sortBy(subclass =>
+              (subclass.pos.line, subclass.pos.column)
+            )
+          } else {
+            // Read all the symbols in the file that contains
+            // the definition of the symbol in declaration order
+            search
+              .definitionSource(semanticdbSymbol(tpe.typeSymbol))
+              .asScala
+              .map { file =>
+                Mtags.toplevels(
+                  Input.VirtualFile(
+                    file.path(),
+                    file.value()
+                  )
+                )
+              }
+              .map(defnSymbols =>
+                subclassesResult
+                  .sortBy(sym => {
+                    defnSymbols.indexOf(semanticdbSymbol(sym))
+                  })
+              )
+              .getOrElse(subclassesResult)
+          }
+
         sortedSubclasses.foreach { sym =>
           val (shortName, edits) =
             importPos match {

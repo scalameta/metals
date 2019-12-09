@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.Location
 import java.util.Optional
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
+import scala.meta.internal.metals.MetalsVirtualFile
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -12,6 +13,7 @@ import scala.meta.pc.SymbolSearchVisitor
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
+import scala.meta.pc.VirtualFile
 
 /**
  * Implementation of `SymbolSearch` for testing purposes.
@@ -41,6 +43,23 @@ class TestingSymbolSearch(
           new Location(
             uri,
             new Range(new Position(0, 0), new Position(0, 0))
+          )
+        )
+    }
+  }
+
+  override def definitionSource(symbol: String): ju.Optional[VirtualFile] = {
+    index.definition(Symbol(symbol)) match {
+      case None =>
+        ju.Optional.empty()
+      case Some(value) =>
+        import java.nio.file.Files
+        val filename = value.path.toNIO.getFileName().toString()
+        val content = new String(Files.readAllBytes(value.path.toNIO))
+        ju.Optional.of(
+          MetalsVirtualFile(
+            filename,
+            content
           )
         )
     }

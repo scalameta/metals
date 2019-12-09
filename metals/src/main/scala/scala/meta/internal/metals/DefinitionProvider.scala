@@ -73,6 +73,22 @@ final class DefinitionProvider(
       case Some(destination) => destination.locations
     }
 
+  /**
+   * Returns VirtualFile that contains the definition of
+   * the given symbol (of semanticdb).
+   */
+  private[internal] def definitionPathInputFromSymbol(
+      sym: String
+  ): Option[Input.VirtualFile] = {
+    for {
+      symbolDefinition <- index.definition(Symbol(sym))
+      defnPathInput = symbolDefinition.path.toInputFromBuffers(buffers)
+    } yield Input.VirtualFile(
+      defnPathInput.path,
+      defnPathInput.text
+    )
+  }
+
   def symbolOccurence(
       source: AbsolutePath,
       dirtyPosition: TextDocumentPositionParams

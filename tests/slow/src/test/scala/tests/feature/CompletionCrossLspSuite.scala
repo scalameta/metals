@@ -11,4 +11,10 @@ object CompletionCrossLspSuite
   testAsync("basic-213") {
     basicTest(V.scala213)
   }
+  testAsync("match-211") {
+    matchKeywordTest(V.scala213)
+  }
+  testAsync("match-213") {
+    matchKeywordTest(V.scala213)
+  }
 }
