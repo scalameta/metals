@@ -103,6 +103,33 @@ object CompletionMatchSuite extends BaseCompletionSuite {
     filter = _.contains("exhaustive")
   )
 
+  checkEdit(
+    "Sort auto-completed exhaustive match keywords by declaration order",
+    """package sort
+      |sealed abstract class TestTree
+      |case class Branch1(t1: TestTree) extends TestTree
+      |case class Leaf(v: Int) extends TestTree
+      |case class Branch2(t1: TestTree, t2: TestTree) extends TestTree
+      |object App {
+      |  null.asInstanceOf[TestTree] matc@@
+      |}
+      |""".stripMargin,
+    """|package sort
+       |sealed abstract class TestTree
+       |case class Branch1(t1: TestTree) extends TestTree
+       |case class Leaf(v: Int) extends TestTree
+       |case class Branch2(t1: TestTree, t2: TestTree) extends TestTree
+       |object App {
+       |  null.asInstanceOf[TestTree] match {
+       |\tcase Branch1(t1) => $0
+       |\tcase Leaf(v) =>
+       |\tcase Branch2(t1, t2) =>
+       |}
+       |}
+       |""".stripMargin,
+    filter = _.contains("exhaustive")
+  )
+
   check(
     "inner-class",
     """

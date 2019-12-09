@@ -1297,7 +1297,12 @@ trait Completions { this: MetalsGlobal =>
         val members = ListBuffer.empty[TextEditMember]
         val importPos = autoImportPosition(pos, text)
         val context = doLocateImportContext(pos, importPos)
+        val subclasses = ListBuffer.empty[Symbol]
         tpe.typeSymbol.foreachKnownDirectSubClass { sym =>
+          subclasses += sym
+        }
+        val sortedSubclasses = subclasses.result().sortBy(sym => (sym.pos.line, sym.pos.column))
+        sortedSubclasses.foreach { sym =>
           val (shortName, edits) =
             importPos match {
               case Some(value) =>
