@@ -104,7 +104,7 @@ object CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "Sort auto-completed exhaustive match keywords by declaration order",
+    "exhaustive-sorting",
     """package sort
       |sealed abstract class TestTree
       |case class Branch1(t1: TestTree) extends TestTree
