@@ -14,11 +14,13 @@ final class AutoImportsProvider(
 
   def autoImports(): List[AutoImportsResult] = {
     val unit = addCompilationUnit(
-      code = params.text,
-      filename = params.filename,
-      cursor = Some(params.offset)
+      code = params.text(),
+      filename = params.filename(),
+      cursor = Some(params.offset())
     )
     val pos = unit.position(params.offset)
+    // make sure the compilation unit is loaded
+    typedTreeAt(pos)
     val importPosition = autoImportPosition(pos, params.text())
     val context = doLocateImportContext(pos, importPosition)
     val isSeen = mutable.Set.empty[String]
