@@ -263,10 +263,13 @@ private class BloopPants(
       Properties.versionNumberString
     }
   val allScalaJars: Seq[Path] = {
-    val scalaJars = libraries.collect {
-      case (module, jar) if isScalaJar(module) =>
-        Paths.get(jar.obj("default").str)
-    }.toSeq
+    val scalaJars = libraries
+      .collect {
+        case (module, jar) if isScalaJar(module) =>
+          jar.obj.get("default")
+      }
+      .flatMap(_.map(source => Paths.get(source.str)))
+      .toSeq
     val hasScalaCompiler =
       scalaJars.exists(_.getFileName().toString().contains("scala-compiler"))
     if (hasScalaCompiler) {
@@ -629,7 +632,6 @@ private class BloopPants(
   private def isScalaJar(module: String): Boolean =
     module.startsWith(scalaCompiler) ||
       module.startsWith("org.scala-lang:scala-reflect:") ||
-      module.startsWith("org.scala-lang:scala-library:") ||
       module.startsWith("org.scala-lang:scala-library:") ||
       module.startsWith("org.fursesource:jansi:") ||
       module.startsWith("jline:jline:")
