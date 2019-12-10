@@ -16,7 +16,14 @@ object AutoImportsSuite extends BaseCodeActionSuite {
        |""".stripMargin,
     """|scala.concurrent
        |java.util.concurrent
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|scala.concurrent
+           |scala.concurrent.impl
+           |java.util.concurrent
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -73,11 +80,16 @@ object AutoImportsSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
-  def check(name: String, original: String, expected: String): Unit =
+  def check(
+      name: String,
+      original: String,
+      expected: String,
+      compat: Map[String, String] = Map.empty
+  ): Unit =
     test(name) {
       val imports = getAutoImports(original)
       val obtained = imports.map(_.packageName()).mkString("\n")
-      assertNoDiff(obtained, expected)
+      assertNoDiff(obtained, getExpected(expected, compat))
     }
 
   def checkEdit(name: String, original: String, expected: String): Unit =
