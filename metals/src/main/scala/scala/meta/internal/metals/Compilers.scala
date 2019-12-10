@@ -25,7 +25,6 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.concurrent.Future
 import java.{util => ju}
-import org.eclipse.lsp4j.CodeActionParams
 import scala.meta.pc.AutoImportsResult
 
 /**
@@ -153,15 +152,11 @@ class Compilers(
     }.getOrElse(Future.successful(new CompletionList()))
 
   def autoImports(
-      params: CodeActionParams,
+      params: TextDocumentPositionParams,
       name: String,
       token: CancelToken
   ): Future[ju.List[AutoImportsResult]] = {
-    val textDocumentPositionParams = new TextDocumentPositionParams(
-      params.getTextDocument(),
-      params.getRange().getEnd()
-    )
-    withPC(textDocumentPositionParams, None) { (pc, pos) =>
+    withPC(params, None) { (pc, pos) =>
       pc.autoImports(name, CompilerOffsetParams.fromPos(pos, token)).asScala
     }.getOrElse(Future.successful(new ju.ArrayList))
   }

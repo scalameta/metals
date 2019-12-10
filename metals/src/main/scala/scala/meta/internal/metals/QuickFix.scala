@@ -5,7 +5,6 @@ import scala.meta.pc.CancelToken
 import org.eclipse.{lsp4j => l}
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
-import org.eclipse.lsp4j.{CodeAction, CodeActionParams}
 
 trait QuickFix {
   def contribute(
@@ -20,17 +19,21 @@ object QuickFix {
   object ImportMissingSymbol extends QuickFix {
 
     override def contribute(
-        params: CodeActionParams,
+        params: l.CodeActionParams,
         compilers: Compilers,
         token: CancelToken
-    )(implicit ec: ExecutionContext): Future[Seq[CodeAction]] = {
+    )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
       def importMissingSymbol(
           diagnostic: l.Diagnostic,
           name: String
-      ): Future[Seq[CodeAction]] = {
+      ): Future[Seq[l.CodeAction]] = {
+        val textDocumentPositionParams = new l.TextDocumentPositionParams(
+          params.getTextDocument(),
+          diagnostic.getRange.getEnd()
+        )
         compilers
-          .autoImports(params, name, token)
+          .autoImports(textDocumentPositionParams, name, token)
           .map { imports =>
             imports.asScala.map { i =>
               val uri = params.getTextDocument().getUri()

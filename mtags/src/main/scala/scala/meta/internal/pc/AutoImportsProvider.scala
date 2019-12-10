@@ -62,8 +62,8 @@ final class AutoImportsProvider(
             )
             val namePos =
               pos
-                .withStart(pos.start - name.length() - 1)
-                .withEnd(pos.end - 1)
+                .withStart(pos.start - name.length())
+                .withEnd(pos.end)
                 .toLSP
             val nameEdit = new TextEdit(namePos, short)
             nameEdit :: edits
