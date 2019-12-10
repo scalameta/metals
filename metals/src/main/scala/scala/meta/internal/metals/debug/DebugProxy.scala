@@ -17,6 +17,7 @@ import scala.meta.internal.metals.debug.DebugProxy._
 
 private[debug] final class DebugProxy(
     sessionName: String,
+    sourcePathProvider: SourcePathProvider,
     client: RemoteEndpoint,
     server: ServerAdapter
 )(implicit ec: ExecutionContext) {
@@ -60,7 +61,7 @@ private[debug] final class DebugProxy(
       server.send(request)
     case request @ SetBreakpointRequest(args) =>
       handleSetBreakpointsRequest(args)
-        .map(DebugProtocol.syntheticResponse(request.getId, _))
+        .map(DebugProtocol.syntheticResponse(request, _))
         .foreach(client.consume)
 
     case message =>
@@ -76,7 +77,22 @@ private[debug] final class DebugProxy(
     // ignore. When restarting, the output keeps getting printed for a short while after the
     // output window gets refreshed resulting in stale messages being printed on top, before
     // any actual logs from the restarted process
-
+    case response @ DebugProtocol.StackTraceResponse(args) =>
+      import scala.meta.internal.metals.JsonParser._
+      args.getStackFrames.foreach {
+        case frame if frame.getSource == null =>
+        // send as is, it is most often a frame for a synthetic class
+        case frame =>
+          sourcePathProvider.findPathFor(frame.getSource) match {
+            case Some(path) =>
+              frame.getSource.setPath(path.toURI.toString)
+            case None =>
+              // don't send invalid source if we couldn't adapt it
+              frame.setSource(null)
+          }
+      }
+      response.setResult(args.toJson)
+      client.consume(response)
     case message =>
       client.consume(message)
   }
@@ -97,6 +113,7 @@ private[debug] object DebugProxy {
 
   def open(
       name: String,
+      sourcePathProvider: SourcePathProvider,
       awaitClient: () => Future[Socket],
       connectToServer: () => Future[Socket]
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
@@ -110,13 +127,15 @@ private[debug] object DebugProxy {
         .map(new SocketEndpoint(_))
         .map(endpoint => withLogger(endpoint, "dap-client"))
         .map(new MessageIdAdapter(_))
-    } yield new DebugProxy(name, client, server)
+    } yield new DebugProxy(name, sourcePathProvider, client, server)
   }
 
   private def withLogger(
       endpoint: RemoteEndpoint,
       name: String
   ): RemoteEndpoint = {
-    new EndpointLogger(endpoint, GlobalTrace.setup(name))
+    val trace = GlobalTrace.setup(name)
+    if (trace == null) endpoint
+    else new EndpointLogger(endpoint, trace)
   }
 }

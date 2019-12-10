@@ -9,6 +9,10 @@ final class DebuggeeBreakpoints {
     breakpoints.put(breakpoint.getId, breakpoint)
   }
 
+  def all: Iterable[Breakpoint] = {
+    breakpoints.values
+  }
+
   def byStackFrame(frame: StackFrame): Option[Breakpoint] = {
     breakpoints.values.find(matching(frame))
   }

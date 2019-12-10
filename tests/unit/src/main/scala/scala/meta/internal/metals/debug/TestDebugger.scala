@@ -144,7 +144,9 @@ final class TestDebugger(
           case Some(_) =>
             Future.successful(Stoppage.Cause.Breakpoint)
           case None =>
-            val error = s"No breakpoint for ${frame.info}"
+            val allBreakpoints = breakpoints.all.mkString("\n")
+            val error =
+              s"No breakpoint for ${frame.info}. Registered breakpoints are $allBreakpoints"
             Future.failed(new IllegalStateException(error))
         }
       case Reason.STEP =>

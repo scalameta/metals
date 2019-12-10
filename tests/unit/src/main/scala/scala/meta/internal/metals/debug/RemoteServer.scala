@@ -68,10 +68,40 @@ private[debug] final class RemoteServer(
     sendRequest("stackTrace", args)
   }
 
+  override def scopes(
+      args: ScopesArguments
+  ): CompletableFuture[ScopesResponse] = {
+    sendRequest("scopes", args)
+  }
+
+  override def variables(
+      args: VariablesArguments
+  ): CompletableFuture[VariablesResponse] = {
+    sendRequest("variables", args)
+  }
+
   override def continue_(
       args: ContinueArguments
   ): CompletableFuture[ContinueResponse] = {
     sendRequest("continue", args)
+  }
+
+  override def next(
+      args: NextArguments
+  ): CompletableFuture[Void] = {
+    sendRequest("next", args)
+  }
+
+  override def stepIn(
+      args: StepInArguments
+  ): CompletableFuture[Void] = {
+    sendRequest("stepIn", args)
+  }
+
+  override def stepOut(
+      args: StepOutArguments
+  ): CompletableFuture[Void] = {
+    sendRequest("stepOut", args)
   }
 
   override def disconnect(

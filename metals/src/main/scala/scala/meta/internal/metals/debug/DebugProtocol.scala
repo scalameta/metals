@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.debug
 
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j.{debug => dap}
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
@@ -11,6 +12,8 @@ import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.IdentifiableMessage
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import scala.reflect.ClassTag
 import scala.util.Failure
@@ -40,14 +43,27 @@ object DebugProtocol {
     request
   }
 
-  def syntheticResponse(
-      id: String,
+  def syntheticResponse[A: ClassTag](
+      request: RequestMessage,
       args: SetBreakpointsResponse
   ): ResponseMessage = {
     val response = new DebugResponseMessage
-    response.setId(id)
-    response.setMethod("setBreakpoints")
+    response.setId(request.getId)
+    response.setMethod(request.getMethod)
     response.setResult(args.toJson)
+    response
+  }
+
+  def syntheticFailure(
+      request: DebugResponseMessage,
+      cause: String
+  ): ResponseMessage = {
+    val error = new ResponseError(ResponseErrorCode.InternalError, cause, null)
+
+    val response = new DebugResponseMessage
+    response.setId(request.getId)
+    response.setMethod(request.getMethod)
+    response.setError(error)
     response
   }
 
@@ -71,6 +87,15 @@ object DebugProtocol {
     def unapply(request: RequestMessage): Option[SetBreakpointsArguments] = {
       if (request.getMethod != "setBreakpoints") None
       else parse[SetBreakpointsArguments](request.getParams).toOption
+    }
+  }
+
+  object StackTraceResponse {
+    def unapply(
+        response: DebugResponseMessage
+    ): Option[dap.StackTraceResponse] = {
+      if (response.getMethod != "stackTrace") None
+      else parse[dap.StackTraceResponse](response.getResult).toOption
     }
   }
 

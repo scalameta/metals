@@ -36,7 +36,7 @@ final class EndpointLogger(endpoint: RemoteEndpoint, logger: PrintWriter)
 
   override def cancel(): Unit = endpoint.cancel()
 
-  private def log(direction: Direction, message: Message): Unit = {
+  private def log(direction: Direction, message: Message): Unit = synchronized {
     logger.println(s"[Trace][$time] $direction ${typeOf(message)}:")
     writer.serialize(message, logger)
     logger.println()

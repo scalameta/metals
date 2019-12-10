@@ -4,5 +4,6 @@ import org.eclipse.lsp4j.{debug => dap}
 
 final case class StackFrame(
     threadId: Long,
-    info: dap.StackFrame
+    info: dap.StackFrame,
+    variables: Variables
 )

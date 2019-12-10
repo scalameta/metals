@@ -228,7 +228,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("for-each-comprehension", disabled = true)( // TODO investigate what happens
+  // TODO investigate what happens
+  assertFileBreakpoints("for-each-comprehension", disabled = true)(
     source = """|a/src/main/scala/a/Main.scala
                 |package a
                 |
@@ -244,7 +245,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("for-yield", disabled = true)( // TODO investigate what happens
+  // TODO investigate what happens
+  assertFileBreakpoints("for-yield", disabled = true)(
     source = """|a/src/main/scala/a/Main.scala
                 |package a
                 |
@@ -387,7 +389,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
     )
   )
 
-  assertProjectBreakpoints("ambiguous")(
+  // TODO OnDemandSymbolIndex doesn't distinguish between build targets
+  assertProjectBreakpoints("ambiguous", disabled = true)(
     sources = List(
       """|a/src/main/scala/Target.scala
          |package foo
@@ -442,9 +445,7 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
       val expectedBreakpoints = fileLayouts.flatMap { file =>
         // lines from FileLayout start at 0
-        file.breakpoints.map(
-          b => Breakpoint(file.relativePath, b.startLine)
-        )
+        file.breakpoints.map(b => Breakpoint(file.relativePath, b.startLine))
       }
 
       val navigator = expectedBreakpoints.foldLeft(StepNavigator(workspace)) {

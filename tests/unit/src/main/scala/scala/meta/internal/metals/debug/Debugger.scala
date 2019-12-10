@@ -80,6 +80,18 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
         val args = new ContinueArguments()
         args.setThreadId(threadId)
         server.continue_(args).asScala.ignoreValue
+      case DebugStep.StepIn =>
+        val args = new StepInArguments()
+        args.setThreadId(threadId)
+        server.stepIn(args).asScala.ignoreValue
+      case DebugStep.StepOut =>
+        val args = new StepOutArguments()
+        args.setThreadId(threadId)
+        server.stepOut(args).asScala.ignoreValue
+      case DebugStep.StepOver =>
+        val args = new NextArguments()
+        args.setThreadId(threadId)
+        server.next(args).asScala.ignoreValue
       case cause =>
         val error = s"Unsupported debug step $cause"
         Future.failed(new IllegalStateException(error))
@@ -89,7 +101,20 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
   def stackFrame(threadId: lang.Long): Future[StackFrame] = {
     for {
       frame <- stackTrace(threadId).map(_.getStackFrames.head)
-    } yield StackFrame(threadId, frame)
+      scopes <- scopes(frame.getId).map(_.getScopes)
+      variables <- {
+        val scopeVariables = scopes.map { scope =>
+          variables(scope.getVariablesReference).map { response =>
+            val variables = response.getVariables.map(Variable.apply)
+            scope.getName -> variables.toList
+          }
+        }
+
+        Future
+          .sequence(scopeVariables.toList)
+          .map(scopes => Variables(scopes.toMap))
+      }
+    } yield StackFrame(threadId, frame, variables)
 
   }
 
@@ -98,6 +123,27 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
     args.setThreadId(thread)
     args.setLevels(1L)
     server.stackTrace(args).asScala
+  }
+
+  def scopes(frame: Long): Future[ScopesResponse] = {
+    val args = new ScopesArguments
+    args.setFrameId(frame)
+    server.scopes(args).asScala
+  }
+
+  def variables(id: Long): Future[VariablesResponse] = {
+    val args = new VariablesArguments
+    args.setVariablesReference(id)
+    server
+      .variables(args)
+      .asScala
+      .recover {
+        // TODO remove after https://github.com/scalacenter/bloop/pull/1115
+        case error if error.getMessage == "an implementation is missing" =>
+          val response = new VariablesResponse
+          response.setVariables(Array.empty)
+          response
+      }
   }
 
   def shutdown: Future[Unit] = {

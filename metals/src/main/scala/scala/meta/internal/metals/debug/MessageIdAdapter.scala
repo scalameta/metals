@@ -15,8 +15,7 @@ import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
  * Additionally, adapts the request id for responses being produced
  * to keep the whole procedure transparent for the caller.
  */
-final class MessageIdAdapter(next: RemoteEndpoint)
-    extends RemoteEndpoint {
+final class MessageIdAdapter(next: RemoteEndpoint) extends RemoteEndpoint {
   private val messageCounter = new AtomicInteger(FirstMessageId)
   private val originalRequestIds = mutable.Map.empty[String, String]
 
