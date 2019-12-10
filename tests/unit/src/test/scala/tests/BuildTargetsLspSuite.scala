@@ -10,7 +10,7 @@ object BuildTargetsLspSuite
       name: String,
       maxDuration: Duration = Duration("3min")
   )(run: => Future[Unit]): Unit = {
-    if (BaseSuite.isWindows) {
+    if (isWindows) {
       // Tests are not working on windows CI
       ignore(name) {}
     } else {

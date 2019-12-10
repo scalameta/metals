@@ -12,7 +12,7 @@ object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   )(
       run: => Future[Unit]
   ): Unit = {
-    if (BaseSuite.isWindows) {
+    if (isWindows) {
       ignore(name)(run)
     } else {
       super.testAsync(name, maxDuration)(run)

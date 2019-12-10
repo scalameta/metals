@@ -193,10 +193,3 @@ class BaseSuite extends TestSuite {
     postProcess(result)
   }
 }
-
-object BaseSuite {
-
-  def isWindows: Boolean =
-    System.getProperty("os.name").toLowerCase().contains("win")
-
-}
