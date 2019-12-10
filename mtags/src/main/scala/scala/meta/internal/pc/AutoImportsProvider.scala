@@ -4,6 +4,7 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.AutoImportsResult
 import scala.collection.mutable
 import scala.collection.JavaConverters._
+import org.eclipse.lsp4j.TextEdit
 
 final class AutoImportsProvider(
     val compiler: MetalsGlobal,
@@ -59,7 +60,13 @@ final class AutoImportsProvider(
               context,
               value
             )
-            edits
+            val namePos =
+              pos
+                .withStart(pos.start - name.length() - 1)
+                .withEnd(pos.end - 1)
+                .toLSP
+            val nameEdit = new TextEdit(namePos, short)
+            nameEdit :: edits
         }
         AutoImportsResultImpl(pkg, edits.asJava)
     }

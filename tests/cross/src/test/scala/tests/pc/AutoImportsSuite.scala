@@ -21,13 +21,54 @@ object AutoImportsSuite extends BaseCodeActionSuite {
 
   checkEdit(
     "basic-edit",
-    """|object A {
+    """|package a
+       |
+       |object A {
        |  <<Future>>.successful(2)
        |}
        |""".stripMargin,
-    """|import scala.concurrent.Future
+    """|package a
+       |
+       |import scala.concurrent.Future
+       |
        |object A {
        |  Future.successful(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "symbol-prefix-edit",
+    """|package a
+       |
+       |object A {
+       |  val l = new <<ArrayList>>[Int]
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import java.{util => ju}
+       |
+       |object A {
+       |  val l = new ju.ArrayList[Int]
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "interpolator-edit",
+    """|package a
+       |
+       |object A {
+       |  val l = s"${<<ListBuffer>>(2)}"
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable
+       |
+       |object A {
+       |  val l = s"${mutable.ListBuffer(2)}"
        |}
        |""".stripMargin
   )
