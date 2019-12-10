@@ -3,23 +3,30 @@ package scala.meta.internal.metals.debug
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.messages.Message
 import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.GlobalTrace
+import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
+import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProxy._
 
 private[debug] final class DebugProxy(
     sessionName: String,
     client: RemoteEndpoint,
-    server: RemoteEndpoint
+    server: ServerAdapter
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
   private val cancelled = new AtomicBoolean()
+  private val adapters = new MetalsDebugAdapters
+
+  private val handleSetBreakpointsRequest =
+    new SetBreakpointsRequestHandler(server, adapters)
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -34,26 +41,37 @@ private[debug] final class DebugProxy(
   }
 
   private def listenToServer(): Unit = {
-    Future(server.listen(handleServerMessage)).andThen { case _ => cancel() }
+    Future(server.onReceived(handleServerMessage))
+      .andThen { case _ => cancel() }
   }
 
   private val handleClientMessage: MessageConsumer = {
+    case null =>
+      () // ignore
     case _ if cancelled.get() =>
-    // ignore
-    case RestartRequest(message) =>
+      () // ignore
+    case request @ InitializeRequest(args) =>
+      adapters.initialize(args)
+      server.send(request)
+    case request @ RestartRequest(_) =>
       // set the status first, since the server can kill the connection
       exitStatus.trySuccess(Restarted)
       outputTerminated = true
-      server.consume(message)
-    case null =>
-      () // do nothing
+      server.send(request)
+    case request @ SetBreakpointRequest(args) =>
+      handleSetBreakpointsRequest(args)
+        .map(DebugProtocol.syntheticResponse(request.getId, _))
+        .foreach(client.consume)
+
     case message =>
-      server.consume(message)
+      server.send(message)
   }
 
-  private val handleServerMessage: MessageConsumer = {
+  private val handleServerMessage: Message => Unit = {
+    case null =>
+      () // ignore
     case _ if cancelled.get() =>
-    // ignore
+      () // ignore
     case OutputNotification() if outputTerminated =>
     // ignore. When restarting, the output keeps getting printed for a short while after the
     // output window gets refreshed resulting in stale messages being printed on top, before
@@ -87,6 +105,7 @@ private[debug] object DebugProxy {
         .map(new SocketEndpoint(_))
         .map(endpoint => withLogger(endpoint, "dap-server"))
         .map(new MessageIdAdapter(_))
+        .map(new ServerAdapter(_))
       client <- awaitClient()
         .map(new SocketEndpoint(_))
         .map(endpoint => withLogger(endpoint, "dap-client"))
