@@ -34,7 +34,8 @@ class MetalsGlobal(
     with Compat
     with GlobalProxy
     with AutoImports
-    with Keywords { compiler =>
+    with Keywords
+    with WorkspaceSymbolSearch { compiler =>
   hijackPresentationCompilerThread()
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
