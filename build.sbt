@@ -348,7 +348,7 @@ lazy val mtest = project
     ) ++ crossSetting(
       scalaVersion.value,
       if211 = List("com.lihaoyi" %% "utest" % "0.6.8"),
-      otherwise = List("com.lihaoyi" %% "utest" % "0.7.1")
+      otherwise = List("com.lihaoyi" %% "utest" % "0.7.2")
     ),
     scalacOptions ++= crossSetting(
       scalaVersion.value,
@@ -404,7 +404,7 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
-      "com.lihaoyi" %% "utest" % "0.7.1"
+      "com.lihaoyi" %% "utest" % "0.7.2"
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),
