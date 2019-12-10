@@ -40,12 +40,18 @@ final class AutoImportsProvider(
 
     search.search(name, buildTargetIdentifier, visitor)
 
+    def isExactMatch(sym: Symbol, name: String): Boolean =
+      sym.name.dropLocal.decoded == name
+
     symbols.result.collect {
-      case sym if sym.name.dropLocal.decoded == name =>
+      case sym if isExactMatch(sym, name) =>
         val ident = Identifier.backtickWrap(sym.name.dropLocal.decoded)
         val pkg = sym.owner.fullName
         val edits = importPosition match {
-          case None => Nil
+          case None =>
+            // No import position means we can't insert an import without clashing with
+            // existing symbols in scope, so we just do nothing
+            Nil
           case Some(value) =>
             val (short, edits) = ShortenedNames.synthesize(
               TypeRef(ThisType(sym.owner), sym, Nil),
