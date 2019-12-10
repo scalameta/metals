@@ -3,9 +3,10 @@ package tests
 import java.{util => ju}
 import org.eclipse.lsp4j.Location
 import java.util.Optional
+import java.nio.file.Files
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
-import scala.meta.internal.metals.MetalsVirtualFile
+import scala.meta.internal.metals.VirtualFileImpl
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -53,11 +54,10 @@ class TestingSymbolSearch(
       case None =>
         ju.Optional.empty()
       case Some(value) =>
-        import java.nio.file.Files
         val filename = value.path.toNIO.getFileName().toString()
         val content = new String(Files.readAllBytes(value.path.toNIO))
         ju.Optional.of(
-          MetalsVirtualFile(
+          VirtualFileImpl(
             filename,
             content
           )

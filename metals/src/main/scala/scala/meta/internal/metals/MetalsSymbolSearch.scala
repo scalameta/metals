@@ -28,7 +28,7 @@ class MetalsSymbolSearch(
     Optional.ofNullable(
       defn
         .definitionPathInputFromSymbol(symbol)
-        .map(input => MetalsVirtualFile.fromInput(input))
+        .map(input => VirtualFileImpl.fromInput(input))
         .orNull
     )
 
