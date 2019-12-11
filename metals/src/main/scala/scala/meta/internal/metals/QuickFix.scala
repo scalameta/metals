@@ -55,7 +55,8 @@ object QuickFix {
 
       Future
         .sequence(params.getContext().getDiagnostics().asScala.collect {
-          case d @ ScalacDiagnostic.SymbolNotFound(name) =>
+          case d @ ScalacDiagnostic.SymbolNotFound(name)
+              if d.getRange().encloses(params.getRange().getEnd()) =>
             importMissingSymbol(d, name)
         })
         .map(_.flatten)
