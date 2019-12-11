@@ -7,6 +7,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.gson.JsonElement
 import com.google.gson.JsonArray
 import scala.collection.JavaConverters._
+import scala.meta.internal.mtags.MD5
 
 object PantsConfiguration {
 
@@ -100,5 +101,14 @@ object PantsConfiguration {
       }
     }
     buf.result().map(workspace.resolve)
+  }
+  def outputFilename(targets: List[String]): String = {
+    val processed =
+      targets.map(_.replaceAll("[^a-zA-Z0-9]", "")).mkString
+    if (processed.isEmpty()) {
+      MD5.compute(targets.mkString) // necessary for targets like "::/"
+    } else {
+      processed
+    }
   }
 }
