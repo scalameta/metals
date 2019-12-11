@@ -45,6 +45,9 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
         _ <- server.didOpen(path)
         codeActions <- server.assertCodeAction(path, input, expectedActions)
         _ <- server.didSave(path) { _ =>
+          if (selectedActionIndex >= codeActions.length) {
+            fail(s"selectedActionIndex ($selectedActionIndex) is out of bounds")
+          }
           client.applyCodeAction(codeActions(selectedActionIndex))
           server.toPath(path).readText
         }
