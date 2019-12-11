@@ -12,7 +12,6 @@ case class PantsExport(
 
 object PantsExport {
   def fromJson(output: ujson.Value): PantsExport = {
-
     val allTargets = output.obj("targets").obj
     val transitiveDependencyCache = mutable.Map.empty[String, List[String]]
     def computeTransitiveDependencies(name: String): List[String] = {
@@ -24,7 +23,7 @@ object PantsExport {
               isVisited += n
               val target = allTargets(n).obj
               for {
-                deps <- target.get("targets").iterator
+                deps <- target.get(PantsKeys.targets).iterator
                 dep <- deps.arr.iterator.map(_.str)
               } {
                 visit(dep)
@@ -39,28 +38,29 @@ object PantsExport {
     val targets: Map[String, PantsTarget] = allTargets.iterator.map {
       case (name, valueObj) =>
         val value = valueObj.obj
-        val dependencies = value("targets").arr.map(_.str)
-        val transitiveDependencies = value.get("transitive_targets") match {
-          case None => computeTransitiveDependencies(name)
-          case Some(transitiveDepencies) => transitiveDepencies.arr.map(_.str)
-        }
-        val libraries = value("libraries").arr.map(_.str)
-        val isTargetRoot = value("is_target_root").bool &&
+        val dependencies = value(PantsKeys.targets).arr.map(_.str)
+        val transitiveDependencies =
+          value.get(PantsKeys.transitiveTargets) match {
+            case None => computeTransitiveDependencies(name)
+            case Some(transitiveDepencies) => transitiveDepencies.arr.map(_.str)
+          }
+        val libraries = value(PantsKeys.libraries).arr.map(_.str)
+        val isTargetRoot = value(PantsKeys.isTargetRoot).bool &&
           !name.startsWith(".pants.d/gen")
-        val id = value("id").str
         name -> PantsTarget(
           name = name,
-          id = id,
+          id = value(PantsKeys.id).str,
           dependencies = dependencies,
           transitiveDependencies = transitiveDependencies,
           libraries = libraries,
           isTargetRoot = isTargetRoot,
-          targetType = TargetType(value("target_type").str),
-          pantsTargetType = PantsTargetType(value("pants_target_type").str)
+          targetType = TargetType(value(PantsKeys.targetType).str),
+          pantsTargetType =
+            PantsTargetType(value(PantsKeys.pantsTargetType).str)
         )
     }.toMap
 
-    val allLibraries = output.obj("libraries").obj
+    val allLibraries = output.obj(PantsKeys.libraries).obj
     val libraries: Map[String, PantsLibrary] = allLibraries.iterator.map {
       case (name, valueObj) =>
         name -> PantsLibrary(name, valueObj.obj.map {
@@ -70,12 +70,12 @@ object PantsExport {
     }.toMap
 
     val scalaCompilerClasspath = output
-      .obj("scala_platform")
-      .obj("compiler_classpath")
+      .obj(PantsKeys.scalaPlatform)
+      .obj(PantsKeys.compilerClasspath)
       .arr
       .map(path => Paths.get(path.str))
     val scalaPlatform = PantsScalaPlatform(
-      output.obj("scala_platform").obj("scala_version").str,
+      output.obj(PantsKeys.scalaPlatform).obj(PantsKeys.scalaVersion).str,
       scalaCompilerClasspath
     )
 

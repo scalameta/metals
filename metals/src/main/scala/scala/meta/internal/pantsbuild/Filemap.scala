@@ -30,15 +30,6 @@ object Filemap {
   def fromPants(workspace: Path, isCache: Boolean, targets: List[String])(
       implicit ec: ExecutionContext
   ): Filemap = {
-    val filemap = new Filemap()
-    val lines = new LineListener(line => {
-      val split = line.split(" ", 2)
-      if (split.length == 2) {
-        val path = workspace.resolve(split(0))
-        val target = split(1)
-        filemap.addPath(target, path)
-      }
-    })
     val outputfile = workspace
       .resolve(".pants.d")
       .resolve("metals")
@@ -55,7 +46,7 @@ object Filemap {
           targets,
         workspace,
         EmptyCancelToken,
-        lines
+        LineListener.info
       )
     }
     Filemap.fromCache(workspace, outputfile)

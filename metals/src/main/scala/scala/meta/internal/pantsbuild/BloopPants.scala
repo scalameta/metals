@@ -293,9 +293,7 @@ private class BloopPants(
     val generatedProjects = new mutable.LinkedHashSet[Path]
     val byName = projects.map(p => p.name -> p).toMap
     projects.foreach { project =>
-      if (export.cycles.parents.contains(project.name)) {
-        ()
-      } else {
+      if (!export.cycles.parents.contains(project.name)) {
         val children =
           export.cycles.children.getOrElse(project.name, Nil).map(byName)
         val withBinaryResolution =
@@ -363,7 +361,7 @@ private class BloopPants(
     val libraries: List[PantsLibrary] = for {
       dependency <- transitiveDependencies
       libraryName <- dependency.libraries
-      library <- export.libraries.get(libraryName).toList
+      library <- export.libraries.get(libraryName)
     } yield library
 
     val classpath = new mutable.LinkedHashSet[Path]()
@@ -430,13 +428,13 @@ private class BloopPants(
     )
   }
 
-  val myExportClasspath: mutable.Map[String, List[Path]] =
+  private val exportClasspathCache: mutable.Map[String, List[Path]] =
     mutable.Map.empty[String, List[Path]]
-  val exportClasspathDir: AbsolutePath = AbsolutePath(
+  private val exportClasspathDir: AbsolutePath = AbsolutePath(
     workspace.resolve("dist").resolve("export-classpath")
   )
-  def exportClasspath(target: PantsTarget): List[Path] = {
-    myExportClasspath.getOrElseUpdate(
+  private def exportClasspath(target: PantsTarget): List[Path] = {
+    exportClasspathCache.getOrElseUpdate(
       target.name, {
         val classpathFile =
           exportClasspathDir.resolve(target.id + "-classpath.txt")
@@ -448,14 +446,8 @@ private class BloopPants(
       }
     )
   }
-  lazy val dist: mutable.Buffer[Path] = Files
-    .list(
-      workspace.resolve("dist").resolve("export-classpath")
-    )
-    .asScala
-    .toBuffer
 
-  def bloopTestFrameworks: Option[C.Test] = {
+  private def bloopTestFrameworks: Option[C.Test] = {
     val scalatest = C.TestFramework(
       List(
         "org.scalatest.tools.Framework",
@@ -463,12 +455,19 @@ private class BloopPants(
       )
     )
     // These test frameworks are the default output from running `show
-    // testFrameworks` in sbt (excluding spec2). The output from `./pants
-    // export` doesn't include the configured test frameworks.
+    // testFrameworks` in sbt. The output from `./pants export` doesn't include
+    // the configured test frameworks.
     val defaultTestFrameworks = List(
       scalatest,
+      C.TestFramework(List("com.novocode.junit.JUnitFramework")),
       C.TestFramework(List("org.scalacheck.ScalaCheckFramework")),
-      C.TestFramework(List("com.novocode.junit.JUnitFramework"))
+      C.TestFramework(List("org.specs.runner.SpecsFramework")),
+      C.TestFramework(
+        List(
+          "org.specs2.runner.Specs2Framework",
+          "org.specs2.runner.SpecsFramework"
+        )
+      )
     )
     Some(
       C.Test(
@@ -486,7 +485,7 @@ private class BloopPants(
     )
   }
 
-  def enclosingSourceDirectory(file: Path): Option[Path] = {
+  private def enclosingSourceDirectory(file: Path): Option[Path] = {
     def loop(p: Path): Option[Path] = {
       if (p == workspace) None
       else if (p.endsWith("java") || p.endsWith("scala")) Some(p)
