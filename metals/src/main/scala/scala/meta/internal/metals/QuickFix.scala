@@ -17,6 +17,8 @@ trait QuickFix {
 object QuickFix {
 
   object ImportMissingSymbol extends QuickFix {
+    def label(name: String, packageName: String): String =
+      s"Import '$name' from package '$packageName'"
 
     override def contribute(
         params: l.CodeActionParams,
@@ -41,9 +43,7 @@ object QuickFix {
 
               val codeAction = new l.CodeAction()
 
-              codeAction.setTitle(
-                s"Import '$name' from package '${i.packageName}'"
-              )
+              codeAction.setTitle(label(name, i.packageName))
               codeAction.setKind(l.CodeActionKind.QuickFix)
               codeAction.setDiagnostics(List(diagnostic).asJava)
               codeAction.setEdit(edit)

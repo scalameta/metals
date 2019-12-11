@@ -86,6 +86,8 @@ import scala.meta.internal.metals.TextEdits
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.RenameFile
 import scala.util.Properties
+import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CodeActionContext
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -648,6 +650,24 @@ final class TestingServer(
     }
   }
 
+  def assertCodeAction(
+      filename: String,
+      query: String,
+      expected: String,
+      root: AbsolutePath = workspace
+  ): Future[List[l.CodeAction]] =
+    for {
+      (codeActions, codeActionString) <- codeAction(filename, query, root)
+    } yield {
+      DiffAssertions.assertNoDiffOrPrintObtained(
+        codeActionString,
+        expected,
+        "obtained",
+        "expected"
+      )
+      codeActions
+    }
+
   def hover(
       filename: String,
       query: String,
@@ -664,6 +684,28 @@ final class TestingServer(
       formatCompletion(c, includeDetail = true)
     }
   }
+
+  def codeAction(
+      filename: String,
+      query: String,
+      root: AbsolutePath
+  ): Future[(List[l.CodeAction], String)] =
+    for {
+      (t, params) <- offsetParams(filename, query, root)
+      codeActionParams = new CodeActionParams(
+        params.getTextDocument(),
+        new l.Range(params.getPosition(), params.getPosition()),
+        new CodeActionContext(
+          client.diagnostics
+            .getOrElse(toPath(filename), Nil)
+            .asJava
+        )
+      )
+      codeActions <- server.codeAction(codeActionParams).asScala
+    } yield (
+      codeActions.asScala.toList,
+      codeActions.map(_.getTitle()).asScala.mkString("\n")
+    )
 
   def assertHighlight(
       filename: String,
