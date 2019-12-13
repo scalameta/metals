@@ -42,7 +42,27 @@ object ReferenceLspSuite extends BaseLspSuite("reference") {
       )
       _ = assertNoDiagnostics()
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ = server.assertReferenceDefinitionBijection()
+      _ = server.assertReferenceDefinitionDiff(
+        """|--- references
+           |+++ definition
+           |                              ^
+           |+a/src/main/scala/a/A.scala:4:36: a/A#
+           |+  def apply(a: Int, b: Int): A = A.apply(a) // overloaded non-synthetic apply
+           |+                                   ^^^^^
+           |+a/src/main/scala/a/A.scala:9:6: a/A#
+           |+    .apply(a = 1)
+           |+     ^^^^^
+           |+a/src/main/scala/a/A.scala:10:6: a/A#
+           |+    .copy(a = 2)
+           |+     ^^^^
+           | b/src/main/scala/b/B.scala:4:12: a/A#
+           |            ^
+           |+b/src/main/scala/b/B.scala:4:20: a/A#
+           |+  val y: a.A = a.A.apply(1)
+           |+                   ^^^^^
+           | b/src/main/scala/b/B.scala:5:13: a/A#
+           |""".stripMargin
+      )
     } yield ()
   }
 
