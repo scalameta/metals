@@ -1318,7 +1318,8 @@ trait Completions { this: MetalsGlobal =>
             // Read all the symbols in the source that contains
             // the definition of the symbol in declaration order
             val defnSymbols = search
-                .definitionSourceToplevels(semanticdbSymbol(tpe.typeSymbol)).asScala
+              .definitionSourceToplevels(semanticdbSymbol(tpe.typeSymbol))
+              .asScala
             if (defnSymbols.length > 0)
               subclassesResult
                 .sortBy(sym => {
