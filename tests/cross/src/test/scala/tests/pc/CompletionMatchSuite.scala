@@ -3,6 +3,10 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 object CompletionMatchSuite extends BaseCompletionSuite {
+  override def beforeAll(): Unit = {
+    indexScalaLibrary()
+  }
+
   check(
     "match",
     """
@@ -127,6 +131,24 @@ object CompletionMatchSuite extends BaseCompletionSuite {
        |}
        |}
        |""".stripMargin,
+    filter = _.contains("exhaustive")
+  )
+
+  checkEdit(
+    "exhaustive-sorting-scalalib",
+    """package sort
+      |object App {
+      |  Option(1) matc@@
+      |}
+      |""".stripMargin,
+    """package sort
+      |object App {
+      |  Option(1) match {
+      |\tcase Some(value) => $0
+      |\tcase None =>
+      |}
+      |}
+      |""".stripMargin,
     filter = _.contains("exhaustive")
   )
 
