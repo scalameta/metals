@@ -134,23 +134,35 @@ object CompletionMatchSuite extends BaseCompletionSuite {
     filter = _.contains("exhaustive")
   )
 
-  checkEdit(
-    "exhaustive-sorting-scalalib",
-    """package sort
-      |object App {
-      |  Option(1) matc@@
-      |}
-      |""".stripMargin,
-    """package sort
-      |object App {
-      |  Option(1) match {
-      |\tcase Some(value) => $0
-      |\tcase None =>
-      |}
-      |}
-      |""".stripMargin,
-    filter = _.contains("exhaustive")
-  )
+  if (!isScala211) {
+    checkEdit(
+      "exhaustive-sorting-scalalib",
+      """package sort
+        |object App {
+        |  Option(1) matc@@
+        |}
+        |""".stripMargin,
+      if (!isScala211)
+        """package sort
+          |object App {
+          |  Option(1) match {
+          |\tcase Some(value) => $0
+          |\tcase None =>
+          |}
+          |}
+          |""".stripMargin
+      else
+        """package sort
+          |object App {
+          |  Option(1) match {
+          |\tcase Some(x) => $0
+          |\tcase None =>
+          |}
+          |}
+          |""".stripMargin,
+      filter = _.contains("exhaustive")
+    )
+  }
 
   check(
     "inner-class",
