@@ -16,8 +16,6 @@ import scala.meta.internal.tokenizers.Chars
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.util.control.NonFatal
 import scala.collection.immutable.Nil
-import scala.meta.inputs.Input
-import scala.meta.internal.mtags.Mtags
 
 /**
  * Utility methods for completions.
@@ -1317,26 +1315,17 @@ trait Completions { this: MetalsGlobal =>
               (subclass.pos.line, subclass.pos.column)
             )
           } else {
-            // Read all the symbols in the file that contains
+            // Read all the symbols in the source that contains
             // the definition of the symbol in declaration order
-            search
-              .definitionSource(semanticdbSymbol(tpe.typeSymbol))
-              .asScala
-              .map { file =>
-                Mtags.toplevels(
-                  Input.VirtualFile(
-                    file.path(),
-                    file.value()
-                  )
-                )
-              }
-              .map(defnSymbols =>
-                subclassesResult
-                  .sortBy(sym => {
-                    defnSymbols.indexOf(semanticdbSymbol(sym))
-                  })
-              )
-              .getOrElse(subclassesResult)
+            val defnSymbols = search
+                .definitionSourceToplevels(semanticdbSymbol(tpe.typeSymbol)).asScala
+            if (defnSymbols.length > 0)
+              subclassesResult
+                .sortBy(sym => {
+                  defnSymbols.indexOf(semanticdbSymbol(sym))
+                })
+            else
+              subclassesResult
           }
 
         sortedSubclasses.foreach { sym =>

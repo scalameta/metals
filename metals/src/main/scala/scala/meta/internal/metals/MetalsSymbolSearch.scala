@@ -7,7 +7,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.pc.VirtualFile
+import scala.meta.internal.mtags.Mtags
 
 /**
  * Implementation of SymbolSearch that delegates to WorkspaceSymbolProvider and SymbolDocumentationIndexer.
@@ -24,13 +24,13 @@ class MetalsSymbolSearch(
     defn.fromSymbol(symbol)
   }
 
-  override def definitionSource(symbol: String): Optional[VirtualFile] =
-    Optional.ofNullable(
-      defn
-        .definitionPathInputFromSymbol(symbol)
-        .map(input => VirtualFileImpl.fromInput(input))
-        .orNull
-    )
+  override def definitionSourceToplevels(symbol: String): ju.List[String] = {
+    import scala.collection.JavaConverters._
+    defn
+      .definitionPathInputFromSymbol(symbol)
+      .map(input => Mtags.toplevels(input).asJava)
+      .getOrElse(ju.Collections.emptyList())
+  }
 
   override def search(
       query: String,

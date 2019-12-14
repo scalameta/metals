@@ -8,7 +8,6 @@ import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.pc.VirtualFile
 
 /**
  * Implementation of `SymbolSearch` for only classpath symbols.
@@ -22,8 +21,8 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
 
   def definition(symbol: String): ju.List[Location] = ju.Collections.emptyList()
 
-  override def definitionSource(symbol: String): ju.Optional[VirtualFile] =
-    ju.Optional.empty()
+  override def definitionSourceToplevels(symbol: String): ju.List[String] =
+    ju.Collections.emptyList()
 
   override def search(
       query: String,

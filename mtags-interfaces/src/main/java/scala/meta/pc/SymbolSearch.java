@@ -20,9 +20,10 @@ public interface SymbolSearch {
     List<Location> definition(String symbol);
 
     /**
-     * Returns the file where the symbol is defined, if any.
+     * Returns the all symbols in the file where the given symbol is defined
+     * in declaration order, if any.
      */
-    Optional<VirtualFile> definitionSource(String symbol);
+    List<String> definitionSourceToplevels(String symbol);
 
     /**
      * Runs fuzzy symbol search for the given query.
