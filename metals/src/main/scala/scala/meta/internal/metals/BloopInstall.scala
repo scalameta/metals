@@ -135,10 +135,14 @@ final class BloopInstall(
     }
   }
 
+  // NOTE(olafur) there's a chance that we get two build change notifications in
+  // a very short period due to duplicate `didSave` and file watching
+  // notifications. This method is synchronized to prevent asking the user
+  // twice whether to import the build.
   def runIfApproved(
       buildTool: BuildTool,
       digest: String
-  ): Future[BloopInstallResult] = {
+  ): Future[BloopInstallResult] = synchronized {
     oldInstallResult(digest) match {
       case Some(result) =>
         scribe.info(s"skipping build import with status '${result.name}'")
