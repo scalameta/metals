@@ -77,7 +77,7 @@ final class DefinitionProvider(
    * Returns VirtualFile that contains the definition of
    * the given symbol (of semanticdb).
    */
-  private[internal] def definitionPathInputFromSymbol(
+  def definitionPathInputFromSymbol(
       sym: String
   ): Option[Input.VirtualFile] =
     index
