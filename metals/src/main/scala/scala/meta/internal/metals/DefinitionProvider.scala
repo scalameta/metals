@@ -79,15 +79,10 @@ final class DefinitionProvider(
    */
   private[internal] def definitionPathInputFromSymbol(
       sym: String
-  ): Option[Input.VirtualFile] = {
-    for {
-      symbolDefinition <- index.definition(Symbol(sym))
-      defnPathInput = symbolDefinition.path.toInputFromBuffers(buffers)
-    } yield Input.VirtualFile(
-      defnPathInput.path,
-      defnPathInput.text
-    )
-  }
+  ): Option[Input.VirtualFile] =
+    index
+      .definition(Symbol(sym))
+      .map(symDef => symDef.path.toInputFromBuffers(buffers))
 
   def symbolOccurence(
       source: AbsolutePath,
