@@ -1320,13 +1320,15 @@ trait Completions { this: MetalsGlobal =>
             val defnSymbols = search
               .definitionSourceToplevels(semanticdbSymbol(tpe.typeSymbol))
               .asScala
-            if (defnSymbols.length > 0)
+            if (defnSymbols.length > 0) {
+              val symbolIdx = defnSymbols.zipWithIndex.toMap
               subclassesResult
                 .sortBy(sym => {
-                  defnSymbols.indexOf(semanticdbSymbol(sym))
+                  symbolIdx.getOrElse(semanticdbSymbol(sym), -1)
                 })
-            else
+            } else {
               subclassesResult
+            }
           }
 
         sortedSubclasses.foreach { sym =>
