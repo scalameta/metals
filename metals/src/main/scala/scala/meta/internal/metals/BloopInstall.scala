@@ -180,27 +180,23 @@ final class BloopInstall(
       digest: String
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
     tables.digests.setStatus(digest, Status.Requested)
-    if (buildTools.isBloop) {
-      languageClient
-        .showMessageRequest(ImportBuildChanges.params(buildTool.toString))
-        .asScala
-        .map { item =>
-          if (item == dontShowAgain) {
-            notification.dismissForever()
-          }
-          Confirmation.fromBoolean(item == ImportBuildChanges.yes)
+    val (params, yes) =
+      if (buildTools.isBloop) {
+        ImportBuildChanges.params(buildTool.toString) ->
+          ImportBuildChanges.yes
+      } else {
+        ImportBuild.params(buildTool.toString) ->
+          ImportBuild.yes
+      }
+    languageClient
+      .showMessageRequest(params)
+      .asScala
+      .map { item =>
+        if (item == dontShowAgain) {
+          notification.dismissForever()
         }
-    } else {
-      languageClient
-        .showMessageRequest(ImportBuild.params(buildTool.toString()))
-        .asScala
-        .map { item =>
-          if (item == dontShowAgain) {
-            notification.dismissForever()
-          }
-          Confirmation.fromBoolean(item == ImportBuild.yes)
-        }
-    }
+        Confirmation.fromBoolean(item == yes)
+      }
   }
 
 }
