@@ -31,19 +31,20 @@ object Refactoring {
         symbolSearch: MetalsSymbolSearch,
         token: CancelToken
     )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
-      scribe.info("Running contribute for UseNamedArguments")
+      scribe.debug("Running contribute for UseNamedArguments")
 
       def findMethodApplyTreeUnderCursor(
           root: Tree,
           range: Position
-      ): Option[Term.Apply] = {
-        root.collect {
-          case t @ Term.Apply(_, _)
-              if t.pos.start <= range.start && t.pos.end >= range.end =>
-            t
-        }.headOption
-        // TODO make sure we pick the correct tree in case of nested applications e.g. `f(g(x), y)`
-      }
+      ): Option[Term.Apply] =
+        root
+          .collect {
+            case t @ Term.Apply(_, _)
+                if t.pos.start <= range.start && t.pos.end >= range.end =>
+              t
+          }
+          .sortBy(_.pos.start)
+          .lastOption
 
       def findSymbolTree(tree: Tree): Term.Name = tree match {
         case x @ Term.Name(_) => x
@@ -55,10 +56,9 @@ object Refactoring {
           textDocument: TextDocument,
           symbolTreePos: Position
       ): Option[SymbolOccurrence] =
-        textDocument.occurrences.find(
-          so =>
-            so.getRange.startLine == symbolTreePos.startLine &&
-              so.getRange.startCharacter == symbolTreePos.startColumn
+        textDocument.occurrences.find(so =>
+          so.getRange.startLine == symbolTreePos.startLine &&
+            so.getRange.startCharacter == symbolTreePos.startColumn
         )
 
       def buildEdits(
@@ -89,22 +89,22 @@ object Refactoring {
             .getRange()
             .toMeta(Input.VirtualFile(path.toString, bufferContent))
           methodApplyTree <- findMethodApplyTreeUnderCursor(rootTree, metaRange)
-          _ = scribe.info(s"Tree under cursor: ${methodApplyTree.structure}")
+          _ = scribe.debug(s"Tree under cursor: ${methodApplyTree.structure}")
           textDocument <- semanticdbs.textDocument(path).documentIncludingStale
           symbolTree = findSymbolTree(methodApplyTree)
-          _ = scribe.info(
+          _ = scribe.debug(
             s"Symbol tree: $symbolTree, position: ${symbolTree.pos}"
           )
           symbolOccurrence <- findSymbolOccurrence(textDocument, symbolTree.pos)
-          _ = scribe.info(s"Symbol occurrence: $symbolOccurrence")
+          _ = scribe.debug(s"Symbol occurrence: $symbolOccurrence")
           symbolDocumentation <- symbolSearch
             .documentation(symbolOccurrence.symbol)
             .asScala
-          _ = scribe.info(s"Symbol documentation: $symbolDocumentation")
+          _ = scribe.debug(s"Symbol documentation: $symbolDocumentation")
         } yield {
           val parameterNames =
             symbolDocumentation.parameters().asScala.map(_.displayName()).toList
-          scribe.info(s"Parameter names: $parameterNames")
+          scribe.debug(s"Parameter names: $parameterNames")
 
           val edit = new l.WorkspaceEdit()
           val uri = params.getTextDocument().getUri()
