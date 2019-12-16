@@ -11,7 +11,7 @@ Whenever you are stuck or unsure, please open an issue or
 
 You will need the following applications installed:
 
-- Java 8 - Make sure `JAVA_HOME` points to a Java 8 installation and not Java 11.
+- Java 11 or 8 - Make sure `JAVA_HOME` points to a Java 11 or 8 installation. Metals will need to build and run on _both_.
 - `git`
 - `sbt` (for building a local version of the server)
 
