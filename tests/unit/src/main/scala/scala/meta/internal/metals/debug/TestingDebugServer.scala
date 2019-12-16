@@ -4,7 +4,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import scala.collection.mutable
 
-final class DummyServer(
+final class TestingDebugServer(
     respondTo: PartialFunction[Message, ResponseMessage] = PartialFunction.empty
 ) extends RemoteEndpoint {
   private val consumed = mutable.Buffer.empty[Message]
@@ -22,10 +22,10 @@ final class DummyServer(
   }
 }
 
-object DummyServer {
+object TestingDebugServer {
 
   def apply(
       respondTo: PartialFunction[Message, ResponseMessage]
-  ): DummyServer =
-    new DummyServer(respondTo)
+  ): TestingDebugServer =
+    new TestingDebugServer(respondTo)
 }

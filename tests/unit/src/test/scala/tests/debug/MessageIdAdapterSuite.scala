@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import tests.BaseSuite
 import scala.collection.mutable
 import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
-import scala.meta.internal.metals.debug.DummyServer
+import scala.meta.internal.metals.debug.TestingDebugServer
 import scala.meta.internal.metals.debug.MessageIdAdapter
 
 object MessageIdAdapterSuite extends BaseSuite {
@@ -21,7 +21,7 @@ object MessageIdAdapterSuite extends BaseSuite {
   }
 
   test("synthetic-request") {
-    val server = new DummyServer
+    val server = new TestingDebugServer
     val adapter = new MessageIdAdapter(server)
 
     adapter.consume(syntheticMessage())
@@ -30,7 +30,7 @@ object MessageIdAdapterSuite extends BaseSuite {
   }
 
   test("maintain-id-sequence") {
-    val server = new DummyServer
+    val server = new TestingDebugServer
     val adapter = new MessageIdAdapter(server)
 
     val messages = List(
@@ -59,7 +59,7 @@ object MessageIdAdapterSuite extends BaseSuite {
   }
 
   test("adapt-response-id") {
-    val server = DummyServer {
+    val server = TestingDebugServer {
       case req: RequestMessage if req.getId.toInt == 2 =>
         val response = new DebugResponseMessage
         response.setId(2)
