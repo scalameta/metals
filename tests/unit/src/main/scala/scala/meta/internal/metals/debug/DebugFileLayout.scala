@@ -2,7 +2,6 @@ package scala.meta.internal.metals.debug
 
 import scala.meta.inputs.Position
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
 
 final case class DebugFileLayout(
     relativePath: String,
@@ -19,8 +18,9 @@ object DebugFileLayout {
   def apply(layout: String): DebugFileLayout = {
     val (name, originalContent) = splitAtFirstNewLine(layout)
     val text = originalContent.replaceAllLiterally(">>", "  ")
-    val breakpoints = originalContent
-      .findAll(">>")
+    val breakpoints = ">>".r
+      .findAllMatchIn(originalContent)
+      .map(_.start)
       .map(offset => Position.Range(Input.String(text), offset, offset))
 
     DebugFileLayout(name.stripPrefix("/"), text, breakpoints.toList)

@@ -411,13 +411,6 @@ object MetalsEnrichments
 
     def toAbsolutePath: AbsolutePath =
       AbsolutePath(Paths.get(URI.create(value.stripPrefix("metals:")))).dealias
-
-    def findAll(pattern: String): Iterator[Int] = {
-      val firstOffset = value.indexOf(pattern)
-      Iterator
-        .iterate(firstOffset)(offset => value.indexOf(pattern, offset + 1))
-        .takeWhile(_ >= 0)
-    }
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
