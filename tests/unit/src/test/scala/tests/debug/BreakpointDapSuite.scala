@@ -22,9 +22,7 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  // disabled, because finding enclosing class for the breakpoint line is not working
-  // see [[scala.meta.internal.metals.debug.SetBreakpointsRequestHandler]]
-  assertFileBreakpoints("succeeding-class", disabled = true)(
+  assertFileBreakpoints("succeeding-class")(
     source = """|a/src/main/scala/a/Main.scala
                 |package a
                 |

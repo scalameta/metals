@@ -82,6 +82,7 @@ private[debug] final class SetBreakpointsRequestHandler(
   ): SymbolOccurrence => Long = { occ =>
     val startLine = occ.range.fold(Int.MaxValue)(_.startLine)
     val breakpointLine = adapters.adaptLine(breakpoint.getLine)
-    math.abs(breakpointLine - startLine)
+    if (startLine > breakpointLine) Long.MaxValue
+    else breakpointLine - startLine
   }
 }
