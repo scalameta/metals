@@ -158,8 +158,9 @@ lazy val V = new {
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
-    Seq("2.13.0", scala213, scala212) ++ deprecatedScalaVersions
+    nonDeprecatedScalaVersions ++ deprecatedScalaVersions
   def deprecatedScalaVersions = Seq("2.12.8", "2.12.9", scala211)
+  def nonDeprecatedScalaVersions = Seq("2.13.0", scala213, scala212)
   def guava = "com.google.guava" % "guava" % "28.1-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.1"
   def dap4j =
@@ -384,7 +385,7 @@ lazy val cross = project
         List("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
       case _ => Nil
     }),
-    crossScalaVersions := V.supportedScalaVersions,
+    crossScalaVersions := V.nonDeprecatedScalaVersions,
     scalacOptions ++= crossSetting(
       scalaVersion.value,
       if211 = List("-Xexperimental", "-Ywarn-unused-import")
