@@ -93,16 +93,16 @@ object StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
       Variables( // after calculating `z`
         Scope.local(Variable("x: int = 1"), Variable("z: int = 3"))
       ),
-      Variables(Scope.local())
+      Variables(Scope.local(Variable("x$1: Tuple2$mcII$sp")))
     )
   )
 
-// TODO enable after https://github.com/scalacenter/bloop/pull/1115 gets merged
-  assertStackFrame("overridden-toString", disabled = true)(
-    source = """|object Main {
+  assertStackFrame("overridden-toString")(
+    source = """|a/src/main/scala/Main.scala
+                |object Main {
                 |  def main(args: Array[String]): Unit = {
                 |    val foo = new Foo
-                |>>  foo()
+                |>>  println()
                 |  }
                 |}
                 |

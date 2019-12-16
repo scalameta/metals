@@ -137,13 +137,6 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
     server
       .variables(args)
       .asScala
-      .recover {
-        // TODO remove after https://github.com/scalacenter/bloop/pull/1115
-        case error if error.getMessage == "an implementation is missing" =>
-          val response = new VariablesResponse
-          response.setVariables(Array.empty)
-          response
-      }
   }
 
   def shutdown: Future[Unit] = {
