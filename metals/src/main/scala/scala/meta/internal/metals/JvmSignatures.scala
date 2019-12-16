@@ -1,8 +1,10 @@
 package scala.meta.internal.metals
 import scala.meta.internal.semanticdb.SymbolOccurrence
 
-object ClassPath {
-  final case class TypeSignature(value: String)
+object JvmSignatures {
+  final case class TypeSignature(value: String) {
+    override def toString: String = value
+  }
 
   def toTypeSignature(definition: SymbolOccurrence): TypeSignature = {
     import scala.meta.internal.semanticdb.Scala._

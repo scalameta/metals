@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.internal.metals.ClassPath
+import scala.meta.internal.metals.JvmSignatures
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -27,7 +27,7 @@ private[debug] final class SetBreakpointsRequestHandler(
     val occurrences = Mtags.allToplevels(input).occurrences
     val groups = request.getBreakpoints.groupBy { breakpoint =>
       val definition = occurrences.minBy(distanceFrom(breakpoint))
-      ClassPath.toTypeSignature(definition)
+      JvmSignatures.toTypeSignature(definition)
     }
 
     val partitions = groups.map {
