@@ -29,6 +29,8 @@ import java.util.concurrent.CancellationException
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.sys.process.Process
 import scala.meta.io.Classpath
+import coursierapi.Repository
+import coursierapi.MavenRepository
 
 object BloopPants {
 
@@ -252,6 +254,8 @@ private class BloopPants(
       )
       Properties.versionNumberString
     }
+  lazy val optimizedScalatestFramework: List[Path] =
+    fetchScalatestFrameworkJar()
   val allScalaJars: Seq[Path] = {
     val compilerClasspath = export.scalaPlatform.compilerClasspath
     if (compilerClasspath.nonEmpty) compilerClasspath
@@ -376,6 +380,9 @@ private class BloopPants(
     } yield entry)
     classpath ++= libraries.iterator.flatMap(_.nonSources)
     classpath ++= allScalaJars
+    if (target.targetType.isTest) {
+      classpath ++= optimizedScalatestFramework
+    }
 
     binaryDependencySources ++= libraries.flatMap(_.sources)
 
@@ -449,10 +456,14 @@ private class BloopPants(
 
   private def bloopTestFrameworks: Option[C.Test] = {
     val scalatest = C.TestFramework(
-      List(
-        "org.scalatest.tools.Framework",
-        "org.scalatest.tools.ScalaTestFramework"
-      )
+      if (optimizedScalatestFramework.nonEmpty) {
+        List("org.scalatest.tools.FasterFramework")
+      } else {
+        List(
+          "org.scalatest.tools.Framework",
+          "org.scalatest.tools.ScalaTestFramework"
+        )
+      }
     )
     // These test frameworks are the default output from running `show
     // testFrameworks` in sbt. The output from `./pants export` doesn't include
@@ -571,5 +582,28 @@ private class BloopPants(
       ls.close()
     }
   }
+
+  // See https://github.com/scalatest/scalatest/pull/1739
+  private def fetchScalatestFrameworkJar(): List[Path] =
+    try {
+      coursierapi.Fetch
+        .create()
+        .withDependencies(
+          Dependency
+            .of("com.geirsson", "scalatest-framework_2.12", "0.1.0")
+            .withTransitive(false)
+        )
+        .addRepositories(
+          MavenRepository.of(
+            "https://oss.sonatype.org/content/repositories/public"
+          )
+        )
+        .fetch()
+        .asScala
+        .map(_.toPath())
+        .toList
+    } catch {
+      case NonFatal(_) => Nil
+    }
 
 }
