@@ -1,5 +1,5 @@
 package scala.meta.internal.metals.debug
-import java.lang
+
 import java.util.Collections
 import java.util.concurrent.TimeUnit
 import org.eclipse.lsp4j.debug.Capabilities
@@ -98,7 +98,7 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
     }
   }
 
-  def stackFrame(threadId: lang.Long): Future[StackFrame] = {
+  def stackFrame(threadId: Long): Future[StackFrame] = {
     for {
       frame <- stackTrace(threadId).map(_.getStackFrames.head)
       scopes <- scopes(frame.getId).map(_.getScopes)
