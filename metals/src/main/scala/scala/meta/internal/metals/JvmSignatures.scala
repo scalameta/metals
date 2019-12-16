@@ -1,37 +1,36 @@
 package scala.meta.internal.metals
+import scala.annotation.tailrec
+import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolOccurrence
 
 object JvmSignatures {
-  final case class TypeSignature(value: String) {
-    override def toString: String = value
-  }
+  private val shouldIgnore = Set(Symbols.RootPackage, Symbols.EmptyPackage)
 
   def toTypeSignature(definition: SymbolOccurrence): TypeSignature = {
-    import scala.meta.internal.semanticdb.Scala._
-    @scala.annotation.tailrec
-    def qualifier(symbol: String, acc: List[String]): String = {
-      val owner = symbol.owner
-      if (owner == Symbols.RootPackage || owner == Symbols.EmptyPackage) {
-        acc.mkString
-      } else {
-        val desc = owner.desc
-        // assumption: can only be a package or type
-        val delimiter = if (desc.isPackage) "." else "$"
-        val segment = desc.name + delimiter
-        qualifier(owner, segment :: acc)
+    @tailrec
+    def loop(owners: List[String], fqcn: StringBuilder): String = {
+      owners match {
+        case Nil => fqcn.toString()
+        case symbol :: tail if shouldIgnore(symbol) =>
+          loop(tail, fqcn)
+        case symbol :: tail =>
+          val desc = symbol.desc
+          fqcn.append(desc.name)
+
+          val delimiter =
+            if (desc.isPackage) "."
+            else if (desc.isTerm) "$"
+            else if (tail.nonEmpty) "$" // nested class
+            else ""
+          loop(tail, fqcn.append(delimiter))
       }
     }
-
-    def name(symbol: String): String = {
-      val desc = symbol.desc
-      val name = desc.name
-
-      val suffix = if (desc.isTerm) "$" else ""
-      name + suffix
-    }
-
-    val symbol = definition.symbol
-    val fqcn = qualifier(symbol, Nil) + name(symbol)
+    val fqcn = loop(definition.symbol.ownerChain, new StringBuilder)
     TypeSignature(fqcn)
+  }
+
+  final case class TypeSignature(value: String) {
+    override def toString: String = value
   }
 }
