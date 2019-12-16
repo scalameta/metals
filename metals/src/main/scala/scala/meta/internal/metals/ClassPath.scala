@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 import scala.meta.internal.semanticdb.SymbolOccurrence
 
 object ClassPath {
-  final case class TypeSignature(value: String) extends AnyVal
+  final case class TypeSignature(value: String)
 
   def toTypeSignature(definition: SymbolOccurrence): TypeSignature = {
     import scala.meta.internal.semanticdb.Scala._
