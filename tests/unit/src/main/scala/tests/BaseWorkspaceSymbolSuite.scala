@@ -21,7 +21,7 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
       expected: String
   )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
     test(query) {
-      val result = symbols.search(query, target = None)
+      val result = symbols.search(query)
       val obtained =
         if (result.length > 100) s"${result.length} results"
         else {

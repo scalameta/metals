@@ -31,28 +31,14 @@ final class WorkspaceSymbolProvider(
   var inDependencies: ClasspathSearch =
     ClasspathSearch.fromClasspath(Nil, bucketSize)
 
-  def search(
-      query: String,
-      target: Option[BuildTargetIdentifier],
-      token: CancelChecker = () => ()
-  ): Seq[l.SymbolInformation] = {
-    if (query.isEmpty) return Nil
-    try {
-      searchUnsafe(WorkspaceSymbolQuery.fromTextQuery(query), token, target)
-    } catch {
-      case InterruptException() =>
-        Nil
-    }
+  def search(query: String): Seq[l.SymbolInformation] = {
+    search(query, () => ())
   }
 
-  def searchExact(
-      query: String,
-      target: Option[BuildTargetIdentifier],
-      token: CancelChecker = () => ()
-  ): Seq[l.SymbolInformation] = {
+  def search(query: String, token: CancelChecker): Seq[l.SymbolInformation] = {
     if (query.isEmpty) return Nil
     try {
-      searchUnsafe(WorkspaceSymbolQuery.exact(query), token, target)
+      searchUnsafe(query, token)
     } catch {
       case InterruptException() =>
         Nil
@@ -142,13 +128,13 @@ final class WorkspaceSymbolProvider(
   }
 
   private def searchUnsafe(
-      query: WorkspaceSymbolQuery,
-      token: CancelChecker,
-      target: Option[BuildTargetIdentifier]
+      textQuery: String,
+      token: CancelChecker
   ): Seq[l.SymbolInformation] = {
+    val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
     val visitor =
       new WorkspaceSearchVisitor(workspace, query, token, index, fileOnDisk)
-    search(query, visitor, target)
+    search(query, visitor, None)
     visitor.allResults()
   }
 }

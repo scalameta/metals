@@ -1121,8 +1121,7 @@ class MetalsLanguageServer(
     CancelTokens.future { token =>
       indexingPromise.future.map { _ =>
         val timer = new Timer(time)
-        val result =
-          workspaceSymbols.search(params.getQuery, target = None, token).asJava
+        val result = workspaceSymbols.search(params.getQuery, token).asJava
         if (config.statistics.isWorkspaceSymbol) {
           scribe.info(
             s"time: found ${result.size()} results for query '${params.getQuery}' in $timer"
@@ -1133,7 +1132,7 @@ class MetalsLanguageServer(
     }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] = {
-    workspaceSymbols.search(query, target = None)
+    workspaceSymbols.search(query)
   }
 
   @JsonRequest("workspace/executeCommand")
