@@ -21,6 +21,9 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
 
   def definition(symbol: String): ju.List[Location] = ju.Collections.emptyList()
 
+  override def definitionSourceToplevels(symbol: String): ju.List[String] =
+    ju.Collections.emptyList()
+
   override def search(
       query: String,
       buildTargetIdentifier: String,

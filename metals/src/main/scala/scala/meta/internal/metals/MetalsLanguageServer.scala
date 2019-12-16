@@ -174,6 +174,7 @@ class MetalsLanguageServer(
   private var foldingRangeProvider: FoldingRangeProvider = _
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
+  private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   var tables: Tables = _
   var statusBar: StatusBar = _
@@ -387,6 +388,11 @@ class MetalsLanguageServer(
       interactiveSemanticdbs.toFileOnDisk
     )
     foldingRangeProvider = FoldingRangeProvider(trees, buffers, params)
+    symbolSearch = new MetalsSymbolSearch(
+      symbolDocs,
+      workspaceSymbols,
+      definitionProvider
+    )
     compilers = register(
       new Compilers(
         workspace,
@@ -394,11 +400,7 @@ class MetalsLanguageServer(
         () => userConfig,
         buildTargets,
         buffers,
-        new MetalsSymbolSearch(
-          symbolDocs,
-          workspaceSymbols,
-          definitionProvider
-        ),
+        symbolSearch,
         embedded,
         statusBar,
         sh,
@@ -1599,6 +1601,7 @@ class MetalsLanguageServer(
       semanticDBIndexer.reset()
       treeView.reset()
       worksheetProvider.reset()
+      symbolSearch.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
       for {
