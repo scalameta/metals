@@ -3,7 +3,7 @@ package tests.pc
 import tests.BasePCSuite
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
-  val test: (String, String) => (String, String) =
+  val runCheck: (String, String) => (String, String) =
     obtainedAndExpected(params => pc.definition(params).thenApply(_.locations())
     )
 
@@ -14,7 +14,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
   ): Unit = {
     test(name) {
       val uri = "A.scala"
-      val (obtained, expected) = test(original, uri)
+      val (obtained, expected) = runCheck(original, uri)
       assertNoDiff(obtained, getExpected(expected, compat))
     }
   }
