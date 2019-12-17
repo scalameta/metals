@@ -99,10 +99,15 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
                  |}
                  |""".stripMargin,
     main = "a.Main",
-    instrument = steps =>
+    instrument = steps => {
+      val (javaLibFile, javaLibLine) =
+        if (isJava8) (".metals/readonly/java/io/PrintStream.java", 805)
+        else (".metals/readonly/java.base/java/io/PrintStream.java", 881)
+
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .at(".metals/readonly/java/io/PrintStream.java", line = 805)(Continue)
+        .at(javaLibFile, javaLibLine)(Continue)
+    }
   )
 
   assertSteps("stops-on-different-class-in-same-file")(
@@ -157,5 +162,10 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
         _ <- debugger.shutdown
       } yield ()
     }
+  }
+
+  private def javaLibRoot: String = {
+    if (isJava8) ".metals/readonly"
+    else ".metals/readonly/java.base"
   }
 }
