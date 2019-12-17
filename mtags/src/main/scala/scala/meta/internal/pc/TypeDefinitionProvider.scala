@@ -19,7 +19,8 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
     if (params.isWhitespace)
       None
     else {
-      Some(createCompilationUnit(params)._3)
+      val (_, _, tree) = createCompilationUnit(params)
+      Some(tree)
     }
 
   def lineAndCharacterToOffset(
@@ -59,15 +60,13 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
 
           val txt = app.pos.source.content
             .slice(rStart, rEnd)
-            .fold("")(_ + _.toString)
-            .toString
-          val tokens = txt.tokenize.get.tokens.toList
-            .filter(t => {
+            .mkString("")
+          txt.tokenize.get.tokens.toList
+            .find(t => {
               val (pStart, pEnd) =
                 (app.pos.start + t.pos.start, app.pos.start + t.pos.end)
               pStart <= params.offset && pEnd >= params.offset
-            })
-          tokens.headOption match {
+            }) match {
             case Some(t) =>
               app.symbol.asMethod.paramLists.flatten
                 .find(_.nameString.trim == t.text)
@@ -93,13 +92,14 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
       }
   }
 
-  def typeDefinition(params: OffsetParams): List[l.Location] =
+  def typeDefinition(params: OffsetParams): List[l.Location] = {
     typeSymbol(params)
       .collect {
         case sym => getSymbolDefinition(sym)
       }
       .toList
       .flatten
+  }
 
   private def getSymbolDefinition(sym: Symbol): List[l.Location] = {
     val file = sym.pos.source.file
@@ -114,14 +114,12 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
     try {
       if (file != null || compiler.unitOfFile.contains(file)) {
         val unit = compiler.unitOfFile(file)
-        if (unit != null) {
-          val trees = unit.body
-            .filter(_.symbol == sym)
-            .filter(_.pos != null)
-            .filter(_.isDef)
-          trees
-            .map(t => new l.Location(uri, t.pos.toLSP))
-        } else fallbackToSemanticDB(sym)
+        val trees = unit.body
+          .filter(_.symbol == sym)
+          .filter(_.pos != null)
+          .filter(_.isDef)
+        trees
+          .map(t => new l.Location(uri, t.pos.toLSP))
       } else fallbackToSemanticDB(sym)
     } catch {
       case _: NoSuchElementException =>

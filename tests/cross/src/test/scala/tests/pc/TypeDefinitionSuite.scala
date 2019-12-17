@@ -1,6 +1,9 @@
 package tests.pc
 
-object TypeDefinitionSuite extends BaseTypeDefinitionSuite {
+import tests.BasePCSuite
+import scala.concurrent.duration.Duration
+
+object TypeDefinitionSuite extends BasePCSuite {
 
   check("val")(
     """
@@ -98,5 +101,24 @@ object TypeDefinitionSuite extends BaseTypeDefinitionSuite {
       |}
       |""".stripMargin
   )
+  val runCheck: (String, String) => (String, String) =
+    obtainedAndExpected(params => pc.typeDefinition(params))
+
+  override def beforeAll(): Unit = {
+    indexJDK()
+    indexScalaLibrary()
+  }
+
+  def check(name: String)(
+      code: String,
+      compat: Map[String, String] = Map(),
+      duration: Duration = Duration("3 min")
+  ): Unit = {
+    test(name) {
+      val uri = "Main.scala"
+      val (obtained, expected) = runCheck(code, uri)
+      assertNoDiff(obtained, getExpected(expected, compat))
+    }
+  }
 
 }
