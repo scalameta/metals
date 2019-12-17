@@ -121,6 +121,30 @@ object StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
     )
   )
 
+  assertStackFrame("symbolic-id")(
+    source = """|a/src/main/scala/Main.scala
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    val list = List(1, 2)
+                |>>  println()
+                |  }
+                |}
+                |
+                |class Foo {
+                |  override def toString = "foo"
+                |}
+                |""".stripMargin,
+    expectedFrames = List(
+      Variables(
+        Scope.local(
+          Variable("this: Main$"),
+          Variable("args: String[]"),
+          Variable("list: $colon$colon")
+        )
+      )
+    )
+  )
+
   def assertStackFrame(
       name: String,
       disabled: Boolean = false
