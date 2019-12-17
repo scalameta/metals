@@ -3,24 +3,12 @@ id: vim
 title: Vim
 ---
 
-Metals works with most LSP clients for Vim:
+![Vim demo](https://i.imgur.com/4BYHCCL.gif)
 
-- [`vim-lsc`](https://github.com/natebosch/vim-lsc/): simple installation and
-  low resource usage but limited functionality (no auto-import, cancellation,
-  formatting, folding).
-- [`coc.nvim`](https://github.com/neoclide/coc.nvim): installation requires
-  neovim or Vim v8.1 along with npm. Feature rich, supports all of LSP.
-- [`LanguageClient-neovim`](https://github.com/autozimu/LanguageClient-neovim/):
-  client written in Rust.
-- [`vim-lsp`](https://github.com/prabirshrestha/vim-lsp): simple installation
-  but limited functionality (no auto-import, cancellation and no prompt for
-  build import).
+Metals works with most LSP clients for Vim, but we recommend using the
+[coc-metals extension](https://www.npmjs.com/package/coc-metals) for [`coc.nvim`](https://github.com/neoclide/coc.nvim)
+which will provide the most complete implementation of LSP and Metals specific helpers.
 
-In this page, we use and recommend `coc.nvim` (Conquer Of Completion) since it offers a richer
-user experience. However, the same steps can be adapted to use Metals with other LSP
-clients.
-
-![Vim demo](https://i.imgur.com/jMMEmCC.gif)
 
 ```scala mdoc:requirements
 
@@ -34,13 +22,12 @@ sure you have the correct version installed.
 ```sh
 # If using Vim
 vim --version | head
-VIM - Vi IMproved 8.1
+VIM - Vi IMproved 8.2
 
 # If using Neovim
 nvim --version | head
 NVIM v0.4.3
 ```
-
 ## Installing yarn
 
 `coc.nvim` requires [Node.js](https://nodejs.org/en/download/) in order to work.
@@ -82,28 +69,6 @@ au BufRead,BufNewFile *.sbt set filetype=scala
 Run `:PlugInstall` to install the plugin. If you already have `coc.nvim`
 installed, be sure to update to the latest version with `:PlugUpdate`.
 
-### Configuration
-
-We need to tell `coc.nvim` that our LSP server is going to be `metals`. In order
-to do so, we need to run `:CocConfig` and input our configuration. Here's the
-recommended default:
-
-```jsonc
-// vim:    ~/.vim/coc-settings.json
-// neovim: ~/.config/nvim/coc-settings.json
-{
-  "languageserver": {
-    "metals": {
-      "command": "metals-vim",
-      "rootPatterns": ["build.sbt"],
-      "filetypes": ["scala", "sbt"]
-    }
-  },
-  // Needed for type formatting on multiline strings
-  "coc.preferences.formatOnType": true
-}
-```
-
 `coc.nvim` uses [jsonc](https://code.visualstudio.com/docs/languages/json) as
 a configuration file format. It's basically json with comment support.
 
@@ -112,23 +77,6 @@ In order to get comment highlighting, please add:
 ```vim
 autocmd FileType json syntax match Comment +\/\/.\+$+
 ```
-
-### Generating metals binary
-
-If you now start Vim in a Scala project, it will fail since the `metals-vim`
-binary does not exist yet.
-
-```scala mdoc:bootstrap:metals-vim coc.nvim
-
-```
-
-The `-Dmetals.client=coc.nvim` flag is important since it configures Metals for
-usage with the `coc.nvim` client.
-
-```scala mdoc:editor:vim
-
-```
-
 ### LSP commands key mapping
 
 `coc.nvim` doesn't come with a default key mapping for LSP commands, so you need to
@@ -213,23 +161,50 @@ nnoremap <silent> <space>p  :<C-u>CocListResume<CR>
 " Currently used for the formatOnType feature.
 inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
       \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
-
-" Metals specific commands
-" Start Metals Doctor
-command! -nargs=0 MetalsDoctor :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'doctor-run' })
-" Manually start build import
-command! -nargs=0 MetalsImport :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-import' })
-" Manually connect with the build server
-command! -nargs=0 MetalsConnect :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-connect' })
 ```
 
-## Learn more about coc.nvim
+### Installing coc-metals
 
-For comprehensive documentation about `coc.nvim`, run the following command.
+Once you have `coc.nvim` installed, you can then install Metals by running.
 
 ```vim
-:help coc-contents
+:CocInstall coc-metals
 ```
+
+
+
+```scala mdoc:editor:vim
+Update the `metals.sbtScript` setting to use a custom `sbt` script instead of the
+default Metals launcher if you need further customizations like reading environment
+variables.
+
+![Sbt Launcher](https://i.imgur.com/kbxNKzI.png)
+```
+
+## Configure Java version
+The `coc-metals` extension uses by default the `JAVA_HOME` environment variable (via [`find-java-home`](https://www.npmjs.com/package/find-java-home)) to locate the `java` executable.
+
+![No Java Home](https://i.imgur.com/clDfPMk.png)
+
+If no `JAVA_HOME` is detected you can then Open Settings by following the instructions or do it at a later time by using `:CocConfig` or `:CocConfigLocal` which will open up your configuration where you can manually enter your JAVA_HOME location.
+
+![Enter Java Home](https://i.imgur.com/wVThrMq.png)
+
+## Using latest Metals SNAPSHOT
+
+Update the "Server Version" setting to try out the latest pending Metals
+features.
+
+```scala mdoc:releases
+
+```
+
+After updating the version, you'll be triggered to reload the window.
+This will be necessary before the new version will be dowloaded and used.
+
+![Update Metals Version](https://i.imgur.com/VUCdQvi.png)
+
+
 
 ## List all workspace compile errors
 
@@ -245,7 +220,67 @@ Or use the default recommended mapping `<space> a`.
 This is helpful to see compilation errors in different files from your current
 open buffer.
 
-## Close buffer without exiting
+![Diagnostics](https://i.imgur.com/cer22HW.png)
+
+## Run doctor
+
+To troubleshoot problems with your build workspace, open your coc commands by either
+using `:CocCommand` or the recommend mapping `<space> c`. This will open your command
+window allowing you to search for `metals.doctor-run` command.
+
+![Run Doctor Command](https://i.imgur.com/QaqhxF7.png)
+
+This command opens your browser with a table like this.
+
+![Run Doctor](https://i.imgur.com/yelm0jd.png)
+
+## Other Available Command
+
+  - `metals.restartServer`
+  - `metals.build-import`
+  - `metals.build-connect`
+  - `metals.sources-scan`
+  - `metals.compile-cascade`
+  - `metals.compile-cancel`
+  - `metals.doctor-run`
+
+## Show document symbols
+
+Run `:CocList outline` to show a symbol outline for the current file or use the
+default mapping `<space> o`.
+
+![Document Symbols](https://i.imgur.com/gEhAXV4.png)
+
+
+## Available Configuration Options
+
+The following configuration options are currently available. The easiest way to set these configurations is to enter `:CocConfig` or `:CocLocalConfig` to set your global or local configuration settings respectively.
+If you'd like to get autocompletion help for the configuration values you can install [coc-json](https://github.com/neoclide/coc-json).
+
+
+   Configuration Option     |      Description
+----------------------------|---------------------------
+`metals.serverVersion`      | The version of the Metals server artifact. Requires reloading the window.
+`metals.serverProperties`   | Optional list of properties to pass along to the Metals server. By default, the environment variable `JAVA_OPTS` and `.jvmopts` file are respected.
+`metals.javaHome`           | Optional path to the Java home directory. Requires reloading the window.\n\nDefaults to the most recent Java 8 version computed by the `locate-java-home` npm package.
+`metals.sbtScript`          | Optional absolute path to an `sbt` executable to use for running `sbt bloopInstall`. By default, Metals uses `java -jar sbt-launch.jar` with an embedded launcher while respecting `.jvmopts` and `.sbtopts`.\n\nUpdate this setting if your `sbt` script requires more customizations like using environment variables.
+`metals.millScript`         | Optional absolute path to a `mill` executable to use for running `mill mill.contrib.Bloop/install`. By default, Metals uses an embedded `millw` script while respecting `.mill-version` file. Update this setting if your `mill` script requires more customizations.
+`metals.mavenScript`        | Optional absolute path to a `mvn` executable to use for running `mvn ch.epfl.scala:maven-bloop_2.10:<bloop_version>:bloopInstall`. By default, Metals uses an embedded `mvnw` script. Update this setting if your `mvn` script requires more customizations.
+`metals.gradleScript`       | Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`. By default, Metals uses an embedded `gradlew` script. Update this setting if your `gradle` script requires more customizations.
+`metals.scalafmtConfigPath` | Optional custom path to the .scalafmt.conf file. Should be relative to the workspace root directory and use forward slashes `/` for file separators (even on Windows).
+`metals.customRepositories` | Optional list of custom resolvers passed to Coursier when fetching metals dependencies.\n\nFor documentation on accepted values see the [Coursier documentation](https://get-coursier.io/docs/other-repositories). The extension will pass these to Coursier using the COURSIER_REPOSITORIES environment variable after joining the custom repositories with a pipe character (|).
+
+## Enable on type formatting for multiline string formatting
+
+![on-type](https://i.imgur.com/astTOKu.gif)
+
+To properly support adding `|` in multiline strings we are using the
+`onTypeFormatting` method. To enable the functionality you need to enable
+`coc.preferences.formatOnType` setting.
+
+![coc-preferences-formatOnType](https://i.imgur.com/RWPHt2q.png)
+
+### Close buffer without exiting
 
 To close a buffer and return to the previous buffer, run the following command.
 
@@ -253,10 +288,9 @@ To close a buffer and return to the previous buffer, run the following command.
 :bd
 ```
 
-This command is helpful when navigating in library dependency sources in the
-`.metals/readonly` directory.
+This command is helpful when navigating in library dependency sources in the .metals/readonly directory.
 
-## Shut down the language server
+### Shut down the language server
 
 The Metals server is shutdown when you exit vim as usual.
 
@@ -266,49 +300,33 @@ The Metals server is shutdown when you exit vim as usual.
 
 This step clean ups resources that are used by the server.
 
-## Run doctor
-
-To troubleshoot problems with your build workspace, make sure the below snippet
-is in your `.vimrc` which will allow you to issue a `:MetalsDoctor` command.
-
-```vim
-command! -nargs=0 MetalsDoctor :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'doctor-run' })
-```
-
-This command opens your browser with a table like this.
-
-![Run Doctor](https://i.imgur.com/yelm0jd.png)
-
-Note: the binary `metals-vim` needs to be built using `-Dmetals.http=true` for
-this command to work.
-
-## Manually start build import
-
-To manually start the `sbt bloopInstall` step, make sure the below snippet
-is in your `.vimrc` and issue the `:MetalsInstall` command.
-This command works only for sbt builds at the moment.
-
-```vim
-command! -nargs=0 MetalsImport :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-import' })
-```
-
-## Manually connect with build server
-
-To manually tell Metals to establish a connection with the build server, make sure
-the snippet below is in your `.vimrc` and issue the `:MetalsConnect` command.
-This command works only if there is a `.bloop/` directory containing JSON files.
-
-```vim
-command! -nargs=0 MetalsConnect :call CocRequestAsync('metals', 'workspace/executeCommand', { 'command': 'build-connect' })
-```
-
-## Show document symbols
-
-Run `:CocList outline` to show a symbol outline for the current file or use the
-default key `<space> o`.
-
-![Document Symbols](https://i.imgur.com/LviFAVm.gif)
-
 ```scala mdoc:generic
 
 ```
+
+## Using an alternative LSP Client
+
+While we recommend using the `coc-metals` extions with `coc.nvim`, Metals will work
+with these alternative LSP clients.
+
+- [`vim-lsc`](https://github.com/natebosch/vim-lsc/): simple installation and
+  low resource usage but limited functionality (no auto-import, cancellation,
+  formatting, folding).
+- [`LanguageClient-neovim`](https://github.com/autozimu/LanguageClient-neovim/):
+  client written in Rust.
+- [`vim-lsp`](https://github.com/prabirshrestha/vim-lsp): simple installation
+  but limited functionality (no auto-import, cancellation and no prompt for
+  build import).
+
+### Generating metals binary
+
+If you now start Vim in a Scala project, it will fail since the `metals-vim`
+binary does not exist yet.
+
+```scala mdoc:bootstrap:metals-vim vim-lsc
+
+```
+
+The `-Dmetals.client=vim-lsc` flag is important since it configures Metals for
+usage with the `vim-lsc` client.
+

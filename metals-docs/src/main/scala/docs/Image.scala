@@ -15,8 +15,8 @@ object Image {
       "runDoctor" -> "https://i.imgur.com/8ODqcUj.png"
     ),
     "vim" -> Map(
-      "importBuild" -> "https://i.imgur.com/EAyt0xP.png",
-      "importChanges" -> "https://i.imgur.com/hxOKfr0.png"
+      "importBuild" -> "https://i.imgur.com/1EyQPTC.png",
+      "importChanges" -> "https://i.imgur.com/iocTVb6.png"
     ),
     "emacs" -> Map(
       "importBuild" -> "https://i.imgur.com/UdwMQFk.png",

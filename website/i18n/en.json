@@ -42,6 +42,10 @@
       "editors/atom": {
         "title": "Atom"
       },
+      "editors/decoration-protocol": {
+        "title": "Decoration Protocol v0.1.0",
+        "sidebar_label": "Decoration Protocol"
+      },
       "editors/eclipse": {
         "title": "Eclipse"
       },
