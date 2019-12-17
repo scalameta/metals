@@ -69,17 +69,9 @@ object PantsExport {
         })
     }.toMap
 
-    val scalaCompilerClasspath = output
-      .obj(PantsKeys.scalaPlatform)
-      .obj(PantsKeys.compilerClasspath)
-      .arr
-      .map(path => Paths.get(path.str))
-    val scalaPlatform = PantsScalaPlatform(
-      output.obj(PantsKeys.scalaPlatform).obj(PantsKeys.scalaVersion).str,
-      scalaCompilerClasspath
-    )
-
     val cycles = Cycles.findConnectedComponents(output)
+
+    val scalaPlatform = PantsScalaPlatform.fromJson(output)
 
     PantsExport(
       targets = targets,
@@ -88,4 +80,5 @@ object PantsExport {
       cycles = cycles
     )
   }
+
 }
