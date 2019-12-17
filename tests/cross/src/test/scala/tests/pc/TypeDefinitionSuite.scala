@@ -4,6 +4,8 @@ import tests.BasePCSuite
 import scala.concurrent.duration.Duration
 
 object TypeDefinitionSuite extends BasePCSuite {
+  val runCheck: (String, String) => (String, String) =
+    obtainedAndExpected(params => pc.typeDefinition(params))
 
   check("val")(
     """
@@ -101,8 +103,6 @@ object TypeDefinitionSuite extends BasePCSuite {
       |}
       |""".stripMargin
   )
-  val runCheck: (String, String) => (String, String) =
-    obtainedAndExpected(params => pc.typeDefinition(params))
 
   override def beforeAll(): Unit = {
     indexJDK()

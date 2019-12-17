@@ -866,8 +866,20 @@ final class TestingServer(
       filenameStr: String = "",
       queryStr: String,
       expectedLocs: List[l.Location] = Nil,
-      root: AbsolutePath
+      root: AbsolutePath,
+      isJava8: Boolean = true
   ): Future[Unit] = {
+    def compatJDK(locs: List[l.Location]): List[Location] =
+      locs.map(loc =>
+        if (isJava8) loc
+        else {
+          new l.Location(
+            loc.getUri.replaceAllLiterally("java.base/", ""),
+            loc.getRange
+          )
+        }
+      )
+
     val fMap =
       FileLayout.mapFromString(queryStr).filter(_._1.endsWith(".scala"))
 
@@ -880,7 +892,7 @@ final class TestingServer(
           (
             filename,
             content.replaceAll("""/\*[^\*]*\*/""", ""),
-            content.lines.find(_.contains("@@")).collect {
+            content.split("\n").find(_.contains("@@")).collect {
               case uriRegex(uri) => uri
             }
           )
@@ -890,11 +902,11 @@ final class TestingServer(
 
     val extractedExp = if (expectedLocs.isEmpty) {
       fMap
-        .filter(_._2.lines.exists(l => l.matches(".*<<[^>]+>>.*")))
+        .filter(_._2.split("\n").exists(l => l.matches(".*<<[^>]+>>.*")))
         .map(t => {
           val (filename, content) = t
 
-          val lines = content.lines.toList
+          val lines = content.split("\n").toList
           val range = lines.indices.find(lines(_).contains("<<")) match {
             case Some(startLine) =>
               val startStr: String = lines(startLine)
@@ -926,13 +938,13 @@ final class TestingServer(
     } yield {
       uri.map(TestingServer.uriToRelative(_, root).stripPrefix("/")) match {
         case Some(uriStr) =>
-          typeDefinitions
+          compatJDK(typeDefinitions)
             .map(o =>
               TestingServer.uriToRelative(o.getUri, root).stripPrefix("/")
             )
             .map(o => DiffAssertions.assertNoDiff(o, uriStr))
         case None =>
-          val obtained = typeDefinitions
+          val obtained = compatJDK(typeDefinitions)
             .map(TestingServer.locationToString(_, root).stripPrefix("/"))
             .sorted
             .mkString("\n")
