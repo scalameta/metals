@@ -3,7 +3,6 @@ import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
-import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.JvmSignatures
@@ -37,20 +36,21 @@ private[debug] final class SetBreakpointsRequestHandler(
 
     server
       .sendPartitioned(partitions.map(DebugProtocol.syntheticRequest))
+      .map(_.map(DebugProtocol.parseResponse[SetBreakpointsResponse]))
+      .map(_.flatMap(_.toList))
       .map(assembleResponse(_, request.getSource))
   }
 
   private def assembleResponse(
-      responses: Iterable[ResponseMessage],
+      responses: Iterable[SetBreakpointsResponse],
       originalSource: Source
   ): SetBreakpointsResponse = {
-    val breakpoints = responses
-      .map(DebugProtocol.parseResponse[SetBreakpointsResponse])
-      .flatMap(_.toOption)
-      .flatMap(_.getBreakpoints)
-
-    breakpoints.foreach { breakpoint =>
+    val breakpoints = for {
+      response <- responses
+      breakpoint <- response.getBreakpoints
+    } yield {
       breakpoint.setSource(originalSource)
+      breakpoint
     }
 
     val response = new SetBreakpointsResponse

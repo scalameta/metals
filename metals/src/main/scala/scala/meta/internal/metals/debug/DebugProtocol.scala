@@ -116,8 +116,8 @@ object DebugProtocol {
     }
   }
 
-  def parseResponse[A: ClassTag](response: ResponseMessage): Try[A] = {
-    parse[A](response.getResult)
+  def parseResponse[A: ClassTag](response: ResponseMessage): Option[A] = {
+    parse[A](response.getResult).toOption
   }
 
   def parse[A: ClassTag](params: Any): Try[A] = {
