@@ -29,7 +29,6 @@ import java.util.concurrent.CancellationException
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.sys.process.Process
 import scala.meta.io.Classpath
-import coursierapi.Repository
 import coursierapi.MavenRepository
 
 object BloopPants {
@@ -346,7 +345,12 @@ private class BloopPants(
 
     val sources: List[Path] =
       if (target.targetType.isResource) Nil
-      else filemap.forTarget(target.name).toList
+      else {
+        target.globs.sourceDirectory(workspace) match {
+          case Some(dir) => List(dir)
+          case _ => filemap.forTarget(target.name).toList
+        }
+      }
 
     val transitiveDependencies: List[PantsTarget] = (for {
       dependency <- target.transitiveDependencies

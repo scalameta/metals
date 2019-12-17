@@ -56,7 +56,8 @@ object PantsExport {
           isTargetRoot = isTargetRoot,
           targetType = TargetType(value(PantsKeys.targetType).str),
           pantsTargetType =
-            PantsTargetType(value(PantsKeys.pantsTargetType).str)
+            PantsTargetType(value(PantsKeys.pantsTargetType).str),
+          globs = PantsGlobs.fromJson(value)
         )
     }.toMap
 
