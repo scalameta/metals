@@ -19,13 +19,6 @@ object TypeDefinitionLspSuite
 
   check("multi-target")(
     query = """
-              |/metals.json
-              |{
-              |  "a": {},
-              |  "b": {
-              |    "dependsOn": [ "a" ]
-              |  }
-              |}
               |/a/src/main/scala/a/A.scala
               |package a
               |object A {
@@ -45,8 +38,6 @@ object TypeDefinitionLspSuite
 
   check("int")(
     query = """
-              |/metals.json
-              |{"a": {}}
               |/a/src/main/scala/a/Main.scala
               |object Main {
               |  val ts/*.metals/readonly/scala/Int.scala*/@@t: Int = 2
@@ -55,8 +46,6 @@ object TypeDefinitionLspSuite
 
   check("basic")(
     query = """
-              |/metals.json
-              |{"a": {}}
               |/a/src/main/scala/a/Main.scala
               |
               |package a
@@ -70,8 +59,6 @@ object TypeDefinitionLspSuite
   )
   check("basicMultifile")(
     query = """
-              |/metals.json
-              |{"a": {}}
               |/a/src/main/scala/a/Main.scala
               |package a
               |object Main {
@@ -84,43 +71,33 @@ object TypeDefinitionLspSuite
   )
 
   check("ext-library")(
-    query = """|
-               |/metals.json
-               |{
-               |  "a": { },
-               |  "b": {
-               |    "libraryDependencies": [
-               |      "org.scalatest::scalatest:3.0.5"
-               |    ],
-               |    "dependsOn": [ "a" ]
-               |  }
-               |}
-               |/a/src/main/java/a/Message.java
-               |package a;
-               |public class Message {
-               |  public static String message = "Hello world!";
-               |}
-               |/a/src/main/scala/a/Main.scala
-               |package a
-               |import java.util.concurrent.Future // unused
-               |import scala.util.Failure // unused
-               |object Main extends App {
-               |  val message = Message.message
-               |  new java.io.PrintStream(new java.io.ByteArrayOutputStream())
-               |  println(message)
-               |}
-               |/b/src/main/scala/a/MainSuite.scala
-               |package a
-               |import java.util.concurrent.Future // unused
-               |import scala.util.Failure // unused
-               |import org.scalatest.FunSuite
-               |object MainSuite extends FunSuite {
-               |  test("a") {
-               |    val condition = Main.message.contains("Hello")
-               |    asse@@rt(condition)
-               |  }
-               |}
-               |""".stripMargin,
+    query = """
+              |/a/src/main/java/a/Message.java
+              |package a;
+              |public class Message {
+              |  public static String message = "Hello world!";
+              |}
+              |/a/src/main/scala/a/Main.scala
+              |package a
+              |import java.util.concurrent.Future // unused
+              |import scala.util.Failure // unused
+              |object Main extends App {
+              |  val message = Message.message
+              |  new java.io.PrintStream(new java.io.ByteArrayOutputStream())
+              |  println(message)
+              |}
+              |/b/src/main/scala/a/MainSuite.scala
+              |package a
+              |import java.util.concurrent.Future // unused
+              |import scala.util.Failure // unused
+              |import org.scalatest.FunSuite
+              |object MainSuite extends FunSuite {
+              |  test("a") {
+              |    val condition = Main.message.contains("Hello")
+              |    asse@@rt(condition)
+              |  }
+              |}
+              |""".stripMargin,
     expectedLocs = List(
       ".metals/readonly/org/scalatest/compatible/Assertion.scala [28:6 -> 28:15]"
     )
@@ -128,8 +105,6 @@ object TypeDefinitionLspSuite
 
   check("method")(
     query = """
-              |/metals.json
-              |{"a": {}}
               |/a/src/main/scala/a/Main.scala
               |
               |package a
@@ -146,8 +121,6 @@ object TypeDefinitionLspSuite
 
   check("method-definition")(
     query = """
-              |/metals.json
-              |{"a": {}}
               |/a/src/main/scala/a/Main.scala
               |package a
               |class Main(i: Int) {}
@@ -162,8 +135,6 @@ object TypeDefinitionLspSuite
 
   check("named-parameter")(
     query = """
-              |/metals.json
-              |{"a": {}}
               |/a/src/main/scala/a/Main.scala
               |<<case class CClass(str: String) {}>>
               |
@@ -176,8 +147,6 @@ object TypeDefinitionLspSuite
 
   check("pattern-match")(
     query = """
-              |/metals.json
-              |{"a": {}}
               |/a/src/main/scala/a/Main.scala
               |case class CClass(str: String) {}
               |
@@ -192,8 +161,6 @@ object TypeDefinitionLspSuite
 
   check("pattern-match-defined-unapply")(
     query = """
-              |/metals.json
-              |{"a": {}}
               |/a/src/main/scala/a/Main.scala
               |object CClass {
               | def unapply(c: CClass): Option[Int] = Some(1)
@@ -218,14 +185,25 @@ object TypeDefinitionLspSuite
         query
           .replaceAll("(@@)?(<<)?(>>)?", "")
           .replaceAll("""\/\*[^\*]+\*\/""", "")
-      val files = query.lines
+      val files = query.linesIterator
         .filter(_.startsWith("/"))
         .filter(_.filter(!_.isWhitespace) != "/metals.json")
         .map(_.stripPrefix("/"))
 
       for {
         _ <- server.initialize(
-          s"""${code.trim}""".stripMargin
+          s"""
+             |/metals.json
+             |{
+             |  "a": { },
+             |  "b": {
+             |    "libraryDependencies": [
+             |      "org.scalatest::scalatest:3.0.5"
+             |    ],
+             |    "dependsOn": [ "a" ]
+             |  }
+             |}
+             |${code.trim}""".stripMargin
         )
         _ <- Future.sequence(files.map(server.didOpen))
         expected = expectedLocs.flatMap(
@@ -234,7 +212,8 @@ object TypeDefinitionLspSuite
         _ <- server.assertTypeDefinition(
           queryStr = query,
           expectedLocs = expected,
-          root = workspace
+          root = workspace,
+          isJava8 = isJava8
         )
         _ = assertNoDiagnostics()
         _ = if (!server.server.isInitialized.get())

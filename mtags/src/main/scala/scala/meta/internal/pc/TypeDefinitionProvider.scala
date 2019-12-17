@@ -1,6 +1,5 @@
 package scala.meta.internal.pc
 
-import java.util.NoSuchElementException
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
@@ -60,7 +59,7 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
 
           val txt = app.pos.source.content
             .slice(rStart, rEnd)
-            .mkString("")
+            .mkString
           txt.tokenize.get.tokens.toList
             .find(t => {
               val (pStart, pEnd) =
@@ -103,28 +102,20 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
 
   private def getSymbolDefinition(sym: Symbol): List[l.Location] = {
     val file = sym.pos.source.file
-    val uri =
-      try {
-        file.toURL.toURI.toString
-      } catch {
-        case _: NullPointerException =>
-          sym.pos.source.path
-      }
 
-    try {
-      if (file != null || compiler.unitOfFile.contains(file)) {
-        val unit = compiler.unitOfFile(file)
-        val trees = unit.body
-          .filter(_.symbol == sym)
-          .filter(_.pos != null)
-          .filter(_.isDef)
-        trees
-          .map(t => new l.Location(uri, t.pos.toLSP))
-      } else fallbackToSemanticDB(sym)
-    } catch {
-      case _: NoSuchElementException =>
-        fallbackToSemanticDB(sym)
-    }
+    if (file != null && compiler.unitOfFile.contains(file)) {
+      val uri =
+        if (file.file != null) {
+          file.toURL.toURI.toString
+        } else {
+          sym.pos.source.path
+        }
+
+      val unit = compiler.unitOfFile(file)
+      unit.body
+        .filter(t => t.symbol == sym && t.pos != null && t.isDef)
+        .map(t => new l.Location(uri, t.pos.toLSP))
+    } else fallbackToSemanticDB(sym)
   }
 
   private def fallbackToSemanticDB(sym: Symbol): List[l.Location] = {
