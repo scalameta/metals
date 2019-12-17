@@ -10,7 +10,8 @@ case class PantsTarget(
     libraries: collection.Seq[String],
     isTargetRoot: Boolean,
     targetType: TargetType,
-    pantsTargetType: PantsTargetType
+    pantsTargetType: PantsTargetType,
+    globs: PantsGlobs
 ) {
   val directoryName: String = BloopPants.makeReadableFilename(name)
   def classesDir(bloopDir: Path): Path =

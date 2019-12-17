@@ -56,7 +56,8 @@ object PantsExport {
           isTargetRoot = isTargetRoot,
           targetType = TargetType(value(PantsKeys.targetType).str),
           pantsTargetType =
-            PantsTargetType(value(PantsKeys.pantsTargetType).str)
+            PantsTargetType(value(PantsKeys.pantsTargetType).str),
+          globs = PantsGlobs.fromJson(value)
         )
     }.toMap
 
@@ -69,17 +70,9 @@ object PantsExport {
         })
     }.toMap
 
-    val scalaCompilerClasspath = output
-      .obj(PantsKeys.scalaPlatform)
-      .obj(PantsKeys.compilerClasspath)
-      .arr
-      .map(path => Paths.get(path.str))
-    val scalaPlatform = PantsScalaPlatform(
-      output.obj(PantsKeys.scalaPlatform).obj(PantsKeys.scalaVersion).str,
-      scalaCompilerClasspath
-    )
-
     val cycles = Cycles.findConnectedComponents(output)
+
+    val scalaPlatform = PantsScalaPlatform.fromJson(output)
 
     PantsExport(
       targets = targets,
@@ -88,4 +81,5 @@ object PantsExport {
       cycles = cycles
     )
   }
+
 }
