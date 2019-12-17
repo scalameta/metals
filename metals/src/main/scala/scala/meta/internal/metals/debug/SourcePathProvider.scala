@@ -31,7 +31,7 @@ final class SourcePathProvider(
     } yield definition.getUri.toAbsolutePath
 
     if (symbols.isEmpty) {
-      scribe.warn(s"No matching symbol on the classpath for [$symbolBase]")
+      scribe.debug(s"no definition for symbol: $symbolBase")
     }
 
     symbols.headOption
@@ -45,7 +45,7 @@ final class SourcePathProvider(
     } yield sourceFile
 
     if (files.isEmpty) {
-      scribe.warn(s"No matching source file for $source")
+      scribe.debug(s"no matching source file: $source")
     }
 
     files.headOption
