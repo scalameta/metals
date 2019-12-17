@@ -226,15 +226,14 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  // TODO investigate what happens
-  assertFileBreakpoints("for-each-comprehension", disabled = true)(
+  assertFileBreakpoints("for-each-comprehension")(
     source = """|a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Main {
                 |  def main(args: Array[String]): Unit = {
                 |    for {
-                |    x <- List()
+                |    x <- List(1)
                 |  } {
                 |>>    println(x)
                 |    }
@@ -243,15 +242,14 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  // TODO investigate what happens
-  assertFileBreakpoints("for-yield", disabled = true)(
+  assertFileBreakpoints("for-yield")(
     source = """|a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Main {
                 |  def main(args: Array[String]): Unit = {
                 |    for {
-                |    x <- List()
+                |    x <- List(1)
                 |    } yield {
                 |>>    println(x)
                 |    }
