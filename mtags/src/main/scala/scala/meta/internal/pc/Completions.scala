@@ -1297,7 +1297,41 @@ trait Completions { this: MetalsGlobal =>
         val members = ListBuffer.empty[TextEditMember]
         val importPos = autoImportPosition(pos, text)
         val context = doLocateImportContext(pos, importPos)
+        val subclasses = ListBuffer.empty[Symbol]
+
         tpe.typeSymbol.foreachKnownDirectSubClass { sym =>
+          subclasses += sym
+        }
+        val subclassesResult = subclasses.result()
+
+        // sort subclasses by declaration order
+        // see: https://github.com/scalameta/metals-feature-requests/issues/49
+        val sortedSubclasses =
+          if (subclassesResult.forall(_.pos.isDefined)) {
+            // if all the symbols of subclasses' position is defined
+            // we can sort those symbols by declaration order
+            // based on their position information quite cheaply
+            subclassesResult.sortBy(subclass =>
+              (subclass.pos.line, subclass.pos.column)
+            )
+          } else {
+            // Read all the symbols in the source that contains
+            // the definition of the symbol in declaration order
+            val defnSymbols = search
+              .definitionSourceToplevels(semanticdbSymbol(tpe.typeSymbol))
+              .asScala
+            if (defnSymbols.length > 0) {
+              val symbolIdx = defnSymbols.zipWithIndex.toMap
+              subclassesResult
+                .sortBy(sym => {
+                  symbolIdx.getOrElse(semanticdbSymbol(sym), -1)
+                })
+            } else {
+              subclassesResult
+            }
+          }
+
+        sortedSubclasses.foreach { sym =>
           val (shortName, edits) =
             importPos match {
               case Some(value) =>

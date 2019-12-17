@@ -7,12 +7,16 @@ import scala.concurrent.Future
 object DefinitionCrossLspSuite
     extends BaseCompletionLspSuite("definition-cross") {
 
-  testAsync("2.11") {
-    basicDefinitionTest(BuildInfo.scala211)
+  if (super.isValidScalaVersionForEnv(BuildInfo.scala211)) {
+    testAsync("2.11") {
+      basicDefinitionTest(BuildInfo.scala211)
+    }
   }
 
-  testAsync("2.13") {
-    basicDefinitionTest(BuildInfo.scala213)
+  if (super.isValidScalaVersionForEnv(BuildInfo.scala213)) {
+    testAsync("2.13") {
+      basicDefinitionTest(BuildInfo.scala213)
+    }
   }
 
   def basicDefinitionTest(scalaVersion: String): Future[Unit] = {

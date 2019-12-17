@@ -135,10 +135,14 @@ final class BloopInstall(
     }
   }
 
+  // NOTE(olafur) there's a chance that we get two build change notifications in
+  // a very short period due to duplicate `didSave` and file watching
+  // notifications. This method is synchronized to prevent asking the user
+  // twice whether to import the build.
   def runIfApproved(
       buildTool: BuildTool,
       digest: String
-  ): Future[BloopInstallResult] = {
+  ): Future[BloopInstallResult] = synchronized {
     oldInstallResult(digest) match {
       case Some(result) =>
         scribe.info(s"skipping build import with status '${result.name}'")
@@ -180,27 +184,23 @@ final class BloopInstall(
       digest: String
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
     tables.digests.setStatus(digest, Status.Requested)
-    if (buildTools.isBloop) {
-      languageClient
-        .showMessageRequest(ImportBuildChanges.params(buildTool.toString))
-        .asScala
-        .map { item =>
-          if (item == dontShowAgain) {
-            notification.dismissForever()
-          }
-          Confirmation.fromBoolean(item == ImportBuildChanges.yes)
+    val (params, yes) =
+      if (buildTools.isBloop) {
+        ImportBuildChanges.params(buildTool.toString) ->
+          ImportBuildChanges.yes
+      } else {
+        ImportBuild.params(buildTool.toString) ->
+          ImportBuild.yes
+      }
+    languageClient
+      .showMessageRequest(params)
+      .asScala
+      .map { item =>
+        if (item == dontShowAgain) {
+          notification.dismissForever()
         }
-    } else {
-      languageClient
-        .showMessageRequest(ImportBuild.params(buildTool.toString()))
-        .asScala
-        .map { item =>
-          if (item == dontShowAgain) {
-            notification.dismissForever()
-          }
-          Confirmation.fromBoolean(item == ImportBuild.yes)
-        }
-    }
+        Confirmation.fromBoolean(item == yes)
+      }
   }
 
 }

@@ -9,7 +9,7 @@ import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.semver.SemVer
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -117,7 +117,7 @@ final class Doctor(
     val minimumBloopVersion = "1.3.5"
     def isUnsupportedBloopVersion =
       bspServerVersion.exists(version =>
-        !BuildTool.isCompatibleVersion(
+        !SemVer.isCompatibleVersion(
           minimumBloopVersion,
           version
         )

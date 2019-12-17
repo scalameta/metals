@@ -1,11 +1,15 @@
 package tests
 
+import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.language.experimental.macros
-import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.Testing
 import scala.meta.internal.mtags
+import scala.meta.internal.semver.SemVer
+import scala.meta.io.AbsolutePath
 import scala.reflect.ClassTag
 import scala.util.Properties
 import utest.TestSuite
@@ -16,9 +20,6 @@ import utest.framework.TestCallTree
 import utest.framework.Tree
 import utest.ufansi.Attrs
 import utest.ufansi.Str
-import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.Testing
-import scala.collection.mutable
 
 /**
  * Test suite that replace utest DSL with FunSuite-style syntax from ScalaTest.
@@ -37,6 +38,12 @@ class BaseSuite extends TestSuite {
   def beforeAll(): Unit = ()
   def afterAll(): Unit = ()
   def intercept[T: ClassTag](exprs: Unit): T = macro Asserts.interceptProxy[T]
+  def isValidScalaVersionForEnv(scalaVersion: String): Boolean =
+    this.isJava8 || SemVer.isCompatibleVersion(
+      BaseSuite.minScalaVersionForJDK9OrHigher,
+      scalaVersion
+    )
+
   def assertNotEmpty(string: String): Unit = {
     if (string.isEmpty) {
       fail(
@@ -192,4 +199,8 @@ class BaseSuite extends TestSuite {
       .getOrElse(default)
     postProcess(result)
   }
+}
+
+object BaseSuite {
+  val minScalaVersionForJDK9OrHigher: String = "2.12.10"
 }

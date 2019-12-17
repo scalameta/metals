@@ -35,9 +35,10 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.DebugServer
-import scala.meta.internal.tvp._
 import scala.meta.internal.mtags._
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semver.SemVer
+import scala.meta.internal.tvp._
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
@@ -159,6 +160,7 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var codeLensProvider: CodeLensProvider = _
+  private var codeActionProvider: CodeActionProvider = _
   private var definitionProvider: DefinitionProvider = _
   private var semanticDBIndexer: SemanticdbIndexer = _
   private var implementationProvider: ImplementationProvider = _
@@ -173,6 +175,7 @@ class MetalsLanguageServer(
   private var foldingRangeProvider: FoldingRangeProvider = _
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
+  private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   var tables: Tables = _
   var statusBar: StatusBar = _
@@ -386,6 +389,11 @@ class MetalsLanguageServer(
       interactiveSemanticdbs.toFileOnDisk
     )
     foldingRangeProvider = FoldingRangeProvider(trees, buffers, params)
+    symbolSearch = new MetalsSymbolSearch(
+      symbolDocs,
+      workspaceSymbols,
+      definitionProvider
+    )
     compilers = register(
       new Compilers(
         workspace,
@@ -393,17 +401,14 @@ class MetalsLanguageServer(
         () => userConfig,
         buildTargets,
         buffers,
-        new MetalsSymbolSearch(
-          symbolDocs,
-          workspaceSymbols,
-          definitionProvider
-        ),
+        symbolSearch,
         embedded,
         statusBar,
         sh,
         Option(params)
       )
     )
+    codeActionProvider = new CodeActionProvider(compilers)
     doctor = new Doctor(
       workspace,
       buildTargets,
@@ -495,6 +500,7 @@ class MetalsLanguageServer(
       capabilities.setWorkspaceSymbolProvider(true)
       capabilities.setDocumentSymbolProvider(true)
       capabilities.setDocumentFormattingProvider(true)
+      capabilities.setCodeActionProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       if (config.isNoInitialized) {
         sh.schedule(
@@ -1089,9 +1095,8 @@ class MetalsLanguageServer(
   def codeAction(
       params: CodeActionParams
   ): CompletableFuture[util.List[CodeAction]] =
-    CancelTokens { _ =>
-      scribe.warn("textDocument/codeAction is not supported.")
-      null
+    CancelTokens.future { token =>
+      codeActionProvider.codeActions(params, token).map(_.asJava)
     }
 
   @JsonRequest("textDocument/codeLens")
@@ -1288,7 +1293,7 @@ class MetalsLanguageServer(
   private def supportedBuildTool(): Option[BuildTool] =
     buildTools.loadSupported match {
       case Some(buildTool) =>
-        val isCompatibleVersion = BuildTool.isCompatibleVersion(
+        val isCompatibleVersion = SemVer.isCompatibleVersion(
           buildTool.minimumVersion,
           buildTool.version
         )
@@ -1600,6 +1605,7 @@ class MetalsLanguageServer(
       semanticDBIndexer.reset()
       treeView.reset()
       worksheetProvider.reset()
+      symbolSearch.reset()
       buildTargets.addWorkspaceBuildTargets(i.workspaceBuildTargets)
       buildTargets.addScalacOptions(i.scalacOptions)
       for {

@@ -39,6 +39,8 @@ import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.builds.BuildTools
 import java.net.URI
+import org.eclipse.lsp4j.CodeAction
+import org.eclipse.lsp4j.WorkspaceEdit
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -91,18 +93,25 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   override def applyEdit(
       params: ApplyWorkspaceEditParams
   ): CompletableFuture[ApplyWorkspaceEditResponse] = {
-    def applyEdits(uri: String, textEdits: java.util.List[TextEdit]): Unit = {
-      val path = AbsolutePath.fromAbsoluteUri(URI.create(uri))
-
-      val content = path.readText
-      val editedContent =
-        TextEdits.applyEdits(content, textEdits.asScala.toList)
-
-      path.writeText(editedContent)
-    }
-
-    params.getEdit.getChanges.forEach(applyEdits)
+    applyWorkspaceEdit(params.getEdit())
     CompletableFuture.completedFuture(new ApplyWorkspaceEditResponse(true))
+  }
+
+  private def applyWorkspaceEdit(edit: WorkspaceEdit): Unit = {
+    edit.getChanges().forEach(applyEdits)
+  }
+
+  private def applyEdits(
+      uri: String,
+      textEdits: java.util.List[TextEdit]
+  ): Unit = {
+    val path = AbsolutePath.fromAbsoluteUri(URI.create(uri))
+
+    val content = path.readText
+    val editedContent =
+      TextEdits.applyEdits(content, textEdits.asScala.toList)
+
+    path.writeText(editedContent)
   }
 
   def workspaceClientCommands: List[String] = {
@@ -324,6 +333,10 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
       }
       .sorted
       .mkString("----\n")
+  }
+
+  def applyCodeAction(codeAction: CodeAction): Unit = {
+    applyWorkspaceEdit(codeAction.getEdit())
   }
 
 }

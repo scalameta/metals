@@ -64,6 +64,11 @@ public abstract class PresentationCompiler {
     public abstract CompletableFuture<DefinitionResult> definition(OffsetParams params);
 
     /**
+     * Return the necessary imports for a symbol at the given position.
+     */
+    public abstract CompletableFuture<List<AutoImportsResult>> autoImports(String name, OffsetParams params);
+
+    /**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.
      */
     public abstract CompletableFuture<byte[]> semanticdbTextDocument(String filename, String code);

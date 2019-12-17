@@ -25,6 +25,7 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.concurrent.Future
 import java.{util => ju}
+import scala.meta.pc.AutoImportsResult
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -150,6 +151,16 @@ class Compilers(
       pc.complete(CompilerOffsetParams.fromPos(pos, token)).asScala
     }.getOrElse(Future.successful(new CompletionList()))
 
+  def autoImports(
+      params: TextDocumentPositionParams,
+      name: String,
+      token: CancelToken
+  ): Future[ju.List[AutoImportsResult]] = {
+    withPC(params, None) { (pc, pos) =>
+      pc.autoImports(name, CompilerOffsetParams.fromPos(pos, token)).asScala
+    }.getOrElse(Future.successful(new ju.ArrayList))
+  }
+
   def hover(
       params: TextDocumentPositionParams,
       token: CancelToken,
@@ -162,6 +173,7 @@ class Compilers(
     }.getOrElse {
       Future.successful(Option.empty)
     }
+
   def definition(
       params: TextDocumentPositionParams,
       token: CancelToken
@@ -178,6 +190,7 @@ class Compilers(
           )
         }
     }.getOrElse(Future.successful(DefinitionResult.empty))
+
   def signatureHelp(
       params: TextDocumentPositionParams,
       token: CancelToken,

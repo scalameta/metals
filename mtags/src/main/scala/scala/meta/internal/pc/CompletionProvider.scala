@@ -1,6 +1,5 @@
 package scala.meta.internal.pc
 
-import java.nio.file.Path
 import scala.meta.internal.mtags.MtagsEnrichments._
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
@@ -10,8 +9,6 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.collection.mutable
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
-import scala.util.control.NonFatal
-import scala.meta.pc.SymbolSearchVisitor
 import org.eclipse.{lsp4j => l}
 
 class CompletionProvider(
@@ -444,91 +441,12 @@ class CompletionProvider(
     if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
     else {
       val context = doLocateContext(pos)
-      val visitor = new CompilerSearchVisitor(query, context, visit)
+      val visitor = new CompilerSearchVisitor(
+        query,
+        context,
+        sym => visit(new WorkspaceMember(sym))
+      )
       search.search(query, buildTargetIdentifier, visitor)
-    }
-  }
-
-  /**
-   * Symbol search visitor that converts results into completion `WorkspaceMember`.
-   */
-  private class CompilerSearchVisitor(
-      query: String,
-      context: Context,
-      visitMember: Member => Boolean
-  ) extends SymbolSearchVisitor {
-    def visit(top: SymbolSearchCandidate): Int = {
-      var added = 0
-      for {
-        sym <- loadSymbolFromClassfile(top)
-        if context.lookupSymbol(sym.name, _ => true).symbol != sym
-      } {
-        if (visitMember(new WorkspaceMember(sym))) {
-          added += 1
-        }
-      }
-      added
-    }
-    def visitClassfile(pkg: String, filename: String): Int = {
-      visit(SymbolSearchCandidate.Classfile(pkg, filename))
-    }
-    def visitWorkspaceSymbol(
-        path: Path,
-        symbol: String,
-        kind: l.SymbolKind,
-        range: l.Range
-    ): Int = {
-      visit(SymbolSearchCandidate.Workspace(symbol))
-    }
-
-    def shouldVisitPackage(pkg: String): Boolean =
-      packageSymbolFromString(pkg).isDefined
-
-    override def isCancelled: Boolean = {
-      false
-    }
-  }
-
-  private def loadSymbolFromClassfile(
-      classfile: SymbolSearchCandidate
-  ): List[Symbol] = {
-    def isAccessible(sym: Symbol): Boolean = {
-      sym != NoSymbol && {
-        sym.info // needed to fill complete symbol
-        sym.isPublic
-      }
-    }
-    try {
-      classfile match {
-        case SymbolSearchCandidate.Classfile(pkgString, filename) =>
-          val pkg = packageSymbolFromString(pkgString).getOrElse(
-            throw new NoSuchElementException(pkgString)
-          )
-          val names = filename
-            .stripSuffix(".class")
-            .split('$')
-            .iterator
-            .filterNot(_.isEmpty)
-            .toList
-          val members = names.foldLeft(List[Symbol](pkg)) {
-            case (accum, name) =>
-              accum.flatMap { sym =>
-                if (!isAccessible(sym) || !sym.isModuleOrModuleClass) Nil
-                else {
-                  sym.info.member(TermName(name)) ::
-                    sym.info.member(TypeName(name)) ::
-                    Nil
-                }
-              }
-          }
-          members.filter(sym => isAccessible(sym))
-        case SymbolSearchCandidate.Workspace(symbol) =>
-          val gsym = inverseSemanticdbSymbol(symbol)
-          if (isAccessible(gsym)) gsym :: Nil
-          else Nil
-      }
-    } catch {
-      case NonFatal(_) => Nil
     }
   }
 

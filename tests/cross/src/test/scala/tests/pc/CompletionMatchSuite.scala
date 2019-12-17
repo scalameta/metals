@@ -3,6 +3,10 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 object CompletionMatchSuite extends BaseCompletionSuite {
+  override def beforeAll(): Unit = {
+    indexScalaLibrary()
+  }
+
   check(
     "match",
     """
@@ -100,6 +104,61 @@ object CompletionMatchSuite extends BaseCompletionSuite {
        |}
        |}
        |""".stripMargin,
+    filter = _.contains("exhaustive")
+  )
+
+  checkEdit(
+    "exhaustive-sorting",
+    """package sort
+      |sealed abstract class TestTree
+      |case class Branch1(t1: TestTree) extends TestTree
+      |case class Leaf(v: Int) extends TestTree
+      |case class Branch2(t1: TestTree, t2: TestTree) extends TestTree
+      |object App {
+      |  null.asInstanceOf[TestTree] matc@@
+      |}
+      |""".stripMargin,
+    """|package sort
+       |sealed abstract class TestTree
+       |case class Branch1(t1: TestTree) extends TestTree
+       |case class Leaf(v: Int) extends TestTree
+       |case class Branch2(t1: TestTree, t2: TestTree) extends TestTree
+       |object App {
+       |  null.asInstanceOf[TestTree] match {
+       |\tcase Branch1(t1) => $0
+       |\tcase Leaf(v) =>
+       |\tcase Branch2(t1, t2) =>
+       |}
+       |}
+       |""".stripMargin,
+    filter = _.contains("exhaustive")
+  )
+
+  checkEdit(
+    "exhaustive-sorting-scalalib",
+    """package sort
+      |object App {
+      |  Option(1) matc@@
+      |}
+      |""".stripMargin,
+    if (!isScala211)
+      """package sort
+        |object App {
+        |  Option(1) match {
+        |\tcase Some(value) => $0
+        |\tcase None =>
+        |}
+        |}
+        |""".stripMargin
+    else
+      """package sort
+        |object App {
+        |  Option(1) match {
+        |\tcase Some(x) => $0
+        |\tcase None =>
+        |}
+        |}
+        |""".stripMargin,
     filter = _.contains("exhaustive")
   )
 

@@ -2,7 +2,6 @@ package scala.meta.internal.builds
 
 import java.nio.file.{Files, Path}
 import scala.meta.io.AbsolutePath
-import scala.util.Try
 import java.nio.file.StandardCopyOption
 import scala.meta.internal.metals.BloopInstallResult
 import scala.concurrent.Future
@@ -47,19 +46,6 @@ abstract class BuildTool {
 }
 
 object BuildTool {
-
-  def isCompatibleVersion(minimumVersion: String, version: String): Boolean = {
-    (minimumVersion.split('.'), version.split('.')) match {
-      case (Array(minMajor, minMinor, minPatch), Array(major, minor, patch)) =>
-        Try {
-          (major > minMajor) ||
-          (major == minMajor && minor > minMinor) ||
-          (major == minMajor && minor == minMinor && patch >= minPatch)
-        }.getOrElse(false)
-      case _ => false
-    }
-  }
-
   def copyFromResource(
       tempDir: Path,
       filePath: String,

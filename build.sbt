@@ -149,7 +149,7 @@ lazy val V = new {
   val scalameta = "4.3.0"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
-  val bloop = "1.3.4+297-48a21249"
+  val bloop = "1.3.4+298-2c6ff971"
   val sbtBloop = "1.3.5"
   val gradleBloop = bloop
   val mavenBloop = bloop
@@ -158,8 +158,9 @@ lazy val V = new {
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
-    Seq("2.13.0", scala213, scala212) ++ deprecatedScalaVersions
+    nonDeprecatedScalaVersions ++ deprecatedScalaVersions
   def deprecatedScalaVersions = Seq("2.12.8", "2.12.9", scala211)
+  def nonDeprecatedScalaVersions = Seq("2.13.0", scala213, scala212)
   def guava = "com.google.guava" % "guava" % "28.1-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.1"
   def dap4j =
@@ -248,7 +249,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.0.28.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.7.7.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.1.1",
+      "org.flywaydb" % "flyway-core" % "6.1.2",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "1.2.4",
@@ -384,7 +385,7 @@ lazy val cross = project
         List("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
       case _ => Nil
     }),
-    crossScalaVersions := V.supportedScalaVersions,
+    crossScalaVersions := V.nonDeprecatedScalaVersions,
     scalacOptions ++= crossSetting(
       scalaVersion.value,
       if211 = List("-Xexperimental", "-Ywarn-unused-import")

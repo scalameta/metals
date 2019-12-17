@@ -20,6 +20,10 @@ object EmptySymbolSearch extends SymbolSearch {
     ju.Collections.emptyList()
   }
 
+  override def definitionSourceToplevels(symbol: String): ju.List[String] = {
+    ju.Collections.emptyList()
+  }
+
   override def documentation(symbol: String): Optional[SymbolDocumentation] =
     Optional.empty()
 }

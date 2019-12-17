@@ -12,6 +12,12 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     Some(ClientExperimentalCapabilities(decorationProvider = true))
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
+
+  override final def test(name: String)(fun: => Any): Unit =
+    if (super.isValidScalaVersionForEnv(this.scalaVersion)) {
+      super.test(name)(fun)
+    }
+
   if (!isWindows)
     testAsync("completion") {
       for {
