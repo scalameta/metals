@@ -1,7 +1,7 @@
 package tests.debug
 
 import tests.BaseDapSuite
-import scala.meta.internal.metals.debug.DebugFileLayout
+import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.Scope
 import scala.meta.internal.metals.debug.StackFrameCollector
 import scala.meta.internal.metals.debug.Variable
@@ -153,7 +153,7 @@ object StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
 
     testAsync(name) {
       cleanWorkspace()
-      val file = DebugFileLayout(source)
+      val workspaceLayout = DebugWorkspaceLayout(source)
 
       val stackFrameCollector = new StackFrameCollector
 
@@ -162,13 +162,13 @@ object StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
           s"""/metals.json
              |{ "a": {} }
              |
-             |${file.layout}
+             |$workspaceLayout
              |""".stripMargin
         )
         debugger <- debugMain("a", "Main", stackFrameCollector)
         _ <- debugger.initialize
         _ <- debugger.launch
-        _ <- setBreakpoints(debugger, List(file))
+        _ <- setBreakpoints(debugger, workspaceLayout)
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
         variables = stackFrameCollector.variables

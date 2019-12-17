@@ -1,15 +1,15 @@
 package tests.debug
 import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugStep._
-import scala.meta.internal.metals.debug.DebugFileLayout
+import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 
 object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
   // disabled, because finding enclosing class for the breakpoint line is not working
   // see [[scala.meta.internal.metals.debug.SetBreakpointsRequestHandler]]
-  assertFileBreakpoints("preceding-class", disabled = true)(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("preceding-class", disabled = true)(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Main {
@@ -22,8 +22,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("succeeding-class")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("succeeding-class")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Main {
@@ -36,8 +36,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("object")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("object")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Bar {
@@ -54,8 +54,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("object-apply")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("object-apply")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Bar {
@@ -72,8 +72,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("object-unapply")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("object-unapply")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Bar {
@@ -92,8 +92,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("trait")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("trait")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |trait Bar {
@@ -111,8 +111,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("class")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("class")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |class Bar {
@@ -130,8 +130,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("anonymous")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("anonymous")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |class Foo
@@ -149,8 +149,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("case-class")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("case-class")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |case class Bar() {
@@ -168,8 +168,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("case-class-unapply")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("case-class-unapply")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |case class Bar() {
@@ -191,8 +191,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("companion")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("companion")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |case class Bar()
@@ -211,8 +211,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("companion-apply")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("companion-apply")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |case class Bar()
@@ -231,8 +231,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("for-comprehension")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("for-comprehension")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Main {
@@ -245,8 +245,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("for-each-comprehension")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("for-each-comprehension")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Main {
@@ -261,8 +261,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("for-yield")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("for-yield")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |object Main {
@@ -277,8 +277,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("nested object")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("nested object")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |trait Foo {
@@ -298,8 +298,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("nested class")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("nested class")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |trait Foo {
@@ -319,8 +319,8 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertFileBreakpoints("nested trait")(
-    source = """|a/src/main/scala/a/Main.scala
+  assertBreakpoints("nested trait")(
+    source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
                 |trait Foo {
@@ -340,126 +340,111 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertProjectBreakpoints("package-object")(
-    sources = List(
-      """|a/src/main/scala/a/package.scala
-         |package object a {
-         |  def call() = {
-         |>>  println()
-         |  }
-         |}
-         |""".stripMargin,
-      """|a/src/main/scala/a/Main.scala
-         |package a
-         |object Main {
-         |    def main(args: Array[String]): Unit = {
-         |      call()
-         |    }
-         |}
-         |""".stripMargin
-    )
+  assertBreakpoints("package-object")(
+    source = """|/a/src/main/scala/a/package.scala
+                |package object a {
+                |  def call() = {
+                |>>  println()
+                |  }
+                |}
+                |
+                |/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |    def main(args: Array[String]): Unit = {
+                |      call()
+                |    }
+                |}
+                |""".stripMargin
   )
 
-  assertProjectBreakpoints("not-matching-filename")(
-    sources = List(
-      """|a/src/main/scala/a/not-matching.scala
-         |package a
-         |
-         |object Foo {
-         |  def call() = {
-         |>>  println()
-         |  }
-         |}
-         |""".stripMargin,
-      """|a/src/main/scala/a/Main.scala
-         |package a
-         |object Main {
-         |    def main(args: Array[String]): Unit = {
-         |      a.Foo.call()
-         |    }
-         |}
-         |""".stripMargin
-    )
+  assertBreakpoints("not-matching-filename")(
+    source = """|/a/src/main/scala/a/not-matching.scala
+                |package a
+                |
+                |object Foo {
+                |  def call() = {
+                |>>  println()
+                |  }
+                |}
+                |
+                |/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |    def main(args: Array[String]): Unit = {
+                |      a.Foo.call()
+                |    }
+                |}
+                |""".stripMargin
   )
 
-  assertProjectBreakpoints("not-matching-package")(
-    sources = List(
-      """|a/src/main/scala/Foo.scala
-         |package not.matching
-         |
-         |object Foo {
-         |  def call() = {
-         |>>  println()
-         |  }
-         |}
-         |""".stripMargin,
-      """|a/src/main/scala/a/Main.scala
-         |package a
-         |object Main {
-         |    def main(args: Array[String]): Unit = {
-         |      not.matching.Foo.call()
-         |    }
-         |}
-         |""".stripMargin
-    )
+  assertBreakpoints("not-matching-package")(
+    source = """|/a/src/main/scala/Foo.scala
+                |package not.matching
+                |
+                |object Foo {
+                |  def call() = {
+                |>>  println()
+                |  }
+                |}
+                |
+                |/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |    def main(args: Array[String]): Unit = {
+                |      not.matching.Foo.call()
+                |    }
+                |}
+                |""".stripMargin
   )
 
   // TODO OnDemandSymbolIndex doesn't distinguish between build targets
-  assertProjectBreakpoints("ambiguous", disabled = true)(
-    sources = List(
-      """|a/src/main/scala/Target.scala
-         |package foo
-         |
-         |object Target {
-         |  def call() = {
-         |>>  println("Correct Target")
-         |  }
-         |}
-         |""".stripMargin,
-      """|b/src/main/scala/Target.scala
-         |package foo
-         |
-         |object Target {
-         |  def call() = {
-         |    println("Incorrect Target")
-         |  }
-         |}
-         |""".stripMargin,
-      """|a/src/main/scala/a/Main.scala
-         |package a
-         |object Main {
-         |    def main(args: Array[String]): Unit = {
-         |      foo.Target.call()
-         |    }
-         |}
-         |""".stripMargin
-    )
+  assertBreakpoints("ambiguous", disabled = true)(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |    def main(args: Array[String]): Unit = {
+                |      foo.Target.call()
+                |    }
+                |}
+                |
+                |/a/src/main/scala/Target.scala
+                |package foo
+                |
+                |object Target {
+                |  def call() = {
+                |>>  println("Correct Target")
+                |  }
+                |}
+                |
+                |/b/src/main/scala/Target.scala
+                |package foo
+                |
+                |object Target {
+                |  def call() = {
+                |    println("Incorrect Target")
+                |  }
+                |}
+                |""".stripMargin
   )
 
-  def assertFileBreakpoints(name: String, disabled: Boolean = false)(
+  def assertBreakpoints(name: String, disabled: Boolean = false)(
       source: String
-  ): Unit = {
-    assertProjectBreakpoints(name, disabled)(List(source))
-  }
-
-  def assertProjectBreakpoints(name: String, disabled: Boolean = false)(
-      sources: List[String]
   ): Unit = {
     if (disabled) return
 
     testAsync(name) {
       cleanWorkspace()
-      val fileLayouts = sources.map(DebugFileLayout.apply)
+      val workspaceLayout = DebugWorkspaceLayout(source)
 
       val layout =
         s"""|/metals.json
             |{ "a": {}, "b": {} }
             |
-            |${fileLayouts.map(_.layout).mkString("\n")}
+            |$workspaceLayout
             |""".stripMargin
 
-      val expectedBreakpoints = fileLayouts.flatMap { file =>
-        // lines from FileLayout start at 0
+      val expectedBreakpoints = workspaceLayout.files.flatMap { file =>
         file.breakpoints.map(b => Breakpoint(file.relativePath, b.startLine))
       }
 
@@ -474,7 +459,7 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
         debugger <- debugMain("a", "a.Main", navigator)
         _ <- debugger.initialize
         _ <- debugger.launch
-        _ <- setBreakpoints(debugger, fileLayouts)
+        _ <- setBreakpoints(debugger, workspaceLayout)
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
       } yield ()

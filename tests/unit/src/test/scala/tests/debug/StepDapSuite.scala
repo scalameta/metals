@@ -2,26 +2,24 @@ package tests.debug
 
 import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugStep._
-import scala.meta.internal.metals.debug.DebugFileLayout
+import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 
 object StepDapSuite extends BaseDapSuite("debug-step") {
   assertSteps("step-out")(
-    sources = List(
-      """|a/src/main/scala/Main.scala
-         |package a
-         |
-         |object Main {
-         |  def foo() = {
-         |>>  println()
-         |  }
-         |
-         |  def main(args: Array[String]): Unit = {
-         |    foo()
-         |  }
-         |}
-         |""".stripMargin
-    ),
+    sources = """|/a/src/main/scala/Main.scala
+                 |package a
+                 |
+                 |object Main {
+                 |  def foo() = {
+                 |>>  println()
+                 |  }
+                 |
+                 |  def main(args: Array[String]): Unit = {
+                 |    foo()
+                 |  }
+                 |}
+                 |""".stripMargin,
     main = "a.Main",
     instrument = steps =>
       steps
@@ -30,18 +28,16 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
   )
 
   assertSteps("step-over")(
-    sources = List(
-      """|a/src/main/scala/Main.scala
-         |package a
-         |
-         |object Main {
-         |  def main(args: Array[String]): Unit = {
-         |>>  println(1)
-         |    println(2)
-         |  }
-         |}
-         |""".stripMargin
-    ),
+    sources = """|/a/src/main/scala/Main.scala
+                 |package a
+                 |
+                 |object Main {
+                 |  def main(args: Array[String]): Unit = {
+                 |>>  println(1)
+                 |    println(2)
+                 |  }
+                 |}
+                 |""".stripMargin,
     main = "a.Main",
     instrument = steps =>
       steps
@@ -50,24 +46,23 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
   )
 
   assertSteps("step-into-java")(
-    sources = List(
-      """|a/src/main/scala/a/ScalaMain.scala
-         |package a
-         |
-         |object ScalaMain {
-         |  def main(args: Array[String]): Unit = {
-         |>>  JavaClass.foo(7)
-         |  }
-         |}""".stripMargin,
-      """|a/src/main/java/a/JavaClass.java
-         |package a;
-         |
-         |class JavaClass {
-         |  static void foo(int i){
-         |    System.out.println(i);
-         |  }
-         |}""".stripMargin
-    ),
+    sources = """|/a/src/main/scala/a/ScalaMain.scala
+                 |package a
+                 |
+                 |object ScalaMain {
+                 |  def main(args: Array[String]): Unit = {
+                 |>>  JavaClass.foo(7)
+                 |  }
+                 |}
+                 |
+                 |/a/src/main/java/a/JavaClass.java
+                 |package a;
+                 |
+                 |class JavaClass {
+                 |  static void foo(int i){
+                 |    System.out.println(i);
+                 |  }
+                 |}""".stripMargin,
     main = "a.ScalaMain",
     instrument = steps =>
       steps
@@ -77,17 +72,15 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
   )
 
   assertSteps("step-into-scala-lib")(
-    sources = List(
-      """|a/src/main/scala/Main.scala
-         |package a
-         |
-         |object Main {
-         |  def main(args: Array[String]): Unit = {
-         |>>  println("foo")
-         |  }
-         |}
-         |""".stripMargin
-    ),
+    sources = """|/a/src/main/scala/Main.scala
+                 |package a
+                 |
+                 |object Main {
+                 |  def main(args: Array[String]): Unit = {
+                 |>>  println("foo")
+                 |  }
+                 |}
+                 |""".stripMargin,
     main = "a.Main",
     instrument = steps =>
       steps
@@ -96,17 +89,15 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
   )
 
   assertSteps("step-into-java-lib")(
-    sources = List(
-      """|a/src/main/scala/Main.scala
-         |package a
-         |
-         |object Main {
-         |  def main(args: Array[String]): Unit = {
-         |>>  System.out.println("foo")
-         |  }
-         |}
-         |""".stripMargin
-    ),
+    sources = """|/a/src/main/scala/Main.scala
+                 |package a
+                 |
+                 |object Main {
+                 |  def main(args: Array[String]): Unit = {
+                 |>>  System.out.println("foo")
+                 |  }
+                 |}
+                 |""".stripMargin,
     main = "a.Main",
     instrument = steps =>
       steps
@@ -115,24 +106,22 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
   )
 
   assertSteps("stops-on-different-class-in-same-file")(
-    sources = List(
-      """|a/src/main/scala/a/Main.scala
-         |package a
-         |
-         |object Main {
-         |  def main(args: Array[String]): Unit = {
-         |    val foo = new Foo
-         |>>  foo.call()
-         |  }
-         |}
-         |
-         |class Foo {
-         |  def call() = {
-         |>>  println("foo")
-         |  }
-         |}
-         |""".stripMargin
-    ),
+    sources = """|/a/src/main/scala/a/Main.scala
+                 |package a
+                 |
+                 |object Main {
+                 |  def main(args: Array[String]): Unit = {
+                 |    val foo = new Foo
+                 |>>  foo.call()
+                 |  }
+                 |}
+                 |
+                 |class Foo {
+                 |  def call() = {
+                 |>>  println("foo")
+                 |  }
+                 |}
+                 |""".stripMargin,
     main = "a.Main",
     instrument = steps =>
       steps
@@ -141,19 +130,19 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
   )
 
   def assertSteps(name: String)(
-      sources: List[String],
+      sources: String,
       main: String,
       instrument: StepNavigator => StepNavigator
   ): Unit = {
     testAsync(name) {
       cleanWorkspace()
-      val fileLayouts = sources.map(DebugFileLayout.apply)
+      val workspaceLayout = DebugWorkspaceLayout(sources)
 
       val layout =
         s"""|/metals.json
             |{ "a": {} }
             |
-            |${fileLayouts.map(_.layout).mkString("\n")}
+            |$workspaceLayout
             |""".stripMargin
 
       val navigator = instrument(StepNavigator(workspace))
@@ -163,7 +152,7 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
         debugger <- debugMain("a", main, navigator)
         _ <- debugger.initialize
         _ <- debugger.launch
-        _ <- setBreakpoints(debugger, fileLayouts)
+        _ <- setBreakpoints(debugger, workspaceLayout)
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
       } yield ()

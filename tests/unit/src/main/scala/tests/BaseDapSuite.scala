@@ -5,7 +5,7 @@ import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import scala.concurrent.Future
-import scala.meta.internal.metals.debug.DebugFileLayout
+import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 
@@ -22,10 +22,10 @@ abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
 
   def setBreakpoints(
       debugger: TestDebugger,
-      files: List[DebugFileLayout]
+      workspace: DebugWorkspaceLayout
   ): Future[List[SetBreakpointsResponse]] = {
     Future.sequence {
-      files.map { file =>
+      workspace.files.map { file =>
         val path = server.toPath(file.relativePath)
         debugger.setBreakpoints(path, file.breakpoints)
       }
