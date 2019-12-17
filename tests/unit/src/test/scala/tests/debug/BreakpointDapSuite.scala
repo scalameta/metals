@@ -130,6 +130,25 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
+  assertFileBreakpoints("anonymous")(
+    source = """|a/src/main/scala/a/Main.scala
+                |package a
+                |
+                |class Foo
+                |
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    val bar = new Foo {
+                |      def call() = {
+                |>>      println()
+                |      }
+                |    }
+                |    bar.call()
+                |  }
+                |}
+                |""".stripMargin
+  )
+
   assertFileBreakpoints("case-class")(
     source = """|a/src/main/scala/a/Main.scala
                 |package a
