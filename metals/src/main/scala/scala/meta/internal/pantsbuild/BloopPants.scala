@@ -60,6 +60,9 @@ object BloopPants {
               sys.exit(1)
             case Success(count) =>
               scribe.info(s"time: exported ${count} Pants target(s) in $timer")
+              if (args.isIntelliJ) {
+                LaunchIntellij.open(args.out)
+              }
           }
         }
     }
@@ -146,7 +149,8 @@ object BloopPants {
         scribe.error(
           s"The target set ${targetSyntax} is too broad, it expands to ${fileCount} source files " +
             s"when the maximum number of allowed source files is ${args.maxFileCount}. " +
-            s"To fix this problem, configure a smaller set of Pants targets."
+            s"To fix this problem, either pass in the flag '--max-file-count ${fileCount}' or" +
+            "configure a smaller set of Pants targets."
         )
         throw new CancellationException("too many Pants targets")
       }
@@ -289,10 +293,7 @@ private class BloopPants(
       .filter(_.isTargetRoot)
       .map(toBloopProject)
       .toList
-    // Only emit library sources in one resolution to avoid duplicated
-    // `*-sources.jar` references.
-    val binaryDependenciesSourcesIterator =
-      binaryDependencySources.iterator.map(newSourceModule)
+    val binaryDependenciesSourcesIterator = getLibraryDependencySources()
     val generatedProjects = new mutable.LinkedHashSet[Path]
     val byName = projects.map(p => p.name -> p).toMap
     projects.foreach { project =>
@@ -337,11 +338,22 @@ private class BloopPants(
     generatedProjects.size
   }
 
+  // This method returns an iterator to avoid duplicated `*-sources.jar` references.
+  private def getLibraryDependencySources(): Iterator[C.Module] = {
+    for {
+      target <- export.targets.valuesIterator
+      if !target.isTargetRoot
+      baseDirectory = target.baseDirectory(workspace)
+      sourceDirectory <- enclosingSourceDirectory(baseDirectory)
+    } {
+      binaryDependencySources += sourceDirectory
+    }
+    binaryDependencySources.iterator.map(newSourceModule)
+  }
+
   private def toBloopProject(target: PantsTarget): C.Project = {
 
-    val baseDirectory: Path = PantsConfiguration
-      .baseDirectory(AbsolutePath(workspace), target.name)
-      .toNIO
+    val baseDirectory: Path = target.baseDirectory(workspace)
 
     val sources: List[Path] =
       if (target.targetType.isResource) Nil
@@ -401,6 +413,10 @@ private class BloopPants(
       entry <- exportClasspath(dependency)
     } yield entry
 
+    // NOTE(olafur): we put resources on the classpath instead of under "resources"
+    // due to an issue how the IntelliJ BSP integration interprets resources.
+    classpath ++= resources
+
     C.Project(
       name = target.name,
       directory = baseDirectory,
@@ -410,7 +426,7 @@ private class BloopPants(
       classpath = classpath.toList,
       out = out,
       classesDir = classDirectory,
-      resources = if (resources.isEmpty) None else Some(resources),
+      resources = None,
       scala = Some(
         C.Scala(
           "org.scala-lang",

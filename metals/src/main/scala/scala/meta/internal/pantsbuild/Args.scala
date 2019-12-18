@@ -17,7 +17,8 @@ case class Args(
     isCompile: Boolean = true,
     isCache: Boolean = false,
     isRegenerate: Boolean = false,
-    maxFileCount: Int = 500,
+    isIntelliJ: Boolean = false,
+    maxFileCount: Int = 5000,
     workspace: Path = PathIO.workingDirectory.toNIO,
     out: Path = PathIO.workingDirectory.toNIO,
     targets: List[String] = Nil,
@@ -25,11 +26,11 @@ case class Args(
     onFilemap: Filemap => Unit = _ => Unit
 ) {
   def helpMessage: String =
-    s"""pants-bloop [option ..] <dir ..>
+    s"""pants-bloop [option ..] <target ..>
        |
        |Command-line tool to export a Pants build into Bloop JSON config files.
-       |The <dir ..> arguments are directories containing BUILD files to export,
-       |for example "src/main/scala".
+       |The <target ..> argument is a list of Pants targets to export,
+       |for example "src/main/scala::".
        |
        |  --help
        |    Print this help message
@@ -45,13 +46,34 @@ case class Args(
        |    If enabled, do not run `./pants export-classpath`
        |  --max-file-count (default=$maxFileCount)
        |    The export process fails fast if the number of exported source files exceeds this threshold.
+       |  --intellij
+       |    Open IntelliJ in the exported project.
+       |
+       |Example usage:
+       |  pants-bloop myproject::                   # Export a single project
+       |  pants-bloop myproject:: other-project::   # Export multiple projects
+       |  pants-bloop --intellij myproject::        # Export a single project
        |""".stripMargin
 }
 object Args {
   def parse(args: List[String]): Either[List[String], Args] =
     args match {
       case Nil => Right(Args(isHelp = true))
-      case _ => parse(args, Args())
+      case _ =>
+        parse(args, Args()).map { parsed =>
+          if (parsed.isIntelliJ) {
+            val projectName = parsed.targets
+              .map(_.stripSuffix("::").stripSuffix("/::"))
+              .map(BloopPants.makeReadableFilename)
+              .mkString("bloop-", "_", "")
+            parsed.copy(
+              out = parsed.workspace.getParent().resolve(projectName)
+            )
+          } else {
+            parsed
+          }
+
+        }
     }
   def parse(args: List[String], base: Args): Either[List[String], Args] =
     args match {
@@ -72,6 +94,8 @@ object Args {
         parse(tail, base.copy(isRegenerate = true))
       case "--no-compile" :: tail =>
         parse(tail, base.copy(isCompile = false))
+      case "--intellij" :: tail =>
+        parse(tail, base.copy(isIntelliJ = true))
       case "--cache" :: tail =>
         parse(tail, base.copy(isCache = true))
       case "--no-cache" :: tail =>
