@@ -12,7 +12,8 @@ final class CodeActionProvider(
     trees: Trees,
     buffers: Buffers,
     semanticdbs: Semanticdbs,
-    symbolSearch: MetalsSymbolSearch
+    symbolSearch: MetalsSymbolSearch,
+    definitionProvider: DefinitionProvider
 ) {
 
   def codeActions(
@@ -33,6 +34,7 @@ final class CodeActionProvider(
             buffers,
             semanticdbs,
             symbolSearch,
+            definitionProvider,
             token
           )
         )

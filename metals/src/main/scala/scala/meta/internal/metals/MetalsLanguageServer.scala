@@ -413,7 +413,8 @@ class MetalsLanguageServer(
       trees,
       buffers,
       semanticdbs,
-      symbolSearch
+      symbolSearch,
+      definitionProvider
     )
     doctor = new Doctor(
       workspace,

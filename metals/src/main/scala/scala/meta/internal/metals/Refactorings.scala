@@ -5,7 +5,7 @@ import scala.meta._
 import scala.meta.pc.CancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags._
-import scala.meta.internal.semanticdb.{SymbolOccurrence, TextDocument}
+import scala.meta.internal.semanticdb.TextDocument
 import org.eclipse.{lsp4j => l}
 
 trait Refactoring {
@@ -15,6 +15,7 @@ trait Refactoring {
       buffers: Buffers,
       semanticdbs: Semanticdbs,
       symbolSearch: MetalsSymbolSearch,
+      definitionProvider: DefinitionProvider,
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]]
 }
@@ -31,6 +32,7 @@ object Refactoring {
         buffers: Buffers,
         semanticdbs: Semanticdbs,
         symbolSearch: MetalsSymbolSearch,
+        definitionProvider: DefinitionProvider,
         token: CancelToken
     )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
       scribe.debug("Running contribute for UseNamedArguments")
@@ -50,23 +52,29 @@ object Refactoring {
 
       def findSymbolTree(tree: Tree): Term.Name = tree match {
         case x @ Term.Name(_) => x
-        case Term.Select(t, x) => x
+        case Term.Select(_, x) => x
         case Term.Apply(x, _) => findSymbolTree(x)
       }
 
-      def findSymbolOccurrence(
+      def resolveSymbol(
+          textDocumentId: l.TextDocumentIdentifier,
+          path: AbsolutePath,
           textDocument: TextDocument,
           symbolTreePos: Position
-      ): Option[SymbolOccurrence] =
-        textDocument.occurrences.find(so =>
-          so.getRange.startLine == symbolTreePos.startLine &&
-            so.getRange.startCharacter == symbolTreePos.startColumn
+      ): ResolvedSymbolOccurrence = {
+        val tdpp = new l.TextDocumentPositionParams(
+          textDocumentId,
+          symbolTreePos.toLSP.getStart
         )
+        definitionProvider.positionOccurrence(path, tdpp, textDocument)
+      }
 
       def buildEdits(
           methodApplyTree: Term.Apply,
-          paramNames: List[String]
+          paramNames: List[String],
+          editDistance: TokenEditDistance
       ): List[l.TextEdit] = {
+        // TODO write tests to confirm whether we need to offset by edit distance or not
         methodApplyTree.args.zip(paramNames).flatMap {
           case (Term.Assign(_, _), _) =>
             // already a named argument, no edit needed
@@ -78,7 +86,6 @@ object Refactoring {
             val edit = new l.TextEdit(new l.Range(position, position), text)
             Some(edit)
         }
-
       }
 
       val path = params.getTextDocument().getUri().toAbsolutePath
@@ -97,7 +104,13 @@ object Refactoring {
           _ = scribe.debug(
             s"Symbol tree: $symbolTree, position: ${symbolTree.pos}"
           )
-          symbolOccurrence <- findSymbolOccurrence(textDocument, symbolTree.pos)
+          resolvedSymbol = resolveSymbol(
+            params.getTextDocument,
+            path,
+            textDocument,
+            symbolTree.pos
+          )
+          symbolOccurrence <- resolvedSymbol.occurrence
           _ = scribe.debug(s"Symbol occurrence: $symbolOccurrence")
           symbolDocumentation <- symbolSearch
             .documentation(symbolOccurrence.symbol)
@@ -111,7 +124,13 @@ object Refactoring {
           val edit = new l.WorkspaceEdit()
           val uri = params.getTextDocument().getUri()
           val changes =
-            Map(uri -> buildEdits(methodApplyTree, parameterNames).asJava)
+            Map(
+              uri -> buildEdits(
+                methodApplyTree,
+                parameterNames,
+                resolvedSymbol.distance
+              ).asJava
+            )
 
           val codeAction = new l.CodeAction()
           codeAction.setTitle(title)
