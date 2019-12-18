@@ -1,6 +1,7 @@
 package scala.meta.internal.pantsbuild
 
 import java.nio.file.Path
+import java.nio.file.Files
 
 case class PantsTarget(
     name: String,
@@ -15,5 +16,5 @@ case class PantsTarget(
 ) {
   val directoryName: String = BloopPants.makeReadableFilename(name)
   def classesDir(bloopDir: Path): Path =
-    bloopDir.resolve(directoryName).resolve("classes")
+    Files.createDirectories(bloopDir.resolve(directoryName).resolve("classes"))
 }
