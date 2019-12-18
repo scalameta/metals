@@ -289,10 +289,7 @@ private class BloopPants(
       .filter(_.isTargetRoot)
       .map(toBloopProject)
       .toList
-    // Only emit library sources in one resolution to avoid duplicated
-    // `*-sources.jar` references.
-    val binaryDependenciesSourcesIterator =
-      binaryDependencySources.iterator.map(newSourceModule)
+    val binaryDependenciesSourcesIterator = getLibraryDependencySources()
     val generatedProjects = new mutable.LinkedHashSet[Path]
     val byName = projects.map(p => p.name -> p).toMap
     projects.foreach { project =>
@@ -337,11 +334,22 @@ private class BloopPants(
     generatedProjects.size
   }
 
+  // This method returns an iterator to avoid duplicated `*-sources.jar` references.
+  private def getLibraryDependencySources(): Iterator[C.Module] = {
+    for {
+      target <- export.targets.valuesIterator
+      if !target.isTargetRoot
+      baseDirectory = target.baseDirectory(workspace)
+      sourceDirectory <- enclosingSourceDirectory(baseDirectory)
+    } {
+      binaryDependencySources += sourceDirectory
+    }
+    binaryDependencySources.iterator.map(newSourceModule)
+  }
+
   private def toBloopProject(target: PantsTarget): C.Project = {
 
-    val baseDirectory: Path = PantsConfiguration
-      .baseDirectory(AbsolutePath(workspace), target.name)
-      .toNIO
+    val baseDirectory: Path = target.baseDirectory(workspace)
 
     val sources: List[Path] =
       if (target.targetType.isResource) Nil
