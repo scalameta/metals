@@ -398,7 +398,7 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  // TODO OnDemandSymbolIndex doesn't distinguish between build targets
+  // TODO: https://github.com/scalameta/metals/issues/1196
   assertBreakpoints("ambiguous", disabled = true)(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a

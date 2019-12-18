@@ -15,9 +15,7 @@ private[debug] final class SetBreakpointsRequestHandler(
     adapters: MetalsDebugAdapters
 )(implicit ec: ExecutionContext) {
 
-  // TODO the partitioning does not work for cases when the same file has other types defined
-  //  which happens to be closer to the breakpoint line than the actual type to which
-  //  the breakpoint should belong. For details see [[tests.debug.BreakpointDapSuite]]
+  // TODO: https://github.com/scalameta/metals/issues/1195
   def apply(
       request: SetBreakpointsArguments
   ): Future[SetBreakpointsResponse] = {
