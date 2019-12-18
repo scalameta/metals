@@ -34,7 +34,7 @@ NVIM v0.4.3
 It also uses [Yarn](https://yarnpkg.com/en/docs/install#debian-stable) to manage
 extensions but you could opt-out of it and use `vim-plug` instead.
 
-For convenience we recommend installing both:
+For convenience we recommend installing both via your favorite package manager or manually:
 
 ```sh
 curl -sL install-node.now.sh/lts | sh
@@ -171,8 +171,6 @@ Once you have `coc.nvim` installed, you can then install Metals by running.
 :CocInstall coc-metals
 ```
 
-
-
 ```scala mdoc:editor:vim
 Update the `metals.sbtScript` setting to use a custom `sbt` script instead of the
 default Metals launcher if you need further customizations like reading environment
@@ -203,8 +201,6 @@ After updating the version, you'll be triggered to reload the window.
 This will be necessary before the new version will be dowloaded and used.
 
 ![Update Metals Version](https://i.imgur.com/VUCdQvi.png)
-
-
 
 ## List all workspace compile errors
 
@@ -251,24 +247,13 @@ default mapping `<space> o`.
 
 ![Document Symbols](https://i.imgur.com/gEhAXV4.png)
 
-
 ## Available Configuration Options
 
 The following configuration options are currently available. The easiest way to set these configurations is to enter `:CocConfig` or `:CocLocalConfig` to set your global or local configuration settings respectively.
 If you'd like to get autocompletion help for the configuration values you can install [coc-json](https://github.com/neoclide/coc-json).
 
-
-   Configuration Option     |      Description
-----------------------------|---------------------------
-`metals.serverVersion`      | The version of the Metals server artifact. Requires reloading the window.
-`metals.serverProperties`   | Optional list of properties to pass along to the Metals server. By default, the environment variable `JAVA_OPTS` and `.jvmopts` file are respected.
-`metals.javaHome`           | Optional path to the Java home directory. Requires reloading the window.\n\nDefaults to the most recent Java 8 version computed by the `locate-java-home` npm package.
-`metals.sbtScript`          | Optional absolute path to an `sbt` executable to use for running `sbt bloopInstall`. By default, Metals uses `java -jar sbt-launch.jar` with an embedded launcher while respecting `.jvmopts` and `.sbtopts`.\n\nUpdate this setting if your `sbt` script requires more customizations like using environment variables.
-`metals.millScript`         | Optional absolute path to a `mill` executable to use for running `mill mill.contrib.Bloop/install`. By default, Metals uses an embedded `millw` script while respecting `.mill-version` file. Update this setting if your `mill` script requires more customizations.
-`metals.mavenScript`        | Optional absolute path to a `mvn` executable to use for running `mvn ch.epfl.scala:maven-bloop_2.10:<bloop_version>:bloopInstall`. By default, Metals uses an embedded `mvnw` script. Update this setting if your `mvn` script requires more customizations.
-`metals.gradleScript`       | Optional absolute path to a `gradle` executable to use for running `gradle bloopInstall`. By default, Metals uses an embedded `gradlew` script. Update this setting if your `gradle` script requires more customizations.
-`metals.scalafmtConfigPath` | Optional custom path to the .scalafmt.conf file. Should be relative to the workspace root directory and use forward slashes `/` for file separators (even on Windows).
-`metals.customRepositories` | Optional list of custom resolvers passed to Coursier when fetching metals dependencies.\n\nFor documentation on accepted values see the [Coursier documentation](https://get-coursier.io/docs/other-repositories). The extension will pass these to Coursier using the COURSIER_REPOSITORIES environment variable after joining the custom repositories with a pipe character (|).
+```scala mdoc:user-config:lsp-config-coc
+```
 
 ## Enable on type formatting for multiline string formatting
 
