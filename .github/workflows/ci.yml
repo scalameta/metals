@@ -6,7 +6,7 @@ on:
   pull_request:
 jobs:
   unit:
-    name: ${{ matrix.os }} unit tests
+    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
