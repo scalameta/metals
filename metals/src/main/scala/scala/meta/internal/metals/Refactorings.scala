@@ -23,6 +23,8 @@ object Refactoring {
 
   object UseNamedArguments extends Refactoring {
 
+    val title = "Use named arguments"
+
     override def contribute(
         params: l.CodeActionParams,
         trees: Trees,
@@ -112,7 +114,7 @@ object Refactoring {
             Map(uri -> buildEdits(methodApplyTree, parameterNames).asJava)
 
           val codeAction = new l.CodeAction()
-          codeAction.setTitle("Use named arguments")
+          codeAction.setTitle(title)
           codeAction.setKind(l.CodeActionKind.Refactor)
 
           edit.setChanges(changes.asJava)

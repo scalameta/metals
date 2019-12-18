@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.QuickFix.ImportMissingSymbol
+import scala.meta.internal.metals.Refactoring.UseNamedArguments
 import scala.meta.internal.metals.MetalsEnrichments._
 
 object CodeActionLspSuite extends BaseLspSuite("codeAction") {
@@ -25,6 +26,219 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
        |}
        |""".stripMargin
   )
+
+  check(
+    "use-named-arguments-basic",
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  val x = doSomething(123,@@ "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  val x = doSomething(foo = 123, bar = "hello")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "use-named-arguments-cursor-in-function-name",
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  val x = doSomethi@@ng(123, "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  val x = doSomething(foo = 123, bar = "hello")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "use-named-arguments-different-class",
+    """|package a
+       |
+       |class Doer(a: Boolean) {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |}
+       |
+       |object A {
+       |  val doer = new Doer(true)
+       |  val x = doer.doSomething(123,@@ "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |class Doer(a: Boolean) {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |}
+       |
+       |object A {
+       |  val doer = new Doer(true)
+       |  val x = doer.doSomething(foo = 123, bar = "hello")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "use-named-arguments-scala-Predef",
+    """|package a
+       |
+       |object A {
+       |  requi@@re(1 == 1)
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |object A {
+       |  require(requirement = 1 == 1)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "use-named-arguments-scala-stdlib",
+    """|package a
+       |
+       |import scala.io.Source
+       |
+       |object A {
+       |  val source = Source.fromString(@@"hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |import scala.io.Source
+       |
+       |object A {
+       |  val source = Source.fromString(s = "hello")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "use-named-arguments-partially-named",
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  val x = doSomething(foo = 123,@@ "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  val x = doSomething(foo = 123, bar = "hello")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "use-named-arguments-nested",
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  def addOne(n: Int): Int = n + 1
+       |  val x = doSomething(addOn@@e(123), "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  def addOne(n: Int): Int = n + 1
+       |  val x = doSomething(addOne(n = 123), "hello")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "use-named-arguments-chained",
+    """|package a
+       |
+       |class Doer(a: Boolean) {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |}
+       |
+       |object A {
+       |  def createDoer(z: Boolean): Doer = new Doer(z)
+       |  val x = createDoer(true).doSomething(@@123, "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |class Doer(a: Boolean) {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |}
+       |
+       |object A {
+       |  def createDoer(z: Boolean): Doer = new Doer(z)
+       |  val x = createDoer(true).doSomething(foo = 123, bar = "hello")
+       |}
+       |""".stripMargin
+  )
+
+  // TODO constructors and apply methods do not work
+  //check(
+  //"use-named-arguments-constructor",
+  //"""|package a
+  //|
+  //|class Thing(foo: Int, bar: String)
+  //|
+  //|object A {
+  //|  val x = new Thing(123,@@ "hello")
+  //|}
+  //|""".stripMargin,
+  //UseNamedArguments.title,
+  //"""|package a
+  //|
+  //|class Thing(foo: Int, bar: String)
+  //|
+  //|object A {
+  //|  val x = new Thing(foo = 123, bar = "hello")
+  //|}
+  //|""".stripMargin
+  //)
+
+  //check(
+  //"use-named-arguments-case-class-apply",
+  //"""|package a
+  //|
+  //|case class Thing(foo: Int, bar: String)
+  //|
+  //|object A {
+  //|  val x = Thing(123,@@ "hello")
+  //|}
+  //|""".stripMargin,
+  //UseNamedArguments.title,
+  //"""|package a
+  //|
+  //|case class Thing(foo: Int, bar: String)
+  //|
+  //|object A {
+  //|  val x = Thing(foo = 123, bar = "hello")
+  //|}
+  //|""".stripMargin
+  //)
 
   def check(
       name: String,
