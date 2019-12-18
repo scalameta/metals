@@ -869,16 +869,6 @@ final class TestingServer(
       root: AbsolutePath,
       isJava8: Boolean = true
   ): Future[Unit] = {
-    def compatJDK(locs: List[l.Location]): List[Location] =
-      locs.map(loc =>
-        if (isJava8) loc
-        else {
-          new l.Location(
-            loc.getUri.replaceAllLiterally("java.base/", ""),
-            loc.getRange
-          )
-        }
-      )
 
     val fMap =
       FileLayout.mapFromString(queryStr).filter(_._1.endsWith(".scala"))
@@ -936,20 +926,20 @@ final class TestingServer(
         query.replaceAll("(<<)?(>>)?", "")
       )
     } yield {
-      uri.map(TestingServer.uriToRelative(_, root).stripPrefix("/")) match {
+      uri.map(TestingUtils.uriToRelative(_, root).stripPrefix("/")) match {
         case Some(uriStr) =>
-          compatJDK(typeDefinitions)
+          TestingUtils.compatJDK(typeDefinitions, isJava8)
             .map(o =>
-              TestingServer.uriToRelative(o.getUri, root).stripPrefix("/")
+              TestingUtils.uriToRelative(o.getUri, root).stripPrefix("/")
             )
             .map(o => DiffAssertions.assertNoDiff(o, uriStr))
         case None =>
-          val obtained = compatJDK(typeDefinitions)
-            .map(TestingServer.locationToString(_, root).stripPrefix("/"))
+          val obtained = TestingUtils.compatJDK(typeDefinitions, isJava8)
+            .map(TestingUtils.locationToString(_, root).stripPrefix("/"))
             .sorted
             .mkString("\n")
           val expected = (expectedLocs ++ extractedExp)
-            .map(TestingServer.locationToString(_, root).stripPrefix("/"))
+            .map(TestingUtils.locationToString(_, root).stripPrefix("/"))
             .sorted
             .mkString("\n")
           DiffAssertions.assertNoDiff(obtained, expected)
@@ -1278,55 +1268,5 @@ object TestingServer {
       .getOrElse {
         throw new IllegalArgumentException(s"no such file: $filename")
       }
-  }
-
-  def uriToRelative(uri: String, root: AbsolutePath): String =
-    uri.stripPrefix(root.toURI.toString)
-
-  def locationToString(loc: l.Location, root: AbsolutePath): String = {
-    def locationToRelative(loc: l.Location, root: AbsolutePath): Location = {
-      val uri = uriToRelative(loc.getUri, root)
-      new l.Location(uri, loc.getRange)
-    }
-
-    val (uri, start, end) =
-      (
-        locationToRelative(loc, root).getUri,
-        loc.getRange.getStart,
-        loc.getRange.getEnd
-      )
-    s"$uri [${start.getLine}:${start.getCharacter} -> ${end.getLine}:${end.getCharacter}]"
-  }
-
-  def locationFromString(
-      str: String,
-      root: AbsolutePath
-  ): Option[l.Location] = {
-    val regex =
-      """\s*([^\s]+)\s* \[([0-9]+):([0-9]+)\s* ->\s* ([0-9]+):([0-9]+)\]\s*""".r
-
-    def createLocation(
-        uri: String,
-        begin: (Int, Int),
-        end: (Int, Int)
-    ): l.Location = {
-      val startPos = new l.Position(begin._1, begin._2)
-      val endPos = new l.Position(end._1, end._2)
-
-      new l.Location(uri, new l.Range(startPos, endPos))
-    }
-
-    str match {
-      case regex(uri, startL, startC, endL, endC) =>
-        Some(
-          createLocation(
-            root.toURI.resolve(uri).toString.replaceFirst("/", "///"),
-            (startL.toInt, startC.toInt),
-            (endL.toInt, endC.toInt)
-          )
-        )
-      case _ =>
-        None
-    }
   }
 }

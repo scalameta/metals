@@ -170,32 +170,7 @@ abstract class BasePCSuite extends BaseSuite {
       locations: java.util.List[l.Location]
   ): String = {
     val edits = locations.asScala.toList.flatMap { location =>
-      if (location.getUri == uri) {
-        List(
-          new l.TextEdit(
-            new l.Range(
-              location.getRange.getStart,
-              location.getRange.getStart
-            ),
-            "<<"
-          ),
-          new l.TextEdit(
-            new l.Range(
-              location.getRange.getEnd,
-              location.getRange.getEnd
-            ),
-            ">>"
-          )
-        )
-      } else {
-        val filename = location.getUri
-        val comment = s"/*$filename*/"
-        if (code.contains(comment)) {
-          Nil
-        } else {
-          List(new l.TextEdit(offsetRange, comment))
-        }
-      }
+      locationToCode(code, uri, offsetRange, location)
     }
     TextEdits.applyEdits(code, edits)
   }
