@@ -207,7 +207,7 @@ object TypeDefinitionLspSuite
         )
         _ <- Future.sequence(files.map(server.didOpen))
         expected = expectedLocs.flatMap(
-          TestingServer.locationFromString(_, workspace)
+          TestingUtils.locationFromString(_, workspace)
         )
         _ <- server.assertTypeDefinition(
           queryStr = query,
@@ -237,32 +237,7 @@ object TypeDefinitionLspSuite
           workspace.toURI.relativize(new java.net.URI(loc.getUri)).toString,
           loc.getRange
         )
-        if (location.getUri == uri) {
-          List(
-            new l.TextEdit(
-              new l.Range(
-                location.getRange.getStart,
-                location.getRange.getStart
-              ),
-              "<<"
-            ),
-            new l.TextEdit(
-              new l.Range(
-                location.getRange.getEnd,
-                location.getRange.getEnd
-              ),
-              ">>"
-            )
-          )
-        } else {
-          val filename = location.getUri
-          val comment = s"/*$filename*/"
-          if (code.contains(comment)) {
-            Nil
-          } else {
-            List(new l.TextEdit(offsetRange, comment))
-          }
-        }
+        locationToCode(code, uri, offsetRange, location)
       }
     }
     TextEdits.applyEdits(code, edits)

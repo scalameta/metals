@@ -1,5 +1,10 @@
 package tests
 
+import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j.TextEdit
+import scala.collection.mutable
+import scala.concurrent.Await
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.meta.internal.semver.SemVer
 import scala.util.Properties
@@ -62,6 +67,35 @@ class BaseSuite extends munit.FunSuite with Assertions {
       .getOrElse(default)
 
     postProcess(result)
+  }
+
+  def locationToCode(code: String, uri: String, offsetRange: l.Range, location: l.Location): List[TextEdit] = {
+    if (location.getUri == uri) {
+      List(
+        new l.TextEdit(
+          new l.Range(
+            location.getRange.getStart,
+            location.getRange.getStart
+          ),
+          "<<"
+        ),
+        new l.TextEdit(
+          new l.Range(
+            location.getRange.getEnd,
+            location.getRange.getEnd
+          ),
+          ">>"
+        )
+      )
+    } else {
+      val filename = location.getUri
+      val comment = s"/*$filename*/"
+      if (code.contains(comment)) {
+        Nil
+      } else {
+        List(new l.TextEdit(offsetRange, comment))
+      }
+    }
   }
 }
 
