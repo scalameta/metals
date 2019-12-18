@@ -536,7 +536,7 @@ final class TestingServer(
       _ <- server.compilations.compileFiles(List(path))
       lenses <- codeLenses.future
       textEdits = CodeLensesTextEdits(lenses)
-    } yield TextEdits.applyEdits(textContents(filename), textEdits)
+    } yield TextEdits.applyEdits(textContents(filename), textEdits.toList)
   }
 
   def formatCompletion(

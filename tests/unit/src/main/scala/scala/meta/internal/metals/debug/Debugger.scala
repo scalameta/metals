@@ -1,6 +1,5 @@
 package scala.meta.internal.metals.debug
 
-import java.util.Collections
 import java.util.concurrent.TimeUnit
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
@@ -40,8 +39,11 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
     server.initialize(arguments).asScala
   }
 
-  def launch: Future[Unit] = {
-    server.launch(Collections.emptyMap()).asScala.ignoreValue
+  def launch(debug: java.lang.Boolean): Future[Unit] = {
+    val arguments = Map[String, AnyRef](
+      "noDebug" -> java.lang.Boolean.valueOf(!debug)
+    )
+    server.launch(arguments.asJava).asScala.ignoreValue
   }
 
   def configurationDone: Future[Unit] = {

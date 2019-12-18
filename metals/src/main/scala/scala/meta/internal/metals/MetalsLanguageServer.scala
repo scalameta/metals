@@ -1220,16 +1220,18 @@ class MetalsLanguageServer(
         val args = params.getArguments.asScala
         args match {
           case Seq(param: JsonElement) =>
-            val session = Future
-              .fromTry(param.as[b.DebugSessionParams])
-              .flatMap(
-                DebugServer
-                  .start(_, definitionProvider, buildTargets, buildServer)
+            val session = for {
+              params <- Future.fromTry(param.as[b.DebugSessionParams])
+              server <- DebugServer.start(
+                params,
+                definitionProvider,
+                buildTargets,
+                buildServer
               )
-              .map { server =>
-                cancelables.add(server)
-                DebugSession(server.sessionName, server.uri.toString)
-              }
+            } yield {
+              cancelables.add(server)
+              DebugSession(server.sessionName, server.uri.toString)
+            }
 
             session.asJavaObject
           case _ =>

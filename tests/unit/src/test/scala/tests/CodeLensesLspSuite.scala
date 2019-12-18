@@ -3,7 +3,7 @@ import scala.concurrent.Future
 
 object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
-    """|<<run>>
+    """|<<run>><<debug>>
        |object Main {
        |  def main(args: Array[String]): Unit = {}
        |}
@@ -19,7 +19,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
 
   check("main")(
     """|package foo
-       |<<run>>
+       |<<run>><<debug>>
        |object Main {
        |  def main(args: Array[String]): Unit = {}
        |}
@@ -28,7 +28,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
 
   check("non-ascii")(
     """|package foo.bar
-       |<<run>>
+       |<<run>><<debug>>
        |object :: {
        |  def main(args: Array[String]): Unit = {}
        |}
@@ -37,7 +37,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
 
   check("test-suite-class", library = "org.scalatest::scalatest:3.0.5")(
     """|package foo.bar
-       |<<test>>
+       |<<test>><<debug test>>
        |class Foo extends org.scalatest.FunSuite {
        |  test("foo") {}
        |}
@@ -46,7 +46,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
 
   check("test-suite-object", library = "com.lihaoyi::utest:0.7.2")(
     """|package foo.bar
-       |<<test>>
+       |<<test>><<debug test>>
        |object Foo extends utest.TestSuite {
        |  val tests = utest.Tests {}
        |}
@@ -79,7 +79,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       _ <- assertCodeLenses(
         "a/src/main/scala/Foo.scala",
         """|package foo.bar
-           |<<run>>
+           |<<run>><<debug>>
            |object Foo {
            |  def main(args: Array[String]): Unit = {}
            |}
@@ -88,7 +88,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       _ <- assertCodeLenses(
         "a/src/main/scala/Bar.scala",
         """|package foo.bar
-           |<<run>>
+           |<<run>><<debug>>
            |object Bar {
            |  def main(args: Array[String]): Unit = {}
            |}
@@ -137,7 +137,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       )
       _ <- assertCodeLenses(
         "a/src/main/scala/Main.scala",
-        """<<run>>
+        """<<run>><<debug>>
           |object Main {
           |  def main(args: Array[String]): Unit = {}
           |}
@@ -165,7 +165,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       )
       _ <- assertCodeLenses(
         "a/src/main/scala/Main.scala",
-        """<<run>>
+        """<<run>><<debug>>
           |object Main {
           |  def main(args: Array[String]): Unit = ???
           |}
@@ -176,7 +176,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       )
       _ <- assertCodeLenses(
         "a/src/main/scala/Main.scala",
-        """<<run>>
+        """<<run>><<debug>>
           |object Main {
           |  def main(args: Array[String]): Unit = ???
           |

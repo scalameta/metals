@@ -6,6 +6,7 @@ import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
+import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.CodeLensProvider._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
@@ -55,11 +56,11 @@ final class DebugCodeLensProvider(
             val main = classes.mainClasses
               .get(symbol)
               .map(mainCommand(target, _))
-              .toList
+              .getOrElse(Nil)
             val tests = classes.testClasses
               .get(symbol)
               .map(testCommand(target, _))
-              .toList
+              .getOrElse(Nil)
             main ++ tests
           }
           if commands.nonEmpty
@@ -102,32 +103,48 @@ object CodeLensProvider {
   def testCommand(
       target: b.BuildTargetIdentifier,
       className: String
-  ): l.Command = {
-    val name = "test"
-    val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
-    val data = singletonList(className).toJson
+  ): List[l.Command] = {
+    val params = {
+      val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
+      val data = singletonList(className).toJson
+      sessionParams(target, dataKind, data)
+    }
 
-    command(target, name, dataKind, data)
+    List(
+      command("test", StartRunSession, params),
+      command("debug test", StartDebugSession, params)
+    )
   }
 
   def mainCommand(
       target: b.BuildTargetIdentifier,
       main: b.ScalaMainClass
-  ): l.Command = {
-    val name = "run"
-    val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
-    val data = main.toJson
+  ): List[l.Command] = {
+    val params = {
+      val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+      val data = main.toJson
+      sessionParams(target, dataKind, data)
+    }
 
-    command(target, name, dataKind, data)
+    List(
+      command("run", StartRunSession, params),
+      command("debug", StartDebugSession, params)
+    )
+  }
+
+  private def sessionParams(
+      target: b.BuildTargetIdentifier,
+      dataKind: String,
+      data: JsonElement
+  ): b.DebugSessionParams = {
+    new b.DebugSessionParams(List(target).asJava, dataKind, data)
   }
 
   private def command(
-      target: b.BuildTargetIdentifier,
       name: String,
-      dataKind: String,
-      data: JsonElement
+      command: Command,
+      params: b.DebugSessionParams
   ): l.Command = {
-    val params = new b.DebugSessionParams(List(target).asJava, dataKind, data)
-    new l.Command(name, StartDebugSession.id, singletonList(params))
+    new l.Command(name, command.id, singletonList(params))
   }
 }

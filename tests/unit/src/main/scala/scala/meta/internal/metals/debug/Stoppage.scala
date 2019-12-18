@@ -20,8 +20,17 @@ object Stoppage {
 
   object Handler {
     case object Continue extends Handler {
-      override def apply(stoppage: Stoppage): Future[DebugStep] =
+      override def apply(stoppage: Stoppage): Future[DebugStep] = {
         Future.successful(DebugStep.Continue)
+      }
+      override def shutdown: Future[Unit] = Future.unit
+    }
+
+    case object Fail extends Handler {
+      override def apply(stoppage: Stoppage): Future[DebugStep] = {
+        val error = s"Unexpected stoppage: $stoppage"
+        Future.failed(new IllegalStateException(error))
+      }
       override def shutdown: Future[Unit] = Future.unit
     }
   }
