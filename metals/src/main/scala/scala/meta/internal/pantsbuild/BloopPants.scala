@@ -401,6 +401,10 @@ private class BloopPants(
       entry <- exportClasspath(dependency)
     } yield entry
 
+    // NOTE(olafur): we put resources on the classpath instead of under "resources"
+    // due to an issue how the IntelliJ BSP integration interprets resources.
+    classpath ++= resources
+
     C.Project(
       name = target.name,
       directory = baseDirectory,
@@ -410,7 +414,7 @@ private class BloopPants(
       classpath = classpath.toList,
       out = out,
       classesDir = classDirectory,
-      resources = if (resources.isEmpty) None else Some(resources),
+      resources = None,
       scala = Some(
         C.Scala(
           "org.scala-lang",
