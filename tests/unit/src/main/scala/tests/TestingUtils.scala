@@ -36,17 +36,17 @@ object TestingUtils {
   }
 
   def locationFromString(
-                          str: String,
-                          root: AbsolutePath
-                        ): Option[l.Location] = {
+      str: String,
+      root: AbsolutePath
+  ): Option[l.Location] = {
     val regex =
       """\s*([^\s]+)\s* \[([0-9]+):([0-9]+)\s* ->\s* ([0-9]+):([0-9]+)\]\s*""".r
 
     def createLocation(
-                        uri: String,
-                        begin: (Int, Int),
-                        end: (Int, Int)
-                      ): l.Location = {
+        uri: String,
+        begin: (Int, Int),
+        end: (Int, Int)
+    ): l.Location = {
       val startPos = new l.Position(begin._1, begin._2)
       val endPos = new l.Position(end._1, end._2)
 
@@ -66,5 +66,9 @@ object TestingUtils {
         None
     }
   }
+
+  def prepareDefinition(original: String, removeAt: Boolean = false): String =
+    if (removeAt) original.replaceAll("(<<)?(>>)?(@@)?", "")
+    else original.replaceAll("(<<)?(>>)?", "")
 
 }

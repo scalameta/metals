@@ -923,18 +923,20 @@ final class TestingServer(
     for {
       typeDefinitions <- typeDefinition(
         filename,
-        query.replaceAll("(<<)?(>>)?", "")
+        TestingUtils.prepareDefinition(query)
       )
     } yield {
       uri.map(TestingUtils.uriToRelative(_, root).stripPrefix("/")) match {
         case Some(uriStr) =>
-          TestingUtils.compatJDK(typeDefinitions, isJava8)
+          TestingUtils
+            .compatJDK(typeDefinitions, isJava8)
             .map(o =>
               TestingUtils.uriToRelative(o.getUri, root).stripPrefix("/")
             )
             .map(o => DiffAssertions.assertNoDiff(o, uriStr))
         case None =>
-          val obtained = TestingUtils.compatJDK(typeDefinitions, isJava8)
+          val obtained = TestingUtils
+            .compatJDK(typeDefinitions, isJava8)
             .map(TestingUtils.locationToString(_, root).stripPrefix("/"))
             .sorted
             .mkString("\n")

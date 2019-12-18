@@ -504,7 +504,7 @@ object ImplementationLspSuite extends BaseLspSuite("implementation") {
       .find(_._2.contains("@@"))
       .map {
         case (fileName, code) =>
-          (fileName, code.replaceAll("(<<|>>)", ""))
+          (fileName, TestingUtils.prepareDefinition(code))
       }
       .getOrElse {
         throw new IllegalArgumentException(
@@ -517,7 +517,7 @@ object ImplementationLspSuite extends BaseLspSuite("implementation") {
     }
     val base = files.map {
       case (fileName, code) =>
-        fileName -> code.replaceAll("(<<|>>|@@)", "")
+        fileName -> TestingUtils.prepareDefinition(code, removeAt = true)
     }
 
     testAsync(name) {
@@ -536,8 +536,8 @@ object ImplementationLspSuite extends BaseLspSuite("implementation") {
              |    ]
              |  }
              |}
-             |${input
-               .replaceAll("(<<|>>|@@)", "")}""".stripMargin
+             |${TestingUtils
+               .prepareDefinition(input, removeAt = true)}""".stripMargin
         )
         _ <- Future.sequence(
           files.map(file => server.didOpen(s"${file._1}"))

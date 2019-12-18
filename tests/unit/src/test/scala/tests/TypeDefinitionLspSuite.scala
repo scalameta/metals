@@ -182,8 +182,8 @@ object TypeDefinitionLspSuite
     testAsync(name) {
       cleanWorkspace()
       val code =
-        query
-          .replaceAll("(@@)?(<<)?(>>)?", "")
+        TestingUtils
+          .prepareDefinition(query, removeAt = true)
           .replaceAll("""\/\*[^\*]+\*\/""", "")
       val files = query.linesIterator
         .filter(_.startsWith("/"))
@@ -222,9 +222,6 @@ object TypeDefinitionLspSuite
     }
   }
 
-  def prepareDefinition(original: String): String =
-    original.replaceAll("(<<)?(>>)?", "")
-
   def locationsToCode(
       code: String,
       uri: String,
@@ -244,7 +241,7 @@ object TypeDefinitionLspSuite
   }
 
   def obtainedAndExpected(original: String, uri: String): Future[String] = {
-    val code = prepareDefinition(original)
+    val code = TestingUtils.prepareDefinition(original)
     val offset = code.indexOf("@@")
     if (offset < 0) fail("@@ missing")
 
