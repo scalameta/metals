@@ -29,7 +29,9 @@ final class DebugCodeLensProvider(
       .inverseSources(path)
       .map { buildTarget =>
         val classes = buildTargetClasses.classesOf(buildTarget)
-        codeLenses(path, buildTarget, classes)
+        val lenses = codeLenses(path, buildTarget, classes)
+        scribe.info(s"Lenses for $path: $lenses")
+        lenses
       }
 
     lenses.getOrElse(Nil)

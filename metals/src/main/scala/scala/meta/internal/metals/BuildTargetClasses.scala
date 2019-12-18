@@ -52,12 +52,20 @@ final class BuildTargetClasses(
           _ <- updateTestClasses
         } yield {
           classes.foreach {
-            case (id, classes) => index.put(id, classes)
+            case (id, classes) => {
+              scribe.info(
+                s"registered main classes for $id: ${classes.mainClasses.keySet}"
+              )
+              scribe.info(
+                s"registered test classes for $id: ${classes.testClasses.keySet}"
+              )
+              index.put(id, classes)
+            }
           }
         }
 
       case None =>
-        Future.successful(())
+        Future.unit
     }
   }
 

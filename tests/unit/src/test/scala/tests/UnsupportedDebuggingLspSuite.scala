@@ -1,12 +1,8 @@
 package tests
 
-import java.util.concurrent.TimeUnit
-import scala.concurrent.TimeoutException
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.util.Failure
-import scala.util.Success
 
 object UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
@@ -31,19 +27,10 @@ object UnsupportedDebuggingLspSuite
            |}
            |""".stripMargin
       )
-      codeLenses <- server
-        .codeLenses("a/src/main/scala/Main.scala")(maxRetries = 3)
-        .withTimeout(5, TimeUnit.SECONDS)
-        .transform(Success(_))
+      withLenses <- server.codeLenses("a/src/main/scala/Main.scala")
     } yield {
-      codeLenses match {
-        case Failure(_: TimeoutException) =>
-        // success
-        case result =>
-          fail(
-            s"Expected timeout when retrieving code lenses. Obtained [$result]"
-          )
-      }
+      val originalContent = server.textContents("a/src/main/scala/Main.scala")
+      assertNoDiff(withLenses, originalContent)
     }
   }
 

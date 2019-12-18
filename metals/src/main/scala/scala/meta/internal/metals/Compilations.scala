@@ -12,11 +12,9 @@ import scala.util.Try
 
 final class Compilations(
     buildTargets: BuildTargets,
-    classes: BuildTargetClasses,
     workspace: () => AbsolutePath,
     buildServer: () => Option[BuildServerConnection],
     languageClient: MetalsLanguageClient,
-    isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit]
 )(implicit ec: ExecutionContext) {
 
@@ -102,18 +100,9 @@ final class Compilations(
     targets.foreach(target => isCompiling(target) = true)
     val compilation = connection.compile(params)
 
-    val result = compilation.asScala
-      .andThen {
-        case result =>
-          updateCompiledTargetState(result)
-
-          // See https://github.com/scalacenter/bloop/issues/1067
-          classes.rebuildIndex(targets).foreach { _ =>
-            if (targets.exists(isCurrentlyFocused)) {
-              languageClient.refreshModel()
-            }
-          }
-      }
+    val result = compilation.asScala.andThen {
+      case result => updateCompiledTargetState(result)
+    }
 
     CancelableFuture(result, Cancelable(() => compilation.cancel(false)))
   }

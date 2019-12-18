@@ -119,11 +119,9 @@ class MetalsLanguageServer(
   val buildTargets: BuildTargets = new BuildTargets()
   val compilations: Compilations = new Compilations(
     buildTargets,
-    buildTargetClasses,
     () => workspace,
     () => buildServer,
     languageClient,
-    buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
   )
   private val fileWatcher = register(
@@ -273,7 +271,8 @@ class MetalsLanguageServer(
         compilers.didCompile(report)
       },
       () => treeView,
-      () => worksheetProvider
+      () => worksheetProvider,
+      buildTarget => focusedDocumentBuildTarget.get() == buildTarget
     )
     trees = new Trees(buffers, diagnostics)
     documentSymbolProvider = new DocumentSymbolProvider(trees)

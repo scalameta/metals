@@ -12,6 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeLensParams
@@ -75,7 +76,6 @@ import scala.meta.io.RelativePath
 import scala.{meta => m}
 import scala.meta.internal.tvp.TreeViewProvider
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import scala.concurrent.Promise
 import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
@@ -89,6 +89,8 @@ import scala.meta.internal.metals.debug.Stoppage
 import scala.util.Properties
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeActionContext
+import scala.concurrent.Promise
+import scala.concurrent.TimeoutException
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
@@ -498,32 +500,28 @@ final class TestingServer(
     }
   }
 
-  def codeLenses(filename: String)(maxRetries: Int): Future[String] = {
+  def codeLenses(filename: String, maxRetries: Int = 10): Future[String] = {
     val path = toPath(filename)
     val uri = path.toURI.toString
     val params = new CodeLensParams(new TextDocumentIdentifier(uri))
 
-    // see https://github.com/scalacenter/bloop/issues/1067
-    // because bloop does not notify us when we can access the main/test classes,
-    // we have to try until we finally get them.
-    // Following handler runs on the refresh-model notification from the server
-    // (basically once the compilation finishes and classes are fetched)
-    // it retries the compilation until we finally can get desired lenses
-    // or fails if it could nat be achieved withing [[maxRetries]] number of tries
-    var retries = maxRetries
-    val codeLenses = Promise[List[l.CodeLens]]()
-    val handler = { () =>
-      for {
-        lenses <- server.codeLens(params).asScala.map(_.asScala)
-      } {
-        if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
-        else if (retries > 0) {
-          retries -= 1
-          server.compilations.compileFiles(List(path))
-        } else {
-          val error = s"Could not fetch any code lenses in $maxRetries tries"
-          codeLenses.tryFailure(new NoSuchElementException(error))
-        }
+    val modelRefreshed = Promise[Unit]()
+    client.refreshModelHandler = () => modelRefreshed.trySuccess(())
+
+    // Since fetching the main/test classes happens asynchronously in regard to
+    // the entire compilation and we don't know when the caches were updated,
+    // we have to try until we finally get them. We cannot depend on model-notification
+    // to be sent, since it will only happen for successfully compiled modules and
+    // sometimes we want to test what happens after compilation fails.
+    def fetch(retries: Int = maxRetries): Future[List[l.CodeLens]] = {
+      server.codeLens(params).asScala.flatMap {
+        case lenses if lenses.isEmpty && retries > 0 =>
+          Thread.sleep(500) // wait for caches to be filled
+          fetch(retries - 1)
+        case lenses if modelRefreshed.isCompleted =>
+          Future.successful(lenses.asScala.toList)
+        case lenses =>
+          Future.successful(lenses.asScala.toList)
       }
     }
 
@@ -531,10 +529,12 @@ final class TestingServer(
       _ <- server
         .didFocus(uri)
         .asScala // model is refreshed only for focused document
-      _ = client.refreshModelHandler = handler
-      // first compilation, to trigger the handler
-      _ <- server.compilations.compileFiles(List(path))
-      lenses <- codeLenses.future
+      _ <- server.compilations.compileFiles(List(path)) // first compilation, to trigger the handler
+      _ = DiffAssertions.assertNoDiff(client.workspaceDiagnostics, "")
+      _ <- modelRefreshed.future
+        .withTimeout(15, TimeUnit.SECONDS)
+        .recover { case _: TimeoutException => () } // if not refreshed within timeout, proceed
+      lenses <- fetch()
       textEdits = CodeLensesTextEdits(lenses)
     } yield TextEdits.applyEdits(textContents(filename), textEdits)
   }

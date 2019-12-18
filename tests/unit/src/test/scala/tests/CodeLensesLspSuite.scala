@@ -223,24 +223,15 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
 
   private def assertCodeLenses(
       relativeFile: String,
-      expected: String,
-      maxRetries: Int = 4
+      expected: String
   ): Future[Unit] = {
-    val obtained = server.codeLenses(relativeFile)(maxRetries).recover {
-      case _: NoSuchElementException =>
-        server.textContents(relativeFile)
+    server.codeLenses(relativeFile).map { obtained =>
+      assertNoDiff(obtained, expected)
     }
-
-    obtained.map(assertNoDiff(_, expected))
   }
 
-  private def assertNoCodeLenses(
-      relativeFile: String,
-      maxRetries: Int = 4
-  ): Future[Unit] = {
-    server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
-      case _: NoSuchElementException => Future.unit
-      case e => Future.failed(e)
-    }
+  private def assertNoCodeLenses(relativeFile: String): Future[Unit] = {
+    val expected = server.textContents(relativeFile)
+    assertCodeLenses(relativeFile, expected)
   }
 }
