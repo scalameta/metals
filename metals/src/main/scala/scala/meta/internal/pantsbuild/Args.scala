@@ -25,11 +25,11 @@ case class Args(
     onFilemap: Filemap => Unit = _ => Unit
 ) {
   def helpMessage: String =
-    s"""pants-bloop [option ..] <dir ..>
+    s"""pants-bloop [option ..] <target ..>
        |
        |Command-line tool to export a Pants build into Bloop JSON config files.
-       |The <dir ..> arguments are directories containing BUILD files to export,
-       |for example "src/main/scala".
+       |The <target ..> argument is a list of Pants targets to export,
+       |for example "src/main/scala::".
        |
        |  --help
        |    Print this help message
@@ -45,6 +45,10 @@ case class Args(
        |    If enabled, do not run `./pants export-classpath`
        |  --max-file-count (default=$maxFileCount)
        |    The export process fails fast if the number of exported source files exceeds this threshold.
+       |
+       |Example usage:
+       |  pants-bloop myproject::                   # Export a single project
+       |  pants-bloop myproject:: other-project::   # Export multiple projects
        |""".stripMargin
 }
 object Args {
