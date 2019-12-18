@@ -146,7 +146,8 @@ object BloopPants {
         scribe.error(
           s"The target set ${targetSyntax} is too broad, it expands to ${fileCount} source files " +
             s"when the maximum number of allowed source files is ${args.maxFileCount}. " +
-            s"To fix this problem, configure a smaller set of Pants targets."
+            s"To fix this problem, either pass in the flag '--max-file-count ${fileCount}' or" +
+            "configure a smaller set of Pants targets."
         )
         throw new CancellationException("too many Pants targets")
       }

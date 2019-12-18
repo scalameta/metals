@@ -17,7 +17,7 @@ case class Args(
     isCompile: Boolean = true,
     isCache: Boolean = false,
     isRegenerate: Boolean = false,
-    maxFileCount: Int = 500,
+    maxFileCount: Int = 5000,
     workspace: Path = PathIO.workingDirectory.toNIO,
     out: Path = PathIO.workingDirectory.toNIO,
     targets: List[String] = Nil,
