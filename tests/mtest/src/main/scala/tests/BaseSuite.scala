@@ -69,7 +69,12 @@ class BaseSuite extends munit.FunSuite with Assertions {
     postProcess(result)
   }
 
-  def locationToCode(code: String, uri: String, offsetRange: l.Range, location: l.Location): List[TextEdit] = {
+  def locationToCode(
+      code: String,
+      uri: String,
+      offsetRange: l.Range,
+      location: l.Location
+  ): List[TextEdit] = {
     if (location.getUri == uri) {
       List(
         new l.TextEdit(

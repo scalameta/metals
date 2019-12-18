@@ -89,9 +89,9 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
   )
 
   def check(name: String, testCase: String)(implicit loc: Location): Unit = {
-    val edit = testCase.replaceAll("(<<|>>)", "")
+    val edit = TestingUtils.prepareDefinition(testCase)
     val expected = testCase.replaceAll("@@", "")
-    val base = testCase.replaceAll("(<<|>>|@@)", "")
+    val base = TestingUtils.prepareDefinition(testCase, removeAt = true)
     test(name) {
       for {
         _ <- server.initialize(
