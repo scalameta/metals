@@ -60,6 +60,9 @@ object BloopPants {
               sys.exit(1)
             case Success(count) =>
               scribe.info(s"time: exported ${count} Pants target(s) in $timer")
+              if (args.isIntelliJ) {
+                LaunchIntellij.open(args.out)
+              }
           }
         }
     }

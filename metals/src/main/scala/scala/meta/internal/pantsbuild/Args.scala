@@ -17,6 +17,7 @@ case class Args(
     isCompile: Boolean = true,
     isCache: Boolean = false,
     isRegenerate: Boolean = false,
+    isIntelliJ: Boolean = false,
     maxFileCount: Int = 5000,
     workspace: Path = PathIO.workingDirectory.toNIO,
     out: Path = PathIO.workingDirectory.toNIO,
@@ -45,17 +46,34 @@ case class Args(
        |    If enabled, do not run `./pants export-classpath`
        |  --max-file-count (default=$maxFileCount)
        |    The export process fails fast if the number of exported source files exceeds this threshold.
+       |  --intellij
+       |    Open IntelliJ in the exported project.
        |
        |Example usage:
        |  pants-bloop myproject::                   # Export a single project
        |  pants-bloop myproject:: other-project::   # Export multiple projects
+       |  pants-bloop --intellij myproject::        # Export a single project
        |""".stripMargin
 }
 object Args {
   def parse(args: List[String]): Either[List[String], Args] =
     args match {
       case Nil => Right(Args(isHelp = true))
-      case _ => parse(args, Args())
+      case _ =>
+        parse(args, Args()).map { parsed =>
+          if (parsed.isIntelliJ) {
+            val projectName = parsed.targets
+              .map(_.stripSuffix("::").stripSuffix("/::"))
+              .map(BloopPants.makeReadableFilename)
+              .mkString("bloop-", "_", "")
+            parsed.copy(
+              out = parsed.workspace.getParent().resolve(projectName)
+            )
+          } else {
+            parsed
+          }
+
+        }
     }
   def parse(args: List[String], base: Args): Either[List[String], Args] =
     args match {
@@ -76,6 +94,8 @@ object Args {
         parse(tail, base.copy(isRegenerate = true))
       case "--no-compile" :: tail =>
         parse(tail, base.copy(isCompile = false))
+      case "--intellij" :: tail =>
+        parse(tail, base.copy(isIntelliJ = true))
       case "--cache" :: tail =>
         parse(tail, base.copy(isCache = true))
       case "--no-cache" :: tail =>
