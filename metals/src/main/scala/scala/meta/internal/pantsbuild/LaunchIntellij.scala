@@ -21,16 +21,16 @@ object LaunchIntellij {
         List(
           "open",
           "-a",
-          intellij.toString(),
-          directory.toString()
+          intellij.toString()
         )
       case None =>
-        List(
-          "idea",
-          directory.toString()
-        )
+        List("idea")
     }
-    val exit = Process(command, cwd = Some(directory.toFile())).!
+    val hasIdeaDirectory = Files.isDirectory(directory.resolve(".idea"))
+    val arguments =
+      if (hasIdeaDirectory) List()
+      else List(directory.toString())
+    val exit = Process(command ++ arguments, cwd = Some(directory.toFile())).!
     if (exit != 0) {
       scribe.error(s"failed to launch IntelliJ: 'binary'")
     }

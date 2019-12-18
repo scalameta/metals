@@ -65,9 +65,13 @@ object Args {
             val projectName = parsed.targets
               .map(_.stripSuffix("::").stripSuffix("/::"))
               .map(BloopPants.makeReadableFilename)
-              .mkString("bloop-", "_", "")
+              .mkString("_")
             parsed.copy(
-              out = parsed.workspace.getParent().resolve(projectName)
+              out = parsed.workspace
+                .getParent()
+                .resolve("intellij-bsp")
+                .resolve(projectName)
+                .resolve(projectName)
             )
           } else {
             parsed
