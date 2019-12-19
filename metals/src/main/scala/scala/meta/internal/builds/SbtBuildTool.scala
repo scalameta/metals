@@ -25,7 +25,7 @@ case class SbtBuildTool(
 
   override def args(workspace: AbsolutePath): List[String] = {
     val sbtArgs = List[String](
-      "set bloopExportJarClassifiers in Global := Some(Set(\"sources\"))",
+      "-Dbloop.export-jar-classifiers=sources",
       "bloopInstall"
     )
     val allArgs = userConfig().sbtScript match {

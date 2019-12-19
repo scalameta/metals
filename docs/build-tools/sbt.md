@@ -49,10 +49,10 @@ addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "@BLOOP_VERSION@")
 Next, run:
 
 ```
-sbt "set bloopExportJarClassifiers := Some(Set(\"source\"))" bloopInstall
+sbt -Dbloop.export-jar-classifiers=sources bloopInstall
 ```
 
-to generate the Bloop JSON configuration files. You can also set the 
+to generate the Bloop JSON configuration files. You can also set the
 `bloopExportJarClassifiers` setting inside your main build.sbt file, but using
 the above command will do it automatically for you in the current sbt session.
 
