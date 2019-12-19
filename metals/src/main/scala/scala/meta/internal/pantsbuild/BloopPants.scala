@@ -60,7 +60,7 @@ object BloopPants {
               sys.exit(1)
             case Success(count) =>
               scribe.info(s"time: exported ${count} Pants target(s) in $timer")
-              if (args.isIntelliJ) {
+              if (args.isLaunchIntelliJ) {
                 LaunchIntellij.open(args.out)
               }
           }
@@ -258,8 +258,15 @@ private class BloopPants(
       )
       Properties.versionNumberString
     }
-  lazy val optimizedScalatestFramework: List[Path] =
-    fetchScalatestFrameworkJar()
+  lazy val testingFrameworkJars: List[Path] =
+    List(
+      // NOTE(olafur) This is a customized fork of
+      // https://github.com/sbt/junit-interface that reproduces the JUnit test
+      // runner in Pants. Most importantly, it automatically registers
+      // org.scalatest.junit.JUnitRunner even if there is no `@RunWith`
+      // annotation.
+      Dependency.of("com.geirsson", "junit-interface", "0.11.1-scalatest")
+    ).flatMap(fetchDependency)
   val allScalaJars: Seq[Path] = {
     val compilerClasspath = export.scalaPlatform.compilerClasspath
     if (compilerClasspath.nonEmpty) compilerClasspath
@@ -398,7 +405,7 @@ private class BloopPants(
     classpath ++= libraries.iterator.flatMap(_.nonSources)
     classpath ++= allScalaJars
     if (target.targetType.isTest) {
-      classpath ++= optimizedScalatestFramework
+      classpath ++= testingFrameworkJars
     }
 
     binaryDependencySources ++= libraries.flatMap(_.sources)
@@ -486,42 +493,14 @@ private class BloopPants(
   }
 
   private def bloopTestFrameworks: Option[C.Test] = {
-    val scalatest = C.TestFramework(
-      if (optimizedScalatestFramework.nonEmpty) {
-        List("org.scalatest.tools.FasterFramework")
-      } else {
-        List(
-          "org.scalatest.tools.Framework",
-          "org.scalatest.tools.ScalaTestFramework"
-        )
-      }
-    )
-    // These test frameworks are the default output from running `show
-    // testFrameworks` in sbt. The output from `./pants export` doesn't include
-    // the configured test frameworks.
-    val defaultTestFrameworks = List(
-      scalatest,
-      C.TestFramework(List("com.novocode.junit.JUnitFramework")),
-      C.TestFramework(List("org.scalacheck.ScalaCheckFramework")),
-      C.TestFramework(List("org.specs.runner.SpecsFramework")),
-      C.TestFramework(
-        List(
-          "org.specs2.runner.Specs2Framework",
-          "org.specs2.runner.SpecsFramework"
-        )
-      )
-    )
     Some(
       C.Test(
-        frameworks = defaultTestFrameworks,
+        frameworks = List(
+          C.TestFramework(List("com.geirsson.junit.JUnitFramework"))
+        ),
         options = C.TestOptions(
           excludes = Nil,
-          arguments = List(
-            C.TestArgument(
-              List("-o"),
-              Some(scalatest)
-            )
-          )
+          arguments = Nil
         )
       )
     )
@@ -615,15 +594,11 @@ private class BloopPants(
   }
 
   // See https://github.com/scalatest/scalatest/pull/1739
-  private def fetchScalatestFrameworkJar(): List[Path] =
+  private def fetchDependency(dep: Dependency): List[Path] =
     try {
       coursierapi.Fetch
         .create()
-        .withDependencies(
-          Dependency
-            .of("com.geirsson", "scalatest-framework_2.12", "0.1.0")
-            .withTransitive(false)
-        )
+        .withDependencies(dep)
         .addRepositories(
           MavenRepository.of(
             "https://oss.sonatype.org/content/repositories/public"
