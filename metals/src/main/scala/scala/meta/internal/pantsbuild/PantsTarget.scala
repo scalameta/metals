@@ -10,11 +10,16 @@ case class PantsTarget(
     dependencies: collection.Seq[String],
     transitiveDependencies: collection.Seq[String],
     libraries: collection.Seq[String],
-    isTargetRoot: Boolean,
+    isPantsTargetRoot: Boolean,
     targetType: TargetType,
     pantsTargetType: PantsTargetType,
     globs: PantsGlobs
 ) {
+
+  def isTargetRoot: Boolean =
+    isPantsTargetRoot &&
+      !name.startsWith(".pants.d") &&
+      !pantsTargetType.isFiles
   val directoryName: String = BloopPants.makeReadableFilename(name)
   def baseDirectory(workspace: Path): Path =
     PantsConfiguration

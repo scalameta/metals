@@ -11,7 +11,8 @@ case class PantsTargetType(value: String) {
   def isJavaLibrary: Boolean = value == "java_library"
   def isJavaThriftLibrary: Boolean = value == "java_thrift_library"
   def isJavaAntlrLibrary: Boolean = value == "java_antrl_library"
-  def isFiles: Boolean = value == "java_files"
+  def isJavaFiles: Boolean = value == "java_files"
+  def isFiles: Boolean = value == "files"
   def isAlias: Boolean = value == "alias"
   def isSupported: Boolean =
     !PantsTargetType.unsupportedTargetType.contains(value)
