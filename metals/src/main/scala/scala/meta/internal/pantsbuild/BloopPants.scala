@@ -105,6 +105,7 @@ object BloopPants {
       val output = Process(
         List[String](
           workspace.resolve("pants").toString(),
+          "--concurrent",
           s"--owner-of=$relpath",
           "list"
         ),
@@ -198,9 +199,9 @@ object BloopPants {
       args: Args,
       outputFile: Path
   )(implicit ec: ExecutionContext): Unit = {
-    val pantsBinary = args.workspace.resolve("pants").toString()
     val command = List[String](
-      pantsBinary,
+      args.workspace.resolve("pants").toString(),
+      "--concurrent",
       s"--no-quiet",
       s"--export-libraries-sources",
       s"--export-output-file=$outputFile",
