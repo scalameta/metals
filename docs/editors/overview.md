@@ -24,7 +24,7 @@ functionality.
     <td>Installation</td>
     <td align="center">Single click</td>
     <td align="center">Single click</td>
-    <td align="center">Few steps</td>
+    <td align="center">Single click</td>
     <td align="center">Few steps</td>
     <td align="center">Few steps</td>
     <td align="center">Few steps</td>
