@@ -450,7 +450,17 @@ private class BloopPants(
       java = Some(C.Java(Nil)),
       sbt = None,
       test = bloopTestFrameworks,
-      platform = Some(C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None)),
+      platform = Some(
+        C.Platform.Jvm(
+          C.JvmConfig(
+            javaHome,
+            List(
+              s"-Duser.dir=$workspace"
+            )
+          ),
+          None
+        )
+      ),
       resolution = None
     )
   }
