@@ -45,15 +45,14 @@ object PantsExport {
             case Some(transitiveDepencies) => transitiveDepencies.arr.map(_.str)
           }
         val libraries = value(PantsKeys.libraries).arr.map(_.str)
-        val isTargetRoot = value(PantsKeys.isTargetRoot).bool &&
-          !name.startsWith(".pants.d/gen")
+        val isPantsTargetRoot = value(PantsKeys.isTargetRoot).bool
         name -> PantsTarget(
           name = name,
           id = value(PantsKeys.id).str,
           dependencies = dependencies,
           transitiveDependencies = transitiveDependencies,
           libraries = libraries,
-          isTargetRoot = isTargetRoot,
+          isPantsTargetRoot = isPantsTargetRoot,
           targetType = TargetType(value(PantsKeys.targetType).str),
           pantsTargetType =
             PantsTargetType(value(PantsKeys.pantsTargetType).str),
