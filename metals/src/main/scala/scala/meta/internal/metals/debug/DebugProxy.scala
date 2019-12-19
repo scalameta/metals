@@ -2,6 +2,7 @@ package scala.meta.internal.metals.debug
 
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
+import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import scala.concurrent.Promise
@@ -60,9 +61,27 @@ private[debug] final class DebugProxy(
       outputTerminated = true
       server.send(request)
     case request @ SetBreakpointRequest(args) =>
-      handleSetBreakpointsRequest(args)
-        .map(DebugProtocol.syntheticResponse(request, _))
-        .foreach(client.consume)
+      import scala.meta.internal.metals.MetalsEnrichments._
+      val path = adapters.adaptPath(args.getSource.getPath).toAbsolutePath
+      if (sourcePathProvider.isWorkspacePath(path)) {
+        server
+          .sendPartitioned(List(request))
+          .map(_.map(DebugProtocol.parseResponse[SetBreakpointsResponse]))
+          .map(_.head.get)
+          .map { response =>
+            val breakpoints = response.getBreakpoints
+            if (breakpoints != null) {
+              breakpoints.foreach(_.setSource(args.getSource))
+            }
+            response
+          }
+          .map(DebugProtocol.syntheticResponse(request, _))
+          .foreach(client.consume)
+      } else {
+        handleSetBreakpointsRequest(args)
+          .map(DebugProtocol.syntheticResponse(request, _))
+          .foreach(client.consume)
+      }
 
     case message =>
       server.send(message)

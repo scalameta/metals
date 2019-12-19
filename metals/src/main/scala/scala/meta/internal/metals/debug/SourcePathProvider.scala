@@ -12,6 +12,10 @@ final class SourcePathProvider(
     buildTargets: BuildTargets,
     targets: List[BuildTargetIdentifier]
 ) {
+  def isWorkspacePath(path: AbsolutePath): Boolean = {
+    buildTargets.inverseSources(path).isDefined
+  }
+
   def findPathFor(source: Source): Option[AbsolutePath] = {
     if (source == null) None
     else {
