@@ -376,7 +376,7 @@ lazy val cross = project
     testSettings,
     libraryDependencies ++= List(
       "com.chuusai" %% "shapeless" % "2.3.3",
-      "org.typelevel" %% "cats-core" % "2.0.0",
+      "org.typelevel" %% "cats-core" % "2.1.0",
       "org.typelevel" %% "simulacrum" % "1.0.0",
       "com.olegpy" %% "better-monadic-for" % "0.3.1",
       "org.typelevel" %% "kind-projector" % "0.10.3"
