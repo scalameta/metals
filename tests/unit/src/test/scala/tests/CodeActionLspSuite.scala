@@ -197,6 +197,27 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
        |""".stripMargin
   )
 
+  check(
+    "use-named-arguments-overload",
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  def doSomething(a: Int, b: String, c: Boolean): Boolean = true
+       |  val x = doSomething(@@123, "hello", false)
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  def doSomething(a: Int, b: String, c: Boolean): Boolean = true
+       |  val x = doSomething(a = 123, b = "hello", c = false)
+       |}
+       |""".stripMargin
+  )
+
   // TODO constructors and apply methods do not work
   //check(
   //"use-named-arguments-constructor",
