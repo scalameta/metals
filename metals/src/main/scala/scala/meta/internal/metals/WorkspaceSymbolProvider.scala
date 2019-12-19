@@ -137,7 +137,6 @@ final class WorkspaceSymbolProvider(
     search(query, visitor, None)
     visitor.allResults()
   }
-
 }
 
 object WorkspaceSymbolProvider {

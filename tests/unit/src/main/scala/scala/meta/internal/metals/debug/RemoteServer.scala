@@ -23,6 +23,7 @@ import scala.concurrent.Promise
 import scala.meta.internal.metals.Cancelable
 import scala.reflect.ClassTag
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
 import scala.reflect.classTag
 
 private[debug] final class RemoteServer(
@@ -34,7 +35,7 @@ private[debug] final class RemoteServer(
 
   private val remote = new SocketEndpoint(socket)
   private val ongoing = new TrieMap[String, Response => Unit]()
-  private val id = new AtomicInteger(1)
+  private val id = new AtomicInteger(FirstMessageId)
   lazy val listening: Future[Unit] = Future(listen())
 
   override def initialize(
@@ -53,6 +54,54 @@ private[debug] final class RemoteServer(
       args: ConfigurationDoneArguments
   ): CompletableFuture[Void] = {
     sendRequest("configurationDone", args)
+  }
+
+  override def setBreakpoints(
+      args: SetBreakpointsArguments
+  ): CompletableFuture[SetBreakpointsResponse] = {
+    sendRequest("setBreakpoints", args)
+  }
+
+  override def stackTrace(
+      args: StackTraceArguments
+  ): CompletableFuture[StackTraceResponse] = {
+    sendRequest("stackTrace", args)
+  }
+
+  override def scopes(
+      args: ScopesArguments
+  ): CompletableFuture[ScopesResponse] = {
+    sendRequest("scopes", args)
+  }
+
+  override def variables(
+      args: VariablesArguments
+  ): CompletableFuture[VariablesResponse] = {
+    sendRequest("variables", args)
+  }
+
+  override def continue_(
+      args: ContinueArguments
+  ): CompletableFuture[ContinueResponse] = {
+    sendRequest("continue", args)
+  }
+
+  override def next(
+      args: NextArguments
+  ): CompletableFuture[Void] = {
+    sendRequest("next", args)
+  }
+
+  override def stepIn(
+      args: StepInArguments
+  ): CompletableFuture[Void] = {
+    sendRequest("stepIn", args)
+  }
+
+  override def stepOut(
+      args: StepOutArguments
+  ): CompletableFuture[Void] = {
+    sendRequest("stepOut", args)
   }
 
   override def disconnect(
@@ -74,6 +123,8 @@ private[debug] final class RemoteServer(
         notification.getMethod match {
           case "output" =>
             notify(notification, listener.onOutput)
+          case "stopped" =>
+            notify(notification, listener.onStopped)
           case "terminated" =>
             listener.onTerminated()
           case _ =>
@@ -136,7 +187,8 @@ private[debug] final class RemoteServer(
 
 object RemoteServer {
   trait Listener {
-    def onOutput(output: OutputEventArguments): Unit
+    def onOutput(event: OutputEventArguments): Unit
+    def onStopped(event: StoppedEventArguments): Unit
     def onTerminated(): Unit
   }
 

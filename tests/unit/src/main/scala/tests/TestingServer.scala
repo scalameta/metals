@@ -85,6 +85,7 @@ import org.eclipse.lsp4j.RenameParams
 import scala.meta.internal.metals.TextEdits
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.RenameFile
+import scala.meta.internal.metals.debug.Stoppage
 import scala.util.Properties
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeActionContext
@@ -184,11 +185,12 @@ final class TestingServer(
               new b.DependencySourcesParams(ids.asJava)
             )
             .asScala
-        } yield dependencySources
-          .getItems()
-          .asScala
-          .flatMap(_.getSources().asScala)
-          .toSeq
+        } yield {
+          dependencySources
+            .getItems()
+            .asScala
+            .flatMap(_.getSources().asScala)
+        }
       case None =>
         Future.successful(Seq.empty)
     }
@@ -331,7 +333,8 @@ final class TestingServer(
   def startDebugging(
       target: String,
       kind: String,
-      parameter: AnyRef
+      parameter: AnyRef,
+      stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue
   ): Future[TestDebugger] = {
     val targets = List(new b.BuildTargetIdentifier(buildTarget(target)))
     val params =
@@ -339,7 +342,7 @@ final class TestingServer(
 
     executeCommand(ServerCommands.StartDebugAdapter.id, params).collect {
       case DebugSession(_, uri) =>
-        TestDebugger(URI.create(uri))
+        TestDebugger(URI.create(uri), stoppageHandler)
     }
   }
 

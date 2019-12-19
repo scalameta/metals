@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.debug
 
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.net.Socket
 import java.util.Collections
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
@@ -32,10 +34,12 @@ private[debug] object SocketEndpoint {
   private val handler = new DebugMessageJsonHandler(Collections.emptyMap())
 
   private def messageSource(socket: Socket): StreamMessageProducer = {
-    new StreamMessageProducer(socket.getInputStream, handler)
+    val stream = new BufferedInputStream(socket.getInputStream)
+    new StreamMessageProducer(stream, handler)
   }
 
   private def messageTarget(socket: Socket): MessageConsumer = {
-    new StreamMessageConsumer(socket.getOutputStream, handler)
+    val stream = new BufferedOutputStream(socket.getOutputStream)
+    new StreamMessageConsumer(stream, handler)
   }
 }

@@ -3,23 +3,31 @@ package scala.meta.internal.metals.debug
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.messages.Message
 import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.GlobalTrace
+import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
+import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProxy._
 
 private[debug] final class DebugProxy(
     sessionName: String,
+    sourcePathProvider: SourcePathProvider,
     client: RemoteEndpoint,
-    server: RemoteEndpoint
+    server: ServerAdapter
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
   private val cancelled = new AtomicBoolean()
+  private val adapters = new MetalsDebugAdapters
+
+  private val handleSetBreakpointsRequest =
+    new SetBreakpointsRequestHandler(server, adapters)
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -34,31 +42,57 @@ private[debug] final class DebugProxy(
   }
 
   private def listenToServer(): Unit = {
-    Future(server.listen(handleServerMessage)).andThen { case _ => cancel() }
+    Future(server.onReceived(handleServerMessage))
+      .andThen { case _ => cancel() }
   }
 
   private val handleClientMessage: MessageConsumer = {
+    case null =>
+      () // ignore
     case _ if cancelled.get() =>
-    // ignore
-    case RestartRequest(message) =>
+      () // ignore
+    case request @ InitializeRequest(args) =>
+      adapters.initialize(args)
+      server.send(request)
+    case request @ RestartRequest(_) =>
       // set the status first, since the server can kill the connection
       exitStatus.trySuccess(Restarted)
       outputTerminated = true
-      server.consume(message)
-    case null =>
-      () // do nothing
+      server.send(request)
+    case request @ SetBreakpointRequest(args) =>
+      handleSetBreakpointsRequest(args)
+        .map(DebugProtocol.syntheticResponse(request, _))
+        .foreach(client.consume)
+
     case message =>
-      server.consume(message)
+      server.send(message)
   }
 
-  private val handleServerMessage: MessageConsumer = {
+  private val handleServerMessage: Message => Unit = {
+    case null =>
+      () // ignore
     case _ if cancelled.get() =>
-    // ignore
+      () // ignore
     case OutputNotification() if outputTerminated =>
     // ignore. When restarting, the output keeps getting printed for a short while after the
     // output window gets refreshed resulting in stale messages being printed on top, before
     // any actual logs from the restarted process
-
+    case response @ DebugProtocol.StackTraceResponse(args) =>
+      import scala.meta.internal.metals.JsonParser._
+      args.getStackFrames.foreach {
+        case frame if frame.getSource == null =>
+        // send as is, it is most often a frame for a synthetic class
+        case frame =>
+          sourcePathProvider.findPathFor(frame.getSource) match {
+            case Some(path) =>
+              frame.getSource.setPath(path.toURI.toString)
+            case None =>
+              // don't send invalid source if we couldn't adapt it
+              frame.setSource(null)
+          }
+      }
+      response.setResult(args.toJson)
+      client.consume(response)
     case message =>
       client.consume(message)
   }
@@ -79,6 +113,7 @@ private[debug] object DebugProxy {
 
   def open(
       name: String,
+      sourcePathProvider: SourcePathProvider,
       awaitClient: () => Future[Socket],
       connectToServer: () => Future[Socket]
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
@@ -86,16 +121,21 @@ private[debug] object DebugProxy {
       server <- connectToServer()
         .map(new SocketEndpoint(_))
         .map(endpoint => withLogger(endpoint, "dap-server"))
+        .map(new MessageIdAdapter(_))
+        .map(new ServerAdapter(_))
       client <- awaitClient()
         .map(new SocketEndpoint(_))
         .map(endpoint => withLogger(endpoint, "dap-client"))
-    } yield new DebugProxy(name, client, server)
+        .map(new MessageIdAdapter(_))
+    } yield new DebugProxy(name, sourcePathProvider, client, server)
   }
 
   private def withLogger(
       endpoint: RemoteEndpoint,
       name: String
   ): RemoteEndpoint = {
-    new EndpointLogger(endpoint, GlobalTrace.setup(name))
+    val trace = GlobalTrace.setup(name)
+    if (trace == null) endpoint
+    else new EndpointLogger(endpoint, trace)
   }
 }

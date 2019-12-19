@@ -6,6 +6,7 @@ import java.net.Socket
 import java.net.URI
 import java.{util => ju}
 import java.util.concurrent.TimeUnit
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
@@ -13,7 +14,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.DefinitionProvider
 import scala.util.Failure
 import scala.util.Try
 
@@ -55,6 +58,8 @@ object DebugServer {
 
   def start(
       parameters: b.DebugSessionParams,
+      definitionProvider: DefinitionProvider,
+      buildTargets: BuildTargets,
       buildServer: => Option[BuildServerConnection]
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     Future.fromTry(parseSessionName(parameters)).flatMap { sessionName =>
@@ -80,8 +85,18 @@ object DebugServer {
           }
       }
 
-      val proxyFactory =
-        () => DebugProxy.open(sessionName, awaitClient, connectToServer)
+      val proxyFactory = { () =>
+        val targets = parameters.getTargets.asScala
+          .map(_.getUri)
+          .map(new BuildTargetIdentifier(_))
+        val sourcePathProvider = new SourcePathProvider(
+          definitionProvider,
+          buildTargets,
+          targets.toList
+        )
+        DebugProxy
+          .open(sessionName, sourcePathProvider, awaitClient, connectToServer)
+      }
       val server = new DebugServer(sessionName, uri, proxyFactory)
 
       server.listen.andThen { case _ => proxyServer.close() }

@@ -1222,7 +1222,10 @@ class MetalsLanguageServer(
           case Seq(param: JsonElement) =>
             val session = Future
               .fromTry(param.as[b.DebugSessionParams])
-              .flatMap(DebugServer.start(_, buildServer))
+              .flatMap(
+                DebugServer
+                  .start(_, definitionProvider, buildTargets, buildServer)
+              )
               .map { server =>
                 cancelables.add(server)
                 DebugSession(server.sessionName, server.uri.toString)
