@@ -57,6 +57,8 @@ object Refactoring {
         case x @ Type.Name(_) => x
         case Term.Select(_, x) => x
         case Term.Apply(x, _) => findSymbolTree(x)
+        case Term.ApplyType(x, _) => findSymbolTree(x)
+        case Type.Apply(x, _) => findSymbolTree(x)
         case Init(x, _, _) => findSymbolTree(x)
       }
 
@@ -71,6 +73,26 @@ object Refactoring {
           symbolTreePos.toLSP.getStart
         )
         definitionProvider.positionOccurrence(path, tdpp, textDocument)
+      }
+
+      def tweakSymbol(symbol: String): String = {
+        if (symbol.endsWith(".") && !symbol.matches(""".*\((\+\d+)?\)\.$""")) {
+          /*
+           * We've probably been given a companion object symbol
+           * e.g. in the case (@@ = cursor)
+           *
+           * case class Foo(a: Int, b: Int)
+           * val x = Fo@@o(1, 2)
+           *
+           * the definition provider gives us the symbol of the companion
+           * object. This is no good to us, so we try to replace it with
+           * the case class's symbol.
+           * In other words we turn "example/Foo." into "example/Foo#"
+           */
+          symbol.stripSuffix(".") ++ "#"
+        } else {
+          symbol
+        }
       }
 
       def buildEdits(
@@ -119,8 +141,9 @@ object Refactoring {
             symbolTree.pos
           )
           symbolOccurrence <- resolvedSymbol.occurrence
+          symbol = tweakSymbol(symbolOccurrence.symbol)
           symbolDocumentation <- symbolSearch
-            .documentation(symbolOccurrence.symbol)
+            .documentation(symbol)
             .asScala
           parameterNames = symbolDocumentation
             .parameters()

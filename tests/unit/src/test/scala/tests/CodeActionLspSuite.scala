@@ -218,7 +218,6 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
        |""".stripMargin
   )
 
-  // TODO constructors and apply methods do not work
   check(
     "use-named-arguments-constructor",
     """|package a
@@ -240,26 +239,66 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
        |""".stripMargin
   )
 
-  //check(
-  //"use-named-arguments-case-class-apply",
-  //"""|package a
-  //|
-  //|case class Thing(foo: Int, bar: String)
-  //|
-  //|object A {
-  //|  val x = Thing(123,@@ "hello")
-  //|}
-  //|""".stripMargin,
-  //UseNamedArguments.title,
-  //"""|package a
-  //|
-  //|case class Thing(foo: Int, bar: String)
-  //|
-  //|object A {
-  //|  val x = Thing(foo = 123, bar = "hello")
-  //|}
-  //|""".stripMargin
-  //)
+  check(
+    "use-named-arguments-polymorphic",
+    """|package a
+       |
+       |object A {
+       |  def doSomething[A](foo: Int, bar: A): Boolean = true
+       |  val x = doSomething[String](123,@@ "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |object A {
+       |  def doSomething[A](foo: Int, bar: A): Boolean = true
+       |  val x = doSomething[String](foo = 123, bar = "hello")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "use-named-arguments-polymorphic-constructor",
+    """|package a
+       |
+       |class Thing[A](foo: Int, bar: A)
+       |
+       |object A {
+       |  val x = new Thing[String](123,@@ "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |class Thing[A](foo: Int, bar: A)
+       |
+       |object A {
+       |  val x = new Thing[String](foo = 123, bar = "hello")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "use-named-arguments-case-class-apply",
+    """|package a
+       |
+       |case class Thing(foo: Int, bar: String)
+       |
+       |object A {
+       |  val x = Thing(123,@@ "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |case class Thing(foo: Int, bar: String)
+       |
+       |object A {
+       |  val x = Thing(foo = 123, bar = "hello")
+       |}
+       |""".stripMargin
+  )
 
   def check(
       name: String,
