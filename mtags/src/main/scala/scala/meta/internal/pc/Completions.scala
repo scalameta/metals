@@ -366,10 +366,13 @@ trait Completions { this: MetalsGlobal =>
     final def isPrioritizedCached(m: Member): Boolean =
       cache.getOrElseUpdate(m.sym, isPrioritized(m))
 
+    /**
+     * Returns true if this member should be sorted at the top of completion items.
+     */
     def isPrioritized(m: Member): Boolean = true
 
     /**
-     * Returns true if this member should be sorted at the top of completion items.
+     * Returns candidate completion items.
      */
     def contribute: List[Member] = Nil
 
