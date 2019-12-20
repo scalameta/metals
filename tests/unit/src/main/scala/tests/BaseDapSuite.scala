@@ -25,10 +25,12 @@ abstract class BaseDapSuite(suiteName: String) extends BaseLspSuite(suiteName) {
       workspace: DebugWorkspaceLayout
   ): Future[List[SetBreakpointsResponse]] = {
     Future.sequence {
-      workspace.files.map { file =>
-        val path = server.toPath(file.relativePath)
-        debugger.setBreakpoints(path, file.breakpoints)
-      }
+      workspace.files
+        .filter(_.breakpoints.nonEmpty)
+        .map { file =>
+          val path = server.toPath(file.relativePath)
+          debugger.setBreakpoints(path, file.breakpoints)
+        }
     }
   }
 }

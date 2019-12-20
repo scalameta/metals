@@ -311,11 +311,11 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |}
                 |
                 |object Main extends Foo {
-                |    def main(args: Array[String]): Unit = {
-                |      val bar = new Bar
-                |      bar.call()
-                |    }
+                |  def main(args: Array[String]): Unit = {
+                |    val bar = new Bar
+                |    bar.call()
                 |  }
+                |}
                 |""".stripMargin
   )
 
@@ -332,11 +332,11 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |}
                 |
                 |object Main extends Foo {
-                |    def main(args: Array[String]): Unit = {
-                |      val bar = new Bar {}
-                |      bar.call()
-                |    }
+                |  def main(args: Array[String]): Unit = {
+                |    val bar = new Bar {}
+                |    bar.call()
                 |  }
+                |}
                 |""".stripMargin
   )
 
@@ -354,6 +354,143 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |    def main(args: Array[String]): Unit = {
                 |      call()
                 |    }
+                |}
+                |""".stripMargin
+  )
+
+  assertBreakpoints("lambda")(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    List(1).foreach{ e =>
+                |>>    println(e)
+                |    }
+                |  }
+                |}
+                |""".stripMargin
+  )
+
+  assertBreakpoints("java-enum")(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    Foo.A.call()
+                |  }
+                |}
+                |
+                |/a/src/main/java/a/Foo.java
+                |package a;
+                |
+                |enum Foo {
+                |  A;
+                |
+                |  void call() {
+                |>>  System.out.println();
+                |  }
+                |}
+                |""".stripMargin
+  )
+
+  assertBreakpoints("java-static-method")(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    Foo.call()
+                |  }
+                |}
+                |
+                |/a/src/main/java/a/Foo.java
+                |package a;
+                |
+                |class Foo {
+                |  static void call(){
+                |>>  System.out.println();
+                |  }
+                |}
+                |""".stripMargin
+  )
+
+  assertBreakpoints("java-lambda")(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    Foo.call()
+                |  }
+                |}
+                |
+                |/a/src/main/java/a/Foo.java
+                |package a;
+                |
+                |import java.util.stream.Stream;
+                |
+                |class Foo {
+                |  static void call(){
+                |    Stream.of(1).forEach(e -> 
+                |>>    System.out.println(e)
+                |    );
+                |  }
+                |}
+                |""".stripMargin
+  )
+
+  assertBreakpoints("java-nested")(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    Foo.call()
+                |  }
+                |}
+                |
+                |/a/src/main/java/a/Foo.java
+                |package a;
+                |
+                |class Foo {
+                |  class Bar {
+                |    void call(){
+                |>>    System.out.println();
+                |    }
+                |  }
+                |
+                |  static void call() {
+                |    Foo foo = new Foo();
+                |    Bar bar = foo.new Bar();
+                |    bar.call();
+                |  }
+                |}
+                |""".stripMargin
+  )
+
+  assertBreakpoints("java-anonymous")(
+    source = """|/a/src/main/scala/a/Main.scala
+                |package a
+                |object Main {
+                |  def main(args: Array[String]): Unit = {
+                |    Foo.call()
+                |  }
+                |}
+                |
+                |/a/src/main/java/a/Foo.java
+                |package a;
+                |
+                |class Bar {
+                |    void call() {};
+                |}
+                |
+                |class Foo {
+                |  static void call() {
+                |    Bar bar = new Bar() {
+                |      @Override
+                |      void call() {
+                |>>      System.out.println();
+                |      }
+                |    };
+                |    bar.call();
+                |  }
                 |}
                 |""".stripMargin
   )

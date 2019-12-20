@@ -8,6 +8,8 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.JvmSignatures
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 
 private[debug] final class SetBreakpointsRequestHandler(
@@ -19,9 +21,24 @@ private[debug] final class SetBreakpointsRequestHandler(
   def apply(
       request: SetBreakpointsArguments
   ): Future[SetBreakpointsResponse] = {
-    val path = adapters.adaptPath(request.getSource.getPath)
-    val input = path.toAbsolutePath.toInput
-    val occurrences = Mtags.allToplevels(input).occurrences
+    val path = adapters.adaptPath(request.getSource.getPath).toAbsolutePath
+
+    val topLevels = Mtags.allToplevels(path.toInput)
+    val occurrences = path.toLanguage match {
+      case Language.JAVA =>
+        def isTypeSymbol(symbol: SymbolInformation): Boolean = {
+          val kind = symbol.kind
+          kind.isClass || kind.isInterface // enum is of `class` kind
+        }
+
+        // make sure only type symbols are under consideration,
+        // as static methods are also included in top-levels
+        val isType = topLevels.symbols.filter(isTypeSymbol).map(_.symbol).toSet
+        topLevels.occurrences.filter(occ => isType(occ.symbol))
+      case _ =>
+        topLevels.occurrences
+    }
+
     val groups = request.getBreakpoints.groupBy { breakpoint =>
       val definition = occurrences.minBy(distanceFrom(breakpoint))
       JvmSignatures.toTypeSignature(definition)
