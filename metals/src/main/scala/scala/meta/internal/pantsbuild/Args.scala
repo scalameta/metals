@@ -18,6 +18,7 @@ case class Args(
     isCache: Boolean = false,
     isRegenerate: Boolean = false,
     isIntelliJ: Boolean = false,
+    isLaunchIntelliJ: Boolean = false,
     maxFileCount: Int = 5000,
     workspace: Path = PathIO.workingDirectory.toNIO,
     out: Path = PathIO.workingDirectory.toNIO,
@@ -47,7 +48,9 @@ case class Args(
        |  --max-file-count (default=$maxFileCount)
        |    The export process fails fast if the number of exported source files exceeds this threshold.
        |  --intellij
-       |    Open IntelliJ in the exported project.
+       |    Export Bloop project in empty sibling directory and open IntelliJ after export completes.
+       |  --[no-]launch-intellij
+       |    Launch IntelliJ after export completes. Default false unless --intellij is enabled.
        |
        |Example usage:
        |  pants-bloop myproject::                   # Export a single project
@@ -99,7 +102,13 @@ object Args {
       case "--no-compile" :: tail =>
         parse(tail, base.copy(isCompile = false))
       case "--intellij" :: tail =>
-        parse(tail, base.copy(isIntelliJ = true))
+        parse(tail, base.copy(isIntelliJ = true, isLaunchIntelliJ = true))
+      case "--launch-intellij" :: tail =>
+        parse(tail, base.copy(isLaunchIntelliJ = true))
+      case "--no-launch-intellij" :: tail =>
+        parse(tail, base.copy(isLaunchIntelliJ = false))
+      case "--no-cache" :: tail =>
+        parse(tail, base.copy(isCache = false))
       case "--cache" :: tail =>
         parse(tail, base.copy(isCache = true))
       case "--no-cache" :: tail =>
