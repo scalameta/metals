@@ -170,6 +170,15 @@ Once you have `coc.nvim` installed, you can then install Metals by running.
 ```vim
 :CocInstall coc-metals
 ```
+If you'd like to use the latest changes on master, you can also just build from source by using a plugin
+manager to download the extension. If you do this and you've had `coc-metals` installed before with `:CocInstall`,
+make sure you run `:CocUninstall coc-metals` to remove it. Then, if you are using [`vim-plug`](https://github.com/junegunn/vim-plug)
+for example, enter the following into where you manage your plugins:
+
+```vim
+Plug 'ckipp01/coc-metals', {'do': 'yarn install --frozen-lockfile'}
+```
+Then, issue a `:PlugInstall` to install the extension, and regularly a `:PlugUpdate` to update it and pull in the latest changes.
 
 ```scala mdoc:editor:vim
 Update the `metals.sbtScript` setting to use a custom `sbt` script instead of the
