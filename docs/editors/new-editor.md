@@ -309,7 +309,7 @@ configuration is defined both via system properties and
 `workspace/didChangeConfiguration`, then `workspace/didChangeConfiguration`
 takes precedence.
 
-```scala mdoc:user-config:lsp-config
+```scala mdoc:user-config:lsp-config-default
 
 ```
 

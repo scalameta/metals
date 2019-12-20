@@ -17,10 +17,8 @@ For running the website locally, you'll need:
 
 In addition to Docusaurus, we preprocess the markdown files using:
 
-- [sbt-docusaurus](https://olafurpg.github.io/sbt-docusaurus/), to publish the
-  Docusaurus page to GitHub from the sbt shell.
-- [mdoc](https://github.com/scalameta/mdoc), to type-check and interpret Scala
-  code fences.
+- [mdoc](https://github.com/scalameta/mdoc), to type-check, interpret Scala
+  code fences, and to generate the site using its [built-in Docusaurus support](https://scalameta.org/mdoc/docs/docusaurus.html).
 
 The first step is to then preprocess the markdown files. You can do it with:
 

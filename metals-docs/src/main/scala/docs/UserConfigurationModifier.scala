@@ -28,7 +28,7 @@ class UserConfigurationModifier extends StringModifier {
                |""".stripMargin
           }
           .mkString("\n")
-      case "lsp-config" =>
+      case "lsp-config-default" =>
         UserConfiguration.options
           .map { option =>
             s"""
@@ -44,6 +44,25 @@ class UserConfigurationModifier extends StringModifier {
                |  "metals": {
                |    "${option.key}": "${option.example}"
                |  }
+               |}
+               |```
+               |""".stripMargin
+          }
+          .mkString("\n")
+      case "lsp-config-coc" =>
+        UserConfiguration.options
+          .map { option =>
+            s"""
+               |### ${option.title}
+               |
+               |${option.description}
+               |
+               |**Default**: ${option.default}
+               |
+               |**Example**:
+               |```json
+               |{
+               |  "metals.${option.key}": "${option.example}"
                |}
                |```
                |""".stripMargin
