@@ -129,30 +129,33 @@ object Refactoring {
             .documentation(symbolOccurrence.symbol)
             .asScala
           _ = scribe.info(s"Symbol documentation: $symbolDocumentation")
-        } yield {
-          val parameterNames =
+          parameterNames =
             symbolDocumentation.parameters().asScala.map(_.displayName()).toList
+        } yield {
           scribe.info(s"Parameter names: $parameterNames")
 
-          val edit = new l.WorkspaceEdit()
-          val uri = params.getTextDocument().getUri()
-          val changes =
-            Map(
-              uri -> buildEdits(
-                methodApplyTree,
-                parameterNames,
-                resolvedSymbol.distance
-              ).asJava
-            )
+          val codeEdits = buildEdits(
+            methodApplyTree,
+            parameterNames,
+            resolvedSymbol.distance
+          )
 
-          val codeAction = new l.CodeAction()
-          codeAction.setTitle(title)
-          codeAction.setKind(l.CodeActionKind.Refactor)
+          codeEdits match {
+            case Nil => None // refactoring results in no changes to the code
+            case edits =>
+              val edit = new l.WorkspaceEdit()
+              val uri = params.getTextDocument().getUri()
+              val changes = Map(uri -> edits.asJava)
 
-          edit.setChanges(changes.asJava)
-          codeAction.setEdit(edit)
-          codeAction
-        }).toSeq
+              val codeAction = new l.CodeAction()
+              codeAction.setTitle(title)
+              codeAction.setKind(l.CodeActionKind.Refactor)
+
+              edit.setChanges(changes.asJava)
+              codeAction.setEdit(edit)
+              Some(codeAction)
+          }
+        }).flatten.toSeq
       }
 
     }
