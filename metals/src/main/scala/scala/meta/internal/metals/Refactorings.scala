@@ -35,7 +35,6 @@ object Refactoring {
         definitionProvider: DefinitionProvider,
         token: CancelToken
     )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
-      scribe.info("Running contribute for UseNamedArguments")
 
       def findMethodApplyOrCtorTreeUnderCursor(
           root: Tree,
@@ -111,12 +110,8 @@ object Refactoring {
             rootTree,
             metaRange
           )
-          _ = scribe.info(s"Tree under cursor: ${methodApplyTree.structure}")
           textDocument <- semanticdbs.textDocument(path).documentIncludingStale
           symbolTree = findSymbolTree(methodApplyTree)
-          _ = scribe.info(
-            s"Symbol tree: $symbolTree, position: ${symbolTree.pos}"
-          )
           resolvedSymbol = resolveSymbol(
             params.getTextDocument,
             path,
@@ -124,16 +119,15 @@ object Refactoring {
             symbolTree.pos
           )
           symbolOccurrence <- resolvedSymbol.occurrence
-          _ = scribe.info(s"Symbol occurrence: $symbolOccurrence")
           symbolDocumentation <- symbolSearch
             .documentation(symbolOccurrence.symbol)
             .asScala
-          _ = scribe.info(s"Symbol documentation: $symbolDocumentation")
-          parameterNames =
-            symbolDocumentation.parameters().asScala.map(_.displayName()).toList
+          parameterNames = symbolDocumentation
+            .parameters()
+            .asScala
+            .map(_.displayName())
+            .toList
         } yield {
-          scribe.info(s"Parameter names: $parameterNames")
-
           val codeEdits = buildEdits(
             methodApplyTree,
             parameterNames,
