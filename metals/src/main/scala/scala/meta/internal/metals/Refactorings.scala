@@ -35,25 +35,30 @@ object Refactoring {
         definitionProvider: DefinitionProvider,
         token: CancelToken
     )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
-      scribe.debug("Running contribute for UseNamedArguments")
+      scribe.info("Running contribute for UseNamedArguments")
 
-      def findMethodApplyTreeUnderCursor(
+      def findMethodApplyOrCtorTreeUnderCursor(
           root: Tree,
           range: Position
-      ): Option[Term.Apply] =
+      ): Option[Tree] =
         root
           .collect {
             case t @ Term.Apply(_, _)
+                if t.pos.start <= range.start && t.pos.end >= range.end =>
+              t
+            case t @ Init(_, _, _)
                 if t.pos.start <= range.start && t.pos.end >= range.end =>
               t
           }
           .sortBy(_.pos.start)
           .lastOption
 
-      def findSymbolTree(tree: Tree): Term.Name = tree match {
+      def findSymbolTree(tree: Tree): Name = tree match {
         case x @ Term.Name(_) => x
+        case x @ Type.Name(_) => x
         case Term.Select(_, x) => x
         case Term.Apply(x, _) => findSymbolTree(x)
+        case Init(x, _, _) => findSymbolTree(x)
       }
 
       def resolveSymbol(
@@ -70,12 +75,17 @@ object Refactoring {
       }
 
       def buildEdits(
-          methodApplyTree: Term.Apply,
+          tree: Tree,
           paramNames: List[String],
           editDistance: TokenEditDistance
       ): List[l.TextEdit] = {
         // TODO write tests to confirm whether we need to offset by edit distance or not
-        methodApplyTree.args.zip(paramNames).flatMap {
+        val args = tree match {
+          case Term.Apply(_, xs) => xs
+          case Init(_, _, xss) => xss.flatten
+          case _ => Nil
+        }
+        args.zip(paramNames).flatMap {
           case (Term.Assign(_, _), _) =>
             // already a named argument, no edit needed
             None
@@ -97,11 +107,14 @@ object Refactoring {
           metaRange = params
             .getRange()
             .toMeta(Input.VirtualFile(path.toString, bufferContent))
-          methodApplyTree <- findMethodApplyTreeUnderCursor(rootTree, metaRange)
-          _ = scribe.debug(s"Tree under cursor: ${methodApplyTree.structure}")
+          methodApplyTree <- findMethodApplyOrCtorTreeUnderCursor(
+            rootTree,
+            metaRange
+          )
+          _ = scribe.info(s"Tree under cursor: ${methodApplyTree.structure}")
           textDocument <- semanticdbs.textDocument(path).documentIncludingStale
           symbolTree = findSymbolTree(methodApplyTree)
-          _ = scribe.debug(
+          _ = scribe.info(
             s"Symbol tree: $symbolTree, position: ${symbolTree.pos}"
           )
           resolvedSymbol = resolveSymbol(
@@ -111,15 +124,15 @@ object Refactoring {
             symbolTree.pos
           )
           symbolOccurrence <- resolvedSymbol.occurrence
-          _ = scribe.debug(s"Symbol occurrence: $symbolOccurrence")
+          _ = scribe.info(s"Symbol occurrence: $symbolOccurrence")
           symbolDocumentation <- symbolSearch
             .documentation(symbolOccurrence.symbol)
             .asScala
-          _ = scribe.debug(s"Symbol documentation: $symbolDocumentation")
+          _ = scribe.info(s"Symbol documentation: $symbolDocumentation")
         } yield {
           val parameterNames =
             symbolDocumentation.parameters().asScala.map(_.displayName()).toList
-          scribe.debug(s"Parameter names: $parameterNames")
+          scribe.info(s"Parameter names: $parameterNames")
 
           val edit = new l.WorkspaceEdit()
           val uri = params.getTextDocument().getUri()

@@ -219,26 +219,26 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   // TODO constructors and apply methods do not work
-  //check(
-  //"use-named-arguments-constructor",
-  //"""|package a
-  //|
-  //|class Thing(foo: Int, bar: String)
-  //|
-  //|object A {
-  //|  val x = new Thing(123,@@ "hello")
-  //|}
-  //|""".stripMargin,
-  //UseNamedArguments.title,
-  //"""|package a
-  //|
-  //|class Thing(foo: Int, bar: String)
-  //|
-  //|object A {
-  //|  val x = new Thing(foo = 123, bar = "hello")
-  //|}
-  //|""".stripMargin
-  //)
+  check(
+    "use-named-arguments-constructor",
+    """|package a
+       |
+       |class Thing(foo: Int, bar: String)
+       |
+       |object A {
+       |  val x = new Thing(123,@@ "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |class Thing(foo: Int, bar: String)
+       |
+       |object A {
+       |  val x = new Thing(foo = 123, bar = "hello")
+       |}
+       |""".stripMargin
+  )
 
   //check(
   //"use-named-arguments-case-class-apply",
