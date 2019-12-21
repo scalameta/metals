@@ -19,7 +19,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param isNoInitialized set true if the editor client doesn't call the `initialized`
  *                        notification for some reason, see https://github.com/natebosch/vim-lsc/issues/113
  * @param isHttpEnabled whether to start the Metals HTTP client interface. This is needed
- *                      for clients with limited support for UI dialogues like Sublime Text
+ *                      for clients with limited support for UI dialogues
  *                      that don't implement window/showMessageRequest yet.
  * @param icons what icon set to use for messages.
  */
@@ -144,9 +144,7 @@ object MetalsServerConfig {
       case "sublime" =>
         base.copy(
           isHttpEnabled = true,
-          // Sublime text opens an invasive alert dialogue for window/showMessage
-          // and window/showMessageRequest.
-          showMessage = ShowMessageConfig.logMessage,
+          showMessage = ShowMessageConfig.showMessage,
           showMessageRequest = ShowMessageRequestConfig.on,
           icons = Icons.unicode,
           isExitOnShutdown = true,

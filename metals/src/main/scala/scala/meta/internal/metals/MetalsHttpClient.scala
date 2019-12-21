@@ -33,7 +33,7 @@ import scala.meta.internal.decorations.PublishDecorationsParams
  * - Become permanent/primary interface for ordinary users. The end goal is to
  *   enable users to interact with Metals from their editor, not via a browser.
  *
- * The most popular LSP clients in editors like Vim and Sublime currently have
+ * The most popular LSP clients in editors like Vim currently have
  * limited support so that endpoints like `window/showMessageRequest` are ignored,
  * with no workaround for users to interact with the Metals language server.
  * This http client allows users in those editors to trigger server commands
