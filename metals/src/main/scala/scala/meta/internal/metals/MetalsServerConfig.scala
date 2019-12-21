@@ -144,7 +144,8 @@ object MetalsServerConfig {
       case "sublime" =>
         base.copy(
           isHttpEnabled = true,
-          showMessage = StatusBarConfig.showMessage,
+          showMessage = ShowMessageConfig.on,
+          statusBar = StatusBarConfig.showMessage,
           showMessageRequest = ShowMessageRequestConfig.on,
           icons = Icons.unicode,
           isExitOnShutdown = true,
