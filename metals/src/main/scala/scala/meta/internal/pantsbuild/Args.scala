@@ -111,8 +111,6 @@ object Args {
         parse(tail, base.copy(isCache = false))
       case "--cache" :: tail =>
         parse(tail, base.copy(isCache = true))
-      case "--no-cache" :: tail =>
-        parse(tail, base.copy(isCache = false))
       case "--max-file-count" :: count :: tail =>
         Try(count.toInt) match {
           case Failure(_) =>
