@@ -114,7 +114,7 @@ Possible values:
 - `log-message`: translate `metals/status` notifications to `window/logMessage`
   notifications. Used by vim-lsc at the moment.
 - `show-message`: translate `metals/status` notifications to
-  `window/showMessage` notifications. Used by coc.nvim at the moment.
+  `window/showMessage` notifications. Used by coc.nvim and sublime at the moment.
 
 ### `-Dmetals.slow-task`
 
@@ -168,9 +168,7 @@ Possible values:
 
 - `off` (default): don't start a server with the Metals HTTP client.
 - `on`: start a server with the [Metals HTTP client] to interact with the server
-  through a basic web UI. This option is needed for editor clients like Sublime
-  Text that don't support necessary requests such as
-  `window/showMessageRequest`.
+  through a basic web UI. This option is needed for editor clients that don't support necessary requests such as `window/showMessageRequest`.
 
 ### `-Dmetals.icons`
 

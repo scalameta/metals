@@ -201,11 +201,6 @@ Open "Preferences > Key Binding" and add:
 
 ![Import after Enter key was hit](https://i.imgur.com/RDYx9mB.gif)
 
-## Known issues
-
-- The Sublime Text client uses an alert window for `window/showMessage` that
-  prevents you from editing code so Metals uses `window/logMessage` instead.
-
 ```scala mdoc:generic
 
 ```
