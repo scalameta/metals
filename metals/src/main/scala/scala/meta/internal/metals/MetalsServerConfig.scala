@@ -12,8 +12,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                    does not support file watching.
  * @param statusBar how to handle metals/status notifications.
  * @param slowTask how to handle metals/slowTask requests.
- * @param showMessage how to handle window/showMessage notifications.
- * @param showMessageRequest how to handle window/showMessageRequest requests.
  * @param snippetAutoIndent if the client defaults to adding the identation of the reference
  *                          line that the operation started on (relevant for multiline textEdits)
  * @param isNoInitialized set true if the editor client doesn't call the `initialized`
@@ -29,9 +27,6 @@ final case class MetalsServerConfig(
     slowTask: SlowTaskConfig = SlowTaskConfig.default,
     executeClientCommand: ExecuteClientCommandConfig =
       ExecuteClientCommandConfig.default,
-    showMessage: ShowMessageConfig = ShowMessageConfig.default,
-    showMessageRequest: ShowMessageRequestConfig =
-      ShowMessageRequestConfig.default,
     snippetAutoIndent: Boolean = MetalsServerConfig.binaryOption(
       "metals.snippet-auto-indent",
       default = true
@@ -84,8 +79,6 @@ final case class MetalsServerConfig(
       s"status-bar=$statusBar",
       s"slow-task=$slowTask",
       s"execute-client-command=$executeClientCommand",
-      s"show-message=$showMessage",
-      s"show-message-request=$showMessageRequest",
       s"no-initialized=$isNoInitialized",
       s"compilers=$compilers",
       s"http=$isHttpEnabled",
@@ -144,9 +137,7 @@ object MetalsServerConfig {
       case "sublime" =>
         base.copy(
           isHttpEnabled = true,
-          showMessage = ShowMessageConfig.on,
           statusBar = StatusBarConfig.showMessage,
-          showMessageRequest = ShowMessageRequestConfig.on,
           icons = Icons.unicode,
           isExitOnShutdown = true,
           compilers = base.compilers.copy(

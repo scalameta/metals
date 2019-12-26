@@ -143,25 +143,6 @@ Possible values:
 - `on`: the `metals/executeClientCommand` notification is supported and all
   [Metals client commands](#metals-client-commands) are handled.
 
-### `-Dmetals.show-message`
-
-Possible values:
-
-- `on` (default): send `window/showMessage` notifications like usual
-- `off`: don't send any `window/showMessage` notifications
-- `log-message`: send `window/showMessage` notifications as `window/logMessage`
-  instead. Useful when editor client responds to `window/showMessage`
-  notification with an intrusive alert.
-
-### `-Dmetals.show-message-request`
-
-Possible values:
-
-- `on` (default): send `window/showMessageRequest` requests like usual
-- `off`: don't send any `window/showMessageRequest` requests
-- `log-message`: send `window/showMessageRequest` requests as
-  `window/logMessage` instead.
-
 ### `-Dmetals.http`
 
 Possible values:
