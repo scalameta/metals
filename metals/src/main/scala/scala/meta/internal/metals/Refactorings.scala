@@ -8,26 +8,17 @@ import scala.meta.internal.mtags._
 import scala.meta.internal.semanticdb.TextDocument
 import org.eclipse.{lsp4j => l}
 
-trait Refactoring {
-  def contribute(
-      params: l.CodeActionParams,
-      trees: Trees,
-      buffers: Buffers,
-      semanticdbs: Semanticdbs,
-      symbolSearch: MetalsSymbolSearch,
-      definitionProvider: DefinitionProvider,
-      token: CancelToken
-  )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]]
-}
+object Refactorings {
 
-object Refactoring {
-
-  object UseNamedArguments extends Refactoring {
+  object UseNamedArguments extends CodeAction {
 
     val title = "Use named arguments"
 
+    override def kind: String = l.CodeActionKind.Refactor
+
     override def contribute(
         params: l.CodeActionParams,
+        compilers: Compilers,
         trees: Trees,
         buffers: Buffers,
         semanticdbs: Semanticdbs,
@@ -52,14 +43,15 @@ object Refactoring {
           .sortBy(_.pos.start)
           .lastOption
 
-      def findSymbolTree(tree: Tree): Name = tree match {
-        case x @ Term.Name(_) => x
-        case x @ Type.Name(_) => x
-        case Term.Select(_, x) => x
+      def findSymbolTree(tree: Tree): Option[Name] = tree match {
+        case x @ Term.Name(_) => Some(x)
+        case x @ Type.Name(_) => Some(x)
+        case Term.Select(_, x) => Some(x)
         case Term.Apply(x, _) => findSymbolTree(x)
         case Term.ApplyType(x, _) => findSymbolTree(x)
         case Type.Apply(x, _) => findSymbolTree(x)
         case Init(x, _, _) => findSymbolTree(x)
+        case _ => None
       }
 
       def resolveSymbol(
@@ -75,8 +67,10 @@ object Refactoring {
         definitionProvider.positionOccurrence(path, tdpp, textDocument)
       }
 
+      val methodSymbolPattern = """.*\((\+\d+)?\)\.$"""
+
       def tweakSymbol(symbol: String): String = {
-        if (symbol.endsWith(".") && !symbol.matches(""".*\((\+\d+)?\)\.$""")) {
+        if (symbol.endsWith(".") && !symbol.matches(methodSymbolPattern)) {
           /*
            * We've probably been given a companion object symbol
            * e.g. in the case (@@ = cursor)
@@ -133,7 +127,7 @@ object Refactoring {
             metaRange
           )
           textDocument <- semanticdbs.textDocument(path).documentIncludingStale
-          symbolTree = findSymbolTree(methodApplyTree)
+          symbolTree <- findSymbolTree(methodApplyTree)
           resolvedSymbol = resolveSymbol(
             params.getTextDocument,
             path,

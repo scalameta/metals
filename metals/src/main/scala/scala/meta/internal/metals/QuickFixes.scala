@@ -5,24 +5,25 @@ import scala.meta.pc.CancelToken
 import org.eclipse.{lsp4j => l}
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Semanticdbs
 
-trait QuickFix {
-  def contribute(
-      params: l.CodeActionParams,
-      compilers: Compilers,
-      token: CancelToken
-  )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]]
-}
+object QuickFixes {
 
-object QuickFix {
+  object ImportMissingSymbol extends CodeAction {
 
-  object ImportMissingSymbol extends QuickFix {
+    override def kind: String = l.CodeActionKind.QuickFix
+
     def label(name: String, packageName: String): String =
       s"Import '$name' from package '$packageName'"
 
     override def contribute(
         params: l.CodeActionParams,
         compilers: Compilers,
+        trees: Trees,
+        buffers: Buffers,
+        semanticdbs: Semanticdbs,
+        symbolSearch: MetalsSymbolSearch,
+        definitionProvider: DefinitionProvider,
         token: CancelToken
     )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 

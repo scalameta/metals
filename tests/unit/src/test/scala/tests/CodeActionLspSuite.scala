@@ -1,7 +1,7 @@
 package tests
 
-import scala.meta.internal.metals.QuickFix.ImportMissingSymbol
-import scala.meta.internal.metals.Refactoring.UseNamedArguments
+import scala.meta.internal.metals.QuickFixes.ImportMissingSymbol
+import scala.meta.internal.metals.Refactorings.UseNamedArguments
 import scala.meta.internal.metals.MetalsEnrichments._
 
 object CodeActionLspSuite extends BaseLspSuite("codeAction") {
