@@ -502,13 +502,6 @@ class MetalsLanguageServer(
       capabilities.setDocumentFormattingProvider(true)
       capabilities.setCodeActionProvider(true)
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
-      if (config.isNoInitialized) {
-        sh.schedule(
-          () => initialized(new InitializedParams),
-          1,
-          TimeUnit.SECONDS
-        )
-      }
       capabilities.setExperimental(MetalsExperimental())
       new InitializeResult(capabilities)
     }).asJava

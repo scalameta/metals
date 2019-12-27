@@ -62,28 +62,17 @@ final class ConfiguredLanguageClient(
     }
   }
   override def showMessage(params: MessageParams): Unit = {
-    if (config.showMessage.isOn) {
-      underlying.showMessage(params)
-    } else if (config.showMessage.isLogMessage) {
-      logMessage(params)
-    }
+    underlying.showMessage(params)
   }
 
   private val pendingShowMessage = new AtomicBoolean(false)
   override def showMessageRequest(
       params: ShowMessageRequestParams
   ): CompletableFuture[MessageActionItem] = {
-    if (config.showMessageRequest.isOn) {
-      pendingShowMessage.set(true)
-      val result = underlying.showMessageRequest(params)
-      result.asScala.onComplete(_ => pendingShowMessage.set(false))
-      result
-    } else {
-      if (config.showMessageRequest.isLogMessage) {
-        logMessage(params)
-      }
-      new CompletableFuture[MessageActionItem]()
-    }
+    pendingShowMessage.set(true)
+    val result = underlying.showMessageRequest(params)
+    result.asScala.onComplete(_ => pendingShowMessage.set(false))
+    result
   }
 
   override def logMessage(message: MessageParams): Unit = {
