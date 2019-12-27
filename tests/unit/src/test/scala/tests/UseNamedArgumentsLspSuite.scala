@@ -1,34 +1,11 @@
 package tests
 
-import scala.meta.internal.metals.QuickFixes.ImportMissingSymbol
 import scala.meta.internal.metals.Refactorings.UseNamedArguments
-import scala.meta.internal.metals.MetalsEnrichments._
 
-object CodeActionLspSuite extends BaseLspSuite("codeAction") {
-
-  check(
-    "auto-import",
-    """|package a
-       |
-       |object A {
-       |  val f = Fut@@ure.successful(2)
-       |}
-       |""".stripMargin,
-    s"""|${ImportMissingSymbol.label("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.label("Future", "java.util.concurrent")}
-        |""".stripMargin,
-    """|package a
-       |
-       |import scala.concurrent.Future
-       |
-       |object A {
-       |  val f = Future.successful(2)
-       |}
-       |""".stripMargin
-  )
+object UseNamedArgumentsLspSuite extends BaseCodeActionLspSuite("useNamedArguments") {
 
   check(
-    "use-named-arguments-basic",
+    "basic",
     """|package a
        |
        |object A {
@@ -47,7 +24,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-cursor-in-function-name",
+    "cursor-in-function-name",
     """|package a
        |
        |object A {
@@ -66,7 +43,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-different-class",
+    "different-class",
     """|package a
        |
        |class Doer(a: Boolean) {
@@ -93,7 +70,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-scala-Predef",
+    "scala-Predef",
     """|package a
        |
        |object A {
@@ -110,7 +87,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-scala-stdlib",
+    "scala-stdlib",
     """|package a
        |
        |import scala.io.Source
@@ -131,7 +108,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-partially-named",
+    "partially-named",
     """|package a
        |
        |object A {
@@ -150,7 +127,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-nested",
+    "nested",
     """|package a
        |
        |object A {
@@ -171,7 +148,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-chained",
+    "chained",
     """|package a
        |
        |class Doer(a: Boolean) {
@@ -198,7 +175,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-overload",
+    "overload",
     """|package a
        |
        |object A {
@@ -219,7 +196,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-constructor",
+    "constructor",
     """|package a
        |
        |class Thing(foo: Int, bar: String)
@@ -240,7 +217,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-polymorphic",
+    "polymorphic",
     """|package a
        |
        |object A {
@@ -259,7 +236,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-polymorphic-constructor",
+    "polymorphic-constructor",
     """|package a
        |
        |class Thing[A](foo: Int, bar: A)
@@ -280,7 +257,7 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
   )
 
   check(
-    "use-named-arguments-case-class-apply",
+    "case-class-apply",
     """|package a
        |
        |case class Thing(foo: Int, bar: String)
@@ -299,36 +276,5 @@ object CodeActionLspSuite extends BaseLspSuite("codeAction") {
        |}
        |""".stripMargin
   )
-
-  def check(
-      name: String,
-      input: String,
-      expectedActions: String,
-      expectedCode: String,
-      selectedActionIndex: Int = 0
-  ): Unit = {
-    val path = "a/src/main/scala/a/A.scala"
-    testAsync(name) {
-      cleanWorkspace()
-      for {
-        _ <- server.initialize(s"""/metals.json
-                                  |{"a":{}}
-                                  |/$path
-                                  |${input.replaceAllLiterally("@@", "")}
-                                  |""".stripMargin)
-        _ <- server.didOpen(path)
-        codeActions <- server.assertCodeAction(path, input, expectedActions)
-        _ <- server.didSave(path) { _ =>
-          if (selectedActionIndex >= codeActions.length) {
-            fail(s"selectedActionIndex ($selectedActionIndex) is out of bounds")
-          }
-          client.applyCodeAction(codeActions(selectedActionIndex))
-          server.toPath(path).readText
-        }
-        _ = assertNoDiff(server.bufferContents(path), expectedCode)
-        _ = assertNoDiagnostics()
-      } yield ()
-    }
-  }
 
 }
