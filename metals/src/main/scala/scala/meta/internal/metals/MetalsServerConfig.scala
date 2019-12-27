@@ -14,8 +14,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param slowTask how to handle metals/slowTask requests.
  * @param snippetAutoIndent if the client defaults to adding the identation of the reference
  *                          line that the operation started on (relevant for multiline textEdits)
- * @param isNoInitialized set true if the editor client doesn't call the `initialized`
- *                        notification for some reason, see https://github.com/natebosch/vim-lsc/issues/113
  * @param isHttpEnabled whether to start the Metals HTTP client interface. This is needed
  *                      for clients with limited support for UI dialogues
  *                      that don't implement window/showMessageRequest yet.
@@ -30,10 +28,6 @@ final case class MetalsServerConfig(
     snippetAutoIndent: Boolean = MetalsServerConfig.binaryOption(
       "metals.snippet-auto-indent",
       default = true
-    ),
-    isNoInitialized: Boolean = MetalsServerConfig.binaryOption(
-      "metals.no-initialized",
-      default = false
     ),
     isExitOnShutdown: Boolean = MetalsServerConfig.binaryOption(
       "metals.exit-on-shutdown",
@@ -79,7 +73,6 @@ final case class MetalsServerConfig(
       s"status-bar=$statusBar",
       s"slow-task=$slowTask",
       s"execute-client-command=$executeClientCommand",
-      s"no-initialized=$isNoInitialized",
       s"compilers=$compilers",
       s"http=$isHttpEnabled",
       s"input-box=$isInputBoxEnabled",
