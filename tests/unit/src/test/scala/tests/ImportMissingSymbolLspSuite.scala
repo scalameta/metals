@@ -2,7 +2,8 @@ package tests
 
 import scala.meta.internal.metals.QuickFixes.ImportMissingSymbol
 
-object ImportMissingSymbolLspSuite extends BaseCodeActionLspSuite("importMissingSymbol") {
+object ImportMissingSymbolLspSuite
+    extends BaseCodeActionLspSuite("importMissingSymbol") {
 
   check(
     "auto-import",

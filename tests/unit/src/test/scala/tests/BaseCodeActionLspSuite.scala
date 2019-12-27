@@ -2,7 +2,8 @@ package tests
 
 import scala.meta.internal.metals.MetalsEnrichments._
 
-abstract class BaseCodeActionLspSuite(suiteName: String) extends BaseLspSuite(suiteName) {
+abstract class BaseCodeActionLspSuite(suiteName: String)
+    extends BaseLspSuite(suiteName) {
 
   def check(
       name: String,

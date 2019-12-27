@@ -29,23 +29,28 @@ final class CodeActionProvider(
     val isRequestedKind: CodeAction => Boolean =
       Option(params.getContext.getOnly) match {
         case Some(only) =>
-          action => only.asScala.toSet.exists(requestedKind => action.kind.startsWith(requestedKind))
+          action =>
+            only.asScala.toSet.exists(requestedKind =>
+              action.kind.startsWith(requestedKind)
+            )
         case None =>
           _ => true
       }
 
-    val actions = allActions.filter(isRequestedKind).map(
-      _.contribute(
-            params,
-            compilers,
-            trees,
-            buffers,
-            semanticdbs,
-            symbolSearch,
-            definitionProvider,
-            token
-          )
+    val actions = allActions
+      .filter(isRequestedKind)
+      .map(
+        _.contribute(
+          params,
+          compilers,
+          trees,
+          buffers,
+          semanticdbs,
+          symbolSearch,
+          definitionProvider,
+          token
         )
+      )
     Future.sequence(actions).map(_.flatten)
   }
 

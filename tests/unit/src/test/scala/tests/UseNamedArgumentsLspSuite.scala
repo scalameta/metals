@@ -2,7 +2,8 @@ package tests
 
 import scala.meta.internal.metals.Refactorings.UseNamedArguments
 
-object UseNamedArgumentsLspSuite extends BaseCodeActionLspSuite("useNamedArguments") {
+object UseNamedArgumentsLspSuite
+    extends BaseCodeActionLspSuite("useNamedArguments") {
 
   check(
     "basic",
