@@ -133,7 +133,6 @@ object MetalsServerConfig {
       case "coc.nvim" =>
         base.copy(
           statusBar = StatusBarConfig.showMessage,
-          isHttpEnabled = true,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
