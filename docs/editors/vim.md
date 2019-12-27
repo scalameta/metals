@@ -16,8 +16,9 @@ which will provide the most complete implementation of LSP and Metals-specific h
 ## Installing Vim
 
 The coc.nvim plugin requires either **Vim >= 8.1** or **Neovim >= 0.3.1**. Make
-sure you have the correct version installed. While it works with both Vim and Neovim, the
-experience is a bit smoother with Neovim.
+sure you have the correct version installed. While it works with both Vim and Neovim,
+we recommend using Neovim since it provides a smoother experience with some of the features such
+as code actions.
 
 ```sh
 # If using Vim
@@ -179,8 +180,14 @@ command like so:
 :CocInstall https://github.com/ckipp01/coc-metals
 ```
 If you'd like to use the latest changes on master, but would prefer managing the plugin using a plugin
-manager to download the extension, make sure you run `:CocUninstall coc-metals` if you've had
-coc-metals installed before. Then, if you are using [`vim-plug`](https://github.com/junegunn/vim-plug)
+manager to download the extension, make sure you run the below snippet to uninstall the old version
+first.
+
+```vim
+:CocUninstall coc-metals
+```
+
+Then, if you are using [`vim-plug`](https://github.com/junegunn/vim-plug)
 for example, enter the following into where you manage your plugins:
 
 ```vim
@@ -309,11 +316,11 @@ The Metals server is shutdown when you exit vim as usual.
 `coc.nvim` has multiple ways to integrate with various statusline plugins. You can find instructions
 for each of them located [here](https://github.com/neoclide/coc.nvim/wiki/Statusline-integration).
 Two noteworthy things that they add are the ability to see diagnostic information in the current
-buffer...
+buffer.
 
 ![Diagnostic statusline](https://i.imgur.com/7uNYTYl.png)
 
-... and also progress information for longer standing processes.
+And it also shows progress information for longer standing processes.
 
 ![Progress item](https://i.imgur.com/AAWZ4o4.png)
 
@@ -337,8 +344,8 @@ let g:airline_section_c = '%f%{CocExtensionStatus()}'
 ```
 ## Formatting on save
 
-If you'd like to have `:w` format using Metals + Scalafmt, then make sure you have the following in
-your `:CocConfig`.
+Add the following configuration to `:CocConfig` if you'd like to have `:w` format using Metals and
+Scalafmt.
 
 ```json
 "coc.preferences.formatOnSaveFiletypes": ["scala"]
@@ -375,3 +382,5 @@ binary does not exist yet.
 The `-Dmetals.client=vim-lsc` flag is important since it configures Metals for
 usage with the `vim-lsc` client.
 
+If you are using `coc.nvim` without the `coc-metals` extension, you'll need to include the
+`-Dmetals.http=true` flag when you are bootstrapping Metals in order to use Doctor.
