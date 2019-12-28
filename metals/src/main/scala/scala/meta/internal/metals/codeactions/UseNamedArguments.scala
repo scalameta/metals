@@ -9,20 +9,18 @@ import scala.meta.internal.mtags._
 import scala.meta.internal.semanticdb.TextDocument
 import org.eclipse.{lsp4j => l}
 
-object UseNamedArguments extends CodeAction {
-
-  val title = "Use named arguments"
+class UseNamedArguments(
+    trees: Trees,
+    buffers: Buffers,
+    semanticdbs: Semanticdbs,
+    symbolSearch: MetalsSymbolSearch,
+    definitionProvider: DefinitionProvider
+) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.Refactor
 
   override def contribute(
       params: l.CodeActionParams,
-      compilers: Compilers,
-      trees: Trees,
-      buffers: Buffers,
-      semanticdbs: Semanticdbs,
-      symbolSearch: MetalsSymbolSearch,
-      definitionProvider: DefinitionProvider,
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
@@ -157,7 +155,7 @@ object UseNamedArguments extends CodeAction {
             val changes = Map(uri -> edits.asJava)
 
             val codeAction = new l.CodeAction()
-            codeAction.setTitle(title)
+            codeAction.setTitle(UseNamedArguments.title)
             codeAction.setKind(l.CodeActionKind.Refactor)
 
             edit.setChanges(changes.asJava)
@@ -168,5 +166,11 @@ object UseNamedArguments extends CodeAction {
     }
 
   }
+
+}
+
+object UseNamedArguments {
+
+  val title = "Use named arguments"
 
 }

@@ -17,15 +17,21 @@ final class CodeActionProvider(
     definitionProvider: DefinitionProvider
 ) {
 
+  val allActions = List(
+    new ImportMissingSymbol(compilers),
+    new UseNamedArguments(
+      trees,
+      buffers,
+      semanticdbs,
+      symbolSearch,
+      definitionProvider
+    )
+  )
+
   def codeActions(
       params: l.CodeActionParams,
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
-
-    val allActions = List(
-      ImportMissingSymbol,
-      UseNamedArguments
-    )
 
     val isRequestedKind: CodeAction => Boolean =
       Option(params.getContext.getOnly) match {
@@ -43,12 +49,6 @@ final class CodeActionProvider(
       .map(
         _.contribute(
           params,
-          compilers,
-          trees,
-          buffers,
-          semanticdbs,
-          symbolSearch,
-          definitionProvider,
           token
         )
       )

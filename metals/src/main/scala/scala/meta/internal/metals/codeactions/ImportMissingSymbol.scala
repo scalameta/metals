@@ -6,23 +6,13 @@ import org.eclipse.{lsp4j => l}
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.Semanticdbs
 
-object ImportMissingSymbol extends CodeAction {
+class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.QuickFix
 
-  def label(name: String, packageName: String): String =
-    s"Import '$name' from package '$packageName'"
-
   override def contribute(
       params: l.CodeActionParams,
-      compilers: Compilers,
-      trees: Trees,
-      buffers: Buffers,
-      semanticdbs: Semanticdbs,
-      symbolSearch: MetalsSymbolSearch,
-      definitionProvider: DefinitionProvider,
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
@@ -43,7 +33,7 @@ object ImportMissingSymbol extends CodeAction {
 
             val codeAction = new l.CodeAction()
 
-            codeAction.setTitle(label(name, i.packageName))
+            codeAction.setTitle(ImportMissingSymbol.label(name, i.packageName))
             codeAction.setKind(l.CodeActionKind.QuickFix)
             codeAction.setDiagnostics(List(diagnostic).asJava)
             codeAction.setEdit(edit)
@@ -62,5 +52,12 @@ object ImportMissingSymbol extends CodeAction {
       .map(_.flatten)
 
   }
+
+}
+
+object ImportMissingSymbol {
+
+  def label(name: String, packageName: String): String =
+    s"Import '$name' from package '$packageName'"
 
 }
