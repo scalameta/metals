@@ -33,25 +33,19 @@ final class CodeActionProvider(
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
-    val isRequestedKind: CodeAction => Boolean =
+    def isRequestedKind(action: CodeAction): Boolean =
       Option(params.getContext.getOnly) match {
         case Some(only) =>
-          action =>
-            only.asScala.toSet.exists(requestedKind =>
-              action.kind.startsWith(requestedKind)
-            )
-        case None =>
-          _ => true
+          only.asScala.toSet.exists(requestedKind =>
+            action.kind.startsWith(requestedKind)
+          )
+        case None => true
       }
 
-    val actions = allActions
-      .filter(isRequestedKind)
-      .map(
-        _.contribute(
-          params,
-          token
-        )
-      )
+    val actions = allActions.collect {
+      case action if isRequestedKind(action) => action.contribute(params, token)
+    }
+
     Future.sequence(actions).map(_.flatten)
   }
 
