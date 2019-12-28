@@ -17,7 +17,7 @@ final class CodeActionProvider(
     definitionProvider: DefinitionProvider
 ) {
 
-  val allActions = List(
+  val allActions: List[CodeAction] = List(
     new ImportMissingSymbol(compilers),
     new UseNamedArguments(
       trees,
