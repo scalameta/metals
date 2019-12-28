@@ -1101,7 +1101,7 @@ class MetalsLanguageServer(
   @JsonRequest("textDocument/codeAction")
   def codeAction(
       params: CodeActionParams
-  ): CompletableFuture[util.List[CodeAction]] =
+  ): CompletableFuture[util.List[l.CodeAction]] =
     CancelTokens.future { token =>
       codeActionProvider.codeActions(params, token).map(_.asJava)
     }
