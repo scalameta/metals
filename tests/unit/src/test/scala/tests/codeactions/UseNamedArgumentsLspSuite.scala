@@ -1,6 +1,6 @@
-package tests
+package tests.codeactions
 
-import scala.meta.internal.metals.Refactorings.UseNamedArguments
+import scala.meta.internal.metals.codeactions.UseNamedArguments
 
 object UseNamedArgumentsLspSuite
     extends BaseCodeActionLspSuite("useNamedArguments") {

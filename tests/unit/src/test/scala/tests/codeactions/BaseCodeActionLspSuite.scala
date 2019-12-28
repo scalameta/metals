@@ -1,5 +1,6 @@
-package tests
+package tests.codeactions
 
+import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
 
 abstract class BaseCodeActionLspSuite(suiteName: String)

@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import org.eclipse.{lsp4j => l}
 import scala.meta.pc.CancelToken
+import scala.meta.internal.metals.codeactions._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -22,8 +23,8 @@ final class CodeActionProvider(
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
     val allActions = List(
-      QuickFixes.ImportMissingSymbol,
-      Refactorings.UseNamedArguments
+      ImportMissingSymbol,
+      UseNamedArguments
     )
 
     val isRequestedKind: CodeAction => Boolean =

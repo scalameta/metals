@@ -1,6 +1,6 @@
-package tests
+package tests.codeactions
 
-import scala.meta.internal.metals.QuickFixes.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
 object ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
