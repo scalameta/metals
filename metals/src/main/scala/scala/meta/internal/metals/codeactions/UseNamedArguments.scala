@@ -83,10 +83,8 @@ class UseNamedArguments(
 
     def buildEdits(
         tree: Tree,
-        paramNames: List[String],
-        editDistance: TokenEditDistance
+        paramNames: List[String]
     ): List[l.TextEdit] = {
-      // TODO write tests to confirm whether we need to offset by edit distance or not
       val args = tree match {
         case Term.Apply(_, xs) => xs
         case Init(_, _, xss) => xss.flatten
@@ -97,8 +95,7 @@ class UseNamedArguments(
           // already a named argument, no edit needed
           None
         case (term, paramName) =>
-          val position =
-            new l.Position(term.pos.startLine, term.pos.startColumn)
+          val position = term.pos.toLSP.getStart
           val text = s"$paramName = "
           val edit = new l.TextEdit(new l.Range(position, position), text)
           Some(edit)
@@ -135,8 +132,7 @@ class UseNamedArguments(
       } yield {
         val codeEdits = buildEdits(
           methodApplyTree,
-          parameterNames,
-          resolvedSymbol.distance
+          parameterNames
         )
 
         codeEdits match {
