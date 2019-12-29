@@ -133,6 +133,19 @@ object MetalsServerConfig {
       case "coc.nvim" =>
         base.copy(
           statusBar = StatusBarConfig.showMessage,
+          isHttpEnabled = true,
+          compilers = base.compilers.copy(
+            _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
+            _completionCommand = Some("editor.action.triggerSuggest"),
+            overrideDefFormat = OverrideDefFormat.Unicode,
+            isCompletionItemResolve = false
+          )
+        )
+      case "coc-metals" =>
+        base.copy(
+          statusBar = StatusBarConfig.showMessage,
+          isInputBoxEnabled = true,
+          executeClientCommand = ExecuteClientCommandConfig.on,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),

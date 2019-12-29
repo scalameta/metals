@@ -18,7 +18,7 @@ which will provide the most complete implementation of LSP and Metals-specific h
 The coc.nvim plugin requires either **Vim >= 8.1** or **Neovim >= 0.3.1**. Make
 sure you have the correct version installed. While it works with both Vim and Neovim,
 we recommend using Neovim since it provides a smoother experience with some of the features such
-as code actions.
+as code actions and general performance.
 
 ```sh
 # If using Vim
@@ -381,6 +381,3 @@ binary does not exist yet.
 
 The `-Dmetals.client=vim-lsc` flag is important since it configures Metals for
 usage with the `vim-lsc` client.
-
-If you are using `coc.nvim` without the `coc-metals` extension, you'll need to include the
-`-Dmetals.http=true` flag when you are bootstrapping Metals in order to use Doctor.
