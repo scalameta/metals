@@ -10,6 +10,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.semver.SemVer
+import ujson.Arr
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -33,7 +34,7 @@ final class Doctor(
   def problemsHtmlPage(url: String): String = {
     val livereload = Urls.livereload(url)
     new HtmlBuilder()
-      .page("Metals Doctor", livereload) { html =>
+      .page(doctorTitle, livereload) { html =>
         html.section("Build targets", buildTargetsTable)
       }
       .render
@@ -63,10 +64,14 @@ final class Doctor(
       onServer: MetalsHttpServer => Unit
   ): Unit = {
     if (config.executeClientCommand.isOn) {
-      val html = buildTargetsHtml()
+      val output = config.doctorFormat match {
+        case format if format.isHtml => buildTargetsHtml()
+        case format if format.isJson => buildTargetsJson()
+        case _ => "Unsupported format. Possible options are `html` or `json`"
+      }
       val params = new ExecuteCommandParams(
         clientCommand.id,
-        List(html: AnyRef).asJava
+        List(output: AnyRef).asJava
       )
       languageClient.metalsExecuteClientCommand(params)
     } else {
@@ -125,10 +130,14 @@ final class Doctor(
 
     def isMaven: Boolean = workspace.resolve("pom.xml").isFile
     def hint() =
-      if (isMaven)
-        "enable SemanticDB following instructions on the " +
-          "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
-      else s"run 'Build import' to enable code navigation."
+      if (isMaven) {
+        val website =
+          if (config.doctorFormat.value == "html")
+            "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
+          else
+            "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
+        "enable SemanticDB following instructions on the " + website
+      } else s"run 'Build import' to enable code navigation."
 
     if (!isSemanticdbEnabled) {
       if (bspServerName.contains("Bloop") && isUnsupportedBloopVersion) {
@@ -204,37 +213,73 @@ final class Doctor(
 
   private def buildTargetsHtml(): String = {
     new HtmlBuilder()
-      .element("h1")(_.text("Metals Doctor"))
+      .element("h1")(_.text(doctorTitle))
       .call(buildTargetsTable)
       .render
+  }
+
+  private def buildTargetsJson(): String = {
+    val json = ujson
+      .Obj(
+        "name" -> doctorTitle,
+        "headerText" -> doctorHeading
+      )
+
+    val targets = buildTargets.all.toList
+
+    if (targets.isEmpty) {
+      json("messages") = Arr(
+        ujson.Obj(
+          "title" -> noBuildTargetsTitle,
+          "recommendations" -> Arr(noBuildTargetRecOne, noBuildTargetRecTwo)
+        )
+      )
+      ujson.write(json)
+    } else {
+      val targetResults = targets.sortBy(_.info.getBaseDirectory).map {
+        target =>
+          val (
+            buildTarget,
+            scalaVersion,
+            definition,
+            completions,
+            isSemanticdbNeeded,
+            references,
+            recommenedFix
+          ) = extractTargetInfo(target)
+          ujson.Obj(
+            "Build Target" -> buildTarget,
+            "Scala" -> scalaVersion,
+            "Diagnostics" -> Icons.unicode.check,
+            "Goto definition" -> definition,
+            "Completions" -> completions,
+            "Find references" -> references,
+            "Recommendation" -> recommenedFix
+          )
+      }
+
+      json("targets") = Arr(targetResults)
+      ujson.write(json)
+    }
   }
 
   private def buildTargetsTable(html: HtmlBuilder): Unit = {
     html
       .element("p")(
-        _.text(
-          "These are the installed build targets for this workspace. " +
-            "One build target corresponds to one classpath. For example, normally one sbt project maps to " +
-            "two build targets: main and test."
-        )
+        _.text(doctorHeading)
       )
     val targets = buildTargets.all.toList
     if (targets.isEmpty) {
       html
         .element("p")(
-          _.text(
-            s"${Icons.unicode.alert} No build targets were detected in this workspace so most functionality won't work."
-          ).element("ul")(
-            _.element("li")(
-              _.text(
-                s"Make sure the workspace directory '$workspace' matches the root of your build."
-              )
-            ).element("li")(
-              _.text(
-                "Try removing the directories .metals/ and .bloop/, then restart metals And import the build again."
+          _.text(noBuildTargetsTitle)
+            .element("ul")(
+              _.element("li")(
+                _.text(noBuildTargetRecOne)
+              ).element("li")(
+                _.text(noBuildTargetRecTwo)
               )
             )
-          )
         )
     } else {
       html
@@ -259,31 +304,16 @@ final class Doctor(
       targets: List[ScalaTarget]
   ): Unit = {
     targets.sortBy(_.info.getBaseDirectory).foreach { target =>
-      val scala = target.info.asScalaBuildTarget
-      val scalaVersion =
-        scala.fold("<unknown>")(_.getScalaVersion)
-      val definition: String =
-        if (ScalaVersions.isSupportedScalaVersion(scalaVersion)) {
-          Icons.unicode.check
-        } else {
-          Icons.unicode.alert
-        }
-      // NOTE(olafur) completions are currently the same as definition but in
-      // the future we may want to update the definition column to take the
-      // existence of library sources into account.
-      val completions: String = definition
-      val isSemanticdbNeeded = !target.isSemanticdbEnabled && target.isScalaTarget
-      val references: String =
-        if (isSemanticdbNeeded) {
-          Icons.unicode.alert
-        } else {
-          Icons.unicode.check
-        }
+      val (
+        _,
+        scalaVersion,
+        definition,
+        completions,
+        isSemanticdbNeeded,
+        references,
+        recommenedFix
+      ) = extractTargetInfo(target)
       val center = "style='text-align: center'"
-      val recommenedFix =
-        if (target.isScalaTarget)
-          recommendation(scalaVersion, target.isSemanticdbEnabled, target)
-        else ""
       html.element("tr")(
         _.element("td")(_.text(target.info.getDisplayName))
           .element("td")(_.text(scalaVersion))
@@ -297,4 +327,49 @@ final class Doctor(
       )
     }
   }
+
+  private def extractTargetInfo(target: ScalaTarget) = {
+    val scala = target.info.asScalaBuildTarget
+    val scalaVersion =
+      scala.fold("<unknown>")(_.getScalaVersion)
+    val definition: String =
+      if (ScalaVersions.isSupportedScalaVersion(scalaVersion)) {
+        Icons.unicode.check
+      } else {
+        Icons.unicode.alert
+      }
+    val completions: String = definition
+    val isSemanticdbNeeded = !target.isSemanticdbEnabled && target.isScalaTarget
+    val references: String =
+      if (isSemanticdbNeeded) {
+        Icons.unicode.alert
+      } else {
+        Icons.unicode.check
+      }
+    val recommenedFix =
+      if (target.isScalaTarget)
+        recommendation(scalaVersion, target.isSemanticdbEnabled, target)
+      else ""
+    (
+      target.info.getDisplayName(),
+      scalaVersion,
+      definition,
+      completions,
+      isSemanticdbNeeded,
+      references,
+      recommenedFix
+    )
+  }
+
+  private val doctorTitle = "Metals Doctor"
+  private val doctorHeading =
+    "These are the installed build targets for this workspace. " +
+      "One build target corresponds to one classpath. For example, normally one sbt project maps to " +
+      "two build targets: main and test."
+  private val noBuildTargetsTitle =
+    s"${Icons.unicode.alert} No build targets were detected in this workspace so most functionality won't work."
+  private val noBuildTargetRecOne =
+    s"Make sure the workspace directory '$workspace' matches the root of your build."
+  private val noBuildTargetRecTwo =
+    "Try removing the directories .metals/ and .bloop/, then restart metals And import the build again."
 }
