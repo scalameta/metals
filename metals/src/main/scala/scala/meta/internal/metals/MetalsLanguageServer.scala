@@ -411,7 +411,6 @@ class MetalsLanguageServer(
     codeActionProvider = new CodeActionProvider(
       compilers,
       trees,
-      buffers,
       semanticdbs,
       symbolSearch,
       definitionProvider

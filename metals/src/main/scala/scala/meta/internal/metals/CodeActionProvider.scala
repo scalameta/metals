@@ -11,7 +11,6 @@ import scala.collection.JavaConverters._
 final class CodeActionProvider(
     compilers: Compilers,
     trees: Trees,
-    buffers: Buffers,
     semanticdbs: Semanticdbs,
     symbolSearch: MetalsSymbolSearch,
     definitionProvider: DefinitionProvider
@@ -21,7 +20,6 @@ final class CodeActionProvider(
     new ImportMissingSymbol(compilers),
     new UseNamedArguments(
       trees,
-      buffers,
       semanticdbs,
       symbolSearch,
       definitionProvider

@@ -11,7 +11,6 @@ import org.eclipse.{lsp4j => l}
 
 class UseNamedArguments(
     trees: Trees,
-    buffers: Buffers,
     semanticdbs: Semanticdbs,
     symbolSearch: MetalsSymbolSearch,
     definitionProvider: DefinitionProvider
@@ -24,17 +23,14 @@ class UseNamedArguments(
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
-    def treeEnclosesCursor(tree: Tree, cursorPos: Position) =
-      tree.pos.start <= cursorPos.start && tree.pos.end >= cursorPos.end
-
     def findMethodApplyOrCtorTreeUnderCursor(
         root: Tree,
-        cursorPos: Position
+        cursorPos: l.Range
     ): Option[Tree] =
       root
         .collect {
-          case t @ Term.Apply(_, _) if treeEnclosesCursor(t, cursorPos) => t
-          case t @ Init(_, _, _) if treeEnclosesCursor(t, cursorPos) => t
+          case t @ Term.Apply(_, _) if t.pos.toLSP.encloses(cursorPos) => t
+          case t @ Init(_, _, _) if t.pos.toLSP.encloses(cursorPos) => t
         }
         .sortBy(_.pos.start)
         .lastOption
@@ -113,14 +109,10 @@ class UseNamedArguments(
 
     Future {
       (for {
-        bufferContent <- buffers.get(path)
         rootTree <- trees.get(path)
-        cursorPos = params
-          .getRange()
-          .toMeta(Input.VirtualFile(path.toString, bufferContent))
         methodApplyTree <- findMethodApplyOrCtorTreeUnderCursor(
           rootTree,
-          cursorPos
+          params.getRange
         )
         textDocument <- semanticdbs.textDocument(path).documentIncludingStale
         symbolTree <- findSymbolTree(methodApplyTree)
