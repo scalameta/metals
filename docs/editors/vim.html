@@ -65,7 +65,7 @@
         </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/editors/vim.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Vim</h1></header><article><div><span><p><img src="https://i.imgur.com/4BYHCCL.gif" alt="Vim demo"></p>
 <p>Metals works with most LSP clients for Vim, but we recommend using the
 <a href="https://www.npmjs.com/package/coc-metals">coc-metals extension</a> for <a href="https://github.com/neoclide/coc.nvim"><code>coc.nvim</code></a>
-which will provide the most complete implementation of LSP and Metals specific helpers.</p>
+which will provide the most complete implementation of LSP and Metals-specific helpers.</p>
 <h2><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h2>
 <p><strong>Java 8 or 11 provided by OpenJDK or Oracle</strong>. Eclipse OpenJ9 is not
 supported, please make sure the <code>JAVA_HOME</code> environment variable
@@ -77,7 +77,9 @@ Note that 2.11.x support is deprecated and it will be removed in future releases
 It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <h2><a class="anchor" aria-hidden="true" id="installing-vim"></a><a href="#installing-vim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing Vim</h2>
 <p>The coc.nvim plugin requires either <strong>Vim &gt;= 8.1</strong> or <strong>Neovim &gt;= 0.3.1</strong>. Make
-sure you have the correct version installed.</p>
+sure you have the correct version installed. While it works with both Vim and Neovim,
+we recommend using Neovim since it provides a smoother experience with some of the features such
+as code actions and general performance.</p>
 <pre><code class="hljs css language-sh"><span class="hljs-comment"># If using Vim</span>
 vim --version | head
 VIM - Vi IMproved 8.2
@@ -204,16 +206,26 @@ configure it yourself.</p>
       \: <span class="hljs-string">"\&lt;C-g&gt;u\&lt;CR&gt;\&lt;c-r&gt;=coc#on_enter()\&lt;CR&gt;"</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="installing-coc-metals"></a><a href="#installing-coc-metals" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing coc-metals</h3>
-<p>Once you have <code>coc.nvim</code> installed, you can then install Metals by running.</p>
+<p>Once you have <code>coc.nvim</code> installed, you can then install Metals a few different ways. The easiest is
+by running:</p>
 <pre><code class="hljs css language-vim">:CocInstall coc-metals
 </code></pre>
-<p>If you'd like to use the latest changes on master, you can also just build from source by using a plugin
-manager to download the extension. If you do this and you've had <code>coc-metals</code> installed before with <code>:CocInstall</code>,
-make sure you run <code>:CocUninstall coc-metals</code> to remove it. Then, if you are using <a href="https://github.com/junegunn/vim-plug"><code>vim-plug</code></a>
+<p>If you'd like to use the latest changes on master, you can also use the url of the repo in the
+command like so:</p>
+<pre><code class="hljs css language-vim">:CocInstall http<span class="hljs-variable">s:</span>//github.<span class="hljs-keyword">com</span>/ckipp01/coc-metals
+</code></pre>
+<p>If you'd like to use the latest changes on master, but would prefer managing the plugin using a plugin
+manager to download the extension, make sure you run the below snippet to uninstall the old version
+first.</p>
+<pre><code class="hljs css language-vim">:CocUninstall coc-metals
+</code></pre>
+<p>Then, if you are using <a href="https://github.com/junegunn/vim-plug"><code>vim-plug</code></a>
 for example, enter the following into where you manage your plugins:</p>
 <pre><code class="hljs css language-vim">Plug <span class="hljs-string">'ckipp01/coc-metals'</span>, {<span class="hljs-string">'do'</span>: <span class="hljs-string">'yarn install --frozen-lockfile'</span>}
 </code></pre>
-<p>Then, issue a <code>:PlugInstall</code> to install the extension, and regularly a <code>:PlugUpdate</code> to update it and pull in the latest changes.</p>
+<p>Then, issue a <code>:PlugInstall</code> to install the extension, and regularly a <code>:PlugUpdate</code> to update it
+and pull in the latest changes. If you're relying on <code>coc.nvim</code> to install the extension, it will
+automatically pull in the latest versions when published.</p>
 <h2><a class="anchor" aria-hidden="true" id="importing-a-build"></a><a href="#importing-a-build" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Importing a build</h2>
 <p>The first time you open Metals in a new workspace it prompts you to import the build.
 Click &quot;Import build&quot; to start the installation step.</p>
@@ -268,13 +280,13 @@ features.</p>
           <td>23 Sep 2019 16:37</td>
         </tr>
         <tr>
-          <td>0.7.6+643-fa1ef181-SNAPSHOT</td>
-          <td>30 Dec 2019 04:20</td>
+          <td>0.7.6+648-4ab0f2ea-SNAPSHOT</td>
+          <td>30 Dec 2019 09:32</td>
         </tr>
       </tbody>
     </table>
 After updating the version, you'll be triggered to reload the window.
-This will be necessary before the new version will be dowloaded and used.
+This will be necessary before the new version will be downloaded and used.
 <p><img src="https://i.imgur.com/VUCdQvi.png" alt="Update Metals Version"></p>
 <h2><a class="anchor" aria-hidden="true" id="list-all-workspace-compile-errors"></a><a href="#list-all-workspace-compile-errors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>List all workspace compile errors</h2>
 <p>To list all compilation errors and warnings in the workspace, run the following
@@ -290,8 +302,9 @@ open buffer.</p>
 using <code>:CocCommand</code> or the recommend mapping <code>&lt;space&gt; c</code>. This will open your command
 window allowing you to search for <code>metals.doctor-run</code> command.</p>
 <p><img src="https://i.imgur.com/QaqhxF7.png" alt="Run Doctor Command"></p>
-<p>This command opens your browser with a table like this.</p>
-<p><img src="https://i.imgur.com/yelm0jd.png" alt="Run Doctor"></p>
+<p>This command opens an embedded doctor in your preview window. If you're not familiar with
+having multiple windows, you can use <code>&lt;C-w&gt; + w</code> to jump into it.</p>
+<p><img src="https://i.imgur.com/McaAFv5.png" alt="Embedded Doctor"></p>
 <h2><a class="anchor" aria-hidden="true" id="other-available-command"></a><a href="#other-available-command" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Other Available Command</h2>
 <ul>
 <li><code>metals.restartServer</code></li>
@@ -301,6 +314,7 @@ window allowing you to search for <code>metals.doctor-run</code> command.</p>
 <li><code>metals.compile-cascade</code></li>
 <li><code>metals.compile-cancel</code></li>
 <li><code>metals.doctor-run</code></li>
+<li><code>metals.logs-toggle</code></li>
 </ul>
 <h2><a class="anchor" aria-hidden="true" id="show-document-symbols"></a><a href="#show-document-symbols" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Show document symbols</h2>
 <p>Run <code>:CocList outline</code> to show a symbol outline for the current file or use the
@@ -384,16 +398,43 @@ is not supported.</p>
 <code>onTypeFormatting</code> method. To enable the functionality you need to enable
 <code>coc.preferences.formatOnType</code> setting.</p>
 <p><img src="https://i.imgur.com/RWPHt2q.png" alt="coc-preferences-formatOnType"></p>
-<h3><a class="anchor" aria-hidden="true" id="close-buffer-without-exiting"></a><a href="#close-buffer-without-exiting" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Close buffer without exiting</h3>
+<h2><a class="anchor" aria-hidden="true" id="close-buffer-without-exiting"></a><a href="#close-buffer-without-exiting" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Close buffer without exiting</h2>
 <p>To close a buffer and return to the previous buffer, run the following command.</p>
 <pre><code class="hljs css language-vim">:<span class="hljs-keyword">bd</span>
 </code></pre>
 <p>This command is helpful when navigating in library dependency sources in the .metals/readonly directory.</p>
-<h3><a class="anchor" aria-hidden="true" id="shut-down-the-language-server"></a><a href="#shut-down-the-language-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Shut down the language server</h3>
+<h2><a class="anchor" aria-hidden="true" id="shut-down-the-language-server"></a><a href="#shut-down-the-language-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Shut down the language server</h2>
 <p>The Metals server is shutdown when you exit vim as usual.</p>
 <pre><code class="hljs css language-vim">:<span class="hljs-keyword">wq</span>
 </code></pre>
-<p>This step clean ups resources that are used by the server.</p>
+<h2><a class="anchor" aria-hidden="true" id="statusline-integration"></a><a href="#statusline-integration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Statusline integration</h2>
+<p><code>coc.nvim</code> has multiple ways to integrate with various statusline plugins. You can find instructions
+for each of them located <a href="https://github.com/neoclide/coc.nvim/wiki/Statusline-integration">here</a>.
+Two noteworthy things that they add are the ability to see diagnostic information in the current
+buffer.</p>
+<p><img src="https://i.imgur.com/7uNYTYl.png" alt="Diagnostic statusline"></p>
+<p>And it also shows progress information for longer standing processes.</p>
+<p><img src="https://i.imgur.com/AAWZ4o4.png" alt="Progress item"></p>
+<p>If you don't use a statusline integration, but would still like to see this information, the easiest
+way is to add the following to your <code>.vimrc</code>.</p>
+<pre><code class="hljs css language-vim"><span class="hljs-keyword">set</span> statusline^=%{coc#status()}
+</code></pre>
+<p>The <code>coc#status()</code> function will display both status and diagnostic information. However, if you are
+using an integration like I am in the photos that display your diagnostic information in the far
+right, but you'd like to see the status information in the middle, you can make a small function to
+just grab that information, and use it in your statusline. Here is an example for lightline to
+display only the status information in the middle of the statusline (<code>section_c</code>).</p>
+<pre><code class="hljs css language-vim"><span class="hljs-function"><span class="hljs-keyword">function</span>! <span class="hljs-title">CocExtensionStatus</span><span class="hljs-params">()</span> <span class="hljs-title">abort</span></span>
+  <span class="hljs-keyword">return</span> <span class="hljs-built_in">get</span>(<span class="hljs-variable">g:</span>, <span class="hljs-string">'coc_status'</span>, <span class="hljs-string">''</span>)
+<span class="hljs-keyword">endfunction</span>
+<span class="hljs-keyword">let</span> <span class="hljs-variable">g:airline_section_c</span> = <span class="hljs-string">'%f%{CocExtensionStatus()}'</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="formatting-on-save"></a><a href="#formatting-on-save" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Formatting on save</h2>
+<p>Add the following configuration to <code>:CocConfig</code> if you'd like to have <code>:w</code> format using Metals and
+Scalafmt.</p>
+<pre><code class="hljs css language-json">"coc.preferences.formatOnSaveFiletypes": ["scala"]
+</code></pre>
+<p>This step cleans up resources that are used by the server.</p>
 <h2><a class="anchor" aria-hidden="true" id="gitignore-projectmetalssbt-metals-and-bloop"></a><a href="#gitignore-projectmetalssbt-metals-and-bloop" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Gitignore <code>project/metals.sbt</code> <code>.metals/</code> and <code>.bloop/</code></h2>
 <p>The Metals server places logs and other files in the <code>.metals/</code> directory. The
 Bloop compile server places logs and compilation artifacts in the <code>.bloop</code>
@@ -406,7 +447,7 @@ from version control systems like git.</p>
 project/metals.sbt
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="using-an-alternative-lsp-client"></a><a href="#using-an-alternative-lsp-client" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using an alternative LSP Client</h2>
-<p>While we recommend using the <code>coc-metals</code> extions with <code>coc.nvim</code>, Metals will work
+<p>While we recommend using the <code>coc-metals</code> extension with <code>coc.nvim</code>, Metals will work
 with these alternative LSP clients.</p>
 <ul>
 <li><a href="https://github.com/natebosch/vim-lsc/"><code>vim-lsc</code></a>: simple installation and
@@ -436,8 +477,8 @@ binary does not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.7.6+643-fa1ef181-SNAPSHOT</td>
-          <td>30 Dec 2019 04:20</td>
+          <td>0.7.6+648-4ab0f2ea-SNAPSHOT</td>
+          <td>30 Dec 2019 09:32</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
@@ -459,7 +500,7 @@ chmod +x coursier
 if you are behind an HTTP proxy.</p>
 <p>The <code>-Dmetals.client=vim-lsc</code> flag is important since it configures Metals for
 usage with the <code>vim-lsc</code> client.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/atom.html"><span class="arrow-prev">← </span><span>Atom</span></a><a class="docs-next button" href="/metals/docs/editors/sublime.html"><span>Sublime Text</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-vim">Installing Vim</a></li><li><a href="#installing-yarn">Installing yarn</a></li><li><a href="#installing-cocnvim">Installing coc.nvim</a><ul class="toc-headings"><li><a href="#lsp-commands-key-mapping">LSP commands key mapping</a></li><li><a href="#installing-coc-metals">Installing coc-metals</a></li></ul></li><li><a href="#importing-a-build">Importing a build</a><ul class="toc-headings"><li><a href="#custom-sbt-launcher">Custom sbt launcher</a></li><li><a href="#speeding-up-import">Speeding up import</a></li><li><a href="#importing-changes">Importing changes</a></li></ul></li><li><a href="#configure-java-version">Configure Java version</a></li><li><a href="#using-latest-metals-snapshot">Using latest Metals SNAPSHOT</a></li><li><a href="#list-all-workspace-compile-errors">List all workspace compile errors</a></li><li><a href="#run-doctor">Run doctor</a></li><li><a href="#other-available-command">Other Available Command</a></li><li><a href="#show-document-symbols">Show document symbols</a></li><li><a href="#available-configuration-options">Available Configuration Options</a><ul class="toc-headings"><li><a href="#java-home-directory">Java Home directory</a></li><li><a href="#sbt-script">sbt script</a></li><li><a href="#gradle-script">gradle script</a></li><li><a href="#maven-script">maven script</a></li><li><a href="#mill-script">mill script</a></li><li><a href="#scalafmt-config-path">Scalafmt config path</a></li><li><a href="#pants-targets">Pants targets</a></li></ul></li><li><a href="#enable-on-type-formatting-for-multiline-string-formatting">Enable on type formatting for multiline string formatting</a><ul class="toc-headings"><li><a href="#close-buffer-without-exiting">Close buffer without exiting</a></li><li><a href="#shut-down-the-language-server">Shut down the language server</a></li></ul></li><li><a href="#gitignore-projectmetalssbt-metals-and-bloop">Gitignore <code>project/metals.sbt</code> <code>.metals/</code> and <code>.bloop/</code></a></li><li><a href="#using-an-alternative-lsp-client">Using an alternative LSP Client</a><ul class="toc-headings"><li><a href="#generating-metals-binary">Generating metals binary</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/atom.html"><span class="arrow-prev">← </span><span>Atom</span></a><a class="docs-next button" href="/metals/docs/editors/sublime.html"><span>Sublime Text</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-vim">Installing Vim</a></li><li><a href="#installing-yarn">Installing yarn</a></li><li><a href="#installing-cocnvim">Installing coc.nvim</a><ul class="toc-headings"><li><a href="#lsp-commands-key-mapping">LSP commands key mapping</a></li><li><a href="#installing-coc-metals">Installing coc-metals</a></li></ul></li><li><a href="#importing-a-build">Importing a build</a><ul class="toc-headings"><li><a href="#custom-sbt-launcher">Custom sbt launcher</a></li><li><a href="#speeding-up-import">Speeding up import</a></li><li><a href="#importing-changes">Importing changes</a></li></ul></li><li><a href="#configure-java-version">Configure Java version</a></li><li><a href="#using-latest-metals-snapshot">Using latest Metals SNAPSHOT</a></li><li><a href="#list-all-workspace-compile-errors">List all workspace compile errors</a></li><li><a href="#run-doctor">Run doctor</a></li><li><a href="#other-available-command">Other Available Command</a></li><li><a href="#show-document-symbols">Show document symbols</a></li><li><a href="#available-configuration-options">Available Configuration Options</a><ul class="toc-headings"><li><a href="#java-home-directory">Java Home directory</a></li><li><a href="#sbt-script">sbt script</a></li><li><a href="#gradle-script">gradle script</a></li><li><a href="#maven-script">maven script</a></li><li><a href="#mill-script">mill script</a></li><li><a href="#scalafmt-config-path">Scalafmt config path</a></li><li><a href="#pants-targets">Pants targets</a></li></ul></li><li><a href="#enable-on-type-formatting-for-multiline-string-formatting">Enable on type formatting for multiline string formatting</a></li><li><a href="#close-buffer-without-exiting">Close buffer without exiting</a></li><li><a href="#shut-down-the-language-server">Shut down the language server</a></li><li><a href="#statusline-integration">Statusline integration</a></li><li><a href="#formatting-on-save">Formatting on save</a></li><li><a href="#gitignore-projectmetalssbt-metals-and-bloop">Gitignore <code>project/metals.sbt</code> <code>.metals/</code> and <code>.bloop/</code></a></li><li><a href="#using-an-alternative-lsp-client">Using an alternative LSP Client</a><ul class="toc-headings"><li><a href="#generating-metals-binary">Generating metals binary</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2019 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
