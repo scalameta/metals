@@ -7,8 +7,7 @@ title: Vim
 
 Metals works with most LSP clients for Vim, but we recommend using the
 [coc-metals extension](https://www.npmjs.com/package/coc-metals) for [`coc.nvim`](https://github.com/neoclide/coc.nvim)
-which will provide the most complete implementation of LSP and Metals specific helpers.
-
+which will provide the most complete implementation of LSP and Metals-specific helpers.
 
 ```scala mdoc:requirements
 
@@ -17,7 +16,9 @@ which will provide the most complete implementation of LSP and Metals specific h
 ## Installing Vim
 
 The coc.nvim plugin requires either **Vim >= 8.1** or **Neovim >= 0.3.1**. Make
-sure you have the correct version installed.
+sure you have the correct version installed. While it works with both Vim and Neovim,
+we recommend using Neovim since it provides a smoother experience with some of the features such
+as code actions and general performance.
 
 ```sh
 # If using Vim
@@ -165,20 +166,36 @@ inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
 
 ### Installing coc-metals
 
-Once you have `coc.nvim` installed, you can then install Metals by running.
+Once you have `coc.nvim` installed, you can then install Metals a few different ways. The easiest is
+by running:
 
 ```vim
 :CocInstall coc-metals
 ```
-If you'd like to use the latest changes on master, you can also just build from source by using a plugin
-manager to download the extension. If you do this and you've had `coc-metals` installed before with `:CocInstall`,
-make sure you run `:CocUninstall coc-metals` to remove it. Then, if you are using [`vim-plug`](https://github.com/junegunn/vim-plug)
+
+If you'd like to use the latest changes on master, you can also use the url of the repo in the
+command like so:
+
+```vim
+:CocInstall https://github.com/ckipp01/coc-metals
+```
+If you'd like to use the latest changes on master, but would prefer managing the plugin using a plugin
+manager to download the extension, make sure you run the below snippet to uninstall the old version
+first.
+
+```vim
+:CocUninstall coc-metals
+```
+
+Then, if you are using [`vim-plug`](https://github.com/junegunn/vim-plug)
 for example, enter the following into where you manage your plugins:
 
 ```vim
 Plug 'ckipp01/coc-metals', {'do': 'yarn install --frozen-lockfile'}
 ```
-Then, issue a `:PlugInstall` to install the extension, and regularly a `:PlugUpdate` to update it and pull in the latest changes.
+Then, issue a `:PlugInstall` to install the extension, and regularly a `:PlugUpdate` to update it
+and pull in the latest changes. If you're relying on `coc.nvim` to install the extension, it will
+automatically pull in the latest versions when published.
 
 ```scala mdoc:editor:vim
 Update the `metals.sbtScript` setting to use a custom `sbt` script instead of the
@@ -207,7 +224,7 @@ features.
 ```
 
 After updating the version, you'll be triggered to reload the window.
-This will be necessary before the new version will be dowloaded and used.
+This will be necessary before the new version will be downloaded and used.
 
 ![Update Metals Version](https://i.imgur.com/VUCdQvi.png)
 
@@ -235,9 +252,10 @@ window allowing you to search for `metals.doctor-run` command.
 
 ![Run Doctor Command](https://i.imgur.com/QaqhxF7.png)
 
-This command opens your browser with a table like this.
+This command opens an embedded doctor in your preview window. If you're not familiar with
+having multiple windows, you can use `<C-w> + w` to jump into it.
 
-![Run Doctor](https://i.imgur.com/yelm0jd.png)
+![Embedded Doctor](https://i.imgur.com/McaAFv5.png)
 
 ## Other Available Command
 
@@ -248,6 +266,7 @@ This command opens your browser with a table like this.
   - `metals.compile-cascade`
   - `metals.compile-cancel`
   - `metals.doctor-run`
+  - `metals.logs-toggle`
 
 ## Show document symbols
 
@@ -274,7 +293,7 @@ To properly support adding `|` in multiline strings we are using the
 
 ![coc-preferences-formatOnType](https://i.imgur.com/RWPHt2q.png)
 
-### Close buffer without exiting
+## Close buffer without exiting
 
 To close a buffer and return to the previous buffer, run the following command.
 
@@ -284,7 +303,7 @@ To close a buffer and return to the previous buffer, run the following command.
 
 This command is helpful when navigating in library dependency sources in the .metals/readonly directory.
 
-### Shut down the language server
+## Shut down the language server
 
 The Metals server is shutdown when you exit vim as usual.
 
@@ -292,7 +311,46 @@ The Metals server is shutdown when you exit vim as usual.
 :wq
 ```
 
-This step clean ups resources that are used by the server.
+## Statusline integration
+
+`coc.nvim` has multiple ways to integrate with various statusline plugins. You can find instructions
+for each of them located [here](https://github.com/neoclide/coc.nvim/wiki/Statusline-integration).
+Two noteworthy things that they add are the ability to see diagnostic information in the current
+buffer.
+
+![Diagnostic statusline](https://i.imgur.com/7uNYTYl.png)
+
+And it also shows progress information for longer standing processes.
+
+![Progress item](https://i.imgur.com/AAWZ4o4.png)
+
+If you don't use a statusline integration, but would still like to see this information, the easiest
+way is to add the following to your `.vimrc`.
+
+```vim
+set statusline^=%{coc#status()}
+```
+The `coc#status()` function will display both status and diagnostic information. However, if you are
+using an integration like I am in the photos that display your diagnostic information in the far
+right, but you'd like to see the status information in the middle, you can make a small function to
+just grab that information, and use it in your statusline. Here is an example for lightline to
+display only the status information in the middle of the statusline (`section_c`).
+
+```vim
+function! CocExtensionStatus() abort
+  return get(g:, 'coc_status', '')
+endfunction
+let g:airline_section_c = '%f%{CocExtensionStatus()}'
+```
+## Formatting on save
+
+Add the following configuration to `:CocConfig` if you'd like to have `:w` format using Metals and
+Scalafmt.
+
+```json
+"coc.preferences.formatOnSaveFiletypes": ["scala"]
+```
+This step cleans up resources that are used by the server.
 
 ```scala mdoc:generic
 
@@ -300,7 +358,7 @@ This step clean ups resources that are used by the server.
 
 ## Using an alternative LSP Client
 
-While we recommend using the `coc-metals` extions with `coc.nvim`, Metals will work
+While we recommend using the `coc-metals` extension with `coc.nvim`, Metals will work
 with these alternative LSP clients.
 
 - [`vim-lsc`](https://github.com/natebosch/vim-lsc/): simple installation and
@@ -323,4 +381,3 @@ binary does not exist yet.
 
 The `-Dmetals.client=vim-lsc` flag is important since it configures Metals for
 usage with the `vim-lsc` client.
-
