@@ -482,8 +482,9 @@ object MetalsEnrichments
         diag.getRange.toLSP,
         fansi.Str(diag.getMessage).plainText,
         diag.getSeverity.toLSP,
-        if (diag.getSource == null) "scalac" else diag.getSource,
-        diag.getCode
+        if (diag.getSource == null) "scalac" else diag.getSource
+        // We omit diag.getCode since Bloop's BSP implementation uses 'code' with different semantics
+        // than LSP. See https://github.com/scalacenter/bloop/issues/1134 for details
       )
   }
 
