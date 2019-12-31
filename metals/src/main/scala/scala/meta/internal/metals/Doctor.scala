@@ -10,7 +10,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.semver.SemVer
-import ujson.Arr
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -217,40 +216,28 @@ final class Doctor(
   }
 
   private def buildTargetsJson(): String = {
-    val json = ujson
-      .Obj(
-        "name" -> doctorTitle,
-        "headerText" -> doctorHeading
-      )
-
     val targets = buildTargets.all.toList
-
-    if (targets.isEmpty) {
-      json("messages") = Arr(
-        ujson.Obj(
-          "title" -> noBuildTargetsTitle,
-          "recommendations" -> Arr(noBuildTargetRecOne, noBuildTargetRecTwo)
-        )
-      )
-      ujson.write(json)
-    } else {
-      val targetResults = targets.sortBy(_.info.getBaseDirectory).map {
-        target =>
-          val targetInfo = extractTargetInfo(target)
-          ujson.Obj(
-            "Build Target" -> targetInfo.name,
-            "Scala" -> targetInfo.scalaVersion,
-            "Diagnostics" -> Icons.unicode.check,
-            "Goto definition" -> targetInfo.definitionStatus,
-            "Completions" -> targetInfo.completionsStatus,
-            "Find references" -> targetInfo.referencesStatus,
-            "Recommendation" -> targetInfo.recommenedFix
+    val results = if (targets.isEmpty) {
+      DoctorResults(
+        doctorTitle,
+        doctorHeading,
+        Some(
+          List(
+            DoctorMessage(
+              noBuildTargetsTitle,
+              List(noBuildTargetRecOne, noBuildTargetRecTwo)
+            )
           )
-      }
+        ),
+        None
+      ).toJson
 
-      json("targets") = Arr(targetResults)
-      ujson.write(json)
+    } else {
+      val targetResults =
+        targets.sortBy(_.info.getBaseDirectory).map(extractTargetInfo)
+      DoctorResults(doctorTitle, doctorHeading, None, Some(targetResults)).toJson
     }
+    ujson.write(results)
   }
 
   private def buildTargetsTable(html: HtmlBuilder): Unit = {
