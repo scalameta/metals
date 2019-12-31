@@ -64,11 +64,9 @@ final class Doctor(
       onServer: MetalsHttpServer => Unit
   ): Unit = {
     if (config.executeClientCommand.isOn) {
-      val output = config.doctorFormat match {
-        case format if format.isHtml => buildTargetsHtml()
-        case format if format.isJson => buildTargetsJson()
-        case _ => "Unsupported format. Possible options are `html` or `json`"
-      }
+      val output =
+        if (config.doctorFormat.isHtml) buildTargetsHtml()
+        else buildTargetsJson()
       val params = new ExecuteCommandParams(
         clientCommand.id,
         List(output: AnyRef).asJava
@@ -132,7 +130,7 @@ final class Doctor(
     def hint() =
       if (isMaven) {
         val website =
-          if (config.doctorFormat.value == "html")
+          if (config.doctorFormat.isHtml)
             "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
           else
             "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
@@ -238,23 +236,15 @@ final class Doctor(
     } else {
       val targetResults = targets.sortBy(_.info.getBaseDirectory).map {
         target =>
-          val (
-            buildTarget,
-            scalaVersion,
-            definition,
-            completions,
-            isSemanticdbNeeded,
-            references,
-            recommenedFix
-          ) = extractTargetInfo(target)
+          val targetInfo = extractTargetInfo(target)
           ujson.Obj(
-            "Build Target" -> buildTarget,
-            "Scala" -> scalaVersion,
+            "Build Target" -> targetInfo.name,
+            "Scala" -> targetInfo.scalaVersion,
             "Diagnostics" -> Icons.unicode.check,
-            "Goto definition" -> definition,
-            "Completions" -> completions,
-            "Find references" -> references,
-            "Recommendation" -> recommenedFix
+            "Goto definition" -> targetInfo.definitionStatus,
+            "Completions" -> targetInfo.completionsStatus,
+            "Find references" -> targetInfo.referencesStatus,
+            "Recommendation" -> targetInfo.recommenedFix
           )
       }
 
@@ -304,25 +294,17 @@ final class Doctor(
       targets: List[ScalaTarget]
   ): Unit = {
     targets.sortBy(_.info.getBaseDirectory).foreach { target =>
-      val (
-        _,
-        scalaVersion,
-        definition,
-        completions,
-        isSemanticdbNeeded,
-        references,
-        recommenedFix
-      ) = extractTargetInfo(target)
+      val targetInfo = extractTargetInfo(target)
       val center = "style='text-align: center'"
       html.element("tr")(
-        _.element("td")(_.text(target.info.getDisplayName))
-          .element("td")(_.text(scalaVersion))
+        _.element("td")(_.text(targetInfo.name))
+          .element("td")(_.text(targetInfo.scalaVersion))
           .element("td", center)(_.text(Icons.unicode.check))
-          .element("td", center)(_.text(definition))
-          .element("td", center)(_.text(completions))
-          .element("td", center)(_.text(references))
+          .element("td", center)(_.text(targetInfo.definitionStatus))
+          .element("td", center)(_.text(targetInfo.completionsStatus))
+          .element("td", center)(_.text(targetInfo.referencesStatus))
           .element("td")(
-            _.raw(recommenedFix)
+            _.raw(targetInfo.recommenedFix)
           )
       )
     }
@@ -350,12 +332,11 @@ final class Doctor(
       if (target.isScalaTarget)
         recommendation(scalaVersion, target.isSemanticdbEnabled, target)
       else ""
-    (
+    DoctorTargetInfo(
       target.info.getDisplayName(),
       scalaVersion,
       definition,
       completions,
-      isSemanticdbNeeded,
       references,
       recommenedFix
     )
