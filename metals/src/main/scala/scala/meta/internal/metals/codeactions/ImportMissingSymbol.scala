@@ -33,7 +33,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
 
             val codeAction = new l.CodeAction()
 
-            codeAction.setTitle(ImportMissingSymbol.label(name, i.packageName))
+            codeAction.setTitle(ImportMissingSymbol.title(name, i.packageName))
             codeAction.setKind(l.CodeActionKind.QuickFix)
             codeAction.setDiagnostics(List(diagnostic).asJava)
             codeAction.setEdit(edit)
@@ -57,7 +57,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
 
 object ImportMissingSymbol {
 
-  def label(name: String, packageName: String): String =
+  def title(name: String, packageName: String): String =
     s"Import '$name' from package '$packageName'"
 
 }

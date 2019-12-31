@@ -13,8 +13,8 @@ object ImportMissingSymbolLspSuite
        |  val f = Fut@@ure.successful(2)
        |}
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.label("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.label("Future", "java.util.concurrent")}
+    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
         |""".stripMargin,
     """|package a
        |
