@@ -25,25 +25,6 @@ object UseNamedArgumentsLspSuite
   )
 
   check(
-    "cursor-in-function-name",
-    """|package a
-       |
-       |object A {
-       |  def doSomething(foo: Int, bar: String): Boolean = true
-       |  val x = doSomethi@@ng(123, "hello")
-       |}
-       |""".stripMargin,
-    UseNamedArguments.title,
-    """|package a
-       |
-       |object A {
-       |  def doSomething(foo: Int, bar: String): Boolean = true
-       |  val x = doSomething(foo = 123, bar = "hello")
-       |}
-       |""".stripMargin
-  )
-
-  check(
     "different-class",
     """|package a
        |
@@ -75,7 +56,7 @@ object UseNamedArgumentsLspSuite
     """|package a
        |
        |object A {
-       |  requi@@re(1 == 1)
+       |  require(@@1 == 1)
        |}
        |""".stripMargin,
     UseNamedArguments.title,
@@ -134,7 +115,7 @@ object UseNamedArgumentsLspSuite
        |object A {
        |  def doSomething(foo: Int, bar: String): Boolean = true
        |  def addOne(n: Int): Int = n + 1
-       |  val x = doSomething(addOn@@e(123), "hello")
+       |  val x = doSomething(addOne(123@@), "hello")
        |}
        |""".stripMargin,
     UseNamedArguments.title,

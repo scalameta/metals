@@ -410,10 +410,8 @@ class MetalsLanguageServer(
     )
     codeActionProvider = new CodeActionProvider(
       compilers,
-      trees,
-      semanticdbs,
-      symbolSearch,
-      definitionProvider
+      interactiveSemanticdbs,
+      trees
     )
     doctor = new Doctor(
       workspace,

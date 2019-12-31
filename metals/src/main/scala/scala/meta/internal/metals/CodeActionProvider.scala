@@ -3,26 +3,22 @@ package scala.meta.internal.metals
 import org.eclipse.{lsp4j => l}
 import scala.meta.pc.CancelToken
 import scala.meta.internal.metals.codeactions._
-import scala.meta.internal.mtags.Semanticdbs
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.collection.JavaConverters._
 
 final class CodeActionProvider(
     compilers: Compilers,
-    trees: Trees,
-    semanticdbs: Semanticdbs,
-    symbolSearch: MetalsSymbolSearch,
-    definitionProvider: DefinitionProvider
+    interactiveSemanticdbs: InteractiveSemanticdbs,
+    trees: Trees
 ) {
 
   val allActions: List[CodeAction] = List(
     new ImportMissingSymbol(compilers),
     new UseNamedArguments(
-      trees,
-      semanticdbs,
-      symbolSearch,
-      definitionProvider
+      compilers,
+      interactiveSemanticdbs,
+      trees
     )
   )
 

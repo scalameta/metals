@@ -5,15 +5,12 @@ import scala.meta._
 import scala.meta.pc.CancelToken
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags._
-import scala.meta.internal.semanticdb.TextDocument
 import org.eclipse.{lsp4j => l}
 
 class UseNamedArguments(
-    trees: Trees,
-    semanticdbs: Semanticdbs,
-    symbolSearch: MetalsSymbolSearch,
-    definitionProvider: DefinitionProvider
+    compilers: Compilers,
+    interactiveSemanticdbs: InteractiveSemanticdbs,
+    trees: Trees
 ) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.Refactor
@@ -46,41 +43,6 @@ class UseNamedArguments(
       case _ => None
     }
 
-    def resolveSymbol(
-        textDocumentId: l.TextDocumentIdentifier,
-        path: AbsolutePath,
-        textDocument: TextDocument,
-        symbolTreePos: Position
-    ): ResolvedSymbolOccurrence = {
-      val tdpp = new l.TextDocumentPositionParams(
-        textDocumentId,
-        symbolTreePos.toLSP.getStart
-      )
-      definitionProvider.positionOccurrence(path, tdpp, textDocument)
-    }
-
-    val methodSymbolPattern = """.*\((\+\d+)?\)\.$"""
-
-    def tweakSymbol(symbol: String): String = {
-      if (symbol.endsWith(".") && !symbol.matches(methodSymbolPattern)) {
-        /*
-         * We've probably been given a companion object symbol
-         * e.g. in the case (@@ = cursor)
-         *
-         * case class Foo(a: Int, b: Int)
-         * val x = Fo@@o(1, 2)
-         *
-         * the definition provider gives us the symbol of the companion
-         * object. This is no good to us, so we try to replace it with
-         * the case class's symbol.
-         * In other words we turn "example/Foo." into "example/Foo#"
-         */
-        symbol.stripSuffix(".") ++ "#"
-      } else {
-        symbol
-      }
-    }
-
     def buildEdits(
         tree: Tree,
         paramNames: List[String]
@@ -104,35 +66,40 @@ class UseNamedArguments(
 
     val path = params.getTextDocument().getUri().toAbsolutePath
 
-    Future {
+    val textDocPosParams = new l.TextDocumentPositionParams(
+      params.getTextDocument,
+      params.getRange.getStart
+    )
+
+    val parameterNames: Future[List[String]] = compilers
+      .signatureHelp(textDocPosParams, token, interactiveSemanticdbs)
+      .map { help =>
+        if (help.getActiveSignature >= 0 && help.getActiveSignature < help.getSignatures.size) {
+          val sig = help.getSignatures.get(help.getActiveSignature)
+          val params = sig.getParameters.asScala
+          val paramLabels = params.collect {
+            case x if x.getLabel.isLeft => x.getLabel.getLeft
+          }
+          paramLabels.collect {
+            // Type param labels are included in the list but do not include a colon, only the type name.
+            // Method argument labels are in the form `foo: Int`
+            case x if x.contains(": ") => x.split(": ").head
+          }.toList
+        } else Nil
+      }
+
+    parameterNames.map { paramNames =>
       (for {
         rootTree <- trees.get(path)
         methodApplyTree <- findMethodApplyOrCtorTreeUnderCursor(
           rootTree,
           params.getRange
         )
-        textDocument <- semanticdbs.textDocument(path).documentIncludingStale
         symbolTree <- findSymbolTree(methodApplyTree)
-        resolvedSymbol = resolveSymbol(
-          params.getTextDocument,
-          path,
-          textDocument,
-          symbolTree.pos
-        )
-        symbolOccurrence <- resolvedSymbol.occurrence
-        symbol = tweakSymbol(symbolOccurrence.symbol)
-        symbolDocumentation <- symbolSearch
-          .documentation(symbol)
-          .asScala
-        parameterNames = symbolDocumentation
-          .parameters()
-          .asScala
-          .map(_.displayName())
-          .toList
       } yield {
         val codeEdits = buildEdits(
           methodApplyTree,
-          parameterNames
+          paramNames
         )
 
         codeEdits match {
