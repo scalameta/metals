@@ -32,17 +32,6 @@ class UseNamedArguments(
         .sortBy(_.pos.start)
         .lastOption
 
-    def findSymbolTree(tree: Tree): Option[Name] = tree match {
-      case x @ Term.Name(_) => Some(x)
-      case x @ Type.Name(_) => Some(x)
-      case Term.Select(_, x) => Some(x)
-      case Term.Apply(x, _) => findSymbolTree(x)
-      case Term.ApplyType(x, _) => findSymbolTree(x)
-      case Type.Apply(x, _) => findSymbolTree(x)
-      case Init(x, _, _) => findSymbolTree(x)
-      case _ => None
-    }
-
     def buildEdits(
         tree: Tree,
         paramNames: List[String]
@@ -95,7 +84,6 @@ class UseNamedArguments(
           rootTree,
           params.getRange
         )
-        symbolTree <- findSymbolTree(methodApplyTree)
       } yield {
         val codeEdits = buildEdits(
           methodApplyTree,
