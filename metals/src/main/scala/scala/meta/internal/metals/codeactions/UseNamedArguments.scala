@@ -26,8 +26,16 @@ class UseNamedArguments(
     ): Option[Tree] =
       root
         .collect {
-          case t: Term.Apply if t.pos.toLSP.encloses(cursorPos) => t
-          case t: Init if t.pos.toLSP.encloses(cursorPos) => t
+          case t: Term.Apply
+              if t.pos.toLSP.encloses(cursorPos) && !t.fun.pos.toLSP.encloses(
+                cursorPos
+              ) =>
+            t
+          case t: Init
+              if t.pos.toLSP.encloses(cursorPos) && !t.tpe.pos.toLSP.encloses(
+                cursorPos
+              ) =>
+            t
         }
         .sortBy(_.pos.start)
         .lastOption

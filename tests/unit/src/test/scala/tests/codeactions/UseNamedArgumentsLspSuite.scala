@@ -109,7 +109,28 @@ object UseNamedArgumentsLspSuite
   )
 
   check(
-    "nested",
+    "nested-outer",
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  def addOne(n: Int): Int = n + 1
+       |  val x = doSomething(add@@One(123), "hello")
+       |}
+       |""".stripMargin,
+    UseNamedArguments.title,
+    """|package a
+       |
+       |object A {
+       |  def doSomething(foo: Int, bar: String): Boolean = true
+       |  def addOne(n: Int): Int = n + 1
+       |  val x = doSomething(foo = addOne(123), bar = "hello")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "nested-inner",
     """|package a
        |
        |object A {
