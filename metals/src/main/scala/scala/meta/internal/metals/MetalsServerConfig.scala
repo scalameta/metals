@@ -11,6 +11,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param fileWatcher whether to start an embedded file watcher in case the editor
  *                    does not support file watching.
  * @param statusBar how to handle metals/status notifications.
+ * @param doctorFormat the format that you'd like doctor to return
  * @param slowTask how to handle metals/slowTask requests.
  * @param snippetAutoIndent if the client defaults to adding the identation of the reference
  *                          line that the operation started on (relevant for multiline textEdits)
@@ -23,6 +24,7 @@ final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
     slowTask: SlowTaskConfig = SlowTaskConfig.default,
+    doctorFormat: DoctorFormatConfig = DoctorFormatConfig.default,
     executeClientCommand: ExecuteClientCommandConfig =
       ExecuteClientCommandConfig.default,
     snippetAutoIndent: Boolean = MetalsServerConfig.binaryOption(
@@ -77,7 +79,8 @@ final case class MetalsServerConfig(
       s"http=$isHttpEnabled",
       s"input-box=$isInputBoxEnabled",
       s"icons=$icons",
-      s"statistics=$statistics"
+      s"statistics=$statistics",
+      s"doctor-format=$doctorFormat"
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

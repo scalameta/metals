@@ -265,6 +265,16 @@ Possible values:
   VS Code, Atom, Sublime, and coc.nvim.
 - `off`: the client does not add any indentation when receiving a multi-line textEdit
 
+### `-Dmetals.doctor-format`
+
+Format that you'd like Doctor to return information in.
+
+Possible values:
+
+- `html`: (default): Metals will return html that can be rendered directly in the browser or web
+view
+- `json`: json representation of the information returned by Doctor
+
 ### `-Dbloop.embedded.version`
 
 Version number of the embedded Bloop server. Default value is
