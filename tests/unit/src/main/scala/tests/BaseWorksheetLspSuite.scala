@@ -330,4 +330,19 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       } yield ()
     }
 
+  testAsync("no-position") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/src/main/scala/Main.worksheet.sc
+           |trait Foo[F[_]]
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
 }

@@ -139,7 +139,11 @@ class WorksheetProvider(
       // infinite loops.
       val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
         override def run(): Unit = {
-          result.complete(evaluateWorksheet(path, token))
+          try result.complete(evaluateWorksheet(path, token))
+          catch {
+            case e @ (NonFatal(_) | InterruptException()) =>
+              result.completeExceptionally(e)
+          }
         }
       }
       interruptThreadOnCancel(path, result, thread)
@@ -220,9 +224,16 @@ class WorksheetProvider(
       input = path.toInputFromBuffers(buffers)
     } yield mdoc.evaluateWorksheet(input.path, input.value)
   }.map { worksheet =>
+    val toPublish = worksheet
+      .diagnostics()
+      .iterator()
+      .asScala
+      .filterNot(_.position().isNone)
+      .map(_.toLsp)
+      .toSeq
     diagnostics.onPublishDiagnostics(
       path,
-      worksheet.diagnostics().iterator().asScala.map(_.toLsp).toSeq,
+      toPublish,
       isReset = true
     )
     worksheet
