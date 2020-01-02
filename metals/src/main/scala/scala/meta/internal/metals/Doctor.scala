@@ -10,6 +10,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions._
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.semver.SemVer
+import upickle.default.write
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -230,14 +231,13 @@ final class Doctor(
           )
         ),
         None
-      ).toJson
-
+      )
     } else {
       val targetResults =
         targets.sortBy(_.info.getBaseDirectory).map(extractTargetInfo)
-      DoctorResults(doctorTitle, doctorHeading, None, Some(targetResults)).toJson
+      DoctorResults(doctorTitle, doctorHeading, None, Some(targetResults))
     }
-    ujson.write(results)
+    write(results)
   }
 
   private def buildTargetsTable(html: HtmlBuilder): Unit = {
