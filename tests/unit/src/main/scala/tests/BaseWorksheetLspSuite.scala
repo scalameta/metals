@@ -341,7 +341,13 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
-      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/Main.worksheet.sc:1:1: warning: there was one feature warning; re-run with -feature for details
+           |trait Foo[F[_]]
+           |^
+           |""".stripMargin
+      )
     } yield ()
   }
 

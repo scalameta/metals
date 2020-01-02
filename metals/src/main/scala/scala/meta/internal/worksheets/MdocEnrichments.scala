@@ -12,16 +12,24 @@ object MdocEnrichments {
         p.endColumn() < 0 &&
         p.endLine() < 0
     def toLsp: l.Range = {
-      new l.Range(
-        new l.Position(
-          p.startLine(),
-          p.startColumn()
-        ),
-        new l.Position(
-          p.endLine(),
-          p.endColumn()
+      if (isNone) {
+        // Don't construct invalid positions with negative values
+        new l.Range(
+          new l.Position(0, 0),
+          new l.Position(0, 0)
         )
-      )
+      } else {
+        new l.Range(
+          new l.Position(
+            p.startLine(),
+            p.startColumn()
+          ),
+          new l.Position(
+            p.endLine(),
+            p.endColumn()
+          )
+        )
+      }
     }
   }
 

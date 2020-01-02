@@ -228,7 +228,6 @@ class WorksheetProvider(
       .diagnostics()
       .iterator()
       .asScala
-      .filterNot(_.position().isNone)
       .map(_.toLsp)
       .toSeq
     diagnostics.onPublishDiagnostics(
