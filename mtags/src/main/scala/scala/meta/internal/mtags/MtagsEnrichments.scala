@@ -299,17 +299,30 @@ trait MtagsEnrichments {
     }
   }
 
+  implicit class XtensionLspPosition(pos: l.Position) {
+    def isNone: Boolean =
+      pos.getLine() < 0 &&
+        pos.getCharacter() < 0
+  }
+
   implicit class XtensionLspRange(range: l.Range) {
     def isOffset: Boolean =
       range.getStart == range.getEnd
+    def isNone: Boolean =
+      range.getStart().isNone &&
+        range.getEnd().isNone
     def toMeta(input: m.Input): m.Position =
-      m.Position.Range(
-        input,
-        range.getStart.getLine,
-        range.getStart.getCharacter,
-        range.getEnd.getLine,
-        range.getEnd.getCharacter
-      )
+      if (range.isNone) {
+        m.Position.None
+      } else {
+        m.Position.Range(
+          input,
+          range.getStart.getLine,
+          range.getStart.getCharacter,
+          range.getEnd.getLine,
+          range.getEnd.getCharacter
+        )
+      }
     def encloses(position: l.Position): Boolean = {
       range.getStart.getLine <= position.getLine &&
       range.getStart.getLine >= position.getLine &&

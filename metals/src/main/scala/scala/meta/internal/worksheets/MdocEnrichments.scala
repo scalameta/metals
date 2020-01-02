@@ -6,17 +6,30 @@ import mdoc.{interfaces => i}
 object MdocEnrichments {
 
   implicit class XtensionRangePosition(p: i.RangePosition) {
+    def isNone: Boolean =
+      p.startLine() < 0 &&
+        p.startColumn() < 0 &&
+        p.endColumn() < 0 &&
+        p.endLine() < 0
     def toLsp: l.Range = {
-      new l.Range(
-        new l.Position(
-          p.startLine(),
-          p.startColumn()
-        ),
-        new l.Position(
-          p.endLine(),
-          p.endColumn()
+      if (isNone) {
+        // Don't construct invalid positions with negative values
+        new l.Range(
+          new l.Position(0, 0),
+          new l.Position(0, 0)
         )
-      )
+      } else {
+        new l.Range(
+          new l.Position(
+            p.startLine(),
+            p.startColumn()
+          ),
+          new l.Position(
+            p.endLine(),
+            p.endColumn()
+          )
+        )
+      }
     }
   }
 

@@ -330,4 +330,29 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       } yield ()
     }
 
+  testAsync("no-position") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/src/main/scala/Main.worksheet.sc
+           |type Structural = {
+           |  def foo(): Int
+           |}
+           |class Foo { def foo(): Int = 42 }
+           |new Foo().asInstanceOf[Structural].foo()
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/Main.worksheet.sc:1:1: warning: there was one feature warning; re-run with -feature for details
+           |type Structural = {
+           |^
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }
