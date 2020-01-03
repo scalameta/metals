@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import ujson.Arr
 import ujson.Obj
 
 final case class DoctorResults(
@@ -24,7 +23,7 @@ final case class DoctorMessage(title: String, recommendations: List[String]) {
   def toJson: Obj =
     ujson.Obj(
       "title" -> title,
-      "recommendations" -> Arr(recommendations)
+      "recommendations" -> recommendations
     )
 }
 
