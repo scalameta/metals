@@ -425,6 +425,13 @@ trait Completions { this: MetalsGlobal =>
     }
 
     latestEnclosingArg match {
+      case _ if isScaladocCompletion(pos, text) =>
+        val associatedDef = onUnitOf(pos.source) { unit =>
+          new AssociatedMemberDefFinder(pos).findAssociatedDef(unit.body)
+        }
+        associatedDef
+          .map(definition => CompletionPosition.Scaladoc(editRange, definition))
+          .getOrElse(CompletionPosition.None)
       case (ident: Ident) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
@@ -666,6 +673,42 @@ trait Completions { this: MetalsGlobal =>
         inferCompletionPosition(pos, text, tail, completions, editRange)
       case _ =>
         CompletionPosition.None
+    }
+  }
+
+  /**
+   * Find a method definition right after the given position.
+   *
+   * @param pos The position of scaladoc in the original source.
+   *            This class will find the associated member def based on this pos.
+   */
+  class AssociatedMemberDefFinder(pos: Position) extends Traverser {
+    private var defs: List[MemberDef] = Nil
+
+    /**
+     * Collect all the member definitions whose position is
+     * below the given `pos`. And then return the closest member definiton.
+     */
+    def findAssociatedDef(root: Tree): Option[MemberDef] = {
+      defs = Nil
+      traverse(root)
+      defs.sortBy(_.pos.point).headOption
+    }
+    override def traverse(t: Tree): Unit = {
+      t match {
+        case typedef @ TypeDef(_, _, _, _) => process(typedef)
+        case clsdef @ ClassDef(_, _, _, _) => process(clsdef)
+        case defdef @ DefDef(_, _, _, _, _, _) => process(defdef)
+        case moduledef @ ModuleDef(_, _, _) => process(moduledef)
+        case pkgdef @ PackageDef(_, _) => process(pkgdef)
+        case valdef @ ValDef(_, _, _, _) => process(valdef)
+        case _ if treePos(t).includes(pos) => super.traverse(t)
+        case _ =>
+      }
+    }
+    private def process(t: MemberDef): Unit = {
+      if (t.pos.isDefined && t.pos.start >= pos.start) defs ::= t
+      if (treePos(t).includes(pos)) super.traverse(t)
     }
   }
 
@@ -1632,6 +1675,93 @@ trait Completions { this: MetalsGlobal =>
         }
       }
     }
+
+    /**
+     * A scaladoc completion showing the parameters of the given associated definition.
+     *
+     * @param editRange the range in the original source file.
+     * @param associatedDef the memberDef associated with the scaladoc to complete.
+     *                      This class will construct scaladoc based on the params of this definition.
+     */
+    case class Scaladoc(
+        editRange: l.Range,
+        associatedDef: MemberDef
+    ) extends CompletionPosition {
+      override def contribute: List[Member] = {
+        val lines = scaladocLines(associatedDef)
+        // add `* @return` line only if the definition is a method def.
+        val returnLine =
+          if (lines.isEmpty && clientSupportsSnippets) "* @return $0"
+          else "* @return"
+        val newText =
+          if (associatedDef.isInstanceOf[DefDef])
+            (Seq("", "*") ++ lines ++ Seq(returnLine, "*/")).mkString("\n  ")
+          else (Seq("", "*") ++ lines ++ Seq("*/")).mkString("\n  ")
+        List(
+          new TextEditMember(
+            "Scaladoc Comment",
+            new l.TextEdit(
+              editRange,
+              newText
+            ),
+            completionsSymbol(associatedDef.name.toString()),
+            label = Some("/** */"),
+            detail = Some("Scaladoc Comment")
+          )
+        )
+      }
+    }
+
+    /**
+     * Returns the parameter lines of scaladoc besed on the given memberDef
+     * like ["* @param param1 $0", "* @param param2"].
+     *
+     * @param memberDef The memberDef to construct scaladoc.
+     */
+    private def scaladocLines(memberDef: MemberDef): List[String] = {
+      memberDef match {
+        case DefDef(_, _, _, vparamss, _, _) =>
+          vparamss.flatten.zipWithIndex
+            .map {
+              case (valdef, idx) => {
+                // /**
+                //   * @param param1 | <- move cursor to here.
+                //   * @param param2
+                //   */
+                if (idx == 0 && clientSupportsSnippets)
+                  s"* @param ${valdef.name} $$0"
+                else s"* @param ${valdef.name}"
+              }
+            }
+        case clazz @ ClassDef(_, _, _, _) =>
+          // If the associated def is a class definition,
+          // retrieve the constructor from the class, and caluculate the lines
+          // from the constructor definition instead.
+          new ConstructorFinder(clazz).getConstructor match {
+            case Some(defdef) => this.scaladocLines(defdef)
+            case scala.None => Nil
+          }
+        case _ => Nil
+      }
+    }
+
+    class ConstructorFinder(clazz: ClassDef) extends Traverser {
+      def getConstructor: Option[DefDef] = {
+        this.constructor = scala.None
+        clazz.impl.body.foreach(traverse)
+        constructor
+      }
+      private var constructor: Option[DefDef] = scala.None
+      override def traverse(tree: Tree): Unit = {
+        tree match {
+          case constructor @ DefDef(_, name, _, _, _, _)
+              if name == termNames.CONSTRUCTOR =>
+            this.constructor = Some(constructor)
+          case _ =>
+            super.traverse(tree)
+        }
+      }
+    }
   }
 
   class PatternMatch(pos: Position) {
@@ -1867,4 +1997,12 @@ trait Completions { this: MetalsGlobal =>
     }
   }
 
+  def isScaladocCompletion(pos: Position, text: String): Boolean = {
+    val line =
+      try {
+        text.split(System.lineSeparator())(pos.line - 1)
+      } catch { case _: Throwable => "" }
+    // check if the line starts with `/**`
+    line.matches("^\\s*\\/\\*\\*\\s*$")
+  }
 }
