@@ -11,6 +11,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val IncompatibleSbt = new Notification(2)
   val ImportChanges = new Notification(3)
   val DoctorWarning = new Notification(4)
+  val IncompatibleBloop = new Notification(5)
 
   class Notification(val id: Int)(implicit name: sourcecode.Name) {
     override def toString: String = s"Notification(${name.value}, $id)"

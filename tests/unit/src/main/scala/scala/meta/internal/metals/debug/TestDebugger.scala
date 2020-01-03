@@ -78,7 +78,7 @@ final class TestDebugger(
   def shutdown: Future[Unit] = {
     for {
       _ <- terminated.future
-      _ <- debugger.shutdown
+      _ <- debugger.shutdown(60)
       _ <- onStoppage.shutdown
     } yield ()
   }
@@ -182,7 +182,7 @@ final class TestDebugger(
     if (failure.isEmpty) {
       failure = Some(error)
       terminated.tryFailure(error)
-      disconnect.andThen { case _ => debugger.shutdown }
+      disconnect.andThen { case _ => debugger.shutdown() }
     }
   }
 }
