@@ -155,7 +155,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
       _ = assertNoDiff(
         client.workspaceDecorations,
         """|
-           |val x = 42
+           |val x = 42 // 42
            |throw new RuntimeException("boom")
            |""".stripMargin
       )
