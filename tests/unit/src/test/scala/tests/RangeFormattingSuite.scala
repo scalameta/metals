@@ -62,6 +62,23 @@ object RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
   )
 
   check(
+    "paste-on-fist-line",
+    s"""
+       |object Main {
+       |  val str = '''| hi @@
+       |               |
+       |               '''.stripMargin
+       |}""".stripMargin,
+    s"""|first line""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''| hi first line
+       |               |
+       |               '''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
     "without-stripmargin",
     s"""
        |object Main {
