@@ -145,7 +145,7 @@ final class MultilineStringFormattingProvider(
       line: Int,
       lines: Array[String],
       defaultIndent: String
-  ): TextEdit = {
+  ): Option[TextEdit] = {
     val zeroPos = new Position(line, 0)
     val lineText = lines(line)
     val firstChar = lineText.trim.headOption
@@ -159,14 +159,24 @@ final class MultilineStringFormattingProvider(
           case Some('|') =>
             val secondPipeIndex = lineText.indexOf('|', firstPipeIndex + 1)
             val secondPipePos = new Position(line, secondPipeIndex)
-            new TextEdit(new Range(zeroPos, secondPipePos), defaultIndent)
+            val textEdit =
+              new TextEdit(new Range(zeroPos, secondPipePos), defaultIndent)
+            Some(textEdit)
           case _ =>
             val pipePos = new Position(line, firstPipeIndex)
-            new TextEdit(new Range(zeroPos, pipePos), defaultIndent)
+            val textEdit =
+              new TextEdit(new Range(zeroPos, pipePos), defaultIndent)
+            Some(textEdit)
         }
       case _ =>
-        val newText = defaultIndent + "|"
-        new TextEdit(new Range(zeroPos, zeroPos), newText)
+        val isFirstLineOfMultiLine = lineText.trim.contains("\"\"\"|")
+        if (isFirstLineOfMultiLine) {
+          None
+        } else {
+          val newText = defaultIndent + "|"
+          val textEdit = new TextEdit(new Range(zeroPos, zeroPos), newText)
+          Some(textEdit)
+        }
     }
   }
 
@@ -190,7 +200,7 @@ final class MultilineStringFormattingProvider(
         range.getStart().getLine().to(range.getEnd().getLine())
 
       linesToFormat
-        .map(line => formatPipeLine(line, splitLines, defaultIndent))
+        .flatMap(line => formatPipeLine(line, splitLines, defaultIndent))
         .toList
     }
   }
