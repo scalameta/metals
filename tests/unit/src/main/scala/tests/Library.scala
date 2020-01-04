@@ -28,7 +28,7 @@ object Library {
     import mtags.BuildInfo.scalaCompilerVersion
 
     val dependencies = List(
-      Dependency.of("com.lihaoyi", "acyclic_2.12", "0.1.8"),
+      Dependency.of("com.lihaoyi", "acyclic_2.12", "0.4.2"),
       Dependency.of("com.lihaoyi", "scalaparse_2.12", "2.1.0"),
       Dependency.of("com.typesafe.akka", "akka-cluster_2.12", "2.5.19"),
       Dependency.of("com.typesafe.akka", "akka-stream_2.12", "2.5.19"),

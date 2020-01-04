@@ -27,7 +27,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
              |{
              |  "a": {
              |    "scalaVersion": "$scalaVersion",
-             |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.1.8"]
+             |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.4.2"]
              |  }
              |}
              |/a/src/main/scala/foo/Main.worksheet.sc
