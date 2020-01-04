@@ -62,7 +62,7 @@ object RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
   )
 
   check(
-    "paste-on-fist-line",
+    "paste-on-first-line-with-pipe",
     s"""
        |object Main {
        |  val str = '''| hi @@
@@ -75,6 +75,23 @@ object RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
        |  val str = '''| hi first line
        |               |
        |               '''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "paste-on-first-line-without-pipe",
+    s"""
+       |object Main {
+       |  val str = ''' hi @@
+       |              |
+       |              '''.stripMargin
+       |}""".stripMargin,
+    s"""|first line""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = ''' hi first line
+       |              |
+       |              '''.stripMargin
        |}""".stripMargin
   )
 
