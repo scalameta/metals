@@ -552,6 +552,15 @@ object MetalsEnrichments
         snippetSupport <- Option(completionItem.getSnippetSupport())
       } yield snippetSupport.booleanValue).getOrElse(false)
 
+    def supportsCodeActionLiterals: Boolean =
+      (for {
+        params <- initializeParams
+        capabilities <- Option(params.getCapabilities)
+        textDocument <- Option(capabilities.getTextDocument)
+        codeAction <- Option(textDocument.getCodeAction)
+        literalSupport <- Option(codeAction.getCodeActionLiteralSupport())
+      } yield literalSupport).isDefined
+
   }
 
   implicit class XtensionPromise[T](promise: Promise[T]) {

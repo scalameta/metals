@@ -500,7 +500,15 @@ class MetalsLanguageServer(
       capabilities.setWorkspaceSymbolProvider(true)
       capabilities.setDocumentSymbolProvider(true)
       capabilities.setDocumentFormattingProvider(true)
-      capabilities.setCodeActionProvider(true)
+      if (initializeParams.supportsCodeActionLiterals) {
+        capabilities.setCodeActionProvider(true)
+      } else {
+        capabilities.setCodeActionProvider(
+          new CodeActionOptions(
+            List(CodeActionKind.QuickFix, CodeActionKind.Refactor).asJava
+          )
+        )
+      }
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       capabilities.setExperimental(MetalsExperimental())
       new InitializeResult(capabilities)
