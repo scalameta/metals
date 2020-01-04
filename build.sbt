@@ -187,7 +187,7 @@ lazy val interfaces = project
 
 val genyVersion = Def.setting {
   if (scalaVersion.value.startsWith("2.11")) "0.1.6"
-  else "0.1.8"
+  else "0.4.2"
 }
 
 lazy val mtags = project
