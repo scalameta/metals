@@ -685,16 +685,16 @@ trait Completions { this: MetalsGlobal =>
    *            This class will find the associated member def based on this pos.
    */
   class AssociatedMemberDefFinder(pos: Position) extends Traverser {
-    private var defs: List[MemberDef] = Nil
+    private var associatedDef: Option[MemberDef] = None
 
     /**
      * Collect all the member definitions whose position is
      * below the given `pos`. And then return the closest member definiton.
      */
     def findAssociatedDef(root: Tree): Option[MemberDef] = {
-      defs = Nil
+      associatedDef = None
       traverse(root)
-      defs.sortBy(_.pos.point).headOption
+      associatedDef
     }
     override def traverse(t: Tree): Unit = {
       t match {
@@ -709,8 +709,12 @@ trait Completions { this: MetalsGlobal =>
       }
     }
     private def process(t: MemberDef): Unit = {
-      if (t.pos.isDefined && t.pos.start >= pos.start) defs ::= t
-      if (treePos(t).includes(pos)) super.traverse(t)
+      // if the node's location is below the current associate def,
+      // we don't have to visit the node because it can't be an associated def.
+      if (associatedDef.map(t.pos.point <= _.pos.point).getOrElse(true)) {
+        if (t.pos.isDefined && t.pos.start >= pos.start) associatedDef = Some(t)
+        if (treePos(t).includes(pos)) super.traverse(t)
+      }
     }
   }
 
@@ -1796,17 +1800,17 @@ trait Completions { this: MetalsGlobal =>
       }
 
       class ConstructorFinder(clazz: ClassDef) extends Traverser {
+        private var found: Option[DefDef] = scala.None
         def getConstructor: Option[DefDef] = {
-          this.constructor = scala.None
+          found = scala.None
           clazz.impl.body.foreach(traverse)
-          constructor
+          found
         }
-        private var constructor: Option[DefDef] = scala.None
         override def traverse(tree: Tree): Unit = {
           tree match {
             case constructor: DefDef
                 if constructor.name == termNames.CONSTRUCTOR =>
-              this.constructor = Some(constructor)
+              found = Some(constructor)
             case _ =>
               super.traverse(tree)
           }
