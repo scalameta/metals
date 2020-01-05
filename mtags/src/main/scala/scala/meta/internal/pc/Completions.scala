@@ -698,12 +698,12 @@ trait Completions { this: MetalsGlobal =>
     }
     override def traverse(t: Tree): Unit = {
       t match {
-        case typedef @ TypeDef(_, _, _, _) => process(typedef)
-        case clsdef @ ClassDef(_, _, _, _) => process(clsdef)
-        case defdef @ DefDef(_, _, _, _, _, _) => process(defdef)
-        case moduledef @ ModuleDef(_, _, _) => process(moduledef)
-        case pkgdef @ PackageDef(_, _) => process(pkgdef)
-        case valdef @ ValDef(_, _, _, _) => process(valdef)
+        case typedef: TypeDef => process(typedef)
+        case clsdef: ClassDef => process(clsdef)
+        case defdef: DefDef => process(defdef)
+        case moduledef: ModuleDef => process(moduledef)
+        case pkgdef: PackageDef => process(pkgdef)
+        case valdef: ValDef => process(valdef)
         case _ if treePos(t).includes(pos) => super.traverse(t)
         case _ =>
       }
@@ -1726,10 +1726,12 @@ trait Completions { this: MetalsGlobal =>
         //   * @return
         //   */
         // """
+        val maybeEmptyLine =
+          if (scaladocParamLines.isEmpty && returnLine.isEmpty) ""
+          else s"${indent}*"
         val newText: String =
           s"""|${indent}*${cursor}
-              |${if (scaladocParamLines.isEmpty && returnLine.isEmpty) ""
-             else s"${indent}*"}
+              |${maybeEmptyLine}
               |${scaladocParamLines}
               |${returnLine}
               |${indent}*/""".stripMargin
@@ -1764,11 +1766,11 @@ trait Completions { this: MetalsGlobal =>
         if (metalsConfig.snippetAutoIndent()) {
           ""
         } else {
-          val line =
-            try {
+          try {
+            val line =
               text.split(System.lineSeparator())(pos.line - 1)
-            } catch { case NonFatal(_) => "" }
-          line.takeWhile(ch => ch != '/')
+            line.takeWhile(ch => ch != '/')
+          } catch { case NonFatal(_) => "" }
         }
       }
 
@@ -1802,8 +1804,8 @@ trait Completions { this: MetalsGlobal =>
         private var constructor: Option[DefDef] = scala.None
         override def traverse(tree: Tree): Unit = {
           tree match {
-            case constructor @ DefDef(_, name, _, _, _, _)
-                if name == termNames.CONSTRUCTOR =>
+            case constructor: DefDef
+                if constructor.name == termNames.CONSTRUCTOR =>
               this.constructor = Some(constructor)
             case _ =>
               super.traverse(tree)
@@ -2047,11 +2049,11 @@ trait Completions { this: MetalsGlobal =>
   }
 
   def isScaladocCompletion(pos: Position, text: String): Boolean = {
-    val line =
-      try {
+    try {
+      val line =
         text.split(System.lineSeparator())(pos.line - 1)
-      } catch { case _: Throwable => "" }
-    // check if the line starts with `/**`
-    line.matches("^\\s*\\/\\*\\*\\s*$")
+      // check if the line starts with `/**`
+      line.matches("^\\s*\\/\\*\\*\\s*$")
+    } catch { case NonFatal(_) => false }
   }
 }
