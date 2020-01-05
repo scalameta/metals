@@ -44,16 +44,16 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object A {
        |  /**
-       |  *
-       |  * @param param1 $0
-       |  * @param param2
-       |  * @return
-       |  */
+       |    * $0
+       |    *
+       |    * @param param1
+       |    * @param param2
+       |    * @return
+       |    */
        |  def test1(param1: Int, param2: Int): Int = ???
        |  def test2(param1: Int, param2: Int, param3: Int): Int = ???
        |}
-       |""".stripMargin,
-    filter = _.contains("/** */")
+       |""".stripMargin
   )
 
   checkEdit(
@@ -66,15 +66,15 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object A {
        |  /**
-       |  *
-       |  * @param param1 $0
-       |  * @param param2
-       |  */
+       |    * $0
+       |    *
+       |    * @param param1
+       |    * @param param2
+       |    */
        |  class Test1(param1: Int, param2: Int) {}
        |  class Test2(param1: Int, param2: Int, param3: Int) {}
        |}
-       |""".stripMargin,
-    filter = _.contains("/** */")
+       |""".stripMargin
   )
 
   checkEdit(
@@ -86,29 +86,11 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object A {
        |  /**
-       |  *
-       |  */
+       |    * $0
+       |    */
        |  val x = 1
        |}
-       |""".stripMargin,
-    filter = _.contains("/** */")
-  )
-
-  checkEdit(
-    "scaladoc-valdef-edit",
-    """|object A {
-       |  /**@@
-       |  val x = 1
-       |}
-       |""".stripMargin,
-    """|object A {
-       |  /**
-       |  *
-       |  */
-       |  val x = 1
-       |}
-       |""".stripMargin,
-    filter = _.contains("/** */")
+       |""".stripMargin
   )
 
   checkEdit(
@@ -120,33 +102,13 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|/**
-       |  *
+       |  * $0
        |  */
        |object A {
        |  // do not calculate scaladoc based on the method
        |  def test(x: Int): Int = ???
        |}
-       |""".stripMargin,
-    filter = _.contains("/** */")
-  )
-
-  checkEdit(
-    "scaladoc-objectdef-edit",
-    """|/**@@
-       |object A {
-       |  // do not calculate scaladoc based on the method
-       |  def test(x: Int): Int = ???
-       |}
-       |""".stripMargin,
-    """|/**
-       |  *
-       |  */
-       |object A {
-       |  // do not calculate scaladoc based on the method
-       |  def test(x: Int): Int = ???
-       |}
-       |""".stripMargin,
-    filter = _.contains("/** */")
+       |""".stripMargin
   )
 
   checkEdit(
@@ -161,15 +123,15 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
     """|object A {
        |  def test(x: Int): Int = {
        |    /**
-       |  *
-       |  * @param y $0
-       |  * @return
-       |  */
+       |      * $0
+       |      *
+       |      * @param y
+       |      * @return
+       |      */
        |    def nest(y: Int) = ???
        |  }
        |}
-       |""".stripMargin,
-    filter = _.contains("/** */")
+       |""".stripMargin
   )
 
   checkEdit(
@@ -182,13 +144,13 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|object A {
        |  /**
-       |  *
-       |  * @return $0
-       |  */
+       |    * $0
+       |    *
+       |    * @return
+       |    */
        |  def test1: Int = ???
        |  def test2(param1: Int, param2: Int, param3: Int): Int = ???
        |}
-       |""".stripMargin,
-    filter = _.contains("/** */")
+       |""".stripMargin
   )
 }

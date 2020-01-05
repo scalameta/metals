@@ -430,7 +430,9 @@ trait Completions { this: MetalsGlobal =>
           new AssociatedMemberDefFinder(pos).findAssociatedDef(unit.body)
         }
         associatedDef
-          .map(definition => CompletionPosition.Scaladoc(editRange, definition))
+          .map(definition =>
+            CompletionPosition.Scaladoc(editRange, definition, pos, text)
+          )
           .getOrElse(CompletionPosition.None)
       case (ident: Ident) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
@@ -1682,21 +1684,59 @@ trait Completions { this: MetalsGlobal =>
      * @param editRange the range in the original source file.
      * @param associatedDef the memberDef associated with the scaladoc to complete.
      *                      This class will construct scaladoc based on the params of this definition.
+     * @param pos the position of the completion request.
+     * @param text the text of the original source code.
      */
     case class Scaladoc(
         editRange: l.Range,
-        associatedDef: MemberDef
+        associatedDef: MemberDef,
+        pos: Position,
+        text: String
     ) extends CompletionPosition {
+      // The indent for gutter asterisks aligned in column three.
+      // |/**
+      // |  *
+      private val scaladocIndent = "  "
+
       override def contribute: List[Member] = {
-        val lines = scaladocLines(associatedDef)
-        // add `* @return` line only if the definition is a method def.
+        val necessaryIndent = inferIndent(pos, text)
+        val indent = s"${necessaryIndent}${scaladocIndent}"
+
+        val params: List[ValDef] = getParams(associatedDef)
+        val cursor =
+          if (clientSupportsSnippets) " $0" else ""
+
+        val scaladocParamLines: String = params
+          .map { param =>
+            s"${indent}* @param ${param.name}"
+          }
+          .mkString("\n")
+
+        // Add `* @return` only if the associatedDef is method definition.
         val returnLine =
-          if (lines.isEmpty && clientSupportsSnippets) "* @return $0"
-          else "* @return"
-        val newText =
-          if (associatedDef.isInstanceOf[DefDef])
-            (Seq("", "*") ++ lines ++ Seq(returnLine, "*/")).mkString("\n  ")
-          else (Seq("", "*") ++ lines ++ Seq("*/")).mkString("\n  ")
+          if (associatedDef.isInstanceOf[DefDef]) s"${indent}* @return" else ""
+
+        // Construct the following new text.
+        // """
+        //
+        //   * $0 <- move cursor here. Add an empty line below here, only if there's @param or @return line.
+        //   *
+        //   * @param param1
+        //   * @param param2
+        //   * @return
+        //   */
+        // """
+        val newText: String =
+          s"""|${indent}*${cursor}
+              |${if (scaladocParamLines.isEmpty && returnLine.isEmpty) ""
+             else s"${indent}*"}
+              |${scaladocParamLines}
+              |${returnLine}
+              |${indent}*/""".stripMargin
+            .split("\n")
+            .filter(!_.isEmpty) // remove empty lines: scaladocParamLines and returnLine can be empty
+            .mkString("\n", "\n", "")
+
         List(
           new TextEditMember(
             "Scaladoc Comment",
@@ -1710,55 +1750,64 @@ trait Completions { this: MetalsGlobal =>
           )
         )
       }
-    }
 
-    /**
-     * Returns the parameter lines of scaladoc besed on the given memberDef
-     * like ["* @param param1 $0", "* @param param2"].
-     *
-     * @param memberDef The memberDef to construct scaladoc.
-     */
-    private def scaladocLines(memberDef: MemberDef): List[String] = {
-      memberDef match {
-        case DefDef(_, _, _, vparamss, _, _) =>
-          vparamss.flatten.zipWithIndex
-            .map {
-              case (valdef, idx) => {
-                // /**
-                //   * @param param1 | <- move cursor to here.
-                //   * @param param2
-                //   */
-                if (idx == 0 && clientSupportsSnippets)
-                  s"* @param ${valdef.name} $$0"
-                else s"* @param ${valdef.name}"
-              }
+      // Infers the indentation at the completion position by counting the number of leading
+      // spaces in the line.
+      // For example:
+      // |"""
+      // |object A {
+      // |  /**<COMPLETE> // inferred indent is 4 spaces
+      // |  def foo(x: Int) = ???
+      // |}
+      // |"""
+      private def inferIndent(pos: Position, text: String): String = {
+        if (metalsConfig.snippetAutoIndent()) {
+          ""
+        } else {
+          val line =
+            try {
+              text.split(System.lineSeparator())(pos.line - 1)
+            } catch { case NonFatal(_) => "" }
+          line.takeWhile(ch => ch != '/')
+        }
+      }
+
+      /**
+       * Returns the parameters of the given memberDef
+       *
+       * @param memberDef The memberDef to construct scaladoc.
+       */
+      private def getParams(memberDef: MemberDef): List[ValDef] = {
+        memberDef match {
+          case defdef: DefDef =>
+            defdef.vparamss.flatten
+          case clazz: ClassDef =>
+            // If the associated def is a class definition,
+            // retrieve the constructor from the class, and caluculate the lines
+            // from the constructor definition instead.
+            new ConstructorFinder(clazz).getConstructor match {
+              case Some(defdef) => getParams(defdef)
+              case scala.None => Nil
             }
-        case clazz @ ClassDef(_, _, _, _) =>
-          // If the associated def is a class definition,
-          // retrieve the constructor from the class, and caluculate the lines
-          // from the constructor definition instead.
-          new ConstructorFinder(clazz).getConstructor match {
-            case Some(defdef) => this.scaladocLines(defdef)
-            case scala.None => Nil
-          }
-        case _ => Nil
+          case _ => Nil
+        }
       }
-    }
 
-    class ConstructorFinder(clazz: ClassDef) extends Traverser {
-      def getConstructor: Option[DefDef] = {
-        this.constructor = scala.None
-        clazz.impl.body.foreach(traverse)
-        constructor
-      }
-      private var constructor: Option[DefDef] = scala.None
-      override def traverse(tree: Tree): Unit = {
-        tree match {
-          case constructor @ DefDef(_, name, _, _, _, _)
-              if name == termNames.CONSTRUCTOR =>
-            this.constructor = Some(constructor)
-          case _ =>
-            super.traverse(tree)
+      class ConstructorFinder(clazz: ClassDef) extends Traverser {
+        def getConstructor: Option[DefDef] = {
+          this.constructor = scala.None
+          clazz.impl.body.foreach(traverse)
+          constructor
+        }
+        private var constructor: Option[DefDef] = scala.None
+        override def traverse(tree: Tree): Unit = {
+          tree match {
+            case constructor @ DefDef(_, name, _, _, _, _)
+                if name == termNames.CONSTRUCTOR =>
+              this.constructor = Some(constructor)
+            case _ =>
+              super.traverse(tree)
+          }
         }
       }
     }
