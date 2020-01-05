@@ -184,4 +184,29 @@ object CompletionMatchSuite extends BaseCompletionSuite {
       "2.11" -> "match"
     )
   )
+
+  // https://github.com/scalameta/metals/issues/1253
+  checkEditBug(
+    "exhaustive-fully-qualify",
+    """
+      |package example
+      |
+      |object None
+      |
+      |object Main {
+      |  Option(1) match@@
+      |}""".stripMargin,
+    """
+      |package example
+      |
+      |object None
+      |
+      |object Main {
+      |  Option(1) match {
+      |\tcase Some(value) => $0
+      |\tcase scala.None =>
+      |}
+      |}""".stripMargin,
+    filter = _.contains("exhaustive")
+  )
 }
