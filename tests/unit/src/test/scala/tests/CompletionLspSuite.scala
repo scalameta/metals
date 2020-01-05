@@ -8,14 +8,15 @@ object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
   override def testAsync(
       name: String,
-      maxDuration: Duration = Duration("10min")
+      maxDuration: Duration = Duration("10min"),
+      expectFailure: Boolean = false
   )(
       run: => Future[Unit]
   ): Unit = {
     if (isWindows) {
       ignore(name)(run)
     } else {
-      super.testAsync(name, maxDuration)(run)
+      super.testAsync(name, maxDuration, expectFailure)(run)
     }
   }
 

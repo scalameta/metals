@@ -144,31 +144,28 @@ class BaseSuite extends TestSuite {
 
   def isTestSuiteEnabled: Boolean = true
 
-  def test(name: String)(fun: => Any): Unit = {
+  def test(name: String, expectFailure: Boolean = false)(fun: => Any): Unit = {
     if (isTestSuiteEnabled) {
-      myTests += FlatTest(name, () => fun)
+      myTests += FlatTest(name, () => {
+        if (expectFailure) {
+          intercept[TestFailedException](fun)
+        } else {
+          fun
+        }
+      })
     }
   }
 
-  def failingTest(name: String)(fun: => Any): Unit = {
-    test(name)(intercept[TestFailedException](fun))
-  }
-
-  def testAsync(name: String, maxDuration: Duration = Duration("10min"))(
+  def testAsync(
+      name: String,
+      maxDuration: Duration = Duration("10min"),
+      expectFailure: Boolean = false
+  )(
       run: => Future[Unit]
   ): Unit = {
-    test(name) {
+    test(name, expectFailure) {
       val fut = run
       Await.result(fut, maxDuration)
-    }
-  }
-
-  def failingAsyncTest(name: String, maxDuration: Duration = Duration("10min"))(
-      run: => Future[Unit]
-  ): Unit = {
-    test(name) {
-      val fut = run
-      intercept[TestFailedException](Await.result(fut, maxDuration))
     }
   }
 

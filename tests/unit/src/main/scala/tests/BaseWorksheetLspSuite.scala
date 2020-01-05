@@ -13,9 +13,11 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
 
-  override final def test(name: String)(fun: => Any): Unit =
+  override final def test(name: String, expectFailure: Boolean = false)(
+      fun: => Any
+  ): Unit =
     if (super.isValidScalaVersionForEnv(this.scalaVersion)) {
-      super.test(name)(fun)
+      super.test(name, expectFailure)(fun)
     }
 
   if (!isWindows)

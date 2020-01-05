@@ -67,14 +67,16 @@ abstract class BasePCSuite extends BaseSuite {
     JdkSources().foreach(jdk => index.addSourceJar(jdk))
   }
 
-  override def test(name: String)(fun: => Any): Unit = {
+  override def test(name: String, expectFailure: Boolean = false)(
+      fun: => Any
+  ): Unit = {
     // We are unable to infer the JDK jars on Appveyor
     // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
     val testName =
       if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
         s"${BuildInfo.scalaCompilerVersion}-$name"
       else name
-    super.test(testName) {
+    super.test(testName, expectFailure) {
       try {
         fun
       } catch {

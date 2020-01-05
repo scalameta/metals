@@ -69,8 +69,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     )
   }
 
-  private def checkEditCore(
-      testMethod: (String) => (=> Unit) => Unit,
+  def checkEdit(
       name: String,
       original: String,
       expected: String,
@@ -78,9 +77,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      expectFailure: Boolean = false
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
-    testMethod(name) {
+    test(name, expectFailure) {
       val items = getItems(original).filter(item => filter(item.getLabel))
       if (items.isEmpty) fail("obtained empty completions!")
       if (assertSingleItem && items.length != 1) {
@@ -101,52 +101,6 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         "Invalid command"
       )
     }
-  }
-
-  def checkEdit(
-      name: String,
-      original: String,
-      expected: String,
-      filterText: String = "",
-      assertSingleItem: Boolean = true,
-      filter: String => Boolean = _ => true,
-      command: Option[String] = None,
-      compat: Map[String, String] = Map.empty
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
-    checkEditCore(
-      test,
-      name,
-      original,
-      expected,
-      filterText,
-      assertSingleItem,
-      filter,
-      command,
-      compat
-    )
-  }
-
-  def checkEditBug(
-      name: String,
-      original: String,
-      expected: String,
-      filterText: String = "",
-      assertSingleItem: Boolean = true,
-      filter: String => Boolean = _ => true,
-      command: Option[String] = None,
-      compat: Map[String, String] = Map.empty
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
-    checkEditCore(
-      failingTest,
-      name,
-      original,
-      expected,
-      filterText,
-      assertSingleItem,
-      filter,
-      command,
-      compat
-    )
   }
 
   def checkSnippet(

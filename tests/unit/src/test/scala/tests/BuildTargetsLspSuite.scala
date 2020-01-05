@@ -8,13 +8,14 @@ object BuildTargetsLspSuite
 
   override def testAsync(
       name: String,
-      maxDuration: Duration = Duration("3min")
+      maxDuration: Duration = Duration("3min"),
+      expectFailure: Boolean = false
   )(run: => Future[Unit]): Unit = {
     if (isWindows) {
       // Tests are not working on windows CI
       ignore(name) {}
     } else {
-      super.testAsync(name, maxDuration)(run)
+      super.testAsync(name, maxDuration, expectFailure)(run)
     }
   }
 
