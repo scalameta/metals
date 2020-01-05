@@ -16,6 +16,7 @@ import scala.meta.internal.tokenizers.Chars
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.util.control.NonFatal
 import scala.collection.immutable.Nil
+import scala.reflect.internal.ModifierFlags
 
 /**
  * Utility methods for completions.
@@ -711,7 +712,11 @@ trait Completions { this: MetalsGlobal =>
     private def process(t: MemberDef): Unit = {
       // if the node's location is below the current associate def,
       // we don't have to visit the node because it can't be an associated def.
-      if (associatedDef.map(t.pos.point <= _.pos.point).getOrElse(true)) {
+      if (associatedDef
+          .map(cur =>
+            t.pos.isDefined && cur.pos.isDefined && t.pos.point <= cur.pos.point
+          )
+          .getOrElse(true)) {
         if (t.pos.isDefined && t.pos.start >= pos.start) associatedDef = Some(t)
         if (treePos(t).includes(pos)) super.traverse(t)
       }
@@ -1802,17 +1807,33 @@ trait Completions { this: MetalsGlobal =>
       class ConstructorFinder(clazz: ClassDef) extends Traverser {
         private var found: Option[DefDef] = scala.None
         def getConstructor: Option[DefDef] = {
-          found = scala.None
-          clazz.impl.body.foreach(traverse)
-          found
+          // Don't try to find the constructor for trait/abstract definition
+          // because they don't have a constructor
+          if (!clazz.mods.hasFlag(
+              ModifierFlags.ABSTRACT |
+                ModifierFlags.TRAIT |
+                ModifierFlags.INTERFACE
+            )) {
+            found = scala.None
+            clazz.impl.body.foreach(traverse)
+            found
+          } else {
+            scala.None
+          }
         }
         override def traverse(tree: Tree): Unit = {
-          tree match {
-            case constructor: DefDef
-                if constructor.name == termNames.CONSTRUCTOR =>
-              found = Some(constructor)
-            case _ =>
-              super.traverse(tree)
+          if (found
+              .map(cur =>
+                tree.pos.isDefined && cur.pos.isDefined && tree.pos.point <= cur.pos.point
+              )
+              .getOrElse(true)) {
+            tree match {
+              case constructor: DefDef
+                  if constructor.name == termNames.CONSTRUCTOR =>
+                found = Some(constructor)
+              case _ =>
+                super.traverse(tree)
+            }
           }
         }
       }

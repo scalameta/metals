@@ -135,6 +135,50 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "scaladoc-classdef-nested-edit",
+    """|object A {
+       |  /**@@
+       |  case class B(x: Int) {
+       |    case class C(y: Int) {}
+       |  }
+       |}
+       |""".stripMargin,
+    """|object A {
+       |  /**
+       |    * $0
+       |    *
+       |    * @param x
+       |    */
+       |  case class B(x: Int) {
+       |    case class C(y: Int) {}
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "scaladoc-trait-classdef-nested-edit",
+    """|object A {
+       |  /**@@
+       |  trait B {
+       |    // do not complete scaladef for class C
+       |    case class C(y: Int) {}
+       |  }
+       |}
+       |""".stripMargin,
+    """|object A {
+       |  /**
+       |    * $0
+       |    */
+       |  trait B {
+       |    // do not complete scaladef for class C
+       |    case class C(y: Int) {}
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "scaladoc-defdef-no-param-cursor",
     """|object A {
        |  /**@@
