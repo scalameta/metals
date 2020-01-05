@@ -87,6 +87,7 @@ abstract class BasePCSuite extends BaseSuite {
       }
     }
   }
+
   def indexScalaLibrary(): Unit = {
     val sources = Fetch()
       .addClassifiers(Classifier.sources)
