@@ -70,17 +70,16 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   }
 
   def checkEdit(
-      name: String,
+      name: TestOptions,
       original: String,
       expected: String,
       filterText: String = "",
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
-      compat: Map[String, String] = Map.empty,
-      expectFailure: Boolean = false
+      compat: Map[String, String] = Map.empty
   )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
-    test(name, expectFailure) {
+    test(name) {
       val items = getItems(original).filter(item => filter(item.getLabel))
       if (items.isEmpty) fail("obtained empty completions!")
       if (assertSingleItem && items.length != 1) {

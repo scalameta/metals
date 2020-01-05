@@ -187,7 +187,7 @@ object CompletionMatchSuite extends BaseCompletionSuite {
 
   // https://github.com/scalameta/metals/issues/1253
   checkEdit(
-    "exhaustive-fully-qualify",
+    "exhaustive-fully-qualify".expectedToFail,
     """
       |package example
       |
@@ -207,7 +207,6 @@ object CompletionMatchSuite extends BaseCompletionSuite {
       |\tcase scala.None =>
       |}
       |}""".stripMargin,
-    filter = _.contains("exhaustive"),
-    expectFailure = true
+    filter = _.contains("exhaustive")
   )
 }
