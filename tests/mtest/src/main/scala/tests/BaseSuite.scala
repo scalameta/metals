@@ -147,7 +147,7 @@ class BaseSuite extends TestSuite with TestOptionsConversions {
   def test(options: TestOptions)(fun: => Any): Unit = {
     if (isTestSuiteEnabled) {
       myTests += FlatTest(options.name, () => {
-        if (options.isExpectedToFail) {
+        if (options.tags.contains(Tag.ExpectFailure)) {
           intercept[TestFailedException](fun)
         } else {
           fun
