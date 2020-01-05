@@ -128,7 +128,7 @@ class WorksheetProvider(
       }
       cancelables.add(Cancelable(() => completeEmptyResult()))
       statusBar.trackFuture(
-        s"Evaluting ${path.filename}",
+        s"Evaluating ${path.filename}",
         result.asScala,
         showTimer = true
       )
