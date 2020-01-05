@@ -49,7 +49,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   }
 
   def checkEditLine(
-      name: String,
+      name: TestOptions,
       template: String,
       original: String,
       expected: String,
