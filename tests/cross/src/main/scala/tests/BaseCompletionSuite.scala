@@ -49,7 +49,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   }
 
   def checkEditLine(
-      name: String,
+      name: TestOptions,
       template: String,
       original: String,
       expected: String,
@@ -68,8 +68,9 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       command = command
     )
   }
+
   def checkEdit(
-      name: String,
+      name: TestOptions,
       original: String,
       expected: String,
       filterText: String = "",

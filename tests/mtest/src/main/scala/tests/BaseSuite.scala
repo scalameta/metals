@@ -24,7 +24,7 @@ import utest.ufansi.Str
 /**
  * Test suite that replace utest DSL with FunSuite-style syntax from ScalaTest.
  */
-class BaseSuite extends TestSuite {
+class BaseSuite extends TestSuite with TestOptionsConversions {
   Testing.enable()
   def isJava8: Boolean =
     !Properties.isJavaAtLeast("9")
@@ -135,24 +135,34 @@ class BaseSuite extends TestSuite {
   case class FlatTest(name: String, thunk: () => Unit)
   private val myTests = mutable.ArrayBuffer.empty[FlatTest]
 
-  def ignore(name: String)(fun: => Any): Unit = {
+  def ignore(options: TestOptions)(fun: => Any): Unit = {
     myTests += FlatTest(
-      utest.ufansi.Color.LightRed(s"IGNORED - $name").toString(),
+      utest.ufansi.Color.LightRed(s"IGNORED - ${options.name}").toString(),
       () => ()
     )
   }
 
   def isTestSuiteEnabled: Boolean = true
 
-  def test(name: String)(fun: => Any): Unit = {
+  def test(options: TestOptions)(fun: => Any): Unit = {
     if (isTestSuiteEnabled) {
-      myTests += FlatTest(name, () => fun)
+      myTests += FlatTest(options.name, () => {
+        if (options.tags.contains(Tag.ExpectFailure)) {
+          intercept[TestFailedException](fun)
+        } else {
+          fun
+        }
+      })
     }
   }
-  def testAsync(name: String, maxDuration: Duration = Duration("10min"))(
+
+  def testAsync(
+      options: TestOptions,
+      maxDuration: Duration = Duration("10min")
+  )(
       run: => Future[Unit]
   ): Unit = {
-    test(name) {
+    test(options) {
       val fut = run
       Await.result(fut, maxDuration)
     }

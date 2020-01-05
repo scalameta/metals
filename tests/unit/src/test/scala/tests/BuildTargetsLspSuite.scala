@@ -7,14 +7,14 @@ object BuildTargetsLspSuite
     with TestHovers {
 
   override def testAsync(
-      name: String,
+      options: TestOptions,
       maxDuration: Duration = Duration("3min")
   )(run: => Future[Unit]): Unit = {
     if (isWindows) {
       // Tests are not working on windows CI
-      ignore(name) {}
+      ignore(options) {}
     } else {
-      super.testAsync(name, maxDuration)(run)
+      super.testAsync(options, maxDuration)(run)
     }
   }
 

@@ -7,15 +7,15 @@ import scala.concurrent.duration.Duration
 object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
   override def testAsync(
-      name: String,
+      options: TestOptions,
       maxDuration: Duration = Duration("10min")
   )(
       run: => Future[Unit]
   ): Unit = {
     if (isWindows) {
-      ignore(name)(run)
+      ignore(options)(run)
     } else {
-      super.testAsync(name, maxDuration)(run)
+      super.testAsync(options, maxDuration)(run)
     }
   }
 
