@@ -78,7 +78,7 @@ SemanticDB files to be provided alongside compiled data. To do that we need a
 couple of steps that are explained in the manual installation section.</p>
 <h2><a class="anchor" aria-hidden="true" id="manual-installation"></a><a href="#manual-installation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manual installation</h2>
 <p>For current Metals snapshots all you need to run the manual installation is:</p>
-<p><code>mvn ch.epfl.scala:maven-bloop_2.10:1.3.4+298-2c6ff971:bloopInstall -DdownloadSources=true</code></p>
+<p><code>mvn ch.epfl.scala:maven-bloop_2.10:1.4.0-RC1:bloopInstall -DdownloadSources=true</code></p>
 <p>However, for all versions before and including 0.7.6 we need a couple more
 steps.</p>
 <p>First, we need to add a couple of options to the Scala compiler in the
@@ -109,12 +109,12 @@ configuration section:</p>
 </code></pre>
 <p>Next, we need to do run bloopInstall via maven, which can be done easily
 through:</p>
-<p><code>mvn ch.epfl.scala:maven-bloop_2.10:1.3.4+298-2c6ff971:bloopInstall -DdownloadSources=true</code></p>
+<p><code>mvn ch.epfl.scala:maven-bloop_2.10:1.4.0-RC1:bloopInstall -DdownloadSources=true</code></p>
 <p>Everything should now be correctly configured and work even when reimporting the
 project.</p>
 <p>If you don't want to modify the <code>pom.xml</code> you can also run bloopInstall with an
 additional parameter:</p>
-<pre><code class="hljs">mvn ch.epfl.scala:maven-bloop_2<span class="hljs-number">.10</span>:<span class="hljs-number">1.3</span><span class="hljs-number">.4</span>+<span class="hljs-number">298</span><span class="hljs-number">-2</span>c6ff971:bloopInstall -DdownloadSources=<span class="hljs-keyword">true</span> -DaddScalacArgs=-Xplugin:/<span class="hljs-type">path</span>/<span class="hljs-keyword">to</span>/semanticdb-scalac.jar|-P:semanticdb:synthetics:<span class="hljs-keyword">on</span>|-P:semanticdb:failures:<span class="hljs-built_in">warning</span>|-P:semanticdb:sourceroot:/<span class="hljs-type">path</span>/<span class="hljs-keyword">to</span>/workspace|-Yrangepos|-Xplugin-require:semanticdb<span class="hljs-string">'
+<pre><code class="hljs">mvn ch.epfl.scala:maven-bloop_2<span class="hljs-number">.10</span>:<span class="hljs-number">1.4</span><span class="hljs-number">.0</span>-RC1:bloopInstall -DdownloadSources=<span class="hljs-keyword">true</span> -DaddScalacArgs=-Xplugin:/<span class="hljs-type">path</span>/<span class="hljs-keyword">to</span>/semanticdb-scalac.jar|-P:semanticdb:synthetics:<span class="hljs-keyword">on</span>|-P:semanticdb:failures:<span class="hljs-built_in">warning</span>|-P:semanticdb:sourceroot:/<span class="hljs-type">path</span>/<span class="hljs-keyword">to</span>/workspace|-Yrangepos|-Xplugin-require:semanticdb<span class="hljs-string">'
 </span></code></pre>
 <p><code>-DaddScalacArgs</code> takes a string with additional scalac options separated by
 <code>|</code>. You would need to download the correct plugin first and manually replace
