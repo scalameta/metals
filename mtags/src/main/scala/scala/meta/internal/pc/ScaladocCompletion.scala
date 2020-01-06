@@ -31,7 +31,7 @@ trait ScaladocCompletion { this: MetalsGlobal =>
     private val scaladocIndent = "  "
 
     override def contribute: List[Member] = {
-      val necessaryIndent = inferIndent(pos, text)
+      val necessaryIndent = inferIndent(pos)
       val indent = s"${necessaryIndent}${scaladocIndent}"
       val params: List[ValDef] = getParams(associatedDef)
 
@@ -94,15 +94,12 @@ trait ScaladocCompletion { this: MetalsGlobal =>
     // |  def foo(x: Int) = ???
     // |}
     // |"""
-    private def inferIndent(pos: Position, text: String): String = {
+    private def inferIndent(pos: Position): String = {
       if (metalsConfig.snippetAutoIndent()) {
         ""
       } else {
-        try {
-          val line =
-            text.split(System.lineSeparator())(pos.line - 1)
-          line.takeWhile(ch => ch != '/')
-        } catch { case NonFatal(_) => "" }
+        // 3 is the length of "/**$" <- $ is a cursor
+        " " * (pos.column - 4)
       }
     }
 
@@ -162,13 +159,21 @@ trait ScaladocCompletion { this: MetalsGlobal =>
     }
   }
 
+  /**
+   * Check if the cursor is located just behind the opening comment.
+   *
+   * @param pos The cursor position
+   * @param text The original text of the source file.
+   */
   protected def isScaladocCompletion(pos: Position, text: String): Boolean = {
     try {
-      val line =
-        text.split(System.lineSeparator())(pos.line - 1)
-      // check if the line starts with `/**`
-      line.matches("^\\s*\\/\\*\\*\\s*$")
-    } catch { case NonFatal(_) => false }
+      pos.isDefined &&
+      text.charAt(pos.point - 3) == '/' &&
+      text.charAt(pos.point - 2) == '*' &&
+      text.charAt(pos.point - 1) == '*'
+    } catch {
+      case NonFatal(_) => false
+    }
   }
 
   /**
