@@ -139,8 +139,8 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
       .asScala
   }
 
-  def shutdown: Future[Unit] = {
-    server.listening.withTimeout(20, TimeUnit.SECONDS).andThen {
+  def shutdown(timeout: Int = 20): Future[Unit] = {
+    server.listening.withTimeout(timeout, TimeUnit.SECONDS).andThen {
       case _ => server.cancel()
     }
   }

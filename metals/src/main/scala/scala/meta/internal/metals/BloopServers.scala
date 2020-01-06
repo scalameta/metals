@@ -10,6 +10,8 @@ import java.nio.charset.StandardCharsets
 import bloop.bloopgun.core.Shell
 import java.nio.channels.Channels
 import java.nio.channels.Pipe
+import java.io.ByteArrayInputStream
+import bloop.bloopgun.BloopgunCli
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
@@ -28,6 +30,25 @@ final class BloopServers(
     workspace: AbsolutePath,
     client: MetalsBuildClient
 )(implicit ec: ExecutionContextExecutorService) {
+
+  def shutdownServer(): Boolean = {
+    val dummyIn = new ByteArrayInputStream(new Array(0))
+    val cli = new BloopgunCli(
+      BuildInfo.bloopVersion,
+      dummyIn,
+      System.out,
+      System.err,
+      Shell.default
+    )
+    val result = cli.run(Array("exit")) == 0
+    if (!result) {
+      scribe.warn("There were issues stopping the Bloop server.")
+      scribe.warn(
+        "If it doesn't start back up you can run the `build-restart` command manually."
+      )
+    }
+    result
+  }
 
   def newServer(): Future[Option[BuildServerConnection]] = {
     val launcherInOutPipe = Pipe.open()

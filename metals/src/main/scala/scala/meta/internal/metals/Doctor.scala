@@ -29,6 +29,13 @@ final class Doctor(
   private var bspServerName: Option[String] = None
   private var bspServerVersion: Option[String] = None
 
+  def isUnsupportedBloopVersion(serverVersion: String): Boolean = {
+    bspServerName.contains("Bloop") && !SemVer.isCompatibleVersion(
+      BuildInfo.bloopVersion,
+      serverVersion
+    )
+  }
+
   /** Returns a full HTML page for the HTTP client. */
   def problemsHtmlPage(url: String): String = {
     val livereload = Urls.livereload(url)
@@ -115,16 +122,6 @@ final class Doctor(
       isSemanticdbEnabled: Boolean,
       scala: ScalaTarget
   ): String = {
-
-    val minimumBloopVersion = "1.3.5"
-    def isUnsupportedBloopVersion =
-      bspServerVersion.exists(version =>
-        !SemVer.isCompatibleVersion(
-          minimumBloopVersion,
-          version
-        )
-      )
-
     def isMaven: Boolean = workspace.resolve("pom.xml").isFile
     def hint() =
       if (isMaven) {
@@ -137,8 +134,8 @@ final class Doctor(
       } else s"run 'Build import' to enable code navigation."
 
     if (!isSemanticdbEnabled) {
-      if (bspServerName.contains("Bloop") && isUnsupportedBloopVersion) {
-        s"""|The installed Bloop server version is ${bspServerVersion.get} while Metals requires at least Bloop version $minimumBloopVersion,
+      if (bspServerVersion.exists(isUnsupportedBloopVersion)) {
+        s"""|The installed Bloop server version is ${bspServerVersion.get} while Metals requires at least Bloop version ${BuildInfo.bloopVersion},
             |To fix this problem please update your Bloop server.""".stripMargin
       } else if (isSupportedScalaVersion(
           scalaVersion

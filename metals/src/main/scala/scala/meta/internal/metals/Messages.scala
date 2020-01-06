@@ -138,6 +138,37 @@ class Messages(icons: Icons) {
     }
   }
 
+  object IncompatibleBloopVersion {
+    def manually: MessageActionItem =
+      new MessageActionItem("I'll update manually")
+    def shutdown: MessageActionItem =
+      new MessageActionItem("Turn off old server")
+    def dismissForever: MessageActionItem =
+      new MessageActionItem("Don't show again")
+    def params(
+        bloopVersion: String,
+        minimumBloopVersion: String
+    ): ShowMessageRequestParams = {
+
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"""|You have Bloop $bloopVersion installed and Metals requires at least Bloop $minimumBloopVersion.
+            |If you installed bloop via a system package manager (brew, aur, scoop), please upgrade manually.
+            |If not, select "Turn off old server". A newer server will be started automatically afterwards.
+            |""".stripMargin
+      )
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          shutdown,
+          manually,
+          dismissForever
+        ).asJava
+      )
+      params
+    }
+  }
+
   object SelectBspServer {
     case class Request(
         params: ShowMessageRequestParams,

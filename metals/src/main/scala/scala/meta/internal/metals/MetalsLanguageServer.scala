@@ -52,6 +52,7 @@ import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
+import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1152,6 +1153,9 @@ class MetalsLanguageServer(
         Future {
           indexWorkspaceSources()
         }.asJavaObject
+      case ServerCommands.RestartBuildServer() =>
+        bloopServers.shutdownServer()
+        autoConnectToBuildServer().asJavaObject
       case ServerCommands.ImportBuild() =>
         slowConnectToBuildServer(forceImport = true).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
@@ -1451,6 +1455,7 @@ class MetalsLanguageServer(
         () => indexWorkspace(i),
         () => indexingPromise.trySuccess(())
       )
+      _ = checkRunningBloopVersion(i.bspServerVersion)
       _ <- Future.sequence[Unit, List](
         compilations
           .cascadeCompileFiles(buffers.open.toSeq)
@@ -1659,6 +1664,26 @@ class MetalsLanguageServer(
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach(_ => languageClient.refreshModel())
+  }
+
+  private def checkRunningBloopVersion(bspServerVersion: String) = {
+    if (doctor.isUnsupportedBloopVersion(bspServerVersion)) {
+      val notification = tables.dismissedNotifications.IncompatibleBloop
+      if (!notification.isDismissed) {
+        val messageParams = IncompatibleBloopVersion.params(
+          bspServerVersion,
+          BuildInfo.bloopVersion
+        )
+        languageClient.showMessageRequest(messageParams).asScala.foreach {
+          case action if action == IncompatibleBloopVersion.shutdown =>
+            bloopServers.shutdownServer()
+            autoConnectToBuildServer()
+          case action if action == IncompatibleBloopVersion.dismissForever =>
+            notification.dismissForever()
+          case _ =>
+        }
+      }
+    }
   }
 
   private def indexDependencySources(

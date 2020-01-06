@@ -34,6 +34,12 @@ object ServerCommands {
     """Unconditionally cancel existing build server connection without reconnecting"""
   )
 
+  val RestartBuildServer = new Command(
+    "build-restart",
+    "Restart the build server",
+    """Unconditionally stop the current running Bloop server and start a new one using Bloop launcher"""
+  )
+
   val ScanWorkspaceSources = new Command(
     "sources-scan",
     "Scan sources",
@@ -186,6 +192,7 @@ object ServerCommands {
 
   def all: List[Command] = List(
     ImportBuild,
+    RestartBuildServer,
     ConnectBuildServer,
     ScanWorkspaceSources,
     RunDoctor,

@@ -1,8 +1,13 @@
 package scala.meta.internal.semver
 
 object SemVer {
+
   def isCompatibleVersion(minimumVersion: String, version: String): Boolean = {
-    (minimumVersion.split('.'), version.split('.')) match {
+
+    def splitVersion(v: String) =
+      v.replaceAll("(-|\\+).+$", "").split('.')
+
+    (splitVersion(minimumVersion), splitVersion(version)) match {
       case (Array(minMajor, minMinor, minPatch), Array(major, minor, patch)) =>
         (major > minMajor) ||
           (major == minMajor && minor > minMinor) ||
