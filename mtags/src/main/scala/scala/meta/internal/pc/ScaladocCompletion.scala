@@ -5,7 +5,6 @@ import java.lang.StringBuilder
 import org.eclipse.{lsp4j => l}
 
 import scala.util.control.NonFatal
-import scala.reflect.internal.ModifierFlags
 import scala.collection.immutable.Nil
 
 trait ScaladocCompletion { this: MetalsGlobal =>
@@ -33,7 +32,7 @@ trait ScaladocCompletion { this: MetalsGlobal =>
     override def contribute: List[Member] = {
       val necessaryIndent = inferIndent(pos)
       val indent = s"${necessaryIndent}${scaladocIndent}"
-      val params: List[ValDef] = getParams(associatedDef)
+      val params: List[String] = getParams(associatedDef)
 
       // Construct the following new text.
       // """
@@ -62,9 +61,7 @@ trait ScaladocCompletion { this: MetalsGlobal =>
 
       // * @param p1
       // * @param p2
-      params.foreach(param =>
-        builder.append(s"${indent}* @param ${param.name}\n")
-      )
+      params.foreach(param => builder.append(s"${indent}* @param ${param}\n"))
 
       // * @return
       // */
@@ -104,57 +101,22 @@ trait ScaladocCompletion { this: MetalsGlobal =>
     }
 
     /**
-     * Returns the parameters of the given memberDef
+     * Returns the parameter names of the given memberDef.
      *
      * @param memberDef The memberDef to construct scaladoc.
      */
-    private def getParams(memberDef: MemberDef): List[ValDef] = {
+    private def getParams(memberDef: MemberDef): List[String] = {
       memberDef match {
         case defdef: DefDef =>
-          defdef.vparamss.flatten
+          defdef.vparamss.flatten.map(param => param.name.toString())
         case clazz: ClassDef =>
           // If the associated def is a class definition,
           // retrieve the constructor from the class, and caluculate the lines
           // from the constructor definition instead.
-          new ConstructorFinder(clazz).getConstructor match {
-            case Some(defdef) => getParams(defdef)
-            case scala.None => Nil
-          }
+          clazz.symbol.primaryConstructor.paramss.flatten.map(sym =>
+            sym.name.toString()
+          )
         case _ => Nil
-      }
-    }
-
-    class ConstructorFinder(clazz: ClassDef) extends Traverser {
-      private var found: Option[DefDef] = scala.None
-      def getConstructor: Option[DefDef] = {
-        // Don't try to find the constructor for trait/abstract definition
-        // because they don't have a constructor
-        if (!clazz.mods.hasFlag(
-            ModifierFlags.ABSTRACT |
-              ModifierFlags.TRAIT |
-              ModifierFlags.INTERFACE
-          )) {
-          found = scala.None
-          clazz.impl.body.foreach(traverse)
-          found
-        } else {
-          scala.None
-        }
-      }
-      override def traverse(tree: Tree): Unit = {
-        if (found
-            .map(cur =>
-              tree.pos.isDefined && cur.pos.isDefined && tree.pos.point <= cur.pos.point
-            )
-            .getOrElse(true)) {
-          tree match {
-            case constructor: DefDef
-                if constructor.name == termNames.CONSTRUCTOR =>
-              found = Some(constructor)
-            case _ =>
-              super.traverse(tree)
-          }
-        }
       }
     }
   }
