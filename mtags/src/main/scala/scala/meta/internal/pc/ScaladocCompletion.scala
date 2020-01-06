@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import java.lang.StringBuilder
+
 import org.eclipse.{lsp4j => l}
 
 import scala.util.control.NonFatal
@@ -31,20 +33,7 @@ trait ScaladocCompletion { this: MetalsGlobal =>
     override def contribute: List[Member] = {
       val necessaryIndent = inferIndent(pos, text)
       val indent = s"${necessaryIndent}${scaladocIndent}"
-
       val params: List[ValDef] = getParams(associatedDef)
-      val cursor =
-        if (clientSupportsSnippets) " $0" else ""
-
-      val scaladocParamLines: String = params
-        .map { param =>
-          s"${indent}* @param ${param.name}"
-        }
-        .mkString("\n")
-
-      // Add `* @return` only if the associatedDef is method definition.
-      val returnLine =
-        if (associatedDef.isInstanceOf[DefDef]) s"${indent}* @return" else ""
 
       // Construct the following new text.
       // """
@@ -56,25 +45,38 @@ trait ScaladocCompletion { this: MetalsGlobal =>
       //   * @return
       //   */
       // """
-      val maybeEmptyLine =
-        if (scaladocParamLines.isEmpty && returnLine.isEmpty) ""
-        else s"${indent}*"
-      val newText: String =
-        s"""|${indent}*${cursor}
-            |${maybeEmptyLine}
-            |${scaladocParamLines}
-            |${returnLine}
-            |${indent}*/""".stripMargin
-          .split("\n")
-          .filter(!_.isEmpty) // remove empty lines: scaladocParamLines and returnLine can be empty
-          .mkString("\n", "\n", "")
+      val builder = new StringBuilder()
+      val shouldHaveReturnLine = associatedDef.isInstanceOf[DefDef]
+
+      // newline after `/**`
+      builder.append("\n")
+
+      // * $0 <- move cursor here.
+      builder.append(s"${indent}*")
+      if (clientSupportsSnippets) builder.append(" $0\n")
+      else builder.append("\n")
+
+      // add empty line if there's parameter or "@return" line.
+      if (params.nonEmpty || shouldHaveReturnLine)
+        builder.append(s"${indent}*\n")
+
+      // * @param p1
+      // * @param p2
+      params.foreach(param =>
+        builder.append(s"${indent}* @param ${param.name}\n")
+      )
+
+      // * @return
+      // */
+      if (shouldHaveReturnLine) builder.append(s"${indent}* @return\n")
+      builder.append(s"${indent}*/")
 
       List(
         new TextEditMember(
           "Scaladoc Comment",
           new l.TextEdit(
             editRange,
-            newText
+            builder.toString()
           ),
           completionsSymbol(associatedDef.name.toString()),
           label = Some("/** */"),
