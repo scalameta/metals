@@ -36,7 +36,11 @@ final class TestDebugger(
   }
 
   def launch: Future[Unit] = {
-    ifNotFailed(debugger.launch)
+    ifNotFailed(debugger.launch(debug = true))
+  }
+
+  def launch(debug: Boolean): Future[Unit] = {
+    ifNotFailed(debugger.launch(debug))
   }
 
   def configurationDone: Future[Unit] = {

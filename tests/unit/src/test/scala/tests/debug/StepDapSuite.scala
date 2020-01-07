@@ -163,9 +163,4 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
       } yield ()
     }
   }
-
-  private def javaLibRoot: String = {
-    if (isJava8) ".metals/readonly"
-    else ".metals/readonly/java.base"
-  }
 }

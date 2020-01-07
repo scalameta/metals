@@ -1,9 +1,9 @@
 package scala.meta.internal.metals.debug
 
 import com.google.gson.JsonElement
-import org.eclipse.lsp4j.{debug => dap}
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
+import org.eclipse.lsp4j.debug.LaunchRequestArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
@@ -15,6 +15,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
+import org.eclipse.lsp4j.{debug => dap}
+import scala.meta.internal.metals.debug.DebugProxy.DebugMode
 import scala.reflect.ClassTag
 import scala.util.Failure
 import scala.util.Try
@@ -80,6 +82,17 @@ object DebugProtocol {
     ): Option[InitializeRequestArguments] = {
       if (request.getMethod != "initialize") None
       else parse[InitializeRequestArguments](request.getParams).toOption
+    }
+  }
+
+  object LaunchRequest {
+    def unapply(request: DebugRequestMessage): Option[DebugMode] = {
+      if (request.getMethod != "launch") None
+      else
+        parse[LaunchRequestArguments](request.getParams).toOption.map {
+          case args if args.getNoDebug => DebugMode.Disabled
+          case _ => DebugMode.Enabled
+        }
     }
   }
 

@@ -2,6 +2,7 @@ package scala.meta.internal.metals.debug
 
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
+import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import scala.concurrent.Promise
@@ -10,6 +11,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.GlobalTrace
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
+import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.RestartRequest
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
@@ -23,6 +25,8 @@ private[debug] final class DebugProxy(
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
+  @volatile private var debugMode: DebugMode = DebugMode.Enabled
+
   private val cancelled = new AtomicBoolean()
   private val adapters = new MetalsDebugAdapters
 
@@ -54,11 +58,19 @@ private[debug] final class DebugProxy(
     case request @ InitializeRequest(args) =>
       adapters.initialize(args)
       server.send(request)
+    case request @ LaunchRequest(debugMode) =>
+      this.debugMode = debugMode
+      server.send(request)
     case request @ RestartRequest(_) =>
       // set the status first, since the server can kill the connection
       exitStatus.trySuccess(Restarted)
       outputTerminated = true
       server.send(request)
+    case request @ SetBreakpointRequest(_) if debugMode == DebugMode.Disabled =>
+      // ignore breakpoints when not debugging
+      val response = new SetBreakpointsResponse
+      response.setBreakpoints(Array.empty)
+      client.consume(DebugProtocol.syntheticResponse(request, response))
     case request @ SetBreakpointRequest(args) =>
       handleSetBreakpointsRequest(args)
         .map(DebugProtocol.syntheticResponse(request, _))
@@ -110,6 +122,12 @@ private[debug] object DebugProxy {
   sealed trait ExitStatus
   case object Terminated extends ExitStatus
   case object Restarted extends ExitStatus
+
+  trait DebugMode
+  object DebugMode {
+    case object Enabled extends DebugMode
+    case object Disabled extends DebugMode
+  }
 
   def open(
       name: String,

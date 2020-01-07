@@ -3,6 +3,7 @@ import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
+import scala.meta.internal.metals.debug.Stoppage
 
 object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
@@ -564,6 +565,38 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |}
                 |""".stripMargin
   )
+
+  testAsync("no-debug") {
+    val workspaceLayout = DebugWorkspaceLayout(
+      """|/a/src/main/scala/a/Main.scala
+         |package a
+         |object Main {
+         |  def main(args: Array[String]): Unit = {
+         |>>  println(1)
+         |>>  println(2)
+         |>>  println(3)
+         |  }
+         |}
+         |""".stripMargin
+    )
+
+    for {
+      _ <- server.initialize(
+        s"""|/metals.json
+            |{ "a": {} }
+            |
+            |$workspaceLayout
+            |""".stripMargin
+      )
+      debugger <- debugMain("a", "a.Main", Stoppage.Handler.Fail)
+      _ <- debugger.initialize
+      _ <- debugger.launch(debug = false)
+      _ <- setBreakpoints(debugger, workspaceLayout)
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "1\n2\n3\n")
+  }
 
   def assertBreakpoints(name: String, disabled: Boolean = false)(
       source: String

@@ -53,6 +53,28 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  val StartRunSession = new Command(
+    "metals-run-session-start",
+    "Start run session",
+    s"""|Starts a run session. The address of a new Debug Adapter can be obtained 
+        | by using the ${ServerCommands.StartDebugAdapter.id} metals server command
+        | with the same arguments as provided to this command.
+    """.stripMargin,
+    s"""|DebugSessionParameters object. It should be forwarded
+        |to the ${ServerCommands.StartDebugAdapter.id} command as is.
+        |
+        |Example:
+        |```json
+        |{
+        |  "targets": ["mybuild://workspace/foo/?id=foo"],
+        |   dataKind: "${b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS}",
+        |   data: {
+        |      className: "com.foo.App"
+        |   }
+        |}```
+    """.stripMargin
+  )
+
   val StartDebugSession = new Command(
     "metals-debug-session-start",
     "Start debug session",
