@@ -11,22 +11,24 @@ import scala.meta.internal.metals.BuildInfo
 import java.nio.file.StandardOpenOption
 import scala.util.control.NonFatal
 import scala.sys.process._
+import funsuite.BeforeEach
+import funsuite.AfterEach
 
 object PantsLspSuite extends BaseImportSuite("pants") {
 
   val buildTool: PantsBuildTool = PantsBuildTool(() => userConfig)
 
-  override def utestAfterEach(path: Seq[String]): Unit = {
+  override def afterEach(context: AfterEach): Unit = {
     try {
       List(workspace.resolve("pants").toString(), "clean-all", "--async").!
-      super.utestAfterEach(path)
+      super.afterEach(context)
     } catch {
       case NonFatal(_) =>
     }
   }
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
-    super.utestBeforeEach(path)
+  override def beforeEach(context: BeforeEach): Unit = {
+    super.beforeEach(context)
     installPants()
   }
 

@@ -1,10 +1,11 @@
 package tests.pc
 
 import tests.BaseSignatureHelpSuite
+import funsuite.BeforeAll
 
 object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(context: BeforeAll): Unit = {
     indexJDK()
     indexScalaLibrary()
   }

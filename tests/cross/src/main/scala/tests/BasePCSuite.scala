@@ -25,6 +25,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import scala.collection.Seq
 import scala.meta.pc.PresentationCompiler
+import funsuite.TestOptions
+import funsuite.Location
+import funsuite.AfterAll
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
@@ -57,8 +60,11 @@ abstract class BasePCSuite extends BaseSuite {
     .withScheduledExecutorService(executorService)
     .newInstance("", myclasspath.asJava, scalacOptions.asJava)
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
-  override def utestAfterAll(): Unit = {
+
+  override def afterAll(context: AfterAll): Unit = {
     executorService.shutdown()
+    pc.shutdown()
+    RecursivelyDelete(tmp)
   }
 
   def requiresJdkSources: Boolean = false
@@ -67,7 +73,9 @@ abstract class BasePCSuite extends BaseSuite {
     JdkSources().foreach(jdk => index.addSourceJar(jdk))
   }
 
-  override def test(options: TestOptions)(fun: => Any): Unit = {
+  override def test(
+      options: TestOptions
+  )(body: => Any)(implicit loc: Location): Unit = {
     // We are unable to infer the JDK jars on Appveyor
     // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
     val testName =
@@ -76,7 +84,7 @@ abstract class BasePCSuite extends BaseSuite {
       else options.name
     super.test(options.copy(name = testName)) {
       try {
-        fun
+        body
       } catch {
         case NonFatal(e)
             if e.getMessage != null &&
@@ -110,10 +118,6 @@ abstract class BasePCSuite extends BaseSuite {
     }
   }
 
-  override def afterAll(): Unit = {
-    pc.shutdown()
-    RecursivelyDelete(tmp)
-  }
   def params(code: String, filename: String = "test.scala"): (String, Int) = {
     val code2 = code.replaceAllLiterally("@@", "")
     val offset = code.indexOf("@@")

@@ -489,8 +489,10 @@ object TreeViewLspSuite extends BaseLspSuite("tree-view") {
       )
 
       // shutdown and restart a new LSP server
-      _ = this.utestAfterEach(List(noOp))
-      _ = this.utestBeforeEach(List(noOp))
+      _ = {
+        cancelServer()
+        newServer(noOp)
+      }
       _ <- server.initialize("")
 
       // This request triggers a no-op background compilation in the "b" project

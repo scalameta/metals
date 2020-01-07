@@ -93,7 +93,7 @@ object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  ignore("reset") {
+  test("reset".ignore) {
     cleanCompileCache("a")
     for {
       _ <- server.initialize(
@@ -304,7 +304,7 @@ object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
         """
           |/metals.json
           |{
-          |  "a": { 
+          |  "a": {
           |    "additionalSources" : [ "a/weird/path/A.scala" ]
           |  }
           |}

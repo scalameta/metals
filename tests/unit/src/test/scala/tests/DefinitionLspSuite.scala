@@ -182,8 +182,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
   // requires org.scalamacros:macroparadise and io.spire-match:kind-projector.
   // Navigation continues to mostly work, except for areas that have compilation
   // errors.
-  // NOTE(olafur): ignored because this test case is flaky and regularly failing the CI.
-  ignore("missing-compiler-plugin") {
+  test("missing-compiler-plugin".flaky) {
     for {
       _ <- server.initialize(
         """

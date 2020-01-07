@@ -11,12 +11,13 @@ import scala.collection.mutable
 import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
 import scala.meta.internal.metals.debug.TestingDebugServer
 import scala.meta.internal.metals.debug.MessageIdAdapter
+import funsuite.BeforeEach
 
 object MessageIdAdapterSuite extends BaseSuite {
   private val idCounter = new AtomicInteger(FirstMessageId)
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
-    super.utestBeforeEach(path)
+  override def beforeEach(context: BeforeEach): Unit = {
+    super.beforeEach(context)
     idCounter.set(FirstMessageId)
   }
 

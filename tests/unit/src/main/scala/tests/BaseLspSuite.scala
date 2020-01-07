@@ -17,6 +17,9 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.meta.internal.metals.SlowTaskConfig
+import funsuite.BeforeEach
+import funsuite.Ignore
+import funsuite.AfterAll
 
 /**
  * Full end to end integration tests against a full metals language server.
@@ -39,7 +42,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   protected def experimentalCapabilities
       : Option[ClientExperimentalCapabilities] = None
 
-  override def afterAll(): Unit = {
+  override def afterAll(context: AfterAll): Unit = {
     if (server != null) {
       server.server.cancelAll()
     }
@@ -54,14 +57,8 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
     assertNoDiff(obtained, expectedName)
   }
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
-    if (path.isEmpty) return
-    if (server != null) {
-      server.server.cancel()
-    }
-    val name = path.last
-    if (utest.ufansi.Str(name).plainText.contains("IGNORED")) return
-    workspace = createWorkspace(name)
+  def newServer(workspaceName: String) = {
+    workspace = createWorkspace(workspaceName)
     val buffers = Buffers()
     val config = serverConfig.copy(
       executeClientCommand = ExecuteClientCommandConfig.on,
@@ -79,6 +76,18 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
       experimentalCapabilities
     )(ex)
     server.server.userConfig = this.userConfig
+  }
+
+  def cancelServer(): Unit = {
+    if (server != null) {
+      server.server.cancel()
+    }
+  }
+
+  override def beforeEach(context: BeforeEach): Unit = {
+    cancelServer()
+    if (context.test.tags.contains(Ignore)) return
+    newServer(context.test.name)
   }
 
   protected def createWorkspace(name: String): AbsolutePath = {

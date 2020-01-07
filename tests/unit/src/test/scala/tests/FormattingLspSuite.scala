@@ -118,7 +118,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
   }
 
   // Ignored because it's very slow, takes ~15s because of HTTP retries.
-  ignore("download-error") {
+  test("download-error".ignore) {
     for {
       _ <- server.initialize(
         """|.scalafmt.conf

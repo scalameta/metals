@@ -337,7 +337,7 @@ lazy val input = project
 lazy val testSettings: Seq[Def.Setting[_]] = List(
   skip.in(publish) := true,
   fork := true,
-  testFrameworks := List(new TestFramework("utest.runner.Framework"))
+  testFrameworks := List(new TestFramework("funsuite.Framework"))
 )
 
 lazy val mtest = project
@@ -347,11 +347,8 @@ lazy val mtest = project
     crossScalaVersions := V.supportedScalaVersions,
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier,
-      "org.scalameta" %% "testkit" % V.scalameta
-    ) ++ crossSetting(
-      scalaVersion.value,
-      if211 = List("com.lihaoyi" %% "utest" % "0.6.8"),
-      otherwise = List("com.lihaoyi" %% "utest" % "0.7.3")
+      "org.scalameta" %% "testkit" % V.scalameta,
+      "com.geirsson" %% "funsuite" % "0.1.1"
     ),
     scalacOptions ++= crossSetting(
       scalaVersion.value,
@@ -407,7 +404,7 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
-      "com.lihaoyi" %% "utest" % "0.7.3"
+      "com.geirsson" %% "funsuite" % "0.1.1"
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),

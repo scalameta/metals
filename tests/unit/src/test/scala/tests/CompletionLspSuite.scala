@@ -3,6 +3,7 @@ package tests
 import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.concurrent.duration.Duration
+import funsuite.TestOptions
 
 object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
@@ -12,10 +13,9 @@ object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   )(
       run: => Future[Unit]
   ): Unit = {
-    if (isWindows) {
-      ignore(options)(run)
-    } else {
-      super.testAsync(options, maxDuration)(run)
+    super.testAsync(options, maxDuration) {
+      assume(!isWindows, "Tests are not working on Windows CI")
+      run
     }
   }
 

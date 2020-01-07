@@ -6,19 +6,21 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Tables
 import scala.meta.io.AbsolutePath
+import funsuite.AfterEach
+import funsuite.BeforeEach
 
 abstract class BaseTablesSuite extends BaseSuite {
   MetalsLogger.updateDefaultFormat()
   var workspace: AbsolutePath = _
   var tables: Tables = _
   var time = new FakeTime
-  override def utestBeforeEach(path: Seq[String]): Unit = {
+  override def beforeEach(connect: BeforeEach): Unit = {
     workspace = AbsolutePath(Files.createTempDirectory("metals"))
     time.reset()
     tables = new Tables(workspace, time, MetalsServerConfig())
     tables.connect()
   }
-  override def utestAfterEach(path: Seq[String]): Unit = {
+  override def afterEach(context: AfterEach): Unit = {
     tables.cancel()
     RecursivelyDelete(workspace)
   }

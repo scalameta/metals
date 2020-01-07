@@ -3,6 +3,7 @@ package tests.pc
 import java.nio.file.Path
 import tests.BaseCompletionSuite
 import scala.collection.Seq
+import funsuite.BeforeAll
 
 object MacroCompletionSuite extends BaseCompletionSuite {
   override def extraClasspath: Seq[Path] = thisClasspath
@@ -15,7 +16,8 @@ object MacroCompletionSuite extends BaseCompletionSuite {
         filename.contains("kind-projector")
       }
       .map(plugin => s"-Xplugin:$plugin")
-  override def beforeAll(): Unit = ()
+
+  override def beforeAll(context: BeforeAll): Unit = ()
 
   check(
     "generic",

@@ -5,12 +5,13 @@ import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.io.AbsolutePath
 import tests.BaseWorkspaceSymbolSuite
 import tests.Library
+import funsuite.AfterAll
 
 object ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   var tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
   override def libraries: List[Library] = Library.all
   def workspace: AbsolutePath = tmp
-  override def afterAll(): Unit = {
+  override def afterAll(context: AfterAll): Unit = {
     RecursivelyDelete(tmp)
   }
 

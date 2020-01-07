@@ -5,15 +5,9 @@ import java.io.PrintStream
 import org.scalactic.source.Position
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.util.control.NonFatal
-import utest.ufansi.Color
+import fansi.Color
 
-/**
- * Bridge for scalameta testkit DiffAssertions and utest assertions.
- *
- * A bit of logic is duplicated between here and Scalameta testkit because
- * we want to customize a bit of the output.
- */
-object DiffAssertions extends scala.meta.testkit.DiffAssertions {
+object DiffAssertions extends funsuite.Assertions {
   def assertNoDiffOrPrintObtained(
       obtained: String,
       expected: String,

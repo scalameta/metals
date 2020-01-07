@@ -112,8 +112,7 @@ object ReferenceLspSuite extends BaseLspSuite("reference") {
     } yield ()
   }
 
-  // NOTE(olafurpg) ignored because it's flaky
-  ignore("edit-distance") {
+  test("edit-distance".flaky) {
     cleanWorkspace()
     for {
       _ <- server.initialize(

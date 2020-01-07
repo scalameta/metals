@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.OffsetParams
 import java.util.concurrent.atomic.AtomicReference
+import funsuite.BeforeEach
+import funsuite.BeforeAll
 
 object InterruptPresentationCompilerSuite extends BasePCSuite {
   class InterruptSymbolIndex
@@ -32,12 +34,12 @@ object InterruptPresentationCompilerSuite extends BasePCSuite {
 
   val interrupt = new InterruptSymbolIndex()
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
+  override def beforeEach(context: BeforeEach): Unit = {
     interrupt.reset()
-    super.utestBeforeEach(path)
+    super.beforeEach(context)
   }
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(context: BeforeAll): Unit = {
     index.underlying = interrupt
     indexScalaLibrary()
   }

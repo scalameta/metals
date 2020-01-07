@@ -4,6 +4,8 @@ import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.MetalsSlowTaskResult
 import scala.concurrent.Promise
+import funsuite.TestOptions
+import funsuite.Location
 
 abstract class BaseWorksheetLspSuite(scalaVersion: String)
     extends BaseLspSuite("worksheet") {
@@ -13,10 +15,13 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
 
-  override final def test(options: TestOptions)(fun: => Any): Unit =
+  override def test(
+      options: TestOptions
+  )(body: => Any)(implicit loc: Location): Unit = {
     if (super.isValidScalaVersionForEnv(this.scalaVersion)) {
-      super.test(options)(fun)
+      super.test(options)(body)
     }
+  }
 
   if (!isWindows)
     testAsync("completion") {

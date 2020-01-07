@@ -35,7 +35,7 @@ abstract class BaseImportSuite(suiteName: String)
   def assertNoStatus(): Unit =
     server.server.tables.digests.getStatus(currentChecksum()) match {
       case Some(value) =>
-        fail(s"expected no status. obtained $value", stackBump = 1)
+        fail(s"expected no status. obtained $value")
       case None =>
         () // OK
     }
@@ -45,7 +45,7 @@ abstract class BaseImportSuite(suiteName: String)
       case Some(status) =>
         assert(fn(status))
       case None =>
-        fail(s"missing persisted checksum $checksum", stackBump = 1)
+        fail(s"missing persisted checksum $checksum")
     }
   }
 }

@@ -7,6 +7,7 @@ import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
 import scala.concurrent.ExecutionContext.Implicits.global
+import funsuite.BeforeEach
 
 object StatusBarSuite extends BaseSuite {
   val time = new FakeTime
@@ -19,7 +20,7 @@ object StatusBarSuite extends BaseSuite {
     Icons.default,
     StatusBarConfig.default
   )
-  override def utestBeforeEach(path: Seq[String]): Unit = {
+  override def beforeEach(context: BeforeEach): Unit = {
     client.statusParams.clear()
     status.cancel()
   }

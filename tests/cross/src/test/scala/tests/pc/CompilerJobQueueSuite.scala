@@ -10,17 +10,19 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import funsuite.BeforeEach
+import funsuite.AfterEach
 
 object CompilerJobQueueSuite extends BaseSuite {
   var jobs: CompilerJobQueue = null
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
+  override def beforeEach(context: BeforeEach): Unit = {
     jobs = CompilerJobQueue()
-    super.utestBeforeEach(path)
+    super.beforeEach(context)
   }
-  override def utestAfterEach(path: Seq[String]): Unit = {
+  override def afterEach(context: AfterEach): Unit = {
     jobs.shutdown()
-    super.utestAfterEach(path)
+    super.afterEach(context)
   }
 
   test("cancel") {
