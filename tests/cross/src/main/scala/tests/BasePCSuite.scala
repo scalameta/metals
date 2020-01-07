@@ -26,7 +26,6 @@ import java.util.concurrent.ScheduledExecutorService
 import scala.collection.Seq
 import scala.meta.pc.PresentationCompiler
 import funsuite.TestOptions
-import funsuite.Location
 import funsuite.AfterAll
 
 abstract class BasePCSuite extends BaseSuite {
@@ -62,7 +61,8 @@ abstract class BasePCSuite extends BaseSuite {
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
 
   override def afterAll(context: AfterAll): Unit = {
-    executorService.shutdown()
+    // FIXME(gabro)
+    // executorService.shutdown()
     pc.shutdown()
     RecursivelyDelete(tmp)
   }

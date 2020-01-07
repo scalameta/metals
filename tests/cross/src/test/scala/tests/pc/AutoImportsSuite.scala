@@ -5,6 +5,7 @@ import scala.meta.pc.AutoImportsResult
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.TextEdits
+import funsuite.Location
 
 object AutoImportsSuite extends BaseCodeActionSuite {
 
@@ -85,14 +86,16 @@ object AutoImportsSuite extends BaseCodeActionSuite {
       original: String,
       expected: String,
       compat: Map[String, String] = Map.empty
-  ): Unit =
+  )(implicit loc: Location): Unit =
     test(name) {
       val imports = getAutoImports(original)
       val obtained = imports.map(_.packageName()).mkString("\n")
       assertNoDiff(obtained, getExpected(expected, compat))
     }
 
-  def checkEdit(name: String, original: String, expected: String): Unit =
+  def checkEdit(name: String, original: String, expected: String)(
+      implicit loc: Location
+  ): Unit =
     test(name) {
       val imports = getAutoImports(original)
       if (imports.isEmpty) fail("obtained no imports")
