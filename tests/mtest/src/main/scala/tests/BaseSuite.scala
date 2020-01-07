@@ -8,6 +8,7 @@ import scala.meta.internal.mtags
 import scala.meta.internal.semver.SemVer
 import scala.util.Properties
 import scala.meta.io.AbsolutePath
+import funsuite.Test
 
 class BaseSuite extends funsuite.FunSuite {
   def isJava8: Boolean =
@@ -22,6 +23,12 @@ class BaseSuite extends funsuite.FunSuite {
       BaseSuite.minScalaVersionForJDK9OrHigher,
       scalaVersion
     )
+  def skipSuite: Boolean = false
+
+  override def funsuiteTests(): Seq[Test] = {
+    if (skipSuite) Seq.empty
+    else super.funsuiteTests()
+  }
 
   def assertNotEmpty(string: String): Unit = {
     if (string.isEmpty) {

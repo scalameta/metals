@@ -2,13 +2,10 @@ package tests
 
 import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}
-import funsuite.Test
 
 object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
-  override def funsuiteTests(): Seq[Test] = {
-    if (!isWindows) super.funsuiteTests() else Seq.empty
-  }
+  override def skipSuite: Boolean = isWindows
 
   testAsync("basic-212") {
     basicTest(V.scala212)

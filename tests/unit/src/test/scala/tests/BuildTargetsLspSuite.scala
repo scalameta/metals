@@ -1,16 +1,10 @@
 package tests
-import scala.concurrent.duration.Duration
-import scala.concurrent.Future
-import funsuite.TestOptions
-import funsuite.Test
 
 object BuildTargetsLspSuite
     extends BaseLspSuite("build-targets")
     with TestHovers {
 
-  override def funsuiteTests(): Seq[Test] = {
-    if (!isWindows) super.funsuiteTests() else Seq.empty
-  }
+  override def skipSuite: Boolean = isWindows
 
   testAsync("scala-priority") {
     for {
