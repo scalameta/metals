@@ -30,7 +30,11 @@ final class BspServers(
 )(implicit ec: ExecutionContextExecutorService) {
 
   def newServer(): Future[Option[BuildServerConnection]] = {
-    findServer().map(_.map(newServer))
+    findServer().flatMap { details =>
+      details
+        .map(d => newServer(d).map(Option(_)))
+        .getOrElse(Future.successful(None))
+    }
   }
 
   /** Runs "Switch build server" command, returns true if build server was changed */
@@ -50,29 +54,40 @@ final class BspServers(
 
   private def newServer(
       details: BspConnectionDetails
-  ): BuildServerConnection = {
-    val process = new ProcessBuilder(details.getArgv)
-      .directory(workspace.toFile)
-      .start()
+  ): Future[BuildServerConnection] = {
 
-    val output = new QuietOutputStream(
-      process.getOutputStream,
-      s"${details.getName} output stream"
-    )
-    val input = new QuietInputStream(
-      process.getInputStream,
-      s"${details.getName} input stream"
-    )
+    def newProcess(): Future[SocketConnection] = {
+      val process = new ProcessBuilder(details.getArgv)
+        .directory(workspace.toFile)
+        .start()
+
+      val output = new ClosableOutputStream(
+        process.getOutputStream,
+        s"${details.getName} output stream"
+      )
+      val input = new QuietInputStream(
+        process.getInputStream,
+        s"${details.getName} input stream"
+      )
+
+      Future.successful {
+        SocketConnection(
+          details.getName(),
+          output,
+          input,
+          List(
+            Cancelable(() => process.destroy())
+          )
+        )
+      }
+
+    }
 
     BuildServerConnection.fromStreams(
       workspace,
       buildClient,
-      output,
-      input,
-      List(
-        Cancelable(() => process.destroy())
-      ),
-      details.getName
+      client,
+      newProcess
     )
   }
 

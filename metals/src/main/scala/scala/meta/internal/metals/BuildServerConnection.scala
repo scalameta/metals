@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.io.InputStream
-import java.io.OutputStream
 import java.net.URI
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
@@ -12,84 +11,156 @@ import java.util.concurrent.atomic.AtomicBoolean
 import ch.epfl.scala.bsp4j._
 import org.eclipse.lsp4j.jsonrpc.Launcher
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.util.Try
-import scala.collection.JavaConverters._
 import com.google.gson.Gson
+import java.util.concurrent.atomic.AtomicReference
+import scala.concurrent.Promise
+import MetalsEnrichments._
+import java.io.IOException
+import org.eclipse.lsp4j.services.LanguageClient
 
 /**
  * An actively running and initialized BSP connection.
  */
 case class BuildServerConnection(
-    workspace: AbsolutePath,
-    client: MetalsBuildClient,
-    server: MetalsBuildServer,
-    cancelables: List[Cancelable],
-    initializeResult: InitializeBuildResult,
-    name: String,
-    version: String
-)(implicit ec: ExecutionContext)
+    restablishConnection: () => Future[LauncherConnection],
+    private val initialConnection: LauncherConnection,
+    languageClient: LanguageClient
+)(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
-  private val ongoingRequests = new MutableCancelable().addAll(cancelables)
+  private val currentConnection = new AtomicReference(initialConnection)
+  private var awaitingConnection: AtomicReference[Promise[LauncherConnection]] =
+    new AtomicReference()
+
+  private val ongoingRequests =
+    new MutableCancelable().addAll(initialConnection.cancelables)
+
+  def version = currentConnection.get.version
+
+  def name = currentConnection.get.socketConnection.serverName
 
   /** Run build/shutdown procedure */
   def shutdown(): Future[Unit] = Future {
     try {
-      server.buildShutdown().get(2, TimeUnit.SECONDS)
-      server.onBuildExit()
+      currentConnection.get.server.buildShutdown().get(2, TimeUnit.SECONDS)
+      currentConnection.get.server.onBuildExit()
       // Cancel pending compilations on our side, this is not needed for Bloop.
       cancel()
     } catch {
       case e: TimeoutException =>
         scribe.error(
-          s"timeout: build server '${initializeResult.getDisplayName}' during shutdown"
+          s"timeout: build server '${currentConnection.get.displayName}' during shutdown"
         )
       case InterruptException() =>
       case e: Throwable =>
         scribe.error(
-          s"build shutdown: ${initializeResult.getDisplayName()}",
+          s"build shutdown: ${currentConnection.get.displayName}",
           e
         )
     }
   }
 
-  private def register[T](e: CompletableFuture[T]): CompletableFuture[T] = {
-    ongoingRequests.add(
-      Cancelable(() => Try(e.completeExceptionally(new InterruptedException())))
-    )
-    e
+  private def reconnect() = synchronized {
+    Option(awaitingConnection.get) match {
+      case Some(promise) => promise.future
+      case None =>
+        val params = Messages.DisconnectedServer.params()
+        languageClient.showMessageRequest(params).asScala.flatMap {
+          case response if response == Messages.DisconnectedServer.reconnect =>
+            val newPromise = Promise[LauncherConnection]()
+            awaitingConnection.set(newPromise)
+            val reconnect = restablishConnection().map { launcherConnection =>
+              currentConnection.set(launcherConnection)
+              awaitingConnection.set(null)
+              ongoingRequests.addAll(launcherConnection.cancelables)
+              launcherConnection
+            }
+            newPromise.completeWith(reconnect)
+            newPromise.future
+          case _ => throw new InterruptedException
+        }
+
+    }
+  }
+
+  private def register[T](
+      action: MetalsBuildServer => CompletableFuture[T]
+  ): CompletableFuture[T] = {
+    val connect = if (currentConnection.get.socketConnection.isClosed) {
+      reconnect()
+    } else {
+      Future.successful(currentConnection.get)
+    }
+    val future = connect
+      .flatMap { launcherConnection =>
+        val e = action(launcherConnection.server)
+        ongoingRequests.add(
+          Cancelable(() =>
+            Try(e.completeExceptionally(new InterruptedException()))
+          )
+        )
+        e.asScala
+      }
+      .recoverWith {
+        case _: IOException =>
+          reconnect().flatMap(conn => action(conn.server).asScala)
+      }
+    CancelTokens.future(_ => future)
   }
 
   def compile(params: CompileParams): CompletableFuture[CompileResult] = {
-    register(server.buildTargetCompile(params))
+    register { server =>
+      server.buildTargetCompile(params)
+    }
   }
 
   def mainClasses(
       params: ScalaMainClassesParams
   ): CompletableFuture[ScalaMainClassesResult] = {
-    register(server.buildTargetScalaMainClasses(params))
+    register(server => server.buildTargetScalaMainClasses(params))
   }
 
   def testClasses(
       params: ScalaTestClassesParams
   ): CompletableFuture[ScalaTestClassesResult] = {
-    register(server.buildTargetScalaTestClasses(params))
+    register(server => server.buildTargetScalaTestClasses(params))
   }
 
   def startDebugSession(params: DebugSessionParams): CompletableFuture[URI] = {
-    register(
+    register(server =>
       server
         .startDebugSession(params)
         .thenApply(address => URI.create(address.getUri))
     )
   }
 
+  def workspaceBuildTargets(): Future[WorkspaceBuildTargetsResult] = {
+    register(server => server.workspaceBuildTargets()).asScala
+  }
+
+  def buildTargetScalacOptions(
+      params: ScalacOptionsParams
+  ): Future[ScalacOptionsResult] = {
+    register(server => server.buildTargetScalacOptions(params)).asScala
+  }
+
+  def buildTargetSources(params: SourcesParams): Future[SourcesResult] = {
+    register(server => server.buildTargetSources(params)).asScala
+  }
+
+  def buildTargetDependencySources(
+      params: DependencySourcesParams
+  ): Future[DependencySourcesResult] = {
+    register(server => server.buildTargetDependencySources(params)).asScala
+  }
+
   private val cancelled = new AtomicBoolean(false)
+
   override def cancel(): Unit = {
     if (cancelled.compareAndSet(false, true)) {
       ongoingRequests.cancel()
@@ -110,34 +181,46 @@ object BuildServerConnection {
   def fromStreams(
       workspace: AbsolutePath,
       localClient: MetalsBuildClient,
-      output: OutputStream,
-      input: InputStream,
-      onShutdown: List[Cancelable],
-      name: String
-  )(implicit ec: ExecutionContextExecutorService): BuildServerConnection = {
-    val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
-    val launcher = new Launcher.Builder[MetalsBuildServer]()
-      .traceMessages(tracePrinter)
-      .setOutput(output)
-      .setInput(input)
-      .setLocalService(localClient)
-      .setRemoteInterface(classOf[MetalsBuildServer])
-      .setExecutorService(ec)
-      .create()
-    val listening = launcher.startListening()
-    val server = launcher.getRemoteProxy
-    val result = BuildServerConnection.initialize(workspace, server)
-    val stopListening =
-      Cancelable(() => listening.cancel(false))
-    BuildServerConnection(
-      workspace,
-      localClient,
-      server,
-      stopListening :: onShutdown,
-      result,
-      name,
-      result.getVersion()
-    )
+      languageClient: LanguageClient,
+      setupConnection: () => Future[SocketConnection]
+  )(
+      implicit ec: ExecutionContextExecutorService
+  ): Future[BuildServerConnection] = {
+
+    def setupServer(): Future[LauncherConnection] = {
+      setupConnection().map {
+        case conn @ SocketConnection(name, output, input, cancelables) =>
+          val tracePrinter = GlobalTrace.setupTracePrinter("BSP")
+          val launcher = new Launcher.Builder[MetalsBuildServer]()
+            .traceMessages(tracePrinter)
+            .setOutput(output)
+            .setInput(input)
+            .setLocalService(localClient)
+            .setRemoteInterface(classOf[MetalsBuildServer])
+            .setExecutorService(ec)
+            .create()
+          val listening = launcher.startListening()
+          val server = launcher.getRemoteProxy
+          val result = BuildServerConnection.initialize(workspace, server)
+          val stopListening =
+            Cancelable(() => listening.cancel(false))
+          LauncherConnection(
+            conn,
+            server,
+            result.getDisplayName(),
+            stopListening,
+            result.getVersion()
+          )
+      }
+    }
+
+    setupServer().map { connection =>
+      BuildServerConnection(
+        setupServer,
+        connection,
+        languageClient
+      )
+    }
   }
 
   final case class BloopExtraBuildParams(
@@ -182,4 +265,24 @@ object BuildServerConnection {
     server.onBuildInitialized()
     result
   }
+}
+
+case class SocketConnection(
+    serverName: String,
+    ouput: ClosableOutputStream,
+    input: InputStream,
+    cancelables: List[Cancelable]
+) {
+  def isClosed = ouput.socketIsClosed
+}
+
+case class LauncherConnection(
+    socketConnection: SocketConnection,
+    server: MetalsBuildServer,
+    displayName: String,
+    cancelServer: Cancelable,
+    version: String
+) {
+  def cancelables: List[Cancelable] =
+    cancelServer :: socketConnection.cancelables
 }

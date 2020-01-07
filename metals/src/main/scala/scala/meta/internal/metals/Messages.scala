@@ -138,6 +138,30 @@ class Messages(icons: Icons) {
     }
   }
 
+  object DisconnectedServer {
+    def reconnect: MessageActionItem =
+      new MessageActionItem("Reconnect to build server")
+    def notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+    def params(): ShowMessageRequestParams = {
+
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"""|The workspace has lost connection with the Build server, which means most functionalities will not be working.
+            |Click `Reconnect to build server` to reconnect.
+            |""".stripMargin
+      )
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          reconnect,
+          notNow
+        ).asJava
+      )
+      params
+    }
+  }
+
   object IncompatibleBloopVersion {
     def manually: MessageActionItem =
       new MessageActionItem("I'll update manually")
