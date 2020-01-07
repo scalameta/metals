@@ -2,19 +2,14 @@ package tests
 import scala.concurrent.duration.Duration
 import scala.concurrent.Future
 import funsuite.TestOptions
+import funsuite.Test
 
 object BuildTargetsLspSuite
     extends BaseLspSuite("build-targets")
     with TestHovers {
 
-  override def testAsync(
-      options: TestOptions,
-      maxDuration: Duration = Duration("3min")
-  )(run: => Future[Unit]): Unit = {
-    super.testAsync(options, maxDuration) {
-      assume(!isWindows, "Tests are not working on Windows CI")
-      run
-    }
+  override def funsuiteTests(): Seq[Test] = {
+    if (!isWindows) super.funsuiteTests() else Seq.empty
   }
 
   testAsync("scala-priority") {

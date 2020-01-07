@@ -2,21 +2,12 @@ package tests
 
 import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.concurrent.duration.Duration
-import funsuite.TestOptions
+import funsuite.Test
 
 object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
-  override def testAsync(
-      options: TestOptions,
-      maxDuration: Duration = Duration("10min")
-  )(
-      run: => Future[Unit]
-  ): Unit = {
-    super.testAsync(options, maxDuration) {
-      assume(!isWindows, "Tests are not working on Windows CI")
-      run
-    }
+  override def funsuiteTests(): Seq[Test] = {
+    if (!isWindows) super.funsuiteTests() else Seq.empty
   }
 
   testAsync("basic-212") {

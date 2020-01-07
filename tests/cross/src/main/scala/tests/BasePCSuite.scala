@@ -73,27 +73,27 @@ abstract class BasePCSuite extends BaseSuite {
     JdkSources().foreach(jdk => index.addSourceJar(jdk))
   }
 
-  override def test(
-      options: TestOptions
-  )(body: => Any)(implicit loc: Location): Unit = {
+  override def funsuiteRunTest(options: TestOptions, body: => Any): Any = {
     // We are unable to infer the JDK jars on Appveyor
     // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
     val testName =
       if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
         s"${BuildInfo.scalaCompilerVersion}-${options.name}"
       else options.name
-    super.test(options.copy(name = testName)) {
-      try {
-        body
-      } catch {
-        case NonFatal(e)
-            if e.getMessage != null &&
-              e.getMessage.contains("x$1") &&
-              !hasJdkSources =>
-          // ignore failing test if jdk sources are missing
-          ()
+    super.funsuiteRunTest(
+      options.copy(name = testName), {
+        try {
+          body
+        } catch {
+          case NonFatal(e)
+              if e.getMessage != null &&
+                e.getMessage.contains("x$1") &&
+                !hasJdkSources =>
+            // ignore failing test if jdk sources are missing
+            ()
+        }
       }
-    }
+    )
   }
 
   def indexScalaLibrary(): Unit = {
