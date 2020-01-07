@@ -304,10 +304,24 @@ private class BloopPants(
       .filter(_.isTargetRoot)
       .map(toBloopProject)
       .toList
+    val sourceRoots = PantsConfiguration.sourceRoots(
+      AbsolutePath(workspace),
+      args.targets
+    )
+    // NOTE(olafur): generate synthetic projects to improve the file tree view
+    // in IntelliJ. Details: https://github.com/olafurpg/intellij-bsp-pants/issues/7
+    val syntheticProjects: List[C.Project] = sourceRoots.map { root =>
+      val name = root
+        .toRelative(AbsolutePath(workspace))
+        .toURI(isDirectory = false)
+        .toString()
+      toEmptyBloopProject(name + "-root", root.toNIO)
+    }
     val binaryDependenciesSourcesIterator = getLibraryDependencySources()
     val generatedProjects = new mutable.LinkedHashSet[Path]
-    val byName = projects.map(p => p.name -> p).toMap
-    projects.foreach { project =>
+    val allProjects = syntheticProjects ::: projects
+    val byName = allProjects.map(p => p.name -> p).toMap
+    allProjects.foreach { project =>
       if (!export.cycles.parents.contains(project.name)) {
         val children =
           export.cycles.children.getOrElse(project.name, Nil).map(byName)
@@ -472,6 +486,36 @@ private class BloopPants(
           None
         )
       ),
+      resolution = None
+    )
+  }
+
+  // Returns a Bloop project that has no source code. This project only exists
+  // to control for example how the project view is displayed in IntelliJ.
+  private def toEmptyBloopProject(name: String, directory: Path): C.Project = {
+    val directoryName = BloopPants.makeFilename(name)
+    val classDirectory: Path = Files.createDirectories(
+      bloopDir.resolve(directoryName).resolve("classes")
+    )
+    C.Project(
+      name = name,
+      directory = directory,
+      workspaceDir = Some(workspace),
+      sources = Nil,
+      dependencies = Nil,
+      classpath = Nil,
+      out = bloopDir.resolve(directoryName),
+      classesDir = classDirectory,
+      // NOTE(olafur): we generate a fake resource directory so that IntelliJ
+      // displays this directory in the "Project files tree" view. This needs to
+      // be a resource directory instead of a source directory to prevent Bloop
+      // from compiling it.
+      resources = Some(List(directory)),
+      scala = None,
+      java = None,
+      sbt = None,
+      test = None,
+      platform = None,
       resolution = None
     )
   }
