@@ -263,12 +263,12 @@ private class BloopPants(
     }
   lazy val testingFrameworkJars: List[Path] =
     List(
-      // NOTE(olafur) This is a customized fork of
-      // https://github.com/sbt/junit-interface that reproduces the JUnit test
+      // NOTE(olafur) This is a fork of the official sbt JUnit testing interface
+      // https://github.com/olafurpg/junit-interface that reproduces the JUnit test
       // runner in Pants. Most importantly, it automatically registers
       // org.scalatest.junit.JUnitRunner even if there is no `@RunWith`
       // annotation.
-      Dependency.of("com.geirsson", "junit-interface", "0.11.3")
+      Dependency.of("com.geirsson", "junit-interface", "0.11.6")
     ).flatMap(fetchDependency)
   val allScalaJars: Seq[Path] = {
     val compilerClasspath = export.scalaPlatform.compilerClasspath
