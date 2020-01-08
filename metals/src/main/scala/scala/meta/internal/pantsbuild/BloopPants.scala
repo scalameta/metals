@@ -80,7 +80,7 @@ object BloopPants {
                 scribe.info(s"output: ${args.out}")
               }
               if (args.isLaunchIntelliJ) {
-                LaunchIntellij.open(args.out)
+                IntelliJ.launch(args.out)
               } else if (args.isVscode) {
                 VSCode.launch(args)
               }

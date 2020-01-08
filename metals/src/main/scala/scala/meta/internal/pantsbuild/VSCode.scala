@@ -19,10 +19,11 @@ object VSCode {
       oldSettings("metals.pantsTargets") = args.targets.map(Str(_))
       settings.writeText(ujson.write(oldSettings, indent = 2))
       scribe.info(s"updated: $settings")
-      exec("code", "--install-extension", "scalameta.metals")
-      exec("code", "--new-window", args.out.toString())
+      val code = codeCommand()
+      exec(code, "--install-extension", "scalameta.metals")
+      exec(code, "--new-window", args.out.toString())
       findFileToOpen(args).headOption.foreach { file =>
-        exec("code", "--reuse-window", file.toString())
+        exec(code, "--reuse-window", file.toString())
       }
     } catch {
       case NonFatal(e) =>
@@ -39,18 +40,43 @@ object VSCode {
         }
     }
 
+  private def codeCommand(): String = {
+    val applications = AbsolutePath("/Applications")
+    val app = List(
+      applications.resolve("Visual Studio Code.app"),
+      applications.resolve("Visual Studio Code - Insiders.app")
+    ).map(
+      _.resolve("Contents")
+        .resolve("Resources")
+        .resolve("app")
+        .resolve("bin")
+        .resolve("code")
+    )
+    app
+      .collectFirst {
+        case file if file.isFile && file.toFile.canExecute() =>
+          file.toString
+      }
+      .getOrElse("code")
+  }
+
   private def exec(command: String*): Unit = {
     val exit = command.!
     require(exit == 0, s"command failed: ${command.mkString(" ")}")
   }
 
   private def findFileToOpen(args: Args): List[AbsolutePath] = {
+    val readonly = args.out.resolve(".metals")
     for {
       root <- PantsConfiguration.sourceRoots(
         AbsolutePath(args.workspace),
         args.targets
       )
-      file <- root.listRecursive.filter(_.isScalaOrJava).take(1).headOption
+      file <- root.listRecursive
+        .filter(_.isScala)
+        .filter(!_.toNIO.startsWith(readonly))
+        .take(1)
+        .headOption
     } yield file
   }
   private def readSettings(settings: AbsolutePath): Obj = {
