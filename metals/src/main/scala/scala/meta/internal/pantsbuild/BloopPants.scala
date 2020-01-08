@@ -46,7 +46,9 @@ object BloopPants {
         if (args.isHelp) {
           println(args.helpMessage)
         } else if (!args.pants.isFile) {
-          scribe.error("No Pants build detected, file '' does not exist.")
+          scribe.error(
+            s"No Pants build detected, file '${args.pants}' does not exist."
+          )
           scribe.error(
             s"Is the working directory correct? (${PathIO.workingDirectory})"
           )
