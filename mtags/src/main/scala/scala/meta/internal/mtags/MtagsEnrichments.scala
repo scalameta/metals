@@ -37,7 +37,7 @@ import scala.meta.io.RelativePath
 
 object MtagsEnrichments extends MtagsEnrichments
 trait MtagsEnrichments {
-  implicit class XtensionRange(range: s.Range) {
+  implicit class XtensionSemanticdbRange(range: s.Range) {
     def isPoint: Boolean = {
       range.startLine == range.endLine &&
       range.startCharacter == range.endCharacter
@@ -49,6 +49,29 @@ trait MtagsEnrichments {
         range.endCharacter > other.endCharacter ||
         other == range
       }
+    }
+    def toLocation(uri: String): l.Location = {
+      new l.Location(uri, range.toLSP)
+    }
+    def toLSP: l.Range = {
+      val start = new l.Position(range.startLine, range.startCharacter)
+      val end = new l.Position(range.endLine, range.endCharacter)
+      new l.Range(start, end)
+    }
+    def encloses(
+        other: l.Position,
+        includeLastCharacter: Boolean = false
+    ): Boolean = {
+      range.startLine <= other.getLine &&
+      range.endLine >= other.getLine &&
+      range.startCharacter <= other.getCharacter && {
+        if (includeLastCharacter) range.endCharacter >= other.getCharacter
+        else range.endCharacter > other.getCharacter
+      }
+    }
+    def encloses(other: l.Range): Boolean = {
+      encloses(other.getStart) &&
+      encloses(other.getEnd)
     }
   }
   private def filenameToLanguage(filename: String): Language = {
@@ -239,31 +262,6 @@ trait MtagsEnrichments {
       content.setKind("markdown")
       content.setValue(doc)
       content
-    }
-  }
-  implicit class XtensionRangeBuildProtocol(range: s.Range) {
-    def toLocation(uri: String): l.Location = {
-      new l.Location(uri, range.toLSP)
-    }
-    def toLSP: l.Range = {
-      val start = new l.Position(range.startLine, range.startCharacter)
-      val end = new l.Position(range.endLine, range.endCharacter)
-      new l.Range(start, end)
-    }
-    def encloses(
-        other: l.Position,
-        includeLastCharacter: Boolean = false
-    ): Boolean = {
-      range.startLine <= other.getLine &&
-      range.endLine >= other.getLine &&
-      range.startCharacter <= other.getCharacter && {
-        if (includeLastCharacter) range.endCharacter >= other.getCharacter
-        else range.endCharacter > other.getCharacter
-      }
-    }
-    def encloses(other: l.Range): Boolean = {
-      encloses(other.getStart) &&
-      encloses(other.getEnd)
     }
   }
 
