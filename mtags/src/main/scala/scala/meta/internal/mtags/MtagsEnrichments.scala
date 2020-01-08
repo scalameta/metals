@@ -324,11 +324,18 @@ trait MtagsEnrichments {
         )
       }
     def encloses(position: l.Position): Boolean = {
-      range.getStart.getLine <= position.getLine &&
-      range.getStart.getLine >= position.getLine &&
-      range.getStart.getCharacter <= position.getCharacter &&
-      range.getEnd.getCharacter > position.getCharacter
+      val startsBeforeOrAt =
+        range.getStart.getLine < position.getLine ||
+          (range.getStart.getLine == position.getLine &&
+            range.getStart.getCharacter <= position.getCharacter)
+      val endsAtOrAfter =
+        range.getEnd.getLine > position.getLine ||
+          (range.getEnd.getLine == position.getLine &&
+            range.getEnd.getCharacter >= position.getCharacter)
+      startsBeforeOrAt && endsAtOrAfter
     }
+    def encloses(other: l.Range): Boolean =
+      encloses(other.getStart) && encloses(other.getEnd)
     def copy(
         startLine: Int = range.getStart().getLine(),
         startCharacter: Int = range.getStart().getCharacter(),
