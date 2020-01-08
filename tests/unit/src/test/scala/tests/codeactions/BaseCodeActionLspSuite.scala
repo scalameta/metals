@@ -1,30 +1,10 @@
-package tests
+package tests.codeactions
 
-import scala.meta.internal.metals.QuickFix.ImportMissingSymbol
+import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
 
-object CodeActionLspSuite extends BaseLspSuite("codeAction") {
-
-  check(
-    "auto-import",
-    """|package a
-       |
-       |object A {
-       |  val f = Fut@@ure.successful(2)
-       |}
-       |""".stripMargin,
-    s"""|${ImportMissingSymbol.label("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.label("Future", "java.util.concurrent")}
-        |""".stripMargin,
-    """|package a
-       |
-       |import scala.concurrent.Future
-       |
-       |object A {
-       |  val f = Future.successful(2)
-       |}
-       |""".stripMargin
-  )
+abstract class BaseCodeActionLspSuite(suiteName: String)
+    extends BaseLspSuite(suiteName) {
 
   def check(
       name: String,
