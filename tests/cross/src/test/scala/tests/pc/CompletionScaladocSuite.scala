@@ -199,4 +199,66 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin
   )
+
+  checkEdit(
+    "scaladoc-defdef-returns-unit",
+    """|// Don't add @return line for a method whose return type is Unit.
+       |object A {
+       |  /**@@
+       |  def test(param1: Int, param2: Int): Unit = ???
+       |}
+       |""".stripMargin,
+    """|// Don't add @return line for a method whose return type is Unit.
+       |object A {
+       |  /**
+       |    * $0
+       |    *
+       |    * @param param1
+       |    * @param param2
+       |    */
+       |  def test(param1: Int, param2: Int): Unit = ???
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "scaladoc-defdef-returns-inferred-unit",
+    """|// Don't add @return line for a method whose return type is Unit.
+       |object A {
+       |  /**@@
+       |  def test(param1: Int, param2: Int) = {}
+       |}
+       |""".stripMargin,
+    """|// Don't add @return line for a method whose return type is Unit.
+       |object A {
+       |  /**
+       |    * $0
+       |    *
+       |    * @param param1
+       |    * @param param2
+       |    */
+       |  def test(param1: Int, param2: Int) = {}
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "scaladoc-defdef-type-poly",
+    """|object A {
+       |  /**@@
+       |  def test[T: Ordering](x: T, y: T): T = if(x < y) x else y
+       |}
+       |""".stripMargin,
+    """|object A {
+       |  /**
+       |    * $0
+       |    *
+       |    * @param x
+       |    * @param y
+       |    * @return
+       |    */
+       |  def test[T: Ordering](x: T, y: T): T = if(x < y) x else y
+       |}
+       |""".stripMargin
+  )
 }
