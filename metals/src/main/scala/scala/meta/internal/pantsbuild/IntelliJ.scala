@@ -8,8 +8,8 @@ import java.nio.charset.StandardCharsets
 import scala.meta.internal.metals.{BuildInfo => V}
 import java.net.URL
 
-object LaunchIntellij {
-  def open(directory: Path): Unit = {
+object IntelliJ {
+  def launch(directory: Path): Unit = {
     val applications = Paths.get("/Applications")
     val candidates = List(
       applications.resolve("Twitter IntelliJ IDEA CE.app"),
