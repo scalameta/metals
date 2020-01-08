@@ -359,7 +359,7 @@ trait MtagsEnrichments {
       else Right(either.getRight)
   }
 
-  implicit class XtensionPositionLsp(pos: m.Position) {
+  implicit class XtensionMetaPosition(pos: m.Position) {
     def toSemanticdb: s.Range = {
       new s.Range(
         pos.startLine,
