@@ -171,7 +171,7 @@ final class Doctor(
 
   def deprecatedVersionWarning: Option[String] = {
     val deprecatedVersions = (for {
-      target <- buildTargets.all.toIterator
+      target <- relevantTargets.toIterator
       scala <- target.info.asScalaBuildTarget
       if ScalaVersions.isDeprecatedScalaVersion(scala.getScalaVersion())
     } yield scala.getScalaVersion()).toSet
@@ -188,8 +188,11 @@ final class Doctor(
     }
   }
 
+  def relevantTargets(): List[ScalaTarget] =
+    buildTargets.all.filter(_.info.asScalaBuildTarget.isDefined).toList
+
   private def problemSummary: Option[String] = {
-    val targets = buildTargets.all.toList
+    val targets = relevantTargets()
     val isMissingSemanticdb = targets.filter(!_.isSemanticdbEnabled)
     val count = isMissingSemanticdb.length
     val isAllProjects = count == targets.size
@@ -213,7 +216,7 @@ final class Doctor(
   }
 
   private def buildTargetsJson(): String = {
-    val targets = buildTargets.all.toList
+    val targets = relevantTargets()
     val results = if (targets.isEmpty) {
       DoctorResults(
         doctorTitle,
@@ -242,7 +245,7 @@ final class Doctor(
       .element("p")(
         _.text(doctorHeading)
       )
-    val targets = buildTargets.all.toList
+    val targets = relevantTargets()
     if (targets.isEmpty) {
       html
         .element("p")(

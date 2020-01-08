@@ -58,6 +58,8 @@ object BloopPants {
             AbsolutePath(args.workspace),
             args.targets
           )(ExecutionContext.global)
+        } else if (args.isVscode && args.isWorkspaceAndOutputSameDirectory) {
+          VSCode.launch(args)
         } else {
           val workspace = args.workspace
           val targets = args.targets
@@ -79,6 +81,8 @@ object BloopPants {
               }
               if (args.isLaunchIntelliJ) {
                 LaunchIntellij.open(args.out)
+              } else if (args.isVscode) {
+                VSCode.launch(args)
               }
           }
         }
@@ -469,26 +473,7 @@ private class BloopPants(
       out = out,
       classesDir = classDirectory,
       resources = None,
-      scala = Some(
-        C.Scala(
-          "org.scala-lang",
-          "scala-compiler",
-          compilerVersion,
-          List.empty[String],
-          allScalaJars.toList,
-          None,
-          setup = Some(
-            C.CompileSetup(
-              C.Mixed,
-              addLibraryToBootClasspath = true,
-              addCompilerToClasspath = false,
-              addExtraJarsToClasspath = false,
-              manageBootClasspath = true,
-              filterLibraryFromClasspath = true
-            )
-          )
-        )
-      ),
+      scala = bloopScala,
       java = Some(C.Java(Nil)),
       sbt = None,
       test = bloopTestFrameworks,
@@ -555,6 +540,28 @@ private class BloopPants(
       }
     )
   }
+
+  private def bloopScala: Option[C.Scala] =
+    Some(
+      C.Scala(
+        "org.scala-lang",
+        "scala-compiler",
+        compilerVersion,
+        List.empty[String],
+        allScalaJars.toList,
+        None,
+        setup = Some(
+          C.CompileSetup(
+            C.Mixed,
+            addLibraryToBootClasspath = true,
+            addCompilerToClasspath = false,
+            addExtraJarsToClasspath = false,
+            manageBootClasspath = true,
+            filterLibraryFromClasspath = true
+          )
+        )
+      )
+    )
 
   private def bloopTestFrameworks: Option[C.Test] = {
     Some(

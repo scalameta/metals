@@ -19,6 +19,7 @@ case class Args(
     isCache: Boolean = false,
     isRegenerate: Boolean = false,
     isIntelliJ: Boolean = false,
+    isVscode: Boolean = false,
     isLaunchIntelliJ: Boolean = false,
     maxFileCount: Int = 5000,
     workspace: Path = PathIO.workingDirectory.toNIO,
@@ -28,6 +29,8 @@ case class Args(
     onFilemap: Filemap => Unit = _ => Unit
 ) {
   def pants: AbsolutePath = AbsolutePath(workspace.resolve("pants"))
+  def isWorkspaceAndOutputSameDirectory: Boolean =
+    workspace == out
   def command: String = Option(System.getProperty("sun.java.command")) match {
     case Some(path) =>
       Try(Paths.get(path.split(" ").head).getFileName().toString())
@@ -101,11 +104,16 @@ object Args {
           else base.out
         parse(tail, base.copy(workspace = dir, out = out))
       case "--out" :: out :: tail =>
-        parse(tail, base.copy(out = AbsolutePath(out).toNIO))
+        parse(
+          tail,
+          base.copy(out = AbsolutePath(out)(AbsolutePath(base.workspace)).toNIO)
+        )
       case "--regenerate" :: tail =>
         parse(tail, base.copy(isRegenerate = true))
       case "--intellij" :: tail =>
         parse(tail, base.copy(isIntelliJ = true, isLaunchIntelliJ = true))
+      case "--vscode" :: tail =>
+        parse(tail, base.copy(isVscode = true))
       case "--launch-intellij" :: tail =>
         parse(tail, base.copy(isLaunchIntelliJ = true))
       case "--no-launch-intellij" :: tail =>
