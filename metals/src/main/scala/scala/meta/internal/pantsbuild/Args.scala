@@ -26,6 +26,7 @@ case class Args(
     token: CancelToken = EmptyCancelToken,
     onFilemap: Filemap => Unit = _ => Unit
 ) {
+  def pants: AbsolutePath = AbsolutePath(workspace.resolve("pants"))
   def helpMessage: String =
     s"""pants-bloop [option ..] <target ..>
        |

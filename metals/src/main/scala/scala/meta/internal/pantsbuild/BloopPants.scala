@@ -30,6 +30,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.sys.process.Process
 import scala.meta.io.Classpath
 import coursierapi.MavenRepository
+import scala.meta.internal.io.PathIO
 
 object BloopPants {
 
@@ -44,6 +45,12 @@ object BloopPants {
       case Right(args) =>
         if (args.isHelp) {
           println(args.helpMessage)
+        } else if (!args.pants.isFile) {
+          scribe.error("No Pants build detected, file '' does not exist.")
+          scribe.error(
+            s"Is the working directory correct? (${PathIO.workingDirectory})"
+          )
+          System.exit(1)
         } else if (args.isRegenerate) {
           bloopRegenerate(
             AbsolutePath(args.workspace),
