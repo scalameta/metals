@@ -43,12 +43,15 @@ trait MtagsEnrichments {
       range.startCharacter == range.endCharacter
     }
     def encloses(other: s.Range): Boolean = {
-      range.startLine <= other.startLine &&
-      range.endLine >= other.endLine &&
-      range.startCharacter <= other.startCharacter && {
-        range.endCharacter > other.endCharacter ||
-        other == range
-      }
+      val startsBeforeOrAt =
+        range.startLine < other.startLine ||
+          (range.startLine == other.startLine &&
+            range.startCharacter <= other.startCharacter)
+      val endsAtOrAfter =
+        range.endLine > other.endLine ||
+          (range.endLine == other.endLine &&
+            range.endCharacter >= other.endCharacter)
+      startsBeforeOrAt && endsAtOrAfter
     }
     def toLocation(uri: String): l.Location = {
       new l.Location(uri, range.toLSP)
@@ -62,12 +65,21 @@ trait MtagsEnrichments {
         other: l.Position,
         includeLastCharacter: Boolean = false
     ): Boolean = {
-      range.startLine <= other.getLine &&
-      range.endLine >= other.getLine &&
-      range.startCharacter <= other.getCharacter && {
-        if (includeLastCharacter) range.endCharacter >= other.getCharacter
-        else range.endCharacter > other.getCharacter
+      val startsBeforeOrAt =
+        range.startLine < other.getLine ||
+          (range.startLine == other.getLine &&
+            range.startCharacter <= other.getCharacter)
+      val endCharCondition = {
+        if (includeLastCharacter)
+          range.endCharacter >= other.getCharacter
+        else
+          range.endCharacter > other.getCharacter
       }
+      val endsAtOrAfter =
+        range.endLine > other.getLine ||
+          (range.endLine == other.getLine &&
+            endCharCondition)
+      startsBeforeOrAt && endsAtOrAfter
     }
     def encloses(other: l.Range): Boolean = {
       encloses(other.getStart) &&
