@@ -14,6 +14,7 @@ object SystemProcess {
   def run(
       shortName: String,
       args: List[String],
+      reproduceArgs: List[String],
       cwd: Path,
       token: CancelToken,
       stdout: LineListener
@@ -33,7 +34,8 @@ object SystemProcess {
     val exit = handler.completeProcess.future.asJava.get()
     token.checkCanceled()
     if (exit != 0) {
-      val message = s"time: '$shortName' failed after $exportTimer"
+      val message =
+        s"command error: ${reproduceArgs.mkString(" ")}"
       scribe.error(message)
       sys.error(message)
     } else {

@@ -222,6 +222,7 @@ object BloopPants {
     SystemProcess.run(
       shortName,
       command,
+      command,
       args.workspace,
       args.token,
       LineListener.info
