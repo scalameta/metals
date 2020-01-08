@@ -28,7 +28,7 @@ case class Args(
     onFilemap: Filemap => Unit = _ => Unit
 ) {
   def pants: AbsolutePath = AbsolutePath(workspace.resolve("pants"))
-  def command = Option(System.getProperty("sun.java.command")) match {
+  def command: String = Option(System.getProperty("sun.java.command")) match {
     case Some(path) =>
       Try(Paths.get(path.split(" ").head).getFileName().toString())
         .getOrElse("pants-bloop")
