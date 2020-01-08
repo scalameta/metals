@@ -45,6 +45,8 @@ trait ScaladocCompletion { this: MetalsGlobal =>
       //   */
       // """
       val builder = new StringBuilder()
+
+      val hasConstructor = associatedDef.symbol.primaryConstructor.isDefined && !associatedDef.symbol.isAbstractClass
       val shouldHaveReturnLine = associatedDef.isInstanceOf[DefDef]
 
       // newline after `/**`
@@ -55,9 +57,12 @@ trait ScaladocCompletion { this: MetalsGlobal =>
       if (clientSupportsSnippets) builder.append(" $0\n")
       else builder.append("\n")
 
-      // add empty line if there's parameter or "@return" line.
-      if (params.nonEmpty || shouldHaveReturnLine)
+      // add empty line if there's parameter or "@return" or "@constructor" line.
+      if (params.nonEmpty || shouldHaveReturnLine || hasConstructor)
         builder.append(s"${indent}*\n")
+
+      // * @constructor
+      if (hasConstructor) builder.append(s"${indent}* @constructor\n")
 
       // * @param p1
       // * @param p2

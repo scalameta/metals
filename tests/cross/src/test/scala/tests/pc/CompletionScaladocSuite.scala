@@ -68,6 +68,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |  /**
        |    * $0
        |    *
+       |    * @constructor
        |    * @param param1
        |    * @param param2
        |    */
@@ -147,6 +148,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |  /**
        |    * $0
        |    *
+       |    * @constructor
        |    * @param x
        |    */
        |  case class B(x: Int) {
