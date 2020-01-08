@@ -315,7 +315,9 @@ private class BloopPants(
         .toRelative(AbsolutePath(workspace))
         .toURI(isDirectory = false)
         .toString()
-      toEmptyBloopProject(name + "-root", root.toNIO)
+      // NOTE(olafur): cannot be `name + "-root"` since that conflicts with the
+      // IntelliJ-generated root project.
+      toEmptyBloopProject(name + "-project-root", root.toNIO)
     }
     val binaryDependenciesSourcesIterator = getLibraryDependencySources()
     val generatedProjects = new mutable.LinkedHashSet[Path]
