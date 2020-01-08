@@ -15,6 +15,7 @@ import scala.meta.pc.OffsetParams
 import java.util.concurrent.atomic.AtomicReference
 import funsuite.BeforeEach
 import funsuite.BeforeAll
+import funsuite.Location
 
 object InterruptPresentationCompilerSuite extends BasePCSuite {
   class InterruptSymbolIndex
@@ -48,7 +49,7 @@ object InterruptPresentationCompilerSuite extends BasePCSuite {
       name: String,
       original: String,
       act: (PresentationCompiler, OffsetParams) => CompletableFuture[_]
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val (code, offset) = this.params(original)
       try {

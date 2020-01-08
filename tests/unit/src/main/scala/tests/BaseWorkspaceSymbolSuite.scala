@@ -4,6 +4,7 @@ import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
 import tests.MetalsTestEnrichments._
+import funsuite.Location
 
 abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def workspace: AbsolutePath
@@ -19,7 +20,7 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def check(
       query: String,
       expected: String
-  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
+  )(implicit loc: Location): Unit = {
     test(query) {
       val result = symbols.search(query)
       val obtained =

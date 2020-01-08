@@ -4,6 +4,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.meta.internal.metals.BuildTargets
+import funsuite.Location
 
 object InverseDependenciesSuite extends BaseSuite {
   class Graph(val root: String) {
@@ -21,7 +22,7 @@ object InverseDependenciesSuite extends BaseSuite {
       name: String,
       original: Graph,
       expected: String
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val obtained = BuildTargets.inverseDependencies(
         List(new BuildTargetIdentifier(original.root)), { key =>

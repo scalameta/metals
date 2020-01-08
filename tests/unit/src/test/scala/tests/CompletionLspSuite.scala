@@ -2,6 +2,7 @@ package tests
 
 import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}
+import funsuite.Location
 
 object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
@@ -56,7 +57,7 @@ object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       name: String,
       compilerPlugins: String,
       extra: => Future[Unit] = Future.successful(())
-  ): Unit =
+  )(implicit loc: Location): Unit =
     testAsync(name) {
       for {
         _ <- server.initialize(

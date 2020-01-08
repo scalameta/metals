@@ -2,13 +2,14 @@ package tests
 
 import scala.meta.internal.ansi.LineListener
 import scala.collection.mutable
+import funsuite.Location
 
 object LineListenerSuite extends BaseSuite {
   def check(
       name: String,
       act: LineListener => Unit,
       expected: List[String]
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       var buf = mutable.ListBuffer.empty[String]
       val output = new LineListener(line => buf += line)

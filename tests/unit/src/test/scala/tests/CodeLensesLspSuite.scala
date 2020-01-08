@@ -1,5 +1,6 @@
 package tests
 import scala.concurrent.Future
+import funsuite.Location
 
 object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
@@ -185,7 +186,9 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
-  def check(name: String, library: String = "")(expected: String): Unit = {
+  def check(name: String, library: String = "")(
+      expected: String
+  )(implicit loc: Location): Unit = {
     testAsync(name) {
       cleanWorkspace()
       val original = expected.replaceAll("<<.*>>\\W+", "")

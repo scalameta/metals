@@ -2,9 +2,10 @@ package tests
 
 import scala.meta.internal.metals.Compression
 import scala.meta.internal.metals.ClassfileElementPart
+import funsuite.Location
 
 object CompressionSuite extends BaseSuite {
-  def checkRoundtrip(a: String): Unit = {
+  def checkRoundtrip(a: String)(implicit loc: Location): Unit = {
     val nonempty = a.trim.linesIterator.map(_.trim).filterNot(_.isEmpty).toArray
     val testName = nonempty.headOption.getOrElse("<empty>")
     test(testName) {

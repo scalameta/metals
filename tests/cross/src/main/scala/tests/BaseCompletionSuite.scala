@@ -11,6 +11,7 @@ import scala.meta.pc.CancelToken
 import scala.collection.Seq
 import scala.meta.internal.metals.TextEdits
 import funsuite.TestOptions
+import funsuite.Location
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 
@@ -43,7 +44,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       name: String,
       original: String,
       fn: Seq[CompletionItem] => Unit
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       fn(getItems(original))
     }
@@ -58,7 +59,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+  )(implicit loc: Location): Unit = {
     checkEdit(
       name = name,
       original = template.replaceAllLiterally("___", original),
@@ -79,7 +80,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
       compat: Map[String, String] = Map.empty
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val items = getItems(original).filter(item => filter(item.getLabel))
       if (items.isEmpty) fail("obtained empty completions!")
@@ -108,7 +109,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       original: String,
       expected: String,
       compat: Map[String, String] = Map.empty
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val items = getItems(original)
       val obtained = items
@@ -138,7 +139,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       filename: String = "A.scala",
       filter: String => Boolean = _ => true,
       enablePackageWrap: Boolean = true
-  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val out = new StringBuilder()
       val withPkg =

@@ -1,5 +1,7 @@
 package tests
 
+import funsuite.Location
+
 object RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
 
   check(
@@ -182,7 +184,7 @@ object RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
       testCase: String,
       paste: String,
       expectedCase: String
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     val tripleQuote = """\u0022\u0022\u0022"""
     def unmangle(string: String): String =
       string.replaceAll("'''", tripleQuote)

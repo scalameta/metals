@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
+import funsuite.Location
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
   def checkDoc(
@@ -9,7 +10,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       code: String,
       expected: String,
       compat: Map[String, String] = Map.empty
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     check(name, code, expected, includeDocs = true, compat = compat)
   }
   def check(
@@ -19,7 +20,7 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       includeDocs: Boolean = false,
       compat: Map[String, String] = Map.empty,
       stableOrder: Boolean = true
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val pkg = scala.meta.Term.Name(name).syntax
       val (code, offset) = params(s"package $pkg\n" + original)

@@ -2,10 +2,10 @@ package tests
 
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
-import org.scalactic.source.Position
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 import fansi.Color
+import funsuite.Location
 
 object DiffAssertions extends funsuite.Assertions {
   def assertNoDiffOrPrintObtained(
@@ -13,7 +13,7 @@ object DiffAssertions extends funsuite.Assertions {
       expected: String,
       obtainedTitle: String,
       expectedTitle: String
-  )(implicit source: Position): Unit = {
+  )(implicit loc: Location): Unit = {
     orPrintObtained(
       () => assertNoDiff(obtained, expected, obtainedTitle, expectedTitle),
       obtained
@@ -25,11 +25,7 @@ object DiffAssertions extends funsuite.Assertions {
       expected: String,
       obtainedTitle: String,
       expectedTitle: String
-  )(
-      implicit source: Position,
-      line: sourcecode.Line,
-      file: sourcecode.File
-  ): Boolean = colored {
+  )(implicit source: Location): Boolean = colored {
     if (obtained.isEmpty && !expected.isEmpty) fail("Obtained empty output!")
     val result = unifiedDiff(obtained, expected, obtainedTitle, expectedTitle)
     if (result.isEmpty) true
@@ -77,15 +73,13 @@ object DiffAssertions extends funsuite.Assertions {
   }
 
   def expectNoDiff(obtained: String, expected: String, hint: String = "")(
-      implicit pos: Position
+      implicit loc: Location
   ): Unit = {
     colored {
       assertNoDiff(obtained, expected, hint, hint)
     }
   }
-  def colored[T](
-      thunk: => T
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): T = {
+  def colored[T](thunk: => T)(implicit loc: Location): T = {
     try {
       thunk
     } catch {
@@ -97,8 +91,7 @@ object DiffAssertions extends funsuite.Assertions {
             else Color.Reset(line)
           }
           .mkString("\n")
-        val location = s"failed assertion at ${filename.value}:${line.value}\n"
-        throw new TestFailedException(location + message)
+        fail("Failed assertion")
     }
   }
 

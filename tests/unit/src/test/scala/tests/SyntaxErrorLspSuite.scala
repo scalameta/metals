@@ -1,7 +1,7 @@
 package tests
 
-import org.scalactic.source.Position
 import scala.concurrent.Future
+import funsuite.Location
 
 object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
@@ -10,7 +10,7 @@ object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       name: String,
       code: String,
       asserts: Assert*
-  )(implicit pos: Position): Unit = {
+  )(implicit loc: Location): Unit = {
     testAsync(name) {
       def runAsserts(as: List[Assert]): Future[Unit] = as match {
         case Nil => Future.successful(())

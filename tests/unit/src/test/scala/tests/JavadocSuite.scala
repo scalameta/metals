@@ -1,10 +1,13 @@
 package tests
 
 import scala.meta.internal.docstrings.MarkdownGenerator
+import funsuite.Location
 
 object JavadocSuite extends BaseSuite {
 
-  def check(name: String, original: String, expected: String): Unit = {
+  def check(name: String, original: String, expected: String)(
+      implicit loc: Location
+  ): Unit = {
     test(name) {
       val obtained = MarkdownGenerator.toMarkdown(original).mkString
       assertNoDiff(obtained, expected)
@@ -167,7 +170,7 @@ object JavadocSuite extends BaseSuite {
         |**Returns:** the image at the specified URL
         |
         |**Throws**
-        |- `IOException`: 
+        |- `IOException`:
         |
         |**See**
         |- [Image](Image)""".stripMargin

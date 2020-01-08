@@ -1,5 +1,7 @@
 package tests
 
+import funsuite.Location
+
 object OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
 
   check(
@@ -118,7 +120,7 @@ object OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  | a multiline
        |  | string
        |  '''.stripMargin
-       |  
+       |
        |}""".stripMargin
   )
 
@@ -197,7 +199,7 @@ object OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
       testCase: String,
       expectedCase: String,
       autoIndent: String = "  "
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     val tripleQuote = """\u0022\u0022\u0022"""
     def unmangle(string: String): String =
       string.replaceAll("'''", tripleQuote)

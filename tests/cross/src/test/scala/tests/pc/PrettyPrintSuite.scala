@@ -1,6 +1,7 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import funsuite.Location
 
 object PrettyPrintSuite extends BaseCompletionSuite {
 
@@ -9,7 +10,7 @@ object PrettyPrintSuite extends BaseCompletionSuite {
       original: String,
       expected: String,
       compat: Map[String, String] = Map.empty
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     val signature = original.replaceAllLiterally("@@", "")
     val completion = original.replaceFirst("@@.*", "@@")
     checkEditLine(

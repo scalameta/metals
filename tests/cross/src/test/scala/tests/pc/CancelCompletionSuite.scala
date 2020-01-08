@@ -10,6 +10,7 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.pc.CancelToken
 import tests.BaseCompletionSuite
 import scala.meta.internal.pc.InterruptException
+import funsuite.Location
 
 object CancelCompletionSuite extends BaseCompletionSuite {
 
@@ -33,7 +34,7 @@ object CancelCompletionSuite extends BaseCompletionSuite {
       name: String,
       query: String,
       expected: String
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val (code, offset) = params(query)
       val token = new AlwaysCancelToken

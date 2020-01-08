@@ -3,12 +3,13 @@ package tests
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.MetalsServerConfig
+import funsuite.Location
 
 object SbtVersionSuite extends BaseSuite {
   def check(
       layout: String,
       expected: String
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(expected) {
       val root = FileLayout.fromString(layout)
       val obtained = SbtBuildTool(

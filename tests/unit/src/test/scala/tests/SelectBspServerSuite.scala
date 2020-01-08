@@ -3,13 +3,14 @@ package tests
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import funsuite.Location
 
 object SelectBspServerSuite extends BaseSuite {
   def check(
       name: String,
       candidates: List[BspConnectionDetails],
       expected: String
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val query = Messages.SelectBspServer.request(candidates)
       val obtained =
