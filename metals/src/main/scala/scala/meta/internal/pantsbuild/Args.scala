@@ -57,9 +57,12 @@ case class Args(
        |    Launch IntelliJ after export completes. Default false unless --intellij is enabled.
        |
        |Example usage:
-       |  pants-bloop myproject::                   # Export a single project
-       |  pants-bloop myproject:: other-project::   # Export multiple projects
-       |  pants-bloop --intellij myproject::        # Export a single project
+       |  $command myproject::                        # Export a single project
+       |  $command myproject:: other-project::        # Export multiple projects
+       |  $command --intellij myproject::             # Export a single project and launch IntelliJ
+       |  $command --update myproject::               # Re-export after updating $command without re-calling Pants.
+       |  $command --out subdirectory myproject::     # Generate Bloop JSON files in a subdirectory
+       |  $command --max-file-count=10000 myproject:: # Increase the limit for number of files to export.
        |""".stripMargin
 }
 object Args {
