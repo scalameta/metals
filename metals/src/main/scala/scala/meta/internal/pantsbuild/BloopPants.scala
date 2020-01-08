@@ -30,6 +30,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.sys.process.Process
 import scala.meta.io.Classpath
 import coursierapi.MavenRepository
+import scala.meta.internal.io.PathIO
 
 object BloopPants {
 
@@ -44,6 +45,12 @@ object BloopPants {
       case Right(args) =>
         if (args.isHelp) {
           println(args.helpMessage)
+        } else if (!args.pants.isFile) {
+          scribe.error("No Pants build detected, file '' does not exist.")
+          scribe.error(
+            s"Is the working directory correct? (${PathIO.workingDirectory})"
+          )
+          System.exit(1)
         } else if (args.isRegenerate) {
           bloopRegenerate(
             AbsolutePath(args.workspace),
@@ -56,7 +63,12 @@ object BloopPants {
           val installResult = bloopInstall(args)(ExecutionContext.global)
           installResult match {
             case Failure(exception) =>
-              scribe.error(s"bloopInstall failed in $timer", exception)
+              exception match {
+                case MessageOnlyException(message) =>
+                  scribe.error(message)
+                case _ =>
+                  scribe.error(s"${args.command} failed to run", exception)
+              }
               sys.exit(1)
             case Success(count) =>
               scribe.info(s"time: exported ${count} Pants target(s) in $timer")
@@ -214,6 +226,7 @@ object BloopPants {
     val shortName = "pants export-classpath export"
     SystemProcess.run(
       shortName,
+      command,
       command,
       args.workspace,
       args.token,

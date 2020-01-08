@@ -88,8 +88,7 @@ case class PantsBuildTool(
               workspace = workspace.toNIO,
               out = workspace.toNIO,
               targets = targets,
-              isCache = false,
-              isCompile = true
+              isCache = false
             )
             BloopPants.bloopInstall(args) match {
               case Failure(error) =>

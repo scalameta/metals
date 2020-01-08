@@ -8,6 +8,7 @@ import scala.meta.internal.ansi.LineListener
 import scala.concurrent.ExecutionContext
 import java.nio.file.Files
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.util.control.NonFatal
 
 class Filemap(
     map: mutable.Map[String, mutable.ArrayBuffer[Path]] = mutable.Map.empty
@@ -37,17 +38,26 @@ object Filemap {
     val shouldRun =
       !isCache || !Files.isRegularFile(outputfile)
     if (shouldRun) {
-      SystemProcess.run(
+      val reproduceCommand = "./pants" :: "filemap" :: targets
+      try SystemProcess.run(
         "pants filemap",
         workspace.resolve("pants").toString() ::
           "--print-exception-stacktrace=true" ::
           s"--filemap-output-file=$outputfile" ::
           "filemap" ::
           targets,
+        reproduceCommand,
         workspace,
         EmptyCancelToken,
         LineListener.info
       )
+      catch {
+        case NonFatal(e) =>
+          throw new MessageOnlyException(
+            s"To fix this problem, make sure '${targets.mkString(" ")}' points to valid BUILD files. To reproduce:\n" +
+              reproduceCommand.mkString(" ")
+          )
+      }
     }
     Filemap.fromCache(workspace, outputfile)
   }
