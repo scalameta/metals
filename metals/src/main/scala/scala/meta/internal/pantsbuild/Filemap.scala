@@ -38,6 +38,7 @@ object Filemap {
     val shouldRun =
       !isCache || !Files.isRegularFile(outputfile)
     if (shouldRun) {
+      val reproduceCommand = "./pants" :: "filemap" :: targets
       try SystemProcess.run(
         "pants filemap",
         workspace.resolve("pants").toString() ::
@@ -45,14 +46,17 @@ object Filemap {
           s"--filemap-output-file=$outputfile" ::
           "filemap" ::
           targets,
-        "./pants" :: "filemap" :: targets,
+        reproduceCommand,
         workspace,
         EmptyCancelToken,
         LineListener.info
       )
       catch {
         case NonFatal(e) =>
-          throw new MessageOnlyException("unable ro t")
+          throw new MessageOnlyException(
+            s"To fix this problem, make sure '${targets.mkString(" ")}' points to valid BUILD files. To reproduce:\n" +
+              reproduceCommand.mkString(" ")
+          )
       }
     }
     Filemap.fromCache(workspace, outputfile)

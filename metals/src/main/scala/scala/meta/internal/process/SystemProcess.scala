@@ -35,7 +35,7 @@ object SystemProcess {
     token.checkCanceled()
     if (exit != 0) {
       val message =
-        s"command error: ${reproduceArgs.mkString(" ")}"
+        s"command failed with exit code $exit: ${reproduceArgs.mkString(" ")}"
       scribe.error(message)
       sys.error(message)
     } else {

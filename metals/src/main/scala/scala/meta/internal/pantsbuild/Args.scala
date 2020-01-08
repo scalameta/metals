@@ -8,13 +8,14 @@ import scala.meta.pc.CancelToken
 import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
+import java.nio.file.Paths
+import scala.meta.internal.metals.BuildInfo
 
 /**
  * The command-line argument parser for BloopPants.
  */
 case class Args(
     isHelp: Boolean = false,
-    isCompile: Boolean = true,
     isCache: Boolean = false,
     isRegenerate: Boolean = false,
     isIntelliJ: Boolean = false,
@@ -27,25 +28,27 @@ case class Args(
     onFilemap: Filemap => Unit = _ => Unit
 ) {
   def pants: AbsolutePath = AbsolutePath(workspace.resolve("pants"))
+  def command = Option(System.getProperty("sun.java.command")) match {
+    case Some(path) =>
+      Try(Paths.get(path.split(" ").head).getFileName().toString())
+        .getOrElse("pants-bloop")
+    case _ => "pants-bloop"
+  }
   def helpMessage: String =
-    s"""pants-bloop [option ..] <target ..>
+    s"""$command ${BuildInfo.metalsVersion}
+       |$command [option ..] <target ..>
+       |
        |
        |Command-line tool to export a Pants build into Bloop JSON config files.
        |The <target ..> argument is a list of Pants targets to export,
-       |for example "src/main/scala::".
+       |for example "$command my-project:: another-project::".
        |
-       |  --help
-       |    Print this help message
        |  --workspace <dir>
-       |    The directory containing the pants build.
+       |    The directory containing the pants build, defaults to the working directory.
        |  --out <dir>
        |    The directory containing the generated Bloop JSON files. Defaults to --workspace if not provided.
-       |  --regenerate (default=false)
-       |    If enabled, only re-expands the source globs to pick up new file creations.
-       |  --[no-]cache (default=false)
-       |    If enabled, cache the result from `./pants export`
-       |  --[no-]compile (default=$isCompile)
-       |    If enabled, do not run `./pants export-classpath`
+       |  --update
+       |    Use this flag after updating $command to re-generate the Bloop JSON files.
        |  --max-file-count (default=$maxFileCount)
        |    The export process fails fast if the number of exported source files exceeds this threshold.
        |  --intellij
@@ -96,21 +99,15 @@ object Args {
         parse(tail, base.copy(workspace = dir, out = out))
       case "--out" :: out :: tail =>
         parse(tail, base.copy(out = AbsolutePath(out).toNIO))
-      case "--compile" :: tail =>
-        parse(tail, base.copy(isCompile = true))
       case "--regenerate" :: tail =>
         parse(tail, base.copy(isRegenerate = true))
-      case "--no-compile" :: tail =>
-        parse(tail, base.copy(isCompile = false))
       case "--intellij" :: tail =>
         parse(tail, base.copy(isIntelliJ = true, isLaunchIntelliJ = true))
       case "--launch-intellij" :: tail =>
         parse(tail, base.copy(isLaunchIntelliJ = true))
       case "--no-launch-intellij" :: tail =>
         parse(tail, base.copy(isLaunchIntelliJ = false))
-      case "--no-cache" :: tail =>
-        parse(tail, base.copy(isCache = false))
-      case "--cache" :: tail =>
+      case ("--update" | "--cache") :: tail =>
         parse(tail, base.copy(isCache = true))
       case "--max-file-count" :: count :: tail =>
         Try(count.toInt) match {
@@ -124,6 +121,11 @@ object Args {
             parse(tail, base.copy(maxFileCount = value))
         }
       case tail =>
-        Right(base.copy(targets = base.targets ++ tail))
+        tail.headOption match {
+          case Some(flag) if flag.startsWith("-") =>
+            Left(List(s"unknown flag: $flag\n" + base.helpMessage))
+          case _ =>
+            Right(base.copy(targets = base.targets ++ tail))
+        }
     }
 }
