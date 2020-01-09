@@ -8,6 +8,7 @@ import scala.meta.internal.mtags
 import scala.meta.internal.semver.SemVer
 import scala.util.Properties
 import funsuite.Test
+import funsuite.TestOptions
 import funsuite.Location
 
 class BaseSuite extends funsuite.FunSuite with Assertions {
@@ -36,7 +37,7 @@ class BaseSuite extends funsuite.FunSuite with Assertions {
   }
 
   def testAsync(
-      options: funsuite.TestOptions,
+      options: TestOptions,
       maxDuration: Duration = Duration("10min")
   )(
       run: => Future[Unit]

@@ -63,7 +63,7 @@ trait Assertions extends funsuite.Assertions {
       obtained: T,
       expected: T,
       hint: String = ""
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     if (obtained == expected) {
       val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
       assertNoDiff(obtained.toString, expected.toString, hint)
@@ -71,7 +71,9 @@ trait Assertions extends funsuite.Assertions {
     }
   }
 
-  def assertDiffEqual[T](obtained: T, expected: T, hint: String = ""): Unit = {
+  def assertDiffEqual[T](obtained: T, expected: T, hint: String = "")(
+      implicit loc: Location
+  ): Unit = {
     if (obtained != expected) {
       val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
       assertNoDiff(obtained.toString, expected.toString, hint)
