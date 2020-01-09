@@ -10,6 +10,10 @@ import scala.util.Properties
 import funsuite.Test
 import funsuite.TestOptions
 import funsuite.Location
+import funsuite.FailException
+import funsuite.FlakyFailure
+import scala.reflect.ClassTag
+import scala.util.control.NonFatal
 
 class BaseSuite extends funsuite.FunSuite with Assertions {
   def isJava8: Boolean =
@@ -28,6 +32,23 @@ class BaseSuite extends funsuite.FunSuite with Assertions {
       BaseSuite.minScalaVersionForJDK9OrHigher,
       scalaVersion
     )
+
+  def intercept[T <: Throwable](
+      body: => Any
+  )(implicit ev: ClassTag[T], loc: Location): Unit = {
+    try {
+      body
+      fail(
+        s"expected exception of type ${ev.runtimeClass} but body evaluated successfully"
+      )
+    } catch {
+      case e: FailException => throw e
+      case e: FlakyFailure => throw e
+      case NonFatal(e) =>
+        if (!ev.runtimeClass.isAssignableFrom(e.getClass()))
+          fail(s"expected ${ev.runtimeClass}, obtained ${e.getClass()}")
+    }
+  }
 
   def skipSuite: Boolean = false
 

@@ -1,6 +1,7 @@
 package tests
 
 import java.nio.file.Files
+import java.nio.file.FileAlreadyExistsException
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.MetalsEnrichments._
 
@@ -51,11 +52,10 @@ class CreateDirectoriesSuite extends BaseSuite {
     val symlinkPluginsPath = sbt1.resolve("plugins")
     Files.createSymbolicLink(symlinkPluginsPath, plugins)
 
-    // FIXME(gabro): intercept is not available in FunSuite
-    // // check that we get an exception using the default nio method
-    // intercept[FileAlreadyExistsException] {
-    //   Files.createDirectories(symlinkPluginsPath)
-    // }
+    // check that we get an exception using the default nio method
+    intercept[FileAlreadyExistsException] {
+      Files.createDirectories(symlinkPluginsPath)
+    }
     AbsolutePath(symlinkPluginsPath).createDirectories()
   }
 
