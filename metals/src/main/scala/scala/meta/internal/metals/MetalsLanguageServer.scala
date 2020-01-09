@@ -297,7 +297,8 @@ class MetalsLanguageServer(
       sh,
       workspace,
       buildClient,
-      languageClient
+      languageClient,
+      tables
     )
     bspServers = new BspServers(
       workspace,

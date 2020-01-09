@@ -30,7 +30,8 @@ final class BloopServers(
     sh: ScheduledExecutorService,
     workspace: AbsolutePath,
     client: MetalsBuildClient,
-    languageClient: LanguageClient
+    languageClient: LanguageClient,
+    tables: Tables
 )(implicit ec: ExecutionContextExecutorService) {
 
   def shutdownServer(): Boolean = {
@@ -54,11 +55,12 @@ final class BloopServers(
 
   def newServer(): Future[Option[BuildServerConnection]] = {
     BuildServerConnection
-      .fromStreams(
+      .fromSockets(
         workspace,
         client,
         languageClient,
-        connectToLauncher
+        connectToLauncher,
+        tables
       )
       .map(Option(_))
   }

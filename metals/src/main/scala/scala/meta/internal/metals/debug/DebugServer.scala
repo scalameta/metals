@@ -75,7 +75,7 @@ object DebugServer {
       // long timeout, since server might take a while to compile the project
       val connectToServer = () => {
         buildServer
-          .map(_.startDebugSession(parameters).asScala)
+          .map(_.startDebugSession(parameters))
           .getOrElse(BuildServerUnavailableError)
           .withTimeout(60, TimeUnit.SECONDS)
           .map { uri =>

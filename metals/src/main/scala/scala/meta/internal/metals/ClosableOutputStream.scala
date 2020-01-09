@@ -8,11 +8,11 @@ class ClosableOutputStream(underlying: OutputStream, name: String)
     extends FilterOutputStream(underlying) {
   private var isClosed = false
 
-  def socketIsClosed = isClosed
-
   override def flush(): Unit = {
     try {
-      super.flush()
+      if (!isClosed) {
+        super.flush()
+      }
     } catch {
       case _: IOException =>
     }
@@ -24,6 +24,7 @@ class ClosableOutputStream(underlying: OutputStream, name: String)
         underlying.write(b)
       }
     } catch {
+      // IOException is usually thrown when the stream is closed
       case e: IOException =>
         scribe.debug(s"closed: $name", e)
         isClosed = true

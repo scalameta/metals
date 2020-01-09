@@ -143,19 +143,21 @@ class Messages(icons: Icons) {
       new MessageActionItem("Reconnect to build server")
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")
+    def dismissForever: MessageActionItem =
+      new MessageActionItem("Don't show again")
     def params(): ShowMessageRequestParams = {
 
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"""|The workspace has lost connection with the Build server, which means most functionalities will not be working.
-            |Click `Reconnect to build server` to reconnect.
-            |""".stripMargin
+        "Metals lost connection with the build server, most functionality will not work. " +
+          "To fix this problem, select \"reconnect to build server\"."
       )
       params.setType(MessageType.Warning)
       params.setActions(
         List(
           reconnect,
-          notNow
+          notNow,
+          dismissForever
         ).asJava
       )
       params

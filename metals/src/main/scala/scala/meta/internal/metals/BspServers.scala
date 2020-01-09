@@ -56,7 +56,7 @@ final class BspServers(
       details: BspConnectionDetails
   ): Future[BuildServerConnection] = {
 
-    def newProcess(): Future[SocketConnection] = {
+    def newConnection(): Future[SocketConnection] = {
       val process = new ProcessBuilder(details.getArgv)
         .directory(workspace.toFile)
         .start()
@@ -83,11 +83,12 @@ final class BspServers(
 
     }
 
-    BuildServerConnection.fromStreams(
+    BuildServerConnection.fromSockets(
       workspace,
       buildClient,
       client,
-      newProcess
+      newConnection,
+      tables
     )
   }
 
