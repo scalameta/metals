@@ -1,11 +1,10 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import funsuite.BeforeAll
 
 class CompletionOverrideSuite extends BaseCompletionSuite {
 
-  override def beforeAll(context: BeforeAll): Unit = {
+  override def beforeAll(): Unit = {
     indexJDK()
   }
 

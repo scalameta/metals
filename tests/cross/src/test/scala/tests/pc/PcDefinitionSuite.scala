@@ -1,10 +1,8 @@
 package tests.pc
 
-import funsuite.BeforeAll
-
 class PcDefinitionSuite extends BasePcDefinitionSuite {
 
-  override def beforeAll(context: BeforeAll): Unit = {
+  override def beforeAll(): Unit = {
     indexJDK()
     indexScalaLibrary()
   }

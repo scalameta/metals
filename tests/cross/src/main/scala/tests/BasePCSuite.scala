@@ -26,7 +26,6 @@ import java.util.concurrent.ScheduledExecutorService
 import scala.collection.Seq
 import scala.meta.pc.PresentationCompiler
 import funsuite.TestOptions
-import funsuite.AfterAll
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
@@ -60,7 +59,7 @@ abstract class BasePCSuite extends BaseSuite {
     .newInstance("", myclasspath.asJava, scalacOptions.asJava)
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
 
-  override def afterAll(context: AfterAll): Unit = {
+  override def afterAll(): Unit = {
     pc.shutdown()
     RecursivelyDelete(tmp)
     executorService.shutdown()

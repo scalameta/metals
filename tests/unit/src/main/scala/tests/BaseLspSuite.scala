@@ -19,7 +19,6 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.SlowTaskConfig
 import funsuite.BeforeEach
 import funsuite.Ignore
-import funsuite.AfterAll
 
 /**
  * Full end to end integration tests against a full metals language server.
@@ -42,7 +41,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   protected def experimentalCapabilities
       : Option[ClientExperimentalCapabilities] = None
 
-  override def afterAll(context: AfterAll): Unit = {
+  override def afterAll(): Unit = {
     if (server != null) {
       server.server.cancelAll()
     }

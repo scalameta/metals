@@ -14,7 +14,6 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.OffsetParams
 import java.util.concurrent.atomic.AtomicReference
 import funsuite.BeforeEach
-import funsuite.BeforeAll
 import funsuite.Location
 
 class InterruptPresentationCompilerSuite extends BasePCSuite {
@@ -40,7 +39,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
     super.beforeEach(context)
   }
 
-  override def beforeAll(context: BeforeAll): Unit = {
+  override def beforeAll(): Unit = {
     index.underlying = interrupt
     indexScalaLibrary()
   }

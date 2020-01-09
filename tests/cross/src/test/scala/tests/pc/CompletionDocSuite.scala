@@ -1,12 +1,11 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import funsuite.BeforeAll
 
 class CompletionDocSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
 
-  override def beforeAll(context: BeforeAll): Unit = {
+  override def beforeAll(): Unit = {
     indexJDK()
     indexScalaLibrary()
   }
