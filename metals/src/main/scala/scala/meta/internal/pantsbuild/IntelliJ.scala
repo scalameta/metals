@@ -12,7 +12,9 @@ object IntelliJ {
   def launch(directory: Path): Unit = {
     val applications = Paths.get("/Applications")
     val candidates = List(
+      applications.resolve("Twitter IntelliJ IDEA.app"),
       applications.resolve("Twitter IntelliJ IDEA CE.app"),
+      applications.resolve("IntelliJ IDEA.app"),
       applications.resolve("IntelliJ IDEA CE.app")
     )
     writeBsp(directory)
