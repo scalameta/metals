@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.Directories
 
-object HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
+class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
 
   testAsync("basic") {
     for {

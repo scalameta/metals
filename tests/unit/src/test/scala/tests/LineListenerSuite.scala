@@ -4,7 +4,7 @@ import scala.meta.internal.ansi.LineListener
 import scala.collection.mutable
 import funsuite.Location
 
-object LineListenerSuite extends BaseSuite {
+class LineListenerSuite extends BaseSuite {
   def check(
       name: String,
       act: LineListener => Unit,

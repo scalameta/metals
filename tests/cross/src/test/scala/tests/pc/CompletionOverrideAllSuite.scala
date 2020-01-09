@@ -3,7 +3,7 @@ package tests.pc
 import tests.BaseCompletionSuite
 import funsuite.BeforeAll
 
-object CompletionOverrideAllSuite extends BaseCompletionSuite {
+class CompletionOverrideAllSuite extends BaseCompletionSuite {
 
   override def beforeAll(context: BeforeAll): Unit = {
     indexJDK()

@@ -3,7 +3,7 @@ package tests
 import java.util.concurrent.CancellationException
 import scala.meta.internal.metals.ServerCommands
 
-object CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
+class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
 
   testAsync("basic") {
     cleanWorkspace()

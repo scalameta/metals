@@ -5,7 +5,7 @@ import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 
-object StepDapSuite extends BaseDapSuite("debug-step") {
+class StepDapSuite extends BaseDapSuite("debug-step") {
   assertSteps("step-out")(
     sources = """|/a/src/main/scala/Main.scala
                  |package a

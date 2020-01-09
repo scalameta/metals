@@ -4,7 +4,7 @@ import scala.meta.internal.builds.Digest
 import scala.meta.internal.builds.Digest.Status._
 import scala.meta.internal.builds.Digests
 
-object DigestsSuite extends BaseTablesSuite {
+class DigestsSuite extends BaseTablesSuite {
   def digests: Digests = tables.digests
   test("basic") {
     assertDiffEqual(digests.setStatus("a", Requested), 1)

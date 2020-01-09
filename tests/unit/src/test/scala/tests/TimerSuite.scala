@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.Timer
 import funsuite.Location
 
-object TimerSuite extends BaseSuite {
+class TimerSuite extends BaseSuite {
   def checkMillis(ms: Long, expected: String)(implicit loc: Location): Unit = {
     checkNanos(TimeUnit.MILLISECONDS.toNanos(ms), expected)
   }

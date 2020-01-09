@@ -6,7 +6,7 @@ import scala.meta.internal.metals.Messages._
 import scala.meta.internal.builds.MillBuildTool
 import tests.BaseImportSuite
 
-object MillLspSuite extends BaseImportSuite("mill-import") {
+class MillLspSuite extends BaseImportSuite("mill-import") {
 
   val buildTool: MillBuildTool = MillBuildTool(() => userConfig)
 

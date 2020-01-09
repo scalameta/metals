@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.ServerCommands
 
-object BuildServerConnectionLspSuite
+class BuildServerConnectionLspSuite
     extends BaseLspSuite("build-server-connection") {
   test("basic".flaky) {
     cleanWorkspace()

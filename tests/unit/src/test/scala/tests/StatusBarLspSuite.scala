@@ -1,7 +1,7 @@
 package tests
 import scala.meta.internal.metals.Icons
 
-object StatusBarLspSuite extends BaseLspSuite("status-bar") {
+class StatusBarLspSuite extends BaseLspSuite("status-bar") {
   override def icons: Icons = Icons.vscode
   testAsync("compile-success") {
     cleanCompileCache("a")

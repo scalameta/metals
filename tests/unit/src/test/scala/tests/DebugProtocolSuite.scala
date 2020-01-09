@@ -4,7 +4,7 @@ import java.util.Collections.emptyList
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 
-object DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
+class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
 
   testAsync("start") {
     for {

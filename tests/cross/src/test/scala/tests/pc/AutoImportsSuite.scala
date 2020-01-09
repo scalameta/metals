@@ -7,7 +7,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.TextEdits
 import funsuite.Location
 
-object AutoImportsSuite extends BaseCodeActionSuite {
+class AutoImportsSuite extends BaseCodeActionSuite {
 
   check(
     "basic",

@@ -5,7 +5,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import tests.BaseCompletionSuite
 import scala.collection.Seq
 
-object CompletionParameterHintSuite extends BaseCompletionSuite {
+class CompletionParameterHintSuite extends BaseCompletionSuite {
 
   override def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl(

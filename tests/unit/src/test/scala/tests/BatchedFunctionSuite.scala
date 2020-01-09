@@ -5,7 +5,7 @@ import scala.meta.internal.metals.BatchedFunction
 import scala.concurrent.ExecutionContext
 import scala.util.Success
 
-object BatchedFunctionSuite extends BaseSuite {
+class BatchedFunctionSuite extends BaseSuite {
   testAsync("batch") {
     implicit val ec = ExecutionContext.global
 

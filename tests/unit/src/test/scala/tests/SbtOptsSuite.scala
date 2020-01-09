@@ -4,7 +4,7 @@ import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.SbtOpts
 import funsuite.Location
 
-object SbtOptsSuite extends BaseSuite {
+class SbtOptsSuite extends BaseSuite {
   def check(name: String, original: String, expected: String)(
       implicit loc: Location
   ): Unit = {

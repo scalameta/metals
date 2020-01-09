@@ -8,7 +8,7 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 
-object BillLspSuite extends BaseLspSuite("bill") {
+class BillLspSuite extends BaseLspSuite("bill") {
 
   def globalBsp: AbsolutePath = workspace.resolve("global-bsp")
   override def bspGlobalDirectories: List[AbsolutePath] =

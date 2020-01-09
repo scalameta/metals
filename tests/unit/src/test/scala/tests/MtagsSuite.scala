@@ -12,7 +12,7 @@ import scala.meta.internal.mtags.Semanticdbs
  * It turns out ScalaMtags is actually more correct semanticdb-scalac when
  * it comes to trickier cases like implicit conversions and pattern matching.
  */
-object MtagsSuite extends DirectoryExpectSuite("mtags") {
+class MtagsSuite extends DirectoryExpectSuite("mtags") {
 
   def hasSemanticdbBug(file: InputFile): Boolean = {
     // don't assert fidelity where semanticdb-scalac has known bugs and mtags is correct.

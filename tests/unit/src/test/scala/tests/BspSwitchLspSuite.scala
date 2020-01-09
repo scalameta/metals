@@ -5,7 +5,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Messages._
 
-object BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
+class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
 
   testAsync("switch") {
     assume(!isWindows, "This test is flaky on Windows")

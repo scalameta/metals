@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionFilenameSuite extends BaseCompletionSuite {
+class CompletionFilenameSuite extends BaseCompletionSuite {
 
   check(
     "class",

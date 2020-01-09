@@ -14,7 +14,7 @@ import scala.sys.process._
 import funsuite.BeforeEach
 import funsuite.AfterEach
 
-object PantsLspSuite extends BaseImportSuite("pants") {
+class PantsLspSuite extends BaseImportSuite("pants") {
 
   val buildTool: PantsBuildTool = PantsBuildTool(() => userConfig)
 

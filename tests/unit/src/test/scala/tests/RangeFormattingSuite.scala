@@ -2,7 +2,7 @@ package tests
 
 import funsuite.Location
 
-object RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
+class RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
 
   check(
     "lines",

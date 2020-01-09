@@ -8,7 +8,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Messages
 import MetalsTestEnrichments._
 
-object WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
+class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 
   testAsync("basic") {
     cleanWorkspace()

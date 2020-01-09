@@ -3,7 +3,7 @@ package tests
 import scala.concurrent.Future
 import funsuite.Location
 
-object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
+class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
   case class Assert(didChange: String => String, expectedDiagnostics: String)
   def check(

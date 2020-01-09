@@ -2,7 +2,7 @@ package tests
 
 import funsuite.Location
 
-object OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
+class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
 
   check(
     "correct-string",

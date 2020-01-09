@@ -4,7 +4,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}
 import funsuite.Location
 
-object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
+class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
   override def skipSuite: Boolean = isWindows
 

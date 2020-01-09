@@ -3,7 +3,7 @@ package tests.feature
 import scala.meta.internal.metals.{BuildInfo => V}
 import tests.BaseCompletionLspSuite
 
-object CompletionCrossLspSuite
+class CompletionCrossLspSuite
     extends BaseCompletionLspSuite("completion-cross") {
 
   if (super.isValidScalaVersionForEnv(V.scala211)) {

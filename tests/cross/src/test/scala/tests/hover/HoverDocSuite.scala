@@ -3,7 +3,7 @@ package tests.hover
 import tests.pc.BaseHoverSuite
 import funsuite.BeforeAll
 
-object HoverDocSuite extends BaseHoverSuite {
+class HoverDocSuite extends BaseHoverSuite {
   override def requiresJdkSources: Boolean = true
 
   override def beforeAll(context: BeforeAll): Unit = {

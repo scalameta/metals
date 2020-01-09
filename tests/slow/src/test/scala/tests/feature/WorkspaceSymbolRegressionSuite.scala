@@ -4,7 +4,7 @@ import bench.Corpus
 import scala.meta.io.AbsolutePath
 import tests.BaseWorkspaceSymbolSuite
 
-object WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
+class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   def workspace: AbsolutePath = Corpus.akka()
   check("Actor", "1025 results")
   check("Actor(", "")

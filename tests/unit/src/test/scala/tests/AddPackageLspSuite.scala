@@ -5,7 +5,7 @@ import java.nio.file.Files
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.MetalsEnrichments._
 
-object AddPackageLspSuite extends BaseLspSuite("add-package") {
+class AddPackageLspSuite extends BaseLspSuite("add-package") {
 
   testAsync("single-level") {
     cleanCompileCache("a")

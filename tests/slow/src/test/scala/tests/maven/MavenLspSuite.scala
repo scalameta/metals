@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets
 import scala.meta.internal.builds.MavenBuildTool
 import tests.BaseImportSuite
 
-object MavenLspSuite extends BaseImportSuite("maven-import") {
+class MavenLspSuite extends BaseImportSuite("maven-import") {
 
   val buildTool: MavenBuildTool = MavenBuildTool(() => userConfig)
 

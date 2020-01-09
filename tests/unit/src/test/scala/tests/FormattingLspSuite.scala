@@ -8,7 +8,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.Messages
 
-object FormattingLspSuite extends BaseLspSuite("formatting") {
+class FormattingLspSuite extends BaseLspSuite("formatting") {
 
   testAsync("basic") {
     for {

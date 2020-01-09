@@ -4,7 +4,7 @@ import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
 import tests.BaseCompletionSuite
 
-object CompletionCaseSuite extends BaseCompletionSuite {
+class CompletionCaseSuite extends BaseCompletionSuite {
 
   def paramHint: Option[String] = Some("param-hint")
 

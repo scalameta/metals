@@ -3,7 +3,7 @@ package tests
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.meta.internal.metals.DependencySources
 
-object DependencySourcesSuite extends BaseTablesSuite {
+class DependencySourcesSuite extends BaseTablesSuite {
   def dependencySources: DependencySources = tables.dependencySources
   test("basic") {
     val textDocument = workspace.resolve("a.scala")

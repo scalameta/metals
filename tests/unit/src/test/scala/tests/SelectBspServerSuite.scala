@@ -5,7 +5,7 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import funsuite.Location
 
-object SelectBspServerSuite extends BaseSuite {
+class SelectBspServerSuite extends BaseSuite {
   def check(
       name: String,
       candidates: List[BspConnectionDetails],

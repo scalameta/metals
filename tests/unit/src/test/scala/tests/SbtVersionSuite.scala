@@ -5,7 +5,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.MetalsServerConfig
 import funsuite.Location
 
-object SbtVersionSuite extends BaseSuite {
+class SbtVersionSuite extends BaseSuite {
   def check(
       layout: String,
       expected: String

@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.docstrings.MarkdownGenerator
 import funsuite.Location
 
-object JavadocSuite extends BaseSuite {
+class JavadocSuite extends BaseSuite {
 
   def check(name: String, original: String, expected: String)(
       implicit loc: Location

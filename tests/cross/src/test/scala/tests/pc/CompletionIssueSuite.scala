@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionIssueSuite extends BaseCompletionSuite {
+class CompletionIssueSuite extends BaseCompletionSuite {
   check(
     "mutate",
     """package a

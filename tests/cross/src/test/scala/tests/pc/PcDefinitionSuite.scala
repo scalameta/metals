@@ -2,7 +2,7 @@ package tests.pc
 
 import funsuite.BeforeAll
 
-object PcDefinitionSuite extends BasePcDefinitionSuite {
+class PcDefinitionSuite extends BasePcDefinitionSuite {
 
   override def beforeAll(context: BeforeAll): Unit = {
     indexJDK()

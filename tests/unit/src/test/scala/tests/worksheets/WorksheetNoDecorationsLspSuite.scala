@@ -5,7 +5,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import tests.TestHovers
 import scala.concurrent.Future
 
-object WorksheetNoDecorationsLspSuite
+class WorksheetNoDecorationsLspSuite
     extends BaseLspSuite("worksheet-no-decorations")
     with TestHovers {
 

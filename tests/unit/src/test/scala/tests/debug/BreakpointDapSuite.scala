@@ -5,7 +5,7 @@ import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage
 
-object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
+class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
   // disabled, because finding enclosing class for the breakpoint line is not working
   // see [[scala.meta.internal.metals.debug.SetBreakpointsRequestHandler]]

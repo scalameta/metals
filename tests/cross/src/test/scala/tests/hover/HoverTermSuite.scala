@@ -2,7 +2,7 @@ package tests.hover
 
 import tests.pc.BaseHoverSuite
 
-object HoverTermSuite extends BaseHoverSuite {
+class HoverTermSuite extends BaseHoverSuite {
 
   check(
     "map",

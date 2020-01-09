@@ -2,7 +2,7 @@ package tests
 
 import java.nio.file.Files
 
-object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
+class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
 
   testAsync("diagnostics") {
     cleanCompileCache("a")

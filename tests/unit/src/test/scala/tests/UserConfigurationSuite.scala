@@ -4,7 +4,7 @@ import java.util.Properties
 import scala.meta.internal.metals.UserConfiguration
 import funsuite.Location
 
-object UserConfigurationSuite extends BaseSuite {
+class UserConfigurationSuite extends BaseSuite {
   def check(
       name: String,
       original: String,

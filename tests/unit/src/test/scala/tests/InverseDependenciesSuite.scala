@@ -6,7 +6,7 @@ import scala.collection.mutable.ListBuffer
 import scala.meta.internal.metals.BuildTargets
 import funsuite.Location
 
-object InverseDependenciesSuite extends BaseSuite {
+class InverseDependenciesSuite extends BaseSuite {
   class Graph(val root: String) {
     val inverseDependencies: mutable.Map[String, ListBuffer[String]] =
       mutable.Map.empty[String, ListBuffer[String]]

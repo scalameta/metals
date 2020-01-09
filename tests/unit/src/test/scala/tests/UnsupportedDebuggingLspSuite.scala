@@ -8,7 +8,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.Failure
 import scala.util.Success
 
-object UnsupportedDebuggingLspSuite
+class UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
 
   override val experimentalCapabilities: Some[ClientExperimentalCapabilities] =

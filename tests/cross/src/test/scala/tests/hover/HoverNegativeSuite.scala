@@ -2,7 +2,7 @@ package tests.hover
 
 import tests.pc.BaseHoverSuite
 
-object HoverNegativeSuite extends BaseHoverSuite {
+class HoverNegativeSuite extends BaseHoverSuite {
 
   // Negative results should have an empty output.
   def checkNegative(name: String, original: String): Unit =

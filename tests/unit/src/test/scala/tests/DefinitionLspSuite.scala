@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
-object DefinitionLspSuite extends BaseLspSuite("definition") {
+class DefinitionLspSuite extends BaseLspSuite("definition") {
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(
       statistics = new StatisticsConfig("diagnostics")

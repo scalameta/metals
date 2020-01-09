@@ -12,7 +12,7 @@ import tests.BaseCompletionSuite
 import scala.meta.internal.pc.InterruptException
 import funsuite.Location
 
-object CancelCompletionSuite extends BaseCompletionSuite {
+class CancelCompletionSuite extends BaseCompletionSuite {
 
   /**
    * A cancel token that cancels asynchronously on first `checkCancelled` call.

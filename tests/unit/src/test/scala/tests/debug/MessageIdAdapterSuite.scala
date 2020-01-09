@@ -13,7 +13,7 @@ import scala.meta.internal.metals.debug.TestingDebugServer
 import scala.meta.internal.metals.debug.MessageIdAdapter
 import funsuite.BeforeEach
 
-object MessageIdAdapterSuite extends BaseSuite {
+class MessageIdAdapterSuite extends BaseSuite {
   private val idCounter = new AtomicInteger(FirstMessageId)
 
   override def beforeEach(context: BeforeEach): Unit = {

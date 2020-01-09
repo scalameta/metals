@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 import funsuite.BeforeEach
 import funsuite.AfterEach
 
-object CompilerJobQueueSuite extends BaseSuite {
+class CompilerJobQueueSuite extends BaseSuite {
   var jobs: CompilerJobQueue = null
 
   override def beforeEach(context: BeforeEach): Unit = {

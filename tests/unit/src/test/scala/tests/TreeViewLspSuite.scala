@@ -3,7 +3,7 @@ package tests
 import scala.collection.SortedSet
 import scala.meta.internal.tvp.TreeViewProvider
 
-object TreeViewLspSuite extends BaseLspSuite("tree-view") {
+class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
   /** The libraries we expect to find for tests in this file.
    *

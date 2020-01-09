@@ -4,7 +4,7 @@ import scala.meta.internal.metals.DidFocusResult._
 import scala.meta.internal.metals.Time
 import funsuite.BeforeEach
 
-object DidFocusLspSuite extends BaseLspSuite("did-focus") {
+class DidFocusLspSuite extends BaseLspSuite("did-focus") {
   var fakeTime: FakeTime = _
   override def time: Time = fakeTime
   override def beforeEach(context: BeforeEach): Unit = {

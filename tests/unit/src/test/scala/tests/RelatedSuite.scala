@@ -8,7 +8,7 @@ import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import funsuite.Location
 
-object RelatedSuite extends BaseSuite {
+class RelatedSuite extends BaseSuite {
   private def addNot(flag: Boolean) =
     if (flag) {
       ""

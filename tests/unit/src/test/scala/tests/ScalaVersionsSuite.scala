@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.ScalaVersions
 
-object ScalaVersionsSuite extends BaseSuite {
+class ScalaVersionsSuite extends BaseSuite {
   test("Idempotent minor release") {
     assert(
       ScalaVersions.dropVendorSuffix("2.12.4") ==

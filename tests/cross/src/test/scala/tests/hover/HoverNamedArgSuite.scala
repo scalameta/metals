@@ -2,7 +2,7 @@ package tests.hover
 
 import tests.pc.BaseHoverSuite
 
-object HoverNamedArgSuite extends BaseHoverSuite {
+class HoverNamedArgSuite extends BaseHoverSuite {
 
   check(
     "named",

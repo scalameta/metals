@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.ChosenBuildServers
 
-object ChosenBuildServerSuite extends BaseTablesSuite {
+class ChosenBuildServerSuite extends BaseTablesSuite {
   def buildServers: ChosenBuildServers = tables.buildServers
   test("basic") {
     assert(buildServers.selectedServer("a").isEmpty)

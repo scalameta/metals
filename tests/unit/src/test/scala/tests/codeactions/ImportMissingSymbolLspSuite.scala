@@ -2,7 +2,7 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
-object ImportMissingSymbolLspSuite
+class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
 
   check(

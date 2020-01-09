@@ -14,7 +14,7 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
-object SbtLspSuite extends BaseImportSuite("sbt-import") {
+class SbtLspSuite extends BaseImportSuite("sbt-import") {
 
   val buildTool: SbtBuildTool = SbtBuildTool("", () => userConfig, serverConfig)
 

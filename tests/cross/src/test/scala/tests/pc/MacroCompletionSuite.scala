@@ -5,7 +5,7 @@ import tests.BaseCompletionSuite
 import scala.collection.Seq
 import funsuite.BeforeAll
 
-object MacroCompletionSuite extends BaseCompletionSuite {
+class MacroCompletionSuite extends BaseCompletionSuite {
   override def extraClasspath: Seq[Path] = thisClasspath
 
   override def scalacOptions: Seq[String] =

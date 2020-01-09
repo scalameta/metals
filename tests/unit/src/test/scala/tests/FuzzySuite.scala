@@ -4,7 +4,7 @@ import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import funsuite.Location
 
-object FuzzySuite extends BaseSuite {
+class FuzzySuite extends BaseSuite {
   def checkOK(query: String, symbol: String)(implicit loc: Location): Unit = {
     test(query) {
       val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)

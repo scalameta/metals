@@ -4,7 +4,7 @@ import tests.BaseCompletionLspSuite
 import scala.meta.internal.metals.BuildInfo
 import scala.concurrent.Future
 
-object DefinitionCrossLspSuite
+class DefinitionCrossLspSuite
     extends BaseCompletionLspSuite("definition-cross") {
 
   if (super.isValidScalaVersionForEnv(BuildInfo.scala211)) {

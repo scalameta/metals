@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 
-object DefinitionDirectorySuite extends BaseSuite {
+class DefinitionDirectorySuite extends BaseSuite {
   test("basic") {
     val index = OnDemandSymbolIndex()
     def assertDefinition(sym: String): Unit = {

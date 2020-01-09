@@ -2,7 +2,7 @@ package tests
 
 import funsuite.Location
 
-object DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
+class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
 
   check(
     "single",

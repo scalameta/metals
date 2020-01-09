@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.metals.TrigramSubstrings
 import funsuite.Location
 
-object TrigramSubstringsSuite extends BaseSuite {
+class TrigramSubstringsSuite extends BaseSuite {
   def check(original: String, expected: String)(
       implicit loc: Location
   ): Unit = {

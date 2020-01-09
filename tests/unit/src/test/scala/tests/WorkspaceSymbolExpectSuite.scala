@@ -6,7 +6,7 @@ import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 
-object WorkspaceSymbolExpectSuite
+class WorkspaceSymbolExpectSuite
     extends DirectoryExpectSuite("workspace-symbol") {
   def testCases(): List[ExpectTestCase] = {
     input.allFiles.map { file =>

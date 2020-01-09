@@ -1,6 +1,6 @@
 package tests
 
-object DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
+class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
 
   testAsync("parse-error") {
     for {

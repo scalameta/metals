@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionBacktickSuite extends BaseCompletionSuite {
+class CompletionBacktickSuite extends BaseCompletionSuite {
 
   check(
     "keyword",

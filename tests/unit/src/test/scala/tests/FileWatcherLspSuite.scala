@@ -3,7 +3,7 @@ package tests
 import java.nio.file.Files
 import scala.meta.internal.metals.RecursivelyDelete
 
-object FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
+class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
   testAsync("basic") {
     cleanCompileCache("a")
     cleanCompileCache("b")

@@ -10,7 +10,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.GradleBuildTool
 import tests.BaseImportSuite
 
-object GradleLspSuite extends BaseImportSuite("gradle-import") {
+class GradleLspSuite extends BaseImportSuite("gradle-import") {
 
   val buildTool: GradleBuildTool = GradleBuildTool(() => userConfig)
 

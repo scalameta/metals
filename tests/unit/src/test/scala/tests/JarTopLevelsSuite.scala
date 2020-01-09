@@ -8,7 +8,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.JarTopLevels
 import scala.meta.internal.io.PlatformFileIO
 
-object JarTopLevelsSuite extends BaseTablesSuite {
+class JarTopLevelsSuite extends BaseTablesSuite {
   private def jarSymbols: JarTopLevels = tables.jarSymbols
   private val tmp: Path = Files.createTempDirectory("metals")
   private val jar1: AbsolutePath = createSourceZip(tmp, "jar1.zip")

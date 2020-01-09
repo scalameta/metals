@@ -1,6 +1,6 @@
 package tests
 
-object WindowStateDidChangeLspSuite
+class WindowStateDidChangeLspSuite
     extends BaseLspSuite("window-state-did-change") {
   testAsync("basic") {
     for {

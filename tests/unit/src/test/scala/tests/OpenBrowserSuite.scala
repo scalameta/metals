@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.metals.Urls
 import scala.meta.internal.metals.ServerCommands
 
-object OpenBrowserSuite extends BaseSuite {
+class OpenBrowserSuite extends BaseSuite {
   val scalaLang = "https://www.scala-lang.org/"
   test("open-url") {
     val command = ServerCommands.OpenBrowser(scalaLang)

@@ -3,7 +3,7 @@ package tests.pc
 import tests.BaseCompletionSuite
 import funsuite.Location
 
-object PrettyPrintSuite extends BaseCompletionSuite {
+class PrettyPrintSuite extends BaseCompletionSuite {
 
   def checkSignature(
       name: String,

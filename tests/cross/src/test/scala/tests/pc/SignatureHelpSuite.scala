@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseSignatureHelpSuite
 
-object SignatureHelpSuite extends BaseSignatureHelpSuite {
+class SignatureHelpSuite extends BaseSignatureHelpSuite {
 
   check(
     "method",

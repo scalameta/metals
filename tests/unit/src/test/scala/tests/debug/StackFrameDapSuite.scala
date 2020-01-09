@@ -7,7 +7,7 @@ import scala.meta.internal.metals.debug.StackFrameCollector
 import scala.meta.internal.metals.debug.Variable
 import scala.meta.internal.metals.debug.Variables
 
-object StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
+class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
   assertStackFrame("foreach")(
     source = """|a/src/main/scala/Main.scala
                 |object Main {

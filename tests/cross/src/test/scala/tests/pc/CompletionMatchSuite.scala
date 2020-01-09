@@ -3,7 +3,7 @@ package tests.pc
 import tests.BaseCompletionSuite
 import funsuite.BeforeAll
 
-object CompletionMatchSuite extends BaseCompletionSuite {
+class CompletionMatchSuite extends BaseCompletionSuite {
 
   override def beforeAll(context: BeforeAll): Unit = {
     indexScalaLibrary()

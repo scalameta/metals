@@ -2,7 +2,7 @@ package tests
 import scala.concurrent.Future
 import funsuite.Location
 
-object ImplementationLspSuite extends BaseLspSuite("implementation") {
+class ImplementationLspSuite extends BaseLspSuite("implementation") {
 
   check(
     "basic",

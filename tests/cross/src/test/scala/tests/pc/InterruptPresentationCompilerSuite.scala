@@ -17,7 +17,7 @@ import funsuite.BeforeEach
 import funsuite.BeforeAll
 import funsuite.Location
 
-object InterruptPresentationCompilerSuite extends BasePCSuite {
+class InterruptPresentationCompilerSuite extends BasePCSuite {
   class InterruptSymbolIndex
       extends DelegatingGlobalSymbolIndex(OnDemandSymbolIndex()) {
     val token = new AtomicReference(new CompletableCancelToken())

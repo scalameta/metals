@@ -1,6 +1,6 @@
 package tests
 
-object BuildTargetsLspSuite
+class BuildTargetsLspSuite
     extends BaseLspSuite("build-targets")
     with TestHovers {
 

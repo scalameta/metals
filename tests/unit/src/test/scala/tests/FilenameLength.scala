@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.metals.Fuzzy
 import funsuite.Location
 
-object FilenameLength extends BaseSuite {
+class FilenameLength extends BaseSuite {
   def check(filename: String, expected: String)(
       implicit loc: Location
   ): Unit = {

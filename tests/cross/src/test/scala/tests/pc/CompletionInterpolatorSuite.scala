@@ -3,7 +3,7 @@ package tests.pc
 import tests.BaseCompletionSuite
 import tests.pc.CrossTestEnrichments._
 
-object CompletionInterpolatorSuite extends BaseCompletionSuite {
+class CompletionInterpolatorSuite extends BaseCompletionSuite {
 
   checkEdit(
     "string",

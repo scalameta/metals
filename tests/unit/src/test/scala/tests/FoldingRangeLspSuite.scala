@@ -2,7 +2,7 @@ package tests
 
 import scala.concurrent.Future
 
-object FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
+class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
   testAsync("parse-error") {
     for {
       _ <- server.initialize(

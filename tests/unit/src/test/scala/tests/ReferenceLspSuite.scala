@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.ServerCommands
 
-object ReferenceLspSuite extends BaseLspSuite("reference") {
+class ReferenceLspSuite extends BaseLspSuite("reference") {
   testAsync("case-class") {
     cleanWorkspace()
     for {

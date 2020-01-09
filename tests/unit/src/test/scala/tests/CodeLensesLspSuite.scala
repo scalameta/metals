@@ -2,7 +2,7 @@ package tests
 import scala.concurrent.Future
 import funsuite.Location
 
-object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
+class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
     """|<<run>><<debug>>
        |object Main {
