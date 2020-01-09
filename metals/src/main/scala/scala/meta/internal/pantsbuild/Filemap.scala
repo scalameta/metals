@@ -4,7 +4,6 @@ import java.nio.file.Path
 import scala.collection.mutable
 import scala.meta.internal.process.SystemProcess
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.ansi.LineListener
 import scala.concurrent.ExecutionContext
 import java.nio.file.Files
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -48,8 +47,7 @@ object Filemap {
           targets,
         reproduceCommand,
         workspace,
-        EmptyCancelToken,
-        LineListener.info
+        EmptyCancelToken
       )
       catch {
         case NonFatal(e) =>

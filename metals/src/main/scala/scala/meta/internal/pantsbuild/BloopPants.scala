@@ -24,7 +24,6 @@ import scala.util.control.NonFatal
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.metals.MetalsLogger
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.ansi.LineListener
 import java.util.concurrent.CancellationException
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import scala.sys.process.Process
@@ -235,8 +234,7 @@ object BloopPants {
       command,
       command,
       args.workspace,
-      args.token,
-      LineListener.info
+      args.token
     )
   }
 
