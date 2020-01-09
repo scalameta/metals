@@ -243,13 +243,15 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-defdef-type-poly",
-    """|object A {
+    "scaladoc-defdef-type-typeclass",
+    """|// do not add compiler generated param like `evidence$1`
+       |object A {
        |  /**@@
        |  def test[T: Ordering](x: T, y: T): T = if(x < y) x else y
        |}
        |""".stripMargin,
-    """|object A {
+    """|// do not add compiler generated param like `evidence$1`
+       |object A {
        |  /**
        |    * $0
        |    *
@@ -258,6 +260,26 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |    * @return
        |    */
        |  def test[T: Ordering](x: T, y: T): T = if(x < y) x else y
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "scaladoc-classdef-type-typeclass",
+    """|object A {
+       |  /**@@
+       |  case class Test[T: Ordering](x: T, y: T) {}
+       |}
+       |""".stripMargin,
+    """|object A {
+       |  /**
+       |    * $0
+       |    *
+       |    * @constructor
+       |    * @param x
+       |    * @param y
+       |    */
+       |  case class Test[T: Ordering](x: T, y: T) {}
        |}
        |""".stripMargin
   )

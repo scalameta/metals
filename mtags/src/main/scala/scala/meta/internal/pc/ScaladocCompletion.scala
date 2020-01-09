@@ -116,14 +116,21 @@ trait ScaladocCompletion { this: MetalsGlobal =>
     private def getParams(memberDef: MemberDef): List[String] = {
       memberDef match {
         case defdef: DefDef =>
-          defdef.vparamss.flatten.map(param => param.name.toString())
+          defdef.symbol.paramss.flatten
+            .filter(!_.isSynthetic)
+            .map(_.name.toString())
         case clazz: ClassDef =>
           // If the associated def is a class definition,
           // retrieve the constructor from the class, and caluculate the lines
           // from the constructor definition instead.
-          clazz.symbol.primaryConstructor.paramss.flatten.map(sym =>
-            sym.name.toString()
-          )
+          clazz.symbol.primaryConstructor.paramss.flatten
+            .filter(sym =>
+              // FIXME: All synthetic params should be filtered out by checking SYNTHETIC flag.
+              // evidence params for classs constructor look like they don't have SYNTHETIC flag.
+              !sym.isSynthetic &&
+                !sym.name.startsWith(nme.EVIDENCE_PARAM_PREFIX)
+            )
+            .map(_.name.toString())
         case _ => Nil
       }
     }
