@@ -52,7 +52,7 @@ object BatchedFunctionSuite extends BaseSuite {
     }
 
     val unpaused = mkString(List("a"))
-    assertEquals(unpaused.value, Some(Success("a")))
+    assertDiffEqual(unpaused.value, Some(Success("a")))
 
     mkString.pause()
 
@@ -63,7 +63,7 @@ object BatchedFunctionSuite extends BaseSuite {
 
     mkString.unpause()
 
-    assertEquals(paused.value, Some(Success("bc")))
-    assertEquals(paused2.value, Some(Success("bc")))
+    assertDiffEqual(paused.value, Some(Success("bc")))
+    assertDiffEqual(paused2.value, Some(Success("bc")))
   }
 }

@@ -195,25 +195,23 @@ final class TestingServer(
     }
   }
 
-  def assertReferenceDefinitionBijection(): Unit = {
+  def assertReferenceDefinitionBijection()(
+      implicit loc: funsuite.Location
+  ): Unit = {
     val compare = workspaceReferences()
     assert(compare.definition.nonEmpty)
     assert(compare.references.nonEmpty)
-    DiffAssertions.assertNoDiff(
+    Assertions.assertNoDiff(
       compare.referencesFormat,
-      compare.definitionFormat,
-      "references",
-      "definition"
+      compare.definitionFormat
     )
   }
   def assertReferenceDefinitionDiff(
       expectedDiff: String
-  ): Unit = {
-    DiffAssertions.assertNoDiffOrPrintObtained(
+  )(implicit loc: funsuite.Location): Unit = {
+    Assertions.assertNoDiffOrPrintObtained(
       workspaceReferences().diff,
-      expectedDiff,
-      "references",
-      "definition"
+      expectedDiff
     )
   }
   def workspaceReferences(): WorkspaceSymbolReferences = {
@@ -455,7 +453,7 @@ final class TestingServer(
       expected: String,
       autoIndent: String,
       root: AbsolutePath = workspace
-  ): Future[Unit] = {
+  )(implicit loc: funsuite.Location): Future[Unit] = {
     for {
       (text, params) <- onTypeParams(filename, query, root, autoIndent)
       multiline <- server.onTypeFormatting(params).asScala
@@ -464,12 +462,7 @@ final class TestingServer(
         multiline.asScala.toList
       )
     } yield {
-      DiffAssertions.assertNoDiffOrPrintObtained(
-        format,
-        expected,
-        "obtained",
-        "expected"
-      )
+      Assertions.assertNoDiffOrPrintObtained(format, expected)
     }
   }
 
@@ -479,7 +472,7 @@ final class TestingServer(
       expected: String,
       paste: String,
       root: AbsolutePath = workspace
-  ): Future[Unit] = {
+  )(implicit loc: funsuite.Location): Future[Unit] = {
     for {
       (text, params) <- rangeFormattingParams(filename, query, paste, root)
       multiline <- server.rangeFormatting(params).asScala
@@ -488,12 +481,7 @@ final class TestingServer(
         multiline.asScala.toList
       )
     } yield {
-      DiffAssertions.assertNoDiffOrPrintObtained(
-        format,
-        expected,
-        "obtained",
-        "expected"
-      )
+      Assertions.assertNoDiffOrPrintObtained(format, expected)
     }
   }
 
@@ -683,16 +671,11 @@ final class TestingServer(
       query: String,
       expected: String,
       root: AbsolutePath = workspace
-  ): Future[Unit] = {
+  )(implicit loc: funsuite.Location): Future[Unit] = {
     for {
       hover <- hover(filename, query, root)
     } yield {
-      DiffAssertions.assertNoDiffOrPrintObtained(
-        hover,
-        expected,
-        "obtained",
-        "expected"
-      )
+      Assertions.assertNoDiffOrPrintObtained(hover, expected)
     }
   }
 
@@ -701,16 +684,11 @@ final class TestingServer(
       query: String,
       expected: String,
       root: AbsolutePath = workspace
-  ): Future[List[l.CodeAction]] =
+  )(implicit loc: funsuite.Location): Future[List[l.CodeAction]] =
     for {
       (codeActions, codeActionString) <- codeAction(filename, query, root)
     } yield {
-      DiffAssertions.assertNoDiffOrPrintObtained(
-        codeActionString,
-        expected,
-        "obtained",
-        "expected"
-      )
+      Assertions.assertNoDiffOrPrintObtained(codeActionString, expected)
       codeActions
     }
 
@@ -756,16 +734,11 @@ final class TestingServer(
       query: String,
       expected: String,
       root: AbsolutePath = workspace
-  ): Future[Unit] = {
+  )(implicit loc: funsuite.Location): Future[Unit] = {
     for {
       highlight <- highlight(filename, query, root)
     } yield {
-      DiffAssertions.assertNoDiffOrPrintObtained(
-        highlight,
-        expected,
-        "obtained",
-        "expected"
-      )
+      Assertions.assertNoDiffOrPrintObtained(highlight, expected)
     }
   }
 
@@ -788,7 +761,7 @@ final class TestingServer(
       expected: Map[String, String],
       files: Set[String],
       newName: String
-  ): Future[Unit] = {
+  )(implicit loc: funsuite.Location): Future[Unit] = {
     for {
       renames <- rename(filename, query, files, newName)
     } yield {
@@ -799,12 +772,7 @@ final class TestingServer(
             s"Unexpected file obtained from renames: $file"
           )
           val expectedImpl = expected(file)
-          DiffAssertions.assertNoDiffOrPrintObtained(
-            obtained,
-            expectedImpl,
-            "obtained",
-            "expected"
-          )
+          Assertions.assertNoDiffOrPrintObtained(obtained, expectedImpl)
       }
     }
   }
@@ -876,18 +844,16 @@ final class TestingServer(
       query: String,
       expected: Map[String, String],
       base: Map[String, String]
-  ): Future[Unit] = {
+  )(implicit loc: funsuite.Location): Future[Unit] = {
     for {
       implementations <- implementation(filename, query, base)
     } yield {
       implementations.foreach {
         case (file, obtained) =>
           val expectedImpl = expected(file)
-          DiffAssertions.assertNoDiffOrPrintObtained(
+          Assertions.assertNoDiffOrPrintObtained(
             obtained,
-            expectedImpl,
-            "obtained",
-            "expected"
+            expectedImpl
           )
       }
     }
@@ -1128,7 +1094,7 @@ final class TestingServer(
   def assertTreeViewChildren(
       uri: String,
       expected: String
-  )(implicit line: sourcecode.Line, file: sourcecode.File): Unit = {
+  )(implicit loc: funsuite.Location): Unit = {
     val viewId: String = TreeViewProvider.Build
     val result =
       server.treeView.children(TreeViewChildrenParams(viewId, uri)).nodes
@@ -1147,7 +1113,7 @@ final class TestingServer(
         s"${libraryName}${icon}${collapse}"
       }
       .mkString("\n")
-    DiffAssertions.assertNoDiff(obtained, expected, "obtained", "expected")
+    Assertions.assertNoDiff(obtained, expected)
   }
 
   def textContents(filename: String): String =

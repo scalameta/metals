@@ -15,7 +15,7 @@ object LineListenerSuite extends BaseSuite {
       val output = new LineListener(line => buf += line)
       act(output)
       output.flushIfNonEmpty()
-      assertEquals(buf.toList, expected)
+      assertDiffEqual(buf.toList, expected)
     }
   }
 

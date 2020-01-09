@@ -51,7 +51,7 @@ object MtagsSuite extends DirectoryExpectSuite("mtags") {
             val semanticdbExpected = Semanticdbs.printTextDocument(
               semanticdb.withOccurrences(globalDefinitions)
             )
-            DiffAssertions.expectNoDiff(
+            Assertions.assertNoDiff(
               obtained,
               semanticdbExpected,
               "mtags == obtained, semanticdb-scalac == expected"

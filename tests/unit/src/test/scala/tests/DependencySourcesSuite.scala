@@ -9,19 +9,19 @@ object DependencySourcesSuite extends BaseTablesSuite {
     val textDocument = workspace.resolve("a.scala")
     val buildTarget = new BuildTargetIdentifier("core")
     val buildTarget2 = new BuildTargetIdentifier("core2")
-    assertEquals(
+    assertDiffEqual(
       dependencySources.setBuildTarget(textDocument, buildTarget),
       1
     )
-    assertEquals(
+    assertDiffEqual(
       dependencySources.getBuildTarget(textDocument).get,
       buildTarget
     )
-    assertEquals(
+    assertDiffEqual(
       dependencySources.setBuildTarget(textDocument, buildTarget2),
       1
     )
-    assertEquals(
+    assertDiffEqual(
       dependencySources.getBuildTarget(textDocument).get,
       buildTarget2
     )

@@ -76,7 +76,7 @@ object MessageIdAdapterSuite extends BaseSuite {
 
     messages.foreach(adapter.consume)
 
-    assertEquals(responses.size, 1)
+    assertDiffEqual(responses.size, 1)
     assertId(responses.head, FirstMessageId)
   }
 
@@ -91,7 +91,7 @@ object MessageIdAdapterSuite extends BaseSuite {
   def assertId(obtained: Message, expected: Int): Unit = {
     obtained match {
       case message: IdentifiableMessage =>
-        assertEquals(message.getId.toInt, expected)
+        assertDiffEqual(message.getId.toInt, expected)
       case _ =>
         fail(s"Not an identifiable message: $obtained")
     }

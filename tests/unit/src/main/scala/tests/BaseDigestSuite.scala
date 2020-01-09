@@ -33,12 +33,12 @@ trait BaseDigestSuite extends BaseSuite {
     test(name) {
       val root = FileLayout.fromString(layout)
       val altRoot = FileLayout.fromString(altLayout)
-      assertEquals(
+      assertDiffEqual(
         digestCurrent(root),
         digestCurrent(root),
         "First layout should be equal when run twice"
       )
-      assertEquals(
+      assertDiffEqual(
         digestCurrent(altRoot),
         digestCurrent(altRoot),
         "Second layout should be equal when run twice"

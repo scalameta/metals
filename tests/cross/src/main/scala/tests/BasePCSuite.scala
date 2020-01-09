@@ -61,10 +61,9 @@ abstract class BasePCSuite extends BaseSuite {
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
 
   override def afterAll(context: AfterAll): Unit = {
-    // FIXME(gabro)
-    // executorService.shutdown()
     pc.shutdown()
     RecursivelyDelete(tmp)
+    executorService.shutdown()
   }
 
   def requiresJdkSources: Boolean = false

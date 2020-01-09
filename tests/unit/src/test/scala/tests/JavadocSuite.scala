@@ -170,7 +170,7 @@ object JavadocSuite extends BaseSuite {
         |**Returns:** the image at the specified URL
         |
         |**Throws**
-        |- `IOException`:
+        |- `IOException`: 
         |
         |**See**
         |- [Image](Image)""".stripMargin

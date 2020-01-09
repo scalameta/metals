@@ -34,12 +34,7 @@ abstract class SingleFileExpectSuite(filename: String)
   }
 
   test(filename) {
-    val obtainedString = obtained()
-    val expectedString = expected()
-    DiffAssertions.expectNoDiff(
-      obtainedString,
-      expectedString
-    )
+    assertNoDiff(obtained(), expected())
   }
 }
 

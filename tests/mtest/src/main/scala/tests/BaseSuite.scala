@@ -7,22 +7,27 @@ import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.mtags
 import scala.meta.internal.semver.SemVer
 import scala.util.Properties
-import scala.meta.io.AbsolutePath
 import funsuite.Test
+import funsuite.Location
 
-class BaseSuite extends funsuite.FunSuite {
+class BaseSuite extends funsuite.FunSuite with Assertions {
   def isJava8: Boolean =
     !Properties.isJavaAtLeast("9")
+
   def isScala211: Boolean =
     mtags.BuildInfo.scalaCompilerVersion.startsWith("2.11")
+
   def hasJdkSources: Boolean = JdkSources().isDefined
+
   def isWindows: Boolean =
     Properties.isWin
+
   def isValidScalaVersionForEnv(scalaVersion: String): Boolean =
     this.isJava8 || SemVer.isCompatibleVersion(
       BaseSuite.minScalaVersionForJDK9OrHigher,
       scalaVersion
     )
+
   def skipSuite: Boolean = false
 
   override def funsuiteTests(): Seq[Test] = {
@@ -30,48 +35,12 @@ class BaseSuite extends funsuite.FunSuite {
     else super.funsuiteTests()
   }
 
-  def assertNotEmpty(string: String): Unit = {
-    if (string.isEmpty) {
-      fail(s"expected non-empty string, obtained empty string.")
-    }
-  }
-  def assertEmpty(string: String): Unit = {
-    if (!string.isEmpty) {
-      fail(s"expected empty string, obtained: $string")
-    }
-  }
-  def assertContains(string: String, substring: String): Unit = {
-    assert(string.contains(substring))
-  }
-  def assertNotContains(string: String, substring: String): Unit = {
-    assert(!string.contains(substring))
-  }
-  def assertNotEquals[T](obtained: T, expected: T, hint: String = ""): Unit = {
-    if (obtained == expected) {
-      val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
-      assertNoDiff(obtained.toString, expected.toString, hint)
-      fail(s"obtained=<$obtained> == expected=<$expected>$hintMsg")
-    }
-  }
-  def assertEquals[T](obtained: T, expected: T, hint: String = ""): Unit = {
-    if (obtained != expected) {
-      val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
-      assertNoDiff(obtained.toString, expected.toString, hint)
-      fail(s"obtained=<$obtained> != expected=<$expected>$hintMsg")
-    }
-  }
-  def assertIsNotDirectory(path: AbsolutePath): Unit = {
-    if (path.isDirectory) {
-      fail(s"directory exists: $path")
-    }
-  }
-
   def testAsync(
       options: funsuite.TestOptions,
       maxDuration: Duration = Duration("10min")
   )(
       run: => Future[Unit]
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(options) {
       val fut = run
       Await.result(fut, maxDuration)
@@ -96,10 +65,12 @@ class BaseSuite extends funsuite.FunSuite {
       .get(scalaBinary(scalaVersion))
       .orElse(compatProcess.get(scalaVersion))
       .getOrElse(identity[String] _)
+
     val result = compat
       .get(scalaBinary(scalaVersion))
       .orElse(compat.get(scalaVersion))
       .getOrElse(default)
+
     postProcess(result)
   }
 }

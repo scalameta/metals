@@ -12,6 +12,6 @@ final class FoldingRangesSuite extends BaseSuite {
 
     ranges.add("Region", range)
 
-    assertEquals(range.getEndLine, lastLine - 1)
+    assertDiffEqual(range.getEndLine, lastLine - 1)
   }
 }

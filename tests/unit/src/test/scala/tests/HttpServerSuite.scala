@@ -17,7 +17,7 @@ object HttpServerSuite extends BaseSuite {
     }
     try {
       val ports = sockets.map(_.getLocalPort)
-      assertEquals(ports.distinct.length, ports.length)
+      assertDiffEqual(ports.distinct.length, ports.length)
     } finally {
       Cancelable.cancelEach(sockets)(_.close())
     }
