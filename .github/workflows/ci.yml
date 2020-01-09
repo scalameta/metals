@@ -23,6 +23,27 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.${{ matrix.java }}"
+      - uses: actions/cache@v1
+        if: startsWith(runner.os, 'Linux')
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
+      - uses: actions/cache@v1
+        if: startsWith(runner.os, 'Windows')
+        with:
+          path: ~\AppData\Local\Coursier\Cache\v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
+      - uses: actions/cache@v1
+        if: startsWith(runner.os, 'macOS')
+        with:
+          path: ~/Library/Caches/Coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - name: Run unit tests
         run: |
           bin/test.sh unit/test
@@ -35,6 +56,12 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - name: Run Sbt tests
         run: bin/test.sh 'slow/testOnly -- tests.sbt'
   maven:
@@ -45,6 +72,12 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - name: Run Maven tests
         run: bin/test.sh 'slow/testOnly -- tests.maven'
   gradle:
@@ -55,6 +88,12 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - name: Run Gradle tests
         run: bin/test.sh 'slow/testOnly -- tests.gradle'
   mill:
@@ -65,6 +104,12 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - name: Run Mill tests
         run: bin/test.sh 'slow/testOnly -- tests.mill'
   pants:
@@ -75,6 +120,12 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - name: Run Pants tests
         run: bin/test.sh 'slow/testOnly -- tests.pants'
   feature:
@@ -85,6 +136,12 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - name: Run LSP tests
         run: bin/test.sh 'slow/testOnly -- tests.feature'
   cross:
@@ -95,6 +152,12 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - name: Run cross tests
         run: sbt +cross/test
   checks:
@@ -105,6 +168,12 @@ jobs:
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
       - uses: actions/setup-node@v1
       - run: git fetch --depth=10000
       - run: git fetch --tags
