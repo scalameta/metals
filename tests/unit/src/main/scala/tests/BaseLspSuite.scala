@@ -56,7 +56,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
     assertNoDiff(obtained, expectedName)
   }
 
-  def newServer(workspaceName: String) = {
+  def newServer(workspaceName: String): Unit = {
     workspace = createWorkspace(workspaceName)
     val buffers = Buffers()
     val config = serverConfig.copy(

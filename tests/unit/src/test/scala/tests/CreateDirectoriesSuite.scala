@@ -1,7 +1,6 @@
 package tests
 
 import java.nio.file.Files
-import java.nio.file.FileAlreadyExistsException
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.MetalsEnrichments._
 
