@@ -25,8 +25,10 @@ for line in stdoutput.split("\n"):
     all_prs.append(int(pr_num[0][1:]))
 
 for pr in all_prs:
-    pull = repo.get_pull(pr)
-    print ("- %s" % pull.title)
-    print ("[\#%s](%s)" % (pull.number, pull.html_url))
-    print ("([%s](https://github.com/%s))" % (pull.user.login, pull.user.login))
-
+    try:
+        pull = repo.get_pull(pr)
+        print ("- %s" % pull.title)
+        print ("[\#%s](%s)" % (pull.number, pull.html_url))
+        print ("([%s](https://github.com/%s))" % (pull.user.login, pull.user.login))
+    except Exception:
+        print ("Cannot read PR %s" % pr)
