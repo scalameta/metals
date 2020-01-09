@@ -4,6 +4,7 @@ import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage
+import funsuite.Location
 
 class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
@@ -600,7 +601,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
   def assertBreakpoints(name: String, disabled: Boolean = false)(
       source: String
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     if (disabled) return
 
     testAsync(name) {

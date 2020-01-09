@@ -1048,7 +1048,7 @@ final class TestingServer(
       filename: String,
       linePattern: String,
       isIgnored: String => Boolean = _ => true
-  )(implicit sourcecodeLine: sourcecode.Line, file: sourcecode.File): String = {
+  )(implicit loc: funsuite.Location): String = {
     val path = toPath(filename)
     val line = path.toInput.value.linesIterator.zipWithIndex
       .collectFirst {

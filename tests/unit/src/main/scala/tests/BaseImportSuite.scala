@@ -6,6 +6,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.MetalsServerConfig
+import funsuite.Location
 
 abstract class BaseImportSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
@@ -32,14 +33,16 @@ abstract class BaseImportSuite(suiteName: String)
     currentDigest(workspace).getOrElse {
       fail("no checksum for workspace")
     }
-  def assertNoStatus(): Unit =
+  def assertNoStatus()(implicit loc: Location): Unit =
     server.server.tables.digests.getStatus(currentChecksum()) match {
       case Some(value) =>
         fail(s"expected no status. obtained $value")
       case None =>
         () // OK
     }
-  def assertStatus(fn: Digest.Status => Boolean): Unit = {
+  def assertStatus(
+      fn: Digest.Status => Boolean
+  )(implicit loc: Location): Unit = {
     val checksum = currentChecksum()
     server.server.tables.digests.getStatus(checksum) match {
       case Some(status) =>

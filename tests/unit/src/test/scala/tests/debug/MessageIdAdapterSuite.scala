@@ -12,6 +12,7 @@ import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
 import scala.meta.internal.metals.debug.TestingDebugServer
 import scala.meta.internal.metals.debug.MessageIdAdapter
 import funsuite.BeforeEach
+import funsuite.Location
 
 class MessageIdAdapterSuite extends BaseSuite {
   private val idCounter = new AtomicInteger(FirstMessageId)
@@ -88,7 +89,9 @@ class MessageIdAdapterSuite extends BaseSuite {
     request
   }
 
-  def assertId(obtained: Message, expected: Int): Unit = {
+  def assertId(obtained: Message, expected: Int)(
+      implicit loc: Location
+  ): Unit = {
     obtained match {
       case message: IdentifiableMessage =>
         assertDiffEqual(message.getId.toInt, expected)

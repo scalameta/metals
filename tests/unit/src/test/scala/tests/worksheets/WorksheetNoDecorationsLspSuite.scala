@@ -4,6 +4,7 @@ import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
 import tests.TestHovers
 import scala.concurrent.Future
+import funsuite.Location
 
 class WorksheetNoDecorationsLspSuite
     extends BaseLspSuite("worksheet-no-decorations")
@@ -89,7 +90,7 @@ class WorksheetNoDecorationsLspSuite
       filename: String,
       query: String,
       expected: String*
-  ): Future[Unit] = {
+  )(implicit loc: Location): Future[Unit] = {
     val queriesAndExpected =
       "@@".r
         .findAllMatchIn(query)

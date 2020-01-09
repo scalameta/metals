@@ -228,7 +228,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       relativeFile: String,
       expected: String,
       maxRetries: Int = 4
-  ): Future[Unit] = {
+  )(implicit loc: Location): Future[Unit] = {
     val obtained = server.codeLenses(relativeFile)(maxRetries).recover {
       case _: NoSuchElementException =>
         server.textContents(relativeFile)
@@ -240,7 +240,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   private def assertNoCodeLenses(
       relativeFile: String,
       maxRetries: Int = 4
-  ): Future[Unit] = {
+  )(implicit loc: Location): Future[Unit] = {
     server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
       case _: NoSuchElementException => Future.unit
       case e => Future.failed(e)

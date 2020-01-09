@@ -19,6 +19,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.SlowTaskConfig
 import funsuite.BeforeEach
 import funsuite.Ignore
+import funsuite.Location
 
 /**
  * Full end to end integration tests against a full metals language server.
@@ -51,7 +52,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
 
   def assertConnectedToBuildServer(
       expectedName: String
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+  )(implicit loc: Location): Unit = {
     val obtained = server.server.buildServer.get.name
     assertNoDiff(obtained, expectedName)
   }
@@ -101,8 +102,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   }
 
   def assertNoDiagnostics()(
-      implicit file: sourcecode.File,
-      line: sourcecode.Line
+      implicit loc: Location
   ): Unit = {
     assertNoDiff(client.workspaceDiagnostics, "")
   }

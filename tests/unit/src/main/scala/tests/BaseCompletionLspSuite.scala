@@ -3,12 +3,13 @@ package tests
 import org.eclipse.lsp4j.CompletionList
 import scala.concurrent.Future
 import scala.meta.internal.metals.TextEdits
+import funsuite.Location
 
 abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
 
   def withCompletion(query: String, project: Char = 'a')(
       fn: CompletionList => Unit
-  )(implicit file: sourcecode.File, line: sourcecode.Line): Future[Unit] = {
+  )(implicit loc: Location): Future[Unit] = {
     val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
     val text = server
       .textContentsOnDisk(filename)
@@ -27,7 +28,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       project: Char = 'a',
       includeDetail: Boolean = true,
       filter: String => Boolean = _ => true
-  )(implicit file: sourcecode.File, line: sourcecode.Line): Future[Unit] = {
+  )(implicit loc: Location): Future[Unit] = {
     withCompletion(query, project) { list =>
       val completion = server.formatCompletion(list, includeDetail, filter)
       assertNoDiff(completion, expected)
@@ -62,7 +63,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       expected: String,
       project: Char = 'a',
       filter: String => Boolean = _ => true
-  ): Future[Unit] = {
+  )(implicit loc: Location): Future[Unit] = {
     withCompletionEdit(query, project, filter) { obtained =>
       assertNoDiff(obtained, expected)
     }
