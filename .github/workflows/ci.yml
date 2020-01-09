@@ -39,7 +39,8 @@ jobs:
       - uses: actions/cache@v1
         with:
           path: ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('project/build.properties') }}-${{ hashFiles('project/plugins.sbt') }}
+          key: |
+            ${{ runner.os }}-sbt-${{ hashFiles('project/build.properties') }}-${{ hashFiles('project/plugins.sbt') }}
           restore-keys: ${{ runner.os }}-sbt-
       - name: Run unit tests
         run: |
@@ -52,34 +53,45 @@ jobs:
       fail-fast: false
       matrix:
         type:
-          [gradle-mac, sbt, maven, gradle, pants, mill, feature, cross, scalafmt, scalafix]
+          [
+            gradle-mac,
+            sbt,
+            maven,
+            gradle,
+            pants,
+            mill,
+            feature,
+            cross,
+            scalafmt,
+            scalafix,
+          ]
         include:
           - type: gradle-mac
-            command: bin/test.sh 'slow/testOnly -- tests.gradle'
+            command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
             name: Gradle MacOS integration
             os: macOS-latest
           - type: sbt
-            command: bin/test.sh 'slow/testOnly -- tests.sbt'
+            command: bin/test.sh 'slow/testOnly -- tests.sbt.*'
             name: Sbt integration
             os: ubuntu-latest
           - type: maven
-            command: bin/test.sh 'slow/testOnly -- tests.maven'
+            command: bin/test.sh 'slow/testOnly -- tests.maven.*'
             name: Maven integration
             os: ubuntu-latest
           - type: gradle
-            command: bin/test.sh 'slow/testOnly -- tests.gradle'
+            command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
             name: Gradle integration
             os: ubuntu-latest
           - type: pants
-            command: bin/test.sh 'slow/testOnly -- tests.pants'
+            command: bin/test.sh 'slow/testOnly -- tests.pants.*'
             name: Pants integration
             os: ubuntu-latest
           - type: mill
-            command: bin/test.sh 'slow/testOnly -- tests.mill'
+            command: bin/test.sh 'slow/testOnly -- tests.mill.*'
             name: Mill integration
             os: ubuntu-latest
           - type: feature
-            command: bin/test.sh 'slow/testOnly -- tests.feature'
+            command: bin/test.sh 'slow/testOnly -- tests.feature.*'
             name: LSP integration tests
             os: ubuntu-latest
           - type: cross
@@ -107,7 +119,9 @@ jobs:
       - uses: actions/cache@v1
         with:
           path: ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('project/build.properties') }}-${{ hashFiles('project/plugins.sbt') }}
+          key:
+            ${{ runner.os }}-sbt-${{ hashFiles('project/build.properties')
+            }}-${{ hashFiles('project/plugins.sbt') }}
           restore-keys: ${{ runner.os }}-sbt-
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
