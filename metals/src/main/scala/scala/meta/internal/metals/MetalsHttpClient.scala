@@ -60,7 +60,9 @@ final class MetalsHttpClient(
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
-  ): Unit = {}
+  ): Unit = {
+    underlying.metalsExecuteClientCommand(params)
+  }
 
   // =============
   // metals/status
