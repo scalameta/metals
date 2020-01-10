@@ -6,7 +6,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 
 object MtagsEnrichmentsSuite extends BaseSuite {
 
-  test("XtensionLspRange.encloses - single line") {
+  test("LspRange-single-line") {
     def r(start: l.Position, end: l.Position) = new l.Range(start, end)
     def p(line: Int, character: Int) = new l.Position(line, character)
     assert(
@@ -20,7 +20,7 @@ object MtagsEnrichmentsSuite extends BaseSuite {
     )
   }
 
-  test("XtensionLspRange.encloses - multi line") {
+  test("LspRange-multi-line") {
     def r(start: l.Position, end: l.Position) = new l.Range(start, end)
     def p(line: Int, character: Int) = new l.Position(line, character)
     assert(
@@ -35,7 +35,7 @@ object MtagsEnrichmentsSuite extends BaseSuite {
     )
   }
 
-  test("XtensionSemanticdbRange.encloses - single line") {
+  test("SemanticdbRange-single-line") {
     def r(start: (Int, Int), end: (Int, Int)) =
       s.Range(start._1, start._2, end._1, end._2)
     assert(
@@ -49,7 +49,7 @@ object MtagsEnrichmentsSuite extends BaseSuite {
     )
   }
 
-  test("XtensionSemanticdbRange.encloses - multi line") {
+  test("SemanticdbRange-multiline") {
     def r(start: (Int, Int), end: (Int, Int)) =
       s.Range(start._1, start._2, end._1, end._2)
     assert(
@@ -67,7 +67,7 @@ object MtagsEnrichmentsSuite extends BaseSuite {
     )
   }
 
-  test("XtensionSemanticdbRange.encloses(l.Position) - multi line") {
+  test("SemanticdbRange-lsp-multi-line") {
     def r(start: (Int, Int), end: (Int, Int)) =
       s.Range(start._1, start._2, end._1, end._2)
     def p(line: Int, character: Int) = new l.Position(line, character)
