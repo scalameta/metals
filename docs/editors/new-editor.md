@@ -114,7 +114,8 @@ Possible values:
 - `log-message`: translate `metals/status` notifications to `window/logMessage`
   notifications. Used by vim-lsc at the moment.
 - `show-message`: translate `metals/status` notifications to
-  `window/showMessage` notifications. Used by coc.nvim and sublime at the moment.
+  `window/showMessage` notifications. Used by coc.nvim and sublime at the
+  moment.
 
 ### `-Dmetals.slow-task`
 
@@ -149,7 +150,8 @@ Possible values:
 
 - `off` (default): don't start a server with the Metals HTTP client.
 - `on`: start a server with the [Metals HTTP client] to interact with the server
-  through a basic web UI. This option is needed for editor clients that don't support necessary requests such as `window/showMessageRequest`.
+  through a basic web UI. This option is needed for editor clients that don't
+  support necessary requests such as `window/showMessageRequest`.
 
 ### `-Dmetals.icons`
 
@@ -255,15 +257,16 @@ Possible values:
 
 ### `-Dmetals.snippet-auto-indent`
 
-Certain editors will automatically insert identation equal to that of the reference 
-line that the operation started on. This is relevant in the case of multiline textEdits
-such as the "implement all methods" completion.
+Certain editors will automatically insert indentation equal to that of the
+reference line that the operation started on. This is relevant in the case of
+multiline textEdits such as the "implement all methods" completion.
 
 Possible values:
 
-- `on`: (default): the client automatically adds in the indentation. This is the case for
-  VS Code, Atom, Sublime, and coc.nvim.
-- `off`: the client does not add any indentation when receiving a multi-line textEdit
+- `on`: (default): the client automatically adds in the indentation. This is the
+  case for VS Code, Atom, Sublime, and coc.nvim.
+- `off`: the client does not add any indentation when receiving a multi-line
+  textEdit
 
 ### `-Dmetals.doctor-format`
 
@@ -271,8 +274,8 @@ Format that you'd like Doctor to return information in.
 
 Possible values:
 
-- `html`: (default): Metals will return html that can be rendered directly in the browser or web
-view
+- `html`: (default): Metals will return html that can be rendered directly in
+  the browser or web view
 - `json`: json representation of the information returned by Doctor
 
 ### `-Dbloop.embedded.version`

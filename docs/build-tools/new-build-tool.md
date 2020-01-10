@@ -22,11 +22,19 @@ There are two options for integrating Metals with a new build tool:
 
 ## Enable SemanticDB
 
-Regardless if you use the Bloop build server or implement a custom build server,
-the [SemanticDB](https://scalameta.org/docs/semanticdb/guide.html) compiler
-plugin is required for Metals code navigation to work. Only limited Metals
-features like diagnostics and code formatting work without the SemanticDB
-compiler plugin enabled.
+If you use the Bloop build server there is nothing that needs to be added in
+order to enable SemanticDB. Metals itself will communicate with Bloop to make
+sure proper options are enabled.
+
+Otherwise, if you implement a custom build server, the
+[SemanticDB](https://scalameta.org/docs/semanticdb/guide.html) compiler plugin
+is required for Metals code navigation to work. Only limited Metals features
+like diagnostics and code formatting will work without the SemanticDB compiler
+plugin enabled.
+
+Users get a warning from Metals when the build server does not enable the
+SemanticDB compiler plugin. Users have an option to suppress this warning by
+selecting a "Don't show again" option.
 
 Make sure to declare the compiler option `"-P:semanticdb:sourceroot:$WORKSPACE"`
 where `$WORKSPACE` is the absolute path to the workspace root directory. By
@@ -128,17 +136,6 @@ clone the repository and write custom tests under
 
 If there is interest, we can publish a Metals `testkit` module to make it
 possible to write tests outside the Metals repository.
-
-### SemanticDB
-
-As a build server, you are responsible for enabling the
-[SemanticDB](https://scalameta.org/docs/semanticdb/guide.html) compiler plugin.
-The SemanticDB plugin is required for features like Goto Definition to work.
-Diagnostics work fine without SemanticDB enabled.
-
-Users get a warning from Metals when the build server does not enable the
-SemanticDB compiler plugin. Users have an option to suppress this warning by
-selecting a "Don't show again" button.
 
 ### BSP endpoints
 
