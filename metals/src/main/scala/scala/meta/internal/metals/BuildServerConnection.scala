@@ -125,10 +125,7 @@ case class BuildServerConnection(
         case response if response == Messages.DisconnectedServer.reconnect =>
           reconnect()
         case response if response == Messages.DisconnectedServer.notNow =>
-          connection
-        case response
-            if response == Messages.DisconnectedServer.dismissForever =>
-          notification.dismissForever()
+          notification.dismiss(5, TimeUnit.MINUTES)
           connection
       }
     } else {
