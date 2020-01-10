@@ -175,16 +175,15 @@ final class TestingServer(
     server.buildServer match {
       case Some(build) =>
         for {
-          workspaceBuildTargets <- build.server.workspaceBuildTargets().asScala
+          workspaceBuildTargets <- build.workspaceBuildTargets()
           ids = workspaceBuildTargets.getTargets
             .map(_.getId)
             .asScala
             .filter(_.getUri().contains(s"?id=$buildTarget"))
-          dependencySources <- build.server
+          dependencySources <- build
             .buildTargetDependencySources(
               new b.DependencySourcesParams(ids.asJava)
             )
-            .asScala
         } yield {
           dependencySources
             .getItems()

@@ -12,6 +12,7 @@ import java.nio.channels.Channels
 import java.nio.channels.Pipe
 import java.io.ByteArrayInputStream
 import bloop.bloopgun.BloopgunCli
+import org.eclipse.lsp4j.services.LanguageClient
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
@@ -28,7 +29,9 @@ import bloop.bloopgun.BloopgunCli
 final class BloopServers(
     sh: ScheduledExecutorService,
     workspace: AbsolutePath,
-    client: MetalsBuildClient
+    client: MetalsBuildClient,
+    languageClient: LanguageClient,
+    tables: Tables
 )(implicit ec: ExecutionContextExecutorService) {
 
   def shutdownServer(): Boolean = {
@@ -51,12 +54,24 @@ final class BloopServers(
   }
 
   def newServer(): Future[Option[BuildServerConnection]] = {
+    BuildServerConnection
+      .fromSockets(
+        workspace,
+        client,
+        languageClient,
+        connectToLauncher,
+        tables
+      )
+      .map(Option(_))
+  }
+
+  private def connectToLauncher(): Future[SocketConnection] = {
     val launcherInOutPipe = Pipe.open()
     val launcherIn = new QuietInputStream(
       Channels.newInputStream(launcherInOutPipe.source()),
       "Bloop InputStream"
     )
-    val clientOut = new QuietOutputStream(
+    val clientOut = new ClosableOutputStream(
       Channels.newOutputStream(launcherInOutPipe.sink()),
       "Bloop OutputStream"
     )
@@ -89,9 +104,8 @@ final class BloopServers(
     })
 
     serverStarted.future.map { _ =>
-      val serverConnection = BuildServerConnection.fromStreams(
-        workspace,
-        client,
+      SocketConnection(
+        "Bloop",
         clientOut,
         clientIn,
         List(
@@ -100,10 +114,8 @@ final class BloopServers(
             clientOut.close()
           },
           Cancelable(() => job.cancel(true))
-        ),
-        "Bloop"
+        )
       )
-      Some(serverConnection)
     }
   }
 }

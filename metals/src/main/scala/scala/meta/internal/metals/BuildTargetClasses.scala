@@ -39,12 +39,10 @@ final class BuildTargetClasses(
 
         val updateMainClasses = connection
           .mainClasses(new b.ScalaMainClassesParams(targetsList))
-          .asScala
           .map(cacheMainClasses(classes, _))
 
         val updateTestClasses = connection
           .testClasses(new b.ScalaTestClassesParams(targetsList))
-          .asScala
           .map(cacheTestClasses(classes, _))
 
         for {

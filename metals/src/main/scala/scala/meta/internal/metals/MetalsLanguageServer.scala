@@ -299,7 +299,9 @@ class MetalsLanguageServer(
     bloopServers = new BloopServers(
       sh,
       workspace,
-      buildClient
+      buildClient,
+      languageClient,
+      tables
     )
     bspServers = new BspServers(
       workspace,
@@ -1432,17 +1434,14 @@ class MetalsLanguageServer(
     buildServer = Some(build)
     val importedBuild = timed("imported build") {
       for {
-        workspaceBuildTargets <- build.server.workspaceBuildTargets().asScala
+        workspaceBuildTargets <- build.workspaceBuildTargets()
         ids = workspaceBuildTargets.getTargets.map(_.getId)
-        scalacOptions <- build.server
+        scalacOptions <- build
           .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
-          .asScala
-        sources <- build.server
+        sources <- build
           .buildTargetSources(new b.SourcesParams(ids))
-          .asScala
-        dependencySources <- build.server
+        dependencySources <- build
           .buildTargetDependencySources(new b.DependencySourcesParams(ids))
-          .asScala
       } yield {
         ImportedBuild(
           workspaceBuildTargets,

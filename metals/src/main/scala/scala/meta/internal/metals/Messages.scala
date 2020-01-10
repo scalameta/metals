@@ -138,6 +138,32 @@ class Messages(icons: Icons) {
     }
   }
 
+  object DisconnectedServer {
+    def reconnect: MessageActionItem =
+      new MessageActionItem("Reconnect to build server")
+    def notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+    def dismissForever: MessageActionItem =
+      new MessageActionItem("Don't show again")
+    def params(): ShowMessageRequestParams = {
+
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        "Metals lost connection with the build server, most functionality will not work. " +
+          "To fix this problem, select \"reconnect to build server\"."
+      )
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          reconnect,
+          notNow,
+          dismissForever
+        ).asJava
+      )
+      params
+    }
+  }
+
   object IncompatibleBloopVersion {
     def manually: MessageActionItem =
       new MessageActionItem("I'll update manually")
