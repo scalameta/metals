@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.WorkspaceSymbolParams
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Messages
-import tests.MetalsTestEnrichments._
+import MetalsTestEnrichments._
 
 object WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 
