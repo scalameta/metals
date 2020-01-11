@@ -4,7 +4,7 @@ import tests.BaseCompletionSuite
 
 object CompletionScaladocSuite extends BaseCompletionSuite {
   check(
-    "scaladoc-methoddef",
+    "methoddef-label",
     """
       |object A {
       |  /**@@
@@ -15,7 +15,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   check(
-    "scaladoc-classdef",
+    "classdef-label",
     """
       |object A {
       |  /**@@
@@ -26,7 +26,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   check(
-    "scaladoc-no-completion",
+    "no-completion",
     """
       |object A {
       |  /**@@
@@ -35,7 +35,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-methoddef-edit",
+    "methoddef",
     """|object A {
        |  /**@@
        |  def test1(param1: Int, param2: Int): Int = ???
@@ -57,7 +57,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-classdef-edit",
+    "classdef",
     """|object A {
        |  /**@@
        |  class Test1(param1: Int, param2: Int) {}
@@ -79,7 +79,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-valdef-edit",
+    "valdef",
     """|object A {
        |  /**@@
        |  val x = 1
@@ -95,7 +95,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-objectdef-edit",
+    "objectdef",
     """|/**@@
        |object A {
        |  // do not calculate scaladoc based on the method
@@ -113,7 +113,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-defdef-nested-edit",
+    "defdef-nested",
     """|object A {
        |  def test(x: Int): Int = {
        |    /**@@
@@ -136,7 +136,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-classdef-nested-edit",
+    "classdef-nested",
     """|object A {
        |  /**@@
        |  case class B(x: Int) {
@@ -159,7 +159,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-trait-classdef-nested-edit",
+    "trait-classdef-nested",
     """|object A {
        |  /**@@
        |  trait B {
@@ -181,7 +181,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-defdef-no-param-cursor",
+    "defdef-no-param-cursor",
     """|object A {
        |  /**@@
        |  def test1: Int = ???
@@ -201,7 +201,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-defdef-returns-unit",
+    "defdef-returns-unit",
     """|// Don't add @return line for a method whose return type is Unit.
        |object A {
        |  /**@@
@@ -222,7 +222,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-defdef-returns-inferred-unit",
+    "defdef-returns-inferred-unit",
     """|// Don't add @return line for a method whose return type is Unit.
        |object A {
        |  /**@@
@@ -243,7 +243,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-defdef-type-typeclass",
+    "defdef-evidence",
     """|// do not add compiler generated param like `evidence$1`
        |object A {
        |  /**@@
@@ -265,7 +265,7 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "scaladoc-classdef-type-typeclass",
+    "classdef-evidence",
     """|object A {
        |  /**@@
        |  case class Test[T: Ordering](x: T, y: T) {}

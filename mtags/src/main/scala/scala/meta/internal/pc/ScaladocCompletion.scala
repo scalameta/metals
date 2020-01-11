@@ -103,7 +103,7 @@ trait ScaladocCompletion { this: MetalsGlobal =>
       if (metalsConfig.snippetAutoIndent()) {
         ""
       } else {
-        // 3 is the length of "/**$" <- $ is a cursor
+        // 4 is the length of "/**$" <- $ is a cursor
         " " * (pos.column - 4)
       }
     }
