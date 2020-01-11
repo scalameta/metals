@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.TrigramSubstrings
-import funsuite.Location
+import munit.Location
 
 class TrigramSubstringsSuite extends BaseSuite {
   def check(original: String, expected: String)(

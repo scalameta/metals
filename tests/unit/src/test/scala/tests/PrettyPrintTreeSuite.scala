@@ -1,6 +1,6 @@
 package tests
 
-import funsuite.Location
+import munit.Location
 
 class PrettyPrintTreeSuite extends BaseSuite {
   def check(name: String, tree: PrettyPrintTree, expected: String)(

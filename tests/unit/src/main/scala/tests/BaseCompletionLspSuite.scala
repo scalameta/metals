@@ -3,7 +3,7 @@ package tests
 import org.eclipse.lsp4j.CompletionList
 import scala.concurrent.Future
 import scala.meta.internal.metals.TextEdits
-import funsuite.Location
+import munit.Location
 
 abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
 

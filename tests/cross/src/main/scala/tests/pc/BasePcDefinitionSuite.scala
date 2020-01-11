@@ -7,7 +7,7 @@ import org.eclipse.{lsp4j => l}
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.metals.TextEdits
-import funsuite.Location
+import munit.Location
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
   def check(

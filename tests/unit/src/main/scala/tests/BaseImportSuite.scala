@@ -6,7 +6,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.MetalsServerConfig
-import funsuite.Location
+import munit.Location
 
 abstract class BaseImportSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {

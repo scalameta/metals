@@ -4,7 +4,7 @@ import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
-import funsuite.Location
+import munit.Location
 
 class StepDapSuite extends BaseDapSuite("debug-step") {
   assertSteps("step-out")(

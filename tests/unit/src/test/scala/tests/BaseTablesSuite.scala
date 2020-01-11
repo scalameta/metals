@@ -6,8 +6,6 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Tables
 import scala.meta.io.AbsolutePath
-import funsuite.AfterEach
-import funsuite.BeforeEach
 
 abstract class BaseTablesSuite extends BaseSuite {
   MetalsLogger.updateDefaultFormat()

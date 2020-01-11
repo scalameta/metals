@@ -1,6 +1,6 @@
 package tests
 
-import funsuite.Location
+import munit.Location
 
 class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
 

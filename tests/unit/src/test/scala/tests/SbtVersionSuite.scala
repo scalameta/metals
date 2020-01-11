@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.MetalsServerConfig
-import funsuite.Location
+import munit.Location
 
 class SbtVersionSuite extends BaseSuite {
   def check(

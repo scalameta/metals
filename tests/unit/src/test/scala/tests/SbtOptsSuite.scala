@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.SbtOpts
-import funsuite.Location
+import munit.Location
 
 class SbtOptsSuite extends BaseSuite {
   def check(name: String, original: String, expected: String)(

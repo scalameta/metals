@@ -2,7 +2,6 @@ package tests
 
 import scala.meta.internal.metals.DidFocusResult._
 import scala.meta.internal.metals.Time
-import funsuite.BeforeEach
 
 class DidFocusLspSuite extends BaseLspSuite("did-focus") {
   var fakeTime: FakeTime = _

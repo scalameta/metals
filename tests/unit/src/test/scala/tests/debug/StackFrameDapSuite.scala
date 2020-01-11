@@ -6,7 +6,7 @@ import scala.meta.internal.metals.debug.Scope
 import scala.meta.internal.metals.debug.StackFrameCollector
 import scala.meta.internal.metals.debug.Variable
 import scala.meta.internal.metals.debug.Variables
-import funsuite.Location
+import munit.Location
 
 class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
   assertStackFrame("foreach")(

@@ -4,7 +4,7 @@ import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
 import tests.TestHovers
 import scala.concurrent.Future
-import funsuite.Location
+import munit.Location
 
 class WorksheetNoDecorationsLspSuite
     extends BaseLspSuite("worksheet-no-decorations")

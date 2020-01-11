@@ -11,8 +11,6 @@ import scala.meta.internal.metals.BuildInfo
 import java.nio.file.StandardOpenOption
 import scala.util.control.NonFatal
 import scala.sys.process._
-import funsuite.BeforeEach
-import funsuite.AfterEach
 
 class PantsLspSuite extends BaseImportSuite("pants") {
 

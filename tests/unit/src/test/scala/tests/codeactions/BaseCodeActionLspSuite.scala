@@ -2,7 +2,7 @@ package tests.codeactions
 
 import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
-import funsuite.Location
+import munit.Location
 
 abstract class BaseCodeActionLspSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {

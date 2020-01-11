@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.builds.BuildTools
 import scala.meta.io.AbsolutePath
-import funsuite.Location
+import munit.Location
 
 class DetectionSuite extends BaseSuite {
 

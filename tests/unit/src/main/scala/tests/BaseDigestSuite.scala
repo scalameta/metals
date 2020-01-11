@@ -3,7 +3,7 @@ package tests
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.UserConfiguration
-import funsuite.Location
+import munit.Location
 
 trait BaseDigestSuite extends BaseSuite {
 

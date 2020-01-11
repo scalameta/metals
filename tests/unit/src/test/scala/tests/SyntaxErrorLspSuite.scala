@@ -1,7 +1,7 @@
 package tests
 
 import scala.concurrent.Future
-import funsuite.Location
+import munit.Location
 
 class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 

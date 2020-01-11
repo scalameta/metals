@@ -5,7 +5,7 @@ import scala.meta.pc.AutoImportsResult
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.TextEdits
-import funsuite.Location
+import munit.Location
 
 class AutoImportsSuite extends BaseCodeActionSuite {
 

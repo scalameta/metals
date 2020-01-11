@@ -13,8 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.OffsetParams
 import java.util.concurrent.atomic.AtomicReference
-import funsuite.BeforeEach
-import funsuite.Location
+import munit.Location
 
 class InterruptPresentationCompilerSuite extends BasePCSuite {
   class InterruptSymbolIndex

@@ -1,6 +1,6 @@
 package tests
 
-import funsuite.Location
+import munit.Location
 
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
 

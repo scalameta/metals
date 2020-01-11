@@ -25,7 +25,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import scala.collection.Seq
 import scala.meta.pc.PresentationCompiler
-import funsuite.TestOptions
+import munit.TestOptions
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
@@ -71,14 +71,14 @@ abstract class BasePCSuite extends BaseSuite {
     JdkSources().foreach(jdk => index.addSourceJar(jdk))
   }
 
-  override def funsuiteRunTest(options: TestOptions, body: => Any): Any = {
+  override def munitRunTest(options: TestOptions, body: => Any): Any = {
     // We are unable to infer the JDK jars on Appveyor
     // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
     val testName =
       if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
         s"${BuildInfo.scalaCompilerVersion}-${options.name}"
       else options.name
-    super.funsuiteRunTest(
+    super.munitRunTest(
       options.copy(name = testName), {
         try {
           body

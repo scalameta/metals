@@ -1,6 +1,6 @@
 package tests
 import scala.concurrent.Future
-import funsuite.Location
+import munit.Location
 
 class RenameLspSuite extends BaseLspSuite("rename") {
 

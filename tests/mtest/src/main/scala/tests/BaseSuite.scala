@@ -7,15 +7,14 @@ import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.mtags
 import scala.meta.internal.semver.SemVer
 import scala.util.Properties
-import funsuite.Test
-import funsuite.TestOptions
-import funsuite.Location
-import funsuite.FailException
-import funsuite.FlakyFailure
+import munit.TestOptions
+import munit.Location
+import munit.FailException
+import munit.TestValues.FlakyFailure
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
-class BaseSuite extends funsuite.FunSuite with Assertions {
+class BaseSuite extends munit.FunSuite with Assertions {
   def isJava8: Boolean =
     !Properties.isJavaAtLeast("9")
 
@@ -52,9 +51,9 @@ class BaseSuite extends funsuite.FunSuite with Assertions {
 
   def skipSuite: Boolean = false
 
-  override def funsuiteTests(): Seq[Test] = {
+  override def munitTests(): Seq[Test] = {
     if (skipSuite) Seq.empty
-    else super.funsuiteTests()
+    else super.munitTests()
   }
 
   def testAsync(

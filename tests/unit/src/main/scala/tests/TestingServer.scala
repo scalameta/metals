@@ -196,7 +196,7 @@ final class TestingServer(
   }
 
   def assertReferenceDefinitionBijection()(
-      implicit loc: funsuite.Location
+      implicit loc: munit.Location
   ): Unit = {
     val compare = workspaceReferences()
     assert(compare.definition.nonEmpty)
@@ -208,7 +208,7 @@ final class TestingServer(
   }
   def assertReferenceDefinitionDiff(
       expectedDiff: String
-  )(implicit loc: funsuite.Location): Unit = {
+  )(implicit loc: munit.Location): Unit = {
     Assertions.assertNoDiffOrPrintObtained(
       workspaceReferences().diff,
       expectedDiff
@@ -453,7 +453,7 @@ final class TestingServer(
       expected: String,
       autoIndent: String,
       root: AbsolutePath = workspace
-  )(implicit loc: funsuite.Location): Future[Unit] = {
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
       (text, params) <- onTypeParams(filename, query, root, autoIndent)
       multiline <- server.onTypeFormatting(params).asScala
@@ -472,7 +472,7 @@ final class TestingServer(
       expected: String,
       paste: String,
       root: AbsolutePath = workspace
-  )(implicit loc: funsuite.Location): Future[Unit] = {
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
       (text, params) <- rangeFormattingParams(filename, query, paste, root)
       multiline <- server.rangeFormatting(params).asScala
@@ -671,7 +671,7 @@ final class TestingServer(
       query: String,
       expected: String,
       root: AbsolutePath = workspace
-  )(implicit loc: funsuite.Location): Future[Unit] = {
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
       hover <- hover(filename, query, root)
     } yield {
@@ -684,7 +684,7 @@ final class TestingServer(
       query: String,
       expected: String,
       root: AbsolutePath = workspace
-  )(implicit loc: funsuite.Location): Future[List[l.CodeAction]] =
+  )(implicit loc: munit.Location): Future[List[l.CodeAction]] =
     for {
       (codeActions, codeActionString) <- codeAction(filename, query, root)
     } yield {
@@ -734,7 +734,7 @@ final class TestingServer(
       query: String,
       expected: String,
       root: AbsolutePath = workspace
-  )(implicit loc: funsuite.Location): Future[Unit] = {
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
       highlight <- highlight(filename, query, root)
     } yield {
@@ -761,7 +761,7 @@ final class TestingServer(
       expected: Map[String, String],
       files: Set[String],
       newName: String
-  )(implicit loc: funsuite.Location): Future[Unit] = {
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
       renames <- rename(filename, query, files, newName)
     } yield {
@@ -844,7 +844,7 @@ final class TestingServer(
       query: String,
       expected: Map[String, String],
       base: Map[String, String]
-  )(implicit loc: funsuite.Location): Future[Unit] = {
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
       implementations <- implementation(filename, query, base)
     } yield {
@@ -1048,7 +1048,7 @@ final class TestingServer(
       filename: String,
       linePattern: String,
       isIgnored: String => Boolean = _ => true
-  )(implicit loc: funsuite.Location): String = {
+  )(implicit loc: munit.Location): String = {
     val path = toPath(filename)
     val line = path.toInput.value.linesIterator.zipWithIndex
       .collectFirst {
@@ -1094,7 +1094,7 @@ final class TestingServer(
   def assertTreeViewChildren(
       uri: String,
       expected: String
-  )(implicit loc: funsuite.Location): Unit = {
+  )(implicit loc: munit.Location): Unit = {
     val viewId: String = TreeViewProvider.Build
     val result =
       server.treeView.children(TreeViewChildrenParams(viewId, uri)).nodes

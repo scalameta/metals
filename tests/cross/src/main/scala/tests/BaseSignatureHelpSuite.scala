@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
-import funsuite.Location
+import munit.Location
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
   def checkDoc(

@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.Compression
 import scala.meta.internal.metals.ClassfileElementPart
-import funsuite.Location
+import munit.Location
 
 class CompressionSuite extends BaseSuite {
   def checkRoundtrip(a: String)(implicit loc: Location): Unit = {

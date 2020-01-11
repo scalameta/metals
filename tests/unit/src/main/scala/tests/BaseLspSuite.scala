@@ -17,9 +17,8 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.meta.internal.metals.SlowTaskConfig
-import funsuite.BeforeEach
-import funsuite.Ignore
-import funsuite.Location
+import munit.Ignore
+import munit.Location
 
 /**
  * Full end to end integration tests against a full metals language server.

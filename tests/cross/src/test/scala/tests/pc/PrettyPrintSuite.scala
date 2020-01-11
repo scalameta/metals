@@ -1,7 +1,7 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
-import funsuite.Location
+import munit.Location
 
 class PrettyPrintSuite extends BaseCompletionSuite {
 

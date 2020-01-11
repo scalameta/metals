@@ -2,7 +2,7 @@ package tests
 
 import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.Timer
-import funsuite.Location
+import munit.Location
 
 class TimerSuite extends BaseSuite {
   def checkMillis(ms: Long, expected: String)(implicit loc: Location): Unit = {

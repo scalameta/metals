@@ -10,8 +10,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import funsuite.BeforeEach
-import funsuite.AfterEach
 
 class CompilerJobQueueSuite extends BaseSuite {
   var jobs: CompilerJobQueue = null

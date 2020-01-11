@@ -2,7 +2,7 @@ package tests
 
 import java.util.Properties
 import scala.meta.internal.metals.UserConfiguration
-import funsuite.Location
+import munit.Location
 
 class UserConfigurationSuite extends BaseSuite {
   def check(

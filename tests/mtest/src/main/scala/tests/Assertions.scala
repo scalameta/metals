@@ -1,10 +1,10 @@
 package tests
 
-import funsuite.Location
+import munit.Location
 import scala.meta.io.AbsolutePath
 import scala.collection.JavaConverters._
 
-trait Assertions extends funsuite.Assertions {
+trait Assertions extends munit.Assertions {
 
   def unifiedDiff(expected: String, obtained: String): String = {
     def splitIntoLines(string: String): Seq[String] =
@@ -32,7 +32,7 @@ trait Assertions extends funsuite.Assertions {
       expected: String
   )(implicit loc: Location): Unit = {
     // FIXME(gabro): surface this in funsuite Assertions
-    funsuite.internal.Diffs.assertNoDiffOrPrintExpected(obtained, expected)
+    munit.Diffs.assertNoDiff(obtained, expected)
   }
 
   def assertNotEmpty(string: String)(implicit loc: Location): Unit = {

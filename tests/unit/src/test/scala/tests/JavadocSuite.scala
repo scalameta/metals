@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.internal.docstrings.MarkdownGenerator
-import funsuite.Location
+import munit.Location
 
 class JavadocSuite extends BaseSuite {
 

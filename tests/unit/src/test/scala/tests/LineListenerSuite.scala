@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.ansi.LineListener
 import scala.collection.mutable
-import funsuite.Location
+import munit.Location
 
 class LineListenerSuite extends BaseSuite {
   def check(

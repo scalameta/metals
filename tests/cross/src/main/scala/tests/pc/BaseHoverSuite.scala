@@ -5,7 +5,7 @@ import tests.RangeReplace
 import tests.TestHovers
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments._
-import funsuite.Location
+import munit.Location
 
 abstract class BaseHoverSuite
     extends BasePCSuite

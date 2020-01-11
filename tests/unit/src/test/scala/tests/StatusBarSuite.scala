@@ -7,7 +7,6 @@ import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
 import scala.concurrent.ExecutionContext.Implicits.global
-import funsuite.BeforeEach
 
 class StatusBarSuite extends BaseSuite {
   val time = new FakeTime

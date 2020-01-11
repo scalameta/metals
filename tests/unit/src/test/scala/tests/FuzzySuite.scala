@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.WorkspaceSymbolQuery
-import funsuite.Location
+import munit.Location
 
 class FuzzySuite extends BaseSuite {
   def checkOK(query: String, symbol: String)(implicit loc: Location): Unit = {

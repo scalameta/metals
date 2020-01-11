@@ -4,7 +4,7 @@ import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage
-import funsuite.Location
+import munit.Location
 
 class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 

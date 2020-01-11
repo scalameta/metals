@@ -156,7 +156,7 @@ lazy val V = new {
   val mavenBloop = bloop
   val mdoc = "2.1.1"
   val scalafmt = "2.3.2"
-  val funsuite = "0.1.4"
+  val munit = "0.2.0"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaVersions =
@@ -338,7 +338,7 @@ lazy val input = project
 lazy val testSettings: Seq[Def.Setting[_]] = List(
   skip.in(publish) := true,
   fork := true,
-  testFrameworks := List(new TestFramework("funsuite.Framework"))
+  testFrameworks := List(new TestFramework("munit.Framework"))
 )
 
 lazy val mtest = project
@@ -349,7 +349,7 @@ lazy val mtest = project
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier,
       "org.scalameta" %% "testkit" % V.scalameta,
-      "com.geirsson" %% "funsuite" % V.funsuite
+      "org.scalameta" %% "munit" % V.munit
     ),
     scalacOptions ++= crossSetting(
       scalaVersion.value,
@@ -405,7 +405,7 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
-      "com.geirsson" %% "funsuite" % V.funsuite
+      "org.scalameta" %% "munit" % V.munit
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),

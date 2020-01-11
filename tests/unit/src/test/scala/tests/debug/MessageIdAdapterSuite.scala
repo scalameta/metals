@@ -11,8 +11,7 @@ import scala.collection.mutable
 import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
 import scala.meta.internal.metals.debug.TestingDebugServer
 import scala.meta.internal.metals.debug.MessageIdAdapter
-import funsuite.BeforeEach
-import funsuite.Location
+import munit.Location
 
 class MessageIdAdapterSuite extends BaseSuite {
   private val idCounter = new AtomicInteger(FirstMessageId)

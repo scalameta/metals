@@ -10,7 +10,7 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.pc.CancelToken
 import tests.BaseCompletionSuite
 import scala.meta.internal.pc.InterruptException
-import funsuite.Location
+import munit.Location
 
 class CancelCompletionSuite extends BaseCompletionSuite {
 

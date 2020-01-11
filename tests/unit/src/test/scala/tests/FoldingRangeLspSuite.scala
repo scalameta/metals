@@ -1,7 +1,7 @@
 package tests
 
 import scala.concurrent.Future
-import funsuite.Location
+import munit.Location
 
 class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
   testAsync("parse-error") {

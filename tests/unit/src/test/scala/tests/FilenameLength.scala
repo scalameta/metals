@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.Fuzzy
-import funsuite.Location
+import munit.Location
 
 class FilenameLength extends BaseSuite {
   def check(filename: String, expected: String)(

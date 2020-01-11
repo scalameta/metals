@@ -10,8 +10,8 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.CancelToken
 import scala.collection.Seq
 import scala.meta.internal.metals.TextEdits
-import funsuite.TestOptions
-import funsuite.Location
+import munit.TestOptions
+import munit.Location
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 
