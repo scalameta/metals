@@ -44,23 +44,28 @@ class CompletionProvider(
       cursor = Some(params.offset),
       cursorName = cursorName
     )
+
     val pos = unit.position(params.offset)
     val isSnippet = isSnippetEnabled(pos, params.text())
-    val clientSupportsSnippets =
-      compiler.metalsConfig.isCompletionSnippetsEnabled()
+
     val (i, completion, editRange, query) = safeCompletionsAt(pos)
+
     val start = inferIdentStart(pos, params.text())
     val end = inferIdentEnd(pos, params.text())
     val oldText = params.text().substring(start, end)
     val stripSuffix = pos.withStart(start).withEnd(end).toLSP
+
     def textEdit(newText: String) = {
       if (newText == oldText) new l.TextEdit(stripSuffix, newText)
       else new l.TextEdit(editRange, newText)
     }
+
     val history = new ShortenedNames()
+
     val sorted = i.results.sorted(memberOrdering(query, history, completion))
     lazy val importPosition = autoImportPosition(pos, params.text())
     lazy val context = doLocateImportContext(pos, importPosition)
+
     val items = sorted.iterator.zipWithIndex.map {
       case (r, idx) =>
         params.checkCanceled()
@@ -73,7 +78,7 @@ class CompletionProvider(
         }
         val label = r match {
           case _: NamedArgMember =>
-            s"${ident} = "
+            s"$ident = "
           case o: OverrideDefMember =>
             o.label
           case o: TextEditMember =>
@@ -218,15 +223,10 @@ class CompletionProvider(
         }
         item
     }
+
     val result = new CompletionList(items.toSeq.asJava)
     result.setIsIncomplete(i.isIncomplete)
     result
-  }
-
-  def isNullary(sym: Symbol): Boolean = sym.info match {
-    case _: NullaryMethodType => true
-    case PolyType(_, _: NullaryMethodType) => true
-    case _ => false
   }
 
   case class InterestingMembers(
