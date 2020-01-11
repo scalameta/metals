@@ -507,13 +507,13 @@ class MetalsLanguageServer(
       capabilities.setDocumentSymbolProvider(true)
       capabilities.setDocumentFormattingProvider(true)
       if (initializeParams.supportsCodeActionLiterals) {
-        capabilities.setCodeActionProvider(true)
-      } else {
         capabilities.setCodeActionProvider(
           new CodeActionOptions(
             List(CodeActionKind.QuickFix, CodeActionKind.Refactor).asJava
           )
         )
+      } else {
+        capabilities.setCodeActionProvider(true)
       }
       capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
       capabilities.setExperimental(MetalsExperimental())
