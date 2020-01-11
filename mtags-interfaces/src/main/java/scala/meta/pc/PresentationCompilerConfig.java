@@ -13,7 +13,7 @@ public interface PresentationCompilerConfig {
     /**
      * Command ID to trigger parameter hints (textDocument/signatureHelp) in the editor.
      *
-     * See https://scalameta.org/metals/docs/editors/new-editor.html#dmetalssignature-helpcommand
+     * See https://scalameta.org/metals/docs/editors/new-editor.html#-dmetalssignature-helpcommand
      * for details.
      */
     Optional<String> parameterHintsCommand();
