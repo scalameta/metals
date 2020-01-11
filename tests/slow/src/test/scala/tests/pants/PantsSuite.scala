@@ -4,7 +4,7 @@ import tests.BaseSuite
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.pantsbuild.PantsConfiguration
 
-object PantsSuite extends BaseSuite {
+class PantsSuite extends BaseSuite {
   def checkSourceRoots(
       name: String,
       original: String,
