@@ -136,6 +136,25 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     )
   }
 
+  test("imports") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |""".stripMargin
+      )
+      _ <- assertCompletionEdit(
+        """import scala.concurrent.Future.succ@@""",
+        """|import scala.concurrent.Future.successful""".stripMargin
+      )
+    } yield ()
+  }
+
   test("symbol-prefixes") {
     cleanWorkspace()
     for {
