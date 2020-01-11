@@ -37,18 +37,53 @@ import scala.meta.io.RelativePath
 
 object MtagsEnrichments extends MtagsEnrichments
 trait MtagsEnrichments {
-  implicit class XtensionRange(range: s.Range) {
+  implicit class XtensionSemanticdbRange(range: s.Range) {
     def isPoint: Boolean = {
       range.startLine == range.endLine &&
       range.startCharacter == range.endCharacter
     }
     def encloses(other: s.Range): Boolean = {
-      range.startLine <= other.startLine &&
-      range.endLine >= other.endLine &&
-      range.startCharacter <= other.startCharacter && {
-        range.endCharacter > other.endCharacter ||
-        other == range
+      val startsBeforeOrAt =
+        range.startLine < other.startLine ||
+          (range.startLine == other.startLine &&
+            range.startCharacter <= other.startCharacter)
+      val endsAtOrAfter =
+        range.endLine > other.endLine ||
+          (range.endLine == other.endLine &&
+            range.endCharacter >= other.endCharacter)
+      startsBeforeOrAt && endsAtOrAfter
+    }
+    def toLocation(uri: String): l.Location = {
+      new l.Location(uri, range.toLSP)
+    }
+    def toLSP: l.Range = {
+      val start = new l.Position(range.startLine, range.startCharacter)
+      val end = new l.Position(range.endLine, range.endCharacter)
+      new l.Range(start, end)
+    }
+    def encloses(
+        other: l.Position,
+        includeLastCharacter: Boolean = false
+    ): Boolean = {
+      val startsBeforeOrAt =
+        range.startLine < other.getLine ||
+          (range.startLine == other.getLine &&
+            range.startCharacter <= other.getCharacter)
+      val endCharCondition = {
+        if (includeLastCharacter)
+          range.endCharacter >= other.getCharacter
+        else
+          range.endCharacter > other.getCharacter
       }
+      val endsAtOrAfter =
+        range.endLine > other.getLine ||
+          (range.endLine == other.getLine &&
+            endCharCondition)
+      startsBeforeOrAt && endsAtOrAfter
+    }
+    def encloses(other: l.Range): Boolean = {
+      encloses(other.getStart) &&
+      encloses(other.getEnd)
     }
   }
   private def filenameToLanguage(filename: String): Language = {
@@ -241,31 +276,6 @@ trait MtagsEnrichments {
       content
     }
   }
-  implicit class XtensionRangeBuildProtocol(range: s.Range) {
-    def toLocation(uri: String): l.Location = {
-      new l.Location(uri, range.toLSP)
-    }
-    def toLSP: l.Range = {
-      val start = new l.Position(range.startLine, range.startCharacter)
-      val end = new l.Position(range.endLine, range.endCharacter)
-      new l.Range(start, end)
-    }
-    def encloses(
-        other: l.Position,
-        includeLastCharacter: Boolean = false
-    ): Boolean = {
-      range.startLine <= other.getLine &&
-      range.endLine >= other.getLine &&
-      range.startCharacter <= other.getCharacter && {
-        if (includeLastCharacter) range.endCharacter >= other.getCharacter
-        else range.endCharacter > other.getCharacter
-      }
-    }
-    def encloses(other: l.Range): Boolean = {
-      encloses(other.getStart) &&
-      encloses(other.getEnd)
-    }
-  }
 
   implicit class XtensionSymbolInformation(kind: s.SymbolInformation.Kind) {
     def toLSP: l.SymbolKind = kind match {
@@ -324,11 +334,18 @@ trait MtagsEnrichments {
         )
       }
     def encloses(position: l.Position): Boolean = {
-      range.getStart.getLine <= position.getLine &&
-      range.getStart.getLine >= position.getLine &&
-      range.getStart.getCharacter <= position.getCharacter &&
-      range.getEnd.getCharacter > position.getCharacter
+      val startsBeforeOrAt =
+        range.getStart.getLine < position.getLine ||
+          (range.getStart.getLine == position.getLine &&
+            range.getStart.getCharacter <= position.getCharacter)
+      val endsAtOrAfter =
+        range.getEnd.getLine > position.getLine ||
+          (range.getEnd.getLine == position.getLine &&
+            range.getEnd.getCharacter >= position.getCharacter)
+      startsBeforeOrAt && endsAtOrAfter
     }
+    def encloses(other: l.Range): Boolean =
+      encloses(other.getStart) && encloses(other.getEnd)
     def copy(
         startLine: Int = range.getStart().getLine(),
         startCharacter: Int = range.getStart().getCharacter(),
@@ -354,7 +371,7 @@ trait MtagsEnrichments {
       else Right(either.getRight)
   }
 
-  implicit class XtensionPositionLsp(pos: m.Position) {
+  implicit class XtensionMetaPosition(pos: m.Position) {
     def toSemanticdb: s.Range = {
       new s.Range(
         pos.startLine,

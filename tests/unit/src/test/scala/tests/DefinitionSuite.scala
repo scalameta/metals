@@ -7,7 +7,6 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.mtags.Symbol
 
 /**
@@ -65,7 +64,7 @@ object DefinitionSuite extends DirectoryExpectSuite("definition") {
               for {
                 document <- Semanticdbs.loadTextDocuments(path).documents
                 occ <- document.occurrences.find(
-                  _.range.exists(_.encloses(range))
+                  _.range.contains(range)
                 )
               } yield Symbol(occ.symbol)
             }.headOption
