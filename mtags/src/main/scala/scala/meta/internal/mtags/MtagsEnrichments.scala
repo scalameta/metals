@@ -318,9 +318,11 @@ trait MtagsEnrichments {
   implicit class XtensionLspRange(range: l.Range) {
     def isOffset: Boolean =
       range.getStart == range.getEnd
+
     def isNone: Boolean =
       range.getStart().isNone &&
         range.getEnd().isNone
+
     def toMeta(input: m.Input): m.Position =
       if (range.isNone) {
         m.Position.None
@@ -333,6 +335,7 @@ trait MtagsEnrichments {
           range.getEnd.getCharacter
         )
       }
+
     def encloses(position: l.Position): Boolean = {
       val startsBeforeOrAt =
         range.getStart.getLine < position.getLine ||
@@ -344,8 +347,24 @@ trait MtagsEnrichments {
             range.getEnd.getCharacter >= position.getCharacter)
       startsBeforeOrAt && endsAtOrAfter
     }
+
     def encloses(other: l.Range): Boolean =
       encloses(other.getStart) && encloses(other.getEnd)
+
+    def overlapsWith(other: l.Range): Boolean = {
+      val startsBeforeOtherEnds =
+        range.getStart.getLine < other.getEnd.getLine ||
+          (range.getStart.getLine == other.getEnd.getLine &&
+            range.getStart.getCharacter <= other.getEnd.getCharacter)
+
+      val endsAfterOtherStarts =
+        range.getEnd.getLine > other.getStart.getLine ||
+          (range.getEnd.getLine == other.getStart.getLine &&
+            range.getEnd.getCharacter >= other.getStart.getCharacter)
+
+      startsBeforeOtherEnds && endsAfterOtherStarts
+    }
+
     def copy(
         startLine: Int = range.getStart().getLine(),
         startCharacter: Int = range.getStart().getCharacter(),

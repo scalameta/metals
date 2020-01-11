@@ -11,7 +11,8 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       input: String,
       expectedActions: String,
       expectedCode: String,
-      selectedActionIndex: Int = 0
+      selectedActionIndex: Int = 0,
+      expectNoDiagnostics: Boolean = true
   ): Unit = {
     val path = "a/src/main/scala/a/A.scala"
     testAsync(name) {
@@ -20,7 +21,9 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
         _ <- server.initialize(s"""/metals.json
                                   |{"a":{}}
                                   |/$path
-                                  |${input.replaceAllLiterally("@@", "")}
+                                  |${input
+                                    .replaceAllLiterally("<<", "")
+                                    .replaceAllLiterally(">>", "")}
                                   |""".stripMargin)
         _ <- server.didOpen(path)
         codeActions <- server.assertCodeAction(path, input, expectedActions)
@@ -32,7 +35,7 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
           server.toPath(path).readText
         }
         _ = assertNoDiff(server.bufferContents(path), expectedCode)
-        _ = assertNoDiagnostics()
+        _ = if (expectNoDiagnostics) assertNoDiagnostics() else ()
       } yield ()
     }
   }

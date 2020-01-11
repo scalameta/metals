@@ -4,7 +4,7 @@ import java.nio.file.Paths
 import java.util
 import java.util.UUID
 import org.eclipse.{lsp4j => l}
-import tests.BuildInfo.testResourceDirectory
+import BuildInfo.testResourceDirectory
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FoldingRangeProvider
 import scala.meta.io.AbsolutePath

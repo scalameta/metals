@@ -35,6 +35,24 @@ object MtagsEnrichmentsSuite extends BaseSuite {
     )
   }
 
+  test("LspRange-overlaps") {
+    def r(start: l.Position, end: l.Position) = new l.Range(start, end)
+    def p(line: Int, character: Int) = new l.Position(line, character)
+    assert(
+      // same line
+      r(p(2, 10), p(2, 20)).overlapsWith(r(p(2, 8), p(2, 12))),
+      r(p(2, 10), p(2, 20)).overlapsWith(r(p(2, 18), p(2, 22))),
+      r(p(2, 10), p(2, 20)).overlapsWith(r(p(2, 6), p(2, 9))) == false,
+      r(p(2, 10), p(2, 20)).overlapsWith(r(p(2, 21), p(2, 30))) == false,
+      // multi line
+      r(p(2, 10), p(5, 10)).overlapsWith(r(p(1, 10), p(4, 10))),
+      r(p(2, 10), p(5, 10)).overlapsWith(r(p(3, 10), p(6, 10))),
+      r(p(2, 10), p(5, 10)).overlapsWith(r(p(2, 8), p(4, 10))),
+      r(p(2, 10), p(5, 10)).overlapsWith(r(p(1, 10), p(2, 9))) == false,
+      r(p(2, 10), p(5, 10)).overlapsWith(r(p(5, 11), p(6, 10))) == false
+    )
+  }
+
   test("SemanticdbRange-single-line") {
     def r(start: (Int, Int), end: (Int, Int)) =
       s.Range(start._1, start._2, end._1, end._2)

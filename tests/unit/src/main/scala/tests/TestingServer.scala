@@ -584,6 +584,39 @@ final class TestingServer(
     }
   }
 
+  private def rangeFromString[T](
+      filename: String,
+      original: String,
+      root: AbsolutePath,
+      replaceWith: String = ""
+  )(
+      fn: (String, TextDocumentIdentifier, l.Range) => T
+  ): Future[T] = {
+    val startOffset = original.indexOf("<<")
+    val endOffset = original.indexOf(">>")
+    if (startOffset < 0) sys.error(s"missing <<\n$original")
+    if (endOffset < 0) sys.error(s"missing >>\n$original")
+    if (startOffset > endOffset)
+      sys.error(s"invalid range, >> must come after <<\n$original")
+    val text =
+      original
+        .replaceAllLiterally("<<", replaceWith)
+        .replaceAllLiterally(">>", replaceWith)
+    val input = m.Input.String(text)
+    val path = root.resolve(filename)
+    path.touch()
+    val pos = m.Position.Range(input, startOffset, endOffset - "<<>>".length())
+    for {
+      _ <- didChange(filename)(_ => text)
+    } yield {
+      fn(
+        text,
+        path.toTextDocumentIdentifier,
+        pos.toLSP
+      )
+    }
+  }
+
   private def offsetParams(
       filename: String,
       original: String,
@@ -592,6 +625,17 @@ final class TestingServer(
     positionFromString(filename, original, root) {
       case (text, textId, start) =>
         (text, new TextDocumentPositionParams(textId, start))
+    }
+
+  private def codeActionParams(
+      filename: String,
+      original: String,
+      root: AbsolutePath,
+      context: CodeActionContext
+  ): Future[(String, CodeActionParams)] =
+    rangeFromString(filename, original, root) {
+      case (text, textId, range) =>
+        (text, new CodeActionParams(textId, range, context))
     }
 
   private def onTypeParams(
@@ -693,17 +737,15 @@ final class TestingServer(
       root: AbsolutePath
   ): Future[(List[l.CodeAction], String)] =
     for {
-      (t, params) <- offsetParams(filename, query, root)
-      codeActionParams = new CodeActionParams(
-        params.getTextDocument(),
-        new l.Range(params.getPosition(), params.getPosition()),
+      (_, params) <- codeActionParams(
+        filename,
+        query,
+        root,
         new CodeActionContext(
-          client.diagnostics
-            .getOrElse(toPath(filename), Nil)
-            .asJava
+          client.diagnostics.getOrElse(toPath(filename), Nil).asJava
         )
       )
-      codeActions <- server.codeAction(codeActionParams).asScala
+      codeActions <- server.codeAction(params).asScala
     } yield (
       codeActions.asScala.toList,
       codeActions.map(_.getTitle()).asScala.mkString("\n")
