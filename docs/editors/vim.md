@@ -6,7 +6,7 @@ title: Vim
 ![Vim demo](https://i.imgur.com/4BYHCCL.gif)
 
 Metals works with most LSP clients for Vim, but we recommend using the
-[coc-metals extension](https://www.npmjs.com/package/coc-metals) for [`coc.nvim`](https://github.com/neoclide/coc.nvim)
+[coc-metals extension](https://github.com/scalameta/coc-metals) for [`coc.nvim`](https://github.com/neoclide/coc.nvim)
 which will provide the most complete implementation of LSP and Metals-specific helpers.
 
 ```scala mdoc:requirements
@@ -177,7 +177,7 @@ If you'd like to use the latest changes on master, you can also use the url of t
 command like so:
 
 ```vim
-:CocInstall https://github.com/ckipp01/coc-metals
+:CocInstall https://github.com/scalameta/coc-metals
 ```
 If you'd like to use the latest changes on master, but would prefer managing the plugin using a plugin
 manager to download the extension, make sure you run the below snippet to uninstall the old version
@@ -191,7 +191,7 @@ Then, if you are using [`vim-plug`](https://github.com/junegunn/vim-plug)
 for example, enter the following into where you manage your plugins:
 
 ```vim
-Plug 'ckipp01/coc-metals', {'do': 'yarn install --frozen-lockfile'}
+Plug 'scalameta/coc-metals', {'do': 'yarn install --frozen-lockfile'}
 ```
 Then, issue a `:PlugInstall` to install the extension, and regularly a `:PlugUpdate` to update it
 and pull in the latest changes. If you're relying on `coc.nvim` to install the extension, it will
@@ -243,6 +243,22 @@ This is helpful to see compilation errors in different files from your current
 open buffer.
 
 ![Diagnostics](https://i.imgur.com/cer22HW.png)
+
+## Worksheets
+
+Metals allows users to create a `*.worksheet.sc` file and see evaluations right in the file. In Vim,
+this is done using comments that are inserted which will allow you to hover on them to expand. In
+Neovim, this is done using Neovim's [virtual text](https://neovim.io/doc/user/api.html#nvim_buf_set_virtual_text())
+to implement Metal's [Decoration Protocol](https://scalameta.org/metals/docs/editors/decoration-protocol.html).
+If using Neovim, make sure to have the following line in included in your `.vimrc` along with your `coc.nvim` mappings.
+
+```vim
+nnoremap <leader>ws :call CocAction('runCommand', 'metals.expand-decoration')<CR>
+```
+Then, when on the line that you'd like to expand the decoration to get the hover information, execute a
+`<leader>ws` in order to see the expanded text for that line.
+
+![Decorations with worksheets](https://i.imgur.com/X8bVmu8.png)
 
 ## Run doctor
 
