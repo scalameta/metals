@@ -154,7 +154,8 @@ class CompletionProvider(
                 item.setAdditionalTextEdits(edits.asJava)
                 item.setTextEdit(textEdit(short + suffix))
             }
-          case _ =>
+          case _ if importPosition.isEmpty =>
+          case member =>
             val baseLabel = ident
             if (isSnippet && member.sym.isNonNullaryMethod) {
               member.sym.paramss match {
@@ -164,9 +165,7 @@ class CompletionProvider(
                 case head :: Nil if head.forall(_.isImplicit) =>
                   () // Don't set ($0) snippet for implicit-only params.
                 case _ =>
-                  val isImport = importPosition.isEmpty
-
-                  if (clientSupportsSnippets && !isImport) {
+                  if (clientSupportsSnippets) {
                     item.setTextEdit(textEdit(baseLabel + "($0)"))
                   }
                   metalsConfig
