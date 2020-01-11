@@ -164,7 +164,9 @@ class CompletionProvider(
                 case head :: Nil if head.forall(_.isImplicit) =>
                   () // Don't set ($0) snippet for implicit-only params.
                 case _ =>
-                  if (clientSupportsSnippets) {
+                  val isImport = importPosition.isEmpty
+
+                  if (clientSupportsSnippets && !isImport) {
                     item.setTextEdit(textEdit(baseLabel + "($0)"))
                   }
                   metalsConfig
