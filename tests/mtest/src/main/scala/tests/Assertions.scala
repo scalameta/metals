@@ -2,30 +2,8 @@ package tests
 
 import munit.Location
 import scala.meta.io.AbsolutePath
-import scala.collection.JavaConverters._
 
 trait Assertions extends munit.Assertions {
-
-  def unifiedDiff(expected: String, obtained: String): String = {
-    def splitIntoLines(string: String): Seq[String] =
-      string.trim.replace("\r\n", "\n").split("\n")
-
-    val references = splitIntoLines(expected).asJava
-    val definition = splitIntoLines(obtained).asJava
-    val diff = difflib.DiffUtils.diff(references, definition)
-    difflib.DiffUtils
-      .generateUnifiedDiff(
-        "references",
-        "definition",
-        references,
-        diff,
-        1
-      )
-      .asScala
-      .iterator
-      .filterNot(_.startsWith("@@"))
-      .mkString("\n")
-  }
 
   def assertNoDiffOrPrintObtained(
       obtained: String,

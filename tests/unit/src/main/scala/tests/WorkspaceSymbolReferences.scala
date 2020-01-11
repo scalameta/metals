@@ -1,5 +1,7 @@
 package tests
 
+import munit.Diffs
+
 case class WorkspaceSymbolReferences(
     references: Seq[SymbolReference],
     definition: Seq[SymbolReference]
@@ -25,7 +27,6 @@ case class WorkspaceSymbolReferences(
       .mkString("\n")
   def referencesFormat: String = format(references)
   def definitionFormat: String = format(definition)
-  def diff: String =
-    Assertions.unifiedDiff(referencesFormat, definitionFormat)
+  def diff: String = Diffs.unifiedDiff(referencesFormat, definitionFormat)
 
 }
