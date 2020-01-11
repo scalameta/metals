@@ -12,7 +12,7 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       expectedActions: String,
       expectedCode: String,
       selectedActionIndex: Int = 0,
-      expectNoDiagnostics: Boolean = false
+      expectNoDiagnostics: Boolean = true
   ): Unit = {
     val path = "a/src/main/scala/a/A.scala"
     testAsync(name) {

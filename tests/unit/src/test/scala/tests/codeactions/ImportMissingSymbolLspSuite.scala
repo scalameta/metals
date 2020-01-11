@@ -23,8 +23,7 @@ object ImportMissingSymbolLspSuite
        |object A {
        |  val f = Future.successful(2)
        |}
-       |""".stripMargin,
-    expectNoDiagnostics = true
+       |""".stripMargin
   )
 
   check(
@@ -45,8 +44,7 @@ object ImportMissingSymbolLspSuite
        |object A {
        |  val f = Future.successful(2)
        |}
-       |""".stripMargin,
-    expectNoDiagnostics = true
+       |""".stripMargin
   )
 
   check(
@@ -70,7 +68,8 @@ object ImportMissingSymbolLspSuite
        |  val f = Future.successful(Instant.now)
        |  val b = ListBuffer.newBuilder[Int]
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    expectNoDiagnostics = false
   )
 
   check(
@@ -93,7 +92,8 @@ object ImportMissingSymbolLspSuite
        |  val f = Future.successful(Instant.now)
        |  val b = ListBuffer.newBuilder[Int]
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    expectNoDiagnostics = false
   )
 
 }
