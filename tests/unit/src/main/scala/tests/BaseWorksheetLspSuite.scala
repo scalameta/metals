@@ -13,7 +13,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
 
-  override def skipSuite: Boolean = isValidScalaVersionForEnv(scalaVersion)
+  override def skipSuite: Boolean = !isValidScalaVersionForEnv(scalaVersion)
 
   testAsync("completion") {
     assume(!isWindows, "This test is flaky on Windows")
