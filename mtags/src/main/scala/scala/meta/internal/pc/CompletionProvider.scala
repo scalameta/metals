@@ -67,16 +67,16 @@ class CompletionProvider(
     lazy val context = doLocateImportContext(pos, importPosition)
 
     val items = sorted.iterator.zipWithIndex.map {
-      case (r, idx) =>
+      case (member, idx) =>
         params.checkCanceled()
-        val symbolName = r.symNameDropLocal.decoded
+        val symbolName = member.symNameDropLocal.decoded
         val ident = Identifier.backtickWrap(symbolName)
-        val detail = r match {
+        val detail = member match {
           case o: OverrideDefMember => o.detail
           case t: TextEditMember if t.detail.isDefined => t.detail.get
-          case _ => detailString(r, history)
+          case _ => detailString(member, history)
         }
-        val label = r match {
+        val label = member match {
           case _: NamedArgMember =>
             s"$ident = "
           case o: OverrideDefMember =>
@@ -86,7 +86,7 @@ class CompletionProvider(
           case o: WorkspaceMember =>
             s"$ident - ${o.sym.owner.fullName}"
           case _ =>
-            if (r.sym.isMethod || r.sym.isValue) {
+            if (member.sym.isMethod || member.sym.isValue) {
               ident + detail
             } else {
               ident
@@ -99,17 +99,17 @@ class CompletionProvider(
         val templateSuffix =
           if (!isSnippet || !clientSupportsSnippets) ""
           else if (completion.isNew &&
-            r.sym.dealiased.requiresTemplateCurlyBraces) " {}"
+            member.sym.dealiased.requiresTemplateCurlyBraces) " {}"
           else ""
 
         val typeSuffix =
           if (!isSnippet || !clientSupportsSnippets) ""
-          else if (completion.isType && r.sym.hasTypeParams) "[$0]"
-          else if (completion.isNew && r.sym.hasTypeParams) "[$0]"
+          else if (completion.isType && member.sym.hasTypeParams) "[$0]"
+          else if (completion.isNew && member.sym.hasTypeParams) "[$0]"
           else ""
         val suffix = typeSuffix + templateSuffix
 
-        r match {
+        member match {
           case i: TextEditMember =>
             item.setFilterText(i.filterText)
           case i: OverrideDefMember =>
@@ -126,7 +126,7 @@ class CompletionProvider(
           item.setInsertTextFormat(InsertTextFormat.PlainText)
         }
 
-        r match {
+        member match {
           case i: TextEditMember =>
             item.setTextEdit(i.edit)
             if (i.additionalTextEdits.nonEmpty) {
@@ -156,8 +156,8 @@ class CompletionProvider(
             }
           case _ =>
             val baseLabel = ident
-            if (isSnippet && r.sym.isNonNullaryMethod) {
-              r.sym.paramss match {
+            if (isSnippet && member.sym.isNonNullaryMethod) {
+              member.sym.paramss match {
                 case Nil =>
                 case Nil :: Nil =>
                   item.setTextEdit(textEdit(baseLabel + "()"))
@@ -182,14 +182,14 @@ class CompletionProvider(
         }
 
         if (item.getTextEdit == null) {
-          val editText = r match {
+          val editText = member match {
             case _: NamedArgMember => item.getLabel
             case _ => ident
           }
           item.setTextEdit(textEdit(editText))
         }
 
-        r match {
+        member match {
           case o: TextEditMember =>
             o.command.foreach { command =>
               item.setCommand(new l.Command("", command))
@@ -197,7 +197,7 @@ class CompletionProvider(
           case _ =>
         }
 
-        val completionItemDataKind = r match {
+        val completionItemDataKind = member match {
           case o: OverrideDefMember if o.sym.isJavaDefined =>
             CompletionItemData.OverrideKind
           case _ =>
@@ -206,14 +206,14 @@ class CompletionProvider(
 
         item.setData(
           CompletionItemData(
-            semanticdbSymbol(r.sym),
+            semanticdbSymbol(member.sym),
             buildTargetIdentifier,
             kind = completionItemDataKind
           ).toJson
         )
-        item.setKind(completionItemKind(r))
+        item.setKind(completionItemKind(member))
         item.setSortText(f"${idx}%05d")
-        if (r.sym.isDeprecated) {
+        if (member.sym.isDeprecated) {
           item.setDeprecated(true)
         }
         // NOTE: We intentionally don't set the commit character because there are valid scenarios where
