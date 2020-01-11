@@ -46,8 +46,7 @@ class ImportMissingSymbol(compilers: Compilers) extends CodeAction {
     Future
       .sequence(params.getContext().getDiagnostics().asScala.collect {
         case d @ ScalacDiagnostic.SymbolNotFound(name)
-            if d.getRange().encloses(params.getRange().getEnd()) ||
-              params.getRange().encloses(d.getRange().getStart()) =>
+            if params.getRange().overlapsWith(d.getRange()) =>
           importMissingSymbol(d, name)
       })
       .map(_.flatten)
