@@ -143,8 +143,6 @@ class Messages(icons: Icons) {
       new MessageActionItem("Reconnect to build server")
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")
-    def dismissForever: MessageActionItem =
-      new MessageActionItem("Don't show again")
     def params(): ShowMessageRequestParams = {
 
       val params = new ShowMessageRequestParams()
@@ -156,8 +154,7 @@ class Messages(icons: Icons) {
       params.setActions(
         List(
           reconnect,
-          notNow,
-          dismissForever
+          notNow
         ).asJava
       )
       params
