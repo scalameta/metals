@@ -43,9 +43,7 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
       _ = assertNoDiagnostics()
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = server.assertReferenceDefinitionDiff(
-        """|--- references
-           |+++ definition
-           |                              ^
+        """|^
            |+a/src/main/scala/a/A.scala:4:36: a/A#
            |+  def apply(a: Int, b: Int): A = A.apply(a) // overloaded non-synthetic apply
            |+                                   ^^^^^
