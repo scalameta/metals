@@ -219,7 +219,7 @@ lazy val mtags = project
         crossSetting(
           scalaVersion.value,
           if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.7")
+          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.8")
         )
     },
     buildInfoPackage := "scala.meta.internal.mtags",
@@ -282,7 +282,7 @@ lazy val metals = project
       "com.outr" %% "scribe" % "2.7.10",
       "com.outr" %% "scribe-slf4j" % "2.7.10", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.5.7",
+      "com.lihaoyi" %% "pprint" % "0.5.8",
       // For exporting Pants builds.
       "com.lihaoyi" %% "ujson" % "0.9.6",
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
