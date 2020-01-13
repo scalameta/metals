@@ -18,7 +18,7 @@
             <link>http://scalameta.org/metals/blog/2020/01/10/cobalt.html</link>
             <guid>http://scalameta.org/metals/blog/2020/01/10/cobalt.html</guid>
             <pubDate>Fri, 10 Jan 2020 06:00:00 GMT</pubDate>
-            <description><![CDATA[<p>We are excited to announce the release of Metals v0.8.0, codename Cobalt. This release includes a large number of new features and improvements, which have been under development since September 2019.</p> <p>Commits since last release: 727</p> <p>Merged PRs: 214</p> <p>C...</p>]]></description>
+            <description><![CDATA[<p>We are excited to announce the release of Metals v0.8.0, codename Cobalt. This release includes a large number of new features and improvements, which have been under development since September 2019.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">772</td> </tr> <tr> <td>Merged PRs</td> <td align="center">21...</td></tr></tbody></table>]]></description>
         </item>
         <item>
             <title><![CDATA[Metals v0.7.6 - Thorium]]></title>
