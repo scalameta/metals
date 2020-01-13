@@ -500,7 +500,7 @@ class MetalsLanguageServer(
       capabilities.setCompletionProvider(
         new CompletionOptions(
           config.compilers.isCompletionItemResolve,
-          List(".").asJava
+          List(".", "*").asJava
         )
       )
       capabilities.setWorkspaceSymbolProvider(true)

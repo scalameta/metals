@@ -336,7 +336,7 @@ trait Completions { this: MetalsGlobal =>
   // variable but it avoids repeating traversals from the compiler
   // implementation of `completionsAt(pos)`.
   var lastVisistedParentTrees: List[Tree] = Nil
-  sealed abstract class CompletionPosition {
+  abstract class CompletionPosition {
     def isType: Boolean = false
     def isNew: Boolean = false
 
@@ -425,6 +425,13 @@ trait Completions { this: MetalsGlobal =>
     }
 
     latestEnclosingArg match {
+      case _ if isScaladocCompletion(pos, text) =>
+        val associatedDef = onUnitOf(pos.source) { unit =>
+          new AssociatedMemberDefFinder(pos).findAssociatedDef(unit.body)
+        }
+        associatedDef
+          .map(definition => Scaladoc(editRange, definition, pos, text))
+          .getOrElse(CompletionPosition.None)
       case (ident: Ident) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
@@ -1866,5 +1873,4 @@ trait Completions { this: MetalsGlobal =>
       }
     }
   }
-
 }
