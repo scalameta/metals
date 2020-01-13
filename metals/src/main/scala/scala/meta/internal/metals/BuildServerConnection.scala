@@ -155,6 +155,7 @@ case class BuildServerConnection(
               connection = askUser(reestablishConnection).map { conn =>
                 // version can change when reconnecting
                 _version.set(conn.version)
+                ongoingRequests.addAll(conn.cancelables)
                 conn
               }
             }
