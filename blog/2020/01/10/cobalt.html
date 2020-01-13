@@ -177,12 +177,15 @@ error by auto-importing a symbol present on the classpath.</p>
 lacking what LSP calls a code action.</p>
 <p>Code actions are context-sensitive actions that are proposed to the user in
 order to fix an error or to perform a relevant refactor.</p>
-<p>Thanks to the work of @gabro we now have a basic architecture in place for
-supporting code actions and we were able to implement this feature.</p>
+<p>Thanks to the work of <a href="https://github.com/gabro">@gabro</a> we now have a basic
+architecture in place for supporting code actions and we were able to implement
+this feature.</p>
 <p><img src="https://user-images.githubusercontent.com/691940/68937367-8839bf80-079c-11ea-8401-4927f6531d24.gif" alt="missing-symbol"></p>
 <h2><a class="anchor" aria-hidden="true" id="worksheet-support"></a><a href="#worksheet-support" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Worksheet support</h2>
-<p>Thanks to great work by @olafurpg and some additional refinements by
-@alekseiAlefirov, worksheets are now available in all supported editors.</p>
+<p>Thanks to great work by <a href="https://github.com/olafurpg">@olafurpg</a> and some
+additional refinements by
+<a href="https://github.com/alekseiAlefirov">@alekseiAlefirov</a>, worksheets are now
+available in all supported editors.</p>
 <p>Worksheets are a way to evaluate code in real time to test and prototype any new
 features in a simple way. To create a worksheet all that is needed is to create
 a file with the extension <code>worksheet.sc</code> and Metals will take care of the rest.</p>
@@ -249,10 +252,10 @@ the user the option of automatic reconnection. This works both when the build
 server was down and when the connection was just interrupted. It should also
 solve the issues on MacOs with dropped connection.</p>
 <h3><a class="anchor" aria-hidden="true" id="experimental-build-tool-support-for-pants"></a><a href="#experimental-build-tool-support-for-pants" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Experimental build tool support for Pants</h3>
-<p>Thanks to the recent work by @olafurpg, there's now experimental support for the
-Pants build tool. The Pants integration is still evolving so it's not yet
-documented. The end goal is to support Pants in the same way as other build
-tools like sbt, Maven and Gradle.</p>
+<p>Thanks to the recent work by <a href="https://github.com/olafurpg">@olafurpg</a>, there's
+now experimental support for the Pants build tool. The Pants integration is
+still evolving so it's not yet documented. The end goal is to support Pants in
+the same way as other build tools like sbt, Maven and Gradle.</p>
 <h2><a class="anchor" aria-hidden="true" id="completions"></a><a href="#completions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Completions</h2>
 <h3><a class="anchor" aria-hidden="true" id="completion-to-add-all-abstract-members"></a><a href="#completion-to-add-all-abstract-members" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Completion to add all abstract members</h3>
 <p>In the past when you were implementing an abstract member in a concrete class,
@@ -282,9 +285,10 @@ Metals + Vim users.</p>
 </ul>
 <p><img src="https://camo.githubusercontent.com/0f56f5a3a874e7c69eff3aaeb2dfe47dc586e3d3/68747470733a2f2f692e696d6775722e636f6d2f7a6f66753456492e706e67" alt="coc-metals"></p>
 <h2><a class="anchor" aria-hidden="true" id="support-for-java-11"></a><a href="#support-for-java-11" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Support for java 11</h2>
-<p>Thanks to @isomarcte we now also run all tests on JDK 11, which enables us to be
-more confident about the support for it. With some additional changes to the
-documentation we now can fully claim that support for JDK 11 is available.</p>
+<p>Thanks to <a href="https://github.com/isomarcte">@isomarcte</a> we now also run all tests
+on JDK 11, which enables us to be more confident about the support for it. With
+some additional changes to the documentation we now can fully claim that support
+for JDK 11 is available.</p>
 <h2><a class="anchor" aria-hidden="true" id="other-changes"></a><a href="#other-changes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Other changes</h2>
 <p>This version includes approximately 25% of the Metals git commit log, which
 makes it impossible to explain every possible improvement in these release
