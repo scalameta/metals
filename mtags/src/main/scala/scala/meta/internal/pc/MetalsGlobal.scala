@@ -30,6 +30,7 @@ class MetalsGlobal(
     val metalsConfig: PresentationCompilerConfig
 ) extends Global(settings, reporter)
     with Completions
+    with ScaladocCompletions
     with Signatures
     with Compat
     with GlobalProxy

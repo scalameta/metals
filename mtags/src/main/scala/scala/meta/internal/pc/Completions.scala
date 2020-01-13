@@ -20,7 +20,7 @@ import scala.collection.immutable.Nil
 /**
  * Utility methods for completions.
  */
-trait Completions extends ScaladocCompletion { this: MetalsGlobal =>
+trait Completions { this: MetalsGlobal =>
 
   val clientSupportsSnippets: Boolean =
     metalsConfig.isCompletionSnippetsEnabled()

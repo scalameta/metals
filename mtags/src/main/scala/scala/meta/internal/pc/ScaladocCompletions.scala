@@ -4,10 +4,9 @@ import java.lang.StringBuilder
 
 import org.eclipse.{lsp4j => l}
 
-import scala.util.control.NonFatal
 import scala.collection.immutable.Nil
 
-trait ScaladocCompletion { this: MetalsGlobal =>
+trait ScaladocCompletions { this: MetalsGlobal =>
 
   /**
    * A scaladoc completion showing the parameters of the given associated definition.
@@ -47,10 +46,8 @@ trait ScaladocCompletion { this: MetalsGlobal =>
       val builder = new StringBuilder()
 
       val hasConstructor = associatedDef.symbol.primaryConstructor.isDefined && !associatedDef.symbol.isAbstractClass
-      val hasReturnValue =
-        associatedDef.symbol.isMethod &&
-          !(associatedDef.symbol.asMethod.returnType.finalResultType
-            =:= typeOf[Unit])
+      val hasReturnValue = associatedDef.symbol.isMethod &&
+        !(associatedDef.symbol.asMethod.returnType.finalResultType =:= definitions.UnitTpe)
 
       // newline after `/**`
       builder.append("\n")
@@ -64,9 +61,6 @@ trait ScaladocCompletion { this: MetalsGlobal =>
       if (params.nonEmpty || hasReturnValue || hasConstructor)
         builder.append(s"${indent}*\n")
 
-      // * @constructor
-      if (hasConstructor) builder.append(s"${indent}* @constructor\n")
-
       // * @param p1
       // * @param p2
       params.foreach(param => builder.append(s"${indent}* @param ${param}\n"))
@@ -76,12 +70,13 @@ trait ScaladocCompletion { this: MetalsGlobal =>
       if (hasReturnValue) builder.append(s"${indent}* @return\n")
       builder.append(s"${indent}*/")
 
+      val newText = builder.toString()
       List(
         new TextEditMember(
           "Scaladoc Comment",
           new l.TextEdit(
             editRange,
-            builder.toString()
+            newText
           ),
           completionsSymbol(associatedDef.name.toString()),
           label = Some("/** */"),
@@ -150,14 +145,11 @@ trait ScaladocCompletion { this: MetalsGlobal =>
    * @param text The original text of the source file.
    */
   protected def isScaladocCompletion(pos: Position, text: String): Boolean = {
-    try {
-      pos.isDefined &&
-      text.charAt(pos.point - 3) == '/' &&
-      text.charAt(pos.point - 2) == '*' &&
-      text.charAt(pos.point - 1) == '*'
-    } catch {
-      case NonFatal(_) => false
-    }
+    pos.isDefined &&
+    pos.point >= 3 &&
+    text.charAt(pos.point - 3) == '/' &&
+    text.charAt(pos.point - 2) == '*' &&
+    text.charAt(pos.point - 1) == '*'
   }
 
   /**
@@ -180,24 +172,28 @@ trait ScaladocCompletion { this: MetalsGlobal =>
     }
     override def traverse(t: Tree): Unit = {
       t match {
-        case typedef: TypeDef => process(typedef)
-        case clsdef: ClassDef => process(clsdef)
-        case defdef: DefDef => process(defdef)
-        case moduledef: ModuleDef => process(moduledef)
-        case pkgdef: PackageDef => process(pkgdef)
-        case valdef: ValDef => process(valdef)
+        case typedef: TypeDef => visit(typedef)
+        case clsdef: ClassDef => visit(clsdef)
+        case defdef: DefDef => visit(defdef)
+        case moduledef: ModuleDef => visit(moduledef)
+        case pkgdef: PackageDef => visit(pkgdef)
+        case valdef: ValDef => visit(valdef)
         case _ if treePos(t).includes(pos) => super.traverse(t)
         case _ =>
       }
     }
-    private def process(t: MemberDef): Unit = {
+    private def visit(t: MemberDef): Unit = {
       // if the node's location is below the current associate def,
       // we don't have to visit the node because it can't be an associated def.
-      if (associatedDef
-          .map(cur =>
-            t.pos.isDefined && cur.pos.isDefined && t.pos.point <= cur.pos.point
-          )
-          .getOrElse(true)) {
+      val isEligible = associatedDef match {
+        case Some(cur) =>
+          t.pos.isDefined &&
+            cur.pos.isDefined &&
+            t.pos.point <= cur.pos.point
+        case None =>
+          true
+      }
+      if (isEligible) {
         if (t.pos.isDefined && t.pos.start >= pos.start) associatedDef = Some(t)
         if (treePos(t).includes(pos)) super.traverse(t)
       }

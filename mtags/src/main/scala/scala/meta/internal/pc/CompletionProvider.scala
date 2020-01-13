@@ -27,9 +27,8 @@ class CompletionProvider(
         // Insert potentially missing `}` to avoid "unclosed literal" error in String interpolator..
         CURSOR + "}"
       case '*'
-          if params
-            .text()
-            .charAt(i - 1) == '*' && params.text().charAt(i - 2) == '/' =>
+          if params.text().charAt(i - 1) == '*' &&
+            params.text().charAt(i - 2) == '/' =>
         // Insert potentially missing `*/` to avoid comment out all codes after the "/**".
         CURSOR + "*/"
       case _ =>

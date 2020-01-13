@@ -68,7 +68,6 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |  /**
        |    * $0
        |    *
-       |    * @constructor
        |    * @param param1
        |    * @param param2
        |    */
@@ -148,7 +147,6 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |  /**
        |    * $0
        |    *
-       |    * @constructor
        |    * @param x
        |    */
        |  case class B(x: Int) {
@@ -275,11 +273,30 @@ object CompletionScaladocSuite extends BaseCompletionSuite {
        |  /**
        |    * $0
        |    *
-       |    * @constructor
        |    * @param x
        |    * @param y
        |    */
        |  case class Test[T: Ordering](x: T, y: T) {}
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "classdef-curried",
+    """|object A {
+       |  /**@@
+       |  case class Test(a: Int, b: String)(c: Long)
+       |}
+       |""".stripMargin,
+    """|object A {
+       |  /**
+       |    * $0
+       |    *
+       |    * @param a
+       |    * @param b
+       |    * @param c
+       |    */
+       |  case class Test(a: Int, b: String)(c: Long)
        |}
        |""".stripMargin
   )
