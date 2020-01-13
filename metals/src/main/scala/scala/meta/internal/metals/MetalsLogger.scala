@@ -62,8 +62,7 @@ object MetalsLogger {
     override def id = "MetalsFilter"
     override def priority: Priority = Priority.Normal
     override def apply[M](record: LogRecord[M]): Option[LogRecord[M]] = {
-      // FIXME: filter on `org.flywaydb` instead of `scribe.sl4j` https://github.com/outr/scribe/issues/100
-      if (record.className.startsWith("scribe.slf4j") && record.level < scribe.Level.Warn.value) {
+      if (record.className.startsWith("org.flywaydb") && record.level < scribe.Level.Warn.value) {
         None
       } else {
         Some(record)
