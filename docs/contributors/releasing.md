@@ -36,6 +36,7 @@ title: Making a release
   - You might use `.bin/release_notes.py` script to generate merged PRs list. It
     requires the official Github library (`pip install PyGithub`) and you will
     also need to fill in tag names.
+  - Update Metals version in `build.sbt`
   - Open a PR to the repo
   - https://github.com/scalameta/metals/releases/new.
 
@@ -63,8 +64,6 @@ title: Making a release
         the website
     - open a PR, feel free to merge after CI is green
     - tag a new release and publish to Marketplace
-  - https://github.com/NixOS/nixpkgs/pull/51988
-    - update the version number and `outputHash`
 
 - Publish the release on GitHub:
 
