@@ -2,12 +2,24 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2019-09-23T06:00:00.000Z</updated>
+    <updated>2020-01-10T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
     <logo>http://scalameta.org/metals/img/scalameta-logo.png</logo>
     <rights>Copyright © 2020 Metals</rights>
+    <entry>
+        <title type="html"><![CDATA[Metals v0.8.0 - Cobalt]]></title>
+        <id>http://scalameta.org/metals/blog/2020/01/10/cobalt.html</id>
+        <link href="http://scalameta.org/metals/blog/2020/01/10/cobalt.html"/>
+        <updated>2020-01-10T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.8.0, codename Cobalt. This release includes a large number of new features and improvements, which have been under development since September 2019.</p> <p>Commits since last release: 727</p> <p>Merged PRs: 214</p> <p>C...</p>]]></summary>
+        <author>
+            <name>Tomasz Godzik</name>
+            <email/>
+            <uri>https://twitter.com/TomekGodzik</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.7.6 - Thorium]]></title>
         <id>http://scalameta.org/metals/blog/2019/09/23/thorium.html</id>

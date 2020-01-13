@@ -1,0 +1,960 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Metals v0.8.0 - Cobalt · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="We are excited to announce the release of Metals v0.8.0, codename Cobalt. This"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Metals v0.8.0 - Cobalt · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/blog/2020/01/10/cobalt.html"/><meta property="og:description" content="We are excited to announce the release of Metals v0.8.0, codename Cobalt. This"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-140140828-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><script src="/metals/js/scrollSpy.js"></script><link rel="stylesheet" href="/metals/css/main.css"/><script src="/metals/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class="siteNavGroupActive"><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>All Blog Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">All Blog Posts</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/metals/blog/2020/01/10/cobalt.html">Metals v0.8.0 - Cobalt</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/09/23/thorium.html">Metals v0.7.6 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/09/12/thorium.html">Metals v0.7.5 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/09/02/thorium.html">Metals v0.7.2 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/06/28/thorium.html">Metals v0.7.0 - Thorium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/06/11/radium.html">Metals v0.6.1 - Radium</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/04/26/mercury.html">Metals v0.5.1</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/04/12/mercury.html">Metals v0.5.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/02/01/tin.html">Metals v0.4.4</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/24/tin.html">Metals v0.4.0</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2019/01/22/bloom-filters.html">Low-memory symbol indexing with bloom filters</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/14/iron.html">Metals v0.3.2</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/12/fast-goto-definition.html">Fast goto definition with low memory footprint</a></li><li class="navListItem"><a class="navItem" href="/metals/blog/2018/12/06/iron.html">Metals v0.3 - Iron</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer postContainer blogContainer"><div class="wrapper"><div class="lonePost"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle"><a href="/metals/blog/2020/01/10/cobalt.html">Metals v0.8.0 - Cobalt</a></h1><p class="post-meta">January 10, 2020</p><div class="authorBlock"><p class="post-authorName"><a href="https://twitter.com/TomekGodzik" target="_blank" rel="noreferrer noopener">Tomasz Godzik</a></p><div class="authorPhoto"><a href="https://twitter.com/TomekGodzik" target="_blank" rel="noreferrer noopener"><img src="https://github.com/tgodzik.png" alt="Tomasz Godzik"/></a></div></div></header><div><span><p>We are excited to announce the release of Metals v0.8.0, codename Cobalt. This
+release includes a large number of new features and improvements, which have
+been under development since September 2019.</p>
+<p>Commits since last release: 727</p>
+<p>Merged PRs: 214</p>
+<p>Contributors: 19</p>
+<p>Closed issues: 84</p>
+<p>New features: 8</p>
+<p>For full details: <a href="https://github.com/scalameta/metals/milestone/9?closed=1">https://github.com/scalameta/metals/milestone/9?closed=1</a></p>
+<p>Metals is a language server for Scala that works with VS Code, Vim, Emacs,
+Sublime Text, Atom and Eclipse. Metals is developed at the
+<a href="https://scala.epfl.ch/">Scala Center</a> and <a href="https://virtuslab.com">VirtusLab</a>
+along with contributors from the community. Recently, Metals has also gained
+support from <a href="https://lunatech.com">Lunatech</a> with the contributions from
+<a href="https://github.com/ckipp01">@ckipp01</a>. We are extremely grateful for the
+growing support from the community and businesses alike, which shows in the
+number of new contributions and their quality.</p>
+<h2><a class="anchor" aria-hidden="true" id="tldr"></a><a href="#tldr" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>TL;DR</h2>
+<p>Check out <a href="https://scalameta.org/metals/">https://scalameta.org/metals/</a> and
+give Metals a try!</p>
+<ul>
+<li>run and debug for tests and main methods</li>
+<li>go to implementations</li>
+<li>rename symbol</li>
+<li>first code action - import missing symbol</li>
+<li>worksheet support</li>
+<li>experimental support for the Pants build tool</li>
+<li>improvements for Bloop integration</li>
+<li>better support for Vim via coc-metals</li>
+<li>completion to add all abstract members</li>
+<li>scaladoc auto completion on type <code>/**</code></li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="debugging"></a><a href="#debugging" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Debugging</h2>
+<p>It is now possible to run and test directly from VS Code using the new &quot;Run&quot;,
+&quot;Test&quot;, &quot;Debug&quot; and &quot;Debug test&quot; buttons. The debug buttons support debugging
+with breakpoints. It's possible to insert breakpoints in Java and Scala sources
+for both workspace sources as well as library dependency sources.</p>
+<p><img src="https://user-images.githubusercontent.com/3709537/70703645-d0cb9680-1cd0-11ea-9034-a2ef18ffb588.gif" alt="debug"></p>
+<p>To support other editors please take a look into the documentation on the Metals
+website.</p>
+<p>Known breakpoints limitations we are working on:</p>
+<ul>
+<li>debugging is only supported in VS Code at this moment, we hope to increase the
+editor support in the future. To support debugging, editors need to implement
+the
+<a href="https://microsoft.github.io/debug-adapter-protocol/">Debug Adapter Protocol</a></li>
+<li>breakpoints may not work as expected in all source locations (example: inner
+classes, ambiguous names, lambdas). Please share your feedback by reporting
+issues!</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="navigation"></a><a href="#navigation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Navigation</h2>
+<h3><a class="anchor" aria-hidden="true" id="go-to-implementations"></a><a href="#go-to-implementations" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Go to implementations</h3>
+<p>Metals now implements the textDocument/implementations LSP endpoint, which
+enables all supported editors to display a list of all implementations of
+abstract classes or members.</p>
+<p><img src="https://i.imgur.com/rke6iny.gif" alt="implementations"></p>
+<p>Finding implementations also works for symbols outside of the workspace, at the
+price of a small performance penalty for the first invocation.</p>
+<p>The work done for this feature was also instrumental for implementing the Rename
+refactor (see below).</p>
+<h2><a class="anchor" aria-hidden="true" id="refactor"></a><a href="#refactor" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Refactor</h2>
+<p>Refactoring support is one of the most requested features in Metals. In this
+release, we started by implementing the most commonly used refactors: rename and
+import missing symbol.</p>
+<p>We plan to add more common refactors along the way. Make sure to check out the
+<a href="https://github.com/scalameta/metals/issues/707">ones that have already been proposed</a>
+and consider suggesting other refactors that are essential in your development
+workflow.</p>
+<h3><a class="anchor" aria-hidden="true" id="rename-symbol"></a><a href="#rename-symbol" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Rename symbol</h3>
+<p>Thanks to the implementation of the <code>Go to implementations</code> feature, we were
+able to work on a proper rename for any workspace symbol that will rename all
+occurrences of a symbol even if that symbol is a part of a class hierarchy.</p>
+<p><img src="https://i.imgur.com/QHaJCr0.gif" alt="rename"></p>
+<p>There are a couple of cases in which rename might behave differently based on
+the particular symbol being renamed:</p>
+<ul>
+<li>renaming an overriden symbol will rename all occurrences for both parent and
+all children overriding that symbol</li>
+<li>java symbols are not renamed</li>
+<li>renaming &quot;hashCode&quot;, &quot;unapply&quot;, &quot;unary_!&quot;, &quot;!&quot; is not supported, since they
+change the semantics</li>
+<li>methods starting with <code>:</code> can only be renamed to ones with the same first
+character to make sure code compiles afterwards</li>
+<li>renaming apply will change all occurrences with just <code>()</code> to a full name
+<code>.newname()</code></li>
+<li>if renaming a class with the same name as the file, the file's name will also
+be renamed</li>
+<li>companion objects will also be renamed along with their companion classes</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="import-missing-symbol"></a><a href="#import-missing-symbol" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Import missing symbol</h3>
+<p>Another refactor that is commonly requested is the ability to fix a compilation
+error by auto-importing a symbol present on the classpath.</p>
+<p>This was previously possible in Metals only during completions, but we were
+lacking what LSP calls a code action.</p>
+<p>Code actions are context-sensitive actions that are proposed to the user in
+order to fix an error or to perform a relevant refactor.</p>
+<p>Thanks to the work of @gabro we now have a basic architecture in place for
+supporting code actions and we were able to implement this feature.</p>
+<p><img src="https://user-images.githubusercontent.com/691940/68937367-8839bf80-079c-11ea-8401-4927f6531d24.gif" alt="missing-symbol"></p>
+<h2><a class="anchor" aria-hidden="true" id="worksheet-support"></a><a href="#worksheet-support" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Worksheet support</h2>
+<p>Thanks to great work by @olafurpg and some additional refinements by
+@alekseiAlefirov, worksheets are now available in all supported editors.</p>
+<p>Worksheets are a way to evaluate code in real time to test and prototype any new
+features in a simple way. To create a worksheet all that is needed is to create
+a file with the extension <code>worksheet.sc</code> and Metals will take care of the rest.</p>
+<p>There are two ways worksheets are implemented for different editors. One is with
+an additional extension to LSP called <code>Decoration extension</code> and it's used by
+Visual Studio Code and coc-metals.</p>
+<p>Visual Studio Code:</p>
+<p><img src="https://user-images.githubusercontent.com/1408093/68093266-b0b3e680-fe8b-11e9-92dd-0165f169966f.gif" alt="worksheet"></p>
+<p>The other way worksheets are implemented for all other editors that don't
+support the <code>Decoration extension</code> is using workspace/applyEdits and comments
+with hover for larger results.</p>
+<p>Sublime:</p>
+<p><img src="https://user-images.githubusercontent.com/10850363/70265661-29fc6d00-179b-11ea-842e-935045e27f96.gif" alt="worksheet2"></p>
+<h2><a class="anchor" aria-hidden="true" id="build-tools"></a><a href="#build-tools" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Build tools</h2>
+<p>In order to make the integration between Bloop and Metals a smoother experience,
+several new improvements are included in this release. There're based on
+feedback from users as well us our own experiences while working with Metals and
+should make the overall experience of importing the build and compiling much
+better. Additionally, we implemented experimental support for the Pants build
+tool.</p>
+<h3><a class="anchor" aria-hidden="true" id="semanticdb-is-resolved-inside-bloop"></a><a href="#semanticdb-is-resolved-inside-bloop" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>SemanticDB is resolved inside Bloop</h3>
+<p>Metals requires the SemanticDB compiler plugin for a number of features to
+function properly. Because of that it was quite difficult to add it
+automatically in all supported build tools even if those supported Bloop itself.
+Perfect examples are Seed and Fury, which use Bloop to compile code, however
+adding a plugin automatically would require changes to their core code.</p>
+<p>Currently, thanks to
+<a href="https://github.com/scalacenter/bloop/pull/942">recent changes</a>, Metals can send
+information about the SemanticDB version, which Bloop uses to automatically
+download and configure the SemanticDB scalac plugin. Thanks to that no changes
+in the build tool itself are needed. Particular changes in regards to build
+tools are:</p>
+<ul>
+<li>Gradle - predef script code used in automatic import is now simplified a lot
+and works with even more customized workspaces. The only thing it needs to do
+is add the Bloop plugin and run <code>bloopInstall</code>, which can easily also be done
+manually by the user.</li>
+<li>Maven - no manual configuration is now needed. To import automatically just
+the plugin is needed to be invoked with a setting for downloading sources.</li>
+<li>Sbt - the <code>metals-sbt</code> plugin is now removed and the Bloop plugin is now added
+via automatically generated <code>./project/metals.sbt</code> file and ran when imported
+automatically. Thanks to this solution it should be possible to reuse Metals
+compilation in the upcoming feature for offloading compilation in Sbt.</li>
+<li>Mill - logic for adding semanticDB plugin is removed from Mill.</li>
+<li>Pants, Fury, Seed - no changes were needed for the semanticDB integration and
+should work out of the box.</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="switch-to-to-using-bloop-launcher"></a><a href="#switch-to-to-using-bloop-launcher" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Switch to to using Bloop Launcher</h3>
+<p>Instead of using internal Metals logic, we now use the Bloop Launcher, which
+enables us to either connect to an existing Bsp server or start a new Bloop
+instance with the specified version if none is running. This greatly simplified
+the connection to Bloop and enabled us to work on further improvements.</p>
+<h3><a class="anchor" aria-hidden="true" id="restart-bloop-automatically-if-newer-version-is-needed"></a><a href="#restart-bloop-automatically-if-newer-version-is-needed" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Restart Bloop automatically if newer version is needed</h3>
+<p>Whenever Metals is started and connects to the Bloop build server it receives
+information about the version it is running. We compare that version to the one
+needed by Metals to make sure everything is properly working. If the current
+running version is older we offer to automatically restart it with the newer
+version. However, this may not work if Bloop was installed manually.</p>
+<h3><a class="anchor" aria-hidden="true" id="automatically-reconnect-to-bspbloop-if-connection-is-broken"></a><a href="#automatically-reconnect-to-bspbloop-if-connection-is-broken" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Automatically reconnect to Bsp/Bloop if connection is broken</h3>
+<p>There were numerous issues reported that the connection to Bps or Bloop was
+being lost, which causes Metals to behave erratically due to no compilation
+being run. To solve this, we now detect if the connection is closed and offer
+the user the option of automatic reconnection. This works both when the build
+server was down and when the connection was just interrupted. It should also
+solve the issues on MacOs with dropped connection.</p>
+<h3><a class="anchor" aria-hidden="true" id="experimental-build-tool-support-for-pants"></a><a href="#experimental-build-tool-support-for-pants" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Experimental build tool support for Pants</h3>
+<p>Thanks to the recent work by @olafurpg, there's now experimental support for the
+Pants build tool. The Pants integration is still evolving so it's not yet
+documented. The end goal is to support Pants in the same way as other build
+tools like sbt, Maven and Gradle.</p>
+<h2><a class="anchor" aria-hidden="true" id="completions"></a><a href="#completions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Completions</h2>
+<h3><a class="anchor" aria-hidden="true" id="completion-to-add-all-abstract-members"></a><a href="#completion-to-add-all-abstract-members" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Completion to add all abstract members</h3>
+<p>In the past when you were implementing an abstract member in a concrete class,
+you'd see the completion option to override the member. However, if you wanted
+to implement all of the abstract members, you'd need to do each one
+individually. Now you'll see a new completion option in the scenario to
+Implement all members which will implement all the members at once.</p>
+<p><img src="https://camo.githubusercontent.com/d698c2adb18a420fcb4259e4264b6417a5e4bb54/68747470733a2f2f692e696d6775722e636f6d2f617942614344552e676966" alt="implement-all"></p>
+<h3><a class="anchor" aria-hidden="true" id="support-scaladoc-auto-completion-on-type-"></a><a href="#support-scaladoc-auto-completion-on-type-" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Support scaladoc auto completion on type <code>/**</code></h3>
+<p>Thanks to recent work by <a href="https://github.com/tanishiking">tanishiking</a> Metals
+now supports auto completing scaladoc for method definition and class definition
+on typing <code>/**</code>. More details about it can be found in
+<a href="https://github.com/scalameta/metals/pull/1250">the pull request</a>.</p>
+<p><img src="https://user-images.githubusercontent.com/9353584/72200454-11affa00-348d-11ea-8967-a9f909c1b2a8.gif" alt="scaladoc"></p>
+<h2><a class="anchor" aria-hidden="true" id="better-support-for-vim-via-coc-metals"></a><a href="#better-support-for-vim-via-coc-metals" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Better support for Vim via coc-metals</h2>
+<p>In order to better support the Vim experience with Metals, coc-metals extension
+was created which is an extension for coc.nvim, the most popular LSP client for
+Vim and Neovim. With this new extension comes a whole bunch of new features for
+Metals + Vim users.</p>
+<ul>
+<li>automated installation</li>
+<li>easier configuration options</li>
+<li>easier workspace commands</li>
+<li>embedded doctor</li>
+<li>input box support</li>
+<li>implementation of the decoration protocol (Neovim only)</li>
+</ul>
+<p><img src="https://camo.githubusercontent.com/0f56f5a3a874e7c69eff3aaeb2dfe47dc586e3d3/68747470733a2f2f692e696d6775722e636f6d2f7a6f66753456492e706e67" alt="coc-metals"></p>
+<h2><a class="anchor" aria-hidden="true" id="support-for-java-11"></a><a href="#support-for-java-11" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Support for java 11</h2>
+<p>Thanks to @isomarcte we now also run all tests on JDK 11, which enables us to be
+more confident about the support for it. With some additional changes to the
+documentation we now can fully claim that support for JDK 11 is available.</p>
+<h2><a class="anchor" aria-hidden="true" id="other-changes"></a><a href="#other-changes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Other changes</h2>
+<p>This version includes approximately 25% of the Metals git commit log, which
+makes it impossible to explain every possible improvement in these release
+notes. Some other features and fixes that we should mention are:</p>
+<ul>
+<li>fix for handling abstract var overrides</li>
+<li>add an empty line after the package declaration before import</li>
+<li>sort auto-completed exhaustive matches by declaration order</li>
+<li>encode the workspace path directory in build digests</li>
+<li>tone down &quot;No SemanticDB&quot; warning</li>
+<li>send Tree View update notification on first no-op compilation.</li>
+<li>enable <code>goToDefinition</code> when cursor is at end of symbol</li>
+<li>prioritize build targets with supported Scala versions.</li>
+<li>add automatic formatting of multi-line <code>stripMargin</code> strings on paste</li>
+<li>remove support for 2.12.7</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="contributors"></a><a href="#contributors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributors</h2>
+<p>Big thanks to everybody who contributed to this release!</p>
+<p>We had a lot of new contributors that provided us with some amazing new features
+and with some amazing quality.</p>
+<pre><code class="hljs"><span class="hljs-meta">$</span> <span class="hljs-string">git shortlog -sn --no-merges v0.7.6..v0.8.0</span>
+<span class="hljs-meta">Ólafur</span> <span class="hljs-string">Páll Geirsson</span>
+<span class="hljs-attr">Tomasz</span> <span class="hljs-string">Godzik</span>
+<span class="hljs-attr">Marek</span> <span class="hljs-string">Żarnowski</span>
+<span class="hljs-attr">Scala</span> <span class="hljs-string">Steward</span>
+<span class="hljs-attr">Gabriele</span> <span class="hljs-string">Petronella</span>
+<span class="hljs-attr">Chris</span> <span class="hljs-string">Kipp</span>
+<span class="hljs-attr">Rikito</span> <span class="hljs-string">Taniguchi</span>
+<span class="hljs-attr">Szymon</span> <span class="hljs-string">Świstun</span>
+<span class="hljs-attr">David</span> <span class="hljs-string">Strawn</span>
+<span class="hljs-attr">Ayoub</span> <span class="hljs-string">Benali</span>
+<span class="hljs-attr">Aleksei</span> <span class="hljs-string">Alefirov</span>
+<span class="hljs-attr">Ashwin</span> <span class="hljs-string">Bhaskar</span>
+<span class="hljs-attr">Alexandre</span> <span class="hljs-string">Archambault</span>
+<span class="hljs-attr">Andy</span> <span class="hljs-string">Czerwonka</span>
+<span class="hljs-attr">Enrique</span> <span class="hljs-string">Molina</span>
+<span class="hljs-attr">Marc</span> <span class="hljs-string">A. Saegesser</span>
+<span class="hljs-attr">Soham</span> <span class="hljs-string">Rohankar</span>
+<span class="hljs-attr">Chris</span> <span class="hljs-string">Birchall</span>
+<span class="hljs-attr">kostafey</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="merged-prs"></a><a href="#merged-prs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Merged PRs</h2>
+<h2><a class="anchor" aria-hidden="true" id="v080httpsgithubcomscalametametalstreev080-2020-01-10"></a><a href="#v080httpsgithubcomscalametametalstreev080-2020-01-10" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><a href="https://github.com/scalameta/metals/tree/v0.8.0">v0.8.0</a> (2020-01-10)</h2>
+<p><a href="https://github.com/scalameta/metals/compare/v0.7.6...v0.8.0">Full Changelog</a></p>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>Silence noisy FlywayDB logs
+<a href="https://github.com/scalameta/metals/pull/1293">#1293</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Support scaladoc auto completion on type <code>/**</code>
+<a href="https://github.com/scalameta/metals/pull/1250">#1250</a>
+(<a href="https://github.com/tanishiking">tanishiking</a>)</li>
+<li>Add ability to cancel build server connection
+<a href="https://github.com/scalameta/metals/pull/1292">#1292</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Update utest to 0.7.3 <a href="https://github.com/scalameta/metals/pull/1291">#1291</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update ujson to 0.9.7 <a href="https://github.com/scalameta/metals/pull/1290">#1290</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update pprint to 0.5.8 <a href="https://github.com/scalameta/metals/pull/1288">#1288</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Compute 'Import missing symbol' code actions for all diagnostics in range
+<a href="https://github.com/scalameta/metals/pull/1286">#1286</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Change namespace to scalameta
+<a href="https://github.com/scalameta/metals/pull/1285">#1285</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Allow only to dismiss build server reconnection for 5 minutes
+<a href="https://github.com/scalameta/metals/pull/1282">#1282</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Automatically restart bsp connection when connection socket is closed
+<a href="https://github.com/scalameta/metals/pull/1266">#1266</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Use scala.sys.Process for BloopPants command-line.
+<a href="https://github.com/scalameta/metals/pull/1280">#1280</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Improve IntelliJ application detection when launching Pants bui…
+<a href="https://github.com/scalameta/metals/pull/1279">#1279</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Further polish to --vscode flag.
+<a href="https://github.com/scalameta/metals/pull/1274">#1274</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add --vscode flag to Pants export tool.
+<a href="https://github.com/scalameta/metals/pull/1274">#1274</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Minor Pants fixes . <a href="https://github.com/scalameta/metals/pull/1273">#1273</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>More small changes to the Pants export.
+<a href="https://github.com/scalameta/metals/pull/1271">#1271</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Use unique name for synthetic Pants projects.
+<a href="https://github.com/scalameta/metals/pull/1269">#1269</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update coursier to 2.0.0-RC5-6
+<a href="https://github.com/scalameta/metals/pull/1267">#1267</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Several improvements to Pants export
+<a href="https://github.com/scalameta/metals/pull/1265">#1265</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add separate &quot;debug&quot; code lens
+<a href="https://github.com/scalameta/metals/pull/1200">#1200</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Support breakpoints in java static methods and nested classes
+<a href="https://github.com/scalameta/metals/pull/1214">#1214</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Update flyway-core to 6.1.4
+<a href="https://github.com/scalameta/metals/pull/1264">#1264</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Upgrade Pants sbt testing interface.
+<a href="https://github.com/scalameta/metals/pull/1257">#1257</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update coursier to 2.0.0-RC5-5
+<a href="https://github.com/scalameta/metals/pull/1261">#1261</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update undertow-core to 2.0.29.Final
+<a href="https://github.com/scalameta/metals/pull/1262">#1262</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Restart Bloop automatically if newer version is needed
+<a href="https://github.com/scalameta/metals/pull/1256">#1256</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>typo - evaluating <a href="https://github.com/scalameta/metals/pull/1255">#1255</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Failing test case for #1253
+<a href="https://github.com/scalameta/metals/pull/1254">#1254</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Slightly more compliant initialization of codeActionProvider
+<a href="https://github.com/scalameta/metals/pull/1251">#1251</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>add in another test for multi-line string formatting
+<a href="https://github.com/scalameta/metals/pull/1249">#1249</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Update geny to 0.4.2 <a href="https://github.com/scalameta/metals/pull/1248">#1248</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Fix multi-line range formatting when on first line
+<a href="https://github.com/scalameta/metals/pull/1245">#1245</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Update sbt-mdoc to 2.1.1
+<a href="https://github.com/scalameta/metals/pull/1247">#1247</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update mdoc-interfaces to 2.1.1
+<a href="https://github.com/scalameta/metals/pull/1243">#1243</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Remove duplicated Arr in doctor json
+<a href="https://github.com/scalameta/metals/pull/1241">#1241</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Disable flaky test cases
+<a href="https://github.com/scalameta/metals/pull/1238">#1238</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add in server property for doctor-format and implement json format
+<a href="https://github.com/scalameta/metals/pull/1235">#1235</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Discard 'code' from BSP diagnostics
+<a href="https://github.com/scalameta/metals/pull/1232">#1232</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Updates to vim section <a href="https://github.com/scalameta/metals/pull/1227">#1227</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Update sbt-ci-release to 1.5.0
+<a href="https://github.com/scalameta/metals/pull/1230">#1230</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update sbt, scripted-plugin to 1.3.6
+<a href="https://github.com/scalameta/metals/pull/1228">#1228</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Remove showMessage and showMessageRequest configuration options
+<a href="https://github.com/scalameta/metals/pull/1222">#1222</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Update ujson to 0.9.6 <a href="https://github.com/scalameta/metals/pull/1224">#1224</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update mdoc-interfaces, sbt-mdoc to 2.1.0
+<a href="https://github.com/scalameta/metals/pull/1225">#1225</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update guava to 28.2-jre
+<a href="https://github.com/scalameta/metals/pull/1223">#1223</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update Sublime settings regarding window/showMessage
+<a href="https://github.com/scalameta/metals/pull/1218">#1218</a>
+(<a href="https://github.com/ayoub-benali">ayoub-benali</a>)</li>
+<li>Update ujson to 0.9.5 <a href="https://github.com/scalameta/metals/pull/1221">#1221</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update flyway-core to 6.1.3
+<a href="https://github.com/scalameta/metals/pull/1216">#1216</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Remove unreachable code
+<a href="https://github.com/scalameta/metals/pull/1217">#1217</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Update pprint to 0.5.7 <a href="https://github.com/scalameta/metals/pull/1219">#1219</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update coursier to 2.0.0-RC5-4
+<a href="https://github.com/scalameta/metals/pull/1215">#1215</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Fix scaladoc for methods in Completions
+<a href="https://github.com/scalameta/metals/pull/1213">#1213</a>
+(<a href="https://github.com/tanishiking">tanishiking</a>)</li>
+<li>Continued improvements to Pants export
+<a href="https://github.com/scalameta/metals/pull/1210">#1210</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>add in documenation for coc-metals
+<a href="https://github.com/scalameta/metals/pull/1197">#1197</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Don't create Bloop projects for Pants targets of type &quot;files&quot;.
+<a href="https://github.com/scalameta/metals/pull/1211">#1211</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Set the working directory to the workspace in Pants export.
+<a href="https://github.com/scalameta/metals/pull/1209">#1209</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Further polish to the Pants export.
+<a href="https://github.com/scalameta/metals/pull/1207">#1207</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update cats-core to 2.1.0
+<a href="https://github.com/scalameta/metals/pull/1206">#1206</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Add breakpoint support while debugging
+<a href="https://github.com/scalameta/metals/pull/1163">#1163</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Update ujson to 0.9.0 <a href="https://github.com/scalameta/metals/pull/1205">#1205</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Several more improvements to the Pants export
+<a href="https://github.com/scalameta/metals/pull/1203">#1203</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Include jdk in the job name
+<a href="https://github.com/scalameta/metals/pull/1202">#1202</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Avoid re-compilation when restarting Bloop in Pants workspace
+<a href="https://github.com/scalameta/metals/pull/1201">#1201</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Several improvements to Pants export step
+<a href="https://github.com/scalameta/metals/pull/1198">#1198</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update bloop-config, bloop-launcher to 1.3.4+298-2c6ff971
+<a href="https://github.com/scalameta/metals/pull/1192">#1192</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update The Getting Started Documentation For Java 11
+<a href="https://github.com/scalameta/metals/pull/1194">#1194</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Update flyway-core to 6.1.2
+<a href="https://github.com/scalameta/metals/pull/1193">#1193</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Remove Usage Of Deprecated <code>lines</code> Method
+<a href="https://github.com/scalameta/metals/pull/1171">#1171</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Sort auto-completed exhaustive match'es by declaration order
+<a href="https://github.com/scalameta/metals/pull/1174">#1174</a>
+(<a href="https://github.com/tanishiking">tanishiking</a>)</li>
+<li>Update bloop-config, bloop-launcher to 1.3.4+297-48a21249
+<a href="https://github.com/scalameta/metals/pull/1187">#1187</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Hopefully fix flaky test failure
+<a href="https://github.com/scalameta/metals/pull/1186">#1186</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix renames for edited companion objects and case class apply
+<a href="https://github.com/scalameta/metals/pull/1169">#1186</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Implement code action for importing missing symbols
+<a href="https://github.com/scalameta/metals/pull/1065">#1065</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Update bloop-config, bloop-launcher to 1.3.4+271-42941449
+<a href="https://github.com/scalameta/metals/pull/1184">#1184</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Improve Pants to Bloop export step.
+<a href="https://github.com/scalameta/metals/pull/1181">#1181</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update bloop-config, bloop-launcher to 1.3.4+260-896345c2
+<a href="https://github.com/scalameta/metals/pull/1180">#1180</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update flyway-core to 6.1.1
+<a href="https://github.com/scalameta/metals/pull/1179">#1179</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Ignore flaky BspSwitchSuite and reenable FoldingRangeSuite on Windows.
+<a href="https://github.com/scalameta/metals/pull/1177">#1177</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Update utest to 0.7.2 <a href="https://github.com/scalameta/metals/pull/1178">#1178</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update scalafmt-core, scalafmt-dynamic to 2.3.2
+<a href="https://github.com/scalameta/metals/pull/1173">#1173</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Minor tweaks to CI jobs names
+<a href="https://github.com/scalameta/metals/pull/1176">#1176</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Disable EOL Conversion On /.jvmopts
+<a href="https://github.com/scalameta/metals/pull/1170">#1170</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Fix Runtime Error In Metals Bench
+<a href="https://github.com/scalameta/metals/pull/1165">#1165</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Try fixing the Windows CI
+<a href="https://github.com/scalameta/metals/pull/1164">#1164</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Upgrade to Scalafmt v2.3.1
+<a href="https://github.com/scalameta/metals/pull/1162">#1162</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update interface to 0.0.16
+<a href="https://github.com/scalameta/metals/pull/1159">#1159</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update ujson to 0.8.0 <a href="https://github.com/scalameta/metals/pull/1157">#1157</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update lz4-java to 1.7.0
+<a href="https://github.com/scalameta/metals/pull/1167">#1167</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update qdox to 2.0.0 <a href="https://github.com/scalameta/metals/pull/1166">#1166</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Use atomic file move operations.
+<a href="https://github.com/scalameta/metals/pull/1155">#1155</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Worksheets support for non-VS Code editors
+<a href="https://github.com/scalameta/metals/pull/1089">#1089</a>
+(<a href="https://github.com/alekseiAlefirov">alekseiAlefirov</a>)</li>
+<li>Update import documentation for Emacs
+<a href="https://github.com/scalameta/metals/pull/1156">#1156</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Add basic support for the Pants build tool
+<a href="https://github.com/scalameta/metals/pull/935">#935</a>
+(<a href="https://github.com/Sohamr">Sohamr</a>)</li>
+<li>Cleanup MarkdownGenerator
+<a href="https://github.com/scalameta/metals/pull/1152">#1152</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Remove Unused <code>packagePriority</code> Parameter From ClasspathSearch
+<a href="https://github.com/scalameta/metals/pull/1149">#1149</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Internal refactorings to prepare for Pants support
+<a href="https://github.com/scalameta/metals/pull/1145">#1145</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Remove Unnecessary <code>asInstanceOf</code> And Unused Values
+<a href="https://github.com/scalameta/metals/pull/1151">#1151</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Remove Unused Local Variable <code>count</code>
+<a href="https://github.com/scalameta/metals/pull/1150">#1150</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Remove Two More Usages Of Deprecated <code>lines</code> Method
+<a href="https://github.com/scalameta/metals/pull/1148">#1148</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Update interface to 0.0.15
+<a href="https://github.com/scalameta/metals/pull/1147">#1147</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update coursier to 2.0.0-RC5-3
+<a href="https://github.com/scalameta/metals/pull/1146">#1146</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Revert &quot;Update directory watcher to 0.9.6&quot;
+<a href="https://github.com/scalameta/metals/pull/1144">#1144</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update directory watcher to 0.9.6
+<a href="https://github.com/scalameta/metals/pull/1135">#1135</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Update scribe to 2.7.10 and remove duplicate newline
+<a href="https://github.com/scalameta/metals/pull/1137">#1137</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Use git fetch --unshallow to restore version number
+<a href="https://github.com/scalameta/metals/pull/1143">#1143</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>[DAP-tests] Adapt new lines to the underlying OS
+<a href="https://github.com/scalameta/metals/pull/1124">#1124</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Remove Deprecated Usage Of String#lines Method
+<a href="https://github.com/scalameta/metals/pull/1139">#1139</a>
+(<a href="https://github.com/isomarcte">isomarcte</a>)</li>
+<li>Update better-monadic-for to 0.3.1
+<a href="https://github.com/scalameta/metals/pull/1104">#1104</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update mdoc-interfaces, sbt-mdoc to 2.0.3
+<a href="https://github.com/scalameta/metals/pull/1141">#1141</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update flyway-core to 6.1.0
+<a href="https://github.com/scalameta/metals/pull/1132">#1132</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update xnio-nio to 3.7.7.Final
+<a href="https://github.com/scalameta/metals/pull/1140">#1140</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update sbt to 1.3.4 and fix flaky 2.13.0 test
+<a href="https://github.com/scalameta/metals/pull/1138">#1138</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Avoid renaming synthetic occurrences
+<a href="https://github.com/scalameta/metals/pull/1077">#1077</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Update coursier interface to 0.0.14
+<a href="https://github.com/scalameta/metals/pull/1136">#1136</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Upgrade to h2 v1.4.200.
+<a href="https://github.com/scalameta/metals/pull/1133">#1133</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Revert &quot;Update jna, jna-platform to 5.5.0&quot;
+<a href="https://github.com/scalameta/metals/pull/1134">#1134</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix renames in case of macro annotations
+<a href="https://github.com/scalameta/metals/pull/1095">#1095</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Revert &quot;Update directory-watcher to 0.8.3&quot;
+<a href="https://github.com/scalameta/metals/pull/1126">#1126</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update xnio-nio to 3.6.9.Final
+<a href="https://github.com/scalameta/metals/pull/1113">#1113</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update simulacrum to 1.0.0
+<a href="https://github.com/scalameta/metals/pull/1099">#1099</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update jna, jna-platform to 5.5.0
+<a href="https://github.com/scalameta/metals/pull/1131">#1131</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update sbt-jmh to 0.3.7
+<a href="https://github.com/scalameta/metals/pull/1121">#1121</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update org.eclipse.lsp4j, ... to 0.8.1
+<a href="https://github.com/scalameta/metals/pull/1111">#1111</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update utest to 0.7.1 <a href="https://github.com/scalameta/metals/pull/1129">#1129</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update jsoup to 1.12.1 <a href="https://github.com/scalameta/metals/pull/1114">#1114</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update sbt-ci-release to 1.4.31
+<a href="https://github.com/scalameta/metals/pull/1125">#1125</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Upgrade to latest Bloop.
+<a href="https://github.com/scalameta/metals/pull/1096">#1096</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update cats-core to 2.0.0
+<a href="https://github.com/scalameta/metals/pull/1120">#1120</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update jna, jna-platform to 4.5.2
+<a href="https://github.com/scalameta/metals/pull/1110">#1110</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update directory-watcher to 0.8.3
+<a href="https://github.com/scalameta/metals/pull/1108">#1108</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update guava to 28.1-jre
+<a href="https://github.com/scalameta/metals/pull/1100">#1100</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update paradise to 2.1.1
+<a href="https://github.com/scalameta/metals/pull/1116">#1116</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update scalameta, semanticdb-scalac, ... to 4.3.0
+<a href="https://github.com/scalameta/metals/pull/1119">#1119</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update sbt-mdoc to 2.0.2
+<a href="https://github.com/scalameta/metals/pull/1117">#1117</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update flyway-core to 5.2.4
+<a href="https://github.com/scalameta/metals/pull/1112">#1112</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update undertow-core to 2.0.28.Final
+<a href="https://github.com/scalameta/metals/pull/1109">#1109</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update qdox to 2.0-M10 <a href="https://github.com/scalameta/metals/pull/1106">#1106</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update utest to 0.6.9 <a href="https://github.com/scalameta/metals/pull/1103">#1103</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update pprint to 0.5.6 <a href="https://github.com/scalameta/metals/pull/1102">#1102</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Update sbt-scalafix to 0.9.11
+<a href="https://github.com/scalameta/metals/pull/1097">#1097</a>
+(<a href="https://github.com/scala-steward">scala-steward</a>)</li>
+<li>Delay renaming in closed files until the first save is run
+<a href="https://github.com/scalameta/metals/pull/1094">#1094</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Update sublime documentation
+<a href="https://github.com/scalameta/metals/pull/1093">#1093</a>
+(<a href="https://github.com/ayoub-benali">ayoub-benali</a>)</li>
+<li>Decode for better readability
+<a href="https://github.com/scalameta/metals/pull/1092">#1092</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Fix cross macro tests for older Scala versions
+<a href="https://github.com/scalameta/metals/pull/1091">#1091</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Fix issue with no source dependencies being downloaded by Bloop
+<a href="https://github.com/scalameta/metals/pull/1090">#1090</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Update to the latest setup-scala.
+<a href="https://github.com/scalameta/metals/pull/1087">#1087</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>add in more documentatin for vim setup
+<a href="https://github.com/scalameta/metals/pull/1082">#1082</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Update documentation <a href="https://github.com/scalameta/metals/pull/1080">#1080</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Replace coursier-small with coursier-interface
+<a href="https://github.com/scalameta/metals/pull/1030">#1080</a>
+(<a href="https://github.com/sswistun-vl">sswistun-vl</a>)</li>
+<li>Use exact match when computing file renames
+<a href="https://github.com/scalameta/metals/pull/1075">#1075</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Force sequential publishLocal for mtags 2.11/2.13.
+<a href="https://github.com/scalameta/metals/pull/1073">#1073</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Update emacs docs to include yasnippet
+<a href="https://github.com/scalameta/metals/pull/1068">#1068</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Update Sublime settings since it does have auto-indent
+<a href="https://github.com/scalameta/metals/pull/1064">#1064</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Respect client capabilities for completion item snippets
+<a href="https://github.com/scalameta/metals/pull/1057">#1057</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Disable flaky test on Window
+<a href="https://github.com/scalameta/metals/pull/1060">#1060</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add completion to add all abstract members
+<a href="https://github.com/scalameta/metals/pull/1031">#1031</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Welcome Chris to the team!
+<a href="https://github.com/scalameta/metals/pull/1059">#1059</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Implement textDocument/rename
+<a href="https://github.com/scalameta/metals/pull/1048">#1048</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Handle abstract var overrides
+<a href="https://github.com/scalameta/metals/pull/1056">#1056</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Add an empty line after the package declaration before import
+<a href="https://github.com/scalameta/metals/pull/1051">#1051</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Implement basic worksheet mode using mdoc and text decorations
+<a href="https://github.com/scalameta/metals/pull/1041">#1041</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Give Bloop more visibility on the website.
+<a href="https://github.com/scalameta/metals/pull/1053">#1053</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Only run tests on master branch or in PRs
+<a href="https://github.com/scalameta/metals/pull/1044">#1044</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Update sbt version to 1.3.2
+<a href="https://github.com/scalameta/metals/pull/1043">#1043</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Update sample Emacs configuration to avoid AutoSave files in src dir
+<a href="https://github.com/scalameta/metals/pull/1032">#1032</a>
+(<a href="https://github.com/marcsaegesser">marcsaegesser</a>)</li>
+<li>Update SemanticDB version to 4.2.5 and enable previously broken test
+<a href="https://github.com/scalameta/metals/pull/1033">#1033</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Add type annotations for public members with Scalafix
+<a href="https://github.com/scalameta/metals/pull/1034">#1034</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Delegating client should not always call configure
+<a href="https://github.com/scalameta/metals/pull/1039">#1039</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Suppress model-refresh if debugging is unsupported
+<a href="https://github.com/scalameta/metals/pull/1019">#1019</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>trace the debug adapter protocol messages
+<a href="https://github.com/scalameta/metals/pull/1023">#1023</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Reenable and fix tests on Windows
+<a href="https://github.com/scalameta/metals/pull/1020">#1020</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Add guards against nulls that happened in the HoverProvider code
+<a href="https://github.com/scalameta/metals/pull/1025">#1025</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Move all tests into github actions
+<a href="https://github.com/scalameta/metals/pull/1018">#1018</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Upgrade to Bloop v1.3.5.
+<a href="https://github.com/scalameta/metals/pull/1017">#1017</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Encode the workspace path directory in build digests
+<a href="https://github.com/scalameta/metals/pull/1015">#1015</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Resolve problem with coc.nvim installation
+<a href="https://github.com/scalameta/metals/pull/1013">#1013</a>
+(<a href="https://github.com/sswistun-vl">sswistun-vl</a>)</li>
+<li>Suppress code lenses if debugging is not supported
+<a href="https://github.com/scalameta/metals/pull/1012">#1012</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Switch to to using Bloop Launcher
+<a href="https://github.com/scalameta/metals/pull/1004">#1004</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Keep code lenses after error until next successful compilation
+<a href="https://github.com/scalameta/metals/pull/994">#994</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Send Tree View update notification on first no-op compilation.
+<a href="https://github.com/scalameta/metals/pull/997">#997</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix current CI flakiness with DiagnosticLspSuite and LensesLspSuite
+<a href="https://github.com/scalameta/metals/pull/1000">#1000</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Switch shutdownNow to shutdown due to excessive exceptions being logged
+<a href="https://github.com/scalameta/metals/pull/1003">#1003</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Strip &quot;metals.&quot; prefix from <code>workspace/executeCommand</code> requests.
+<a href="https://github.com/scalameta/metals/pull/998">#998</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Strip library version when comparing expected output in TreeViewLspSuite.
+<a href="https://github.com/scalameta/metals/pull/999">#999</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Install bloop server in CI
+<a href="https://github.com/scalameta/metals/pull/982">#982</a>
+(<a href="https://github.com/sswistun-vl">sswistun-vl</a>)</li>
+<li>A documentation change in support of Java 11 configuration
+<a href="https://github.com/scalameta/metals/pull/995">#995</a>
+(<a href="https://github.com/andyczerwonka">andyczerwonka</a>)</li>
+<li>Make find implementation run on a separate thread for each file
+<a href="https://github.com/scalameta/metals/pull/989">#989</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Fix issue when on type formatting threw an exception on last newline
+<a href="https://github.com/scalameta/metals/pull/990">#990</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Re-introduce Azure pipelines for more stable CI.
+<a href="https://github.com/scalameta/metals/pull/988">#988</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Add automatic formatting of multi-line <code>stripMargin</code> strings on paste
+<a href="https://github.com/scalameta/metals/pull/968">#968</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Clarify Emacs installation instructions
+<a href="https://github.com/scalameta/metals/pull/985">#985</a>
+(<a href="https://github.com/sswistun-vl">sswistun-vl</a>)</li>
+<li>Add system property to disable project/metals.sbt generation
+<a href="https://github.com/scalameta/metals/pull/979">#979</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Fix typo: Occurence -&gt; Occurrence
+<a href="https://github.com/scalameta/metals/pull/987">#987</a>
+(<a href="https://github.com/tanishiking">tanishiking</a>)</li>
+<li>Add link to new Discord server in the website footer.
+<a href="https://github.com/scalameta/metals/pull/981">#981</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>(Spac)Emacs continuously crashing due to compilation of swap files
+<a href="https://github.com/scalameta/metals/pull/986">#986</a>
+(<a href="https://github.com/quiquedev">quiquedev</a>)</li>
+<li>Remove automatic gitignoring.
+<a href="https://github.com/scalameta/metals/pull/983">#983</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Refactor slow suite name <a href="https://github.com/scalameta/metals/pull/977">#977</a>
+(<a href="https://github.com/ckipp01">ckipp01</a>)</li>
+<li>Tone down &quot;No SemanticDB&quot; warning
+<a href="https://github.com/scalameta/metals/pull/973">#973</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Print summary of test failures at the end of the logs.
+<a href="https://github.com/scalameta/metals/pull/972">#972</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Enable goToDefinition when cursor is at end of symbol
+<a href="https://github.com/scalameta/metals/pull/965">#965</a>
+(<a href="https://github.com/ashwinbhaskar">ashwinbhaskar</a>)</li>
+<li>Test code lenses within packages
+<a href="https://github.com/scalameta/metals/pull/971">#971</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Add .bloop and .metals paths to gitignore automatically
+<a href="https://github.com/scalameta/metals/pull/967">#967</a>
+(<a href="https://github.com/ashwinbhaskar">ashwinbhaskar</a>)</li>
+<li>Fall back to mtags position occurrences
+<a href="https://github.com/scalameta/metals/pull/962">#962</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Bump server version in template
+<a href="https://github.com/scalameta/metals/pull/964">#964</a>
+(<a href="https://github.com/gabro">gabro</a>)</li>
+<li>Change manual instalation section for sbt, gradle and maven
+<a href="https://github.com/scalameta/metals/pull/963">#963</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Warn if bloop version is older than 1.3.3
+<a href="https://github.com/scalameta/metals/pull/957">#957</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Use consistent naming for metals experimental feature: debugging provider
+<a href="https://github.com/scalameta/metals/pull/960">#960</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Add support for running and testing via Debug Adapter Protocol
+<a href="https://github.com/scalameta/metals/pull/942">#942</a>
+(<a href="https://github.com/marek1840">marek1840</a>)</li>
+<li>Add goto implementation <a href="https://github.com/scalameta/metals/pull/934">#934</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Improve SemanticDB integration using Bloop's newest features
+<a href="https://github.com/scalameta/metals/pull/852">#852</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Avoid race conditions during slow/test command.
+<a href="https://github.com/scalameta/metals/pull/951">#951</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Don't file watch inside jar files.
+<a href="https://github.com/scalameta/metals/pull/950">#950</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Don't propose completions for null or nothing
+<a href="https://github.com/scalameta/metals/pull/949">#949</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+<li>Prioritize build targets with supported Scala versions.
+<a href="https://github.com/scalameta/metals/pull/948">#948</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Replace Azure pipelines with GitHub Actions
+<a href="https://github.com/scalameta/metals/pull/947">#947</a>
+(<a href="https://github.com/olafurpg">olafurpg</a>)</li>
+<li>Replace mvn and mvn.cmd script with jar invocation
+<a href="https://github.com/scalameta/metals/pull/944">#944</a>
+(<a href="https://github.com/tgodzik">tgodzik</a>)</li>
+</ul>
+</span></div></div><div class="blogSocialSection"></div></div><div class="blog-recent"><a class="button" href="/metals/blog">Recent Posts</a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#tldr">TL;DR</a></li><li><a href="#debugging">Debugging</a></li><li><a href="#navigation">Navigation</a><ul class="toc-headings"><li><a href="#go-to-implementations">Go to implementations</a></li></ul></li><li><a href="#refactor">Refactor</a><ul class="toc-headings"><li><a href="#rename-symbol">Rename symbol</a></li><li><a href="#import-missing-symbol">Import missing symbol</a></li></ul></li><li><a href="#worksheet-support">Worksheet support</a></li><li><a href="#build-tools">Build tools</a><ul class="toc-headings"><li><a href="#semanticdb-is-resolved-inside-bloop">SemanticDB is resolved inside Bloop</a></li><li><a href="#switch-to-to-using-bloop-launcher">Switch to to using Bloop Launcher</a></li><li><a href="#restart-bloop-automatically-if-newer-version-is-needed">Restart Bloop automatically if newer version is needed</a></li><li><a href="#automatically-reconnect-to-bspbloop-if-connection-is-broken">Automatically reconnect to Bsp/Bloop if connection is broken</a></li><li><a href="#experimental-build-tool-support-for-pants">Experimental build tool support for Pants</a></li></ul></li><li><a href="#completions">Completions</a><ul class="toc-headings"><li><a href="#completion-to-add-all-abstract-members">Completion to add all abstract members</a></li><li><a href="#support-scaladoc-auto-completion-on-type-">Support scaladoc auto completion on type <code>/**</code></a></li></ul></li><li><a href="#better-support-for-vim-via-coc-metals">Better support for Vim via coc-metals</a></li><li><a href="#support-for-java-11">Support for java 11</a></li><li><a href="#other-changes">Other changes</a></li><li><a href="#contributors">Contributors</a></li><li><a href="#merged-prs">Merged PRs</a></li><li><a href="#v080httpsgithubcomscalametametalstreev080-2020-01-10"><a href="https://github.com/scalameta/metals/tree/v0.8.0">v0.8.0</a> (2020-01-10)</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2020 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
