@@ -1,7 +1,7 @@
 ---
-id: debugging
-sidebar_label: Debugging
-title: Debugging using Debug Adapter Protocol
+id: debug-adapter-protocol
+sidebar_label: Debug Adapter Protocol
+title: Debug Adapter Protocol
 ---
 
 Metals implements the Debug Adapter Protocol, which can be used by the editor to

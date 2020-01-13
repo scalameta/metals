@@ -93,6 +93,52 @@ functionality.
     <td align="center">✅</td>
   </tr>
   <tr>
+    <td>Run/Debug</td>
+    <td align="center">✅</td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center"></td>
+    <td align="center"></td>
+  </tr>
+  <tr>
+    <td>Find implementations</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Rename symbol</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td>Code actions</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  </tr>
+  <tr>
+    <td>Worksheets</td>
+    <td align="center">✅</td>
+    <td align="center">Comments</td>
+    <td align="center">✅</td>
+    <td align="center">Comments</td>
+    <td align="center">Comments</td>
+    <td align="center">Comments</td>
+  </tr>
+  <tr>
     <td>Document symbols</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -263,6 +309,14 @@ projects.
   if you run "find references" on the method `Dog.name()` then it won't include
   references to the super method `Animal.name()`.
 
+## Worksheets
+
+**✅**: Worksheets work via Decoration protocol and are added as a non-editable
+side decoration.
+
+**Comments**: Worksheets work via `workspace/applyEdit` by adding comments to
+the source code and support hover to show larger output.
+
 ## Document symbols
 
 **✅**: Document symbols are displayed in a hierarchical outline.
@@ -338,7 +392,7 @@ extensions, see [integrating a new editor](new-editor.md).
 
 Metals does not support the following features:
 
-- Rename symbol 
+- Rename symbol
 - Organize imports
 - Run test
 - Debugging

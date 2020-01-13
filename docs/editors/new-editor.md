@@ -346,6 +346,11 @@ them to improve the user experience.
 To enable Metals extensions, start the main process with the system property
 `-Dmetals.extensions=true`.
 
+### Debug Adapter Protocol
+
+Metals implements and additional protocol for running and debugging inside the
+editor, see the [Debug Adapter Protocol](debug-adapter-protocol.md).
+
 ### Tree View Protocol
 
 Metals implements several custom JSON-RPC endpoints related to rendering tree

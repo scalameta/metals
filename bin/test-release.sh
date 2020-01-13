@@ -12,5 +12,4 @@ coursier fetch \
   org.scalameta:mtags_2.12.10:$version \
   org.scalameta:mtags_2.12.9:$version \
   org.scalameta:mtags_2.12.8:$version \
-  org.scalameta:mtags_2.12.7:$version \
   org.scalameta:mtags_2.11.12:$version $suffix

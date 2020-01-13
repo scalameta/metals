@@ -42,20 +42,23 @@ variables.
 
 ## Configure Java version
 
-The VS Code plugin uses by default the `JAVA_HOME` environment variable (via [`find-java-home`](https://www.npmjs.com/package/find-java-home)) to locate the `java` executable. To override the default Java home location, update the "Java Home" variable 
-in the settings menu.
+The VS Code plugin uses by default the `JAVA_HOME` environment variable (via
+[`find-java-home`](https://www.npmjs.com/package/find-java-home)) to locate the
+`java` executable. To override the default Java home location, update the "Java
+Home" variable in the settings menu.
 
 ![Java Home setting](https://i.imgur.com/sKrPKk2.png)
 
-If this setting is defined, the VS Code plugin uses the custom path instead of the `JAVA_HOME` environment variable.
-
-**Note:** Metals only tries to find by default Java 8. For Java 11 support, you need to specify the path in Metals settings.
+If this setting is defined, the VS Code plugin uses the custom path instead of
+the `JAVA_HOME` environment variable.
 
 ### macOS
 
-To globally configure `$JAVA_HOME` for all GUI applications, see [this Stackoverflow answer](https://stackoverflow.com/questions/135688/setting-environment-variables-on-os-x).
+To globally configure `$JAVA_HOME` for all GUI applications, see
+[this Stackoverflow answer](https://stackoverflow.com/questions/135688/setting-environment-variables-on-os-x).
 
-If you prefer to manually configure Java home through VS Code, run the following command to copy the Java 8 home path.
+If you prefer to manually configure Java home through VS Code, run the following
+command to copy the Java 8 home path.
 
 ```sh
 /usr/libexec/java_home -v 1.8 | pbcopy
@@ -148,7 +151,7 @@ Install the
 extension to use default IntelliJ shortcuts with VS Code.
 
 | IntelliJ         | VS Code                   |
-|------------------|---------------------------|
+| ---------------- | ------------------------- |
 | Go to class      | Go to symbol in workspace |
 | Parameter info   | Trigger parameter hints   |
 | Basic completion | Trigger suggest           |
