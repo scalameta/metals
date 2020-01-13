@@ -22,6 +22,7 @@
       "editors/new-editor",
       "editors/tree-view-protocol",
       "editors/decoration-protocol",
+      "editors/debug-adapter-protocol",
       "contributors/project-goals",
       "contributors/getting-started",
       "contributors/updating-website",
