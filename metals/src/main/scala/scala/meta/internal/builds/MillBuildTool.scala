@@ -50,18 +50,18 @@ case class MillBuildTool(userConfig: () => UserConfiguration)
   override def digest(workspace: AbsolutePath): Option[String] =
     MillDigest.current(workspace)
 
-  override def minimumVersion: String = "0.4.0"
+  override def minimumVersion: String = "0.6.0"
 
   override def recommendedVersion: String = version
 
-  override def version: String = "0.5.2"
+  override def version: String = "0.6.0"
 
   override def toString(): String = "Mill"
 
   def executableName = "mill"
 
   private def predefScript(millVersion: String) =
-    s"import $$ivy.`com.lihaoyi::mill-contrib-bloop:$millVersion`".getBytes()
+    "import $ivy.`com.lihaoyi::mill-contrib-bloop:$MILL_VERSION`".getBytes()
 
   private def predefScriptPath(millVersion: String): Path = {
     Files.write(tempDir.resolve(predefScriptName), predefScript(millVersion))
