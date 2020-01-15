@@ -249,7 +249,7 @@ Update the `metals.sbtScript` setting to use a custom `sbt` script instead of th
 default Metals launcher if you need further customizations like reading environment
 variables.
 
-![Sbt Launcher](https://i.imgur.com/kbxNKzI.png)
+![Sbt Launcher](https://i.imgur.com/meciPTg.png)
 ```
 
 ## Configure Java version
@@ -259,7 +259,7 @@ The `coc-metals` extension uses by default the `JAVA_HOME` environment variable 
 
 If no `JAVA_HOME` is detected you can then Open Settings by following the instructions or do it at a later time by using `:CocConfig` or `:CocConfigLocal` which will open up your configuration where you can manually enter your JAVA_HOME location.
 
-![Enter Java Home](https://i.imgur.com/wVThrMq.png)
+![Enter Java Home](https://i.imgur.com/wK07Vju.png)
 
 ## Using latest Metals SNAPSHOT
 
@@ -305,7 +305,7 @@ nmap <Leader>ws <Plug>(coc-metals-expand-decoration)
 Then, when on the line that you'd like to expand the decoration to get the hover information, execute a
 `<leader>ws` in order to see the expanded text for that line.
 
-![Decorations with worksheets](https://i.imgur.com/X8bVmu8.png)
+![Decorations with worksheets](https://i.imgur.com/Bt6DMtH.png)
 
 ## Run doctor
 

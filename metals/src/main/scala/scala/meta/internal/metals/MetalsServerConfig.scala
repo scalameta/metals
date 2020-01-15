@@ -134,7 +134,6 @@ object MetalsServerConfig {
           statusBar = StatusBarConfig.showMessage,
           isInputBoxEnabled = true,
           executeClientCommand = ExecuteClientCommandConfig.on,
-          icons = Icons.unicode,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
