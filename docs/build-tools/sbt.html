@@ -95,7 +95,7 @@ resolvers += <span class="hljs-type">Resolver</span>.sonatypeRepo(<span class="h
 addSbtPlugin(<span class="hljs-string">"ch.epfl.scala"</span> % <span class="hljs-string">"sbt-bloop"</span> % <span class="hljs-string">"1.4.0-RC1"</span>)
 </code></pre>
 <p>Next, run:</p>
-<pre><code class="hljs">sbt "<span class="hljs-keyword">set</span> bloopExportJarClassifiers := <span class="hljs-keyword">Some</span>(<span class="hljs-keyword">Set</span>(\<span class="hljs-string">"source\"</span>))<span class="hljs-string">" bloopInstall
+<pre><code class="hljs"><span class="hljs-keyword">sbt </span>-Dbloop.export-<span class="hljs-keyword">jar-classifiers=sources </span><span class="hljs-keyword">bloopInstall
 </span></code></pre>
 <p>to generate the Bloop JSON configuration files. You can also set the
 <code>bloopExportJarClassifiers</code> setting inside your main build.sbt file, but using
@@ -109,7 +109,7 @@ with the Bloop build server.</p>
 <span class="hljs-comment">//   ~/.sbt/0.13/plugins/plugins.sbt</span>
 <span class="hljs-comment">//   ~/.sbt/1.0/plugins/plugins.sbt</span>
 resolvers += <span class="hljs-type">Resolver</span>.sonatypeRepo(<span class="hljs-string">"snapshots"</span>)
-addSbtPlugin(<span class="hljs-string">"org.scalameta"</span> % <span class="hljs-string">"sbt-metals"</span> % <span class="hljs-string">"0.8.0+13-c1102a13-SNAPSHOT"</span>)
+addSbtPlugin(<span class="hljs-string">"org.scalameta"</span> % <span class="hljs-string">"sbt-metals"</span> % <span class="hljs-string">"0.8.0+15-b1f12557-SNAPSHOT"</span>)
 addSbtPlugin(<span class="hljs-string">"ch.epfl.scala"</span> % <span class="hljs-string">"sbt-bloop"</span> % <span class="hljs-string">"1.4.0-RC1"</span>)
 </code></pre>
 <p>Next, run <code>sbt metalsEnable bloopInstall</code> to generate the Bloop JSON
