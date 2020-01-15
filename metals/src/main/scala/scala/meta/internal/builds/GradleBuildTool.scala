@@ -26,6 +26,8 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
       ""
     }
   }
+  private val versionToUse =
+    userConfig().bloopPluginVersion.getOrElse(BuildInfo.gradleBloopVersion)
 
   private val initScript =
     s"""
@@ -35,7 +37,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
        |    mavenCentral()
        |  }
        |  dependencies {
-       |    classpath 'ch.epfl.scala:gradle-bloop_2.11:${BuildInfo.gradleBloopVersion}'
+       |    classpath 'ch.epfl.scala:gradle-bloop_2.11:$versionToUse'
        |  }
        |}
        |allprojects {

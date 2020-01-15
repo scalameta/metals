@@ -82,9 +82,11 @@ case class SbtBuildTool(
       workspace: AbsolutePath,
       config: MetalsServerConfig
   ): Unit = {
-    if (!config.bloopGenerateSbt) return
+    if (!userConfig().bloopGenerateSbt) return
+    val versionToUse =
+      userConfig().bloopPluginVersion.getOrElse(BuildInfo.sbtBloopVersion)
     val bytes = SbtBuildTool
-      .sbtPlugin(config.bloopSbtVersion)
+      .sbtPlugin(versionToUse)
       .getBytes(StandardCharsets.UTF_8)
     val projectDir = workspace.resolve("project")
     projectDir.toFile.mkdir()

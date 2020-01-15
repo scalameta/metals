@@ -30,6 +30,8 @@ case class UserConfiguration(
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
     worksheetScreenWidth: Int = 120,
     worksheetCancelTimeout: Int = 4,
+    bloopGenerateSbt: Boolean = true,
+    bloopPluginVersion: Option[String] = None,
     pantsTargets: Option[List[String]] = None
 )
 object UserConfiguration {
@@ -105,6 +107,20 @@ object UserConfiguration {
         |`src/main/scala:: src/main/java::`. Syntax such as `src/{main,test}::`
         |is not supported.
         |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "bloop-generate-sbt",
+      """true""",
+      "true",
+      "Generate Bloop plugin file",
+      """Option that can specified to false if the user doesn't want to generate an sbt file adding the Bloop sbt plugin."""
+    ),
+    UserConfigurationOption(
+      "bloop-plugin-version",
+      BuildInfo.bloopVersion,
+      "1.4.0-RC1",
+      "Version of Bloop build tool plugin",
+      "This version will be used for the Bloop build tool plugin, for any supported build tool, while importing in Metals"
     )
   )
 
@@ -138,6 +154,16 @@ object UserConfiguration {
               None
             }, Some(_))
             .filter(_.nonEmpty)
+        }
+      )
+    def getBooleanKey(key: String): Option[Boolean] =
+      getKey(
+        key, { value =>
+          Try(value.getAsBoolean())
+            .fold(_ => {
+              errors += s"json error: key '$key' should have value of type boolean but obtained $value"
+              None
+            }, Some(_))
         }
       )
     def getIntKey(key: String): Option[Int] =
@@ -206,7 +232,8 @@ object UserConfiguration {
           }
         }
       )
-
+    val bloopGenerateSbt = getBooleanKey("bloop-generate-sbt").getOrElse(true)
+    val bloopPluginVersion = getStringKey("bloop-plugin-version")
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -219,6 +246,8 @@ object UserConfiguration {
           symbolPrefixes,
           worksheetScreenWidth,
           worksheetCancelTimeout,
+          bloopGenerateSbt,
+          bloopPluginVersion,
           pantsTargets
         )
       )
