@@ -188,12 +188,13 @@ additional refinements by
 available in all supported editors.</p>
 <p>Worksheets are a way to evaluate code in real time to test and prototype any new
 features in a simple way. To create a worksheet all that is needed is to create
-a file with the extension <code>worksheet.sc</code> and Metals will take care of the rest.</p>
+a file with the extension <code>.worksheet.sc</code> within the source directory of your
+workspace (like <code>/src/main/scala</code>) and Metals will take care of the rest.</p>
 <p>There are two ways worksheets are implemented for different editors. One is with
 an additional extension to LSP called <code>Decoration extension</code> and it's used by
 Visual Studio Code and coc-metals.</p>
 <p>Visual Studio Code:</p>
-<p><img src="https://user-images.githubusercontent.com/1408093/68093266-b0b3e680-fe8b-11e9-92dd-0165f169966f.gif" alt="worksheet"></p>
+<p><img src="https://i.imgur.com/8c1NkIx.gif" alt="worksheet"></p>
 <p>The other way worksheets are implemented for all other editors that don't
 support the <code>Decoration extension</code> is using workspace/applyEdits and comments
 with hover for larger results.</p>
