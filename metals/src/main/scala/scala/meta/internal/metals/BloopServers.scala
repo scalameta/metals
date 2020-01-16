@@ -79,7 +79,13 @@ final class BloopServers(
     val clientInOutPipe = Pipe.open()
     val clientIn = Channels.newInputStream(clientInOutPipe.source())
     val launcherOut = Channels.newOutputStream(clientInOutPipe.sink())
-
+    val coursierRepositories = sys.env
+      .get("COURSIER_REPOSITORIES")
+      .map(repos => "-Dcoursier.repositories=" + repos)
+    val jvmOpts = JvmOpts.fromWorkspace(workspace) ++ JvmOpts.fromEnvironment ++ coursierRepositories
+    val prefixedJvmOpts = jvmOpts.map { opt =>
+      if (opt.startsWith("-J")) opt else "-J" + opt
+    }
     val serverStarted = Promise[Unit]()
     val launcher =
       new LauncherMain(
@@ -98,7 +104,7 @@ final class BloopServers(
         launcher.runLauncher(
           BuildInfo.bloopVersion,
           skipBspConnection = false,
-          Nil
+          prefixedJvmOpts
         )
       }
     })
