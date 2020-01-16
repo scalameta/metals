@@ -140,7 +140,7 @@ formatted by Metals:
 ![format-on-paste](https://i.imgur.com/yJLAIxQ.gif)
 
 To enable this feature you need to enable formatting on paste in Visual Studio
-Code by checking `Editor: Format On PAste`:
+Code by checking `Editor: Format On Paste`:
 
 ![format-on-paste](https://i.imgur.com/OaBxwer.png)
 
