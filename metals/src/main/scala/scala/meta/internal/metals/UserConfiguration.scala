@@ -30,8 +30,8 @@ case class UserConfiguration(
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
     worksheetScreenWidth: Int = 120,
     worksheetCancelTimeout: Int = 4,
-    bloopGenerateSbt: Boolean = true,
-    bloopPluginVersion: Option[String] = None,
+    bloopSbtAlreadyInstalled: Boolean = false,
+    bloopVersion: String = BuildInfo.bloopVersion,
     pantsTargets: Option[List[String]] = None
 )
 object UserConfiguration {
@@ -109,18 +109,19 @@ object UserConfiguration {
         |""".stripMargin
     ),
     UserConfigurationOption(
-      "bloop-generate-sbt",
-      """true""",
-      "true",
-      "Generate Bloop plugin file",
-      """Option that can specified to false if the user doesn't want to generate an sbt file adding the Bloop sbt plugin."""
+      "bloop-sbt-already-installed",
+      "false",
+      "false",
+      "Don't generate Bloop plugin file for Sbt",
+      "Option that can specified to true if the user doesn't want to generate an sbt file adding the Bloop sbt plugin."
     ),
     UserConfigurationOption(
-      "bloop-plugin-version",
+      "bloop-version",
       BuildInfo.bloopVersion,
       "1.4.0-RC1",
-      "Version of Bloop build tool plugin",
-      "This version will be used for the Bloop build tool plugin, for any supported build tool, while importing in Metals"
+      "Version of Bloop",
+      """|This version will be used for the Bloop build tool plugin, for any supported build tool, 
+         |while importing in Metals as well as for running the embedded server""".stripMargin
     )
   )
 
@@ -232,8 +233,10 @@ object UserConfiguration {
           }
         }
       )
-    val bloopGenerateSbt = getBooleanKey("bloop-generate-sbt").getOrElse(true)
-    val bloopPluginVersion = getStringKey("bloop-plugin-version")
+    val bloopSbtAlreadyInstalled =
+      getBooleanKey("bloop-sbt-already-installed").getOrElse(true)
+    val bloopVersion =
+      getStringKey("bloop-version").getOrElse(BuildInfo.bloopVersion)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -246,8 +249,8 @@ object UserConfiguration {
           symbolPrefixes,
           worksheetScreenWidth,
           worksheetCancelTimeout,
-          bloopGenerateSbt,
-          bloopPluginVersion,
+          bloopSbtAlreadyInstalled,
+          bloopVersion,
           pantsTargets
         )
       )

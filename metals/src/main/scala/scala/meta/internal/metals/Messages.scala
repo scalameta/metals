@@ -160,6 +160,26 @@ class Messages(icons: Icons) {
       params
     }
   }
+  object BloopVersionChange {
+    def reconnect: MessageActionItem =
+      new MessageActionItem("Restart Bloop")
+    def notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+    def params(version: String): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"Bloop version was updated, do you want to kill the running server and start Bloop $version?"
+      )
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          reconnect,
+          notNow
+        ).asJava
+      )
+      params
+    }
+  }
 
   object IncompatibleBloopVersion {
     def manually: MessageActionItem =
@@ -170,15 +190,20 @@ class Messages(icons: Icons) {
       new MessageActionItem("Don't show again")
     def params(
         bloopVersion: String,
-        minimumBloopVersion: String
+        minimumBloopVersion: String,
+        isChangedInSettings: Boolean
     ): ShowMessageRequestParams = {
 
       val params = new ShowMessageRequestParams()
+      val additional =
+        if (isChangedInSettings)
+          "You will also need to remove or update the `bloopVersion` setting"
+        else ""
       params.setMessage(
         s"""|You have Bloop $bloopVersion installed and Metals requires at least Bloop $minimumBloopVersion.
             |If you installed bloop via a system package manager (brew, aur, scoop), please upgrade manually.
             |If not, select "Turn off old server". A newer server will be started automatically afterwards.
-            |""".stripMargin
+            |""".stripMargin + s"\n$additional"
       )
       params.setType(MessageType.Warning)
       params.setActions(

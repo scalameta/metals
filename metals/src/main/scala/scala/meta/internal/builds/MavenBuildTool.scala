@@ -19,9 +19,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
   }
 
   def args(workspace: AbsolutePath): List[String] = {
-    import scala.meta.internal.metals.BuildInfo
-    val versionToUse =
-      userConfig().bloopPluginVersion.getOrElse(BuildInfo.mavenBloopVersion)
+    val versionToUse = userConfig().bloopVersion
     val command =
       List(
         s"ch.epfl.scala:maven-bloop_2.10:$versionToUse:bloopInstall",

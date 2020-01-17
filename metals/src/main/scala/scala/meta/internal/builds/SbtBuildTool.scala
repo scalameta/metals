@@ -82,19 +82,18 @@ case class SbtBuildTool(
       workspace: AbsolutePath,
       config: MetalsServerConfig
   ): Unit = {
-    if (!userConfig().bloopGenerateSbt) return
-    val versionToUse =
-      userConfig().bloopPluginVersion.getOrElse(BuildInfo.sbtBloopVersion)
+    if (userConfig().bloopSbtAlreadyInstalled) return
+    val versionToUse = userConfig().bloopVersion
     val bytes = SbtBuildTool
       .sbtPlugin(versionToUse)
       .getBytes(StandardCharsets.UTF_8)
     val projectDir = workspace.resolve("project")
     projectDir.toFile.mkdir()
-    val metalsPluginfile = projectDir.resolve("metals.sbt")
-    val pluginFileShouldChange = !metalsPluginfile.isFile ||
-      !metalsPluginfile.readAllBytes.sameElements(bytes)
+    val metalsPluginFile = projectDir.resolve("metals.sbt")
+    val pluginFileShouldChange = !metalsPluginFile.isFile ||
+      !metalsPluginFile.readAllBytes.sameElements(bytes)
     if (pluginFileShouldChange) {
-      Files.write(metalsPluginfile.toNIO, bytes)
+      Files.write(metalsPluginFile.toNIO, bytes)
     }
   }
 

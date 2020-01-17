@@ -26,8 +26,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
       ""
     }
   }
-  private val versionToUse =
-    userConfig().bloopPluginVersion.getOrElse(BuildInfo.gradleBloopVersion)
+  private val versionToUse = userConfig().bloopVersion
 
   private val initScript =
     s"""
