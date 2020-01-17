@@ -69,7 +69,7 @@ First, install the Bloop and Metals plugins globally
 //   ~/.sbt/0.13/plugins/plugins.sbt
 //   ~/.sbt/1.0/plugins/plugins.sbt
 resolvers += Resolver.sonatypeRepo("snapshots")
-addSbtPlugin("org.scalameta" % "sbt-metals" % "@VERSION@")
+addSbtPlugin("org.scalameta" % "sbt-metals" % "0.7.6")
 addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "@BLOOP_VERSION@")
 ```
 
