@@ -829,6 +829,8 @@ class MetalsLanguageServer(
                 case item if item == Messages.BloopVersionChange.reconnect =>
                   bloopServers.shutdownServer()
                   autoConnectToBuildServer().ignoreValue
+                case _ =>
+                  Future.successful(())
               }
           } else if (userConfig.pantsTargets != old.pantsTargets) {
             slowConnectToBuildServer(forceImport = false).ignoreValue

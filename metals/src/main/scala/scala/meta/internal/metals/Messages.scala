@@ -168,7 +168,7 @@ class Messages(icons: Icons) {
     def params(version: String): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"Bloop version was updated, do you want to kill the running server and start Bloop $version?"
+        s"Bloop version was updated, do you want to restart the running Bloop server?"
       )
       params.setType(MessageType.Warning)
       params.setActions(
