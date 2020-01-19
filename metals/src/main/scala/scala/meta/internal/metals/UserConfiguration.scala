@@ -30,6 +30,8 @@ case class UserConfiguration(
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
     worksheetScreenWidth: Int = 120,
     worksheetCancelTimeout: Int = 4,
+    bloopSbtAlreadyInstalled: Boolean = false,
+    bloopVersion: String = BuildInfo.bloopVersion,
     pantsTargets: Option[List[String]] = None
 )
 object UserConfiguration {
@@ -105,6 +107,21 @@ object UserConfiguration {
         |`src/main/scala:: src/main/java::`. Syntax such as `src/{main,test}::`
         |is not supported.
         |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "bloop-sbt-already-installed",
+      "false",
+      "false",
+      "Don't generate Bloop plugin file for sbt",
+      "If true, Metals will not generate a `project/metals.sbt` file under the assumption that sbt-bloop is already manually installed in the sbt build. Build import will fail with a 'not valid command bloopInstall' error in case Bloop is not manually installed in the build when using this option."
+    ),
+    UserConfigurationOption(
+      "bloop-version",
+      BuildInfo.bloopVersion,
+      "1.4.0-RC1",
+      "Version of Bloop",
+      """|This version will be used for the Bloop build tool plugin, for any supported build tool, 
+         |while importing in Metals as well as for running the embedded server""".stripMargin
     )
   )
 
@@ -138,6 +155,16 @@ object UserConfiguration {
               None
             }, Some(_))
             .filter(_.nonEmpty)
+        }
+      )
+    def getBooleanKey(key: String): Option[Boolean] =
+      getKey(
+        key, { value =>
+          Try(value.getAsBoolean())
+            .fold(_ => {
+              errors += s"json error: key '$key' should have value of type boolean but obtained $value"
+              None
+            }, Some(_))
         }
       )
     def getIntKey(key: String): Option[Int] =
@@ -206,7 +233,10 @@ object UserConfiguration {
           }
         }
       )
-
+    val bloopSbtAlreadyInstalled =
+      getBooleanKey("bloop-sbt-already-installed").getOrElse(true)
+    val bloopVersion =
+      getStringKey("bloop-version").getOrElse(BuildInfo.bloopVersion)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -219,6 +249,8 @@ object UserConfiguration {
           symbolPrefixes,
           worksheetScreenWidth,
           worksheetCancelTimeout,
+          bloopSbtAlreadyInstalled,
+          bloopVersion,
           pantsTargets
         )
       )

@@ -53,19 +53,24 @@ final class BloopServers(
     result
   }
 
-  def newServer(): Future[Option[BuildServerConnection]] = {
+  def newServer(
+      userConfiguration: UserConfiguration
+  ): Future[Option[BuildServerConnection]] = {
+    val bloopVersion = userConfiguration.bloopVersion
     BuildServerConnection
       .fromSockets(
         workspace,
         client,
         languageClient,
-        connectToLauncher,
+        () => connectToLauncher(bloopVersion),
         tables
       )
       .map(Option(_))
   }
 
-  private def connectToLauncher(): Future[SocketConnection] = {
+  private def connectToLauncher(
+      bloopVersion: String
+  ): Future[SocketConnection] = {
     val launcherInOutPipe = Pipe.open()
     val launcherIn = new QuietInputStream(
       Channels.newInputStream(launcherInOutPipe.source()),
@@ -96,7 +101,7 @@ final class BloopServers(
     val job = ec.submit(new Runnable {
       override def run(): Unit = {
         launcher.runLauncher(
-          BuildInfo.bloopVersion,
+          bloopVersion,
           skipBspConnection = false,
           Nil
         )

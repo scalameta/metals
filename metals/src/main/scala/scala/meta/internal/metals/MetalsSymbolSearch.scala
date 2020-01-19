@@ -21,7 +21,7 @@ class MetalsSymbolSearch(
     defn: DefinitionProvider
 ) extends SymbolSearch {
   // A cache for definitionSourceToplevels.
-  // The key is an absolutepath to the dependency source file, and
+  // The key is an absolute path to the dependency source file, and
   // the value is the list of symbols that the file contains.
   private val dependencySourceCache =
     new TrieMap[AbsolutePath, ju.List[String]]()

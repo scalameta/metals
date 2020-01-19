@@ -59,12 +59,6 @@ final case class MetalsServerConfig(
       "bloop.embedded.version",
       BuildInfo.bloopVersion
     ),
-    bloopSbtVersion: String = System.getProperty(
-      "bloop.sbt.version",
-      BuildInfo.sbtBloopVersion
-    ),
-    bloopGenerateSbt: Boolean =
-      "false" != System.getProperty("bloop.generate.sbt"),
     icons: Icons = Icons.default,
     statistics: StatisticsConfig = StatisticsConfig.default,
     compilers: PresentationCompilerConfigImpl = CompilersConfig()

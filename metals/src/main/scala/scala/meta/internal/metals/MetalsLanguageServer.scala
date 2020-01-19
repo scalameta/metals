@@ -819,7 +819,20 @@ class MetalsLanguageServer(
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {
             compilers.restartAll()
           }
-          if (userConfig.pantsTargets != old.pantsTargets) {
+          if (userConfig.bloopVersion != old.bloopVersion) {
+            languageClient
+              .showMessageRequest(
+                Messages.BloopVersionChange.params(userConfig.bloopVersion)
+              )
+              .asScala
+              .flatMap {
+                case item if item == Messages.BloopVersionChange.reconnect =>
+                  bloopServers.shutdownServer()
+                  autoConnectToBuildServer().ignoreValue
+                case _ =>
+                  Future.successful(())
+              }
+          } else if (userConfig.pantsTargets != old.pantsTargets) {
             slowConnectToBuildServer(forceImport = false).ignoreValue
           } else {
             Future.successful(())
@@ -1386,7 +1399,7 @@ class MetalsLanguageServer(
     for {
       _ <- disconnectOldBuildServer()
       maybeBuild <- timed("connected to build server") {
-        if (buildTools.isBloop) bloopServers.newServer()
+        if (buildTools.isBloop) bloopServers.newServer(userConfig)
         else bspServers.newServer()
       }
       result <- maybeBuild match {
@@ -1676,7 +1689,8 @@ class MetalsLanguageServer(
       if (!notification.isDismissed) {
         val messageParams = IncompatibleBloopVersion.params(
           bspServerVersion,
-          BuildInfo.bloopVersion
+          BuildInfo.bloopVersion,
+          BuildInfo.bloopVersion != userConfig.bloopVersion
         )
         languageClient.showMessageRequest(messageParams).asScala.foreach {
           case action if action == IncompatibleBloopVersion.shutdown =>
