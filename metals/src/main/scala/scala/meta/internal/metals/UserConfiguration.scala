@@ -112,7 +112,7 @@ object UserConfiguration {
       "bloop-sbt-already-installed",
       "false",
       "false",
-      "Don't generate Bloop plugin file for Sbt",
+      "Don't generate Bloop plugin file for sbt",
       "Option that can specified to true if the user doesn't want to generate an sbt file adding the Bloop sbt plugin."
     ),
     UserConfigurationOption(
