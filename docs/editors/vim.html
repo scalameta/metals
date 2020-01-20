@@ -131,30 +131,46 @@ configure it yourself.</p>
 <pre><code class="hljs css language-vim"><span class="hljs-comment">" ~/.vimrc</span>
 <span class="hljs-comment">" Configuration for coc.nvim</span>
 
-<span class="hljs-comment">" Smaller updatetime for CursorHold &amp; CursorHoldI</span>
-<span class="hljs-keyword">set</span> updatetime=<span class="hljs-number">300</span>
+<span class="hljs-keyword">set</span> hidden
 
-<span class="hljs-comment">" don't give |ins-completion-menu| messages.</span>
-<span class="hljs-keyword">set</span> shortmess+=<span class="hljs-keyword">c</span>
-
-<span class="hljs-comment">" always show signcolumns</span>
-<span class="hljs-keyword">set</span> signcolumn=yes
-
-<span class="hljs-comment">" Some server have issues with backup files, see #649</span>
+<span class="hljs-comment">" Some servers have issues with backup files</span>
 <span class="hljs-keyword">set</span> nobackup
 <span class="hljs-keyword">set</span> nowritebackup
 
 <span class="hljs-comment">" Better display for messages</span>
 <span class="hljs-keyword">set</span> cmdheight=<span class="hljs-number">2</span>
 
-<span class="hljs-comment">" Use &lt;c-space&gt; for trigger completion.</span>
+<span class="hljs-comment">" You will have a bad experience with diagnostic messages with the default 4000.</span>
+<span class="hljs-keyword">set</span> updatetime=<span class="hljs-number">300</span>
+
+<span class="hljs-comment">" Don't give |ins-completion-menu| messages.</span>
+<span class="hljs-keyword">set</span> shortmess+=<span class="hljs-keyword">c</span>
+
+<span class="hljs-comment">" Always show signcolumns</span>
+<span class="hljs-keyword">set</span> signcolumn=yes
+
+<span class="hljs-comment">" Use tab for trigger completion with characters ahead and navigate.</span>
+<span class="hljs-comment">" Use command ':verbose imap &lt;tab&gt;' to make sure tab is not mapped by other plugin.</span>
+<span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span><span class="hljs-symbol">&lt;expr&gt;</span> <span class="hljs-symbol">&lt;TAB&gt;</span>
+      \ <span class="hljs-built_in">pumvisible</span>() ? <span class="hljs-string">"\&lt;C-n&gt;"</span> :
+      \ <span class="hljs-symbol">&lt;SID&gt;</span>check_back_space() ? <span class="hljs-string">"\&lt;TAB&gt;"</span> :
+      \ coc#refresh()
+<span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;expr&gt;</span><span class="hljs-symbol">&lt;S-TAB&gt;</span> <span class="hljs-built_in">pumvisible</span>() ? <span class="hljs-string">"\&lt;C-p&gt;"</span> : <span class="hljs-string">"\&lt;C-h&gt;"</span>
+
+<span class="hljs-comment">" Used in the tab autocompletion for coc</span>
+<span class="hljs-function"><span class="hljs-keyword">function</span>! <span class="hljs-title">s</span>:<span class="hljs-title">check_back_space</span><span class="hljs-params">()</span> <span class="hljs-title">abort</span></span>
+  <span class="hljs-keyword">let</span> <span class="hljs-keyword">col</span> = <span class="hljs-keyword">col</span>(<span class="hljs-string">'.'</span>) - <span class="hljs-number">1</span>
+  <span class="hljs-keyword">return</span> !col || <span class="hljs-built_in">getline</span>(<span class="hljs-string">'.'</span>)[<span class="hljs-keyword">col</span> - <span class="hljs-number">1</span>]  =~# <span class="hljs-string">'\s'</span>
+<span class="hljs-keyword">endfunction</span>
+
+<span class="hljs-comment">" Use &lt;c-space&gt; to trigger completion.</span>
 <span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span><span class="hljs-symbol">&lt;expr&gt;</span> <span class="hljs-symbol">&lt;c-space&gt;</span> coc#refresh()
 
-<span class="hljs-comment">" Use &lt;cr&gt; for confirm completion, `&lt;C-g&gt;u` means break undo chain at current position.</span>
+<span class="hljs-comment">" Use &lt;cr&gt; to confirm completion, `&lt;C-g&gt;u` means break undo chain at current position.</span>
 <span class="hljs-comment">" Coc only does snippet and additional edit on confirm.</span>
 <span class="hljs-keyword">inoremap</span> <span class="hljs-symbol">&lt;expr&gt;</span> <span class="hljs-symbol">&lt;cr&gt;</span> <span class="hljs-built_in">pumvisible</span>() ? <span class="hljs-string">"\&lt;C-y&gt;"</span> : <span class="hljs-string">"\&lt;C-g&gt;u\&lt;CR&gt;"</span>
 
-<span class="hljs-comment">" Use `[c` and `]c` for navigate diagnostics</span>
+<span class="hljs-comment">" Use `[c` and `]c` to navigate diagnostics</span>
 <span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> [<span class="hljs-keyword">c</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-diagnostic-<span class="hljs-keyword">prev</span>)
 <span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> ]<span class="hljs-keyword">c</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-diagnostic-<span class="hljs-keyword">next</span>)
 
@@ -164,17 +180,14 @@ configure it yourself.</p>
 <span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> gi <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-implementation)
 <span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-keyword">gr</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-references)
 
-<span class="hljs-comment">" Remap for do codeAction of current line</span>
-<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span>ac <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-codeaction)
+<span class="hljs-comment">" Used to expand decorations in worksheets</span>
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;Leader&gt;</span><span class="hljs-keyword">ws</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-metals-<span class="hljs-built_in">expand</span>-decoration)
 
-<span class="hljs-comment">" Remap for do action format</span>
-<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> F :<span class="hljs-keyword">call</span> CocAction(<span class="hljs-string">'format'</span>)<span class="hljs-symbol">&lt;CR&gt;</span>
-
-<span class="hljs-comment">" Use K for show documentation in preview window</span>
+<span class="hljs-comment">" Use K to either doHover or show documentation in preview window</span>
 <span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> K :<span class="hljs-keyword">call</span> <span class="hljs-symbol">&lt;SID&gt;</span>show_documentation()<span class="hljs-symbol">&lt;CR&gt;</span>
 
 <span class="hljs-function"><span class="hljs-keyword">function</span>! <span class="hljs-title">s</span>:<span class="hljs-title">show_documentation</span><span class="hljs-params">()</span></span>
-  <span class="hljs-keyword">if</span> &amp;<span class="hljs-keyword">filetype</span> == <span class="hljs-string">'vim'</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">index</span>([<span class="hljs-string">'vim'</span>,<span class="hljs-string">'help'</span>], &amp;<span class="hljs-keyword">filetype</span>) &gt;= <span class="hljs-number">0</span>)
     <span class="hljs-keyword">execute</span> <span class="hljs-string">'h '</span>.<span class="hljs-built_in">expand</span>(<span class="hljs-string">'&lt;cword&gt;'</span>)
   <span class="hljs-keyword">else</span>
     <span class="hljs-keyword">call</span> CocAction(<span class="hljs-string">'doHover'</span>)
@@ -187,8 +200,42 @@ configure it yourself.</p>
 <span class="hljs-comment">" Remap for rename current word</span>
 <span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span>rn <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-<span class="hljs-built_in">rename</span>)
 
+<span class="hljs-comment">" Remap for format selected region</span>
+<span class="hljs-keyword">xmap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">f</span>  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-format-selected)
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">f</span>  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-format-selected)
+
+<span class="hljs-keyword">augroup</span> mygroup
+  autocmd!
+  <span class="hljs-comment">" Setup formatexpr specified filetype(s).</span>
+  <span class="hljs-keyword">autocmd</span> FileType scala <span class="hljs-keyword">setl</span> formatexpr=CocAction(<span class="hljs-string">'formatSelected'</span>)
+  <span class="hljs-comment">" Update signature help on jump placeholder</span>
+  <span class="hljs-keyword">autocmd</span> User CocJumpPlaceholder <span class="hljs-keyword">call</span> CocActionAsync(<span class="hljs-string">'showSignatureHelp'</span>)
+<span class="hljs-keyword">augroup</span> end
+
+<span class="hljs-comment">" Remap for do codeAction of selected region, ex: `&lt;leader&gt;aap` for current paragraph</span>
+<span class="hljs-keyword">xmap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">a</span>  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-codeaction-selected)
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">a</span>  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-codeaction-selected)
+
+<span class="hljs-comment">" Remap for do codeAction of current line</span>
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span>ac  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-codeaction)
+<span class="hljs-comment">" Fix autofix problem of current line</span>
+<span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;leader&gt;</span>qf  <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-<span class="hljs-keyword">fix</span>-current)
+
+<span class="hljs-comment">" Use `:Format` to format current buffer</span>
+command! -nargs=<span class="hljs-number">0</span> Format :<span class="hljs-keyword">call</span> CocAction(<span class="hljs-string">'format'</span>)
+
+<span class="hljs-comment">" Use `:Fold` to fold current buffer</span>
+command! -nargs=? Fold :<span class="hljs-keyword">call</span>     CocAction(<span class="hljs-string">'fold'</span>, <span class="hljs-symbol">&lt;f-args&gt;</span>)
+
+<span class="hljs-comment">" Add status line support, for integration with other plugin, checkout `:h coc-status`</span>
+<span class="hljs-keyword">set</span> statusline^=%{coc#status()}%{<span class="hljs-built_in">get</span>(<span class="hljs-variable">b:</span>,<span class="hljs-string">'coc_current_function'</span>,<span class="hljs-string">''</span>)}
+
 <span class="hljs-comment">" Show all diagnostics</span>
 <span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">a</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList diagnostics<span class="hljs-symbol">&lt;cr&gt;</span>
+<span class="hljs-comment">" Manage extensions</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">e</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList extensions<span class="hljs-symbol">&lt;cr&gt;</span>
+<span class="hljs-comment">" Show commands</span>
+<span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">c</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList commands<span class="hljs-symbol">&lt;cr&gt;</span>
 <span class="hljs-comment">" Find symbol of current document</span>
 <span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;silent&gt;</span> <span class="hljs-symbol">&lt;space&gt;</span><span class="hljs-keyword">o</span>  :<span class="hljs-symbol">&lt;C-u&gt;</span>CocList outline<span class="hljs-symbol">&lt;cr&gt;</span>
 <span class="hljs-comment">" Search workspace symbols</span>
@@ -248,7 +295,7 @@ However, the environment variables <code>SBT_OPTS</code> and <code>JAVA_OPTS</co
 <p>Update the <code>metals.sbtScript</code> setting to use a custom <code>sbt</code> script instead of the
 default Metals launcher if you need further customizations like reading environment
 variables.</p>
-<p><img src="https://i.imgur.com/kbxNKzI.png" alt="Sbt Launcher"></p>
+<p><img src="https://i.imgur.com/meciPTg.png" alt="Sbt Launcher"></p>
 <h3><a class="anchor" aria-hidden="true" id="speeding-up-import"></a><a href="#speeding-up-import" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Speeding up import</h3>
 <p>The &quot;Import build&quot; step can take a long time, especially the first time you
 run it in a new build. The exact time depends on the complexity of the build and
@@ -265,7 +312,7 @@ re-import the build.</p>
 <p>The <code>coc-metals</code> extension uses by default the <code>JAVA_HOME</code> environment variable (via <a href="https://www.npmjs.com/package/find-java-home"><code>find-java-home</code></a>) to locate the <code>java</code> executable.</p>
 <p><img src="https://i.imgur.com/clDfPMk.png" alt="No Java Home"></p>
 <p>If no <code>JAVA_HOME</code> is detected you can then Open Settings by following the instructions or do it at a later time by using <code>:CocConfig</code> or <code>:CocConfigLocal</code> which will open up your configuration where you can manually enter your JAVA_HOME location.</p>
-<p><img src="https://i.imgur.com/wVThrMq.png" alt="Enter Java Home"></p>
+<p><img src="https://i.imgur.com/wK07Vju.png" alt="Enter Java Home"></p>
 <h2><a class="anchor" aria-hidden="true" id="using-latest-metals-snapshot"></a><a href="#using-latest-metals-snapshot" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using latest Metals SNAPSHOT</h2>
 <p>Update the &quot;Server Version&quot; setting to try out the latest pending Metals
 features.</p>
@@ -280,8 +327,8 @@ features.</p>
           <td>13 Jan 2020 14:57</td>
         </tr>
         <tr>
-          <td>0.8.0+38-34487a5f-SNAPSHOT</td>
-          <td>20 Jan 2020 11:52</td>
+          <td>0.8.0+41-5f0fe01e-SNAPSHOT</td>
+          <td>20 Jan 2020 13:12</td>
         </tr>
       </tbody>
     </table>
@@ -303,11 +350,11 @@ this is done using comments that are inserted which will allow you to hover on t
 Neovim, this is done using Neovim's <a href="https://neovim.io/doc/user/api.html#nvim_buf_set_virtual_text()">virtual text</a>
 to implement Metal's <a href="https://scalameta.org/metals/docs/editors/decoration-protocol.html">Decoration Protocol</a>.
 If using Neovim, make sure to have the following line in included in your <code>.vimrc</code> along with your <code>coc.nvim</code> mappings.</p>
-<pre><code class="hljs css language-vim"><span class="hljs-keyword">nnoremap</span> <span class="hljs-symbol">&lt;leader&gt;</span><span class="hljs-keyword">ws</span> :<span class="hljs-keyword">call</span> CocAction(<span class="hljs-string">'runCommand'</span>, <span class="hljs-string">'metals.expand-decoration'</span>)<span class="hljs-symbol">&lt;CR&gt;</span>
+<pre><code class="hljs css language-vim"><span class="hljs-keyword">nmap</span> <span class="hljs-symbol">&lt;Leader&gt;</span><span class="hljs-keyword">ws</span> <span class="hljs-symbol">&lt;Plug&gt;</span>(coc-metals-<span class="hljs-built_in">expand</span>-decoration)
 </code></pre>
 <p>Then, when on the line that you'd like to expand the decoration to get the hover information, execute a
 <code>&lt;leader&gt;ws</code> in order to see the expanded text for that line.</p>
-<p><img src="https://i.imgur.com/X8bVmu8.png" alt="Decorations with worksheets"></p>
+<p><img src="https://i.imgur.com/Bt6DMtH.png" alt="Decorations with worksheets"></p>
 <h2><a class="anchor" aria-hidden="true" id="run-doctor"></a><a href="#run-doctor" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Run doctor</h2>
 <p>To troubleshoot problems with your build workspace, open your coc commands by either
 using <code>:CocCommand</code> or the recommend mapping <code>&lt;space&gt; c</code>. This will open your command
@@ -476,16 +523,12 @@ project/metals.sbt
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="using-an-alternative-lsp-client"></a><a href="#using-an-alternative-lsp-client" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using an alternative LSP Client</h2>
 <p>While we recommend using the <code>coc-metals</code> extension with <code>coc.nvim</code>, Metals will work
-with these alternative LSP clients.</p>
+with these alternative LSP clients. Keep in mind that they have varying levels of LSP support.</p>
 <ul>
-<li><a href="https://github.com/natebosch/vim-lsc/"><code>vim-lsc</code></a>: simple installation and
-low resource usage but limited functionality (no auto-import, cancellation,
-formatting, folding).</li>
-<li><a href="https://github.com/autozimu/LanguageClient-neovim/"><code>LanguageClient-neovim</code></a>:
-client written in Rust.</li>
-<li><a href="https://github.com/prabirshrestha/vim-lsp"><code>vim-lsp</code></a>: simple installation
-but limited functionality (no auto-import, cancellation and no prompt for
-build import).</li>
+<li><a href="https://github.com/natebosch/vim-lsc/"><code>vim-lsc</code></a>: simple installation and written in Vimscript.</li>
+<li><a href="https://github.com/autozimu/LanguageClient-neovim/"><code>LanguageClient-neovim</code></a>: client written in Rust.</li>
+<li><a href="https://github.com/prabirshrestha/vim-lsp"><code>vim-lsp</code></a>: simple installation and written in
+Vimscript.</li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="generating-metals-binary"></a><a href="#generating-metals-binary" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Generating metals binary</h3>
 <p>If you now start Vim in a Scala project, it will fail since the <code>metals-vim</code>
@@ -505,8 +548,8 @@ binary does not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.8.0+38-34487a5f-SNAPSHOT</td>
-          <td>20 Jan 2020 11:52</td>
+          <td>0.8.0+41-5f0fe01e-SNAPSHOT</td>
+          <td>20 Jan 2020 13:12</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
