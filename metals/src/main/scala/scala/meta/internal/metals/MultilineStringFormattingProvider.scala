@@ -16,9 +16,6 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.Position
 
-/*in order to use onTypeFormatting in vscode,
-you'll have to set editor.formatOnType = true
-and editor.formatOnPaste = true in settings*/
 final class MultilineStringFormattingProvider(
     semanticdbs: Semanticdbs,
     buffer: Buffers
