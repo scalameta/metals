@@ -403,7 +403,7 @@ object MetalsEnrichments
         upperBound: Int = value.size
     ): Int = {
       var index = upperBound
-      while (index > lowerBound && value(index) != char) {
+      while (index >= lowerBound && value(index) != char) {
         index -= 1
       }
       index
