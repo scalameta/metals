@@ -92,8 +92,8 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.8.0+41-5f0fe01e-SNAPSHOT</td>
-          <td>20 Jan 2020 13:12</td>
+          <td>0.8.0+43-d141bad4-SNAPSHOT</td>
+          <td>20 Jan 2020 14:15</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
@@ -141,7 +141,7 @@ take anywhere from 10 seconds in small cached builds up to 10-15 minutes in
 large uncached builds.</p>
 <p>For more detailed information about what is happening behind the scenes during
 <code>sbt bloopInstall</code>:</p>
-<pre><code class="hljs">tail -f .metals/metals.<span class="hljs-built_in">log</span>
+<pre><code class="hljs"><span class="hljs-built_in">tail</span> -f .metals/metals.<span class="hljs-built_in">log</span>
 </code></pre>
 <p>Once the import step completes, compilation starts for your open <code>*.scala</code>
 files. Once the sources have compiled successfully, you can navigate the the
