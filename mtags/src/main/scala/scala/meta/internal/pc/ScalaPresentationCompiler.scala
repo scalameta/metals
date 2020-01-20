@@ -178,8 +178,7 @@ case class ScalaPresentationCompiler(
     }
     val (isSuccess, unprocessed) =
       settings.processArguments(options, processAll = true)
-    require(isSuccess, unprocessed)
-    if (unprocessed.nonEmpty) {
+    if (unprocessed.nonEmpty || !isSuccess) {
       logger.warning(s"Unknown compiler options: ${unprocessed.mkString(", ")}")
     }
     new MetalsGlobal(
