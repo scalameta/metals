@@ -106,7 +106,6 @@ object MetalsServerConfig {
         base.copy(
           // window/logMessage output is always visible and non-invasive in vim-lsc
           statusBar = StatusBarConfig.logMessage,
-          // Not strictly needed, but helpful while this integration matures.
           isHttpEnabled = true,
           icons = Icons.unicode,
           compilers = base.compilers.copy(
