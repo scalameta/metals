@@ -286,7 +286,11 @@ final class ImplementationProvider(
       plainParentSymbol <- classContext.findSymbol(symbol).toIterable
       parentSymbol = addParameterSignatures(plainParentSymbol, classContext)
       symbolClass <- classFromSymbol(parentSymbol, classContext.findSymbol)
-      locationsByFile = findImplementation(symbolClass.symbol, classContext)
+      locationsByFile = findImplementation(
+        symbolClass.symbol,
+        classContext,
+        source.toNIO
+      )
       file <- locationsByFile.keySet.toArray.par
       locations = locationsByFile(file)
       implPath = AbsolutePath(file)
@@ -315,19 +319,27 @@ final class ImplementationProvider(
 
   private def findImplementation(
       symbol: String,
-      classContext: InheritanceContext
+      classContext: InheritanceContext,
+      file: Path
   ): Map[Path, Set[ClassLocation]] = {
 
-    def loop(symbol: String): Set[ClassLocation] = {
-      val directImplementations = classContext.getLocations(symbol)
+    def loop(symbol: String, currentPath: Option[Path]): Set[ClassLocation] = {
+      val directImplementations = classContext.getLocations(symbol).filterNot {
+        loc =>
+          // we are not interested in local symbols from outside the workspace
+          (loc.symbol.isLocal && loc.file.isEmpty) ||
+          // local symbols ineheritance should only be picked up in the same file
+          (loc.symbol.isLocal && loc.file != currentPath)
+      }
       directImplementations.toSet ++ directImplementations
         .flatMap { loc =>
-          val allPossible = loop(loc.symbol)
+          val allPossible = loop(loc.symbol, loc.file)
           allPossible.map(_.translateAsSeenFrom(loc))
+
         }
     }
 
-    loop(symbol).groupBy(_.file).collect {
+    loop(symbol, Some(file)).groupBy(_.file).collect {
       case (Some(path), locs) =>
         path -> locs
     }

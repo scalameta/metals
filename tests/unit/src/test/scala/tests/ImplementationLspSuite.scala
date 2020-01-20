@@ -51,6 +51,26 @@ object ImplementationLspSuite extends BaseLspSuite("implementation") {
   )
 
   check(
+    "file-locals",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait Ap@@p
+       |object outer{
+       |  abstract class <<State>> extends App
+       |  val app = new <<>>State{}
+       |}
+       |/a/src/main/scala/a/Other.scala
+       |package a
+       |object Other{
+       |  def main(){
+       |    trait Inner
+       |    object InnerImpl extends Inner
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "basic-value",
     """|/a/src/main/scala/a/Main.scala
        |package a
