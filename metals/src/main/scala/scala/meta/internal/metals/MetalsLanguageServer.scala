@@ -1773,7 +1773,7 @@ class MetalsLanguageServer(
               case e: InvalidJarException =>
                 scribe.warn(s"invalid jar: ${e.path}")
               case NonFatal(e) =>
-                scribe.warn(s"jar error: $path", e)
+                scribe.debug(s"jar error: $path", e)
             })
             tempIndex.addSourceJar(path)
             if (tempIndex.toplevels.nonEmpty) {
