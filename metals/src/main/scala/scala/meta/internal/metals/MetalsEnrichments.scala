@@ -410,7 +410,9 @@ object MetalsEnrichments
     }
 
     def toAbsolutePath: AbsolutePath =
-      AbsolutePath(Paths.get(URI.create(value.stripPrefix("metals:")))).dealias
+      AbsolutePath(
+        Paths.get(URI.create(value.stripPrefix("metals:").replace('\\', '/')))
+      ).dealias
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
