@@ -88,7 +88,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
         """|package a.b
            |
            |package object c {
-           |
+           |  
            |}
            |""".stripMargin
       )

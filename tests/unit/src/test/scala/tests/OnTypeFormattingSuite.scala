@@ -120,7 +120,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  | a multiline
        |  | string
        |  '''.stripMargin
-       |
+       |  
        |}""".stripMargin
   )
 
