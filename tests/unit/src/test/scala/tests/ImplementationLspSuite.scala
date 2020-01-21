@@ -541,7 +541,7 @@ class ImplementationLspSuite extends BaseLspSuite("implementation") {
         fileName -> code.replaceAll("(<<|>>|@@)", "")
     }
 
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       for {
         _ <- server.initialize(

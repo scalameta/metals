@@ -3,7 +3,7 @@ import scala.meta.internal.metals.Icons
 
 class StatusBarLspSuite extends BaseLspSuite("status-bar") {
   override def icons: Icons = Icons.vscode
-  testAsync("compile-success") {
+  test("compile-success") {
     cleanCompileCache("a")
     for {
       _ <- server.initialize(

@@ -10,7 +10,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
     fakeTime = new FakeTime()
     super.beforeEach(context)
   }
-  testAsync("is-compiled") {
+  test("is-compiled") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -68,7 +68,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
     } yield ()
   }
 
-  testAsync("497") {
+  test("497") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

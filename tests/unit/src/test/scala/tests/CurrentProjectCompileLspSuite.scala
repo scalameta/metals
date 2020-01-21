@@ -1,7 +1,7 @@
 package tests
 
 class CurrentProjectCompileLspSuite extends BaseLspSuite("current-project") {
-  testAsync("basic") {
+  test("basic") {
     for {
       _ <- server.initialize(
         """

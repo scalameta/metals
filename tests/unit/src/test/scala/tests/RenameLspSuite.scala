@@ -540,7 +540,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       val allMarkersRegex = "(<<|>>|@@|##.*##)"
       val files = FileLayout.mapFromString(input)

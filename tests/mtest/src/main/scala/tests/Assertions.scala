@@ -5,14 +5,6 @@ import scala.meta.io.AbsolutePath
 
 trait Assertions extends munit.Assertions {
 
-  def assertNoDiffOrPrintObtained(
-      obtained: String,
-      expected: String
-  )(implicit loc: Location): Unit = {
-    // FIXME(gabro): surface this in funsuite Assertions
-    munit.Diffs.assertNoDiff(obtained, expected)
-  }
-
   def assertNotEmpty(string: String)(implicit loc: Location): Unit = {
     if (string.isEmpty) {
       fail(s"expected non-empty string, obtained empty string.")

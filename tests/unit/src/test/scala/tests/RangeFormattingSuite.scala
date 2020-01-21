@@ -189,10 +189,10 @@ class RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
     def unmangle(string: String): String =
       string.replaceAll("'''", tripleQuote)
 
-    val test = unmangle(testCase)
-    val base = test.replaceAll("(@@)", "")
+    val testCode = unmangle(testCase)
+    val base = testCode.replaceAll("(@@)", "")
     val expected = unmangle(expectedCase)
-    testAsync(name) {
+    test(name) {
       for {
         _ <- server.initialize(
           s"""/metals.json
@@ -203,7 +203,7 @@ class RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ <- server.rangeFormatting(
           "a/src/main/scala/a/Main.scala",
-          test, // bez @@
+          testCode, // bez @@
           expected,
           paste
         )

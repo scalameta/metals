@@ -4,7 +4,7 @@ import scala.concurrent.Future
 import munit.Location
 
 class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
-  testAsync("parse-error") {
+  test("parse-error") {
     for {
       _ <- server.initialize(
         """|

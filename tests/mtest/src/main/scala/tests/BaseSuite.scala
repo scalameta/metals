@@ -1,18 +1,10 @@
 package tests
 
-import scala.concurrent.Await
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.mtags
 import scala.meta.internal.semver.SemVer
 import scala.util.Properties
-import munit.TestOptions
-import munit.Location
-import munit.FailException
-import munit.TestValues.FlakyFailure
-import scala.reflect.ClassTag
-import scala.util.control.NonFatal
 
 class BaseSuite extends munit.FunSuite with Assertions {
   def isJava8: Boolean =
@@ -32,41 +24,7 @@ class BaseSuite extends munit.FunSuite with Assertions {
       scalaVersion
     )
 
-  def intercept[T <: Throwable](
-      body: => Any
-  )(implicit ev: ClassTag[T], loc: Location): Unit = {
-    try {
-      body
-      fail(
-        s"expected exception of type ${ev.runtimeClass} but body evaluated successfully"
-      )
-    } catch {
-      case e: FailException => throw e
-      case e: FlakyFailure => throw e
-      case NonFatal(e) =>
-        if (!ev.runtimeClass.isAssignableFrom(e.getClass()))
-          fail(s"expected ${ev.runtimeClass}, obtained ${e.getClass()}")
-    }
-  }
-
-  def skipSuite: Boolean = false
-
-  override def munitTests(): Seq[Test] = {
-    if (skipSuite) Seq.empty
-    else super.munitTests()
-  }
-
-  def testAsync(
-      options: TestOptions,
-      maxDuration: Duration = Duration("10min")
-  )(
-      run: => Future[Unit]
-  )(implicit loc: Location): Unit = {
-    test(options) {
-      val fut = run
-      Await.result(fut, maxDuration)
-    }
-  }
+  override def munitTimeout: Duration = Duration("10min")
 
   private def scalaVersion: String =
     Properties.versionNumberString

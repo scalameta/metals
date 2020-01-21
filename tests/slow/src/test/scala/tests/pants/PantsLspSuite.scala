@@ -85,7 +85,7 @@ class PantsLspSuite extends BaseImportSuite("pants") {
 
   // TODO(olafur) re-enable this test when it's no longer flaky
   // https://github.com/scalameta/metals/issues/1182
-  // testAsync("basic") {
+  // test("basic") {
   //   for {
   //     _ <- server.initialize(
   //       s"""
@@ -130,7 +130,7 @@ class PantsLspSuite extends BaseImportSuite("pants") {
   //   } yield ()
   // }
 
-  testAsync("regenerate") {
+  test("regenerate") {
     for {
       _ <- server.initialize(
         s"""
@@ -174,7 +174,7 @@ class PantsLspSuite extends BaseImportSuite("pants") {
     } yield ()
   }
 
-  testAsync("binary-dependency") {
+  test("binary-dependency") {
     for {
       _ <- server.initialize(
         s"""

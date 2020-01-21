@@ -54,7 +54,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
        |""".stripMargin
   )
 
-  testAsync("run-many-main-files") {
+  test("run-many-main-files") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -99,7 +99,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   }
 
   // Tests, whether main class in one project does not affect other class with same name in other project
-  testAsync("run-multi-module") {
+  test("run-multi-module") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -122,7 +122,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
-  testAsync("remove-stale-lenses") {
+  test("remove-stale-lenses") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -152,7 +152,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
-  testAsync("keep-after-error") {
+  test("keep-after-error") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -189,7 +189,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   def check(name: String, library: String = "")(
       expected: String
   )(implicit loc: Location): Unit = {
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       val original = expected.replaceAll("<<.*>>\\W+", "")
 

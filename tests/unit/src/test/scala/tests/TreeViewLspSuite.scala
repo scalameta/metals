@@ -45,7 +45,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
   lazy val expectedLibrariesCount: Int =
     this.expectedLibraries.size
 
-  testAsync("projects") {
+  test("projects") {
     cleanWorkspace()
     for {
       _ <- server.initialize("""
@@ -118,7 +118,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
     } yield ()
   }
 
-  testAsync("libraries") {
+  test("libraries") {
     for {
       _ <- server.initialize(
         """
@@ -460,7 +460,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
   // see https://github.com/scalameta/metals/issues/846
   val noOp = "no-op"
-  testAsync(noOp) {
+  test(noOp) {
     cleanWorkspace()
     for {
       _ <- server.initialize(

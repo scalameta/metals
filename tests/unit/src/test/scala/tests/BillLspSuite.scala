@@ -42,12 +42,12 @@ class BillLspSuite extends BaseLspSuite("bill") {
     } yield ()
   }
 
-  testAsync("diagnostics") {
+  test("diagnostics") {
     Bill.installWorkspace(workspace.toNIO)
     testRoundtripCompilation()
   }
 
-  testAsync("reconnect") {
+  test("reconnect") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
@@ -85,7 +85,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     } yield ()
   }
 
-  testAsync("global") {
+  test("global") {
     Bill.installGlobal(globalBsp.toNIO)
     testRoundtripCompilation()
   }
@@ -108,14 +108,14 @@ class BillLspSuite extends BaseLspSuite("bill") {
     } yield ()
   }
 
-  testAsync("conflict") {
+  test("conflict") {
     cleanDatabase()
     Bill.installWorkspace(workspace.toNIO, "Bill")
     Bill.installWorkspace(workspace.toNIO, "Bob")
     testSelectServerDialogue()
   }
 
-  testAsync("mix") {
+  test("mix") {
     cleanDatabase()
     Bill.installWorkspace(workspace.toNIO, "Bill")
     Bill.installGlobal(globalBsp.toNIO, "Bob")

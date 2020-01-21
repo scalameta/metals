@@ -6,9 +6,9 @@ import munit.Location
 
 class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
-  override def skipSuite: Boolean = isWindows
+  override def munitIgnore: Boolean = isWindows
 
-  testAsync("basic-212") {
+  test("basic-212") {
     basicTest(V.scala212)
   }
 
@@ -58,7 +58,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       compilerPlugins: String,
       extra: => Future[Unit] = Future.successful(())
   )(implicit loc: Location): Unit =
-    testAsync(name) {
+    test(name) {
       for {
         _ <- server.initialize(
           s"""/metals.json

@@ -154,7 +154,7 @@ class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
   ): Unit = {
     if (disabled) return
 
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       val workspaceLayout = DebugWorkspaceLayout(source)
 

@@ -140,7 +140,7 @@ class StepDapSuite extends BaseDapSuite("debug-step") {
       main: String,
       instrument: StepNavigator => StepNavigator
   )(implicit loc: Location): Unit = {
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       val workspaceLayout = DebugWorkspaceLayout(sources)
 

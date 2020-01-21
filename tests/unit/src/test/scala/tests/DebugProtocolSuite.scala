@@ -6,7 +6,7 @@ import ch.epfl.scala.bsp4j.ScalaMainClass
 
 class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
 
-  testAsync("start") {
+  test("start") {
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -35,7 +35,7 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
     } yield assertNoDiff(output, "Foo")
   }
 
-  testAsync("disconnect") {
+  test("disconnect") {
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -45,7 +45,7 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |/a/src/main/scala/a/Main.scala
            |package a
            |object Main {
-           |  def main(args: Array[String]) = { 
+           |  def main(args: Array[String]) = {
            |    synchronized(wait())
            |  }
            |}
@@ -65,7 +65,7 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
     } yield assertNoDiff(output, "")
   }
 
-  testAsync("restart") {
+  test("restart") {
     for {
       _ <- server.initialize(
         s"""/metals.json

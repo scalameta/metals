@@ -19,7 +19,7 @@ class UnsupportedDebuggingLspSuite
       )
     )
 
-  testAsync("no-code-lenses") {
+  test("no-code-lenses") {
     for {
       _ <- server.initialize(
         """|/metals.json
@@ -47,7 +47,7 @@ class UnsupportedDebuggingLspSuite
     }
   }
 
-  testAsync("suppress-model-refresh") {
+  test("suppress-model-refresh") {
     for {
       _ <- server.initialize(
         """|/metals.json

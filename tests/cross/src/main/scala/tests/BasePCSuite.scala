@@ -71,15 +71,19 @@ abstract class BasePCSuite extends BaseSuite {
     JdkSources().foreach(jdk => index.addSourceJar(jdk))
   }
 
+  override def munitNewTest(test: Test): Test = {
+    val testName =
+      if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
+        s"${BuildInfo.scalaCompilerVersion}-${test.name}"
+      else test.name
+    test.withName(testName)
+  }
+
   override def munitRunTest(options: TestOptions, body: => Any): Any = {
     // We are unable to infer the JDK jars on Appveyor
     // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
-    val testName =
-      if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
-        s"${BuildInfo.scalaCompilerVersion}-${options.name}"
-      else options.name
     super.munitRunTest(
-      options.copy(name = testName), {
+      options, {
         try {
           body
         } catch {

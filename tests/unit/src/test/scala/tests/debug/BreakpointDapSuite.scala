@@ -431,7 +431,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |
                 |class Foo {
                 |  static void call(){
-                |    Stream.of(1).forEach(e -> 
+                |    Stream.of(1).forEach(e ->
                 |>>    System.out.println(e)
                 |    );
                 |  }
@@ -567,7 +567,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  testAsync("no-debug") {
+  test("no-debug") {
     val workspaceLayout = DebugWorkspaceLayout(
       """|/a/src/main/scala/a/Main.scala
          |package a
@@ -604,7 +604,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
   )(implicit loc: Location): Unit = {
     if (disabled) return
 
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       val workspaceLayout = DebugWorkspaceLayout(source)
 

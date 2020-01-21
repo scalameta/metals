@@ -1,6 +1,6 @@
 package tests
 
-import munit.Diffs
+import munit.internal.difflib.Diffs
 
 case class WorkspaceSymbolReferences(
     references: Seq[SymbolReference],

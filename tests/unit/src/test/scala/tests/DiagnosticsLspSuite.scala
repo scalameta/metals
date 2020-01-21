@@ -4,7 +4,7 @@ import java.nio.file.Files
 
 class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
 
-  testAsync("diagnostics") {
+  test("diagnostics") {
     cleanCompileCache("a")
     cleanCompileCache("b")
     for {
@@ -129,7 +129,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("post-typer") {
+  test("post-typer") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -157,7 +157,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("deprecation") {
+  test("deprecation") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -184,7 +184,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("exponential") {
+  test("exponential") {
     cleanWorkspace()
     def expo(n: Int, pkg: String): String =
       s"""package $pkg
@@ -220,7 +220,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("reset-build") {
+  test("reset-build") {
     cleanWorkspace()
     import scala.meta.internal.metals.ServerCommands
     for {
@@ -264,7 +264,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("delete") {
+  test("delete") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -297,7 +297,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("single-source") {
+  test("single-source") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

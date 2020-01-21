@@ -9,7 +9,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
       statistics = new StatisticsConfig("diagnostics")
     )
 
-  testAsync("definition") {
+  test("definition") {
     for {
       _ <- server.initialize(
         """|
@@ -124,7 +124,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
   // instead of definition location if the symbol at the given text document position
   // represents a definition itself.
   // https://github.com/scalameta/metals/issues/755
-  testAsync("definition-fallback-to-show-usages") {
+  test("definition-fallback-to-show-usages") {
     for {
       _ <- server.initialize(
         """
@@ -277,7 +277,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
-  testAsync("stale") {
+  test("stale") {
     for {
       _ <- server.initialize(
         """
@@ -315,7 +315,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
-  testAsync("annotations") {
+  test("annotations") {
     for {
       _ <- server.initialize(
         """
@@ -361,7 +361,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
-  testAsync("fallback-to-presentation-compiler") {
+  test("fallback-to-presentation-compiler") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

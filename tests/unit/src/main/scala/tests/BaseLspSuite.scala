@@ -127,7 +127,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   def flakyTest(name: String, maxRetries: Int = 3)(
       run: => Future[Unit]
   ): Unit = {
-    testAsync(name) {
+    test(name) {
       def loop(n: Int): Future[Unit] = {
         run.recoverWith {
           case NonFatal(_) if n > 0 =>

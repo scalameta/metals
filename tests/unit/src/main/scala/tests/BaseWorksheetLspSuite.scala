@@ -13,9 +13,9 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
 
-  override def skipSuite: Boolean = !isValidScalaVersionForEnv(scalaVersion)
+  override def munitIgnore: Boolean = !isValidScalaVersionForEnv(scalaVersion)
 
-  testAsync("completion") {
+  test("completion") {
     assume(!isWindows, "This test is flaky on Windows")
     for {
       _ <- server.initialize(
@@ -54,7 +54,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("render") {
+  test("render") {
     for {
       _ <- server.initialize(
         s"""
@@ -102,7 +102,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("cancel") {
+  test("cancel") {
     val cancelled = Promise[Unit]()
     client.slowTaskHandler = { params =>
       cancelled.trySuccess(())
@@ -137,7 +137,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("crash") {
+  test("crash") {
     for {
       _ <- server.initialize(
         s"""
@@ -169,7 +169,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("dependsOn") {
+  test("dependsOn") {
     for {
       _ <- server.initialize(
         s"""
@@ -202,7 +202,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("no-worksheet") {
+  test("no-worksheet") {
     for {
       _ <- server.initialize(
         s"""|/metals.json
@@ -225,7 +225,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("update-classpath") {
+  test("update-classpath") {
     client.slowTaskHandler = _ => None
     for {
       _ <- server.initialize(
@@ -263,7 +263,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("syntax-error") {
+  test("syntax-error") {
     for {
       _ <- server.initialize(
         s"""|/metals.json
@@ -300,7 +300,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("definition") {
+  test("definition") {
     // NOTE(olafur) this test fails unpredicatly on Windows with
     //      """|/a/src/main/scala/Main.worksheet.sc
     //         |val message/*<no symbol>*/ = "Hello World!"
@@ -327,7 +327,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("no-position") {
+  test("no-position") {
     for {
       _ <- server.initialize(
         s"""

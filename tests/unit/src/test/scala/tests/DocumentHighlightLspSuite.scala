@@ -92,7 +92,7 @@ class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
     val edit = testCase.replaceAll("(<<|>>)", "")
     val expected = testCase.replaceAll("@@", "")
     val base = testCase.replaceAll("(<<|>>|@@)", "")
-    testAsync(name) {
+    test(name) {
       for {
         _ <- server.initialize(
           s"""/metals.json

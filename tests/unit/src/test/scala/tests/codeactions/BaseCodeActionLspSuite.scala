@@ -16,7 +16,7 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       expectNoDiagnostics: Boolean = true
   )(implicit loc: Location): Unit = {
     val path = "a/src/main/scala/a/A.scala"
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       for {
         _ <- server.initialize(s"""/metals.json

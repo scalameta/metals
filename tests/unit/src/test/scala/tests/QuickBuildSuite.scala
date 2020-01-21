@@ -1,7 +1,7 @@
 package tests
 
 class QuickBuildSuite extends BaseLspSuite("quick-build") {
-  testAsync("basic") {
+  test("basic") {
     cleanCompileCache("b")
     for {
       _ <- server.initialize(

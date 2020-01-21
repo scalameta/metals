@@ -2,7 +2,7 @@ package tests
 
 class WindowStateDidChangeLspSuite
     extends BaseLspSuite("window-state-did-change") {
-  testAsync("basic") {
+  test("basic") {
     for {
       _ <- server.initialize(
         """

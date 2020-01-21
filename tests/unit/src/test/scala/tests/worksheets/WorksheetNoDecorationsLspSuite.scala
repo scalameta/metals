@@ -10,7 +10,7 @@ class WorksheetNoDecorationsLspSuite
     extends BaseLspSuite("worksheet-no-decorations")
     with TestHovers {
 
-  testAsync("edits-and-hovers") {
+  test("edits-and-hovers") {
     for {
       _ <- server.initialize(
         s"""
@@ -48,7 +48,7 @@ class WorksheetNoDecorationsLspSuite
     } yield ()
   }
 
-  testAsync("new-edits") {
+  test("new-edits") {
     for {
       _ <- server.initialize(
         s"""

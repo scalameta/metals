@@ -6,7 +6,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.Success
 
 class BatchedFunctionSuite extends BaseSuite {
-  testAsync("batch") {
+  test("batch") {
     implicit val ec = ExecutionContext.global
 
     val lock = new Object

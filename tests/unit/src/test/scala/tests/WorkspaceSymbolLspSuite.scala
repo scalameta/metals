@@ -10,7 +10,7 @@ import MetalsTestEnrichments._
 
 class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 
-  testAsync("basic") {
+  test("basic") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -54,7 +54,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  testAsync("pre-initialized") {
+  test("pre-initialized") {
     var request = Future.successful[List[List[SymbolInformation]]](Nil)
     for {
       _ <- server.initialize(
@@ -95,7 +95,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  testAsync("duplicate") {
+  test("duplicate") {
     for {
       _ <- server.initialize(
         """
@@ -121,7 +121,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  testAsync("dependencies") {
+  test("dependencies") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -153,7 +153,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  testAsync("workspace-only") {
+  test("workspace-only") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -199,7 +199,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  testAsync("deleted") {
+  test("deleted") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

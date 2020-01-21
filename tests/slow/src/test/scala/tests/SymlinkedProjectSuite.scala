@@ -4,7 +4,7 @@ import java.util.UUID
 import scala.meta.io.AbsolutePath
 
 class SymlinkedProjectSuite extends BaseLspSuite("symlinked-project") {
-  testAsync("definitions-from-other-file") {
+  test("definitions-from-other-file") {
     for {
       _ <- server.initialize(
         """|/project/build.properties

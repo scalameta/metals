@@ -4,7 +4,7 @@ import scala.meta.internal.metals.Directories
 
 class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
 
-  testAsync("basic") {
+  test("basic") {
     for {
       _ <- server.initialize(
         """/metals.json
@@ -22,7 +22,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
     } yield ()
   }
 
-  testAsync("dependencies") {
+  test("dependencies") {
     for {
       _ <- server.initialize(
         """/metals.json

@@ -209,7 +209,7 @@ final class TestingServer(
   def assertReferenceDefinitionDiff(
       expectedDiff: String
   )(implicit loc: munit.Location): Unit = {
-    Assertions.assertNoDiffOrPrintObtained(
+    Assertions.assertNoDiff(
       workspaceReferences().diff,
       expectedDiff
     )
@@ -462,7 +462,7 @@ final class TestingServer(
         multiline.asScala.toList
       )
     } yield {
-      Assertions.assertNoDiffOrPrintObtained(format, expected)
+      Assertions.assertNoDiff(format, expected)
     }
   }
 
@@ -481,7 +481,7 @@ final class TestingServer(
         multiline.asScala.toList
       )
     } yield {
-      Assertions.assertNoDiffOrPrintObtained(format, expected)
+      Assertions.assertNoDiff(format, expected)
     }
   }
 
@@ -675,7 +675,7 @@ final class TestingServer(
     for {
       hover <- hover(filename, query, root)
     } yield {
-      Assertions.assertNoDiffOrPrintObtained(hover, expected)
+      Assertions.assertNoDiff(hover, expected)
     }
   }
 
@@ -688,7 +688,7 @@ final class TestingServer(
     for {
       (codeActions, codeActionString) <- codeAction(filename, query, root)
     } yield {
-      Assertions.assertNoDiffOrPrintObtained(codeActionString, expected)
+      Assertions.assertNoDiff(codeActionString, expected)
       codeActions
     }
 
@@ -738,7 +738,7 @@ final class TestingServer(
     for {
       highlight <- highlight(filename, query, root)
     } yield {
-      Assertions.assertNoDiffOrPrintObtained(highlight, expected)
+      Assertions.assertNoDiff(highlight, expected)
     }
   }
 
@@ -772,7 +772,7 @@ final class TestingServer(
             s"Unexpected file obtained from renames: $file"
           )
           val expectedImpl = expected(file)
-          Assertions.assertNoDiffOrPrintObtained(obtained, expectedImpl)
+          Assertions.assertNoDiff(obtained, expectedImpl)
       }
     }
   }
@@ -851,7 +851,7 @@ final class TestingServer(
       implementations.foreach {
         case (file, obtained) =>
           val expectedImpl = expected(file)
-          Assertions.assertNoDiffOrPrintObtained(
+          Assertions.assertNoDiff(
             obtained,
             expectedImpl
           )

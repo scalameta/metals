@@ -14,7 +14,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       workspace: AbsolutePath
   ): Option[String] = MillDigest.current(workspace)
 
-  testAsync("basic") {
+  test("basic") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -63,7 +63,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
     }
   }
 
-  testAsync("new-dependency") {
+  test("new-dependency") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -98,7 +98,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
     } yield ()
   }
 
-  testAsync("error") {
+  test("error") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -139,7 +139,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
     } yield ()
   }
 
-  testAsync("fatal-warnings") {
+  test("fatal-warnings") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

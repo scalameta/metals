@@ -7,7 +7,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 
 class AddPackageLspSuite extends BaseLspSuite("add-package") {
 
-  testAsync("single-level") {
+  test("single-level") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -35,7 +35,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
     } yield ()
   }
 
-  testAsync("package-file") {
+  test("package-file") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -57,14 +57,14 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/a/package.scala").readText,
         """|package object a {
-           |  
+           |
            |}
            |""".stripMargin
       )
     } yield ()
   }
 
-  testAsync("package-file-multi") {
+  test("package-file-multi") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -88,14 +88,14 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
         """|package a.b
            |
            |package object c {
-           |  
+           |
            |}
            |""".stripMargin
       )
     } yield ()
   }
 
-  testAsync("multilevel") {
+  test("multilevel") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -123,7 +123,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
     } yield ()
   }
 
-  testAsync("no-package") {
+  test("no-package") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -149,7 +149,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
     } yield ()
   }
 
-  testAsync("java-file") {
+  test("java-file") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(

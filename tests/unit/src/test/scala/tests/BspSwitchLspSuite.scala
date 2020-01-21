@@ -7,7 +7,7 @@ import scala.meta.internal.metals.Messages._
 
 class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
 
-  testAsync("switch") {
+  test("switch") {
     assume(!isWindows, "This test is flaky on Windows")
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)

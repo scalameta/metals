@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.metals.ServerCommands
 
 class ReferenceLspSuite extends BaseLspSuite("reference") {
-  testAsync("case-class") {
+  test("case-class") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -161,7 +161,7 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
     } yield ()
   }
 
-  testAsync("var") {
+  test("var") {
     for {
       _ <- server.initialize(
         """

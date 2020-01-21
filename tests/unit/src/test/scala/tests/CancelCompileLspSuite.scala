@@ -5,7 +5,7 @@ import scala.meta.internal.metals.ServerCommands
 
 class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
 
-  testAsync("basic") {
+  test("basic") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

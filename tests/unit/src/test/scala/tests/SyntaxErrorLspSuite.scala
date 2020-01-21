@@ -11,7 +11,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       code: String,
       asserts: Assert*
   )(implicit loc: Location): Unit = {
-    testAsync(name) {
+    test(name) {
       def runAsserts(as: List[Assert]): Future[Unit] = as match {
         case Nil => Future.successful(())
         case assert :: tail =>
@@ -41,7 +41,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     }
   }
 
-  testAsync("basic") {
+  test("basic") {
     for {
       _ <- server.initialize(
         """|
@@ -85,7 +85,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     } yield ()
   }
 
-  testAsync("mix1") {
+  test("mix1") {
     for {
       _ <- server.initialize(
         """|
@@ -121,7 +121,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     } yield ()
   }
 
-  testAsync("mix2") {
+  test("mix2") {
     for {
       _ <- server.initialize(
         """|
@@ -155,7 +155,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     } yield ()
   }
 
-  testAsync("no-build-tool") {
+  test("no-build-tool") {
     for {
       _ <- server.initialize(
         """
@@ -175,7 +175,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     } yield ()
   }
 
-  testAsync("unclosed-literal") {
+  test("unclosed-literal") {
     for {
       _ <- server.initialize(
         """
@@ -312,7 +312,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     )
   )
 
-  testAsync("literal-types") {
+  test("literal-types") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
