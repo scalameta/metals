@@ -93,8 +93,7 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
       _ = assertNoDiagnostics()
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = server.assertReferenceDefinitionDiff(
-        """|--- references
-           |+++ definition
+        """|
            |       ^^^^^
            |-a/src/main/scala/a/B.scala:4:11: a/A.apply().
            |-  val a = A(1)
@@ -147,9 +146,7 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
       )
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
       _ = server.assertReferenceDefinitionDiff(
-        """|--- references
-           |+++ definition
-           |        ^
+        """|        ^
            |+=============
            |+= b/B.number.
            |+=============
