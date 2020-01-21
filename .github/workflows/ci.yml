@@ -18,29 +18,21 @@ jobs:
             java: 8
           - os: macOS-latest
             java: 8
+        include:
+          - os: ubuntu-latest
+            CACHE_PATH: ~/.cache/coursier/v1
+          - os: macOS-latest
+            CACHE_PATH: ~/Library/Caches/Coursier/v1
+          - os: windows-latest
+            CACHE_PATH: ~\AppData\Local\Coursier\Cache\v1
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.${{ matrix.java }}"
       - uses: actions/cache@v1
-        if: startsWith(runner.os, 'Linux')
         with:
-          path: ~/.cache/coursier/v1
-          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
-          restore-keys: |
-            ${{ runner.os }}-coursier-
-      - uses: actions/cache@v1
-        if: startsWith(runner.os, 'Windows')
-        with:
-          path: ~\AppData\Local\Coursier\Cache\v1
-          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
-          restore-keys: |
-            ${{ runner.os }}-coursier-
-      - uses: actions/cache@v1
-        if: startsWith(runner.os, 'macOS')
-        with:
-          path: ~/Library/Caches/Coursier/v1
+          path: $CACHE_PATH
           key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
           restore-keys: |
             ${{ runner.os }}-coursier-
