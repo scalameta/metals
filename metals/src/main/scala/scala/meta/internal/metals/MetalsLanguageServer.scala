@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
+import com.google.gson.JsonNull
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
@@ -1284,6 +1285,24 @@ class MetalsLanguageServer(
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
             Future.failed(new IllegalArgumentException(msg)).asJavaObject
         }
+      case ServerCommands.NewScalaWorksheet() =>
+        val args = params.getArguments.asScala
+        def f(dir: URI, name: String) = Future {
+          val path = dir.toString.toAbsolutePath.resolve(name + ".worksheet.sc")
+          //TODO: report failure, like file already exists?
+          Files.createFile(path.toNIO).toUri()
+        }
+        args match {
+          case Seq(location: JsonPrimitive, name: JsonPrimitive)
+              if location.isString && name.isString =>
+            f(new URI(location.getAsString()), name.getAsString()).asJavaObject
+          case Seq(location: JsonNull, name: JsonPrimitive) if name.isString =>
+            f(workspace.toURI, name.getAsString()).asJavaObject
+          case _ =>
+            val msg = s"Invalid arguments: $args."
+            Future.failed(new IllegalArgumentException(msg)).asJavaObject
+        }
+
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
