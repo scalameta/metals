@@ -130,6 +130,17 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val NewScalaWorksheet = new Command(
+    "new-scala-worksheet",
+    "Create new scala worksheet",
+    """|Create and open new scala worksheet file,
+       |at the argument location with the argument + ".worksheet.sc" name.
+       |
+       |Arguments: [string], where the string is a URI of location of the new worksheet file;
+       |[string], where the string is a name for the new worksheet
+       |""".stripMargin
+  )
+
   /**
    * Open the browser at the given url.
    */
@@ -199,6 +210,7 @@ object ServerCommands {
     CascadeCompile,
     CancelCompile,
     BspSwitch,
-    StartDebugAdapter
+    StartDebugAdapter,
+    NewScalaWorksheet
   )
 }
