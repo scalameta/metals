@@ -186,4 +186,36 @@ object ReferenceLspSuite extends BaseLspSuite("reference") {
       _ = server.assertReferenceDefinitionBijection()
     } yield ()
   }
+
+  testAsync("implicit") {
+    for {
+      _ <- server.initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |trait Document
+          |
+          |class DD extends Document
+          |
+          |trait Hello[T <: Document]{
+          |
+          |  implicit class Better[T <: Document](doc : T){
+          |    def other() = {}
+          |  }
+          |}
+          |
+          |class Hey extends Hello[DD]{
+          |  Some(new DD).map(_.other())
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      _ = server.assertReferenceDefinitionBijection()
+    } yield ()
+  }
 }
