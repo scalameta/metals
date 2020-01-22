@@ -18,97 +18,83 @@ jobs:
             java: 8
           - os: macOS-latest
             java: 8
+        include:
+          - os: ubuntu-latest
+            CACHE_PATH: ~/.cache/coursier/v1
+          - os: macOS-latest
+            CACHE_PATH: ~/Library/Caches/Coursier/v1
+          - os: windows-latest
+            CACHE_PATH: ~\AppData\Local\Coursier\Cache\v1
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.${{ matrix.java }}"
+      - uses: actions/cache@v1
+        with:
+          path: $CACHE_PATH
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
+      - uses: actions/cache@v1
+        with:
+          path: ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('project/build.properties') }}-${{ hashFiles('project/plugins.sbt') }}
+          restore-keys: ${{ runner.os }}-sbt-
       - name: Run unit tests
         run: |
           bin/test.sh unit/test
         shell: bash
-  sbt:
-    name: Sbt integration
+  integration:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        type:
+          [sbt, maven, gradle, pants, mill, feature, cross, scalafmt, scalafix]
+        include:
+          - type: sbt
+            command: bin/test.sh 'slow/testOnly -- tests.sbt'
+            name: Sbt integration
+          - type: maven
+            command: bin/test.sh 'slow/testOnly -- tests.maven'
+            name: Maven integration
+          - type: gradle
+            command: bin/test.sh 'slow/testOnly -- tests.gradle'
+            name: Gradle integration
+          - type: pants
+            command: bin/test.sh 'slow/testOnly -- tests.pants'
+            name: Pants integration
+          - type: mill
+            command: bin/test.sh 'slow/testOnly -- tests.mill'
+            name: Mill integration
+          - type: feature
+            command: bin/test.sh 'slow/testOnly -- tests.feature'
+            name: LSP integration tests
+          - type: cross
+            command: sbt +cross/test
+            name: Scala cross tests
+          - type: scalafix
+            command: sbt scalafixCheck docs/docusaurusCreateSite
+            name: Scalafix and docs
+          - type: scalafmt
+            command: ./bin/scalafmt --test
+            name: Formatting
     steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v7
         with:
           java-version: "adopt@1.11"
-      - name: Run Sbt tests
-        run: bin/test.sh 'slow/testOnly -- tests.sbt'
-  maven:
-    name: Maven integration
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v7
+      - uses: actions/cache@v1
         with:
-          java-version: "adopt@1.11"
-      - name: Run Maven tests
-        run: bin/test.sh 'slow/testOnly -- tests.maven'
-  gradle:
-    name: Gradle integration
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v7
+          path: ~/.cache/coursier/v1
+          key: ${{ runner.os }}-coursier-${{ hashFiles('**/*.sbt') }}
+          restore-keys: ${{ runner.os }}-coursier-
+      - uses: actions/cache@v1
         with:
-          java-version: "adopt@1.11"
-      - name: Run Gradle tests
-        run: bin/test.sh 'slow/testOnly -- tests.gradle'
-  mill:
-    name: Mill integration
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v7
-        with:
-          java-version: "adopt@1.11"
-      - name: Run Mill tests
-        run: bin/test.sh 'slow/testOnly -- tests.mill'
-  pants:
-    name: Pants integration
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v7
-        with:
-          java-version: "adopt@1.11"
-      - name: Run Pants tests
-        run: bin/test.sh 'slow/testOnly -- tests.pants'
-  feature:
-    name: LSP integration tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v7
-        with:
-          java-version: "adopt@1.11"
-      - name: Run LSP tests
-        run: bin/test.sh 'slow/testOnly -- tests.feature'
-  cross:
-    name: Scala cross tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v7
-        with:
-          java-version: "adopt@1.11"
-      - name: Run cross tests
-        run: sbt +cross/test
-  checks:
-    name: Scalafmt/Scalafix/Docs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v7
-        with:
-          java-version: "adopt@1.11"
-      - uses: actions/setup-node@v1
-      - run: git fetch --depth=10000
-      - run: git fetch --tags
-      - name: Scalafmt & Scalafix & Docusaurus
-        run: |
-          ./bin/scalafmt --test
-          sbt scalafixCheck docs/docusaurusCreateSite
+          path: ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('project/build.properties') }}-${{ hashFiles('project/plugins.sbt') }}
+          restore-keys: ${{ runner.os }}-sbt-
+      - name: ${{ matrix.command }}
+        run: ${{ matrix.command }}
