@@ -171,3 +171,12 @@ tail -f ~/.cache/metals/lsp.trace.json
 
 The traces are very verbose so it's recommended to delete the files if you are
 not interested in debugging the JSON communication.
+
+### JVM Debugging
+
+To debug the JVM with the Metals server, add a property to your `Server Properties` with the usual Java debugging flags, making sure you have the `quiet` option on.
+It's important to remember about the flag, as the server uses standard input/output to communicate with the client, and the default output of the debuggee interferes with that.
+
+This property will make your server run in debug mode on port 5005 without waiting for the debugger to connect:
+
+`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y`
