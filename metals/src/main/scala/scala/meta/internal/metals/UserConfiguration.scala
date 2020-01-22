@@ -234,7 +234,7 @@ object UserConfiguration {
         }
       )
     val bloopSbtAlreadyInstalled =
-      getBooleanKey("bloop-sbt-already-installed").getOrElse(true)
+      getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
       getStringKey("bloop-version").getOrElse(BuildInfo.bloopVersion)
     if (errors.isEmpty) {
