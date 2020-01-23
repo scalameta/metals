@@ -244,7 +244,7 @@ lazy val metals = project
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.9",
       // for file watching
-      "io.methvin" % "directory-watcher" % "0.8.0",
+      "io.methvin" % "directory-watcher" % "0.9.9",
       // for http client
       "io.undertow" % "undertow-core" % "2.0.29.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.7.7.Final",
@@ -252,7 +252,7 @@ lazy val metals = project
       "org.flywaydb" % "flyway-core" % "6.2.0",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
-      "com.zaxxer" % "nuprocess" % "1.2.4",
+      "com.zaxxer" % "nuprocess" % "1.2.5",
       "net.java.dev.jna" % "jna" % "4.5.2",
       "net.java.dev.jna" % "jna-platform" % "4.5.2",
       // for token edit-distance used by goto definition
