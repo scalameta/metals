@@ -392,8 +392,5 @@ extensions, see [integrating a new editor](new-editor.md).
 
 Metals does not support the following features:
 
-- Rename symbol
 - Organize imports
-- Run test
-- Debugging
 - Refactoring: move class, extract/inline value, convert to block
