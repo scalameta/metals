@@ -30,6 +30,7 @@ import scala.sys.process.Process
 import scala.meta.io.Classpath
 import coursierapi.MavenRepository
 import scala.meta.internal.io.PathIO
+import java.nio.file.StandardCopyOption
 
 object BloopPants {
 
@@ -525,13 +526,38 @@ private class BloopPants(
   private val exportClasspathDir: AbsolutePath = AbsolutePath(
     workspace.resolve("dist").resolve("export-classpath")
   )
+  private val exportClasspathJars = mutable.Map.empty[Path, Option[Path]]
+  def exportClasspathJar(target: PantsTarget, entry: Path): Option[Path] = {
+    exportClasspathJars.getOrElseUpdate(
+      entry, {
+        val out = bloopJars.resolve(target.id + ".jar")
+        if (Files.isRegularFile(entry)) {
+          // Copy jar from `.pants.d/` directory to `.bloop/` directory to ensure that the
+          // Bloop classpath is isolated from the Pants classpath.
+          Files.copy(entry, out, StandardCopyOption.REPLACE_EXISTING)
+          Some(out)
+        } else if (Files.isDirectory(entry)) {
+          // Leave directory entries unchanged, don't copy them to `.bloop/` directory.
+          Some(entry)
+        } else {
+          scribe.debug(s"ignored classpath entry: $entry")
+          None
+        }
+      }
+    )
+  }
+
+  private val bloopJars =
+    Files.createDirectories(bloopDir.resolve("bloop-jars"))
   private def exportClasspath(target: PantsTarget): List[Path] = {
     exportClasspathCache.getOrElseUpdate(
       target.name, {
         val classpathFile =
           exportClasspathDir.resolve(target.id + "-classpath.txt")
         if (classpathFile.isFile) {
-          Classpath(classpathFile.readText.trim()).entries.map(_.toNIO)
+          val classpath =
+            Classpath(classpathFile.readText.trim()).entries.map(_.toNIO)
+          classpath.flatMap(entry => exportClasspathJar(target, entry))
         } else {
           Nil
         }
