@@ -1,38 +1,38 @@
 package scala.meta.internal.pantsbuild
 
 import bloop.config.{Config => C}
-import java.nio.file.Paths
-import java.nio.file.Files
-import java.nio.charset.StandardCharsets
-import java.nio.file.Path
-import scala.collection.mutable
-import ujson.Value
-import scala.util.Success
-import scala.util.Failure
-import scala.util.Try
-import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.Time
-import java.nio.file.NoSuchFileException
-import scala.util.Properties
-import coursierapi.Dependency
-import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.process.SystemProcess
-import scala.meta.pc.CancelToken
-import scala.util.control.NonFatal
-import scala.meta.internal.pc.InterruptException
-import scala.meta.internal.metals.MetalsLogger
-import scala.meta.io.AbsolutePath
-import java.util.concurrent.CancellationException
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import scala.sys.process.Process
-import scala.meta.io.Classpath
+import coursierapi.Dependency
 import coursierapi.MavenRepository
-import scala.meta.internal.io.PathIO
-import java.nio.file.StandardCopyOption
-import java.nio.file.attribute.BasicFileAttributes
 import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.Files
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
+import java.util.concurrent.CancellationException
+import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.pc.InterruptException
+import scala.meta.internal.process.SystemProcess
+import scala.meta.io.AbsolutePath
+import scala.meta.io.Classpath
+import scala.meta.pc.CancelToken
+import scala.sys.process.Process
+import scala.util.control.NonFatal
+import scala.util.Failure
+import scala.util.Properties
+import scala.util.Success
+import scala.util.Try
+import ujson.Value
 
 object BloopPants {
 
@@ -80,6 +80,7 @@ object BloopPants {
               scribe.info(s"time: exported ${count} Pants target(s) in $timer")
               if (args.out != args.workspace) {
                 scribe.info(s"output: ${args.out}")
+                symlinkToOut(args)
               }
               if (args.isLaunchIntelliJ) {
                 IntelliJ.launch(args.out)
@@ -215,6 +216,16 @@ object BloopPants {
         files.iterator.map(file => Value.Str(file.toString)).toBuffer
       json("project")("sources") = newSources
       jsonFile.writeText(ujson.write(json, indent = 4))
+    }
+  }
+
+  private def symlinkToOut(args: Args): Unit = {
+    val workspaceBloop = args.workspace.resolve(".bloop")
+
+    if (!Files.exists(workspaceBloop) || Files.isSymbolicLink(workspaceBloop)) {
+      val outBloop = args.out.resolve(".bloop")
+      Files.deleteIfExists(workspaceBloop)
+      Files.createSymbolicLink(workspaceBloop, outBloop)
     }
   }
 
