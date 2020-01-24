@@ -411,7 +411,7 @@ object MetalsEnrichments
 
     def toAbsolutePath: AbsolutePath =
       AbsolutePath(
-        Paths.get(URI.create(value.stripPrefix("metals:").replace('\\', '/')))
+        Paths.get(URI.create(value.stripPrefix("metals:")))
       ).dealias
   }
 
