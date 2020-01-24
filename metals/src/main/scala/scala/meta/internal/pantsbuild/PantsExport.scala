@@ -2,6 +2,7 @@ package scala.meta.internal.pantsbuild
 
 import java.nio.file.Paths
 import scala.collection.mutable
+import java.nio.file.Files
 
 case class PantsExport(
     targets: Map[String, PantsTarget],
@@ -63,9 +64,11 @@ object PantsExport {
     val allLibraries = output.obj(PantsKeys.libraries).obj
     val libraries: Map[String, PantsLibrary] = allLibraries.iterator.map {
       case (name, valueObj) =>
-        name -> PantsLibrary(name, valueObj.obj.map {
+        name -> PantsLibrary(name, valueObj.obj.flatMap {
           case (key, value) =>
-            key -> Paths.get(value.str)
+            val path = Paths.get(value.str)
+            if (Files.isRegularFile(path)) Some(key -> path)
+            else None
         })
     }.toMap
 
