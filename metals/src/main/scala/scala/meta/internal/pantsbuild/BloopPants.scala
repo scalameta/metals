@@ -286,7 +286,7 @@ private class BloopPants(
       // runner in Pants. Most importantly, it automatically registers
       // org.scalatest.junit.JUnitRunner even if there is no `@RunWith`
       // annotation.
-      Dependency.of("com.geirsson", "junit-interface", "0.11.6")
+      Dependency.of("com.geirsson", "junit-interface", "0.11.9")
     ).flatMap(fetchDependency)
   val allScalaJars: Seq[Path] = {
     val compilerClasspath = export.scalaPlatform.compilerClasspath
