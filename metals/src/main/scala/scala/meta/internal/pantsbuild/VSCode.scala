@@ -17,6 +17,7 @@ object VSCode {
       val oldSettings = readSettings(settings)
       oldSettings("metals.serverVersion") = BuildInfo.metalsVersion
       oldSettings("metals.pantsTargets") = args.targets.map(Str(_))
+      oldSettings("metals.bloopVersion") = BuildInfo.bloopNightlyVersion
       settings.writeText(ujson.write(oldSettings, indent = 2))
       scribe.info(s"updated: $settings")
       val code = codeCommand()

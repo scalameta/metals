@@ -31,6 +31,8 @@ import scala.meta.io.Classpath
 import coursierapi.MavenRepository
 import scala.meta.internal.io.PathIO
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
+import java.io.IOException
 
 object BloopPants {
 
@@ -286,7 +288,7 @@ private class BloopPants(
       // runner in Pants. Most importantly, it automatically registers
       // org.scalatest.junit.JUnitRunner even if there is no `@RunWith`
       // annotation.
-      Dependency.of("com.geirsson", "junit-interface", "0.11.6")
+      Dependency.of("com.geirsson", "junit-interface", "0.11.9")
     ).flatMap(fetchDependency)
   val allScalaJars: Seq[Path] = {
     val compilerClasspath = export.scalaPlatform.compilerClasspath
@@ -426,6 +428,14 @@ private class BloopPants(
     val libraries: List[PantsLibrary] = for {
       dependency <- transitiveDependencies
       libraryName <- dependency.libraries
+      // The "$ORGANIZATION:$ARTIFACT" part of Maven library coordinates.
+      module = {
+        val colon = libraryName.lastIndexOf(':')
+        if (colon < 0) libraryName
+        else libraryName.substring(0, colon)
+      }
+      // Respect "excludes" setting in Pants BUILD files to exclude library dependencies.
+      if !target.excludes.contains(module)
       library <- export.libraries.get(libraryName)
     } yield library
 
@@ -527,21 +537,29 @@ private class BloopPants(
     workspace.resolve("dist").resolve("export-classpath")
   )
   private val exportClasspathJars = mutable.Map.empty[Path, Option[Path]]
-  def exportClasspathJar(target: PantsTarget, entry: Path): Option[Path] = {
+  def exportClasspathJar(
+      target: PantsTarget,
+      entry: Path,
+      suffix: String
+  ): Option[Path] = {
     exportClasspathJars.getOrElseUpdate(
       entry, {
-        val out = bloopJars.resolve(target.id + ".jar")
-        if (Files.isRegularFile(entry)) {
-          // Copy jar from `.pants.d/` directory to `.bloop/` directory to ensure that the
-          // Bloop classpath is isolated from the Pants classpath.
-          Files.copy(entry, out, StandardCopyOption.REPLACE_EXISTING)
-          Some(out)
-        } else if (Files.isDirectory(entry)) {
-          // Leave directory entries unchanged, don't copy them to `.bloop/` directory.
-          Some(entry)
-        } else {
-          scribe.debug(s"ignored classpath entry: $entry")
-          None
+        val out = bloopJars.resolve(s"${target.id}$suffix.jar")
+        try {
+          val attr = Files.readAttributes(entry, classOf[BasicFileAttributes])
+          if (attr.isRegularFile()) {
+            // Copy jar from `.pants.d/` directory to `.bloop/` directory to ensure that the
+            // Bloop classpath is isolated from the Pants classpath.
+            Files.copy(entry, out, StandardCopyOption.REPLACE_EXISTING)
+            Some(out)
+          } else {
+            // Leave directory entries unchanged, don't copy them to `.bloop/` directory.
+            Some(entry)
+          }
+        } catch {
+          case _: IOException =>
+            // Does not exist, ignore this entry.
+            None
         }
       }
     )
@@ -557,7 +575,10 @@ private class BloopPants(
         if (classpathFile.isFile) {
           val classpath =
             Classpath(classpathFile.readText.trim()).entries.map(_.toNIO)
-          classpath.flatMap(entry => exportClasspathJar(target, entry))
+          classpath.iterator.zipWithIndex.flatMap {
+            case (entry, 0) => exportClasspathJar(target, entry, "")
+            case (entry, i) => exportClasspathJar(target, entry, s"-$i")
+          }.toList
         } else {
           Nil
         }
