@@ -149,6 +149,7 @@ lazy val V = new {
   val scalameta = "4.3.0"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
+  val bloopNightly = "1.4.0-RC1+16-1cd95092"
   val bloop = "1.4.0-RC1"
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -297,6 +298,7 @@ lazy val metals = project
       "mdocVersion" -> V.mdoc,
       "bspVersion" -> V.bsp,
       "bloopVersion" -> V.bloop,
+      "bloopNightlyVersion" -> V.bloop,
       "sbtBloopVersion" -> V.sbtBloop,
       "gradleBloopVersion" -> V.gradleBloop,
       "mavenBloopVersion" -> V.mavenBloop,

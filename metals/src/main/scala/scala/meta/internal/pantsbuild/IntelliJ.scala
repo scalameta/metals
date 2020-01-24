@@ -46,13 +46,13 @@ object IntelliJ {
       bsp.resolve("bloop.json"),
       s"""{
   "name": "Bloop",
-  "version": "${V.bloopVersion}",
+  "version": "${V.bloopNightlyVersion}",
   "bspVersion": "${V.bspVersion}",
   "languages": ["scala", "java"],
   "argv": [
     "$coursier",
     "launch",
-    "ch.epfl.scala:bloop-launcher-core_2.12:${V.bloopVersion}",
+    "ch.epfl.scala:bloop-launcher-core_2.12:${V.bloopNightlyVersion}",
     "--",
     "${V.bloopVersion}"
   ]
