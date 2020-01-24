@@ -242,7 +242,7 @@ lazy val metals = project
       // for bloom filters
       V.guava,
       // for measuring memory footprint
-      "org.openjdk.jol" % "jol-core" % "0.9",
+      "org.openjdk.jol" % "jol-core" % "0.10",
       // for file watching
       "io.methvin" % "directory-watcher" % "0.9.9",
       // for http client
