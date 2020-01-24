@@ -40,6 +40,10 @@ object PantsExport {
       case (name, valueObj) =>
         val value = valueObj.obj
         val dependencies = value(PantsKeys.targets).arr.map(_.str)
+        val excludes = (for {
+          excludes <- value.get(PantsKeys.excludes).iterator
+          value <- excludes.arr.iterator
+        } yield value.str).toSet
         val transitiveDependencies =
           value.get(PantsKeys.transitiveTargets) match {
             case None => computeTransitiveDependencies(name)
@@ -51,6 +55,7 @@ object PantsExport {
           name = name,
           id = value(PantsKeys.id).str,
           dependencies = dependencies,
+          excludes = excludes,
           transitiveDependencies = transitiveDependencies,
           libraries = libraries,
           isPantsTargetRoot = isPantsTargetRoot,

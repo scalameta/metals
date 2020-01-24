@@ -426,6 +426,14 @@ private class BloopPants(
     val libraries: List[PantsLibrary] = for {
       dependency <- transitiveDependencies
       libraryName <- dependency.libraries
+      // The "$ORGANIZATION:$ARTIFACT" part of Maven library coordinates.
+      module = {
+        val colon = libraryName.lastIndexOf(':')
+        if (colon < 0) libraryName
+        else libraryName.substring(0, colon)
+      }
+      // Respect "excludes" setting in Pants BUILD files to exclude library dependencies.
+      if !target.excludes.contains(module)
       library <- export.libraries.get(libraryName)
     } yield library
 
