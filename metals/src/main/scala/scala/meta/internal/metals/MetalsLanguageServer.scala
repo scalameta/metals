@@ -1265,17 +1265,24 @@ class MetalsLanguageServer(
         }
       case ServerCommands.NewScalaWorksheet() =>
         val args = params.getArguments.asScala
-        def f(dir: URI, name: String) = Future {
+        def createWorksheet(dir: URI, name: String) = Future {
           val path = dir.toString.toAbsolutePath.resolve(name + ".worksheet.sc")
-          //TODO: report failure, like file already exists?
-          Files.createFile(path.toNIO).toUri()
+          try {
+            Files.createFile(path.toNIO).toUri()
+          } catch {
+            case NonFatal(e) =>
+              val message = "Cannot create worksheet"
+              scribe.error(message, e)
+              languageClient
+                .showMessage(MessageType.Error, s"$message:\n ${e.toString()}")
+          }
         }
         args match {
           case Seq(location: JsonPrimitive, name: JsonPrimitive)
               if location.isString && name.isString =>
-            f(new URI(location.getAsString()), name.getAsString()).asJavaObject
+            createWorksheet(new URI(location.getAsString()), name.getAsString()).asJavaObject
           case Seq(location: JsonNull, name: JsonPrimitive) if name.isString =>
-            f(workspace.toURI, name.getAsString()).asJavaObject
+            createWorksheet(workspace.toURI, name.getAsString()).asJavaObject
           case _ =>
             val msg = s"Invalid arguments: $args."
             Future.failed(new IllegalArgumentException(msg)).asJavaObject
