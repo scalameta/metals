@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.{
   InitializeRequestArgumentsPathFormat => PathFormat
 }
+import java.nio.file.Paths
 
 final class MetalsDebugAdapters {
   private var lineAdapter: Long => Long = identity
@@ -19,7 +20,7 @@ final class MetalsDebugAdapters {
 
     Option(clientConfig.getPathFormat) match {
       case Some(PathFormat.PATH) =>
-        pathAdapter = path => s"file://$path"
+        pathAdapter = path => Paths.get(path).toUri().toString()
       case Some(PathFormat.URI) =>
         pathAdapter = identity // metals expects an URI
       case _ =>
