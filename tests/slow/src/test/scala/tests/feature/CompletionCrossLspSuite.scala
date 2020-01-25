@@ -17,9 +17,6 @@ class CompletionCrossLspSuite
       basicTest(V.scala213)
     }
   }
-  test("match-211") {
-    matchKeywordTest(V.scala213)
-  }
   test("match-213") {
     matchKeywordTest(V.scala213)
   }
