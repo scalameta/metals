@@ -336,6 +336,7 @@ lazy val input = project
   .disablePlugins(ScalafixPlugin)
 
 lazy val testSettings: Seq[Def.Setting[_]] = List(
+  Test / parallelExecution := false,
   skip.in(publish) := true,
   fork := true,
   testFrameworks := List(new TestFramework("munit.Framework"))
