@@ -17,6 +17,9 @@ class CompletionCrossLspSuite
       basicTest(V.scala213)
     }
   }
+  // NOTE(olafur): I'm unable to reproduce failures for this test when running
+  // locally but this test still fails when running in CI, see
+  // https://github.com/scalameta/metals/pull/1277#issuecomment-578406803
   test("match-213".flaky) {
     matchKeywordTest(V.scala213)
   }
