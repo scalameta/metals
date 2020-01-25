@@ -56,10 +56,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
       _ <- server.didOpen("a/src/main/scala/a/package.scala")
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/a/package.scala").readText,
-        """|package object a {
-           |
-           |}
-           |""".stripMargin
+        "package object a {\n  \n}\n"
       )
     } yield ()
   }
