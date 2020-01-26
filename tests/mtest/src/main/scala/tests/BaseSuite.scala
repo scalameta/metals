@@ -26,7 +26,7 @@ class BaseSuite extends munit.FunSuite with Assertions {
 
   override def munitTimeout: Duration = Duration("10min")
 
-  // NOTE(olafur): always ignore flak test failures.
+  // NOTE(olafur): always ignore flaky test failures.
   override def munitFlakyOK = true
 
   private def scalaVersion: String =

@@ -52,7 +52,7 @@ trait BaseDigestSuite extends BaseSuite {
           if (isEqual) {
             assertNoDiff(x, y)
           } else {
-            assert(x != y, "The digests should not be equal")
+            assertNotEquals(x, y, "The digests should not be equal")
           }
         case (None, Some(y)) =>
           fail(s"expected digest $y but did not obtain a digest")

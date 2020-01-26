@@ -25,7 +25,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import scala.collection.Seq
 import scala.meta.pc.PresentationCompiler
-import munit.TestOptions
 
 abstract class BasePCSuite extends BaseSuite {
   def thisClasspath: Seq[Path] =
@@ -77,25 +76,6 @@ abstract class BasePCSuite extends BaseSuite {
         s"${BuildInfo.scalaCompilerVersion}-${test.name}"
       else test.name
     test.withName(testName)
-  }
-
-  override def munitRunTest(options: TestOptions, body: => Any): Any = {
-    // We are unable to infer the JDK jars on Appveyor
-    // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
-    super.munitRunTest(
-      options, {
-        try {
-          body
-        } catch {
-          case NonFatal(e)
-              if e.getMessage != null &&
-                e.getMessage.contains("x$1") &&
-                !hasJdkSources =>
-            // ignore failing test if jdk sources are missing
-            ()
-        }
-      }
-    )
   }
 
   def indexScalaLibrary(): Unit = {

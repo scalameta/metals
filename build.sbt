@@ -349,7 +349,6 @@ lazy val mtest = project
     crossScalaVersions := V.supportedScalaVersions,
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier,
-      "org.scalameta" %% "testkit" % V.scalameta,
       "org.scalameta" %% "munit" % V.munit
     ),
     scalacOptions ++= crossSetting(

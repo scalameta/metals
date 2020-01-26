@@ -83,52 +83,50 @@ class PantsLspSuite extends BaseImportSuite("pants") {
     )
   }
 
-  // TODO(olafur) re-enable this test when it's no longer flaky
-  // https://github.com/scalameta/metals/issues/1182
-  // test("basic") {
-  //   for {
-  //     _ <- server.initialize(
-  //       s"""
-  //          |/src/BUILD
-  //          |scala_library(
-  //          |  name='math',
-  //          |  sources=globs('*.scala'),
-  //          |)
-  //          |/src/Util.scala
-  //          |package src
-  //          |object Util {
-  //          |  def add(a: Int, b: Int) = a + b
-  //          |}
-  //          |/src/Math.scala
-  //          |package src
-  //          |class Math {
-  //          |  def add(a: Int, b: Int): Unit = a + b
-  //          |}
-  //          |""".stripMargin,
-  //       preInitialized = () => preInitialized
-  //     )
-  //     _ = assertNoDiff(
-  //       client.workspaceMessageRequests,
-  //       List(
-  //         importBuildMessage,
-  //         progressMessage
-  //       ).mkString("\n")
-  //     )
-  //     _ <- server.didOpen("src/Math.scala")
-  //     _ = client.messageRequests.clear() // restart
-  //     _ <- server.didSave(s"src/BUILD") { text =>
-  //       text.replace("'math'", "'math1'")
-  //     }
-  //     _ <- server.didOpen("src/Util.scala")
-  //     _ = assertNoDiff(
-  //       client.workspaceMessageRequests,
-  //       List(
-  //         importBuildChangesMessage,
-  //         progressMessage
-  //       ).mkString("\n")
-  //     )
-  //   } yield ()
-  // }
+  test("basic".flaky) {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/src/BUILD
+           |scala_library(
+           |  name='math',
+           |  sources=globs('*.scala'),
+           |)
+           |/src/Util.scala
+           |package src
+           |object Util {
+           |  def add(a: Int, b: Int) = a + b
+           |}
+           |/src/Math.scala
+           |package src
+           |class Math {
+           |  def add(a: Int, b: Int): Unit = a + b
+           |}
+           |""".stripMargin,
+        preInitialized = () => preInitialized
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          importBuildMessage,
+          progressMessage
+        ).mkString("\n")
+      )
+      _ <- server.didOpen("src/Math.scala")
+      _ = client.messageRequests.clear() // restart
+      _ <- server.didSave(s"src/BUILD") { text =>
+        text.replace("'math'", "'math1'")
+      }
+      _ <- server.didOpen("src/Util.scala")
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          importBuildChangesMessage,
+          progressMessage
+        ).mkString("\n")
+      )
+    } yield ()
+  }
 
   test("regenerate") {
     for {
