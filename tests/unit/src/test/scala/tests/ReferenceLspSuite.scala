@@ -181,7 +181,7 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
     } yield ()
   }
 
-  testAsync("implicit") {
+  test("implicit") {
     for {
       _ <- server.initialize(
         """
