@@ -5,6 +5,7 @@ import tests.RangeReplace
 import tests.TestHovers
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments._
+import munit.Location
 
 abstract class BaseHoverSuite
     extends BasePCSuite
@@ -18,7 +19,7 @@ abstract class BaseHoverSuite
       includeRange: Boolean = false,
       automaticPackage: Boolean = true,
       compat: Map[String, String] = Map.empty
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val filename = "Hover.scala"
       val pkg = scala.meta.Term.Name(name).syntax

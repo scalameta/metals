@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseSignatureHelpSuite
 
-object SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
+class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
   check(
     "case",
     """

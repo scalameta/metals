@@ -1,6 +1,6 @@
 package tests.pc
 
-object PcDefinitionSuite extends BasePcDefinitionSuite {
+class PcDefinitionSuite extends BasePcDefinitionSuite {
 
   override def beforeAll(): Unit = {
     indexJDK()

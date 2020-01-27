@@ -4,12 +4,13 @@ import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
 import tests.TestHovers
 import scala.concurrent.Future
+import munit.Location
 
-object WorksheetNoDecorationsLspSuite
+class WorksheetNoDecorationsLspSuite
     extends BaseLspSuite("worksheet-no-decorations")
     with TestHovers {
 
-  testAsync("edits-and-hovers") {
+  test("edits-and-hovers") {
     for {
       _ <- server.initialize(
         s"""
@@ -47,7 +48,7 @@ object WorksheetNoDecorationsLspSuite
     } yield ()
   }
 
-  testAsync("new-edits") {
+  test("new-edits") {
     for {
       _ <- server.initialize(
         s"""
@@ -89,7 +90,7 @@ object WorksheetNoDecorationsLspSuite
       filename: String,
       query: String,
       expected: String*
-  ): Future[Unit] = {
+  )(implicit loc: Location): Future[Unit] = {
     val queriesAndExpected =
       "@@".r
         .findAllMatchIn(query)

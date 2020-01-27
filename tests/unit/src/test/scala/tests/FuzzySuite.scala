@@ -2,9 +2,10 @@ package tests
 
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.WorkspaceSymbolQuery
+import munit.Location
 
-object FuzzySuite extends BaseSuite {
-  def checkOK(query: String, symbol: String): Unit = {
+class FuzzySuite extends BaseSuite {
+  def checkOK(query: String, symbol: String)(implicit loc: Location): Unit = {
     test(query) {
       val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
       Predef.assert(
@@ -14,7 +15,7 @@ object FuzzySuite extends BaseSuite {
     }
   }
 
-  def checkNO(query: String, symbol: String): Unit = {
+  def checkNO(query: String, symbol: String)(implicit loc: Location): Unit = {
     test(query) {
       val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
       Predef.assert(

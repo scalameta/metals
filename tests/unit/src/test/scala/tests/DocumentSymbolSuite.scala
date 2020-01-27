@@ -9,7 +9,7 @@ import MetalsTestEnrichments._
 /**
  * Checks the positions of document symbols inside a document
  */
-object DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
+class DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
   val documentSymbolProvider = new DocumentSymbolProvider(TestingTrees())
 
   override def testCases(): List[ExpectTestCase] = {

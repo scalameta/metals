@@ -1,9 +1,12 @@
 package tests
 
 import scala.meta.internal.metals.Fuzzy
+import munit.Location
 
-object FilenameLength extends BaseSuite {
-  def check(filename: String, expected: String): Unit = {
+class FilenameLength extends BaseSuite {
+  def check(filename: String, expected: String)(
+      implicit loc: Location
+  ): Unit = {
     test(expected) {
       val obtained = Fuzzy.nameLength(filename)
       assertNoDiff(obtained.toString, expected.length.toString)

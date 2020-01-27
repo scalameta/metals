@@ -10,7 +10,7 @@ import scala.meta.internal.metals.FoldingRangeProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.TextEdits
 
-object FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
+class FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
   private val buffers = Buffers()
   private val trees = TestingTrees(buffers)
   private val foldingRangeProvider =

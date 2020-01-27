@@ -7,13 +7,14 @@ import org.eclipse.{lsp4j => l}
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.metals.TextEdits
+import munit.Location
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
   def check(
       name: String,
       original: String,
       compat: Map[String, String] = Map.empty
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val noRange = original
         .replaceAllLiterally("<<", "")

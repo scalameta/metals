@@ -13,8 +13,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.OffsetParams
 import java.util.concurrent.atomic.AtomicReference
+import munit.Location
 
-object InterruptPresentationCompilerSuite extends BasePCSuite {
+class InterruptPresentationCompilerSuite extends BasePCSuite {
   class InterruptSymbolIndex
       extends DelegatingGlobalSymbolIndex(OnDemandSymbolIndex()) {
     val token = new AtomicReference(new CompletableCancelToken())
@@ -32,9 +33,9 @@ object InterruptPresentationCompilerSuite extends BasePCSuite {
 
   val interrupt = new InterruptSymbolIndex()
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
+  override def beforeEach(context: BeforeEach): Unit = {
     interrupt.reset()
-    super.utestBeforeEach(path)
+    super.beforeEach(context)
   }
 
   override def beforeAll(): Unit = {
@@ -46,7 +47,7 @@ object InterruptPresentationCompilerSuite extends BasePCSuite {
       name: String,
       original: String,
       act: (PresentationCompiler, OffsetParams) => CompletableFuture[_]
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val (code, offset) = this.params(original)
       try {

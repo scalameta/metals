@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionKeywordSuite extends BaseCompletionSuite {
+class CompletionKeywordSuite extends BaseCompletionSuite {
   check(
     "super-template",
     """

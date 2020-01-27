@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionArgSuite extends BaseCompletionSuite {
+class CompletionArgSuite extends BaseCompletionSuite {
   check(
     "arg",
     s"""|object Main {

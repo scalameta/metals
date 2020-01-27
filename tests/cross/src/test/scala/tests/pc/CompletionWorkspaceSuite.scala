@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionWorkspaceSuite extends BaseCompletionSuite {
+class CompletionWorkspaceSuite extends BaseCompletionSuite {
 
   checkEdit(
     "files",

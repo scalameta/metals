@@ -5,8 +5,8 @@ import scala.meta.internal.metals.BatchedFunction
 import scala.concurrent.ExecutionContext
 import scala.util.Success
 
-object BatchedFunctionSuite extends BaseSuite {
-  testAsync("batch") {
+class BatchedFunctionSuite extends BaseSuite {
+  test("batch") {
     implicit val ec = ExecutionContext.global
 
     val lock = new Object
@@ -52,7 +52,7 @@ object BatchedFunctionSuite extends BaseSuite {
     }
 
     val unpaused = mkString(List("a"))
-    assertEquals(unpaused.value, Some(Success("a")))
+    assertDiffEqual(unpaused.value, Some(Success("a")))
 
     mkString.pause()
 
@@ -63,7 +63,7 @@ object BatchedFunctionSuite extends BaseSuite {
 
     mkString.unpause()
 
-    assertEquals(paused.value, Some(Success("bc")))
-    assertEquals(paused2.value, Some(Success("bc")))
+    assertDiffEqual(paused.value, Some(Success("bc")))
+    assertDiffEqual(paused2.value, Some(Success("bc")))
   }
 }

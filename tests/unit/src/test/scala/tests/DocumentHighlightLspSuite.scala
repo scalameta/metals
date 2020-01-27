@@ -1,6 +1,8 @@
 package tests
 
-object DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
+import munit.Location
+
+class DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
 
   check(
     "single",
@@ -86,11 +88,11 @@ object DocumentHighlightLspSuite extends BaseLspSuite("documentHighlight") {
       |}""".stripMargin
   )
 
-  def check(name: String, testCase: String): Unit = {
+  def check(name: String, testCase: String)(implicit loc: Location): Unit = {
     val edit = testCase.replaceAll("(<<|>>)", "")
     val expected = testCase.replaceAll("@@", "")
     val base = testCase.replaceAll("(<<|>>|@@)", "")
-    testAsync(name) {
+    test(name) {
       for {
         _ <- server.initialize(
           s"""/metals.json

@@ -17,6 +17,8 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.meta.internal.metals.SlowTaskConfig
+import munit.Ignore
+import munit.Location
 
 /**
  * Full end to end integration tests against a full metals language server.
@@ -49,19 +51,13 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
 
   def assertConnectedToBuildServer(
       expectedName: String
-  )(implicit filename: sourcecode.File, line: sourcecode.Line): Unit = {
+  )(implicit loc: Location): Unit = {
     val obtained = server.server.buildServer.get.name
     assertNoDiff(obtained, expectedName)
   }
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
-    if (path.isEmpty) return
-    if (server != null) {
-      server.server.cancel()
-    }
-    val name = path.last
-    if (utest.ufansi.Str(name).plainText.contains("IGNORED")) return
-    workspace = createWorkspace(name)
+  def newServer(workspaceName: String): Unit = {
+    workspace = createWorkspace(workspaceName)
     val buffers = Buffers()
     val config = serverConfig.copy(
       executeClientCommand = ExecuteClientCommandConfig.on,
@@ -81,6 +77,18 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
     server.server.userConfig = this.userConfig
   }
 
+  def cancelServer(): Unit = {
+    if (server != null) {
+      server.server.cancel()
+    }
+  }
+
+  override def beforeEach(context: BeforeEach): Unit = {
+    cancelServer()
+    if (context.test.tags.contains(Ignore)) return
+    newServer(context.test.name)
+  }
+
   protected def createWorkspace(name: String): AbsolutePath = {
     val path = PathIO.workingDirectory
       .resolve("target")
@@ -93,8 +101,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   }
 
   def assertNoDiagnostics()(
-      implicit file: sourcecode.File,
-      line: sourcecode.Line
+      implicit loc: Location
   ): Unit = {
     assertNoDiff(client.workspaceDiagnostics, "")
   }
@@ -120,7 +127,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   def flakyTest(name: String, maxRetries: Int = 3)(
       run: => Future[Unit]
   ): Unit = {
-    testAsync(name) {
+    test(name) {
       def loop(n: Int): Future[Unit] = {
         run.recoverWith {
           case NonFatal(_) if n > 0 =>

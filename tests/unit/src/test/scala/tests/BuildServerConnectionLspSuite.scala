@@ -2,10 +2,9 @@ package tests
 
 import scala.meta.internal.metals.ServerCommands
 
-object BuildServerConnectionLspSuite
+class BuildServerConnectionLspSuite
     extends BaseLspSuite("build-server-connection") {
-  // NOTE(olafur) ignored because this test is flaky.
-  ignore("basic") {
+  test("basic".flaky) {
     cleanWorkspace()
     for {
       _ <- server.initialize(

@@ -1,6 +1,8 @@
 package tests
 
-object OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
+import munit.Location
+
+class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
 
   check(
     "correct-string",
@@ -197,15 +199,15 @@ object OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
       testCase: String,
       expectedCase: String,
       autoIndent: String = "  "
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     val tripleQuote = """\u0022\u0022\u0022"""
     def unmangle(string: String): String =
       string.replaceAll("'''", tripleQuote)
 
-    val test = unmangle(testCase)
-    val base = test.replaceAll("(@@)", "")
+    val testCode = unmangle(testCase)
+    val base = testCode.replaceAll("(@@)", "")
     val expected = unmangle(expectedCase)
-    testAsync(name) {
+    test(name) {
       for {
         _ <- server.initialize(
           s"""/metals.json
@@ -216,7 +218,7 @@ object OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ <- server.onTypeFormatting(
           "a/src/main/scala/a/Main.scala",
-          test,
+          testCode,
           expected,
           autoIndent
         )

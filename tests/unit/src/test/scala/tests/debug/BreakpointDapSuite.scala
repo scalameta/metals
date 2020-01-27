@@ -4,8 +4,9 @@ import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage
+import munit.Location
 
-object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
+class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
   // disabled, because finding enclosing class for the breakpoint line is not working
   // see [[scala.meta.internal.metals.debug.SetBreakpointsRequestHandler]]
@@ -430,7 +431,7 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |
                 |class Foo {
                 |  static void call(){
-                |    Stream.of(1).forEach(e -> 
+                |    Stream.of(1).forEach(e ->
                 |>>    System.out.println(e)
                 |    );
                 |  }
@@ -566,7 +567,7 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  testAsync("no-debug") {
+  test("no-debug") {
     val workspaceLayout = DebugWorkspaceLayout(
       """|/a/src/main/scala/a/Main.scala
          |package a
@@ -600,10 +601,10 @@ object BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
   def assertBreakpoints(name: String, disabled: Boolean = false)(
       source: String
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     if (disabled) return
 
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       val workspaceLayout = DebugWorkspaceLayout(source)
 

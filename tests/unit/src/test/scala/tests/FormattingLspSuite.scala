@@ -8,9 +8,9 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.Messages
 
-object FormattingLspSuite extends BaseLspSuite("formatting") {
+class FormattingLspSuite extends BaseLspSuite("formatting") {
 
-  testAsync("basic") {
+  test("basic") {
     for {
       _ <- server.initialize(
         """|/.scalafmt.conf
@@ -34,7 +34,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
-  testAsync("require-config") {
+  test("require-config") {
     for {
       _ <- server.initialize(
         """|/a/src/main/scala/a/Main.scala
@@ -59,7 +59,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
-  testAsync("custom-config-path") {
+  test("custom-config-path") {
     for {
       _ <- server.initialize(
         """|/project/.scalafmt.conf
@@ -90,7 +90,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
-  testAsync("version") {
+  test("version") {
     for {
       _ <- server.initialize(
         """|.scalafmt.conf
@@ -118,7 +118,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
   }
 
   // Ignored because it's very slow, takes ~15s because of HTTP retries.
-  ignore("download-error") {
+  test("download-error".ignore) {
     for {
       _ <- server.initialize(
         """|.scalafmt.conf
@@ -140,7 +140,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
-  testAsync("config-error") {
+  test("config-error") {
     for {
       _ <- server.initialize(
         """|.scalafmt.conf
@@ -165,7 +165,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
-  testAsync("filters") {
+  test("filters") {
     for {
       _ <- server.initialize(
         """|/.scalafmt.conf
@@ -210,7 +210,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
-  testAsync("sbt") {
+  test("sbt") {
     for {
       _ <- server.initialize(
         """|/.scalafmt.conf
@@ -230,7 +230,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
-  testAsync("missing-version") {
+  test("missing-version") {
     cleanWorkspace()
     client.showMessageRequestHandler = { params =>
       if (MissingScalafmtVersion.isMissingScalafmtVersion(params)) {
@@ -276,7 +276,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
-  testAsync("version-not-now") {
+  test("version-not-now") {
     cleanWorkspace()
     client.showMessageRequestHandler = { params =>
       if (MissingScalafmtVersion.isMissingScalafmtVersion(params)) {
@@ -325,7 +325,7 @@ object FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
-  testAsync("workspace-folder") {
+  test("workspace-folder") {
     for {
       _ <- server.initialize(
         """|/a/.scalafmt.conf

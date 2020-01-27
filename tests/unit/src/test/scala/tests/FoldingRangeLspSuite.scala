@@ -1,9 +1,10 @@
 package tests
 
 import scala.concurrent.Future
+import munit.Location
 
-object FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
-  testAsync("parse-error") {
+class FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
+  test("parse-error") {
     for {
       _ <- server.initialize(
         """|
@@ -56,7 +57,9 @@ object FoldingRangeLspSuite extends BaseLspSuite("foldingRange") {
     } yield ()
   }
 
-  private def assertFolded(filename: String, expected: String): Future[Unit] =
+  private def assertFolded(filename: String, expected: String)(
+      implicit loc: Location
+  ): Future[Unit] =
     for {
       folded <- server.foldingRange(filename)
       _ = assertNoDiff(folded, expected)

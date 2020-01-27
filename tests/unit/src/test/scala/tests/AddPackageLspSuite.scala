@@ -5,9 +5,9 @@ import java.nio.file.Files
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.MetalsEnrichments._
 
-object AddPackageLspSuite extends BaseLspSuite("add-package") {
+class AddPackageLspSuite extends BaseLspSuite("add-package") {
 
-  testAsync("single-level") {
+  test("single-level") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -35,7 +35,7 @@ object AddPackageLspSuite extends BaseLspSuite("add-package") {
     } yield ()
   }
 
-  testAsync("package-file") {
+  test("package-file") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -56,15 +56,12 @@ object AddPackageLspSuite extends BaseLspSuite("add-package") {
       _ <- server.didOpen("a/src/main/scala/a/package.scala")
       _ = assertNoDiff(
         workspace.resolve("a/src/main/scala/a/package.scala").readText,
-        """|package object a {
-           |  
-           |}
-           |""".stripMargin
+        "package object a {\n  \n}\n"
       )
     } yield ()
   }
 
-  testAsync("package-file-multi") {
+  test("package-file-multi") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -95,7 +92,7 @@ object AddPackageLspSuite extends BaseLspSuite("add-package") {
     } yield ()
   }
 
-  testAsync("multilevel") {
+  test("multilevel") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -123,7 +120,7 @@ object AddPackageLspSuite extends BaseLspSuite("add-package") {
     } yield ()
   }
 
-  testAsync("no-package") {
+  test("no-package") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(
@@ -149,7 +146,7 @@ object AddPackageLspSuite extends BaseLspSuite("add-package") {
     } yield ()
   }
 
-  testAsync("java-file") {
+  test("java-file") {
     cleanCompileCache("a")
     RecursivelyDelete(workspace.resolve("a"))
     Files.createDirectories(

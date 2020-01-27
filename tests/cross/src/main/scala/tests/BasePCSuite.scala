@@ -57,7 +57,10 @@ abstract class BasePCSuite extends BaseSuite {
     .withScheduledExecutorService(executorService)
     .newInstance("", myclasspath.asJava, scalacOptions.asJava)
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
-  override def utestAfterAll(): Unit = {
+
+  override def afterAll(): Unit = {
+    pc.shutdown()
+    RecursivelyDelete(tmp)
     executorService.shutdown()
   }
 
@@ -67,25 +70,12 @@ abstract class BasePCSuite extends BaseSuite {
     JdkSources().foreach(jdk => index.addSourceJar(jdk))
   }
 
-  override def test(options: TestOptions)(fun: => Any): Unit = {
-    // We are unable to infer the JDK jars on Appveyor
-    // tests.BasePCSuite.indexJDK(BasePCSuite.scala:44)
+  override def munitNewTest(test: Test): Test = {
     val testName =
       if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
-        s"${BuildInfo.scalaCompilerVersion}-${options.name}"
-      else options.name
-    super.test(options.copy(name = testName)) {
-      try {
-        fun
-      } catch {
-        case NonFatal(e)
-            if e.getMessage != null &&
-              e.getMessage.contains("x$1") &&
-              !hasJdkSources =>
-          // ignore failing test if jdk sources are missing
-          ()
-      }
-    }
+        s"${BuildInfo.scalaCompilerVersion}-${test.name}"
+      else test.name
+    test.withName(testName)
   }
 
   def indexScalaLibrary(): Unit = {
@@ -110,10 +100,6 @@ abstract class BasePCSuite extends BaseSuite {
     }
   }
 
-  override def afterAll(): Unit = {
-    pc.shutdown()
-    RecursivelyDelete(tmp)
-  }
   def params(code: String, filename: String = "test.scala"): (String, Int) = {
     val code2 = code.replaceAllLiterally("@@", "")
     val offset = code.indexOf("@@")

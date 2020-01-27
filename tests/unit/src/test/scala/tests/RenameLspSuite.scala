@@ -1,7 +1,8 @@
 package tests
 import scala.concurrent.Future
+import munit.Location
 
-object RenameLspSuite extends BaseLspSuite("rename") {
+class RenameLspSuite extends BaseLspSuite("rename") {
 
   renamed(
     "basic",
@@ -508,7 +509,7 @@ object RenameLspSuite extends BaseLspSuite("rename") {
       nonOpened: Set[String] = Set.empty,
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty
-  ): Unit =
+  )(implicit loc: Location): Unit =
     check(
       name,
       input,
@@ -522,7 +523,7 @@ object RenameLspSuite extends BaseLspSuite("rename") {
   def same(
       name: String,
       input: String
-  ): Unit =
+  )(implicit loc: Location): Unit =
     check(
       name,
       input,
@@ -538,8 +539,8 @@ object RenameLspSuite extends BaseLspSuite("rename") {
       nonOpened: Set[String] = Set.empty,
       breakingChange: String => String = identity[String],
       fileRenames: Map[String, String] = Map.empty
-  ): Unit = {
-    testAsync(name) {
+  )(implicit loc: Location): Unit = {
+    test(name) {
       cleanWorkspace()
       val allMarkersRegex = "(<<|>>|@@|##.*##)"
       val files = FileLayout.mapFromString(input)

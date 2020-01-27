@@ -4,7 +4,7 @@ package digest
 import scala.meta.internal.builds.MavenDigest
 import scala.meta.io.AbsolutePath
 
-object MavenDigestSuite extends BaseDigestSuite {
+class MavenDigestSuite extends BaseDigestSuite {
 
   override def digestCurrent(
       root: AbsolutePath

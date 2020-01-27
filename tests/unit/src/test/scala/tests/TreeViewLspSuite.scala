@@ -3,7 +3,7 @@ package tests
 import scala.collection.SortedSet
 import scala.meta.internal.tvp.TreeViewProvider
 
-object TreeViewLspSuite extends BaseLspSuite("tree-view") {
+class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
   /** The libraries we expect to find for tests in this file.
    *
@@ -45,7 +45,7 @@ object TreeViewLspSuite extends BaseLspSuite("tree-view") {
   lazy val expectedLibrariesCount: Int =
     this.expectedLibraries.size
 
-  testAsync("projects") {
+  test("projects") {
     cleanWorkspace()
     for {
       _ <- server.initialize("""
@@ -118,7 +118,7 @@ object TreeViewLspSuite extends BaseLspSuite("tree-view") {
     } yield ()
   }
 
-  testAsync("libraries") {
+  test("libraries") {
     for {
       _ <- server.initialize(
         """
@@ -460,7 +460,7 @@ object TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
   // see https://github.com/scalameta/metals/issues/846
   val noOp = "no-op"
-  testAsync(noOp) {
+  test(noOp) {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -489,8 +489,10 @@ object TreeViewLspSuite extends BaseLspSuite("tree-view") {
       )
 
       // shutdown and restart a new LSP server
-      _ = this.utestAfterEach(List(noOp))
-      _ = this.utestBeforeEach(List(noOp))
+      _ = {
+        cancelServer()
+        newServer(noOp)
+      }
       _ <- server.initialize("")
 
       // This request triggers a no-op background compilation in the "b" project

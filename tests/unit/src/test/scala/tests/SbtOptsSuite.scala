@@ -2,9 +2,12 @@ package tests
 
 import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.SbtOpts
+import munit.Location
 
-object SbtOptsSuite extends BaseSuite {
-  def check(name: String, original: String, expected: String): Unit = {
+class SbtOptsSuite extends BaseSuite {
+  def check(name: String, original: String, expected: String)(
+      implicit loc: Location
+  ): Unit = {
     test(name) {
       val root = FileLayout.fromString(original)
       val obtained =

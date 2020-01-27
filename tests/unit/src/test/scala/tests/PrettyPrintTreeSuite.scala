@@ -1,7 +1,11 @@
 package tests
 
-object PrettyPrintTreeSuite extends BaseSuite {
-  def check(name: String, tree: PrettyPrintTree, expected: String): Unit = {
+import munit.Location
+
+class PrettyPrintTreeSuite extends BaseSuite {
+  def check(name: String, tree: PrettyPrintTree, expected: String)(
+      implicit loc: Location
+  ): Unit = {
     test(name) {
       assertNoDiff(tree.toString(), expected)
     }

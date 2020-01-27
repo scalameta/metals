@@ -1,8 +1,8 @@
 package tests
 
-object DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
+class DocumentSymbolLspSuite extends BaseLspSuite("documentSymbol") {
 
-  testAsync("parse-error") {
+  test("parse-error") {
     for {
       // start with code that does not parse (notice the first char in Main.scala)
       _ <- server.initialize(

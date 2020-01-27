@@ -11,12 +11,13 @@ import scala.collection.mutable
 import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
 import scala.meta.internal.metals.debug.TestingDebugServer
 import scala.meta.internal.metals.debug.MessageIdAdapter
+import munit.Location
 
-object MessageIdAdapterSuite extends BaseSuite {
+class MessageIdAdapterSuite extends BaseSuite {
   private val idCounter = new AtomicInteger(FirstMessageId)
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
-    super.utestBeforeEach(path)
+  override def beforeEach(context: BeforeEach): Unit = {
+    super.beforeEach(context)
     idCounter.set(FirstMessageId)
   }
 
@@ -75,7 +76,7 @@ object MessageIdAdapterSuite extends BaseSuite {
 
     messages.foreach(adapter.consume)
 
-    assertEquals(responses.size, 1)
+    assertDiffEqual(responses.size, 1)
     assertId(responses.head, FirstMessageId)
   }
 
@@ -87,10 +88,12 @@ object MessageIdAdapterSuite extends BaseSuite {
     request
   }
 
-  def assertId(obtained: Message, expected: Int): Unit = {
+  def assertId(obtained: Message, expected: Int)(
+      implicit loc: Location
+  ): Unit = {
     obtained match {
       case message: IdentifiableMessage =>
-        assertEquals(message.getId.toInt, expected)
+        assertDiffEqual(message.getId.toInt, expected)
       case _ =>
         fail(s"Not an identifiable message: $obtained")
     }

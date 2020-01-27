@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionDocSuite extends BaseCompletionSuite {
+class CompletionDocSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
 
   override def beforeAll(): Unit = {

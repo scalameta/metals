@@ -8,7 +8,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.Failure
 import scala.util.Success
 
-object UnsupportedDebuggingLspSuite
+class UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
 
   override val experimentalCapabilities: Some[ClientExperimentalCapabilities] =
@@ -19,7 +19,7 @@ object UnsupportedDebuggingLspSuite
       )
     )
 
-  testAsync("no-code-lenses") {
+  test("no-code-lenses") {
     for {
       _ <- server.initialize(
         """|/metals.json
@@ -47,7 +47,7 @@ object UnsupportedDebuggingLspSuite
     }
   }
 
-  testAsync("suppress-model-refresh") {
+  test("suppress-model-refresh") {
     for {
       _ <- server.initialize(
         """|/metals.json

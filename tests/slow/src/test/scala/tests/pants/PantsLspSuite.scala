@@ -12,21 +12,21 @@ import java.nio.file.StandardOpenOption
 import scala.util.control.NonFatal
 import scala.sys.process._
 
-object PantsLspSuite extends BaseImportSuite("pants") {
+class PantsLspSuite extends BaseImportSuite("pants") {
 
   val buildTool: PantsBuildTool = PantsBuildTool(() => userConfig)
 
-  override def utestAfterEach(path: Seq[String]): Unit = {
+  override def afterEach(context: AfterEach): Unit = {
     try {
       List(workspace.resolve("pants").toString(), "clean-all", "--async").!
-      super.utestAfterEach(path)
+      super.afterEach(context)
     } catch {
       case NonFatal(_) =>
     }
   }
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
-    super.utestBeforeEach(path)
+  override def beforeEach(context: BeforeEach): Unit = {
+    super.beforeEach(context)
     installPants()
   }
 
@@ -83,54 +83,52 @@ object PantsLspSuite extends BaseImportSuite("pants") {
     )
   }
 
-  // TODO(olafur) re-enable this test when it's no longer flaky
-  // https://github.com/scalameta/metals/issues/1182
-  // testAsync("basic") {
-  //   for {
-  //     _ <- server.initialize(
-  //       s"""
-  //          |/src/BUILD
-  //          |scala_library(
-  //          |  name='math',
-  //          |  sources=globs('*.scala'),
-  //          |)
-  //          |/src/Util.scala
-  //          |package src
-  //          |object Util {
-  //          |  def add(a: Int, b: Int) = a + b
-  //          |}
-  //          |/src/Math.scala
-  //          |package src
-  //          |class Math {
-  //          |  def add(a: Int, b: Int): Unit = a + b
-  //          |}
-  //          |""".stripMargin,
-  //       preInitialized = () => preInitialized
-  //     )
-  //     _ = assertNoDiff(
-  //       client.workspaceMessageRequests,
-  //       List(
-  //         importBuildMessage,
-  //         progressMessage
-  //       ).mkString("\n")
-  //     )
-  //     _ <- server.didOpen("src/Math.scala")
-  //     _ = client.messageRequests.clear() // restart
-  //     _ <- server.didSave(s"src/BUILD") { text =>
-  //       text.replace("'math'", "'math1'")
-  //     }
-  //     _ <- server.didOpen("src/Util.scala")
-  //     _ = assertNoDiff(
-  //       client.workspaceMessageRequests,
-  //       List(
-  //         importBuildChangesMessage,
-  //         progressMessage
-  //       ).mkString("\n")
-  //     )
-  //   } yield ()
-  // }
+  test("basic".flaky) {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/src/BUILD
+           |scala_library(
+           |  name='math',
+           |  sources=globs('*.scala'),
+           |)
+           |/src/Util.scala
+           |package src
+           |object Util {
+           |  def add(a: Int, b: Int) = a + b
+           |}
+           |/src/Math.scala
+           |package src
+           |class Math {
+           |  def add(a: Int, b: Int): Unit = a + b
+           |}
+           |""".stripMargin,
+        preInitialized = () => preInitialized
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          importBuildMessage,
+          progressMessage
+        ).mkString("\n")
+      )
+      _ <- server.didOpen("src/Math.scala")
+      _ = client.messageRequests.clear() // restart
+      _ <- server.didSave(s"src/BUILD") { text =>
+        text.replace("'math'", "'math1'")
+      }
+      _ <- server.didOpen("src/Util.scala")
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          importBuildChangesMessage,
+          progressMessage
+        ).mkString("\n")
+      )
+    } yield ()
+  }
 
-  testAsync("regenerate") {
+  test("regenerate") {
     for {
       _ <- server.initialize(
         s"""
@@ -174,7 +172,7 @@ object PantsLspSuite extends BaseImportSuite("pants") {
     } yield ()
   }
 
-  testAsync("binary-dependency") {
+  test("binary-dependency") {
     for {
       _ <- server.initialize(
         s"""

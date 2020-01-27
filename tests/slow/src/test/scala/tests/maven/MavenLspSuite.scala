@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets
 import scala.meta.internal.builds.MavenBuildTool
 import tests.BaseImportSuite
 
-object MavenLspSuite extends BaseImportSuite("maven-import") {
+class MavenLspSuite extends BaseImportSuite("maven-import") {
 
   val buildTool: MavenBuildTool = MavenBuildTool(() => userConfig)
 
@@ -24,7 +24,7 @@ object MavenLspSuite extends BaseImportSuite("maven-import") {
       workspace: AbsolutePath
   ): Option[String] = MavenDigest.current(workspace)
 
-  testAsync("basic") {
+  test("basic") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -66,7 +66,7 @@ object MavenLspSuite extends BaseImportSuite("maven-import") {
     }
   }
 
-  testAsync("force-command") {
+  test("force-command") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -92,7 +92,7 @@ object MavenLspSuite extends BaseImportSuite("maven-import") {
     } yield ()
   }
 
-  testAsync("new-dependency") {
+  test("new-dependency") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -111,9 +111,9 @@ object MavenLspSuite extends BaseImportSuite("maven-import") {
         text.replace(
           "<!--DEPENDENCY-->",
           s"""
-             |<dependency> 
+             |<dependency>
              |  <groupId>com.lihaoyi</groupId>
-             |  <artifactId>sourcecode_2.12</artifactId> 
+             |  <artifactId>sourcecode_2.12</artifactId>
              |  <version>0.1.4</version>
              |</dependency>
              |""".stripMargin
@@ -128,14 +128,14 @@ object MavenLspSuite extends BaseImportSuite("maven-import") {
     } yield ()
   }
 
-  testAsync("error") {
+  test("error") {
     cleanWorkspace()
     val badPom = defaultPom.replace(
       "<!--DEPENDENCY-->",
       s"""
-         |<dependency> 
+         |<dependency>
          |  <groupId>non.existent</groupId>
-         |  <artifactId>bad</artifactId> 
+         |  <artifactId>bad</artifactId>
          |  <version>0.1.4</version>
          |</dependency>
          |""".stripMargin
@@ -177,7 +177,7 @@ object MavenLspSuite extends BaseImportSuite("maven-import") {
        |<arg>-Ywarn-unused</arg>
        |""".stripMargin
 
-  testAsync("fatal-warnings") {
+  test("fatal-warnings") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

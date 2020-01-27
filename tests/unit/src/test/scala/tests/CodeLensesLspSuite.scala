@@ -1,7 +1,8 @@
 package tests
 import scala.concurrent.Future
+import munit.Location
 
-object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
+class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
     """|<<run>><<debug>>
        |object Main {
@@ -53,7 +54,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
        |""".stripMargin
   )
 
-  testAsync("run-many-main-files") {
+  test("run-many-main-files") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -98,7 +99,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   }
 
   // Tests, whether main class in one project does not affect other class with same name in other project
-  testAsync("run-multi-module") {
+  test("run-multi-module") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -121,7 +122,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
-  testAsync("remove-stale-lenses") {
+  test("remove-stale-lenses") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -151,7 +152,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
-  testAsync("keep-after-error") {
+  test("keep-after-error") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -185,8 +186,10 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
-  def check(name: String, library: String = "")(expected: String): Unit = {
-    testAsync(name) {
+  def check(name: String, library: String = "")(
+      expected: String
+  )(implicit loc: Location): Unit = {
+    test(name) {
       cleanWorkspace()
       val original = expected.replaceAll("<<.*>>\\W+", "")
 
@@ -225,7 +228,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       relativeFile: String,
       expected: String,
       maxRetries: Int = 4
-  ): Future[Unit] = {
+  )(implicit loc: Location): Future[Unit] = {
     val obtained = server.codeLenses(relativeFile)(maxRetries).recover {
       case _: NoSuchElementException =>
         server.textContents(relativeFile)
@@ -237,7 +240,7 @@ object CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   private def assertNoCodeLenses(
       relativeFile: String,
       maxRetries: Int = 4
-  ): Future[Unit] = {
+  )(implicit loc: Location): Future[Unit] = {
     server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
       case _: NoSuchElementException => Future.unit
       case e => Future.failed(e)

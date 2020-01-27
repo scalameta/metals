@@ -4,7 +4,7 @@ import java.nio.file.Path
 import tests.BaseCompletionSuite
 import scala.collection.Seq
 
-object MacroCompletionSuite extends BaseCompletionSuite {
+class MacroCompletionSuite extends BaseCompletionSuite {
   override def extraClasspath: Seq[Path] = thisClasspath
 
   override def scalacOptions: Seq[String] =
@@ -15,6 +15,7 @@ object MacroCompletionSuite extends BaseCompletionSuite {
         filename.contains("kind-projector")
       }
       .map(plugin => s"-Xplugin:$plugin")
+
   override def beforeAll(): Unit = ()
 
   check(

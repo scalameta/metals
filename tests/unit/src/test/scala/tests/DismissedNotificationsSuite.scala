@@ -3,7 +3,7 @@ package tests
 import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.DismissedNotifications
 
-object DismissedNotificationsSuite extends BaseTablesSuite {
+class DismissedNotificationsSuite extends BaseTablesSuite {
   def notifications: DismissedNotifications = tables.dismissedNotifications
   test("basic") {
     assert(!notifications.Only212Navigation.isDismissed)

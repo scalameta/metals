@@ -13,51 +13,48 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
   override def userConfig: UserConfiguration =
     super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
 
-  override final def test(options: TestOptions)(fun: => Any): Unit =
-    if (super.isValidScalaVersionForEnv(this.scalaVersion)) {
-      super.test(options)(fun)
-    }
+  override def munitIgnore: Boolean = !isValidScalaVersionForEnv(scalaVersion)
 
-  if (!isWindows)
-    testAsync("completion") {
-      for {
-        _ <- server.initialize(
-          s"""
-             |/metals.json
-             |{
-             |  "a": {
-             |    "scalaVersion": "$scalaVersion",
-             |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.1.8"]
-             |  }
-             |}
-             |/a/src/main/scala/foo/Main.worksheet.sc
-             |identity(42)
-             |val name = sourcecode.Name.generate.value
-             |""".stripMargin
-        )
-        _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
-        _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
-        identity <- server.completion(
-          "a/src/main/scala/foo/Main.worksheet.sc",
-          "identity@@"
-        )
-        _ = assertNoDiff(identity, "identity[A](x: A): A")
-        generate <- server.completion(
-          "a/src/main/scala/foo/Main.worksheet.sc",
-          "generate@@"
-        )
-        _ = assertNoDiff(generate, "generate: Name")
-        _ = assertNoDiagnostics()
-        _ = assertNoDiff(
-          client.workspaceDecorations,
-          """|identity(42) // 42
-             |val name = sourcecode.Name.generate.value // "name"
-             |""".stripMargin
-        )
-      } yield ()
-    }
+  test("completion") {
+    assume(!isWindows, "This test is flaky on Windows")
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion",
+           |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.1.8"]
+           |  }
+           |}
+           |/a/src/main/scala/foo/Main.worksheet.sc
+           |identity(42)
+           |val name = sourcecode.Name.generate.value
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      identity <- server.completion(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        "identity@@"
+      )
+      _ = assertNoDiff(identity, "identity[A](x: A): A")
+      generate <- server.completion(
+        "a/src/main/scala/foo/Main.worksheet.sc",
+        "generate@@"
+      )
+      _ = assertNoDiff(generate, "generate: Name")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|identity(42) // 42
+           |val name = sourcecode.Name.generate.value // "name"
+           |""".stripMargin
+      )
+    } yield ()
+  }
 
-  testAsync("render") {
+  test("render") {
     for {
       _ <- server.initialize(
         s"""
@@ -105,7 +102,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("cancel") {
+  test("cancel") {
     val cancelled = Promise[Unit]()
     client.slowTaskHandler = { params =>
       cancelled.trySuccess(())
@@ -140,7 +137,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("crash") {
+  test("crash") {
     for {
       _ <- server.initialize(
         s"""
@@ -172,7 +169,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("dependsOn") {
+  test("dependsOn") {
     for {
       _ <- server.initialize(
         s"""
@@ -205,7 +202,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("no-worksheet") {
+  test("no-worksheet") {
     for {
       _ <- server.initialize(
         s"""|/metals.json
@@ -228,7 +225,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("update-classpath") {
+  test("update-classpath") {
     client.slowTaskHandler = _ => None
     for {
       _ <- server.initialize(
@@ -266,7 +263,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  testAsync("syntax-error") {
+  test("syntax-error") {
     for {
       _ <- server.initialize(
         s"""|/metals.json
@@ -303,34 +300,34 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  // NOTE(olafur) this test fails unpredicatly on Windows with
-  //      """|/a/src/main/scala/Main.worksheet.sc
-  //         |val message/*<no symbol>*/ = "Hello World!"
-  //         |println/*<no symbol>*/(message/*<no symbol>*/)
-  if (!isWindows)
-    testAsync("definition") {
-      for {
-        _ <- server.initialize(
-          s"""
-             |/metals.json
-             |{"a": {"scalaVersion": "$scalaVersion"}}
-             |/a/src/main/scala/Main.worksheet.sc
-             |val message = "Hello World!"
-             |println(message)
-             |""".stripMargin
-        )
-        _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
-        _ = assertNoDiff(
-          server.workspaceDefinitions,
-          """|/a/src/main/scala/Main.worksheet.sc
-             |val message/*L0*/ = "Hello World!"
-             |println/*Predef.scala*/(message/*L0*/)
-             |""".stripMargin
-        )
-      } yield ()
-    }
+  test("definition") {
+    // NOTE(olafur) this test fails unpredicatly on Windows with
+    //      """|/a/src/main/scala/Main.worksheet.sc
+    //         |val message/*<no symbol>*/ = "Hello World!"
+    //         |println/*<no symbol>*/(message/*<no symbol>*/)
+    assume(!isWindows, "This test fails unpredictably on Window")
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/src/main/scala/Main.worksheet.sc
+           |val message = "Hello World!"
+           |println(message)
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/Main.worksheet.sc
+           |val message/*L0*/ = "Hello World!"
+           |println/*Predef.scala*/(message/*L0*/)
+           |""".stripMargin
+      )
+    } yield ()
+  }
 
-  testAsync("no-position") {
+  test("no-position") {
     for {
       _ <- server.initialize(
         s"""

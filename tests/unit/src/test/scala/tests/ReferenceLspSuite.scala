@@ -2,8 +2,8 @@ package tests
 
 import scala.meta.internal.metals.ServerCommands
 
-object ReferenceLspSuite extends BaseLspSuite("reference") {
-  testAsync("case-class") {
+class ReferenceLspSuite extends BaseLspSuite("reference") {
+  test("case-class") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -43,9 +43,7 @@ object ReferenceLspSuite extends BaseLspSuite("reference") {
       _ = assertNoDiagnostics()
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = server.assertReferenceDefinitionDiff(
-        """|--- references
-           |+++ definition
-           |                              ^
+        """|^
            |+a/src/main/scala/a/A.scala:4:36: a/A#
            |+  def apply(a: Int, b: Int): A = A.apply(a) // overloaded non-synthetic apply
            |+                                   ^^^^^
@@ -95,8 +93,7 @@ object ReferenceLspSuite extends BaseLspSuite("reference") {
       _ = assertNoDiagnostics()
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = server.assertReferenceDefinitionDiff(
-        """|--- references
-           |+++ definition
+        """|
            |       ^^^^^
            |-a/src/main/scala/a/B.scala:4:11: a/A.apply().
            |-  val a = A(1)
@@ -112,8 +109,7 @@ object ReferenceLspSuite extends BaseLspSuite("reference") {
     } yield ()
   }
 
-  // NOTE(olafurpg) ignored because it's flaky
-  ignore("edit-distance") {
+  test("edit-distance".flaky) {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -150,9 +146,7 @@ object ReferenceLspSuite extends BaseLspSuite("reference") {
       )
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer.id)
       _ = server.assertReferenceDefinitionDiff(
-        """|--- references
-           |+++ definition
-           |        ^
+        """|        ^
            |+=============
            |+= b/B.number.
            |+=============
@@ -164,7 +158,7 @@ object ReferenceLspSuite extends BaseLspSuite("reference") {
     } yield ()
   }
 
-  testAsync("var") {
+  test("var") {
     for {
       _ <- server.initialize(
         """

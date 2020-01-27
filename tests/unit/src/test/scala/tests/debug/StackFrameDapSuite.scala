@@ -6,8 +6,9 @@ import scala.meta.internal.metals.debug.Scope
 import scala.meta.internal.metals.debug.StackFrameCollector
 import scala.meta.internal.metals.debug.Variable
 import scala.meta.internal.metals.debug.Variables
+import munit.Location
 
-object StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
+class StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
   assertStackFrame("foreach")(
     source = """|a/src/main/scala/Main.scala
                 |object Main {
@@ -148,10 +149,12 @@ object StackFrameDapSuite extends BaseDapSuite("debug-stack-frame") {
   def assertStackFrame(
       name: String,
       disabled: Boolean = false
-  )(source: String, expectedFrames: List[Variables]): Unit = {
+  )(source: String, expectedFrames: List[Variables])(
+      implicit loc: Location
+  ): Unit = {
     if (disabled) return
 
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       val workspaceLayout = DebugWorkspaceLayout(source)
 

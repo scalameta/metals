@@ -2,7 +2,7 @@ package tests.hover
 
 import tests.pc.BaseHoverSuite
 
-object HoverDefnSuite extends BaseHoverSuite {
+class HoverDefnSuite extends BaseHoverSuite {
 
   check(
     "val",

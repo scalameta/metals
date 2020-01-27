@@ -1,17 +1,17 @@
 package tests
 
-import org.scalactic.source.Position
 import scala.concurrent.Future
+import munit.Location
 
-object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
+class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
   case class Assert(didChange: String => String, expectedDiagnostics: String)
   def check(
       name: String,
       code: String,
       asserts: Assert*
-  )(implicit pos: Position): Unit = {
-    testAsync(name) {
+  )(implicit loc: Location): Unit = {
+    test(name) {
       def runAsserts(as: List[Assert]): Future[Unit] = as match {
         case Nil => Future.successful(())
         case assert :: tail =>
@@ -41,7 +41,7 @@ object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     }
   }
 
-  testAsync("basic") {
+  test("basic") {
     for {
       _ <- server.initialize(
         """|
@@ -85,7 +85,7 @@ object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     } yield ()
   }
 
-  testAsync("mix1") {
+  test("mix1") {
     for {
       _ <- server.initialize(
         """|
@@ -121,7 +121,7 @@ object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     } yield ()
   }
 
-  testAsync("mix2") {
+  test("mix2") {
     for {
       _ <- server.initialize(
         """|
@@ -155,7 +155,7 @@ object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     } yield ()
   }
 
-  testAsync("no-build-tool") {
+  test("no-build-tool") {
     for {
       _ <- server.initialize(
         """
@@ -175,7 +175,7 @@ object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     } yield ()
   }
 
-  testAsync("unclosed-literal") {
+  test("unclosed-literal") {
     for {
       _ <- server.initialize(
         """
@@ -312,7 +312,7 @@ object SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
     )
   )
 
-  testAsync("literal-types") {
+  test("literal-types") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

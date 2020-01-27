@@ -2,6 +2,7 @@ package tests.codeactions
 
 import tests.BaseLspSuite
 import scala.meta.internal.metals.MetalsEnrichments._
+import munit.Location
 
 abstract class BaseCodeActionLspSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
@@ -13,9 +14,9 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
       expectedCode: String,
       selectedActionIndex: Int = 0,
       expectNoDiagnostics: Boolean = true
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     val path = "a/src/main/scala/a/A.scala"
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       for {
         _ <- server.initialize(s"""/metals.json

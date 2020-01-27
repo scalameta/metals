@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseSignatureHelpSuite
 
-object SignatureHelpDocSuite extends BaseSignatureHelpSuite {
+class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
 
   override def beforeAll(): Unit = {
     indexJDK()

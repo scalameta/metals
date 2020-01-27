@@ -4,7 +4,7 @@ import tests.BaseCompletionSuite
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 
-object CompletionSnippetNegSuite extends BaseCompletionSuite {
+class CompletionSnippetNegSuite extends BaseCompletionSuite {
 
   override def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl(

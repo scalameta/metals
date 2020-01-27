@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionSnippetSuite extends BaseCompletionSuite {
+class CompletionSnippetSuite extends BaseCompletionSuite {
   checkSnippet(
     "member",
     """

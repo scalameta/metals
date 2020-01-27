@@ -5,7 +5,7 @@ import java.nio.file.FileAlreadyExistsException
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.MetalsEnrichments._
 
-object CreateDirectoriesSuite extends BaseSuite {
+class CreateDirectoriesSuite extends BaseSuite {
 
   test("symlink-parent") {
 

@@ -9,7 +9,7 @@ import scala.util.Properties
  * This test suite does not test any metals functionality, it is only to see what
  * semanticdb-scalac procudes.
  */
-object SemanticdbSuite extends DirectoryExpectSuite("semanticdb") {
+class SemanticdbSuite extends DirectoryExpectSuite("semanticdb") {
   override def testCases(): List[ExpectTestCase] = {
     def isEnabled(f: InputFile): Boolean = {
       if (Properties.isWin &&

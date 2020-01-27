@@ -3,6 +3,7 @@ package tests
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.UserConfiguration
+import munit.Location
 
 trait BaseDigestSuite extends BaseSuite {
 
@@ -13,14 +14,14 @@ trait BaseDigestSuite extends BaseSuite {
       name: String,
       layout: String,
       altLayout: String
-  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit =
+  )(implicit loc: Location): Unit =
     check(name, layout, altLayout, isEqual = true)
 
   def checkDiff(
       name: String,
       layout: String,
       altLayout: String
-  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit =
+  )(implicit loc: Location): Unit =
     check(name, layout, altLayout, isEqual = false)
 
   private def check(
@@ -28,16 +29,16 @@ trait BaseDigestSuite extends BaseSuite {
       layout: String,
       altLayout: String,
       isEqual: Boolean = true
-  )(implicit file: sourcecode.File, line: sourcecode.Line): Unit = {
+  )(implicit loc: Location): Unit = {
     test(name) {
       val root = FileLayout.fromString(layout)
       val altRoot = FileLayout.fromString(altLayout)
-      assertEquals(
+      assertDiffEqual(
         digestCurrent(root),
         digestCurrent(root),
         "First layout should be equal when run twice"
       )
-      assertEquals(
+      assertDiffEqual(
         digestCurrent(altRoot),
         digestCurrent(altRoot),
         "Second layout should be equal when run twice"

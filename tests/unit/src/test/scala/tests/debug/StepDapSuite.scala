@@ -4,8 +4,9 @@ import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
+import munit.Location
 
-object StepDapSuite extends BaseDapSuite("debug-step") {
+class StepDapSuite extends BaseDapSuite("debug-step") {
   assertSteps("step-out")(
     sources = """|/a/src/main/scala/Main.scala
                  |package a
@@ -138,8 +139,8 @@ object StepDapSuite extends BaseDapSuite("debug-step") {
       sources: String,
       main: String,
       instrument: StepNavigator => StepNavigator
-  ): Unit = {
-    testAsync(name) {
+  )(implicit loc: Location): Unit = {
+    test(name) {
       cleanWorkspace()
       val workspaceLayout = DebugWorkspaceLayout(sources)
 

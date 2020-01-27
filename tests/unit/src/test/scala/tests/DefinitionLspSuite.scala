@@ -3,13 +3,13 @@ package tests
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 
-object DefinitionLspSuite extends BaseLspSuite("definition") {
+class DefinitionLspSuite extends BaseLspSuite("definition") {
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(
       statistics = new StatisticsConfig("diagnostics")
     )
 
-  testAsync("definition") {
+  test("definition") {
     for {
       _ <- server.initialize(
         """|
@@ -124,7 +124,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
   // instead of definition location if the symbol at the given text document position
   // represents a definition itself.
   // https://github.com/scalameta/metals/issues/755
-  testAsync("definition-fallback-to-show-usages") {
+  test("definition-fallback-to-show-usages") {
     for {
       _ <- server.initialize(
         """
@@ -182,8 +182,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
   // requires org.scalamacros:macroparadise and io.spire-match:kind-projector.
   // Navigation continues to mostly work, except for areas that have compilation
   // errors.
-  // NOTE(olafur): ignored because this test case is flaky and regularly failing the CI.
-  ignore("missing-compiler-plugin") {
+  test("missing-compiler-plugin".flaky) {
     for {
       _ <- server.initialize(
         """
@@ -278,7 +277,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
-  testAsync("stale") {
+  test("stale") {
     for {
       _ <- server.initialize(
         """
@@ -316,7 +315,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
-  testAsync("annotations") {
+  test("annotations") {
     for {
       _ <- server.initialize(
         """
@@ -362,7 +361,7 @@ object DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
-  testAsync("fallback-to-presentation-compiler") {
+  test("fallback-to-presentation-compiler") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

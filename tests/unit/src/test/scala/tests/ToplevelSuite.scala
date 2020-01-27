@@ -7,7 +7,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.Mtags
 
 /** Assert that Mtags.toplevels method works as expected. */
-object ToplevelSuite extends SingleFileExpectSuite("toplevels.expect") {
+class ToplevelSuite extends SingleFileExpectSuite("toplevels.expect") {
   override def obtained(): String = {
     val toplevels = ListBuffer.empty[String]
     val missingSymbols = ListBuffer.empty[String]

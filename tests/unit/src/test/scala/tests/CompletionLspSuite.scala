@@ -2,24 +2,13 @@ package tests
 
 import scala.concurrent.Future
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.concurrent.duration.Duration
+import munit.Location
 
-object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
+class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
 
-  override def testAsync(
-      options: TestOptions,
-      maxDuration: Duration = Duration("10min")
-  )(
-      run: => Future[Unit]
-  ): Unit = {
-    if (isWindows) {
-      ignore(options)(run)
-    } else {
-      super.testAsync(options, maxDuration)(run)
-    }
-  }
+  override def munitIgnore: Boolean = isWindows
 
-  testAsync("basic-212") {
+  test("basic-212") {
     basicTest(V.scala212)
   }
 
@@ -68,8 +57,8 @@ object CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       name: String,
       compilerPlugins: String,
       extra: => Future[Unit] = Future.successful(())
-  ): Unit =
-    testAsync(name) {
+  )(implicit loc: Location): Unit =
+    test(name) {
       for {
         _ <- server.initialize(
           s"""/metals.json

@@ -1,7 +1,8 @@
 package tests
 import scala.concurrent.Future
+import munit.Location
 
-object ImplementationLspSuite extends BaseLspSuite("implementation") {
+class ImplementationLspSuite extends BaseLspSuite("implementation") {
 
   check(
     "basic",
@@ -518,7 +519,7 @@ object ImplementationLspSuite extends BaseLspSuite("implementation") {
        |""".stripMargin
   )
 
-  def check(name: String, input: String): Unit = {
+  def check(name: String, input: String)(implicit loc: Location): Unit = {
     val files = FileLayout.mapFromString(input)
     val (filename, edit) = files
       .find(_._2.contains("@@"))
@@ -540,7 +541,7 @@ object ImplementationLspSuite extends BaseLspSuite("implementation") {
         fileName -> code.replaceAll("(<<|>>|@@)", "")
     }
 
-    testAsync(name) {
+    test(name) {
       cleanWorkspace()
       for {
         _ <- server.initialize(

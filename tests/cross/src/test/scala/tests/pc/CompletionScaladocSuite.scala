@@ -2,7 +2,7 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionScaladocSuite extends BaseCompletionSuite {
+class CompletionScaladocSuite extends BaseCompletionSuite {
   check(
     "methoddef-label",
     """

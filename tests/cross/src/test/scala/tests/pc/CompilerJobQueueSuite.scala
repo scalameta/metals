@@ -11,16 +11,16 @@ import scala.collection.mutable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
-object CompilerJobQueueSuite extends BaseSuite {
+class CompilerJobQueueSuite extends BaseSuite {
   var jobs: CompilerJobQueue = null
 
-  override def utestBeforeEach(path: Seq[String]): Unit = {
+  override def beforeEach(context: BeforeEach): Unit = {
     jobs = CompilerJobQueue()
-    super.utestBeforeEach(path)
+    super.beforeEach(context)
   }
-  override def utestAfterEach(path: Seq[String]): Unit = {
+  override def afterEach(context: AfterEach): Unit = {
     jobs.shutdown()
-    super.utestAfterEach(path)
+    super.afterEach(context)
   }
 
   test("cancel") {
@@ -51,9 +51,9 @@ object CompilerJobQueueSuite extends BaseSuite {
     Await.result(all, Duration("1s"))
 
     // Assert all submitted non-cancelled jobs completed.
-    assertEquals(obtained.length, size)
+    assertDiffEqual(obtained.length, size)
 
     // Assert that the jobs don't run in the default order.
-    assertNotEquals(obtained.toList, original)
+    assertDiffNotEqual(obtained.toList, original)
   }
 }

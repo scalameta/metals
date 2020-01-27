@@ -2,7 +2,8 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionMatchSuite extends BaseCompletionSuite {
+class CompletionMatchSuite extends BaseCompletionSuite {
+
   override def beforeAll(): Unit = {
     indexScalaLibrary()
   }
@@ -187,7 +188,7 @@ object CompletionMatchSuite extends BaseCompletionSuite {
 
   // https://github.com/scalameta/metals/issues/1253
   checkEdit(
-    "exhaustive-fully-qualify".expectedToFail,
+    "exhaustive-fully-qualify".fail,
     """
       |package example
       |

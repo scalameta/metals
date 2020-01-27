@@ -2,7 +2,8 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 
-object CompletionSuite extends BaseCompletionSuite {
+class CompletionSuite extends BaseCompletionSuite {
+
   override def beforeAll(): Unit = {
     indexJDK()
   }

@@ -14,7 +14,7 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
-object SbtLspSuite extends BaseImportSuite("sbt-import") {
+class SbtLspSuite extends BaseImportSuite("sbt-import") {
 
   val buildTool: SbtBuildTool = SbtBuildTool("", () => userConfig, serverConfig)
 
@@ -22,7 +22,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
       workspace: AbsolutePath
   ): Option[String] = SbtDigest.current(workspace)
 
-  testAsync("basic") {
+  test("basic") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -64,7 +64,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     }
   }
 
-  testAsync("force-command") {
+  test("force-command") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -93,7 +93,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     } yield ()
   }
 
-  testAsync("new-dependency") {
+  test("new-dependency") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -124,7 +124,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     } yield ()
   }
 
-  testAsync("cancel") {
+  test("cancel") {
     client.slowTaskHandler = params => {
       if (params == bloopInstallProgress("sbt")) {
         Thread.sleep(TimeUnit.SECONDS.toMillis(2))
@@ -156,7 +156,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     } yield ()
   }
 
-  testAsync("error") {
+  test("error") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -194,7 +194,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     } yield ()
   }
 
-  testAsync("supported-scala") {
+  test("supported-scala") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -267,7 +267,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     } yield ()
   }
 
-  testAsync("sbtopts") {
+  test("sbtopts") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -293,7 +293,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     } yield ()
   }
 
-  testAsync("jvmopts") {
+  test("jvmopts") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -313,7 +313,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     } yield ()
   }
 
-  testAsync("fatal-warnings") {
+  test("fatal-warnings") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -355,7 +355,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     } yield ()
   }
 
-  testAsync("sbt-script") {
+  test("sbt-script") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -377,7 +377,7 @@ object SbtLspSuite extends BaseImportSuite("sbt-import") {
     } yield ()
   }
 
-  testAsync("sbt-version") {
+  test("sbt-version") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

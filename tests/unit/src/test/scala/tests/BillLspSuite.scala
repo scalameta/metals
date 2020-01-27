@@ -8,7 +8,7 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 
-object BillLspSuite extends BaseLspSuite("bill") {
+class BillLspSuite extends BaseLspSuite("bill") {
 
   def globalBsp: AbsolutePath = workspace.resolve("global-bsp")
   override def bspGlobalDirectories: List[AbsolutePath] =
@@ -42,12 +42,12 @@ object BillLspSuite extends BaseLspSuite("bill") {
     } yield ()
   }
 
-  testAsync("diagnostics") {
+  test("diagnostics") {
     Bill.installWorkspace(workspace.toNIO)
     testRoundtripCompilation()
   }
 
-  testAsync("reconnect") {
+  test("reconnect") {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {
@@ -85,7 +85,7 @@ object BillLspSuite extends BaseLspSuite("bill") {
     } yield ()
   }
 
-  testAsync("global") {
+  test("global") {
     Bill.installGlobal(globalBsp.toNIO)
     testRoundtripCompilation()
   }
@@ -108,14 +108,14 @@ object BillLspSuite extends BaseLspSuite("bill") {
     } yield ()
   }
 
-  testAsync("conflict") {
+  test("conflict") {
     cleanDatabase()
     Bill.installWorkspace(workspace.toNIO, "Bill")
     Bill.installWorkspace(workspace.toNIO, "Bob")
     testSelectServerDialogue()
   }
 
-  testAsync("mix") {
+  test("mix") {
     cleanDatabase()
     Bill.installWorkspace(workspace.toNIO, "Bill")
     Bill.installGlobal(globalBsp.toNIO, "Bob")

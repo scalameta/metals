@@ -4,7 +4,7 @@ package digest
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.MillDigest
 
-object MillDigestSuite extends BaseDigestSuite {
+class MillDigestSuite extends BaseDigestSuite {
 
   override def digestCurrent(
       root: AbsolutePath

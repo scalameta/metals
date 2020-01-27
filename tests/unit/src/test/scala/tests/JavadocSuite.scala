@@ -1,10 +1,13 @@
 package tests
 
 import scala.meta.internal.docstrings.MarkdownGenerator
+import munit.Location
 
-object JavadocSuite extends BaseSuite {
+class JavadocSuite extends BaseSuite {
 
-  def check(name: String, original: String, expected: String): Unit = {
+  def check(name: String, original: String, expected: String)(
+      implicit loc: Location
+  ): Unit = {
     test(name) {
       val obtained = MarkdownGenerator.toMarkdown(original).mkString
       assertNoDiff(obtained, expected)

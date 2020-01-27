@@ -5,7 +5,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import tests.BaseCompletionSuite
 
-object CompletionOverrideConfigSuite extends BaseCompletionSuite {
+class CompletionOverrideConfigSuite extends BaseCompletionSuite {
 
   override def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(

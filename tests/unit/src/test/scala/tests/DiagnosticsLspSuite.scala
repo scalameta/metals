@@ -2,9 +2,9 @@ package tests
 
 import java.nio.file.Files
 
-object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
+class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
 
-  testAsync("diagnostics") {
+  test("diagnostics") {
     cleanCompileCache("a")
     cleanCompileCache("b")
     for {
@@ -93,7 +93,7 @@ object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  ignore("reset") {
+  test("reset".ignore) {
     cleanCompileCache("a")
     for {
       _ <- server.initialize(
@@ -129,7 +129,7 @@ object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("post-typer") {
+  test("post-typer") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -157,7 +157,7 @@ object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("deprecation") {
+  test("deprecation") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -184,7 +184,7 @@ object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("exponential") {
+  test("exponential") {
     cleanWorkspace()
     def expo(n: Int, pkg: String): String =
       s"""package $pkg
@@ -220,7 +220,7 @@ object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("reset-build") {
+  test("reset-build") {
     cleanWorkspace()
     import scala.meta.internal.metals.ServerCommands
     for {
@@ -264,7 +264,7 @@ object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("delete") {
+  test("delete") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -297,14 +297,14 @@ object DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  testAsync("single-source") {
+  test("single-source") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
         """
           |/metals.json
           |{
-          |  "a": { 
+          |  "a": {
           |    "additionalSources" : [ "a/weird/path/A.scala" ]
           |  }
           |}

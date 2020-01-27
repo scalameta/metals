@@ -1,24 +1,12 @@
 package tests
-import scala.concurrent.duration.Duration
-import scala.concurrent.Future
 
-object BuildTargetsLspSuite
+class BuildTargetsLspSuite
     extends BaseLspSuite("build-targets")
     with TestHovers {
 
-  override def testAsync(
-      options: TestOptions,
-      maxDuration: Duration = Duration("3min")
-  )(run: => Future[Unit]): Unit = {
-    if (isWindows) {
-      // Tests are not working on windows CI
-      ignore(options) {}
-    } else {
-      super.testAsync(options, maxDuration)(run)
-    }
-  }
+  override def munitIgnore: Boolean = isWindows
 
-  testAsync("scala-priority") {
+  test("scala-priority") {
     for {
       _ <- server.initialize(
         s"""/metals.json

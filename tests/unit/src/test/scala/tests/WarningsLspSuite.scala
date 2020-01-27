@@ -4,10 +4,10 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Messages
 
-object WarningsLspSuite extends BaseLspSuite("warnings") {
+class WarningsLspSuite extends BaseLspSuite("warnings") {
   // NOTE(olafur) Ignored because at the time of this writing we have no deprecated
   // Scala versions.
-  ignore("deprecated-scala") {
+  test("deprecated-scala".ignore) {
     cleanWorkspace()
     val using = V.deprecatedScalaVersions.head
     val recommended = ScalaVersions.recommendedVersion(using)

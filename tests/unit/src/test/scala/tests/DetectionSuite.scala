@@ -2,14 +2,15 @@ package tests
 
 import scala.meta.internal.builds.BuildTools
 import scala.meta.io.AbsolutePath
+import munit.Location
 
-object DetectionSuite extends BaseSuite {
+class DetectionSuite extends BaseSuite {
 
   def check(
       layout: String,
       testFunction: AbsolutePath => Boolean,
       isTrue: Boolean = true
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     val workspace = FileLayout.fromString(layout)
     workspace.toFile.deleteOnExit()
     val isSbt = testFunction(workspace)
@@ -18,11 +19,15 @@ object DetectionSuite extends BaseSuite {
   }
 
   /**------------ SBT ------------**/
-  def checkNotSbt(name: String, layout: String): Unit = {
+  def checkNotSbt(name: String, layout: String)(
+      implicit loc: Location
+  ): Unit = {
     checkSbt(name, layout, isTrue = false)
   }
 
-  def checkSbt(name: String, layout: String, isTrue: Boolean = true): Unit = {
+  def checkSbt(name: String, layout: String, isTrue: Boolean = true)(
+      implicit loc: Location
+  ): Unit = {
     test(s"sbt-$name") {
       check(
         layout,
@@ -32,7 +37,9 @@ object DetectionSuite extends BaseSuite {
     }
   }
 
-  def checkPants(name: String, layout: String, isTrue: Boolean = true): Unit = {
+  def checkPants(name: String, layout: String, isTrue: Boolean = true)(
+      implicit loc: Location
+  ): Unit = {
     test(s"pants-$name") {
       check(
         layout,
@@ -107,14 +114,16 @@ object DetectionSuite extends BaseSuite {
   )
 
   /**------------ Gradle ------------**/
-  def checkNotGradle(name: String, layout: String): Unit = {
+  def checkNotGradle(name: String, layout: String)(
+      implicit loc: Location
+  ): Unit = {
     checkGradle(name, layout, isTrue = false)
   }
   def checkGradle(
       name: String,
       layout: String,
       isTrue: Boolean = true
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(s"gradle-$name") {
       check(
         layout,
@@ -153,14 +162,16 @@ object DetectionSuite extends BaseSuite {
   )
 
   /**------------ Maven ------------**/
-  def checkNotMaven(name: String, layout: String): Unit = {
+  def checkNotMaven(name: String, layout: String)(
+      implicit loc: Location
+  ): Unit = {
     checkMaven(name, layout, isTrue = false)
   }
   def checkMaven(
       name: String,
       layout: String,
       isTrue: Boolean = true
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     test(s"maven-$name") {
       check(
         layout,

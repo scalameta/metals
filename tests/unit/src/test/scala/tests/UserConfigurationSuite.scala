@@ -2,13 +2,16 @@ package tests
 
 import java.util.Properties
 import scala.meta.internal.metals.UserConfiguration
+import munit.Location
 
-object UserConfigurationSuite extends BaseSuite {
+class UserConfigurationSuite extends BaseSuite {
   def check(
       name: String,
       original: String,
       props: Map[String, String] = Map.empty
-  )(fn: Either[List[String], UserConfiguration] => Unit): Unit = {
+  )(
+      fn: Either[List[String], UserConfiguration] => Unit
+  )(implicit loc: Location): Unit = {
     test(name) {
       val json = UserConfiguration.parse(original)
       val jprops = new Properties()
@@ -23,7 +26,7 @@ object UserConfigurationSuite extends BaseSuite {
       name: String,
       original: String,
       props: Map[String, String] = Map.empty
-  )(fn: UserConfiguration => Unit): Unit = {
+  )(fn: UserConfiguration => Unit)(implicit loc: Location): Unit = {
     check(name, original, props) {
       case Left(errs) =>
         fail(s"Expected success. Obtained error: $errs")
@@ -35,7 +38,7 @@ object UserConfigurationSuite extends BaseSuite {
       name: String,
       original: String,
       expected: String
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     check(name, original) {
       case Right(ok) =>
         fail(s"Expected error. Obtained successful value $ok")

@@ -10,7 +10,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.GradleBuildTool
 import tests.BaseImportSuite
 
-object GradleLspSuite extends BaseImportSuite("gradle-import") {
+class GradleLspSuite extends BaseImportSuite("gradle-import") {
 
   val buildTool: GradleBuildTool = GradleBuildTool(() => userConfig)
 
@@ -18,7 +18,7 @@ object GradleLspSuite extends BaseImportSuite("gradle-import") {
       workspace: AbsolutePath
   ): Option[String] = GradleDigest.current(workspace)
 
-  testAsync("basic") {
+  test("basic") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -66,7 +66,7 @@ object GradleLspSuite extends BaseImportSuite("gradle-import") {
     }
   }
 
-  testAsync("transitive") {
+  test("transitive") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -95,7 +95,7 @@ object GradleLspSuite extends BaseImportSuite("gradle-import") {
     } yield assertNoDiff(client.workspaceMessageRequests, "")
   }
 
-  testAsync("force-command") {
+  test("force-command") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -130,7 +130,7 @@ object GradleLspSuite extends BaseImportSuite("gradle-import") {
     } yield ()
   }
 
-  testAsync("new-dependency") {
+  test("new-dependency") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -169,7 +169,7 @@ object GradleLspSuite extends BaseImportSuite("gradle-import") {
     } yield ()
   }
 
-  testAsync("error") {
+  test("error") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -227,7 +227,7 @@ object GradleLspSuite extends BaseImportSuite("gradle-import") {
         |""".stripMargin
   }
 
-  testAsync("different-scala") {
+  test("different-scala") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -300,7 +300,7 @@ object GradleLspSuite extends BaseImportSuite("gradle-import") {
     } yield ()
   }
 
-  testAsync("fatal-warnings") {
+  test("fatal-warnings") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

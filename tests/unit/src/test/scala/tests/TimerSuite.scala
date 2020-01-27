@@ -2,12 +2,13 @@ package tests
 
 import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.Timer
+import munit.Location
 
-object TimerSuite extends BaseSuite {
-  def checkMillis(ms: Long, expected: String): Unit = {
+class TimerSuite extends BaseSuite {
+  def checkMillis(ms: Long, expected: String)(implicit loc: Location): Unit = {
     checkNanos(TimeUnit.MILLISECONDS.toNanos(ms), expected)
   }
-  def checkNanos(ns: Long, expected: String): Unit = {
+  def checkNanos(ns: Long, expected: String)(implicit loc: Location): Unit = {
     test(s"${ns}ns") {
       val obtained = Timer.readableNanos(ns)
       assertNoDiff(obtained, expected)

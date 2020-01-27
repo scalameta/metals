@@ -24,7 +24,7 @@ abstract class DirectoryExpectSuite(directoryName: String)
       val obtained = unitTest.obtained()
       unitTest.input.slurpExpected(directoryName) match {
         case Some(expected) =>
-          DiffAssertions.expectNoDiff(obtained, expected)
+          assertNoDiff(obtained, expected)
         case None =>
           val expect = unitTest.input.expectPath(directoryName).toNIO
           fail(s"does not exist: $expect (run save-expect to fix this problem)")

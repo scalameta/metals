@@ -2,8 +2,8 @@ package tests
 
 import scala.meta.internal.metals.ServerCommands
 
-object CascadeLspSuite extends BaseLspSuite("cascade") {
-  testAsync("basic") {
+class CascadeLspSuite extends BaseLspSuite("cascade") {
+  test("basic") {
     for {
       _ <- server.initialize(
         """

@@ -1,15 +1,16 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import munit.Location
 
-object PrettyPrintSuite extends BaseCompletionSuite {
+class PrettyPrintSuite extends BaseCompletionSuite {
 
   def checkSignature(
       name: String,
       original: String,
       expected: String,
       compat: Map[String, String] = Map.empty
-  ): Unit = {
+  )(implicit loc: Location): Unit = {
     val signature = original.replaceAllLiterally("@@", "")
     val completion = original.replaceFirst("@@.*", "@@")
     checkEditLine(
