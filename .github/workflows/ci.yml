@@ -45,6 +45,11 @@ jobs:
       - name: Run unit tests
         run: |
           bin/test.sh unit/test
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS:
+            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON:
+            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
         shell: bash
   integration:
     name: ${{ matrix.name }}
@@ -125,3 +130,8 @@ jobs:
           restore-keys: ${{ runner.os }}-sbt-
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS:
+            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON:
+            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
