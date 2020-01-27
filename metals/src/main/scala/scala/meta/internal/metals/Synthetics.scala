@@ -27,7 +27,7 @@ object Synthetics {
       case ApplyTree(function, arguments) =>
         isStop(function) || arguments.exists(isStop)
       case SelectTree(qualifier, id) =>
-        id.exists(isStop) || isStop(qualifier)
+        id.exists(isStop)
       case IdTree(symbol) =>
         fn(symbol).isStop
       case TypeApplyTree(function, _) =>
