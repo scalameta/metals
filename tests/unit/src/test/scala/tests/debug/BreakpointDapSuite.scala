@@ -1,4 +1,5 @@
 package tests.debug
+
 import tests.BaseDapSuite
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout

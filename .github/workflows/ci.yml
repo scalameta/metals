@@ -6,13 +6,14 @@ on:
   pull_request:
 jobs:
   unit:
-    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests
+    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit ${{matrix.type}} tests
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, macOS-latest, ubuntu-latest]
         java: [8, 11]
+        type: [build, debug, extensions, navigation, refactor, tools, util]
         exclude:
           - os: windows-latest
             java: 8
@@ -44,7 +45,7 @@ jobs:
           restore-keys: ${{ runner.os }}-sbt-
       - name: Run unit tests
         run: |
-          bin/test.sh unit/test
+          bin/test.sh 'unit/testOnly -- tests.${{ matrix.type }}.*' 
         shell: bash
   integration:
     name: ${{ matrix.name }}
