@@ -3,8 +3,8 @@ package tests
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.MetalsEnrichments._
 
-object NewScalaWorksheetLspSuite extends BaseLspSuite("new-scala-worksheet") {
-  testAsync("new-worksheet") {
+class NewScalaWorksheetLspSuite extends BaseLspSuite("new-scala-worksheet") {
+  test("new-worksheet") {
     for {
       _ <- server.initialize(s"""
                                 |/metals.json
