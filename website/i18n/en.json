@@ -24,6 +24,9 @@
         "title": "Build Tools Overview",
         "sidebar_label": "Overview"
       },
+      "build-tools/proxy": {
+        "title": "Proxy and mirrors"
+      },
       "build-tools/sbt": {
         "title": "sbt"
       },
