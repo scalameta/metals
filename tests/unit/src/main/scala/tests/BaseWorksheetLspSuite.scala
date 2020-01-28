@@ -54,6 +54,37 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
+  test("outside-target") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/Main.worksheet.sc
+           |import java.nio.file.Files
+           |val name = "Susan"
+           |val greeting = s"Hello $$name"
+           |println(greeting + "\\nHow are you?")
+           |1.to(10).toVector
+           |val List(a, b) = List(42, 10)
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/Main.worksheet.sc")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.workspaceDecorations,
+        """|
+           |import java.nio.file.Files
+           |val name = "Susan" // "Susan"
+           |val greeting = s"Hello $name" // "Hello Susan"
+           |println(greeting + "\nHow are you?") // Hello Susan
+           |1.to(10).toVector // Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+           |val List(a, b) = List(42, 10) // a=42, b=10
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
   test("render") {
     for {
       _ <- server.initialize(
