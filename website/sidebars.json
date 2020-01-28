@@ -26,7 +26,8 @@
       "contributors/project-goals",
       "contributors/getting-started",
       "contributors/updating-website",
-      "contributors/releasing"
+      "contributors/releasing",
+      "contributors/tests"
     ]
   }
 }

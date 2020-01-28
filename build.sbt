@@ -476,9 +476,10 @@ lazy val docs = project
     skip.in(publish) := true,
     moduleName := "metals-docs",
     mdoc := run.in(Compile).evaluated,
+    munitRepository := Some("scalameta/metals"),
     libraryDependencies ++= List(
       "org.jsoup" % "jsoup" % "1.12.1"
     )
   )
   .dependsOn(metals)
-  .enablePlugins(DocusaurusPlugin)
+  .enablePlugins(DocusaurusPlugin, MUnitReportPlugin)

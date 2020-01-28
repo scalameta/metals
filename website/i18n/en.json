@@ -36,6 +36,9 @@
       "contributors/releasing": {
         "title": "Making a release"
       },
+      "contributors/tests": {
+        "title": "Tests overview"
+      },
       "contributors/updating-website": {
         "title": "Contributing to the website"
       },
