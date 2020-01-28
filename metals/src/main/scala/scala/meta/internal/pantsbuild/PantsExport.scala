@@ -51,6 +51,19 @@ object PantsExport {
           }
         val libraries = value(PantsKeys.libraries).arr.map(_.str)
         val isPantsTargetRoot = value(PantsKeys.isTargetRoot).bool
+        val pantsTargetType =
+          PantsTargetType(value(PantsKeys.pantsTargetType).str)
+        val targetType =
+          if (pantsTargetType.isNodeModule) {
+            // NOTE(olafur) Treat "node_module" targets as `target_type:
+            // RESOURCE` since they are included on the runtime classpath even
+            // if they have `target_type: SOURCE`. See
+            // https://github.com/pantsbuild/pants/issues/9026 for a reason why
+            // node_module needs special handling.
+            TargetType("RESOURCE")
+          } else {
+            TargetType(value(PantsKeys.targetType).str)
+          }
         name -> PantsTarget(
           name = name,
           id = value(PantsKeys.id).str,
@@ -59,9 +72,8 @@ object PantsExport {
           transitiveDependencies = transitiveDependencies,
           libraries = libraries,
           isPantsTargetRoot = isPantsTargetRoot,
-          targetType = TargetType(value(PantsKeys.targetType).str),
-          pantsTargetType =
-            PantsTargetType(value(PantsKeys.pantsTargetType).str),
+          targetType = targetType,
+          pantsTargetType = pantsTargetType,
           globs = PantsGlobs.fromJson(value)
         )
     }.toMap

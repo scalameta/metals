@@ -438,7 +438,7 @@ private class BloopPants(
       acyclicDependencyName = cycles.acyclicDependency(dependency.name)
       if acyclicDependencyName != target.name
       acyclicDependency = export.targets(acyclicDependencyName)
-      if acyclicDependency.isTargetRoot && !acyclicDependency.targetType.isAnyResource
+      if acyclicDependency.isTargetRoot && !acyclicDependency.targetType.isResourceOrTestResource
     } yield acyclicDependency.name
 
     val libraries: List[PantsLibrary] = for {
@@ -480,7 +480,7 @@ private class BloopPants(
 
     val resources: List[Path] = for {
       dependency <- transitiveDependencies
-      if dependency.targetType.isAnyResource
+      if dependency.targetType.isResourceOrTestResource
       entry <- exportClasspath(dependency)
     } yield entry
 
