@@ -41,11 +41,11 @@ final class Embedded(
     mdocs.clear()
   }
 
-  def mdoc(info: ScalaBuildTarget): Mdoc = {
+  def mdoc(scalaVersion: String, scalaBinaryVersion: String): Mdoc = {
     val classloader = mdocs.getOrElseUpdate(
-      info.getScalaBinaryVersion(),
+      scalaBinaryVersion,
       statusBar.trackSlowTask("Preparing worksheets") {
-        Embedded.newMdocClassLoader(info)
+        Embedded.newMdocClassLoader(scalaVersion, scalaBinaryVersion)
       }
     )
     serviceLoader(
@@ -106,14 +106,17 @@ object Embedded {
         )
       )
 
-  def newMdocClassLoader(info: ScalaBuildTarget): URLClassLoader = {
+  def newMdocClassLoader(
+      scalaVersion: String,
+      scalaBinaryVersion: String
+  ): URLClassLoader = {
     val mdoc = Dependency.of(
       "org.scalameta",
-      s"mdoc_${info.getScalaBinaryVersion()}",
+      s"mdoc_${scalaBinaryVersion}",
       BuildInfo.mdocVersion
     )
-    val settings = fetchSettings(mdoc, info.getScalaVersion())
-    val jars = fetchSettings(mdoc, info.getScalaVersion()).fetch()
+    val settings = fetchSettings(mdoc, scalaVersion)
+    val jars = fetchSettings(mdoc, scalaVersion).fetch()
     val parent =
       new MdocClassLoader(this.getClass.getClassLoader)
     val urls = jars.iterator.asScala.map(_.toURI().toURL()).toArray
