@@ -109,6 +109,8 @@ from commandline, the proxy settings will be reapplied according to the current
 workspace's `.jvmopts`. This should not be an issue, since those settings are
 required only to download the compiler bridges and SemanticDB plugin.
 
+**Important** Each setting needs to be on a separate line.
+
 ## Troubleshooting
 
 There has already been a couple of issues surrounding this topic, if you are
@@ -117,6 +119,7 @@ still having issues you can take a look at some of them:
 - https://github.com/scalameta/metals/issues/1315
 - https://github.com/scalameta/metals/issues/1301
 - https://github.com/scalameta/metals/issues/1306
+- https://github.com/scalameta/metals/issues/1362
 
 ### The server did not start, got FailedToOpenBspConnection
 
