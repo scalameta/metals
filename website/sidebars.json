@@ -15,7 +15,8 @@
       "build-tools/gradle",
       "build-tools/maven",
       "build-tools/mill",
-      "build-tools/sbt"
+      "build-tools/sbt",
+      "build-tools/proxy"
     ],
     "Contributing": [
       "build-tools/new-build-tool",
