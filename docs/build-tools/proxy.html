@@ -1,0 +1,220 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Proxy and mirrors · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="There are several parts inside Metals and Bloop that require resolving"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Proxy and mirrors · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="There are several parts inside Metals and Bloop that require resolving"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-140140828-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><script src="/metals/js/scrollSpy.js"></script><link rel="stylesheet" href="/metals/css/main.css"/><script src="/metals/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class=""><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Build Tools</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Text Editors</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/docs/editors/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vscode.html">Visual Studio Code</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/atom.html">Atom</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vim.html">Vim</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/sublime.html">Sublime Text</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/emacs.html">Emacs</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/eclipse.html">Eclipse</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Build Tools</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/bloop.html">Bloop</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/gradle.html">Gradle</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/maven.html">Maven</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/mill.html">Mill</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/sbt.html">sbt</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/docs/build-tools/proxy.html">Proxy and mirrors</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Contributing</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/new-build-tool.html">Integrating a new build tool</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/new-editor.html">Integrating a new editor</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/tree-view-protocol.html">Tree View Protocol</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/decoration-protocol.html">Decoration Protocol</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/debug-adapter-protocol.html">Debug Adapter Protocol</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/project-goals.html">Project Goals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/getting-started.html">Contributing to Metals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/updating-website.html">Contributing to the website</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/releasing.html">Making a release</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/tests.html">Tests overview</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/build-tools/proxy.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Proxy and mirrors</h1></header><article><div><span><p>There are several parts inside Metals and Bloop that require resolving
+additional dependencies from the internet. Inside environments behind a proxy or
+with private artifact repositories Metals might not be able to start, because it
+cannot easily download the needed dependencies.</p>
+<p>There are multiple ways of fixing these issues, but not all of them work in all
+situations. While we are trying to make it as painless as possible to setup
+everything, there are some steps that might need to be done manually.</p>
+<p>Everything inside Metals uses Coursier to download its dependencies:</p>
+<ul>
+<li>The Visual Studio Code and coc-metals extensions use Coursier bootstrap to
+download Metals server - Coursier boostrap is a minimal file, which only
+purpose is to download a full Coursier version. It's used to keep the
+extension size down to a minimum.</li>
+<li>Metals uses Coursier api to download dependencies needed for a particular
+Scala version</li>
+<li>Bloop uses Coursier api to download the SemanticDB plugin</li>
+</ul>
+<p>You can find some more information about particular topics on
+<a href="https://get-coursier.io/docs/overview">Coursier's website</a>, but we will try to
+summarize the most useful solutions here.</p>
+<h2><a class="anchor" aria-hidden="true" id="mirrors"></a><a href="#mirrors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Mirrors</h2>
+<p>If Maven Central is not available for your workspace it might be best to use
+Coursier's mirrors. Especially since Coursier boostrap tries to download the
+core of Coursier from Maven Central directly, which can only be changed using
+the mirrors. Not all functionalities are yet available for the boostrapped
+Coursier version, including custom repositories, so mirrors are really the only
+way to fix this.</p>
+<p>There are different ways to setup mirrors:</p>
+<h3><a class="anchor" aria-hidden="true" id="via-global-properties-file"></a><a href="#via-global-properties-file" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Via global properties file</h3>
+<p>Create <code>mirror.properties</code> file with the contents:</p>
+<pre><code class="hljs">central.from=<span class="hljs-string">https:</span><span class="hljs-comment">//repo1.maven.org/maven2</span>
+central.to=<span class="hljs-string">http:</span><span class="hljs-comment">//exmaple.com:8080/nexus/content/groups/public</span>
+</code></pre>
+<p>You need to replace the uri after <code>central.to=</code> with your private repository.</p>
+<p>The location of the mirror file varies depending on the operating system:</p>
+<ul>
+<li>Windows:
+<code>C:\Users\&lt;user_name&gt;\AppData\Roaming\Coursier\config\mirror.properties</code></li>
+<li>Linux: <code>~/.config/coursier/mirror.properties</code></li>
+<li>MacOS: <code>~/Library/Preferences/Coursier/mirror.properties</code></li>
+</ul>
+<p>This solution will work in most cases for all previously mentioned usages of
+Coursier, which is especially important in the case of the Bloop server, which
+when started by Metals will not have any system properties forwarded.</p>
+<h3><a class="anchor" aria-hidden="true" id="via-environment-variable"></a><a href="#via-environment-variable" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Via environment variable</h3>
+<p>You can set the environment variable <code>COURSIER_MIRRORS</code> with the location of the
+file containing the mirror definition. That environment variable will need to
+available either locally or globally for the Metals server. In case of the
+Visual Studio Code extension it means you will need to start it from command
+line with that variable in scope.</p>
+<h3><a class="anchor" aria-hidden="true" id="via-properties"></a><a href="#via-properties" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Via properties</h3>
+<p>You can also use properties to specify the location of the mirror file, for
+example:</p>
+<pre><code class="hljs">-<span class="ruby">Dcoursier.mirrors=~<span class="hljs-regexp">/.config/coursier</span><span class="hljs-regexp">/mirror.properties
+</span></span></code></pre>
+<p>This property needs to be added to the Metals server and Coursier invocation.
+However, this solution will not work for Bloop, because properties are not
+forwarded to the invocation of the Bloop server. You will need to use a
+different method for Bloop in this case or you can run the build server manually
+with everything specified separately.</p>
+<h2><a class="anchor" aria-hidden="true" id="custom-artifact-repositories-maven-or-ivy-resolvers"></a><a href="#custom-artifact-repositories-maven-or-ivy-resolvers" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Custom artifact repositories (Maven or Ivy resolvers)</h2>
+<p>In case you need to add custom repositories to resolve Metals server artifacts
+you can use the <code>COURSIER_REPOSITORIES</code> environment variable. This will tell
+Coursier to try to download artifacts from your private artifact repository.
+This is also available as a setting in the Metals Visual Studio Code and
+coc-metals extensions.</p>
+<h2><a class="anchor" aria-hidden="true" id="proxy-settings"></a><a href="#proxy-settings" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Proxy settings</h2>
+<p>In some cases, workspaces might require a proxy in order to resolve the needed
+artifacts. Depending on the way Metals server is started, proxy settings can be
+specified using properties inside a <code>.jvmopts</code> file and
+<code>metals.serverProperties</code> (for Visual Studio Code or coc-metals extensions) or
+via properties for Coursier and Metals invocations.</p>
+<p>However, because proxy properties might vary between workspaces and a Bloop
+server must work for multiple clients at the same time they are not forwarded to
+the Bloop itself. To make sure that Bloop uses the correct proxy settings, you
+can specify them by copying the correct <code>.jvmopts</code> file to the <code>~/.bloop</code>
+directory, which will make them global.</p>
+<p>If you are using a manually installed Bloop server, each time you run <code>bloop</code>
+from commandline, the proxy settings will be reapplied according to the current
+workspace's <code>.jvmopts</code>. This should not be an issue, since those settings are
+required only to download the compiler bridges and SemanticDB plugin.</p>
+<p><strong>Important</strong> Each setting needs to be on a separate line.</p>
+<h2><a class="anchor" aria-hidden="true" id="troubleshooting"></a><a href="#troubleshooting" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Troubleshooting</h2>
+<p>There has already been a couple of issues surrounding this topic, if you are
+still having issues you can take a look at some of them:</p>
+<ul>
+<li><a href="https://github.com/scalameta/metals/issues/1315">https://github.com/scalameta/metals/issues/1315</a></li>
+<li><a href="https://github.com/scalameta/metals/issues/1301">https://github.com/scalameta/metals/issues/1301</a></li>
+<li><a href="https://github.com/scalameta/metals/issues/1306">https://github.com/scalameta/metals/issues/1306</a></li>
+<li><a href="https://github.com/scalameta/metals/issues/1362">https://github.com/scalameta/metals/issues/1362</a></li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="the-server-did-not-start-got-failedtoopenbspconnection"></a><a href="#the-server-did-not-start-got-failedtoopenbspconnection" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The server did not start, got FailedToOpenBspConnection</h3>
+<pre><code class="hljs">error: The command bsp --protocol tcp --port <span class="hljs-number">44559</span> returned <span class="hljs-keyword">with</span> an error
+&gt;
+error: The launcher failed <span class="hljs-keyword">to</span> establish a bsp connection, aborting...
+ERROR Failed <span class="hljs-keyword">to</span> connect <span class="hljs-keyword">with</span> build server, no functionality will work.
+java.lang.RuntimeException: The server did not start, got FailedToOpenBspConnection
+    at bloop.launcher.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">LauncherMain</span>.</span></span>fail<span class="hljs-constructor">Promise$1(Launcher.<span class="hljs-params">scala</span>:92)</span>
+    at bloop.launcher.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">LauncherMain</span>.</span></span>run<span class="hljs-constructor">Launcher(Launcher.<span class="hljs-params">scala</span>:119)</span>
+    at scala.meta.internal.metals.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">BloopServers$$anon$1</span>.</span></span>run(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">BloopServers</span>.</span></span>scala:<span class="hljs-number">101</span>)
+    at java.util.concurrent.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Executors$RunnableAdapter</span>.</span></span>call(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Executors</span>.</span></span>java:<span class="hljs-number">515</span>)
+    at java.util.concurrent.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">FutureTask</span>.</span></span>run(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">FutureTask</span>.</span></span>java:<span class="hljs-number">264</span>)
+    at java.util.concurrent.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">ThreadPoolExecutor</span>.</span></span>run<span class="hljs-constructor">Worker(ThreadPoolExecutor.<span class="hljs-params">java</span>:1128)</span>
+    at java.util.concurrent.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">ThreadPoolExecutor$Worker</span>.</span></span>run(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">ThreadPoolExecutor</span>.</span></span>java:<span class="hljs-number">628</span>)
+    at java.lang.<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Thread</span>.</span></span>run(<span class="hljs-module-access"><span class="hljs-module"><span class="hljs-identifier">Thread</span>.</span></span>java:<span class="hljs-number">834</span>)
+</code></pre>
+<pre><code class="hljs">Exception in thread <span class="hljs-string">"bloop-server-background"</span> <span class="hljs-keyword">java.io.IOException: </span>Cannot run program <span class="hljs-string">"java"</span> (in <span class="hljs-keyword">directory </span><span class="hljs-string">"&lt;some path here ...&gt;"</span>): error=<span class="hljs-number">2</span>, No such file <span class="hljs-keyword">or </span><span class="hljs-keyword">directory
+</span>        <span class="hljs-built_in">at</span> <span class="hljs-keyword">java.lang.ProcessBuilder.start(ProcessBuilder.java:1048)
+</span></code></pre>
+<p>This might mean that you don't have your java installation on your PATH and
+Bloop was unable to start.</p>
+<h3><a class="anchor" aria-hidden="true" id="timeout-waiting-for-buildinitialize-response"></a><a href="#timeout-waiting-for-buildinitialize-response" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Timeout waiting for 'build/initialize' response</h3>
+<pre><code class="hljs">INFO  tracing is disabled <span class="hljs-keyword">for</span> protocol BSP, to enable tracing of incoming and outgoing JSON messages create an empty file at C:\Users\tgodzik\AppData\Local\scalameta\metals\cache\bsp<span class="hljs-selector-class">.trace</span><span class="hljs-selector-class">.json</span>
+ERROR Timeout waiting <span class="hljs-keyword">for</span> <span class="hljs-string">'build/initialize'</span> response
+ERROR Failed to connect with build server, no functionality will work.
+java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.TimeoutException</span>
+    at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.CompletableFuture</span>.timedGet(CompletableFuture<span class="hljs-selector-class">.java</span>:<span class="hljs-number">1886</span>)
+    at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.CompletableFuture</span>.get(CompletableFuture<span class="hljs-selector-class">.java</span>:<span class="hljs-number">2021</span>)
+    at scala<span class="hljs-selector-class">.meta</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.metals</span>.BuildServerConnection$.initialize(BuildServerConnection<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">259</span>)
+    at scala<span class="hljs-selector-class">.meta</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.metals</span>.BuildServerConnection$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$fromSockets</span>$<span class="hljs-number">1</span>(BuildServerConnection<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">203</span>)
+    at scala<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.Success</span>.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$map</span>$<span class="hljs-number">1</span>(Try<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">255</span>)
+    at scala<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.Success</span>.map(Try<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">213</span>)
+    at scala<span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.Future</span>.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$map</span>$<span class="hljs-number">1</span>(Future<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">292</span>)
+    at scala<span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.impl</span><span class="hljs-selector-class">.Promise</span>.liftedTree1$<span class="hljs-number">1</span>(Promise<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">33</span>)
+    at scala<span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.impl</span><span class="hljs-selector-class">.Promise</span>.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$transform</span>$<span class="hljs-number">1</span>(Promise<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">33</span>)
+    at scala<span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.impl</span><span class="hljs-selector-class">.CallbackRunnable</span>.run(Promise<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">64</span>)
+    at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.ThreadPoolExecutor</span>.runWorker(ThreadPoolExecutor<span class="hljs-selector-class">.java</span>:<span class="hljs-number">1128</span>)
+    at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span>.ThreadPoolExecutor<span class="hljs-variable">$Worker</span>.run(ThreadPoolExecutor<span class="hljs-selector-class">.java</span>:<span class="hljs-number">628</span>)
+    at java<span class="hljs-selector-class">.lang</span><span class="hljs-selector-class">.Thread</span>.run(Thread<span class="hljs-selector-class">.java</span>:<span class="hljs-number">834</span>)
+
+WARN  Stopped configuration of SemanticDB <span class="hljs-keyword">in</span> Scala <span class="hljs-number">2.13</span>.<span class="hljs-number">1</span> projects: Error downloading org<span class="hljs-selector-class">.scalameta</span>:semanticdb-scalac_2.<span class="hljs-number">13.1</span>:<span class="hljs-number">4.3</span>.<span class="hljs-number">0</span>
+  not found: C:\Users\tgodzik\.ivy2\local\org.scalameta\semanticdb-scalac_2.<span class="hljs-number">13.1</span>\<span class="hljs-number">4.3</span>.<span class="hljs-number">0</span>\ivys\ivy<span class="hljs-selector-class">.xml</span>
+  download error: Caught java<span class="hljs-selector-class">.net</span><span class="hljs-selector-class">.ConnectException</span>: Connection timed out: connect (Connection timed out: connect) while downloading https:<span class="hljs-comment">//repo1.maven.org/maven2/org/scalameta/semanticdb-scalac_2.13.1/4.3.0/semanticdb-scalac_2.13.1-4.3.0.pom</span>
+  not found: https:<span class="hljs-comment">//dl.bintray.com/scalacenter/releases/org/scalameta/semanticdb-scalac_2.13.1/4.3.0/semanticdb-scalac_2.13.1-4.3.0.pom</span>
+</code></pre>
+<p>This might mean you need to specify proxy settings for Bloop or add custom
+repositories as specified above.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/build-tools/sbt.html"><span class="arrow-prev">← </span><span>sbt</span></a><a class="docs-next button" href="/metals/docs/build-tools/new-build-tool.html"><span>Integrating a new build tool</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#mirrors">Mirrors</a><ul class="toc-headings"><li><a href="#via-global-properties-file">Via global properties file</a></li><li><a href="#via-environment-variable">Via environment variable</a></li><li><a href="#via-properties">Via properties</a></li></ul></li><li><a href="#custom-artifact-repositories-maven-or-ivy-resolvers">Custom artifact repositories (Maven or Ivy resolvers)</a></li><li><a href="#proxy-settings">Proxy settings</a></li><li><a href="#troubleshooting">Troubleshooting</a><ul class="toc-headings"><li><a href="#the-server-did-not-start-got-failedtoopenbspconnection">The server did not start, got FailedToOpenBspConnection</a></li><li><a href="#timeout-waiting-for-buildinitialize-response">Timeout waiting for 'build/initialize' response</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2020 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
