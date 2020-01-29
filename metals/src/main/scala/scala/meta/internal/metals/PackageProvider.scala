@@ -15,7 +15,7 @@ class PackageProvider(private val buildTargets: BuildTargets) {
     packageStatement(path).map(workspaceEdit(path, _))
   }
 
-  private def packageStatement(path: AbsolutePath): Option[String] = {
+  def packageStatement(path: AbsolutePath): Option[String] = {
 
     def packageObjectStatement(path: Iterator[Path]): Option[String] = {
       val pathList = path.toList
