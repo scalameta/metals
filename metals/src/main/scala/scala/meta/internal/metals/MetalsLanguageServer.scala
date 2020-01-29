@@ -177,6 +177,8 @@ class MetalsLanguageServer(
   private var foldingRangeProvider: FoldingRangeProvider = _
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
+  private val newFilesProvider: NewFilesProvider =
+    new NewFilesProvider(workspace, packageProvider)
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   var tables: Tables = _
@@ -670,11 +672,6 @@ class MetalsLanguageServer(
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
     trees.didChange(path)
-
-    packageProvider
-      .workspaceEdit(path)
-      .map(new ApplyWorkspaceEditParams(_))
-      .foreach(languageClient.applyEdit)
 
     if (path.isDependencySource(workspace)) {
       CancelTokens { _ =>
@@ -1265,28 +1262,52 @@ class MetalsLanguageServer(
         }
       case ServerCommands.NewScalaWorksheet() =>
         val args = params.getArguments.asScala
-        def createWorksheet(dir: URI, name: String) = Future {
-          val path = dir.toString.toAbsolutePath.resolve(name + ".worksheet.sc")
-          try {
-            Files.createFile(path.toNIO).toUri()
-          } catch {
-            case NonFatal(e) =>
-              val message = "Cannot create worksheet"
-              scribe.error(message, e)
-              languageClient
-                .showMessage(MessageType.Error, s"$message:\n ${e.toString()}")
-          }
-        }
-        args match {
-          case Seq(location: JsonPrimitive, name: JsonPrimitive)
-              if location.isString && name.isString =>
-            createWorksheet(new URI(location.getAsString()), name.getAsString()).asJavaObject
-          case Seq(location: JsonNull, name: JsonPrimitive) if name.isString =>
-            createWorksheet(workspace.toURI, name.getAsString()).asJavaObject
+        (args match {
+          case Seq(JsonString.Option(directory), JsonString(name)) =>
+            val result =
+              newFilesProvider.createWorksheet(directory.map(new URI(_)), name)
+            result.onFailure {
+              case NonFatal(e) =>
+                languageClient
+                  .showMessage(
+                    MessageType.Error,
+                    s"Cannot create worksheet:\n ${e.toString()}"
+                  )
+            }
+            result
           case _ =>
             val msg = s"Invalid arguments: $args."
-            Future.failed(new IllegalArgumentException(msg)).asJavaObject
-        }
+            Future.failed(new IllegalArgumentException(msg))
+        }).asJavaObject
+      case ServerCommands.NewScalaClass() =>
+        val args = params.getArguments.asScala
+        (args match {
+          case Seq(
+              JsonString.Option(directory),
+              JsonString(name),
+              JsonString(kind)
+              ) =>
+            val result =
+              newFilesProvider
+                .createClass(directory.map(new URI(_)), name, kind)
+                .map {
+                  case (path, edit) =>
+                    languageClient.applyEdit(new ApplyWorkspaceEditParams(edit))
+                    path
+                }
+            result.onFailure {
+              case NonFatal(e) =>
+                languageClient
+                  .showMessage(
+                    MessageType.Error,
+                    s"Cannot create file:\n ${e.toString()}"
+                  )
+            }
+            result
+          case _ =>
+            val msg = s"Invalid arguments: $args."
+            Future.failed(new IllegalArgumentException(msg))
+        }).asJavaObject
 
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
@@ -1941,6 +1962,21 @@ class MetalsLanguageServer(
       case NonFatal(e) =>
         scribe.error("unexpected error during source scanning", e)
     })
+  }
+
+  private object JsonString {
+    def unapply(json: Any): Option[String] = json match {
+      case p: JsonPrimitive if p.isString() => Some(p.getAsString())
+      case _ => None
+    }
+
+    object Option {
+      def unapply(json: Any): Option[Option[String]] = json match {
+        case JsonString(s) => Some(Some(s))
+        case _: JsonNull => Some(None)
+        case _ => None
+      }
+    }
   }
 
 }

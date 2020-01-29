@@ -140,6 +140,17 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val NewScalaClass = new Command(
+    "new-scala-class",
+    "Create new scala class",
+    """|Create and open new scala class and get suggested edit with the new class, object, or trait template.
+       |
+       |Arguments: [string], where the string is a URI of location of the new file;
+       |[string], where the string is a name for the new class
+       |[string], where the string is whether 'class', 'object', or 'trait'.
+       |""".stripMargin
+  )
+
   /**
    * Open the browser at the given url.
    */
@@ -210,6 +221,7 @@ object ServerCommands {
     CancelCompile,
     BspSwitch,
     StartDebugAdapter,
-    NewScalaWorksheet
+    NewScalaWorksheet,
+    NewScalaClass
   )
 }
