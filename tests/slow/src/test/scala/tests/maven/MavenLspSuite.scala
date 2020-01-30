@@ -128,7 +128,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
     } yield ()
   }
 
-  test("error") {
+  test("error".flaky) {
     cleanWorkspace()
     val badPom = defaultPom.replace(
       "<!--DEPENDENCY-->",

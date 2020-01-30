@@ -227,7 +227,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         |""".stripMargin
   }
 
-  test("different-scala") {
+  test("different-scala".flaky) {
     cleanWorkspace()
     for {
       _ <- server.initialize(
