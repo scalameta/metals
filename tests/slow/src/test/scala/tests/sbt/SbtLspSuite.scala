@@ -16,6 +16,7 @@ import scala.meta.io.AbsolutePath
 
 class SbtLspSuite extends BaseImportSuite("sbt-import") {
 
+  val sbtVersion = "1.3.7"
   val buildTool: SbtBuildTool = SbtBuildTool("", () => userConfig, serverConfig)
 
   override def currentDigest(
@@ -26,11 +27,11 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """|/project/build.properties
-           |sbt.version=1.2.6
-           |/build.sbt
-           |scalaVersion := "2.12.10"
-           |""".stripMargin
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |scalaVersion := "2.12.10"
+            |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -68,11 +69,11 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """|/project/build.properties
-           |sbt.version=1.2.6
-           |/build.sbt
-           |scalaVersion := "2.12.10"
-           |""".stripMargin
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |scalaVersion := "2.12.10"
+            |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -97,16 +98,16 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """|/project/build.properties
-           |sbt.version=1.2.6
-           |/build.sbt
-           |scalaVersion := "2.12.10"
-           |/src/main/scala/reload/Main.scala
-           |package reload
-           |object Main extends App {
-           |  println("sourcecode.Line(42)")
-           |}
-           |""".stripMargin
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |scalaVersion := "2.12.10"
+            |/src/main/scala/reload/Main.scala
+            |package reload
+            |object Main extends App {
+            |  println("sourcecode.Line(42)")
+            |}
+            |""".stripMargin
       )
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -136,13 +137,13 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |version := "1.0"
-          |scalaVersion := "2.12.10"
-          |""".stripMargin,
+        s"""
+           |/project/build.properties
+           |sbt.version=$sbtVersion
+           |/build.sbt
+           |version := "1.0"
+           |scalaVersion := "2.12.10"
+           |""".stripMargin,
         expectError = true
       )
       _ = assertStatus(!_.isInstalled)
@@ -160,11 +161,11 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """|/project/build.properties
-           |sbt.version=1.2.6
-           |/build.sbt
-           |, syntax error
-           |""".stripMargin,
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |, syntax error
+            |""".stripMargin,
         expectError = true
       )
       _ = assertNoDiff(
@@ -200,7 +201,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
       _ <- server.initialize(
         s"""
            |/project/build.properties
-           |sbt.version=1.2.6
+           |sbt.version=$sbtVersion
            |/build.sbt
            |scalaVersion := "2.12.10"
            |lazy val a = project.settings(scalaVersion := "2.12.4")
@@ -271,23 +272,23 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |scalaVersion := "2.12.10"
-          |libraryDependencies +=
-          |  // dependency won't resolve without the `bintray:scalacenter/releases` resolver
-          |  // that is defined in the `custom-repositories` file.
-          |  "ch.epfl.scala" %% "bloop-config" % "1.0.0-RC1+4-c5e24b66"
-          |/.sbtopts
-          |-Dsbt.repository.config=custom-repositories
-          |/custom-repositories
-          |[repositories]
-          |  local
-          |  maven: https://repo1.maven.org/maven2/
-          |  scalacenter-releases: https://dl.bintray.com/scalacenter/releases
-          |""".stripMargin
+        s"""
+           |/project/build.properties
+           |sbt.version=$sbtVersion
+           |/build.sbt
+           |scalaVersion := "2.12.10"
+           |libraryDependencies +=
+           |  // dependency won't resolve without the `bintray:scalacenter/releases` resolver
+           |  // that is defined in the `custom-repositories` file.
+           |  "ch.epfl.scala" %% "bloop-config" % "1.0.0-RC1+4-c5e24b66"
+           |/.sbtopts
+           |-Dsbt.repository.config=custom-repositories
+           |/custom-repositories
+           |[repositories]
+           |  local
+           |  maven: https://repo1.maven.org/maven2/
+           |  scalacenter-releases: https://dl.bintray.com/scalacenter/releases
+           |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
@@ -297,16 +298,16 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |scalaVersion := "2.12.10"
-          |/.jvmopts
-          |-Xms1536M
-          |-Xmx1536M
-          |-Xss6M
-          |""".stripMargin
+        s"""
+           |/project/build.properties
+           |sbt.version=$sbtVersion
+           |/build.sbt
+           |scalaVersion := "2.12.10"
+           |/.jvmopts
+           |-Xms1536M
+           |-Xmx1536M
+           |-Xss6M
+           |""".stripMargin
       )
       // assert that a `.jvmopts` file doesn't break "Import build"
       _ = assertStatus(_.isInstalled)
@@ -317,22 +318,22 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |scalaVersion := "2.12.10"
-          |scalacOptions ++= List(
-          |  "-Xfatal-warnings",
-          |  "-Ywarn-unused"
-          |)
-          |/src/main/scala/warning/Warning.scala
-          |import scala.concurrent.Future // unused
-          |object Warning
-          |object A{
-          |  object B
-          |}
-          |""".stripMargin
+        s"""
+           |/project/build.properties
+           |sbt.version=$sbtVersion
+           |/build.sbt
+           |scalaVersion := "2.12.10"
+           |scalacOptions ++= List(
+           |  "-Xfatal-warnings",
+           |  "-Ywarn-unused"
+           |)
+           |/src/main/scala/warning/Warning.scala
+           |import scala.concurrent.Future // unused
+           |object Warning
+           |object A{
+           |  object B
+           |}
+           |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
       _ <- server.didOpen("src/main/scala/warning/Warning.scala")
@@ -359,12 +360,12 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/project/build.properties
-          |sbt.version=1.2.6
-          |/build.sbt
-          |scalaVersion := "2.12.10"
-          |""".stripMargin,
+        s"""
+           |/project/build.properties
+           |sbt.version=$sbtVersion
+           |/build.sbt
+           |scalaVersion := "2.12.10"
+           |""".stripMargin,
         expectError = true,
         preInitialized = () => {
           val doesNotExist = workspace.resolve("does-not-exist")
