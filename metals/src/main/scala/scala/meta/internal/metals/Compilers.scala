@@ -219,12 +219,11 @@ class Compilers(
       target: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
     for {
-      info <- buildTargets.info(target)
-      scala <- info.asScalaBuildTarget
-      isSupported = ScalaVersions.isSupportedScalaVersion(scala.getScalaVersion)
+      info <- buildTargets.scalaTarget(target)
+      isSupported = ScalaVersions.isSupportedScalaVersion(info.scalaVersion)
       _ = {
         if (!isSupported) {
-          scribe.warn(s"unsupported Scala ${scala.getScalaVersion}")
+          scribe.warn(s"unsupported Scala ${info.scalaVersion}")
         }
       }
       if isSupported
@@ -235,7 +234,7 @@ class Compilers(
           statusBar.trackBlockingTask(
             s"${statusBar.icons.sync}Loading presentation compiler"
           ) {
-            newCompiler(scalac, scala)
+            newCompiler(scalac, info.scalaInfo)
           }
         }
       )

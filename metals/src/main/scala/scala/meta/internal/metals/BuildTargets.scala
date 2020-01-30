@@ -76,13 +76,15 @@ final class BuildTargets() {
     for {
       (id, target) <- buildTargetInfo.iterator
       scalac <- scalacTargetInfo.get(id)
-    } yield ScalaTarget(target, scalac)
+      scalaTarget <- target.asScalaBuildTarget
+    } yield ScalaTarget(target, scalaTarget, scalac)
 
   def scalaTarget(id: BuildTargetIdentifier): Option[ScalaTarget] =
     for {
       info <- buildTargetInfo.get(id)
       scalac <- scalacTargetInfo.get(id)
-    } yield ScalaTarget(info, scalac)
+      scalaTarget <- info.asScalaBuildTarget
+    } yield ScalaTarget(info, scalaTarget, scalac)
 
   def allWorkspaceJars: Iterator[AbsolutePath] = {
     val isVisited = new ju.HashSet[AbsolutePath]()
@@ -296,7 +298,7 @@ final class BuildTargets() {
       null
     )
     lazy val classpaths =
-      all.map(i => i.info.getId -> i.scalac.classpath.toSeq).toSeq
+      all.map(i => i.id -> i.scalac.classpath.toSeq).toSeq
     try {
       toplevels.foldLeft(Option.empty[InferredBuildTarget]) {
         case (Some(x), toplevel) => Some(x)

@@ -254,8 +254,7 @@ class WorksheetProvider(
     mdocs.get(target).orElse {
       for {
         info <- buildTargets.scalaTarget(target)
-        scala <- info.info.asScalaBuildTarget
-        scalaVersion = scala.getScalaVersion
+        scalaVersion = info.scalaVersion
         isSupported = ScalaVersions.isSupportedScalaVersion(scalaVersion)
         _ = {
           if (!isSupported) {
@@ -270,7 +269,7 @@ class WorksheetProvider(
           .filterNot(_.contains("semanticdb"))
           .asJava
         val mdoc = embedded
-          .mdoc(scala.getScalaVersion(), scala.getScalaBinaryVersion())
+          .mdoc(info.scalaVersion, info.scalaBinaryVersion)
           .withClasspath(info.fullClasspath.asScala.distinct.asJava)
           .withScalacOptions(scalacOptions)
         mdocs(target) = mdoc
