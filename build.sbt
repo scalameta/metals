@@ -149,7 +149,7 @@ lazy val V = new {
   val scalameta = "4.3.0"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
-  val bloopNightly = "1.4.0-RC1+16-1cd95092"
+  val bloopNightly = "1.4.0-RC1+33-dfd03f53"
   val bloop = "1.4.0-RC1"
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -262,7 +262,7 @@ lazy val metals = project
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
-      "ch.epfl.scala" %% "bloop-launcher" % V.bloop,
+      "ch.epfl.scala" %% "bloop-launcher" % V.bloopNightly,
       // for LSP
       V.lsp4j,
       // for DAP
