@@ -21,7 +21,9 @@ case class Args(
     isIntelliJ: Boolean = false,
     isVscode: Boolean = false,
     isLaunchIntelliJ: Boolean = false,
+    isSources: Boolean = true,
     maxFileCount: Int = 5000,
+    projectName: Option[String] = None,
     workspace: Path = PathIO.workingDirectory.toNIO,
     out: Path = PathIO.workingDirectory.toNIO,
     targets: List[String] = Nil,
@@ -58,6 +60,12 @@ case class Args(
        |    Export Bloop project in empty sibling directory and open IntelliJ after export completes.
        |  --[no-]launch-intellij
        |    Launch IntelliJ after export completes. Default false unless --intellij is enabled.
+       |  --project-name
+       |    The name of the IntelliJ project to generate when using the  --intellij flag.
+       |    Ignored when --intellij is not used. Defaults to the name of the directory
+       |    containing the Pants build.
+       |  --no-sources
+       |    Do not download library sources of 3rd party dependencies.
        |
        |Example usage:
        |  $command myproject::                        # Export a single project
@@ -75,10 +83,9 @@ object Args {
       case _ =>
         parse(args, Args()).map { parsed =>
           if (parsed.isIntelliJ) {
-            val projectName = parsed.targets
-              .map(_.stripSuffix("::").stripSuffix("/::"))
-              .map(BloopPants.makeReadableFilename)
-              .mkString("_")
+            val projectName = parsed.projectName.getOrElse(
+              parsed.workspace.getFileName().toString()
+            )
             parsed.copy(
               out = parsed.workspace
                 .getParent()
@@ -114,12 +121,16 @@ object Args {
         parse(tail, base.copy(isIntelliJ = true, isLaunchIntelliJ = true))
       case "--vscode" :: tail =>
         parse(tail, base.copy(isVscode = true))
+      case "--no-sources" :: tail =>
+        parse(tail, base.copy(isSources = false))
       case "--launch-intellij" :: tail =>
         parse(tail, base.copy(isLaunchIntelliJ = true))
       case "--no-launch-intellij" :: tail =>
         parse(tail, base.copy(isLaunchIntelliJ = false))
       case ("--update" | "--cache") :: tail =>
         parse(tail, base.copy(isCache = true))
+      case "--project-name" :: name :: tail =>
+        parse(tail, base.copy(projectName = Some(name)))
       case "--max-file-count" :: count :: tail =>
         Try(count.toInt) match {
           case Failure(_) =>
