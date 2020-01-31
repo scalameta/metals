@@ -83,7 +83,7 @@ object BloopPants {
                 symlinkToOut(args)
               }
               if (args.isLaunchIntelliJ) {
-                IntelliJ.launch(args.out)
+                IntelliJ.launch(args.out, args.targets)
               } else if (args.isVscode) {
                 VSCode.launch(args)
               }

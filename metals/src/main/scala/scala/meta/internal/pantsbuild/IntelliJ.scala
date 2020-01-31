@@ -7,9 +7,10 @@ import scala.sys.process._
 import java.nio.charset.StandardCharsets
 import scala.meta.internal.metals.{BuildInfo => V}
 import java.net.URL
+import com.google.gson.JsonArray
 
 object IntelliJ {
-  def launch(directory: Path): Unit = {
+  def launch(directory: Path, targets: List[String]): Unit = {
     val applications = Paths.get("/Applications")
     val candidates = List(
       applications.resolve("Twitter IntelliJ IDEA.app"),
@@ -17,7 +18,7 @@ object IntelliJ {
       applications.resolve("IntelliJ IDEA.app"),
       applications.resolve("IntelliJ IDEA CE.app")
     )
-    writeBsp(directory)
+    writeBsp(directory, targets)
     val command = candidates.find(Files.isDirectory(_)) match {
       case Some(intellij) =>
         List(
@@ -44,9 +45,13 @@ object IntelliJ {
   }
 
   /** The .bsp/bloop.json file is necessary for IntelliJ to automatically impor the project */
-  private def writeBsp(directory: Path): Unit = {
+  private def writeBsp(directory: Path, targets: List[String]): Unit = {
     val bsp = Files.createDirectories(directory.resolve(".bsp"))
     val coursier = downloadCoursier(bsp.resolve("coursier"))
+    val targetsJson = new JsonArray()
+    targets.foreach { target =>
+      targetsJson.add(target)
+    }
     Files.write(
       bsp.resolve("bloop.json"),
       s"""{
@@ -61,7 +66,8 @@ object IntelliJ {
     "--",
     "${V.bloopVersion}"
   ],
-  "timestamp": "${System.currentTimeMillis()}"
+  "timestamp": "${System.currentTimeMillis()}",
+  "pantsTargets": ${targetsJson.toString()}
 }
 """.getBytes(StandardCharsets.UTF_8)
     )
