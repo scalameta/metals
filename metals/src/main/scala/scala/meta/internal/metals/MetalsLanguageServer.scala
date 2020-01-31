@@ -1677,7 +1677,7 @@ class MetalsLanguageServer(
         .foreach(focusedDocumentBuildTarget.set)
     }
 
-    val targets = buildTargets.all.map(_.info.getId).toSeq
+    val targets = buildTargets.all.map(_.id).toSeq
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach(_ => languageClient.refreshModel())

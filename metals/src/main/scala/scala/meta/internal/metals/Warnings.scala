@@ -32,37 +32,36 @@ final class Warnings(
     }
     val isReported: Option[Unit] = for {
       buildTarget <- buildTargets.inverseSources(path)
-      info <- buildTargets.info(buildTarget)
-      scala <- info.asScalaBuildTarget
+      info <- buildTargets.scalaTarget(buildTarget)
       scalacOptions <- buildTargets.scalacOptions(buildTarget)
     } yield {
       if (!scalacOptions.isSemanticdbEnabled) {
-        if (isSupportedScalaVersion(scala.getScalaVersion)) {
+        if (isSupportedScalaVersion(info.scalaVersion)) {
           logger.error(
-            s"$doesntWorkBecause the SemanticDB compiler plugin is not enabled for the build target ${info.getDisplayName}."
+            s"$doesntWorkBecause the SemanticDB compiler plugin is not enabled for the build target ${info.displayName}."
           )
           buildMisconfiguration()
         } else {
           logger.error(
-            s"$doesntWorkBecause the Scala version ${scala.getScalaVersion} is not supported. " +
+            s"$doesntWorkBecause the Scala version ${info.scalaVersion} is not supported. " +
               s"To fix this problem, change the Scala version to ${isLatestScalaVersion.mkString(" or ")}."
           )
           statusBar.addMessage(
-            s"${icons.alert}Unsupported Scala ${scala.getScalaVersion}"
+            s"${icons.alert}Unsupported Scala ${info.scalaVersion}"
           )
         }
       } else {
         if (!scalacOptions.isSourcerootDeclared) {
           val option = workspace.sourcerootOption
           logger.error(
-            s"$doesntWorkBecause the build target ${info.getDisplayName} is missing the compiler option $option. " +
+            s"$doesntWorkBecause the build target ${info.displayName} is missing the compiler option $option. " +
               s"To fix this problems, update the build settings to include this compiler option."
           )
           buildMisconfiguration()
         } else if (isCompiling(buildTarget)) {
           val tryAgain = "Wait until compilation is finished and try again"
           logger.error(
-            s"$doesntWorkBecause the build target ${info.getDisplayName} is being compiled. $tryAgain."
+            s"$doesntWorkBecause the build target ${info.displayName} is being compiled. $tryAgain."
           )
           statusBar.addMessage(icons.info + tryAgain)
         } else {

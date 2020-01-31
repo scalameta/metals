@@ -52,13 +52,13 @@ class MetalsTreeViewProvider(
     Build,
     "projects",
     "Projects",
-    _.info.getId(),
+    _.id,
     _.getUri(),
     uri => new BuildTargetIdentifier(uri),
-    _.info.getDisplayName(),
-    _.info.getBaseDirectory, { () =>
+    _.displayName,
+    _.baseDirectory, { () =>
       buildTargets.all.filter(target =>
-        buildTargets.buildTargetSources(target.info.getId()).nonEmpty
+        buildTargets.buildTargetSources(target.id).nonEmpty
       )
     }, { (id, symbol) =>
       doCompile(id)

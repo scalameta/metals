@@ -171,10 +171,9 @@ final class Doctor(
 
   def deprecatedVersionWarning: Option[String] = {
     val deprecatedVersions = (for {
-      target <- relevantTargets.toIterator
-      scala <- target.info.asScalaBuildTarget
-      if ScalaVersions.isDeprecatedScalaVersion(scala.getScalaVersion())
-    } yield scala.getScalaVersion()).toSet
+      target <- allTargets.toIterator
+      if ScalaVersions.isDeprecatedScalaVersion(target.scalaVersion)
+    } yield target.scalaVersion).toSet
     if (deprecatedVersions.isEmpty) {
       None
     } else {
@@ -188,11 +187,10 @@ final class Doctor(
     }
   }
 
-  def relevantTargets(): List[ScalaTarget] =
-    buildTargets.all.filter(_.info.asScalaBuildTarget.isDefined).toList
+  def allTargets(): List[ScalaTarget] = buildTargets.all.toList
 
   private def problemSummary: Option[String] = {
-    val targets = relevantTargets()
+    val targets = allTargets()
     val isMissingSemanticdb = targets.filter(!_.isSemanticdbEnabled)
     val count = isMissingSemanticdb.length
     val isAllProjects = count == targets.size
@@ -201,7 +199,7 @@ final class Doctor(
     } else if (isAllProjects) {
       Some(CheckDoctor.allProjectsMisconfigured)
     } else if (count == 1) {
-      val name = isMissingSemanticdb.head.info.getDisplayName
+      val name = isMissingSemanticdb.head.displayName
       Some(CheckDoctor.singleMisconfiguredProject(name))
     } else {
       Some(CheckDoctor.multipleMisconfiguredProjects(count))
@@ -216,7 +214,7 @@ final class Doctor(
   }
 
   private def buildTargetsJson(): String = {
-    val targets = relevantTargets()
+    val targets = allTargets()
     val results = if (targets.isEmpty) {
       DoctorResults(
         doctorTitle,
@@ -234,7 +232,7 @@ final class Doctor(
 
     } else {
       val targetResults =
-        targets.sortBy(_.info.getBaseDirectory).map(extractTargetInfo)
+        targets.sortBy(_.baseDirectory).map(extractTargetInfo)
       DoctorResults(doctorTitle, doctorHeading, None, Some(targetResults)).toJson
     }
     ujson.write(results)
@@ -245,7 +243,7 @@ final class Doctor(
       .element("p")(
         _.text(doctorHeading)
       )
-    val targets = relevantTargets()
+    val targets = allTargets()
     if (targets.isEmpty) {
       html
         .element("p")(
@@ -280,7 +278,7 @@ final class Doctor(
       html: HtmlBuilder,
       targets: List[ScalaTarget]
   ): Unit = {
-    targets.sortBy(_.info.getBaseDirectory).foreach { target =>
+    targets.sortBy(_.baseDirectory).foreach { target =>
       val targetInfo = extractTargetInfo(target)
       val center = "style='text-align: center'"
       html.element("tr")(
@@ -298,9 +296,7 @@ final class Doctor(
   }
 
   private def extractTargetInfo(target: ScalaTarget) = {
-    val scala = target.info.asScalaBuildTarget
-    val scalaVersion =
-      scala.fold("<unknown>")(_.getScalaVersion)
+    val scalaVersion = target.scalaVersion
     val definition: String =
       if (ScalaVersions.isSupportedScalaVersion(scalaVersion)) {
         Icons.unicode.check
@@ -308,7 +304,7 @@ final class Doctor(
         Icons.unicode.alert
       }
     val completions: String = definition
-    val isSemanticdbNeeded = !target.isSemanticdbEnabled && target.isScalaTarget
+    val isSemanticdbNeeded = !target.isSemanticdbEnabled
     val references: String =
       if (isSemanticdbNeeded) {
         Icons.unicode.alert
@@ -316,11 +312,9 @@ final class Doctor(
         Icons.unicode.check
       }
     val recommenedFix =
-      if (target.isScalaTarget)
-        recommendation(scalaVersion, target.isSemanticdbEnabled, target)
-      else ""
+      recommendation(scalaVersion, target.isSemanticdbEnabled, target)
     DoctorTargetInfo(
-      target.info.getDisplayName(),
+      target.displayName,
       scalaVersion,
       definition,
       completions,
