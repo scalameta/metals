@@ -22,6 +22,7 @@ case class Args(
     isVscode: Boolean = false,
     isLaunchIntelliJ: Boolean = false,
     maxFileCount: Int = 5000,
+    projectName: Option[String] = None,
     workspace: Path = PathIO.workingDirectory.toNIO,
     out: Path = PathIO.workingDirectory.toNIO,
     targets: List[String] = Nil,
@@ -75,10 +76,9 @@ object Args {
       case _ =>
         parse(args, Args()).map { parsed =>
           if (parsed.isIntelliJ) {
-            val projectName = parsed.targets
-              .map(_.stripSuffix("::").stripSuffix("/::"))
-              .map(BloopPants.makeReadableFilename)
-              .mkString("_")
+            val projectName = parsed.projectName.getOrElse(
+              parsed.workspace.getFileName().toString()
+            )
             parsed.copy(
               out = parsed.workspace
                 .getParent()
@@ -120,6 +120,8 @@ object Args {
         parse(tail, base.copy(isLaunchIntelliJ = false))
       case ("--update" | "--cache") :: tail =>
         parse(tail, base.copy(isCache = true))
+      case "--project-name" :: name :: tail =>
+        parse(tail, base.copy(projectName = Some(name)))
       case "--max-file-count" :: count :: tail =>
         Try(count.toInt) match {
           case Failure(_) =>
