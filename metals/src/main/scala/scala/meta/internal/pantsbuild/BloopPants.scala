@@ -163,7 +163,11 @@ object BloopPants {
       )
       val outputFilename = PantsConfiguration.outputFilename(args.targets)
       val outputFile = cacheDir.resolve(s"$outputFilename.json")
-      val bloopDir = Files.createDirectories(args.out.resolve(".bloop"))
+      val bloopDir = args.out.resolve(".bloop")
+      if (Files.isSymbolicLink(bloopDir)) {
+        Files.delete(bloopDir)
+      }
+      Files.createDirectories(bloopDir)
       args.token.checkCanceled()
 
       val filemap =
