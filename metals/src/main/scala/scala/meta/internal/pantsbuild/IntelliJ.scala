@@ -30,7 +30,12 @@ object IntelliJ {
     }
     val hasIdeaDirectory = Files.isDirectory(directory.resolve(".idea"))
     val arguments =
-      if (hasIdeaDirectory) List()
+      // NOTE(olafur): it seems necessary to use the parent directory when there
+      // is an existing .idea/ directory. This behavior was discovered by trial
+      // and error. If we don't use the parent directory when there is an
+      // existing idea/ directory then IntelliJ opens the project as a normal
+      // directory without BSP (even if there is a .bsp/ directory).
+      if (hasIdeaDirectory) List(directory.getParent().toString())
       else List(directory.toString())
     val exit = Process(command ++ arguments, cwd = Some(directory.toFile())).!
     if (exit != 0) {
