@@ -37,5 +37,5 @@ case class ScalaTarget(
 
   def displayName: String = info.getDisplayName()
 
-  def scalaBinaryVersion: String = scalaInfo.getScalaVersion()
+  def scalaBinaryVersion: String = scalaInfo.getScalaBinaryVersion()
 }
