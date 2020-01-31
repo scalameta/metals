@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.util.matching.Regex
 import ch.epfl.scala.{bsp4j => b}
+import javax.annotation.Nullable
 
 /**
  * LSP commands supported by the Metals language server.
@@ -130,25 +131,20 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val NewScalaWorksheet = new Command(
-    "new-scala-worksheet",
-    "Create new scala worksheet",
-    """|Create and open new scala worksheet file at the argument location with the argument + ".worksheet.sc" name.
-       |
-       |Arguments: [string], where the string is a URI of location of the new worksheet file;
-       |[string], where the string is a name for the new worksheet
-       |""".stripMargin
-  )
-
-  val NewScalaClass = new Command(
-    "new-scala-class",
-    "Create new scala class",
-    """|Create and open new scala class and get suggested edit with the new class, object, or trait template.
-       |
-       |Arguments: [string], where the string is a URI of location of the new file;
-       |[string], where the string is a name for the new class
-       |[string], where the string is whether 'class', 'object', or 'trait'.
-       |""".stripMargin
+  val NewScalaFile = new Command(
+    "new-scala-file",
+    "Create new scala file",
+    """Create and open new file with either scala class, object, trait, or worksheet.""",
+    s"""|MetalsNewScalaFileParams object
+        |Example:
+        |```json
+        |{
+        |   directory: "file:///home/dev/foo/bar/",
+        |   name: 'Baz',
+        |   kind: 'class'
+        |}
+        |```
+    """.stripMargin
   )
 
   /**
@@ -221,7 +217,12 @@ object ServerCommands {
     CancelCompile,
     BspSwitch,
     StartDebugAdapter,
-    NewScalaWorksheet,
-    NewScalaClass
+    NewScalaFile
   )
 }
+
+case class MetalsNewScalaFileParams(
+    @Nullable directory: String,
+    name: String,
+    kind: String
+)

@@ -32,4 +32,15 @@ object JsonParser {
       Try(JsonParser.gson.fromJson(json, targetType))
     }
   }
+
+  // NOTE(alekseiAlefirov): one cannot do type parameterized extractor, unfortunately (https://github.com/scala/bug/issues/884)
+  // so instantiating this class is a workaround
+  class Of[A: ClassTag] {
+    object Jsonized {
+      def unapply(json: JsonElement): Option[A] = {
+        json.as[A].toOption
+      }
+    }
+  }
+
 }
