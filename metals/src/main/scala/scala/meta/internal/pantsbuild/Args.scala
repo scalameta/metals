@@ -21,6 +21,7 @@ case class Args(
     isIntelliJ: Boolean = false,
     isVscode: Boolean = false,
     isLaunchIntelliJ: Boolean = false,
+    isSources: Boolean = true,
     maxFileCount: Int = 5000,
     projectName: Option[String] = None,
     workspace: Path = PathIO.workingDirectory.toNIO,
@@ -63,6 +64,8 @@ case class Args(
        |    The name of the IntelliJ project to generate when using the  --intellij flag.
        |    Ignored when --intellij is not used. Defaults to the name of the directory
        |    containing the Pants build.
+       |  --no-sources
+       |    Do not download library sources of 3rd party dependencies.
        |
        |Example usage:
        |  $command myproject::                        # Export a single project
@@ -118,6 +121,8 @@ object Args {
         parse(tail, base.copy(isIntelliJ = true, isLaunchIntelliJ = true))
       case "--vscode" :: tail =>
         parse(tail, base.copy(isVscode = true))
+      case "--no-sources" :: tail =>
+        parse(tail, base.copy(isSources = false))
       case "--launch-intellij" :: tail =>
         parse(tail, base.copy(isLaunchIntelliJ = true))
       case "--no-launch-intellij" :: tail =>

@@ -233,15 +233,16 @@ object BloopPants {
       args: Args,
       outputFile: Path
   )(implicit ec: ExecutionContext): Unit = {
-    val command = List[String](
-      args.workspace.resolve("pants").toString(),
-      "--concurrent",
-      s"--no-quiet",
-      s"--export-libraries-sources",
-      s"--export-output-file=$outputFile",
-      s"export-classpath",
-      s"export"
-    ) ++ args.targets
+    val command = List[Option[String]](
+      Some(args.workspace.resolve("pants").toString()),
+      Some("--concurrent"),
+      Some(s"--no-quiet"),
+      if (args.isSources) Some(s"--export-libraries-sources")
+      else None,
+      Some(s"--export-output-file=$outputFile"),
+      Some(s"export-classpath"),
+      Some(s"export")
+    ).flatten ++ args.targets
     val shortName = "pants export-classpath export"
     SystemProcess.run(
       shortName,
@@ -339,7 +340,8 @@ private class BloopPants(
       AbsolutePath(workspace),
       args.targets
     )
-    val isBaseDirectory = projects.iterator.map(_.directory).toSet
+    val isBaseDirectory =
+      projects.iterator.filter(_.sources.nonEmpty).map(_.directory).toSet
     // NOTE(olafur): generate synthetic projects to improve the file tree view
     // in IntelliJ. Details: https://github.com/olafurpg/intellij-bsp-pants/issues/7
     val syntheticProjects: List[C.Project] = sourceRoots.flatMap { root =>
