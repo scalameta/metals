@@ -22,6 +22,9 @@ import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.Classpath
 import scala.{meta => m}
+import ch.epfl.scala.bsp4j.ScalaBuildTarget
+import ch.epfl.scala.bsp4j.ScalaPlatform
+import com.google.gson.Gson
 
 /**
  *  Equivalent to scala.meta.internal.metals.MetalsEnrichments
@@ -70,6 +73,16 @@ object MetalsTestEnrichments {
         Nil.asJava,
         new BuildTargetCapabilities(true, true, true)
       )
+      val scalaTarget = new ScalaBuildTarget(
+        "org.scala-lang",
+        BuildInfo.scalaVersion,
+        BuildInfo.scalaVersion.split('.').take(2).mkString("."),
+        ScalaPlatform.JVM,
+        Nil.asJava
+      )
+      val gson = new Gson
+      val data = gson.toJsonTree(scalaTarget)
+      buildTarget.setData(data)
       val result = new WorkspaceBuildTargetsResult(List(buildTarget).asJava)
       wsp.buildTargets.addWorkspaceBuildTargets(result)
       val item = new ScalacOptionsItem(
