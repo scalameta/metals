@@ -60,7 +60,8 @@ object IntelliJ {
     "ch.epfl.scala:bloop-launcher-core_2.12:${V.bloopNightlyVersion}",
     "--",
     "${V.bloopVersion}"
-  ]
+  ],
+  "timestamp": "${System.currentTimeMillis()}"
 }
 """.getBytes(StandardCharsets.UTF_8)
     )
