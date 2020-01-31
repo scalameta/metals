@@ -17,6 +17,18 @@ class NewFilesProvider(
     packageProvider: PackageProvider
 ) {
 
+  def createNewFile(directory: Option[URI], name: String, kind: String)(
+      implicit ec: ExecutionContext
+  ): Future[(URI, Option[WorkspaceEdit])] = kind match {
+    case "class" | "object" | "trait" =>
+      createClass(directory, name, kind).map {
+        case (path, edit) => (path, Some(edit))
+      }
+    case "worksheet" =>
+      createWorksheet(directory, name).map((_, None))
+    case _ => Future.failed(new IllegalArgumentException)
+  }
+
   def createWorksheet(directory: Option[URI], name: String)(
       implicit ec: ExecutionContext
   ): Future[URI] = {

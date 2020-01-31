@@ -1260,39 +1260,20 @@ class MetalsLanguageServer(
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
             Future.failed(new IllegalArgumentException(msg)).asJavaObject
         }
-      case ServerCommands.NewScalaWorksheet() =>
+      case ServerCommands.NewScalaFile() =>
+        val parser = new JsonParser.Of[MetalsNewScalaFileParams]
         val args = params.getArguments.asScala
         (args match {
-          case Seq(JsonString.Option(directory), JsonString(name)) =>
-            val result =
-              newFilesProvider.createWorksheet(directory.map(new URI(_)), name)
-            result.onFailure {
-              case NonFatal(e) =>
-                languageClient
-                  .showMessage(
-                    MessageType.Error,
-                    s"Cannot create worksheet:\n ${e.toString()}"
-                  )
-            }
-            result
-          case _ =>
-            val msg = s"Invalid arguments: $args."
-            Future.failed(new IllegalArgumentException(msg))
-        }).asJavaObject
-      case ServerCommands.NewScalaClass() =>
-        val args = params.getArguments.asScala
-        (args match {
-          case Seq(
-              JsonString.Option(directory),
-              JsonString(name),
-              JsonString(kind)
-              ) =>
+          case Seq(parser.Jsonized(newScalaFileParams)) =>
+            import newScalaFileParams._
             val result =
               newFilesProvider
-                .createClass(directory.map(new URI(_)), name, kind)
+                .createNewFile(Option(directory).map(new URI(_)), name, kind)
                 .map {
                   case (path, edit) =>
-                    languageClient.applyEdit(new ApplyWorkspaceEditParams(edit))
+                    edit.foreach(e =>
+                      languageClient.applyEdit(new ApplyWorkspaceEditParams(e))
+                    )
                     path
                 }
             result.onFailure {
@@ -1305,7 +1286,8 @@ class MetalsLanguageServer(
             }
             result
           case _ =>
-            val msg = s"Invalid arguments: $args."
+            val argExample = ServerCommands.NewScalaFile.arguments
+            val msg = s"Invalid arguments: $args. Expecting: $argExample"
             Future.failed(new IllegalArgumentException(msg))
         }).asJavaObject
 
@@ -1962,21 +1944,6 @@ class MetalsLanguageServer(
       case NonFatal(e) =>
         scribe.error("unexpected error during source scanning", e)
     })
-  }
-
-  private object JsonString {
-    def unapply(json: Any): Option[String] = json match {
-      case p: JsonPrimitive if p.isString() => Some(p.getAsString())
-      case _ => None
-    }
-
-    object Option {
-      def unapply(json: Any): Option[Option[String]] = json match {
-        case JsonString(s) => Some(Some(s))
-        case _: JsonNull => Some(None)
-        case _ => None
-      }
-    }
   }
 
 }
