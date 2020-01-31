@@ -59,6 +59,10 @@ case class Args(
        |    Export Bloop project in empty sibling directory and open IntelliJ after export completes.
        |  --[no-]launch-intellij
        |    Launch IntelliJ after export completes. Default false unless --intellij is enabled.
+       |  --project-name
+       |    The name of the IntelliJ project to generate when using the  --intellij flag.
+       |    Ignored when --intellij is not used. Defaults to the name of the directory
+       |    containing the Pants build.
        |
        |Example usage:
        |  $command myproject::                        # Export a single project
