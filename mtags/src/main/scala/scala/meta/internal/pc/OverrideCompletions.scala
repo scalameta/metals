@@ -9,6 +9,8 @@ import scala.collection.immutable.Nil
 
 trait OverrideCompletions { this: MetalsGlobal =>
 
+  private val DefaultIndent = 2
+
   class OverrideDefMember(
       val label: String,
       val edit: l.TextEdit,
@@ -157,7 +159,6 @@ trait OverrideCompletions { this: MetalsGlobal =>
     val owners: scala.collection.Set[Symbol] = parentSymbols(context)
 
     val isDecl: Set[Symbol] = typed.tpe.decls.toSet
-    println(isDecl)
     def isOverridableMethod(sym: Symbol): Boolean = {
       sym.isMethod &&
       !isDecl(sym) &&
@@ -290,4 +291,171 @@ trait OverrideCompletions { this: MetalsGlobal =>
   // https://github.com/scala/scala/blob/f389823ef0416612a0058a80c1fe85948ff5fc0a/src/reflect/scala/reflect/internal/Symbols.scala#L2645
   private def isVarSetter(sym: Symbol): Boolean =
     !sym.isStable && !sym.isLazy && sym.isAccessor
+
+  def implementAllAt(pos: Position, text: String): List[l.TextEdit] = {
+    // make sure the compilation unit is loaded
+    typedTreeAt(pos)
+
+    lastVisistedParentTrees match {
+
+      // class Foo extends Bar {}
+      // ~~~~~~~~~~~~~~~~~~~~~~~~
+      case (c: ClassDef) :: _ =>
+        val t = c.impl
+        val typed = typedTreeAt(t.pos)
+        implementAll(
+          typed,
+          inferEditPosition(text, t).toLSP,
+          t,
+          text,
+          true,
+          _ => true
+        )
+
+      // new Foo {}
+      //     ~~~~~~
+      case (_: Ident) ::
+            (t: Template) :: _ =>
+        val typed = typedTreeAt(t.pos)
+        implementAll(
+          typed,
+          inferEditPosition(text, t).toLSP,
+          t,
+          text,
+          true,
+          _ => true
+        )
+
+      // new Foo[T] {}
+      //     ~~~~~~~~~
+      case (_: Ident) ::
+            (_: AppliedTypeTree) ::
+            (t: Template) :: _ =>
+        val typed = typedTreeAt(t.pos)
+        implementAll(
+          typed,
+          inferEditPosition(text, t).toLSP,
+          t,
+          text,
+          true,
+          _ => true
+        )
+
+      case _ =>
+        Nil
+    }
+  }
+
+  /**
+   * Get text edits for an `override def` completion to implement methods from the supertype.
+   *
+   * @param typed the typed tree: template for the class/object we are implementing.
+   * @param range the position to fill the completions.
+   * @param t the enclosing template for the class/object we are implementing.
+   * @param text the text of the original source code.
+   * @param shouldAddOverrideKwd if it's true, completion add `override` for each methods.
+   * @param isCandidate the determination of whether the symbol will be a possible completion item.
+   * @return the list of TextEdit of both method implementations and auto imports.
+   */
+  private def implementAll(
+      typed: Tree,
+      range: l.Range,
+      t: Template,
+      text: String,
+      shouldAddOverrideKwd: Boolean,
+      isCandidate: Symbol => Boolean
+  ): List[l.TextEdit] = {
+    val overrideMembers = getMembers(
+      typed,
+      range,
+      t.pos,
+      text,
+      true,
+      false,
+      isCandidate
+    )
+
+    val allAbstractMembers = overrideMembers
+      .filter(_.sym.isAbstract)
+
+    val (allAbstractEdits, allAbstractImports) = toEdits(allAbstractMembers)
+
+    if (allAbstractEdits.length > 0) {
+
+      // infer necessary indent
+      //
+      // |object Test {
+      // |    class Foo extends Bar {} // inferred to 4
+      // |}
+      val lineStart = t.pos.source.lineToOffset(t.pos.line - 1)
+      val necessaryIndent = inferIndent(lineStart, text)
+
+      // infer indent for implementations
+      // if there's declaration in the class/object, follow its indent.
+      // otherwise the indent default to 2
+      val indent = typed.tpe.decls
+        .filter(sym =>
+          !sym.isSynthetic &&
+            !sym.isPrimaryConstructor &&
+            sym.pos.line != t.pos.line // filter out explicit primary constructor `class Foo(x: Int) ...`
+        )
+        .headOption
+        .map(existing => {
+          " " * inferIndent(
+            t.pos.source.lineToOffset(existing.pos.line - 1),
+            text
+          )
+        })
+        .getOrElse {
+          " " * (necessaryIndent + DefaultIndent)
+        }
+
+      // if the both opening/closing braces located in a line:
+      //
+      // object {
+      //   class Foo extends Bar {}
+      // }
+      //
+      // add an newline and indent in the end of implementations, so that
+      // the closing brace is indented.
+      //
+      // object {
+      //   class Foo extends Bar {
+      //     override def foo = ???
+      //   }
+      // }
+      val end =
+        if (t.pos.source.offsetToLine(t.pos.start) ==
+            t.pos.source.offsetToLine(t.pos.end)) "\n" + " " * necessaryIndent
+        else ""
+
+      val implementAll = new l.TextEdit(
+        range,
+        allAbstractEdits
+          .map(_.getNewText)
+          .mkString(
+            s"\n${indent}",
+            s"\n${indent}",
+            s"$end"
+          )
+      )
+      implementAll :: allAbstractImports.toList
+    } else {
+      Nil
+    }
+  }
+
+  /**
+   * Get the position of the opening brace of given Template.
+   * insert implementations onto the top of the body.
+   *
+   * @param text the text of the original source code.
+   * @param t the enclosing template for the class/object/trait we are implementing.
+   */
+  private def inferEditPosition(text: String, t: Template): Position = {
+    val start = t.pos.start
+    val end = t.pos.end
+    val offset = text.indexOf('{', start) + 1
+    t.pos.withStart(offset).withEnd(offset)
+  }
 }

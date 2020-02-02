@@ -10,8 +10,8 @@ import scala.collection.JavaConverters._
 final class CodeActionProvider(
     compilers: Compilers
 ) {
-
   val allActions: List[CodeAction] = List(
+    new ImplementAbstractMethods(compilers),
     new ImportMissingSymbol(compilers)
   )
 
@@ -19,7 +19,6 @@ final class CodeActionProvider(
       params: l.CodeActionParams,
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
-
     def isRequestedKind(action: CodeAction): Boolean =
       Option(params.getContext.getOnly) match {
         case Some(only) =>

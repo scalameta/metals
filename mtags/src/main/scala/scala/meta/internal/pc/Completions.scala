@@ -1035,7 +1035,6 @@ trait Completions { this: MetalsGlobal =>
       }
     }
 
-
     /**
      * A `match` keyword completion to generate an exhaustive pattern match for sealed types.
      *
