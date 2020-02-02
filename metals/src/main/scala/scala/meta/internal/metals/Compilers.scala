@@ -26,6 +26,7 @@ import scala.meta.pc.SymbolSearch
 import scala.concurrent.Future
 import java.{util => ju}
 import scala.meta.pc.AutoImportsResult
+import org.eclipse.lsp4j.TextEdit
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -158,6 +159,15 @@ class Compilers(
   ): Future[ju.List[AutoImportsResult]] = {
     withPC(params, None) { (pc, pos) =>
       pc.autoImports(name, CompilerOffsetParams.fromPos(pos, token)).asScala
+    }.getOrElse(Future.successful(new ju.ArrayList))
+  }
+
+  def autoImplement(
+      params: TextDocumentPositionParams,
+      token: CancelToken
+  ): Future[ju.List[TextEdit]] = {
+    withPC(params, None) { (pc, pos) =>
+      pc.autoImplement(CompilerOffsetParams.fromPos(pos, token)).asScala
     }.getOrElse(Future.successful(new ju.ArrayList))
   }
 
