@@ -510,7 +510,8 @@ class RenameLspSuite extends BaseLspSuite("rename") {
        |  object <<Ma@@in>>
        |}
        |""".stripMargin,
-    newName = "Child"
+    newName = "Child",
+    fileRenames = Map.empty
   )
 
   def renamed(
