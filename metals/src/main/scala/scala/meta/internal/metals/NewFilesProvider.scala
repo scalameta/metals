@@ -3,10 +3,6 @@ package scala.meta.internal.metals
 import scala.meta.io.AbsolutePath
 import java.net.URI
 import scala.concurrent.Future
-import org.eclipse.lsp4j.WorkspaceEdit
-import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.Position
 import MetalsEnrichments._
 import java.nio.file.Files
 import scala.concurrent.ExecutionContext
@@ -19,13 +15,13 @@ class NewFilesProvider(
 
   def createNewFile(directory: Option[URI], name: String, kind: String)(
       implicit ec: ExecutionContext
-  ): Future[(URI, Option[WorkspaceEdit])] = kind match {
+  ): Future[URI] = kind match {
     case "class" | "object" | "trait" =>
-      createClass(directory, name, kind).map {
-        case (path, edit) => (path, Some(edit))
-      }
+      createClass(directory, name, kind)
+    case "package-object" =>
+      createPackageObject(directory)
     case "worksheet" =>
-      createWorksheet(directory, name).map((_, None))
+      createWorksheet(directory, name)
     case _ => Future.failed(new IllegalArgumentException)
   }
 
@@ -35,40 +31,46 @@ class NewFilesProvider(
     val path = directory
       .fold(workspace)(_.toString.toAbsolutePath)
       .resolve(name + ".worksheet.sc")
-    val result = Future {
-      Files.createFile(path.toNIO).toUri()
-    }
-    result.onFailure {
-      case NonFatal(e) => scribe.error("Cannot create worksheet", e)
-    }
-    result
+    createFile(path)
   }
 
   def createClass(directory: Option[URI], name: String, kind: String)(
       implicit ec: ExecutionContext
-  ): Future[(URI, WorkspaceEdit)] = {
+  ): Future[URI] = {
     val path = directory
       .fold(workspace)(_.toString.toAbsolutePath)
       .resolve(name + ".scala")
-    val result = Future {
-      val newFileUri = Files.createFile(path.toNIO).toUri()
-      val editText =
-        packageProvider.packageStatement(path).getOrElse("") +
-          classTemplate(kind, name)
+    val editText =
+      packageProvider.packageStatement(path).getOrElse("") +
+        classTemplate(kind, name)
+    createFileAndWriteText(path, editText)
+  }
 
-      val edit =
-        new WorkspaceEdit(
-          Map(
-            newFileUri.toString() ->
-              List(
-                new TextEdit(
-                  new Range(new Position(0, 0), new Position(0, 0)),
-                  editText
-                )
-              ).asJava
-          ).asJava
+  def createPackageObject(
+      directory: Option[URI]
+  )(implicit ec: ExecutionContext): Future[URI] = {
+    directory
+      .map { directory =>
+        val path = directory.toString.toAbsolutePath.resolve("package.scala")
+        createFileAndWriteText(
+          path,
+          packageProvider.packageStatement(path).getOrElse("")
         )
-      (newFileUri, edit)
+      }
+      .getOrElse(
+        Future.failed(
+          new IllegalArgumentException(
+            "'directory' must be provided to create a package object"
+          )
+        )
+      )
+  }
+
+  private def createFile(
+      path: AbsolutePath
+  )(implicit ec: ExecutionContext): Future[URI] = {
+    val result = Future {
+      Files.createFile(path.toNIO).toUri()
     }
     result.onFailure {
       case NonFatal(e) => scribe.error("Cannot create file", e)
@@ -76,9 +78,18 @@ class NewFilesProvider(
     result
   }
 
+  private def createFileAndWriteText(path: AbsolutePath, text: String)(
+      implicit ec: ExecutionContext
+  ): Future[URI] = {
+    createFile(path).map { newFileUri =>
+      path.writeText(text)
+      newFileUri
+    }
+  }
+
   private def classTemplate(kind: String, name: String): String =
     s"""|$kind $name {
-        |
+        |  
         |}
         |""".stripMargin
 

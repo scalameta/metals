@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
-import com.google.gson.JsonNull
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryChangeEvent.EventType
 import io.undertow.server.HttpServerExchange
@@ -673,6 +672,11 @@ class MetalsLanguageServer(
     buffers.put(path, params.getTextDocument.getText)
     trees.didChange(path)
 
+    packageProvider
+      .workspaceEdit(path)
+      .map(new ApplyWorkspaceEditParams(_))
+      .foreach(languageClient.applyEdit)
+
     if (path.isDependencySource(workspace)) {
       CancelTokens { _ =>
         // trigger compilation in preparation for definition requests
@@ -1269,13 +1273,6 @@ class MetalsLanguageServer(
             val result =
               newFilesProvider
                 .createNewFile(Option(directory).map(new URI(_)), name, kind)
-                .map {
-                  case (path, edit) =>
-                    edit.foreach(e =>
-                      languageClient.applyEdit(new ApplyWorkspaceEditParams(e))
-                    )
-                    path
-                }
             result.onFailure {
               case NonFatal(e) =>
                 languageClient

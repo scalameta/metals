@@ -134,7 +134,7 @@ object ServerCommands {
   val NewScalaFile = new Command(
     "new-scala-file",
     "Create new scala file",
-    """Create and open new file with either scala class, object, trait, or worksheet.""",
+    """Create and open new file with either scala class, object, trait, package object or worksheet.""",
     s"""|MetalsNewScalaFileParams object
         |Example:
         |```json
