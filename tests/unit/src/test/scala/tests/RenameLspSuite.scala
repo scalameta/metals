@@ -502,6 +502,18 @@ class RenameLspSuite extends BaseLspSuite("rename") {
     newName = "Animal"
   )
 
+  renamed(
+    "nested-symbol",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Foo {
+       |  object <<Ma@@in>>
+       |}
+       |""".stripMargin,
+    newName = "Child",
+    fileRenames = Map.empty
+  )
+
   def renamed(
       name: String,
       input: String,
