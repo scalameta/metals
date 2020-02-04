@@ -231,6 +231,26 @@ object BloopPants {
       Files.deleteIfExists(workspaceBloop)
       Files.createSymbolicLink(workspaceBloop, outBloop)
     }
+
+    val inScalafmt = {
+      val link = args.workspace.resolve(".scalafmt.conf")
+      // Configuration file may be symbolic link.
+      val relpath =
+        if (Files.isSymbolicLink(link)) Files.readSymbolicLink(link)
+        else link
+      // Symbolic link may be relative to workspace directory.
+      if (relpath.isAbsolute()) relpath
+      else args.workspace.resolve(relpath)
+    }
+    val outScalafmt = args.out.resolve(".scalafmt.conf")
+    if (!args.out.startsWith(args.workspace) &&
+      Files.exists(inScalafmt) && {
+        !Files.exists(outScalafmt) ||
+        Files.isSymbolicLink(outScalafmt)
+      }) {
+      Files.deleteIfExists(outScalafmt)
+      Files.createSymbolicLink(outScalafmt, inScalafmt)
+    }
   }
 
   private def runPantsExport(
