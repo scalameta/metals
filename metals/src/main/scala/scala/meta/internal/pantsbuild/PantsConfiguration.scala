@@ -107,6 +107,9 @@ object PantsConfiguration {
       targets.map(_.replaceAll("[^a-zA-Z0-9]", "")).mkString
     if (processed.isEmpty()) {
       MD5.compute(targets.mkString) // necessary for targets like "::/"
+    } else if (processed.length() > 15) {
+      // Avoid too long filename.
+      s"${processed.take(15)}-${MD5.compute(targets.mkString)}"
     } else {
       processed
     }
