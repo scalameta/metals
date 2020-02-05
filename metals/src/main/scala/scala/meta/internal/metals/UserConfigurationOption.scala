@@ -15,4 +15,9 @@ case class UserConfigurationOption(
   def headerID: String = {
     title.toLowerCase().replace(' ', '-')
   }
+  def camelCaseKey: String =
+    key.split('-').toList match {
+      case head :: tail => head ++ tail.flatMap(_.capitalize)
+      case _ => key
+    }
 }
