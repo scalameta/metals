@@ -1,6 +1,7 @@
 package tests
 import scala.concurrent.Future
 import munit.Location
+import munit.TestOptions
 
 class RenameLspSuite extends BaseLspSuite("rename") {
 
@@ -576,7 +577,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
   )
 
   def renamed(
-      name: String,
+      name: TestOptions,
       input: String,
       newName: String,
       nonOpened: Set[String] = Set.empty,
@@ -605,7 +606,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
     )
 
   def check(
-      name: String,
+      name: TestOptions,
       input: String,
       newName: String,
       notRenamed: Boolean = false,

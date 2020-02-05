@@ -142,10 +142,13 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       _ = server.workspaceSymbol("scala.None")
       option = ".metals/readonly/scala/Option.scala"
       _ <- server.didOpen(option)
-      references <- server.references(option, "object None")
+      references = server.references(option, "object None")
       _ = assertNoDiff(
         references,
-        """|a/src/main/scala/a/A.scala:4:24: info: reference
+        """|.metals/readonly/scala/Option.scala:527:13: info: reference
+           |case object None extends Option[Nothing] {
+           |            ^^^^
+           |a/src/main/scala/a/A.scala:4:24: info: reference
            |  val x: Option[Int] = None
            |                       ^^^^
            |""".stripMargin

@@ -1,7 +1,5 @@
 package scala.meta.internal.implementation
 
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -12,14 +10,13 @@ import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.TextDocument
-import java.util.concurrent.ConcurrentHashMap
-import java.nio.file.Path
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.metals.PositionInFile
 import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TypeSignature
@@ -28,6 +25,9 @@ import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.util.control.NonFatal
 import scala.meta.internal.mtags.Mtags
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ConcurrentHashMap
+import java.nio.file.Path
+import org.eclipse.lsp4j.Location
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
@@ -83,16 +83,12 @@ final class ImplementationProvider(
   }
 
   def implementations(
-      params: TextDocumentPositionParams
+      positionInFile: PositionInFile
   ): List[Location] = {
-    val source = params.getTextDocument.getUri.toAbsolutePath
-    lazy val global = globalTable.globalSymbolTableFor(source)
+    lazy val global = globalTable.globalSymbolTableFor(positionInFile.filePath)
     val locations = for {
       (symbolOccurrence, currentDocument) <- definitionProvider
-        .symbolOccurence(
-          source,
-          params
-        )
+        .symbolOccurrence(positionInFile)
         .toIterable
     } yield {
       // 1. Search locally for symbol
@@ -118,7 +114,7 @@ final class ImplementationProvider(
         // symbol is not in workspace, we only search classpath for it
         case None =>
           globalTable.globalContextFor(
-            source,
+            positionInFile.filePath,
             implementationsInPath.asScala.toMap
           )
         // symbol is in workspace,
@@ -133,7 +129,7 @@ final class ImplementationProvider(
       }
       symbolLocationsFromContext(
         dealiased,
-        source,
+        positionInFile.filePath,
         inheritanceContext
       )
     }
@@ -141,28 +137,29 @@ final class ImplementationProvider(
   }
 
   def topMethodParents(
-      symbol: String,
-      textDocument: TextDocument
+      doc: TextDocument,
+      symbol: String
   ): Seq[Location] = {
+    // location in semanticDB for symbol might not be present when symbol is local then it must be in current document
+    val textDocument = findSemanticDbForSymbol(symbol).getOrElse(doc)
 
     def findClassInfo(owner: String) = {
       if (owner.nonEmpty) {
         findSymbol(textDocument, owner)
       } else {
-        textDocument.symbols.find {
-          case sym =>
-            sym.signature match {
-              case sig: ClassSignature =>
-                sig.declarations.exists(_.symlinks.contains(symbol))
-              case _ => false
-            }
+        textDocument.symbols.find { sym =>
+          sym.signature match {
+            case sig: ClassSignature =>
+              sig.declarations.exists(_.symlinks.contains(symbol))
+            case _ => false
+          }
         }
       }
     }
 
     val results = for {
       currentInfo <- findSymbol(textDocument, symbol)
-      if (!isClassLike(currentInfo))
+      if !isClassLike(currentInfo)
       classInfo <- findClassInfo(symbol.owner)
     } yield {
       classInfo.signature match {
@@ -244,7 +241,7 @@ final class ImplementationProvider(
         buffer
       )
       revised <- distance.toRevised(range.toLSP)
-    } yield new Location(source.toNIO.toUri().toString(), revised)
+    } yield new Location(source.toNIO.toUri.toString, revised)
   }
 
   private def symbolLocationsFromContext(
@@ -328,10 +325,10 @@ final class ImplementationProvider(
         loc =>
           // we are not interested in local symbols from outside the workspace
           (loc.symbol.isLocal && loc.file.isEmpty) ||
-          // local symbols ineheritance should only be picked up in the same file
+          // local symbols inheritance should only be picked up in the same file
           (loc.symbol.isLocal && loc.file != currentPath)
       }
-      directImplementations.toSet ++ directImplementations
+      directImplementations ++ directImplementations
         .flatMap { loc =>
           val allPossible = loop(loc.symbol, loc.file)
           allPossible.map(_.translateAsSeenFrom(loc))

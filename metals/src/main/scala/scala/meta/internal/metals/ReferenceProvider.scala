@@ -1,12 +1,12 @@
 package scala.meta.internal.metals
 
-import com.google.common.hash.BloomFilter
-import com.google.common.hash.Funnels
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.ReferenceParams
+import com.google.common.hash.BloomFilter
+import com.google.common.hash.Funnels
+import org.eclipse.lsp4j._
 import scala.collection.concurrent.TrieMap
+import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.SemanticdbClasspath
@@ -15,18 +15,20 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.metals.PositionInFile.locationToPositionInFile
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
-import scala.meta.internal.semanticdb.Synthetic
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
     semanticdbs: Semanticdbs,
     buffers: Buffers,
-    definition: DefinitionProvider
+    definition: DefinitionProvider,
+    implementation: ImplementationProvider
 ) {
   var referencedPackages: BloomFilter[CharSequence] = BloomFilters.create(10000)
   val index: TrieMap[Path, BloomFilter[CharSequence]] =
@@ -66,30 +68,39 @@ final class ReferenceProvider(
   }
 
   def references(
-      params: ReferenceParams,
-      canSkipExactMatchCheck: Boolean = true,
-      includeSynthetics: Synthetic => Boolean = _ => true
+      positionInFile: PositionInFile,
+      includeDeclaration: Boolean
   ): ReferencesResult = {
-    val source = params.getTextDocument.getUri.toAbsolutePath
-    semanticdbs.textDocument(source).documentIncludingStale match {
+    semanticdbs
+      .textDocument(positionInFile.filePath)
+      .documentIncludingStale match {
       case Some(doc) =>
         val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
-          definition.positionOccurrence(source, params, doc)
+          definition.positionOccurrence(
+            positionInFile,
+            doc
+          )
         maybeOccurrence match {
           case Some(occurrence) =>
-            val alternatives = referenceAlternatives(doc, occurrence)
-            val locations = references(
-              source,
-              params,
-              doc,
-              distance,
-              occurrence,
-              alternatives,
-              params.getContext.isIncludeDeclaration,
-              canSkipExactMatchCheck,
-              includeSynthetics
-            )
-            ReferencesResult(occurrence.symbol, locations)
+            val symbolName = occurrence.symbol.desc.name.value
+            if (ReferenceProvider.methodsSearchedWithoutInheritance.contains(
+                symbolName
+              )) {
+              currentSymbolReferences(
+                positionInFile,
+                includeDeclaration
+              )
+            } else {
+              ReferencesResult(
+                occurrence.symbol,
+                allInheritanceReferences(
+                  occurrence,
+                  doc,
+                  positionInFile,
+                  _ => true
+                )
+              )
+            }
           case None =>
             ReferencesResult.empty
         }
@@ -98,13 +109,104 @@ final class ReferenceProvider(
     }
   }
 
+  private def implementations(
+      positionInFile: PositionInFile,
+      shouldCheckImplementation: Boolean,
+      canSkipExactMatchCheck: Boolean
+  ): Seq[Location] = {
+    if (shouldCheckImplementation) {
+      for {
+        implLoc <- implementation.implementations(positionInFile)
+        loc <- currentSymbolReferences(
+          locationToPositionInFile(implLoc),
+          includeDeclaration = true,
+          canSkipExactMatchCheck = canSkipExactMatchCheck
+        ).locations
+      } yield loc
+    } else {
+      Nil
+    }
+  }
+
+  def allInheritanceReferences(
+      symbolOccurrence: SymbolOccurrence,
+      doc: TextDocument,
+      positionInFile: PositionInFile,
+      fnIncludeSynthetics: Synthetic => Boolean,
+      canSkipExactMatchCheck: Boolean = true
+  ): Seq[Location] = {
+    val parentSymbols = implementation
+      .topMethodParents(doc, symbolOccurrence.symbol)
+    val txtParams: Seq[PositionInFile] = {
+      if (parentSymbols.isEmpty) List(positionInFile)
+      else parentSymbols.map(locationToPositionInFile)
+    }
+    val isLocal = symbolOccurrence.symbol.isLocal
+    val currentReferences = txtParams
+      .flatMap(
+        currentSymbolReferences(
+          _,
+          includeDeclaration = isLocal,
+          canSkipExactMatchCheck = canSkipExactMatchCheck,
+          includeSynthetics = fnIncludeSynthetics
+        ).locations
+      )
+    val definitionLocation = {
+      if (parentSymbols.isEmpty)
+        definition
+          .fromSymbol(symbolOccurrence.symbol)
+          .asScala
+          .filter(_.getUri.isScalaFilename)
+      else parentSymbols
+    }
+    val implReferences = txtParams.flatMap(
+      implementations(
+        _,
+        !symbolOccurrence.symbol.desc.isType,
+        canSkipExactMatchCheck
+      )
+    )
+
+    currentReferences ++ implReferences ++ definitionLocation
+  }
+
+  private def currentSymbolReferences(
+      positionInFile: PositionInFile,
+      includeDeclaration: Boolean,
+      canSkipExactMatchCheck: Boolean = true,
+      includeSynthetics: Synthetic => Boolean = _ => true
+  ): ReferencesResult = {
+    val referencesResult = for {
+      doc <- semanticdbs
+        .textDocument(positionInFile.filePath)
+        .documentIncludingStale
+      ResolvedSymbolOccurrence(distance, maybeOccurrence) = definition
+        .positionOccurrence(
+          positionInFile,
+          doc
+        )
+      occurrence <- maybeOccurrence
+      alternatives = referenceAlternatives(doc, occurrence)
+      locations = currentSymbolReferences(
+        doc,
+        distance,
+        occurrence,
+        positionInFile.filePath.toURI.toString,
+        alternatives,
+        includeDeclaration,
+        canSkipExactMatchCheck,
+        includeSynthetics
+      )
+    } yield ReferencesResult(occurrence.symbol, locations)
+    referencesResult.getOrElse(ReferencesResult.empty)
+  }
+
   // Returns alternatives symbols for which "goto definition" resolves to the occurrence symbol.
   private def referenceAlternatives(
       doc: TextDocument,
       occ: SymbolOccurrence
   ): Set[String] = {
     val name = occ.symbol.desc.name.value
-    val isCopyOrApply = Set("apply", "copy")
     // Returns true if `info` is the companion object matching the occurrence class symbol.
     def isCompanionObject(info: SymbolInformation): Boolean =
       info.isObject &&
@@ -173,24 +275,23 @@ final class ReferenceProvider(
     } yield doc.symbol
     isCandidate -- nonSyntheticSymbols
   }
-  private def references(
-      source: AbsolutePath,
-      params: ReferenceParams,
+  private def currentSymbolReferences(
       snapshot: TextDocument,
       distance: TokenEditDistance,
-      occ: SymbolOccurrence,
+      symbolOccurrence: SymbolOccurrence,
+      symbolOccurrenceUri: String,
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
       canSkipExactMatchCheck: Boolean,
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
-    val isSymbol = alternatives + occ.symbol
-    if (occ.symbol.isLocal) {
+    val isSymbol = alternatives + symbolOccurrence.symbol
+    if (symbolOccurrence.symbol.isLocal) {
       referenceLocations(
         snapshot,
         isSymbol,
         distance,
-        params.getTextDocument.getUri,
+        symbolOccurrenceUri,
         isIncludeDeclaration,
         canSkipExactMatchCheck,
         includeSynthetics
@@ -199,7 +300,7 @@ final class ReferenceProvider(
       val visited = scala.collection.mutable.Set.empty[AbsolutePath]
       val results: Iterator[Location] = for {
         (path, bloom) <- index.iterator
-        if bloom.mightContain(occ.symbol)
+        if bloom.mightContain(symbolOccurrence.symbol)
         scalaPath <- SemanticdbClasspath
           .toScala(workspace, AbsolutePath(path))
           .iterator
@@ -235,6 +336,39 @@ final class ReferenceProvider(
       } yield reference
       results.toSeq
     }
+  }
+
+  def companionReferences(sym: String): Seq[Location] = {
+    val results = for {
+      companionSymbol <- companion(sym).toIterable
+      loc <- definition
+        .fromSymbol(companionSymbol)
+        .asScala
+      if loc.getUri.isScalaFilename
+      companionLocs <- currentSymbolReferences(
+        locationToPositionInFile(loc),
+        includeDeclaration = false
+      ).locations :+ loc
+    } yield companionLocs
+    results.toList
+  }
+
+  private def companion(sym: String) = {
+    val termOrType = sym.desc match {
+      case Descriptor.Type(name) =>
+        Some(Descriptor.Term(name))
+      case Descriptor.Term(name) =>
+        Some(Descriptor.Type(name))
+      case other =>
+        None
+    }
+
+    termOrType.map(name =>
+      Symbols.Global(
+        sym.owner,
+        name
+      )
+    )
   }
 
   private def referenceLocations(
@@ -332,4 +466,9 @@ final class ReferenceProvider(
     }
   }
 
+}
+
+object ReferenceProvider {
+  val methodsSearchedWithoutInheritance: Set[String] = Set("eq", "equals",
+    "hashCode", "toString", "clone", "notify", "wait", "getClass")
 }
