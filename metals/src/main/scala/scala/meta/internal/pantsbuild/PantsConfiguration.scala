@@ -33,9 +33,15 @@ object PantsConfiguration {
     new BuildTargetIdentifier(uri.toString())
   }
 
+  def baseDirectoryString(target: String): String = {
+    val colon = target.lastIndexOf(':')
+    if (colon < 0) target
+    else target.substring(0, colon)
+  }
+
   /** Returns the nearest enclosing directory of a Pants target */
   def baseDirectory(workspace: AbsolutePath, target: String): AbsolutePath = {
-    workspace.resolve(target.substring(0, target.lastIndexOf(':')))
+    workspace.resolve(baseDirectoryString(target))
   }
 
   def pantsTargetsFromGson(
@@ -107,9 +113,9 @@ object PantsConfiguration {
       targets.map(_.replaceAll("[^a-zA-Z0-9]", "")).mkString
     if (processed.isEmpty()) {
       MD5.compute(targets.mkString) // necessary for targets like "::/"
-    } else if (processed.length() > 15) {
+    } else if (processed.length() > 30) {
       // Avoid too long filename.
-      s"${processed.take(15)}-${MD5.compute(targets.mkString)}"
+      s"${processed.take(15)}...${processed.takeRight(15)}-${MD5.compute(targets.mkString)}"
     } else {
       processed
     }
