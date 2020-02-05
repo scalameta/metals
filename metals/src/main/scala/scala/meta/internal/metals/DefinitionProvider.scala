@@ -18,7 +18,6 @@ import scala.meta.io.AbsolutePath
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import org.eclipse.lsp4j.Position
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -60,7 +59,7 @@ final class DefinitionProvider(
           warnings.noSemanticdb(path)
           DefinitionResult.empty
       }
-    if (fromSemanticdb.locations.isEmpty()) {
+    if (fromSemanticdb.locations.isEmpty) {
       compilers().definition(params, token)
     } else {
       Future.successful(fromSemanticdb)
@@ -84,47 +83,46 @@ final class DefinitionProvider(
       .definition(Symbol(sym))
       .map(symDef => symDef.path.toInputFromBuffers(buffers))
 
-  def symbolOccurence(
-      source: AbsolutePath,
-      dirtyPosition: TextDocumentPositionParams
+  def symbolOccurrence(
+      dirtyPositionInFile: PositionInFile
   ): Option[(SymbolOccurrence, TextDocument)] = {
     for {
       currentDocument <- semanticdbs
-        .textDocument(source)
+        .textDocument(dirtyPositionInFile.filePath)
         .documentIncludingStale
       posOcc = positionOccurrence(
-        source,
-        dirtyPosition,
+        dirtyPositionInFile,
         currentDocument
       )
-      symbolOccurrence <- {
-        def mtagsOccurrence =
-          fromMtags(source, dirtyPosition.getPosition())
-        posOcc.occurrence.orElse(mtagsOccurrence)
-      }
+      symbolOccurrence <- posOcc.occurrence.orElse(
+        fromMtags(dirtyPositionInFile)
+      )
     } yield (symbolOccurrence, currentDocument)
   }
 
   def positionOccurrence(
-      source: AbsolutePath,
-      dirtyPosition: TextDocumentPositionParams,
+      dirtyPositionInFile: PositionInFile,
       snapshot: TextDocument
   ): ResolvedSymbolOccurrence = {
     // Convert dirty buffer position to snapshot position in "source"
     val sourceDistance =
-      TokenEditDistance.fromBuffer(source, snapshot.text, buffers)
+      TokenEditDistance.fromBuffer(
+        dirtyPositionInFile.filePath,
+        snapshot.text,
+        buffers
+      )
     val snapshotPosition = sourceDistance.toOriginal(
-      dirtyPosition.getPosition.getLine,
-      dirtyPosition.getPosition.getCharacter
+      dirtyPositionInFile.position.getLine,
+      dirtyPositionInFile.position.getCharacter
     )
 
     // Find matching symbol occurrence in SemanticDB snapshot
     val occurrence = for {
-      queryPosition <- snapshotPosition.toPosition(dirtyPosition.getPosition)
+      queryPosition <- snapshotPosition.toPosition(dirtyPositionInFile.position)
       occurrence <- snapshot.occurrences
-        .find(_.encloses(queryPosition, true))
+        .find(_.encloses(queryPosition, includeLastCharacter = true))
         // In case of macros we might need to get the postion from the presentation compiler
-        .orElse(fromMtags(source, queryPosition))
+        .orElse(fromMtags(dirtyPositionInFile.copy(position = queryPosition)))
     } yield occurrence
 
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
@@ -136,7 +134,10 @@ final class DefinitionProvider(
       snapshot: TextDocument
   ): DefinitionResult = {
     val ResolvedSymbolOccurrence(sourceDistance, occurrence) =
-      positionOccurrence(source, dirtyPosition, snapshot)
+      positionOccurrence(
+        PositionInFile(source, dirtyPosition.getPosition),
+        snapshot
+      )
     // Find symbol definition location.
     val result: Option[DefinitionResult] = occurrence.flatMap { occ =>
       val isLocal = occ.symbol.isLocal || snapshot.definesSymbol(occ.symbol)
@@ -158,11 +159,13 @@ final class DefinitionProvider(
     result.getOrElse(DefinitionResult.empty(occurrence.fold("")(_.symbol)))
   }
 
-  private def fromMtags(source: AbsolutePath, dirtyPos: Position) = {
+  private def fromMtags(
+      dirtyPositionInFile: PositionInFile
+  ): Option[SymbolOccurrence] = {
     Mtags
-      .allToplevels(source.toInput)
+      .allToplevels(dirtyPositionInFile.filePath.toInput)
       .occurrences
-      .find(_.encloses(dirtyPos))
+      .find(_.encloses(dirtyPositionInFile.position))
   }
 
   private case class DefinitionDestination(
