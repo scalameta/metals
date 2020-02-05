@@ -78,7 +78,7 @@ In order to get comment highlighting, please add:
 ```vim
 autocmd FileType json syntax match Comment +\/\/.\+$+
 ```
-### LSP commands key mapping
+### Recommended coc.nvim mappings
 
 `coc.nvim` doesn't come with a default key mapping for LSP commands, so you need to
 configure it yourself.
@@ -209,6 +209,15 @@ nnoremap <silent> <space>p  :<C-u>CocListResume<CR>
 " Currently used for the formatOnType feature.
 inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
       \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+
+" Toggle panel with Tree Views
+nnoremap <silent> <space>t :<C-u>CocCommand metals.tvp<CR>
+" Toggle Tree View 'metalsBuild'
+nnoremap <silent> <space>tb :<C-u>CocCommand metals.tvp metalsBuild<CR>
+" Toggle Tree View 'metalsCompile'
+nnoremap <silent> <space>tc :<C-u>CocCommand metals.tvp metalsCompile<CR>
+" Reveal current current class (trait or object) in Tree View 'metalsBuild'
+nnoremap <silent> <space>tf :<C-u>CocCommand metals.revealInTreeView metalsBuild<CR>
 ```
 
 ### Installing coc-metals
@@ -306,6 +315,48 @@ Then, when on the line that you'd like to expand the decoration to get the hover
 `<leader>ws` in order to see the expanded text for that line.
 
 ![Decorations with worksheets](https://i.imgur.com/Bt6DMtH.png)
+
+## Tree View Protocol
+
+![Tree View Protocol](https://i.imgur.com/ryUPx3l.png)
+
+coc-metals has a built-in implementation of the [Tree View Protocol](https://scalameta.org/metals/docs/editors/tree-view-protocol.html).
+If you have the [recommended mappings](#recommended-coc.nvim-mappings) copied, you'll notice
+that in the bottom you'll have some TVP related settings. You can start by
+opening the TVP panel by using the default `<space> t`. Once open, you'll see
+there are two parts to the panel. The first being the `MetalsCompile` where you
+can see the status of ongoing compilations for your modules and also options to
+compile.
+
+![MetalsCompile](https://i.imgur.com/QBPHNQo.gif)
+
+You are able to trigger the compiles while being on top of the option you are
+attempting to trigger and pressing `r`. You can change this default in the
+settings. You can find all the relevant TVP settings below in the [Tree View Protocol configuration options](#tree-view-protocol-configuration-options).
+
+The second part of the TVP panel is a view of your project and external dependencies.
+You can navigate through them by jumping to the next or previous nodes, the last
+or first nodes, or jumping to parent or first child nodes. There are shortcuts
+to all of these found below. You will see the traits, classes, objects,
+members, and methods are all color coded.
+
+### Tree View Protocol configuration options
+
+   Configuration Option                         |      Description
+----------------------------                    |---------------------------
+`metals.treeviews.toggleNode`                   | Expand / Collapse tree node (default `<CR>`)
+`metals.treeviews.initialWidth`                 | Initial Tree Views panels (default `40`)
+`metals.treeviews.initialViews`                 | Initial views that the Tree View Panel displays. Done mess with this unless you know what you're doing.
+`metals.treeviews.gotoLastChild`                | Go to the last child Node (defalt `J`)
+`metals.treeviews.gotoParentNode`               | Go to parent Node (default `p`)
+`metals.treeviews.gotoFirstChild`               | Go to first child Node (default `K`)
+`metals.treeviews.executeCommand`               | Execute command for node (default `r`)
+`metals.treeviews.gotoPrevSibling`              | Go to prev sibling (default `<C-k>`)
+`metals.treeviews.gotoNextSibling`              | Go to next sibling (default `<C-j>`)
+`metals.treeviews.forceChildrenReload`          | Force the reloading of the children of this node. May be useful when the wrong result is cached and tree contains invalid data. (default `f`)
+`metals.treeviews.executeCommandAndOpenTab`     | Execute command and open node under cursor in tab (if node is class, trait and so on) (default `t`)
+`metals.treeviews.executeCommandAndOpenSplit`   | Execute command and open node under cursor in horizontal split (if node is class, trait and so on) (default `s`)
+`metals.treeviews.executeCommandAndOpenVSplit`  | Execute command and open node under cursor in horizontal split (if node is class, trait and so on) (default `v`)
 
 ## Run doctor
 
