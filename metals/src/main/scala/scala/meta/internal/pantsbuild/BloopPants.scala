@@ -185,22 +185,32 @@ object BloopPants {
       }
       args.onFilemap(filemap)
 
-      if (!args.isCache || !Files.isRegularFile(outputFile)) {
-        runPantsExport(args, outputFile)
+      def readJson(file: Path): Option[Value] = {
+        Try {
+          val text =
+            new String(Files.readAllBytes(outputFile), StandardCharsets.UTF_8)
+          ujson.read(text)
+        }.toOption
       }
+      val fromCache: Option[Value] =
+        if (!args.isCache) None
+        else readJson(outputFile)
+      val fromExport: Option[Value] =
+        fromCache.orElse {
+          runPantsExport(args, outputFile)
+          readJson(outputFile)
+        }
 
-      if (Files.isRegularFile(outputFile)) {
-        val text =
-          new String(Files.readAllBytes(outputFile), StandardCharsets.UTF_8)
-        val json = ujson.read(text)
-        val export = PantsExport.fromJson(json)
-        new BloopPants(args, bloopDir, export, filemap).run()
-      } else {
-        throw new NoSuchFileException(
-          outputFile.toString(),
-          null,
-          "expected this file to exist after running `./pants export`"
-        )
+      fromExport match {
+        case Some(value) =>
+          val export = PantsExport.fromJson(args, value)
+          new BloopPants(args, bloopDir, export, filemap).run()
+        case None =>
+          throw new NoSuchFileException(
+            outputFile.toString(),
+            null,
+            "expected this file to exist after running `./pants export`"
+          )
       }
     }
 
@@ -386,9 +396,12 @@ private class BloopPants(
     val allProjects = syntheticProjects ::: projects
     val byName = allProjects.map(p => p.name -> p).toMap
     allProjects.foreach { project =>
+      // NOTE(olafur): we probably want to generate projects with empty
+      // sources/classpath and single dependency on the parent.
       if (!export.cycles.parents.contains(project.name)) {
-        val children =
-          export.cycles.children.getOrElse(project.name, Nil).map(byName)
+        val children = export.cycles.children
+          .getOrElse(project.name, Nil)
+          .flatMap(byName.get)
         val withBinaryResolution =
           if (binaryDependenciesSourcesIterator.hasNext) {
             val extraResolution =
@@ -406,13 +419,24 @@ private class BloopPants(
         val finalProject =
           if (children.isEmpty) withBinaryResolution
           else {
-            val newSources =
-              (withBinaryResolution.sources ++ children.flatMap(_.sources)).distinct
-            val newClasspath =
-              (withBinaryResolution.classpath ++ children.flatMap(_.classpath)).distinct
+            val newSources = Iterator(
+              withBinaryResolution.sources.iterator,
+              children.iterator.flatMap(_.sources.iterator)
+            ).flatten.distinctBy(identity)
+            val newClasspath = Iterator(
+              withBinaryResolution.classpath.iterator,
+              children.iterator.flatMap(_.classpath.iterator)
+            ).flatten.distinctBy(identity)
+            val newDependencies = Iterator(
+              withBinaryResolution.dependencies.iterator,
+              children.iterator.flatMap(_.dependencies.iterator)
+            ).flatten
+              .filterNot(_ == withBinaryResolution.name)
+              .distinctBy(identity)
             withBinaryResolution.copy(
               sources = newSources,
-              classpath = newClasspath
+              classpath = newClasspath,
+              dependencies = newDependencies
             )
           }
         val out =
@@ -485,7 +509,11 @@ private class BloopPants(
     classpath ++= (for {
       dependency <- transitiveDependencies
       if dependency.isTargetRoot
-    } yield dependency.classesDir(bloopDir))
+      acyclicDependency = cycles.parents
+        .get(dependency.name)
+        .flatMap(export.targets.get)
+        .getOrElse(dependency)
+    } yield acyclicDependency.classesDir(bloopDir))
     classpath ++= (for {
       dependency <- transitiveDependencies
       if !dependency.isTargetRoot
