@@ -22,7 +22,7 @@ class NewFilesProvider(
       createPackageObject(directory)
     case "worksheet" =>
       createWorksheet(directory, name)
-    case _ => Future.failed(new IllegalArgumentException)
+    case invalid => Future.failed(new IllegalArgumentException(invalid))
   }
 
   def createWorksheet(directory: Option[URI], name: String)(
