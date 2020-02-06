@@ -154,7 +154,7 @@ class CompletionProvider(
                 item.setAdditionalTextEdits(edits.asJava)
                 item.setTextEdit(textEdit(short + suffix))
             }
-          case _ if importPosition.isEmpty =>
+          case _ if isImportPosition(pos) => // no parameter lists in import statements
           case member =>
             val baseLabel = ident
             if (isSnippet && member.sym.isNonNullaryMethod) {

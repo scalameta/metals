@@ -172,6 +172,19 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     topLines = Some(2)
   )
 
+  checkEdit(
+    "issue-1281-import-parens",
+    """object obj {
+      |  def method(arg: String): Unit = ()
+      |}
+      |import obj.meth@@
+      |""".stripMargin,
+    """object obj {
+      |  def method(arg: String): Unit = ()
+      |}
+      |import obj.method""".stripMargin
+  )
+
   override val compatProcess: Map[String, String => String] = Map(
     "2.13" -> { s =>
       s.replaceAllLiterally(

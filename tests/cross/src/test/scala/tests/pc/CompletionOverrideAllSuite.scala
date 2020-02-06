@@ -89,7 +89,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |object Main {
        |  val x = new Foo {
        |    def@@
-       |  }
+       |  } 
        |}
        |""".stripMargin,
     """
