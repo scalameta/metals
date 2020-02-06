@@ -11,6 +11,8 @@ def crossSetting[A](
     case _ => otherwise
   }
 
+val MUnitFramework = new TestFramework("munit.Framework")
+
 inThisBuild(
   List(
     version ~= { dynVer =>
@@ -339,7 +341,15 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   Test / parallelExecution := false,
   skip.in(publish) := true,
   fork := true,
-  testFrameworks := List(new TestFramework("munit.Framework"))
+  testFrameworks := List(MUnitFramework),
+  testOptions.in(Test) ++= {
+    if (isCI) {
+      // Enable verbose logging using sbt loggers in CI.
+      List(Tests.Argument(MUnitFramework, "+l", "--verbose"))
+    } else {
+      Nil
+    }
+  }
 )
 
 lazy val mtest = project
