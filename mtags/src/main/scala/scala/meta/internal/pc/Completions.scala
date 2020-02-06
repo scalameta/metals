@@ -336,6 +336,14 @@ trait Completions { this: MetalsGlobal =>
   // variable but it avoids repeating traversals from the compiler
   // implementation of `completionsAt(pos)`.
   var lastVisistedParentTrees: List[Tree] = Nil
+
+  def findLastVisitedParentTree(pos: Position): Option[Tree] = {
+    if (lastVisistedParentTrees.isEmpty) {
+      locateTree(pos)
+    }
+    lastVisistedParentTrees.headOption
+  }
+
   abstract class CompletionPosition {
     def isType: Boolean = false
     def isNew: Boolean = false
