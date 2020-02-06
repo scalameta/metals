@@ -119,6 +119,34 @@ class UserConfigurationSuite extends BaseSuite {
       "metals.java-home" -> "b"
     )
   ) { obtained =>
+    assert(obtained.javaHome == Some("b"))
+  }
+
+  checkOK(
+    "empty",
+    """
+      |{
+      |  "java-home": ""
+      |}
+    """.stripMargin,
+    Map(
+      "metals.java-home" -> "b"
+    )
+  ) { obtained =>
+    assert(obtained.javaHome == Some("b"))
+  }
+
+  checkOK(
+    "empty-prop",
+    """
+      |{
+      |  "java-home": "a"
+      |}
+    """.stripMargin,
+    Map(
+      "metals.java-home" -> ""
+    )
+  ) { obtained =>
     assert(obtained.javaHome == Some("a"))
   }
 
