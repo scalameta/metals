@@ -37,14 +37,14 @@ trait AutoImports { this: MetalsGlobal =>
     }
   }
 
+  def isImportPosition(pos: Position): Boolean =
+    findLastVisitedParentTree(pos).exists(_.isInstanceOf[Import])
+
   def autoImportPosition(
       pos: Position,
       text: String
   ): Option[AutoImportPosition] = {
-    if (lastVisistedParentTrees.isEmpty) {
-      locateTree(pos)
-    }
-    lastVisistedParentTrees.headOption match {
+    findLastVisitedParentTree(pos) match {
       case Some(_: Import) => None
       case _ =>
         val enclosingPackage = lastVisistedParentTrees.collectFirst {
