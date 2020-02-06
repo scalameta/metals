@@ -1544,7 +1544,8 @@ trait Completions { this: MetalsGlobal =>
         isSnippet: Boolean = true
     ): TextEditMember = {
       sym.info // complete
-      if (sym.isCase || fsym.hasModuleFlag) {
+      val isModuleLike = fsym.hasModuleFlag || fsym.hasJavaEnumFlag
+      if (sym.isCase || isModuleLike) {
         // Syntax for deconstructing the symbol as an infix operator, for example `case head :: tail =>`
         val isInfixEligible =
           context.symbolIsInScope(sym) ||
@@ -1566,7 +1567,7 @@ trait Completions { this: MetalsGlobal =>
         val pattern = infixPattern.getOrElse {
           // Fallback to "apply syntax", example `case ::(head, tail) =>`
           val suffix =
-            if (fsym.hasModuleFlag) ""
+            if (isModuleLike) ""
             else {
               sym.primaryConstructor.paramss match {
                 case Nil => "()"

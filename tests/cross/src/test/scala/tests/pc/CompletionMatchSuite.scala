@@ -186,6 +186,34 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     )
   )
 
+  checkEdit(
+    "exhaustive-java-enum",
+    """
+      |package example
+      |
+      |import java.nio.file.AccessMode
+      |
+      |object Main {
+      |  (null: AccessMode) match@@
+      |}""".stripMargin,
+    """
+      |package example
+      |
+      |import java.nio.file.AccessMode
+      |import java.nio.file.AccessMode.READ
+      |import java.nio.file.AccessMode.WRITE
+      |import java.nio.file.AccessMode.EXECUTE
+      |
+      |object Main {
+      |  (null: AccessMode) match {
+      |\tcase READ => $0
+      |\tcase WRITE =>
+      |\tcase EXECUTE =>
+      |}
+      |}""".stripMargin,
+    filter = _.contains("exhaustive")
+  )
+
   // https://github.com/scalameta/metals/issues/1253
   checkEdit(
     "exhaustive-fully-qualify".fail,
