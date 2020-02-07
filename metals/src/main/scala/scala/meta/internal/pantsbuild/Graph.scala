@@ -23,6 +23,16 @@ object Graph {
     }
     Graph(Value.Str(""), index.apply _, rindex.apply _, edges)
   }
+  def fromTargets(targets: IndexedSeq[PantsTarget]): Graph = {
+    val edges = new Array[Array[Int]](targets.length)
+    val index = targets.map(_.name).zipWithIndex.toMap
+    val rindex = index.map(_.swap).toMap
+    targets.zipWithIndex.foreach {
+      case (project, i) =>
+        edges(i) = project.dependencies.iterator.map(index).toArray
+    }
+    Graph(Value.Str(""), index.apply _, rindex.apply _, edges)
+  }
   def fromExport(export: Value): Graph = {
     val targets = export.obj("targets").obj
     val index = targets.keysIterator.zipWithIndex.toMap

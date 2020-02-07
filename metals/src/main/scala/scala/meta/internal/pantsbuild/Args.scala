@@ -22,6 +22,7 @@ case class Args(
     isVscode: Boolean = false,
     isLaunchIntelliJ: Boolean = false,
     isSources: Boolean = true,
+    isMergeTargetsInSameDirectory: Boolean = true,
     maxFileCount: Int = 5000,
     projectName: Option[String] = None,
     workspace: Path = PathIO.workingDirectory.toNIO,
@@ -64,6 +65,10 @@ case class Args(
        |    The name of the IntelliJ project to generate when using the  --intellij flag.
        |    Ignored when --intellij is not used. Defaults to the name of the directory
        |    containing the Pants build.
+       |  --merge-targets-in-same-directory
+       |    If enabled, automatically merge targets that are defined in the same directory.
+       |    Disabled by default. This option may help improve the experience in IntelliJ,
+       |    since IntelliJ only supports one module per base directory.
        |  --no-sources
        |    Do not download library sources of 3rd party dependencies.
        |
@@ -117,6 +122,13 @@ object Args {
         )
       case "--regenerate" :: tail =>
         parse(tail, base.copy(isRegenerate = true))
+      case "--merge-targets-in-same-directory" :: tail =>
+        parse(
+          tail,
+          base.copy(
+            isMergeTargetsInSameDirectory = true
+          )
+        )
       case "--intellij" :: tail =>
         parse(tail, base.copy(isIntelliJ = true, isLaunchIntelliJ = true))
       case "--vscode" :: tail =>

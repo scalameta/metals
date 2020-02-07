@@ -12,7 +12,7 @@ case class PantsExport(
 )
 
 object PantsExport {
-  def fromJson(output: ujson.Value): PantsExport = {
+  def fromJson(args: Args, output: ujson.Value): PantsExport = {
     val allTargets = output.obj("targets").obj
     val transitiveDependencyCache = mutable.Map.empty[String, List[String]]
     def computeTransitiveDependencies(name: String): List[String] = {
@@ -36,15 +36,30 @@ object PantsExport {
         }
       )
     }
+    val targetsByDirectory = allTargets.keys.groupBy { name =>
+      PantsConfiguration.baseDirectoryString(name)
+    }
     val targets: Map[String, PantsTarget] = allTargets.iterator.map {
       case (name, valueObj) =>
         val value = valueObj.obj
-        val dependencies = value(PantsKeys.targets).arr.map(_.str)
+        val directDependencies = value(PantsKeys.targets).arr.map(_.str)
+        val syntheticDependencies: Iterable[String] =
+          if (args.isMergeTargetsInSameDirectory) {
+            targetsByDirectory
+              .getOrElse(
+                PantsConfiguration.baseDirectoryString(name),
+                Nil
+              )
+              .filterNot(_ == name)
+          } else {
+            Nil
+          }
+        val dependencies = directDependencies ++ syntheticDependencies
         val excludes = (for {
           excludes <- value.get(PantsKeys.excludes).iterator
           value <- excludes.arr.iterator
         } yield value.str).toSet
-        val transitiveDependencies =
+        val transitiveDependencies: Seq[String] =
           value.get(PantsKeys.transitiveTargets) match {
             case None => computeTransitiveDependencies(name)
             case Some(transitiveDepencies) => transitiveDepencies.arr.map(_.str)
@@ -89,7 +104,7 @@ object PantsExport {
         })
     }.toMap
 
-    val cycles = Cycles.findConnectedComponents(output)
+    val cycles = Cycles.findConnectedComponents(targets)
 
     val scalaPlatform = PantsScalaPlatform.fromJson(output)
 
