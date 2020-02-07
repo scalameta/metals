@@ -379,7 +379,8 @@ class MetalsLanguageServer(
       workspace,
       languageClient,
       buffers,
-      compilations
+      compilations,
+      config
     )
     semanticDBIndexer =
       new SemanticdbIndexer(referencesProvider, implementationProvider)
