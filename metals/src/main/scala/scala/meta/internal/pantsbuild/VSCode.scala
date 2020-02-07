@@ -7,23 +7,24 @@ import scala.meta.internal.metals.BuildInfo
 import ujson.Str
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.control.NonFatal
+import scala.meta.internal.pantsbuild.commands.Project
 
 object VSCode {
-  def launch(args: Args): Unit =
+  def launch(project: Project): Unit =
     try {
-      val settings = AbsolutePath(args.out)
+      val settings = AbsolutePath(project.common.workspace)
         .resolve(".vscode")
         .resolve("settings.json")
       val oldSettings = readSettings(settings)
       oldSettings("metals.serverVersion") = BuildInfo.metalsVersion
-      oldSettings("metals.pantsTargets") = args.targets.map(Str(_))
+      oldSettings("metals.pantsTargets") = project.targets.map(Str(_))
       oldSettings("metals.bloopVersion") = BuildInfo.bloopNightlyVersion
       settings.writeText(ujson.write(oldSettings, indent = 2))
       scribe.info(s"updated: $settings")
       val code = codeCommand()
       exec(code, "--install-extension", "scalameta.metals")
-      exec(code, "--new-window", args.out.toString())
-      findFileToOpen(args).headOption.foreach { file =>
+      exec(code, "--new-window", project.common.workspace.toString())
+      findFileToOpen(project).headOption.foreach { file =>
         exec(code, "--reuse-window", file.toString())
       }
     } catch {
@@ -66,12 +67,12 @@ object VSCode {
     require(exit == 0, s"command failed: ${command.mkString(" ")}")
   }
 
-  private def findFileToOpen(args: Args): List[AbsolutePath] = {
-    val readonly = args.out.resolve(".metals")
+  private def findFileToOpen(project: Project): List[AbsolutePath] = {
+    val readonly = project.common.workspace.resolve(".metals")
     for {
       root <- PantsConfiguration.sourceRoots(
-        AbsolutePath(args.workspace),
-        args.targets
+        AbsolutePath(project.common.workspace),
+        project.targets
       )
       file <- root.listRecursive
         .filter(_.isScala)

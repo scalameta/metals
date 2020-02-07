@@ -12,7 +12,7 @@ case class PantsExport(
 )
 
 object PantsExport {
-  def fromJson(args: Args, output: ujson.Value): PantsExport = {
+  def fromJson(args: Export, output: ujson.Value): PantsExport = {
     val allTargets = output.obj("targets").obj
     val transitiveDependencyCache = mutable.Map.empty[String, List[String]]
     def computeTransitiveDependencies(name: String): List[String] = {

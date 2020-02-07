@@ -8,15 +8,17 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.BloopInstallResult
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.Time
-import scala.util.Failure
-import scala.util.Success
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.FutureCancelToken
-import scala.meta.internal.pantsbuild.Args
+import scala.meta.internal.pantsbuild.Export
 import scala.meta.internal.pantsbuild.PantsConfiguration
+import scala.meta.internal.pantsbuild.commands.SharedOptions
+import scala.meta.internal.pantsbuild.commands.OpenOptions
+import scala.meta.internal.pantsbuild.commands.Project
+import scala.meta.internal.pantsbuild.commands.SharedCommand
 
 case class PantsBuildTool(
     userConfig: () => UserConfiguration
@@ -84,19 +86,21 @@ case class PantsBuildTool(
           )
           val token = FutureCancelToken(response.asScala.map(_.cancel))
           try {
-            val args = Args().copy(
-              workspace = workspace.toNIO,
-              out = workspace.toNIO,
-              targets = targets,
-              isCache = false
+            val project = Project.create(
+              name = "metals",
+              SharedOptions(workspace = workspace.toNIO),
+              targets
             )
-            BloopPants.bloopInstall(args) match {
-              case Failure(error) =>
-                scribe.error(s"pants bloopInstall failed", error)
-                BloopInstallResult.Failed(1)
-              case Success(count) =>
-                scribe.info(s"Exported ${count} Pants targets(s) in $timer")
-                BloopInstallResult.Installed
+            val args = Export(
+              project,
+              OpenOptions(),
+              BloopPants.app
+            ).copy(isCache = false)
+            val exit = SharedCommand.interpretExport(args)
+            if (exit != 0) {
+              BloopInstallResult.Failed(1)
+            } else {
+              BloopInstallResult.Installed
             }
           } finally {
             response.cancel(false)

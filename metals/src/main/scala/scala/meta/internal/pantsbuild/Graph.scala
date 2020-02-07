@@ -1,7 +1,7 @@
 package scala.meta.internal.pantsbuild
 
 import ujson.Value
-import bloop.config.Config.Project
+import bloop.config.{Config => C}
 
 case class Graph(
     export: Value,
@@ -13,7 +13,7 @@ object Graph {
   def fromSeq(graph: Seq[Seq[Int]]): Graph = {
     Graph(Value.Str(""), _.toInt, _.toString, graph.map(_.toArray).toArray)
   }
-  def fromProjects(projects: Seq[Project]): Graph = {
+  def fromProjects(projects: Seq[C.Project]): Graph = {
     val edges = new Array[Array[Int]](projects.length)
     val index = projects.map(_.name).zipWithIndex.toMap
     val rindex = index.map(_.swap).toMap
