@@ -176,6 +176,8 @@ class MetalsLanguageServer(
   private var foldingRangeProvider: FoldingRangeProvider = _
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
+  private val newFilesProvider: NewFilesProvider =
+    new NewFilesProvider(workspace, packageProvider)
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   var tables: Tables = _
@@ -1262,6 +1264,30 @@ class MetalsLanguageServer(
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
             Future.failed(new IllegalArgumentException(msg)).asJavaObject
         }
+      case ServerCommands.NewScalaFile() =>
+        val parser = new JsonParser.Of[MetalsNewScalaFileParams]
+        val args = params.getArguments.asScala
+        (args match {
+          case Seq(parser.Jsonized(newScalaFileParams)) =>
+            import newScalaFileParams._
+            val result =
+              newFilesProvider
+                .createNewFile(Option(directory).map(new URI(_)), name, kind)
+            result.onFailure {
+              case NonFatal(e) =>
+                languageClient
+                  .showMessage(
+                    MessageType.Error,
+                    s"Cannot create file:\n ${e.toString()}"
+                  )
+            }
+            result
+          case _ =>
+            val argExample = ServerCommands.NewScalaFile.arguments
+            val msg = s"Invalid arguments: $args. Expecting: $argExample"
+            Future.failed(new IllegalArgumentException(msg))
+        }).asJavaObject
+
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
