@@ -1816,8 +1816,12 @@ class MetalsLanguageServer(
   ): Future[Unit] = {
     paths
       .find { path =>
-        focusedDocument.contains(path) &&
-        path.isWorksheet
+        if (focusedDocument.isDefined) {
+          focusedDocument.contains(path) &&
+          path.isWorksheet
+        } else {
+          path.isWorksheet
+        }
       }
       .fold(Future.successful(()))(
         worksheetProvider.evaluateAndPublish(_, EmptyCancelToken)
