@@ -424,13 +424,16 @@ trait OverrideCompletions { this: MetalsGlobal =>
           " " * (necessaryIndent + DefaultIndent)
         }
 
+      val shouldCompleteBraces = !hasBody(text, t)
+
       // if the both opening/closing braces located in a line:
-      //
+      // ```
       // object {
       //   class Foo extends Bar {}
       // }
-      //
-      // add an newline and indent in the end of implementations, so that
+      // ```
+      // or there's no body like this `class Foo extends Bar`.
+      // Add an newline and indent in the end of implementations, so that
       // the closing brace is indented.
       //
       // object {
@@ -438,19 +441,29 @@ trait OverrideCompletions { this: MetalsGlobal =>
       //     override def foo = ???
       //   }
       // }
-      val end =
+      val lastIndent =
         if (t.pos.source.offsetToLine(t.pos.start) ==
-            t.pos.source.offsetToLine(t.pos.end)) "\n" + " " * necessaryIndent
+            t.pos.source.offsetToLine(t.pos.end) || shouldCompleteBraces)
+          "\n" + " " * necessaryIndent
         else ""
 
+      // Add opening/closing braces
+      // `object Foo extends Bar` to
+      // ```
+      // object Foo extends Bar {
+      //   override def method: Int = ???
+      // }
+      // ```
+      val start = if (shouldCompleteBraces) s" {\n${indent}" else s"\n${indent}"
+      val end = if (shouldCompleteBraces) s"${lastIndent}}" else lastIndent
       val implementAll = new l.TextEdit(
         range,
         allAbstractEdits
           .map(_.getNewText)
           .mkString(
+            start,
             s"\n${indent}",
-            s"\n${indent}",
-            s"$end"
+            end
           )
       )
       implementAll :: allAbstractImports.toList
@@ -460,8 +473,9 @@ trait OverrideCompletions { this: MetalsGlobal =>
   }
 
   /**
-   * Get the position of the opening brace of given Template.
-   * insert implementations onto the top of the body.
+   * Get the position to insert implements for the given Template.
+   * `class Foo extends Bar {}` => retuning position would be right after the opening brace.
+   * `class Foo extends Bar` => retuning position would be right after `Bar`.
    *
    * @param text the text of the original source code.
    * @param t the enclosing template for the class/object/trait we are implementing.
@@ -469,7 +483,24 @@ trait OverrideCompletions { this: MetalsGlobal =>
   private def inferEditPosition(text: String, t: Template): Position = {
     val start = t.pos.start
     val end = t.pos.end
-    val offset = text.indexOf('{', start) + 1
-    t.pos.withStart(offset).withEnd(offset)
+    val offset = text.indexOf('{', start)
+    if (offset > 0 && offset < t.pos.end)
+      t.pos.withStart(offset + 1).withEnd(offset + 1)
+    else t.pos.withStart(t.pos.end).withEnd(t.pos.end)
+  }
+
+  /**
+   * Check if the given Template has body or not:
+   * `class Foo extends Bar {}` => true
+   * `class Foo extends Bar` => false
+   *
+   * @param text the text of the original source code.
+   * @param t the enclosing template for the class/object/trait we are implementing.
+   */
+  private def hasBody(text: String, t: Template): Boolean = {
+    val start = t.pos.start
+    val end = t.pos.end
+    val offset = text.indexOf('{', start)
+    offset > 0 && offset < t.pos.end
   }
 }

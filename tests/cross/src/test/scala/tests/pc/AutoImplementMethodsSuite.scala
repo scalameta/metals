@@ -38,7 +38,7 @@ class AutoImplementMethodsSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-     "objectdef",
+    "objectdef",
     """|package a
        |
        |object A {
@@ -158,7 +158,7 @@ class AutoImplementMethodsSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-     "generics-inheritance",
+    "generics-inheritance",
     """
       |trait Context[T] {
       |   def method: T
@@ -521,6 +521,50 @@ class AutoImplementMethodsSuite extends BaseCodeActionSuite {
        |      new Base {
        |        override def foo(x: Int): Int = ???
        |      }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "complete-braces-moduledef",
+    """|package a
+       |
+       |trait Base {
+       |  def foo(x: Int): Int
+       |}
+       |object <<Concrete>> extends Base
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base {
+       |  def foo(x: Int): Int
+       |}
+       |object Concrete extends Base {
+       |  override def foo(x: Int): Int = ???
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "complete-braces-indent",
+    """|package a
+       |
+       |trait Base {
+       |  def foo(x: Int): Int
+       |}
+       |object Test {
+       |   class <<Concrete>> extends Base
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base {
+       |  def foo(x: Int): Int
+       |}
+       |object Test {
+       |   class Concrete extends Base {
+       |     override def foo(x: Int): Int = ???
+       |   }
        |}
        |""".stripMargin
   )

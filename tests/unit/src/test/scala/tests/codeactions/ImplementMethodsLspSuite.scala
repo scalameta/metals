@@ -91,4 +91,29 @@ class ImplementMethodsLspSuite
        |""".stripMargin
   )
 
+  check(
+    "no-braces",
+    """|package a
+       |
+       |object A {
+       |  trait Foo {
+       |    def foo(x: Int): Int
+       |  }
+       |  object <<Bar>> extends Foo
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMethods.title}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Foo {
+       |    def foo(x: Int): Int
+       |  }
+       |  object Bar extends Foo {
+       |    override def foo(x: Int): Int = ???
+       |  }
+       |}
+       |""".stripMargin
+  )
 }
