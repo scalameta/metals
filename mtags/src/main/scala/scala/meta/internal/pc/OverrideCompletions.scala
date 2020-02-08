@@ -312,6 +312,20 @@ trait OverrideCompletions { this: MetalsGlobal =>
           _ => true
         )
 
+      // object Foo extends Bar {}
+      // ~~~~~~~~~~~~~~~~~~~~~~~~
+      case (m: ModuleDef) :: _ =>
+        val t = m.impl
+        val typed = typedTreeAt(t.pos)
+        implementAll(
+          typed,
+          inferEditPosition(text, t).toLSP,
+          t,
+          text,
+          true,
+          _ => true
+        )
+
       // new Foo {}
       //     ~~~~~~
       case (_: Ident) ::
