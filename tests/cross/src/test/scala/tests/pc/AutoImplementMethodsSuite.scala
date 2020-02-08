@@ -38,6 +38,31 @@ class AutoImplementMethodsSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+     "objectdef",
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |  }
+       |  object <<Concrete>> extends Base {
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |  }
+       |  object Concrete extends Base {
+       |    override def foo(x: Int): Int = ???
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "overload",
     """|package a
        |
@@ -127,6 +152,29 @@ class AutoImplementMethodsSuite extends BaseCodeActionSuite {
       |object Main {
       |  new Context {
       |    override def add[T: Ordering]: T = ???
+      |  }
+      |}
+      |""".stripMargin
+  )
+
+  checkEdit(
+     "generics-inheritance",
+    """
+      |trait Context[T] {
+      |   def method: T
+      |}
+      |object Main {
+      |  class <<Concrete>> extends Context[Int] {
+      |  }
+      |}
+     """.stripMargin,
+    """
+      |trait Context[T] {
+      |   def method: T
+      |}
+      |object Main {
+      |  class Concrete extends Context[Int] {
+      |    override def method: Int = ???
       |  }
       |}
       |""".stripMargin
