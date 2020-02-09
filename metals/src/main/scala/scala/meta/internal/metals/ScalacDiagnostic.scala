@@ -17,12 +17,12 @@ object ScalacDiagnostic {
       """since (method|value) (.+) is not defined""".r,
       """it has (one|[0-9]+) unimplemented members""".r
     )
-    
+
     def matches(v: String): Boolean = {
       regexes.exists(r => r.findFirstMatchIn(v).isDefined)
     }
-    
-    def unapply(d: l.Diagnostic): Option[Unit] = 
-      if(matches(d.getMessage())) Some(()) else None
+
+    def unapply(d: l.Diagnostic): Option[Unit] =
+      if (matches(d.getMessage())) Some(()) else None
   }
 }

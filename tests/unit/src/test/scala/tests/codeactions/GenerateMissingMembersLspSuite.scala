@@ -2,7 +2,8 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.GenerateMissingMembers
 
-class GenerateMissingMembersLspSuite extends BaseCodeActionLspSuite("genereteMissingMembers") {
+class GenerateMissingMembersLspSuite
+    extends BaseCodeActionLspSuite("genereteMissingMembers") {
 
   import scala.meta.internal.metals.ScalacDiagnostic
 
@@ -97,7 +98,7 @@ class GenerateMissingMembersLspSuite extends BaseCodeActionLspSuite("genereteMis
        |    override def foo(i: Int): String = ???
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -127,7 +128,7 @@ class GenerateMissingMembersLspSuite extends BaseCodeActionLspSuite("genereteMis
        |    override def bar(i: Int): String = ???
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   test("parse diagnostic") {

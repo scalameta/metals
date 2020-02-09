@@ -163,10 +163,10 @@ class Compilers(
   }
 
   def stubsForMissingMembers(
-    params: TextDocumentPositionParams,
-    token: CancelToken
+      params: TextDocumentPositionParams,
+      token: CancelToken
   ): Future[Option[TextEdit]] =
-    withPC(params, None) {(pc, pos) =>
+    withPC(params, None) { (pc, pos) =>
       pc.stubsForMissingMembers(CompilerOffsetParams.fromPos(pos, token))
         .asScala
         .map(_.asScala)

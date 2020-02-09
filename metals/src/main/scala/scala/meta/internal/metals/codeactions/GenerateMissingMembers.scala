@@ -31,23 +31,32 @@ class GenerateMissingMembers(compilers: Compilers) extends CodeAction {
       codeAction.setKind(l.CodeActionKind.QuickFix)
       codeAction.setDiagnostics(List(diagnostic).asJava)
 
-      compilers.stubsForMissingMembers(textDocumentPositionParams, token).map(v => {
-        v.map(edit => {
-          val uri = params.getTextDocument().getUri()
-          val wsEdit = new l.WorkspaceEdit(Map(uri -> List(edit).asJava).asJava)
-          codeAction.setEdit(wsEdit)
-          codeAction
+      compilers
+        .stubsForMissingMembers(textDocumentPositionParams, token)
+        .map(v => {
+          v.map(edit => {
+            val uri = params.getTextDocument().getUri()
+            val wsEdit =
+              new l.WorkspaceEdit(Map(uri -> List(edit).asJava).asJava)
+            codeAction.setEdit(wsEdit)
+            codeAction
+          })
         })
-      })
     }
 
-    Future.sequence(
-      params.getContext().getDiagnostics().asScala.collect({
-        case d @ ScalacDiagnostic.UnimplementedMembers(_)
-            if params.getRange().overlapsWith(d.getRange()) =>
-            generateStubs(d)
-      })
-    ).map(_.flatten)
+    Future
+      .sequence(
+        params
+          .getContext()
+          .getDiagnostics()
+          .asScala
+          .collect({
+            case d @ ScalacDiagnostic.UnimplementedMembers(_)
+                if params.getRange().overlapsWith(d.getRange()) =>
+              generateStubs(d)
+          })
+      )
+      .map(_.flatten)
   }
 }
 

@@ -26,13 +26,15 @@ class MissingMemberStubsProvider(
   }
 
   private def toTextEdit(
-    implDef: ImplDef,
-    text: String
+      implDef: ImplDef,
+      text: String
   ): Option[TextEdit] = {
 
-    val missing = implDef.symbol.info.nonPrivateMembersAdmitting(Flags.VBRIDGE)
+    val missing = implDef.symbol.info
+      .nonPrivateMembersAdmitting(Flags.VBRIDGE)
       .filter({
-        case m if m.isAbstractOverride && m.isIncompleteIn(implDef.symbol) => true
+        case m if m.isAbstractOverride && m.isIncompleteIn(implDef.symbol) =>
+          true
         case m if m.isDeferred => true
         case _ => false
       })
@@ -40,13 +42,20 @@ class MissingMemberStubsProvider(
     val regrouped = missing.groupBy(_.owner).toList
 
     val stubs = regrouped
-      .flatMap({case (_, group) => group.toList.sortBy(_.name).flatMap(v => renderMember(v, implDef.symbol.info)) })
+      .flatMap({
+        case (_, group) =>
+          group.toList
+            .sortBy(_.name)
+            .flatMap(v => renderMember(v, implDef.symbol.info))
+      })
 
     val bodyIsEmpty = text.charAt(implDef.pos.end - 1) != '}'
-    
+
     val lineIdentation = {
       val fromClzDef =
-        (1 to implDef.pos.start).reverse.takeWhile(i => text.charAt(i - 1) != '\n').size
+        (1 to implDef.pos.start).reverse
+          .takeWhile(i => text.charAt(i - 1) != '\n')
+          .size
       fromClzDef + 2
     }
 
@@ -61,8 +70,8 @@ class MissingMemberStubsProvider(
     out.append(renderedMembers)
     if (bodyIsEmpty) out.append('\n').append(lastBraceIdent).append('}')
 
-    val insertPos = 
-      if(bodyIsEmpty) {
+    val insertPos =
+      if (bodyIsEmpty) {
         Some(implDef.pos.withStart(implDef.pos.end))
       } else {
         lastMemberPos(implDef, text)
@@ -76,9 +85,9 @@ class MissingMemberStubsProvider(
 
   private def renderMember(m: Symbol, asSeenFrom: Type): Option[String] = {
     if (m.isMethod) {
-        val typeInfo = m.infoString(asSeenFrom.memberType(m))
-        val str = s"override def ${m.name}$typeInfo = ???"
-        Some(str)
+      val typeInfo = m.infoString(asSeenFrom.memberType(m))
+      val str = s"override def ${m.name}$typeInfo = ???"
+      Some(str)
     } else {
       None
     }
@@ -86,29 +95,32 @@ class MissingMemberStubsProvider(
 
   private def findClassDef(pos: Position): Option[ImplDef] = {
     def loop(ctx: Context): Option[ImplDef] = {
-     if (ctx == NoContext) None
-     else {
-       val tree = ctx.tree
-       tree match {
-         case clsdef: ClassDef => Some(clsdef)
-         case module: ModuleDef => Some(module)
-         case _ => loop(ctx.outer)
-       }
-     }
+      if (ctx == NoContext) None
+      else {
+        val tree = ctx.tree
+        tree match {
+          case clsdef: ClassDef => Some(clsdef)
+          case module: ModuleDef => Some(module)
+          case _ => loop(ctx.outer)
+        }
+      }
     }
     val ctx = doLocateContext(pos)
     loop(ctx)
   }
 
   private def lastMemberPos(
-    implDef: ImplDef,
-    text: String
+      implDef: ImplDef,
+      text: String
   ): Option[Position] = {
     val range = (implDef.pos.start to implDef.pos.end - 1).reverse
-    range.dropWhile(i => {
-      val c = text.charAt(i -1)
-      c == '\n' || c == ' ' || c == '\t'
-    }).headOption.map(i => Position.offset(implDef.pos.source, i))
+    range
+      .dropWhile(i => {
+        val c = text.charAt(i - 1)
+        c == '\n' || c == ' ' || c == '\t'
+      })
+      .headOption
+      .map(i => Position.offset(implDef.pos.source, i))
   }
 
 }

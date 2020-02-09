@@ -103,11 +103,14 @@ case class ScalaPresentationCompiler(
       new AutoImportsProvider(global, name, params).autoImports().asJava
     }
 
-  override def stubsForMissingMembers(params: OffsetParams): CompletableFuture[Optional[TextEdit]] = 
-    access.withInterruptableCompiler(Optional.empty[TextEdit], params.token) { global =>
-      Optional.ofNullable(
-        new MissingMemberStubsProvider(global, params).memberStubs().orNull
-      )
+  override def stubsForMissingMembers(
+      params: OffsetParams
+  ): CompletableFuture[Optional[TextEdit]] =
+    access.withInterruptableCompiler(Optional.empty[TextEdit], params.token) {
+      global =>
+        Optional.ofNullable(
+          new MissingMemberStubsProvider(global, params).memberStubs().orNull
+        )
     }
 
   // NOTE(olafur): hover and signature help use a "shared" compiler instance because
