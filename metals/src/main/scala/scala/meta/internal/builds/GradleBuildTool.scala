@@ -78,7 +78,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
         script :: cmd
       case None =>
         val workspaceGradle = workspaceGradleLauncher(workspace)
-        if (workspaceGradle.toFile.exists())
+        if (workspaceGradle.isFile)
           workspaceGradle.toString() :: cmd
         else
           embeddedGradleLauncher.toString() :: cmd
