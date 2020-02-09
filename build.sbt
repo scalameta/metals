@@ -209,7 +209,7 @@ lazy val mtags = project
     ),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0.0", // for java mtags
-      "org.jsoup" % "jsoup" % "1.12.1", // for extracting HTML from javadocs
+      "org.jsoup" % "jsoup" % "1.12.2", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.7.1", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
@@ -488,7 +488,7 @@ lazy val docs = project
     mdoc := run.in(Compile).evaluated,
     munitRepository := Some("scalameta/metals"),
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.12.1"
+      "org.jsoup" % "jsoup" % "1.12.2"
     )
   )
   .dependsOn(metals)
