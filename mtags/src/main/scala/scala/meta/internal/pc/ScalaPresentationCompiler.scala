@@ -28,6 +28,7 @@ import scala.meta.pc.DefinitionResult
 import scala.collection.Seq
 import java.{util => ju}
 import scala.meta.pc.AutoImportsResult
+import org.eclipse.lsp4j.TextEdit
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -100,6 +101,13 @@ case class ScalaPresentationCompiler(
       params.token
     ) { global =>
       new AutoImportsProvider(global, name, params).autoImports().asJava
+    }
+
+  override def stubsForMissingMembers(params: OffsetParams): CompletableFuture[Optional[TextEdit]] = 
+    access.withInterruptableCompiler(Optional.empty[TextEdit], params.token) { global =>
+      Optional.ofNullable(
+        new MissingMemberStubsProvider(global, params).memberStubs().orNull
+      )
     }
 
   // NOTE(olafur): hover and signature help use a "shared" compiler instance because
