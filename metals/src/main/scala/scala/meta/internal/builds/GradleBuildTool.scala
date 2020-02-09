@@ -11,11 +11,6 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
 
   private val initScriptName = "init-script.gradle"
 
-  private val versionsArray =
-    BuildInfo.supportedScalaVersions
-      .map(s => scala.meta.Lit.String(s).syntax)
-      .mkString("[", ",", "]")
-
   private def additionalRepos = {
     val isSnapshotVersion = BuildInfo.gradleBloopVersion.contains("+")
     if (isSnapshotVersion)
@@ -48,10 +43,12 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     Files.write(tempDir.resolve(initScriptName), initScript)
   }
 
+  private lazy val gradleWrapper = {
+    if (Properties.isWin) "gradlew.bat"
+    else "gradlew"
+  }
+
   private lazy val embeddedGradleLauncher: AbsolutePath = {
-    val gradleWrapper =
-      if (Properties.isWin) "gradlew.bat"
-      else "gradlew"
     val out = BuildTool.copyFromResource(tempDir, gradleWrapper)
     out.toFile.setExecutable(true)
     Set(s"gradle-wrapper.jar", "gradle-wrapper.properties").foreach {
@@ -59,6 +56,10 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
         BuildTool.copyFromResource(tempDir, s"gradle/wrapper/$fileName")
     }
     AbsolutePath(out)
+  }
+
+  private def workspaceGradleLauncher(workspace: AbsolutePath): AbsolutePath = {
+    workspace.resolve(gradleWrapper)
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
@@ -76,7 +77,11 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
       case Some(script) =>
         script :: cmd
       case None =>
-        embeddedGradleLauncher.toString() :: cmd
+        val workspaceGradle = workspaceGradleLauncher(workspace)
+        if (workspaceGradle.toFile.exists())
+          workspaceGradle.toString() :: cmd
+        else
+          embeddedGradleLauncher.toString() :: cmd
     }
   }
 
@@ -85,7 +90,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
   // doesn't save it in any settings
   override def version: String = "5.3.1"
 
-  override def minimumVersion: String = "3.0.0"
+  override def minimumVersion: String = "4.3.0"
 
   override def recommendedVersion: String = version
 
