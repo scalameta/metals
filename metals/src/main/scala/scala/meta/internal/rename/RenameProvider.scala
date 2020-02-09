@@ -176,10 +176,11 @@ final class RenameProvider(
   ): Option[LSPEither[TextDocumentEdit, ResourceOperation]] = {
     fileChanges
       .find { file =>
-        isOccurence(str => {
+        isOccurence { str =>
+          str.owner.isPackage &&
           (str.desc.isType || str.desc.isTerm) &&
-            file.endsWith(s"/${str.desc.name.value}.scala")
-        })
+          file.endsWith(s"/${str.desc.name.value}.scala")
+        }
       }
       .map { file =>
         val newFile =

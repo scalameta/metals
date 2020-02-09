@@ -64,6 +64,12 @@ class WorksheetProvider(
     Executors.newSingleThreadScheduledExecutor()
   private val cancelables = new MutableCancelable()
   private val mdocs = new TrieMap[BuildTargetIdentifier, Mdoc]()
+  private val currentScalaVersion =
+    scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
+  private val currentBinaryVersion =
+    currentScalaVersion.split('.').take(2).mkString(".")
+  private lazy val ramboMdoc =
+    embedded.mdoc(currentScalaVersion, currentBinaryVersion)
 
   def onBuildTargetDidCompile(target: BuildTargetIdentifier): Unit = {
     clearBuildTarget(target)
@@ -139,7 +145,7 @@ class WorksheetProvider(
       // infinite loops.
       val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
         override def run(): Unit = {
-          try result.complete(evaluateWorksheet(path, token))
+          try result.complete(Some(evaluateWorksheet(path, token)))
           catch {
             case e @ (NonFatal(_) | InterruptException()) =>
               result.completeExceptionally(e)
@@ -218,12 +224,10 @@ class WorksheetProvider(
   private def evaluateWorksheet(
       path: AbsolutePath,
       token: CancelToken
-  ): Option[EvaluatedWorksheet] = {
-    for {
-      mdoc <- getMdoc(path)
-      input = path.toInputFromBuffers(buffers)
-    } yield mdoc.evaluateWorksheet(input.path, input.value)
-  }.map { worksheet =>
+  ): EvaluatedWorksheet = {
+    val mdoc = getMdoc(path)
+    val input = path.toInputFromBuffers(buffers)
+    val worksheet = mdoc.evaluateWorksheet(input.path, input.value)
     val toPublish = worksheet
       .diagnostics()
       .iterator()
@@ -238,18 +242,19 @@ class WorksheetProvider(
     worksheet
   }
 
-  private def getMdoc(path: AbsolutePath): Option[Mdoc] = {
-    for {
+  private def getMdoc(path: AbsolutePath): Mdoc = {
+    val mdoc = for {
       target <- buildTargets.inverseSources(path)
       mdoc <- getMdoc(target)
     } yield mdoc
+    mdoc.getOrElse(ramboMdoc)
   }
+
   private def getMdoc(target: BuildTargetIdentifier): Option[Mdoc] = {
     mdocs.get(target).orElse {
       for {
         info <- buildTargets.scalaTarget(target)
-        scala <- info.info.asScalaBuildTarget
-        scalaVersion = scala.getScalaVersion
+        scalaVersion = info.scalaVersion
         isSupported = ScalaVersions.isSupportedScalaVersion(scalaVersion)
         _ = {
           if (!isSupported) {
@@ -264,7 +269,7 @@ class WorksheetProvider(
           .filterNot(_.contains("semanticdb"))
           .asJava
         val mdoc = embedded
-          .mdoc(scala)
+          .mdoc(info.scalaVersion, info.scalaBinaryVersion)
           .withClasspath(info.fullClasspath.asScala.distinct.asJava)
           .withScalacOptions(scalacOptions)
         mdocs(target) = mdoc

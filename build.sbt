@@ -11,6 +11,8 @@ def crossSetting[A](
     case _ => otherwise
   }
 
+val MUnitFramework = new TestFramework("munit.Framework")
+
 inThisBuild(
   List(
     version ~= { dynVer =>
@@ -149,8 +151,8 @@ lazy val V = new {
   val scalameta = "4.3.0"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
-  val bloopNightly = "1.4.0-RC1+16-1cd95092"
-  val bloop = "1.4.0-RC1"
+  val bloop = "1.4.0-RC1+33-dfd03f53"
+  val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
   val mavenBloop = bloop
@@ -207,7 +209,7 @@ lazy val mtags = project
     ),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0.0", // for java mtags
-      "org.jsoup" % "jsoup" % "1.12.1", // for extracting HTML from javadocs
+      "org.jsoup" % "jsoup" % "1.12.2", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.7.1", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
@@ -221,7 +223,7 @@ lazy val mtags = project
         crossSetting(
           scalaVersion.value,
           if211 = List("com.lihaoyi" %% "pprint" % "0.5.4"),
-          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.8")
+          otherwise = List("com.lihaoyi" %% "pprint" % "0.5.9")
         )
     },
     buildInfoPackage := "scala.meta.internal.mtags",
@@ -251,7 +253,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.0.29.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.7.7.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.2.0",
+      "org.flywaydb" % "flyway-core" % "6.2.2",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "1.2.6",
@@ -262,7 +264,7 @@ lazy val metals = project
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.0.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
-      "ch.epfl.scala" %% "bloop-launcher" % V.bloop,
+      "ch.epfl.scala" %% "bloop-launcher" % V.bloopNightly,
       // for LSP
       V.lsp4j,
       // for DAP
@@ -279,12 +281,12 @@ lazy val metals = project
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "io.get-coursier" % "interface" % "0.0.17",
+      "io.get-coursier" % "interface" % "0.0.18",
       // for logging
       "com.outr" %% "scribe" % "2.7.10",
       "com.outr" %% "scribe-slf4j" % "2.7.10", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
-      "com.lihaoyi" %% "pprint" % "0.5.8",
+      "com.lihaoyi" %% "pprint" % "0.5.9",
       // For exporting Pants builds.
       "com.lihaoyi" %% "ujson" % "0.9.8",
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
@@ -339,7 +341,15 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   Test / parallelExecution := false,
   skip.in(publish) := true,
   fork := true,
-  testFrameworks := List(new TestFramework("munit.Framework"))
+  testFrameworks := List(MUnitFramework),
+  testOptions.in(Test) ++= {
+    if (isCI) {
+      // Enable verbose logging using sbt loggers in CI.
+      List(Tests.Argument(MUnitFramework, "+l", "--verbose"))
+    } else {
+      Nil
+    }
+  }
 )
 
 lazy val mtest = project
@@ -476,9 +486,10 @@ lazy val docs = project
     skip.in(publish) := true,
     moduleName := "metals-docs",
     mdoc := run.in(Compile).evaluated,
+    munitRepository := Some("scalameta/metals"),
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.12.1"
+      "org.jsoup" % "jsoup" % "1.12.2"
     )
   )
   .dependsOn(metals)
-  .enablePlugins(DocusaurusPlugin)
+  .enablePlugins(DocusaurusPlugin, MUnitReportPlugin)

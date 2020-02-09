@@ -137,11 +137,10 @@ object UserConfiguration {
       def option[T](fn: String => T): Option[T] =
         Option(fn(key)).orElse(Option(fn(StringCase.kebabToCamel(key))))
       for {
-        jsonValue <- option(base.get)
-          .orElse(
-            option(k => properties.getProperty(s"metals.$k"))
-              .map(new JsonPrimitive(_))
-          )
+        jsonValue <- option(k => properties.getProperty(s"metals.$k"))
+          .filterNot(_.isEmpty())
+          .map(prop => new JsonPrimitive(prop))
+          .orElse(option(base.get))
         value <- f(jsonValue)
       } yield value
     }
@@ -157,6 +156,7 @@ object UserConfiguration {
             .filter(_.nonEmpty)
         }
       )
+
     def getBooleanKey(key: String): Option[Boolean] =
       getKey(
         key, { value =>

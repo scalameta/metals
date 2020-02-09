@@ -12,7 +12,7 @@ case class PantsExport(
 )
 
 object PantsExport {
-  def fromJson(output: ujson.Value): PantsExport = {
+  def fromJson(args: Args, output: ujson.Value): PantsExport = {
     val allTargets = output.obj("targets").obj
     val transitiveDependencyCache = mutable.Map.empty[String, List[String]]
     def computeTransitiveDependencies(name: String): List[String] = {
@@ -36,21 +36,49 @@ object PantsExport {
         }
       )
     }
+    val targetsByDirectory = allTargets.keys.groupBy { name =>
+      PantsConfiguration.baseDirectoryString(name)
+    }
     val targets: Map[String, PantsTarget] = allTargets.iterator.map {
       case (name, valueObj) =>
         val value = valueObj.obj
-        val dependencies = value(PantsKeys.targets).arr.map(_.str)
+        val directDependencies = value(PantsKeys.targets).arr.map(_.str)
+        val syntheticDependencies: Iterable[String] =
+          if (args.isMergeTargetsInSameDirectory) {
+            targetsByDirectory
+              .getOrElse(
+                PantsConfiguration.baseDirectoryString(name),
+                Nil
+              )
+              .filterNot(_ == name)
+          } else {
+            Nil
+          }
+        val dependencies = directDependencies ++ syntheticDependencies
         val excludes = (for {
           excludes <- value.get(PantsKeys.excludes).iterator
           value <- excludes.arr.iterator
         } yield value.str).toSet
-        val transitiveDependencies =
+        val transitiveDependencies: Seq[String] =
           value.get(PantsKeys.transitiveTargets) match {
             case None => computeTransitiveDependencies(name)
             case Some(transitiveDepencies) => transitiveDepencies.arr.map(_.str)
           }
         val libraries = value(PantsKeys.libraries).arr.map(_.str)
         val isPantsTargetRoot = value(PantsKeys.isTargetRoot).bool
+        val pantsTargetType =
+          PantsTargetType(value(PantsKeys.pantsTargetType).str)
+        val targetType =
+          if (pantsTargetType.isNodeModule) {
+            // NOTE(olafur) Treat "node_module" targets as `target_type:
+            // RESOURCE` since they are included on the runtime classpath even
+            // if they have `target_type: SOURCE`. See
+            // https://github.com/pantsbuild/pants/issues/9026 for a reason why
+            // node_module needs special handling.
+            TargetType("RESOURCE")
+          } else {
+            TargetType(value(PantsKeys.targetType).str)
+          }
         name -> PantsTarget(
           name = name,
           id = value(PantsKeys.id).str,
@@ -59,9 +87,8 @@ object PantsExport {
           transitiveDependencies = transitiveDependencies,
           libraries = libraries,
           isPantsTargetRoot = isPantsTargetRoot,
-          targetType = TargetType(value(PantsKeys.targetType).str),
-          pantsTargetType =
-            PantsTargetType(value(PantsKeys.pantsTargetType).str),
+          targetType = targetType,
+          pantsTargetType = pantsTargetType,
           globs = PantsGlobs.fromJson(value)
         )
     }.toMap
@@ -77,7 +104,7 @@ object PantsExport {
         })
     }.toMap
 
-    val cycles = Cycles.findConnectedComponents(output)
+    val cycles = Cycles.findConnectedComponents(targets)
 
     val scalaPlatform = PantsScalaPlatform.fromJson(output)
 

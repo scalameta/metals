@@ -24,6 +24,9 @@
         "title": "Build Tools Overview",
         "sidebar_label": "Overview"
       },
+      "build-tools/proxy": {
+        "title": "Proxy and mirrors"
+      },
       "build-tools/sbt": {
         "title": "sbt"
       },
@@ -35,6 +38,9 @@
       },
       "contributors/releasing": {
         "title": "Making a release"
+      },
+      "contributors/tests": {
+        "title": "Tests overview"
       },
       "contributors/updating-website": {
         "title": "Contributing to the website"

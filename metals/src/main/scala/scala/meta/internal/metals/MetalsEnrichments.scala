@@ -69,6 +69,7 @@ object MetalsEnrichments
       decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])
     }
   }
+
   implicit class XtensionTaskStart(task: b.TaskStartParams) {
     def asCompileTask: Option[b.CompileTask] = {
       decodeJson(task.getData, classOf[b.CompileTask])

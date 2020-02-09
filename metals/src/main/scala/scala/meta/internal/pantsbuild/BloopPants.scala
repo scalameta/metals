@@ -1,38 +1,38 @@
 package scala.meta.internal.pantsbuild
 
 import bloop.config.{Config => C}
-import java.nio.file.Paths
-import java.nio.file.Files
-import java.nio.charset.StandardCharsets
-import java.nio.file.Path
-import scala.collection.mutable
-import ujson.Value
-import scala.util.Success
-import scala.util.Failure
-import scala.util.Try
-import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.Time
-import java.nio.file.NoSuchFileException
-import scala.util.Properties
-import coursierapi.Dependency
-import scala.concurrent.ExecutionContext
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.process.SystemProcess
-import scala.meta.pc.CancelToken
-import scala.util.control.NonFatal
-import scala.meta.internal.pc.InterruptException
-import scala.meta.internal.metals.MetalsLogger
-import scala.meta.io.AbsolutePath
-import java.util.concurrent.CancellationException
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import scala.sys.process.Process
-import scala.meta.io.Classpath
+import coursierapi.Dependency
 import coursierapi.MavenRepository
-import scala.meta.internal.io.PathIO
-import java.nio.file.StandardCopyOption
-import java.nio.file.attribute.BasicFileAttributes
 import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.Files
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
+import java.util.concurrent.CancellationException
+import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsLogger
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.pc.InterruptException
+import scala.meta.internal.process.SystemProcess
+import scala.meta.io.AbsolutePath
+import scala.meta.io.Classpath
+import scala.meta.pc.CancelToken
+import scala.sys.process.Process
+import scala.util.control.NonFatal
+import scala.util.Failure
+import scala.util.Properties
+import scala.util.Success
+import scala.util.Try
+import ujson.Value
 
 object BloopPants {
 
@@ -80,9 +80,10 @@ object BloopPants {
               scribe.info(s"time: exported ${count} Pants target(s) in $timer")
               if (args.out != args.workspace) {
                 scribe.info(s"output: ${args.out}")
+                symlinkToOut(args)
               }
               if (args.isLaunchIntelliJ) {
-                IntelliJ.launch(args.out)
+                IntelliJ.launch(args.out, args.targets)
               } else if (args.isVscode) {
                 VSCode.launch(args)
               }
@@ -162,7 +163,11 @@ object BloopPants {
       )
       val outputFilename = PantsConfiguration.outputFilename(args.targets)
       val outputFile = cacheDir.resolve(s"$outputFilename.json")
-      val bloopDir = Files.createDirectories(args.out.resolve(".bloop"))
+      val bloopDir = args.out.resolve(".bloop")
+      if (Files.isSymbolicLink(bloopDir)) {
+        Files.delete(bloopDir)
+      }
+      Files.createDirectories(bloopDir)
       args.token.checkCanceled()
 
       val filemap =
@@ -180,22 +185,32 @@ object BloopPants {
       }
       args.onFilemap(filemap)
 
-      if (!args.isCache || !Files.isRegularFile(outputFile)) {
-        runPantsExport(args, outputFile)
+      def readJson(file: Path): Option[Value] = {
+        Try {
+          val text =
+            new String(Files.readAllBytes(outputFile), StandardCharsets.UTF_8)
+          ujson.read(text)
+        }.toOption
       }
+      val fromCache: Option[Value] =
+        if (!args.isCache) None
+        else readJson(outputFile)
+      val fromExport: Option[Value] =
+        fromCache.orElse {
+          runPantsExport(args, outputFile)
+          readJson(outputFile)
+        }
 
-      if (Files.isRegularFile(outputFile)) {
-        val text =
-          new String(Files.readAllBytes(outputFile), StandardCharsets.UTF_8)
-        val json = ujson.read(text)
-        val export = PantsExport.fromJson(json)
-        new BloopPants(args, bloopDir, export, filemap).run()
-      } else {
-        throw new NoSuchFileException(
-          outputFile.toString(),
-          null,
-          "expected this file to exist after running `./pants export`"
-        )
+      fromExport match {
+        case Some(value) =>
+          val export = PantsExport.fromJson(args, value)
+          new BloopPants(args, bloopDir, export, filemap).run()
+        case None =>
+          throw new NoSuchFileException(
+            outputFile.toString(),
+            null,
+            "expected this file to exist after running `./pants export`"
+          )
       }
     }
 
@@ -218,19 +233,50 @@ object BloopPants {
     }
   }
 
+  private def symlinkToOut(args: Args): Unit = {
+    val workspaceBloop = args.workspace.resolve(".bloop")
+
+    if (!Files.exists(workspaceBloop) || Files.isSymbolicLink(workspaceBloop)) {
+      val outBloop = args.out.resolve(".bloop")
+      Files.deleteIfExists(workspaceBloop)
+      Files.createSymbolicLink(workspaceBloop, outBloop)
+    }
+
+    val inScalafmt = {
+      val link = args.workspace.resolve(".scalafmt.conf")
+      // Configuration file may be symbolic link.
+      val relpath =
+        if (Files.isSymbolicLink(link)) Files.readSymbolicLink(link)
+        else link
+      // Symbolic link may be relative to workspace directory.
+      if (relpath.isAbsolute()) relpath
+      else args.workspace.resolve(relpath)
+    }
+    val outScalafmt = args.out.resolve(".scalafmt.conf")
+    if (!args.out.startsWith(args.workspace) &&
+      Files.exists(inScalafmt) && {
+        !Files.exists(outScalafmt) ||
+        Files.isSymbolicLink(outScalafmt)
+      }) {
+      Files.deleteIfExists(outScalafmt)
+      Files.createSymbolicLink(outScalafmt, inScalafmt)
+    }
+  }
+
   private def runPantsExport(
       args: Args,
       outputFile: Path
   )(implicit ec: ExecutionContext): Unit = {
-    val command = List[String](
-      args.workspace.resolve("pants").toString(),
-      "--concurrent",
-      s"--no-quiet",
-      s"--export-libraries-sources",
-      s"--export-output-file=$outputFile",
-      s"export-classpath",
-      s"export"
-    ) ++ args.targets
+    val command = List[Option[String]](
+      Some(args.workspace.resolve("pants").toString()),
+      Some("--concurrent"),
+      Some(s"--no-quiet"),
+      if (args.isSources) Some(s"--export-libraries-sources")
+      else None,
+      Some(s"--export-output-file=$outputFile"),
+      Some(s"export-classpath"),
+      Some(s"export")
+    ).flatten ++ args.targets
     val shortName = "pants export-classpath export"
     SystemProcess.run(
       shortName,
@@ -288,7 +334,7 @@ private class BloopPants(
       // runner in Pants. Most importantly, it automatically registers
       // org.scalatest.junit.JUnitRunner even if there is no `@RunWith`
       // annotation.
-      Dependency.of("com.geirsson", "junit-interface", "0.11.9")
+      Dependency.of("com.geirsson", "junit-interface", "0.11.10")
     ).flatMap(fetchDependency)
   val allScalaJars: Seq[Path] = {
     val compilerClasspath = export.scalaPlatform.compilerClasspath
@@ -328,25 +374,34 @@ private class BloopPants(
       AbsolutePath(workspace),
       args.targets
     )
+    val isBaseDirectory =
+      projects.iterator.filter(_.sources.nonEmpty).map(_.directory).toSet
     // NOTE(olafur): generate synthetic projects to improve the file tree view
     // in IntelliJ. Details: https://github.com/olafurpg/intellij-bsp-pants/issues/7
-    val syntheticProjects: List[C.Project] = sourceRoots.map { root =>
-      val name = root
-        .toRelative(AbsolutePath(workspace))
-        .toURI(isDirectory = false)
-        .toString()
-      // NOTE(olafur): cannot be `name + "-root"` since that conflicts with the
-      // IntelliJ-generated root project.
-      toEmptyBloopProject(name + "-project-root", root.toNIO)
+    val syntheticProjects: List[C.Project] = sourceRoots.flatMap { root =>
+      if (isBaseDirectory(root.toNIO)) {
+        Nil
+      } else {
+        val name = root
+          .toRelative(AbsolutePath(workspace))
+          .toURI(isDirectory = false)
+          .toString()
+        // NOTE(olafur): cannot be `name + "-root"` since that conflicts with the
+        // IntelliJ-generated root project.
+        List(toEmptyBloopProject(name + "-project-root", root.toNIO))
+      }
     }
     val binaryDependenciesSourcesIterator = getLibraryDependencySources()
     val generatedProjects = new mutable.LinkedHashSet[Path]
     val allProjects = syntheticProjects ::: projects
     val byName = allProjects.map(p => p.name -> p).toMap
     allProjects.foreach { project =>
+      // NOTE(olafur): we probably want to generate projects with empty
+      // sources/classpath and single dependency on the parent.
       if (!export.cycles.parents.contains(project.name)) {
-        val children =
-          export.cycles.children.getOrElse(project.name, Nil).map(byName)
+        val children = export.cycles.children
+          .getOrElse(project.name, Nil)
+          .flatMap(byName.get)
         val withBinaryResolution =
           if (binaryDependenciesSourcesIterator.hasNext) {
             val extraResolution =
@@ -364,13 +419,24 @@ private class BloopPants(
         val finalProject =
           if (children.isEmpty) withBinaryResolution
           else {
-            val newSources =
-              (withBinaryResolution.sources ++ children.flatMap(_.sources)).distinct
-            val newClasspath =
-              (withBinaryResolution.classpath ++ children.flatMap(_.classpath)).distinct
+            val newSources = Iterator(
+              withBinaryResolution.sources.iterator,
+              children.iterator.flatMap(_.sources.iterator)
+            ).flatten.distinctBy(identity)
+            val newClasspath = Iterator(
+              withBinaryResolution.classpath.iterator,
+              children.iterator.flatMap(_.classpath.iterator)
+            ).flatten.distinctBy(identity)
+            val newDependencies = Iterator(
+              withBinaryResolution.dependencies.iterator,
+              children.iterator.flatMap(_.dependencies.iterator)
+            ).flatten
+              .filterNot(_ == withBinaryResolution.name)
+              .distinctBy(identity)
             withBinaryResolution.copy(
               sources = newSources,
-              classpath = newClasspath
+              classpath = newClasspath,
+              dependencies = newDependencies
             )
           }
         val out =
@@ -422,7 +488,7 @@ private class BloopPants(
       acyclicDependencyName = cycles.acyclicDependency(dependency.name)
       if acyclicDependencyName != target.name
       acyclicDependency = export.targets(acyclicDependencyName)
-      if acyclicDependency.isTargetRoot && !acyclicDependency.targetType.isAnyResource
+      if acyclicDependency.isTargetRoot && !acyclicDependency.targetType.isResourceOrTestResource
     } yield acyclicDependency.name
 
     val libraries: List[PantsLibrary] = for {
@@ -443,7 +509,11 @@ private class BloopPants(
     classpath ++= (for {
       dependency <- transitiveDependencies
       if dependency.isTargetRoot
-    } yield dependency.classesDir(bloopDir))
+      acyclicDependency = cycles.parents
+        .get(dependency.name)
+        .flatMap(export.targets.get)
+        .getOrElse(dependency)
+    } yield acyclicDependency.classesDir(bloopDir))
     classpath ++= (for {
       dependency <- transitiveDependencies
       if !dependency.isTargetRoot
@@ -464,7 +534,7 @@ private class BloopPants(
 
     val resources: List[Path] = for {
       dependency <- transitiveDependencies
-      if dependency.targetType.isAnyResource
+      if dependency.targetType.isResourceOrTestResource
       entry <- exportClasspath(dependency)
     } yield entry
 

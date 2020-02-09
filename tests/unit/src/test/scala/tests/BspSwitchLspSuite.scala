@@ -7,7 +7,7 @@ import scala.meta.internal.metals.Messages._
 
 class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
 
-  test("switch".tag(FlakyWindows)) {
+  test("switch".flaky) {
     cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     for {

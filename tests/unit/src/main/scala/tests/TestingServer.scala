@@ -1020,11 +1020,11 @@ final class TestingServer(
 
   def buildTarget(displayName: String): String = {
     server.buildTargets.all
-      .find(_.info.getDisplayName() == displayName)
-      .map(_.info.getId().getUri())
+      .find(_.displayName == displayName)
+      .map(_.id.getUri())
       .getOrElse {
         val alternatives =
-          server.buildTargets.all.map(_.info.getDisplayName()).mkString(" ")
+          server.buildTargets.all.map(_.displayName).mkString(" ")
         throw new NoSuchElementException(
           s"$displayName (alternatives: ${alternatives}"
         )
