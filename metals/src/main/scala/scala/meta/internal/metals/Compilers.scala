@@ -162,12 +162,13 @@ class Compilers(
     }.getOrElse(Future.successful(new ju.ArrayList))
   }
 
-  def autoImplement(
+  def implementAbstractMembers(
       params: TextDocumentPositionParams,
       token: CancelToken
   ): Future[ju.List[TextEdit]] = {
     withPC(params, None) { (pc, pos) =>
-      pc.autoImplement(CompilerOffsetParams.fromPos(pos, token)).asScala
+      pc.implementAbstractMembers(CompilerOffsetParams.fromPos(pos, token))
+        .asScala
     }.getOrElse(Future.successful(new ju.ArrayList))
   }
 

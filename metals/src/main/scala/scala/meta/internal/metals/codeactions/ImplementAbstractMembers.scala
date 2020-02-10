@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.MetalsEnrichments._
 
-class ImplementAbstractMethods(compilers: Compilers) extends CodeAction {
+class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.QuickFix
 
@@ -23,15 +23,15 @@ class ImplementAbstractMethods(compilers: Compilers) extends CodeAction {
         .collect {
           case d @ ScalacDiagnostic.ObjectCreationImpossible(_)
               if params.getRange().overlapsWith(d.getRange()) =>
-            autoImport(d, params, token)
+            implementAbstractMembers(d, params, token)
           case d @ ScalacDiagnostic.MissingImplementation(_)
               if params.getRange().overlapsWith(d.getRange()) =>
-            autoImport(d, params, token)
+            implementAbstractMembers(d, params, token)
         }
     )
   }
 
-  private def autoImport(
+  private def implementAbstractMembers(
       diagnostic: l.Diagnostic,
       params: l.CodeActionParams,
       token: CancelToken
@@ -41,14 +41,14 @@ class ImplementAbstractMethods(compilers: Compilers) extends CodeAction {
       diagnostic.getRange.getStart()
     )
     compilers
-      .autoImplement(textDocumentPositionParams, token)
+      .implementAbstractMembers(textDocumentPositionParams, token)
       .map { edits =>
         val uri = params.getTextDocument().getUri()
         val edit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
 
         val codeAction = new l.CodeAction()
 
-        codeAction.setTitle(ImplementAbstractMethods.title)
+        codeAction.setTitle(ImplementAbstractMembers.title)
         codeAction.setKind(l.CodeActionKind.QuickFix)
         codeAction.setDiagnostics(List(diagnostic).asJava)
         codeAction.setEdit(edit)
@@ -58,7 +58,7 @@ class ImplementAbstractMethods(compilers: Compilers) extends CodeAction {
   }
 }
 
-object ImplementAbstractMethods {
+object ImplementAbstractMembers {
   def title: String =
     s"Implement methods"
 }
