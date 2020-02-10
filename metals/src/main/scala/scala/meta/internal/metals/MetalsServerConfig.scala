@@ -12,7 +12,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                    does not support file watching.
  * @param statusBar how to handle metals/status notifications.
  * @param doctorFormat the format that you'd like doctor to return
- * @param slowTask how to handle metals/slowTask requests.
  * @param snippetAutoIndent if the client defaults to adding the identation of the reference
  *                          line that the operation started on (relevant for multiline textEdits)
  * @param isHttpEnabled whether to start the Metals HTTP client interface. This is needed
@@ -23,7 +22,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
-    slowTask: SlowTaskConfig = SlowTaskConfig.default,
     doctorFormat: DoctorFormatConfig = DoctorFormatConfig.default,
     executeClientCommand: ExecuteClientCommandConfig =
       ExecuteClientCommandConfig.default,
@@ -96,7 +94,6 @@ object MetalsServerConfig {
       case "vscode" =>
         base.copy(
           statusBar = StatusBarConfig.on,
-          slowTask = SlowTaskConfig.on,
           icons = Icons.vscode,
           openFilesOnRenames = true,
           executeClientCommand = ExecuteClientCommandConfig.on,

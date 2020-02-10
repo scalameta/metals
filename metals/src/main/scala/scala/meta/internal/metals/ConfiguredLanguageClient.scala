@@ -52,12 +52,9 @@ final class ConfiguredLanguageClient(
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {
-    if (config.slowTask.isOn) {
+    if (clientCapabilities.slowTaskProvider) {
       underlying.metalsSlowTask(params)
     } else {
-      if (config.slowTask.isStatusBar) {
-        metalsStatus(MetalsStatusParams(params.message))
-      }
       new CompletableFuture[MetalsSlowTaskResult]()
     }
   }

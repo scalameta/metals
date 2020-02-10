@@ -4,17 +4,15 @@ import scala.meta.internal.builds.Digest
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.SlowTaskConfig
-import scala.meta.internal.metals.MetalsServerConfig
 import munit.Location
+import scala.meta.internal.metals.ClientExperimentalCapabilities
 
 abstract class BaseImportSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
 
-  // enables support for bloop install (a slow task)
-  override val serverConfig: MetalsServerConfig = {
-    super.serverConfig.copy(slowTask = SlowTaskConfig.on)
-  }
+  override def experimentalCapabilities
+      : Option[ClientExperimentalCapabilities] =
+    Some(ClientExperimentalCapabilities(slowTaskProvider = true))
 
   def buildTool: BuildTool
 

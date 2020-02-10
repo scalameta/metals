@@ -7,7 +7,8 @@ final case class ClientExperimentalCapabilities(
     treeViewProvider: java.lang.Boolean = false,
     decorationProvider: java.lang.Boolean = false,
     inputBoxProvider: java.lang.Boolean = false,
-    didFocusProvider: java.lang.Boolean = false
+    didFocusProvider: java.lang.Boolean = false,
+    slowTaskProvider: java.lang.Boolean = false
 )
 
 object ClientExperimentalCapabilities {
