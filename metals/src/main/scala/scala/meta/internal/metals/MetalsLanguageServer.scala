@@ -345,6 +345,7 @@ class MetalsLanguageServer(
       config,
       () => userConfig,
       languageClient,
+      clientExperimentalCapabilities,
       statusBar,
       config.icons,
       Option(params.getWorkspaceFolders) match {

@@ -39,10 +39,6 @@ final case class MetalsServerConfig(
       "metals.http",
       default = false
     ),
-    isInputBoxEnabled: Boolean = MetalsServerConfig.binaryOption(
-      "metals.input-box",
-      default = false
-    ),
     isVerbose: Boolean = MetalsServerConfig.binaryOption(
       "metals.verbose",
       default = false
@@ -75,7 +71,6 @@ final case class MetalsServerConfig(
       s"execute-client-command=$executeClientCommand",
       s"compilers=$compilers",
       s"http=$isHttpEnabled",
-      s"input-box=$isInputBoxEnabled",
       s"icons=$icons",
       s"statistics=$statistics",
       s"doctor-format=$doctorFormat"
@@ -136,7 +131,6 @@ object MetalsServerConfig {
       case "coc-metals" =>
         base.copy(
           statusBar = StatusBarConfig.showMessage,
-          isInputBoxEnabled = true,
           executeClientCommand = ExecuteClientCommandConfig.on,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
