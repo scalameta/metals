@@ -62,7 +62,7 @@ class UserConfigurationModifier extends StringModifier {
                |**Example**:
                |```json
                |{
-               |  "metals.${option.key}": "${option.example}"
+               |  "metals.${option.camelCaseKey}": "${option.example}"
                |}
                |```
                |""".stripMargin
