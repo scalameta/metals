@@ -23,7 +23,7 @@ You will need the following applications installed:
   projects like [Metabrowse](https://github.com/scalameta/metabrowse).
 - `mtags-interfaces` - java interfaces for the presentation compiler.
 - `tests/cross` - tests targeting cross builds for common features such as
-  hover, compleltions, signatures etc.
+  hover, completions, signatures etc.
 - `tests/input` example Scala code that is used as testing data for unit tests.
 - `tests/unit` moderately fast-running unit tests.
 - `tests/slow` slow integration tests.

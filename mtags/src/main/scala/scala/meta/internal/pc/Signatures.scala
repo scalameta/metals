@@ -121,6 +121,7 @@ trait Signatures { this: MetalsGlobal =>
 
     def topSymbolResolves(sym: Symbol): Boolean = {
       // Returns the package `a` for the symbol `_root_.a.b.c`
+      @annotation.tailrec
       def topPackage(s: Symbol): Symbol = {
         val owner = s.owner
         if (s.isRoot || s.isRootPackage || s == NoSymbol || s.owner.isEffectiveRoot || s == owner) {
