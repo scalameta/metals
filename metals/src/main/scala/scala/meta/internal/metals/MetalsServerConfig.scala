@@ -148,6 +148,7 @@ object MetalsServerConfig {
         )
       case "emacs" =>
         base.copy(
+          statusBar = StatusBarConfig.on,
           executeClientCommand = ExecuteClientCommandConfig.on,
           compilers = base.compilers.copy(
             snippetAutoIndent = false
