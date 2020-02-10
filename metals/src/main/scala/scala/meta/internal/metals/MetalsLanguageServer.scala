@@ -171,6 +171,7 @@ class MetalsLanguageServer(
   private var multilineStringFormattingProvider
       : MultilineStringFormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
+  private var clientExperimentalCapabilities: ClientExperimentalCapabilities = _
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
   private var foldingRangeProvider: FoldingRangeProvider = _
@@ -219,7 +220,7 @@ class MetalsLanguageServer(
     scribe.info(
       s"started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace'"
     )
-    val clientExperimentalCapabilities =
+    clientExperimentalCapabilities =
       ClientExperimentalCapabilities.from(params.getCapabilities)
 
     languageClient.configure(clientExperimentalCapabilities)
@@ -1829,7 +1830,7 @@ class MetalsLanguageServer(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (focusedDocument.isDefined) {
+        if (clientExperimentalCapabilities.didFocusProvider) {
           focusedDocument.contains(path) &&
           path.isWorksheet
         } else {
