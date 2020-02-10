@@ -72,7 +72,7 @@ public abstract class PresentationCompiler {
     /**
      * Return the missing implements and imports for the symbol at the given position.
      */
-    public abstract CompletableFuture<List<TextEdit>> autoImplement(OffsetParams params);
+    public abstract CompletableFuture<List<TextEdit>> implementAbstractMembers(OffsetParams params);
 
     /**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.

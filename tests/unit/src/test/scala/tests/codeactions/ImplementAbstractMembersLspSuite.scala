@@ -1,9 +1,9 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.codeactions.ImplementAbstractMethods
+import scala.meta.internal.metals.codeactions.ImplementAbstractMembers
 
-class ImplementMethodsLspSuite
-    extends BaseCodeActionLspSuite("implementMethods") {
+class ImplementAbstractMembersLspSuite
+    extends BaseCodeActionLspSuite("implementAbstractMembers") {
 
   check(
     "classdef",
@@ -18,7 +18,7 @@ class ImplementMethodsLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ImplementAbstractMethods.title}
+    s"""|${ImplementAbstractMembers.title}
         |""".stripMargin,
     """|package a
        |
@@ -48,7 +48,7 @@ class ImplementMethodsLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ImplementAbstractMethods.title}
+    s"""|${ImplementAbstractMembers.title}
         |""".stripMargin,
     """|package a
        |
@@ -76,7 +76,7 @@ class ImplementMethodsLspSuite
        |  new <<Foo>> {}
        |}
        |""".stripMargin,
-    s"""|${ImplementAbstractMethods.title}
+    s"""|${ImplementAbstractMembers.title}
         |""".stripMargin,
     """|package a
        |
@@ -102,7 +102,7 @@ class ImplementMethodsLspSuite
        |  object <<Bar>> extends Foo
        |}
        |""".stripMargin,
-    s"""|${ImplementAbstractMethods.title}
+    s"""|${ImplementAbstractMembers.title}
         |""".stripMargin,
     """|package a
        |

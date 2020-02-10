@@ -4,10 +4,10 @@ import org.eclipse.{lsp4j => l}
 
 import tests.BaseCodeActionSuite
 import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.jdk.CollectionConverters._
 
-class AutoImplementMethodsSuite extends BaseCodeActionSuite {
+class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
 
   checkEdit(
     "classdef",
@@ -588,7 +588,7 @@ class AutoImplementMethodsSuite extends BaseCodeActionSuite {
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = pc
-      .autoImplement(
+      .implementAbstractMembers(
         CompilerOffsetParams("file:/" + filename, code, offset, cancelToken)
       )
       .get()

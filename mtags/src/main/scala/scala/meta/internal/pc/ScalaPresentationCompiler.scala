@@ -92,7 +92,7 @@ case class ScalaPresentationCompiler(
       new CompletionProvider(global, params).completions()
     }
 
-  override def autoImplement(
+  override def implementAbstractMembers(
       params: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
