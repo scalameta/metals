@@ -293,6 +293,21 @@ trait OverrideCompletions { this: MetalsGlobal =>
     !sym.isStable && !sym.isLazy && sym.isAccessor
 
   def implementAllAt(pos: Position, text: String): List[l.TextEdit] = {
+
+    def implementAllFor(
+        t: Template
+    ): List[l.TextEdit] = {
+      val typed = typedTreeAt(t.pos)
+      implementAll(
+        typed,
+        inferEditPosition(text, t).toLSP,
+        t,
+        text,
+        true,
+        _ => true
+      )
+    }
+
     // make sure the compilation unit is loaded
     typedTreeAt(pos)
 
@@ -302,58 +317,26 @@ trait OverrideCompletions { this: MetalsGlobal =>
       // ~~~~~~~~~~~~~~~~~~~~~~~~
       case (c: ClassDef) :: _ =>
         val t = c.impl
-        val typed = typedTreeAt(t.pos)
-        implementAll(
-          typed,
-          inferEditPosition(text, t).toLSP,
-          t,
-          text,
-          true,
-          _ => true
-        )
+        implementAllFor(t)
 
       // object Foo extends Bar {}
       // ~~~~~~~~~~~~~~~~~~~~~~~~
       case (m: ModuleDef) :: _ =>
         val t = m.impl
-        val typed = typedTreeAt(t.pos)
-        implementAll(
-          typed,
-          inferEditPosition(text, t).toLSP,
-          t,
-          text,
-          true,
-          _ => true
-        )
+        implementAllFor(t)
 
       // new Foo {}
       //     ~~~~~~
       case (_: Ident) ::
             (t: Template) :: _ =>
-        val typed = typedTreeAt(t.pos)
-        implementAll(
-          typed,
-          inferEditPosition(text, t).toLSP,
-          t,
-          text,
-          true,
-          _ => true
-        )
+        implementAllFor(t)
 
       // new Foo[T] {}
       //     ~~~~~~~~~
       case (_: Ident) ::
             (_: AppliedTypeTree) ::
             (t: Template) :: _ =>
-        val typed = typedTreeAt(t.pos)
-        implementAll(
-          typed,
-          inferEditPosition(text, t).toLSP,
-          t,
-          text,
-          true,
-          _ => true
-        )
+        implementAllFor(t)
 
       case _ =>
         Nil
