@@ -288,7 +288,7 @@ lazy val metals = project
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.5.9",
       // For exporting Pants builds.
-      "com.lihaoyi" %% "ujson" % "0.9.8",
+      "com.lihaoyi" %% "ujson" % "0.9.9",
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
