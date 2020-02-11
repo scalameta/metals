@@ -59,6 +59,5 @@ class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
 }
 
 object ImplementAbstractMembers {
-  def title: String =
-    s"Implement methods"
+  def title: String = "Implement all members"
 }

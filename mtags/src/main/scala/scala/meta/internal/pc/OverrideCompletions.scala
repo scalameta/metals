@@ -407,7 +407,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
           " " * (necessaryIndent + DefaultIndent)
         }
 
-      val shouldCompleteBraces = !hasBody(text, t)
+      val shouldCompleteBraces = hasBody(text, t).isEmpty
 
       // if the both opening/closing braces located in a line:
       // ```
@@ -464,26 +464,29 @@ trait OverrideCompletions { this: MetalsGlobal =>
    * @param t the enclosing template for the class/object/trait we are implementing.
    */
   private def inferEditPosition(text: String, t: Template): Position = {
-    val start = t.pos.start
-    val end = t.pos.end
-    val offset = text.indexOf('{', start)
-    if (offset > 0 && offset < t.pos.end)
-      t.pos.withStart(offset + 1).withEnd(offset + 1)
-    else t.pos.withStart(t.pos.end).withEnd(t.pos.end)
+    hasBody(text, t)
+      .map { offset =>
+        t.pos.withStart(offset + 1).withEnd(offset + 1)
+      }
+      .getOrElse(
+        t.pos.withStart(t.pos.end)
+      )
   }
 
   /**
    * Check if the given Template has body or not:
-   * `class Foo extends Bar {}` => true
-   * `class Foo extends Bar` => false
+   * `class Foo extends Bar {}` => Some(position of `{`)
+   * `class Foo extends Bar` => None
    *
    * @param text the text of the original source code.
    * @param t the enclosing template for the class/object/trait we are implementing.
+   * @return if the given Template has body, returns the pos of opening brace, otherwise returns None
    */
-  private def hasBody(text: String, t: Template): Boolean = {
+  private def hasBody(text: String, t: Template): Option[Int] = {
     val start = t.pos.start
     val end = t.pos.end
     val offset = text.indexOf('{', start)
-    offset > 0 && offset < t.pos.end
+    if (offset > 0 && offset < t.pos.end) Some(offset)
+    else None
   }
 }

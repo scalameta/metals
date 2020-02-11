@@ -91,6 +91,57 @@ class ImplementAbstractMembersLspSuite
        |""".stripMargin
   )
 
+  // Test ScalacDiagnostic can capture the multiple lines of diagnostic message.
+  check(
+    "object-creation-multiple-missing-members",
+    """|package a
+       |
+       |object A {
+       |  trait Foo {
+       |    def foo(x: Int): Int
+       |    def bar(x: Int): Int
+       |  }
+       |  new <<Foo>> {}
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Foo {
+       |    def foo(x: Int): Int
+       |    def bar(x: Int): Int
+       |  }
+       |  new Foo {
+       |    override def foo(x: Int): Int = ???
+       |    override def bar(x: Int): Int = ???
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "object-creation-iterator",
+    """|package a
+       |
+       |object A {
+       |  new <<Iterator>>[Int] {}
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  new Iterator[Int] {
+       |    override def hasNext: Boolean = ???
+       |    override def next(): Int = ???
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   check(
     "no-braces",
     """|package a

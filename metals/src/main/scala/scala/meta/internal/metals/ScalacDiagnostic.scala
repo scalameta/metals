@@ -13,20 +13,19 @@ object ScalacDiagnostic {
   }
   object MissingImplementation {
     // https://github.com/scala/scala/blob/4c0f49c7de6ba48f2b0ae59e64ea94fabd82b4a7/src/compiler/scala/tools/nsc/typechecker/RefChecks.scala#L566
-    private val regex = """needs to be abstract""".r
+    private val regex = """(?s).*needs to be abstract.*""".r
     def unapply(d: l.Diagnostic): Option[String] =
-      regex.findFirstMatchIn(d.getMessage()) match {
-        case Some(_) => Some(d.getMessage())
+      d.getMessage() match {
+        case regex() => Some(d.getMessage())
         case _ => None
       }
   }
   object ObjectCreationImpossible {
     // https://github.com/scala/scala/blob/4c0f49c7de6ba48f2b0ae59e64ea94fabd82b4a7/src/compiler/scala/tools/nsc/typechecker/RefChecks.scala#L564
-    private val regex = """object creation impossible""".r
-    def unapply(d: l.Diagnostic): Option[String] =
-      regex.findFirstMatchIn(d.getMessage()) match {
-        case Some(_) => Some(d.getMessage())
-        case None => None
-      }
+    private val regex = """(?s).*object creation impossible.*""".r
+    def unapply(d: l.Diagnostic): Option[String] = d.getMessage() match {
+      case regex() => Some(d.getMessage())
+      case _ => None
+    }
   }
 }
