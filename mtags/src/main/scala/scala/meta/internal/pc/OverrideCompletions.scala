@@ -437,15 +437,17 @@ trait OverrideCompletions { this: MetalsGlobal =>
       //   override def method: Int = ???
       // }
       // ```
-      val start = if (shouldCompleteBraces) s" {\n${indent}" else s"\n${indent}"
-      val end = if (shouldCompleteBraces) s"${lastIndent}}" else lastIndent
+      val start =
+        if (shouldCompleteBraces) s" {\n\n${indent}" else s"\n\n${indent}"
+      val end =
+        if (shouldCompleteBraces) s"\n${lastIndent}}" else s"\n${lastIndent}"
       val implementAll = new l.TextEdit(
         range,
         allAbstractEdits
           .map(_.getNewText)
           .mkString(
             start,
-            s"\n${indent}",
+            s"\n\n${indent}",
             end
           )
       )
