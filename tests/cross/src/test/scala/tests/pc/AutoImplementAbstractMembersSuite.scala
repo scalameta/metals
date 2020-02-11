@@ -30,8 +30,46 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def bar(x: String): String
        |  }
        |  class Concrete extends Base {
+       |
        |    override def foo(x: Int): Int = ???
+       |
        |    override def bar(x: String): String = ???
+       |
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "empty-lines-between-members",
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class <<Concrete>> extends Base {
+       |
+       |    def bar(x: String): String = ???
+       |
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  trait Base {
+       |    def foo(x: Int): Int
+       |    def bar(x: String): String
+       |  }
+       |  class Concrete extends Base {
+       |
+       |    override def foo(x: Int): Int = ???
+       |
+       |
+       |    def bar(x: String): String = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -56,7 +94,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def foo(x: Int): Int
        |  }
        |  object Concrete extends Base {
+       |
        |    override def foo(x: Int): Int = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -84,7 +124,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def bar(x: String): String
        |  }
        |  class Concrete extends Base {
+       |
        |    override def bar(x: String): String = ???
+       |
        |    override def foo(x: Int): Int = x
        |  }
        |}
@@ -111,8 +153,11 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def bar(x: String): String
        |  }
        |  class Concrete extends Base {
+       |
        |    override def foo(x: Int): Int = ???
+       |
        |    override def bar(x: String): String = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -128,7 +173,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
     """
       |object Main {
       |  new Iterable[Int] {
+      |
       |    override def iterator: Iterator[Int] = ???
+      |
       |  }
       |}
       |""".stripMargin
@@ -151,7 +198,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       |}
       |object Main {
       |  new Context {
+      |
       |    override def add[T: Ordering]: T = ???
+      |
       |  }
       |}
       |""".stripMargin
@@ -174,7 +223,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       |}
       |object Main {
       |  class Concrete extends Context[Int] {
+      |
       |    override def method: Int = ???
+      |
       |  }
       |}
       |""".stripMargin
@@ -201,7 +252,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       |}
       |object Main {
       |  new Abstract {
+      |
       |    override def aaa: Int = ???
+      |
       |  }
       |}
       |""".stripMargin
@@ -225,8 +278,11 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |}
        |object Main {
        |  new Mutable {
+       |
        |    override def foo: mutable.Set[Int] = ???
+       |
        |    override def bar: Set[Int] = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -253,8 +309,11 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |}
        |object Main {
        |  class Baz extends Bar {
+       |
        |    override def foo: Int = ???
+       |
        |    override def bar: Int = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -273,7 +332,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  def foo: java.util.List[Int]
        |}
        |class Main extends JUtil {
+       |
        |  override def foo: ju.List[Int] = ???
+       |
        |}
        |""".stripMargin
   )
@@ -296,7 +357,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  def foo: java.util.List[Int]
        |}
        |class Main extends JUtil {
+       |
        |  override def foo: ju.List[Int] = ???
+       |
        |  val java = 42
        |}
        |""".stripMargin
@@ -314,7 +377,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  val baz: String
        |}
        |class Main extends Abstract {
+       |
        |  override val baz: String = ???
+       |
        |}
        |""".stripMargin
   )
@@ -343,7 +408,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  }
        |  // if there's a member, infer indent based on it.
        |  class Concrete extends Base {
+       |
        |       override def bar(x: String): String = ???
+       |
        |       override def foo(x: Int): Int = x
        |  }
        |}
@@ -374,8 +441,11 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  }
        |  // if there's a member, infer indent based on it.
        |  class Concrete extends Base {
+       |
        |           override def foo(x: Int): Int = ???
+       |
        |           override def bar(x: String): String = ???
+       |
        |           val test = 1
        |  }
        |}
@@ -406,8 +476,11 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  }
        |  // if there's a member, infer indent based on it.
        |  class Concrete extends Base {
+       |
        |           override def foo(x: Int): Int = ???
+       |
        |           override def bar(x: String): String = ???
+       |
        |           type T = Int
        |  }
        |}
@@ -436,7 +509,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def bar(x: String): String
        |  }
        |  new Base {
+       |
        |          override def foo(x: Int): Int = ???
+       |
        |          def bar(x: String): Int = x
        |  }
        |}
@@ -464,8 +539,11 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def bar(x: String): String
        |  }
        |  class Concrete(num: Int) extends Base {
+       |
        |    override def foo(x: Int): Int = ???
+       |
        |    override def bar(x: String): String = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -493,8 +571,11 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def bar(x: String): String
        |  }
        |  class Concrete(num: Int) extends Base {
+       |
        |      override def foo(x: Int): Int = ???
+       |
        |      override def bar(x: String): String = ???
+       |
        |      def this() = { this(4) }
        |  }
        |}
@@ -519,7 +600,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |    def foo(x: Int): Int
        |  }
        |      new Base {
+       |
        |        override def foo(x: Int): Int = ???
+       |
        |      }
        |}
        |""".stripMargin
@@ -540,7 +623,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |  def foo(x: Int): Int
        |}
        |object Concrete extends Base {
+       |
        |  override def foo(x: Int): Int = ???
+       |
        |}
        |""".stripMargin
   )
@@ -563,7 +648,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |}
        |object Test {
        |   class Concrete extends Base {
+       |
        |     override def foo(x: Int): Int = ???
+       |
        |   }
        |}
        |""".stripMargin

@@ -28,8 +28,11 @@ class ImplementAbstractMembersLspSuite
        |    def bar(x: String): String
        |  }
        |  class Concrete extends Base {
+       |
        |    override def foo(x: Int): Int = ???
+       |
        |    override def bar(x: String): String = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -58,8 +61,11 @@ class ImplementAbstractMembersLspSuite
        |    def bar(x: String): String
        |  }
        |  class Concrete extends Base {
+       |
        |    override def foo(x: Int): Int = ???
+       |
        |    override def bar(x: String): String = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -85,7 +91,9 @@ class ImplementAbstractMembersLspSuite
        |    def foo(x: Int): Int
        |  }
        |  new Foo {
+       |
        |    override def foo(x: Int): Int = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -114,8 +122,11 @@ class ImplementAbstractMembersLspSuite
        |    def bar(x: Int): Int
        |  }
        |  new Foo {
+       |
        |    override def foo(x: Int): Int = ???
+       |
        |    override def bar(x: Int): Int = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -135,8 +146,11 @@ class ImplementAbstractMembersLspSuite
        |
        |object A {
        |  new Iterator[Int] {
+       |
        |    override def hasNext: Boolean = ???
+       |
        |    override def next(): Int = ???
+       |
        |  }
        |}
        |""".stripMargin
@@ -162,7 +176,9 @@ class ImplementAbstractMembersLspSuite
        |    def foo(x: Int): Int
        |  }
        |  object Bar extends Foo {
+       |
        |    override def foo(x: Int): Int = ???
+       |
        |  }
        |}
        |""".stripMargin
