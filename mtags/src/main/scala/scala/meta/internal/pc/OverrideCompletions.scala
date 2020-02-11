@@ -87,7 +87,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
               range,
               allAbstractEdits
                 .map(_.getNewText)
-                .mkString(s"\n${necessaryIndent}")
+                .mkString("", s"\n\n${necessaryIndent}", "\n")
             ),
             completionsSymbol("implement"),
             label = Some("Implement all members"),
