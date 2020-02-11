@@ -284,7 +284,8 @@ final class TestingServer(
     val experimental = experimentalCapabilities.getOrElse(
       new ClientExperimentalCapabilities(
         debuggingProvider = true,
-        treeViewProvider = true
+        treeViewProvider = true,
+        slowTaskProvider = true
       )
     )
     params.setCapabilities(

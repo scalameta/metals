@@ -5,14 +5,9 @@ import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.metals.Messages._
 import munit.Location
-import scala.meta.internal.metals.ClientExperimentalCapabilities
 
 abstract class BaseImportSuite(suiteName: String)
     extends BaseLspSuite(suiteName) {
-
-  override def experimentalCapabilities
-      : Option[ClientExperimentalCapabilities] =
-    Some(ClientExperimentalCapabilities(slowTaskProvider = true))
 
   def buildTool: BuildTool
 

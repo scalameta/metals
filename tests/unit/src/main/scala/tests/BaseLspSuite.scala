@@ -36,8 +36,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   var client: TestingClient = _
   var workspace: AbsolutePath = _
 
-  protected def experimentalCapabilities
-      : Option[ClientExperimentalCapabilities] =
+  def experimentalCapabilities: Option[ClientExperimentalCapabilities] =
     Some(ClientExperimentalCapabilities(slowTaskProvider = true))
 
   override def afterAll(): Unit = {
