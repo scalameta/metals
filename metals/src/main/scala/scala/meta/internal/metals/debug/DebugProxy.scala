@@ -97,7 +97,7 @@ private[debug] final class DebugProxy(
         case frame =>
           sourcePathProvider.findPathFor(frame.getSource) match {
             case Some(path) =>
-              frame.getSource.setPath(path.toURI.toString)
+              frame.getSource.setPath(adapters.adaptPathForClient(path))
             case None =>
               // don't send invalid source if we couldn't adapt it
               frame.setSource(null)
