@@ -50,7 +50,9 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |object Main {
        |  val x = new Foo {
        |    def foo: Int = ${0:???}
+       |
        |    def bar: Int = ${0:???}
+       |
        |  }
        |}
        |""".stripMargin,
@@ -103,8 +105,11 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
       |object Main {
       |  val x = new Foo {
       |    def foo: Int = ${0:???}
+      |
       |    def bar: Int = ${0:???}
+      |
       |    def car: Int = ${0:???}
+      |
       |  }
       |}
       |""".stripMargin,
@@ -159,7 +164,9 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  val x = new Foo {
        |    def foo = 2
        |    def bar: Int = ${0:???}
+       |
        |    def car: Int = ${0:???}
+       |
        |  }
        |}
        |""".stripMargin,
@@ -228,7 +235,9 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |object Main {
        |  val x = new Foo {
        |    def one: a.Foo = ${0:???}
+       |
        |    def two: b.Foo = ${0:???}
+       |
        |  }
        |}
        |""".stripMargin,
@@ -280,8 +289,11 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |object Main {
        |  val x = new Foo {
        |    def foo: Int = ${0:???}
+       |
        |    val bar: Int = ${0:???}
+       |
        |    var car: Int = ${0:???}
+       |
        |  }
        |}
        |""".stripMargin,
@@ -351,8 +363,11 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |    var bar: int = 2
        |    val car: Int = 1
        |    def foo2: Int = ${0:???}
+       |
        |    var bar2: Int = ${0:???}
+       |
        |    val car2: Int = ${0:???}
+       |
        |  }
        |}
        |""".stripMargin,

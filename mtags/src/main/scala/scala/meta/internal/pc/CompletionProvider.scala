@@ -10,6 +10,7 @@ import scala.collection.mutable
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
 import org.eclipse.{lsp4j => l}
+import java.{util => ju}
 
 class CompletionProvider(
     val compiler: MetalsGlobal,
@@ -454,6 +455,21 @@ class CompletionProvider(
       )
       search.search(query, buildTargetIdentifier, visitor)
     }
+  }
+
+  /**
+   * Get the missing implements and imports for the symbol at the given position.
+   *
+   * @return the list of TextEdits for missing implements and imports.
+   */
+  def implementAll(): ju.List[l.TextEdit] = {
+    val unit = addCompilationUnit(
+      code = params.text,
+      filename = params.filename,
+      cursor = None
+    )
+    val pos = unit.position(params.offset)
+    implementAllAt(pos, params.text).asJava
   }
 
 }

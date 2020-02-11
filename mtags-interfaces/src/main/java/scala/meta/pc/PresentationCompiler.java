@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.SignatureHelp;
+import org.eclipse.lsp4j.TextEdit;
 
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
@@ -67,6 +68,11 @@ public abstract class PresentationCompiler {
      * Return the necessary imports for a symbol at the given position.
      */
     public abstract CompletableFuture<List<AutoImportsResult>> autoImports(String name, OffsetParams params);
+
+    /**
+     * Return the missing implements and imports for the symbol at the given position.
+     */
+    public abstract CompletableFuture<List<TextEdit>> implementAbstractMembers(OffsetParams params);
 
     /**
      * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for the given source.

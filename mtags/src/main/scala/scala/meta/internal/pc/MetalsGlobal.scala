@@ -31,6 +31,7 @@ class MetalsGlobal(
 ) extends Global(settings, reporter)
     with Completions
     with ScaladocCompletions
+    with OverrideCompletions
     with Signatures
     with Compat
     with GlobalProxy

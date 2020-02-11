@@ -11,6 +11,7 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.SignatureHelp
+import org.eclipse.lsp4j.TextEdit
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
@@ -90,6 +91,15 @@ case class ScalaPresentationCompiler(
     access.withInterruptableCompiler(emptyCompletion, params.token) { global =>
       new CompletionProvider(global, params).completions()
     }
+
+  override def implementAbstractMembers(
+      params: OffsetParams
+  ): CompletableFuture[ju.List[TextEdit]] = {
+    val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
+    access.withInterruptableCompiler(empty, params.token) { global =>
+      new CompletionProvider(global, params).implementAll()
+    }
+  }
 
   override def autoImports(
       name: String,
