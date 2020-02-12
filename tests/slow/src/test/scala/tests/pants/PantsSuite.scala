@@ -19,6 +19,7 @@ class PantsSuite extends BaseSuite {
       assertNoDiff(obtained, expected)
     }
   }
+
   checkSourceRoots(
     "two",
     """
@@ -64,4 +65,5 @@ class PantsSuite extends BaseSuite {
       |a/
       |""".stripMargin
   )
+
 }

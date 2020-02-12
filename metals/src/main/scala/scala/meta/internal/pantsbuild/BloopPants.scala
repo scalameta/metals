@@ -15,12 +15,10 @@ import java.nio.file.StandardCopyOption
 import java.util.concurrent.CancellationException
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.MetalsLogger
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.Timer
+import scala.meta.internal.pantsbuild.commands._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
@@ -33,63 +31,32 @@ import scala.util.Properties
 import scala.util.Success
 import scala.util.Try
 import ujson.Value
+import metaconfig.cli.CliApp
+import metaconfig.cli.HelpCommand
+import metaconfig.cli.VersionCommand
 
 object BloopPants {
+  lazy val app: CliApp = CliApp(
+    version = BuildInfo.metalsVersion,
+    binaryName = "fastpass",
+    commands = List(
+      HelpCommand,
+      VersionCommand,
+      CreateCommand,
+      RefreshCommand,
+      ListCommand,
+      InfoCommand,
+      OpenCommand,
+      LinkCommand,
+      AmendCommand,
+      RemoveCommand
+    )
+  )
 
-  def main(argStrings: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = {
     MetalsLogger.updateDefaultFormat()
-    Args.parse(argStrings.toList) match {
-      case Left(errors) =>
-        errors.foreach { error =>
-          scribe.error(error)
-        }
-        System.exit(1)
-      case Right(args) =>
-        if (args.isHelp) {
-          println(args.helpMessage)
-        } else if (!args.pants.isFile) {
-          scribe.error(
-            s"No Pants build detected, file '${args.pants}' does not exist."
-          )
-          scribe.error(
-            s"Is the working directory correct? (${PathIO.workingDirectory})"
-          )
-          System.exit(1)
-        } else if (args.isRegenerate) {
-          bloopRegenerate(
-            AbsolutePath(args.workspace),
-            args.targets
-          )(ExecutionContext.global)
-        } else if (args.isVscode && args.isWorkspaceAndOutputSameDirectory) {
-          VSCode.launch(args)
-        } else {
-          val workspace = args.workspace
-          val targets = args.targets
-          val timer = new Timer(Time.system)
-          val installResult = bloopInstall(args)(ExecutionContext.global)
-          installResult match {
-            case Failure(exception) =>
-              exception match {
-                case MessageOnlyException(message) =>
-                  scribe.error(message)
-                case _ =>
-                  scribe.error(s"${args.command} failed to run", exception)
-              }
-              sys.exit(1)
-            case Success(count) =>
-              scribe.info(s"time: exported ${count} Pants target(s) in $timer")
-              if (args.out != args.workspace) {
-                scribe.info(s"output: ${args.out}")
-                symlinkToOut(args)
-              }
-              if (args.isLaunchIntelliJ) {
-                IntelliJ.launch(args.out, args.targets)
-              } else if (args.isVscode) {
-                VSCode.launch(args)
-              }
-          }
-        }
-    }
+    val exit = app.run(args.toList)
+    System.exit(exit)
   }
 
   def bloopAddOwnerOf(
@@ -156,7 +123,7 @@ object BloopPants {
       case e @ InterruptException() => Failure(e)
     }
 
-  def bloopInstall(args: Args)(implicit ec: ExecutionContext): Try[Int] =
+  def bloopInstall(args: Export)(implicit ec: ExecutionContext): Try[Int] =
     interruptedTry {
       val cacheDir = Files.createDirectories(
         args.workspace.resolve(".pants.d").resolve("metals")
@@ -233,38 +200,8 @@ object BloopPants {
     }
   }
 
-  private def symlinkToOut(args: Args): Unit = {
-    val workspaceBloop = args.workspace.resolve(".bloop")
-
-    if (!Files.exists(workspaceBloop) || Files.isSymbolicLink(workspaceBloop)) {
-      val outBloop = args.out.resolve(".bloop")
-      Files.deleteIfExists(workspaceBloop)
-      Files.createSymbolicLink(workspaceBloop, outBloop)
-    }
-
-    val inScalafmt = {
-      val link = args.workspace.resolve(".scalafmt.conf")
-      // Configuration file may be symbolic link.
-      val relpath =
-        if (Files.isSymbolicLink(link)) Files.readSymbolicLink(link)
-        else link
-      // Symbolic link may be relative to workspace directory.
-      if (relpath.isAbsolute()) relpath
-      else args.workspace.resolve(relpath)
-    }
-    val outScalafmt = args.out.resolve(".scalafmt.conf")
-    if (!args.out.startsWith(args.workspace) &&
-      Files.exists(inScalafmt) && {
-        !Files.exists(outScalafmt) ||
-        Files.isSymbolicLink(outScalafmt)
-      }) {
-      Files.deleteIfExists(outScalafmt)
-      Files.createSymbolicLink(outScalafmt, inScalafmt)
-    }
-  }
-
   private def runPantsExport(
-      args: Args,
+      args: Export,
       outputFile: Path
   )(implicit ec: ExecutionContext): Unit = {
     val command = List[Option[String]](
@@ -301,7 +238,7 @@ object BloopPants {
 }
 
 private class BloopPants(
-    args: Args,
+    args: Export,
     bloopDir: Path,
     export: PantsExport,
     filemap: Filemap
