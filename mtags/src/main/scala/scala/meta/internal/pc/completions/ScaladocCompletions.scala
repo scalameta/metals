@@ -1,10 +1,11 @@
-package scala.meta.internal.pc
+package scala.meta.internal.pc.completions
 
 import java.lang.StringBuilder
 
 import org.eclipse.{lsp4j => l}
 
 import scala.collection.immutable.Nil
+import scala.meta.internal.pc.MetalsGlobal
 
 trait ScaladocCompletions { this: MetalsGlobal =>
 
