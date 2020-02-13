@@ -525,6 +525,23 @@ class RenameLspSuite extends BaseLspSuite("rename") {
     newName = "other"
   )
 
+  // If renaming in VS Code, backticks are taken as part of the name
+  renamed(
+    "backtick4",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  def local = {
+       |    val greeting = "Hello"
+       |    "" match {
+       |      case `gre@@eting` =>
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "`greeting`"
+  )
+
   // tests currently not working correctly due to issues in SemanticDB
   // issue https://github.com/scalameta/scalameta/issues/1169
   // possibly issue https://github.com/scalameta/scalameta/issues/1845
@@ -606,7 +623,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
             val expected = if (!notRenamed) {
               code
                 .replaceAll("\\<\\<\\S*\\>\\>", newName)
-                .replaceAll("##", "")
+                .replaceAll("(##|@@)", "")
             } else {
               code.replaceAll(allMarkersRegex, "")
             }
