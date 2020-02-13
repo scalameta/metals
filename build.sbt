@@ -245,7 +245,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.9.7",
+      "com.geirsson" %% "metaconfig-core" % "0.9.8",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.10",
       // for file watching

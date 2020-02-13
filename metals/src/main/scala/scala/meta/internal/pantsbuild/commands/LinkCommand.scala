@@ -5,7 +5,6 @@ import metaconfig.cli.CliApp
 import org.typelevel.paiges.Doc
 import metaconfig.cli.Messages
 import java.nio.file.Files
-import MetaconfigEnrichments._
 
 object LinkCommand extends Command[LinkOptions]("link") {
   override def options: Doc = Messages.options(LinkOptions())
