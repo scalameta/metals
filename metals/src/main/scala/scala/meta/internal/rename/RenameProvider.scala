@@ -190,7 +190,7 @@ final class RenameProvider(
         isOccurence { str =>
           str.owner.isPackage &&
           (str.desc.isType || str.desc.isTerm) &&
-          file.toString.endsWith(s"/${str.desc.name.value}.scala")
+          file.toURI.toString.endsWith(s"/${str.desc.name.value}.scala")
         }
       }
       .map { file =>
