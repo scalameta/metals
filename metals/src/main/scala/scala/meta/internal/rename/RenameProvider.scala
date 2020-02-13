@@ -103,7 +103,7 @@ final class RenameProvider(
             // we can't get definition by name for local symbols
             toReferenceParams(txtParams, includeDeclaration = isLocal),
             // local symbol will not contain a proper name
-            checkMatchesText = !isLocal,
+            checkMatchesText = true,
             includeSynthetics = includeSynthetic
           )
           .locations

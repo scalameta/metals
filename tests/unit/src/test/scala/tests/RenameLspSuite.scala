@@ -469,6 +469,62 @@ class RenameLspSuite extends BaseLspSuite("rename") {
     newName = "anotherName"
   )
 
+  renamed(
+    "nested-symbol",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Foo {
+       |  object <<Ma@@in>>
+       |}
+       |""".stripMargin,
+    newName = "Child",
+    fileRenames = Map.empty
+  )
+
+  renamed(
+    "backtick",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val <<greet@@ing>> = "Hello"
+       |  "" match {
+       |    case `<<greeting>>` =>
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "other"
+  )
+
+  renamed(
+    "backtick2",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  val <<greeting>> = "Hello"
+       |  "" match {
+       |    case `<<gre@@eting>>` =>
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "other"
+  )
+
+  renamed(
+    "backtick3",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main{
+       |  def local = {
+       |    val <<greet@@ing>> = "Hello"
+       |    "" match {
+       |      case `<<greeting>>` =>
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "other"
+  )
+
   // tests currently not working correctly due to issues in SemanticDB
   // issue https://github.com/scalameta/scalameta/issues/1169
   // possibly issue https://github.com/scalameta/scalameta/issues/1845
@@ -500,18 +556,6 @@ class RenameLspSuite extends BaseLspSuite("rename") {
        |}
        |""".stripMargin,
     newName = "Animal"
-  )
-
-  renamed(
-    "nested-symbol",
-    """|/a/src/main/scala/a/Main.scala
-       |package a
-       |object Foo {
-       |  object <<Ma@@in>>
-       |}
-       |""".stripMargin,
-    newName = "Child",
-    fileRenames = Map.empty
   )
 
   def renamed(
