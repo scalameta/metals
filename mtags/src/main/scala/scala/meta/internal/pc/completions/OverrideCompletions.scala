@@ -31,7 +31,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
    * @param start the position start of the completion.
    * @param isCandidate the determination of whether the symbol will be a possible completion item.
    */
-  case class Override(
+  case class OverrideCompletion(
       name: Name,
       t: Template,
       pos: Position,

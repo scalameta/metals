@@ -7,7 +7,7 @@ import scala.meta.internal.pc.MetalsGlobal
 
 trait ArgCompletions { this: MetalsGlobal =>
 
-  case class Arg(
+  case class ArgCompletion(
       ident: Ident,
       apply: Apply,
       pos: Position,

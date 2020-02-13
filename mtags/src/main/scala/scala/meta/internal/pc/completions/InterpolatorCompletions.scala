@@ -26,7 +26,7 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
    * @param cursor the cursor position where the completion is triggered, `@@` in the example above.
    * @param text the text of the original source file without `_CURSOR_` instrumentation.
    */
-  case class InterpolatorType(
+  case class InterpolatorTypeCompletion(
       query: String,
       ident: Ident,
       literalPart: Literal,
@@ -75,7 +75,7 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
    *                     curly braces.
    * @param text The text of the original source code without the instrumented `_CURSOR_`.
    */
-  case class InterpolatorScope(
+  case class InterpolatorScopeCompletion(
       lit: Literal,
       pos: Position,
       interpolator: InterpolationSplice,
@@ -147,13 +147,13 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
       parent: Tree,
       text: String,
       cursor: Position
-  ): Option[InterpolatorType] = {
+  ): Option[InterpolatorTypeCompletion] = {
     for {
       query <- interpolatorMemberSelect(lit)
       if text.charAt(lit.pos.point - 1) != '}'
       arg <- interpolatorMemberArg(parent, lit)
     } yield {
-      InterpolatorType(
+      InterpolatorTypeCompletion(
         query,
         arg,
         lit,

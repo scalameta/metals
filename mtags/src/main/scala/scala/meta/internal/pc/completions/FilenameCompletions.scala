@@ -23,7 +23,7 @@ trait FilenameCompletions { this: MetalsGlobal =>
    * @param pos the completion position.
    * @param editRange the range to replace in the completion.
    */
-  case class Filename(
+  case class FilenameCompletion(
       toplevel: DefTree,
       pkg: PackageDef,
       pos: Position,

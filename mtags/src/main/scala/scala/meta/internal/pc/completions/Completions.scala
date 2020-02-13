@@ -413,12 +413,12 @@ trait Completions { this: MetalsGlobal =>
     ): CompletionPosition = {
       if (hasLeadingBrace(ident, text)) {
         if (isCasePrefix(ident.name)) {
-          CaseKeyword(EmptyTree, editRange, pos, text, apply)
+          CaseKeywordCompletion(EmptyTree, editRange, pos, text, apply)
         } else {
           NoneCompletion
         }
       } else {
-        Arg(ident, apply, pos, text, completions)
+        ArgCompletion(ident, apply, pos, text, completions)
       }
     }
 
@@ -428,20 +428,22 @@ trait Completions { this: MetalsGlobal =>
           new AssociatedMemberDefFinder(pos).findAssociatedDef(unit.body)
         }
         associatedDef
-          .map(definition => Scaladoc(editRange, definition, pos, text))
+          .map(definition =>
+            ScaladocCompletion(editRange, definition, pos, text)
+          )
           .getOrElse(NoneCompletion)
       case (ident: Ident) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
       case Ident(_) :: PatternMatch(c, m) =>
-        CasePattern(isTyped = false, c, m)
+        CasePatternCompletion(isTyped = false, c, m)
       case Ident(_) :: Typed(_, _) :: PatternMatch(c, m) =>
-        CasePattern(isTyped = true, c, m)
+        CasePatternCompletion(isTyped = true, c, m)
       case (lit @ Literal(Constant(_: String))) :: head :: _ =>
         isPossibleInterpolatorSplice(pos, text) match {
           case Some(i) =>
-            InterpolatorScope(lit, pos, i, text)
+            InterpolatorScopeCompletion(lit, pos, i, text)
           case _ =>
             isPossibleInterpolatorMember(lit, head, text, pos)
               .getOrElse(NoneCompletion)
@@ -450,7 +452,7 @@ trait Completions { this: MetalsGlobal =>
             Select(Ident(TermName("scala")), TypeName("Unit")) ::
             (defdef: DefDef) ::
             (t: Template) :: _ if defdef.name.endsWith(CURSOR) =>
-        Override(
+        OverrideCompletion(
           defdef.name,
           t,
           pos,
@@ -460,7 +462,7 @@ trait Completions { this: MetalsGlobal =>
         )
       case (valdef @ ValDef(_, name, _, Literal(Constant(null)))) ::
             (t: Template) :: _ if name.endsWith(CURSOR) =>
-        Override(
+        OverrideCompletion(
           name,
           t,
           pos,
@@ -469,17 +471,17 @@ trait Completions { this: MetalsGlobal =>
           _ => true
         )
       case (m @ Match(_, Nil)) :: parent :: _ =>
-        CaseKeyword(m.selector, editRange, pos, text, parent)
+        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
       case Ident(name) :: (_: CaseDef) :: (m: Match) :: parent :: _
           if isCasePrefix(name) =>
-        CaseKeyword(m.selector, editRange, pos, text, parent)
+        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
       case (ident @ Ident(name)) :: Block(_, expr) :: (_: CaseDef) :: (m: Match) :: parent :: _
           if ident == expr && isCasePrefix(name) =>
-        CaseKeyword(m.selector, editRange, pos, text, parent)
+        CaseKeywordCompletion(m.selector, editRange, pos, text, parent)
       case (c: DefTree) :: (p: PackageDef) :: _ if c.namePos.includes(pos) =>
-        Filename(c, p, pos, editRange)
+        FilenameCompletion(c, p, pos, editRange)
       case (ident: Ident) :: (t: Template) :: _ =>
-        Override(
+        OverrideCompletion(
           ident.name,
           t,
           pos,
@@ -515,7 +517,7 @@ trait Completions { this: MetalsGlobal =>
             case t: CompletionResult.TypeMembers =>
               t.results.collectFirst {
                 case result if result.prefix.isDefined =>
-                  MatchKeyword(
+                  MatchKeywordCompletion(
                     result.prefix,
                     editRange,
                     pos,

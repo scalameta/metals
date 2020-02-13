@@ -24,7 +24,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
    *               `List(1).foreach { cas@@ }`, used as fallback to compute the type of the selector when
    *               it's `EmptyTree`.
    */
-  case class CaseKeyword(
+  case class CaseKeywordCompletion(
       selector: Tree,
       editRange: l.Range,
       pos: Position,
@@ -143,7 +143,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
    *
    * @param prefix the type of the qualifier being matched.
    */
-  case class MatchKeyword(
+  case class MatchKeywordCompletion(
       prefix: Type,
       editRange: l.Range,
       pos: Position,
@@ -253,7 +253,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     }
   }
 
-  case class CasePattern(
+  case class CasePatternCompletion(
       isTyped: Boolean,
       c: CaseDef,
       m: Match

@@ -18,7 +18,7 @@ trait ScaladocCompletions { this: MetalsGlobal =>
    * @param pos the position of the completion request.
    * @param text the text of the original source code.
    */
-  case class Scaladoc(
+  case class ScaladocCompletion(
       editRange: l.Range,
       associatedDef: MemberDef,
       pos: Position,
