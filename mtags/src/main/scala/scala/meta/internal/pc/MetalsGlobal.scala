@@ -29,7 +29,7 @@ class MetalsGlobal(
     val buildTargetIdentifier: String,
     val metalsConfig: PresentationCompilerConfig
 ) extends Global(settings, reporter)
-    with Completions
+    with completions.Completions
     with completions.ArgCompletions
     with completions.FilenameCompletions
     with completions.InterpolatorCompletions

@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.pc.completions
 
 import java.util.logging.Level
 
@@ -10,6 +10,11 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tokenizers.Chars
 import scala.util.control.NonFatal
 import scala.collection.immutable.Nil
+import scala.meta.internal.pc.{
+  IdentifierComparator,
+  MetalsGlobal,
+  MemberOrdering
+}
 
 /**
  * Utility methods for completions.
