@@ -34,7 +34,10 @@ class MetalsGlobal(
     with completions.FilenameCompletions
     with completions.InterpolatorCompletions
     with completions.MatchCaseCompletions
+    with completions.NewCompletions
+    with completions.NoneCompletions
     with completions.ScaladocCompletions
+    with completions.TypeCompletions
     with completions.OverrideCompletions
     with Signatures
     with Compat

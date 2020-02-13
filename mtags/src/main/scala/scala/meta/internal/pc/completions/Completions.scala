@@ -396,7 +396,7 @@ trait Completions { this: MetalsGlobal =>
     catch {
       case NonFatal(e) =>
         logger.log(Level.SEVERE, e.getMessage(), e)
-        CompletionPosition.None
+        NoneCompletion
     }
   }
   def completionPositionUnsafe(
@@ -415,7 +415,7 @@ trait Completions { this: MetalsGlobal =>
         if (isCasePrefix(ident.name)) {
           CaseKeyword(EmptyTree, editRange, pos, text, apply)
         } else {
-          CompletionPosition.None
+          NoneCompletion
         }
       } else {
         Arg(ident, apply, pos, text, completions)
@@ -429,7 +429,7 @@ trait Completions { this: MetalsGlobal =>
         }
         associatedDef
           .map(definition => Scaladoc(editRange, definition, pos, text))
-          .getOrElse(CompletionPosition.None)
+          .getOrElse(NoneCompletion)
       case (ident: Ident) :: (a: Apply) :: _ =>
         fromIdentApply(ident, a)
       case (ident: Ident) :: (_: Select) :: (_: Assign) :: (a: Apply) :: _ =>
@@ -444,7 +444,7 @@ trait Completions { this: MetalsGlobal =>
             InterpolatorScope(lit, pos, i, text)
           case _ =>
             isPossibleInterpolatorMember(lit, head, text, pos)
-              .getOrElse(CompletionPosition.None)
+              .getOrElse(NoneCompletion)
         }
       case (_: Ident) ::
             Select(Ident(TermName("scala")), TypeName("Unit")) ::
@@ -535,46 +535,26 @@ trait Completions { this: MetalsGlobal =>
         tail match {
           case (v: ValOrDefDef) :: _ =>
             if (v.tpt.pos.includes(pos)) {
-              CompletionPosition.Type
+              TypeCompletion
             } else {
-              CompletionPosition.None
+              NoneCompletion
             }
           case _ =>
             inferCompletionPosition(pos, text, tail, completions, editRange)
         }
       case AppliedTypeTree(_, args) :: _ =>
         if (args.exists(_.pos.includes(pos))) {
-          CompletionPosition.Type
+          TypeCompletion
         } else {
-          CompletionPosition.None
+          NoneCompletion
         }
       case New(_) :: _ =>
-        CompletionPosition.New
+        NewCompletion
       case head :: tail if !head.pos.includes(pos) =>
         inferCompletionPosition(pos, text, tail, completions, editRange)
       case _ =>
-        CompletionPosition.None
+        NoneCompletion
     }
-
-  }
-
-  object CompletionPosition {
-
-    /**
-     * A completion inside a type position, example `val x: Map[Int, Strin@@]`
-     */
-    case object Type extends CompletionPosition {
-      override def isType: Boolean = true
-    }
-
-    /**
-     * A completion inside a new expression, example `new Array@@`
-     */
-    case object New extends CompletionPosition {
-      override def isNew: Boolean = true
-    }
-
-    case object None extends CompletionPosition
 
   }
 
