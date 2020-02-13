@@ -139,13 +139,16 @@ final class RenameProvider(
         Seq(uri.toAbsolutePath -> textEdits.toList)
       }
       val fileChanges = allChanges.flatten.toMap
+      val shouldRenameInBackground =
+        !metalsConfig.openFilesOnRenames ||
+          fileChanges.keySet.size >= metalsConfig.renameFileThreshold
       val (openedEdits, closedEdits) =
-        if (!metalsConfig.openFilesOnRenames || fileChanges.keySet.size >= metalsConfig.renameFileThreshold) {
+        if (shouldRenameInBackground) {
           if (metalsConfig.openFilesOnRenames) {
             client.showMessage(fileThreshold(fileChanges.keySet.size))
           }
           fileChanges.partition {
-            case (path, edits) =>
+            case (path, _) =>
               buffers.contains(path)
           }
         } else {
@@ -372,8 +375,8 @@ final class RenameProvider(
   ): MessageParams = {
     val message =
       s"""|Renamed symbol is present in over $files files.
-          |It will be renamed outside the editor in the background, 
-          |otherwise the editor might become unresponsive.""".stripMargin
+          |It will be renamed without opening the files
+          |to prevent the editor from becoming unresponsive.""".stripMargin
     new MessageParams(MessageType.Warning, message)
   }
 

@@ -3,8 +3,6 @@ package scala.meta.internal.metals
 import scala.meta.internal.metals.Configs._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
-import scala.util.Success
-import scala.util.Try
 
 /**
  * Configuration parameters for the Metals language server.
@@ -57,14 +55,8 @@ final case class MetalsServerConfig(
       "metals.warnings",
       default = true
     ),
-    openFilesOnRenames: Boolean = MetalsServerConfig.binaryOption(
-      "metals.open-files-on-rename",
-      default = false
-    ),
-    renameFileThreshold: Int = MetalsServerConfig.intOption(
-      "metals.rename-file-threshold",
-      default = 300
-    ),
+    openFilesOnRenames: Boolean = false,
+    renameFileThreshold: Int = 300,
     bloopEmbeddedVersion: String = System.getProperty(
       "bloop.embedded.version",
       BuildInfo.bloopVersion
@@ -97,25 +89,11 @@ object MetalsServerConfig {
       case Some("false" | "off") => false
       case Some(other) =>
         scribe.warn(
-          s"Invalid property, required 'true|on' or 'false|off', but got '$other'. Using the default value '$default'"
+          s"Invalid value for property '$key', required 'true|on' or 'false|off', but got '$other'. Using the default value '$default'"
         )
         default
       case None => default
     }
-  def intOption(key: String, default: Int): Int = {
-    sys.props.get(key) match {
-      case Some(property) =>
-        Try(property.toInt) match {
-          case Success(value) => value
-          case _ =>
-            scribe.warn(
-              s"Invalid property, required Int, but got '$property'. Using the default value '$default'"
-            )
-            default
-        }
-      case None => default
-    }
-  }
 
   def base: MetalsServerConfig = MetalsServerConfig()
   def default: MetalsServerConfig = {
