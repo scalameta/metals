@@ -14,7 +14,6 @@ import scala.meta.internal.pantsbuild.MessageOnlyException
 import scala.meta.internal.pantsbuild.IntelliJ
 import metaconfig.cli.CliApp
 import metaconfig.internal.Levenshtein
-import MetaconfigEnrichments._
 import scala.meta.internal.pc.LogMessages
 
 object SharedCommand {

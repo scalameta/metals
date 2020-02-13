@@ -17,7 +17,6 @@ object OpenCommand extends Command[OpenOptions]("open") {
   override def examples: Doc =
     Doc.text("fastpass open --intellij PROJECT_NAME")
   def onEmpty(project: Project, app: CliApp): Unit = {
-    import MetaconfigEnrichments._
     app.info(
       s"to open the project in IntelliJ run: fastpass open --intellij ${project.name}"
     )
