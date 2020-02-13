@@ -1,4 +1,5 @@
 package scala.meta.internal.rename
+
 import scala.meta.internal.metals.ReferenceProvider
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.WorkspaceEdit
@@ -23,8 +24,6 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.{Range => LSPRange}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => LSPEither}
 import scala.meta.internal.metals.Buffers
-import java.net.URI
-import java.nio.file.Paths
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Compilations
 import org.eclipse.lsp4j.TextDocumentEdit
@@ -35,6 +34,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.SelectTree
+import scala.meta.internal.metals.MetalsServerConfig
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
@@ -45,7 +45,8 @@ final class RenameProvider(
     workspace: AbsolutePath,
     client: MetalsLanguageClient,
     buffers: Buffers,
-    compilations: Compilations
+    compilations: Compilations,
+    metalsConfig: MetalsServerConfig
 ) {
 
   private var awaitingSave = new ConcurrentLinkedQueue[() => Unit]
@@ -135,14 +136,24 @@ final class RenameProvider(
         val textEdits = for (loc <- locs) yield {
           textEdit(isOccurence, loc, params.getNewName())
         }
-        Seq(uri -> textEdits.toList)
+        Seq(uri.toAbsolutePath -> textEdits.toList)
       }
       val fileChanges = allChanges.flatten.toMap
-      val (openedEdits, closedEdits) = fileChanges.partition {
-        case (file, edits) =>
-          val path = AbsolutePath(Paths.get(new URI(file)))
-          buffers.contains(path)
-      }
+      val shouldRenameInBackground =
+        !metalsConfig.openFilesOnRenames ||
+          fileChanges.keySet.size >= metalsConfig.renameFileThreshold
+      val (openedEdits, closedEdits) =
+        if (shouldRenameInBackground) {
+          if (metalsConfig.openFilesOnRenames) {
+            client.showMessage(fileThreshold(fileChanges.keySet.size))
+          }
+          fileChanges.partition {
+            case (path, _) =>
+              buffers.contains(path)
+          }
+        } else {
+          (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
+        }
 
       awaitingSave.add(() => changeClosedFiles(closedEdits))
 
@@ -158,12 +169,12 @@ final class RenameProvider(
   }
 
   private def documentEdits(
-      openedEdits: Map[String, List[TextEdit]]
+      openedEdits: Map[AbsolutePath, List[TextEdit]]
   ): List[LSPEither[TextDocumentEdit, ResourceOperation]] = {
     openedEdits.map {
       case (file, edits) =>
         val textId = new VersionedTextDocumentIdentifier()
-        textId.setUri(file)
+        textId.setUri(file.toURI.toString())
         val ed = new TextDocumentEdit(textId, edits.asJava)
         LSPEither.forLeft[TextDocumentEdit, ResourceOperation](ed)
     }.toList
@@ -171,7 +182,7 @@ final class RenameProvider(
 
   private def fileRenames(
       isOccurence: (String => Boolean) => Boolean,
-      fileChanges: Set[String],
+      fileChanges: Set[AbsolutePath],
       newName: String
   ): Option[LSPEither[TextDocumentEdit, ResourceOperation]] = {
     fileChanges
@@ -179,14 +190,15 @@ final class RenameProvider(
         isOccurence { str =>
           str.owner.isPackage &&
           (str.desc.isType || str.desc.isTerm) &&
-          file.endsWith(s"/${str.desc.name.value}.scala")
+          file.toURI.toString.endsWith(s"/${str.desc.name.value}.scala")
         }
       }
       .map { file =>
+        val uri = file.toURI.toString
         val newFile =
-          file.replaceAll("/[^/]+\\.scala$", s"/$newName.scala")
+          uri.replaceAll("/[^/]+\\.scala$", s"/$newName.scala")
         LSPEither.forRight[TextDocumentEdit, ResourceOperation](
-          new RenameFile(file, newFile)
+          new RenameFile(uri, newFile)
         )
       }
   }
@@ -223,13 +235,14 @@ final class RenameProvider(
     )
   }
 
-  private def changeClosedFiles(fileEdits: Map[String, List[TextEdit]]) = {
+  private def changeClosedFiles(
+      fileEdits: Map[AbsolutePath, List[TextEdit]]
+  ) = {
     fileEdits.toArray.par.foreach {
       case (file, changes) =>
-        val path = AbsolutePath(Paths.get(new URI(file)))
-        val text = path.readText
+        val text = file.readText
         val newText = TextEdits.applyEdits(text, changes)
-        path.writeText(newText)
+        file.writeText(newText)
     }
   }
 
@@ -355,6 +368,16 @@ final class RenameProvider(
       new TextDocumentIdentifier(location.getUri()),
       location.getRange().getStart()
     )
+  }
+
+  private def fileThreshold(
+      files: Int
+  ): MessageParams = {
+    val message =
+      s"""|Renamed symbol is present in over $files files.
+          |It will be renamed without opening the files
+          |to prevent the editor from becoming unresponsive.""".stripMargin
+    new MessageParams(MessageType.Warning, message)
   }
 
   private def javaSymbol(
