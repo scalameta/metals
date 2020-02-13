@@ -194,6 +194,24 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |""".stripMargin
   )
 
+  check(
+    "real-pipe",
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |word this is a `|` @@sign
+       |  '''.stripMargin
+       |}@@""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |word this is a `|` 
+       |  |sign
+       |  '''.stripMargin
+       |}
+       |""".stripMargin
+  )
+
   def check(
       name: String,
       testCase: String,

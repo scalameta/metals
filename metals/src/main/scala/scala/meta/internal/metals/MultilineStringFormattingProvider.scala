@@ -41,7 +41,7 @@ final class MultilineStringFormattingProvider(
   }
 
   private def determineDefaultIndent(sourceText: String, start: Int): String = {
-    val lastPipe = sourceText.lastIndexBetween('|', upperBound = start)
+    val lastPipe = sourceText.indexOf('|')
     val lastNewline = sourceText.lastIndexBetween('\n', upperBound = lastPipe)
     space * (lastPipe - lastNewline - 1)
   }
