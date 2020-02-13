@@ -21,7 +21,8 @@ private[debug] final class SetBreakpointsRequestHandler(
   def apply(
       request: SetBreakpointsArguments
   ): Future[SetBreakpointsResponse] = {
-    val path = adapters.adaptPath(request.getSource.getPath).toAbsolutePath
+    val path =
+      adapters.adaptPathForServer(request.getSource.getPath).toAbsolutePath
 
     val topLevels = Mtags.allToplevels(path.toInput)
     val occurrences = path.toLanguage match {
