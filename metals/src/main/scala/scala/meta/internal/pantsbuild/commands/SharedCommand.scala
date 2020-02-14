@@ -1,8 +1,5 @@
 package scala.meta.internal.pantsbuild.commands
 
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
-import scala.util.Try
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.Time
@@ -15,6 +12,8 @@ import scala.meta.internal.pantsbuild.IntelliJ
 import metaconfig.cli.CliApp
 import metaconfig.internal.Levenshtein
 import scala.meta.internal.pc.LogMessages
+import metaconfig.cli.TabCompletionContext
+import metaconfig.cli.TabCompletionItem
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
@@ -24,12 +23,6 @@ object SharedCommand {
           s"To fix this problem, change the working directory to the root of a Pants build."
       )
       1
-    } else if (export.isRegenerate) {
-      BloopPants.bloopRegenerate(
-        AbsolutePath(export.workspace),
-        export.targets
-      )(ExecutionContext.global)
-      0
     } else {
       val workspace = export.workspace
       val targets = export.targets
@@ -106,57 +99,20 @@ object SharedCommand {
     1
   }
 
-  def interpretRefresh(refresh: RefreshOptions): Int = { 1 }
-}
-
-case class ProjectRoot(
-    root: AbsolutePath
-) {
-  val bspRoot: AbsolutePath = root.resolve(root.filename)
-  val bspJson: AbsolutePath = bspRoot.resolve(".bsp").resolve("bloop.json")
-  val bloopRoot: AbsolutePath = bspRoot.resolve(".bloop")
-}
-
-case class Project(
-    common: SharedOptions,
-    name: String,
-    targets: List[String],
-    root: ProjectRoot
-) {
-  def parentRoot: AbsolutePath = root.root
-  def bspRoot: AbsolutePath = root.bspRoot
-}
-object Project {
-  def create(
-      name: String,
-      common: SharedOptions,
-      targets: List[String]
-  ): Project = {
-    Project(common, name, targets, ProjectRoot(common.home.resolve(name)))
-  }
-  def names(common: SharedOptions): List[String] =
-    fromCommon(common).map(_.name)
-  def fromName(
-      name: String,
-      common: SharedOptions
-  ): Option[Project] =
-    fromCommon(common, _ == name).headOption
-  def fromCommon(
-      common: SharedOptions,
-      isEnabled: String => Boolean = _ => true
-  ): List[Project] = {
-    for {
-      project <- common.home.list.toBuffer[AbsolutePath].toList
-      if (isEnabled(project.filename))
-      root = ProjectRoot(project)
-      if (root.bspJson.isFile)
-      json <- Try(ujson.read(root.bspJson.readText)).toOption
-      targets <- json.obj.get("pantsTargets")
-    } yield Project(
-      common,
-      project.filename,
-      targets.arr.map(_.str).toList,
-      root
-    )
+  def complete(
+      context: TabCompletionContext,
+      allowsMultipleProjects: Boolean = false
+  ): List[TabCompletionItem] = {
+    if (!allowsMultipleProjects & context.arguments.length > 1) {
+      Nil
+    } else {
+      context.setting match {
+        case None =>
+          Project
+            .fromCommon(SharedOptions())
+            .map(project => TabCompletionItem(project.name))
+        case Some(_) => Nil
+      }
+    }
   }
 }

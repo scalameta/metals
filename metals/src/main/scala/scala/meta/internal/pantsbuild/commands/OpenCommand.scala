@@ -6,6 +6,8 @@ import scala.meta.internal.pantsbuild.IntelliJ
 import org.typelevel.paiges.Doc
 import metaconfig.cli.Messages
 import scala.meta.internal.pantsbuild.VSCode
+import metaconfig.cli.TabCompletionContext
+import metaconfig.cli.TabCompletionItem
 
 object OpenCommand extends Command[OpenOptions]("open") {
   override def description: Doc =
@@ -24,6 +26,10 @@ object OpenCommand extends Command[OpenOptions]("open") {
       s"to open the project in VS Code run:  fastpass open --vscode ${project.name}"
     )
   }
+  override def complete(
+      context: TabCompletionContext
+  ): List[TabCompletionItem] =
+    SharedCommand.complete(context)
   def run(open: OpenOptions, app: CliApp): Int = {
     SharedCommand.withOneProject(
       "open",

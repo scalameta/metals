@@ -5,6 +5,7 @@ import metaconfig.cli.CliApp
 import org.typelevel.paiges.Doc
 import metaconfig.cli.Messages
 import scala.meta.internal.pantsbuild.Export
+import metaconfig.cli.{TabCompletionContext, TabCompletionItem}
 
 object RefreshCommand extends Command[RefreshOptions]("refresh") {
   override def description: Doc = Doc.paragraph("Refresh an existing project")
@@ -17,19 +18,25 @@ object RefreshCommand extends Command[RefreshOptions]("refresh") {
         "fastpass refresh --intellij PROJECT_NAME"
       ).map(Doc.text)
     )
+  override def complete(
+      context: TabCompletionContext
+  ): List[TabCompletionItem] =
+    SharedCommand.complete(context, allowsMultipleProjects = true)
   def run(refresh: RefreshOptions, app: CliApp): Int = {
-    SharedCommand.withOneProject(
-      "refresh",
-      refresh.projects,
-      refresh.common,
-      app
-    ) { project =>
-      SharedCommand.interpretExport(
-        Export(project, refresh.open, app).copy(
-          export = refresh.export,
-          isCache = refresh.update
-        )
-      )
+    val projects = Project.fromCommon(refresh.common)
+    val errors = refresh.projects.map { projectName =>
+      projects.find(_.name == projectName) match {
+        case Some(project) =>
+          SharedCommand.interpretExport(
+            Export(project, refresh.open, app).copy(
+              export = refresh.export,
+              isCache = refresh.update
+            )
+          )
+        case None =>
+          SharedCommand.noSuchProject(projectName, app, refresh.common)
+      }
     }
+    errors.sum
   }
 }

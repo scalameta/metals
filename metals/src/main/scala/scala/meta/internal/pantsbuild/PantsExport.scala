@@ -89,7 +89,8 @@ object PantsExport {
           isPantsTargetRoot = isPantsTargetRoot,
           targetType = targetType,
           pantsTargetType = pantsTargetType,
-          globs = PantsGlobs.fromJson(value)
+          globs = PantsGlobs.fromJson(value),
+          roots = PantsRoots.fromJson(value)
         )
     }.toMap
 
@@ -99,7 +100,7 @@ object PantsExport {
         name -> PantsLibrary(name, valueObj.obj.flatMap {
           case (key, value) =>
             val path = Paths.get(value.str)
-            if (Files.isRegularFile(path)) Some(key -> path)
+            if (Files.exists(path)) Some(key -> path)
             else None
         })
     }.toMap

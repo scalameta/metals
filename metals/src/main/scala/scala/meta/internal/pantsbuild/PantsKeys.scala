@@ -13,4 +13,6 @@ object PantsKeys {
   val scalaPlatform = "scala_platform"
   val compilerClasspath = "compiler_classpath"
   val scalaVersion = "scala_version"
+  val roots = "roots"
+  val sourceRoot = "source_root"
 }

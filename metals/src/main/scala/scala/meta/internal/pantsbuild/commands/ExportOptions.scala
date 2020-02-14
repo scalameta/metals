@@ -6,12 +6,6 @@ import metaconfig.ConfCodec
 
 case class ExportOptions(
     @Description(
-      "The maximum number of source files to export. " +
-        "This options exists to prevent the export from taking a long time to complete, " +
-        "for example if exporting '::' in a large Pants build."
-    )
-    maxFileCount: Int = 5000,
-    @Description(
       "Don't download *-sources.jar for 3rd party dependencies."
     )
     noSources: Boolean = false,

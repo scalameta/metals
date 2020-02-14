@@ -11,6 +11,8 @@ import java.io.PrintWriter
 import java.nio.file.Path
 import scala.util.control.NonFatal
 import scala.collection.JavaConverters._
+import metaconfig.cli.TabCompletionContext
+import metaconfig.cli.TabCompletionItem
 
 object AmendCommand extends Command[AmendOptions]("amend") {
   override def description: Doc =
@@ -18,6 +20,10 @@ object AmendCommand extends Command[AmendOptions]("amend") {
       "Edit the Pants targets of an existing project"
     )
   override def options: Doc = Messages.options(AmendOptions())
+  override def complete(
+      context: TabCompletionContext
+  ): List[TabCompletionItem] =
+    SharedCommand.complete(context)
   def run(amend: AmendOptions, app: CliApp): Int = {
     SharedCommand.withOneProject(
       "amend",

@@ -11,6 +11,8 @@ case class PantsTargetType(value: String) {
   def isJUnitTests: Boolean = value == "junit_tests"
   def isJavaLibrary: Boolean = value == "java_library"
   def isJavaThriftLibrary: Boolean = value == "java_thrift_library"
+  def isRubyThriftLibrary: Boolean = value == "ruby_thrift_library"
+  def isPythonThriftLibrary: Boolean = value == "python_thrift_library"
   def isJavaAntlrLibrary: Boolean = value == "java_antrl_library"
   def isJavaFiles: Boolean = value == "java_files"
   def isFiles: Boolean = value == "files"
@@ -25,6 +27,7 @@ case class PantsTargetType(value: String) {
 object PantsTargetType {
   private val unsupportedTargetType = Set(
     "files", "page", "python_binary", "python_tests", "python_library",
-    "python_requirement_library"
+    "python3_binary", "python23_library", "python_requirement_library",
+    "ruby_thrift_library", "python_thrift_library"
   )
 }

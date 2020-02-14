@@ -18,12 +18,9 @@ case class Export(
     export: ExportOptions = ExportOptions.default,
     isCache: Boolean = false,
     isRegenerate: Boolean = false,
-    token: CancelToken = EmptyCancelToken,
-    onFilemap: Filemap => Unit = _ => Unit
+    token: CancelToken = EmptyCancelToken
 ) {
   def isSources: Boolean = !export.noSources
-  def maxFileCount: Int =
-    export.maxFileCount
   def isMergeTargetsInSameDirectory: Boolean =
     export.mergeTargetsInSameDirectory
   def root = project.root
