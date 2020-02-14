@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.pc.completions
 
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
@@ -6,6 +6,7 @@ import org.eclipse.{lsp4j => l}
 
 import scala.collection.mutable
 import scala.collection.immutable.Nil
+import scala.meta.internal.pc.{CompletionFuzzy, MetalsGlobal, Identifier}
 
 trait OverrideCompletions { this: MetalsGlobal =>
 
@@ -30,7 +31,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
    * @param start the position start of the completion.
    * @param isCandidate the determination of whether the symbol will be a possible completion item.
    */
-  case class Override(
+  case class OverrideCompletion(
       name: Name,
       t: Template,
       pos: Position,

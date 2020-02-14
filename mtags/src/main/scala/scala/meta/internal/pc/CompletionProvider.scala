@@ -345,11 +345,11 @@ class CompletionProvider(
         CompletionResult.NoResults,
         getLastVisitedParentTrees(pos)
       ) match {
-        case CompletionPosition.None =>
+        case NoneCompletion =>
           logger.warning(e.getMessage)
           (
             InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
-            CompletionPosition.None,
+            NoneCompletion,
             editRange,
             noQuery
           )

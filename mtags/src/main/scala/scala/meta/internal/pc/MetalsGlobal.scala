@@ -29,9 +29,16 @@ class MetalsGlobal(
     val buildTargetIdentifier: String,
     val metalsConfig: PresentationCompilerConfig
 ) extends Global(settings, reporter)
-    with Completions
-    with ScaladocCompletions
-    with OverrideCompletions
+    with completions.Completions
+    with completions.ArgCompletions
+    with completions.FilenameCompletions
+    with completions.InterpolatorCompletions
+    with completions.MatchCaseCompletions
+    with completions.NewCompletions
+    with completions.NoneCompletions
+    with completions.ScaladocCompletions
+    with completions.TypeCompletions
+    with completions.OverrideCompletions
     with Signatures
     with Compat
     with GlobalProxy

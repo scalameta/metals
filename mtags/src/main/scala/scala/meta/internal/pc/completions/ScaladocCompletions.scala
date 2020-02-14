@@ -1,10 +1,11 @@
-package scala.meta.internal.pc
+package scala.meta.internal.pc.completions
 
 import java.lang.StringBuilder
 
 import org.eclipse.{lsp4j => l}
 
 import scala.collection.immutable.Nil
+import scala.meta.internal.pc.MetalsGlobal
 
 trait ScaladocCompletions { this: MetalsGlobal =>
 
@@ -17,7 +18,7 @@ trait ScaladocCompletions { this: MetalsGlobal =>
    * @param pos the position of the completion request.
    * @param text the text of the original source code.
    */
-  case class Scaladoc(
+  case class ScaladocCompletion(
       editRange: l.Range,
       associatedDef: MemberDef,
       pos: Position,

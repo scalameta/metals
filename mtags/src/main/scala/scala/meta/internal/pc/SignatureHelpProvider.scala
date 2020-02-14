@@ -372,7 +372,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
             memberOrdering(
               qual.name.toString(),
               new ShortenedNames(),
-              CompletionPosition.None
+              NoneCompletion
             )
           )
           .map(_.sym.javaClassSymbol)
