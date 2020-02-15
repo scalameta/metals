@@ -1,7 +1,6 @@
 package tests
 
 import java.nio.file.Paths
-import java.util
 import java.util.UUID
 import org.eclipse.{lsp4j => l}
 import BuildInfo.testResourceDirectory
@@ -42,7 +41,7 @@ class FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
 
   private def findFoldingRangesFor(
       source: String
-  ): util.List[l.FoldingRange] = {
+  ): java.util.List[l.FoldingRange] = {
     val path = registerSource(source)
     foldingRangeProvider.getRangedFor(path)
   }

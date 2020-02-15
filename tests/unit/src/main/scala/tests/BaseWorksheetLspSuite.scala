@@ -233,7 +233,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
-  test("no-worksheet") {
+  test("no-worksheet".flaky) {
     for {
       _ <- server.initialize(
         s"""|/metals.json

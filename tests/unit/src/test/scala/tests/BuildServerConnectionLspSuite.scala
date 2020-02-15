@@ -4,7 +4,7 @@ import scala.meta.internal.metals.ServerCommands
 
 class BuildServerConnectionLspSuite
     extends BaseLspSuite("build-server-connection") {
-  test("basic".flaky) {
+  test("basic") {
     cleanWorkspace()
     for {
       _ <- server.initialize(

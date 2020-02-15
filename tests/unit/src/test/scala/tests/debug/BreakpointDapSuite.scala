@@ -5,6 +5,7 @@ import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage
 import munit.Location
+import munit.TestOptions
 
 class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
 
@@ -247,7 +248,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
                 |""".stripMargin
   )
 
-  assertBreakpoints("for-each-comprehension")(
+  assertBreakpoints("for-each-comprehension".flaky)(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
@@ -599,7 +600,7 @@ class BreakpointDapSuite extends BaseDapSuite("debug-breakpoint") {
     } yield assertNoDiff(output, "1\n2\n3\n")
   }
 
-  def assertBreakpoints(name: String, disabled: Boolean = false)(
+  def assertBreakpoints(name: TestOptions, disabled: Boolean = false)(
       source: String
   )(implicit loc: Location): Unit = {
     if (disabled) return
