@@ -21,7 +21,7 @@ class BootstrapModifier extends StringModifier {
            |
            |```sh
            |# Make sure to use coursier v1.1.0-M9 or newer.
-           |curl -L -o coursier https://git.io/coursier
+           |curl -L -o coursier https://git.io/coursier-cli
            |chmod +x coursier
            |./coursier bootstrap \\
            |  --java-opt -Xss4m \\
