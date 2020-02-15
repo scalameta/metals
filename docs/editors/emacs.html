@@ -98,10 +98,11 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
       backup-directory-alist `((<span class="hljs-string">".*"</span> . ,temporary-file-directory))
       auto-save-file-name-transforms `((<span class="hljs-string">".*"</span> ,temporary-file-directory <span class="hljs-literal">t</span>)))
 
-<span class="hljs-comment">;; Enable scala-mode and sbt-mode</span>
+<span class="hljs-comment">;; Enable scala-mode for highlighting, indentation and motion commands</span>
 (<span class="hljs-name">use-package</span> scala-mode
   <span class="hljs-symbol">:mode</span> <span class="hljs-string">"\\.s\\(cala\\|bt\\)$"</span>)
 
+<span class="hljs-comment">;; Enable sbt mode for executing sbt commands</span>
 (<span class="hljs-name">use-package</span> sbt-mode
   <span class="hljs-symbol">:commands</span> sbt-start sbt-command
   <span class="hljs-symbol">:config</span>
@@ -121,9 +122,11 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 
 (<span class="hljs-name">use-package</span> lsp-mode
   <span class="hljs-comment">;; Optional - enable lsp-mode automatically in scala files</span>
-  <span class="hljs-symbol">:hook</span> (<span class="hljs-name">scala-mode</span> . lsp)
+  <span class="hljs-symbol">:hook</span>  (<span class="hljs-name">scala-mode</span> . lsp)
+         (<span class="hljs-name">lsp-mode</span> . lsp-lens-mode)
   <span class="hljs-symbol">:config</span> (<span class="hljs-name">setq</span> lsp-prefer-flymake <span class="hljs-literal">nil</span>))
 
+<span class="hljs-comment">;; Enable nice rendering of documentation on hover</span>
 (<span class="hljs-name">use-package</span> lsp-ui)
 
 <span class="hljs-comment">;; lsp-mode supports snippets, but in order for them to work you need to use yasnippet</span>
@@ -133,6 +136,23 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 
 <span class="hljs-comment">;; Add company-lsp backend for metals</span>
 (<span class="hljs-name">use-package</span> company-lsp)
+
+<span class="hljs-comment">;; Use the Debug Adapter Protocol for running tests and debugging</span>
+(<span class="hljs-name">use-package</span> posframe
+  <span class="hljs-comment">;; Posframe is a pop-up tool that must be manually installed for dap-mode</span>
+  )
+(<span class="hljs-name">use-package</span> dap-mode
+  <span class="hljs-symbol">:hook</span>
+  (<span class="hljs-name">lsp-mode</span> . dap-mode)
+  (<span class="hljs-name">lsp-mode</span> . dap-ui-mode)
+  )
+
+<span class="hljs-comment">;; Use the Tree View Protocol for viewing the project structure and triggering compilation</span>
+(<span class="hljs-name">use-package</span> lsp-treemacs
+  <span class="hljs-symbol">:config</span>
+  (<span class="hljs-name">lsp-metals-treeview-enable</span> <span class="hljs-literal">t</span>)
+  (<span class="hljs-name">setq</span> lsp-metals-treeview-show-when-views-received <span class="hljs-literal">t</span>)
+  )
 </code></pre>
 <blockquote>
 <p>You may need to disable other packages like <code>ensime</code> or sbt server to prevent
@@ -155,8 +175,8 @@ not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.8.0+249-d73fbf2c-SNAPSHOT</td>
-          <td>14 Feb 2020 14:30</td>
+          <td>0.8.0+251-05a84d44-SNAPSHOT</td>
+          <td>15 Feb 2020 19:06</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
@@ -244,6 +264,7 @@ you want to use an alternative to lsp-mode.</p>
 (<span class="hljs-name">use-package</span> scala-mode
   <span class="hljs-symbol">:mode</span> <span class="hljs-string">"^\w+\\.s\\(cala\\|bt\\)$"</span>)
 
+<span class="hljs-comment">;; Enable sbt mode for executing sbt commands</span>
 (<span class="hljs-name">use-package</span> sbt-mode
   <span class="hljs-symbol">:commands</span> sbt-start sbt-command
   <span class="hljs-symbol">:config</span>
@@ -252,7 +273,10 @@ you want to use an alternative to lsp-mode.</p>
   (<span class="hljs-name">substitute-key-definition</span>
    'minibuffer-complete-word
    'self-insert-command
-   minibuffer-local-completion-map))
+   minibuffer-local-completion-map)
+   <span class="hljs-comment">;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152</span>
+   (<span class="hljs-name">setq</span> sbt<span class="hljs-symbol">:program-options</span> '(<span class="hljs-string">"-Dsbt.supershell=false"</span>))
+)
 
 (<span class="hljs-name">use-package</span> eglot
   <span class="hljs-symbol">:pin</span> melpa-stable
