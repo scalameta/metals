@@ -182,7 +182,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
   // requires org.scalamacros:macroparadise and io.spire-match:kind-projector.
   // Navigation continues to mostly work, except for areas that have compilation
   // errors.
-  test("missing-compiler-plugin".flaky) {
+  test("missing-compiler-plugin") {
     for {
       _ <- server.initialize(
         """
@@ -213,14 +213,14 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |/**
            | * Must obey the laws defined in cats.laws.ContravariantLaws.
            | */
-           |@typeclass/*<no symbol>*/ trait Contravariant/*L5*/[F/*L5*/[_]] extends Invariant/*Invariant.scala*/[F/*L5*/] { self/*L1*/ =>
+           |@typeclass/*<no symbol>*/ trait Contravariant/*L5*/[F/*L5*/[_]] extends Invariant/*Invariant.scala*/[F/*L5*/] { self/*L5*/ =>
            |  def contramap/*L6*/[A/*L6*/, B/*L6*/](fa/*L6*/: F/*L5*/[A/*L6*/])(f/*L6*/: B/*L6*/ => A/*L6*/): F/*L5*/[B/*L6*/]
            |  override def imap/*L7*/[A/*L7*/, B/*L7*/](fa/*L7*/: F/*L5*/[A/*L7*/])(f/*L7*/: A/*L7*/ => B/*L7*/)(fi/*L7*/: B/*L7*/ => A/*L7*/): F/*L5*/[B/*L7*/] = contramap/*L6*/(fa/*L7*/)(fi/*L7*/)
            |
-           |  def compose/*L9*/[G/*L9*/[_]:/*unexpected: L5*/ Contravariant/*L5*/]: Functor/*Functor.scala*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
+           |  def compose/*L9*/[G/*L9*/[_]: Contravariant/*L5*/]: Functor/*Functor.scala*/[λ/*<no symbol>*/[α/*Functor.scala*/ => F/*Functor.scala*/[G/*Functor.scala*/[α/*Functor.scala*/]]]] =
            |    new ComposedContravariant/*Composed.scala*/[F/*L5*/, G/*L9*/] {
            |      val F/*L11*/ = self/*L5*/
-           |      val G/*L12*/ = Contravariant/*<no symbol>*/[G/*L9*/]
+           |      val G/*L12*/ = Contravariant/*L5*/[G/*L9*/]
            |    }
            |
            |  /**
@@ -231,7 +231,7 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |
            |  def liftContravariant/*L21*/[A/*L21*/, B/*L21*/](f/*L21*/: A/*L21*/ => B/*L21*/): F/*L5*/[B/*L21*/] => F/*L5*/[A/*L21*/] = contramap/*L6*/(_: F/*L5*/[B/*L21*/])(f/*L21*/)
            |
-           |  override def composeFunctor/*L23*/[G/*L23*/[_]: Functor/*Functor.scala*/]: Contravariant/*L5*/[λ/*<no symbol>*/[α/*<no symbol>*/ => F/*<no symbol>*/[G/*<no symbol>*/[α/*<no symbol>*/]]]] =
+           |  override def composeFunctor/*L23*/[G/*L23*/[_]: Functor/*Functor.scala*/]: Contravariant/*L5*/[λ/*<no symbol>*/[α/*L5*/ => F/*L5*/[G/*L5*/[α/*L5*/]]]] =
            |    new ComposedContravariantCovariant/*Composed.scala*/[F/*L5*/, G/*L23*/] {
            |      val F/*L25*/ = self/*L5*/
            |      val G/*L26*/ = Functor/*Functor.scala*/[G/*L23*/]
@@ -260,9 +260,6 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
            |.metals/readonly/cats/Contravariant.scala:10:45: information: <error> takes no type parameters, expected: one
            |  def compose[G[_]: Contravariant]: Functor[λ[α => F[G[α]]]] =
            |                                            ^
-           |.metals/readonly/cats/Contravariant.scala:13:15: information: not found: value Contravariant
-           |      val G = Contravariant[G]
-           |              ^^^^^^^^^^^^^
            |.metals/readonly/cats/Contravariant.scala:24:61: information: not found: type λ
            |  override def composeFunctor[G[_]: Functor]: Contravariant[λ[α => F[G[α]]]] =
            |                                                            ^

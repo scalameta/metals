@@ -460,7 +460,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
 
   // see https://github.com/scalameta/metals/issues/846
   val noOp = "no-op"
-  test(noOp) {
+  test(noOp.flaky) {
     cleanWorkspace()
     for {
       _ <- server.initialize(
