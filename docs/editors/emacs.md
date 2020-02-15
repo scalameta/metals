@@ -39,10 +39,11 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
       backup-directory-alist `((".*" . ,temporary-file-directory))
       auto-save-file-name-transforms `((".*" ,temporary-file-directory t)))
 
-;; Enable scala-mode and sbt-mode
+;; Enable scala-mode for highlighting, indentation and motion commands
 (use-package scala-mode
   :mode "\\.s\\(cala\\|bt\\)$")
 
+;; Enable sbt mode for executing sbt commands
 (use-package sbt-mode
   :commands sbt-start sbt-command
   :config
@@ -62,9 +63,11 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 
 (use-package lsp-mode
   ;; Optional - enable lsp-mode automatically in scala files
-  :hook (scala-mode . lsp)
+  :hook  (scala-mode . lsp)
+         (lsp-mode . lsp-lens-mode)
   :config (setq lsp-prefer-flymake nil))
 
+;; Enable nice rendering of documentation on hover
 (use-package lsp-ui)
 
 ;; lsp-mode supports snippets, but in order for them to work you need to use yasnippet
@@ -74,6 +77,23 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 
 ;; Add company-lsp backend for metals
 (use-package company-lsp)
+
+;; Use the Debug Adapter Protocol for running tests and debugging
+(use-package posframe
+  ;; Posframe is a pop-up tool that must be manually installed for dap-mode
+  )
+(use-package dap-mode
+  :hook
+  (lsp-mode . dap-mode)
+  (lsp-mode . dap-ui-mode)
+  )
+
+;; Use the Tree View Protocol for viewing the project structure and triggering compilation
+(use-package lsp-treemacs
+  :config
+  (lsp-metals-treeview-enable t)
+  (setq lsp-metals-treeview-show-when-views-received t)
+  )
 ```
 
 > You may need to disable other packages like `ensime` or sbt server to prevent
@@ -135,6 +155,7 @@ To configure Eglot with Metals:
 (use-package scala-mode
   :mode "^\w+\\.s\\(cala\\|bt\\)$")
 
+;; Enable sbt mode for executing sbt commands
 (use-package sbt-mode
   :commands sbt-start sbt-command
   :config
@@ -143,7 +164,10 @@ To configure Eglot with Metals:
   (substitute-key-definition
    'minibuffer-complete-word
    'self-insert-command
-   minibuffer-local-completion-map))
+   minibuffer-local-completion-map)
+   ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
+   (setq sbt:program-options '("-Dsbt.supershell=false"))
+)
 
 (use-package eglot
   :pin melpa-stable
