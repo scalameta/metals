@@ -27,3 +27,15 @@ starting the run/debug session is as follows:
    [vscode implementation](https://github.com/scalameta/metals-vscode/blob/master/src/scalaDebugger.ts)
    and how it is
    [wired up together](https://github.com/scalameta/metals-vscode/blob/master/src/extension.ts#L356)
+
+
+Create the following trace files to spy on incoming/outgoing JSON communication between the debug server and editor.
+
+```
+# macOS
+touch ~/Library/Caches/org.scalameta.metals/dap-server.trace.json
+touch ~/Library/Caches/org.scalameta.metals/dap-client.trace.json
+# Linux
+touch ~/.cache/metals/dap-server.trace.json
+touch ~/.cache/metals/dap-client.trace.json
+```
