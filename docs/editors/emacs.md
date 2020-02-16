@@ -140,6 +140,8 @@ To configure Eglot with Metals:
 ;; Add melpa-stable to your packages repositories
 (add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 
+(package-initialize)
+
 ;; Install use-package if not already installed
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
