@@ -175,8 +175,8 @@ not exist yet.</p>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.8.0+261-0b33f317-SNAPSHOT</td>
-          <td>16 Feb 2020 13:10</td>
+          <td>0.8.0+263-be4e5d44-SNAPSHOT</td>
+          <td>16 Feb 2020 17:17</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
@@ -248,6 +248,8 @@ you want to use an alternative to lsp-mode.</p>
 
 <span class="hljs-comment">;; Add melpa-stable to your packages repositories</span>
 (<span class="hljs-name">add-to-list</span> 'package-archives '(<span class="hljs-string">"melpa-stable"</span> . <span class="hljs-string">"https://stable.melpa.org/packages/"</span>) <span class="hljs-literal">t</span>)
+
+(<span class="hljs-name">package-initialize</span>)
 
 <span class="hljs-comment">;; Install use-package if not already installed</span>
 (<span class="hljs-name">unless</span> (<span class="hljs-name">package-installed-p</span> 'use-package)
