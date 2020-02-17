@@ -141,6 +141,16 @@ Possible values:
 
 *Usage of `inputBoxProvider` in `ClientCapabilities.experimental` is preferable.*
 
+### `-Dmetals.pick-input`
+
+Possible values:
+
+- `off` (default): the `metals/pickInput` request is not supported. In this case,
+  Metals fallbacks to `window/showMessageRequest`.
+- `on`: the `metals/pickInput` request is fully supported.
+
+*Usage of `pickInputProvider` in `ClientCapabilities.experimental` is preferable.*
+
 ### `-Dmetals.execute-client-command`
 
 Possible values:
@@ -537,6 +547,73 @@ export interface MetalsInputBoxParams {
 ```ts
 export interface MetalsInputBoxResult {
   value?: string;
+  cancelled?: boolean;
+}
+```
+
+### `metals/pickInput`
+
+The Metals pick input request is sent from the server to the client to let the
+user provide a string value by picking one out of a number of given options. It is similar to `window/showMessageRequest`, but the `metals/pickInput` request has richer parameters, that can be used to filter items to pick, like `description` and `detail`.
+
+_Request_:
+
+- method: `metals/pickInput`
+- params: `MetalsPickInputParams` defined as follows. It partially matches [`QuickPickOptions`](https://code.visualstudio.com/api/references/vscode-api#QuickPickOptions) in the Visual Studio Code API, but it also contains `items` of [`MetalsPickItem`](https://code.visualstudio.com/api/references/vscode-api#QuickPickItem), which, in it's turn, partially matches `QuickPickItem`, but these interfaces do not contain options for picking many items:
+
+```ts
+export interface MetalsPickInputParams {
+  /**
+   * An array of items that can be selected from.
+   */
+  items: MetalsPickItem[];
+  /**
+   * An optional flag to include the description when filtering the picks.
+   */
+  matchOnDescription?: boolean;
+  /**
+   * An optional flag to include the detail when filtering the picks.
+   */
+  matchOnDetail?: boolean;
+  /**
+   * An optional string to show as place holder in the input box to guide the user what to pick on.
+   */
+  placeHolder?: string;
+  /**
+   * Set to `true` to keep the picker open when focus moves to another part of the editor or to another window.
+   */
+  ignoreFocusOut?: boolean;
+}
+
+export interface MetalsPickItem {
+  /**
+   * An id for this items that should be return as a result of the picking.
+   */
+  id: string;
+  /**
+   * A human readable string which is rendered prominent.
+   */
+  label: string;
+  /**
+   * A human readable string which is rendered less prominent.
+   */
+  description?: string;
+  /**
+   * A human readable string which is rendered less prominent.
+   */
+  detail?: string;
+  /**
+   * Always show this item.
+   */
+  alwaysShow?: boolean;
+}
+```
+
+- result: `MetalsPickInputResult` defined as follows:
+
+```ts
+export interface MetalsPickInputResult {
+  itemId?: string;
   cancelled?: boolean;
 }
 ```

@@ -382,4 +382,15 @@ class Messages(icons: Icons) {
         s"Please upgrade to Scala $recommended."
     }
   }
+
+  object NewScalaFile {
+    def selectTheKindOfFileMessage = "Select the kind of file to create"
+    def enterNameMessage(kind: String): String = s"Enter name for the new $kind"
+
+    def isSelectTheKindOfFile(params: ShowMessageRequestParams): Boolean =
+      params.getMessage() == selectTheKindOfFileMessage
+
+    def isEnterName(params: MetalsInputBoxParams, kind: String): Boolean =
+      params.prompt == enterNameMessage(kind)
+  }
 }

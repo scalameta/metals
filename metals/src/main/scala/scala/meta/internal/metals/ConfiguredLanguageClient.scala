@@ -106,12 +106,33 @@ final class ConfiguredLanguageClient(
     }
   }
 
+  override def metalsPickInput(
+      params: MetalsPickInputParams
+  ): CompletableFuture[MetalsPickInputResult] = {
+    if (config.isPickInputEnabled) {
+      underlying.metalsPickInput(params)
+    } else {
+      showMessageRequest(params).asScala
+        .map(item => MetalsPickInputResult(itemId = item.getTitle()))
+        .asJava
+    }
+  }
+
   override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
     if (clientCapabilities.decorationProvider) {
       underlying.metalsPublishDecorations(params)
     }
+  }
+
+  private implicit def metalsPickInputParams2ShowMessageRequestInputParams(
+      params: MetalsPickInputParams
+  ): ShowMessageRequestParams = {
+    val result = new ShowMessageRequestParams()
+    result.setMessage(params.placeHolder)
+    result.setActions(params.items.map(item => new MessageActionItem(item.id)))
+    result
   }
 
 }

@@ -71,6 +71,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     _: ShowMessageRequestParams =>
       None
   }
+  var inputBoxHandler: MetalsInputBoxParams => Option[MetalsInputBoxResult] = _
 
   private var refreshedOnIndex = false
   var refreshModelHandler: () => Unit = () => {}
@@ -273,7 +274,13 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   override def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
-    CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
+    CompletableFuture.completedFuture {
+      messageRequests.addLast(params.prompt)
+      inputBoxHandler(params) match {
+        case Some(result) => result
+        case None => MetalsInputBoxResult(cancelled = true)
+      }
+    }
   }
 
   override def metalsTreeViewDidChange(

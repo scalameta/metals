@@ -378,6 +378,8 @@ using the Metals sidebar. This feature is only implemented in VS Code.
 
 **Input box**: Editor client implements the `metals/inputBox` request.
 
+**Pick Input**: Editor client implements the `metals/pickInput` request.
+
 **Window state**: Editor client implements the `metals/windowStateDidChange`
 notification.
 
