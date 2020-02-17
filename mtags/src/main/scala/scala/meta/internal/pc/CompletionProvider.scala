@@ -323,10 +323,10 @@ class CompletionProvider(
   }
 
   private def getLastVisitedParentTrees(pos: Position): List[Tree] = {
-    if (lastVisistedParentTrees.isEmpty) {
+    if (lastVisitedParentTrees.isEmpty) {
       locateTree(pos)
     }
-    lastVisistedParentTrees
+    lastVisitedParentTrees
   }
 
   private def safeCompletionsAt(

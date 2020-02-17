@@ -325,13 +325,13 @@ trait Completions { this: MetalsGlobal =>
   // or `locateTree(pos)`. It's dirty to store this as a global mutable
   // variable but it avoids repeating traversals from the compiler
   // implementation of `completionsAt(pos)`.
-  var lastVisistedParentTrees: List[Tree] = Nil
+  var lastVisitedParentTrees: List[Tree] = Nil
 
   def findLastVisitedParentTree(pos: Position): Option[Tree] = {
-    if (lastVisistedParentTrees.isEmpty) {
+    if (lastVisitedParentTrees.isEmpty) {
       locateTree(pos)
     }
-    lastVisistedParentTrees.headOption
+    lastVisitedParentTrees.headOption
   }
 
   abstract class CompletionPosition {
@@ -571,9 +571,9 @@ trait Completions { this: MetalsGlobal =>
   }
   class MetalsLocator(pos: Position) extends Traverser {
     def locateIn(root: Tree): Tree = {
-      lastVisistedParentTrees = Nil
+      lastVisitedParentTrees = Nil
       traverse(root)
-      lastVisistedParentTrees match {
+      lastVisitedParentTrees match {
         case head :: _ => head
         case _ => EmptyTree
       }
@@ -587,7 +587,7 @@ trait Completions { this: MetalsGlobal =>
         case _ =>
           if (t.pos includes pos) {
             if (isEligible(t)) {
-              lastVisistedParentTrees ::= t
+              lastVisitedParentTrees ::= t
             }
             super.traverse(t)
           } else {
@@ -741,7 +741,7 @@ trait Completions { this: MetalsGlobal =>
           }
         }
     }
-    loop(lastVisistedParentTrees)
+    loop(lastVisitedParentTrees)
   }
 
   /**
