@@ -67,7 +67,7 @@ final class ReferenceProvider(
 
   def references(
       params: ReferenceParams,
-      checkMatchesText: Boolean = false,
+      canSkipExactMatchCheck: Boolean = true,
       includeSynthetics: Synthetic => Boolean = _ => true
   ): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
@@ -86,7 +86,7 @@ final class ReferenceProvider(
               occurrence,
               alternatives,
               params.getContext.isIncludeDeclaration,
-              checkMatchesText,
+              canSkipExactMatchCheck,
               includeSynthetics
             )
             ReferencesResult(occurrence.symbol, locations)
@@ -181,7 +181,7 @@ final class ReferenceProvider(
       occ: SymbolOccurrence,
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
-      checkMatchesText: Boolean,
+      canSkipExactMatchCheck: Boolean,
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
@@ -192,7 +192,7 @@ final class ReferenceProvider(
         distance,
         params.getTextDocument.getUri,
         isIncludeDeclaration,
-        checkMatchesText,
+        canSkipExactMatchCheck,
         includeSynthetics
       )
     } else {
@@ -219,7 +219,7 @@ final class ReferenceProvider(
             semanticdbDistance,
             uri,
             isIncludeDeclaration,
-            checkMatchesText,
+            canSkipExactMatchCheck,
             includeSynthetics
           )
         } catch {
@@ -239,7 +239,7 @@ final class ReferenceProvider(
       distance: TokenEditDistance,
       uri: String,
       isIncludeDeclaration: Boolean,
-      checkMatchesText: Boolean,
+      canSkipExactMatchCheck: Boolean,
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
@@ -266,7 +266,6 @@ final class ReferenceProvider(
        * for some issues with macro annotations, so with renames we
        * must be sure that a proper name is replaced.
        */
-      val canSkipExactMatchCheck = !checkMatchesText
       if (canSkipExactMatchCheck) {
         add(range)
       } else {
