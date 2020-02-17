@@ -6,33 +6,33 @@ import org.typelevel.paiges.Doc
 import metaconfig.cli.Messages
 import java.nio.file.Files
 
-object LinkCommand extends Command[LinkOptions]("link") {
-  override def options: Doc = Messages.options(LinkOptions())
+object SwitchCommand extends Command[SwitchOptions]("switch") {
+  override def options: Doc = Messages.options(SwitchOptions())
   override def description: Doc =
-    Doc.paragraph("Symlink the Bloop build into the workspace directory")
-  override def usage: Doc = Doc.text("fastpass link PROJECT_NAME")
+    Doc.paragraph("Activate an existing project")
+  override def usage: Doc = Doc.text("fastpass switch PROJECT_NAME")
   override def examples: Doc =
     Doc.intercalate(
       Doc.line,
       List(
-        "fastpass link PROJECT_NAME",
-        "# List all Bloop targets in the newly linked project",
+        "fastpass switch PROJECT_NAME",
+        "# List all Bloop targets in the newly activated project",
         "bloop projects"
       ).map(Doc.text)
     )
 
-  def run(link: LinkOptions, app: CliApp): Int = {
+  def run(switch: SwitchOptions, app: CliApp): Int = {
     SharedCommand.withOneProject(
-      "link",
-      link.projects,
-      link.common,
+      "switch",
+      switch.projects,
+      switch.common,
       app
     ) { project =>
-      runSymblinkOrWarn(project, link.common, app, isStrict = true)
+      runSymlinkOrWarn(project, switch.common, app, isStrict = true)
     }
   }
 
-  def runSymblinkOrWarn(
+  def runSymlinkOrWarn(
       project: Project,
       common: SharedOptions,
       app: CliApp,
@@ -50,13 +50,13 @@ object LinkCommand extends Command[LinkOptions]("link") {
       if (isUnchanged) {
         if (isStrict) {
           app.info(
-            s"project '${project.name}' is already linked, $runBloopProjects"
+            s"project '${project.name}' is already active, $runBloopProjects"
           )
         }
         0
       } else {
         runSymlink(project, common)
-        app.info(s"linked project '${project.name}', $runBloopProjects")
+        app.info(s"switched to project '${project.name}', $runBloopProjects")
         0
       }
     }
@@ -110,7 +110,7 @@ object LinkCommand extends Command[LinkOptions]("link") {
       val message = s"unable to link project '${project.name}' because '$bloopDirectory' is a directory. " +
         s"To fix this problem run: " +
         s"\n\trm -rf $relpath" +
-        s"\n\tfastpass link ${project.name}"
+        s"\n\tfastpass switch ${project.name}"
       if (isError) app.error(message)
       else app.warn(message)
       true

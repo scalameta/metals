@@ -52,7 +52,7 @@ object SharedCommand {
           export.app.info(
             s"exported ${targets} to project '${export.project.name}' in $timer"
           )
-          LinkCommand.runSymblinkOrWarn(
+          SwitchCommand.runSymlinkOrWarn(
             export.project,
             export.common,
             export.app,
