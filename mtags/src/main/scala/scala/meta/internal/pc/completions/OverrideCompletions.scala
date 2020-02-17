@@ -312,7 +312,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
     // make sure the compilation unit is loaded
     typedTreeAt(pos)
 
-    lastVisistedParentTrees match {
+    lastVisitedParentTrees match {
 
       // class Foo extends Bar {}
       // ~~~~~~~~~~~~~~~~~~~~~~~~
