@@ -1830,7 +1830,7 @@ class MetalsLanguageServer(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (clientExperimentalCapabilities.didFocusProvider) {
+        if (clientExperimentalCapabilities.didFocusProvider || focusedDocument.isDefined) {
           focusedDocument.contains(path) &&
           path.isWorksheet
         } else {

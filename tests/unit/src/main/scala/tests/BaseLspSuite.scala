@@ -15,6 +15,7 @@ import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.SlowTaskConfig
 import scala.util.control.NonFatal
 import munit.Ignore
 import munit.Location
@@ -26,7 +27,8 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   MetalsLogger.updateDefaultFormat()
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration = UserConfiguration()
-  def serverConfig: MetalsServerConfig = MetalsServerConfig.default
+  def serverConfig: MetalsServerConfig =
+    MetalsServerConfig.default.copy(slowTask = SlowTaskConfig.on)
   def time: Time = Time.system
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
@@ -36,8 +38,8 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   var client: TestingClient = _
   var workspace: AbsolutePath = _
 
-  def experimentalCapabilities: Option[ClientExperimentalCapabilities] =
-    Some(ClientExperimentalCapabilities(slowTaskProvider = true))
+  protected def experimentalCapabilities
+      : Option[ClientExperimentalCapabilities] = None
 
   override def afterAll(): Unit = {
     if (server != null) {

@@ -12,6 +12,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                    does not support file watching.
  * @param statusBar how to handle metals/status notifications.
  * @param doctorFormat the format that you'd like doctor to return
+ * @param slowTask how to handle metals/slowTask requests.
  * @param snippetAutoIndent if the client defaults to adding the identation of the reference
  *                          line that the operation started on (relevant for multiline textEdits)
  * @param isHttpEnabled whether to start the Metals HTTP client interface. This is needed
@@ -22,6 +23,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
+    slowTask: SlowTaskConfig = SlowTaskConfig.default,
     doctorFormat: DoctorFormatConfig = DoctorFormatConfig.default,
     executeClientCommand: ExecuteClientCommandConfig =
       ExecuteClientCommandConfig.default,
@@ -35,6 +37,10 @@ final case class MetalsServerConfig(
     ),
     isHttpEnabled: Boolean = MetalsServerConfig.binaryOption(
       "metals.http",
+      default = false
+    ),
+    isInputBoxEnabled: Boolean = MetalsServerConfig.binaryOption(
+      "metals.input-box",
       default = false
     ),
     isVerbose: Boolean = MetalsServerConfig.binaryOption(
@@ -69,6 +75,7 @@ final case class MetalsServerConfig(
       s"execute-client-command=$executeClientCommand",
       s"compilers=$compilers",
       s"http=$isHttpEnabled",
+      s"input-box=$isInputBoxEnabled",
       s"icons=$icons",
       s"statistics=$statistics",
       s"doctor-format=$doctorFormat"

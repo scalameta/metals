@@ -143,7 +143,7 @@ final class FormattingProvider(
   }
 
   private def askScalafmtVersion(): Future[Option[String]] = {
-    if (clientExperimentalCapabilities.inputBoxProvider) {
+    if (clientExperimentalCapabilities.inputBoxProvider || serverConfig.isInputBoxEnabled) {
       client
         .metalsInputBox(MissingScalafmtVersion.inputBox())
         .asScala
