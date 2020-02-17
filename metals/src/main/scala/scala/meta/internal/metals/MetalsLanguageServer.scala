@@ -802,7 +802,7 @@ class MetalsLanguageServer(
       } {
         val event =
           new DirectoryChangeEvent(EventType.MODIFY, generatedFile.toNIO, 1)
-        didChangeWatchedFiles(event)
+        didChangeWatchedFiles(event).get()
       }
     }
   }
@@ -857,20 +857,21 @@ class MetalsLanguageServer(
     onChange(paths).asJava
   }
 
+  // This method is run the FileWatcher, so it should not do anything expensive on the main thread
   def didChangeWatchedFiles(
       event: DirectoryChangeEvent
   ): CompletableFuture[Unit] = {
     if (event.eventType() == EventType.OVERFLOW && event.path() == null) {
-      CompletableFuture.completedFuture {
+      Future {
         semanticDBIndexer.onOverflow()
-      }
-
+      }.asJava
     } else {
       val path = AbsolutePath(event.path())
       val isScalaOrJava = path.isScalaOrJava
       if (isScalaOrJava && event.eventType() == EventType.DELETE) {
-        diagnostics.didDelete(path)
-        CompletableFuture.completedFuture(())
+        Future {
+          diagnostics.didDelete(path)
+        }.asJava
       } else if (isScalaOrJava && !savedFiles.isRecentlyActive(path)) {
         event.eventType() match {
           case EventType.CREATE =>
@@ -879,7 +880,7 @@ class MetalsLanguageServer(
         }
         onChange(List(path)).asJava
       } else if (path.isSemanticdb) {
-        CompletableFuture.completedFuture {
+        Future {
           event.eventType() match {
             case EventType.DELETE =>
               semanticDBIndexer.onDelete(event.path())
@@ -888,7 +889,7 @@ class MetalsLanguageServer(
             case EventType.OVERFLOW =>
               semanticDBIndexer.onOverflow(event.path())
           }
-        }
+        }.asJava
       } else if (path.isBuild) {
         onBuildChanged(List(path)).ignoreValue.asJava
       } else {

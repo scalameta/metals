@@ -128,6 +128,7 @@ final class FileWatcher(
 
   class DirectoryListener extends DirectoryChangeListener {
     override def onEvent(event: DirectoryChangeEvent): Unit = {
+      // in non-MacOS systems the path will be null
       if (event.eventType() == EventType.OVERFLOW) {
         didChangeWatchedFiles(event)
       } else if (!Files.isDirectory(event.path())) {
