@@ -31,7 +31,12 @@ object OpenCommand extends Command[OpenOptions]("open") {
       open.common,
       app
     ) { project =>
-      LinkCommand.runSymblinkOrWarn(project, open.common, app, isStrict = false)
+      SwitchCommand.runSymlinkOrWarn(
+        project,
+        open.common,
+        app,
+        isStrict = false
+      )
       if (open.strict && open.isEmpty) {
         app.error(
           s"can't open project '${project.name}' since no editor is provided"
