@@ -1,11 +1,8 @@
 package scala.meta.internal.rename
 
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.ReferenceProvider
-import scala.meta.internal.metals.TextEdits
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.TextDocumentPositionParams
@@ -21,7 +18,9 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.{Range => LSPRange}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => LSPEither}
-
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.Compilations
 import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.ResourceOperation
@@ -156,7 +155,7 @@ final class RenameProvider(
     openedEdits.map {
       case (file, edits) =>
         val textId = new VersionedTextDocumentIdentifier()
-        textId.setUri(file.toURI.toString())
+        textId.setUri(file.toURI.toString)
         val ed = new TextDocumentEdit(textId, edits.asJava)
         LSPEither.forLeft[TextDocumentEdit, ResourceOperation](ed)
     }.toList
