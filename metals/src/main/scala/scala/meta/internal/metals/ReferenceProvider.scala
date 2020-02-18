@@ -94,9 +94,10 @@ final class ReferenceProvider(
         maybeOccurrence match {
           case Some(occurrence) =>
             val symbolName = occurrence.symbol.desc.name.value
-            if (ReferenceProvider.methodsSearchedWithoutInheritance.contains(
-                symbolName
-              )) {
+            val shouldIncludeInheritance =
+              ReferenceProvider.methodsSearchedWithoutInheritance.contains(symbolName)
+
+            if (shouldIncludeInheritance) {
               currentSymbolReferences(
                 filePosition,
                 includeDeclaration
@@ -129,12 +130,12 @@ final class ReferenceProvider(
   ): Seq[Location] = {
     val parentSymbols = implementation
       .topMethodParents(doc, symbolOccurrence.symbol)
-    val txtParams: Seq[FilePosition] = {
+    val parentPositions: Seq[FilePosition] = {
       if (parentSymbols.isEmpty) List(filePosition)
       else parentSymbols.map(locationToFilePosition)
     }
     val isLocal = symbolOccurrence.symbol.isLocal
-    val currentReferences = txtParams
+    val currentReferences = parentPositions
       .flatMap(
         currentSymbolReferences(
           _,
@@ -151,7 +152,7 @@ final class ReferenceProvider(
           .filter(_.getUri.isScalaFilename)
       else parentSymbols
     }
-    val implReferences = txtParams.flatMap(
+    val implReferences = parentPositions.flatMap(
       implementations(
         _,
         !symbolOccurrence.symbol.desc.isType,
