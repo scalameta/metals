@@ -217,36 +217,6 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
 
   test("method-hierarchy") {
     cleanWorkspace()
-    val expectedDiff =
-      """
-        |a/src/main/scala/a/A.scala:6:17: info: reference
-        |  class A { def fx(): Unit = () }
-        |                ^^
-        |a/src/main/scala/a/A.scala:7:36: info: reference
-        |  class B extends A { override def fx(): Unit = () }
-        |                                   ^^
-        |a/src/main/scala/a/A.scala:8:36: info: reference
-        |  class C extends B { override def fx(): Unit = () }
-        |                                   ^^
-        |a/src/main/scala/a/A.scala:10:36: info: reference
-        |  class E extends D { override def fx(): Unit = () }
-        |                                   ^^
-        |a/src/main/scala/a/A.scala:15:5: info: reference
-        |  a.fx()
-        |    ^^
-        |a/src/main/scala/a/A.scala:18:5: info: reference
-        |  b.fx()
-        |    ^^
-        |a/src/main/scala/a/A.scala:21:5: info: reference
-        |  c.fx()
-        |    ^^
-        |a/src/main/scala/a/A.scala:24:5: info: reference
-        |  d.fx()
-        |    ^^
-        |a/src/main/scala/a/A.scala:27:5: info: reference
-        |  e.fx()
-        |    ^^
-        |""".stripMargin
     for {
       _ <- server.initialize(
         """
@@ -288,6 +258,35 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
+      expectedDiff = """
+                       |a/src/main/scala/a/A.scala:6:17: info: reference
+                       |  class A { def fx(): Unit = () }
+                       |                ^^
+                       |a/src/main/scala/a/A.scala:7:36: info: reference
+                       |  class B extends A { override def fx(): Unit = () }
+                       |                                   ^^
+                       |a/src/main/scala/a/A.scala:8:36: info: reference
+                       |  class C extends B { override def fx(): Unit = () }
+                       |                                   ^^
+                       |a/src/main/scala/a/A.scala:10:36: info: reference
+                       |  class E extends D { override def fx(): Unit = () }
+                       |                                   ^^
+                       |a/src/main/scala/a/A.scala:15:5: info: reference
+                       |  a.fx()
+                       |    ^^
+                       |a/src/main/scala/a/A.scala:18:5: info: reference
+                       |  b.fx()
+                       |    ^^
+                       |a/src/main/scala/a/A.scala:21:5: info: reference
+                       |  c.fx()
+                       |    ^^
+                       |a/src/main/scala/a/A.scala:24:5: info: reference
+                       |  d.fx()
+                       |    ^^
+                       |a/src/main/scala/a/A.scala:27:5: info: reference
+                       |  e.fx()
+                       |    ^^
+                       |""".stripMargin
       _ = server.assertReferenceDiff(
         "a/src/main/scala/a/A.scala",
         "b.fx",
@@ -308,39 +307,6 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
 
   test("method-hierarchy-multiple-files") {
     cleanWorkspace()
-    val expectedDiff =
-      """
-        |a/src/main/scala/a/A.scala:2:15: info: reference
-        |class A { def fx(): Unit = () }
-        |              ^^
-        |a/src/main/scala/a/A.scala:3:34: info: reference
-        |class B extends A { override def fx(): Unit = () }
-        |                                 ^^
-        |a/src/main/scala/a/A.scala:4:34: info: reference
-        |class C extends B { override def fx(): Unit = () }
-        |                                 ^^
-        |a/src/main/scala/a/A.scala:6:34: info: reference
-        |class E extends D { override def fx(): Unit = () }
-        |                                 ^^
-        |a/src/main/scala/a/A.scala:10:5: info: reference
-        |  a.fx()
-        |    ^^
-        |a/src/main/scala/a/A.scala:12:5: info: reference
-        |  b.fx()
-        |    ^^
-        |a/src/main/scala/a/A.scala:14:5: info: reference
-        |  c.fx()
-        |    ^^
-        |a/src/main/scala/a/A.scala:16:5: info: reference
-        |  d.fx()
-        |    ^^
-        |a/src/main/scala/a/A.scala:18:5: info: reference
-        |  e.fx()
-        |    ^^
-        |b/src/main/scala/b/B.scala:4:6: info: reference
-        |  bc.fx()
-        |     ^^
-        |""".stripMargin
     for {
       _ <- server.initialize(
         """
@@ -379,6 +345,38 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
       )
       _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ = assertNoDiagnostics()
+      expectedDiff = """
+                       |a/src/main/scala/a/A.scala:2:15: info: reference
+                       |class A { def fx(): Unit = () }
+                       |              ^^
+                       |a/src/main/scala/a/A.scala:3:34: info: reference
+                       |class B extends A { override def fx(): Unit = () }
+                       |                                 ^^
+                       |a/src/main/scala/a/A.scala:4:34: info: reference
+                       |class C extends B { override def fx(): Unit = () }
+                       |                                 ^^
+                       |a/src/main/scala/a/A.scala:6:34: info: reference
+                       |class E extends D { override def fx(): Unit = () }
+                       |                                 ^^
+                       |a/src/main/scala/a/A.scala:10:5: info: reference
+                       |  a.fx()
+                       |    ^^
+                       |a/src/main/scala/a/A.scala:12:5: info: reference
+                       |  b.fx()
+                       |    ^^
+                       |a/src/main/scala/a/A.scala:14:5: info: reference
+                       |  c.fx()
+                       |    ^^
+                       |a/src/main/scala/a/A.scala:16:5: info: reference
+                       |  d.fx()
+                       |    ^^
+                       |a/src/main/scala/a/A.scala:18:5: info: reference
+                       |  e.fx()
+                       |    ^^
+                       |b/src/main/scala/b/B.scala:4:6: info: reference
+                       |  bc.fx()
+                       |     ^^
+                       |""".stripMargin
       _ = server.assertReferenceDiff(
         "b/src/main/scala/b/B.scala",
         "bc.fx",

@@ -16,7 +16,7 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.PositionInFile
+import scala.meta.internal.metals.FilePosition
 import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TypeSignature
@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.nio.file.Path
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.TextDocumentPositionParams
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
@@ -82,13 +83,22 @@ final class ImplementationProvider(
     }
   }
 
+  def implementations(position: TextDocumentPositionParams): List[Location] = {
+    implementations(
+      FilePosition(
+        position.getTextDocument.getUri.toAbsolutePath,
+        position.getPosition
+      )
+    )
+  }
+
   def implementations(
-      positionInFile: PositionInFile
+      filePosition: FilePosition
   ): List[Location] = {
-    lazy val global = globalTable.globalSymbolTableFor(positionInFile.filePath)
+    lazy val global = globalTable.globalSymbolTableFor(filePosition.filePath)
     val locations = for {
       (symbolOccurrence, currentDocument) <- definitionProvider
-        .symbolOccurrence(positionInFile)
+        .symbolOccurrence(filePosition)
         .toIterable
     } yield {
       // 1. Search locally for symbol
@@ -114,7 +124,7 @@ final class ImplementationProvider(
         // symbol is not in workspace, we only search classpath for it
         case None =>
           globalTable.globalContextFor(
-            positionInFile.filePath,
+            filePosition.filePath,
             implementationsInPath.asScala.toMap
           )
         // symbol is in workspace,
@@ -129,7 +139,7 @@ final class ImplementationProvider(
       }
       symbolLocationsFromContext(
         dealiased,
-        positionInFile.filePath,
+        filePosition.filePath,
         inheritanceContext
       )
     }

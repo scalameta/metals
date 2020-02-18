@@ -939,11 +939,7 @@ class MetalsLanguageServer(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens { _ =>
-      val positionInFile = PositionInFile(
-        position.getTextDocument.getUri.toAbsolutePath,
-        position.getPosition
-      )
-      implementationProvider.implementations(positionInFile).asJava
+      implementationProvider.implementations(position).asJava
     }
 
   @JsonRequest("textDocument/hover")
@@ -967,11 +963,7 @@ class MetalsLanguageServer(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
     CancelTokens { _ =>
-      val positionInFile = PositionInFile(
-        params.getTextDocument.getUri.toAbsolutePath,
-        params.getPosition
-      )
-      documentHighlightProvider.documentHighlight(positionInFile)
+      documentHighlightProvider.documentHighlight(params).asJava
     }
 
   @JsonRequest("textDocument/documentSymbol")
@@ -1044,11 +1036,8 @@ class MetalsLanguageServer(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens { _ =>
-      referencesSync(params)
+      referencesResult(params).locations.asJava
     }
-
-  def referencesSync(params: ReferenceParams): util.List[Location] =
-    referencesResult(params).locations.asJava
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
@@ -1083,12 +1072,7 @@ class MetalsLanguageServer(
       newParams match {
         case None =>
         case Some(p) =>
-          val positionInFile = PositionInFile(
-            p.getTextDocument.getUri.toAbsolutePath,
-            p.getPosition
-          )
-          val newResult = referencesProvider
-            .references(positionInFile, p.getContext.isIncludeDeclaration)
+          val newResult = referencesProvider.references(p)
           val diff = newResult.locations.length - result.locations.length
           val isSameSymbol = newResult.symbol == result.symbol
           if (isSameSymbol && diff > 0) {
@@ -1104,14 +1088,7 @@ class MetalsLanguageServer(
   }
   def referencesResult(params: ReferenceParams): ReferencesResult = {
     val timer = new Timer(time)
-    val positionInFile = PositionInFile(
-      params.getTextDocument.getUri.toAbsolutePath,
-      params.getPosition
-    )
-    val result = referencesProvider.references(
-      positionInFile,
-      params.getContext.isIncludeDeclaration
-    )
+    val result = referencesProvider.references(params)
     if (config.statistics.isReferences) {
       if (result.symbol.isEmpty) {
         scribe.info(s"time: found 0 references in $timer")
@@ -1897,7 +1874,7 @@ class MetalsLanguageServer(
       (for {
         doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
-          PositionInFile(source, position.getPosition),
+          FilePosition(source, position.getPosition),
           doc
         )
         occ <- positionOccurrence.occurrence

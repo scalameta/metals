@@ -4,13 +4,13 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsLanguageClient
-import scala.meta.internal.metals.PositionInFile
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.TextEdits
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.semanticdb.Scala._
@@ -21,13 +21,16 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.{Range => LSPRange}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => LSPEither}
+
 import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.RenameFile
 import java.util.concurrent.ConcurrentLinkedQueue
+
 import scala.meta.internal.async.ConcurrentQueue
-import scala.meta.internal.metals.PositionInFile.locationToPositionInFile
+import scala.meta.internal.metals.FilePosition
+import scala.meta.internal.metals.FilePosition.locationToFilePosition
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.metals.MetalsServerConfig
@@ -50,12 +53,7 @@ final class RenameProvider(
       client.showMessage(isCompiling)
       None
     } else {
-      val positionInFile = PositionInFile(
-        params.getTextDocument.getUri.toAbsolutePath,
-        params.getPosition
-      )
-      val symbolOccurence =
-        definitionProvider.symbolOccurrence(positionInFile)
+      val symbolOccurence = definitionProvider.symbolOccurrence(params)
       for {
         (occurence, semanticDb) <- symbolOccurence
         if canRenameSymbol(occurence.symbol, None)
@@ -84,23 +82,23 @@ final class RenameProvider(
           suggestedName.substring(1, suggestedName.length() - 1)
         else suggestedName
 
-      val positionInFile = PositionInFile(
+      val filePosition = FilePosition(
         params.getTextDocument.getUri.toAbsolutePath,
         params.getPosition
       )
 
       val symbolOccurrence =
-        definitionProvider.symbolOccurrence(positionInFile)
+        definitionProvider.symbolOccurrence(params)
       val allReferences = symbolOccurrence match {
         case Some((occurrence, doc))
             if canRenameSymbol(occurrence.symbol, Some(newName)) =>
           referenceProvider.allInheritanceReferences(
             occurrence,
             doc,
-            positionInFile,
+            filePosition,
             includeSynthetic,
             canSkipExactMatchCheck = false
-          ) ++ referenceProvider.companionReferences(
+          ) ++ companionReferences(
             occurrence.symbol
           )
         case _ =>
@@ -198,6 +196,41 @@ final class RenameProvider(
     }
   }
 
+  private def companionReferences(sym: String): Seq[Location] = {
+    val results = for {
+      companionSymbol <- companion(sym).toIterable
+      loc <- definitionProvider
+        .fromSymbol(companionSymbol)
+        .asScala
+      if loc.getUri.isScalaFilename
+      companionLocs <- referenceProvider
+        .currentSymbolReferences(
+          locationToFilePosition(loc),
+          includeDeclaration = false
+        )
+        .locations :+ loc
+    } yield companionLocs
+    results.toList
+  }
+
+  private def companion(sym: String) = {
+    val termOrType = sym.desc match {
+      case Descriptor.Type(name) =>
+        Some(Descriptor.Term(name))
+      case Descriptor.Term(name) =>
+        Some(Descriptor.Type(name))
+      case other =>
+        None
+    }
+
+    termOrType.map(name =>
+      Symbols.Global(
+        sym.owner,
+        name
+      )
+    )
+  }
+
   private def canRenameSymbol(symbol: String, newName: Option[String]) = {
     val desc = symbol.desc
     val name = desc.name.value
@@ -241,7 +274,7 @@ final class RenameProvider(
     if (isApply) {
       val isImplicitApply =
         definitionProvider
-          .symbolOccurrence(locationToPositionInFile(loc))
+          .symbolOccurrence(locationToFilePosition(loc))
           .exists(_._1.symbol.desc.name.value != "apply")
       if (isImplicitApply) {
         val range = loc.getRange

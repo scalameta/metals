@@ -4,6 +4,7 @@ import java.{util => ju}
 import java.util.Collections
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.RenameParams
 import scala.meta.pc.CancelToken
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -84,45 +85,67 @@ final class DefinitionProvider(
       .map(symDef => symDef.path.toInputFromBuffers(buffers))
 
   def symbolOccurrence(
-      dirtyPositionInFile: PositionInFile
+      params: RenameParams
+  ): Option[(SymbolOccurrence, TextDocument)] = {
+    symbolOccurrence(
+      FilePosition(
+        params.getTextDocument.getUri.toAbsolutePath,
+        params.getPosition
+      )
+    )
+  }
+
+  def symbolOccurrence(
+      params: TextDocumentPositionParams
+  ): Option[(SymbolOccurrence, TextDocument)] = {
+    symbolOccurrence(
+      FilePosition(
+        params.getTextDocument.getUri.toAbsolutePath,
+        params.getPosition
+      )
+    )
+  }
+
+  def symbolOccurrence(
+      dirtyFilePosition: FilePosition
   ): Option[(SymbolOccurrence, TextDocument)] = {
     for {
       currentDocument <- semanticdbs
-        .textDocument(dirtyPositionInFile.filePath)
+        .textDocument(dirtyFilePosition.filePath)
         .documentIncludingStale
       posOcc = positionOccurrence(
-        dirtyPositionInFile,
+        dirtyFilePosition,
         currentDocument
       )
       symbolOccurrence <- posOcc.occurrence.orElse(
-        fromMtags(dirtyPositionInFile)
+        fromMtags(dirtyFilePosition)
       )
     } yield (symbolOccurrence, currentDocument)
   }
 
   def positionOccurrence(
-      dirtyPositionInFile: PositionInFile,
+      dirtyFilePosition: FilePosition,
       snapshot: TextDocument
   ): ResolvedSymbolOccurrence = {
     // Convert dirty buffer position to snapshot position in "source"
     val sourceDistance =
       TokenEditDistance.fromBuffer(
-        dirtyPositionInFile.filePath,
+        dirtyFilePosition.filePath,
         snapshot.text,
         buffers
       )
     val snapshotPosition = sourceDistance.toOriginal(
-      dirtyPositionInFile.position.getLine,
-      dirtyPositionInFile.position.getCharacter
+      dirtyFilePosition.position.getLine,
+      dirtyFilePosition.position.getCharacter
     )
 
     // Find matching symbol occurrence in SemanticDB snapshot
     val occurrence = for {
-      queryPosition <- snapshotPosition.toPosition(dirtyPositionInFile.position)
+      queryPosition <- snapshotPosition.toPosition(dirtyFilePosition.position)
       occurrence <- snapshot.occurrences
         .find(_.encloses(queryPosition, includeLastCharacter = true))
         // In case of macros we might need to get the postion from the presentation compiler
-        .orElse(fromMtags(dirtyPositionInFile.copy(position = queryPosition)))
+        .orElse(fromMtags(dirtyFilePosition.copy(position = queryPosition)))
     } yield occurrence
 
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
@@ -135,7 +158,7 @@ final class DefinitionProvider(
   ): DefinitionResult = {
     val ResolvedSymbolOccurrence(sourceDistance, occurrence) =
       positionOccurrence(
-        PositionInFile(source, dirtyPosition.getPosition),
+        FilePosition(source, dirtyPosition.getPosition),
         snapshot
       )
     // Find symbol definition location.
@@ -160,12 +183,12 @@ final class DefinitionProvider(
   }
 
   private def fromMtags(
-      dirtyPositionInFile: PositionInFile
+      dirtyFilePosition: FilePosition
   ): Option[SymbolOccurrence] = {
     Mtags
-      .allToplevels(dirtyPositionInFile.filePath.toInput)
+      .allToplevels(dirtyFilePosition.filePath.toInput)
       .occurrences
-      .find(_.encloses(dirtyPositionInFile.position))
+      .find(_.encloses(dirtyFilePosition.position))
   }
 
   private case class DefinitionDestination(

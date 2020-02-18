@@ -3,7 +3,11 @@ package tests
 import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.nio.file._
+import java.nio.file.Paths
+import java.nio.file.Path
+import java.nio.file.Files
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.FileVisitResult
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
@@ -58,7 +62,17 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.internal.metals._
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Debug
+import scala.meta.internal.metals.DidFocusResult
+import scala.meta.internal.metals.WindowStateDidChangeParams
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.MetalsLanguageServer
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ProgressTicks
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.mtags.Semanticdbs
@@ -72,9 +86,12 @@ import scala.meta.io.RelativePath
 import scala.util.Properties
 import scala.util.matching.Regex
 import scala.{meta => m}
+import scala.meta.internal.metals.DebugSession
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.TextEdits
 
 /**
- * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
+ * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
  *
  * - manages text synchronization, example didSave writes file contents to disk.
  * - pretty-prints results of textDocument/definition for readable multiline string diffing.
@@ -886,8 +903,8 @@ final class TestingServer(
     val pos = m.Position.Range(input, offset, offset + 1)
     params.setPosition(new l.Position(pos.startLine, pos.startColumn))
     server
-      .referencesSync(params)
-      .asScala
+      .referencesResult(params)
+      .locations
       .sortBy(loc =>
         (
           loc.getUri,

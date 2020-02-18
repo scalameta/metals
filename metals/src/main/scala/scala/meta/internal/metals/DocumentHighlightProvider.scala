@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.DocumentHighlightKind
+import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
@@ -18,14 +19,25 @@ final class DocumentHighlightProvider(
 ) {
 
   def documentHighlight(
-      positionInFile: PositionInFile
-  ): java.util.List[DocumentHighlight] = {
-    val result = semanticdbs.textDocument(positionInFile.filePath)
+      params: TextDocumentPositionParams
+  ): List[DocumentHighlight] = {
+    documentHighlight(
+      FilePosition(
+        params.getTextDocument.getUri.toAbsolutePath,
+        params.getPosition
+      )
+    )
+  }
+
+  def documentHighlight(
+      filePosition: FilePosition
+  ): List[DocumentHighlight] = {
+    val result = semanticdbs.textDocument(filePosition.filePath)
 
     val highlights = for {
       doc <- result.documentIncludingStale.toList
       positionOccurrence = definitionProvider.positionOccurrence(
-        positionInFile,
+        filePosition,
         doc
       )
       occ <- positionOccurrence.occurrence.toList
@@ -40,7 +52,7 @@ final class DocumentHighlightProvider(
         DocumentHighlightKind.Read
       }
     } yield new DocumentHighlight(revised, kind)
-    highlights.asJava
+    highlights
   }
 
   private def findAllAlternatives(

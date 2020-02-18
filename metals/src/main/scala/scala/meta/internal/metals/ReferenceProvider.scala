@@ -4,7 +4,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
-import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.Location
 import scala.collection.concurrent.TrieMap
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -19,7 +20,7 @@ import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
-import scala.meta.internal.metals.PositionInFile.locationToPositionInFile
+import scala.meta.internal.metals.FilePosition.locationToFilePosition
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 
@@ -67,17 +68,27 @@ final class ReferenceProvider(
     resizeReferencedPackages()
   }
 
+  def references(params: ReferenceParams): ReferencesResult = {
+    references(
+      FilePosition(
+        params.getTextDocument.getUri.toAbsolutePath,
+        params.getPosition
+      ),
+      params.getContext.isIncludeDeclaration
+    )
+  }
+
   def references(
-      positionInFile: PositionInFile,
+      filePosition: FilePosition,
       includeDeclaration: Boolean
   ): ReferencesResult = {
     semanticdbs
-      .textDocument(positionInFile.filePath)
+      .textDocument(filePosition.filePath)
       .documentIncludingStale match {
       case Some(doc) =>
         val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
           definition.positionOccurrence(
-            positionInFile,
+            filePosition,
             doc
           )
         maybeOccurrence match {
@@ -87,7 +98,7 @@ final class ReferenceProvider(
                 symbolName
               )) {
               currentSymbolReferences(
-                positionInFile,
+                filePosition,
                 includeDeclaration
               )
             } else {
@@ -96,7 +107,7 @@ final class ReferenceProvider(
                 allInheritanceReferences(
                   occurrence,
                   doc,
-                  positionInFile,
+                  filePosition,
                   _ => true
                 )
               )
@@ -109,37 +120,18 @@ final class ReferenceProvider(
     }
   }
 
-  private def implementations(
-      positionInFile: PositionInFile,
-      shouldCheckImplementation: Boolean,
-      canSkipExactMatchCheck: Boolean
-  ): Seq[Location] = {
-    if (shouldCheckImplementation) {
-      for {
-        implLoc <- implementation.implementations(positionInFile)
-        loc <- currentSymbolReferences(
-          locationToPositionInFile(implLoc),
-          includeDeclaration = true,
-          canSkipExactMatchCheck = canSkipExactMatchCheck
-        ).locations
-      } yield loc
-    } else {
-      Nil
-    }
-  }
-
   def allInheritanceReferences(
       symbolOccurrence: SymbolOccurrence,
       doc: TextDocument,
-      positionInFile: PositionInFile,
+      filePosition: FilePosition,
       fnIncludeSynthetics: Synthetic => Boolean,
       canSkipExactMatchCheck: Boolean = true
   ): Seq[Location] = {
     val parentSymbols = implementation
       .topMethodParents(doc, symbolOccurrence.symbol)
-    val txtParams: Seq[PositionInFile] = {
-      if (parentSymbols.isEmpty) List(positionInFile)
-      else parentSymbols.map(locationToPositionInFile)
+    val txtParams: Seq[FilePosition] = {
+      if (parentSymbols.isEmpty) List(filePosition)
+      else parentSymbols.map(locationToFilePosition)
     }
     val isLocal = symbolOccurrence.symbol.isLocal
     val currentReferences = txtParams
@@ -170,19 +162,38 @@ final class ReferenceProvider(
     currentReferences ++ implReferences ++ definitionLocation
   }
 
-  private def currentSymbolReferences(
-      positionInFile: PositionInFile,
+  private def implementations(
+      filePosition: FilePosition,
+      shouldCheckImplementation: Boolean,
+      canSkipExactMatchCheck: Boolean
+  ): Seq[Location] = {
+    if (shouldCheckImplementation) {
+      for {
+        implLoc <- implementation.implementations(filePosition)
+        loc <- currentSymbolReferences(
+          locationToFilePosition(implLoc),
+          includeDeclaration = true,
+          canSkipExactMatchCheck = canSkipExactMatchCheck
+        ).locations
+      } yield loc
+    } else {
+      Nil
+    }
+  }
+
+  def currentSymbolReferences(
+      filePosition: FilePosition,
       includeDeclaration: Boolean,
       canSkipExactMatchCheck: Boolean = true,
       includeSynthetics: Synthetic => Boolean = _ => true
   ): ReferencesResult = {
     val referencesResult = for {
       doc <- semanticdbs
-        .textDocument(positionInFile.filePath)
+        .textDocument(filePosition.filePath)
         .documentIncludingStale
       ResolvedSymbolOccurrence(distance, maybeOccurrence) = definition
         .positionOccurrence(
-          positionInFile,
+          filePosition,
           doc
         )
       occurrence <- maybeOccurrence
@@ -191,7 +202,7 @@ final class ReferenceProvider(
         doc,
         distance,
         occurrence,
-        positionInFile.filePath.toURI.toString,
+        filePosition.filePath.toURI.toString,
         alternatives,
         includeDeclaration,
         canSkipExactMatchCheck,
@@ -336,39 +347,6 @@ final class ReferenceProvider(
       } yield reference
       results.toSeq
     }
-  }
-
-  def companionReferences(sym: String): Seq[Location] = {
-    val results = for {
-      companionSymbol <- companion(sym).toIterable
-      loc <- definition
-        .fromSymbol(companionSymbol)
-        .asScala
-      if loc.getUri.isScalaFilename
-      companionLocs <- currentSymbolReferences(
-        locationToPositionInFile(loc),
-        includeDeclaration = false
-      ).locations :+ loc
-    } yield companionLocs
-    results.toList
-  }
-
-  private def companion(sym: String) = {
-    val termOrType = sym.desc match {
-      case Descriptor.Type(name) =>
-        Some(Descriptor.Term(name))
-      case Descriptor.Term(name) =>
-        Some(Descriptor.Type(name))
-      case other =>
-        None
-    }
-
-    termOrType.map(name =>
-      Symbols.Global(
-        sym.owner,
-        name
-      )
-    )
   }
 
   private def referenceLocations(
