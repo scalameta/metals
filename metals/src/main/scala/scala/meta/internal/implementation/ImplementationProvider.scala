@@ -85,71 +85,87 @@ final class ImplementationProvider(
 
   def implementations(position: TextDocumentPositionParams): List[Location] = {
     implementations(
-      FilePosition(
-        position.getTextDocument.getUri.toAbsolutePath,
-        position.getPosition
-      )
+      Left(
+        FilePosition(
+          position.getTextDocument.getUri.toAbsolutePath,
+          position.getPosition
+        )
+      ),
+      position.getTextDocument.getUri.toAbsolutePath
     )
   }
 
   def implementations(
-      filePosition: FilePosition
+      filePositionOrSymbol: Either[FilePosition, SymbolInformation],
+      source: AbsolutePath
   ): List[Location] = {
-    lazy val global = globalTable.globalSymbolTableFor(filePosition.filePath)
-    val locations = for {
-      (symbolOccurrence, currentDocument) <- definitionProvider
-        .symbolOccurrence(filePosition)
-        .toIterable
-    } yield {
-      // 1. Search locally for symbol
-      // 2. Search inside workspace
-      // 3. Search classpath via GlobalSymbolTable
-      def symbolSearch(symbol: String): Option[SymbolInformation] = {
-        findSymbol(currentDocument, symbol)
-          .orElse(findSymbolDef(symbol))
-          .orElse(global.flatMap(_.safeInfo(symbol)))
-      }
-      val sym = symbolOccurrence.symbol
-      val dealiased =
-        if (sym.desc.isType) dealiasClass(sym, symbolSearch _) else sym
-
-      val definitionDocument =
-        if (currentDocument.definesSymbol(dealiased)) {
-          Some(currentDocument)
-        } else {
-          findSemanticDbForSymbol(dealiased)
+    filePositionOrSymbol match {
+      case Left(filePosition) =>
+        definitionProvider.symbolOccurrence(filePosition) match {
+          case Some((so, doc)) =>
+            implementations(Some(doc), so.symbol, source)
+          case None =>
+            List.empty
         }
+      case Right(symbolInformation) =>
+        implementations(None, symbolInformation.symbol, source)
+    }
+  }
 
-      val inheritanceContext = definitionDocument match {
-        // symbol is not in workspace, we only search classpath for it
-        case None =>
-          globalTable.globalContextFor(
-            filePosition.filePath,
+  private def implementations(
+      currentDocument: Option[TextDocument],
+      symbol: String,
+      source: AbsolutePath
+  ): List[Location] = {
+    lazy val global = globalTable.globalSymbolTableFor(source)
+
+    // 1. Search locally for symbol
+    // 2. Search inside workspace
+    // 3. Search classpath via GlobalSymbolTable
+    def symbolSearch(symbol: String): Option[SymbolInformation] = {
+      currentDocument
+        .flatMap(doc => findSymbol(doc, symbol))
+        .orElse(findSymbolDef(symbol))
+        .orElse(global.flatMap(_.safeInfo(symbol)))
+    }
+
+    val dealiased =
+      if (symbol.desc.isType) dealiasClass(symbol, symbolSearch _) else symbol
+
+    val definitionDocument =
+      currentDocument.flatMap(doc =>
+        if (doc.definesSymbol(dealiased)) currentDocument
+        else findSemanticDbForSymbol(dealiased)
+      )
+
+    val inheritanceContext = definitionDocument match {
+      // symbol is not in workspace, we only search classpath for it
+      case None =>
+        globalTable.globalContextFor(
+          source,
+          implementationsInPath.asScala.toMap
+        )
+      // symbol is in workspace,
+      // we might need to search different places for related symbols
+      case Some(textDocument) =>
+        Some(
+          InheritanceContext.fromDefinitions(
+            symbolSearch,
             implementationsInPath.asScala.toMap
           )
-        // symbol is in workspace,
-        // we might need to search different places for related symbols
-        case Some(textDocument) =>
-          Some(
-            InheritanceContext.fromDefinitions(
-              symbolSearch,
-              implementationsInPath.asScala.toMap
-            )
-          )
-      }
-      symbolLocationsFromContext(
-        dealiased,
-        filePosition.filePath,
-        inheritanceContext
-      )
+        )
     }
-    locations.flatten.toList
+    symbolLocationsFromContext(
+      dealiased,
+      source,
+      inheritanceContext
+    ).toList
   }
 
   def topMethodParents(
       doc: TextDocument,
       symbol: String
-  ): Seq[Location] = {
+  ): Seq[Either[Location, SymbolInformation]] = {
     // location in semanticDB for symbol might not be present when symbol is local then it must be in current document
     val textDocument = findSemanticDbForSymbol(symbol).getOrElse(doc)
 
@@ -173,9 +189,16 @@ final class ImplementationProvider(
       classInfo <- findClassInfo(symbol.owner)
     } yield {
       classInfo.signature match {
-        case sig: ClassSignature =>
-          methodInParentSignature(sig, currentInfo)
-        case _ => Nil
+        case classSignature: ClassSignature =>
+          val globalSymbolTable = globalTable.globalSymbolTableFor(
+            workspace.resolve(textDocument.uri)
+          )
+          methodInParentSignature(
+            classSignature,
+            currentInfo,
+            globalSymbolTable
+          )
+        case _ => Seq.empty
       }
     }
     results.getOrElse(Seq.empty)
@@ -184,13 +207,18 @@ final class ImplementationProvider(
   private def methodInParentSignature(
       sig: ClassSignature,
       childInfo: SymbolInformation,
+      globalSymbolTable: Option[GlobalSymbolTable],
       childASF: Map[String, String] = Map.empty
-  ): Seq[Location] = {
+  ): Seq[Either[Location, SymbolInformation]] = {
     sig.parents.flatMap {
-      case parentSym: TypeRef =>
+      case parentSym: TypeRef if parentSym.symbol != "scala/AnyRef#" =>
         val parentTextDocument = findSemanticDbForSymbol(parentSym.symbol)
-        def search(symbol: String) =
-          parentTextDocument.flatMap(findSymbol(_, symbol))
+
+        def search(symbol: String): Option[SymbolInformation] =
+          parentTextDocument
+            .flatMap(findSymbol(_, symbol))
+            .orElse(globalSymbolTable.flatMap(_.safeInfo(symbol)))
+
         val parentASF =
           AsSeenFrom.calculateAsSeenFrom(parentSym, sig.typeParameters)
         val asSeenFrom = AsSeenFrom.translateAsSeenFrom(childASF, parentASF)
@@ -199,6 +227,7 @@ final class ImplementationProvider(
             val fromParent = methodInParentSignature(
               parenClassSig,
               childInfo,
+              globalSymbolTable,
               asSeenFrom
             )
             if (fromParent.isEmpty) {
@@ -213,10 +242,10 @@ final class ImplementationProvider(
             } else {
               fromParent
             }
-          case _ => Nil
+          case _ => Seq.empty
         }
 
-      case _ => Nil
+      case _ => Seq.empty
     }
   }
 
@@ -227,31 +256,34 @@ final class ImplementationProvider(
       asSeenFrom: Map[String, String],
       search: String => Option[SymbolInformation],
       parentTextDocument: Option[TextDocument]
-  ): Option[Location] = {
+  ): Option[Either[Location, SymbolInformation]] = {
     val matchingSymbol = MethodImplementation.findParentSymbol(
       childInfo,
-      sig,
       parenClassSig,
       asSeenFrom,
       search
     )
-    for {
-      symbol <- matchingSymbol
-      parentDoc <- parentTextDocument
-      source = workspace.resolve(parentDoc.uri)
-      implOccurrence <- findDefOccurrence(
-        parentDoc,
-        symbol,
-        source
-      )
-      range <- implOccurrence.range
-      distance = TokenEditDistance.fromBuffer(
-        source,
-        parentDoc.text,
-        buffer
-      )
-      revised <- distance.toRevised(range.toLSP)
-    } yield new Location(source.toNIO.toUri.toString, revised)
+    if (matchingSymbol.isDefined && parentTextDocument.isEmpty) {
+      Some(Right(matchingSymbol.get))
+    } else {
+      for {
+        symbol <- matchingSymbol
+        parentDoc <- parentTextDocument
+        source = workspace.resolve(parentDoc.uri)
+        implOccurrence <- findDefOccurrence(
+          parentDoc,
+          symbol.symbol,
+          source
+        )
+        range <- implOccurrence.range
+        distance = TokenEditDistance.fromBuffer(
+          source,
+          parentDoc.text,
+          buffer
+        )
+        revised <- distance.toRevised(range.toLSP)
+      } yield Left(new Location(source.toNIO.toUri.toString, revised))
+    }
   }
 
   private def symbolLocationsFromContext(

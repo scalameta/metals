@@ -94,10 +94,12 @@ final class ReferenceProvider(
         maybeOccurrence match {
           case Some(occurrence) =>
             val symbolName = occurrence.symbol.desc.name.value
-            val shouldIncludeInheritance =
-              ReferenceProvider.methodsSearchedWithoutInheritance.contains(symbolName)
+            val shouldNotIncludeInheritance =
+              ReferenceProvider.methodsSearchedWithoutInheritance.contains(
+                symbolName
+              )
 
-            if (shouldIncludeInheritance) {
+            if (shouldNotIncludeInheritance) {
               currentSymbolReferences(
                 filePosition,
                 includeDeclaration
@@ -109,7 +111,8 @@ final class ReferenceProvider(
                   occurrence,
                   doc,
                   filePosition,
-                  _ => true
+                  failWhenReachingDependencySymbol = false,
+                  fnIncludeSynthetics = _ => true
                 )
               )
             }
@@ -126,51 +129,65 @@ final class ReferenceProvider(
       doc: TextDocument,
       filePosition: FilePosition,
       fnIncludeSynthetics: Synthetic => Boolean,
+      failWhenReachingDependencySymbol: Boolean,
       canSkipExactMatchCheck: Boolean = true
   ): Seq[Location] = {
     val parentSymbols = implementation
       .topMethodParents(doc, symbolOccurrence.symbol)
-    val parentPositions: Seq[FilePosition] = {
-      if (parentSymbols.isEmpty) List(filePosition)
-      else parentSymbols.map(locationToFilePosition)
-    }
-    val isLocal = symbolOccurrence.symbol.isLocal
-    val currentReferences = parentPositions
-      .flatMap(
-        currentSymbolReferences(
-          _,
-          includeDeclaration = isLocal,
-          canSkipExactMatchCheck = canSkipExactMatchCheck,
-          includeSynthetics = fnIncludeSynthetics
-        ).locations
-      )
-    val definitionLocation = {
-      if (parentSymbols.isEmpty)
-        definition
-          .fromSymbol(symbolOccurrence.symbol)
-          .asScala
-          .filter(_.getUri.isScalaFilename)
-      else parentSymbols
-    }
-    val implReferences = parentPositions.flatMap(
-      implementations(
-        _,
-        !symbolOccurrence.symbol.desc.isType,
-        canSkipExactMatchCheck
-      )
-    )
 
-    currentReferences ++ implReferences ++ definitionLocation
+    if (failWhenReachingDependencySymbol && parentSymbols.exists(_.isRight)) {
+      Seq.empty
+    } else {
+
+      val mainDefinitions: Seq[Either[FilePosition, SymbolInformation]] = {
+        if (parentSymbols.isEmpty) List(Left(filePosition))
+        else parentSymbols.map(ps => ps.left.map(locationToFilePosition))
+      }
+
+      val topParentWorkspaceLocations =
+        mainDefinitions.flatMap(_.swap.toOption)
+
+      val isLocal = symbolOccurrence.symbol.isLocal
+      val currentReferences = topParentWorkspaceLocations
+        .flatMap(
+          currentSymbolReferences(
+            _,
+            includeDeclaration = isLocal,
+            canSkipExactMatchCheck = canSkipExactMatchCheck,
+            includeSynthetics = fnIncludeSynthetics
+          ).locations
+        )
+      val definitionLocation = {
+        val parentSymbolLocs = parentSymbols.flatMap(_.left.toOption)
+        if (parentSymbolLocs.isEmpty)
+          definition
+            .fromSymbol(symbolOccurrence.symbol)
+            .asScala
+            .filter(_.getUri.isScalaFilename)
+        else parentSymbolLocs
+      }
+      val implReferences = mainDefinitions.flatMap(
+        implementations(
+          _,
+          filePosition.filePath,
+          !symbolOccurrence.symbol.desc.isType,
+          canSkipExactMatchCheck
+        )
+      )
+
+      currentReferences ++ implReferences ++ definitionLocation
+    }
   }
 
   private def implementations(
-      filePosition: FilePosition,
+      filePosition: Either[FilePosition, SymbolInformation],
+      source: AbsolutePath,
       shouldCheckImplementation: Boolean,
       canSkipExactMatchCheck: Boolean
   ): Seq[Location] = {
     if (shouldCheckImplementation) {
       for {
-        implLoc <- implementation.implementations(filePosition)
+        implLoc <- implementation.implementations(filePosition, source)
         loc <- currentSymbolReferences(
           locationToFilePosition(implLoc),
           includeDeclaration = true,

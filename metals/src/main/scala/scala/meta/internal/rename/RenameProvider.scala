@@ -96,7 +96,8 @@ final class RenameProvider(
             doc,
             filePosition,
             includeSynthetic,
-            canSkipExactMatchCheck = false
+            canSkipExactMatchCheck = false,
+            failWhenReachingDependencySymbol = true
           ) ++ companionReferences(
             occurrence.symbol
           )
@@ -205,7 +206,8 @@ final class RenameProvider(
       companionLocs <- referenceProvider
         .currentSymbolReferences(
           locationToFilePosition(loc),
-          includeDeclaration = false
+          includeDeclaration = false,
+          canSkipExactMatchCheck = true
         )
         .locations :+ loc
     } yield companionLocs

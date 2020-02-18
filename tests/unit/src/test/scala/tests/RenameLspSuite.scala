@@ -640,8 +640,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
           )
         }
 
-      val openedFiles = files.keySet
-        .filterNot(file => nonOpened.contains(file))
+      val openedFiles = files.keySet.diff(nonOpened)
       val fullInput = input.replaceAll(allMarkersRegex, "")
       for {
         _ <- server.initialize(

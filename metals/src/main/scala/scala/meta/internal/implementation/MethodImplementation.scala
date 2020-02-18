@@ -30,11 +30,10 @@ object MethodImplementation {
 
   def findParentSymbol(
       childSymbol: SymbolInformation,
-      childClassSig: ClassSignature,
       parentClassSig: ClassSignature,
       asSeenFromMap: Map[String, String],
       findSymbol: String => Option[SymbolInformation]
-  ): Option[String] = {
+  ): Option[SymbolInformation] = {
     val validMethods = for {
       declarations <- parentClassSig.declarations.toIterable
       methodSymbol <- declarations.symlinks
@@ -52,7 +51,7 @@ object MethodImplementation {
       if isOverridenMethod(methodSymbolInfo, childSymbol, findParent = true)(
         context
       )
-    } yield methodSymbol
+    } yield methodSymbolInfo
     validMethods.headOption
   }
 
