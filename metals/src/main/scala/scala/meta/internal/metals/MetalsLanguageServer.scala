@@ -430,7 +430,8 @@ class MetalsLanguageServer(
       languageClient,
       () => httpServer,
       tables,
-      messages
+      messages,
+      clientExperimentalCapabilities
     )
     val worksheetPublisher =
       if (clientExperimentalCapabilities.decorationProvider)

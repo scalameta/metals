@@ -103,7 +103,6 @@ object MetalsServerConfig {
           statusBar = StatusBarConfig.on,
           icons = Icons.vscode,
           openFilesOnRenames = true,
-          executeClientCommand = ExecuteClientCommandConfig.on,
           globSyntax = GlobSyntaxConfig.vscode,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
@@ -135,7 +134,6 @@ object MetalsServerConfig {
       case "coc-metals" =>
         base.copy(
           statusBar = StatusBarConfig.showMessage,
-          executeClientCommand = ExecuteClientCommandConfig.on,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
@@ -156,7 +154,6 @@ object MetalsServerConfig {
         )
       case "emacs" =>
         base.copy(
-          executeClientCommand = ExecuteClientCommandConfig.on,
           compilers = base.compilers.copy(
             snippetAutoIndent = false
           )

@@ -52,7 +52,7 @@ final class ConfiguredLanguageClient(
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {
-    if (clientCapabilities.slowTaskProvider || config.slowTask.isOn) {
+    if (config.slowTask.isOn || clientCapabilities.slowTaskProvider) {
       underlying.metalsSlowTask(params)
     } else {
       new CompletableFuture[MetalsSlowTaskResult]()
@@ -85,7 +85,7 @@ final class ConfiguredLanguageClient(
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
-    if (config.executeClientCommand.isOn) {
+    if (config.executeClientCommand.isOn || clientCapabilities.executeClientCommandProvider) {
       params.getCommand match {
         case ClientCommands.RefreshModel()
             if !clientCapabilities.debuggingProvider =>
@@ -99,7 +99,7 @@ final class ConfiguredLanguageClient(
   override def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
-    if (clientCapabilities.inputBoxProvider || config.slowTask.isOn) {
+    if (config.slowTask.isOn || clientCapabilities.inputBoxProvider) {
       underlying.metalsInputBox(params)
     } else {
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))
