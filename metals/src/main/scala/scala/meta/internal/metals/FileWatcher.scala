@@ -11,6 +11,7 @@ import java.util.concurrent.Executors
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import java.{util => ju}
+import io.methvin.watcher.DirectoryChangeEvent.EventType
 
 /**
  * Handles file watching of interesting files in this build.
@@ -39,32 +40,25 @@ final class FileWatcher(
 ) extends Cancelable {
 
   private val directoryExecutor = Executors.newFixedThreadPool(1)
-  private val fileExecutor = Executors.newFixedThreadPool(1)
 
   ThreadPools.discardRejectedRunnables(
     "FileWatcher.executor",
     directoryExecutor
   )
-  ThreadPools.discardRejectedRunnables("FileWatcher.fileExecutor", fileExecutor)
 
   private var activeDirectoryWatcher: Option[DirectoryWatcher] = None
-  private var activeFileWatcher: Option[DirectoryWatcher] = None
 
   private var directoryWatching: CompletableFuture[Void] =
     new CompletableFuture()
-  private var fileWatching: CompletableFuture[Void] = new CompletableFuture()
 
   override def cancel(): Unit = {
     stopWatching()
     directoryExecutor.shutdown()
-    fileExecutor.shutdown()
     activeDirectoryWatcher.foreach(_.close())
-    activeFileWatcher.foreach(_.close())
   }
 
   def restart(): Unit = {
     val sourceDirectoriesToWatch = new util.LinkedHashSet[Path]()
-    val sourceFilesToWatch = new util.ArrayList[Path]()
     val createdSourceDirectories = new util.ArrayList[AbsolutePath]()
     def watch(path: AbsolutePath, isSource: Boolean): Unit = {
       if (!path.isDirectory && !path.isFile) {
@@ -129,22 +123,15 @@ final class FileWatcher(
       // this error won't affect correctness of Metals.
       case _: ju.ConcurrentModificationException =>
     }
-    activeFileWatcher.foreach(_.close())
-    fileWatching.cancel(false)
     directoryWatching.cancel(false)
   }
 
   class DirectoryListener extends DirectoryChangeListener {
     override def onEvent(event: DirectoryChangeEvent): Unit = {
-      if (!Files.isDirectory(event.path())) {
+      // in non-MacOS systems the path will be null
+      if (event.eventType() == EventType.OVERFLOW) {
         didChangeWatchedFiles(event)
-      }
-    }
-  }
-
-  class FileListener(watched: Set[Path]) extends DirectoryChangeListener {
-    override def onEvent(event: DirectoryChangeEvent): Unit = {
-      if (watched(event.path())) {
+      } else if (!Files.isDirectory(event.path())) {
         didChangeWatchedFiles(event)
       }
     }

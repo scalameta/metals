@@ -202,6 +202,7 @@ final class ReferenceProvider(
         scalaPath <- SemanticdbClasspath
           .toScala(workspace, AbsolutePath(path))
           .iterator
+        if scalaPath.exists
         semanticdb <- semanticdbs
           .textDocument(scalaPath)
           .documentIncludingStale

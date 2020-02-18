@@ -9,7 +9,8 @@ import scala.meta.internal.implementation.ImplementationProvider
 
 class SemanticdbIndexer(
     referenceProvider: ReferenceProvider,
-    implementationProvider: ImplementationProvider
+    implementationProvider: ImplementationProvider,
+    buildTargets: BuildTargets
 ) {
 
   def onScalacOptions(scalacOptions: ScalacOptionsResult): Unit = {
@@ -37,6 +38,20 @@ class SemanticdbIndexer(
    */
   def onOverflow(path: Path): Unit = {
     path.semanticdbRoot.foreach(onChangeDirectory(_))
+  }
+
+  /**
+   * Handle EventType.OVERFLOW, meaning we lost file events, when we don't know the path.
+   * We walk up the file tree for all targets `META-INF/semanticdb` directory
+   * and re-index all of its `*.semanticdb` children.
+   */
+  def onOverflow(): Unit = {
+    buildTargets.scalacOptions.foreach { item =>
+      val targetroot = item.targetroot
+      if (!targetroot.isJar) {
+        onChangeDirectory(targetroot.resolve(Directories.semanticdb).toNIO)
+      }
+    }
   }
 
   def onChangeDirectory(dir: Path): Unit = {

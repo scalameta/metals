@@ -384,8 +384,11 @@ class MetalsLanguageServer(
       compilations,
       config
     )
-    semanticDBIndexer =
-      new SemanticdbIndexer(referencesProvider, implementationProvider)
+    semanticDBIndexer = new SemanticdbIndexer(
+      referencesProvider,
+      implementationProvider,
+      buildTargets
+    )
     documentHighlightProvider = new DocumentHighlightProvider(
       definitionProvider,
       semanticdbs
@@ -799,7 +802,7 @@ class MetalsLanguageServer(
       } {
         val event =
           new DirectoryChangeEvent(EventType.MODIFY, generatedFile.toNIO, 1)
-        didChangeWatchedFiles(event)
+        didChangeWatchedFiles(event).get()
       }
     }
   }
@@ -854,36 +857,44 @@ class MetalsLanguageServer(
     onChange(paths).asJava
   }
 
+  // This method is run the FileWatcher, so it should not do anything expensive on the main thread
   def didChangeWatchedFiles(
       event: DirectoryChangeEvent
   ): CompletableFuture[Unit] = {
-    val path = AbsolutePath(event.path())
-    val isScalaOrJava = path.isScalaOrJava
-    if (isScalaOrJava && event.eventType() == EventType.DELETE) {
-      diagnostics.didDelete(path)
-      CompletableFuture.completedFuture(())
-    } else if (isScalaOrJava && !savedFiles.isRecentlyActive(path)) {
-      event.eventType() match {
-        case EventType.CREATE =>
-          buildTargets.onCreate(path)
-        case _ =>
-      }
-      onChange(List(path)).asJava
-    } else if (path.isSemanticdb) {
-      CompletableFuture.completedFuture {
-        event.eventType() match {
-          case EventType.DELETE =>
-            semanticDBIndexer.onDelete(event.path())
-          case EventType.CREATE | EventType.MODIFY =>
-            semanticDBIndexer.onChange(event.path())
-          case EventType.OVERFLOW =>
-            semanticDBIndexer.onOverflow(event.path())
-        }
-      }
-    } else if (path.isBuild) {
-      onBuildChanged(List(path)).ignoreValue.asJava
+    if (event.eventType() == EventType.OVERFLOW && event.path() == null) {
+      Future {
+        semanticDBIndexer.onOverflow()
+      }.asJava
     } else {
-      CompletableFuture.completedFuture(())
+      val path = AbsolutePath(event.path())
+      val isScalaOrJava = path.isScalaOrJava
+      if (isScalaOrJava && event.eventType() == EventType.DELETE) {
+        Future {
+          diagnostics.didDelete(path)
+        }.asJava
+      } else if (isScalaOrJava && !savedFiles.isRecentlyActive(path)) {
+        event.eventType() match {
+          case EventType.CREATE =>
+            buildTargets.onCreate(path)
+          case _ =>
+        }
+        onChange(List(path)).asJava
+      } else if (path.isSemanticdb) {
+        Future {
+          event.eventType() match {
+            case EventType.DELETE =>
+              semanticDBIndexer.onDelete(event.path())
+            case EventType.CREATE | EventType.MODIFY =>
+              semanticDBIndexer.onChange(event.path())
+            case EventType.OVERFLOW =>
+              semanticDBIndexer.onOverflow(event.path())
+          }
+        }.asJava
+      } else if (path.isBuild) {
+        onBuildChanged(List(path)).ignoreValue.asJava
+      } else {
+        CompletableFuture.completedFuture(())
+      }
     }
   }
 
