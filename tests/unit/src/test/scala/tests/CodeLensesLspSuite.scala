@@ -1,6 +1,8 @@
 package tests
 import scala.concurrent.Future
 import munit.Location
+import org.eclipse.lsp4j.CodeLensParams
+import org.eclipse.lsp4j.TextDocumentIdentifier
 
 class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
@@ -183,6 +185,134 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
           |
           |""".stripMargin
       )
+    } yield ()
+  }
+
+  test("go-to-parent-method-lenses") {
+    cleanWorkspace()
+    for {
+      _ <- server.initialize(
+        """|/metals.json
+           |{ "a": { } }
+           |
+           |/a/src/main/scala/Lannister.scala
+           |abstract class Lannister {
+           |  def payTheirDebts: Boolean
+           |  def trueLannister = payTheirDebts
+           |}
+           |
+           |trait Tywin extends Lannister{
+           |  override def payTheirDebts = true
+           |}
+           |
+           |trait Jamie extends Tywin {
+           |  override def payTheirDebts = true
+           |}
+           |
+           |trait Tyrion extends Tywin {
+           |  override def payTheirDebts = true
+           |}
+           |
+           |trait Cersei extends Tywin {
+           |  override def payTheirDebts = false
+           |}
+           |
+           |class Joffrey extends Lannister with Jamie with Cersei {
+           |  override def payTheirDebts = false
+           |}
+           |
+           |class Tommen extends Lannister with Cersei with Jamie {
+           |  override def payTheirDebts = true
+           |}""".stripMargin
+      )
+      _ <- assertCodeLenses(
+        "a/src/main/scala/Lannister.scala",
+        """abstract class Lannister {
+          |  def payTheirDebts: Boolean
+          |  def trueLannister = payTheirDebts
+          |}
+          |
+          |trait Tywin extends Lannister{
+          |<<parent method>>
+          |  override def payTheirDebts = true
+          |}
+          |
+          |trait Jamie extends Tywin {
+          |<<parent method>>
+          |  override def payTheirDebts = true
+          |}
+          |
+          |trait Tyrion extends Tywin {
+          |<<parent method>>
+          |  override def payTheirDebts = true
+          |}
+          |
+          |trait Cersei extends Tywin {
+          |
+          |  <<parent method>>
+          |  override def payTheirDebts = false
+          |}
+          |
+          |class Joffrey extends Lannister with Jamie with Cersei {
+          |  <<parent method>>
+          |  override def payTheirDebts = false
+          |}
+          |
+          |class Tommen extends Lannister with Cersei with Jamie {
+          |  <<parent method>>
+          |  override def payTheirDebts = true
+          |}
+          |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("go-to-parent-method-command".only) {
+    cleanWorkspace()
+
+    for {
+      _ <- server.initialize(
+        s"""|/metals.json
+            |{
+            |  "a": { }
+            |}
+            |
+            |/a/src/main/scala/a/Main.scala
+            |
+            |package a
+            |
+            |class A {
+            |  def afx(): Unit = ()
+            |  val zm: String = "A"
+            |}
+            |
+            |class B extends A {
+            |  override def afx(): Unit = ()
+            |  override val zm: String = "B"
+            |}
+            |
+            |class C extends B {
+            |  override def afx(): Unit = ()
+            |}
+            |
+            |class D extends C {
+            |  override val zm: String = "D"
+            |}
+            |
+            |class E extends D { }
+            |
+            |object X {
+            |  val t = new E {
+            |    override def afx(): Unit = ()
+            |    override val zm: String = "anon"
+            |  }
+            |}
+            |
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      lenses = server.codeLensesTips("a/src/main/scala/a/Main.scala")
+      _ = pprint.log(s"LENSES ${lenses}")
     } yield ()
   }
 

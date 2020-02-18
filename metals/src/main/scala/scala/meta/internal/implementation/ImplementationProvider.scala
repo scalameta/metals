@@ -342,17 +342,19 @@ final class ImplementationProvider(
     }
   }
 
-  private def findSymbolDef(symbol: String): Option[SymbolInformation] = {
+  def findSymbolDef(symbol: String): Option[SymbolInformation] = {
     findSemanticDbForSymbol(symbol).flatMap(findSymbol(_, symbol))
   }
 
-  private def findSemanticDbForSymbol(symbol: String): Option[TextDocument] = {
+  def findSemanticDbForSymbol(symbol: String): Option[TextDocument] = {
+    findSemanticDbWithPathForSymbol(symbol).map(_.textDocument)
+  }
+
+  def findSemanticDbWithPathForSymbol(symbol: String): Option[TextDocumentWithPath] = {
     for {
       symbolDefinition <- index.definition(MSymbol(symbol))
       document <- findSemanticdb(symbolDefinition.path)
-    } yield {
-      document
-    }
+    } yield TextDocumentWithPath(document, symbolDefinition.path)
   }
 
   private def classFromSymbol(

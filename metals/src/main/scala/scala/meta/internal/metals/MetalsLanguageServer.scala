@@ -52,7 +52,12 @@ import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
+import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
+
+
+case class GoToParentMethodParams(document: String, position: Position)
+
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -319,14 +324,6 @@ class MetalsLanguageServer(
         interactiveSemanticdbs
       )
     )
-    codeLensProvider = CodeLensProvider(
-      buildTargetClasses,
-      buffers,
-      buildTargets,
-      compilations,
-      semanticdbs,
-      clientExperimentalCapabilities
-    )
     definitionProvider = new DefinitionProvider(
       workspace,
       mtags,
@@ -372,6 +369,15 @@ class MetalsLanguageServer(
       buffers,
       definitionProvider,
       implementationProvider
+    )
+    codeLensProvider = CodeLensProvider(
+      buildTargetClasses,
+      buffers,
+      buildTargets,
+      compilations,
+      semanticdbs,
+      implementationProvider,
+      clientExperimentalCapabilities
     )
     renameProvider = new RenameProvider(
       referencesProvider,
@@ -1148,10 +1154,13 @@ class MetalsLanguageServer(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      val lenses = codeLensProvider.findLenses(path)
-      lenses.asJava
+      codeLensSync(params).asJava
     }
+
+  def codeLensSync(params: CodeLensParams): List[CodeLens] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    codeLensProvider.findLenses(path).toList
+  }
 
   @JsonRequest("textDocument/foldingRange")
   def foldingRange(
@@ -1249,6 +1258,28 @@ class MetalsLanguageServer(
             )
           }
         }.asJavaObject
+      case ServerCommands.GoToParentMethod() =>
+        Future {
+          for {
+            args <- Option(params.getArguments)
+            argObject <- args.asScala.headOption
+            pr <- argObject.toJsonObject.as[GoToParentMethodParams].toOption
+            filePath = pr.document.toAbsolutePath
+            (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(PositionInFile(filePath, pr.position))
+            symbolInformation <- ImplementationProvider.findSymbol(textDocument, symbolOcc.symbol)
+            if symbolInformation.isMethod || symbolInformation.isField
+            param = TextDocumentWithPath(textDocument, filePath)
+            location <- codeLensProvider.findParentForMethodOrField(symbolInformation, param)
+          } {
+            languageClient.metalsExecuteClientCommand(
+              new ExecuteCommandParams(
+                ClientCommands.GotoLocation.id,
+                List(location: Object).asJava
+              )
+            )
+
+          }
+        }.asJavaObject
       case ServerCommands.GotoLog() =>
         Future {
           val log = workspace.resolve(Directories.log)
@@ -1258,7 +1289,7 @@ class MetalsLanguageServer(
             new ExecuteCommandParams(
               ClientCommands.GotoLocation.id,
               List(
-                new Location(log.toURI.toString(), new l.Range(pos, pos)): Object
+                new Location(log.toURI.toString, new l.Range(pos, pos)): Object
               ).asJava
             )
           )

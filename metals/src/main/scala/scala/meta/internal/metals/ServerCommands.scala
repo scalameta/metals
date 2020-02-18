@@ -131,6 +131,22 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val GoToParentMethod = new Command(
+    "go-to-parent-method",
+    "Go to parent definition",
+    """|Jumps to parent method/field definition of a symbol under cursor
+       |according to inheritance rules.
+       |
+       |Arguments:
+       |```json
+       |{
+       |  document: "file:///home/dev/foo/Bar.scala",
+       |  position: {line: 5, character: 12}
+       |}
+       |```
+       |""".stripMargin
+  )
+
   val NewScalaFile = new Command(
     "new-scala-file",
     "Create new scala file",

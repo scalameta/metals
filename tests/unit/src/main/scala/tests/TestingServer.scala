@@ -8,6 +8,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
+
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeActionContext
@@ -46,7 +47,9 @@ import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j.CodeLens
 import tests.MetalsTestEnrichments._
+
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -478,6 +481,13 @@ final class TestingServer(
     } yield {
       Assertions.assertNoDiff(format, expected)
     }
+  }
+
+  def codeLensesTips(filename: String): List[CodeLens] = {
+    val path = toPath(filename)
+    val uri = path.toURI.toString
+    val params = new CodeLensParams(new TextDocumentIdentifier(uri))
+    server.codeLensSync(params)
   }
 
   def codeLenses(filename: String)(maxRetries: Int): Future[String] = {
