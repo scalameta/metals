@@ -185,12 +185,12 @@ final class DebugCodeLensProvider(
                   si,
                   TextDocumentWithPath(textDocument, path)
                 ).map(loc =>
-                    makeGoToParentMethodCommand(
-                      loc.getUri,
-                      si.displayName,
-                      loc.getRange
-                    )
+                  makeGoToParentMethodCommand(
+                    loc.getUri,
+                    si.displayName,
+                    loc.getRange
                   )
+                )
 
               case _ =>
                 None

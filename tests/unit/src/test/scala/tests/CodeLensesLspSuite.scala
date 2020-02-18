@@ -1,8 +1,8 @@
 package tests
 import scala.concurrent.Future
 import munit.Location
-import org.eclipse.lsp4j.CodeLensParams
-import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.MetalsEnrichments._
 
 class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
@@ -233,33 +233,32 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
           |}
           |
           |trait Tywin extends Lannister{
-          |<<parent method>>
+          |<<Parent payTheirDebts>>
           |  override def payTheirDebts = true
           |}
           |
           |trait Jamie extends Tywin {
-          |<<parent method>>
+          |<<Parent payTheirDebts>>
           |  override def payTheirDebts = true
           |}
           |
           |trait Tyrion extends Tywin {
-          |<<parent method>>
+          |<<Parent payTheirDebts>>
           |  override def payTheirDebts = true
           |}
           |
           |trait Cersei extends Tywin {
-          |
-          |  <<parent method>>
+          |<<Parent payTheirDebts>>
           |  override def payTheirDebts = false
           |}
           |
           |class Joffrey extends Lannister with Jamie with Cersei {
-          |  <<parent method>>
+          |<<Parent payTheirDebts>>
           |  override def payTheirDebts = false
           |}
           |
           |class Tommen extends Lannister with Cersei with Jamie {
-          |  <<parent method>>
+          |<<Parent payTheirDebts>>
           |  override def payTheirDebts = true
           |}
           |""".stripMargin
@@ -267,7 +266,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
-  test("go-to-parent-method-command".only) {
+  test("go-to-parent-method-command") {
     cleanWorkspace()
 
     for {
@@ -313,6 +312,11 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       lenses = server.codeLensesTips("a/src/main/scala/a/Main.scala")
       _ = pprint.log(s"LENSES ${lenses}")
+      formattedLenses = lenses.map(lens => (lens.getCommand.getTitle, lens.getCommand.getArguments.asScala.head.asInstanceOf[l.Location].getRange))
+      _ = assert(formattedLenses.contains(("Parent afx", new l.Range(new l.Position(4, 6), new l.Position(4, 9)))))
+      _ = assert(formattedLenses.contains(("Parent afx", new l.Range(new l.Position(9, 15), new l.Position(9, 18)))))
+      _ = assert(formattedLenses.contains(("Parent zm", new l.Range(new l.Position(10, 15), new l.Position(10, 17)))))
+      _ = assert(formattedLenses.contains(("Parent zm", new l.Range(new l.Position(18, 15), new l.Position(18, 17)))))
     } yield ()
   }
 
