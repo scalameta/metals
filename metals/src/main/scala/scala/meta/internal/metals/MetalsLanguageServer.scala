@@ -55,9 +55,7 @@ import java.{util => ju}
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 
-
 case class GoToParentMethodParams(document: String, position: Position)
-
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1265,11 +1263,19 @@ class MetalsLanguageServer(
             argObject <- args.asScala.headOption
             pr <- argObject.toJsonObject.as[GoToParentMethodParams].toOption
             filePath = pr.document.toAbsolutePath
-            (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(PositionInFile(filePath, pr.position))
-            symbolInformation <- ImplementationProvider.findSymbol(textDocument, symbolOcc.symbol)
+            (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(
+              PositionInFile(filePath, pr.position)
+            )
+            symbolInformation <- ImplementationProvider.findSymbol(
+              textDocument,
+              symbolOcc.symbol
+            )
             if symbolInformation.isMethod || symbolInformation.isField
             param = TextDocumentWithPath(textDocument, filePath)
-            location <- codeLensProvider.findParentForMethodOrField(symbolInformation, param)
+            location <- codeLensProvider.findParentForMethodOrField(
+              symbolInformation,
+              param
+            )
           } {
             languageClient.metalsExecuteClientCommand(
               new ExecuteCommandParams(

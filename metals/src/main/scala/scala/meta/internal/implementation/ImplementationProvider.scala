@@ -350,7 +350,9 @@ final class ImplementationProvider(
     findSemanticDbWithPathForSymbol(symbol).map(_.textDocument)
   }
 
-  def findSemanticDbWithPathForSymbol(symbol: String): Option[TextDocumentWithPath] = {
+  def findSemanticDbWithPathForSymbol(
+      symbol: String
+  ): Option[TextDocumentWithPath] = {
     for {
       symbolDefinition <- index.definition(MSymbol(symbol))
       document <- findSemanticdb(symbolDefinition.path)
