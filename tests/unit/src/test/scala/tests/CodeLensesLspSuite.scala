@@ -312,11 +312,46 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       lenses = server.codeLensesTips("a/src/main/scala/a/Main.scala")
       _ = pprint.log(s"LENSES ${lenses}")
-      formattedLenses = lenses.map(lens => (lens.getCommand.getTitle, lens.getCommand.getArguments.asScala.head.asInstanceOf[l.Location].getRange))
-      _ = assert(formattedLenses.contains(("Parent afx", new l.Range(new l.Position(4, 6), new l.Position(4, 9)))))
-      _ = assert(formattedLenses.contains(("Parent afx", new l.Range(new l.Position(9, 15), new l.Position(9, 18)))))
-      _ = assert(formattedLenses.contains(("Parent zm", new l.Range(new l.Position(10, 15), new l.Position(10, 17)))))
-      _ = assert(formattedLenses.contains(("Parent zm", new l.Range(new l.Position(18, 15), new l.Position(18, 17)))))
+      formattedLenses = lenses.map(lens =>
+        (
+          lens.getCommand.getTitle,
+          lens.getCommand.getArguments.asScala.head
+            .asInstanceOf[l.Location]
+            .getRange
+        )
+      )
+      _ = assert(
+        formattedLenses.contains(
+          (
+            "Parent afx",
+            new l.Range(new l.Position(4, 6), new l.Position(4, 9))
+          )
+        )
+      )
+      _ = assert(
+        formattedLenses.contains(
+          (
+            "Parent afx",
+            new l.Range(new l.Position(9, 15), new l.Position(9, 18))
+          )
+        )
+      )
+      _ = assert(
+        formattedLenses.contains(
+          (
+            "Parent zm",
+            new l.Range(new l.Position(10, 15), new l.Position(10, 17))
+          )
+        )
+      )
+      _ = assert(
+        formattedLenses.contains(
+          (
+            "Parent zm",
+            new l.Range(new l.Position(18, 15), new l.Position(18, 17))
+          )
+        )
+      )
     } yield ()
   }
 
