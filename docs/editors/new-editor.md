@@ -76,7 +76,9 @@ coursier bootstrap --java-opt -Dmetals.statistics=all ...
 The system properties control how Metals handles certain LSP endpoints. For
 example, in vim-lsc the `window/logMessage` notification is always displayed in
 the UI so `-Dmetals.status-bar=log-message` can be configured to direct
-higher-priority messages to the logs.
+higher-priority messages to the logs. However, whenever possible, if the client
+supports the ability to add in `experimental` items to the `ClientCapabilities`
+interface, this is preferable.
 
 ### `-Dmetals.verbose`
 
@@ -117,6 +119,9 @@ Possible values:
   `window/showMessage` notifications. Used by coc.nvim and sublime at the
   moment.
 
+*Usage of `statusBarProvider` in `ClientCapabilities.experimental` is
+preferable.*
+
 ### `-Dmetals.slow-task`
 
 Possible values:
@@ -134,6 +139,8 @@ Possible values:
   Metals tries to fallback to `window/showMessageRequest` when possible.
 - `on`: the `metals/inputBox` request is fully supported.
 
+*Usage of `inputBoxProvider` in `ClientCapabilities.experimental` is preferable.*
+
 ### `-Dmetals.execute-client-command`
 
 Possible values:
@@ -143,6 +150,9 @@ Possible values:
   `-Dmetals.http=on`.
 - `on`: the `metals/executeClientCommand` notification is supported and all
   [Metals client commands](#metals-client-commands) are handled.
+
+*Usage of `executeClientCommandProvider` in `ClientCapabilities.experimental` is
+preferable.*
 
 ### `-Dmetals.http`
 
@@ -277,6 +287,8 @@ Possible values:
 - `html`: (default): Metals will return html that can be rendered directly in
   the browser or web view
 - `json`: json representation of the information returned by Doctor
+
+*Usage of `doctorProvider` in `ClientCapabilities.experimental` is preferable.*
 
 ### `-Dbloop.embedded.version`
 
@@ -563,6 +575,32 @@ specification.
   will be able to use incremental text synchronization.
 - `didChangeWatchedFiles` client capability is used to determine whether to
   register file watchers.
+
+#### `experimental`
+
+During the `initialize` we also have the ability to pass in `experimental`
+capabilities. In Metals we have a few different "providers". Some are also LSP
+extensions, such as `metals/inputBox` which you read about above, and others
+used to be server properties that have been migrated to `clientCapabilities`.
+Whenever possible, instead of introducing a new server property, try to
+introduce it here. The main reason for this is that it allows clients to
+initialize and define their "support" for certain things solely through LSP
+rather then using server properties. The currently available settings for
+`experimental` are listed below.
+
+```js
+    "experimental": {
+      "treeViewProvider": boolean,
+      "debuggingProvider": boolean,
+      "decorationProvider": boolean,
+      "inputBoxProvider": boolean,
+      "didFocusProvider": boolean,
+      "slowTaskProvider": boolean,
+      "executeClientCommandProvider": boolean,
+      "doctorProvider": "json" | "html",
+      "statusBarProvider": "on" | "off" | "show-message" | "log-message"
+    }
+```
 
 ### `initialized`
 

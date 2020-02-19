@@ -23,7 +23,8 @@ final class Doctor(
     languageClient: MetalsLanguageClient,
     httpServer: () => Option[MetalsHttpServer],
     tables: Tables,
-    messages: Messages
+    messages: Messages,
+    clientExperimentalCapabilities: ClientExperimentalCapabilities
 )(implicit ec: ExecutionContext) {
   private val hasProblems = new AtomicBoolean(false)
   private var bspServerName: Option[String] = None
@@ -69,10 +70,11 @@ final class Doctor(
       clientCommand: Command,
       onServer: MetalsHttpServer => Unit
   ): Unit = {
-    if (config.executeClientCommand.isOn) {
+    if (config.executeClientCommand.isOn || clientExperimentalCapabilities.executeClientCommandProvider) {
       val output =
-        if (config.doctorFormat.isHtml) buildTargetsHtml()
-        else buildTargetsJson()
+        if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson)
+          buildTargetsJson()
+        else buildTargetsHtml()
       val params = new ExecuteCommandParams(
         clientCommand.id,
         List(output: AnyRef).asJava
@@ -126,10 +128,10 @@ final class Doctor(
     def hint() =
       if (isMaven) {
         val website =
-          if (config.doctorFormat.isHtml)
-            "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
-          else
+          if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson)
             "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
+          else
+            "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
         "enable SemanticDB following instructions on the " + website
       } else s"run 'Build import' to enable code navigation."
 

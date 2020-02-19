@@ -372,7 +372,7 @@ using the Metals sidebar. This feature is only implemented in VS Code.
 **Tree view**: Editor client implements the
 [Tree View Protocol](tree-view-protocol.md).
 
-**Did focus**: Editor client implements the `metals/didFocus` notification.
+**Did focus**: Editor client implements the `metals/didFocusTextDocument` notification.
 
 **Slow task**: Editor client implements the `metals/slowTask` request.
 

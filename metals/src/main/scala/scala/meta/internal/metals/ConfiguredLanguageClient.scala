@@ -35,13 +35,13 @@ final class ConfiguredLanguageClient(
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
-    if (config.statusBar.isOn) {
+    if (config.statusBar.isOn || clientCapabilities.statusBarIsOn) {
       underlying.metalsStatus(params)
     } else if (params.text.nonEmpty && !pendingShowMessage.get()) {
-      if (config.statusBar.isLogMessage) {
-        underlying.logMessage(new MessageParams(MessageType.Log, params.text))
-      } else if (config.statusBar.isShowMessage) {
+      if (config.statusBar.isShowMessage || clientCapabilities.statusBarIsShowMessage) {
         underlying.showMessage(new MessageParams(MessageType.Log, params.text))
+      } else if (config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage) {
+        underlying.logMessage(new MessageParams(MessageType.Log, params.text))
       } else {
         ()
       }
@@ -52,12 +52,9 @@ final class ConfiguredLanguageClient(
   override def metalsSlowTask(
       params: MetalsSlowTaskParams
   ): CompletableFuture[MetalsSlowTaskResult] = {
-    if (config.slowTask.isOn) {
+    if (config.slowTask.isOn || clientCapabilities.slowTaskProvider) {
       underlying.metalsSlowTask(params)
     } else {
-      if (config.slowTask.isStatusBar) {
-        metalsStatus(MetalsStatusParams(params.message))
-      }
       new CompletableFuture[MetalsSlowTaskResult]()
     }
   }
@@ -76,7 +73,7 @@ final class ConfiguredLanguageClient(
   }
 
   override def logMessage(message: MessageParams): Unit = {
-    if (config.statusBar.isLogMessage && message.getType == MessageType.Log) {
+    if ((config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage) && message.getType == MessageType.Log) {
       // window/logMessage is reserved for the status bar so we don't publish
       // scribe.{info,warn,error} logs here. Users should look at .metals/metals.log instead.
       ()
@@ -88,7 +85,7 @@ final class ConfiguredLanguageClient(
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
-    if (config.executeClientCommand.isOn) {
+    if (config.executeClientCommand.isOn || clientCapabilities.executeClientCommandProvider) {
       params.getCommand match {
         case ClientCommands.RefreshModel()
             if !clientCapabilities.debuggingProvider =>
@@ -102,7 +99,7 @@ final class ConfiguredLanguageClient(
   override def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
-    if (config.isInputBoxEnabled) {
+    if (config.isInputBoxEnabled || clientCapabilities.inputBoxProvider) {
       underlying.metalsInputBox(params)
     } else {
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))

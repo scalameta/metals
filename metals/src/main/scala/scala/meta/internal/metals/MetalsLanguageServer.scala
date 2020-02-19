@@ -171,6 +171,8 @@ class MetalsLanguageServer(
   private var multilineStringFormattingProvider
       : MultilineStringFormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
+  private var clientExperimentalCapabilities: ClientExperimentalCapabilities =
+    ClientExperimentalCapabilities.Default
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
   private var foldingRangeProvider: FoldingRangeProvider = _
@@ -195,7 +197,8 @@ class MetalsLanguageServer(
       time,
       progressTicks,
       config.icons,
-      config.statusBar
+      config.statusBar,
+      clientExperimentalCapabilities
     )
     embedded = register(
       new Embedded(
@@ -219,7 +222,7 @@ class MetalsLanguageServer(
     scribe.info(
       s"started: Metals version ${BuildInfo.metalsVersion} in workspace '$workspace'"
     )
-    val clientExperimentalCapabilities =
+    clientExperimentalCapabilities =
       ClientExperimentalCapabilities.from(params.getCapabilities)
 
     languageClient.configure(clientExperimentalCapabilities)
@@ -345,6 +348,7 @@ class MetalsLanguageServer(
       config,
       () => userConfig,
       languageClient,
+      clientExperimentalCapabilities,
       statusBar,
       config.icons,
       Option(params.getWorkspaceFolders) match {
@@ -428,7 +432,8 @@ class MetalsLanguageServer(
       languageClient,
       () => httpServer,
       tables,
-      messages
+      messages,
+      clientExperimentalCapabilities
     )
     val worksheetPublisher =
       if (clientExperimentalCapabilities.decorationProvider)
@@ -1828,7 +1833,7 @@ class MetalsLanguageServer(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (focusedDocument.isDefined) {
+        if (clientExperimentalCapabilities.didFocusProvider || focusedDocument.isDefined) {
           focusedDocument.contains(path) &&
           path.isWorksheet
         } else {
