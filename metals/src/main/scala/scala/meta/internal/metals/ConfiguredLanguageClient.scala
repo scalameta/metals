@@ -35,12 +35,12 @@ final class ConfiguredLanguageClient(
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
-    if (config.statusBar.isOn || clientCapabilities.statusBarProvider == "on") {
+    if (config.statusBar.isOn || clientCapabilities.statusBarIsOn) {
       underlying.metalsStatus(params)
     } else if (params.text.nonEmpty && !pendingShowMessage.get()) {
-      if (config.statusBar.isShowMessage || clientCapabilities.statusBarProvider == "show-message") {
+      if (config.statusBar.isShowMessage || clientCapabilities.statusBarIsShowMessage) {
         underlying.showMessage(new MessageParams(MessageType.Log, params.text))
-      } else if (config.statusBar.isLogMessage || clientCapabilities.statusBarProvider == "log-message") {
+      } else if (config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage) {
         underlying.logMessage(new MessageParams(MessageType.Log, params.text))
       } else {
         ()
@@ -73,7 +73,7 @@ final class ConfiguredLanguageClient(
   }
 
   override def logMessage(message: MessageParams): Unit = {
-    if ((config.statusBar.isLogMessage || clientCapabilities.statusBarProvider == "log-message") && message.getType == MessageType.Log) {
+    if ((config.statusBar.isLogMessage || clientCapabilities.statusBarIsLogMessage) && message.getType == MessageType.Log) {
       // window/logMessage is reserved for the status bar so we don't publish
       // scribe.{info,warn,error} logs here. Users should look at .metals/metals.log instead.
       ()

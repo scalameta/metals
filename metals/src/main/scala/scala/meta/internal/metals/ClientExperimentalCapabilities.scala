@@ -12,7 +12,13 @@ final case class ClientExperimentalCapabilities(
     executeClientCommandProvider: java.lang.Boolean = false,
     doctorProvider: String = "html",
     statusBarProvider: String = "off"
-)
+) {
+  def doctorFormatIsJson = doctorProvider == "json"
+  def statusBarIsOn = statusBarProvider == "on"
+  def statusBarIsOff = statusBarProvider == "off"
+  def statusBarIsShowMessage = statusBarProvider == "show-message"
+  def statusBarIsLogMessage = statusBarProvider == "log-message"
+}
 
 object ClientExperimentalCapabilities {
   val Default = new ClientExperimentalCapabilities()

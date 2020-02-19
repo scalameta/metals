@@ -72,7 +72,7 @@ final class Doctor(
   ): Unit = {
     if (config.executeClientCommand.isOn || clientExperimentalCapabilities.executeClientCommandProvider) {
       val output =
-        if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorProvider == "json")
+        if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson)
           buildTargetsJson()
         else buildTargetsHtml()
       val params = new ExecuteCommandParams(
@@ -128,7 +128,7 @@ final class Doctor(
     def hint() =
       if (isMaven) {
         val website =
-          if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorProvider == "json")
+          if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorFormatIsJson)
             "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
           else
             "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
