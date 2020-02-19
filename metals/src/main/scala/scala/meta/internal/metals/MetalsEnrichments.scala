@@ -306,7 +306,7 @@ object MetalsEnrichments
 
     def isJar: Boolean = {
       val filename = path.toNIO.getFileName.toString
-      filename.endsWith(".jar")
+      filename.endsWith(".jar") || filename.endsWith(".srcjar")
     }
 
     /**
