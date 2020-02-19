@@ -196,12 +196,15 @@ final class ReferenceProvider(
         includeSynthetics
       )
     } else {
+      val visited = scala.collection.mutable.Set.empty[AbsolutePath]
       val results: Iterator[Location] = for {
         (path, bloom) <- index.iterator
         if bloom.mightContain(occ.symbol)
         scalaPath <- SemanticdbClasspath
           .toScala(workspace, AbsolutePath(path))
           .iterator
+        if !visited(scalaPath)
+        _ = visited.add(scalaPath)
         if scalaPath.exists
         semanticdb <- semanticdbs
           .textDocument(scalaPath)
