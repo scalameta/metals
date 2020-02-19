@@ -76,7 +76,7 @@ It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
 <h2><a class="anchor" aria-hidden="true" id="starting-the-server"></a><a href="#starting-the-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting the server</h2>
 <p>Use <a href="https://github.com/coursier/coursier">Coursier</a> to obtain the JVM classpath
 of Metals:</p>
-<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.8.0+278-468f3f1a-SNAPSHOT -o metals -f
+<pre><code class="hljs css language-sh">coursier bootstrap org.scalameta:metals_2.12:0.8.0+290-ccacc735-SNAPSHOT -o metals -f
 </code></pre>
 <p>(optional) It is recommended to enable JVM string de-duplication and provide
 generous stack size and memory options.</p>
@@ -85,7 +85,7 @@ generous stack size and memory options.</p>
   --java-opt -XX:+UseStringDeduplication  \
   --java-opt -Xss4m \
   --java-opt -Xms100m \
-  org.scalameta:metals_2.12:0.8.0+278-468f3f1a-SNAPSHOT -o metals -f
+  org.scalameta:metals_2.12:0.8.0+290-ccacc735-SNAPSHOT -o metals -f
 </code></pre>
 <p>See <a href="#metals-server-properties">Metals server properties</a> for additional system
 properties that are supported by the server.</p>
@@ -123,7 +123,9 @@ coursier bootstrap --java-opt -Dmetals.statistics=all ...
 <p>The system properties control how Metals handles certain LSP endpoints. For
 example, in vim-lsc the <code>window/logMessage</code> notification is always displayed in
 the UI so <code>-Dmetals.status-bar=log-message</code> can be configured to direct
-higher-priority messages to the logs.</p>
+higher-priority messages to the logs. However, whenever possible, if the client
+supports the ability to add in <code>experimental</code> items to the <code>ClientCapabilities</code>
+interface, this is preferable.</p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsverbose"></a><a href="#-dmetalsverbose" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.verbose</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -157,6 +159,8 @@ notifications. Used by vim-lsc at the moment.</li>
 <code>window/showMessage</code> notifications. Used by coc.nvim and sublime at the
 moment.</li>
 </ul>
+<p><em>Usage of <code>statusBarProvider</code> in <code>ClientCapabilities.experimental</code> is
+preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsslow-task"></a><a href="#-dmetalsslow-task" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.slow-task</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -172,6 +176,7 @@ about slow tasks via <code>metals/status</code>.</li>
 Metals tries to fallback to <code>window/showMessageRequest</code> when possible.</li>
 <li><code>on</code>: the <code>metals/inputBox</code> request is fully supported.</li>
 </ul>
+<p><em>Usage of <code>inputBoxProvider</code> in <code>ClientCapabilities.experimental</code> is preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalsexecute-client-command"></a><a href="#-dmetalsexecute-client-command" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.execute-client-command</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -181,6 +186,8 @@ supported. Client commands can still be handled by enabling
 <li><code>on</code>: the <code>metals/executeClientCommand</code> notification is supported and all
 <a href="#metals-client-commands">Metals client commands</a> are handled.</li>
 </ul>
+<p><em>Usage of <code>executeClientCommandProvider</code> in <code>ClientCapabilities.experimental</code> is
+preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dmetalshttp"></a><a href="#-dmetalshttp" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dmetals.http</code></h3>
 <p>Possible values:</p>
 <ul>
@@ -345,6 +352,7 @@ textEdit</li>
 the browser or web view</li>
 <li><code>json</code>: json representation of the information returned by Doctor</li>
 </ul>
+<p><em>Usage of <code>doctorProvider</code> in <code>ClientCapabilities.experimental</code> is preferable.</em></p>
 <h3><a class="anchor" aria-hidden="true" id="-dbloopembeddedversion"></a><a href="#-dbloopembeddedversion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>-Dbloop.embedded.version</code></h3>
 <p>Version number of the embedded Bloop server. Default value is
 <code>-Dbloop.embedded.version=1.4.0-RC1-62-d098adda</code>.</p>
@@ -778,6 +786,28 @@ will be able to use incremental text synchronization.</li>
 <li><code>didChangeWatchedFiles</code> client capability is used to determine whether to
 register file watchers.</li>
 </ul>
+<h4><a class="anchor" aria-hidden="true" id="experimental"></a><a href="#experimental" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>experimental</code></h4>
+<p>During the <code>initialize</code> we also have the ability to pass in <code>experimental</code>
+capabilities. In Metals we have a few different &quot;providers&quot;. Some are also LSP
+extensions, such as <code>metals/inputBox</code> which you read about above, and others
+used to be server properties that have been migrated to <code>clientCapabilities</code>.
+Whenever possible, instead of introducing a new server property, try to
+introduce it here. The main reason for this is that it allows clients to
+initialize and define their &quot;support&quot; for certain things solely through LSP
+rather then using server properties. The currently available settings for
+<code>experimental</code> are listed below.</p>
+<pre><code class="hljs css language-js">    <span class="hljs-string">"experimental"</span>: {
+      <span class="hljs-string">"treeViewProvider"</span>: boolean,
+      <span class="hljs-string">"debuggingProvider"</span>: boolean,
+      <span class="hljs-string">"decorationProvider"</span>: boolean,
+      <span class="hljs-string">"inputBoxProvider"</span>: boolean,
+      <span class="hljs-string">"didFocusProvider"</span>: boolean,
+      <span class="hljs-string">"slowTaskProvider"</span>: boolean,
+      <span class="hljs-string">"executeClientCommandProvider"</span>: boolean,
+      <span class="hljs-string">"doctorProvider"</span>: <span class="hljs-string">"json"</span> | <span class="hljs-string">"html"</span>,
+      <span class="hljs-string">"statusBarProvider"</span>: <span class="hljs-string">"on"</span> | <span class="hljs-string">"off"</span> | <span class="hljs-string">"show-message"</span> | <span class="hljs-string">"log-message"</span>
+    }
+</code></pre>
 <h3><a class="anchor" aria-hidden="true" id="initialized"></a><a href="#initialized" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>initialized</code></h3>
 <p>Triggers build server initialization and workspace indexing. The <code>initialized</code>
 notification is critical for any Metals functionality to work.</p>
