@@ -13,11 +13,11 @@ final case class ClientExperimentalCapabilities(
     doctorProvider: String = "html",
     statusBarProvider: String = "off"
 ) {
-  def doctorFormatIsJson = doctorProvider == "json"
-  def statusBarIsOn = statusBarProvider == "on"
-  def statusBarIsOff = statusBarProvider == "off"
-  def statusBarIsShowMessage = statusBarProvider == "show-message"
-  def statusBarIsLogMessage = statusBarProvider == "log-message"
+  def doctorFormatIsJson: Boolean = doctorProvider == "json"
+  def statusBarIsOn: Boolean = statusBarProvider == "on"
+  def statusBarIsOff: Boolean = statusBarProvider == "off"
+  def statusBarIsShowMessage: Boolean = statusBarProvider == "show-message"
+  def statusBarIsLogMessage: Boolean = statusBarProvider == "log-message"
 }
 
 object ClientExperimentalCapabilities {

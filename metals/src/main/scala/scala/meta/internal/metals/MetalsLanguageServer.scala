@@ -171,7 +171,8 @@ class MetalsLanguageServer(
   private var multilineStringFormattingProvider
       : MultilineStringFormattingProvider = _
   private var initializeParams: Option[InitializeParams] = None
-  private var clientExperimentalCapabilities: ClientExperimentalCapabilities = _
+  private var clientExperimentalCapabilities: ClientExperimentalCapabilities =
+    ClientExperimentalCapabilities.Default
   private var referencesProvider: ReferenceProvider = _
   private var workspaceSymbols: WorkspaceSymbolProvider = _
   private var foldingRangeProvider: FoldingRangeProvider = _

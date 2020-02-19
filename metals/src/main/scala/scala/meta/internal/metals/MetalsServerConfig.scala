@@ -6,6 +6,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 /**
  * Configuration parameters for the Metals language server.
+ * If possible, use a field in ClientExperimentalCapabilities instead.
  *
  * @param bloopProtocol the protocol to communicate with Bloop.
  * @param fileWatcher whether to start an embedded file watcher in case the editor
