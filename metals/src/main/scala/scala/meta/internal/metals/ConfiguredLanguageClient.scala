@@ -99,7 +99,7 @@ final class ConfiguredLanguageClient(
   override def metalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult] = {
-    if (config.slowTask.isOn || clientCapabilities.inputBoxProvider) {
+    if (config.isInputBoxEnabled || clientCapabilities.inputBoxProvider) {
       underlying.metalsInputBox(params)
     } else {
       CompletableFuture.completedFuture(MetalsInputBoxResult(cancelled = true))

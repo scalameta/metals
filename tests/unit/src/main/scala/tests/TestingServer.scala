@@ -282,7 +282,7 @@ final class TestingServer(
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
     val experimental = experimentalCapabilities.getOrElse(
-      new ClientExperimentalCapabilities(
+      ClientExperimentalCapabilities.Default.copy(
         debuggingProvider = true,
         treeViewProvider = true,
         slowTaskProvider = true

@@ -39,8 +39,7 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
   var workspace: AbsolutePath = _
 
   protected def experimentalCapabilities
-      : Option[ClientExperimentalCapabilities] =
-    Some(ClientExperimentalCapabilities.Default)
+      : Option[ClientExperimentalCapabilities] = None
 
   override def afterAll(): Unit = {
     if (server != null) {
