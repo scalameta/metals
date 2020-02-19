@@ -72,8 +72,9 @@ final class Doctor(
   ): Unit = {
     if (config.executeClientCommand.isOn || clientExperimentalCapabilities.executeClientCommandProvider) {
       val output =
-        if (config.doctorFormat.isHtml) buildTargetsHtml()
-        else buildTargetsJson()
+        if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorProvider == "json")
+          buildTargetsJson()
+        else buildTargetsHtml()
       val params = new ExecuteCommandParams(
         clientCommand.id,
         List(output: AnyRef).asJava
@@ -127,10 +128,10 @@ final class Doctor(
     def hint() =
       if (isMaven) {
         val website =
-          if (config.doctorFormat.isHtml)
-            "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
-          else
+          if (config.doctorFormat.isJson || clientExperimentalCapabilities.doctorProvider == "json")
             "Metals Website - https://scalameta.org/metals/docs/build-tools/maven.html"
+          else
+            "<a href=https://scalameta.org/metals/docs/build-tools/maven.html>Metals website</a>"
         "enable SemanticDB following instructions on the " + website
       } else s"run 'Build import' to enable code navigation."
 
