@@ -36,33 +36,39 @@ final class ReferenceProvider(
     index.clear()
   }
   def onDelete(file: Path): Unit = {
-    index.remove(file)
+    val scalaPath = SemanticdbClasspath
+      .toScala(workspace, AbsolutePath(file))
+    scalaPath.foreach(path => index.remove(path.toNIO))
   }
 
   def onChange(docs: TextDocuments, file: Path): Unit = {
-    val count = docs.documents.foldLeft(0)(_ + _.occurrences.length)
-    val syntheticsCount = docs.documents.foldLeft(0)(_ + _.synthetics.length)
-    val bloom = BloomFilter.create(
-      Funnels.stringFunnel(StandardCharsets.UTF_8),
-      Integer.valueOf((count + syntheticsCount) * 2),
-      0.01
-    )
-    index(file) = bloom
-    docs.documents.foreach { d =>
-      d.occurrences.foreach { o =>
-        if (o.symbol.endsWith("/")) {
-          referencedPackages.put(o.symbol)
+    val scalaPath = SemanticdbClasspath
+      .toScala(workspace, AbsolutePath(file))
+    scalaPath.foreach { path =>
+      val count = docs.documents.foldLeft(0)(_ + _.occurrences.length)
+      val syntheticsCount = docs.documents.foldLeft(0)(_ + _.synthetics.length)
+      val bloom = BloomFilter.create(
+        Funnels.stringFunnel(StandardCharsets.UTF_8),
+        Integer.valueOf((count + syntheticsCount) * 2),
+        0.01
+      )
+      index(path.toNIO) = bloom
+      docs.documents.foreach { d =>
+        d.occurrences.foreach { o =>
+          if (o.symbol.endsWith("/")) {
+            referencedPackages.put(o.symbol)
+          }
+          bloom.put(o.symbol)
         }
-        bloom.put(o.symbol)
-      }
-      d.synthetics.foreach { synthetic =>
-        Synthetics.foreachSymbol(synthetic) { sym =>
-          bloom.put(sym)
-          Synthetics.Continue
+        d.synthetics.foreach { synthetic =>
+          Synthetics.foreachSymbol(synthetic) { sym =>
+            bloom.put(sym)
+            Synthetics.Continue
+          }
         }
       }
+      resizeReferencedPackages()
     }
-    resizeReferencedPackages()
   }
 
   def references(
@@ -199,9 +205,7 @@ final class ReferenceProvider(
       val results: Iterator[Location] = for {
         (path, bloom) <- index.iterator
         if bloom.mightContain(occ.symbol)
-        scalaPath <- SemanticdbClasspath
-          .toScala(workspace, AbsolutePath(path))
-          .iterator
+        scalaPath = AbsolutePath(path)
         if scalaPath.exists
         semanticdb <- semanticdbs
           .textDocument(scalaPath)
