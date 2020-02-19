@@ -81,6 +81,12 @@ final class RenameProvider(
       val symbolOccurence =
         definitionProvider.symbolOccurence(source, textParams)
 
+      val suggestedName = params.getNewName()
+      val newName =
+        if (suggestedName.charAt(0) == '`')
+          suggestedName.substring(1, suggestedName.length() - 1)
+        else suggestedName
+
       def includeSynthetic(syn: Synthetic) = {
         syn.tree match {
           case SelectTree(_, id) =>
@@ -91,7 +97,7 @@ final class RenameProvider(
 
       val allReferences = for {
         (occurence, semanticDb) <- symbolOccurence.toIterable
-        if canRenameSymbol(occurence.symbol, Option(params.getNewName()))
+        if canRenameSymbol(occurence.symbol, Option(newName))
         parentSymbols = implementationProvider
           .topMethodParents(occurence.symbol, semanticDb)
         txtParams <- {
@@ -103,8 +109,7 @@ final class RenameProvider(
           .references(
             // we can't get definition by name for local symbols
             toReferenceParams(txtParams, includeDeclaration = isLocal),
-            // local symbol will not contain a proper name
-            checkMatchesText = !isLocal,
+            canSkipExactMatchCheck = false,
             includeSynthetics = includeSynthetic
           )
           .locations
@@ -134,7 +139,7 @@ final class RenameProvider(
         (uri, locs) <- allReferences.toList.distinct.groupBy(_.getUri())
       } yield {
         val textEdits = for (loc <- locs) yield {
-          textEdit(isOccurence, loc, params.getNewName())
+          textEdit(isOccurence, loc, newName)
         }
         Seq(uri.toAbsolutePath -> textEdits.toList)
       }
@@ -159,7 +164,7 @@ final class RenameProvider(
 
       val edits = documentEdits(openedEdits)
       val renames =
-        fileRenames(isOccurence, fileChanges.keySet, params.getNewName())
+        fileRenames(isOccurence, fileChanges.keySet, newName)
       new WorkspaceEdit((edits ++ renames).asJava)
     }
   }

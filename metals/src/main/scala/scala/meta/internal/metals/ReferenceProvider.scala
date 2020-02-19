@@ -67,7 +67,7 @@ final class ReferenceProvider(
 
   def references(
       params: ReferenceParams,
-      checkMatchesText: Boolean = false,
+      canSkipExactMatchCheck: Boolean = true,
       includeSynthetics: Synthetic => Boolean = _ => true
   ): ReferencesResult = {
     val source = params.getTextDocument.getUri.toAbsolutePath
@@ -86,7 +86,7 @@ final class ReferenceProvider(
               occurrence,
               alternatives,
               params.getContext.isIncludeDeclaration,
-              checkMatchesText,
+              canSkipExactMatchCheck,
               includeSynthetics
             )
             ReferencesResult(occurrence.symbol, locations)
@@ -181,7 +181,7 @@ final class ReferenceProvider(
       occ: SymbolOccurrence,
       alternatives: Set[String],
       isIncludeDeclaration: Boolean,
-      checkMatchesText: Boolean,
+      canSkipExactMatchCheck: Boolean,
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
@@ -192,7 +192,7 @@ final class ReferenceProvider(
         distance,
         params.getTextDocument.getUri,
         isIncludeDeclaration,
-        checkMatchesText,
+        canSkipExactMatchCheck,
         includeSynthetics
       )
     } else {
@@ -220,7 +220,7 @@ final class ReferenceProvider(
             semanticdbDistance,
             uri,
             isIncludeDeclaration,
-            checkMatchesText,
+            canSkipExactMatchCheck,
             includeSynthetics
           )
         } catch {
@@ -240,7 +240,7 @@ final class ReferenceProvider(
       distance: TokenEditDistance,
       uri: String,
       isIncludeDeclaration: Boolean,
-      checkMatchesText: Boolean,
+      canSkipExactMatchCheck: Boolean,
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val buf = Seq.newBuilder[Location]
@@ -259,12 +259,21 @@ final class ReferenceProvider(
       if isSymbol(reference.symbol)
       if !reference.role.isDefinition || isIncludeDeclaration
       range <- reference.range.toList
-      if !checkMatchesText || reference.symbol.contains(
-        findName(range, snapshot.text)
-      )
     } {
-      add(range)
+
+      /* We skip checking if the symbol name matches exactly
+       * in case of finding references, where false positives
+       * are ok and speed is more important. This was needed
+       * for some issues with macro annotations, so with renames we
+       * must be sure that a proper name is replaced.
+       */
+      if (canSkipExactMatchCheck) {
+        add(range)
+      } else {
+        findRealRange(range, snapshot.text, reference.symbol).foreach(add)
+      }
     }
+
     for {
       synthetic <- snapshot.synthetics
       if Synthetics.existsSymbol(synthetic)(isSymbol) && includeSynthetics(
@@ -276,6 +285,30 @@ final class ReferenceProvider(
     buf.result()
   }
 
+  private def findRealRange(
+      range: s.Range,
+      text: String,
+      symbol: String
+  ): Option[s.Range] = {
+    val name = findName(range, text)
+    val isBackticked = name.charAt(0) == '`'
+    val realName =
+      if (isBackticked) name.substring(1, name.length() - 1)
+      else name
+    if (symbol.isLocal || symbol.contains(realName)) {
+      val realRange = if (isBackticked) {
+        range
+          .withStartCharacter(range.startCharacter + 1)
+          .withEndCharacter(range.endCharacter - 1)
+      } else {
+        range
+      }
+      Some(realRange)
+    } else {
+      None
+    }
+  }
+
   private def findName(range: s.Range, text: String): String = {
     var i = 0
     var max = 0
@@ -283,8 +316,9 @@ final class ReferenceProvider(
       if (text.charAt(i) == '\n') max += 1
       i += 1
     }
-    text
-      .substring(i + range.startCharacter, i + range.endCharacter)
+    val start = i + range.startCharacter
+    val end = i + range.endCharacter
+    text.substring(start, end)
   }
 
   private def resizeReferencedPackages(): Unit = {
