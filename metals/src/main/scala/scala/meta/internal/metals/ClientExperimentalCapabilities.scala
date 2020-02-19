@@ -10,7 +10,8 @@ final case class ClientExperimentalCapabilities(
     didFocusProvider: java.lang.Boolean = false,
     slowTaskProvider: java.lang.Boolean = false,
     executeClientCommandProvider: java.lang.Boolean = false,
-    doctorProvider: String = "html"
+    doctorProvider: String = "html",
+    statusBarProvider: String = "off"
 )
 
 object ClientExperimentalCapabilities {

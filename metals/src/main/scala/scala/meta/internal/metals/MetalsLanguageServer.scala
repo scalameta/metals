@@ -196,7 +196,8 @@ class MetalsLanguageServer(
       time,
       progressTicks,
       config.icons,
-      config.statusBar
+      config.statusBar,
+      clientExperimentalCapabilities.statusBarProvider
     )
     embedded = register(
       new Embedded(

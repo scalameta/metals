@@ -100,7 +100,6 @@ object MetalsServerConfig {
     System.getProperty("metals.client", "default") match {
       case "vscode" =>
         base.copy(
-          statusBar = StatusBarConfig.on,
           icons = Icons.vscode,
           openFilesOnRenames = true,
           globSyntax = GlobSyntaxConfig.vscode,
@@ -133,7 +132,6 @@ object MetalsServerConfig {
         )
       case "coc-metals" =>
         base.copy(
-          statusBar = StatusBarConfig.showMessage,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
@@ -154,6 +152,7 @@ object MetalsServerConfig {
         )
       case "emacs" =>
         base.copy(
+          executeClientCommand = ExecuteClientCommandConfig.on,
           compilers = base.compilers.copy(
             snippetAutoIndent = false
           )
