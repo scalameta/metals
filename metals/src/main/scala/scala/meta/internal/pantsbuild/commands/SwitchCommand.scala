@@ -5,6 +5,8 @@ import metaconfig.cli.CliApp
 import org.typelevel.paiges.Doc
 import metaconfig.cli.Messages
 import java.nio.file.Files
+import metaconfig.cli.TabCompletionContext
+import metaconfig.cli.TabCompletionItem
 
 object SwitchCommand extends Command[SwitchOptions]("switch") {
   override def options: Doc = Messages.options(SwitchOptions())
@@ -20,6 +22,11 @@ object SwitchCommand extends Command[SwitchOptions]("switch") {
         "bloop projects"
       ).map(Doc.text)
     )
+
+  override def complete(
+      context: TabCompletionContext
+  ): List[TabCompletionItem] =
+    SharedCommand.complete(context, allowsMultipleProjects = true)
 
   def run(switch: SwitchOptions, app: CliApp): Int = {
     SharedCommand.withOneProject(

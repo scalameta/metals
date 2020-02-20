@@ -1,6 +1,5 @@
 def localSnapshotVersion = "0.8.1-SNAPSHOT"
 def isCI = System.getenv("CI") != null
-
 def crossSetting[A](
     scalaVersion: String,
     if211: List[A],
@@ -151,7 +150,7 @@ lazy val V = new {
   val scalameta = "4.3.0"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
-  val bloop = "1.4.0-RC1-62-d098adda"
+  val bloop = "1.4.0-RC1-69-693de22a"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -245,7 +244,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "com.geirsson" %% "metaconfig-core" % "0.9.8",
+      "com.geirsson" %% "metaconfig-core" % "0.9.9",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.10",
       // for file watching
@@ -314,10 +313,32 @@ lazy val metals = project
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
       "scala213" -> V.scala213
-    )
+    ),
+    mainClass in GraalVMNativeImage := Some(
+      "scala.meta.internal.pantsbuild.BloopPants"
+    ),
+    graalVMNativeImageOptions ++= {
+      val reflectionFile =
+        Keys.sourceDirectory.in(Compile).value./("graal")./("reflection.json")
+      assert(reflectionFile.exists, "no such file: " + reflectionFile)
+      List(
+        "-H:+ReportUnsupportedElementsAtRuntime",
+        "--initialize-at-build-time",
+        "--initialize-at-run-time=scala.meta.internal.pantsbuild,metaconfig",
+        "--no-server",
+        "--enable-http",
+        "--enable-https",
+        "-H:EnableURLProtocols=http,https",
+        "--enable-all-security-services",
+        "--no-fallback",
+        s"-H:ReflectionConfigurationFiles=$reflectionFile",
+        "--allow-incomplete-classpath",
+        "-H:+ReportExceptionStackTraces"
+      )
+    }
   )
   .dependsOn(mtags)
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoPlugin, GraalVMNativeImagePlugin)
 
 lazy val input = project
   .in(file("tests/input"))
@@ -494,3 +515,13 @@ lazy val docs = project
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin, MUnitReportPlugin)
+
+addCommandAlias(
+  "fastpass-link",
+  "; metals/graalvm-native-image:packageBin ; taskready"
+)
+commands += Command.command("taskready") { s =>
+  import scala.sys.process._
+  "say 'native-image ready'".!
+  s
+}

@@ -5,11 +5,44 @@ import ujson.Value
 import ujson.Obj
 import ujson.Arr
 import ujson.Str
+import bloop.config.{Config => C}
+import scala.meta.io.AbsolutePath
 
 case class PantsGlobs(
     include: List[String],
     exclude: List[String]
 ) {
+  def isEmpty: Boolean = include.isEmpty
+  def bloopConfig(workspace: Path, baseDirectory: Path): C.SourcesGlobs = {
+    val prefix = AbsolutePath(baseDirectory)
+      .toRelative(AbsolutePath(workspace))
+      .toURI(true)
+      .toString()
+    def relativizeGlob(glob: String): String = {
+      val pattern = glob
+        .stripPrefix(prefix)
+        // NOTE(olafur) Pants globs interpret "**/*.scala" as "zero or more
+        // directories" while Bloop uses `java.nio.file.PathMatcher`, which
+        // interprets it as "one or more directories".
+        .replaceAllLiterally("**/*", "**")
+      s"glob:$pattern"
+    }
+    C.SourcesGlobs(
+      baseDirectory,
+      walkDepth = PantsGlobs.walkDepth(include),
+      includes = include.map(relativizeGlob),
+      excludes = exclude.map(relativizeGlob)
+    )
+  }
+  def isStatic: Boolean =
+    exclude.isEmpty && include.forall(_.indexOf('*') < 0)
+
+  def staticPaths(workspace: Path): Option[List[Path]] =
+    if (isStatic) {
+      Some(include.map(relpath => workspace.resolve(relpath)))
+    } else {
+      None
+    }
 
   /** Returns a source directory if this target uses rglobs("*.scala") */
   def sourceDirectory(workspace: Path): Option[Path] = include match {
@@ -56,5 +89,17 @@ object PantsGlobs {
           Nil
       }
     case _ => Nil
+  }
+
+  private def walkDepth(globs: List[String]): Option[Int] = {
+    if (globs.isEmpty) Some(0)
+    else {
+      val depth = globs.map { glob =>
+        if (glob.contains("**")) Int.MaxValue
+        else glob.count(_ == '/') + 1
+      }.max
+      if (depth == Int.MaxValue) None
+      else Some(depth)
+    }
   }
 }

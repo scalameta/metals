@@ -14,14 +14,15 @@ case class PantsTarget(
     isPantsTargetRoot: Boolean,
     targetType: TargetType,
     pantsTargetType: PantsTargetType,
-    globs: PantsGlobs
+    globs: PantsGlobs,
+    roots: PantsRoots
 ) {
 
   def isTargetRoot: Boolean =
     isPantsTargetRoot &&
-      !name.startsWith(".pants.d") &&
-      !pantsTargetType.isFiles
-  val directoryName: String = BloopPants.makeReadableFilename(name)
+      pantsTargetType.isSupported
+  def isGeneratedTarget: Boolean = name.startsWith(".pants.d")
+  val directoryName: String = BloopPants.makeClassesDirFilename(name)
   def baseDirectory(workspace: Path): Path =
     PantsConfiguration
       .baseDirectory(AbsolutePath(workspace), name)
