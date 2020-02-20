@@ -71,7 +71,10 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
     _: ShowMessageRequestParams =>
       None
   }
-  var inputBoxHandler: MetalsInputBoxParams => Option[MetalsInputBoxResult] = _
+  var inputBoxHandler: MetalsInputBoxParams => Option[MetalsInputBoxResult] = {
+    _: MetalsInputBoxParams =>
+      None
+  }
 
   private var refreshedOnIndex = false
   var refreshModelHandler: () => Unit = () => {}

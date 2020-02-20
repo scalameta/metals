@@ -385,7 +385,8 @@ class Messages(icons: Icons) {
 
   object NewScalaFile {
     def selectTheKindOfFileMessage = "Select the kind of file to create"
-    def enterNameMessage(kind: String): String = s"Enter name for the new $kind"
+    def enterNameMessage(kind: String): String =
+      s"Enter the name for the new $kind"
 
     def isSelectTheKindOfFile(params: ShowMessageRequestParams): Boolean =
       params.getMessage() == selectTheKindOfFileMessage

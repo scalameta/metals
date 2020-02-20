@@ -109,10 +109,12 @@ final class ConfiguredLanguageClient(
   override def metalsPickInput(
       params: MetalsPickInputParams
   ): CompletableFuture[MetalsPickInputResult] = {
-    if (config.isPickInputEnabled) {
+    if (config.isPickInputEnabled || clientCapabilities.pickInputProvider) {
       underlying.metalsPickInput(params)
     } else {
-      showMessageRequest(params).asScala
+      showMessageRequest(
+        toShowMessageRequestParams(params)
+      ).asScala
         .map(item => MetalsPickInputResult(itemId = item.getTitle()))
         .asJava
     }
@@ -126,7 +128,7 @@ final class ConfiguredLanguageClient(
     }
   }
 
-  private implicit def metalsPickInputParams2ShowMessageRequestInputParams(
+  private def toShowMessageRequestParams(
       params: MetalsPickInputParams
   ): ShowMessageRequestParams = {
     val result = new ShowMessageRequestParams()

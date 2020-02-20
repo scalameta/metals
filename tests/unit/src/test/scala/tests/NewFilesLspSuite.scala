@@ -7,6 +7,8 @@ import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsInputBoxResult
+import scala.concurrent.Future
+import scala.meta.io.AbsolutePath
 
 class NewFilesLspSuite extends BaseLspSuite("new-files") {
   override def serverConfig: MetalsServerConfig =
@@ -18,20 +20,6 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Files.createDirectories(
       workspace.resolve("a/src/main/scala/").toNIO
     )
-    client.showMessageRequestHandler = { params =>
-      if (NewScalaFile.isSelectTheKindOfFile(params)) {
-        params.getActions().asScala.find(_.getTitle() == "worksheet")
-      } else {
-        None
-      }
-    }
-    client.inputBoxHandler = { params =>
-      if (NewScalaFile.isEnterName(params, "worksheet")) {
-        Some(new MetalsInputBoxResult(value = "Foo"))
-      } else {
-        None
-      }
-    }
     for {
       _ <- server.initialize(s"""
                                 |/metals.json
@@ -39,20 +27,13 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
                                 |  "a": { }
                                 |}
                                 |""".stripMargin)
-      _ <- server.executeCommand(
-        ServerCommands.NewScalaFile.id,
-        workspace.resolve("a/src/main/scala/").toURI.toString
+      _ <- check(
+        workspace.resolve("a/src/main/scala/").toURI.toString(),
+        "worksheet",
+        Some("Foo"),
+        workspace.resolve("a/src/main/scala/Foo.worksheet.sc"),
+        ""
       )
-      _ = {
-        assertNoDiff(
-          client.workspaceMessageRequests,
-          List(
-            NewScalaFile.selectTheKindOfFileMessage,
-            NewScalaFile.enterNameMessage("worksheet")
-          ).mkString("\n")
-        )
-        assert(workspace.resolve("a/src/main/scala/Foo.worksheet.sc").exists)
-      }
     } yield ()
   }
 
@@ -62,20 +43,6 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Files.createDirectories(
       workspace.resolve("a/src/main/scala/foo").toNIO
     )
-    client.showMessageRequestHandler = { params =>
-      if (NewScalaFile.isSelectTheKindOfFile(params)) {
-        params.getActions().asScala.find(_.getTitle() == "class")
-      } else {
-        None
-      }
-    }
-    client.inputBoxHandler = { params =>
-      if (NewScalaFile.isEnterName(params, "class")) {
-        Some(new MetalsInputBoxResult(value = "Foo"))
-      } else {
-        None
-      }
-    }
     for {
       _ <- server.initialize(s"""
                                 |/metals.json
@@ -83,32 +50,18 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
                                 |  "a": { }
                                 |}
                                 |""".stripMargin)
-      _ <- server.executeCommand(
-        ServerCommands.NewScalaFile.id,
-        workspace.resolve("a/src/main/scala/foo/").toURI.toString
+      _ <- check(
+        workspace.resolve("a/src/main/scala/foo/").toURI.toString(),
+        "class",
+        Some("Foo"),
+        workspace.resolve("a/src/main/scala/foo/Foo.scala"),
+        """|package foo
+           |
+           |class Foo {
+           |  
+           |}
+           |""".stripMargin
       )
-      _ = {
-        assert(
-          workspace.resolve("a/src/main/scala/foo/Foo.scala").exists
-        )
-        assertNoDiff(
-          client.workspaceMessageRequests,
-          List(
-            NewScalaFile.selectTheKindOfFileMessage,
-            NewScalaFile.enterNameMessage("class")
-          ).mkString("\n")
-        )
-        assertNoDiff(
-          workspace.resolve("a/src/main/scala/foo/Foo.scala").readText,
-          """|package foo
-             |
-             |class Foo {
-             |  
-             |}
-             |""".stripMargin
-        )
-      }
-
     } yield ()
   }
 
@@ -119,20 +72,6 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Files.createDirectories(
       workspace.resolve("a/src/main/scala/").toNIO
     )
-    client.showMessageRequestHandler = { params =>
-      if (NewScalaFile.isSelectTheKindOfFile(params)) {
-        params.getActions().asScala.find(_.getTitle() == "object")
-      } else {
-        None
-      }
-    }
-    client.inputBoxHandler = { params =>
-      if (NewScalaFile.isEnterName(params, "object")) {
-        Some(new MetalsInputBoxResult(value = "Bar"))
-      } else {
-        None
-      }
-    }
     for {
       _ <- server.initialize(s"""
                                 |/metals.json
@@ -140,30 +79,16 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
                                 |  "a": { }
                                 |}
                                 |""".stripMargin)
-      _ <- server.executeCommand(
-        ServerCommands.NewScalaFile.id,
-        null.asInstanceOf[String]
+      _ <- check(
+        directoryUri = null.asInstanceOf[String],
+        "object",
+        Some("Bar"),
+        workspace.resolve("Bar.scala"),
+        """|object Bar {
+           |  
+           |}
+           |""".stripMargin
       )
-      _ = {
-        assert(
-          workspace.resolve("Bar.scala").exists
-        )
-        assertNoDiff(
-          client.workspaceMessageRequests,
-          List(
-            NewScalaFile.selectTheKindOfFileMessage,
-            NewScalaFile.enterNameMessage("object")
-          ).mkString("\n")
-        )
-        assertNoDiff(
-          workspace.resolve("Bar.scala").readText,
-          """|object Bar {
-             |  
-             |}
-             |""".stripMargin
-        )
-      }
-
     } yield ()
   }
 
@@ -173,20 +98,6 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Files.createDirectories(
       workspace.resolve("a/src/main/scala/").toNIO
     )
-    client.showMessageRequestHandler = { params =>
-      if (NewScalaFile.isSelectTheKindOfFile(params)) {
-        params.getActions().asScala.find(_.getTitle() == "trait")
-      } else {
-        None
-      }
-    }
-    client.inputBoxHandler = { params =>
-      if (NewScalaFile.isEnterName(params, "trait")) {
-        Some(new MetalsInputBoxResult(value = "Baz"))
-      } else {
-        None
-      }
-    }
     for {
       _ <- server.initialize(s"""
                                 |/metals.json
@@ -194,30 +105,16 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
                                 |  "a": { }
                                 |}
                                 |""".stripMargin)
-      _ <- server.executeCommand(
-        ServerCommands.NewScalaFile.id,
-        workspace.resolve("a/src/main/scala/").toURI.toString
+      _ <- check(
+        workspace.resolve("a/src/main/scala/").toURI.toString(),
+        "trait",
+        Some("Baz"),
+        workspace.resolve("a/src/main/scala/Baz.scala"),
+        """|trait Baz {
+           |  
+           |}
+           |""".stripMargin
       )
-      _ = {
-        assert(
-          workspace.resolve("a/src/main/scala/Baz.scala").exists
-        )
-        assertNoDiff(
-          client.workspaceMessageRequests,
-          List(
-            NewScalaFile.selectTheKindOfFileMessage,
-            NewScalaFile.enterNameMessage("trait")
-          ).mkString("\n")
-        )
-        assertNoDiff(
-          workspace.resolve("a/src/main/scala/Baz.scala").readText,
-          """|trait Baz {
-             |  
-             |}
-             |""".stripMargin
-        )
-      }
-
     } yield ()
   }
 
@@ -227,13 +124,6 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     Files.createDirectories(
       workspace.resolve("a/src/main/scala/foo").toNIO
     )
-    client.showMessageRequestHandler = { params =>
-      if (NewScalaFile.isSelectTheKindOfFile(params)) {
-        params.getActions().asScala.find(_.getTitle() == "package-object")
-      } else {
-        None
-      }
-    }
     for {
       _ <- server.initialize(s"""
                                 |/metals.json
@@ -241,28 +131,64 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
                                 |  "a": { }
                                 |}
                                 |""".stripMargin)
+      _ <- check(
+        workspace.resolve("a/src/main/scala/foo").toURI.toString(),
+        "package-object",
+        name = None,
+        workspace.resolve("a/src/main/scala/foo/package.scala"),
+        """|package object foo {
+           |  
+           |}
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  private def check(
+      directoryUri: String,
+      pickedKind: String,
+      name: Option[String],
+      expectedFilePath: AbsolutePath,
+      expectedContent: String
+  ): Future[Unit] = {
+    client.showMessageRequestHandler = { params =>
+      if (NewScalaFile.isSelectTheKindOfFile(params)) {
+        params.getActions().asScala.find(_.getTitle() == pickedKind)
+      } else {
+        None
+      }
+    }
+    name.foreach { name =>
+      client.inputBoxHandler = { params =>
+        if (NewScalaFile.isEnterName(params, pickedKind)) {
+          Some(new MetalsInputBoxResult(value = name))
+        } else {
+          None
+        }
+      }
+    }
+
+    val expectedMessages =
+      NewScalaFile.selectTheKindOfFileMessage + name.fold("")(_ =>
+        "\n" + NewScalaFile.enterNameMessage(pickedKind)
+      )
+
+    for {
       _ <- server.executeCommand(
         ServerCommands.NewScalaFile.id,
-        workspace.resolve("a/src/main/scala/foo").toURI.toString
+        directoryUri
       )
       _ = {
-        assert(
-          workspace.resolve("a/src/main/scala/foo/package.scala").exists
-        )
         assertNoDiff(
           client.workspaceMessageRequests,
-          NewScalaFile.selectTheKindOfFileMessage
+          expectedMessages
         )
-
+        assert(expectedFilePath.exists)
         assertNoDiff(
-          workspace.resolve("a/src/main/scala/foo/package.scala").readText,
-          """|package object foo {
-             |  
-             |}
-             |""".stripMargin
+          expectedFilePath.readText,
+          expectedContent
         )
       }
-
     } yield ()
   }
 

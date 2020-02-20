@@ -671,6 +671,7 @@ rather then using server properties. The currently available settings for
       "debuggingProvider": boolean,
       "decorationProvider": boolean,
       "inputBoxProvider": boolean,
+      "pickInputProvider": boolean,
       "didFocusProvider": boolean,
       "slowTaskProvider": boolean,
       "executeClientCommandProvider": boolean,

@@ -10,7 +10,7 @@ import scala.util.control.NonFatal
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.Location
-import DialogEnrichments._
+import org.eclipse.lsp4j.Range
 import scala.meta.internal.metals.Messages.NewScalaFile
 
 class NewFilesProvider(
@@ -18,7 +18,9 @@ class NewFilesProvider(
     client: MetalsLanguageClient,
     packageProvider: PackageProvider,
     serverConfig: MetalsServerConfig,
-    focusedDocument: => Option[AbsolutePath]
+    focusedDocument: () => Option[AbsolutePath]
+)(
+    implicit ec: ExecutionContext
 ) {
 
   private val classPick = MetalsPickItem(id = "class", label = "Class")
@@ -29,30 +31,26 @@ class NewFilesProvider(
   private val worksheetPick =
     MetalsPickItem(id = "worksheet", label = "Worksheet")
 
-  def createNewFileDialog(directoryUri: Option[URI])(
-      implicit ec: ExecutionContext
-  ): Future[Unit] = {
+  def createNewFileDialog(directoryUri: Option[URI]): Future[Unit] = {
     val directory = directoryUri
       .map(_.toString.toAbsolutePath)
-      .orElse(focusedDocument.map(_.parent))
+      .orElse(focusedDocument().map(_.parent))
 
     val newlyCreatedFile =
       askForKind
-        .continueWith {
+        .flatMapOption {
           case kind @ (classPick.id | objectPick.id | traitPick.id) =>
             askForName(kind)
-              .endWith(
+              .mapOption(
                 createClass(directory, _, kind)
               )
           case worksheetPick.id =>
             askForName(worksheetPick.id)
-              .endWith(
+              .mapOption(
                 createWorksheet(directory, _)
               )
           case packageObjectPick.id =>
-            endWith(
-              createPackageObject(directory)
-            )
+            createPackageObject(directory).liftOption
           case invalid =>
             Future.failed(new IllegalArgumentException(invalid))
         }
@@ -64,9 +62,7 @@ class NewFilesProvider(
     }
   }
 
-  private def askForKind(
-      implicit ec: ExecutionContext
-  ): Future[Option[String]] = {
+  private def askForKind: Future[Option[String]] = {
     client
       .metalsPickInput(
         MetalsPickInputParams(
@@ -87,9 +83,7 @@ class NewFilesProvider(
       }
   }
 
-  private def askForName(kind: String)(
-      implicit ec: ExecutionContext
-  ): Future[Option[String]] = {
+  private def askForName(kind: String): Future[Option[String]] = {
     client
       .metalsInputBox(
         MetalsInputBoxParams(prompt = NewScalaFile.enterNameMessage(kind))
@@ -105,8 +99,6 @@ class NewFilesProvider(
       directory: Option[AbsolutePath],
       name: String,
       kind: String
-  )(
-      implicit ec: ExecutionContext
   ): Future[AbsolutePath] = {
     val path = directory.getOrElse(workspace).resolve(name + ".scala")
     val editText =
@@ -117,7 +109,7 @@ class NewFilesProvider(
 
   private def createPackageObject(
       directory: Option[AbsolutePath]
-  )(implicit ec: ExecutionContext): Future[AbsolutePath] = {
+  ): Future[AbsolutePath] = {
     directory
       .map { directory =>
         val path = directory.resolve("package.scala")
@@ -135,8 +127,9 @@ class NewFilesProvider(
       )
   }
 
-  private def createWorksheet(directory: Option[AbsolutePath], name: String)(
-      implicit ec: ExecutionContext
+  private def createWorksheet(
+      directory: Option[AbsolutePath],
+      name: String
   ): Future[AbsolutePath] = {
     val path = directory.getOrElse(workspace).resolve(name + ".worksheet.sc")
     createFile(path)
@@ -144,7 +137,7 @@ class NewFilesProvider(
 
   private def createFile(
       path: AbsolutePath
-  )(implicit ec: ExecutionContext): Future[AbsolutePath] = {
+  ): Future[AbsolutePath] = {
     val result = Future {
       AbsolutePath(
         Files.createFile(path.toNIO)
@@ -161,8 +154,9 @@ class NewFilesProvider(
     result
   }
 
-  private def createFileAndWriteText(path: AbsolutePath, text: String)(
-      implicit ec: ExecutionContext
+  private def createFileAndWriteText(
+      path: AbsolutePath,
+      text: String
   ): Future[AbsolutePath] = {
     createFile(path).map { _ =>
       path.writeText(text)
@@ -175,7 +169,7 @@ class NewFilesProvider(
       new ExecuteCommandParams(
         ClientCommands.GotoLocation.id,
         List(
-          new Location(path.toString(), new org.eclipse.lsp4j.Range()): Object
+          new Location(path.toURI.toString(), new Range()): Object
         ).asJava
       )
     )
@@ -186,29 +180,5 @@ class NewFilesProvider(
         |  
         |}
         |""".stripMargin
-
-}
-
-object DialogEnrichments {
-
-  implicit class DialogContinuation[A](state: Future[Option[A]]) {
-
-    def continueWith[B](
-        continuation: A => Future[Option[B]]
-    )(implicit ec: ExecutionContext): Future[Option[B]] =
-      state.flatMap(_.fold(Future.successful(Option.empty[B]))(continuation))
-
-    def endWith[B](
-        ending: A => Future[B]
-    )(implicit ec: ExecutionContext): Future[Option[B]] =
-      state.flatMap(
-        _.fold(Future.successful(Option.empty[B]))(ending(_).map(Some(_)))
-      )
-
-  }
-
-  def endWith[A](ending: Future[A])(
-      implicit ec: ExecutionContext
-  ): Future[Option[A]] = ending.map(Some(_))
 
 }

@@ -363,7 +363,7 @@ class MetalsLanguageServer(
       languageClient,
       packageProvider,
       config,
-      focusedDocument
+      () => focusedDocument
     )
     multilineStringFormattingProvider = new MultilineStringFormattingProvider(
       semanticdbs,
@@ -1296,7 +1296,7 @@ class MetalsLanguageServer(
               Some(directory.getAsString()).map(new URI(_))
             )
           case Seq(_: JsonNull) =>
-            newFilesProvider.createNewFileDialog(None)
+            newFilesProvider.createNewFileDialog(directoryUri = None)
           case _ =>
             Future.failed(
               new IllegalArgumentException(s"Invalid arguments: $args.")

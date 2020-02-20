@@ -602,4 +602,25 @@ object MetalsEnrichments
     def findFirstTrailing(predicate: Token => Boolean): Option[Token] =
       trailingTokens.find(predicate)
   }
+
+  implicit class OptionFutureTransformer[A](state: Future[Option[A]]) {
+    def flatMapOption[B](
+        f: A => Future[Option[B]]
+    )(implicit ec: ExecutionContext): Future[Option[B]] =
+      state.flatMap(_.fold(Future.successful(Option.empty[B]))(f))
+
+    def mapOption[B](
+        f: A => Future[B]
+    )(implicit ec: ExecutionContext): Future[Option[B]] =
+      state.flatMap(
+        _.fold(Future.successful(Option.empty[B]))(f(_).liftOption)
+      )
+  }
+
+  implicit class OptionFutureLift[A](state: Future[A]) {
+    def liftOption(
+        implicit ec: ExecutionContext
+    ): Future[Option[A]] = state.map(Some(_))
+  }
+
 }
