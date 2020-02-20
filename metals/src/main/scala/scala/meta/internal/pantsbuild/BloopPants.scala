@@ -1,7 +1,6 @@
 package scala.meta.internal.pantsbuild
 
 import bloop.config.{Config => C}
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import coursierapi.Dependency
 import coursierapi.MavenRepository
 import java.io.IOException
@@ -34,6 +33,7 @@ import metaconfig.cli.HelpCommand
 import metaconfig.cli.VersionCommand
 import java.{util => ju}
 import java.nio.file.FileSystems
+import scala.meta.internal.mtags.MD5
 
 object BloopPants {
   lazy val app: CliApp = CliApp(
@@ -58,34 +58,6 @@ object BloopPants {
     MetalsLogger.updateDefaultFormat()
     val exit = app.run(args.toList)
     System.exit(exit)
-  }
-
-  def bloopAddOwnerOf(
-      workspace: AbsolutePath,
-      source: AbsolutePath
-  ): Seq[BuildTargetIdentifier] = synchronized {
-    val targets = pantsOwnerOf(workspace, source)
-    if (targets.nonEmpty) {
-      val bloopDir = workspace.resolve(".bloop")
-      for {
-        target <- targets
-        jsonFile = bloopDir.resolve(BloopPants.makeJsonFilename(target))
-        if jsonFile.isFile
-      } {
-        val json = ujson.read(jsonFile.readText)
-        val sources = json("project")("sources").arr
-        val sourceStr = Value.Str(source.toString())
-        if (!sources.contains(sourceStr)) {
-          sources += sourceStr
-          jsonFile.writeText(ujson.write(json, indent = 4))
-          scribe.info(s"add source: $jsonFile")
-        }
-      }
-    }
-    targets.map { target =>
-      val baseDirectory = PantsConfiguration.baseDirectory(workspace, target)
-      PantsConfiguration.toBloopBuildTarget(baseDirectory, target)
-    }
   }
 
   def pantsOwnerOf(
@@ -203,7 +175,7 @@ object BloopPants {
   def makeClassesDirFilename(target: String): String = {
     // Prepend "z_" to separate it from the JSON files when listing the
     // `.bloop/` directory.
-    "z_" + makeReadableFilename(target)
+    "z_" + MD5.compute(target).take(12)
   }
 
 }
@@ -251,6 +223,7 @@ private class BloopPants(
   private val jarPattern =
     FileSystems.getDefault().getPathMatcher("glob:**.jar")
   private val copiedJars = new ju.HashSet[Path]()
+  private val sourcesJars = new ju.HashSet[Path]()
   private val immutableJars = mutable.Map.empty[Path, Path]
   val allScalaJars: List[Path] =
     export.scalaPlatform.compilerClasspath
@@ -285,7 +258,6 @@ private class BloopPants(
         List(toEmptyBloopProject(name + "-project-root", root.toNIO))
       }
     }
-    val binaryDependenciesSourcesIterator = getLibraryDependencySources()
     val generatedProjects = new mutable.LinkedHashSet[Path]
     val allProjects = syntheticProjects ::: projects
     val byName = allProjects.map(p => p.name -> p).toMap
@@ -296,44 +268,30 @@ private class BloopPants(
         val children = export.cycles.children
           .getOrElse(project.name, Nil)
           .flatMap(byName.get)
-        val withBinaryResolution =
-          if (binaryDependenciesSourcesIterator.hasNext) {
-            val extraResolution =
-              project.resolution.map(_.modules).getOrElse(Nil)
-            project.copy(
-              resolution = Some(
-                C.Resolution(
-                  binaryDependenciesSourcesIterator.toList ++ extraResolution
-                )
-              )
-            )
-          } else {
-            project
-          }
         val finalProject =
-          if (children.isEmpty) withBinaryResolution
+          if (children.isEmpty) project
           else {
             val newSources = Iterator(
-              withBinaryResolution.sources.iterator,
+              project.sources.iterator,
               children.iterator.flatMap(_.sources.iterator)
             ).flatten.distinctBy(identity)
             val newSourcesGlobs = Iterator(
-              withBinaryResolution.sourcesGlobs.iterator.flatMap(_.iterator),
+              project.sourcesGlobs.iterator.flatMap(_.iterator),
               children.iterator.flatMap(
                 _.sourcesGlobs.iterator.flatMap(_.iterator)
               )
             ).flatten.distinctBy(identity)
             val newClasspath = Iterator(
-              withBinaryResolution.classpath.iterator,
+              project.classpath.iterator,
               children.iterator.flatMap(_.classpath.iterator)
             ).flatten.distinctBy(identity)
             val newDependencies = Iterator(
-              withBinaryResolution.dependencies.iterator,
+              project.dependencies.iterator,
               children.iterator.flatMap(_.dependencies.iterator)
             ).flatten
-              .filterNot(_ == withBinaryResolution.name)
+              .filterNot(_ == project.name)
               .distinctBy(identity)
-            withBinaryResolution.copy(
+            project.copy(
               sources = newSources,
               sourcesGlobs =
                 if (newSourcesGlobs.isEmpty) None
@@ -342,8 +300,8 @@ private class BloopPants(
               dependencies = newDependencies
             )
           }
-        val out =
-          bloopDir.resolve(BloopPants.makeJsonFilename(finalProject.name))
+        val id = export.targets.get(finalProject.name).fold(project.name)(_.id)
+        val out = bloopDir.resolve(BloopPants.makeJsonFilename(id))
         val json = C.File(BuildInfo.bloopVersion, finalProject)
         bloop.config.write(json, out)
         generatedProjects += out
@@ -352,19 +310,6 @@ private class BloopPants(
     cleanStaleBloopFiles(generatedProjects)
     token.checkCanceled()
     generatedProjects.size
-  }
-
-  // This method returns an iterator to avoid duplicated `*-sources.jar` references.
-  private def getLibraryDependencySources(): Iterator[C.Module] = {
-    for {
-      target <- export.targets.valuesIterator
-      if !target.isTargetRoot
-      baseDirectory = target.baseDirectory(workspace)
-      sourceDirectory <- enclosingSourceDirectory(baseDirectory)
-    } {
-      binaryDependencySources += sourceDirectory
-    }
-    binaryDependencySources.iterator.map(newSourceModule)
   }
 
   private def toBloopProject(target: PantsTarget): C.Project = {
@@ -399,7 +344,7 @@ private class BloopPants(
       if acyclicDependencyName != target.name
       acyclicDependency = export.targets(acyclicDependencyName)
       if acyclicDependency.isTargetRoot
-    } yield acyclicDependency.name
+    } yield acyclicDependency.dependencyName
 
     val libraries: List[PantsLibrary] = for {
       dependency <- target :: transitiveDependencies
@@ -432,7 +377,21 @@ private class BloopPants(
       classpath ++= testingFrameworkJars
     }
 
-    binaryDependencySources ++= libraries.iterator.flatMap(_.sources)
+    val resolution = Some(
+      C.Resolution(
+        (for {
+          library <- libraries.iterator
+          source <- library.sources
+          // NOTE(olafur): avoid sending the same *-sources.jar to reduce the
+          // size of the Bloop JSON configs. Both IntelliJ and Metals only need each
+          // jar to appear once.
+          if !sourcesJars.contains(source)
+        } yield {
+          sourcesJars.add(source)
+          newSourceModule(source)
+        }).toList
+      )
+    )
 
     val out: Path = bloopDir.resolve(target.directoryName)
     val classesDir: Path = target.classesDir(bloopDir)
@@ -446,7 +405,7 @@ private class BloopPants(
       }
 
     C.Project(
-      name = target.name,
+      name = target.dependencyName,
       directory = baseDirectory,
       workspaceDir = Some(workspace),
       sources = sources,
@@ -471,7 +430,7 @@ private class BloopPants(
           None
         )
       ),
-      resolution = None
+      resolution = resolution
     )
   }
 
@@ -586,20 +545,6 @@ private class BloopPants(
         )
       )
     )
-  }
-
-  private def enclosingSourceDirectory(file: Path): Option[Path] = {
-    def loop(p: Path): Option[Path] = {
-      if (p == workspace) None
-      else if (p.endsWith("java") || p.endsWith("scala")) Some(p)
-      else {
-        Option(p.getParent()) match {
-          case None => None
-          case Some(parent) => loop(parent)
-        }
-      }
-    }
-    loop(file)
   }
 
   private def newSourceModule(source: Path) =

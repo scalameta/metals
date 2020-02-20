@@ -17,12 +17,16 @@ case class PantsTarget(
     globs: PantsGlobs,
     roots: PantsRoots
 ) {
+  def isGeneratedTarget: Boolean = name.startsWith(".pants.d")
+  private val prefixedId = id.stripPrefix(".")
+  def dependencyName: String =
+    if (isGeneratedTarget) prefixedId
+    else name
 
   def isTargetRoot: Boolean =
     isPantsTargetRoot &&
       pantsTargetType.isSupported
-  def isGeneratedTarget: Boolean = name.startsWith(".pants.d")
-  val directoryName: String = BloopPants.makeClassesDirFilename(name)
+  val directoryName: String = BloopPants.makeClassesDirFilename(id)
   def baseDirectory(workspace: Path): Path =
     PantsConfiguration
       .baseDirectory(AbsolutePath(workspace), name)

@@ -56,8 +56,6 @@ case class PantsBuildTool(
           .map(target =>
             PantsConfiguration.toBloopBuildTarget(workspace, target)
           )
-      } else if (source.isScalaOrJava) {
-        BloopPants.bloopAddOwnerOf(workspace, source)
       } else {
         Nil
       }

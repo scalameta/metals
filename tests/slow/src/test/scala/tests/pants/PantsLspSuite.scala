@@ -124,50 +124,6 @@ class PantsLspSuite extends BaseImportSuite("pants") {
     } yield ()
   }
 
-  test("regenerate") {
-    for {
-      _ <- server.initialize(
-        s"""
-           |/src/BUILD
-           |scala_library(
-           |  name='math',
-           |  sources=globs('*.scala'),
-           |)
-           |/src/Util.scala
-           |package src
-           |object Util {
-           |  def add(a: Int, b: Int) = a + b
-           |}
-           |""".stripMargin,
-        preInitialized = () => preInitialized
-      )
-      _ <- server.didOpen("src/Util.scala")
-      _ = assertNoDiagnostics()
-      _ = FileLayout.fromString(
-        """
-          |/src/Example.scala
-          |package src
-          |object Example {
-          |  def number = Util.add(1, 2)
-          |  def error: Int = ""
-          |}
-          |""".stripMargin,
-        workspace
-      )
-      _ <- server.didOpen("src/Example.scala")
-      _ <- server.didSave("src/Example.scala")(identity)
-      _ = assertNoDiff(
-        client.workspaceDiagnostics,
-        """|src/Example.scala:4:20: error: type mismatch;
-           | found   : String("")
-           | required: Int
-           |  def error: Int = ""
-           |                   ^^
-           |""".stripMargin
-      )
-    } yield ()
-  }
-
   test("binary-dependency") {
     for {
       _ <- server.initialize(
