@@ -4,15 +4,16 @@ import java.nio.file.Files
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsInputBoxResult
+import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.concurrent.Future
 import scala.meta.io.AbsolutePath
 
 class NewFilesLspSuite extends BaseLspSuite("new-files") {
-  override def serverConfig: MetalsServerConfig =
-    super.serverConfig.copy(isInputBoxEnabled = true)
+  override def experimentalCapabilities
+      : Option[ClientExperimentalCapabilities] =
+    Some(ClientExperimentalCapabilities(inputBoxProvider = true))
 
   test("new-worksheet") {
     cleanCompileCache("a")

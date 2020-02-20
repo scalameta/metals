@@ -109,7 +109,7 @@ final class ConfiguredLanguageClient(
   override def metalsPickInput(
       params: MetalsPickInputParams
   ): CompletableFuture[MetalsPickInputResult] = {
-    if (config.isPickInputEnabled || clientCapabilities.pickInputProvider) {
+    if (clientCapabilities.pickInputProvider) {
       underlying.metalsPickInput(params)
     } else {
       showMessageRequest(

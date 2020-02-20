@@ -141,16 +141,6 @@ Possible values:
 
 *Usage of `inputBoxProvider` in `ClientCapabilities.experimental` is preferable.*
 
-### `-Dmetals.pick-input`
-
-Possible values:
-
-- `off` (default): the `metals/pickInput` request is not supported. In this case,
-  Metals fallbacks to `window/showMessageRequest`.
-- `on`: the `metals/pickInput` request is fully supported.
-
-*Usage of `pickInputProvider` in `ClientCapabilities.experimental` is preferable.*
-
 ### `-Dmetals.execute-client-command`
 
 Possible values:

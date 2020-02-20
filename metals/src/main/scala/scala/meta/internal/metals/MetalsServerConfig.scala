@@ -44,10 +44,6 @@ final case class MetalsServerConfig(
       "metals.input-box",
       default = false
     ),
-    isPickInputEnabled: Boolean = MetalsServerConfig.binaryOption(
-      "metals.pick-input",
-      default = false
-    ),
     isVerbose: Boolean = MetalsServerConfig.binaryOption(
       "metals.verbose",
       default = false
@@ -81,7 +77,6 @@ final case class MetalsServerConfig(
       s"compilers=$compilers",
       s"http=$isHttpEnabled",
       s"input-box=$isInputBoxEnabled",
-      s"pick-input=$isPickInputEnabled",
       s"icons=$icons",
       s"statistics=$statistics",
       s"doctor-format=$doctorFormat"
@@ -113,7 +108,6 @@ object MetalsServerConfig {
           executeClientCommand = ExecuteClientCommandConfig.on,
           globSyntax = GlobSyntaxConfig.vscode,
           isInputBoxEnabled = true,
-          isPickInputEnabled = true,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
