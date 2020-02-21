@@ -5,6 +5,11 @@ import metaconfig.cli.CliApp
 import org.typelevel.paiges.Doc
 import scala.meta.internal.pantsbuild.Export
 import metaconfig.cli.Messages
+import metaconfig.cli.{TabCompletionContext, TabCompletionItem}
+import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.MetalsEnrichments._
+import java.io.File
+import scala.meta.io.AbsolutePath
 
 object CreateCommand extends Command[CreateOptions]("create") {
   override def description: Doc =
@@ -23,6 +28,16 @@ object CreateCommand extends Command[CreateOptions]("create") {
         "fastpass create --intellij TARGETS::"
       ).map(Doc.text)
     )
+  override def complete(
+      context: TabCompletionContext
+  ): List[TabCompletionItem] = {
+    context.setting match {
+      case None =>
+        completeTargetSpec(context, PathIO.workingDirectory)
+      case _ =>
+        Nil
+    }
+  }
   def run(create: CreateOptions, app: CliApp): Int = {
     val name = create.actualName
     Project.fromName(name, create.common) match {
@@ -38,5 +53,32 @@ object CreateCommand extends Command[CreateOptions]("create") {
           Export(project, create.open, app).copy(export = create.export)
         )
     }
+  }
+
+  private def completeTargetSpec(
+      context: TabCompletionContext,
+      cwd: AbsolutePath
+  ): List[TabCompletionItem] = {
+    val path =
+      context.last.split(File.separatorChar).foldLeft(cwd) {
+        case (dir, "") => dir
+        case (dir, name) => dir.resolve(name)
+      }
+    val toList =
+      if (context.last.isEmpty ||
+        context.last.endsWith(File.separator)) path
+      else path.parent
+    toList.list
+      .filter(_.isDirectory)
+      .filter(!_.filename.startsWith("."))
+      .map(name =>
+        name
+          .toRelative(cwd)
+          .toURI(isDirectory = false)
+          .toString() + "::"
+      )
+      .map(name => TabCompletionItem(name))
+      .toBuffer
+      .toList
   }
 }
