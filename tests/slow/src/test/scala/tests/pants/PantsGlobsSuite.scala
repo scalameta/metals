@@ -26,35 +26,35 @@ class PantsGlobsSuite extends BaseSuite {
 
   check(
     "basic",
-    List("*.scala"),
+    List("src/*.scala"),
     expectedWalkDepth = Some(1),
     expectedIncludes = List("glob:*.scala")
   )
 
   check(
     "recursive",
-    List("**/*.scala"),
+    List("src/**/*.scala"),
     expectedWalkDepth = None,
     expectedIncludes = List("glob:**.scala")
   )
 
   check(
     "nested-directory",
-    List("foo/*.scala"),
+    List("src/foo/*.scala"),
     expectedWalkDepth = Some(2),
     expectedIncludes = List("glob:foo/*.scala")
   )
 
   check(
     "nested-directory-with-recursive",
-    List("foo/**/*.scala"),
+    List("src/foo/**/*.scala"),
     expectedWalkDepth = None,
     expectedIncludes = List("glob:foo/**.scala")
   )
 
   check(
     "max",
-    List("*.scala", "foo/*.scala", "foo/bar/*.scala"),
+    List("src/*.scala", "src/foo/*.scala", "src/foo/bar/*.scala"),
     expectedWalkDepth = Some(3),
     expectedIncludes = List(
       "glob:*.scala",

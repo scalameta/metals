@@ -27,11 +27,14 @@ case class PantsGlobs(
         .replaceAllLiterally("**/*", "**")
       s"glob:$pattern"
     }
+    val includeGlobs = include.map(relativizeGlob)
+    val excludeGlobs = exclude.map(relativizeGlob)
+    val walkDepth = PantsGlobs.walkDepth(includeGlobs)
     C.SourcesGlobs(
       baseDirectory,
-      walkDepth = PantsGlobs.walkDepth(include),
-      includes = include.map(relativizeGlob),
-      excludes = exclude.map(relativizeGlob)
+      walkDepth = walkDepth,
+      includes = includeGlobs,
+      excludes = excludeGlobs
     )
   }
   def isStatic: Boolean =
