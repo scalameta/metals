@@ -171,6 +171,10 @@ object MetalsEnrichments
           Future.failed(e)
       }
     }
+
+    def liftOption(
+        implicit ec: ExecutionContext
+    ): Future[Option[A]] = future.map(Some(_))
   }
 
   implicit class XtensionJavaList[A](lst: util.List[A]) {
@@ -615,12 +619,6 @@ object MetalsEnrichments
       state.flatMap(
         _.fold(Future.successful(Option.empty[B]))(f(_).liftOption)
       )
-  }
-
-  implicit class OptionFutureLift[A](state: Future[A]) {
-    def liftOption(
-        implicit ec: ExecutionContext
-    ): Future[Option[A]] = state.map(Some(_))
   }
 
 }

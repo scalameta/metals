@@ -107,7 +107,6 @@ object MetalsServerConfig {
           openFilesOnRenames = true,
           executeClientCommand = ExecuteClientCommandConfig.on,
           globSyntax = GlobSyntaxConfig.vscode,
-          isInputBoxEnabled = true,
           compilers = base.compilers.copy(
             _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),

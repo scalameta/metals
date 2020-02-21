@@ -4,7 +4,6 @@ import scala.meta.io.AbsolutePath
 import java.net.URI
 import scala.concurrent.Future
 import MetalsEnrichments._
-import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 import org.eclipse.lsp4j.MessageType
@@ -101,9 +100,11 @@ class NewFilesProvider(
       kind: String
   ): Future[AbsolutePath] = {
     val path = directory.getOrElse(workspace).resolve(name + ".scala")
+    //name can be actually be "foo/Name", where "foo" is a folder to create
+    val className = directory.getOrElse(workspace).resolve(name).filename
     val editText =
       packageProvider.packageStatement(path).getOrElse("") +
-        classTemplate(kind, name)
+        classTemplate(kind, className)
     createFileAndWriteText(path, editText)
   }
 
@@ -139,9 +140,8 @@ class NewFilesProvider(
       path: AbsolutePath
   ): Future[AbsolutePath] = {
     val result = Future {
-      AbsolutePath(
-        Files.createFile(path.toNIO)
-      )
+      path.touch()
+      path
     }
     result.onFailure {
       case NonFatal(e) =>

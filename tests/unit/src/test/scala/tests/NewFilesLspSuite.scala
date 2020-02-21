@@ -7,153 +7,91 @@ import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsInputBoxResult
 import scala.meta.internal.metals.ClientExperimentalCapabilities
-import scala.concurrent.Future
-import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.MetalsInputBoxParams
+import org.eclipse.lsp4j.ShowMessageRequestParams
 
 class NewFilesLspSuite extends BaseLspSuite("new-files") {
   override def experimentalCapabilities
       : Option[ClientExperimentalCapabilities] =
     Some(ClientExperimentalCapabilities(inputBoxProvider = true))
 
-  test("new-worksheet") {
-    cleanCompileCache("a")
-    RecursivelyDelete(workspace.resolve("a"))
-    Files.createDirectories(
-      workspace.resolve("a/src/main/scala/").toNIO
-    )
-    for {
-      _ <- server.initialize(s"""
-                                |/metals.json
-                                |{
-                                |  "a": { }
-                                |}
-                                |""".stripMargin)
-      _ <- check(
-        workspace.resolve("a/src/main/scala/").toURI.toString(),
-        "worksheet",
-        Some("Foo"),
-        workspace.resolve("a/src/main/scala/Foo.worksheet.sc"),
-        ""
-      )
-    } yield ()
-  }
+  check("new-worksheet")(
+    Some("a/src/main/scala/"),
+    "worksheet",
+    Some("Foo"),
+    "a/src/main/scala/Foo.worksheet.sc",
+    ""
+  )
 
-  test("new-class") {
-    cleanCompileCache("a")
-    RecursivelyDelete(workspace.resolve("a"))
-    Files.createDirectories(
-      workspace.resolve("a/src/main/scala/foo").toNIO
-    )
-    for {
-      _ <- server.initialize(s"""
-                                |/metals.json
-                                |{
-                                |  "a": { }
-                                |}
-                                |""".stripMargin)
-      _ <- check(
-        workspace.resolve("a/src/main/scala/foo/").toURI.toString(),
-        "class",
-        Some("Foo"),
-        workspace.resolve("a/src/main/scala/foo/Foo.scala"),
-        """|package foo
-           |
-           |class Foo {
-           |  
-           |}
-           |""".stripMargin
-      )
-    } yield ()
-  }
+  check("new-class")(
+    Some("a/src/main/scala/foo/"),
+    "class",
+    Some("Foo"),
+    "a/src/main/scala/foo/Foo.scala",
+    """|package foo
+       |
+       |class Foo {
+       |  
+       |}
+       |""".stripMargin
+  )
 
-  test("new-object-null-dir") {
-    cleanCompileCache("a")
-    RecursivelyDelete(workspace.resolve("a"))
-    RecursivelyDelete(workspace.resolve("Bar.scala"))
-    Files.createDirectories(
-      workspace.resolve("a/src/main/scala/").toNIO
-    )
-    for {
-      _ <- server.initialize(s"""
-                                |/metals.json
-                                |{
-                                |  "a": { }
-                                |}
-                                |""".stripMargin)
-      _ <- check(
-        directoryUri = null.asInstanceOf[String],
-        "object",
-        Some("Bar"),
-        workspace.resolve("Bar.scala"),
-        """|object Bar {
-           |  
-           |}
-           |""".stripMargin
-      )
-    } yield ()
-  }
+  check("new-object-null-dir")(
+    directory = None,
+    "object",
+    Some("Bar"),
+    "Bar.scala",
+    """|object Bar {
+       |  
+       |}
+       |""".stripMargin
+  )
 
-  test("new-trait") {
-    cleanCompileCache("a")
-    RecursivelyDelete(workspace.resolve("a"))
-    Files.createDirectories(
-      workspace.resolve("a/src/main/scala/").toNIO
-    )
-    for {
-      _ <- server.initialize(s"""
-                                |/metals.json
-                                |{
-                                |  "a": { }
-                                |}
-                                |""".stripMargin)
-      _ <- check(
-        workspace.resolve("a/src/main/scala/").toURI.toString(),
-        "trait",
-        Some("Baz"),
-        workspace.resolve("a/src/main/scala/Baz.scala"),
-        """|trait Baz {
-           |  
-           |}
-           |""".stripMargin
-      )
-    } yield ()
-  }
+  check("new-trait-new-dir")(
+    Some("a/src/main/scala/"),
+    "trait",
+    Some("bar/Baz"),
+    "a/src/main/scala/bar/Baz.scala",
+    """|package bar
+       |
+       |trait Baz {
+       |  
+       |}
+       |""".stripMargin
+  )
 
-  test("new-package-object") {
-    cleanCompileCache("a")
-    RecursivelyDelete(workspace.resolve("a"))
-    Files.createDirectories(
-      workspace.resolve("a/src/main/scala/foo").toNIO
-    )
-    for {
-      _ <- server.initialize(s"""
-                                |/metals.json
-                                |{
-                                |  "a": { }
-                                |}
-                                |""".stripMargin)
-      _ <- check(
-        workspace.resolve("a/src/main/scala/foo").toURI.toString(),
-        "package-object",
-        name = None,
-        workspace.resolve("a/src/main/scala/foo/package.scala"),
-        """|package object foo {
-           |  
-           |}
-           |""".stripMargin
-      )
-    } yield ()
-  }
+  check("new-package-object")(
+    Some("a/src/main/scala/foo"),
+    "package-object",
+    name = None,
+    "a/src/main/scala/foo/package.scala",
+    """|package object foo {
+       |  
+       |}
+       |""".stripMargin
+  )
 
-  private def check(
-      directoryUri: String,
+  private def check(testName: String)(
+      directory: Option[String],
       pickedKind: String,
       name: Option[String],
-      expectedFilePath: AbsolutePath,
+      expectedFilePath: String,
       expectedContent: String
-  ): Future[Unit] = {
+  ): Unit = test(testName) {
+    val directoryUri = directory.fold(null.asInstanceOf[String])(
+      workspace.resolve(_).toURI.toString()
+    )
+    val expectedFilePathAbsolute = workspace.resolve(expectedFilePath)
+
+    RecursivelyDelete(expectedFilePathAbsolute)
+    cleanCompileCache("a")
+    RecursivelyDelete(workspace.resolve("a"))
+    Files.createDirectories(
+      workspace.resolve("a/src/main/scala/").toNIO
+    )
+
     client.showMessageRequestHandler = { params =>
-      if (NewScalaFile.isSelectTheKindOfFile(params)) {
+      if (isSelectTheKindOfFile(params)) {
         params.getActions().asScala.find(_.getTitle() == pickedKind)
       } else {
         None
@@ -161,7 +99,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     }
     name.foreach { name =>
       client.inputBoxHandler = { params =>
-        if (NewScalaFile.isEnterName(params, pickedKind)) {
+        if (isEnterName(params, pickedKind)) {
           Some(new MetalsInputBoxResult(value = name))
         } else {
           None
@@ -175,6 +113,12 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
       )
 
     for {
+      _ <- server.initialize(s"""
+                                |/metals.json
+                                |{
+                                |  "a": { }
+                                |}
+                                |""".stripMargin)
       _ <- server.executeCommand(
         ServerCommands.NewScalaFile.id,
         directoryUri
@@ -184,13 +128,19 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
           client.workspaceMessageRequests,
           expectedMessages
         )
-        assert(expectedFilePath.exists)
+        assert(expectedFilePathAbsolute.exists)
         assertNoDiff(
-          expectedFilePath.readText,
+          expectedFilePathAbsolute.readText,
           expectedContent
         )
       }
     } yield ()
   }
+
+  private def isSelectTheKindOfFile(params: ShowMessageRequestParams): Boolean =
+    params.getMessage() == NewScalaFile.selectTheKindOfFileMessage
+
+  private def isEnterName(params: MetalsInputBoxParams, kind: String): Boolean =
+    params.prompt == NewScalaFile.enterNameMessage(kind)
 
 }

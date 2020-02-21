@@ -136,6 +136,8 @@ object ServerCommands {
     """|Create and open new file with either scala class, object, trait, package object or worksheet.
        |
        |Arguments: [string], where the string is a directory location for the new file.
+       |
+       |Note: requires 'metals/inputBox' capability from language client.
        |""".stripMargin
   )
 
