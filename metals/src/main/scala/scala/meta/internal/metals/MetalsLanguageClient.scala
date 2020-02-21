@@ -59,15 +59,15 @@ trait MetalsLanguageClient
   ): CompletableFuture[MetalsInputBoxResult]
 
   /**
-   * Opens an input box to ask the user to pick one of the suggested options.
+   * Opens an menu to ask the user to pick one of the suggested options.
    *
    * @return the user provided pick. The future can be cancelled, meaning
    *         the input box should be dismissed in the editor.
    */
-  @JsonRequest("metals/pickInput")
-  def metalsPickInput(
-      params: MetalsPickInputParams
-  ): CompletableFuture[MetalsPickInputResult]
+  @JsonRequest("metals/quickPick")
+  def metalsQuickPick(
+      params: MetalsQuickPickParams
+  ): CompletableFuture[MetalsQuickPickResult]
 
   final def showMessage(messageType: MessageType, message: String): Unit = {
     val params = new MessageParams(messageType, message)
@@ -124,8 +124,8 @@ case class MetalsInputBoxResult(
     @Nullable cancelled: java.lang.Boolean = null
 )
 
-case class MetalsPickInputParams(
-    items: java.util.List[MetalsPickItem],
+case class MetalsQuickPickParams(
+    items: java.util.List[MetalsQuickPickItem],
     // An optional flag to include the description when filtering the picks.
     @Nullable matchOnDescription: java.lang.Boolean = null,
     // An optional flag to include the detail when filtering the picks.
@@ -136,13 +136,13 @@ case class MetalsPickInputParams(
     @Nullable ignoreFocusOut: java.lang.Boolean = null
 )
 
-case class MetalsPickInputResult(
+case class MetalsQuickPickResult(
     // value=null when cancelled=true
     @Nullable itemId: String = null,
     @Nullable cancelled: java.lang.Boolean = null
 )
 
-case class MetalsPickItem(
+case class MetalsQuickPickItem(
     id: String,
     // A human readable string which is rendered prominent.
     label: String,

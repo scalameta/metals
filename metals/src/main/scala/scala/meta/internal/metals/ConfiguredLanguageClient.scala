@@ -106,16 +106,16 @@ final class ConfiguredLanguageClient(
     }
   }
 
-  override def metalsPickInput(
-      params: MetalsPickInputParams
-  ): CompletableFuture[MetalsPickInputResult] = {
-    if (clientCapabilities.pickInputProvider) {
-      underlying.metalsPickInput(params)
+  override def metalsQuickPick(
+      params: MetalsQuickPickParams
+  ): CompletableFuture[MetalsQuickPickResult] = {
+    if (clientCapabilities.quickPickProvider) {
+      underlying.metalsQuickPick(params)
     } else {
       showMessageRequest(
         toShowMessageRequestParams(params)
       ).asScala
-        .map(item => MetalsPickInputResult(itemId = item.getTitle()))
+        .map(item => MetalsQuickPickResult(itemId = item.getTitle()))
         .asJava
     }
   }
@@ -129,7 +129,7 @@ final class ConfiguredLanguageClient(
   }
 
   private def toShowMessageRequestParams(
-      params: MetalsPickInputParams
+      params: MetalsQuickPickParams
   ): ShowMessageRequestParams = {
     val result = new ShowMessageRequestParams()
     result.setMessage(params.placeHolder)

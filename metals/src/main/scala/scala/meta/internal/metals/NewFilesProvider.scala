@@ -23,13 +23,13 @@ class NewFilesProvider(
     implicit ec: ExecutionContext
 ) {
 
-  private val classPick = MetalsPickItem(id = "class", label = "Class")
-  private val objectPick = MetalsPickItem(id = "object", label = "Object")
-  private val traitPick = MetalsPickItem(id = "trait", label = "Trait")
+  private val classPick = MetalsQuickPickItem(id = "class", label = "Class")
+  private val objectPick = MetalsQuickPickItem(id = "object", label = "Object")
+  private val traitPick = MetalsQuickPickItem(id = "trait", label = "Trait")
   private val packageObjectPick =
-    MetalsPickItem(id = "package-object", label = "Package Object")
+    MetalsQuickPickItem(id = "package-object", label = "Package Object")
   private val worksheetPick =
-    MetalsPickItem(id = "worksheet", label = "Worksheet")
+    MetalsQuickPickItem(id = "worksheet", label = "Worksheet")
 
   def createNewFileDialog(directoryUri: Option[URI]): Future[Unit] = {
     val directory = directoryUri
@@ -64,8 +64,8 @@ class NewFilesProvider(
 
   private def askForKind: Future[Option[String]] = {
     client
-      .metalsPickInput(
-        MetalsPickInputParams(
+      .metalsQuickPick(
+        MetalsQuickPickParams(
           List(
             classPick,
             objectPick,

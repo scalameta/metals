@@ -541,22 +541,22 @@ export interface MetalsInputBoxResult {
 }
 ```
 
-### `metals/pickInput`
+### `metals/quickPick`
 
-The Metals pick input request is sent from the server to the client to let the
-user provide a string value by picking one out of a number of given options. It is similar to `window/showMessageRequest`, but the `metals/pickInput` request has richer parameters, that can be used to filter items to pick, like `description` and `detail`.
+The Metals quick pick request is sent from the server to the client to let the
+user provide a string value by picking one out of a number of given options. It is similar to `window/showMessageRequest`, but the `metals/quickPick` request has richer parameters, that can be used to filter items to pick, like `description` and `detail`.
 
 _Request_:
 
-- method: `metals/pickInput`
-- params: `MetalsPickInputParams` defined as follows. It partially matches [`QuickPickOptions`](https://code.visualstudio.com/api/references/vscode-api#QuickPickOptions) in the Visual Studio Code API, but it also contains `items` of [`MetalsPickItem`](https://code.visualstudio.com/api/references/vscode-api#QuickPickItem), which, in it's turn, partially matches `QuickPickItem`, but these interfaces do not contain options for picking many items:
+- method: `metals/quickPick`
+- params: `MetalsQuickInputParams` defined as follows. It partially matches [`QuickPickOptions`](https://code.visualstudio.com/api/references/vscode-api#QuickPickOptions) in the Visual Studio Code API, but it also contains `items` of [`MetalsQuickPickItem`](https://code.visualstudio.com/api/references/vscode-api#QuickPickItem), which, in it's turn, partially matches `QuickPickItem`, but these interfaces do not contain options for picking many items:
 
 ```ts
-export interface MetalsPickInputParams {
+export interface MetalsQuickPickParams {
   /**
    * An array of items that can be selected from.
    */
-  items: MetalsPickItem[];
+  items: MetalsQuickPickItem[];
   /**
    * An optional flag to include the description when filtering the picks.
    */
@@ -575,7 +575,7 @@ export interface MetalsPickInputParams {
   ignoreFocusOut?: boolean;
 }
 
-export interface MetalsPickItem {
+export interface MetalsQuickPickItem {
   /**
    * An id for this items that should be return as a result of the picking.
    */
@@ -599,10 +599,10 @@ export interface MetalsPickItem {
 }
 ```
 
-- result: `MetalsPickInputResult` defined as follows:
+- result: `MetalsQuickPickResult` defined as follows:
 
 ```ts
-export interface MetalsPickInputResult {
+export interface MetalsQuickPickResult {
   itemId?: string;
   cancelled?: boolean;
 }
@@ -661,7 +661,7 @@ rather then using server properties. The currently available settings for
       "debuggingProvider": boolean,
       "decorationProvider": boolean,
       "inputBoxProvider": boolean,
-      "pickInputProvider": boolean,
+      "quickPickProvider": boolean,
       "didFocusProvider": boolean,
       "slowTaskProvider": boolean,
       "executeClientCommandProvider": boolean,

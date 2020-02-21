@@ -7,7 +7,7 @@ final case class ClientExperimentalCapabilities(
     treeViewProvider: java.lang.Boolean = false,
     decorationProvider: java.lang.Boolean = false,
     inputBoxProvider: java.lang.Boolean = false,
-    pickInputProvider: java.lang.Boolean = false,
+    quickPickProvider: java.lang.Boolean = false,
     didFocusProvider: java.lang.Boolean = false,
     slowTaskProvider: java.lang.Boolean = false,
     executeClientCommandProvider: java.lang.Boolean = false,
