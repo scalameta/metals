@@ -1,5 +1,7 @@
 package scala.meta.internal.pantsbuild.commands
 
+import scala.sys.process._
+import scala.util.Try
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.Time
@@ -14,6 +16,11 @@ import metaconfig.internal.Levenshtein
 import scala.meta.internal.pc.LogMessages
 import metaconfig.cli.TabCompletionContext
 import metaconfig.cli.TabCompletionItem
+import bloop.launcher.LauncherMain
+import java.nio.charset.StandardCharsets
+import bloop.bloopgun.core.Shell
+import scala.concurrent.Promise
+import scala.meta.internal.metals.BuildInfo
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
@@ -51,6 +58,7 @@ object SharedCommand {
             export.app,
             isStrict = false
           )
+          restartOldBloopServer()
           if (export.open.isEmpty) {
             OpenCommand.onEmpty(export.project, export.app)
           } else {
@@ -112,6 +120,38 @@ object SharedCommand {
             .fromCommon(SharedOptions())
             .map(project => TabCompletionItem(project.name))
         case Some(_) => Nil
+      }
+    }
+  }
+
+  /** Upgrades the Bloop server if it's known to be an old version. */
+  private def restartOldBloopServer(): Unit = {
+    val isOutdated = Set[String](
+      "1.4.0-RC1+33-dfd03f53",
+      "1.4.0-RC1"
+    )
+    Try {
+      val version = List("bloop", "--version").!!.linesIterator
+        .find(_.startsWith("bloop v"))
+        .getOrElse("")
+        .stripPrefix("bloop v")
+      if (isOutdated(version)) {
+        scribe.info(s"shutting down old version of Bloop '$version'")
+        List("bloop", "exit").!
+        new LauncherMain(
+          clientIn = System.in,
+          clientOut = System.out,
+          out = System.out,
+          charset = StandardCharsets.UTF_8,
+          shell = Shell.default,
+          userNailgunHost = None,
+          userNailgunPort = None,
+          startedServer = Promise[Unit]()
+        ).runLauncher(
+          bloopVersionToInstall = BuildInfo.bloopVersion,
+          skipBspConnection = true,
+          serverJvmOptions = Nil
+        )
       }
     }
   }
