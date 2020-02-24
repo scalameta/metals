@@ -11,6 +11,7 @@ final case class ClientExperimentalCapabilities(
     didFocusProvider: java.lang.Boolean = false,
     slowTaskProvider: java.lang.Boolean = false,
     executeClientCommandProvider: java.lang.Boolean = false,
+    openFilesOnRenameProvider: java.lang.Boolean = false,
     doctorProvider: String = "html",
     statusBarProvider: String = "off"
 ) {

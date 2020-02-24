@@ -35,6 +35,7 @@ import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ClientExperimentalCapabilities
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
@@ -46,7 +47,8 @@ final class RenameProvider(
     client: MetalsLanguageClient,
     buffers: Buffers,
     compilations: Compilations,
-    metalsConfig: MetalsServerConfig
+    metalsConfig: MetalsServerConfig,
+    clientExperimentalCapabilities: ClientExperimentalCapabilities
 ) {
 
   private var awaitingSave = new ConcurrentLinkedQueue[() => Unit]
@@ -144,12 +146,13 @@ final class RenameProvider(
         Seq(uri.toAbsolutePath -> textEdits.toList)
       }
       val fileChanges = allChanges.flatten.toMap
+      val openFilesOnRenameProvider =
+        metalsConfig.openFilesOnRenames || clientExperimentalCapabilities.openFilesOnRenameProvider
       val shouldRenameInBackground =
-        !metalsConfig.openFilesOnRenames ||
-          fileChanges.keySet.size >= metalsConfig.renameFileThreshold
+        !openFilesOnRenameProvider || fileChanges.keySet.size >= metalsConfig.renameFileThreshold
       val (openedEdits, closedEdits) =
         if (shouldRenameInBackground) {
-          if (metalsConfig.openFilesOnRenames) {
+          if (openFilesOnRenameProvider) {
             client.showMessage(fileThreshold(fileChanges.keySet.size))
           }
           fileChanges.partition {
