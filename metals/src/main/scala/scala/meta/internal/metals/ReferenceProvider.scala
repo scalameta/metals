@@ -185,6 +185,7 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean
   ): Seq[Location] = {
     val isSymbol = alternatives + occ.symbol
+    pprint.log(alternatives)
     if (occ.symbol.isLocal) {
       referenceLocations(
         snapshot,

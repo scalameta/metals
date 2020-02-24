@@ -213,9 +213,13 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     "companion",
     """|/a/src/main/scala/a/Main.scala
        |package a
-       |class <<Ma@@in>>{}
-       |object <<Main>>{
-       |  new <<Main>>
+       |case class <<Ma@@in>>(name : String){
+       |  val appl = <<Main>>.apply("")
+       |}
+       |/a/src/main/scala/a/Other.scala
+       |package a
+       |object Other{
+       | val appl = <<Main>>.apply("")
        |}
        |""".stripMargin
   )
