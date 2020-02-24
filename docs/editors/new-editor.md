@@ -541,6 +541,73 @@ export interface MetalsInputBoxResult {
 }
 ```
 
+### `metals/quickPick`
+
+The Metals quick pick request is sent from the server to the client to let the
+user provide a string value by picking one out of a number of given options. It is similar to `window/showMessageRequest`, but the `metals/quickPick` request has richer parameters, that can be used to filter items to pick, like `description` and `detail`.
+
+_Request_:
+
+- method: `metals/quickPick`
+- params: `MetalsQuickInputParams` defined as follows. It partially matches [`QuickPickOptions`](https://code.visualstudio.com/api/references/vscode-api#QuickPickOptions) in the Visual Studio Code API, but it also contains `items` of [`MetalsQuickPickItem`](https://code.visualstudio.com/api/references/vscode-api#QuickPickItem), which, in it's turn, partially matches `QuickPickItem`, but these interfaces do not contain options for picking many items:
+
+```ts
+export interface MetalsQuickPickParams {
+  /**
+   * An array of items that can be selected from.
+   */
+  items: MetalsQuickPickItem[];
+  /**
+   * An optional flag to include the description when filtering the picks.
+   */
+  matchOnDescription?: boolean;
+  /**
+   * An optional flag to include the detail when filtering the picks.
+   */
+  matchOnDetail?: boolean;
+  /**
+   * An optional string to show as place holder in the input box to guide the user what to pick on.
+   */
+  placeHolder?: string;
+  /**
+   * Set to `true` to keep the picker open when focus moves to another part of the editor or to another window.
+   */
+  ignoreFocusOut?: boolean;
+}
+
+export interface MetalsQuickPickItem {
+  /**
+   * An id for this items that should be return as a result of the picking.
+   */
+  id: string;
+  /**
+   * A human readable string which is rendered prominent.
+   */
+  label: string;
+  /**
+   * A human readable string which is rendered less prominent.
+   */
+  description?: string;
+  /**
+   * A human readable string which is rendered less prominent.
+   */
+  detail?: string;
+  /**
+   * Always show this item.
+   */
+  alwaysShow?: boolean;
+}
+```
+
+- result: `MetalsQuickPickResult` defined as follows:
+
+```ts
+export interface MetalsQuickPickResult {
+  itemId?: string;
+  cancelled?: boolean;
+}
+```
+
 ### `metals/windowStateDidChange`
 
 The `metals/windowStateDidChange` notification is sent from the client to the
@@ -594,6 +661,7 @@ rather then using server properties. The currently available settings for
       "debuggingProvider": boolean,
       "decorationProvider": boolean,
       "inputBoxProvider": boolean,
+      "quickPickProvider": boolean,
       "didFocusProvider": boolean,
       "slowTaskProvider": boolean,
       "executeClientCommandProvider": boolean,

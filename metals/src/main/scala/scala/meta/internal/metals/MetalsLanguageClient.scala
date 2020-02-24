@@ -58,6 +58,17 @@ trait MetalsLanguageClient
       params: MetalsInputBoxParams
   ): CompletableFuture[MetalsInputBoxResult]
 
+  /**
+   * Opens an menu to ask the user to pick one of the suggested options.
+   *
+   * @return the user provided pick. The future can be cancelled, meaning
+   *         the input box should be dismissed in the editor.
+   */
+  @JsonRequest("metals/quickPick")
+  def metalsQuickPick(
+      params: MetalsQuickPickParams
+  ): CompletableFuture[MetalsQuickPickResult]
+
   final def showMessage(messageType: MessageType, message: String): Unit = {
     val params = new MessageParams(messageType, message)
     showMessage(params)
@@ -111,4 +122,34 @@ case class MetalsInputBoxResult(
     // value=null when cancelled=true
     @Nullable value: String = null,
     @Nullable cancelled: java.lang.Boolean = null
+)
+
+case class MetalsQuickPickParams(
+    items: java.util.List[MetalsQuickPickItem],
+    // An optional flag to include the description when filtering the picks.
+    @Nullable matchOnDescription: java.lang.Boolean = null,
+    // An optional flag to include the detail when filtering the picks.
+    @Nullable matchOnDetail: java.lang.Boolean = null,
+    // An optional string to show as place holder in the input box to guide the user what to pick on.
+    @Nullable placeHolder: String = null,
+    // Set to `true` to keep the picker open when focus moves to another part of the editor or to another window.
+    @Nullable ignoreFocusOut: java.lang.Boolean = null
+)
+
+case class MetalsQuickPickResult(
+    // value=null when cancelled=true
+    @Nullable itemId: String = null,
+    @Nullable cancelled: java.lang.Boolean = null
+)
+
+case class MetalsQuickPickItem(
+    id: String,
+    // A human readable string which is rendered prominent.
+    label: String,
+    // A human readable string which is rendered less prominent.
+    @Nullable description: String = null,
+    // A human readable string which is rendered less prominent.
+    @Nullable detail: String = null,
+    // Always show this item.
+    @Nullable alwaysShow: java.lang.Boolean = null
 )

@@ -4,54 +4,116 @@ import scala.meta.io.AbsolutePath
 import java.net.URI
 import scala.concurrent.Future
 import MetalsEnrichments._
-import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
+import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Range
+import scala.meta.internal.metals.Messages.NewScalaFile
 
 class NewFilesProvider(
     workspace: AbsolutePath,
-    packageProvider: PackageProvider
+    client: MetalsLanguageClient,
+    packageProvider: PackageProvider,
+    serverConfig: MetalsServerConfig,
+    focusedDocument: () => Option[AbsolutePath]
+)(
+    implicit ec: ExecutionContext
 ) {
 
-  def createNewFile(directory: Option[URI], name: String, kind: String)(
-      implicit ec: ExecutionContext
-  ): Future[URI] = kind match {
-    case "class" | "object" | "trait" =>
-      createClass(directory, name, kind)
-    case "package-object" =>
-      createPackageObject(directory)
-    case "worksheet" =>
-      createWorksheet(directory, name)
-    case invalid => Future.failed(new IllegalArgumentException(invalid))
+  private val classPick = MetalsQuickPickItem(id = "class", label = "Class")
+  private val objectPick = MetalsQuickPickItem(id = "object", label = "Object")
+  private val traitPick = MetalsQuickPickItem(id = "trait", label = "Trait")
+  private val packageObjectPick =
+    MetalsQuickPickItem(id = "package-object", label = "Package Object")
+  private val worksheetPick =
+    MetalsQuickPickItem(id = "worksheet", label = "Worksheet")
+
+  def createNewFileDialog(directoryUri: Option[URI]): Future[Unit] = {
+    val directory = directoryUri
+      .map(_.toString.toAbsolutePath)
+      .orElse(focusedDocument().map(_.parent))
+
+    val newlyCreatedFile =
+      askForKind
+        .flatMapOption {
+          case kind @ (classPick.id | objectPick.id | traitPick.id) =>
+            askForName(kind)
+              .mapOption(
+                createClass(directory, _, kind)
+              )
+          case worksheetPick.id =>
+            askForName(worksheetPick.id)
+              .mapOption(
+                createWorksheet(directory, _)
+              )
+          case packageObjectPick.id =>
+            createPackageObject(directory).liftOption
+          case invalid =>
+            Future.failed(new IllegalArgumentException(invalid))
+        }
+
+    newlyCreatedFile.map {
+      case Some(path) =>
+        openFile(path)
+      case None => ()
+    }
   }
 
-  def createWorksheet(directory: Option[URI], name: String)(
-      implicit ec: ExecutionContext
-  ): Future[URI] = {
-    val path = directory
-      .fold(workspace)(_.toString.toAbsolutePath)
-      .resolve(name + ".worksheet.sc")
-    createFile(path)
+  private def askForKind: Future[Option[String]] = {
+    client
+      .metalsQuickPick(
+        MetalsQuickPickParams(
+          List(
+            classPick,
+            objectPick,
+            traitPick,
+            packageObjectPick,
+            worksheetPick
+          ).asJava,
+          placeHolder = NewScalaFile.selectTheKindOfFileMessage
+        )
+      )
+      .asScala
+      .map {
+        case kind if !kind.cancelled => Some(kind.itemId)
+        case _ => None
+      }
   }
 
-  def createClass(directory: Option[URI], name: String, kind: String)(
-      implicit ec: ExecutionContext
-  ): Future[URI] = {
-    val path = directory
-      .fold(workspace)(_.toString.toAbsolutePath)
-      .resolve(name + ".scala")
+  private def askForName(kind: String): Future[Option[String]] = {
+    client
+      .metalsInputBox(
+        MetalsInputBoxParams(prompt = NewScalaFile.enterNameMessage(kind))
+      )
+      .asScala
+      .map {
+        case name if !name.cancelled => Some(name.value)
+        case _ => None
+      }
+  }
+
+  private def createClass(
+      directory: Option[AbsolutePath],
+      name: String,
+      kind: String
+  ): Future[AbsolutePath] = {
+    val path = directory.getOrElse(workspace).resolve(name + ".scala")
+    //name can be actually be "foo/Name", where "foo" is a folder to create
+    val className = directory.getOrElse(workspace).resolve(name).filename
     val editText =
       packageProvider.packageStatement(path).getOrElse("") +
-        classTemplate(kind, name)
+        classTemplate(kind, className)
     createFileAndWriteText(path, editText)
   }
 
-  def createPackageObject(
-      directory: Option[URI]
-  )(implicit ec: ExecutionContext): Future[URI] = {
+  private def createPackageObject(
+      directory: Option[AbsolutePath]
+  ): Future[AbsolutePath] = {
     directory
       .map { directory =>
-        val path = directory.toString.toAbsolutePath.resolve("package.scala")
+        val path = directory.resolve("package.scala")
         createFileAndWriteText(
           path,
           packageProvider.packageStatement(path).getOrElse("")
@@ -66,25 +128,51 @@ class NewFilesProvider(
       )
   }
 
+  private def createWorksheet(
+      directory: Option[AbsolutePath],
+      name: String
+  ): Future[AbsolutePath] = {
+    val path = directory.getOrElse(workspace).resolve(name + ".worksheet.sc")
+    createFile(path)
+  }
+
   private def createFile(
       path: AbsolutePath
-  )(implicit ec: ExecutionContext): Future[URI] = {
+  ): Future[AbsolutePath] = {
     val result = Future {
-      Files.createFile(path.toNIO).toUri()
+      path.touch()
+      path
     }
     result.onFailure {
-      case NonFatal(e) => scribe.error("Cannot create file", e)
+      case NonFatal(e) =>
+        scribe.error("Cannot create file", e)
+        client.showMessage(
+          MessageType.Error,
+          s"Cannot create file:\n ${e.toString()}"
+        )
     }
     result
   }
 
-  private def createFileAndWriteText(path: AbsolutePath, text: String)(
-      implicit ec: ExecutionContext
-  ): Future[URI] = {
-    createFile(path).map { newFileUri =>
+  private def createFileAndWriteText(
+      path: AbsolutePath,
+      text: String
+  ): Future[AbsolutePath] = {
+    createFile(path).map { _ =>
       path.writeText(text)
-      newFileUri
+      path
     }
+  }
+
+  private def openFile(path: AbsolutePath): Unit = {
+    client.metalsExecuteClientCommand(
+      new ExecuteCommandParams(
+        ClientCommands.GotoLocation.id,
+        List(
+          new Location(path.toURI.toString(), new Range()): Object
+        ).asJava
+      )
+    )
   }
 
   private def classTemplate(kind: String, name: String): String =

@@ -92,6 +92,12 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.metalsInputBox(params)
   }
 
+  override def metalsQuickPick(
+      params: MetalsQuickPickParams
+  ): CompletableFuture[MetalsQuickPickResult] = {
+    underlying.metalsQuickPick(params)
+  }
+
   override def metalsTreeViewDidChange(
       params: TreeViewDidChangeParams
   ): Unit = {

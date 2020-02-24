@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import scala.util.matching.Regex
 import ch.epfl.scala.{bsp4j => b}
-import javax.annotation.Nullable
 
 /**
  * LSP commands supported by the Metals language server.
@@ -134,17 +133,12 @@ object ServerCommands {
   val NewScalaFile = new Command(
     "new-scala-file",
     "Create new scala file",
-    """Create and open new file with either scala class, object, trait, package object or worksheet.""",
-    s"""|MetalsNewScalaFileParams object
-        |Example:
-        |```json
-        |{
-        |   directory: "file:///home/dev/foo/bar/",
-        |   name: 'Baz',
-        |   kind: 'class'
-        |}
-        |```
-    """.stripMargin
+    """|Create and open new file with either scala class, object, trait, package object or worksheet.
+       |
+       |Arguments: [string], where the string is a directory location for the new file.
+       |
+       |Note: requires 'metals/inputBox' capability from language client.
+       |""".stripMargin
   )
 
   /**
@@ -220,9 +214,3 @@ object ServerCommands {
     NewScalaFile
   )
 }
-
-case class MetalsNewScalaFileParams(
-    @Nullable directory: String,
-    name: String,
-    kind: String
-)

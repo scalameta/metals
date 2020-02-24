@@ -106,12 +106,35 @@ final class ConfiguredLanguageClient(
     }
   }
 
+  override def metalsQuickPick(
+      params: MetalsQuickPickParams
+  ): CompletableFuture[MetalsQuickPickResult] = {
+    if (clientCapabilities.quickPickProvider) {
+      underlying.metalsQuickPick(params)
+    } else {
+      showMessageRequest(
+        toShowMessageRequestParams(params)
+      ).asScala
+        .map(item => MetalsQuickPickResult(itemId = item.getTitle()))
+        .asJava
+    }
+  }
+
   override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
     if (clientCapabilities.decorationProvider) {
       underlying.metalsPublishDecorations(params)
     }
+  }
+
+  private def toShowMessageRequestParams(
+      params: MetalsQuickPickParams
+  ): ShowMessageRequestParams = {
+    val result = new ShowMessageRequestParams()
+    result.setMessage(params.placeHolder)
+    result.setActions(params.items.map(item => new MessageActionItem(item.id)))
+    result
   }
 
 }
