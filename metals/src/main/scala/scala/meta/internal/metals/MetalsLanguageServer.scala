@@ -1339,6 +1339,28 @@ class MetalsLanguageServer(
             name.getAsString()
         }
         newFilesProvider.createNewFileDialog(directoryURI, name).asJavaObject
+      case ServerCommands.ResolveDebugClass() =>
+        //TODO: polish this
+        val args = params.getArguments().asScala
+        val je = args.head.asInstanceOf[JsonElement]
+        val p = je.as[DebugClassParams].get
+        val (target, clazz) = (for {
+          //TODO: would be good to have error messages, maybe with use of Either
+          info <- buildTargets.findByDisplayName(
+            Option(p.project).getOrElse("root")
+          )
+          classes = buildTargetClasses.classesOf(info.getId())
+          clazz <- classes.mainClasses.values.find(
+            _.getClassName == p.mainClass
+          )
+        } yield (info.getId(), clazz)).get
+
+        val result = {
+          val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+          val data = clazz.toJson
+          new b.DebugSessionParams(List(target).asJava, dataKind, data)
+        }
+        Future { result }.asJavaObject
 
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")

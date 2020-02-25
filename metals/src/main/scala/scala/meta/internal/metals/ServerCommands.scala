@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.util.matching.Regex
 import ch.epfl.scala.{bsp4j => b}
+import javax.annotation.Nullable
 
 /**
  * LSP commands supported by the Metals language server.
@@ -108,6 +109,13 @@ object ServerCommands {
         |}
         |```
     """.stripMargin
+  )
+
+  val ResolveDebugClass = new Command(
+    "debug-resolve-class",
+    "Resolve class parameters for debug",
+    "Resolve class parameters from user domain into Metals domain in order to use it to start debug session",
+    s"""|DebugClassParams object""".stripMargin
   )
 
   val PresentationCompilerRestart = new Command(
@@ -256,6 +264,12 @@ object ServerCommands {
     GotoLocation,
     NewScalaFile,
     GotoSuperMethod,
-    SuperMethodHierarchy
+    SuperMethodHierarchy,
+    ResolveDebugClass
   )
 }
+
+case class DebugClassParams(
+    mainClass: String,
+    @Nullable project: String = null
+)

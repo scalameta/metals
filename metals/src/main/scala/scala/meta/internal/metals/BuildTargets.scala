@@ -268,6 +268,10 @@ final class BuildTargets() {
     }
   }
 
+  def findByDisplayName(name: String): Option[BuildTarget] = {
+    buildTargetInfo.values.find(_.getDisplayName() == name)
+  }
+
   private def unsafeInferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
