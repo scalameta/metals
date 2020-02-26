@@ -49,7 +49,7 @@ object MethodImplementation {
         findSymbol,
         asSeenFrom
       )
-      if isOverridenMethod(
+      if isOverriddenMethod(
         methodSymbolInfo,
         bottomSymbolInformation,
         findParent = true
@@ -88,12 +88,12 @@ object MethodImplementation {
         inheritanceContext.findSymbol,
         asSeenFrom
       )
-      if isOverridenMethod(methodSymbolInfo, parentSymbol)(context)
+      if isOverriddenMethod(methodSymbolInfo, parentSymbol)(context)
     } yield methodSymbol
     validMethods.headOption
   }
 
-  private def isOverridenMethod(
+  private def isOverriddenMethod(
       methodSymbolInfo: SymbolInformation,
       otherSymbol: SymbolInformation,
       findParent: Boolean = false
@@ -200,6 +200,15 @@ object MethodImplementation {
               signaturesEqual(linkPar.signature, linkChil.signature)
           }
     }
+  }
+
+  def checkSignaturesEqual(
+      sig1: MethodSignature,
+      sig2: MethodSignature,
+      findSymbol: String => Option[SymbolInformation]
+  ): Boolean = {
+    val context = Context(findSymbol, findSymbol, Map())
+    signaturesEqual(sig1, sig2)(context)
   }
 
   private def signaturesEqual(

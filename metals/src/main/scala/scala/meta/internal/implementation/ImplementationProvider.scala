@@ -2,8 +2,13 @@ package scala.meta.internal.implementation
 
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
-import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.mtags.{Symbol => MSymbol}
+import scala.meta.internal.mtags.{
+  GlobalSymbolIndex,
+  Mtags,
+  Semanticdbs,
+  SymbolDefinition,
+  Symbol => MSymbol
+}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.semanticdb.TextDocuments
@@ -16,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.nio.file.Path
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.MethodSignature
-import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.DefinitionProvider
@@ -26,7 +30,6 @@ import scala.meta.internal.semanticdb.TypeSignature
 import scala.collection.mutable
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.util.control.NonFatal
-import scala.meta.internal.mtags.Mtags
 import java.util.concurrent.ConcurrentLinkedQueue
 
 final class ImplementationProvider(
@@ -87,7 +90,7 @@ final class ImplementationProvider(
     lazy val global = globalTable.globalSymbolTableFor(source)
     val locations = for {
       (symbolOccurrence, currentDocument) <- definitionProvider
-        .symbolOccurence(
+        .symbolOccurrence(
           source,
           params
         )
@@ -250,6 +253,14 @@ final class ImplementationProvider(
     } yield new Location(source.toNIO.toUri().toString(), revised)
   }
 
+  def search(
+      symbol: String,
+      source: AbsolutePath
+  ): Option[SymbolInformation] = {
+    lazy val global = globalTable.globalSymbolTableFor(source)
+    findSymbolDef(symbol).orElse(global.flatMap(_.safeInfo(symbol)))
+  }
+
   private def symbolLocationsFromContext(
       symbol: String,
       source: AbsolutePath,
@@ -348,17 +359,30 @@ final class ImplementationProvider(
     }
   }
 
-  private def findSymbolDef(symbol: String): Option[SymbolInformation] = {
+  def findSymbolDef(symbol: String): Option[SymbolInformation] = {
     findSemanticDbForSymbol(symbol).flatMap(findSymbol(_, symbol))
+  }
+
+  def symbolDef(symbol: String): Option[SymbolDefinition] = {
+    index.definition(MSymbol(symbol))
   }
 
   private def findSemanticDbForSymbol(symbol: String): Option[TextDocument] = {
     for {
-      symbolDefinition <- index.definition(MSymbol(symbol))
+      symbolDefinition <- symbolDef(symbol)
       document <- findSemanticdb(symbolDefinition.path)
     } yield {
       document
     }
+  }
+
+  def findSemanticDbWithPathForSymbol(
+      symbol: String
+  ): Option[TextDocumentWithPath] = {
+    for {
+      symbolDefinition <- symbolDef(symbol)
+      document <- findSemanticdb(symbolDefinition.path)
+    } yield TextDocumentWithPath(document, symbolDefinition.path)
   }
 
   private def classFromSymbol(

@@ -16,7 +16,7 @@ inThisBuild(
   List(
     version ~= { dynVer =>
       if (isCI) dynVer
-      else localSnapshotVersion // only for local publishng
+      else localSnapshotVersion // only for local publishing
     },
     scalaVersion := V.scala212,
     crossScalaVersions := List(V.scala212),

@@ -2,8 +2,10 @@ package scala.meta.internal.metals
 
 import java.{util => ju}
 import java.util.Collections
+
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.Location
+
 import scala.meta.pc.CancelToken
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -19,6 +21,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.TextDocumentIdentifier
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -92,7 +95,20 @@ final class DefinitionProvider(
       .definition(Symbol(sym))
       .map(symDef => symDef.path.toInputFromBuffers(buffers))
 
-  def symbolOccurence(
+  def symbolOccurrence(
+      source: AbsolutePath,
+      position: Position
+  ): Option[(SymbolOccurrence, TextDocument)] = {
+    symbolOccurrence(
+      source,
+      new TextDocumentPositionParams(
+        new TextDocumentIdentifier(source.toURI.toString),
+        position
+      )
+    )
+  }
+
+  def symbolOccurrence(
       source: AbsolutePath,
       dirtyPosition: TextDocumentPositionParams
   ): Option[(SymbolOccurrence, TextDocument)] = {
@@ -107,7 +123,7 @@ final class DefinitionProvider(
       )
       symbolOccurrence <- {
         def mtagsOccurrence =
-          fromMtags(source, dirtyPosition.getPosition())
+          fromMtags(source, dirtyPosition.getPosition)
         posOcc.occurrence.orElse(mtagsOccurrence)
       }
     } yield (symbolOccurrence, currentDocument)

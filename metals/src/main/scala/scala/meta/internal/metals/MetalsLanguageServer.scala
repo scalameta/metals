@@ -11,6 +11,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
@@ -21,6 +22,7 @@ import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -46,13 +48,18 @@ import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
+
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
+
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
+
+import scala.meta.internal.implementation.SuperMethodProvider
+import scala.meta.internal.metals.codeactions.GoToSuperMethod
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -161,6 +168,8 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var codeLensProvider: CodeLensProvider = _
+  private var superMethodProvider: SuperMethodProvider = _
+  var goToSuperMethod: GoToSuperMethod = _
   private var codeActionProvider: CodeActionProvider = _
   private var definitionProvider: DefinitionProvider = _
   private var semanticDBIndexer: SemanticdbIndexer = _
@@ -321,14 +330,6 @@ class MetalsLanguageServer(
         interactiveSemanticdbs
       )
     )
-    codeLensProvider = CodeLensProvider(
-      buildTargetClasses,
-      buffers,
-      buildTargets,
-      compilations,
-      semanticdbs,
-      clientExperimentalCapabilities
-    )
     definitionProvider = new DefinitionProvider(
       workspace,
       mtags,
@@ -381,6 +382,23 @@ class MetalsLanguageServer(
       buildTargets,
       buffers,
       definitionProvider
+    )
+    superMethodProvider = new SuperMethodProvider(
+      implementationProvider,
+      implementationProvider.findSemanticDbWithPathForSymbol
+    )
+
+    goToSuperMethod =
+      new GoToSuperMethod(definitionProvider, superMethodProvider)
+
+    codeLensProvider = CodeLensProvider(
+      buildTargetClasses,
+      buffers,
+      buildTargets,
+      semanticdbs,
+      config,
+      superMethodProvider,
+      clientExperimentalCapabilities
     )
     renameProvider = new RenameProvider(
       referencesProvider,
@@ -1034,7 +1052,9 @@ class MetalsLanguageServer(
   def prepareRename(
       params: TextDocumentPositionParams
   ): CompletableFuture[l.Range] =
-    CancelTokens { _ => renameProvider.prepareRename(params).getOrElse(null) }
+    CancelTokens { _ =>
+      renameProvider.prepareRename(params).orNull
+    }
 
   @JsonRequest("textDocument/rename")
   def rename(
@@ -1149,10 +1169,13 @@ class MetalsLanguageServer(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      val lenses = codeLensProvider.findLenses(path)
-      lenses.asJava
+      codeLensSync(params).asJava
     }
+
+  def codeLensSync(params: CodeLensParams): List[CodeLens] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    codeLensProvider.findLenses(path).toList
+  }
 
   @JsonRequest("textDocument/foldingRange")
   def foldingRange(
@@ -1287,6 +1310,14 @@ class MetalsLanguageServer(
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
             Future.failed(new IllegalArgumentException(msg)).asJavaObject
         }
+
+      case ServerCommands.GoToSuperMethod() =>
+        Future {
+          val command = goToSuperMethod.getGoToSuperMethodCommand(params)
+          command.foreach(languageClient.metalsExecuteClientCommand)
+          scribe.debug(s"Executing GoToSuperMethod ${command}")
+        }.asJavaObject
+
       case ServerCommands.NewScalaFile() =>
         val args = params.getArguments.asScala
         val directoryURI = args.lift(0).collect {
@@ -1425,6 +1456,9 @@ class MetalsLanguageServer(
     } yield change
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
+
+    import scala.meta.internal.metals.codeactions.GoToSuperMethod
+
     if (!buildTools.isAutoConnectable) {
       Future.successful(BuildChange.None)
     } else {

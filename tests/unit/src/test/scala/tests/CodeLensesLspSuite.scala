@@ -188,6 +188,53 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
+  check("go-to-super-method-lenses")(
+    """package gameofthrones
+      |
+      |abstract class Lannister {
+      |  def payTheirDebts: Boolean
+      |  def trueLannister = payTheirDebts
+      |}
+      |
+      |trait Tywin extends Lannister{
+      |<< payTheirDebts>>
+      |override def payTheirDebts = true
+      |}
+      |
+      |trait Jamie extends Tywin {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = true
+      |}
+      |
+      |trait Tyrion extends Tywin {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = true
+      |}
+      |
+      |trait Cersei extends Tywin {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = false
+      |}
+      |
+      |class Joffrey extends Lannister with Jamie with Cersei {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = false
+      |}
+      |
+      |class Tommen extends Lannister with Cersei with Jamie {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = true
+      |}
+      |
+      |object Pak {
+      |  val x = new Joffrey {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = false
+      |  }
+      |}
+      |""".stripMargin
+  )
+
   def check(name: String, library: String = "")(
       expected: String
   )(implicit loc: Location): Unit = {

@@ -6,12 +6,14 @@ abstract class Icons {
   def alert: String
   def info: String
   def check: String
+  def findsuper: String
   final def all: List[String] = List(
     rocket,
     sync,
     alert,
     info,
-    check
+    check,
+    findsuper
   )
 }
 object Icons {
@@ -35,6 +37,7 @@ object Icons {
     override def alert: String = "⚠️ "
     override def info: String = "ℹ️ "
     override def check: String = "✅ "
+    override def findsuper: String = "⏫ "
   }
   case object none extends Icons {
     override def rocket: String = ""
@@ -42,13 +45,17 @@ object Icons {
     override def alert: String = ""
     override def info: String = ""
     override def check: String = ""
+    override def findsuper: String = ""
   }
+  // icons for vscode can be found here("Icons in Labels"):
+  // https://code.visualstudio.com/api/references/icons-in-labels
   case object vscode extends Icons {
     override def rocket: String = "$(rocket) "
     override def sync: String = "$(sync) "
     override def alert: String = "$(alert) "
     override def info: String = "$(info) "
     override def check: String = "$(check) "
+    override def findsuper: String = "$(arrow-up)"
   }
   case object atom extends Icons {
     private def span(id: String) = s"<span class='icon icon-$id'></span> "
@@ -57,5 +64,6 @@ object Icons {
     override def alert: String = span("alert")
     override def info: String = span("info")
     override def check: String = span("check")
+    override def findsuper: String = span("up-arrow")
   }
 }
