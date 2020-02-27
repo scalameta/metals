@@ -36,8 +36,9 @@ title: Making a release
   - You might use `.bin/release_notes.py` script to generate merged PRs list. It
     requires the official Github library (`pip install PyGithub`) and you will
     also need to fill in tag names.
-  - Update Metals version in `build.sbt`
-  - Open a PR to the repo
+  - Update Metals SNAPSHOT version in `build.sbt` and the default version in
+    Github issue templates.
+  - Open a PR to the repo.
   - https://github.com/scalameta/metals/releases/new.
 
 - Verify the Sonatype release:

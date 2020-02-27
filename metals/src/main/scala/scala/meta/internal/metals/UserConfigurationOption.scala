@@ -13,7 +13,7 @@ case class UserConfigurationOption(
     description: String
 ) {
   def headerID: String = {
-    title.toLowerCase().replace(' ', '-')
+    title.toLowerCase().replace(' ', '-').replace("'", " ")
   }
   def camelCaseKey: String =
     key.split('-').toList match {

@@ -321,7 +321,7 @@ Then, when on the line that you'd like to expand the decoration to get the hover
 ![Tree View Protocol](https://i.imgur.com/ryUPx3l.png)
 
 coc-metals has a built-in implementation of the [Tree View Protocol](https://scalameta.org/metals/docs/editors/tree-view-protocol.html).
-If you have the [recommended mappings](#recommended-coc.nvim-mappings) copied, you'll notice
+If you have the [recommended mappings](#recommended-cocnvim-mappings) copied, you'll notice
 that in the bottom you'll have some TVP related settings. You can start by
 opening the TVP panel by using the default `<space> t`. Once open, you'll see
 there are two parts to the panel. The first being the `MetalsCompile` where you
