@@ -271,5 +271,7 @@ object ServerCommands {
 
 case class DebugClassParams(
     mainClass: String,
-    @Nullable project: String = null
+    @Nullable project: String = null,
+    @Nullable args: java.util.List[String] = null,
+    @Nullable jvmOption: java.util.List[String] = null
 )

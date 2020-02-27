@@ -1353,6 +1353,8 @@ class MetalsLanguageServer(
           clazz <- classes.mainClasses.values.find(
             _.getClassName == p.mainClass
           )
+          _ = clazz.setArguments(Option(p.args).getOrElse(List().asJava))
+          _ = clazz.setJvmOptions(Option(p.args).getOrElse(List().asJava))
         } yield (info.getId(), clazz)).get
 
         val result = {
