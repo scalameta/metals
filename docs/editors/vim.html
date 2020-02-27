@@ -332,12 +332,12 @@ features.</p>
       </thead>
       <tbody>
         <tr>
-          <td>0.8.0</td>
-          <td>13 Jan 2020 14:57</td>
+          <td>0.8.1</td>
+          <td>26 Feb 2020 17:58</td>
         </tr>
         <tr>
-          <td>0.8.0+313-40759eb6-SNAPSHOT</td>
-          <td>24 Feb 2020 18:23</td>
+          <td>0.8.1+4-f814bb71-SNAPSHOT</td>
+          <td>27 Feb 2020 12:24</td>
         </tr>
       </tbody>
     </table>
@@ -367,7 +367,7 @@ If using Neovim, make sure to have the following line in included in your <code>
 <h2><a class="anchor" aria-hidden="true" id="tree-view-protocol"></a><a href="#tree-view-protocol" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Tree View Protocol</h2>
 <p><img src="https://i.imgur.com/ryUPx3l.png" alt="Tree View Protocol"></p>
 <p>coc-metals has a built-in implementation of the <a href="https://scalameta.org/metals/docs/editors/tree-view-protocol.html">Tree View Protocol</a>.
-If you have the <a href="#recommended-coc.nvim-mappings">recommended mappings</a> copied, you'll notice
+If you have the <a href="#recommended-cocnvim-mappings">recommended mappings</a> copied, you'll notice
 that in the bottom you'll have some TVP related settings. You can start by
 opening the TVP panel by using the default <code>&lt;space&gt; t</code>. Once open, you'll see
 there are two parts to the panel. The first being the <code>MetalsCompile</code> where you
@@ -591,13 +591,13 @@ binary does not exist yet.</p>
       </thead>
       <tbody>
         <tr>
-          <td>0.8.0</td>
-          <td>13 Jan 2020 14:57</td>
+          <td>0.8.1</td>
+          <td>26 Feb 2020 17:58</td>
           <td><code>-r sonatype:releases</code></td>
         </tr>
         <tr>
-          <td>0.8.0+313-40759eb6-SNAPSHOT</td>
-          <td>24 Feb 2020 18:23</td>
+          <td>0.8.1+4-f814bb71-SNAPSHOT</td>
+          <td>27 Feb 2020 12:24</td>
           <td><code>-r sonatype:snapshots</code></td>
         </tr>
       </tbody>
@@ -609,7 +609,7 @@ chmod +x coursier
   --java-opt -Xss4m \
   --java-opt -Xms100m \
   --java-opt -Dmetals.client=vim-lsc \
-  org.scalameta:metals_2.12:0.8.0 \
+  org.scalameta:metals_2.12:0.8.1 \
   -r bintray:scalacenter/releases \
   -r sonatype:snapshots \
   -o /usr/<span class="hljs-built_in">local</span>/bin/metals-vim -f

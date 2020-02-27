@@ -2,12 +2,24 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2020-01-10T06:00:00.000Z</updated>
+    <updated>2020-02-26T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
     <logo>http://scalameta.org/metals/img/scalameta-logo.png</logo>
     <rights>Copyright © 2020 Metals</rights>
+    <entry>
+        <title type="html"><![CDATA[Metals v0.8.1 - Cobalt]]></title>
+        <id>http://scalameta.org/metals/blog/2020/02/26/cobalt.html</id>
+        <link href="http://scalameta.org/metals/blog/2020/02/26/cobalt.html"/>
+        <updated>2020-02-26T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>We are excited to announce the release of Metals v0.8.1. This release includes a large number of bug fixes and some new features.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">313</td> </tr> <tr> <td>Merged PRs</td> <td align="center">100</td> </tr> <tr> <td>Contributors</td> <td align="center">19</td> </tr> <tr> <td>Closed issues</td> <td align="center">52</td> </tr> <tr> <td>New features</td> <td align="center">2</td> </tr> </tbody> </table> <p>For full det...</p>]]></summary>
+        <author>
+            <name>Tomasz Godzik</name>
+            <email/>
+            <uri>https://twitter.com/TomekGodzik</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.8.0 - Cobalt]]></title>
         <id>http://scalameta.org/metals/blog/2020/01/10/cobalt.html</id>

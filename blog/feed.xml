@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Fri, 10 Jan 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 26 Feb 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2020 Metals</copyright>
+        <item>
+            <title><![CDATA[Metals v0.8.1 - Cobalt]]></title>
+            <link>http://scalameta.org/metals/blog/2020/02/26/cobalt.html</link>
+            <guid>http://scalameta.org/metals/blog/2020/02/26/cobalt.html</guid>
+            <pubDate>Wed, 26 Feb 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>We are excited to announce the release of Metals v0.8.1. This release includes a large number of bug fixes and some new features.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">313</td> </tr> <tr> <td>Merged PRs</td> <td align="center">100</td> </tr> <tr> <td>Contributors</td> <td align="center">19</td> </tr> <tr> <td>Closed issues</td> <td align="center">52</td> </tr> <tr> <td>New features</td> <td align="center">2</td> </tr> </tbody> </table> <p>For full det...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.8.0 - Cobalt]]></title>
             <link>http://scalameta.org/metals/blog/2020/01/10/cobalt.html</link>
