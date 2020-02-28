@@ -19,15 +19,14 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
   }
 
   def args(workspace: AbsolutePath): List[String] = {
-    val versionToUse = userConfig().bloopVersion
-    val command =
+    def command(versionToUse: String) =
       List(
         s"ch.epfl.scala:maven-bloop_2.10:$versionToUse:bloopInstall",
         "-DdownloadSources=true"
       )
     userConfig().mavenScript match {
       case Some(script) =>
-        script :: command
+        script :: command(userConfig().currentBloopVersion)
       case None =>
         writeProperties()
         val javaArgs = List[String](
@@ -44,7 +43,7 @@ case class MavenBuildTool(userConfig: () => UserConfiguration)
         List(
           javaArgs,
           jarArgs,
-          command
+          command(userConfig().currentBloopVersion)
         ).flatten
     }
   }

@@ -11,7 +11,7 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
 
   private val initScriptName = "init-script.gradle"
 
-  private def additionalRepos = {
+  private def additionalRepos: String = {
     val isSnapshotVersion = BuildInfo.gradleBloopVersion.contains("+")
     if (isSnapshotVersion)
       """|maven{
@@ -21,9 +21,8 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
       ""
     }
   }
-  private val versionToUse = userConfig().bloopVersion
 
-  private val initScript =
+  private def initScript(versionToUse: String) =
     s"""
        |initscript {
        |  repositories{
@@ -40,7 +39,8 @@ case class GradleBuildTool(userConfig: () => UserConfiguration)
     """.stripMargin.getBytes()
 
   private lazy val initScriptPath: Path = {
-    Files.write(tempDir.resolve(initScriptName), initScript)
+    val bloopVersion = userConfig().currentBloopVersion
+    Files.write(tempDir.resolve(initScriptName), initScript(bloopVersion))
   }
 
   private lazy val gradleWrapper = {

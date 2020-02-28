@@ -56,7 +56,7 @@ final class BloopServers(
   def newServer(
       userConfiguration: UserConfiguration
   ): Future[Option[BuildServerConnection]] = {
-    val bloopVersion = userConfiguration.bloopVersion
+    val bloopVersion = userConfiguration.currentBloopVersion
     BuildServerConnection
       .fromSockets(
         workspace,
