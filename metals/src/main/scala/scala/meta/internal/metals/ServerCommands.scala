@@ -108,14 +108,7 @@ object ServerCommands {
         |   }
         |}
         |```
-    """.stripMargin
-  )
-
-  val ResolveDebugClass = new Command(
-    "debug-resolve-class",
-    "Resolve class parameters for debug",
-    "Resolve class parameters from user domain into Metals domain in order to use it to start debug session",
-    s"""|DebugClassParams object""".stripMargin
+    """.stripMargin //TODO: add new parameters
   )
 
   val PresentationCompilerRestart = new Command(
@@ -264,14 +257,18 @@ object ServerCommands {
     GotoLocation,
     NewScalaFile,
     GotoSuperMethod,
-    SuperMethodHierarchy,
-    ResolveDebugClass
+    SuperMethodHierarchy
   )
 }
 
-case class DebugClassParams(
+case class DebugUnresolvedMainClassParams(
     mainClass: String,
-    @Nullable project: String = null,
+    @Nullable buildTarget: String = null,
     @Nullable args: java.util.List[String] = null,
     @Nullable jvmOption: java.util.List[String] = null
+)
+
+case class DebugUnresolvedTestClassParams(
+    testClass: String,
+    @Nullable buildTarget: String = null
 )

@@ -1294,28 +1294,162 @@ class MetalsLanguageServer(
           )
         }.asJavaObject
       case ServerCommands.StartDebugAdapter() =>
+        //TODO: polish this
         val args = params.getArguments.asScala
-        args match {
-          case Seq(param: JsonElement) =>
-            val session = for {
-              params <- Future.fromTry(param.as[b.DebugSessionParams])
-              server <- DebugServer.start(
-                params,
-                definitionProvider,
-                buildTargets,
-                buildServer
-              )
-            } yield {
-              cancelables.add(server)
-              DebugSession(server.sessionName, server.uri.toString)
+        val debugSessionParamsParser = new JsonParser.Of[b.DebugSessionParams]
+        val mainClassParamsParser =
+          new JsonParser.Of[DebugUnresolvedMainClassParams]
+        val testClassParamsParser =
+          new JsonParser.Of[DebugUnresolvedTestClassParams]
+        import java.util.Collections.singletonList
+        val debugSessionParams: Future[b.DebugSessionParams] = args match {
+          case Seq(debugSessionParamsParser.Jsonized(params))
+              if params.getData != null =>
+            //TODO: delete this
+            scribe.info("PARSED AS SESSION: " + params.toString())
+            Future.successful(params)
+          case Seq(mainClassParamsParser.Jsonized(params))
+              if params.mainClass != null =>
+            //TODO: delete this
+            scribe.info("PARSED AS Main Class: " + params.toString())
+            Option(params.buildTarget).fold {
+              val classes =
+                buildTargetClasses.findMainClassByName(params.mainClass)
+              if (classes.nonEmpty) Future.successful {
+                val (target, clazz) = classes.head
+                if (classes.length > 1) {
+                  val targetName = buildTargets.info(target).get.getDisplayName
+                  val anotherTargets = classes.tail
+                    .map {
+                      case (id, _) =>
+                        "'" + buildTargets.info(id).get.getDisplayName + "'"
+                    }
+                    .mkString(", ")
+                  languageClient.showMessage(
+                    MessageType.Warning,
+                    s"Running '${clazz.getClassName}' main class from '${targetName}' build target,\n" +
+                      s"but class(es) with the same name also foud in $anotherTargets\n." +
+                      "Build target can be specified with 'buildTarget' debug configuration"
+                  )
+                }
+                val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+                val data = clazz.toJson
+                new b.DebugSessionParams(List(target).asJava, dataKind, data)
+              } else
+                Future.failed(new ClassNotFoundException(params.mainClass)) //Todo: fix the exception
+            } { targetName =>
+              buildTargets
+                .findByDisplayName(targetName)
+                .fold {
+                  Future.failed[b.DebugSessionParams](
+                    new ClassNotFoundException(targetName)
+                  ) //Todo: fix the exception
+                } { target =>
+                  buildTargetClasses
+                    .classesOf(target.getId())
+                    .mainClasses
+                    .values
+                    .find(
+                      _.getClassName == params.mainClass
+                    )
+                    .fold {
+                      Future.failed[b.DebugSessionParams](
+                        new ClassNotFoundException(params.mainClass)
+                      ) //todo: in the build target
+                    } { clazz =>
+                      val dataKind =
+                        b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+                      val data = clazz.toJson
+                      Future.successful(
+                        new b.DebugSessionParams(
+                          List(target.getId()).asJava,
+                          dataKind,
+                          data
+                        )
+                      )
+                    }
+                }
             }
-
-            session.asJavaObject
+          case Seq(testClassParamsParser.Jsonized(params))
+              if params.testClass != null =>
+            //TODO: delete this
+            scribe.info("PARSED AS test Class: " + params.toString())
+            Option(params.buildTarget).fold {
+              val classes =
+                buildTargetClasses.findTestClassByName(params.testClass)
+              if (classes.nonEmpty) Future.successful {
+                val (target, clazz) = classes.head
+                if (classes.length > 1) {
+                  val targetName = buildTargets.info(target).get.getDisplayName
+                  val anotherTargets = classes.tail
+                    .map {
+                      case (id, _) =>
+                        "'" + buildTargets.info(id).get.getDisplayName + "'"
+                    }
+                    .mkString(", ")
+                  languageClient.showMessage(
+                    MessageType.Warning,
+                    s"Running '$clazz' test class from '${targetName}' build target,\n" +
+                      s"but class(es) with the same name also foud in $anotherTargets\n." +
+                      "Build target can be specified with 'buildTarget' debug configuration"
+                  )
+                }
+                val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
+                val data = singletonList(clazz).toJson
+                new b.DebugSessionParams(List(target).asJava, dataKind, data)
+              } else
+                Future.failed(new ClassNotFoundException(params.testClass)) //Todo: fix the exception
+            } { targetName =>
+              buildTargets
+                .findByDisplayName(targetName)
+                .fold {
+                  Future.failed[b.DebugSessionParams](
+                    new ClassNotFoundException(targetName)
+                  ) //Todo: fix the exception
+                } { target =>
+                  buildTargetClasses
+                    .classesOf(target.getId())
+                    .testClasses
+                    .values
+                    .find(
+                      _ == params.testClass
+                    )
+                    .fold {
+                      Future.failed[b.DebugSessionParams](
+                        new ClassNotFoundException(params.testClass)
+                      ) //todo: in the build target
+                    } { clazz =>
+                      val dataKind =
+                        b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
+                      val data = singletonList(clazz).toJson
+                      Future.successful(
+                        new b.DebugSessionParams(
+                          List(target.getId()).asJava,
+                          dataKind,
+                          data
+                        )
+                      )
+                    }
+                }
+            }
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
-            Future.failed(new IllegalArgumentException(msg)).asJavaObject
+            Future.failed(new IllegalArgumentException(msg))
         }
+        val session = for {
+          params <- debugSessionParams
+          server <- DebugServer.start(
+            params,
+            definitionProvider,
+            buildTargets,
+            buildServer
+          )
+        } yield {
+          cancelables.add(server)
+          DebugSession(server.sessionName, server.uri.toString)
+        }
+        session.asJavaObject
 
       case ServerCommands.GotoSuperMethod() =>
         Future {
@@ -1339,30 +1473,6 @@ class MetalsLanguageServer(
             name.getAsString()
         }
         newFilesProvider.createNewFileDialog(directoryURI, name).asJavaObject
-      case ServerCommands.ResolveDebugClass() =>
-        //TODO: polish this
-        val args = params.getArguments().asScala
-        val je = args.head.asInstanceOf[JsonElement]
-        val p = je.as[DebugClassParams].get
-        val (target, clazz) = (for {
-          //TODO: would be good to have error messages, maybe with use of Either
-          info <- buildTargets.findByDisplayName(
-            Option(p.project).getOrElse("root")
-          )
-          classes = buildTargetClasses.classesOf(info.getId())
-          clazz <- classes.mainClasses.values.find(
-            _.getClassName == p.mainClass
-          )
-          _ = clazz.setArguments(Option(p.args).getOrElse(List().asJava))
-          _ = clazz.setJvmOptions(Option(p.args).getOrElse(List().asJava))
-        } yield (info.getId(), clazz)).get
-
-        val result = {
-          val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
-          val data = clazz.toJson
-          new b.DebugSessionParams(List(target).asJava, dataKind, data)
-        }
-        Future { result }.asJavaObject
 
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
