@@ -31,9 +31,15 @@ case class UserConfiguration(
     worksheetScreenWidth: Int = 120,
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
-    bloopVersion: String = BuildInfo.bloopVersion,
+    bloopVersion: Option[String] = None,
     pantsTargets: Option[List[String]] = None
-)
+) {
+
+  def currentBloopVersion: String =
+    bloopVersion.getOrElse(BuildInfo.bloopVersion)
+
+}
+
 object UserConfiguration {
 
   def default: UserConfiguration = UserConfiguration()
@@ -235,8 +241,7 @@ object UserConfiguration {
       )
     val bloopSbtAlreadyInstalled =
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
-    val bloopVersion =
-      getStringKey("bloop-version").getOrElse(BuildInfo.bloopVersion)
+    val bloopVersion = getStringKey("bloop-version")
     if (errors.isEmpty) {
       Right(
         UserConfiguration(

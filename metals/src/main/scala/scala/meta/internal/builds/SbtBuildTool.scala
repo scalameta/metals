@@ -83,7 +83,7 @@ case class SbtBuildTool(
       config: MetalsServerConfig
   ): Unit = {
     if (userConfig().bloopSbtAlreadyInstalled) return
-    val versionToUse = userConfig().bloopVersion
+    val versionToUse = userConfig().currentBloopVersion
     val bytes = SbtBuildTool
       .sbtPlugin(versionToUse)
       .getBytes(StandardCharsets.UTF_8)

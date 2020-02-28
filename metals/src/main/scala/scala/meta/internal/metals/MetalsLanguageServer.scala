@@ -841,7 +841,9 @@ class MetalsLanguageServer(
           if (userConfig.bloopVersion != old.bloopVersion) {
             languageClient
               .showMessageRequest(
-                Messages.BloopVersionChange.params(userConfig.bloopVersion)
+                Messages.BloopVersionChange.params(
+                  userConfig.currentBloopVersion
+                )
               )
               .asScala
               .flatMap {
@@ -1732,7 +1734,7 @@ class MetalsLanguageServer(
         val messageParams = IncompatibleBloopVersion.params(
           bspServerVersion,
           BuildInfo.bloopVersion,
-          BuildInfo.bloopVersion != userConfig.bloopVersion
+          isChangedInSettings = userConfig.bloopVersion != None
         )
         languageClient.showMessageRequest(messageParams).asScala.foreach {
           case action if action == IncompatibleBloopVersion.shutdown =>
