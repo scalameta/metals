@@ -1579,6 +1579,7 @@ class MetalsLanguageServer(
           }
       }
       workspaceSymbols.didChange(source, symbols)
+      symbolDocs.didChange(symbols.map(_.symbol))
     } catch {
       case NonFatal(e) =>
         scribe.error(source.toString(), e)

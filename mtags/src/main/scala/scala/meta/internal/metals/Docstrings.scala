@@ -37,6 +37,10 @@ class Docstrings(index: GlobalSymbolIndex) {
     }
   }
 
+  def didChange(symbols: Seq[String]): Unit = {
+    symbols.foreach(sym => indexSymbol(sym))
+  }
+
   private def cacheSymbol(doc: SymbolDocumentation): Unit = {
     cache(doc.symbol()) = doc
   }
