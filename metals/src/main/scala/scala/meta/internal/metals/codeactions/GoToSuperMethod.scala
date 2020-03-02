@@ -1,12 +1,18 @@
 package scala.meta.internal.metals.codeactions
 
-import scala.meta.internal.implementation.ImplementationProvider
+import scala.meta.internal.implementation.{
+  GlobalClassTable,
+  ImplementationProvider,
+  SuperMethodProvider,
+  TextDocumentWithPath
+}
 import org.eclipse.lsp4j.{ExecuteCommandParams, Location, Position}
 
-import scala.meta.internal.implementation.SuperMethodProvider
-import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.implementation.TextDocumentWithPath
-import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.metals.{
+  BuildTargets,
+  ClientCommands,
+  DefinitionProvider
+}
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.GoToSuperMethod.GoToSuperMethodParams
@@ -14,7 +20,8 @@ import scala.meta.internal.semanticdb.{SymbolInformation, SymbolOccurrence}
 
 class GoToSuperMethod(
     definitionProvider: DefinitionProvider,
-    superMethodProvider: SuperMethodProvider
+    superMethodProvider: SuperMethodProvider,
+    buildTargets: BuildTargets
 ) {
 
   def getGoToSuperMethodCommand(
@@ -54,10 +61,14 @@ class GoToSuperMethod(
       role: SymbolOccurrence.Role,
       docText: TextDocumentWithPath
   ): Option[Location] = {
+    val global = new GlobalClassTable(buildTargets)
+      .globalSymbolTableFor(docText.filePath)
+      .get
     superMethodProvider.findSuperForMethodOrField(
       si,
       docText,
-      role
+      role,
+      global.info
     )
   }
 

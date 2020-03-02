@@ -384,12 +384,11 @@ class MetalsLanguageServer(
       definitionProvider
     )
     superMethodProvider = new SuperMethodProvider(
-      implementationProvider,
       implementationProvider.findSemanticDbWithPathForSymbol
     )
 
     goToSuperMethod =
-      new GoToSuperMethod(definitionProvider, superMethodProvider)
+      new GoToSuperMethod(definitionProvider, superMethodProvider, buildTargets)
 
     codeLensProvider = CodeLensProvider(
       buildTargetClasses,

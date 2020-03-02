@@ -7,15 +7,18 @@ import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.implementation.ImplementationProvider
-import scala.meta.internal.implementation.SuperMethodProvider
-import scala.meta.internal.implementation.TextDocumentWithPath
+import scala.meta.internal.implementation.{
+  GlobalClassTable,
+  ImplementationProvider,
+  SuperMethodProvider,
+  TextDocumentWithPath
+}
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.CodeLensProvider._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.{SymbolInformation, SymbolOccurrence}
 import scala.meta.io.AbsolutePath
 
 trait CodeLensProvider {
@@ -52,6 +55,11 @@ final class DebugCodeLensProvider(
       case None =>
         Nil
       case Some(textDocument) =>
+        val cache = scala.collection.mutable.Map[String, List[
+          (SymbolInformation, Option[TextDocumentWithPath])
+        ]]()
+        val global =
+          new GlobalClassTable(buildTargets).globalSymbolTableFor(path).get
         val distance =
           TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
         for {
@@ -69,7 +77,13 @@ final class DebugCodeLensProvider(
               .getOrElse(Nil)
             val docWithPath = TextDocumentWithPath(textDocument, path)
             val gotoSuperMethod =
-              createSuperMethodCommand(docWithPath, symbol, occurrence.role)
+              createSuperMethodCommand(
+                docWithPath,
+                symbol,
+                occurrence.role,
+                cache,
+                global.info
+              )
             main ++ tests ++ gotoSuperMethod
           }
           if commands.nonEmpty
@@ -86,7 +100,11 @@ final class DebugCodeLensProvider(
   private def createSuperMethodCommand(
       docWithPath: TextDocumentWithPath,
       symbol: String,
-      role: SymbolOccurrence.Role
+      role: SymbolOccurrence.Role,
+      cache: scala.collection.mutable.Map[String, List[
+        (SymbolInformation, Option[TextDocumentWithPath])
+      ]],
+      findSymbol: String => Option[SymbolInformation]
   ): Option[l.Command] = {
     for {
       symbolInformation <- ImplementationProvider.findSymbol(
@@ -96,7 +114,9 @@ final class DebugCodeLensProvider(
       gotoLocation <- superMethodProvider.findSuperForMethodOrField(
         symbolInformation,
         docWithPath,
-        role
+        role,
+        findSymbol,
+        cache
       )
     } yield convertToSuperMethodCommand(
       gotoLocation,
