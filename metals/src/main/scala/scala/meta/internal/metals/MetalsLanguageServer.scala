@@ -387,8 +387,12 @@ class MetalsLanguageServer(
       implementationProvider.findSemanticDbWithPathForSymbol
     )
 
-    goToSuperMethod =
-      new GoToSuperMethod(definitionProvider, superMethodProvider, buildTargets)
+    goToSuperMethod = new GoToSuperMethod(
+      definitionProvider,
+      implementationProvider,
+      superMethodProvider,
+      buildTargets
+    )
 
     codeLensProvider = CodeLensProvider(
       buildTargetClasses,
@@ -397,6 +401,7 @@ class MetalsLanguageServer(
       semanticdbs,
       config,
       superMethodProvider,
+      implementationProvider,
       clientExperimentalCapabilities
     )
     renameProvider = new RenameProvider(

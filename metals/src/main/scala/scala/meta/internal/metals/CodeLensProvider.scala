@@ -6,6 +6,7 @@ import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
 
+import scala.collection.{mutable => m}
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.implementation.{
   GlobalClassTable,
@@ -19,6 +20,7 @@ import scala.meta.internal.metals.CodeLensProvider._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.{SymbolInformation, SymbolOccurrence}
+import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 
 trait CodeLensProvider {
@@ -31,9 +33,10 @@ final class DebugCodeLensProvider(
     buildTargets: BuildTargets,
     config: MetalsServerConfig,
     semanticdbs: Semanticdbs,
-    superMethodProvider: SuperMethodProvider
-)(implicit ec: ExecutionContext)
-    extends CodeLensProvider {
+    superMethodProvider: SuperMethodProvider,
+    implementationProvider: ImplementationProvider
+) extends CodeLensProvider {
+
   // code lenses will be refreshed after compilation or when workspace gets indexed
   def findLenses(path: AbsolutePath): Seq[l.CodeLens] = {
     val lenses = buildTargets
@@ -46,20 +49,19 @@ final class DebugCodeLensProvider(
     lenses.getOrElse(Nil)
   }
 
+  private def makeGlobalClassTable(path: AbsolutePath): GlobalSymbolTable = {
+    new GlobalClassTable(buildTargets).globalSymbolTableFor(path).get
+  }
+
   private def codeLenses(
       path: AbsolutePath,
       target: b.BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes
   ): Seq[l.CodeLens] = {
     semanticdbs.textDocument(path).documentIncludingStale match {
-      case None =>
-        Nil
       case Some(textDocument) =>
-        val cache = scala.collection.mutable.Map[String, List[
-          (SymbolInformation, Option[TextDocumentWithPath])
-        ]]()
-        val global =
-          new GlobalClassTable(buildTargets).globalSymbolTableFor(path).get
+        val cache: LensGoSuperCache = m.Map()
+        val global = makeGlobalClassTable(path)
         val distance =
           TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
         for {
@@ -82,7 +84,10 @@ final class DebugCodeLensProvider(
                 symbol,
                 occurrence.role,
                 cache,
-                global.info
+                si =>
+                  implementationProvider
+                    .findSymbolDef(si)
+                    .orElse(global.info(si))
               )
             main ++ tests ++ gotoSuperMethod
           }
@@ -93,7 +98,7 @@ final class DebugCodeLensProvider(
           command <- commands
         } yield new l.CodeLens(range, command, null)
       case _ =>
-        Nil
+        Seq.empty
     }
   }
 
@@ -101,9 +106,7 @@ final class DebugCodeLensProvider(
       docWithPath: TextDocumentWithPath,
       symbol: String,
       role: SymbolOccurrence.Role,
-      cache: scala.collection.mutable.Map[String, List[
-        (SymbolInformation, Option[TextDocumentWithPath])
-      ]],
+      cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
   ): Option[l.Command] = {
     for {
@@ -139,6 +142,9 @@ final class DebugCodeLensProvider(
 object CodeLensProvider {
   import scala.meta.internal.metals.JsonParser._
 
+  type LensGoSuperCache =
+    m.Map[String, List[(SymbolInformation, Option[TextDocumentWithPath])]]
+
   private val Empty: CodeLensProvider = (_: AbsolutePath) => Nil
 
   def apply(
@@ -148,6 +154,7 @@ object CodeLensProvider {
       semanticdbs: Semanticdbs,
       config: MetalsServerConfig,
       superMethodProvider: SuperMethodProvider,
+      implementationProvider: ImplementationProvider,
       capabilities: ClientExperimentalCapabilities
   )(implicit ec: ExecutionContext): CodeLensProvider = {
     if (!capabilities.debuggingProvider) Empty
@@ -158,7 +165,8 @@ object CodeLensProvider {
         buildTargets,
         config,
         semanticdbs,
-        superMethodProvider
+        superMethodProvider,
+        implementationProvider
       )
     }
   }

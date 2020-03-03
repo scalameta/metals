@@ -7,7 +7,7 @@ import scala.meta.internal.implementation.{
   TextDocumentWithPath
 }
 import org.eclipse.lsp4j.{ExecuteCommandParams, Location, Position}
-
+import scala.collection.{mutable => m}
 import scala.meta.internal.metals.{
   BuildTargets,
   ClientCommands,
@@ -20,6 +20,7 @@ import scala.meta.internal.semanticdb.{SymbolInformation, SymbolOccurrence}
 
 class GoToSuperMethod(
     definitionProvider: DefinitionProvider,
+    implementationProvider: ImplementationProvider,
     superMethodProvider: SuperMethodProvider,
     buildTargets: BuildTargets
 ) {
@@ -68,7 +69,8 @@ class GoToSuperMethod(
       si,
       docText,
       role,
-      global.info
+      si => implementationProvider.findSymbolDef(si).orElse(global.info(si)),
+      m.Map()
     )
   }
 

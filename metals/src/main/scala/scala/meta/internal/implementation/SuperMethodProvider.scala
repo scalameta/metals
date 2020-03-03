@@ -1,6 +1,8 @@
 package scala.meta.internal.implementation
 
 import org.eclipse.{lsp4j => l}
+
+import scala.meta.internal.metals.CodeLensProvider.LensGoSuperCache
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.{
@@ -21,26 +23,8 @@ class SuperMethodProvider(
       msi: SymbolInformation,
       documentWithPath: TextDocumentWithPath,
       symbolRole: SymbolOccurrence.Role,
-      search: String => Option[SymbolInformation]
-  ): Option[l.Location] = {
-
-    findSuperForMethodOrField(
-      msi,
-      documentWithPath,
-      symbolRole,
-      search,
-      scala.collection.mutable.Map()
-    )
-  }
-
-  def findSuperForMethodOrField(
-      msi: SymbolInformation,
-      documentWithPath: TextDocumentWithPath,
-      symbolRole: SymbolOccurrence.Role,
       findSymbol: String => Option[SymbolInformation],
-      cache: scala.collection.mutable.Map[String, List[
-        (SymbolInformation, Option[TextDocumentWithPath])
-      ]]
+      cache: LensGoSuperCache
   ): Option[l.Location] = {
     if (symbolRole.isDefinition && (msi.isMethod || msi.isField)) {
       findSuperForMethodOrFieldChecked(msi, documentWithPath, cache, findSymbol)
@@ -102,9 +86,7 @@ class SuperMethodProvider(
 
   private def calculateClassSuperHierarchyWithCache(
       classSymbolInformation: SymbolInformation,
-      cache: scala.collection.mutable.Map[String, List[
-        (SymbolInformation, Option[TextDocumentWithPath])
-      ]],
+      cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
   ): List[(SymbolInformation, Option[TextDocumentWithPath])] = {
     cache.get(classSymbolInformation.symbol) match {
@@ -134,9 +116,7 @@ class SuperMethodProvider(
   def findSuperForMethodOrFieldChecked(
       msi: SymbolInformation,
       documentWithPath: TextDocumentWithPath,
-      cache: scala.collection.mutable.Map[String, List[
-        (SymbolInformation, Option[TextDocumentWithPath])
-      ]],
+      cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
   ): Option[l.Location] = {
     val classSymbolInformation =
