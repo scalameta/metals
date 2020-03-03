@@ -13,6 +13,10 @@ import scala.meta.pc.SymbolDocumentation
 import scala.util.control.NonFatal
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.mtags.ScalaMtags
+import scala.meta.inputs.Input
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.io.AbsolutePath
 
 /**
  * Implementation of the `documentation(symbol: String): Option[SymbolDocumentation]` method in `SymbolSearch`.
@@ -38,26 +42,33 @@ class Docstrings(index: GlobalSymbolIndex) {
     }
   }
 
-  def didChange(symbols: Seq[String]): Unit = {
-    symbols.foreach(sym => indexSymbol(sym, Some(expireCacheSymbol)))
+  /**
+   * Expire all symbols showed in the given scala source file.
+   *
+   * Note that what this method does is only expiring the cache, and
+   * it doesn't update the cache in honor of the memory footprint.
+   * Otherwise, if we update the cache for symbols every time we save a file,
+   * metals will cache all symbols in files we've saved, and it consumes a considerable amount of memory.
+   *
+   * @param path the absolute path for the source file to update.
+   */
+  def expireSymbolDefinition(path: AbsolutePath): Unit = {
+    path.toLanguage match {
+      case Language.SCALA =>
+        new Deindexer(path.toInput).indexRoot()
+      case _ =>
+    }
   }
 
   private def cacheSymbol(doc: SymbolDocumentation): Unit = {
     cache(doc.symbol()) = doc
   }
 
-  private def expireCacheSymbol(occ: SymbolOccurrence): Unit = {
-    cache.remove(occ.symbol)
-  }
-
-  private def indexSymbol(
-      symbol: String,
-      occFn: Option[SymbolOccurrence => Unit] = None
-  ): Unit = {
+  private def indexSymbol(symbol: String): Unit = {
     index.definition(Symbol(symbol)) match {
       case Some(defn) =>
         try {
-          indexSymbolDefinition(defn, occFn)
+          indexSymbolDefinition(defn)
         } catch {
           case NonFatal(e) =>
             logger.log(Level.SEVERE, defn.path.toURI.toString, e)
@@ -66,18 +77,27 @@ class Docstrings(index: GlobalSymbolIndex) {
     }
   }
 
-  private def indexSymbolDefinition(
-      defn: SymbolDefinition,
-      occFn: Option[SymbolOccurrence => Unit]
-  ): Unit = {
+  private def indexSymbolDefinition(defn: SymbolDefinition): Unit = {
     defn.path.toLanguage match {
       case Language.JAVA =>
         JavadocIndexer
           .foreach(defn.path.toInput)(cacheSymbol)
       case Language.SCALA =>
         ScaladocIndexer
-          .foreach(defn.path.toInput)(cacheSymbol, occFn)
+          .foreach(defn.path.toInput)(cacheSymbol)
       case _ =>
+    }
+  }
+
+  private class Deindexer(
+      input: Input.VirtualFile
+  ) extends ScalaMtags(input) {
+    override def visitOccurrence(
+        occ: SymbolOccurrence,
+        sinfo: SymbolInformation,
+        owner: String
+    ): Unit = {
+      cache.remove(occ.symbol)
     }
   }
 
