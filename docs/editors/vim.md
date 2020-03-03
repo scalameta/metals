@@ -427,35 +427,49 @@ The Metals server is shutdown when you exit vim as usual.
 
 ## Statusline integration
 
-`coc.nvim` has multiple ways to integrate with various statusline plugins. You can find instructions
-for each of them located [here](https://github.com/neoclide/coc.nvim/wiki/Statusline-integration).
-Two noteworthy things that they add are the ability to see diagnostic information in the current
-buffer.
+It's recommended to use a statusline integration with `coc-metals` in order to
+allow messages to be displayed in your status line rather than as a message.
+This will allow for a better experience as you can continue to get status
+information while entering a command or responding to a prompt. However, we
+realize that not everyone by default will have this setup, and since the user
+needs to see messages about the status of their build, the following is
+defaulted to false.
+
+```json
+"metals.statusBarEnabled": true
+```
+
+Again, it's recommended to make this active, and use a statusline plugin, or
+manually add the coc status information into your statusline. `coc.nvim` has
+multiple ways to integrate with various statusline plugins. You can find
+instructions for each of them located
+[here](https://github.com/neoclide/coc.nvim/wiki/Statusline-integration).  If
+you're unsure of what to use,
+[vim-airline](https://github.com/vim-airline/vim-airline) is a great minimal
+choice that will work out of the box.
+
+With [vim-airline](https://github.com/vim-airline/vim-airline) you'll notice
+two noteworthy things. The first will be that you'll have diagnostic
+information on the far right of your screen.
 
 ![Diagnostic statusline](https://i.imgur.com/7uNYTYl.png)
 
-And it also shows progress information for longer standing processes.
+You'll also have metals status information in your status bar.
 
-![Progress item](https://i.imgur.com/AAWZ4o4.png)
+![Status bar info](https://i.imgur.com/eCAgrCn.png)
 
-If you don't use a statusline integration, but would still like to see this information, the easiest
-way is to add the following to your `.vimrc`.
+Without a statusline integration, you'll get messages like you see below.
 
-```vim
-set statusline^=%{coc#status()}
-```
-The `coc#status()` function will display both status and diagnostic information. However, if you are
-using an integration like I am in the photos that display your diagnostic information in the far
-right, but you'd like to see the status information in the middle, you can make a small function to
-just grab that information, and use it in your statusline. Here is an example for lightline to
-display only the status information in the middle of the statusline (`section_c`).
+![No status line](https://i.imgur.com/XF7A1BJ.png)
+
+If you don't use a statusline plugin, but would still like to see this
+information, the easiest way is to make sure you have the following in your
+`.vimrc`.
 
 ```vim
-function! CocExtensionStatus() abort
-  return get(g:, 'coc_status', '')
-endfunction
-let g:airline_section_c = '%f%{CocExtensionStatus()}'
+set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}
 ```
+
 ## Formatting on save
 
 Add the following configuration to `:CocConfig` if you'd like to have `:w` format using Metals and
