@@ -15,10 +15,8 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
-
 import scala.collection.convert.DecorateAsJava
 import scala.collection.convert.DecorateAsScala
 import scala.compat.java8.FutureConverters
@@ -40,7 +38,6 @@ import scala.meta.tokens.Token
 import scala.util.Properties
 import scala.{meta => m}
 import java.nio.file.StandardOpenOption
-
 import scala.util.control.NonFatal
 import scala.util.Try
 

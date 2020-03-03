@@ -2,10 +2,8 @@ package scala.meta.internal.metals
 
 import java.{util => ju}
 import java.util.Collections
-
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.Location
-
 import scala.meta.pc.CancelToken
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._

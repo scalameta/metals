@@ -12,7 +12,6 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
-
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeLensParams
@@ -46,7 +45,6 @@ import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
 import tests.MetalsTestEnrichments._
-
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -77,7 +75,6 @@ import scala.meta.io.RelativePath
 import scala.{meta => m}
 import scala.meta.internal.tvp.TreeViewProvider
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
-
 import scala.concurrent.Promise
 import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.ServerCommands
@@ -85,24 +82,17 @@ import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.DebugSession
 import scala.util.matching.Regex
 import org.eclipse.lsp4j.RenameParams
-
 import scala.meta.internal.metals.TextEdits
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.RenameFile
-
 import scala.meta.internal.metals.debug.Stoppage
 import scala.util.Properties
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeActionContext
-import org.eclipse.lsp4j.jsonrpc.messages
-import org.eclipse.lsp4j.ResourceOperation
-import org.eclipse.lsp4j.TextDocumentEdit
-
-import scala.meta.internal.implementation.ImplementationProvider
-import scala.meta.internal.metals.codeactions.GoToSuperMethod.GoToSuperMethodParams
+import scala.meta.internal.implementation.GoToSuperMethod.GoToSuperMethodParams
 
 /**
- * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
+ * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
  *
  * - manages text synchronization, example didSave writes file contents to disk.
  * - pretty-prints results of textDocument/definition for readable multiline string diffing.
@@ -213,7 +203,7 @@ final class TestingServer(
   )(implicit loc: munit.Location): Unit = {
     val command = GoToSuperMethodParams(context(pos)._2, context(pos)._1)
     val maybeFoundLocation =
-      server.goToSuperMethod.getGoToSuperMethodCommand(command)
+      server.goToSuperMethod.getGoToSuperMethodLocation(command)
     val maybeFoundPosition =
       maybeFoundLocation.map(l => (l.getRange.getStart, l.getUri))
     val maybeExpectedPosition = maybeSuperPos.flatMap(context.get)

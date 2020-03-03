@@ -1,25 +1,22 @@
 package scala.meta.internal.metals
 
 import java.util.Collections._
-
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
-
 import scala.collection.{mutable => m}
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.implementation.{
-  GlobalClassTable,
-  ImplementationProvider,
-  SuperMethodProvider,
-  TextDocumentWithPath
-}
+import scala.meta.internal.implementation.GlobalClassTable
+import scala.meta.internal.implementation.ImplementationProvider
+import scala.meta.internal.implementation.SuperMethodProvider
+import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.CodeLensProvider._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.{SymbolInformation, SymbolOccurrence}
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 
@@ -46,11 +43,19 @@ final class DebugCodeLensProvider(
         codeLenses(path, buildTarget, classes)
       }
 
-    lenses.getOrElse(Nil)
+    lenses.getOrElse(Seq.empty)
   }
 
   private def makeGlobalClassTable(path: AbsolutePath): GlobalSymbolTable = {
     new GlobalClassTable(buildTargets).globalSymbolTableFor(path).get
+  }
+
+  private def makeSymbolSearchMethod(
+      global: GlobalSymbolTable
+  ): String => Option[SymbolInformation] = { si =>
+    implementationProvider
+      .findSymbolInformation(si)
+      .orElse(global.info(si))
   }
 
   private def codeLenses(
@@ -61,7 +66,7 @@ final class DebugCodeLensProvider(
     semanticdbs.textDocument(path).documentIncludingStale match {
       case Some(textDocument) =>
         val cache: LensGoSuperCache = m.Map()
-        val global = makeGlobalClassTable(path)
+        val search = makeSymbolSearchMethod(makeGlobalClassTable(path))
         val distance =
           TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
         for {
@@ -84,10 +89,7 @@ final class DebugCodeLensProvider(
                 symbol,
                 occurrence.role,
                 cache,
-                si =>
-                  implementationProvider
-                    .findSymbolDef(si)
-                    .orElse(global.info(si))
+                search
               )
             main ++ tests ++ gotoSuperMethod
           }
@@ -110,10 +112,7 @@ final class DebugCodeLensProvider(
       findSymbol: String => Option[SymbolInformation]
   ): Option[l.Command] = {
     for {
-      symbolInformation <- ImplementationProvider.findSymbol(
-        docWithPath.textDocument,
-        symbol
-      )
+      symbolInformation <- findSymbol(symbol)
       gotoLocation <- superMethodProvider.findSuperForMethodOrField(
         symbolInformation,
         docWithPath,

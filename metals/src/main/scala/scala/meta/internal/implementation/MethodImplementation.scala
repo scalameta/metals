@@ -203,30 +203,33 @@ object MethodImplementation {
   }
 
   def checkSignaturesEqual(
-      sig1: MethodSignature,
-      sig2: MethodSignature,
+      parentSignature: MethodSignature,
+      childSignature: MethodSignature,
       findSymbol: String => Option[SymbolInformation]
   ): Boolean = {
     val context = Context(findSymbol, findSymbol, Map())
-    signaturesEqual(sig1, sig2)(context)
+    signaturesEqual(parentSignature, childSignature)(context)
   }
 
   private def signaturesEqual(
-      parentSig: Signature,
-      sig: Signature
+      parentSignature: Signature,
+      childSignature: Signature
   )(implicit context: Context): Boolean = {
-    (parentSig, sig) match {
-      case (sig1: MethodSignature, sig2: MethodSignature) =>
+    (parentSignature, childSignature) match {
+      case (
+          methodParentSignature: MethodSignature,
+          methodChildSignature: MethodSignature
+          ) =>
         val newContext = context.addAsSeenFrom(
           typeMappingFromMethodScope(
-            sig1.typeParameters,
-            sig2.typeParameters
+            methodParentSignature.typeParameters,
+            methodChildSignature.typeParameters
           )
         )
         lazy val enrichedSig1 =
-          addParameterSignatures(sig1, context.findSymbol)
+          addParameterSignatures(methodParentSignature, context.findSymbol)
         lazy val enrichedSig2 =
-          addParameterSignatures(sig2, context.findSymbol)
+          addParameterSignatures(methodChildSignature, context.findSymbol)
         paramsAreEqual(
           enrichedSig1.parameterLists,
           enrichedSig2.parameterLists

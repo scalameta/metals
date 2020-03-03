@@ -2,13 +2,11 @@ package scala.meta.internal.implementation
 
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
-import scala.meta.internal.mtags.{
-  GlobalSymbolIndex,
-  Mtags,
-  Semanticdbs,
-  SymbolDefinition,
-  Symbol => MSymbol
-}
+import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.mtags.SymbolDefinition
+import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.semanticdb.TextDocuments
@@ -101,7 +99,7 @@ final class ImplementationProvider(
       // 3. Search classpath via GlobalSymbolTable
       def symbolSearch(symbol: String): Option[SymbolInformation] = {
         findSymbol(currentDocument, symbol)
-          .orElse(findSymbolDef(symbol))
+          .orElse(findSymbolInformation(symbol))
           .orElse(global.flatMap(_.safeInfo(symbol)))
       }
       val sym = symbolOccurrence.symbol
@@ -150,20 +148,19 @@ final class ImplementationProvider(
       if (owner.nonEmpty) {
         findSymbol(textDocument, owner)
       } else {
-        textDocument.symbols.find {
-          case sym =>
-            sym.signature match {
-              case sig: ClassSignature =>
-                sig.declarations.exists(_.symlinks.contains(symbol))
-              case _ => false
-            }
+        textDocument.symbols.find { sym =>
+          sym.signature match {
+            case sig: ClassSignature =>
+              sig.declarations.exists(_.symlinks.contains(symbol))
+            case _ => false
+          }
         }
       }
     }
 
     val results = for {
       currentInfo <- findSymbol(textDocument, symbol)
-      if (!isClassLike(currentInfo))
+      if !isClassLike(currentInfo)
       classInfo <- findClassInfo(symbol.owner)
     } yield {
       classInfo.signature match {
@@ -253,14 +250,6 @@ final class ImplementationProvider(
     } yield new Location(source.toNIO.toUri().toString(), revised)
   }
 
-  def search(
-      symbol: String,
-      source: AbsolutePath
-  ): Option[SymbolInformation] = {
-    lazy val global = globalTable.globalSymbolTableFor(source)
-    findSymbolDef(symbol).orElse(global.flatMap(_.safeInfo(symbol)))
-  }
-
   private def symbolLocationsFromContext(
       symbol: String,
       source: AbsolutePath,
@@ -280,7 +269,7 @@ final class ImplementationProvider(
         lazy val global = globalTable.globalSymbolTableFor(source)
         def localSearch(symbol: String): Option[SymbolInformation] = {
           findSymbol(implDocument, symbol)
-            .orElse(findSymbolDef(symbol))
+            .orElse(findSymbolInformation(symbol))
             .orElse(global.flatMap(_.safeInfo(symbol)))
         }
         MethodImplementation.findInherited(
@@ -342,10 +331,10 @@ final class ImplementationProvider(
         loc =>
           // we are not interested in local symbols from outside the workspace
           (loc.symbol.isLocal && loc.file.isEmpty) ||
-          // local symbols ineheritance should only be picked up in the same file
+          // local symbols inheritance should only be picked up in the same file
           (loc.symbol.isLocal && loc.file != currentPath)
       }
-      directImplementations.toSet ++ directImplementations
+      directImplementations ++ directImplementations
         .flatMap { loc =>
           val allPossible = loop(loc.symbol, loc.file)
           allPossible.map(_.translateAsSeenFrom(loc))
@@ -359,30 +348,30 @@ final class ImplementationProvider(
     }
   }
 
-  def findSymbolDef(symbol: String): Option[SymbolInformation] = {
+  def findSymbolInformation(symbol: String): Option[SymbolInformation] = {
     findSemanticDbForSymbol(symbol).flatMap(findSymbol(_, symbol))
-  }
-
-  def symbolDef(symbol: String): Option[SymbolDefinition] = {
-    index.definition(MSymbol(symbol))
-  }
-
-  private def findSemanticDbForSymbol(symbol: String): Option[TextDocument] = {
-    for {
-      symbolDefinition <- symbolDef(symbol)
-      document <- findSemanticdb(symbolDefinition.path)
-    } yield {
-      document
-    }
   }
 
   def findSemanticDbWithPathForSymbol(
       symbol: String
   ): Option[TextDocumentWithPath] = {
     for {
-      symbolDefinition <- symbolDef(symbol)
+      symbolDefinition <- findSymbolDefinition(symbol)
       document <- findSemanticdb(symbolDefinition.path)
     } yield TextDocumentWithPath(document, symbolDefinition.path)
+  }
+
+  private def findSymbolDefinition(symbol: String): Option[SymbolDefinition] = {
+    index.definition(MSymbol(symbol))
+  }
+
+  private def findSemanticDbForSymbol(symbol: String): Option[TextDocument] = {
+    for {
+      symbolDefinition <- findSymbolDefinition(symbol)
+      document <- findSemanticdb(symbolDefinition.path)
+    } yield {
+      document
+    }
   }
 
   private def classFromSymbol(

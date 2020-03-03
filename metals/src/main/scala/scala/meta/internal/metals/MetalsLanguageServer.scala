@@ -11,7 +11,6 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
@@ -22,7 +21,6 @@ import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
-
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -48,18 +46,16 @@ import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
-
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
-
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
-
+import scala.meta.internal.implementation.GoToSuperMethod
 import scala.meta.internal.implementation.SuperMethodProvider
-import scala.meta.internal.metals.codeactions.GoToSuperMethod
+import com.google.gson.JsonNull
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -384,6 +380,7 @@ class MetalsLanguageServer(
       definitionProvider
     )
     superMethodProvider = new SuperMethodProvider(
+      definitionProvider,
       implementationProvider.findSemanticDbWithPathForSymbol
     )
 
@@ -1173,13 +1170,9 @@ class MetalsLanguageServer(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
-      codeLensSync(params).asJava
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      codeLensProvider.findLenses(path).toList.asJava
     }
-
-  def codeLensSync(params: CodeLensParams): List[CodeLens] = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    codeLensProvider.findLenses(path).toList
-  }
 
   @JsonRequest("textDocument/foldingRange")
   def foldingRange(
@@ -1460,9 +1453,6 @@ class MetalsLanguageServer(
     } yield change
 
   private def quickConnectToBuildServer(): Future[BuildChange] = {
-
-    import scala.meta.internal.metals.codeactions.GoToSuperMethod
-
     if (!buildTools.isAutoConnectable) {
       Future.successful(BuildChange.None)
     } else {
