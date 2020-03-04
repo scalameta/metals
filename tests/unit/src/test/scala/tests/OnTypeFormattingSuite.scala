@@ -4,6 +4,22 @@ import munit.Location
 
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
 
+  // Ensures that entering a newline at the beginning of a file doesn't
+  // throw an exception
+  // https://github.com/scalameta/metals/issues/1469
+  check(
+    "top-of-file",
+    s"""
+       |@@
+       |object Main {}
+       |""".stripMargin,
+    s"""
+       |
+       |
+       |object Main {}
+       |""".stripMargin
+  )
+
   check(
     "correct-string",
     s"""
