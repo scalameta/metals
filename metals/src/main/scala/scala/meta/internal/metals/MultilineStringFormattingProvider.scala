@@ -78,7 +78,7 @@ final class MultilineStringFormattingProvider(
       newlineAdded: Boolean
   ): Boolean = {
     val newLineBeforePos =
-      text.lastIndexBetween('\n', upperBound = pos.start - 1)
+      text.lastIndexBetween('\n', upperBound = pos.start)
     val pipeSearchStop =
       if (newlineAdded)
         text.lastIndexBetween('\n', upperBound = newLineBeforePos - 1)
