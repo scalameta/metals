@@ -125,6 +125,11 @@ class ScaladocIndexer(
 
 object ScaladocIndexer {
 
+  /**
+   * Extracts Scaladoc from Scala source code.
+   *
+   * @param fn callback function for calculated SymbolDocumentation
+   */
   def foreach(
       input: Input.VirtualFile
   )(fn: SymbolDocumentation => Unit): Unit = {

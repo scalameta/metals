@@ -22,6 +22,86 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
     } yield ()
   }
 
+  test("docstrings") {
+    for {
+      _ <- server.initialize(
+        """/metals.json
+          |{"a":{}}
+          |/a/src/main/scala/a/Def.scala
+          |package a
+          |object Def {
+          |  /**
+          |    * test
+          |    */
+          |  def foo(x: Int): Int = ???
+          |}
+        """.stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/a/Def.scala")(s => s) // index docs
+      _ <- server.assertHover(
+        "a/src/main/scala/a/Main.scala",
+        """
+          |package a
+          |object Main {
+          |  val res = Def.fo@@o(1)
+          |}""".stripMargin,
+        """|```scala
+           |def foo(x: Int): Int
+           |```
+           |test
+           |""".stripMargin.hover
+      )
+    } yield ()
+  }
+
+  test("update-docstrings") {
+    for {
+      _ <- server.initialize(
+        """/metals.json
+          |{"a":{}}
+          |/a/src/main/scala/a/Def.scala
+          |package a
+          |object Def {
+          |  /**
+          |    * test
+          |    */
+          |  def foo(x: Int): Int = ???
+          |}
+        """.stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/a/Def.scala")(s => s)
+      _ <- server.assertHover(
+        "a/src/main/scala/a/Main.scala",
+        """
+          |package a
+          |object Main {
+          |  val res = Def.fo@@o(1)
+          |}""".stripMargin,
+        """|```scala
+           |def foo(x: Int): Int
+           |```
+           |test
+           |""".stripMargin.hover
+      )
+      _ <- server.didSave("a/src/main/scala/a/Def.scala")(s =>
+        s.replace("test", "test2")
+      )
+      _ <- server.assertHover(
+        "a/src/main/scala/a/Main.scala",
+        """
+          |package a
+          |object Main {
+          |  val res = Def.fo@@o(1)
+          |}""".stripMargin,
+        """|```scala
+           |def foo(x: Int): Int
+           |```
+           |test2
+           |""".stripMargin.hover
+      )
+    } yield ()
+  }
+
   test("dependencies") {
     for {
       _ <- server.initialize(

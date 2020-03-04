@@ -1579,6 +1579,10 @@ class MetalsLanguageServer(
           }
       }
       workspaceSymbols.didChange(source, symbols)
+
+      // Since the `symbols` here are toplevel symbols,
+      // we cannot use `symbols` for expiring the cache for all symbols in the source.
+      symbolDocs.expireSymbolDefinition(source)
     } catch {
       case NonFatal(e) =>
         scribe.error(source.toString(), e)
