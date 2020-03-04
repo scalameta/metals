@@ -605,7 +605,7 @@ private class BloopPants(
   private def cleanStaleBloopFiles(
       generatedProjects: collection.Set[Path]
   ): Unit = {
-    val jsonPattern = FileSystems.getDefault().getPathMatcher("glob:*.json")
+    val jsonPattern = FileSystems.getDefault().getPathMatcher("glob:**/*.json")
     AbsolutePath(bloopDir).list
       .filter { path =>
         // Re-implementation of https://github.com/scalacenter/bloop/blob/e014760490bf140e2755eb91260bdaf9a75e4476/integrations/sbt-bloop/src/main/scala/bloop/integrations/sbt/SbtBloop.scala#L1064-L1079
