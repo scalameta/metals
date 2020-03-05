@@ -14,6 +14,9 @@ The first time you open Metals in a new workspace it prompts you to import the
 build. Select "Import build" to start automatic installation. After it's
 finished you should be able edit and compile your code.
 
+To force a mill version you can write it to a file named `.mill-version`
+in the workspace directory.
+
 ## Manual installation
 
 Manual installation is not recommended, but it's pretty easy to do. There are
