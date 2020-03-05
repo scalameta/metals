@@ -58,7 +58,12 @@ object SharedCommand {
             export.app,
             isStrict = false
           )
-          restartOldBloopServer()
+          val updatedZipkin = ZipkinUrls.updateZipkinServerUrl()
+          if (updatedZipkin) {
+            restartBloopServer()
+          } else {
+            restartOldBloopServer()
+          }
           if (export.open.isEmpty) {
             OpenCommand.onEmpty(export.project, export.app)
           } else {
@@ -137,22 +142,26 @@ object SharedCommand {
         .stripPrefix("bloop v")
       if (isOutdated(version)) {
         scribe.info(s"shutting down old version of Bloop '$version'")
-        List("bloop", "exit").!
-        new LauncherMain(
-          clientIn = System.in,
-          clientOut = System.out,
-          out = System.out,
-          charset = StandardCharsets.UTF_8,
-          shell = Shell.default,
-          userNailgunHost = None,
-          userNailgunPort = None,
-          startedServer = Promise[Unit]()
-        ).runLauncher(
-          bloopVersionToInstall = BuildInfo.bloopVersion,
-          skipBspConnection = true,
-          serverJvmOptions = Nil
-        )
+        restartBloopServer()
       }
     }
+  }
+
+  private def restartBloopServer(): Unit = {
+    List("bloop", "exit").!
+    new LauncherMain(
+      clientIn = System.in,
+      clientOut = System.out,
+      out = System.out,
+      charset = StandardCharsets.UTF_8,
+      shell = Shell.default,
+      userNailgunHost = None,
+      userNailgunPort = None,
+      startedServer = Promise[Unit]()
+    ).runLauncher(
+      bloopVersionToInstall = BuildInfo.bloopVersion,
+      skipBspConnection = true,
+      serverJvmOptions = Nil
+    )
   }
 }
