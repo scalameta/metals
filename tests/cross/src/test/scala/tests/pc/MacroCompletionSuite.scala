@@ -1,14 +1,48 @@
 package tests.pc
 
-import java.nio.file.Path
 import tests.BaseCompletionSuite
 import scala.collection.Seq
+import coursierapi.Dependency
+import java.nio.file.Path
+import tests.ScalaDependencies
+import tests.BuildInfoVersions
 
 class MacroCompletionSuite extends BaseCompletionSuite {
-  override def extraClasspath: Seq[Path] = thisClasspath
 
-  override def scalacOptions: Seq[String] =
-    thisClasspath
+  override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
+
+    val scalaBinaryVersion = ScalaDependencies.createBinaryVersion(scalaVersion)
+    val macrosDependencies =
+      if (scalaBinaryVersion == "2.11" || scalaBinaryVersion == "2.12") {
+        Seq(
+          Dependency.of("org.scalamacros", s"paradise_$scalaVersion", "2.1.1")
+        )
+      } else {
+        Nil
+      }
+    if (ScalaDependencies.isScala3Version(scalaVersion)) {
+      Seq.empty
+    } else {
+      Seq(
+        Dependency
+          .of("com.olegpy", s"better-monadic-for_$scalaBinaryVersion", "0.3.1"),
+        Dependency
+          .of("org.typelevel", s"kind-projector_$scalaBinaryVersion", "0.10.3"),
+        Dependency
+          .of("org.typelevel", s"simulacrum_$scalaBinaryVersion", "1.0.0"),
+        Dependency
+          .of("com.lihaoyi", s"sourcecode_$scalaBinaryVersion", "0.1.9"),
+        Dependency.of("com.chuusai", s"shapeless_$scalaBinaryVersion", "2.3.3")
+      ) ++ macrosDependencies
+    }
+  }
+
+  // @tgodzik macros will not work in Dotty
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
+
+  override def scalacOptions(classpath: Seq[Path]): Seq[String] =
+    classpath
       .filter { path =>
         val filename = path.getFileName.toString
         filename.contains("better-monadic-for") ||
@@ -120,9 +154,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "2.11" ->
         """|fold[X](fa: Int => X, fb: String => X): X
-           |""".stripMargin,
-      // NOTE(tgodzik): the presentation compiler returns empty results here in 2.12.9
-      "2.13.0" -> ""
+           |""".stripMargin
     )
   )
 
@@ -135,11 +167,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|toCharArray(): Array[Char]
-       |""".stripMargin,
-    compat = Map(
-      // NOTE(tgodzik): the presentation compiler returns empty results here in 2.12.9
-      "2.12.9" -> ""
-    )
+       |""".stripMargin
   )
 
 }

@@ -17,8 +17,6 @@ case class ScalaTarget(
 
   def isSemanticdbEnabled: Boolean = scalac.isSemanticdbEnabled(scalaVersion)
 
-  def isSourcerootDeclared: Boolean = scalac.isSourcerootDeclared
-
   def id: BuildTargetIdentifier = info.getId()
 
   def baseDirectory: String = info.getBaseDirectory()

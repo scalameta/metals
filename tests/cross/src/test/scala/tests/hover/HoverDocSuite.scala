@@ -5,10 +5,6 @@ import tests.pc.BaseHoverSuite
 class HoverDocSuite extends BaseHoverSuite {
   override def requiresJdkSources: Boolean = true
 
-  override def beforeAll(): Unit = {
-    indexJDK()
-  }
-
   check(
     "doc",
     """object a {
@@ -49,7 +45,8 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |List<String> s = Collections.emptyList();
            |```
-           |""".stripMargin
+           |""".stripMargin,
+      "0." -> "def emptyList[T](): java.util.List[T]".hover
     )
   )
 

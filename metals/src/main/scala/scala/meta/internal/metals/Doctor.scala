@@ -15,6 +15,7 @@ import scala.meta.internal.semver.SemVer
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
  *
  * At the moment, the doctor only validates that SemanticDB is enabled for all projects.
+ *
  */
 final class Doctor(
     workspace: AbsolutePath,
@@ -156,11 +157,11 @@ final class Doctor(
       } else {
         val versionToUpgradeTo =
           if (ScalaVersions.isScala3Version(scalaVersion)) {
-            s"Scala3 ${BuildInfo.scala3}"
+            s"Scala ${BuildInfo.scala3}"
           } else {
             s"Scala ${BuildInfo.scala213} or ${BuildInfo.scala212}"
           }
-        s"Code navigation is not supported for this compiler version, upgrade to " + versionToUpgradeTo + " and " + hint
+        s"Code navigation is not supported for this compiler version, change to " + versionToUpgradeTo + " and " + hint
       }
     } else {
       val messages = ListBuffer.empty[String]
@@ -221,8 +222,6 @@ final class Doctor(
       }
   }
 
-  def allTargets(): List[ScalaTarget] = buildTargets.all.toList
-
   private def possiblyMissingSemanticDB: Option[String] = {
     val targets = allTargets()
     val isMissingSemanticdb = targets.filter(!_.isSemanticdbEnabled)
@@ -239,6 +238,8 @@ final class Doctor(
       Some(CheckDoctor.multipleMisconfiguredProjects(count))
     }
   }
+
+  def allTargets(): List[ScalaTarget] = buildTargets.all.toList
 
   private def buildTargetsHtml(): String = {
     new HtmlBuilder()

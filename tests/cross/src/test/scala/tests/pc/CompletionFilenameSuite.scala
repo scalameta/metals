@@ -1,11 +1,16 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class CompletionFilenameSuite extends BaseCompletionSuite {
 
+  // @tgodzik TODO currently not implemented for Dotty
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
+
   check(
-    "class".only,
+    "class",
     """|
        |class M@@
        |""".stripMargin,

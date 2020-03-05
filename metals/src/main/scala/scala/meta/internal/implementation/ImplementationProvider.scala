@@ -257,10 +257,9 @@ final class ImplementationProvider(
         source
       )
       range <- implOccurrence.range
-      distance = Buffers.tokenEditDistance(
+      distance = buffer.tokenEditDistance(
         source,
-        parentDoc.text,
-        buffer
+        parentDoc.text
       )
       revised <- distance.toRevised(range.toLSP)
     } yield new Location(source.toNIO.toUri().toString(), revised)
@@ -293,7 +292,6 @@ final class ImplementationProvider(
       }
     }
 
-    import Buffers.tokenEditDistance
     val allLocations = new ConcurrentLinkedQueue[Location]
 
     for {
@@ -310,7 +308,7 @@ final class ImplementationProvider(
       locations = locationsByFile(file)
       implPath = AbsolutePath(file)
       implDocument <- findSemanticdb(implPath).toIterable
-      distance = tokenEditDistance(implPath, implDocument.text, buffer)
+      distance = buffer.tokenEditDistance(implPath, implDocument.text)
       implLocation <- locations
       implReal = implLocation.toRealNames(symbolClass, translateKey = true)
       implSymbol <- findImplementationSymbol(

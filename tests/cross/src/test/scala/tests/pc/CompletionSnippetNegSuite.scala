@@ -3,6 +3,7 @@ package tests.pc
 import tests.BaseCompletionSuite
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
+import tests.BuildInfoVersions
 
 class CompletionSnippetNegSuite extends BaseCompletionSuite {
 
@@ -27,7 +28,8 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
         """|apply
            |unapplySeq
            |apply
-           |""".stripMargin
+           |""".stripMargin,
+      "0." -> "apply"
     )
   )
 
@@ -41,7 +43,10 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|println()
        |println
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "println"
+    )
   )
 
   checkSnippet(
@@ -58,7 +63,10 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
     // even if `Foo.toString` is nullary, it overrides `Object.toString()`
     // which is a Java non-nullary method with an empty parameter list.
     """|toString()
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "toString"
+    )
   )
 
   checkSnippet(
@@ -70,7 +78,8 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
     // It's expected to have two separate results, one for `object IndexedSeq` and one for `type IndexedSeq[T]`.
     """|IndexedSeq
        |IndexedSeq
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
 }

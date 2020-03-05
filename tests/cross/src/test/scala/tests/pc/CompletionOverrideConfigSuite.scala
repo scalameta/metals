@@ -4,8 +4,13 @@ import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class CompletionOverrideConfigSuite extends BaseCompletionSuite {
+
+  // @tgodzik TODO currently not implemented for Dotty
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   override def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(

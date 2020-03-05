@@ -1,8 +1,14 @@
 package tests.pc
 
 import tests.BaseSignatureHelpSuite
+import tests.BuildInfoVersions
 
 class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
+
+  // @tgodzik docs not yet supported for Scala 3
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
+
   check(
     "case",
     """

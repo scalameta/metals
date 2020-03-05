@@ -218,10 +218,9 @@ final class ReferenceProvider(
           .textDocument(scalaPath)
           .documentIncludingStale
           .iterator
-        semanticdbDistance = Buffers.tokenEditDistance(
+        semanticdbDistance = buffers.tokenEditDistance(
           scalaPath,
-          semanticdb.text,
-          buffers
+          semanticdb.text
         )
         uri = scalaPath.toURI.toString
         reference <- try {

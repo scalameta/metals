@@ -1,12 +1,11 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class CompletionSuite extends BaseCompletionSuite {
 
-  override def beforeAll(): Unit = {
-    indexJDK()
-  }
+  override def requiresJdkSources: Boolean = true
 
   check(
     "scope",
@@ -29,7 +28,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |ListMap - scala.collection.immutable
            |""".stripMargin
     ),
-    topLines = Some(5)
+    topLines = Some(5),
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -40,7 +40,10 @@ class CompletionSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """
       |empty[A]: List[A]
-      |""".stripMargin
+      |""".stripMargin,
+    compat = Map(
+      "0." -> "empty[A] => List[A]"
+    )
   )
 
   check(
@@ -63,7 +66,10 @@ class CompletionSuite extends BaseCompletionSuite {
       |  new Foo[Int].ident@@
       |}""".stripMargin,
     """|identity[B >: Int](a: B): B
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "identity[B >: A](a: B): B"
+    )
   )
 
   check(
@@ -76,9 +82,11 @@ class CompletionSuite extends BaseCompletionSuite {
       |  new Foo[Int].ident@@
       |}""".stripMargin,
     """|identity(a: Int): Int
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "identity(a: A): A"
+    )
   )
-  List(1)
 
   check(
     "tparam2",
@@ -90,7 +98,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|getOrElse[V1 >: String](key: Int, default: => V1): V1
        |""".stripMargin,
     compat = Map(
-      "2.11" -> "getOrElse[B1 >: String](key: Int, default: => B1): B1"
+      "2.11" -> "getOrElse[B1 >: String](key: Int, default: => B1): B1",
+      "0." -> "getOrElse[V1 >: V](key: K, default: => V1): V1"
     )
   )
 
@@ -108,7 +117,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |override def toString(): String
        |override def clone(): Object
        |override def finalize(): Unit
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -219,7 +229,9 @@ class CompletionSuite extends BaseCompletionSuite {
            |synchronized[T0](x$1: T0): T0
            |toString(): String
            |""".stripMargin
-    )
+    ),
+    // different results might be returned on each run
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -232,7 +244,10 @@ class CompletionSuite extends BaseCompletionSuite {
       |  Xtension@@
       |}""".stripMargin,
     """|XtensionMethod(a: Int): XtensionMethod
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "XtensionMethod(a: Int): implicit-class.A.XtensionMethod"
+    )
   )
 
   check(
@@ -243,7 +258,8 @@ class CompletionSuite extends BaseCompletionSuite {
       |  uService@@
       |}""".stripMargin,
     """|userService: Int
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -261,7 +277,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |PKIXBuilderParameters - java.security.cert
        |CertPathBuilderException - java.security.cert
        |PKIXCertPathBuilderResult - java.security.cert
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -282,7 +299,8 @@ class CompletionSuite extends BaseCompletionSuite {
       "2.13" ->
         """|TrieMap scala.collection.concurrent
            |TrieMapSerializationEnd - scala.collection.concurrent
-           |""".stripMargin
+           |""".stripMargin,
+      "0." -> "TrieMap: scala.collection.concurrent.TrieMap$"
     )
   )
 
@@ -292,7 +310,10 @@ class CompletionSuite extends BaseCompletionSuite {
       |import scala.collection.conc@@
       |""".stripMargin,
     """|concurrent scala.collection
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "concurrent: scala.collection.concurrent"
+    )
   )
 
   check(
@@ -321,7 +342,8 @@ class CompletionSuite extends BaseCompletionSuite {
                    |JavaConversions - scala.collection
                    |JavaConversions - scala.concurrent
                    |""".stripMargin
-    )
+    ),
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -330,7 +352,8 @@ class CompletionSuite extends BaseCompletionSuite {
       |import Paths@@
       |""".stripMargin,
     """|Paths - java.nio.file
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -339,7 +362,8 @@ class CompletionSuite extends BaseCompletionSuite {
       |import Catch@@
       |""".stripMargin,
     """|Catch - scala.util.control.Exception
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -358,7 +382,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |PathIterator - java.awt.geom
        |XPathEvaluator - org.w3c.dom.xpath
        |XPathException - org.w3c.dom.xpath
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -370,7 +395,8 @@ class CompletionSuite extends BaseCompletionSuite {
     """|DatabaseMetaData - java.sql
        |ParameterMetaData - java.sql
        |ResultSetMetaData - java.sql
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -385,7 +411,8 @@ class CompletionSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|Inner - a.Outer
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -419,7 +446,10 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """Files java.nio.file
       |Files - a.Outer
-      |""".stripMargin
+      |""".stripMargin,
+    compat = Map(
+      "0." -> "Files: java.nio.file.Files$"
+    )
   )
 
   check(
@@ -435,7 +465,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     includeCommitCharacter = true,
     compat = Map(
-      "2.11" -> "empty[A, B]: Map[A,B] (commit: '')"
+      "2.11" -> "empty[A, B]: Map[A,B] (commit: '')",
+      "0." -> "empty[K, V] => Map[K, V] (commit: '')"
     )
   )
 
@@ -488,7 +519,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |Function21 scala
        |Function22 scala
        |PartialFunction scala
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -513,8 +545,12 @@ class CompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|concat[T: ClassTag](xss: Array[T]*): Array[T]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "concat[T](xss: Array[T]*)(implicit evidence$11: scala.reflect.ClassTag[T]): Array[T]"
+    )
   )
+
   check(
     "bounds",
     """
@@ -524,7 +560,12 @@ class CompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|readAttributes(path: Path, attributes: String, options: LinkOption*): Map[String,Object]
        |readAttributes[A <: BasicFileAttributes](path: Path, type: Class[A], options: LinkOption*): A
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> """|readAttributes(x$0: java.nio.file.Path, x$1: String, x$2: java.nio.file.LinkOption*):
+                 |  java.util.Map[String, Object]
+                 |""".stripMargin
+    )
   )
 
   check(
@@ -556,7 +597,8 @@ class CompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|DelayedLazyVal scala.concurrent
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -576,7 +618,14 @@ class CompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|prefixbb: Int
        |prefixaa: Int
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> """|prefixaa: Int
+                 |prefixbb: Int
+                 |prefixcc: Int
+                 |prefixyy: Int
+                 |""".stripMargin
+    )
   )
 
   check(
@@ -588,7 +637,10 @@ class CompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|incrementThisType(): A.this.type (with underlying type singleton.A)
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "incrementThisType(): (A.this : singleton.A)"
+    )
   )
 
   check(
@@ -628,7 +680,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |until(end: Double, step: Double): NumericRange.Exclusive[Double]
            |until(end: Long): NumericRange.Exclusive[Long]
            |until(end: Long, step: Long): NumericRange.Exclusive[Long]
-           |""".stripMargin
+           |""".stripMargin,
+      "0." -> "until(end: Int, step: Int): Range"
     )
   )
 
@@ -651,7 +704,10 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|banana: Int
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "selectDynamic(field: String): dynamic.Foo"
+    )
   )
 
   check(
@@ -662,7 +718,10 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|banana: Int
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "selectDynamic(field: String): dynamic2.Foo"
+    )
   )
 
   check(
@@ -674,7 +733,10 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|banana: Int
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "selectDynamic(field: String): dynamic3.Foo"
+    )
   )
 
   check(
@@ -685,7 +747,10 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|banana: Int
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "selectDynamic(field: String): dynamic4.Foo"
+    )
   )
 
   check(
@@ -697,7 +762,10 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|selectDynamic(field: String): Foo
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "selectDynamic(field: String): dynamic5.Foo"
+    )
   )
 
   check(
@@ -707,7 +775,8 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -717,7 +786,8 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -735,7 +805,8 @@ class CompletionSuite extends BaseCompletionSuite {
            |Iterable[+A] = Iterable
            |IterableOnce[+A] = IterableOnce
            |""".stripMargin
-    )
+    ),
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -746,7 +817,10 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some scala
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "Some: Some$"
+    )
   )
 
   check(
@@ -757,7 +831,10 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some scala
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "Some: Some$"
+    )
   )
 
   check(
@@ -770,7 +847,13 @@ class CompletionSuite extends BaseCompletionSuite {
     """|None scala
        |NoManifest scala.reflect
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "0." ->
+        """|NoClassDefFoundError: NoClassDefFoundError$
+           |NoManifest=> reflect.NoManifest.type
+           |""".stripMargin
+    )
   )
 
   check(
@@ -790,6 +873,11 @@ class CompletionSuite extends BaseCompletionSuite {
         """|Some scala
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
+           |""".stripMargin,
+      "0." ->
+        """|SafeVarargs: SafeVarargs$
+           |ScalaReflectionException: ScalaReflectionException$
+           |SecurityException: SecurityException$
            |""".stripMargin
     )
   )
@@ -811,6 +899,11 @@ class CompletionSuite extends BaseCompletionSuite {
         """|Some scala
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
+           |""".stripMargin,
+      "0." ->
+        """|SafeVarargs: class and object SafeVarargs
+           |ScalaReflectionException: class and object ScalaReflectionException
+           |SecurityException: class and object SecurityException
            |""".stripMargin
     )
   )
@@ -833,7 +926,14 @@ class CompletionSuite extends BaseCompletionSuite {
        |NotString: Int
        |Nil scala.collection.immutable
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map(
+      "0." ->
+        """|NegativeArraySizeException: NegativeArraySizeException$
+           |NoClassDefFoundError: NoClassDefFoundError$
+           |NoManifest=> reflect.NoManifest.type
+           |""".stripMargin
+    )
   )
 
   check(
@@ -848,7 +948,14 @@ class CompletionSuite extends BaseCompletionSuite {
        |Nil scala.collection.immutable
        |NoManifest scala.reflect
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map(
+      "0." ->
+        """|NegativeArraySizeException: class and object NegativeArraySizeException
+           |NoClassDefFoundError: class and object NoClassDefFoundError
+           |NoManifest=> reflect.NoManifest.type
+           |""".stripMargin
+    )
   )
 
   check(
@@ -863,7 +970,14 @@ class CompletionSuite extends BaseCompletionSuite {
        |Nil scala.collection.immutable
        |NoManifest scala.reflect
        |""".stripMargin,
-    topLines = Option(3)
+    topLines = Option(3),
+    compat = Map(
+      "0." ->
+        """|NegativeArraySizeException: class and object NegativeArraySizeException
+           |NoClassDefFoundError: class and object NoClassDefFoundError
+           |NoManifest=> reflect.NoManifest.type
+           |""".stripMargin
+    )
   )
 
   check(
@@ -885,7 +999,10 @@ class CompletionSuite extends BaseCompletionSuite {
     """substring(beginIndex: Int): String
       |substring(beginIndex: Int, endIndex: Int): String
       |""".stripMargin,
-    filterText = "substring"
+    filterText = "substring",
+    compat = Map(
+      "0." -> "substring(x$0: Int, x$1: Int): String"
+    )
   )
 
   check(
@@ -916,7 +1033,15 @@ class CompletionSuite extends BaseCompletionSuite {
        |printnnn: String
        |print(x: Any): Unit
        |""".stripMargin,
-    topLines = Some(4)
+    topLines = Some(4),
+    compat = Map(
+      "0." ->
+        """|print(x: Any): Unit
+           |printf(text: String, xs: Any*): Unit
+           |println(x: Any): Unit
+           |printmmm=> String
+           |""".stripMargin
+    )
   )
 
   check(
@@ -929,7 +1054,8 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|getTimeStamp: Int
-       |""".stripMargin
+       |""".stripMargin,
+    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
   )
 
   check(
@@ -948,7 +1074,10 @@ class CompletionSuite extends BaseCompletionSuite {
        |instance: Int
        |asInstanceOf[T0]: T0
        |isInstanceOf[T0]: Boolean
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "0." -> "intNumber=> Int"
+    )
   )
 
 }

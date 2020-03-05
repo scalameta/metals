@@ -239,7 +239,7 @@ object MetalsEnrichments
     }
 
     /**
-     * Resolve each path segment individually to prevent
+     * Resolve each path segment individually to prevent FileSystem mismatch errors.
      */
     def resolveZipPath(zipPath: Path): AbsolutePath = {
       zipPath.iterator().asScala.foldLeft(path) {
@@ -482,9 +482,7 @@ object MetalsEnrichments
 
     def isSemanticdbEnabled(scalaVersion: String): Boolean = {
       if (ScalaVersions.isScala3Version(scalaVersion)) {
-        item.getOptions.asScala.exists { opt =>
-          opt == "-Ysemanticdb"
-        }
+        item.getOptions.asScala.exists { opt => opt == "-Ysemanticdb" }
       } else {
         item.getOptions.asScala.exists { opt =>
           opt.startsWith("-Xplugin:") && opt

@@ -7,7 +7,6 @@ import tests.BuildInfo.testResourceDirectory
 import scala.meta.internal.metals.FoldingRangeProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.Trees
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TextEdits
 
 class FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
@@ -44,13 +43,13 @@ class FoldingRangeSuite extends DirectoryExpectSuite("foldingRange/expect") {
       source: String
   ): java.util.List[l.FoldingRange] = {
     val path = registerSource(source)
-    foldingRangeProvider.getRangedFor(path.filename, source)
+    foldingRangeProvider.getRangedFor(path.toURI, source)
   }
 
   private def registerSource(source: String): AbsolutePath = {
     val name = UUID.randomUUID().toString + ".scala"
     val path = AbsolutePath(Paths.get(name))
-    trees.didChange(path.filename, source)
+    trees.didChange(path.toURI, source)
     path
   }
 }

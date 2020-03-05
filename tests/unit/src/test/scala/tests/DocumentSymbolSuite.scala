@@ -18,7 +18,7 @@ class DocumentSymbolSuite extends DirectoryExpectSuite("documentSymbol") {
       ExpectTestCase(
         file, { () =>
           val documentSymbols = documentSymbolProvider
-            .documentSymbols(file.file.filename, file.code)
+            .documentSymbols(file.file.toURI, file.code)
             .asScala
           val flatSymbols =
             documentSymbols.toSymbolInformation(file.file.toURI.toString)

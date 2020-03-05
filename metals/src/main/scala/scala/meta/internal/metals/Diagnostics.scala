@@ -82,8 +82,6 @@ final class Diagnostics(
       pos: m.Position,
       shortMessage: String
   ): Unit = {
-    pprint.log(path)
-    pprint.log(shortMessage)
     onSyntaxError(
       path,
       new Diagnostic(

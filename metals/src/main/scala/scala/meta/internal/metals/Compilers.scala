@@ -27,7 +27,6 @@ import scala.concurrent.Future
 import scala.meta.pc.AutoImportsResult
 import org.eclipse.lsp4j.TextEdit
 import scala.util.Try
-import scala.meta.internal.pc.EmptySymbolSearch
 import org.eclipse.lsp4j.FoldingRange
 import java.{util => ju}
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
@@ -37,6 +36,7 @@ import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.DocumentSymbol
 import java.nio.file.Paths
+import scala.meta.internal.pc.EmptySymbolSearch
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -172,14 +172,14 @@ class Compilers(
     pc.didClose(path.toNIO.toUri())
   }
 
-  def didChange(path: AbsolutePath): Unit = {
+  def didChange(path: AbsolutePath): Future[Unit] = {
     val pc = loadCompiler(path, None).getOrElse(ramboCompiler)
     val input = path.toInputFromBuffers(buffers)
     for {
       ds <- pc
         .didChange(CompilerVirtualFileParams(path.toNIO.toUri(), input.value))
         .asScala
-    } {
+    } yield {
       ds.asScala.headOption match {
         case None =>
           diagnostics.onNoSyntaxError(path)

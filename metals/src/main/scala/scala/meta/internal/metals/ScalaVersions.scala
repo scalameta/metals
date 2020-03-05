@@ -26,7 +26,10 @@ object ScalaVersions {
     }
 
   def isScala3Version(scalaVersion: String): Boolean =
-    scalaVersion.startsWith("0.")
+    scalaVersion.startsWith("0.") || scalaVersion.startsWith("3.")
+
+  def supportedScala3Versions: Set[String] =
+    BuildInfo.supportedScalaVersions.filter(isScala3Version(_)).toSet
 
   val isLatestScalaVersion: Set[String] =
     Set(BuildInfo.scala212, BuildInfo.scala213, BuildInfo.scala3)

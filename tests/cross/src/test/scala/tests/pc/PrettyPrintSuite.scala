@@ -2,8 +2,13 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 import munit.Location
+import tests.BuildInfoVersions
 
 class PrettyPrintSuite extends BaseCompletionSuite {
+
+  // @tgodzik TODO this doesn't seem to work in Scala 3 yet
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   def checkSignature(
       name: String,
@@ -13,6 +18,11 @@ class PrettyPrintSuite extends BaseCompletionSuite {
   )(implicit loc: Location): Unit = {
     val signature = original.replaceAllLiterally("@@", "")
     val completion = original.replaceFirst("@@.*", "@@")
+    val suffix = " = ${0:???}"
+    val compatWithSuffix = compat.map {
+      case (key, value) =>
+        key -> (value + suffix)
+    }
     checkEditLine(
       name,
       s"""package ${scala.meta.Term.Name(name)}
@@ -24,7 +34,8 @@ class PrettyPrintSuite extends BaseCompletionSuite {
          |}
       """.stripMargin,
       completion,
-      getExpected(expected, compat) + " = ${0:???}"
+      expected + suffix,
+      compat = compatWithSuffix
     )
   }
 

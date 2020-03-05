@@ -121,6 +121,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
 
   test("mix") {
     cleanWorkspace()
+    RecursivelyDelete(globalBsp)
     Bill.installWorkspace(workspace.toNIO, "Bill")
     Bill.installGlobal(globalBsp.toNIO, "Bob")
     testSelectServerDialogue()

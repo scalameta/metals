@@ -16,17 +16,19 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       original: String,
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    test(name) {
+    testPc(name) { implicit pc =>
       val noRange = original
         .replaceAllLiterally("<<", "")
         .replaceAllLiterally(">>", "")
-      val uri = "A.scala"
-      val (code, offset) = params(noRange, uri)
+      val filename = "A.scala"
+      val uri = s"file:///$filename"
+      val (code, offset) = params(noRange, filename)
       import scala.meta.inputs.Position
       import scala.meta.inputs.Input
       val offsetRange = Position.Range(Input.String(code), offset, offset).toLSP
-      val defn =
-        pc.definition(CompilerOffsetParams(URI.create(uri), code, offset)).get()
+      val defn = pc
+        .definition(CompilerOffsetParams(URI.create(uri), code, offset))
+        .get()
       val edits = defn.locations().asScala.toList.flatMap { location =>
         if (location.getUri() == uri) {
           List(
@@ -57,7 +59,10 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       }
       val obtained = TextEdits.applyEdits(code, edits)
       val expected = original.replaceAllLiterally("@@", "")
-      assertNoDiff(obtained, getExpected(expected, compat))
+      assertNoDiff(
+        obtained,
+        getExpected(expected, compat, scalaVersion)
+      )
     }
   }
 }

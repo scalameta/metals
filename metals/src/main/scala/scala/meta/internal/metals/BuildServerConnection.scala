@@ -235,9 +235,7 @@ object BuildServerConnection {
   ): InitializeBuildResult = {
     val extraParams = BloopExtraBuildParams(
       BuildInfo.scalametaVersion,
-      BuildInfo.supportedScalaVersions
-        .filterNot(ScalaVersions.isScala3Version)
-        .asJava
+      BuildInfo.supportedScala2Versions.asJava
     )
 
     val initializeResult = server.buildInitialize {

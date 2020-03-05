@@ -5,12 +5,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.logging.Level
 import java.util.logging.Logger
-import scala.tools.nsc.reporters.StoreReporter
-import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.NonFatal
 import scala.meta.pc.CancelToken
-import java.util.concurrent.CompletableFuture
 import scala.meta.pc.PresentationCompilerConfig
+import java.util.concurrent.CompletableFuture
 import scala.concurrent.ExecutionContextExecutor
 
 /**
@@ -20,27 +18,31 @@ import scala.concurrent.ExecutionContextExecutor
  * - handles cancellation via `Thread.interrupt()` to stop the compiler during typechecking,
  *   for functions that support cancellation.
  */
-class CompilerAccess(
+abstract class CompilerAccess[Reporter, Compiler](
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
-    newCompiler: () => MetalsGlobal
+    newCompiler: () => CompilerWrapper[Reporter, Compiler]
 )(implicit ec: ExecutionContextExecutor) {
-  private val logger: Logger = Logger.getLogger(classOf[CompilerAccess].getName)
+  private val logger: Logger =
+    Logger.getLogger(classOf[CompilerAccess[_, _]].getName)
 
   private val jobs = CompilerJobQueue()
-  private var _compiler: MetalsGlobal = _
+  private var _compiler: CompilerWrapper[Reporter, Compiler] = _
   private def isEmpty: Boolean = _compiler == null
   private def isDefined: Boolean = !isEmpty
-  private def loadCompiler(): MetalsGlobal = {
+  private def loadCompiler(): CompilerWrapper[Reporter, Compiler] = {
     if (_compiler == null) {
       _compiler = newCompiler()
     }
-    _compiler.reporter.reset()
+    _compiler.resetReporter()
     _compiler
   }
-  def reporter: StoreReporter =
-    if (isEmpty) new StoreReporter()
-    else _compiler.reporter.asInstanceOf[StoreReporter]
+
+  protected def newReporter: Reporter
+
+  def reporter: Reporter =
+    if (isEmpty) newReporter
+    else _compiler.reporterAccess.reporter
 
   def isLoaded(): Boolean = _compiler != null
 
@@ -56,8 +58,8 @@ class CompilerAccess(
       _compiler = null
       sh.foreach { scheduler =>
         scheduler.schedule[Unit](() => {
-          if (compiler.presentationCompilerThread.isAlive) {
-            compiler.presentationCompilerThread.stop()
+          if (compiler.isAlive()) {
+            compiler.stop()
           }
         }, 2, TimeUnit.SECONDS)
       }
@@ -70,7 +72,7 @@ class CompilerAccess(
   def withInterruptableCompiler[T](
       default: T,
       token: CancelToken
-  )(thunk: MetalsGlobal => T): CompletableFuture[T] = {
+  )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
     val isFinished = new AtomicBoolean(false)
     var queueThread = Option.empty[Thread]
     val result = onCompilerJobQueue(
@@ -88,8 +90,9 @@ class CompilerAccess(
           if (isCancelled &&
             isFinished.compareAndSet(false, true) &&
             isDefined) {
-            _compiler.presentationCompilerThread.interrupt()
-            if (thread != _compiler.presentationCompilerThread) {
+            _compiler.presentationCompilerThread.foreach(_.interrupt())
+            if (_compiler.presentationCompilerThread.isEmpty || !_compiler.presentationCompilerThread
+                .contains(thread)) {
               thread.interrupt()
             }
           }
@@ -108,7 +111,7 @@ class CompilerAccess(
   def withNonInterruptableCompiler[T](
       default: T,
       token: CancelToken
-  )(thunk: MetalsGlobal => T): CompletableFuture[T] = {
+  )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
     onCompilerJobQueue(() => withSharedCompiler(default)(thunk), token)
   }
 
@@ -117,54 +120,36 @@ class CompilerAccess(
    *
    * May potentially run in parallel with other requests, use carefully.
    */
-  def withSharedCompiler[T](default: T)(thunk: MetalsGlobal => T): T = {
+  def withSharedCompiler[T](
+      default: T
+  )(thunk: CompilerWrapper[Reporter, Compiler] => T): T = {
     try {
       thunk(loadCompiler())
     } catch {
       case InterruptException() =>
         default
-      case ShutdownReq =>
-        retryWithCleanCompiler(
-          thunk,
-          default,
-          "an error in the Scala compiler"
-        )
-      case NonFatal(e) =>
-        val isParadiseRelated = e.getStackTrace
-          .exists(_.getClassName.startsWith("org.scalamacros"))
-        val isCompilerRelated = e.getStackTrace.headOption.exists { e =>
-          e.getClassName.startsWith("scala.tools") ||
-          e.getClassName.startsWith("scala.reflect")
-        }
-        if (isParadiseRelated) {
-          // NOTE(olafur) Metals disables macroparadise by default but other library
-          // clients of mtags may enable it.
-          // Testing shows that the scalamacro paradise plugin tends to crash
-          // easily in long-running sessions. We retry with a fresh compiler
-          // to see if that fixes the issue. This is a hacky solution that is
-          // slow because creating new compiler instances is expensive. A better
-          // long-term solution is to fix the paradise plugin implementation
-          // to be  more resilient in long-running sessions.
-          retryWithCleanCompiler(
-            thunk,
-            default,
-            "the org.scalamacros:paradise compiler plugin"
-          )
-        } else if (isCompilerRelated) {
-          retryWithCleanCompiler(
-            thunk,
-            default,
-            "an error in the Scala compiler"
-          )
-        } else {
-          handleError(e)
-          default
-        }
+      case other: Throwable =>
+        handleSharedCompilerException(other)
+          .map { message =>
+            retryWithCleanCompiler(
+              thunk,
+              default,
+              message
+            )
+          }
+          .getOrElse {
+            handleError(other)
+            default
+          }
     }
   }
 
+  protected def handleSharedCompilerException(t: Throwable): Option[String]
+
+  protected def ignoreException(t: Throwable): Boolean
+
   private def retryWithCleanCompiler[T](
-      thunk: MetalsGlobal => T,
+      thunk: CompilerWrapper[Reporter, Compiler] => T,
       default: T,
       cause: String
   ): T = {
@@ -217,7 +202,8 @@ class CompilerAccess(
               shutdownCurrentCompiler()
             } catch {
               case NonFatal(_) =>
-              case ShutdownReq =>
+              case other: Throwable =>
+                if (!ignoreException(other)) throw other
             }
           }
         },

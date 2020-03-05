@@ -58,6 +58,7 @@ import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.remotels.RemoteLanguageServer
+import scala.meta.internal.pc.EmptyCancelToken
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -148,7 +149,10 @@ class MetalsLanguageServer(
   )
   private val indexingPromise: Promise[Unit] = Promise[Unit]()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
-    CancelableFuture(paths.distinct.foreach(compilers.didChange))
+    CancelableFuture(
+      Future.sequence(paths.distinct.map(compilers.didChange)).ignoreValue,
+      Cancelable.empty
+    )
   )
   private val onBuildChanged =
     BatchedFunction.fromFuture[AbsolutePath, BuildChange](
@@ -164,7 +168,6 @@ class MetalsLanguageServer(
   private var bloopInstall: BloopInstall = _
   private var diagnostics: Diagnostics = _
   private var warnings: Warnings = _
-  private var trees: Trees = _
   private var fileSystemSemanticdbs: FileSystemSemanticdbs = _
   private var interactiveSemanticdbs: InteractiveSemanticdbs = _
   private var buildTools: BuildTools = _
@@ -714,7 +717,7 @@ class MetalsLanguageServer(
     fingerprints.add(path, FileIO.slurp(path, charset))
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
-    compilers.didChange(path)
+    val didChangeFuture = compilers.didChange(path)
 
     packageProvider
       .workspaceEdit(path)
@@ -730,8 +733,13 @@ class MetalsLanguageServer(
         ()
       }
     } else {
-      compilers.load(List(path))
-      compilations.compileFiles(List(path)).ignoreValue.asJava
+      val loadFuture = compilers.load(List(path))
+      val compileFuture =
+        compilations.compileFiles(List(path))
+      Future
+        .sequence(List(didChangeFuture, loadFuture, compileFuture))
+        .ignoreValue
+        .asJava
     }
   }
   @JsonNotification("metals/didFocusTextDocument")
@@ -799,7 +807,6 @@ class MetalsLanguageServer(
       case Some(change) =>
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
-        compilers.didChange(path)
         diagnostics.didChange(path)
         parseTrees(path).asJava
     }
@@ -809,6 +816,7 @@ class MetalsLanguageServer(
     val path = params.getTextDocument.getUri.toAbsolutePath
     buffers.remove(path)
     compilers.didClose(path)
+    diagnostics.onNoSyntaxError(path)
   }
 
   @JsonNotification("textDocument/didSave")
@@ -1043,17 +1051,13 @@ class MetalsLanguageServer(
   def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens.future { token =>
-      compilers.onTypeFormatting(params)
-    }
+    CancelTokens.future { token => compilers.onTypeFormatting(params) }
 
   @JsonRequest("textDocument/rangeFormatting")
   def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens.future { token =>
-      compilers.rangeFormatting(params)
-    }
+    CancelTokens.future { token => compilers.rangeFormatting(params) }
 
   @JsonRequest("textDocument/prepareRename")
   def prepareRename(
@@ -1182,9 +1186,7 @@ class MetalsLanguageServer(
   def foldingRange(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] = {
-    CancelTokens.future { token =>
-      compilers.foldingRange(params, token)
-    }
+    CancelTokens.future { token => compilers.foldingRange(params, token) }
   }
 
   @JsonRequest("workspace/symbol")

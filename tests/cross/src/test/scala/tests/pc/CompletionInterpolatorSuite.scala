@@ -2,8 +2,13 @@ package tests.pc
 
 import tests.BaseCompletionSuite
 import tests.pc.CrossTestEnrichments._
+import tests.BuildInfoVersions
 
 class CompletionInterpolatorSuite extends BaseCompletionSuite {
+
+  // @tgodzik TODO currently not implemented for Dotty
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   checkEdit(
     "string",
@@ -496,4 +501,33 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     filter = _.contains("hello")
   )
 
+  checkEdit(
+    "backtick",
+    """|object Main {
+       |  val `type` = 42
+       |  "Hello $type@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val `type` = 42
+       |  s"Hello ${`type`$0}"
+       |}
+       |""".stripMargin,
+    filterText = "\"Hello $type"
+  )
+
+  checkEdit(
+    "backtick2",
+    """|object Main {
+       |  val `hello world` = 42
+       |  "Hello $hello@@"
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  val `hello world` = 42
+       |  s"Hello ${`hello world`$0}"
+       |}
+       |""".stripMargin,
+    filterText = "\"Hello $hello world"
+  )
 }

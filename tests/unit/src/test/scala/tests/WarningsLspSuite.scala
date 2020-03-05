@@ -98,4 +98,27 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
     } yield ()
   }
+
+  test("unsupported-scala-3") {
+    cleanWorkspace()
+    val using = "0.21.0"
+    for {
+      _ <- server.initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${using}"
+           |  }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Messages.UnsupportedScalaVersion.message(Set(using))
+      )
+    } yield ()
+  }
 }

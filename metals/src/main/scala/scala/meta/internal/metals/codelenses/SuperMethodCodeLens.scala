@@ -35,8 +35,7 @@ final class SuperMethodCodeLens(
     val search = implementationProvider.defaultSymbolSearch(
       textDocumentWithPath
     )
-    val distance =
-      Buffers.tokenEditDistance(path, textDocument.text, buffers)
+    val distance = buffers.tokenEditDistance(path, textDocument.text)
 
     for {
       occurrence <- textDocument.occurrences

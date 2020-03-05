@@ -18,6 +18,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -199,4 +200,11 @@ public abstract class PresentationCompiler {
      * detail that the compiler is `null` when it has been reset.
      */
     public abstract boolean isLoaded();
+
+    protected CompletionList emptyCompletion(){
+        CompletionList items = new CompletionList(new LinkedList<>());
+        items.setIsIncomplete(true);
+        return items;
+    }
+
 }

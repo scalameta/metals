@@ -7,6 +7,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments._
 import munit.Location
 import java.nio.file.Paths
+import scala.meta.XtensionSyntax
 
 abstract class BaseHoverSuite
     extends BasePCSuite
@@ -21,7 +22,7 @@ abstract class BaseHoverSuite
       automaticPackage: Boolean = true,
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    test(name) {
+    testPc(name) { implicit pc =>
       val filename = "Hover.scala"
       val pkg = scala.meta.Term.Name(name).syntax
       val noRange = original
@@ -38,7 +39,10 @@ abstract class BaseHoverSuite
         )
         .get()
       val obtained: String = renderAsString(code, hover.asScala, includeRange)
-      assertNoDiff(obtained, getExpected(expected, compat))
+      assertNoDiff(
+        obtained,
+        getExpected(expected, compat, scalaVersion)
+      )
       for {
         h <- hover.asScala
         range <- Option(h.getRange)

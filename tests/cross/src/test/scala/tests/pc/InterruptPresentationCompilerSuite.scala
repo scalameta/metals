@@ -8,17 +8,16 @@ import tests.BasePCSuite
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.mtags.Symbol
 import java.util.concurrent.CancellationException
-import scala.meta.internal.mtags.OnDemandSymbolIndex
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.OffsetParams
 import java.util.concurrent.atomic.AtomicReference
 import munit.Location
 import java.net.URI
+import tests.BuildInfoVersions
 
 class InterruptPresentationCompilerSuite extends BasePCSuite {
-  class InterruptSymbolIndex
-      extends DelegatingGlobalSymbolIndex(OnDemandSymbolIndex()) {
+  class InterruptSymbolIndex extends DelegatingGlobalSymbolIndex() {
     val token = new AtomicReference(new CompletableCancelToken())
     val isInterrupted = new AtomicBoolean(false)
     def reset(): Unit = {
@@ -32,30 +31,33 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
     }
   }
 
-  val interrupt = new InterruptSymbolIndex()
+  // @tgodzik currently not handled for Dotty
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   override def beforeEach(context: BeforeEach): Unit = {
-    interrupt.reset()
+    index.asInstanceOf[InterruptSymbolIndex].reset()
     super.beforeEach(context)
   }
 
-  override def beforeAll(): Unit = {
-    index.underlying = interrupt
-    indexScalaLibrary()
-  }
+  override def requiresScalaLibrarySources: Boolean = true
+
+  override val index: DelegatingGlobalSymbolIndex =
+    new InterruptSymbolIndex()
 
   def check(
       name: String,
       original: String,
       act: (PresentationCompiler, OffsetParams) => CompletableFuture[_]
   )(implicit loc: Location): Unit = {
-    test(name) {
+    testPc(name) { implicit pc =>
       val (code, offset) = this.params(original)
+      val interrupt = index.asInstanceOf[InterruptSymbolIndex]
       try {
         val result = act(
           pc,
           CompilerOffsetParams(
-            URI.create("file://A.scala"),
+            URI.create("file:///A.scala"),
             code,
             offset,
             interrupt.token.get()

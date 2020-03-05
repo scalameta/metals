@@ -1,8 +1,13 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class CompletionWorkspaceSuite extends BaseCompletionSuite {
+
+  // @tgodzik TODO currently not implemented for Dotty
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   checkEdit(
     "files",

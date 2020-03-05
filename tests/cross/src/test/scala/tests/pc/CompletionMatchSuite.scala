@@ -1,12 +1,15 @@
 package tests.pc
 
 import tests.BaseCompletionSuite
+import tests.BuildInfoVersions
 
 class CompletionMatchSuite extends BaseCompletionSuite {
 
-  override def beforeAll(): Unit = {
-    indexScalaLibrary()
-  }
+  override def requiresScalaLibrarySources: Boolean = true
+
+  // @tgodzik TODO currently not implemented for Dotty
+  override def excludedScalaVersions: Set[String] =
+    Set(BuildInfoVersions.scala3)
 
   check(
     "match",
@@ -51,39 +54,41 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     "",
     filter = _ => false
   )
-  if (!isScala211)
-    // Assert that Workday/Weekend symbols from previous test don't appear in result.
-    checkEdit(
-      "stale2",
-      """package stale
-        |sealed abstract class Weekday
-        |object Weekday {
-        |  case object Workday extends Weekday
-        |  case object Weekend extends Weekday
-        |}
-        |object App {
-        |  null.asInstanceOf[Weekday] matc@@
-        |}
-        |""".stripMargin,
-      // Tab characters are used to indicate user-configured indentation in the editor.
-      // For example, in VS Code, the tab characters become 2 space indent by default.
-      """|package stale
-         |import stale.Weekday.Workday
-         |import stale.Weekday.Weekend
-         |sealed abstract class Weekday
-         |object Weekday {
-         |  case object Workday extends Weekday
-         |  case object Weekend extends Weekday
-         |}
-         |object App {
-         |  null.asInstanceOf[Weekday] match {
-         |\tcase Workday => $0
-         |\tcase Weekend =>
-         |}
-         |}
-         |""".stripMargin,
-      filter = _.contains("exhaustive")
-    )
+
+  // Assert that Workday/Weekend symbols from previous test don't appear in result.
+  checkEdit(
+    "stale2",
+    """package stale
+      |sealed abstract class Weekday
+      |object Weekday {
+      |  case object Workday extends Weekday
+      |  case object Weekend extends Weekday
+      |}
+      |object App {
+      |  null.asInstanceOf[Weekday] matc@@
+      |}
+      |""".stripMargin,
+    // Tab characters are used to indicate user-configured indentation in the editor.
+    // For example, in VS Code, the tab characters become 2 space indent by default.
+    """|package stale
+       |import stale.Weekday.Workday
+       |import stale.Weekday.Weekend
+       |sealed abstract class Weekday
+       |object Weekday {
+       |  case object Workday extends Weekday
+       |  case object Weekend extends Weekday
+       |}
+       |object App {
+       |  null.asInstanceOf[Weekday] match {
+       |\tcase Workday => $0
+       |\tcase Weekend =>
+       |}
+       |}
+       |""".stripMargin,
+    filter = _.contains("exhaustive"),
+    ignoredScalaVersions = Set("2.11.12")
+  )
+
   checkEdit(
     "stale3",
     """package stale
@@ -142,24 +147,25 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |  Option(1) matc@@
       |}
       |""".stripMargin,
-    if (!isScala211)
-      """package sort
-        |object App {
-        |  Option(1) match {
-        |\tcase Some(value) => $0
-        |\tcase None =>
-        |}
-        |}
-        |""".stripMargin
-    else
-      """package sort
-        |object App {
-        |  Option(1) match {
-        |\tcase Some(x) => $0
-        |\tcase None =>
-        |}
-        |}
-        |""".stripMargin,
+    """package sort
+      |object App {
+      |  Option(1) match {
+      |\tcase Some(value) => $0
+      |\tcase None =>
+      |}
+      |}
+      |""".stripMargin,
+    compat = Map(
+      "2.11.12" ->
+        """package sort
+          |object App {
+          |  Option(1) match {
+          |\tcase Some(x) => $0
+          |\tcase None =>
+          |}
+          |}
+          |""".stripMargin
+    ),
     filter = _.contains("exhaustive")
   )
 

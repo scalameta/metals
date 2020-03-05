@@ -4,6 +4,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import munit.Location
 import java.nio.file.Paths
+import scala.meta.XtensionSyntax
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
   def checkDoc(
@@ -20,9 +21,10 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       expected: String,
       includeDocs: Boolean = false,
       compat: Map[String, String] = Map.empty,
-      stableOrder: Boolean = true
+      stableOrder: Boolean = true,
+      ignoredScalaVersions: Set[String] = Set.empty
   )(implicit loc: Location): Unit = {
-    test(name) {
+    testPc(name, ignoredScalaVersions) { implicit pc =>
       val pkg = scala.meta.Term.Name(name).syntax
       val (code, offset) = params(s"package $pkg\n" + original)
       val result =
@@ -43,7 +45,8 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
             out
               .append(signature.getLabel)
               .append("\n")
-            if (result.getActiveSignature == i && result.getActiveParameter != null) {
+            if (result.getActiveSignature == i && result.getActiveParameter != null && signature.getParameters
+                .size() > 0) {
               val param = signature.getParameters.get(result.getActiveParameter)
               val column = signature.getLabel.indexOf(param.getLabel.getLeft())
               if (column < 0) {
@@ -76,7 +79,10 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
       }
       assertNoDiff(
         sortLines(stableOrder, out.toString()),
-        sortLines(stableOrder, getExpected(expected, compat))
+        sortLines(
+          stableOrder,
+          getExpected(expected, compat, scalaVersion)
+        )
       )
     }
   }
