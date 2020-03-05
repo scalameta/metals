@@ -33,6 +33,7 @@ import metaconfig.cli.HelpCommand
 import metaconfig.cli.VersionCommand
 import java.{util => ju}
 import java.nio.file.FileSystems
+import scala.annotation.tailrec
 import scala.meta.internal.mtags.MD5
 
 object BloopPants {
@@ -176,6 +177,23 @@ object BloopPants {
     // Prepend "z_" to separate it from the JSON files when listing the
     // `.bloop/` directory.
     "z_" + MD5.compute(target).take(12)
+  }
+
+  private val sourceRootPattern = FileSystems.getDefault.getPathMatcher(
+    "glob:**/{main,test,tests,src,3rdparty,3rd_party,thirdparty,third_party}/{resources,scala,java,jvm,proto,python,protobuf,py}"
+  )
+
+  private def approximateSourceRoot(dir: Path): Option[Path] = {
+    @tailrec def loop(d: Path): Option[Path] = {
+      if (sourceRootPattern.matches(d)) Some(d)
+      else {
+        Option(d.getParent) match {
+          case Some(parent) => loop(parent)
+          case None => None
+        }
+      }
+    }
+    loop(dir)
   }
 
 }
@@ -404,12 +422,15 @@ private class BloopPants(
         Some(List(baseDirectory))
       }
 
+    val sourceRoots = BloopPants.approximateSourceRoot(baseDirectory).toList
+
     C.Project(
       name = target.dependencyName,
       directory = baseDirectory,
       workspaceDir = Some(workspace),
       sources = sources,
       sourcesGlobs = sourcesGlobs,
+      sourceRoots = Some(sourceRoots),
       dependencies = dependencies,
       classpath = classpath.toList,
       out = out,
@@ -447,6 +468,7 @@ private class BloopPants(
       workspaceDir = Some(workspace),
       sources = Nil,
       sourcesGlobs = None,
+      sourceRoots = None,
       dependencies = Nil,
       classpath = Nil,
       out = bloopDir.resolve(directoryName),
