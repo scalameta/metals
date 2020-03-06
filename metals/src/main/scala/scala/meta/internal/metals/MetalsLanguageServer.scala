@@ -379,10 +379,7 @@ class MetalsLanguageServer(
       buffers,
       definitionProvider
     )
-    superMethodProvider = new SuperMethodProvider(
-      definitionProvider,
-      implementationProvider.findSemanticDbWithPathForSymbol
-    )
+    superMethodProvider = new SuperMethodProvider()
 
     goToSuperMethod = new GoToSuperMethod(
       definitionProvider,
@@ -1308,7 +1305,7 @@ class MetalsLanguageServer(
             Future.failed(new IllegalArgumentException(msg)).asJavaObject
         }
 
-      case ServerCommands.GoToSuperMethod() =>
+      case ServerCommands.GotoSuperMethod() =>
         Future {
           val command = goToSuperMethod.getGoToSuperMethodCommand(params)
           command.foreach(languageClient.metalsExecuteClientCommand)

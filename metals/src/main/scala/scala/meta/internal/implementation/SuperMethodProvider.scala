@@ -1,9 +1,6 @@
 package scala.meta.internal.implementation
 
-import org.eclipse.{lsp4j => l}
 import scala.meta.internal.metals.CodeLensProvider.LensGoSuperCache
-import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.MethodSignature
@@ -11,13 +8,10 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.internal.implementation.SuperMethodProvider._
 import scala.meta.internal.semanticdb.TypeSignature
-import SuperMethodProvider._
 
-class SuperMethodProvider(
-    definitionProvider: DefinitionProvider,
-    findSemanticDbWithPathForSymbol: String => Option[TextDocumentWithPath]
-) {
+class SuperMethodProvider() {
 
   def findSuperForMethodOrField(
       methodSymbolInformation: SymbolInformation,
@@ -25,7 +19,7 @@ class SuperMethodProvider(
       symbolRole: SymbolOccurrence.Role,
       findSymbol: String => Option[SymbolInformation],
       cache: LensGoSuperCache
-  ): Option[l.Location] = {
+  ): Option[String] = {
     if (symbolRole.isDefinition && (methodSymbolInformation.isMethod || methodSymbolInformation.isField)) {
       findSuperForMethodOrFieldChecked(
         methodSymbolInformation,
@@ -41,10 +35,11 @@ class SuperMethodProvider(
   private def getSuperClasses(
       symbolInformation: SymbolInformation,
       findSymbol: String => Option[SymbolInformation],
-      skip: scala.collection.mutable.Set[SymbolInformation]
-  ): List[(SymbolInformation, Option[TextDocumentWithPath])] = {
+      skip: scala.collection.mutable.Set[SymbolInformation],
+      asSeenFrom: Map[String, String]
+  ): List[(SymbolInformation, Map[String, String])] = {
     if (skip.exists(_.symbol == symbolInformation.symbol)) {
-      List()
+      List.empty
     } else {
       skip += symbolInformation
       symbolInformation.signature match {
@@ -53,28 +48,36 @@ class SuperMethodProvider(
             .collect { case x: TypeRef => x }
             .filterNot(typeRef => stopSymbols.contains(typeRef.symbol))
             .filterNot(typeRef => skip.exists(_.symbol == typeRef.symbol))
-          val mainParents = parents.headOption
-            .flatMap(p => findSymbol(p.symbol))
-            .map(si => getSuperClasses(si, findSymbol, skip))
+          val parentsHierarchy = parents
+            .flatMap(p => findSymbol(p.symbol).map((_, p)))
+            .map {
+              case (si, p) =>
+                val parentASF = AsSeenFrom.calculateAsSeenFrom(
+                  p,
+                  classSignature.typeParameters
+                )
+                val currentASF =
+                  AsSeenFrom.translateAsSeenFrom(asSeenFrom, parentASF)
+                getSuperClasses(si, findSymbol, skip, currentASF)
+            }
             .toList
+            .reverse
             .flatten
-          val withParents = if (parents.nonEmpty) {
-            parents.tail.reverse.flatMap { linParent =>
-              findSymbol(linParent.symbol)
-                .map(ssss => getSuperClasses(ssss, findSymbol, skip))
-                .toIterable
-                .flatten
-            }.toList
-          } else {
-            List.empty
-          }
-          val expParents = withParents ++ mainParents
-          val semDB = findSemanticDbWithPathForSymbol(symbolInformation.symbol)
-          (symbolInformation, semDB) +: expParents
+          val outASF =
+            AsSeenFrom.toRealNames(classSignature, true, Some(asSeenFrom))
+          (symbolInformation, outASF) +: parentsHierarchy
         case sig: TypeSignature =>
-          findSymbol(sig.lowerBound.asInstanceOf[TypeRef].symbol)
+          val upperBound = sig.upperBound.asInstanceOf[TypeRef]
+          findSymbol(upperBound.symbol)
             .filterNot(s => skip.exists(_.symbol == s.symbol))
-            .map(getSuperClasses(_, findSymbol, skip))
+            .map(si => {
+//              val classSig = si.signature.asInstanceOf[ClassSignature]
+              val parentASF =
+                AsSeenFrom.calculateAsSeenFrom(upperBound, sig.typeParameters)
+              val currentASF =
+                AsSeenFrom.translateAsSeenFrom(asSeenFrom, parentASF)
+              getSuperClasses(si, findSymbol, skip, currentASF)
+            })
             .getOrElse(List.empty)
         case _ =>
           List.empty
@@ -86,7 +89,7 @@ class SuperMethodProvider(
       classSymbolInformation: SymbolInformation,
       cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
-  ): List[(SymbolInformation, Option[TextDocumentWithPath])] = {
+  ): List[(SymbolInformation, Map[String, String])] = {
     cache.get(classSymbolInformation.symbol) match {
       case Some(value) => value
       case None =>
@@ -101,11 +104,12 @@ class SuperMethodProvider(
   private def calculateClassSuperHierarchy(
       classSymbolInformation: SymbolInformation,
       findSymbol: String => Option[SymbolInformation]
-  ): List[(SymbolInformation, Option[TextDocumentWithPath])] = {
+  ): List[(SymbolInformation, Map[String, String])] = {
     getSuperClasses(
       classSymbolInformation,
       findSymbol,
-      scala.collection.mutable.Set[SymbolInformation]()
+      scala.collection.mutable.Set[SymbolInformation](),
+      Map()
     )
   }
 
@@ -114,7 +118,7 @@ class SuperMethodProvider(
       documentWithPath: TextDocumentWithPath,
       cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
-  ): Option[l.Location] = {
+  ): Option[String] = {
     val classSymbolInformation =
       findClassInfo(
         msi.symbol,
@@ -126,7 +130,7 @@ class SuperMethodProvider(
 
     val result = for {
       si <- classSymbolInformation.toIterable
-      (superClass, docMaybe) <- calculateClassSuperHierarchyWithCache(
+      (superClass, asSeenFrom) <- calculateClassSuperHierarchyWithCache(
         si,
         cache,
         findSymbol
@@ -139,31 +143,14 @@ class SuperMethodProvider(
       methodSignature = mSymbolInformation.signature
         .asInstanceOf[MethodSignature]
       if checkSignaturesEqual(
-        msi,
-        methodInfo,
         mSymbolInformation,
         methodSignature,
+        msi,
+        methodInfo,
+        asSeenFrom,
         findSymbol
       )
-      loc <- {
-        docMaybe match {
-          case Some(doc) =>
-            val socMaybe = ImplementationProvider.findDefOccurrence(
-              doc.textDocument,
-              mSymbolInformation.symbol,
-              doc.filePath
-            )
-            socMaybe.map(soc =>
-              new l.Location(doc.filePath.toURI.toString, soc.getRange.toLSP)
-            )
-          case None =>
-            definitionProvider
-              .fromSymbol(mSymbolInformation.symbol)
-              .asScala
-              .headOption
-        }
-      }
-    } yield loc
+    } yield mSymbolInformation.symbol
     result.headOption
   }
 
@@ -202,6 +189,7 @@ object SuperMethodProvider {
       parentSignature: MethodSignature,
       childSymbol: SymbolInformation,
       childSignature: MethodSignature,
+      asSeenFrom: Map[String, String],
       findSymbol: String => Option[SymbolInformation]
   ): Boolean = {
     parentSymbol.symbol != childSymbol.symbol &&
@@ -209,6 +197,7 @@ object SuperMethodProvider {
     MethodImplementation.checkSignaturesEqual(
       parentSignature,
       childSignature,
+      asSeenFrom,
       findSymbol
     )
   }

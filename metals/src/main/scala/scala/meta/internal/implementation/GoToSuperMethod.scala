@@ -42,19 +42,20 @@ class GoToSuperMethod(
       )
       findSymbol = makeFindSymbolMethod(textDocument, filePath)
       symbolInformation <- findSymbol(symbolOcc.symbol)
-      jumpToLocation <- {
+      gotoSymbol <- {
         if (symbolOcc.role.isDefinition) {
           val docText = TextDocumentWithPath(textDocument, filePath)
-          findSuperMethodLocation(
+          findSuperMethodSymbol(
             symbolInformation,
             symbolOcc.role,
             docText,
             findSymbol
           )
         } else {
-          findDefinitionLocation(symbolInformation.symbol)
+          Some(symbolInformation.symbol)
         }
       }
+      jumpToLocation <- findDefinitionLocation(gotoSymbol)
     } yield jumpToLocation
   }
 
@@ -77,12 +78,12 @@ class GoToSuperMethod(
         )
   }
 
-  private def findSuperMethodLocation(
+  private def findSuperMethodSymbol(
       symbolInformation: SymbolInformation,
       role: SymbolOccurrence.Role,
       docText: TextDocumentWithPath,
       findSymbol: String => Option[SymbolInformation]
-  ): Option[Location] = {
+  ): Option[String] = {
     superMethodProvider.findSuperForMethodOrField(
       symbolInformation,
       docText,

@@ -205,9 +205,10 @@ object MethodImplementation {
   def checkSignaturesEqual(
       parentSignature: MethodSignature,
       childSignature: MethodSignature,
+      asSeenFrom: Map[String, String],
       findSymbol: String => Option[SymbolInformation]
   ): Boolean = {
-    val context = Context(findSymbol, findSymbol, Map())
+    val context = Context(findSymbol, findSymbol, asSeenFrom)
     signaturesEqual(parentSignature, childSignature)(context)
   }
 

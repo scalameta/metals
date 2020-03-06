@@ -130,8 +130,8 @@ object ServerCommands {
        |""".stripMargin
   )
 
-  val GoToSuperMethod = new Command(
-    "go-to-super-method",
+  val GotoSuperMethod = new Command(
+    "goto-super-method",
     "Go to super method/field definition",
     """|Jumps to super method/field definition of a symbol under cursor according to inheritance rules.
        |When A {override def x()} <:< B <:< C {def x()} and on method 'A.x' it will jump directly to 'C.x'
@@ -231,7 +231,8 @@ object ServerCommands {
     CancelCompile,
     BspSwitch,
     StartDebugAdapter,
+    GotoLocation,
     NewScalaFile,
-    GoToSuperMethod
+    GotoSuperMethod
   )
 }

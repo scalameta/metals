@@ -113,7 +113,7 @@ final class DebugCodeLensProvider(
   ): Option[l.Command] = {
     for {
       symbolInformation <- findSymbol(symbol)
-      gotoLocation <- superMethodProvider.findSuperForMethodOrField(
+      gotoParentSymbol <- superMethodProvider.findSuperForMethodOrField(
         symbolInformation,
         docWithPath,
         role,
@@ -121,19 +121,19 @@ final class DebugCodeLensProvider(
         cache
       )
     } yield convertToSuperMethodCommand(
-      gotoLocation,
+      gotoParentSymbol,
       symbolInformation.displayName
     )
   }
 
   private def convertToSuperMethodCommand(
-      gotoLocation: l.Location,
+      symbol: String,
       name: String
   ): l.Command = {
     new l.Command(
       s"${config.icons.findsuper} ${name}",
-      ClientCommands.GotoLocation.id,
-      singletonList(gotoLocation)
+      ServerCommands.GotoLocation.id,
+      singletonList(symbol)
     )
   }
 }
@@ -142,7 +142,7 @@ object CodeLensProvider {
   import scala.meta.internal.metals.JsonParser._
 
   type LensGoSuperCache =
-    m.Map[String, List[(SymbolInformation, Option[TextDocumentWithPath])]]
+    m.Map[String, List[(SymbolInformation, Map[String, String])]]
 
   private val Empty: CodeLensProvider = (_: AbsolutePath) => Nil
 
