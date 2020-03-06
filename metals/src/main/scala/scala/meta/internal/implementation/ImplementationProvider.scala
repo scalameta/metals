@@ -167,7 +167,7 @@ final class ImplementationProvider(
     } yield {
       classInfo.signature match {
         case sig: ClassSignature =>
-          methodInParentSignature(sig, currentInfo)
+          methodInParentSignature(sig, currentInfo, sig)
         case _ => Nil
       }
     }
@@ -175,29 +175,34 @@ final class ImplementationProvider(
   }
 
   private def methodInParentSignature(
-      sig: ClassSignature,
-      childInfo: SymbolInformation,
+      currentClassSig: ClassSignature,
+      bottomSymbol: SymbolInformation,
+      bottomClassSig: ClassSignature,
       childASF: Map[String, String] = Map.empty
   ): Seq[Location] = {
-    sig.parents.flatMap {
+    currentClassSig.parents.flatMap {
       case parentSym: TypeRef =>
         val parentTextDocument = findSemanticDbForSymbol(parentSym.symbol)
         def search(symbol: String) =
           parentTextDocument.flatMap(findSymbol(_, symbol))
         val parentASF =
-          AsSeenFrom.calculateAsSeenFrom(parentSym, sig.typeParameters)
+          AsSeenFrom.calculateAsSeenFrom(
+            parentSym,
+            currentClassSig.typeParameters
+          )
         val asSeenFrom = AsSeenFrom.translateAsSeenFrom(childASF, parentASF)
         search(parentSym.symbol).map(_.signature) match {
           case Some(parenClassSig: ClassSignature) =>
             val fromParent = methodInParentSignature(
               parenClassSig,
-              childInfo,
+              bottomSymbol,
+              bottomClassSig,
               asSeenFrom
             )
             if (fromParent.isEmpty) {
               locationFromClass(
-                childInfo,
-                sig,
+                bottomSymbol,
+                bottomClassSig,
                 parenClassSig,
                 asSeenFrom,
                 search,
@@ -214,17 +219,17 @@ final class ImplementationProvider(
   }
 
   private def locationFromClass(
-      childInfo: SymbolInformation,
-      sig: ClassSignature,
-      parenClassSig: ClassSignature,
+      bottomSymbolInformation: SymbolInformation,
+      bottomClassSignature: ClassSignature,
+      parentClassSig: ClassSignature,
       asSeenFrom: Map[String, String],
       search: String => Option[SymbolInformation],
       parentTextDocument: Option[TextDocument]
   ): Option[Location] = {
     val matchingSymbol = MethodImplementation.findParentSymbol(
-      childInfo,
-      sig,
-      parenClassSig,
+      bottomSymbolInformation,
+      bottomClassSignature,
+      parentClassSig,
       asSeenFrom,
       search
     )
