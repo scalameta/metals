@@ -29,8 +29,8 @@ object MethodImplementation {
   import ImplementationProvider._
 
   def findParentSymbol(
-      childSymbol: SymbolInformation,
-      childClassSig: ClassSignature,
+      bottomSymbolInformation: SymbolInformation,
+      bottomClassSig: ClassSignature,
       parentClassSig: ClassSignature,
       asSeenFromMap: Map[String, String],
       findSymbol: String => Option[SymbolInformation]
@@ -41,7 +41,7 @@ object MethodImplementation {
       methodSymbolInfo <- findSymbol(methodSymbol)
       asSeenFrom = AsSeenFrom.toRealNames(
         parentClassSig,
-        translateKey = true,
+        bottomClassSig,
         Some(asSeenFromMap)
       )
       context = Context(
@@ -49,7 +49,11 @@ object MethodImplementation {
         findSymbol,
         asSeenFrom
       )
-      if isOverridenMethod(methodSymbolInfo, childSymbol, findParent = true)(
+      if isOverridenMethod(
+        methodSymbolInfo,
+        bottomSymbolInformation,
+        findParent = true
+      )(
         context
       )
     } yield methodSymbol

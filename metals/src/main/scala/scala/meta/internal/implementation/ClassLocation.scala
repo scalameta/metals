@@ -30,7 +30,7 @@ private[implementation] case class ClassLocation(
     this.copy(asSeenFrom = newASF)
   }
 
-  // Translate postion based names to real names in the class
+  // Translate position based names to real names in the class
   def toRealNames(
       classInfo: SymbolInformation,
       translateKey: Boolean
@@ -100,7 +100,16 @@ object AsSeenFrom {
     }.toMap
   }
 
-  // Translate postion based names to real names in the class
+  // Translate position based names to real names in the class
+  def toRealNames(
+      parentClassSig: ClassSignature,
+      childClassSig: ClassSignature,
+      asSeenFrom: Option[Map[String, String]]
+  ): Map[String, String] = {
+    val mappedKeys = toRealNames(parentClassSig, true, asSeenFrom)
+    toRealNames(childClassSig, false, Some(mappedKeys))
+  }
+
   def toRealNames(
       classSig: ClassSignature,
       translateKey: Boolean,

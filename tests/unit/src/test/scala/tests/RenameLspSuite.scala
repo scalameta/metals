@@ -1,6 +1,7 @@
 package tests
 import scala.concurrent.Future
 import munit.Location
+import munit.TestOptions
 
 class RenameLspSuite extends BaseLspSuite("rename") {
 
@@ -32,6 +33,20 @@ class RenameLspSuite extends BaseLspSuite("rename") {
        |}
        |""".stripMargin,
     newName = "Login"
+  )
+
+  renamed(
+    "generics",
+    """/a/src/main/scala/a/Main.scala
+      |package a
+      |trait S1[X] { def <<torename>>(p: X): String = "" }
+      |trait T1[Z] extends S1[Z] { override def <<torename>>(p: Z): String = super.<<torename>>(p) }
+      |trait T2[X] extends T1[X] { override def <<torename>>(p: X): String = super.<<torename>>(p) }
+      |trait T3[I, J] extends T2[I] { override def <<torename>>(p: I): String = super.<<torename>>(p) }
+      |trait T4[I, J] extends T3[J, I] { override def <<torename>>(p: J): String = super.<<torename>>(p) }
+      |trait T5[U] extends T4[U, U] { override def <<tore@@name>>(p: U): String = super.<<torename>>(p) }
+      |""".stripMargin,
+    newName = "newname"
   )
 
   renamed(
@@ -576,7 +591,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
   )
 
   def renamed(
-      name: String,
+      name: TestOptions,
       input: String,
       newName: String,
       nonOpened: Set[String] = Set.empty,
@@ -605,7 +620,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
     )
 
   def check(
-      name: String,
+      name: TestOptions,
       input: String,
       newName: String,
       notRenamed: Boolean = false,
