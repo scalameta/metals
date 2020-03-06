@@ -27,7 +27,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
        |package a
        |case class <<User>>(name : String)
        |object Main{
-       |  val user = <<U@@ser>>.apply("James")
+       |  val user = <<User>>.apply("James")
        |  val user2 = <<U@@ser>>(name = "Roger")
        |  user.copy(name = "")
        |}
@@ -45,6 +45,19 @@ class RenameLspSuite extends BaseLspSuite("rename") {
       |trait T3[I, J] extends T2[I] { override def <<torename>>(p: I): String = super.<<torename>>(p) }
       |trait T4[I, J] extends T3[J, I] { override def <<torename>>(p: J): String = super.<<torename>>(p) }
       |trait T5[U] extends T4[U, U] { override def <<tore@@name>>(p: U): String = super.<<torename>>(p) }
+      |""".stripMargin,
+    newName = "newname"
+  )
+
+  renamed(
+    "match-ret-type",
+    """/a/src/main/scala/a/Main.scala
+      |package a
+      |trait P
+      |trait PP extends P
+      |trait A { def <<torename>>(a: String): P = ??? }
+      |trait B extends A { override def <<tore@@name>>(a: String): PP = ??? }
+      |
       |""".stripMargin,
     newName = "newname"
   )
@@ -580,7 +593,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
     "type-params",
     """|/a/src/main/scala/a/Main.scala
        |package a
-       |trait <<A@@BC>>
+       |trait <<ABC>>
        |class CBD[T <: <<AB@@C>>]
        |object Main{
        |  val a = classOf[ABC]
@@ -654,8 +667,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
           )
         }
 
-      val openedFiles = files.keySet
-        .filterNot(file => nonOpened.contains(file))
+      val openedFiles = files.keySet.diff(nonOpened)
       val fullInput = input.replaceAll(allMarkersRegex, "")
       for {
         _ <- server.initialize(
@@ -689,7 +701,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
             }
           }
         }
-        // chnage the code to make sure edit distance is being used
+        // change the code to make sure edit distance is being used
         _ <- Future.sequence {
           openedFiles.map { file =>
             server.didChange(file) { code =>
@@ -701,7 +713,7 @@ class RenameLspSuite extends BaseLspSuite("rename") {
           filename,
           edit.replaceAll("(<<|>>|##.*##)", ""),
           expectedFiles,
-          files.toMap.keySet,
+          files.keySet,
           newName
         )
       } yield ()

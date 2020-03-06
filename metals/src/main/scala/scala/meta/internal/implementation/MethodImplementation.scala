@@ -213,13 +213,11 @@ object MethodImplementation {
             sig2.typeParameters
           )
         )
-        val returnTypesEqual =
-          typesAreEqual(sig1.returnType, sig2.returnType)(newContext)
         lazy val enrichedSig1 =
           addParameterSignatures(sig1, context.findSymbol)
         lazy val enrichedSig2 =
           addParameterSignatures(sig2, context.findSymbol)
-        returnTypesEqual && paramsAreEqual(
+        paramsAreEqual(
           enrichedSig1.parameterLists,
           enrichedSig2.parameterLists
         )(newContext)
