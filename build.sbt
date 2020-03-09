@@ -325,6 +325,7 @@ lazy val metals = project
         "-H:+ReportUnsupportedElementsAtRuntime",
         "--initialize-at-build-time",
         "--initialize-at-run-time=scala.meta.internal.pantsbuild,metaconfig",
+        "--initialize-at-build-time=scala.meta.internal.pantsbuild.ZipkinUrls",
         "--no-server",
         "--enable-http",
         "--enable-https",
