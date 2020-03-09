@@ -136,8 +136,25 @@ object ServerCommands {
     """|Jumps to super method/field definition of a symbol under cursor according to inheritance rules.
        |When A {override def x()} <:< B <:< C {def x()} and on method 'A.x' it will jump directly to 'C.x'
        |as method x() is not overridden in B.
+       |If symbol is a reference of a method it will jump to a definition.
        |If symbol under cursor is invalid or does not override anything then command is ignored.
        |
+       |Note: document in json argument must be absolute path.
+       |
+       |Arguments:
+       |```json
+       |{
+       |  document: "file:///home/dev/foo/Bar.scala",
+       |  position: {line: 5, character: 12}
+       |}
+       |```
+       |""".stripMargin
+  )
+
+  val SuperMethodHierarchy = new Command(
+    "super-method-hierarchy",
+    "Go to super method/field definition",
+    """|
        |Note: document in json argument must be absolute path.
        |
        |Arguments:
@@ -233,6 +250,7 @@ object ServerCommands {
     StartDebugAdapter,
     GotoLocation,
     NewScalaFile,
-    GotoSuperMethod
+    GotoSuperMethod,
+    SuperMethodHierarchy
   )
 }

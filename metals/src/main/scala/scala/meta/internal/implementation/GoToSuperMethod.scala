@@ -5,22 +5,31 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 
 import scala.collection.{mutable => m}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.meta.internal.implementation.GoToSuperMethod.GoToSuperMethodParams
+import scala.meta.internal.implementation.GoToSuperMethod.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.MetalsQuickPickItem
+import scala.meta.internal.metals.MetalsQuickPickParams
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
 class GoToSuperMethod(
+    client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
     implementationProvider: ImplementationProvider,
     superMethodProvider: SuperMethodProvider,
     buildTargets: BuildTargets
+)(
+    implicit ec: ExecutionContext
 ) {
 
   def getGoToSuperMethodCommand(
@@ -29,6 +38,25 @@ class GoToSuperMethod(
     parseJsonParams(commandParams)
       .flatMap(getGoToSuperMethodLocation)
       .map(makeCommandParams)
+  }
+
+  def jumpToSelectedSuperMethod(
+      commandParams: ExecuteCommandParams
+  ): Future[Unit] = {
+    def execute(methodSymbols: List[String]): Future[Unit] = {
+      askUserToSelectSuperMethod(methodSymbols)
+        .map(
+          _.flatMap(findDefinitionLocation)
+            .map(makeCommandParams)
+            .foreach(client.metalsExecuteClientCommand)
+        )
+    }
+
+    (for {
+      params <- parseJsonParams(commandParams)
+      methodsHierarchy <- getSuperMethodHierarchySymbols(params)
+      if methodsHierarchy.nonEmpty
+    } yield execute(methodsHierarchy)).getOrElse(Future.successful())
   }
 
   def getGoToSuperMethodLocation(
@@ -59,6 +87,51 @@ class GoToSuperMethod(
     } yield jumpToLocation
   }
 
+  private def askUserToSelectSuperMethod(
+      methodSymbols: List[String]
+  ): Future[Option[String]] = {
+    client
+      .metalsQuickPick(
+        MetalsQuickPickParams(
+          methodSymbols
+            .map(symbol =>
+              MetalsQuickPickItem(
+                symbol,
+                formatMethodSymbolForQuickPick(symbol)
+              )
+            )
+            .asJava,
+          placeHolder = "Select super method to jump to"
+        )
+      )
+      .asScala
+      .map {
+        case kind if !kind.cancelled => Some(kind.itemId)
+        case _ => None
+      }
+  }
+
+  private def getSuperMethodHierarchySymbols(
+      params: GoToSuperMethodParams
+  ): Option[List[String]] = {
+    for {
+      filePath <- params.document.toAbsolutePathSafe
+      (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(
+        filePath,
+        params.position
+      )
+      findSymbol = makeFindSymbolMethod(textDocument, filePath)
+      symbolInformation <- findSymbol(symbolOcc.symbol)
+      docText = TextDocumentWithPath(textDocument, filePath)
+      hierarchy <- superMethodProvider.getSuperMethodHierarchy(
+        symbolInformation,
+        docText,
+        symbolOcc.role,
+        findSymbol
+      )
+    } yield hierarchy.map(_.symbol)
+  }
+
   private def makeFindSymbolMethod(
       textDocument: TextDocument,
       filePath: AbsolutePath
@@ -72,9 +145,9 @@ class GoToSuperMethod(
         .orElse(
           implementationProvider
             .findSymbolInformation(si)
-            .orElse(
-              global.info(si)
-            )
+        )
+        .orElse(
+          global.info(si)
         )
   }
 
@@ -119,6 +192,13 @@ class GoToSuperMethod(
 
 object GoToSuperMethod {
 
-  case class GoToSuperMethodParams(document: String, position: Position)
+  final case class GoToSuperMethodParams(document: String, position: Position)
+
+  def formatMethodSymbolForQuickPick(symbol: String): String = {
+    val replaced = symbol
+      .replace("/", ".")
+      .replaceAll("\\(.*\\)", "")
+    replaced.substring(0, replaced.length - 1)
+  }
 
 }

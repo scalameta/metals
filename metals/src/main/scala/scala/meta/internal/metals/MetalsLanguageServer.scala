@@ -358,7 +358,6 @@ class MetalsLanguageServer(
       workspace,
       languageClient,
       packageProvider,
-      config,
       () => focusedDocument
     )
     multilineStringFormattingProvider = new MultilineStringFormattingProvider(
@@ -382,6 +381,7 @@ class MetalsLanguageServer(
     superMethodProvider = new SuperMethodProvider()
 
     goToSuperMethod = new GoToSuperMethod(
+      languageClient,
       definitionProvider,
       implementationProvider,
       superMethodProvider,
@@ -394,6 +394,7 @@ class MetalsLanguageServer(
       buildTargets,
       semanticdbs,
       config,
+      () => userConfig,
       superMethodProvider,
       implementationProvider,
       clientExperimentalCapabilities
@@ -1311,6 +1312,10 @@ class MetalsLanguageServer(
           command.foreach(languageClient.metalsExecuteClientCommand)
           scribe.debug(s"Executing GoToSuperMethod ${command}")
         }.asJavaObject
+
+      case ServerCommands.SuperMethodHierarchy() =>
+        scribe.debug(s"Executing SuperMethodHierarchy ${command}")
+        goToSuperMethod.jumpToSelectedSuperMethod(params).asJavaObject
 
       case ServerCommands.NewScalaFile() =>
         val args = params.getArguments.asScala

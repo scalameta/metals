@@ -1,14 +1,17 @@
 package scala.meta.internal.metals
 
 import java.util.Collections._
+
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
+
 import scala.collection.{mutable => m}
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.implementation.GlobalClassTable
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.SuperMethodProvider
+import scala.meta.internal.implementation.SuperMethodProvider.SymbolWithAsSeenFrom
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.ClientCommands.StartRunSession
@@ -29,6 +32,7 @@ final class DebugCodeLensProvider(
     buffers: Buffers,
     buildTargets: BuildTargets,
     config: MetalsServerConfig,
+    userConfig: () => UserConfiguration,
     semanticdbs: Semanticdbs,
     superMethodProvider: SuperMethodProvider,
     implementationProvider: ImplementationProvider
@@ -63,6 +67,7 @@ final class DebugCodeLensProvider(
       target: b.BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes
   ): Seq[l.CodeLens] = {
+    println(s"FIND LENSES ${userConfig().superMethodLensesEnabled}")
     semanticdbs.textDocument(path).documentIncludingStale match {
       case Some(textDocument) =>
         val cache: LensGoSuperCache = m.Map()
@@ -111,19 +116,23 @@ final class DebugCodeLensProvider(
       cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
   ): Option[l.Command] = {
-    for {
-      symbolInformation <- findSymbol(symbol)
-      gotoParentSymbol <- superMethodProvider.findSuperForMethodOrField(
-        symbolInformation,
-        docWithPath,
-        role,
-        findSymbol,
-        cache
+    if (userConfig().superMethodLensesEnabled) {
+      for {
+        symbolInformation <- findSymbol(symbol)
+        gotoParentSymbol <- superMethodProvider.findSuperForMethodOrField(
+          symbolInformation,
+          docWithPath,
+          role,
+          findSymbol,
+          cache
+        )
+      } yield convertToSuperMethodCommand(
+        gotoParentSymbol,
+        symbolInformation.displayName
       )
-    } yield convertToSuperMethodCommand(
-      gotoParentSymbol,
-      symbolInformation.displayName
-    )
+    } else {
+      None
+    }
   }
 
   private def convertToSuperMethodCommand(
@@ -142,7 +151,7 @@ object CodeLensProvider {
   import scala.meta.internal.metals.JsonParser._
 
   type LensGoSuperCache =
-    m.Map[String, List[(SymbolInformation, Map[String, String])]]
+    m.Map[String, List[SymbolWithAsSeenFrom]]
 
   private val Empty: CodeLensProvider = (_: AbsolutePath) => Nil
 
@@ -152,6 +161,7 @@ object CodeLensProvider {
       buildTargets: BuildTargets,
       semanticdbs: Semanticdbs,
       config: MetalsServerConfig,
+      userConfig: () => UserConfiguration,
       superMethodProvider: SuperMethodProvider,
       implementationProvider: ImplementationProvider,
       capabilities: ClientExperimentalCapabilities
@@ -163,6 +173,7 @@ object CodeLensProvider {
         buffers,
         buildTargets,
         config,
+        userConfig,
         semanticdbs,
         superMethodProvider,
         implementationProvider

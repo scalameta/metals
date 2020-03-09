@@ -235,6 +235,20 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       |""".stripMargin
   )
 
+  check("go-to-super-method-lenses")(
+    """package a
+      |
+      |class A { def afx(): Unit = ??? }
+      |object X {
+      |  val t = new A {
+      |<<afx>>
+      |    override def afx(): Unit = ???
+      |  }
+      |}
+      |
+    """.stripMargin
+  )
+
   def check(name: String, library: String = "")(
       expected: String
   )(implicit loc: Location): Unit = {

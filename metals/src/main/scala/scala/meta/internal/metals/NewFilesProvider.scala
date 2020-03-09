@@ -16,7 +16,6 @@ class NewFilesProvider(
     workspace: AbsolutePath,
     client: MetalsLanguageClient,
     packageProvider: PackageProvider,
-    serverConfig: MetalsServerConfig,
     focusedDocument: () => Option[AbsolutePath]
 )(
     implicit ec: ExecutionContext
