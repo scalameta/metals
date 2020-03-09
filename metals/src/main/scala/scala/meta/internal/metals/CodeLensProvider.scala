@@ -1,11 +1,9 @@
 package scala.meta.internal.metals
 
 import java.util.Collections._
-
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
-
 import scala.collection.{mutable => m}
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.implementation.GlobalClassTable

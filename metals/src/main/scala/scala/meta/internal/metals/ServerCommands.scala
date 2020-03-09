@@ -153,8 +153,13 @@ object ServerCommands {
 
   val SuperMethodHierarchy = new Command(
     "super-method-hierarchy",
-    "Go to super method/field definition",
-    """|
+    "Go to super method/field definition in hierarchy",
+    """|When user executes this command it will calculate inheritance hierarchy of a class that contains given method.
+       |Then it will filter out classes not overriding given method and a list using 'metalsQuickPick' will be
+       |displayed to which super method user would like to go to.
+       |Command has no effect on other symbols than method definition.
+       |QuickPick will show up only if more than one result is found.
+       |
        |Note: document in json argument must be absolute path.
        |
        |Arguments:
