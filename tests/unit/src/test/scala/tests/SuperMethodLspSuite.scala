@@ -4,7 +4,7 @@ import org.eclipse.lsp4j.Position
 
 import scala.concurrent.Future
 
-class SuperMethodLspSuite extends BaseLspSuite("supermethod") {
+class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
   test("simple") {
     val code =
@@ -130,19 +130,6 @@ class SuperMethodLspSuite extends BaseLspSuite("supermethod") {
     checkSuperMethod(code)
   }
 
-  test("GENERIC".only) {
-    val code =
-      """
-        |package a
-        |
-        |trait S1[X] { def <<1->0>>fx(p: X): String = s"X1[X]" }
-        |trait T1[X] extends S1[X] { override def <<2->1>>fx(p: X): String = s"T1[X] -> ${super.fx(p)}" }
-        |
-    """.stripMargin
-    checkSuperMethod(code)
-
-  }
-
   test("matching methods") {
     val code =
       """
@@ -207,15 +194,14 @@ class SuperMethodLspSuite extends BaseLspSuite("supermethod") {
     )
   }
 
-  //TODO: test jumping to external source here
-  test("jump to external dependency".ignore) {
+  test("jump to external dependency") {
     val code =
       """
         |package a
         |import io.circe.Decoder
         |
         |trait CustomDecoder extends Decoder[String] {
-        |  override def <<1->0>>apply(c: io.circe.HCursor): Decoder.Result[String] = ???
+        |  override def <<1->50>>apply(c: io.circe.HCursor): Decoder.Result[String] = ???
         |}
         |
         |""".stripMargin
@@ -252,7 +238,7 @@ class SuperMethodLspSuite extends BaseLspSuite("supermethod") {
       val (contextB, assertsB) = parseWithUri(codeB, pathB)
       for (check <- assertsA ++ assertsB) {
         println(s"CHECKING ${check}")
-        server.assertSuperMethod(check._1, check._2, contextA ++ contextB)
+        server.assertGotoSuperMethod(check._1, check._2, contextA ++ contextB)
       }
     }
   }
@@ -281,13 +267,16 @@ class SuperMethodLspSuite extends BaseLspSuite("supermethod") {
       val path = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
       val (context, assertions) = parseWithUri(code, path)
       for (check <- assertions) {
-        if (check._1 == 5) {
-          println(s"CHECKING ${check}")
-          server.assertSuperMethod(check._1, check._2, context)
-        }
+        println(s"CHECKING ${check}")
+        server.assertGotoSuperMethod(check._1, check._2, context ++ externalDep)
       }
     }
   }
+
+  // Checked manually it is actually there and operated under artificial ID link "50"
+  val externalDep = Map(
+    50 -> (new Position(60, 6), workspace.toURI.toString + ".metals/readonly/io/circe/Decoder.scala")
+  )
 
   private def strip(code: String): String = {
     code.replaceAll("\\<\\<\\S*\\>\\>", "")

@@ -3,14 +3,13 @@ package scala.meta.internal.implementation
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
-
-import scala.collection.{mutable => m}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.implementation.GoToSuperMethod.GoToSuperMethodParams
 import scala.meta.internal.implementation.GoToSuperMethod.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.CodeLensProvider.emptyLensGoSuperCache
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -106,12 +105,12 @@ class GoToSuperMethod(
       )
       .asScala
       .map {
-        case kind if !kind.cancelled => Some(kind.itemId)
+        case pickResult if !pickResult.cancelled => Some(pickResult.itemId)
         case _ => None
       }
   }
 
-  private def getSuperMethodHierarchySymbols(
+  def getSuperMethodHierarchySymbols(
       params: GoToSuperMethodParams
   ): Option[List[String]] = {
     for {
@@ -162,7 +161,7 @@ class GoToSuperMethod(
       docText,
       role,
       findSymbol,
-      m.Map()
+      emptyLensGoSuperCache()
     )
   }
 

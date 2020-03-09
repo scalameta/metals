@@ -134,9 +134,11 @@ object UserConfiguration {
       "super-method-lenses-enabled",
       "true",
       "true",
-      "Should display hints with link to super methods",
-      """ <ADD DOC HERE TODO>
-        |""".stripMargin
+      "Should display lenses with links to super methods",
+      """|Super method lenses are visible above methods definition that override another methods. Clicking on a lens jumps to super method definition.
+         |Disabled lenses are not calculated for opened documents which might speed up document processing.
+         |
+         |""".stripMargin
     )
   )
 

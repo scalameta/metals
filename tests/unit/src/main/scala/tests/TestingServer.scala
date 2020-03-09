@@ -90,6 +90,7 @@ import scala.util.Properties
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeActionContext
 import scala.meta.internal.implementation.GoToSuperMethod.GoToSuperMethodParams
+import scala.meta.internal.implementation.GoToSuperMethod.formatMethodSymbolForQuickPick
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -196,7 +197,7 @@ final class TestingServer(
     }
   }
 
-  def assertSuperMethod(
+  def assertGotoSuperMethod(
       pos: Int,
       maybeSuperPos: Option[Int],
       context: Map[Int, (l.Position, String)]
@@ -208,6 +209,19 @@ final class TestingServer(
       maybeFoundLocation.map(l => (l.getRange.getStart, l.getUri))
     val maybeExpectedPosition = maybeSuperPos.flatMap(context.get)
     Assertions.assertEquals(maybeFoundPosition, maybeExpectedPosition)
+  }
+
+  def assertSuperMethodHierarchy(
+      uri: String,
+      pos: l.Position,
+      expected: List[String]
+  )(implicit loc: munit.Location): Unit = {
+    val params = GoToSuperMethodParams(uri, pos)
+    val result = server.goToSuperMethod
+      .getSuperMethodHierarchySymbols(params)
+      .map(_.map(formatMethodSymbolForQuickPick))
+      .get
+    Assertions.assertNoDiff(result.toString, expected.toString)
   }
 
   def assertReferenceDefinitionBijection()(

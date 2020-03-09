@@ -1,6 +1,7 @@
 package tests
 import scala.concurrent.Future
 import munit.Location
+import munit.TestOptions
 
 class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
@@ -225,31 +226,24 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       |<< payTheirDebts>>
       |override def payTheirDebts = true
       |}
-      |
-      |object Pak {
-      |  val x = new Joffrey {
-      |<< payTheirDebts>>
-      |override def payTheirDebts = false
-      |  }
-      |}
       |""".stripMargin
   )
 
-  check("go-to-super-method-lenses")(
+  check("go-to-super-method-lenses-anonymous-class")(
     """package a
       |
       |class A { def afx(): Unit = ??? }
       |object X {
       |  val t = new A {
-      |<<afx>>
-      |    override def afx(): Unit = ???
+      |<< afx>>
+      |override def afx(): Unit = ???
       |  }
       |}
       |
     """.stripMargin
   )
 
-  def check(name: String, library: String = "")(
+  def check(name: TestOptions, library: String = "")(
       expected: String
   )(implicit loc: Location): Unit = {
     test(name) {
@@ -303,7 +297,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   private def assertNoCodeLenses(
       relativeFile: String,
       maxRetries: Int = 4
-  )(implicit loc: Location): Future[Unit] = {
+  ): Future[Unit] = {
     server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
       case _: NoSuchElementException => Future.unit
       case e => Future.failed(e)

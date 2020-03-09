@@ -20,6 +20,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 
@@ -55,11 +56,13 @@ final class DebugCodeLensProvider(
   }
 
   private def makeSymbolSearchMethod(
-      global: GlobalSymbolTable
+      global: GlobalSymbolTable,
+      openedTextDocument: TextDocument
   ): String => Option[SymbolInformation] = { si =>
     implementationProvider
       .findSymbolInformation(si)
       .orElse(global.info(si))
+      .orElse(openedTextDocument.symbols.find(_.symbol == si))
   }
 
   private def codeLenses(
@@ -67,11 +70,10 @@ final class DebugCodeLensProvider(
       target: b.BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes
   ): Seq[l.CodeLens] = {
-    println(s"FIND LENSES ${userConfig().superMethodLensesEnabled}")
     semanticdbs.textDocument(path).documentIncludingStale match {
       case Some(textDocument) =>
-        val cache: LensGoSuperCache = m.Map()
-        val search = makeSymbolSearchMethod(makeGlobalClassTable(path))
+        val search =
+          makeSymbolSearchMethod(makeGlobalClassTable(path), textDocument)
         val distance =
           TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
         for {
@@ -93,7 +95,7 @@ final class DebugCodeLensProvider(
                 docWithPath,
                 symbol,
                 occurrence.role,
-                cache,
+                emptyLensGoSuperCache(),
                 search
               )
             main ++ tests ++ gotoSuperMethod
@@ -152,6 +154,8 @@ object CodeLensProvider {
 
   type LensGoSuperCache =
     m.Map[String, List[SymbolWithAsSeenFrom]]
+
+  def emptyLensGoSuperCache(): LensGoSuperCache = m.Map()
 
   private val Empty: CodeLensProvider = (_: AbsolutePath) => Nil
 
