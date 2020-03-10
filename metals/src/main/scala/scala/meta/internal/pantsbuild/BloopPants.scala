@@ -246,7 +246,7 @@ private class BloopPants(
     // NOTE(olafur): generate synthetic projects to improve the file tree view
     // in IntelliJ. Details: https://github.com/olafurpg/intellij-bsp-pants/issues/7
     val syntheticProjects: List[C.Project] = sourceRoots.flatMap { root =>
-      if (isBaseDirectory(root.toNIO)) {
+      if (isBaseDirectory(root.toNIO) || args.export.noRootProject) {
         Nil
       } else {
         val name = root
