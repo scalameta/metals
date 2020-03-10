@@ -605,19 +605,18 @@ private class BloopPants(
   private def cleanStaleBloopFiles(
       generatedProjects: collection.Set[Path]
   ): Unit = {
-    val ls = Files.list(bloopDir)
-    try {
-      ls.filter { path =>
-          Files.isRegularFile(path) &&
-          path.getFileName().toString().endsWith(".json") &&
-          !generatedProjects(path)
-        }
-        .forEach { path =>
-          Files.delete(path)
-        }
-    } finally {
-      ls.close()
-    }
+    val jsonPattern = FileSystems.getDefault().getPathMatcher("glob:**/*.json")
+    AbsolutePath(bloopDir).list
+      .filter { path =>
+        // Re-implementation of https://github.com/scalacenter/bloop/blob/e014760490bf140e2755eb91260bdaf9a75e4476/integrations/sbt-bloop/src/main/scala/bloop/integrations/sbt/SbtBloop.scala#L1064-L1079
+        path.isFile &&
+        jsonPattern.matches(path.toNIO) &&
+        path.filename != "bloop.settings.json" &&
+        !generatedProjects(path.toNIO)
+      }
+      .foreach { path =>
+        Files.deleteIfExists(path.toNIO)
+      }
   }
 
   // See https://github.com/scalatest/scalatest/pull/1739
