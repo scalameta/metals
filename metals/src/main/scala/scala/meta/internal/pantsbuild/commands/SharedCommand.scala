@@ -47,7 +47,7 @@ object SharedCommand {
           }
           1
         case Success(count) =>
-          IntelliJ.writeBsp(export.project)
+          IntelliJ.writeBsp(export.project, export.export.coursierBinary)
           val targets = LogMessages.pluralName("Pants target", count)
           export.app.info(
             s"exported ${targets} to project '${export.project.name}' in $timer"
