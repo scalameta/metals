@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.Messages
 
 class BuildServerConnectionLspSuite
     extends BaseLspSuite("build-server-connection") {
@@ -40,4 +41,40 @@ class BuildServerConnectionLspSuite
     } yield ()
   }
 
+  test("bloop-version-change") {
+    cleanWorkspace()
+    val updatedBloopVersion = "1.4.0-RC1-76-1488031d"
+    for {
+      _ <- server.initialize(
+        s"""|/metals.json
+            |{"a":
+            |  {}
+            |}""".stripMargin
+      )
+      _ = assertEmpty(
+        client.workspaceMessageRequests
+      )
+      _ <- server.didChangeConfiguration(
+        s"""|{
+            |  "bloopVersion": "${scala.meta.internal.metals.BuildInfo.bloopVersion}"
+            |}
+            |""".stripMargin
+      )
+
+      _ = assertEmpty(
+        client.workspaceMessageRequests
+      )
+      _ <- server.didChangeConfiguration(
+        s"""|{
+            |  "bloopVersion": "$updatedBloopVersion"
+            |}
+            |""".stripMargin
+      )
+    } yield {
+      assertNoDiff(
+        client.workspaceMessageRequests,
+        List(Messages.BloopVersionChange.params().getMessage()).mkString("\n")
+      )
+    }
+  }
 }

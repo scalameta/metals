@@ -838,12 +838,13 @@ class MetalsLanguageServer(
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {
             compilers.restartAll()
           }
-          if (userConfig.bloopVersion != old.bloopVersion) {
+          val expectedBloopVersion = userConfig.currentBloopVersion
+          val correctVersionRunning =
+            buildServer.map(_.version).contains(expectedBloopVersion)
+          if (buildServer.nonEmpty && !correctVersionRunning) {
             languageClient
               .showMessageRequest(
-                Messages.BloopVersionChange.params(
-                  userConfig.currentBloopVersion
-                )
+                Messages.BloopVersionChange.params()
               )
               .asScala
               .flatMap {
