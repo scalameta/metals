@@ -841,7 +841,11 @@ class MetalsLanguageServer(
           val expectedBloopVersion = userConfig.currentBloopVersion
           val correctVersionRunning =
             buildServer.map(_.version).contains(expectedBloopVersion)
-          if (buildServer.nonEmpty && !correctVersionRunning) {
+          val allVersionsDefined = buildServer.nonEmpty && userConfig.bloopVersion.nonEmpty
+          val changedToNoVersion = old.bloopVersion.isDefined && userConfig.bloopVersion.isEmpty
+          val versionChanged = allVersionsDefined && !correctVersionRunning
+          val versionRevertedToDefault = changedToNoVersion && !correctVersionRunning
+          if (versionRevertedToDefault || versionChanged) {
             languageClient
               .showMessageRequest(
                 Messages.BloopVersionChange.params()
