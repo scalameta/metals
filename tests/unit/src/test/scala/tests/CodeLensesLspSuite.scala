@@ -50,7 +50,8 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     """|package foo.bar
        |<<test>><<debug test>>
        |object Foo extends utest.TestSuite {
-       |  val tests = utest.Tests {}
+       |<< tests>>
+       |val tests = utest.Tests {}
        |}
        |""".stripMargin
   )
@@ -215,6 +216,8 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
       |trait Cersei extends Tywin {
       |<< payTheirDebts>>
       |override def payTheirDebts = false
+      |<< trueLannister>>
+      |override def trueLannister = false
       |}
       |
       |class Joffrey extends Lannister with Jamie with Cersei {
