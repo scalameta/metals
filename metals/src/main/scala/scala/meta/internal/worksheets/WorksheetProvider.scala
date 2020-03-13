@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.pc.InterruptException
-import scala.util.control.NonFatal
 import java.util.concurrent.Executors
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Timer
@@ -120,10 +119,11 @@ class WorksheetProvider(
       }
     }
     val onError: PartialFunction[Throwable, Option[EvaluatedWorksheet]] = {
-      case NonFatal(e) =>
-        scribe.error(s"worksheet: $path", e)
-        None
       case InterruptException() =>
+        None
+      case e: Throwable =>
+        // NOTE(olafur): we catch all exceptions because of https://github.com/scalameta/metals/issues/1456
+        scribe.error(s"worksheet: $path", e)
         None
     }
     def runEvaluation(): Unit = {
@@ -145,11 +145,10 @@ class WorksheetProvider(
       // infinite loops.
       val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
         override def run(): Unit = {
-          try result.complete(Some(evaluateWorksheet(path, token)))
-          catch {
-            case e @ (NonFatal(_) | InterruptException()) =>
-              result.completeExceptionally(e)
-          }
+          result.complete(
+            try Some(evaluateWorksheet(path, token))
+            catch onError
+          )
         }
       }
       interruptThreadOnCancel(path, result, thread)

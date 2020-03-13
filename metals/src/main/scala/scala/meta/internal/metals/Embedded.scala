@@ -99,7 +99,7 @@ object Embedded {
         Repository.central(),
         Repository.ivy2Local(),
         MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/releases/"
+          "https://oss.sonatype.org/content/repositories/public/"
         ),
         MavenRepository.of(
           "https://oss.sonatype.org/content/repositories/snapshots/"

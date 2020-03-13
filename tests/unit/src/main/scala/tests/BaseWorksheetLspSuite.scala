@@ -383,4 +383,48 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
     } yield ()
   }
 
+  test("fatal-exception") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalaVersion": "$scalaVersion"}}
+           |/a/src/main/scala/StackOverflowError.worksheet.sc
+           |throw new StackOverflowError()
+           |/a/src/main/scala/NoSuchMethodError.worksheet.sc
+           |throw new NoSuchMethodError()
+           |/a/src/main/scala/IncompatibleClassChangeError.worksheet.sc
+           |throw new IncompatibleClassChangeError()
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/StackOverflowError.worksheet.sc")
+      _ <- server.didOpen(
+        "a/src/main/scala/IncompatibleClassChangeError.worksheet.sc"
+      )
+      _ <- server.didOpen("a/src/main/scala/NoSuchMethodError.worksheet.sc")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/IncompatibleClassChangeError.worksheet.sc:1:1: error: java.lang.IncompatibleClassChangeError
+           |	at repl.Session$App.<init>(IncompatibleClassChangeError.worksheet.sc:8)
+           |	at repl.Session$.app(IncompatibleClassChangeError.worksheet.sc:3)
+           |
+           |throw new IncompatibleClassChangeError()
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |a/src/main/scala/NoSuchMethodError.worksheet.sc:1:1: error: java.lang.NoSuchMethodError
+           |	at repl.Session$App.<init>(NoSuchMethodError.worksheet.sc:8)
+           |	at repl.Session$.app(NoSuchMethodError.worksheet.sc:3)
+           |
+           |throw new NoSuchMethodError()
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |a/src/main/scala/StackOverflowError.worksheet.sc:1:1: error: java.lang.StackOverflowError
+           |	at repl.Session$App.<init>(StackOverflowError.worksheet.sc:8)
+           |	at repl.Session$.app(StackOverflowError.worksheet.sc:3)
+           |
+           |throw new StackOverflowError()
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
 }
