@@ -11,6 +11,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
@@ -21,6 +22,7 @@ import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -46,16 +48,20 @@ import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
+
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
+import com.google.gson.JsonNull
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.implementation.GoToSuperMethod
 import scala.meta.internal.implementation.SuperMethodProvider
-import com.google.gson.JsonNull
+import scala.meta.internal.metals.codelenses.RunTestLensesProvider
+import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider
+
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -164,7 +170,6 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var codeLensProvider: CodeLensProvider = _
-  private var superMethodProvider: SuperMethodProvider = _
   var goToSuperMethod: GoToSuperMethod = _
   private var codeActionProvider: CodeActionProvider = _
   private var definitionProvider: DefinitionProvider = _
@@ -378,25 +383,26 @@ class MetalsLanguageServer(
       buffers,
       definitionProvider
     )
-    superMethodProvider = new SuperMethodProvider()
 
     goToSuperMethod = new GoToSuperMethod(
       languageClient,
       definitionProvider,
       implementationProvider,
-      superMethodProvider,
       buildTargets
     )
 
-    codeLensProvider = CodeLensProvider(
-      buildTargetClasses,
+    val runTestLensesProvider =
+      new RunTestLensesProvider(buildTargetClasses, buffers, buildTargets)
+    val goSuperLensesProvider = new SuperMethodLensesProvider(
+      implementationProvider,
       buffers,
       buildTargets,
-      semanticdbs,
-      config,
       () => userConfig,
-      superMethodProvider,
-      implementationProvider,
+      config
+    )
+    codeLensProvider = CodeLensProvider(
+      List(runTestLensesProvider, goSuperLensesProvider),
+      semanticdbs,
       clientExperimentalCapabilities
     )
     renameProvider = new RenameProvider(
@@ -1892,11 +1898,11 @@ class MetalsLanguageServer(
    * https://github.com/scalameta/metals/issues/755
    */
   def definitionOrReferences(
-      position: TextDocumentPositionParams,
+      positionParams: TextDocumentPositionParams,
       token: CancelToken = EmptyCancelToken,
       definitionOnly: Boolean = false
   ): Future[DefinitionResult] = {
-    val source = position.getTextDocument.getUri.toAbsolutePath
+    val source = positionParams.getTextDocument.getUri.toAbsolutePath
     if (source.isScalaFilename) {
       val semanticDBDoc =
         semanticdbs.textDocument(source).documentIncludingStale
@@ -1904,7 +1910,7 @@ class MetalsLanguageServer(
         doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
           source,
-          position,
+          positionParams.getPosition,
           doc
         )
         occ <- positionOccurrence.occurrence
@@ -1913,14 +1919,14 @@ class MetalsLanguageServer(
           if (occ.role.isDefinition && !definitionOnly) {
             val referenceContext = new ReferenceContext(false)
             val refParams = new ReferenceParams(referenceContext)
-            refParams.setTextDocument(position.getTextDocument())
-            refParams.setPosition(position.getPosition())
+            refParams.setTextDocument(positionParams.getTextDocument())
+            refParams.setPosition(positionParams.getPosition())
             val result = referencesResult(refParams)
             if (result.locations.isEmpty) {
               // Fallback again to the original behavior that returns
               // the definition location itself if no reference locations found,
               // for avoiding the confusing messages like "No definition found ..."
-              definitionResult(position, token)
+              definitionResult(positionParams, token)
             } else {
               Future.successful(
                 DefinitionResult(
@@ -1932,7 +1938,7 @@ class MetalsLanguageServer(
               )
             }
           } else {
-            definitionResult(position, token)
+            definitionResult(positionParams, token)
           }
         case None =>
           if (semanticDBDoc.isEmpty) {
@@ -1940,7 +1946,7 @@ class MetalsLanguageServer(
           }
           // Even if it failed to retrieve the symbol occurrence from semanticdb,
           // try to find its definitions from presentation compiler.
-          definitionResult(position, token)
+          definitionResult(positionParams, token)
       }
     } else {
       // Ignore non-scala files.

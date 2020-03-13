@@ -4,7 +4,7 @@ import org.eclipse.lsp4j.Position
 
 import scala.concurrent.Future
 
-class SuperHierarchyLspSuite extends BaseLspSuite("supermethodhierarchy") {
+class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
 
   test("simple") {
     val code =

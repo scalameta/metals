@@ -124,7 +124,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
         |trait Y3 extends X1[A] { override def <<6->2>>fn(p: A): String = s"Y3 -> ${super.fn(p)}" }
         |
         |trait Z2 extends X2[String] { override def <<7->3>>fn(p: A): String = s"Z2 -> ${super.fn(p)}" }
-        |trait Z3 extends X3 { override def <<8->3>>fn(p: A1): String = s"Z3 -> ${super.fn(p)}" }
+        |trait Z3 extends X3 { override def <<8->4>>fn(p: A1): String = s"Z3 -> ${super.fn(p)}" }
         |
         |""".stripMargin
     checkSuperMethod(code)
@@ -237,7 +237,6 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       val (contextA, assertsA) = parseWithUri(codeA, pathA)
       val (contextB, assertsB) = parseWithUri(codeB, pathB)
       for (check <- assertsA ++ assertsB) {
-        println(s"CHECKING ${check}")
         server.assertGotoSuperMethod(check._1, check._2, contextA ++ contextB)
       }
     }
@@ -265,18 +264,18 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       _ = assertNoDiagnostics()
     } yield {
       val path = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
+
+      // Checked manually it is actually there and operated under artificial ID link "50"
+      val externalDep = Map(
+        50 -> (new Position(60, 6), workspace.toURI.toString + ".metals/readonly/io/circe/Decoder.scala")
+      )
+
       val (context, assertions) = parseWithUri(code, path)
       for (check <- assertions) {
-        println(s"CHECKING ${check}")
         server.assertGotoSuperMethod(check._1, check._2, context ++ externalDep)
       }
     }
   }
-
-  // Checked manually it is actually there and operated under artificial ID link "50"
-  val externalDep = Map(
-    50 -> (new Position(60, 6), workspace.toURI.toString + ".metals/readonly/io/circe/Decoder.scala")
-  )
 
   private def strip(code: String): String = {
     code.replaceAll("\\<\\<\\S*\\>\\>", "")

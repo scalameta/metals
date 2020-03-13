@@ -90,7 +90,7 @@ final class ImplementationProvider(
       (symbolOccurrence, currentDocument) <- definitionProvider
         .symbolOccurrence(
           source,
-          params
+          params.getPosition
         )
         .toIterable
     } yield {

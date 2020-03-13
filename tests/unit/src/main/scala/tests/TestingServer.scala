@@ -202,9 +202,13 @@ final class TestingServer(
       maybeSuperPos: Option[Int],
       context: Map[Int, (l.Position, String)]
   )(implicit loc: munit.Location): Unit = {
-    val command = GoToSuperMethodParams(context(pos)._2, context(pos)._1)
+    val (position, document) = context(pos)
+    val command = GoToSuperMethodParams(document, position)
     val maybeFoundLocation =
+//      executeCommand(ServerCommands.GotoSuperMethod, params)
       server.goToSuperMethod.getGoToSuperMethodLocation(command)
+
+//    client.clientCommands
     val maybeFoundPosition =
       maybeFoundLocation.map(l => (l.getRange.getStart, l.getUri))
     val maybeExpectedPosition = maybeSuperPos.flatMap(context.get)

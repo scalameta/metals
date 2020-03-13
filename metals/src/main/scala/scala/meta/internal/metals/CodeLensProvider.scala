@@ -1,25 +1,10 @@
 package scala.meta.internal.metals
 
-import java.util.Collections._
-import ch.epfl.scala.{bsp4j => b}
-import com.google.gson.JsonElement
 import org.eclipse.{lsp4j => l}
-import scala.collection.{mutable => m}
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.implementation.GlobalClassTable
-import scala.meta.internal.implementation.ImplementationProvider
-import scala.meta.internal.implementation.SuperMethodProvider
-import scala.meta.internal.implementation.SuperMethodProvider.SymbolWithAsSeenFrom
 import scala.meta.internal.implementation.TextDocumentWithPath
-import scala.meta.internal.metals.ClientCommands.StartDebugSession
-import scala.meta.internal.metals.ClientCommands.StartRunSession
-import scala.meta.internal.metals.CodeLensProvider._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codelenses.CodeLenses
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 
 trait CodeLensProvider {
@@ -27,207 +12,36 @@ trait CodeLensProvider {
 }
 
 final class DebugCodeLensProvider(
-    buildTargetClasses: BuildTargetClasses,
-    buffers: Buffers,
-    buildTargets: BuildTargets,
-    config: MetalsServerConfig,
-    userConfig: () => UserConfiguration,
-    semanticdbs: Semanticdbs,
-    superMethodProvider: SuperMethodProvider,
-    implementationProvider: ImplementationProvider
+    codeLensProviders: List[CodeLenses],
+    semanticdbs: Semanticdbs
 ) extends CodeLensProvider {
-
   // code lenses will be refreshed after compilation or when workspace gets indexed
   def findLenses(path: AbsolutePath): Seq[l.CodeLens] = {
-    val lenses = buildTargets
-      .inverseSources(path)
-      .map { buildTarget =>
-        val classes = buildTargetClasses.classesOf(buildTarget)
-        codeLenses(path, buildTarget, classes)
+    semanticdbs
+      .textDocument(path)
+      .documentIncludingStale
+      .map { textDocument =>
+        val doc = TextDocumentWithPath(textDocument, path)
+        codeLensProviders.filter(_.isEnabled).flatMap(_.codeLenses(doc))
       }
-
-    lenses.getOrElse(Seq.empty)
-  }
-
-  private def makeGlobalClassTable(path: AbsolutePath): GlobalSymbolTable = {
-    new GlobalClassTable(buildTargets).globalSymbolTableFor(path).get
-  }
-
-  private def makeSymbolSearchMethod(
-      global: GlobalSymbolTable,
-      openedTextDocument: TextDocument
-  ): String => Option[SymbolInformation] = { si =>
-    implementationProvider
-      .findSymbolInformation(si)
-      .orElse(global.info(si))
-      .orElse(openedTextDocument.symbols.find(_.symbol == si))
-  }
-
-  private def codeLenses(
-      path: AbsolutePath,
-      target: b.BuildTargetIdentifier,
-      classes: BuildTargetClasses.Classes
-  ): Seq[l.CodeLens] = {
-    semanticdbs.textDocument(path).documentIncludingStale match {
-      case Some(textDocument) =>
-        val search =
-          makeSymbolSearchMethod(makeGlobalClassTable(path), textDocument)
-        val distance =
-          TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
-        for {
-          occurrence <- textDocument.occurrences
-          if occurrence.role.isDefinition
-          symbol = occurrence.symbol
-          commands = {
-            val main = classes.mainClasses
-              .get(symbol)
-              .map(mainCommand(target, _))
-              .getOrElse(Nil)
-            val tests = classes.testClasses
-              .get(symbol)
-              .map(testCommand(target, _))
-              .getOrElse(Nil)
-            val docWithPath = TextDocumentWithPath(textDocument, path)
-            val gotoSuperMethod =
-              createSuperMethodCommand(
-                docWithPath,
-                symbol,
-                occurrence.role,
-                emptyLensGoSuperCache(),
-                search
-              )
-            main ++ tests ++ gotoSuperMethod
-          }
-          if commands.nonEmpty
-          range <- occurrence.range
-            .flatMap(r => distance.toRevised(r.toLSP))
-            .toList
-          command <- commands
-        } yield new l.CodeLens(range, command, null)
-      case _ =>
-        Seq.empty
-    }
-  }
-
-  private def createSuperMethodCommand(
-      docWithPath: TextDocumentWithPath,
-      symbol: String,
-      role: SymbolOccurrence.Role,
-      cache: LensGoSuperCache,
-      findSymbol: String => Option[SymbolInformation]
-  ): Option[l.Command] = {
-    if (userConfig().superMethodLensesEnabled) {
-      for {
-        symbolInformation <- findSymbol(symbol)
-        gotoParentSymbol <- superMethodProvider.findSuperForMethodOrField(
-          symbolInformation,
-          docWithPath,
-          role,
-          findSymbol,
-          cache
-        )
-      } yield convertToSuperMethodCommand(
-        gotoParentSymbol,
-        symbolInformation.displayName
-      )
-    } else {
-      None
-    }
-  }
-
-  private def convertToSuperMethodCommand(
-      symbol: String,
-      name: String
-  ): l.Command = {
-    new l.Command(
-      s"${config.icons.findsuper} ${name}",
-      ServerCommands.GotoLocation.id,
-      singletonList(symbol)
-    )
+      .getOrElse(Seq.empty)
   }
 }
 
 object CodeLensProvider {
-  import scala.meta.internal.metals.JsonParser._
-
-  type LensGoSuperCache =
-    m.Map[String, List[SymbolWithAsSeenFrom]]
-
-  def emptyLensGoSuperCache(): LensGoSuperCache = m.Map()
-
   private val Empty: CodeLensProvider = (_: AbsolutePath) => Nil
 
   def apply(
-      buildTargetClasses: BuildTargetClasses,
-      buffers: Buffers,
-      buildTargets: BuildTargets,
+      codeLensProviders: List[CodeLenses],
       semanticdbs: Semanticdbs,
-      config: MetalsServerConfig,
-      userConfig: () => UserConfiguration,
-      superMethodProvider: SuperMethodProvider,
-      implementationProvider: ImplementationProvider,
       capabilities: ClientExperimentalCapabilities
   )(implicit ec: ExecutionContext): CodeLensProvider = {
     if (!capabilities.debuggingProvider) Empty
     else {
       new DebugCodeLensProvider(
-        buildTargetClasses,
-        buffers,
-        buildTargets,
-        config,
-        userConfig,
-        semanticdbs,
-        superMethodProvider,
-        implementationProvider
+        codeLensProviders,
+        semanticdbs
       )
     }
-  }
-
-  def testCommand(
-      target: b.BuildTargetIdentifier,
-      className: String
-  ): List[l.Command] = {
-    val params = {
-      val dataKind = b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
-      val data = singletonList(className).toJson
-      sessionParams(target, dataKind, data)
-    }
-
-    List(
-      command("test", StartRunSession, params),
-      command("debug test", StartDebugSession, params)
-    )
-  }
-
-  def mainCommand(
-      target: b.BuildTargetIdentifier,
-      main: b.ScalaMainClass
-  ): List[l.Command] = {
-    val params = {
-      val dataKind = b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
-      val data = main.toJson
-      sessionParams(target, dataKind, data)
-    }
-
-    List(
-      command("run", StartRunSession, params),
-      command("debug", StartDebugSession, params)
-    )
-  }
-
-  private def sessionParams(
-      target: b.BuildTargetIdentifier,
-      dataKind: String,
-      data: JsonElement
-  ): b.DebugSessionParams = {
-    new b.DebugSessionParams(List(target).asJava, dataKind, data)
-  }
-
-  private def command(
-      name: String,
-      command: Command,
-      params: b.DebugSessionParams
-  ): l.Command = {
-    new l.Command(name, command.id, singletonList(params))
   }
 }

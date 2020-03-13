@@ -9,13 +9,13 @@ import scala.meta.internal.implementation.GoToSuperMethod.GoToSuperMethodParams
 import scala.meta.internal.implementation.GoToSuperMethod.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.CodeLensProvider.emptyLensGoSuperCache
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsQuickPickItem
 import scala.meta.internal.metals.MetalsQuickPickParams
+import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider.emptyLensGoSuperCache
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
@@ -25,7 +25,6 @@ class GoToSuperMethod(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
     implementationProvider: ImplementationProvider,
-    superMethodProvider: SuperMethodProvider,
     buildTargets: BuildTargets
 )(
     implicit ec: ExecutionContext
@@ -122,7 +121,7 @@ class GoToSuperMethod(
       findSymbol = makeFindSymbolMethod(textDocument, filePath)
       symbolInformation <- findSymbol(symbolOcc.symbol)
       docText = TextDocumentWithPath(textDocument, filePath)
-      hierarchy <- superMethodProvider.getSuperMethodHierarchy(
+      hierarchy <- SuperMethodProvider.getSuperMethodHierarchy(
         symbolInformation,
         docText,
         symbolOcc.role,
@@ -156,7 +155,7 @@ class GoToSuperMethod(
       docText: TextDocumentWithPath,
       findSymbol: String => Option[SymbolInformation]
   ): Option[String] = {
-    superMethodProvider.findSuperForMethodOrField(
+    SuperMethodProvider.findSuperForMethodOrField(
       symbolInformation,
       docText,
       role,
@@ -193,6 +192,13 @@ object GoToSuperMethod {
 
   final case class GoToSuperMethodParams(document: String, position: Position)
 
+  /**
+   * Formats method symbol to be nicely displayed in QuickPick for user.
+   * Tests visualizing how this method works are in class SuperMethodSuite.
+   *
+   * @param symbol  Symbol string from semanticdb which represents method.
+   * @return
+   */
   def formatMethodSymbolForQuickPick(symbol: String): String = {
     val replaced = symbol
       .replace("/", ".")

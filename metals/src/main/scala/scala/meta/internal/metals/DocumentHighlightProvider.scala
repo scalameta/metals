@@ -28,7 +28,7 @@ final class DocumentHighlightProvider(
       doc <- result.documentIncludingStale.toList
       positionOccurrence = definitionProvider.positionOccurrence(
         source,
-        params,
+        params.getPosition,
         doc
       )
       occ <- positionOccurrence.occurrence.toList
