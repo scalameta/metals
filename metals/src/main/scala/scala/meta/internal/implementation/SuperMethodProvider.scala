@@ -230,7 +230,7 @@ object SuperMethodProvider {
   ): Boolean =
     symbolRole.isDefinition && (symbolInformation.isMethod || symbolInformation.isField)
 
-  final val stopSymbols = Set(
+  final val stopSymbols: Set[String] = Set(
     "scala/AnyRef#",
     "scala/Serializable#",
     "java/io/Serializable#",

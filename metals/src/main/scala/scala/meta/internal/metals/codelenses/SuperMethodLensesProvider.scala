@@ -1,37 +1,27 @@
 package scala.meta.internal.metals.codelenses
 
 import java.util.Collections.singletonList
-
 import org.eclipse.{lsp4j => l}
-
 import scala.collection.{mutable => m}
-import scala.meta.internal.implementation.{
-  GlobalClassTable,
-  ImplementationProvider,
-  SuperMethodProvider,
-  SymbolWithAsSeenFrom,
-  TextDocumentWithPath
-}
-import scala.meta.internal.metals.{
-  Buffers,
-  BuildTargets,
-  MetalsServerConfig,
-  ServerCommands,
-  TokenEditDistance,
-  UserConfiguration
-}
-import scala.meta.internal.semanticdb.{
-  SymbolInformation,
-  SymbolOccurrence,
-  TextDocument
-}
+import scala.meta.internal.implementation.GlobalClassTable
+import scala.meta.internal.implementation.ImplementationProvider
+import scala.meta.internal.implementation.SuperMethodProvider
+import scala.meta.internal.implementation.SymbolWithAsSeenFrom
+import scala.meta.internal.implementation.TextDocumentWithPath
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.TokenEditDistance
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider.{
-  LensGoSuperCache,
-  emptyLensGoSuperCache
-}
+import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider.LensGoSuperCache
+import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider.emptyLensGoSuperCache
 
 final class SuperMethodLensesProvider(
     implementationProvider: ImplementationProvider,

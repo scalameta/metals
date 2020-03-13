@@ -19,7 +19,6 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.TextDocumentIdentifier
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
