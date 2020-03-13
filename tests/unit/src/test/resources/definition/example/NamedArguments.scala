@@ -15,8 +15,7 @@ object NamedArguments/*NamedArguments.scala*/ {
       )
   val user2/*NamedArguments.scala*/: User/*NamedArguments.scala*/ =
     User/*NamedArguments.scala*/(
-      // FIXME: https://github.com/scalameta/scalameta/issues/1787
-      name/*<no symbol>*/ = susan/*NamedArguments.scala*/
+      name/*NamedArguments.scala fallback to example.User#name.*/ = susan/*NamedArguments.scala*/
     ).copy/*NamedArguments.scala fallback to example.User#*/(
       name/*NamedArguments.scala fallback to example.User#name.*/ = susan/*NamedArguments.scala*/
     )
