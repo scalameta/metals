@@ -241,6 +241,8 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
           ImportBuildChanges.yes
         } else if (isSameMessage(ImportBuild.params)) {
           ImportBuild.yes
+        } else if (BloopVersionChange.params() == params) {
+          BloopVersionChange.notNow
         } else if (CheckDoctor.isDoctor(params)) {
           CheckDoctor.moreInformation
         } else if (SelectBspServer.isSelectBspServer(params)) {

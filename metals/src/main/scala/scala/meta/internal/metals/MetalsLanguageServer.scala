@@ -838,12 +838,17 @@ class MetalsLanguageServer(
           if (userConfig.symbolPrefixes != old.symbolPrefixes) {
             compilers.restartAll()
           }
-          if (userConfig.bloopVersion != old.bloopVersion) {
+          val expectedBloopVersion = userConfig.currentBloopVersion
+          val correctVersionRunning =
+            buildServer.map(_.version).contains(expectedBloopVersion)
+          val allVersionsDefined = buildServer.nonEmpty && userConfig.bloopVersion.nonEmpty
+          val changedToNoVersion = old.bloopVersion.isDefined && userConfig.bloopVersion.isEmpty
+          val versionChanged = allVersionsDefined && !correctVersionRunning
+          val versionRevertedToDefault = changedToNoVersion && !correctVersionRunning
+          if (versionRevertedToDefault || versionChanged) {
             languageClient
               .showMessageRequest(
-                Messages.BloopVersionChange.params(
-                  userConfig.currentBloopVersion
-                )
+                Messages.BloopVersionChange.params()
               )
               .asScala
               .flatMap {

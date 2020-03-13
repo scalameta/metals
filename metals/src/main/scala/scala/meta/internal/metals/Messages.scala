@@ -165,7 +165,7 @@ class Messages(icons: Icons) {
       new MessageActionItem("Restart Bloop")
     def notNow: MessageActionItem =
       new MessageActionItem("Not now")
-    def params(version: String): ShowMessageRequestParams = {
+    def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
         s"Bloop version was updated, do you want to restart the running Bloop server?"
