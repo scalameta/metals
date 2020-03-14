@@ -243,25 +243,9 @@ private class BloopPants(
     )
     val isBaseDirectory =
       projects.iterator.filter(_.sources.nonEmpty).map(_.directory).toSet
-    // NOTE(olafur): generate synthetic projects to improve the file tree view
-    // in IntelliJ. Details: https://github.com/olafurpg/intellij-bsp-pants/issues/7
-    val syntheticProjects: List[C.Project] = sourceRoots.flatMap { root =>
-      if (isBaseDirectory(root.toNIO) || args.export.noRootProject) {
-        Nil
-      } else {
-        val name = root
-          .toRelative(AbsolutePath(workspace))
-          .toURI(isDirectory = false)
-          .toString()
-        // NOTE(olafur): cannot be `name + "-root"` since that conflicts with the
-        // IntelliJ-generated root project.
-        List(toEmptyBloopProject(name + "-project-root", root.toNIO))
-      }
-    }
     val generatedProjects = new mutable.LinkedHashSet[Path]
-    val allProjects = syntheticProjects ::: projects
-    val byName = allProjects.map(p => p.name -> p).toMap
-    allProjects.foreach { project =>
+    val byName = projects.map(p => p.name -> p).toMap
+    projects.foreach { project =>
       // NOTE(olafur): we probably want to generate projects with empty
       // sources/classpath and single dependency on the parent.
       if (!export.cycles.parents.contains(project.name)) {
