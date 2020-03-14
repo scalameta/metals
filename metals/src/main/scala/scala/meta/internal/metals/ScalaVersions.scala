@@ -17,7 +17,7 @@ object ScalaVersions {
   def isDeprecatedScalaVersion(version: String): Boolean =
     _isDeprecatedScalaVersion(dropVendorSuffix(version))
   def isSupportedScalaBinaryVersion(scalaVersion: String): Boolean =
-    Set("2.13", "2.12", "2.11").exists { binaryVersion =>
+    BuildInfo.supportedScalaBinaryVersions.exists { binaryVersion =>
       scalaVersion.startsWith(binaryVersion)
     }
 
@@ -28,4 +28,7 @@ object ScalaVersions {
 
   def isCurrentScalaCompilerVersion(version: String): Boolean =
     ScalaVersions.dropVendorSuffix(version) == mtags.BuildInfo.scalaCompilerVersion
+
+  def scalaBinaryVersionFromFullVersion(scalaVersion: String): String =
+    scalaVersion.split('.').take(2).mkString(".")
 }

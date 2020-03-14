@@ -52,10 +52,7 @@ final class FormattingProvider(
     )
   }
 
-  private var scalafmt = Scalafmt
-    .create(this.getClass.getClassLoader)
-    .withReporter(EmptyScalafmtReporter)
-    .withDefaultVersion(BuildInfo.scalafmtVersion)
+  private var scalafmt = FormattingProvider.newScalafmt()
   private val reporterPromise =
     new AtomicReference[Option[Promise[Boolean]]](None)
   private val cancelToken = new AtomicReference[Option[CancelChecker]](None)
@@ -263,4 +260,12 @@ final class FormattingProvider(
       new PrintWriter(downloadOutputStream())
     }
   }
+}
+
+object FormattingProvider {
+  def newScalafmt(): Scalafmt =
+    Scalafmt
+      .create(this.getClass.getClassLoader)
+      .withReporter(EmptyScalafmtReporter)
+      .withDefaultVersion(BuildInfo.scalafmtVersion)
 }

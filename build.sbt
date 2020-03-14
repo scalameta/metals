@@ -160,6 +160,12 @@ lazy val V = new {
   val munit = "0.4.3"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
+  def supportedScalaBinaryVersions =
+    supportedScalaVersions.iterator
+      .map(CrossVersion.partialVersion)
+      .collect { case Some((a, b)) => s"$a.$b" }
+      .toList
+      .distinct
   def supportedScalaVersions =
     nonDeprecatedScalaVersions ++ deprecatedScalaVersions
   def deprecatedScalaVersions = Seq("2.12.8", "2.12.9", scala211)
@@ -309,6 +315,7 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb,
       "scalafmtVersion" -> V.scalafmt,
       "supportedScalaVersions" -> V.supportedScalaVersions,
+      "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
       "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
