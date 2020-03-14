@@ -109,16 +109,9 @@ object Embedded {
       scalaVersion: String,
       scalaBinaryVersion: String
   ): URLClassLoader = {
-    val mdoc = Dependency.of(
-      "org.scalameta",
-      s"mdoc_${scalaBinaryVersion}",
-      BuildInfo.mdocVersion
-    )
-    val settings = fetchSettings(mdoc, scalaVersion)
-    val jars = fetchSettings(mdoc, scalaVersion).fetch()
-    val parent =
-      new MdocClassLoader(this.getClass.getClassLoader)
-    val urls = jars.iterator.asScala.map(_.toURI().toURL()).toArray
+    val jars = downloadMdoc(scalaVersion, scalaBinaryVersion)
+    val parent = new MdocClassLoader(this.getClass.getClassLoader)
+    val urls = jars.iterator.map(_.toUri().toURL()).toArray
     new URLClassLoader(urls, parent)
   }
 
@@ -150,6 +143,15 @@ object Embedded {
     BuildInfo.metalsVersion
   )
 
+  private def mdocDependency(
+      scalaVersion: String,
+      scalaBinaryVersion: String
+  ): Dependency = Dependency.of(
+    "org.scalameta",
+    s"mdoc_${scalaBinaryVersion}",
+    BuildInfo.mdocVersion
+  )
+
   private def semanticdbScalacDependency(scalaVersion: String): Dependency =
     Dependency.of(
       "org.scalameta",
@@ -171,6 +173,14 @@ object Embedded {
     downloadDependency(semanticdbScalacDependency(scalaVersion), scalaVersion)
   def downloadMtags(scalaVersion: String): List[Path] =
     downloadDependency(mtagsDependency(scalaVersion), scalaVersion)
+  def downloadMdoc(
+      scalaVersion: String,
+      scalaBinaryVersion: String
+  ): List[Path] =
+    downloadDependency(
+      mdocDependency(scalaVersion, scalaBinaryVersion),
+      scalaVersion
+    )
 
   def newPresentationCompilerClassLoader(
       info: ScalaBuildTarget,

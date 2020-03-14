@@ -34,12 +34,10 @@ object DownloadDependencies {
   def downloadMdoc(): Unit = {
     scribe.info("Downloading mdoc")
     BuildInfo.supportedScalaVersions.foreach { scalaVersion =>
-      Embedded
-        .newMdocClassLoader(
-          scalaVersion,
-          ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
-        )
-        .close()
+      Embedded.downloadMdoc(
+        scalaVersion,
+        ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
+      )
     }
   }
 
