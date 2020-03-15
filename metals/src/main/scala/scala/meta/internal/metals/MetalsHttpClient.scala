@@ -117,9 +117,7 @@ final class MetalsHttpClient(
       1,
       TimeUnit.SECONDS
     )
-    fromEditorCompletable.asScala.onComplete { _ =>
-      triggerReload()
-    }
+    fromEditorCompletable.asScala.onComplete { _ => triggerReload() }
     fromEditorCompletable
   }
 
@@ -169,9 +167,7 @@ final class MetalsHttpClient(
       MessageRequest(nextId(), params, fromEditorCompletable)
     )
     triggerReload()
-    fromEditorCompletable.asScala.onComplete { _ =>
-      triggerReload()
-    }
+    fromEditorCompletable.asScala.onComplete { _ => triggerReload() }
     fromEditorCompletable
   }
 
@@ -181,9 +177,7 @@ final class MetalsHttpClient(
   private val logs = new ConcurrentLinkedDeque[MessageParams]()
   private def logsFormatted(html: HtmlBuilder): Unit = {
     while (logs.size() > 20) logs.pollLast()
-    logs.forEach { params =>
-      html.append(params)
-    }
+    logs.forEach { params => html.append(params) }
   }
   override def logMessage(message: MessageParams): Unit = {
     logs.addFirst(message)

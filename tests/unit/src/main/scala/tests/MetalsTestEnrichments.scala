@@ -59,9 +59,7 @@ object MetalsTestEnrichments {
       }
     }
     def indexLibraries(libraries: Seq[Library]): Unit = {
-      JdkSources(None).foreach { zip =>
-        wsp.index.addSourceJar(zip)
-      }
+      JdkSources(None).foreach { zip => wsp.index.addSourceJar(zip) }
       libraries.foreach(
         _.sources.entries.foreach(s => wsp.index.addSourceJar(s))
       )

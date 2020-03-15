@@ -377,9 +377,7 @@ class MetalsGlobal(
   }
 
   override def locateTree(pos: Position): Tree = {
-    onUnitOf(pos.source) { unit =>
-      new MetalsLocator(pos).locateIn(unit.body)
-    }
+    onUnitOf(pos.source) { unit => new MetalsLocator(pos).locateIn(unit.body) }
   }
 
   def CURSOR = "_CURSOR_"

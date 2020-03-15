@@ -20,7 +20,8 @@ case class InheritanceContext(
   ): InheritanceContext = {
     val newInheritance = mutable.Map(inheritance.toSeq: _*)
     for { (symbol, locations) <- classpathInheritance } {
-      val newLocations = newInheritance.getOrElse(symbol, Set.empty) ++ locations
+      val newLocations =
+        newInheritance.getOrElse(symbol, Set.empty) ++ locations
       newInheritance += symbol -> newLocations
     }
     this.copy(

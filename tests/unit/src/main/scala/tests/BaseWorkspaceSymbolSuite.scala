@@ -27,9 +27,7 @@ abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
         if (result.length > 100) s"${result.length} results"
         else {
           result
-            .map { i =>
-              s"${i.getContainerName}${i.getName} ${i.getKind}"
-            }
+            .map { i => s"${i.getContainerName}${i.getName} ${i.getKind}" }
             .sorted
             .mkString("\n")
         }

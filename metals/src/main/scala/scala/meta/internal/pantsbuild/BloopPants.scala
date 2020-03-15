@@ -598,9 +598,7 @@ private class BloopPants(
         path.filename != "bloop.settings.json" &&
         !generatedProjects(path.toNIO)
       }
-      .foreach { path =>
-        Files.deleteIfExists(path.toNIO)
-      }
+      .foreach { path => Files.deleteIfExists(path.toNIO) }
   }
 
   // See https://github.com/scalatest/scalatest/pull/1739

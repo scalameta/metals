@@ -135,8 +135,8 @@ class MetalsLanguageServer(
     )
   )
   private val indexingPromise = Promise[Unit]()
-  val parseTrees = new BatchedFunction[AbsolutePath, Unit](
-    paths => CancelableFuture(paths.distinct.foreach(trees.didChange))
+  val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
+    CancelableFuture(paths.distinct.foreach(trees.didChange))
   )
   private val onBuildChanged =
     BatchedFunction.fromFuture[AbsolutePath, BuildChange](
@@ -739,7 +739,8 @@ class MetalsLanguageServer(
                 target,
                 compilations.previouslyCompiled.toList
               )
-          val needsCompile = isAffectedByCurrentCompilation || isAffectedByLastCompilation
+          val needsCompile =
+            isAffectedByCurrentCompilation || isAffectedByLastCompilation
           if (needsCompile) {
             compilations
               .compileFiles(List(path))
@@ -828,9 +829,7 @@ class MetalsLanguageServer(
       val json = params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
       UserConfiguration.fromJson(json) match {
         case Left(errors) =>
-          errors.foreach { error =>
-            scribe.error(s"config error: $error")
-          }
+          errors.foreach { error => scribe.error(s"config error: $error") }
           Future.successful(())
         case Right(value) =>
           val old = userConfig
@@ -841,10 +840,13 @@ class MetalsLanguageServer(
           val expectedBloopVersion = userConfig.currentBloopVersion
           val correctVersionRunning =
             buildServer.map(_.version).contains(expectedBloopVersion)
-          val allVersionsDefined = buildServer.nonEmpty && userConfig.bloopVersion.nonEmpty
-          val changedToNoVersion = old.bloopVersion.isDefined && userConfig.bloopVersion.isEmpty
+          val allVersionsDefined =
+            buildServer.nonEmpty && userConfig.bloopVersion.nonEmpty
+          val changedToNoVersion =
+            old.bloopVersion.isDefined && userConfig.bloopVersion.isEmpty
           val versionChanged = allVersionsDefined && !correctVersionRunning
-          val versionRevertedToDefault = changedToNoVersion && !correctVersionRunning
+          val versionRevertedToDefault =
+            changedToNoVersion && !correctVersionRunning
           if (versionRevertedToDefault || versionChanged) {
             languageClient
               .showMessageRequest(
@@ -978,9 +980,7 @@ class MetalsLanguageServer(
   def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
-    CancelTokens { _ =>
-      documentHighlightProvider.documentHighlight(params)
-    }
+    CancelTokens { _ => documentHighlightProvider.documentHighlight(params) }
 
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
@@ -1035,25 +1035,19 @@ class MetalsLanguageServer(
   def prepareRename(
       params: TextDocumentPositionParams
   ): CompletableFuture[l.Range] =
-    CancelTokens { _ =>
-      renameProvider.prepareRename(params).getOrElse(null)
-    }
+    CancelTokens { _ => renameProvider.prepareRename(params).getOrElse(null) }
 
   @JsonRequest("textDocument/rename")
   def rename(
       params: RenameParams
   ): CompletableFuture[WorkspaceEdit] =
-    CancelTokens { _ =>
-      renameProvider.rename(params)
-    }
+    CancelTokens { _ => renameProvider.rename(params) }
 
   @JsonRequest("textDocument/references")
   def references(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ =>
-      referencesResult(params).locations.asJava
-    }
+    CancelTokens { _ => referencesResult(params).locations.asJava }
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
@@ -1121,9 +1115,7 @@ class MetalsLanguageServer(
   }
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList] =
-    CancelTokens.future { token =>
-      compilers.completions(params, token)
-    }
+    CancelTokens.future { token => compilers.completions(params, token) }
 
   @JsonRequest("completionItem/resolve")
   def completionItemResolve(

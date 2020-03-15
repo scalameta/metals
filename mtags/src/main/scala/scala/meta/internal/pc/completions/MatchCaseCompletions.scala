@@ -156,9 +156,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       val context = doLocateImportContext(pos, importPos)
       val subclasses = ListBuffer.empty[Symbol]
 
-      tpe.typeSymbol.foreachKnownDirectSubClass { sym =>
-        subclasses += sym
-      }
+      tpe.typeSymbol.foreachKnownDirectSubClass { sym => subclasses += sym }
       val subclassesResult = subclasses.result()
 
       // sort subclasses by declaration order

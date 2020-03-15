@@ -72,7 +72,9 @@ final class FoldingRanges(foldOnlyLines: Boolean) {
   def add(range: FoldingRange, adjust: Boolean): Unit = {
     if (isNotCollapsed(range)) {
       if (adjust && foldOnlyLines) {
-        range.setEndLine(range.getEndLine - 1) // we want to preserve the last line containing e.g. '}'
+        range.setEndLine(
+          range.getEndLine - 1
+        ) // we want to preserve the last line containing e.g. '}'
       }
 
       allRanges.add(range)

@@ -225,9 +225,7 @@ final class StatusBar(
   private def mostRelevant(): Option[Item] = {
     if (items.isEmpty) None
     else {
-      Some(items.asScala.maxBy { item =>
-        (item.isRecent, item.priority)
-      })
+      Some(items.asScala.maxBy { item => (item.isRecent, item.priority) })
     }
   }
 

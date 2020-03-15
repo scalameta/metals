@@ -30,9 +30,7 @@ class ClasspathSymbolsBench {
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Unit = {
     val jars = new ClasspathSymbols()
-    classpath.foreach { jar =>
-      jars.symbols(jar, "cats/")
-    }
+    classpath.foreach { jar => jars.symbols(jar, "cats/") }
   }
 
 }

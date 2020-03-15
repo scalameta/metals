@@ -114,10 +114,11 @@ object SwitchCommand extends Command[SwitchOptions]("switch") {
     if (Files.isDirectory(bloopDirectory) &&
       !Files.isSymbolicLink(bloopDirectory)) {
       val relpath = app.workingDirectory.relativize(bloopDirectory)
-      val message = s"unable to link project '${project.name}' because '$bloopDirectory' is a directory. " +
-        s"To fix this problem run: " +
-        s"\n\trm -rf $relpath" +
-        s"\n\tfastpass switch ${project.name}"
+      val message =
+        s"unable to link project '${project.name}' because '$bloopDirectory' is a directory. " +
+          s"To fix this problem run: " +
+          s"\n\trm -rf $relpath" +
+          s"\n\tfastpass switch ${project.name}"
       if (isError) app.error(message)
       else app.warn(message)
       true

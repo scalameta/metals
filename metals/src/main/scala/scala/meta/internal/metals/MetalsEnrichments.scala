@@ -90,7 +90,8 @@ object MetalsEnrichments
   implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {
     def toPosition(dirty: l.Position): Option[l.Position] =
       foldResult(
-        onPosition = pos => Some(new l.Position(pos.startLine, pos.startColumn)),
+        onPosition =
+          pos => Some(new l.Position(pos.startLine, pos.startColumn)),
         onUnchanged = () => Some(dirty),
         onNoMatch = () => None
       )
@@ -222,13 +223,9 @@ object MetalsEnrichments
           case _ =>
             Symbols.Global(owner, Descriptor.Term(s.getName))
         }
-        s.getChildren.forEach { child =>
-          loop(child, newOwner)
-        }
+        s.getChildren.forEach { child => loop(child, newOwner) }
       }
-      symbol.foreach { s =>
-        loop(s, Symbols.RootPackage)
-      }
+      symbol.foreach { s => loop(s, Symbols.RootPackage) }
       buf.result()
     }
   }
@@ -436,9 +433,7 @@ object MetalsEnrichments
     def definition(uri: String, symbol: String): Option[l.Location] = {
       textDocument.occurrences
         .find(o => o.role.isDefinition && o.symbol == symbol)
-        .map { occ =>
-          occ.toLocation(uri)
-        }
+        .map { occ => occ.toLocation(uri) }
     }
   }
 

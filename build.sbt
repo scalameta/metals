@@ -47,7 +47,7 @@ inThisBuild(
         "ckipp01",
         "Chris Kipp",
         "ckipp@pm.me",
-        url("https://wiki.chronica.xyz")
+        url("https://chronica.xyz")
       ),
       Developer(
         "gabro",
@@ -105,9 +105,7 @@ inThisBuild(
       props
         .stringPropertyNames()
         .asScala
-        .map { configKey =>
-          s"-D$configKey=${props.getProperty(configKey)}"
-        }
+        .map { configKey => s"-D$configKey=${props.getProperty(configKey)}" }
         .mkString(" ")
     },
     resolvers += Resolver.bintrayRepo("scalacenter", "releases")
@@ -156,7 +154,7 @@ lazy val V = new {
   val gradleBloop = bloop
   val mavenBloop = bloop
   val mdoc = "2.1.3"
-  val scalafmt = "2.4.1"
+  val scalafmt = "2.4.2"
   val munit = "0.4.3"
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.

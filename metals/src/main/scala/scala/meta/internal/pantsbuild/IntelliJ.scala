@@ -56,9 +56,7 @@ object IntelliJ {
       downloadCoursier(bspJson.resolveSibling("coursier"))
     )
     val targetsJson = new JsonArray()
-    project.targets.foreach { target =>
-      targetsJson.add(target)
-    }
+    project.targets.foreach { target => targetsJson.add(target) }
     val newJson = s"""{
   "name": "Bloop",
   "version": "${V.bloopNightlyVersion}",

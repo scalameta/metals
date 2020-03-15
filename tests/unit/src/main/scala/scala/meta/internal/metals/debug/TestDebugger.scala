@@ -173,7 +173,9 @@ final class TestDebugger(
             Future.failed(error)
           case Success(value) =>
             failure match {
-              case Some(error) => // propagate failure that occurred while processing action
+              case Some(
+                  error
+                  ) => // propagate failure that occurred while processing action
                 Future.failed(error)
               case None =>
                 Future.successful(value)

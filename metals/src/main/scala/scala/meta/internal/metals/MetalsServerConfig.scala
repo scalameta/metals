@@ -104,7 +104,8 @@ object MetalsServerConfig {
           icons = Icons.vscode,
           globSyntax = GlobSyntaxConfig.vscode,
           compilers = base.compilers.copy(
-            _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
+            _parameterHintsCommand =
+              Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
             overrideDefFormat = OverrideDefFormat.Unicode
           )
@@ -124,7 +125,8 @@ object MetalsServerConfig {
           statusBar = StatusBarConfig.showMessage,
           isHttpEnabled = true,
           compilers = base.compilers.copy(
-            _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
+            _parameterHintsCommand =
+              Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
             overrideDefFormat = OverrideDefFormat.Unicode,
             isCompletionItemResolve = false
@@ -133,7 +135,8 @@ object MetalsServerConfig {
       case "coc-metals" =>
         base.copy(
           compilers = base.compilers.copy(
-            _parameterHintsCommand = Some("editor.action.triggerParameterHints"),
+            _parameterHintsCommand =
+              Some("editor.action.triggerParameterHints"),
             _completionCommand = Some("editor.action.triggerSuggest"),
             overrideDefFormat = OverrideDefFormat.Unicode,
             isCompletionItemResolve = false

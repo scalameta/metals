@@ -36,9 +36,7 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
           |  val param: String = a.A.param(arg = 2)
           |}
           |""".stripMargin,
-        preInitialized = { () =>
-          server.didOpen("a/src/main/scala/a/A.scala")
-        }
+        preInitialized = { () => server.didOpen("a/src/main/scala/a/A.scala") }
       )
       _ = assertNoDiagnostics()
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
@@ -86,9 +84,7 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
           |  val a = A(1)
           |}
           |""".stripMargin,
-        preInitialized = { () =>
-          server.didOpen("a/src/main/scala/a/A.scala")
-        }
+        preInitialized = { () => server.didOpen("a/src/main/scala/a/A.scala") }
       )
       _ = assertNoDiagnostics()
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
@@ -131,9 +127,7 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
           |  val b = new a.A().bar(2)
           |}
           |""".stripMargin,
-        preInitialized = { () =>
-          server.didOpen("a/src/main/scala/a/A.scala")
-        }
+        preInitialized = { () => server.didOpen("a/src/main/scala/a/A.scala") }
       )
       _ = assertNoDiagnostics()
       // Assert that goto definition and reference are still bijective after buffer changes

@@ -16,7 +16,5 @@ object Codecs {
         Configured.ok(AbsolutePath(path)(workingDirectory).toNIO)
     }
   implicit val pathEncoder: ConfEncoder[Path] =
-    ConfEncoder.instance[Path] { path =>
-      Str(path.toString())
-    }
+    ConfEncoder.instance[Path] { path => Str(path.toString()) }
 }

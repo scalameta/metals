@@ -31,8 +31,8 @@ class PantsLspSuite extends BaseImportSuite("pants") {
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = {
-    new PantsDigest(
-      () => UserConfiguration(pantsTargets = Option(List("src::")))
+    new PantsDigest(() =>
+      UserConfiguration(pantsTargets = Option(List("src::")))
     ).current(workspace)
   }
 

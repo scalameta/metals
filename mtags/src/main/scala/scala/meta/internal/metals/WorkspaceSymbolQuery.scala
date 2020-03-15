@@ -66,9 +66,7 @@ object WorkspaceSymbolQuery {
     def apply(query: String): AlternativeQuery = {
       val hasher = new StringBloomFilter(0)
       val queries = Fuzzy.bloomFilterQueryStrings(query).toArray
-      val bytes = queries.map { query =>
-        hasher.computeHashCode(query)
-      }
+      val bytes = queries.map { query => hasher.computeHashCode(query) }
       AlternativeQuery(query, queries, bytes)
     }
     def all(query: String): Array[AlternativeQuery] = {

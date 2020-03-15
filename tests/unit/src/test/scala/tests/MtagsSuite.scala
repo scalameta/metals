@@ -21,9 +21,7 @@ class MtagsSuite extends DirectoryExpectSuite("mtags") {
       "PatternMatching",
       "ImplicitConversions",
       "MacroAnnotation"
-    ).exists { name =>
-      file.file.toNIO.endsWith(s"$name.scala")
-    }
+    ).exists { name => file.file.toNIO.endsWith(s"$name.scala") }
   }
 
   def testCases(): List[ExpectTestCase] = {

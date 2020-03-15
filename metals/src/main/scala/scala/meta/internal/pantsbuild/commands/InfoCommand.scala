@@ -22,9 +22,7 @@ object InfoCommand extends Command[InfoOptions]("info") {
       info.common,
       app
     ) { project =>
-      project.targets.foreach { target =>
-        println(target)
-      }
+      project.targets.foreach { target => println(target) }
       0
     }
   }

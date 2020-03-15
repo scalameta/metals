@@ -59,9 +59,7 @@ object Digest {
   ): Boolean = {
     if (!path.isDirectory) true
     else {
-      path.list.forall { file =>
-        digestFile(file, digest)
-      }
+      path.list.forall { file => digestFile(file, digest) }
     }
   }
 
@@ -141,9 +139,7 @@ object Digest {
         .mkString("\n")
         .replaceAll("""//.*""", "") // replace any inline comment
         .split("\\s+")
-        .foreach { word =>
-          digest.update(word.getBytes())
-        }
+        .foreach { word => digest.update(word.getBytes()) }
       true
     } catch {
       case NonFatal(_) =>

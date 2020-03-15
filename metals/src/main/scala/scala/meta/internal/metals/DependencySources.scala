@@ -22,9 +22,7 @@ final class DependencySources(conn: () => Connection) {
   ): Option[BuildTargetIdentifier] = {
     conn().query(
       "select build_target_uri from dependency_source where text_document_uri = ?;"
-    ) { stmt =>
-      stmt.setString(1, dependencySource.toURI.toString)
-    } { rs =>
+    ) { stmt => stmt.setString(1, dependencySource.toURI.toString) } { rs =>
       new BuildTargetIdentifier(rs.getString(1))
     }
   }.headOption

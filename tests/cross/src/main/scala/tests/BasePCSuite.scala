@@ -95,9 +95,7 @@ abstract class BasePCSuite extends BaseSuite {
         )
       )
       .run()
-    sources.foreach { jar =>
-      index.addSourceJar(AbsolutePath(jar))
-    }
+    sources.foreach { jar => index.addSourceJar(AbsolutePath(jar)) }
   }
 
   def params(code: String, filename: String = "test.scala"): (String, Int) = {
