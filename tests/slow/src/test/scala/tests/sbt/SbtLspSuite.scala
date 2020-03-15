@@ -181,9 +181,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
-      _ <- server.didSave("build.sbt") { _ =>
-        """scalaVersion := "2.12.10" """
-      }
+      _ <- server.didSave("build.sbt") { _ => """scalaVersion := "2.12.10" """ }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
@@ -249,7 +247,8 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = {
-        val expected = ClientCommands.ReloadDoctor.id :: ClientCommands.RunDoctor.id :: Nil
+        val expected =
+          ClientCommands.ReloadDoctor.id :: ClientCommands.RunDoctor.id :: Nil
         val actual = client.workspaceClientCommands
         assert(actual.startsWith(expected))
         client.showMessages.clear()

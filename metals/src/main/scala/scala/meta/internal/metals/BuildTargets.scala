@@ -260,9 +260,7 @@ final class BuildTargets() {
       val fromInference =
         buildTargetInference.asScala.flatMap(fn => fn(source))
       if (fromInference.nonEmpty) {
-        fromInference.foreach { target =>
-          addSourceItem(source, target)
-        }
+        fromInference.foreach { target => addSourceItem(source, target) }
         inverseSources(source)
       } else {
         None
@@ -373,9 +371,7 @@ final class BuildTargets() {
 
   def isInsideSourceRoot(path: AbsolutePath): Boolean = {
     !isSourceRoot.contains(path) &&
-    isSourceRoot.asScala.exists { root =>
-      path.toNIO.startsWith(root.toNIO)
-    }
+    isSourceRoot.asScala.exists { root => path.toNIO.startsWith(root.toNIO) }
   }
 }
 

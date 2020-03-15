@@ -689,24 +689,18 @@ class RenameLspSuite extends BaseLspSuite("rename") {
              |$fullInput""".stripMargin
         )
         _ <- Future.sequence {
-          openedFiles.map { file =>
-            server.didOpen(file)
-          }
+          openedFiles.map { file => server.didOpen(file) }
         }
         // possible breaking changes for testing
         _ <- Future.sequence {
           openedFiles.map { file =>
-            server.didSave(file) { code =>
-              breakingChange(code)
-            }
+            server.didSave(file) { code => breakingChange(code) }
           }
         }
         // change the code to make sure edit distance is being used
         _ <- Future.sequence {
           openedFiles.map { file =>
-            server.didChange(file) { code =>
-              "\n" + code
-            }
+            server.didChange(file) { code => "\n" + code }
           }
         }
         _ <- server.assertRename(

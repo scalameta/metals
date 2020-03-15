@@ -82,9 +82,7 @@ object HtmlConverter {
     lazy val childText = element
       .childNodes()
       .asScala
-      .map { node =>
-        processHtmlNode(node)
-      }
+      .map { node => processHtmlNode(node) }
       .mkString
     element.tagName().toLowerCase match {
       case "body" => childText

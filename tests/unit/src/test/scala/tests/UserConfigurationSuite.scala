@@ -77,9 +77,7 @@ class UserConfigurationSuite extends BaseSuite {
   checkOK(
     "empty-string",
     "{'java-home':''}"
-  ) { obtained =>
-    assert(obtained.javaHome.isEmpty)
-  }
+  ) { obtained => assert(obtained.javaHome.isEmpty) }
 
   checkOK(
     "sys-props",
@@ -104,9 +102,7 @@ class UserConfigurationSuite extends BaseSuite {
       |  "javaHome": "home"
       |}
     """.stripMargin
-  ) { obtained =>
-    assert(obtained.javaHome == Some("home"))
-  }
+  ) { obtained => assert(obtained.javaHome == Some("home")) }
 
   checkOK(
     "conflict",
@@ -118,9 +114,7 @@ class UserConfigurationSuite extends BaseSuite {
     Map(
       "metals.java-home" -> "b"
     )
-  ) { obtained =>
-    assert(obtained.javaHome == Some("b"))
-  }
+  ) { obtained => assert(obtained.javaHome == Some("b")) }
 
   checkOK(
     "empty",
@@ -132,9 +126,7 @@ class UserConfigurationSuite extends BaseSuite {
     Map(
       "metals.java-home" -> "b"
     )
-  ) { obtained =>
-    assert(obtained.javaHome == Some("b"))
-  }
+  ) { obtained => assert(obtained.javaHome == Some("b")) }
 
   checkOK(
     "empty-prop",
@@ -146,9 +138,7 @@ class UserConfigurationSuite extends BaseSuite {
     Map(
       "metals.java-home" -> ""
     )
-  ) { obtained =>
-    assert(obtained.javaHome == Some("a"))
-  }
+  ) { obtained => assert(obtained.javaHome == Some("a")) }
 
   checkError(
     "type-mismatch",
@@ -183,9 +173,7 @@ class UserConfigurationSuite extends BaseSuite {
       | "pants-targets": "a b"
       |}
     """.stripMargin
-  ) { ok =>
-    assert(ok.pantsTargets == Some(List("a", "b")))
-  }
+  ) { ok => assert(ok.pantsTargets == Some(List("a", "b"))) }
 
   checkOK(
     "pants-targets-string2",
@@ -194,9 +182,7 @@ class UserConfigurationSuite extends BaseSuite {
       | "pants-targets": "a  b"
       |}
     """.stripMargin
-  ) { ok =>
-    assert(ok.pantsTargets == Some(List("a", "b")))
-  }
+  ) { ok => assert(ok.pantsTargets == Some(List("a", "b"))) }
 
   checkOK(
     "pants-targets-list",
@@ -205,9 +191,7 @@ class UserConfigurationSuite extends BaseSuite {
       | "pants-targets": ["a  b"]
       |}
     """.stripMargin
-  ) { ok =>
-    assert(ok.pantsTargets == Some(List("a", "b")))
-  }
+  ) { ok => assert(ok.pantsTargets == Some(List("a", "b"))) }
 
   checkOK(
     "pants-targets-list2",
@@ -216,9 +200,7 @@ class UserConfigurationSuite extends BaseSuite {
       | "pants-targets": ["a", "b"]
       |}
     """.stripMargin
-  ) { ok =>
-    assert(ok.pantsTargets == Some(List("a", "b")))
-  }
+  ) { ok => assert(ok.pantsTargets == Some(List("a", "b"))) }
 
   checkError(
     "pants-error",

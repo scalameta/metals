@@ -89,9 +89,7 @@ class ScalaToplevelMtags(
     scanner.curr.token match {
       case IDENTIFIER | BACKQUOTED_IDENT =>
         val paths = parsePath()
-        paths.foreach { path =>
-          pkg(path.name, path.pos)
-        }
+        paths.foreach { path => pkg(path.name, path.pos) }
       case OBJECT =>
         emitMember(isPackageObject = true)
       case _ =>

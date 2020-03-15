@@ -98,8 +98,9 @@ object MethodImplementation {
       otherSymbol: SymbolInformation,
       findParent: Boolean = false
   )(implicit context: Context): Boolean = {
-    val isVisiblySame = (methodSymbolInfo.kind.isField || methodSymbolInfo.kind.isMethod) &&
-      methodSymbolInfo.displayName == otherSymbol.displayName
+    val isVisiblySame =
+      (methodSymbolInfo.kind.isField || methodSymbolInfo.kind.isMethod) &&
+        methodSymbolInfo.displayName == otherSymbol.displayName
     if (findParent) {
       isVisiblySame && signaturesEqual(
         methodSymbolInfo.signature,

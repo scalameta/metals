@@ -24,9 +24,7 @@ object Cycles {
         val head = all.head
         val tail = all.tail
         children(head) = tail
-        tail.foreach { child =>
-          parents(child) = head
-        }
+        tail.foreach { child => parents(child) = head }
       }
     }
     Cycles(children, parents)

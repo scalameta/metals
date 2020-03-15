@@ -106,9 +106,7 @@ final class JarTopLevels(conn: () => Connection) {
     val md5s = usedPaths.map(getMD5Digest).map("'" + _ + "'").mkString(",")
     conn().update {
       s"delete from indexed_jar where md5 not in ($md5s)"
-    } { _ =>
-      ()
-    }
+    } { _ => () }
   }
 
   private def getMD5Digest(path: AbsolutePath) = {

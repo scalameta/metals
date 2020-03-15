@@ -114,12 +114,12 @@ object ScaladocParser {
         }
     }
 
-    override val shortDescription
-        : Option[Text] = shortDescription0.lastOption collect {
-      case Body(List(Paragraph(Chain(List(Summary(Text(e)))))))
-          if !e.trim.contains("\n") =>
-        Text(e)
-    }
+    override val shortDescription: Option[Text] =
+      shortDescription0.lastOption collect {
+        case Body(List(Paragraph(Chain(List(Summary(Text(e)))))))
+            if !e.trim.contains("\n") =>
+          Text(e)
+      }
 
     override val hideImplicitConversions: List[String] =
       hideImplicitConversions0 flatMap {
@@ -658,7 +658,10 @@ object ScaladocParser {
     /** listStyle ::= '-' spc | '1.' spc | 'I.' spc | 'i.' spc | 'A.' spc | 'a.' spc
      * Characters used to build lists and their constructors */
     val listStyles: Map[String, Seq[Block] => Block] =
-      Map[String, (Seq[Block] => Block)]( // TODO Should this be defined at some list companion?
+      Map[
+        String,
+        (Seq[Block] => Block)
+      ]( // TODO Should this be defined at some list companion?
         "- " -> (UnorderedList(_)),
         "1. " -> (OrderedList(_, "decimal")),
         "I. " -> (OrderedList(_, "upperRoman")),

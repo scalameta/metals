@@ -58,9 +58,7 @@ object EndpointLogger {
   final case object Sent extends Direction
 
   private def serializer: MessageJsonHandler = {
-    val configure: Consumer[GsonBuilder] = { gson =>
-      gson.setPrettyPrinting()
-    }
+    val configure: Consumer[GsonBuilder] = { gson => gson.setPrettyPrinting() }
     new DebugMessageJsonHandler(Collections.emptyMap(), configure)
   }
 

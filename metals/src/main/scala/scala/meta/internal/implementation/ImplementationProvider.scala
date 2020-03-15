@@ -53,9 +53,7 @@ final class ImplementationProvider(
 
   def onChange(docs: TextDocuments, path: Path): Unit = {
     implementationsInPath.compute(
-      path, { (_, _) =>
-        computeInheritance(docs)
-      }
+      path, { (_, _) => computeInheritance(docs) }
     )
   }
 
@@ -531,9 +529,7 @@ object ImplementationProvider {
   ): MethodSignature = {
     val allParams = signature.parameterLists.map { scope =>
       if (scope.symlinks.size > scope.hardlinks.size) {
-        val hardlinks = scope.symlinks.flatMap { sym =>
-          findSymbol(sym)
-        }
+        val hardlinks = scope.symlinks.flatMap { sym => findSymbol(sym) }
         scope.copy(hardlinks = hardlinks)
       } else {
         scope

@@ -60,9 +60,7 @@ class LineListener(onLine: String => Unit) {
       // we reach Print.
       state.apply(ch) match {
         case AnsiStateMachine.Print =>
-          stack.foreach { i =>
-            onCharacter(i)
-          }
+          stack.foreach { i => onCharacter(i) }
           onCharacter(ch)
           resetState()
         case AnsiStateMachine.Discard =>

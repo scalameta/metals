@@ -10,9 +10,7 @@ object ListCommand extends Command[ListProjects]("list") {
     Doc.paragraph("List all existing projects")
   override def options: Doc = Messages.options(ListProjects())
   def run(list: ListProjects, app: CliApp): Int = {
-    Project.fromCommon(list.common).foreach { project =>
-      println(project.name)
-    }
+    Project.fromCommon(list.common).foreach { project => println(project.name) }
     0
   }
 }

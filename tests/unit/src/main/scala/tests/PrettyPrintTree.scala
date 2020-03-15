@@ -11,9 +11,7 @@ case class PrettyPrintTree(
         .append(value)
         .append("\n")
       val newIndent = indent + "  "
-      children.foreach { child =>
-        child.render(newIndent, sb)
-      }
+      children.foreach { child => child.render(newIndent, sb) }
     }
   }
   override def toString(): String = {

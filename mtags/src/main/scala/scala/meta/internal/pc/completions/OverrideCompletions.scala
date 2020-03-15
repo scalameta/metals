@@ -128,9 +128,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
       def expandParent(parent: Symbol): Unit = {
         if (!isVisited(parent)) {
           isVisited.add(parent)
-          parent.parentSymbols.foreach { parent =>
-            expandParent(parent)
-          }
+          parent.parentSymbols.foreach { parent => expandParent(parent) }
         }
       }
 
@@ -189,9 +187,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
         }
 
       val history = new ShortenedNames(
-        lookupSymbol = { name =>
-          context.lookupSymbol(name, _ => true) :: Nil
-        },
+        lookupSymbol = { name => context.lookupSymbol(name, _ => true) :: Nil },
         config = renameConfig,
         renames = re,
         owners = owners
@@ -468,9 +464,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
    */
   private def inferEditPosition(text: String, t: Template): Position = {
     hasBody(text, t)
-      .map { offset =>
-        t.pos.withStart(offset + 1).withEnd(offset + 1)
-      }
+      .map { offset => t.pos.withStart(offset + 1).withEnd(offset + 1) }
       .getOrElse(
         t.pos.withStart(t.pos.end)
       )

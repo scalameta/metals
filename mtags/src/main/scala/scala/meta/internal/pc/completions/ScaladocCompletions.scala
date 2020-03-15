@@ -46,7 +46,8 @@ trait ScaladocCompletions { this: MetalsGlobal =>
       // """
       val builder = new StringBuilder()
 
-      val hasConstructor = associatedDef.symbol.primaryConstructor.isDefined && !associatedDef.symbol.isAbstractClass
+      val hasConstructor =
+        associatedDef.symbol.primaryConstructor.isDefined && !associatedDef.symbol.isAbstractClass
       val hasReturnValue = associatedDef.symbol.isMethod &&
         !(associatedDef.symbol.asMethod.returnType.finalResultType =:= definitions.UnitTpe)
 

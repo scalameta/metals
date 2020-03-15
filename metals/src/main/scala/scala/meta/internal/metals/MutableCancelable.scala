@@ -11,9 +11,7 @@ final class MutableCancelable extends Cancelable {
     this
   }
   def addAll(cancelables: Iterable[Cancelable]): this.type = {
-    cancelables.foreach { cancelable =>
-      toCancel.add(cancelable)
-    }
+    cancelables.foreach { cancelable => toCancel.add(cancelable) }
     this
   }
   override def cancel(): Unit = {

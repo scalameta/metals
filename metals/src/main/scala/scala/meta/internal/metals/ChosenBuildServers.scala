@@ -11,9 +11,7 @@ class ChosenBuildServers(conn: () => Connection, time: Time) {
         "select selected_server from chosen_build_server where md5 = ?;"
       )(
         _.setString(1, md5)
-      ) { rs =>
-        rs.getString(1)
-      }
+      ) { rs => rs.getString(1) }
       .headOption
   }
 

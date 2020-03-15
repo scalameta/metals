@@ -54,9 +54,7 @@ final class Diagnostics(
   def reset(): Unit = {
     val keys = diagnostics.keys
     diagnostics.clear()
-    keys.foreach { key =>
-      publishDiagnostics(key)
-    }
+    keys.foreach { key => publishDiagnostics(key) }
   }
 
   def onStartCompileBuildTarget(target: BuildTargetIdentifier): Unit = {
@@ -137,9 +135,7 @@ final class Diagnostics(
     if (queue.isEmpty && !diagnostics.isEmpty) {
       snapshots(path) = path.toInput
     }
-    diagnostics.foreach { diagnostic =>
-      queue.add(diagnostic)
-    }
+    diagnostics.foreach { diagnostic => queue.add(diagnostic) }
 
     // NOTE(olafur): we buffer up several diagnostics for the same path before forwarding
     // them to the editor client. Without buffering, we risk publishing an exponential number
@@ -202,9 +198,7 @@ final class Diagnostics(
   }
 
   private def publishDiagnosticsBuffer(): Unit = {
-    clearDiagnosticsBuffer().foreach { path =>
-      publishDiagnostics(path)
-    }
+    clearDiagnosticsBuffer().foreach { path => publishDiagnostics(path) }
   }
 
   // Adjust positions for type errors for changes in the open buffer.

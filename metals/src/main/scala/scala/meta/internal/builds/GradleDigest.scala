@@ -21,9 +21,7 @@ object GradleDigest extends Digestable {
   }
 
   def digestBuildSrc(path: AbsolutePath, digest: MessageDigest): Boolean = {
-    path.listRecursive.forall { file =>
-      Digest.digestFile(file, digest)
-    }
+    path.listRecursive.forall { file => Digest.digestFile(file, digest) }
   }
 
   def digestSubProjects(
@@ -48,8 +46,6 @@ object GradleDigest extends Digestable {
     /*
        If it's a dir we need to keep searching since gradle can have non trivial workspace layouts
      */
-    isSuccessful && dirs.forall { file =>
-      digestSubProjects(file, digest)
-    }
+    isSuccessful && dirs.forall { file => digestSubProjects(file, digest) }
   }
 }

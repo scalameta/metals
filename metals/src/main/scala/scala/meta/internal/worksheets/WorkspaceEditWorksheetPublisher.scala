@@ -123,7 +123,8 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
       source: Input
   ): Option[Position] = {
     val editPattern = """\A\s*/\*>.*?\*/""".r
-    val offset = source.lineToOffset(statement.position.endLine) + statement.position.endColumn
+    val offset =
+      source.lineToOffset(statement.position.endLine) + statement.position.endColumn
     val text = source.text.drop(offset)
     editPattern
       .findFirstMatchIn(text)

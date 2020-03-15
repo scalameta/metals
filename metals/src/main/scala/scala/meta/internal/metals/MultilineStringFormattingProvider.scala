@@ -110,8 +110,9 @@ final class MultilineStringFormattingProvider(
               .isInstanceOf[Interpolation.End]) endIndex += 1
           val end = tokens(endIndex)
           stringFound = end.end > pos.end
-          shouldAddPipes = stringFound && isMultilineString(sourceText, start) &&
-            hasStripMarginSuffix(endIndex, tokens)
+          shouldAddPipes =
+            stringFound && isMultilineString(sourceText, start) &&
+              hasStripMarginSuffix(endIndex, tokens)
         case _ =>
       }
       tokenIndex += 1

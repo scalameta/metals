@@ -31,17 +31,13 @@ class DefinitionSuite extends DirectoryExpectSuite("definition") {
     }
     // Step 2. Index dependency sources
     index.addSourceJar(JdkSources().get)
-    input.dependencySources.entries.foreach { jar =>
-      index.addSourceJar(jar)
-    }
+    input.dependencySources.entries.foreach { jar => index.addSourceJar(jar) }
 
     def hasKnownIssues(file: InputFile): Boolean = {
       val badlist = List(
         "ForComprehensions.scala" // local symbols in large for comprehensions cause problems
       )
-      badlist.exists { filename =>
-        file.file.toNIO.endsWith(filename)
-      }
+      badlist.exists { filename => file.file.toNIO.endsWith(filename) }
     }
     input.scalaFiles.map { file =>
       ExpectTestCase(

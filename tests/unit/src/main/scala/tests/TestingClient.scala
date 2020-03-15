@@ -63,17 +63,14 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   val decorations =
     new ConcurrentHashMap[AbsolutePath, Array[DecorationOptions]]()
   var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
-    _: MetalsSlowTaskParams =>
-      None
+    _: MetalsSlowTaskParams => None
   }
   var showMessageRequestHandler
       : ShowMessageRequestParams => Option[MessageActionItem] = {
-    _: ShowMessageRequestParams =>
-      None
+    _: ShowMessageRequestParams => None
   }
   var inputBoxHandler: MetalsInputBoxParams => Option[MetalsInputBoxResult] = {
-    _: MetalsInputBoxParams =>
-      None
+    _: MetalsInputBoxParams => None
   }
 
   private var refreshedOnIndex = false
@@ -137,9 +134,7 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   }
   def workspaceLogMessages: String = {
     logMessages.asScala
-      .map { params =>
-        s"${params.getType}: ${params.getMessage}"
-      }
+      .map { params => s"${params.getType}: ${params.getMessage}" }
       .mkString("\n")
   }
   def workspaceShowMessages: String = {

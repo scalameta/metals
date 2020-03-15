@@ -293,7 +293,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = {
-        val expected = ClientCommands.ReloadDoctor.id :: ClientCommands.RunDoctor.id :: Nil
+        val expected =
+          ClientCommands.ReloadDoctor.id :: ClientCommands.RunDoctor.id :: Nil
         val actual = client.workspaceClientCommands
         assert(actual.startsWith(expected))
       }

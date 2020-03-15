@@ -166,7 +166,8 @@ final class FoldingRangeExtractor(
 
         for {
           token <- startingPoint.findFirstTrailing(_.is[Token.RightArrow])
-          end = if (isLastCase) bodyEnd + 1 else bodyEnd // last case does not span until the closing bracket
+          end = if (isLastCase) bodyEnd + 1
+          else bodyEnd // last case does not span until the closing bracket
           pos <- range(tree.pos.input, token.pos.end, end)
         } yield pos
 

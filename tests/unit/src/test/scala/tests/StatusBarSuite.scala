@@ -51,9 +51,7 @@ class StatusBarSuite extends BaseSuite {
   test("future") {
     val promise = Promise[Unit]()
     status.trackFuture("tick", promise.future)
-    1.to(7).foreach { _ =>
-      tickSecond()
-    }
+    1.to(7).foreach { _ => tickSecond() }
     promise.success(())
     status.tick()
     assertNoDiff(
@@ -78,13 +76,9 @@ class StatusBarSuite extends BaseSuite {
     status.trackFuture("a", promise1.future, showTimer = true)
     tickSecond()
     status.trackFuture("b", promise2.future, showTimer = true)
-    1.to(2).foreach { _ =>
-      tickSecond()
-    }
+    1.to(2).foreach { _ => tickSecond() }
     promise1.success(())
-    1.to(2).foreach { _ =>
-      tickSecond()
-    }
+    1.to(2).foreach { _ => tickSecond() }
     promise2.success(())
     status.tick()
     assertNoDiff(

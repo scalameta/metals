@@ -76,7 +76,9 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/Foo.scala") // compile `a` to populate its cache
+      _ <- server.didOpen(
+        "a/src/main/scala/Foo.scala"
+      ) // compile `a` to populate its cache
       _ <- assertCodeLenses(
         "a/src/main/scala/Foo.scala",
         """|package foo.bar

@@ -69,7 +69,8 @@ object MarkdownGenerator {
         "",
       if (c.valueParams.nonEmpty)
         "\n**Parameters**\n" + c.valueParams
-          .map(tuple => s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
+          .map(tuple =>
+            s"- `${tuple._1}`: " + blocksToMarkdown(tuple._2.blocks)
           )
           .mkString
       else
@@ -90,9 +91,7 @@ object MarkdownGenerator {
       else "",
       if (c.see.nonEmpty)
         "\n**See**\n" + c.see
-          .map { body =>
-            s"- ${blocksToMarkdown(body.blocks).trim}"
-          }
+          .map { body => s"- ${blocksToMarkdown(body.blocks).trim}" }
           .mkString("", "\n", "\n")
       else ""
     ).reduce(_ + _).trim

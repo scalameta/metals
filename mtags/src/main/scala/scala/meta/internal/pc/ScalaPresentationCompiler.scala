@@ -131,9 +131,7 @@ case class ScalaPresentationCompiler(
     access.withNonInterruptableCompiler(
       new SignatureHelp(),
       params.token
-    ) { global =>
-      new SignatureHelpProvider(global).signatureHelp(params)
-    }
+    ) { global => new SignatureHelpProvider(global).signatureHelp(params) }
 
   override def hover(
       params: OffsetParams
@@ -149,9 +147,7 @@ case class ScalaPresentationCompiler(
     access.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,
       params.token
-    ) { global =>
-      new PcDefinitionProvider(global, params).definition()
-    }
+    ) { global => new PcDefinitionProvider(global, params).definition() }
   }
 
   override def semanticdbTextDocument(
