@@ -38,6 +38,40 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   )
 
   check(
+    "multiple-multi1",
+    s"""
+       |object Main {
+       |  val str = '''|@@'''.stripMargin
+       |  val other = '''|
+       |                 |'''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |'''.stripMargin
+       |  val other = '''|
+       |                 |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "multiple-multi2",
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |'''.stripMargin
+       |  val other = '''|@@'''.stripMargin
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''|
+       |               |'''.stripMargin
+       |  val other = '''|
+       |                 |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
     "interpolated-string",
     s"""
        |object Main {
