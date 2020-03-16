@@ -22,6 +22,27 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
     } yield ()
   }
 
+  test("basic-rambo") {
+    for {
+      _ <- server.initialize(
+        """|/a/src/main/scala/a/Main.scala
+           |object Main extends App {
+           |  // @@
+           |}
+           |""".stripMargin,
+        expectError = true
+      )
+      _ <- server.assertHover(
+        "a/src/main/scala/a/Main.scala",
+        """
+          |object Main {
+          |  Option(1).he@@ad
+          |}""".stripMargin,
+        """override def head: Int""".hover
+      )
+    } yield ()
+  }
+
   test("docstrings") {
     for {
       _ <- server.initialize(

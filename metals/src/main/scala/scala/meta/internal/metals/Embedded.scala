@@ -136,6 +136,8 @@ object Embedded {
       .withResolutionParams(resolutionParams)
       .withMainArtifacts()
   }
+  private def scalaDependency(scalaVersion: String): Dependency =
+    Dependency.of("org.scala-lang", "scala-library", scalaVersion)
 
   private def mtagsDependency(scalaVersion: String): Dependency = Dependency.of(
     "org.scalameta",
@@ -161,13 +163,22 @@ object Embedded {
 
   private def downloadDependency(
       dep: Dependency,
-      scalaVersion: String
+      scalaVersion: String,
+      classfiers: Seq[String] = Seq.empty
   ): List[Path] =
     fetchSettings(dep, scalaVersion)
+      .addClassifiers(classfiers: _*)
       .fetch()
       .asScala
       .toList
       .map(_.toPath())
+
+  def downloadScalaSources(scalaVersion: String): List[Path] =
+    downloadDependency(
+      scalaDependency(scalaVersion),
+      scalaVersion,
+      classfiers = Seq("sources")
+    )
 
   def downloadSemanticdbScalac(scalaVersion: String): List[Path] =
     downloadDependency(semanticdbScalacDependency(scalaVersion), scalaVersion)
