@@ -30,28 +30,28 @@ final class BuildTargetClasses(
 
   def findMainClassByName(
       name: String
-  ): List[(b.BuildTargetIdentifier, b.ScalaMainClass)] = {
+  ): List[(b.ScalaMainClass, b.BuildTargetIdentifier)] = {
     index
       .mapValues(
         _.mainClasses.values.find(_.getClassName() == name)
       )
-      .collect {
-        case (target, Some(clazz)) => target -> clazz
-      }
       .toList
+      .collect {
+        case (target, Some(clazz)) => clazz -> target
+      }
   }
 
   def findTestClassByName(
       name: String
-  ): List[(b.BuildTargetIdentifier, String)] = {
+  ): List[(String, b.BuildTargetIdentifier)] = {
     index
       .mapValues(
         _.testClasses.values.find(_ == name)
       )
-      .collect {
-        case (target, Some(clazz)) => target -> clazz
-      }
       .toList
+      .collect {
+        case (target, Some(clazz)) => clazz -> target
+      }
   }
 
   private def fetchClasses(

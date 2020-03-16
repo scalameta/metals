@@ -388,4 +388,18 @@ class Messages(icons: Icons) {
     def enterNameMessage(kind: String): String =
       s"Enter the name for the new $kind"
   }
+
+  object UnresolvedDebugSessionParams {
+    def runningClassMultipleBuildTargetsMessage(
+        className: String,
+        chosenTarget: String,
+        anotherTargets: Seq[String],
+        mainOrTest: String
+    ): String = {
+      val anotherTargetsStr = anotherTargets.map(t => s"'$t'").mkString(", ")
+      s"Running '${className}' $mainOrTest class from '${chosenTarget}' build target,\n" +
+        s"but class(es) with the same name also found in $anotherTargetsStr.\n" +
+        "Build target can be specified with 'buildTarget' debug configuration"
+    }
+  }
 }

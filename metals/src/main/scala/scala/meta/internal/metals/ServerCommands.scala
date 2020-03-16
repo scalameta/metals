@@ -108,7 +108,26 @@ object ServerCommands {
         |   }
         |}
         |```
-    """.stripMargin //TODO: add new parameters
+        |
+        |or DebugUnresolvedMainClassParams object
+        |Example:
+        |```json
+        |{
+        |   mainClass: "com.foo.App",
+        |   buildTarget: "foo",
+        |   args: ["bar"]
+        |}
+        |```
+        |
+        |or DebugUnresolvedTestClassParams object
+        |Example:
+        |```json
+        |{
+        |   testClass: "com.foo.FooSuite",
+        |   buildTarget: "foo"
+        |}
+        |```
+        |""".stripMargin
   )
 
   val PresentationCompilerRestart = new Command(
@@ -265,7 +284,7 @@ case class DebugUnresolvedMainClassParams(
     mainClass: String,
     @Nullable buildTarget: String = null,
     @Nullable args: java.util.List[String] = null,
-    @Nullable jvmOption: java.util.List[String] = null
+    @Nullable jvmOptions: java.util.List[String] = null
 )
 
 case class DebugUnresolvedTestClassParams(

@@ -19,6 +19,13 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.DefinitionProvider
 import scala.util.Failure
 import scala.util.Try
+import scala.meta.internal.metals.BuildTargetClasses
+import scala.meta.internal.metals.DebugUnresolvedMainClassParams
+import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
+import scala.util.Success
+import scala.meta.internal.metals.DebugUnresolvedTestClassParams
+import java.util.Collections.singletonList
+import scala.meta.internal.metals.JsonParser._
 
 final class DebugServer(
     val sessionName: String,
@@ -105,6 +112,155 @@ object DebugServer {
     }
   }
 
+  def resolveMainClassParams(
+      params: DebugUnresolvedMainClassParams,
+      buildTargets: BuildTargets,
+      buildTargetClasses: BuildTargetClasses,
+      showWarningMessage: String => Unit
+  ): Try[b.DebugSessionParams] = {
+    val classAndTarget = Option(params.buildTarget).fold {
+      val classes =
+        buildTargetClasses.findMainClassByName(params.mainClass)
+      if (classes.nonEmpty) Success {
+        val classAndTarget = classes.head
+        if (classes.length > 1) {
+          val className = classAndTarget._1.getClassName()
+          val targetName =
+            buildTargets.info(classAndTarget._2).get.getDisplayName
+          val anotherTargets = classes.tail
+            .map {
+              case (_, id) =>
+                buildTargets.info(id).get.getDisplayName
+            }
+          showWarningMessage(
+            UnresolvedDebugSessionParams
+              .runningClassMultipleBuildTargetsMessage(
+                className,
+                targetName,
+                anotherTargets,
+                "main"
+              )
+          )
+        }
+        classAndTarget
+      }
+      else
+        Failure(new ClassNotFoundException(params.mainClass))
+    } { targetName =>
+      buildTargets
+        .findByDisplayName(targetName)
+        .fold {
+          Failure[(b.ScalaMainClass, b.BuildTargetIdentifier)](
+            new BuildTargetNotFoundException(targetName)
+          ): Try[(b.ScalaMainClass, b.BuildTargetIdentifier)]
+        } { target =>
+          buildTargetClasses
+            .classesOf(target.getId())
+            .mainClasses
+            .values
+            .find(
+              _.getClassName == params.mainClass
+            )
+            .fold {
+              Failure[(b.ScalaMainClass, b.BuildTargetIdentifier)](
+                new ClassNotFoundInBuildTargetException(
+                  params.mainClass,
+                  targetName
+                )
+              ): Try[(b.ScalaMainClass, b.BuildTargetIdentifier)]
+            } { clazz => Success(clazz -> target.getId()) }
+        }
+    }
+    classAndTarget.map {
+      case (clazz, target) =>
+        clazz.setArguments(Option(params.args).getOrElse(List().asJava))
+        clazz.setJvmOptions(Option(params.jvmOptions).getOrElse(List().asJava))
+        val dataKind =
+          b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+        val data = clazz.toJson
+        new b.DebugSessionParams(
+          singletonList(target),
+          dataKind,
+          data
+        )
+    }
+  }
+
+  def resolveTestClassParams(
+      params: DebugUnresolvedTestClassParams,
+      buildTargets: BuildTargets,
+      buildTargetClasses: BuildTargetClasses,
+      showWarningMessage: String => Unit
+  ): Try[b.DebugSessionParams] = {
+    val classAndTarget = Option(params.buildTarget).fold {
+      val classes =
+        buildTargetClasses.findTestClassByName(params.testClass)
+      if (classes.nonEmpty) Success {
+        val classAndTarget = classes.head
+        if (classes.length > 1) {
+          val targetName =
+            buildTargets.info(classAndTarget._2).get.getDisplayName
+          val anotherTargets = classes.tail
+            .map {
+              case (_, id) =>
+                buildTargets.info(id).get.getDisplayName
+            }
+          showWarningMessage(
+            UnresolvedDebugSessionParams
+              .runningClassMultipleBuildTargetsMessage(
+                classAndTarget._1,
+                targetName,
+                anotherTargets,
+                "test"
+              )
+          )
+        }
+        classAndTarget
+      }
+      else
+        Failure(new ClassNotFoundException(params.testClass))
+    } { targetName =>
+      buildTargets
+        .findByDisplayName(targetName)
+        .fold {
+          Failure[(String, b.BuildTargetIdentifier)](
+            new BuildTargetNotFoundException(targetName)
+          ): Try[(String, b.BuildTargetIdentifier)]
+        } { target =>
+          buildTargetClasses
+            .classesOf(target.getId())
+            .testClasses
+            .values
+            .find(
+              _ == params.testClass
+            )
+            .fold {
+              Failure[(String, b.BuildTargetIdentifier)](
+                new ClassNotFoundInBuildTargetException(
+                  params.testClass,
+                  targetName
+                )
+              ): Try[(String, b.BuildTargetIdentifier)]
+            } { clazz =>
+              Success(
+                clazz -> target.getId()
+              )
+            }
+        }
+    }
+    classAndTarget.map {
+      case (clazz, target) =>
+        val dataKind =
+          b.DebugSessionParamsDataKind.SCALA_TEST_SUITES
+        val data = singletonList(clazz).toJson
+        new b.DebugSessionParams(
+          singletonList(target),
+          dataKind,
+          data
+        )
+    }
+  }
+
   private def parseSessionName(
       parameters: b.DebugSessionParams
   ): Try[String] = {
@@ -136,3 +292,13 @@ object DebugServer {
   private val BuildServerUnavailableError =
     Future.failed(new IllegalStateException("Build server unavailable"))
 }
+
+class BuildTargetNotFoundException(buildTargetName: String)
+    extends Exception(s"Build target not found: $buildTargetName")
+
+class ClassNotFoundInBuildTargetException(
+    className: String,
+    buildTargetName: String
+) extends Exception(
+      s"Class '$className' not found in build target '$buildTargetName'"
+    )
