@@ -9,8 +9,11 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import java.net.URL
 import com.google.gson.JsonArray
 import scala.meta.internal.pantsbuild.commands.OpenOptions
-import scala.meta.internal.pantsbuild.commands.Project
+import scala.meta.internal.pantsbuild.commands.{Project, RefreshCommand}
 import java.nio.file.StandardOpenOption
+import bloop.data.WorkspaceSettings
+import bloop.io.AbsolutePath
+import bloop.logging.NoopLogger
 
 object IntelliJ {
   def launch(project: Project, open: OpenOptions): Unit = {
@@ -53,7 +56,7 @@ object IntelliJ {
     }
   }
 
-  /** The .bsp/bloop.json file is necessary for IntelliJ to automatically impor the project */
+  /** The .bsp/bloop.json file is necessary for IntelliJ to automatically import the project */
   def writeBsp(project: Project, coursierBinary: Option[Path] = None): Unit = {
     val bspJson = project.root.bspJson.toNIO
     Files.createDirectories(bspJson.getParent)
@@ -75,7 +78,7 @@ object IntelliJ {
     "${V.bloopVersion}"
   ],
   "timestamp": "${System.currentTimeMillis()}",
-  "pantsTargets": ${targetsJson.toString()}
+  "pantsTargets": ${targetsJson.toString}
 }
 """
     Files.write(
@@ -83,6 +86,25 @@ object IntelliJ {
       newJson.getBytes(StandardCharsets.UTF_8),
       StandardOpenOption.TRUNCATE_EXISTING,
       StandardOpenOption.CREATE
+    )
+
+    val refreshCommand = List(
+      coursier.toString,
+      "launch",
+      s"org.scalameta:metals_2.12:${V.metalsVersion}",
+      "--main",
+      classOf[BloopPants].getName,
+      "--",
+      RefreshCommand.name,
+      "--workspace",
+      project.common.workspace.toString,
+      project.name
+    )
+    val settings = WorkspaceSettings(None, None, Some(refreshCommand))
+    WorkspaceSettings.writeToFile(
+      AbsolutePath(project.common.bloopDirectory),
+      settings,
+      NoopLogger
     )
   }
 
