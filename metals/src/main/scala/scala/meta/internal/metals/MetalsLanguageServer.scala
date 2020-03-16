@@ -1052,9 +1052,7 @@ class MetalsLanguageServer(
   def prepareRename(
       params: TextDocumentPositionParams
   ): CompletableFuture[l.Range] =
-    CancelTokens { _ =>
-      renameProvider.prepareRename(params).orNull
-    }
+    CancelTokens { _ => renameProvider.prepareRename(params).orNull }
 
   @JsonRequest("textDocument/rename")
   def rename(
