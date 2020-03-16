@@ -15,8 +15,7 @@ object NamedArguments/*example.NamedArguments.*/ {
       )
   val user2/*example.NamedArguments.user2.*/: User/*example.User#*/ =
     User/*example.User.*/(
-      // FIXME: https://github.com/scalameta/scalameta/issues/1787
-      name = susan/*example.NamedArguments.susan.*/
+      name/*example.User.apply().(name)*/ = susan/*example.NamedArguments.susan.*/
     ).copy/*example.User#copy().*/(
       name/*example.User#copy().(name)*/ = susan/*example.NamedArguments.susan.*/
     )

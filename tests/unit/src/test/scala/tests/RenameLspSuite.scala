@@ -570,18 +570,30 @@ class RenameLspSuite extends BaseLspSuite("rename") {
     newName = "`greeting`"
   )
 
-  // tests currently not working correctly due to issues in SemanticDB
-  // issue https://github.com/scalameta/scalameta/issues/1169
-  // possibly issue https://github.com/scalameta/scalameta/issues/1845
   renamed(
     "params",
     """|/a/src/main/scala/a/Main.scala
        |case class Name(<<va@@lue>>: String)
        |
        |object Main {
-       |  val name1 = Name(value = "42")
+       |  val name1 = Name(<<value>> = "42")
+       |   .copy(<<value>> = "43")
        |   .copy(<<value>> = "43")
        |   .<<value>>
+       |  val name2 = Name(<<value>> = "44")
+       |}
+       |""".stripMargin,
+    newName = "name"
+  )
+
+  // tests currently not working correctly due to issues in SemanticDB
+  // https://github.com/scalameta/metals/issues/1086 - most likely due to scalameta bug
+  renamed(
+    "constructor",
+    """|/a/src/main/scala/a/Main.scala
+       |case class Name(<<va@@lue>>: String)
+       |
+       |object Main {
        |  val name2 = new Name(value = "44")
        |}
        |""".stripMargin,

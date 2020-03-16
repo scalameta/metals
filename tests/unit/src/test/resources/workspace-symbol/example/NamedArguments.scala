@@ -15,7 +15,6 @@ object NamedArguments/*example.NamedArguments.*/ {
       )
   val user2: User =
     User(
-      // FIXME: https://github.com/scalameta/scalameta/issues/1787
       name = susan
     ).copy(
       name = susan
