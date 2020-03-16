@@ -66,7 +66,7 @@ class WorksheetProvider(
   private val currentScalaVersion =
     scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
   private val currentBinaryVersion =
-    currentScalaVersion.split('.').take(2).mkString(".")
+    ScalaVersions.scalaBinaryVersionFromFullVersion(currentScalaVersion)
   private lazy val ramboMdoc =
     embedded.mdoc(currentScalaVersion, currentBinaryVersion)
 

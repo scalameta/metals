@@ -16,13 +16,12 @@ import coursierapi.Repository
 import coursierapi.ResolutionParams
 import scala.meta.internal.worksheets.MdocClassLoader
 import mdoc.interfaces.Mdoc
+import java.nio.file.Path
 
 /**
  * Wrapper around software that is embedded with Metals.
  *
  * - sbt-launch.jar
- * - bloop.py
- * - ch.epfl.scala:bloop-frontend
  * - mdoc
  */
 final class Embedded(
@@ -110,16 +109,9 @@ object Embedded {
       scalaVersion: String,
       scalaBinaryVersion: String
   ): URLClassLoader = {
-    val mdoc = Dependency.of(
-      "org.scalameta",
-      s"mdoc_${scalaBinaryVersion}",
-      BuildInfo.mdocVersion
-    )
-    val settings = fetchSettings(mdoc, scalaVersion)
-    val jars = fetchSettings(mdoc, scalaVersion).fetch()
-    val parent =
-      new MdocClassLoader(this.getClass.getClassLoader)
-    val urls = jars.iterator.asScala.map(_.toURI().toURL()).toArray
+    val jars = downloadMdoc(scalaVersion, scalaBinaryVersion)
+    val parent = new MdocClassLoader(this.getClass.getClassLoader)
+    val urls = jars.iterator.map(_.toUri().toURL()).toArray
     new URLClassLoader(urls, parent)
   }
 
@@ -145,17 +137,58 @@ object Embedded {
       .withMainArtifacts()
   }
 
+  private def mtagsDependency(scalaVersion: String): Dependency = Dependency.of(
+    "org.scalameta",
+    s"mtags_$scalaVersion",
+    BuildInfo.metalsVersion
+  )
+
+  private def mdocDependency(
+      scalaVersion: String,
+      scalaBinaryVersion: String
+  ): Dependency = Dependency.of(
+    "org.scalameta",
+    s"mdoc_${scalaBinaryVersion}",
+    BuildInfo.mdocVersion
+  )
+
+  private def semanticdbScalacDependency(scalaVersion: String): Dependency =
+    Dependency.of(
+      "org.scalameta",
+      s"semanticdb-scalac_$scalaVersion",
+      BuildInfo.scalametaVersion
+    )
+
+  private def downloadDependency(
+      dep: Dependency,
+      scalaVersion: String
+  ): List[Path] =
+    fetchSettings(dep, scalaVersion)
+      .fetch()
+      .asScala
+      .toList
+      .map(_.toPath())
+
+  def downloadSemanticdbScalac(scalaVersion: String): List[Path] =
+    downloadDependency(semanticdbScalacDependency(scalaVersion), scalaVersion)
+  def downloadMtags(scalaVersion: String): List[Path] =
+    downloadDependency(mtagsDependency(scalaVersion), scalaVersion)
+  def downloadMdoc(
+      scalaVersion: String,
+      scalaBinaryVersion: String
+  ): List[Path] =
+    downloadDependency(
+      mdocDependency(scalaVersion, scalaBinaryVersion),
+      scalaVersion
+    )
+
   def newPresentationCompilerClassLoader(
       info: ScalaBuildTarget,
       scalac: ScalacOptionsItem
   ): URLClassLoader = {
     val scalaVersion = ScalaVersions
       .dropVendorSuffix(info.getScalaVersion)
-    val pc = Dependency.of(
-      "org.scalameta",
-      s"mtags_$scalaVersion",
-      BuildInfo.metalsVersion
-    )
+    val pc = mtagsDependency(scalaVersion)
     val semanticdbJars = scalac.getOptions.asScala.collect {
       case opt
           if opt.startsWith("-Xplugin:") &&
