@@ -165,7 +165,7 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var codeLensProvider: CodeLensProvider = _
-  var goToSuperMethod: GoToSuperMethod = _
+  private var goToSuperMethod: GoToSuperMethod = _
   private var codeActionProvider: CodeActionProvider = _
   private var definitionProvider: DefinitionProvider = _
   private var semanticDBIndexer: SemanticdbIndexer = _

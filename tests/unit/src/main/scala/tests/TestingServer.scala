@@ -91,6 +91,7 @@ import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeActionContext
 import scala.meta.internal.implementation.GoToSuperMethod.GoToSuperMethodParams
 import scala.meta.internal.implementation.GoToSuperMethod.formatMethodSymbolForQuickPick
+import scala.meta.internal.metals.ClientCommands
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -198,34 +199,73 @@ final class TestingServer(
   }
 
   def assertGotoSuperMethod(
-      pos: Int,
-      maybeSuperPos: Option[Int],
+      asserts: Map[Int, Option[Int]],
       context: Map[Int, (l.Position, String)]
-  )(implicit loc: munit.Location): Unit = {
-    val (position, document) = context(pos)
-    val command = GoToSuperMethodParams(document, position)
-    val maybeFoundLocation =
-//      executeCommand(ServerCommands.GotoSuperMethod, params)
-      server.goToSuperMethod.getGoToSuperMethodLocation(command)
+  )(implicit loc: munit.Location): Future[Unit] = {
+    def exec(
+        toCheck: List[(Int, Option[Int])]
+    ): Future[List[Option[(l.Position, String)]]] = {
+      toCheck match {
+        case (pos, expectedPos) :: tl =>
+          val (position, document) = context(pos)
+          val command = GoToSuperMethodParams(document, position)
+          executeCommand(ServerCommands.GotoSuperMethod.id, command)
+            .flatMap(_ =>
+              exec(tl).map(rest => expectedPos.flatMap(context.get) +: rest)
+            )
+        case _ =>
+          Future.successful(List.empty)
+      }
+    }
 
-//    client.clientCommands
-    val maybeFoundPosition =
-      maybeFoundLocation.map(l => (l.getRange.getStart, l.getUri))
-    val maybeExpectedPosition = maybeSuperPos.flatMap(context.get)
-    Assertions.assertEquals(maybeFoundPosition, maybeExpectedPosition)
+    val resultsF = exec(asserts.toList)
+
+    resultsF.map { expectedGotoPositionsOpts =>
+      val expectedGotoPositions = expectedGotoPositionsOpts.collect {
+        case Some(pos) => pos
+      }
+      val gotoExecutedCommandPositions = client.clientCommands.asScala
+        .filter(_.getCommand == ClientCommands.GotoLocation.id)
+        .map(_.getArguments.asScala.head.asInstanceOf[l.Location])
+        .map(l => (l.getRange.getStart, l.getUri))
+        .toList
+
+      Assertions.assertEquals(
+        gotoExecutedCommandPositions,
+        expectedGotoPositions
+      )
+    }
   }
 
   def assertSuperMethodHierarchy(
       uri: String,
-      pos: l.Position,
-      expected: List[String]
-  )(implicit loc: munit.Location): Unit = {
-    val params = GoToSuperMethodParams(uri, pos)
-    val result = server.goToSuperMethod
-      .getSuperMethodHierarchySymbols(params)
-      .map(_.map(formatMethodSymbolForQuickPick))
-      .get
-    Assertions.assertNoDiff(result.toString, expected.toString)
+      expectations: List[(Int, List[String])],
+      context: Map[Int, l.Position]
+  )(implicit loc: munit.Location): Future[Unit] = {
+    val obtained = scala.collection.mutable.Buffer[Set[String]]()
+    client.showMessageRequestHandler = { req =>
+      val titles = req.getActions.asScala
+        .map(action => formatMethodSymbolForQuickPick(action.getTitle))
+        .toSet
+      obtained.append(titles)
+      Some(req.getActions.get(0))
+    }
+
+    def exec(toCheck: List[(Int, List[String])]): Future[List[Set[String]]] = {
+      toCheck match {
+        case (pos, expected) :: tl =>
+          val command = GoToSuperMethodParams(uri, context(pos))
+          executeCommand(ServerCommands.SuperMethodHierarchy.id, command)
+            .flatMap(_ => exec(tl).map(rest => expected.toSet +: rest))
+
+        case _ =>
+          Future.successful(List.empty)
+      }
+    }
+
+    exec(expectations).map(expected => {
+      Assertions.assertEquals(obtained.toList, expected)
+    })
   }
 
   def assertReferenceDefinitionBijection()(

@@ -231,15 +231,16 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ = assertNoDiagnostics()
-    } yield {
-      val pathA = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
-      val pathB = server.toPath("b/src/main/scala/b/B.scala").toURI.toString
-      val (contextA, assertsA) = parseWithUri(codeA, pathA)
-      val (contextB, assertsB) = parseWithUri(codeB, pathB)
-      for (check <- assertsA ++ assertsB) {
-        server.assertGotoSuperMethod(check._1, check._2, contextA ++ contextB)
-      }
-    }
+      pathA = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
+      pathB = server.toPath("b/src/main/scala/b/B.scala").toURI.toString
+      (contextA, assertsA) = parseWithUri(codeA, pathA)
+      (contextB, assertsB) = parseWithUri(codeB, pathB)
+      result <- server.assertGotoSuperMethod(
+        assertsA ++ assertsB,
+        contextA ++ contextB
+      )
+
+    } yield result
   }
 
   def checkSuperMethod(
@@ -262,19 +263,17 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       _ <- server.initialize(strip(header + code))
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
-    } yield {
-      val path = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
+
+      path = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
 
       // Checked manually it is actually there and operated under artificial ID link "50"
-      val externalDep = Map(
+      externalDep = Map(
         50 -> (new Position(60, 6), workspace.toURI.toString + ".metals/readonly/io/circe/Decoder.scala")
       )
 
-      val (context, assertions) = parseWithUri(code, path)
-      for (check <- assertions) {
-        server.assertGotoSuperMethod(check._1, check._2, context ++ externalDep)
-      }
-    }
+      (context, assertions) = parseWithUri(code, path)
+      result <- server.assertGotoSuperMethod(assertions, context ++ externalDep)
+    } yield result
   }
 
   private def strip(code: String): String = {

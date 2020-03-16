@@ -18,7 +18,6 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
     checkHierarchy(
       code,
       Map(
-        1 -> List(),
         3 -> List("a.A#xxx"),
         4 -> List("a.C#xxx", "a.A#xxx")
       )
@@ -55,7 +54,6 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
     checkHierarchy(
       code,
       Map(
-        1 -> List(),
         2 -> List("a.A#xxx"),
         3 -> List("a.A#xxx"),
         4 -> List("a.C2#xxx", "a.A#xxx"),
@@ -120,13 +118,15 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
       _ <- server.initialize(strip(header + code))
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
-    } yield {
-      val path = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
-      val context = parse(code)
-      for (e <- expectations) {
-        server.assertSuperMethodHierarchy(path, context(e._1), e._2)
-      }
-    }
+
+      path = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
+      context = parse(code)
+      result <- server.assertSuperMethodHierarchy(
+        path,
+        expectations.toList,
+        context
+      )
+    } yield result
   }
 
   private def parse(
