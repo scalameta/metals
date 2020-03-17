@@ -124,7 +124,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   }
 
   def check(
-      name: String,
+      name: TestOptions,
       original: String,
       expected: String,
       includeDocs: Boolean = false,
@@ -144,7 +144,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       val out = new StringBuilder()
       val withPkg =
         if (original.contains("package") || !enablePackageWrap) original
-        else s"package ${scala.meta.Term.Name(name)}\n$original"
+        else s"package ${scala.meta.Term.Name(name.name)}\n$original"
       val baseItems = getItems(withPkg, filename)
       val items = topLines match {
         case Some(top) => baseItems.take(top)

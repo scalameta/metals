@@ -4,6 +4,8 @@ package digest
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.builds.MillDigest
 
+import scala.meta.internal.metals.{BuildInfo => V}
+
 class MillDigestSuite extends BaseDigestSuite {
 
   override def digestCurrent(
@@ -12,89 +14,89 @@ class MillDigestSuite extends BaseDigestSuite {
 
   checkSame(
     "solo-build.sc",
-    """
-      |/build.sc
-      |import mill._, scalalib._
-      |object foo extends ScalaModule {
-      |  def scalaVersion = "2.12.10"
-      |}
+    s"""
+       |/build.sc
+       |import mill._, scalalib._
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala212}"
+       |}
     """.stripMargin,
-    """
-      |/build.sc
-      |import mill._, scalalib._
-      |object foo extends ScalaModule {
-      |  def scalaVersion = "2.12.10"
-      |}
+    s"""
+       |/build.sc
+       |import mill._, scalalib._
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala212}"
+       |}
     """.stripMargin
   )
 
   checkSame(
     "multiline-comment",
-    """
-      |/build.sc
-      |import mill._, scalalib._
-      |object foo extends ScalaModule {
-      |  def scalaVersion = "2.12.10"
-      |}
+    s"""
+       |/build.sc
+       |import mill._, scalalib._
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala212}"
+       |}
     """.stripMargin,
-    """
-      |/build.sc
-      |import mill._, scalalib._
-      | /* This is a multi
-      | line comment */
-      |object foo extends ScalaModule {
-      |  def scalaVersion = "2.12.10"
-      |}
+    s"""
+       |/build.sc
+       |import mill._, scalalib._
+       | /* This is a multi
+       | line comment */
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala212}"
+       |}
     """.stripMargin
   )
 
   checkSame(
     "comment",
-    """
-      |/build.sc
-      |import mill._, scalalib._
-      |object foo extends ScalaModule {
-      |  def scalaVersion = "2.12.10"
-      |}
+    s"""
+       |/build.sc
+       |import mill._, scalalib._
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala212}"
+       |}
     """.stripMargin,
-    """
-      |/build.sc
-      |import mill._, scalalib._
-      | // this is a comment
-      |object foo extends ScalaModule {
-      |  def scalaVersion = "2.12.10"
-      |}
+    s"""
+       |/build.sc
+       |import mill._, scalalib._
+       | // this is a comment
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala212}"
+       |}
     """.stripMargin
   )
 
   checkSame(
     "whitespace",
-    """
-      |/build.sc
-      |import mill._, scalalib._
-      |object foo extends ScalaModule {
-      |  def scalaVersion = "2.12.10"
-      |}
+    s"""
+       |/build.sc
+       |import mill._, scalalib._
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala212}"
+       |}
     """.stripMargin,
-    """
-      |/build.sc
-      |import mill._, scalalib._
-      |
-      |object foo extends ScalaModule {
-      |
-      | def scalaVersion =    "2.12.10"
-      |}
+    s"""
+       |/build.sc
+       |import mill._, scalalib._
+       |
+       |object foo extends ScalaModule {
+       |
+       | def scalaVersion =    "${V.scala212}"
+       |}
     """.stripMargin
   )
 
   checkDiff(
     "significant-tokens",
-    """
-      |/build.sc
-      |import mill._, scalalib._
-      |object foo extends ScalaModule {
-      |  def scalaVersion = "2.12.10"
-      |}
+    s"""
+       |/build.sc
+       |import mill._, scalalib._
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala212}"
+       |}
     """.stripMargin,
     """
       |/build.sc
@@ -109,7 +111,7 @@ class MillDigestSuite extends BaseDigestSuite {
     s"""
        |import mill._, scalalib._
        |object $name extends ScalaModule {
-       | def scalaVersion = "2.12.10"
+       | def scalaVersion = "${V.scala212}"
        |}
       """.stripMargin
 
