@@ -6,6 +6,7 @@ import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
+import scala.meta.internal.metals.JsonParser._
 
 class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
 
@@ -126,14 +127,13 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |}
            |""".stripMargin
       )
-      //NOTE(alekseiAefirov): Other way buildTargetClasses may not get updated
-      _ <- server.didSave("a/src/main/scala/a/Main.scala")(identity)
+      _ = Thread.sleep(1000) //it fails otherwise
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedMainClassParams(
           "a.Main",
           "a",
           singletonList("Foo")
-        )
+        ).toJson
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -149,36 +149,27 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
         s"""/metals.json
            |{
            |  "a": {
-           |    "libratyDependencies":["org.scalatest::scalatest:3.0.5"]
+           |    "libraryDependencies":["org.scalatest::scalatest:3.0.5"]
            |  }
            |}
            |/a/src/main/scala/a/Foo.scala
            |package a
            |class Foo extends org.scalatest.FunSuite {
-           |  test("foo") {
-           |    println("bar")
-           |  }
+           |  test("foo") {}
            |}
            |""".stripMargin
       )
-      _ <- server.didSave("a/src/main/scala/a/Foo.scala")(identity)
-      //this fails because cannot find classes in buildTargetClasses
+      _ = Thread.sleep(1000) //it fails otherwise
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedTestClassParams(
           "a.Foo"
-        )
+        ).toJson
       )
-      //this hangs on DebugServer.start :(
-      /*debugger <- server.startDebugging(
-        "a",
-        DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-        singletonList("a.Foo").toJson
-      )*/
       _ <- debugger.initialize
       _ <- debugger.launch
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assertNoDiff(output, "bar")
+    } yield assert(output.contains("All tests in a.Foo passed"))
   }
 }
