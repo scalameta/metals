@@ -64,6 +64,106 @@ class RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
   )
 
   check(
+    "multiple-multi-single1",
+    s"""
+       |object Main {
+       |  val str = '''
+       |              |@@
+       |              |'''.stripMargin
+       |  val other = '''
+       |                |
+       |                |'''.stripMargin
+       |}""".stripMargin,
+    s"""|  some text""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |              |  some text
+       |              |'''.stripMargin
+       |  val other = '''
+       |                |
+       |                |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "multiple-multi-single2",
+    s"""
+       |object Main {
+       |  val str = '''
+       |              |
+       |              |'''.stripMargin
+       |  val other = '''
+       |                |@@
+       |                |'''.stripMargin
+       |}""".stripMargin,
+    s"""|  some text""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |              |
+       |              |'''.stripMargin
+       |  val other = '''
+       |                |  some text
+       |                |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "multiple-multi-double1",
+    s"""
+       |object Main {
+       |  val str = '''
+       |              |@@
+       |              |'''.stripMargin
+       |  val other = '''
+       |                |
+       |                |'''.stripMargin
+       |}""".stripMargin,
+    s"""|some text
+        |  some other text
+        |""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |              |some text
+       |              |  some other text
+       |              |
+       |              |'''.stripMargin
+       |  val other = '''
+       |                |
+       |                |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
+    "multiple-multi-double2",
+    s"""
+       |object Main {
+       |  val str = '''
+       |              |
+       |              |'''.stripMargin
+       |  val other = '''
+       |                |@@
+       |                |'''.stripMargin
+       |}""".stripMargin,
+    s"""|  some text
+        |some other text
+        |""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |              |
+       |              |'''.stripMargin
+       |  val other = '''
+       |                |  some text
+       |                |some other text
+       |                |
+       |                |'''.stripMargin
+       |}""".stripMargin
+  )
+
+  check(
     "paste-on-first-line-with-pipe",
     s"""
        |object Main {

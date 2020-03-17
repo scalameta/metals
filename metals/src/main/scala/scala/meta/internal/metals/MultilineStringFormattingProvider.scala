@@ -40,18 +40,22 @@ final class MultilineStringFormattingProvider(
     }
   }
 
-  private def determineDefaultIndent(sourceText: String, start: Int): String = {
-    val lastPipe = sourceText.indexOf('|')
-    val lastNewline = sourceText.lastIndexBetween('\n', upperBound = lastPipe)
-    space * (lastPipe - lastNewline - 1)
+  private def determineDefaultIndent(
+      lines: Array[String],
+      lineNumberToCheck: Int
+  ): String = {
+    val lineToCheck = lines(lineNumberToCheck)
+    val lastPipe = lineToCheck.indexOf('|')
+    space * lastPipe
   }
 
   private def indent(
       sourceText: String,
-      start: Int,
       position: Position
   ): TextEdit = {
-    val defaultIndent = determineDefaultIndent(sourceText, start)
+    val splitLines = sourceText.split('\n')
+    // position line -1 since we are checking the line before when doing onType
+    val defaultIndent = determineDefaultIndent(splitLines, position.getLine - 1)
     val existingSpaces = position.getCharacter()
     val addedSpaces = defaultIndent.drop(existingSpaces)
     val startChar = defaultIndent.size - addedSpaces.size
@@ -186,7 +190,7 @@ final class MultilineStringFormattingProvider(
     val doc = params.getTextDocument()
     val newlineAdded = params.getCh() == "\n"
     withToken(doc, range, newlineAdded) { (sourceText, position) =>
-      List(indent(sourceText, position.start, params.getPosition))
+      List(indent(sourceText, params.getPosition))
     }
   }
 
@@ -196,7 +200,8 @@ final class MultilineStringFormattingProvider(
     val doc = params.getTextDocument()
     withToken(doc, range, newlineAdded = false) { (sourceText, position) =>
       val splitLines = sourceText.split('\n')
-      val defaultIndent = determineDefaultIndent(sourceText, position.start)
+      // position.startLine since we want to check current line on rangeFormatting
+      val defaultIndent = determineDefaultIndent(splitLines, position.startLine)
       val linesToFormat =
         range.getStart().getLine().to(range.getEnd().getLine())
 

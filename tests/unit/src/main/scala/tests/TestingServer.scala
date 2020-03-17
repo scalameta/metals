@@ -475,7 +475,7 @@ final class TestingServer(
       root: AbsolutePath = workspace
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      (text, params) <- rangeFormattingParams(filename, query, paste, root)
+      (_, params) <- rangeFormattingParams(filename, query, paste, root)
       multiline <- server.rangeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
