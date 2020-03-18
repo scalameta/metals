@@ -295,4 +295,35 @@ class DefinitionLspSuite extends BaseLspSuite("definition") {
     } yield ()
   }
 
+  test("rambo") {
+    cleanDatabase()
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala212}"
+           |  }
+           |}
+           |/Main.scala
+           |object Main {
+           |  println("hello!")
+           |  val arr = Seq("").toArray()
+           |}
+           |""".stripMargin
+      )
+      _ = client.messageRequests.clear()
+      _ <- server.didOpen("Main.scala")
+      _ = server.workspaceDefinitions // trigger definition
+      _ <- server.didOpen("scala/Predef.scala")
+      _ <- server.didOpen("scala/collection/TraversableOnce.scala")
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        ""
+      )
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+    } yield ()
+  }
+
 }

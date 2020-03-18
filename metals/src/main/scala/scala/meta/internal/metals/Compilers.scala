@@ -27,6 +27,8 @@ import scala.concurrent.Future
 import java.{util => ju}
 import scala.meta.pc.AutoImportsResult
 import org.eclipse.lsp4j.TextEdit
+import scala.util.Try
+import scala.meta.internal.pc.EmptySymbolSearch
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -63,11 +65,15 @@ class Compilers(
     scribe.info(
       "no build target: using presentation compiler with only scala-library"
     )
-    val compiler = configure(new ScalaPresentationCompiler()).newInstance(
-      s"metals-default-${mtags.BuildInfo.scalaCompilerVersion}",
-      PackageIndex.scalaLibrary.asJava,
-      Nil.asJava
-    )
+    val ramboSearch =
+      Try(new RamboSymbolSearch(workspace, buffers))
+        .getOrElse(EmptySymbolSearch)
+    val compiler =
+      configure(new ScalaPresentationCompiler(), ramboSearch).newInstance(
+        s"metals-default-${mtags.BuildInfo.scalaCompilerVersion}",
+        PackageIndex.scalaLibrary.asJava,
+        Nil.asJava
+      )
     ramboCancelable = Cancelable(() => compiler.shutdown())
     compiler
   }
@@ -267,7 +273,10 @@ class Compilers(
     }
   }
 
-  private def configure(pc: PresentationCompiler): PresentationCompiler =
+  private def configure(
+      pc: PresentationCompiler,
+      search: SymbolSearch
+  ): PresentationCompiler =
     pc.withSearch(search)
       .withExecutorService(ec)
       .withScheduledExecutorService(sh)
@@ -295,7 +304,7 @@ class Compilers(
         embedded.presentationCompiler(info, scalac)
       }
     val options = plugins.filterSupportedOptions(scalac.getOptions.asScala)
-    configure(pc).newInstance(
+    configure(pc, search).newInstance(
       scalac.getTarget.getUri,
       classpath.asJava,
       (log ++ options).asJava

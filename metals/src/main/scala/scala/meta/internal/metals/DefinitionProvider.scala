@@ -47,6 +47,14 @@ final class DefinitionProvider(
     compilers: () => Compilers
 )(implicit ec: ExecutionContext) {
 
+  val destinationProvider = new DestinationProvider(
+    index,
+    buffers,
+    mtags,
+    workspace,
+    Some(semanticdbs)
+  )
+
   def definition(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
@@ -68,7 +76,7 @@ final class DefinitionProvider(
   }
 
   def fromSymbol(sym: String): ju.List[Location] =
-    DefinitionDestination.fromSymbol(sym).flatMap(_.toResult) match {
+    destinationProvider.fromSymbol(sym).flatMap(_.toResult) match {
       case None => ju.Collections.emptyList()
       case Some(destination) => destination.locations
     }
@@ -151,7 +159,7 @@ final class DefinitionProvider(
         ).toResult
       } else {
         // symbol is global so it is defined in an external destination buffer.
-        DefinitionDestination.fromSymbol(occ.symbol).flatMap(_.toResult)
+        destinationProvider.fromSymbol(occ.symbol).flatMap(_.toResult)
       }
     }
 
@@ -165,75 +173,85 @@ final class DefinitionProvider(
       .find(_.encloses(dirtyPos))
   }
 
-  private case class DefinitionDestination(
-      snapshot: TextDocument,
-      distance: TokenEditDistance,
-      symbol: String,
-      path: Option[AbsolutePath],
-      uri: String
-  ) {
+}
 
-    /** Converts snapshot position to dirty buffer position in the destination file */
-    def toResult: Option[DefinitionResult] =
-      for {
-        location <- snapshot.definition(uri, symbol)
-        revisedPosition = distance.toRevised(
-          location.getRange.getStart.getLine,
-          location.getRange.getStart.getCharacter
-        )
-        result <- revisedPosition.toLocation(location)
-      } yield {
-        DefinitionResult(
-          Collections.singletonList(result),
-          symbol,
-          path,
-          Some(snapshot)
-        )
-      }
-  }
+case class DefinitionDestination(
+    snapshot: TextDocument,
+    distance: TokenEditDistance,
+    symbol: String,
+    path: Option[AbsolutePath],
+    uri: String
+) {
 
-  private object DefinitionDestination {
-    def bestTextDocument(symbolDefinition: SymbolDefinition): TextDocument = {
-      val defnRevisedInput = symbolDefinition.path.toInput
-      // Read text file from disk instead of editor buffers because the file
-      // on disk is more likely to parse.
-      val parsed =
-        mtags.index(symbolDefinition.path.toLanguage, defnRevisedInput)
-      if (parsed.occurrences.isEmpty) {
-        // Fall back to SemanticDB on disk, if any
-        semanticdbs
-          .textDocument(symbolDefinition.path)
-          .documentIncludingStale
-          .getOrElse(parsed)
-      } else {
-        parsed
-      }
+  /** Converts snapshot position to dirty buffer position in the destination file */
+  def toResult: Option[DefinitionResult] =
+    for {
+      location <- snapshot.definition(uri, symbol)
+      revisedPosition = distance.toRevised(
+        location.getRange.getStart.getLine,
+        location.getRange.getStart.getCharacter
+      )
+      result <- revisedPosition.toLocation(location)
+    } yield {
+      DefinitionResult(
+        Collections.singletonList(result),
+        symbol,
+        path,
+        Some(snapshot)
+      )
     }
+}
 
-    def fromSymbol(symbol: String): Option[DefinitionDestination] = {
-      for {
-        symbolDefinition <- index.definition(Symbol(symbol))
-        destinationDoc = bestTextDocument(symbolDefinition)
-        defnPathInput = symbolDefinition.path.toInputFromBuffers(buffers)
-        defnOriginalInput = Input.VirtualFile(
-          defnPathInput.path,
-          destinationDoc.text
-        )
-        destinationPath = symbolDefinition.path.toFileOnDisk(workspace)
-        destinationDistance = TokenEditDistance(
-          defnOriginalInput,
-          defnPathInput
-        )
-      } yield {
-        DefinitionDestination(
-          destinationDoc,
-          destinationDistance,
-          symbolDefinition.definitionSymbol.value,
-          Some(destinationPath),
-          destinationPath.toURI.toString
-        )
-      }
+class DestinationProvider(
+    index: GlobalSymbolIndex,
+    buffers: Buffers,
+    mtags: Mtags,
+    workspace: AbsolutePath,
+    semanticdbsFallback: Option[Semanticdbs]
+) {
+
+  private def bestTextDocument(
+      symbolDefinition: SymbolDefinition
+  ): TextDocument = {
+    val defnRevisedInput = symbolDefinition.path.toInput
+    // Read text file from disk instead of editor buffers because the file
+    // on disk is more likely to parse.
+    val parsed =
+      mtags.index(symbolDefinition.path.toLanguage, defnRevisedInput)
+    if (parsed.occurrences.isEmpty) {
+      // Fall back to SemanticDB on disk, if any
+      semanticdbsFallback
+        .flatMap {
+          _.textDocument(symbolDefinition.path).documentIncludingStale
+        }
+        .getOrElse(parsed)
+    } else {
+      parsed
     }
   }
 
+  def fromSymbol(symbol: String): Option[DefinitionDestination] = {
+    for {
+      symbolDefinition <- index.definition(Symbol(symbol))
+      destinationDoc = bestTextDocument(symbolDefinition)
+      defnPathInput = symbolDefinition.path.toInputFromBuffers(buffers)
+      defnOriginalInput = Input.VirtualFile(
+        defnPathInput.path,
+        destinationDoc.text
+      )
+      destinationPath = symbolDefinition.path.toFileOnDisk(workspace)
+      destinationDistance = TokenEditDistance(
+        defnOriginalInput,
+        defnPathInput
+      )
+    } yield {
+      DefinitionDestination(
+        destinationDoc,
+        destinationDistance,
+        symbolDefinition.definitionSymbol.value,
+        Some(destinationPath),
+        destinationPath.toURI.toString
+      )
+    }
+  }
 }

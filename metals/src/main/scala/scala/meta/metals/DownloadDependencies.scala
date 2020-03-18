@@ -27,8 +27,16 @@ object DownloadDependencies {
     downloadScalafmt()
     downloadMtags()
     downloadSemanticDB()
+    downloadScala()
     // NOTE(olafur): important, Bloop comes last because it does System.exit()
     downloadBloop()
+  }
+
+  def downloadScala(): Unit = {
+    scribe.info("Downloading scala library and sources")
+    BuildInfo.supportedScalaVersions.foreach { scalaVersion =>
+      Embedded.downloadScalaSources(scalaVersion)
+    }
   }
 
   def downloadMdoc(): Unit = {

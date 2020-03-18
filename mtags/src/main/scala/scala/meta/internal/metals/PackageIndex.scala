@@ -123,9 +123,6 @@ class PackageIndex() {
     } else {
       PackageIndex.bootClasspath.foreach(visit)
     }
-    PackageIndex.scalaLibrary.foreach { scalaLibrary =>
-      visit(AbsolutePath(scalaLibrary))
-    }
   }
 
   private def expandJrtClasspath(): Unit = {
