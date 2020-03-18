@@ -51,7 +51,7 @@ object OpenCommand extends Command[OpenOptions]("open") {
         1
       } else {
         if (open.intellij) {
-          IntelliJ.launch(project)
+          IntelliJ.launch(project, open)
         }
         if (open.vscode) {
           VSCode.launch(project)

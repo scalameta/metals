@@ -68,7 +68,7 @@ object SharedCommand {
             OpenCommand.onEmpty(export.project, export.app)
           } else {
             OpenCommand.run(
-              export.open.withProject(export.project),
+              export.open.withProject(export.project).withWorkspace(workspace),
               export.app
             )
           }

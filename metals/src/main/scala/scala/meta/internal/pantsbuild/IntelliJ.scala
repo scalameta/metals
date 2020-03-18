@@ -8,11 +8,12 @@ import java.nio.charset.StandardCharsets
 import scala.meta.internal.metals.{BuildInfo => V}
 import java.net.URL
 import com.google.gson.JsonArray
+import scala.meta.internal.pantsbuild.commands.OpenOptions
 import scala.meta.internal.pantsbuild.commands.Project
 import java.nio.file.StandardOpenOption
 
 object IntelliJ {
-  def launch(project: Project): Unit = {
+  def launch(project: Project, open: OpenOptions): Unit = {
     val applications = Paths.get("/Applications")
     val candidates = List(
       applications.resolve("Twitter IntelliJ IDEA.app"),
@@ -20,15 +21,19 @@ object IntelliJ {
       applications.resolve("IntelliJ IDEA.app"),
       applications.resolve("IntelliJ IDEA CE.app")
     )
-    val command = candidates.find(Files.isDirectory(_)) match {
-      case Some(intellij) =>
-        List(
-          "open",
-          "-a",
-          intellij.toString()
-        )
+    def macosOpen(app: String): List[String] =
+      List("open", "-a", app)
+    val command = open.intellijLauncher match {
+      case Some(launcher) =>
+        if (launcher.endsWith(".app")) macosOpen(launcher)
+        else List(launcher)
       case None =>
-        List("idea")
+        candidates.find(Files.isDirectory(_)) match {
+          case Some(intellij) =>
+            macosOpen(intellij.toString())
+          case None =>
+            List("idea")
+        }
     }
     val hasIdeaDirectory = project.bspRoot.resolve(".idea").isDirectory
     val openDirectory =
@@ -44,7 +49,7 @@ object IntelliJ {
       cwd = Some(openDirectory.toFile)
     ).!
     if (exit != 0) {
-      scribe.error(s"failed to launch IntelliJ: 'binary'")
+      scribe.error(s"failed to launch IntelliJ: '${command.mkString(" ")}'")
     }
   }
 
