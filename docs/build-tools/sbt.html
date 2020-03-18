@@ -134,7 +134,7 @@ bloopExportJarClassifiers.in(<span class="hljs-type">Global</span>) := <span cla
 plugin.</p>
 <pre><code class="hljs css language-diff">// build.sbt
  lazy val myproject = project.settings(
-<span class="hljs-addition">+  scalaVersion := "2.12.10", // or 2.11.12, other versions are not supported.</span>
+<span class="hljs-addition">+  scalaVersion := "2.12.11", // or 2.11.12, other versions are not supported.</span>
 <span class="hljs-addition">+  addCompilerPlugin(MetalsPlugin.semanticdbModule), // enable SemanticDB</span>
 <span class="hljs-addition">+  scalacOptions += "-Yrangepos" // required by SemanticDB</span>
  )
