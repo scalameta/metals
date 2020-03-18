@@ -22,17 +22,17 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """|/build.gradle
-           |plugins {
-           |    id 'scala'
-           |}
-           |repositories {
-           |    mavenCentral()
-           |}
-           |dependencies {
-           |    implementation 'org.scala-lang:scala-library:2.12.10'
-           |}
-           |""".stripMargin
+        s"""|/build.gradle
+            |plugins {
+            |    id 'scala'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |}
+            |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -70,17 +70,17 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """|/build.gradle
-           |plugins {
-           |    id 'scala'
-           |}
-           |repositories {
-           |    mavenCentral()
-           |}
-           |dependencies {
-           |    implementation 'org.scala-lang:scala-reflect:2.12.10'
-           |}
-           |""".stripMargin
+        s"""|/build.gradle
+            |plugins {
+            |    id 'scala'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'org.scala-lang:scala-reflect:${V.scala212}'
+            |}
+            |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -99,17 +99,17 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """|/build.gradle
-           |plugins {
-           |    id 'scala'
-           |}
-           |repositories {
-           |    mavenCentral()
-           |}
-           |dependencies {
-           |    implementation 'org.scala-lang:scala-library:2.12.10'
-           |}
-           |""".stripMargin
+        s"""|/build.gradle
+            |plugins {
+            |    id 'scala'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |}
+            |""".stripMargin
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -134,22 +134,22 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """|/build.gradle
-           |plugins {
-           |    id 'scala'
-           |}
-           |repositories {
-           |    mavenCentral()
-           |}
-           |dependencies {
-           |    implementation 'org.scala-lang:scala-library:2.12.10'
-           |}
-           |/src/main/scala/reload/Main.scala
-           |package reload
-           |object Main extends App {
-           |  println("sourcecode.Line(42)")
-           |}
-           |""".stripMargin
+        s"""|/build.gradle
+            |plugins {
+            |    id 'scala'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |}
+            |/src/main/scala/reload/Main.scala
+            |package reload
+            |object Main extends App {
+            |  println("sourcecode.Line(42)")
+            |}
+            |""".stripMargin
       )
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -192,16 +192,16 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
       _ <- server.didSave("build.gradle") { _ =>
-        """|plugins {
-           |    id 'scala'
-           |}
-           |repositories {
-           |    mavenCentral()
-           |}
-           |dependencies {
-           |    implementation 'org.scala-lang:scala-library:2.12.10'
-           |}
-           |""".stripMargin
+        s"""|plugins {
+            |    id 'scala'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+            |}
+            |""".stripMargin
       }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -305,30 +305,30 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/build.gradle
-          |plugins {
-          |    id 'scala'
-          |}
-          |repositories {
-          |    mavenCentral()
-          |}
-          |dependencies {
-          |    implementation 'org.scala-lang:scala-library:2.12.10'
-          |}
-          |tasks.withType(ScalaCompile) {
-          |    scalaCompileOptions.additionalParameters = [
-          |         '-Xfatal-warnings',
-          |         '-Ywarn-unused'
-          |    ]
-          |}
-          |/src/main/scala/warning/Warning.scala
-          |import scala.concurrent.Future // unused
-          |object Warning
-          |object A{
-          |  object B
-          |}
-          |""".stripMargin
+        s"""
+           |/build.gradle
+           |plugins {
+           |    id 'scala'
+           |}
+           |repositories {
+           |    mavenCentral()
+           |}
+           |dependencies {
+           |    implementation 'org.scala-lang:scala-library:${V.scala212}'
+           |}
+           |tasks.withType(ScalaCompile) {
+           |    scalaCompileOptions.additionalParameters = [
+           |         '-Xfatal-warnings',
+           |         '-Ywarn-unused'
+           |    ]
+           |}
+           |/src/main/scala/warning/Warning.scala
+           |import scala.concurrent.Future // unused
+           |object Warning
+           |object A{
+           |  object B
+           |}
+           |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
       _ <- server.didOpen("src/main/scala/warning/Warning.scala")

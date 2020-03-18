@@ -102,9 +102,6 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
         """|a/src/main/scala/Main.scala:1:8: error: identifier expected but 'object' found.
            |object object A
            |       ^^^^^^
-           |a/src/main/scala/Main.scala:2:1: error: <error> is already defined as object <error>
-           |object object B
-           |^^^^^^^^^^^^^^^
            |a/src/main/scala/Main.scala:2:8: error: identifier expected but 'object' found.
            |object object B
            |       ^^^^^^
@@ -116,9 +113,6 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
         """|a/src/main/scala/Main.scala:2:8: error: identifier expected but 'object' found.
            |object object A
            |       ^^^^^^
-           |a/src/main/scala/Main.scala:3:1: error: <error> is already defined as object <error>
-           |object object B
-           |^^^^^^^^^^^^^^^
            |a/src/main/scala/Main.scala:3:8: error: identifier expected but 'object' found.
            |object object B
            |       ^^^^^^

@@ -143,9 +143,9 @@ commands += Command.command("save-expect") { s =>
 lazy val V = new {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val scala212 = "2.12.10"
+  val scala212 = "2.12.11"
   val scala213 = "2.13.1"
-  val scalameta = "4.3.4"
+  val scalameta = "4.3.6"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
   val bloop = "1.4.0-RC1-90-70cfd9e2"
@@ -166,8 +166,9 @@ lazy val V = new {
       .distinct
   def supportedScalaVersions =
     nonDeprecatedScalaVersions ++ deprecatedScalaVersions
-  def deprecatedScalaVersions = Seq("2.12.8", "2.12.9", scala211)
-  def nonDeprecatedScalaVersions = Seq("2.13.0", scala213, scala212)
+  def deprecatedScalaVersions =
+    Seq(scala211, "2.12.8", "2.12.9", "2.12.10", "2.13.0")
+  def nonDeprecatedScalaVersions = Seq(scala213, scala212)
   def guava = "com.google.guava" % "guava" % "28.2-jre"
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.1"
   def dap4j =

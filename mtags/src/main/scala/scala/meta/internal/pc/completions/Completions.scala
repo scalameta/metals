@@ -235,7 +235,7 @@ trait Completions { this: MetalsGlobal =>
             } else {
               val short = shortType(info, history)
               if (short == NoType) ""
-              else sym.infoString(short).replaceAllLiterally(" <: <?>", "")
+              else sym.infoString(short).trim.replaceAllLiterally(" <: <?>", "")
             }
         }
     }

@@ -5,6 +5,7 @@ import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.builds.MillBuildTool
 import tests.BaseImportSuite
+import scala.meta.internal.metals.{BuildInfo => V}
 
 class MillLspSuite extends BaseImportSuite("mill-import") {
 
@@ -18,12 +19,12 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/build.sc
-          |import mill._, scalalib._
-          |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.10"
-          |}
+        s"""
+           |/build.sc
+           |import mill._, scalalib._
+           |object foo extends ScalaModule {
+           |  def scalaVersion = "${V.scala212}"
+           |}
         """.stripMargin
       )
       _ = assertNoDiff(
@@ -43,11 +44,11 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didChange("build.sc") { text =>
         text +
-          """|
-             |object bar extends ScalaModule {
-             |  def scalaVersion = "2.12.10"
-             |}
-             |""".stripMargin
+          s"""|
+              |object bar extends ScalaModule {
+              |  def scalaVersion = "${V.scala212}"
+              |}
+              |""".stripMargin
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didSave("build.sc")(identity)
@@ -67,19 +68,19 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/build.sc
-          |import mill._, scalalib._
-          |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.10"
-          |  /*DEPS*/
-          |}
-          |/foo/src/reload/Main.scala
-          |package reload
-          |object Main extends App {
-          |  println("sourcecode.Line(42)")
-          |}
-          |""".stripMargin
+        s"""
+           |/build.sc
+           |import mill._, scalalib._
+           |object foo extends ScalaModule {
+           |  def scalaVersion = "${V.scala212}"
+           |  /*DEPS*/
+           |}
+           |/foo/src/reload/Main.scala
+           |package reload
+           |object Main extends App {
+           |  println("sourcecode.Line(42)")
+           |}
+           |""".stripMargin
       )
       _ <- server.didOpen("foo/src/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -121,11 +122,11 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
       _ <- server.didSave("build.sc") { _ =>
-        """
-          |import mill._, scalalib._
-          |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.10"
-          |}
+        s"""
+           |import mill._, scalalib._
+           |object foo extends ScalaModule {
+           |  def scalaVersion = "${V.scala212}"
+           |}
         """.stripMargin,
       }
       _ = assertNoDiff(
@@ -143,20 +144,20 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
     cleanWorkspace()
     for {
       _ <- server.initialize(
-        """
-          |/build.sc
-          |import mill._, scalalib._
-          |object foo extends ScalaModule {
-          |  def scalaVersion = "2.12.10"
-          |  def scalacOptions = Seq("-Xfatal-warnings", "-Ywarn-unused")
-          |}
-          |/foo/src/Warning.scala
-          |import scala.concurrent.Future // unused
-          |object Warning
-          |object A{
-          |  object B
-          |}
-          |""".stripMargin
+        s"""
+           |/build.sc
+           |import mill._, scalalib._
+           |object foo extends ScalaModule {
+           |  def scalaVersion = "${V.scala212}"
+           |  def scalacOptions = Seq("-Xfatal-warnings", "-Ywarn-unused")
+           |}
+           |/foo/src/Warning.scala
+           |import scala.concurrent.Future // unused
+           |object Warning
+           |object A{
+           |  object B
+           |}
+           |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
       _ <- server.didOpen("foo/src/Warning.scala")

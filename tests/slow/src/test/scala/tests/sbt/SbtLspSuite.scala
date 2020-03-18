@@ -30,7 +30,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "2.12.10"
+            |scalaVersion := "${V.scala212}"
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -72,7 +72,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "2.12.10"
+            |scalaVersion := "${V.scala212}"
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -101,7 +101,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "2.12.10"
+            |scalaVersion := "${V.scala212}"
             |/src/main/scala/reload/Main.scala
             |package reload
             |object Main extends App {
@@ -142,7 +142,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
            |sbt.version=$sbtVersion
            |/build.sbt
            |version := "1.0"
-           |scalaVersion := "2.12.10"
+           |scalaVersion := "${V.scala212}"
            |""".stripMargin,
         expectError = true
       )
@@ -181,7 +181,9 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
-      _ <- server.didSave("build.sbt") { _ => """scalaVersion := "2.12.10" """ }
+      _ <- server.didSave("build.sbt") { _ =>
+        s"""scalaVersion := "${V.scala212}" """
+      }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
@@ -201,7 +203,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "2.12.10"
+           |scalaVersion := "${V.scala212}"
            |lazy val a = project.settings(scalaVersion := "2.12.4")
            |lazy val b = project.settings(scalaVersion := "2.12.3")
            |lazy val c = project.settings(scalaVersion := "2.11.12")
@@ -254,7 +256,9 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
         client.showMessages.clear()
         client.clientCommands.clear()
       }
-      _ <- server.didSave("build.sbt")(_ => """scalaVersion := "2.12.10" """)
+      _ <- server.didSave("build.sbt")(_ =>
+        s"""scalaVersion := "${V.scala212}" """
+      )
       _ = {
         val expected = ClientCommands.ReloadDoctor.id :: Nil
         val actual = client.workspaceClientCommands
@@ -275,7 +279,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "2.12.10"
+           |scalaVersion := "${V.scala212}"
            |libraryDependencies +=
            |  // dependency won't resolve without the `bintray:scalacenter/releases` resolver
            |  // that is defined in the `custom-repositories` file.
@@ -301,7 +305,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "2.12.10"
+           |scalaVersion := "${V.scala212}"
            |/.jvmopts
            |-Xms1536M
            |-Xmx1536M
@@ -321,7 +325,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "2.12.10"
+           |scalaVersion := "${V.scala212}"
            |scalacOptions ++= List(
            |  "-Xfatal-warnings",
            |  "-Ywarn-unused"
@@ -363,7 +367,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
            |/project/build.properties
            |sbt.version=$sbtVersion
            |/build.sbt
-           |scalaVersion := "2.12.10"
+           |scalaVersion := "${V.scala212}"
            |""".stripMargin,
         expectError = true,
         preInitialized = () => {
