@@ -6,7 +6,7 @@ import scala.collection.{mutable => m}
 import scala.meta.internal.implementation.GlobalClassTable
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.SuperMethodProvider
-import scala.meta.internal.implementation.SymbolWithAsSeenFrom
+import scala.meta.internal.implementation.ClassHierarchyItem
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
@@ -39,7 +39,7 @@ final class SuperMethodLensesProvider(
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
 
-    val search =
+    lazy val search =
       makeSymbolSearchMethod(
         makeGlobalClassTable(textDocumentWithPath.filePath),
         textDocumentWithPath.textDocument
@@ -71,23 +71,19 @@ final class SuperMethodLensesProvider(
       cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
   ): Option[l.Command] = {
-    if (userConfig().superMethodLensesEnabled) {
-      for {
-        symbolInformation <- findSymbol(symbol)
-        gotoParentSymbol <- SuperMethodProvider.findSuperForMethodOrField(
-          symbolInformation,
-          docWithPath,
-          role,
-          findSymbol,
-          cache
-        )
-      } yield convertToSuperMethodCommand(
-        gotoParentSymbol,
-        symbolInformation.displayName
+    for {
+      symbolInformation <- findSymbol(symbol)
+      gotoParentSymbol <- SuperMethodProvider.findSuperForMethodOrField(
+        symbolInformation,
+        docWithPath,
+        role,
+        findSymbol,
+        cache
       )
-    } else {
-      None
-    }
+    } yield convertToSuperMethodCommand(
+      gotoParentSymbol,
+      symbolInformation.displayName
+    )
   }
 
   private def convertToSuperMethodCommand(
@@ -119,7 +115,7 @@ final class SuperMethodLensesProvider(
 
 object SuperMethodLensesProvider {
   type LensGoSuperCache =
-    m.Map[String, List[SymbolWithAsSeenFrom]]
+    m.Map[String, List[ClassHierarchyItem]]
 
   def emptyLensGoSuperCache(): LensGoSuperCache = m.Map()
 

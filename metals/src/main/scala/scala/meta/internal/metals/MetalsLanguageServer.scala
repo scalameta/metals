@@ -11,6 +11,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import io.methvin.watcher.DirectoryChangeEvent
@@ -21,6 +22,7 @@ import org.eclipse.{lsp4j => l}
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 import scala.concurrent.Await
@@ -46,15 +48,19 @@ import scala.meta.tokenizers.TokenizeException
 import scala.util.control.NonFatal
 import scala.util.Success
 import com.google.gson.JsonPrimitive
+
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
+
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import com.google.gson.JsonNull
-import scala.meta.internal.implementation.GoToSuperMethod
+
+import scala.meta.internal.implementation.Supermethods
+import scala.meta.internal.metals.codelenses.CodeLenses
 import scala.meta.internal.metals.codelenses.RunTestLensesProvider
 import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider
 
@@ -165,7 +171,7 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var codeLensProvider: CodeLensProvider = _
-  private var goToSuperMethod: GoToSuperMethod = _
+  private var goToSuperMethod: Supermethods = _
   private var codeActionProvider: CodeActionProvider = _
   private var definitionProvider: DefinitionProvider = _
   private var semanticDBIndexer: SemanticdbIndexer = _
@@ -379,15 +385,21 @@ class MetalsLanguageServer(
       definitionProvider
     )
 
-    goToSuperMethod = new GoToSuperMethod(
+    goToSuperMethod = new Supermethods(
       languageClient,
       definitionProvider,
       implementationProvider,
       buildTargets
     )
 
-    val runTestLensesProvider =
-      new RunTestLensesProvider(buildTargetClasses, buffers, buildTargets)
+    val runTestLensesProvider: List[CodeLenses] =
+      if (clientExperimentalCapabilities.debuggingProvider) {
+        List(
+          new RunTestLensesProvider(buildTargetClasses, buffers, buildTargets)
+        )
+      } else {
+        List.empty
+      }
     val goSuperLensesProvider = new SuperMethodLensesProvider(
       implementationProvider,
       buffers,
@@ -395,10 +407,9 @@ class MetalsLanguageServer(
       () => userConfig,
       config
     )
-    codeLensProvider = CodeLensProvider(
-      List(runTestLensesProvider, goSuperLensesProvider),
-      semanticdbs,
-      clientExperimentalCapabilities
+    codeLensProvider = new CodeLensProvider(
+      runTestLensesProvider :+ goSuperLensesProvider,
+      semanticdbs
     )
     renameProvider = new RenameProvider(
       referencesProvider,

@@ -5,8 +5,8 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.internal.implementation.GoToSuperMethod.GoToSuperMethodParams
-import scala.meta.internal.implementation.GoToSuperMethod.formatMethodSymbolForQuickPick
+import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
+import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.DefinitionProvider
@@ -21,7 +21,7 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
-class GoToSuperMethod(
+class Supermethods(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
     implementationProvider: ImplementationProvider,
@@ -188,7 +188,7 @@ class GoToSuperMethod(
   }
 }
 
-object GoToSuperMethod {
+object Supermethods {
 
   final case class GoToSuperMethodParams(document: String, position: Position)
 

@@ -23,6 +23,7 @@ object SuperMethodProvider {
     if (isDefinitionOfMethodField(symbolRole, methodSymbolInformation)) {
       findSuperForMethodOrFieldChecked(
         methodSymbolInformation,
+        methodSymbolInformation.signature.asInstanceOf[MethodSignature],
         documentWithPath,
         cache,
         findSymbol
@@ -70,7 +71,7 @@ object SuperMethodProvider {
   }
 
   private def matchMethodInClass(
-      superClass: SymbolWithAsSeenFrom,
+      superClass: ClassHierarchyItem,
       baseMethodSymbolInformation: SymbolInformation,
       baseMethodInfo: MethodSignature,
       findSymbol: String => Option[SymbolInformation]
@@ -81,9 +82,9 @@ object SuperMethodProvider {
           .map(methodSymbolLink =>
             for {
               mSymbolInformation <- findSymbol(methodSymbolLink)
-              if mSymbolInformation.isMethod
-              methodSignature = mSymbolInformation.signature
-                .asInstanceOf[MethodSignature]
+              methodSignature <- Option(mSymbolInformation.signature).collect {
+                case m: MethodSignature => m
+              }
               if checkSignaturesEqual(
                 mSymbolInformation,
                 methodSignature,
@@ -106,7 +107,7 @@ object SuperMethodProvider {
       findSymbol: String => Option[SymbolInformation],
       skipSymbols: m.Set[String],
       asSeenFrom: Map[String, String]
-  ): List[SymbolWithAsSeenFrom] = {
+  ): List[ClassHierarchyItem] = {
     if (skipSymbols.contains(symbolInformation.symbol)) {
       List.empty
     } else {
@@ -132,7 +133,7 @@ object SuperMethodProvider {
             .toList
             .reverse
             .flatten
-          SymbolWithAsSeenFrom(symbolInformation, asSeenFrom) +: parentsHierarchy
+          ClassHierarchyItem(symbolInformation, asSeenFrom) +: parentsHierarchy
         case sig: TypeSignature =>
           val upperBound = sig.upperBound.asInstanceOf[TypeRef]
           findSymbol(upperBound.symbol)
@@ -153,7 +154,7 @@ object SuperMethodProvider {
       classSymbolInformation: SymbolInformation,
       cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
-  ): List[SymbolWithAsSeenFrom] = {
+  ): List[ClassHierarchyItem] = {
     cache.get(classSymbolInformation.symbol) match {
       case Some(value) => value
       case None =>
@@ -168,7 +169,7 @@ object SuperMethodProvider {
   private def calculateClassSuperHierarchy(
       classSymbolInformation: SymbolInformation,
       findSymbol: String => Option[SymbolInformation]
-  ): List[SymbolWithAsSeenFrom] = {
+  ): List[ClassHierarchyItem] = {
     getSuperClasses(
       classSymbolInformation,
       findSymbol,
@@ -179,34 +180,35 @@ object SuperMethodProvider {
 
   private def findSuperForMethodOrFieldChecked(
       msi: SymbolInformation,
+      methodInfo: MethodSignature,
       documentWithPath: TextDocumentWithPath,
       cache: LensGoSuperCache,
       findSymbol: String => Option[SymbolInformation]
   ): Option[String] = {
-    val classSymbolInformation =
+    val classSymbolInformationOption =
       findClassInfo(
         msi.symbol,
         msi.symbol.owner,
         documentWithPath.textDocument,
         findSymbol
       )
-    val methodInfo = msi.signature.asInstanceOf[MethodSignature]
-
     val result = for {
-      si <- classSymbolInformation.toIterable
-      bottomClassSig = si.signature.asInstanceOf[ClassSignature]
-      SymbolWithAsSeenFrom(superClass, asSeenFrom) <- calculateClassSuperHierarchyWithCache(
-        si,
+      classSymbolInformation <- classSymbolInformationOption.toIterable
+      bottomClassSig = classSymbolInformation.signature
+        .asInstanceOf[ClassSignature]
+      ClassHierarchyItem(superClass, asSeenFrom) <- calculateClassSuperHierarchyWithCache(
+        classSymbolInformation,
         cache,
         findSymbol
       )
-      if superClass.signature.isInstanceOf[ClassSignature]
-      classSig = superClass.signature.asInstanceOf[ClassSignature]
+      classSig <- List(superClass.signature).collect {
+        case cs: ClassSignature => cs
+      }
       methodSymbolLink <- classSig.getDeclarations.symlinks
       mSymbolInformation <- findSymbol(methodSymbolLink).toIterable
-      if mSymbolInformation.isMethod
-      methodSignature = mSymbolInformation.signature
-        .asInstanceOf[MethodSignature]
+      methodSignature <- Option(mSymbolInformation.signature).collect {
+        case m: MethodSignature => m
+      }
       translatedASF = AsSeenFrom.toRealNames(
         classSig,
         bottomClassSig,
@@ -228,7 +230,8 @@ object SuperMethodProvider {
       symbolRole: SymbolOccurrence.Role,
       symbolInformation: SymbolInformation
   ): Boolean =
-    symbolRole.isDefinition && (symbolInformation.isMethod || symbolInformation.isField)
+    symbolRole.isDefinition && (symbolInformation.isMethod || symbolInformation.isField) && symbolInformation.signature
+      .isInstanceOf[MethodSignature]
 
   final val stopSymbols: Set[String] = Set(
     "scala/AnyRef#",

@@ -89,8 +89,8 @@ import scala.meta.internal.metals.debug.Stoppage
 import scala.util.Properties
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeActionContext
-import scala.meta.internal.implementation.GoToSuperMethod.GoToSuperMethodParams
-import scala.meta.internal.implementation.GoToSuperMethod.formatMethodSymbolForQuickPick
+import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
+import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.ClientCommands
 
 /**

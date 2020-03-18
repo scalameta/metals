@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.implementation.GoToSuperMethod
+import scala.meta.internal.implementation.Supermethods
 
 class SuperMethodSuite extends BaseSuite {
 
@@ -21,7 +21,7 @@ class SuperMethodSuite extends BaseSuite {
 
   def checkConvert(current: String, converted: String): Unit = {
     assertNoDiff(
-      GoToSuperMethod.formatMethodSymbolForQuickPick(current),
+      Supermethods.formatMethodSymbolForQuickPick(current),
       converted
     )
   }
