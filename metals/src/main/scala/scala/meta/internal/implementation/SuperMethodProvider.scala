@@ -42,6 +42,7 @@ object SuperMethodProvider {
     if (isDefinitionOfMethodField(symbolRole, methodSymbolInformation)) {
       getSuperMethodHierarchyChecked(
         methodSymbolInformation,
+        methodSymbolInformation.signature.asInstanceOf[MethodSignature],
         documentWithPath,
         findSymbol
       )
@@ -52,6 +53,7 @@ object SuperMethodProvider {
 
   private def getSuperMethodHierarchyChecked(
       msi: SymbolInformation,
+      methodInfo: MethodSignature,
       documentWithPath: TextDocumentWithPath,
       findSymbol: String => Option[SymbolInformation]
   ): Option[List[SymbolInformation]] = {
@@ -62,8 +64,6 @@ object SuperMethodProvider {
         documentWithPath.textDocument,
         findSymbol
       )
-    val methodInfo = msi.signature.asInstanceOf[MethodSignature]
-
     classSymbolInformationMaybe.map(classSymbolInformation => {
       calculateClassSuperHierarchy(classSymbolInformation, findSymbol)
         .flatMap(matchMethodInClass(_, msi, methodInfo, findSymbol))
@@ -230,8 +230,9 @@ object SuperMethodProvider {
       symbolRole: SymbolOccurrence.Role,
       symbolInformation: SymbolInformation
   ): Boolean =
-    symbolRole.isDefinition && (symbolInformation.isMethod || symbolInformation.isField) && symbolInformation.signature
-      .isInstanceOf[MethodSignature]
+    symbolRole.isDefinition &&
+      (symbolInformation.isMethod || symbolInformation.isField) &&
+      symbolInformation.signature.isInstanceOf[MethodSignature]
 
   final val stopSymbols: Set[String] = Set(
     "scala/AnyRef#",
