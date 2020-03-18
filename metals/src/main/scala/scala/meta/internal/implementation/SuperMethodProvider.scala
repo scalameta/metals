@@ -20,17 +20,19 @@ object SuperMethodProvider {
       findSymbol: String => Option[SymbolInformation],
       cache: LensGoSuperCache
   ): Option[String] = {
-    if (isDefinitionOfMethodField(symbolRole, methodSymbolInformation)) {
-      findSuperForMethodOrFieldChecked(
+    for {
+      methodSignature <- isDefinitionOfMethodField(
+        symbolRole,
+        methodSymbolInformation
+      )
+      superSymbol <- findSuperForMethodOrFieldChecked(
         methodSymbolInformation,
-        methodSymbolInformation.signature.asInstanceOf[MethodSignature],
+        methodSignature,
         documentWithPath,
         cache,
         findSymbol
       )
-    } else {
-      None
-    }
+    } yield superSymbol
   }
 
   def getSuperMethodHierarchy(
@@ -39,16 +41,19 @@ object SuperMethodProvider {
       symbolRole: SymbolOccurrence.Role,
       findSymbol: String => Option[SymbolInformation]
   ): Option[List[SymbolInformation]] = {
-    if (isDefinitionOfMethodField(symbolRole, methodSymbolInformation)) {
-      getSuperMethodHierarchyChecked(
+    for {
+      methodSignature <- isDefinitionOfMethodField(
+        symbolRole,
+        methodSymbolInformation
+      )
+      superSymbolsInformation <- getSuperMethodHierarchyChecked(
         methodSymbolInformation,
-        methodSymbolInformation.signature.asInstanceOf[MethodSignature],
+        methodSignature,
         documentWithPath,
         findSymbol
       )
-    } else {
-      None
-    }
+
+    } yield superSymbolsInformation
   }
 
   private def getSuperMethodHierarchyChecked(
@@ -229,10 +234,14 @@ object SuperMethodProvider {
   private def isDefinitionOfMethodField(
       symbolRole: SymbolOccurrence.Role,
       symbolInformation: SymbolInformation
-  ): Boolean =
-    symbolRole.isDefinition &&
-      (symbolInformation.isMethod || symbolInformation.isField) &&
-      symbolInformation.signature.isInstanceOf[MethodSignature]
+  ): Option[MethodSignature] =
+    symbolInformation.signature match {
+      case methodSignature: MethodSignature
+          if symbolRole.isDefinition && (symbolInformation.isMethod || symbolInformation.isField) =>
+        Some(methodSignature)
+      case _ =>
+        None
+    }
 
   final val stopSymbols: Set[String] = Set(
     "scala/AnyRef#",
