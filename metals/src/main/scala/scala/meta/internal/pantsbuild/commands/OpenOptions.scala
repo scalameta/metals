@@ -4,10 +4,13 @@ import metaconfig.generic
 import metaconfig.annotation._
 import metaconfig.generic.Settings
 import metaconfig.{ConfDecoder, ConfEncoder}
+import java.nio.file.Path
 
 case class OpenOptions(
     @Description("Open IntelliJ in the given project")
     intellij: Boolean = false,
+    @Description("The IntelliJ application or binary to use for launching")
+    intellijLauncher: Option[String] = None,
     @Description("Open VS Code in the given project")
     vscode: Boolean = false,
     @Hidden()
@@ -21,6 +24,8 @@ case class OpenOptions(
 ) {
   def withProject(project: Project): OpenOptions =
     copy(projects = List(project.name))
+  def withWorkspace(workspace: Path): OpenOptions =
+    copy(common = common.copy(workspace = workspace))
   def isEmpty: Boolean = !intellij && !vscode
 }
 
