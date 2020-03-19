@@ -148,7 +148,7 @@ lazy val V = new {
   val scalameta = "4.3.6"
   val semanticdb = scalameta
   val bsp = "2.0.0-M4+10-61e61e87"
-  val bloop = "1.4.0-RC1-90-70cfd9e2"
+  val bloop = "1.4.0-RC1-105-118a551b"
   val bloopNightly = bloop
   val sbtBloop = bloop
   val gradleBloop = bloop
@@ -295,6 +295,7 @@ lazy val metals = project
       // For exporting Pants builds.
       "com.lihaoyi" %% "ujson" % "0.9.9",
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
+      "ch.epfl.scala" %% "bloop-frontend" % V.bloop,
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
