@@ -92,6 +92,8 @@ object IntelliJ {
       coursier.toString,
       "launch",
       s"org.scalameta:metals_2.12:${V.metalsVersion}",
+      "-r",
+      "sonatype:snapshots",
       "--main",
       classOf[BloopPants].getName,
       "--",
@@ -100,12 +102,13 @@ object IntelliJ {
       project.common.workspace.toString,
       project.name
     )
-    val settings = WorkspaceSettings(None, None, Some(refreshCommand))
-    WorkspaceSettings.writeToFile(
-      AbsolutePath(project.common.bloopDirectory),
-      settings,
-      NoopLogger
-    )
+    val configDir = AbsolutePath(project.common.bloopDirectory)
+    val currentSettings = WorkspaceSettings
+      .readFromFile(configDir, NoopLogger)
+      .getOrElse(WorkspaceSettings(None, None, None))
+    val settings =
+      currentSettings.copy(refreshProjectsCommand = Some(refreshCommand))
+    WorkspaceSettings.writeToFile(configDir, settings, NoopLogger)
   }
 
   private def downloadCoursier(destination: Path): Path = {
