@@ -3,33 +3,27 @@ package scala.meta.internal.metals.codelenses
 import java.util.Collections.singletonList
 import org.eclipse.{lsp4j => l}
 import scala.collection.{mutable => m}
-import scala.meta.internal.implementation.GlobalClassTable
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.SuperMethodProvider
 import scala.meta.internal.implementation.ClassHierarchyItem
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.symtab.GlobalSymbolTable
-import scala.meta.io.AbsolutePath
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider.LensGoSuperCache
-import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider.emptyLensGoSuperCache
+import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.LensGoSuperCache
+import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSuperCache
 
-final class SuperMethodLensesProvider(
+final class SuperMethodCodeLens(
     implementationProvider: ImplementationProvider,
     buffers: Buffers,
-    buildTargets: BuildTargets,
     userConfig: () => UserConfiguration,
     config: MetalsServerConfig
-) extends CodeLenses {
+) extends CodeLens {
 
   override def isEnabled: Boolean = userConfig().superMethodLensesEnabled
 
@@ -39,11 +33,9 @@ final class SuperMethodLensesProvider(
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
 
-    lazy val search =
-      makeSymbolSearchMethod(
-        makeGlobalClassTable(textDocumentWithPath.filePath),
-        textDocumentWithPath.textDocument
-      )
+    val search = implementationProvider.defaultSymbolSearch(
+      textDocumentWithPath
+    )
     val distance =
       TokenEditDistance.fromBuffer(path, textDocument.text, buffers)
 
@@ -97,23 +89,9 @@ final class SuperMethodLensesProvider(
     )
   }
 
-  private def makeSymbolSearchMethod(
-      global: GlobalSymbolTable,
-      openedTextDocument: TextDocument
-  ): String => Option[SymbolInformation] = { symbolInformation =>
-    implementationProvider
-      .findSymbolInformation(symbolInformation)
-      .orElse(global.info(symbolInformation))
-      .orElse(openedTextDocument.symbols.find(_.symbol == symbolInformation))
-  }
-
-  private def makeGlobalClassTable(path: AbsolutePath): GlobalSymbolTable = {
-    new GlobalClassTable(buildTargets).globalSymbolTableFor(path).get
-  }
-
 }
 
-object SuperMethodLensesProvider {
+object SuperMethodCodeLens {
   type LensGoSuperCache =
     m.Map[String, List[ClassHierarchyItem]]
 

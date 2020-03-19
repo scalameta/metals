@@ -9,7 +9,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.TypeSignature
 import scala.collection.{mutable => m}
-import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider.LensGoSuperCache
+import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.LensGoSuperCache
 
 object SuperMethodProvider {
 

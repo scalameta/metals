@@ -7,7 +7,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.JsonParser._
@@ -15,17 +14,14 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLanguageClient
 import scala.meta.internal.metals.MetalsQuickPickItem
 import scala.meta.internal.metals.MetalsQuickPickParams
-import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider.emptyLensGoSuperCache
+import scala.meta.internal.metals.codelenses.SuperMethodCodeLens.emptyLensGoSuperCache
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.io.AbsolutePath
 
 class Supermethods(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
-    implementationProvider: ImplementationProvider,
-    buildTargets: BuildTargets
+    implementationProvider: ImplementationProvider
 )(
     implicit ec: ExecutionContext
 ) {
@@ -66,7 +62,10 @@ class Supermethods(
         filePath,
         params.position
       )
-      findSymbol = makeFindSymbolMethod(textDocument, filePath)
+      findSymbol = implementationProvider.defaultSymbolSearch(
+        filePath,
+        textDocument
+      )
       symbolInformation <- findSymbol(symbolOcc.symbol)
       gotoSymbol <- {
         if (symbolOcc.role.isDefinition) {
@@ -118,7 +117,10 @@ class Supermethods(
         filePath,
         params.position
       )
-      findSymbol = makeFindSymbolMethod(textDocument, filePath)
+      findSymbol = implementationProvider.defaultSymbolSearch(
+        filePath,
+        textDocument
+      )
       symbolInformation <- findSymbol(symbolOcc.symbol)
       docText = TextDocumentWithPath(textDocument, filePath)
       hierarchy <- SuperMethodProvider.getSuperMethodHierarchy(
@@ -128,25 +130,6 @@ class Supermethods(
         findSymbol
       )
     } yield hierarchy.map(_.symbol)
-  }
-
-  private def makeFindSymbolMethod(
-      textDocument: TextDocument,
-      filePath: AbsolutePath
-  ): String => Option[SymbolInformation] = {
-    val global = new GlobalClassTable(buildTargets)
-      .globalSymbolTableFor(filePath)
-      .get
-    si =>
-      ImplementationProvider
-        .findSymbol(textDocument, si)
-        .orElse(
-          implementationProvider
-            .findSymbolInformation(si)
-        )
-        .orElse(
-          global.info(si)
-        )
   }
 
   private def findSuperMethodSymbol(

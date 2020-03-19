@@ -3,7 +3,7 @@ import scala.concurrent.Future
 import munit.Location
 import munit.TestOptions
 
-class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
+class CodeLensLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
     """|<<run>><<debug>>
        |object Main {

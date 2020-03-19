@@ -2,12 +2,12 @@ package scala.meta.internal.metals
 
 import org.eclipse.{lsp4j => l}
 import scala.meta.internal.implementation.TextDocumentWithPath
-import scala.meta.internal.metals.codelenses.CodeLenses
+import scala.meta.internal.metals.codelenses.CodeLens
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.io.AbsolutePath
 
 final class CodeLensProvider(
-    codeLensProviders: List[CodeLenses],
+    codeLensProviders: List[CodeLens],
     semanticdbs: Semanticdbs
 ) {
   // code lenses will be refreshed after compilation or when workspace gets indexed

@@ -55,9 +55,8 @@ import java.{util => ju}
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import com.google.gson.JsonNull
 import scala.meta.internal.implementation.Supermethods
-import scala.meta.internal.metals.codelenses.CodeLenses
-import scala.meta.internal.metals.codelenses.RunTestLensesProvider
-import scala.meta.internal.metals.codelenses.SuperMethodLensesProvider
+import scala.meta.internal.metals.codelenses.RunTestCodeLens
+import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -383,27 +382,25 @@ class MetalsLanguageServer(
     supermethods = new Supermethods(
       languageClient,
       definitionProvider,
-      implementationProvider,
-      buildTargets
+      implementationProvider
     )
 
-    val runTestLensesProvider: List[CodeLenses] =
-      if (clientExperimentalCapabilities.debuggingProvider) {
-        List(
-          new RunTestLensesProvider(buildTargetClasses, buffers, buildTargets)
-        )
-      } else {
-        List.empty
-      }
-    val goSuperLensesProvider = new SuperMethodLensesProvider(
+    val runTestLensProvider =
+      new RunTestCodeLens(
+        buildTargetClasses,
+        buffers,
+        buildTargets,
+        clientExperimentalCapabilities
+      )
+
+    val goSuperLensProvider = new SuperMethodCodeLens(
       implementationProvider,
       buffers,
-      buildTargets,
       () => userConfig,
       config
     )
     codeLensProvider = new CodeLensProvider(
-      runTestLensesProvider :+ goSuperLensesProvider,
+      List(runTestLensProvider, goSuperLensProvider),
       semanticdbs
     )
     renameProvider = new RenameProvider(

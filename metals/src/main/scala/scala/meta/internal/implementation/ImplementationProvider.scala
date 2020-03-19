@@ -81,11 +81,32 @@ final class ImplementationProvider(
     }
   }
 
+  def defaultSymbolSearch(
+      textDocumentWithPath: TextDocumentWithPath
+  ): String => Option[SymbolInformation] =
+    defaultSymbolSearch(
+      textDocumentWithPath.filePath,
+      textDocumentWithPath.textDocument
+    )
+
+  def defaultSymbolSearch(
+      anyWorkspacePath: AbsolutePath,
+      textDocument: TextDocument
+  ): String => Option[SymbolInformation] = {
+    lazy val global =
+      new GlobalClassTable(buildTargets).globalSymbolTableFor(anyWorkspacePath)
+    symbol => {
+      textDocument.symbols
+        .find(_.symbol == symbol)
+        .orElse(findSymbolInformation(symbol))
+        .orElse(global.flatMap(_.safeInfo(symbol)))
+    }
+  }
+
   def implementations(
       params: TextDocumentPositionParams
   ): List[Location] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    lazy val global = globalTable.globalSymbolTableFor(source)
     val locations = for {
       (symbolOccurrence, currentDocument) <- definitionProvider
         .symbolOccurrence(
@@ -97,14 +118,10 @@ final class ImplementationProvider(
       // 1. Search locally for symbol
       // 2. Search inside workspace
       // 3. Search classpath via GlobalSymbolTable
-      def symbolSearch(symbol: String): Option[SymbolInformation] = {
-        findSymbol(currentDocument, symbol)
-          .orElse(findSymbolInformation(symbol))
-          .orElse(global.flatMap(_.safeInfo(symbol)))
-      }
+      val symbolSearch = defaultSymbolSearch(source, currentDocument)
       val sym = symbolOccurrence.symbol
       val dealiased =
-        if (sym.desc.isType) dealiasClass(sym, symbolSearch _) else sym
+        if (sym.desc.isType) dealiasClass(sym, symbolSearch) else sym
 
       val definitionDocument =
         if (currentDocument.definesSymbol(dealiased)) {
@@ -266,18 +283,13 @@ final class ImplementationProvider(
       if (isClassLike(parentSymbolInfo))
         Some(implReal.symbol)
       else {
-        lazy val global = globalTable.globalSymbolTableFor(source)
-        def localSearch(symbol: String): Option[SymbolInformation] = {
-          findSymbol(implDocument, symbol)
-            .orElse(findSymbolInformation(symbol))
-            .orElse(global.flatMap(_.safeInfo(symbol)))
-        }
+        val symbolSearch = defaultSymbolSearch(source, implDocument)
         MethodImplementation.findInherited(
           parentSymbolInfo,
           symbolClass,
           classContext,
           implReal,
-          localSearch
+          symbolSearch
         )
       }
     }
@@ -348,7 +360,9 @@ final class ImplementationProvider(
     }
   }
 
-  def findSymbolInformation(symbol: String): Option[SymbolInformation] = {
+  private def findSymbolInformation(
+      symbol: String
+  ): Option[SymbolInformation] = {
     findSemanticDbForSymbol(symbol).flatMap(findSymbol(_, symbol))
   }
 
@@ -435,7 +449,7 @@ object ImplementationProvider {
     }
   }
 
-  def findSymbol(
+  private def findSymbol(
       semanticDb: TextDocument,
       symbol: String
   ): Option[SymbolInformation] = {

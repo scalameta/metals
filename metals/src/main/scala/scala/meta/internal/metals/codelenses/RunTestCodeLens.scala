@@ -1,7 +1,6 @@
 package scala.meta.internal.metals.codelenses
 
 import java.util.Collections.singletonList
-
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
@@ -15,16 +14,19 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.BuildTargetClasses
+import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.metals.JsonParser._
 
-final class RunTestLensesProvider(
+final class RunTestCodeLens(
     buildTargetClasses: BuildTargetClasses,
     buffers: Buffers,
-    buildTargets: BuildTargets
-) extends CodeLenses {
+    buildTargets: BuildTargets,
+    clientExperimentalCapabilities: ClientExperimentalCapabilities
+) extends CodeLens {
 
-  override def isEnabled: Boolean = true
+  override def isEnabled: Boolean =
+    clientExperimentalCapabilities.debuggingProvider
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
