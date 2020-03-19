@@ -7,15 +7,15 @@ PIPE = subprocess.PIPE
 gh = Github()
 
 # Needed data
-first_tag = "v0.7.6"
-last_tag = "v0.8.0"
+first_tag = "v0.8.1"
+last_tag = "v0.8.2"
 
 # Running
 org = gh.get_organization('scalameta')
 repo = org.get_repo('metals')
 
 tag_range = "%s..%s" % (first_tag, last_tag)
-command = ['git', 'log', tag_range, "--merges", "--first-parent", "master", "--pretty=format:\"%s\""]
+command = ['git', 'log', tag_range, "--first-parent", "master", "--pretty=format:\"%s\""]
 process = subprocess.Popen(command, stdout=PIPE, stderr=PIPE)
 stdoutput, stderroutput = process.communicate()
 
