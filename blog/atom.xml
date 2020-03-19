@@ -2,12 +2,24 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>http://scalameta.org/metals/blog</id>
     <title>Metals Blog</title>
-    <updated>2020-02-26T06:00:00.000Z</updated>
+    <updated>2020-03-19T06:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="http://scalameta.org/metals/blog"/>
     <subtitle>The best place to stay up-to-date with the latest Metals news and events.</subtitle>
     <logo>http://scalameta.org/metals/img/scalameta-logo.png</logo>
     <rights>Copyright © 2020 Metals</rights>
+    <entry>
+        <title type="html"><![CDATA[Metals v0.8.2 - Cobalt]]></title>
+        <id>http://scalameta.org/metals/blog/2020/03/19/cobalt.html</id>
+        <link href="http://scalameta.org/metals/blog/2020/03/19/cobalt.html"/>
+        <updated>2020-03-19T06:00:00.000Z</updated>
+        <summary type="html"><![CDATA[<p>We are happy to announce the release of Metals v0.8.2, which main purpose is adding support for the new Scala version, 2.12.11. Additionally, we included a couple of recent fixes.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">55</td> </tr> <tr> <td>Merged PRs</td> <td align="center">14</td> </tr> <tr> <td>Contributors</td> <td align="center">9</td> </tr> <tr> <td>Cl...</td></tr></tbody></table>]]></summary>
+        <author>
+            <name>Tomasz Godzik</name>
+            <email/>
+            <uri>https://twitter.com/TomekGodzik</uri>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Metals v0.8.1 - Cobalt]]></title>
         <id>http://scalameta.org/metals/blog/2020/02/26/cobalt.html</id>

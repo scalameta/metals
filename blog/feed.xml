@@ -4,7 +4,7 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>The best place to stay up-to-date with the latest Metals news and events.</description>
-        <lastBuildDate>Wed, 26 Feb 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Thu, 19 Mar 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>http://scalameta.org/metals/blog</link>
         </image>
         <copyright>Copyright © 2020 Metals</copyright>
+        <item>
+            <title><![CDATA[Metals v0.8.2 - Cobalt]]></title>
+            <link>http://scalameta.org/metals/blog/2020/03/19/cobalt.html</link>
+            <guid>http://scalameta.org/metals/blog/2020/03/19/cobalt.html</guid>
+            <pubDate>Thu, 19 Mar 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>We are happy to announce the release of Metals v0.8.2, which main purpose is adding support for the new Scala version, 2.12.11. Additionally, we included a couple of recent fixes.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">55</td> </tr> <tr> <td>Merged PRs</td> <td align="center">14</td> </tr> <tr> <td>Contributors</td> <td align="center">9</td> </tr> <tr> <td>Cl...</td></tr></tbody></table>]]></description>
+        </item>
         <item>
             <title><![CDATA[Metals v0.8.1 - Cobalt]]></title>
             <link>http://scalameta.org/metals/blog/2020/02/26/cobalt.html</link>
