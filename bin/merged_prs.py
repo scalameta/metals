@@ -7,8 +7,8 @@ PIPE = subprocess.PIPE
 gh = Github()
 
 # Needed data
-first_tag = "v0.8.1"
-last_tag = "v0.8.2"
+first_tag = "v0.8.2"
+last_tag = "v0.8.3"
 
 # Running
 org = gh.get_organization('scalameta')
