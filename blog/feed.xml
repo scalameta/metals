@@ -14,11 +14,11 @@
         </image>
         <copyright>Copyright © 2020 Metals</copyright>
         <item>
-            <title><![CDATA[Metals v0.8.2 - Cobalt]]></title>
+            <title><![CDATA[Metals v0.8.3 - Cobalt]]></title>
             <link>http://scalameta.org/metals/blog/2020/03/19/cobalt.html</link>
             <guid>http://scalameta.org/metals/blog/2020/03/19/cobalt.html</guid>
             <pubDate>Thu, 19 Mar 2020 06:00:00 GMT</pubDate>
-            <description><![CDATA[<p>We are happy to announce the release of Metals v0.8.2, which main purpose is adding support for the new Scala version, 2.12.11. Additionally, we included a couple of recent fixes.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">55</td> </tr> <tr> <td>Merged PRs</td> <td align="center">14</td> </tr> <tr> <td>Contributors</td> <td align="center">9</td> </tr> <tr> <td>Cl...</td></tr></tbody></table>]]></description>
+            <description><![CDATA[<p>We are happy to announce the release of Metals v0.8.3, which main purpose is adding support for the new Scala version, 2.12.11. Additionally, we included a couple of recent fixes.</p> <table> <tbody> <tr> <td>Commits since last release</td> <td align="center">61</td> </tr> <tr> <td>Merged PRs</td> <td align="center">18</td> </tr> <tr> <td>Contributors</td> <td align="center">9</td> </tr> <tr> <td>Cl...</td></tr></tbody></table>]]></description>
         </item>
         <item>
             <title><![CDATA[Metals v0.8.1 - Cobalt]]></title>
