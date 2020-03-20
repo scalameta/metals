@@ -127,7 +127,7 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |}
            |""".stripMargin
       )
-      _ = Thread.sleep(1000) //it fails otherwise
+      _ <- server.server.indexingPromise.future
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedMainClassParams(
           "a.Main",
@@ -159,7 +159,7 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |}
            |""".stripMargin
       )
-      _ = Thread.sleep(1000) //it fails otherwise
+      _ <- server.server.indexingPromise.future
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedTestClassParams(
           "a.Foo"

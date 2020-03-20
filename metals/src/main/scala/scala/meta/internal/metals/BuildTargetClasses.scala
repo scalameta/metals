@@ -30,24 +30,19 @@ final class BuildTargetClasses(
 
   def findMainClassByName(
       name: String
-  ): List[(b.ScalaMainClass, b.BuildTargetIdentifier)] = {
-    index
-      .mapValues(
-        _.mainClasses.values.find(_.getClassName() == name)
-      )
-      .toList
-      .collect {
-        case (target, Some(clazz)) => clazz -> target
-      }
-  }
+  ): List[(b.ScalaMainClass, b.BuildTargetIdentifier)] =
+    findClassesBy(_.mainClasses.values.find(_.getClassName() == name))
 
   def findTestClassByName(
       name: String
-  ): List[(String, b.BuildTargetIdentifier)] = {
+  ): List[(String, b.BuildTargetIdentifier)] =
+    findClassesBy(_.testClasses.values.find(_ == name))
+
+  private def findClassesBy[A](
+      f: Classes => Option[A]
+  ): List[(A, b.BuildTargetIdentifier)] = {
     index
-      .mapValues(
-        _.testClasses.values.find(_ == name)
-      )
+      .mapValues(f)
       .toList
       .collect {
         case (target, Some(clazz)) => clazz -> target
