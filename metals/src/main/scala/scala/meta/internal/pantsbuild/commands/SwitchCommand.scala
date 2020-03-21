@@ -7,6 +7,8 @@ import metaconfig.cli.Messages
 import java.nio.file.Files
 import metaconfig.cli.TabCompletionContext
 import metaconfig.cli.TabCompletionItem
+import scala.meta.io.AbsolutePath
+import scala.meta.internal.metals.MetalsEnrichments._
 
 object SwitchCommand extends Command[SwitchOptions]("switch") {
   override def options: Doc = Messages.options(SwitchOptions())
@@ -52,20 +54,35 @@ object SwitchCommand extends Command[SwitchOptions]("switch") {
         Files.isSymbolicLink(common.bloopDirectory) &&
           Files.readSymbolicLink(common.bloopDirectory) ==
             project.root.bloopRoot.toNIO
-      def runBloopProjects =
-        "to see the list of exported Pants targets run: bloop projects"
       if (isUnchanged) {
         if (isStrict) {
           app.info(
-            s"project '${project.name}' is already active, $runBloopProjects"
+            s"project '${project.name}' is already active${runBloopProjects(project.common)}"
           )
         }
         0
       } else {
+        val isCreated = !Files.isSymbolicLink(project.common.bloopDirectory)
         runSymlink(project, common)
-        app.info(s"switched to project '${project.name}', $runBloopProjects")
+        val verb = if (isCreated) "created" else "switched to"
+        app.info(
+          s"$verb project '${project.name}'${runBloopProjects(project.common)}"
+        )
         0
       }
+    }
+  }
+
+  private def runBloopProjects(common: SharedOptions): String = {
+    val isBuildExported =
+      Files.isSymbolicLink(common.bloopDirectory) &&
+        // Check that at least some files have been generated in `.bloop/*`
+        AbsolutePath(Files.readSymbolicLink(common.bloopDirectory)).list
+          .exists(_.filename != "bloop.settings.json")
+    if (isBuildExported) {
+      ", to see the list of exported Pants targets run: bloop projects"
+    } else {
+      ""
     }
   }
 
