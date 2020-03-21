@@ -5,6 +5,7 @@ import scala.util.Try
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.util.Failure
 import scala.util.Success
 import scala.meta.internal.pantsbuild.Export
@@ -21,6 +22,9 @@ import java.nio.charset.StandardCharsets
 import bloop.bloopgun.core.Shell
 import scala.concurrent.Promise
 import scala.meta.internal.metals.BuildInfo
+import java.nio.file.Files
+import scala.meta.io.AbsolutePath
+import scala.meta.internal.pantsbuild.PantsConfiguration
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
@@ -65,6 +69,7 @@ object SharedCommand {
             export.app,
             isStrict = false
           )
+          symlinkProjectViewRoots(export.project)
           val updatedZipkin = ZipkinUrls.updateZipkinServerUrl()
           if (updatedZipkin) {
             restartBloopServer()
@@ -84,6 +89,27 @@ object SharedCommand {
     }
   }
 
+  def symlinkProjectViewRoots(project: Project): Unit = {
+    val workspace = AbsolutePath(project.common.workspace)
+    deleteSymlinkDirectories(project.bspRoot)
+    val projectViewRoots = PantsConfiguration
+      .sourceRoots(workspace, project.targets)
+      .map(_.toNIO)
+    projectViewRoots.foreach { root =>
+      val link = project.bspRoot.toNIO.resolve(root.getFileName())
+      Files.createSymbolicLink(link, root)
+    }
+  }
+
+  private def deleteSymlinkDirectories(dir: AbsolutePath): Unit = {
+    dir.list
+      .map(_.toNIO)
+      .filter(path =>
+        Files.isSymbolicLink(path) &&
+          Files.isDirectory(Files.readSymbolicLink(path))
+      )
+      .foreach { symlink => Files.deleteIfExists(symlink) }
+  }
   def withOneProject(
       action: String,
       projects: List[String],
