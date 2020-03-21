@@ -7,15 +7,18 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.decorations.ThemableDecorationInstanceRenderOptions
 import scala.meta.internal.decorations.ThemableDecorationAttachmentRenderOptions
 import MdocEnrichments._
-import org.eclipse.lsp4j.MarkedString
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.io.AbsolutePath
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.MarkupContent
+import org.eclipse.lsp4j.MarkupKind
 
 class DecorationWorksheetPublisher() extends WorksheetPublisher {
 
-  val commentHeader = " // "
+  private val scalaMarkdownTics = "```scala"
+  private val endTics = "```"
+  private val commentHeader = " // "
 
   override def publish(
       languageClient: MetalsLanguageClient,
@@ -40,7 +43,10 @@ class DecorationWorksheetPublisher() extends WorksheetPublisher {
       .map { s =>
         new DecorationOptions(
           s.position().toLsp,
-          new MarkedString("scala", s.details()),
+          new MarkupContent(
+            MarkupKind.MARKDOWN,
+            List(scalaMarkdownTics, s.details, endTics).mkString("\n")
+          ),
           ThemableDecorationInstanceRenderOptions(
             after = ThemableDecorationAttachmentRenderOptions(
               commentHeader + s.summary(),
