@@ -32,10 +32,15 @@ object SharedCommand {
       1
     } else {
       val workspace = export.workspace
-      val targets = export.targets
       val timer = new Timer(Time.system)
       val installResult =
-        BloopPants.bloopInstall(export)(ExecutionContext.global)
+        if (export.open.intellij) {
+          // there is no need to export bloop projects before starting intellij
+          // as it will request buildTargets bsp endpoint that will call fastpass refresh
+          Success(None)
+        } else {
+          BloopPants.bloopInstall(export)(ExecutionContext.global).map(Some(_))
+        }
       installResult match {
         case Failure(exception) =>
           exception match {
@@ -46,12 +51,14 @@ object SharedCommand {
               exception.printStackTrace(export.app.out)
           }
           1
-        case Success(count) =>
+        case Success(exportedProjectsCount) =>
           IntelliJ.writeBsp(export.project, export.export.coursierBinary)
-          val targets = LogMessages.pluralName("Pants target", count)
-          export.app.info(
-            s"exported ${targets} to project '${export.project.name}' in $timer"
-          )
+          exportedProjectsCount.foreach { count =>
+            val targets = LogMessages.pluralName("Pants target", count)
+            export.app.info(
+              s"exported ${targets} to project '${export.project.name}' in $timer"
+            )
+          }
           SwitchCommand.runSymlinkOrWarn(
             export.project,
             export.common,

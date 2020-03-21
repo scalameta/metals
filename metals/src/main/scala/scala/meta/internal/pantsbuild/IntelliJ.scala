@@ -94,7 +94,7 @@ object IntelliJ {
       project.common.workspace.toString,
       project.name
     )
-    val configDir = AbsolutePath(project.common.bloopDirectory)
+    val configDir = AbsolutePath(project.root.bloopRoot.toNIO)
     if (!configDir.exists) configDir.createDirectories
     val currentSettings = WorkspaceSettings
       .readFromFile(configDir, NoopLogger)
