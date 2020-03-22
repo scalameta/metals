@@ -6,6 +6,7 @@ import scala.meta.internal.decorations.DecorationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.decorations.ThemableDecorationInstanceRenderOptions
 import scala.meta.internal.decorations.ThemableDecorationAttachmentRenderOptions
+import scala.meta.internal.pc.HoverMarkup
 import MdocEnrichments._
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.io.AbsolutePath
@@ -16,8 +17,6 @@ import org.eclipse.lsp4j.MarkupKind
 
 class DecorationWorksheetPublisher() extends WorksheetPublisher {
 
-  private val scalaMarkdownTics = "```scala"
-  private val endTics = "```"
   private val commentHeader = " // "
 
   override def publish(
@@ -45,7 +44,7 @@ class DecorationWorksheetPublisher() extends WorksheetPublisher {
           s.position().toLsp,
           new MarkupContent(
             MarkupKind.MARKDOWN,
-            List(scalaMarkdownTics, s.details, endTics).mkString("\n")
+            HoverMarkup(s.details)
           ),
           ThemableDecorationInstanceRenderOptions(
             after = ThemableDecorationAttachmentRenderOptions(

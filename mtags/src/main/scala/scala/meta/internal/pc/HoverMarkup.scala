@@ -38,4 +38,10 @@ object HoverMarkup {
     markdown.toString()
   }
 
+  def apply(body: String): String = {
+    s"""|```scala
+        |$body
+        |```""".stripMargin
+  }
+
 }

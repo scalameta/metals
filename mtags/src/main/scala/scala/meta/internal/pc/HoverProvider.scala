@@ -11,9 +11,6 @@ import scala.util.control.NonFatal
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
 
-  private val scalaMarkdownTics = "```scala"
-  private val endTics = "```"
-
   def hover(): Option[Hover] = {
     if (params.isWhitespace) {
       None
@@ -179,10 +176,9 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         new Hover(
           new MarkupContent(
             MarkupKind.MARKDOWN,
-            s"""|${scalaMarkdownTics}
-                |${symbol.javaClassSymbol.keyString} ${symbol.fullName}
-                |${endTics}
-                """.stripMargin
+            HoverMarkup(
+              s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
+            )
           )
         )
       )
