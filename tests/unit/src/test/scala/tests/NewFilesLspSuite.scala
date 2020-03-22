@@ -36,6 +36,17 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
        |""".stripMargin
   )
 
+  check("new-case-class")(
+    Some("a/src/main/scala/foo/"),
+    "case-class",
+    Some("Foo"),
+    "a/src/main/scala/foo/Foo.scala",
+    """|package foo
+       |
+       |final case class Foo()
+       |""".stripMargin
+  )
+
   check("new-object-null-dir")(
     directory = None,
     "object",

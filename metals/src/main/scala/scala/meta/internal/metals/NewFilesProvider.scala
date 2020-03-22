@@ -23,6 +23,8 @@ class NewFilesProvider(
 ) {
 
   private val classPick = MetalsQuickPickItem(id = "class", label = "Class")
+  private val caseClassPick =
+    MetalsQuickPickItem(id = "case-class", label = "Case class")
   private val objectPick = MetalsQuickPickItem(id = "object", label = "Object")
   private val traitPick = MetalsQuickPickItem(id = "trait", label = "Trait")
   private val packageObjectPick =
@@ -38,7 +40,8 @@ class NewFilesProvider(
     val newlyCreatedFile =
       askForKind
         .flatMapOption {
-          case kind @ (classPick.id | objectPick.id | traitPick.id) =>
+          case kind @ (classPick.id | caseClassPick.id | objectPick.id |
+              traitPick.id) =>
             askForName(kind)
               .mapOption(
                 createClass(directory, _, kind)
@@ -67,6 +70,7 @@ class NewFilesProvider(
         MetalsQuickPickParams(
           List(
             classPick,
+            caseClassPick,
             objectPick,
             traitPick,
             packageObjectPick,
@@ -102,9 +106,12 @@ class NewFilesProvider(
     val path = directory.getOrElse(workspace).resolve(name + ".scala")
     //name can be actually be "foo/Name", where "foo" is a folder to create
     val className = directory.getOrElse(workspace).resolve(name).filename
+    val template = kind match {
+      case caseClassPick.id => caseClassTemplate(className)
+      case _ => classTemplate(kind, className)
+    }
     val editText =
-      packageProvider.packageStatement(path).getOrElse("") +
-        classTemplate(kind, className)
+      packageProvider.packageStatement(path).getOrElse("") + template
     createFileAndWriteText(path, editText)
   }
 
@@ -180,5 +187,8 @@ class NewFilesProvider(
         |  
         |}
         |""".stripMargin
+
+  private def caseClassTemplate(name: String): String =
+    s"final case class $name()"
 
 }
