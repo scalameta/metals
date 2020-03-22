@@ -170,7 +170,7 @@ lazy val V = new {
     Seq(scala211, "2.12.8", "2.12.9", "2.13.0")
   def nonDeprecatedScalaVersions = Seq(scala213, scala212, "2.12.10")
   def guava = "com.google.guava" % "guava" % "28.2-jre"
-  def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.8.1"
+  def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.8.1"
   val coursier = "2.0.0-RC5-6"

@@ -1,7 +1,7 @@
 ---
 id: decoration-protocol
 sidebar_label: Decoration Protocol
-title: Decoration Protocol v0.1.0
+title: Decoration Protocol v0.2.0
 ---
 
 Metals implements a Language Server Protocol extension called the "Decoration
@@ -35,9 +35,9 @@ export interface DecorationOptions {
   range: Range;
   /**
    * The text to display when the mouse hovers over the decoration.
-   * The MarkedString data structure is defined in the LanguageServerProtocol
+   * The MarkupContent data structure is defined in the LanguageServerProtocol
    */
-  hoverMessage?: MarkedString;
+  hoverMessage?: MarkupContent;
   /** The URI of the text document to place text decorations */
   renderOptions: ThemableDecorationInstanceRenderOption;
 }
@@ -113,3 +113,5 @@ export interface PublishDecorationsParams {
 ## Changelog
 
 - v0.1.0: First release with basic support for worksheets.
+- v0.2.0: `MarkedString` in `DecorationOptions` changed to `MarkupContent` to align
+    with LSP 3.15

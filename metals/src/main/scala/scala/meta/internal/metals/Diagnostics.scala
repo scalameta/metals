@@ -214,8 +214,7 @@ final class Diagnostics(
         range,
         d.getMessage,
         d.getSeverity,
-        d.getSource,
-        d.getCode
+        d.getSource
       )
     }
     if (result.isEmpty) {

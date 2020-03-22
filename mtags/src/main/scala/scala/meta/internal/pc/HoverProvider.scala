@@ -1,12 +1,11 @@
 package scala.meta.internal.pc
 
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.MarkedString
+import org.eclipse.lsp4j.MarkupContent
+import org.eclipse.lsp4j.MarkupKind
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.reflect.internal.{Flags => gf}
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
@@ -175,14 +174,12 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     else if (symbol.hasPackageFlag || symbol.hasModuleFlag) {
       Some(
         new Hover(
-          List(
-            JEither.forRight[String, MarkedString](
-              new MarkedString(
-                "scala",
-                s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
-              )
+          new MarkupContent(
+            MarkupKind.MARKDOWN,
+            HoverMarkup(
+              s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
             )
-          ).asJava
+          )
         )
       )
     } else {

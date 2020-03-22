@@ -117,17 +117,27 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
         client.workspaceDecorationHoverMessage,
         """|import java.nio.file.Files
            |val name = "Susan"
+           |```scala
            |name: String = "Susan"
+           |```
            |val greeting = s"Hello $name"
+           |```scala
            |greeting: String = "Hello Susan"
+           |```
            |println(greeting + "\nHow are you?")
+           |```scala
            |// Hello Susan
            |// How are you?
+           |```
            |1.to(10).toVector
+           |```scala
            |res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+           |```
            |val List(a, b) = List(42, 10)
+           |```scala
            |a: Int = 42
            |b: Int = 10
+           |```
            |""".stripMargin
       )
     } yield ()

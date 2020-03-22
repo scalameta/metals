@@ -2,8 +2,8 @@ package scala.meta.internal.decorations
 
 import javax.annotation.Nullable
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
+import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.MarkedString
 
 trait DecorationClient {
   @JsonNotification("metals/publishDecorations")
@@ -14,7 +14,7 @@ trait DecorationClient {
 
 case class DecorationOptions(
     range: Range,
-    @Nullable hoverMessage: MarkedString = null,
+    @Nullable hoverMessage: MarkupContent = null,
     @Nullable renderOptions: ThemableDecorationInstanceRenderOptions = null
 )
 

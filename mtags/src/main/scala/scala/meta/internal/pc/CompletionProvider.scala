@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import scala.meta.internal.mtags.MtagsEnrichments._
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.CompletionItemTag
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
 import scala.meta.internal.jdk.CollectionConverters._
@@ -216,7 +217,7 @@ class CompletionProvider(
         item.setKind(completionItemKind(member))
         item.setSortText(f"${idx}%05d")
         if (member.sym.isDeprecated) {
-          item.setDeprecated(true)
+          item.setTags(List(CompletionItemTag.Deprecated).asJava)
         }
         // NOTE: We intentionally don't set the commit character because there are valid scenarios where
         // the user wants to type a dot '.' character without selecting a completion item.
