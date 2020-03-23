@@ -15,6 +15,10 @@ case class ExportOptions(
         "If unspecified, coursier will be downloaded automatically."
     )
     coursierBinary: Option[Path] = None,
+    @Description(
+      "Unconditionally prevent generation of '*-project-root' modules"
+    )
+    noRootProject: Boolean = true,
     @Hidden()
     mergeTargetsInSameDirectory: Boolean = false
 )
