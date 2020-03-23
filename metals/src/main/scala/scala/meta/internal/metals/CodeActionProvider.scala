@@ -10,7 +10,7 @@ import scala.collection.JavaConverters._
 final class CodeActionProvider(
     compilers: Compilers
 ) {
-  val allActions: List[CodeAction] = List(
+  private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbol(compilers),
     new CreateNewSymbol()

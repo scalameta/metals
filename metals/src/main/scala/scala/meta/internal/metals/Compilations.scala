@@ -66,7 +66,7 @@ final class Compilations(
     cascadeBatch.cancelCurrentRequest()
   }
 
-  def expand(paths: Seq[AbsolutePath]): Seq[b.BuildTargetIdentifier] = {
+  private def expand(paths: Seq[AbsolutePath]): Seq[b.BuildTargetIdentifier] = {
     def isCompilable(path: AbsolutePath): Boolean =
       path.isScalaOrJava && !path.isDependencySource(workspace())
 

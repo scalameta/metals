@@ -54,7 +54,7 @@ class SemanticdbIndexer(
     }
   }
 
-  def onChangeDirectory(dir: Path): Unit = {
+  private def onChangeDirectory(dir: Path): Unit = {
     if (Files.isDirectory(dir)) {
       val stream = Files.walk(dir)
       try {

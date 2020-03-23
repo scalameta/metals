@@ -149,7 +149,7 @@ final class DefinitionProvider(
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
   }
 
-  def definitionFromSnapshot(
+  private def definitionFromSnapshot(
       source: AbsolutePath,
       dirtyPosition: TextDocumentPositionParams,
       snapshot: TextDocument

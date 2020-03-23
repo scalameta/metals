@@ -822,7 +822,7 @@ class MetalsLanguageServer(
       .asJava
   }
 
-  def didCompileTarget(report: CompileReport): Unit = {
+  private def didCompileTarget(report: CompileReport): Unit = {
     if (!isReliableFileWatcher) {
       // NOTE(olafur) this step is exclusively used when running tests on
       // non-Linux computers to avoid flaky failures caused by delayed file
@@ -900,7 +900,7 @@ class MetalsLanguageServer(
   }
 
   // This method is run the FileWatcher, so it should not do anything expensive on the main thread
-  def didChangeWatchedFiles(
+  private def didChangeWatchedFiles(
       event: DirectoryChangeEvent
   ): CompletableFuture[Unit] = {
     if (event.eventType() == EventType.OVERFLOW && event.path() == null) {
@@ -1692,7 +1692,7 @@ class MetalsLanguageServer(
     scribe.info(s"memory: $footprint")
   }
 
-  def indexWorkspace(i: ImportedBuild): Unit = {
+  private def indexWorkspace(i: ImportedBuild): Unit = {
     timedThunk("updated build targets", config.statistics.isIndex) {
       buildTargets.reset()
       interactiveSemanticdbs.reset()

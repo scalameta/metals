@@ -27,8 +27,10 @@ import org.eclipse.lsp4j.jsonrpc.JsonRpcException
  * An actively running and initialized BSP connection.
  */
 class BuildServerConnection private (
-    reestablishConnection: () => Future[LauncherConnection],
-    initialConnection: LauncherConnection,
+    reestablishConnection: () => Future[
+      BuildServerConnection.LauncherConnection
+    ],
+    initialConnection: BuildServerConnection.LauncherConnection,
     languageClient: LanguageClient,
     tables: Tables
 )(implicit ec: ExecutionContextExecutorService)
@@ -115,7 +117,7 @@ class BuildServerConnection private (
     }
   }
 
-  private def askUser(): Future[LauncherConnection] = {
+  private def askUser(): Future[BuildServerConnection.LauncherConnection] = {
     val notification = tables.dismissedNotifications.ReconnectBsp
     if (!notification.isDismissed) {
       val params = Messages.DisconnectedServer.params()
@@ -263,6 +265,17 @@ object BuildServerConnection {
     server.onBuildInitialized()
     result
   }
+
+  private case class LauncherConnection(
+      socketConnection: SocketConnection,
+      server: MetalsBuildServer,
+      displayName: String,
+      cancelServer: Cancelable,
+      version: String
+  ) {
+    def cancelables: List[Cancelable] =
+      cancelServer :: socketConnection.cancelables
+  }
 }
 
 case class SocketConnection(
@@ -271,14 +284,3 @@ case class SocketConnection(
     input: InputStream,
     cancelables: List[Cancelable]
 )
-
-case class LauncherConnection(
-    socketConnection: SocketConnection,
-    server: MetalsBuildServer,
-    displayName: String,
-    cancelServer: Cancelable,
-    version: String
-) {
-  def cancelables: List[Cancelable] =
-    cancelServer :: socketConnection.cancelables
-}
