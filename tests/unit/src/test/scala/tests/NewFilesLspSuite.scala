@@ -28,12 +28,12 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     "class",
     Some("Foo"),
     "a/src/main/scala/foo/Foo.scala",
-    """|package foo
-       |
-       |class Foo {
-       |  
-       |}
-       |""".stripMargin
+    s"""|package foo
+        |
+        |class Foo {
+        |$indent
+        |}
+        |""".stripMargin
   )
 
   check("new-case-class")(
@@ -52,10 +52,10 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     "object",
     Some("Bar"),
     "Bar.scala",
-    """|object Bar {
-       |  
-       |}
-       |""".stripMargin
+    s"""|object Bar {
+        |$indent
+        |}
+        |""".stripMargin
   )
 
   check("new-trait-new-dir")(
@@ -63,12 +63,12 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     "trait",
     Some("bar/Baz"),
     "a/src/main/scala/bar/Baz.scala",
-    """|package bar
-       |
-       |trait Baz {
-       |  
-       |}
-       |""".stripMargin
+    s"""|package bar
+        |
+        |trait Baz {
+        |$indent
+        |}
+        |""".stripMargin
   )
 
   check("new-package-object")(
@@ -76,11 +76,13 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
     "package-object",
     name = None,
     "a/src/main/scala/foo/package.scala",
-    """|package object foo {
-       |  
-       |}
-       |""".stripMargin
+    s"""|package object foo {
+        |$indent
+        |}
+        |""".stripMargin
   )
+
+  private val indent = "  "
 
   private def check(testName: String)(
       directory: Option[String],

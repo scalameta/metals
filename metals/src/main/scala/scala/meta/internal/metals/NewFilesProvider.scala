@@ -195,11 +195,13 @@ class NewFilesProvider(
     )
   }
 
-  private def classTemplate(kind: String, name: String): String =
+  private def classTemplate(kind: String, name: String): String = {
+    val indent = "  "
     s"""|$kind $name {
-        |
+        |$indent
         |}
         |""".stripMargin
+  }
 
   private def caseClassTemplate(name: String): String =
     s"final case class $name()"
