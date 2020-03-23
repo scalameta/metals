@@ -115,7 +115,6 @@ class MetalsLanguageServer(
   var buildServer: Option[BuildServerConnection] =
     Option.empty[BuildServerConnection]
   private val buildTargetClasses = new BuildTargetClasses(() => buildServer)
-  private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
@@ -313,7 +312,6 @@ class MetalsLanguageServer(
       )
     )
     bloopServers = new BloopServers(
-      sh,
       workspace,
       buildClient,
       languageClient,
@@ -339,8 +337,6 @@ class MetalsLanguageServer(
       buffers,
       definitionIndex,
       semanticdbs,
-      config.icons,
-      statusBar,
       warnings,
       () => compilers,
       remote
@@ -348,7 +344,6 @@ class MetalsLanguageServer(
     formattingProvider = new FormattingProvider(
       workspace,
       buffers,
-      embedded,
       config,
       () => userConfig,
       languageClient,
@@ -369,7 +364,6 @@ class MetalsLanguageServer(
       () => focusedDocument
     )
     multilineStringFormattingProvider = new MultilineStringFormattingProvider(
-      semanticdbs,
       buffers
     )
     referencesProvider = new ReferenceProvider(
@@ -416,7 +410,6 @@ class MetalsLanguageServer(
       referencesProvider,
       implementationProvider,
       definitionProvider,
-      semanticdbs,
       definitionIndex,
       workspace,
       languageClient,
@@ -710,7 +703,6 @@ class MetalsLanguageServer(
     val path = params.getTextDocument.getUri.toAbsolutePath
     focusedDocument = Some(path)
     openedFiles.add(path)
-    openTextDocument.set(path)
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))

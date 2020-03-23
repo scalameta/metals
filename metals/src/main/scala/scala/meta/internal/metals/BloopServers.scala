@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.util.concurrent.ScheduledExecutorService
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -27,7 +26,6 @@ import org.eclipse.lsp4j.services.LanguageClient
  * https://github.com/scalacenter/bsp/blob/master/docs/bsp.md#bsp-connection-protocol
  */
 final class BloopServers(
-    sh: ScheduledExecutorService,
     workspace: AbsolutePath,
     client: MetalsBuildClient,
     languageClient: LanguageClient,

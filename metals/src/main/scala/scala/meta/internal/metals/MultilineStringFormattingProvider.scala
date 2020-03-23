@@ -7,7 +7,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.tokens.Token
 import scala.meta.tokens.Token.Constant
 import scala.meta.tokens.Tokens
@@ -17,7 +16,6 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.Position
 
 final class MultilineStringFormattingProvider(
-    semanticdbs: Semanticdbs,
     buffer: Buffers
 )(implicit ec: ExecutionContext) {
 

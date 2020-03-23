@@ -42,8 +42,6 @@ final class DefinitionProvider(
     buffers: Buffers,
     index: GlobalSymbolIndex,
     semanticdbs: Semanticdbs,
-    icons: Icons,
-    statusBar: StatusBar,
     warnings: Warnings,
     compilers: () => Compilers,
     remote: RemoteLanguageServer
