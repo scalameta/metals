@@ -42,6 +42,7 @@ import java.net.URI
 import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.Command
+import scala.concurrent.Future
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -346,18 +347,25 @@ final class TestingClient(workspace: AbsolutePath, buffers: Buffers)
   private def executeServerCommand(
       command: Command,
       server: TestingServer
-  ): Unit = {
+  ): Future[Any] = {
     server.executeCommand(
       command.getCommand(),
       command.getArguments().asScala: _*
     )
   }
 
-  def applyCodeAction(codeAction: CodeAction, server: TestingServer): Unit = {
+  def applyCodeAction(
+      codeAction: CodeAction,
+      server: TestingServer
+  ): Future[Any] = {
     val edit = codeAction.getEdit()
     val command = codeAction.getCommand()
-    if (edit != null) applyWorkspaceEdit(edit)
-    if (command != null) executeServerCommand(command, server)
+    if (edit != null) {
+      applyWorkspaceEdit(edit)
+    }
+    if (command != null) {
+      executeServerCommand(command, server)
+    } else Future.unit
   }
 
 }

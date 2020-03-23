@@ -71,7 +71,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
                                   |""".stripMargin)
         _ <- server.didOpen(path)
         codeActions <- server.assertCodeAction(path, input, expectedActions)
-        _ <- server.didSave(path) { content =>
+        _ <- {
           if (selectedActionIndex >= codeActions.length) {
             fail(s"selectedActionIndex ($selectedActionIndex) is out of bounds")
           }
@@ -85,8 +85,8 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
             }
           }
           client.applyCodeAction(codeActions(selectedActionIndex), server)
-          content
         }
+        _ <- server.didSave(path)(identity)
         _ = if (expectNoDiagnostics) assertNoDiagnostics() else ()
         _ = {
           val (path, content) = newFile
