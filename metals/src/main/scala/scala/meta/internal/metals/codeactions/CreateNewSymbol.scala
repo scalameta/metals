@@ -9,7 +9,7 @@ import scala.concurrent.Future
 import java.net.URI
 import java.nio.file.Paths
 
-class CreateNewFile() extends CodeAction {
+class CreateNewSymbol() extends CodeAction {
   override def kind: String = l.CodeActionKind.QuickFix
 
   override def contribute(
@@ -17,9 +17,12 @@ class CreateNewFile() extends CodeAction {
       token: CancelToken
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
 
-    def createNewFile(diagnostic: l.Diagnostic, name: String): l.CodeAction = {
+    def createNewSymbol(
+        diagnostic: l.Diagnostic,
+        name: String
+    ): l.CodeAction = {
       val codeAction = new l.CodeAction()
-      codeAction.setTitle(CreateNewFile.title(name))
+      codeAction.setTitle(CreateNewSymbol.title(name))
       codeAction.setKind(l.CodeActionKind.QuickFix)
       codeAction.setDiagnostics(List(diagnostic).asJava)
       val directory = Paths
@@ -33,7 +36,7 @@ class CreateNewFile() extends CodeAction {
     val codeActions = params.getContext().getDiagnostics().asScala.collect {
       case d @ ScalacDiagnostic.SymbolNotFound(name)
           if d.getRange().encloses(params.getRange()) =>
-        createNewFile(d, name)
+        createNewSymbol(d, name)
     }
 
     Future.successful(codeActions)
@@ -41,6 +44,6 @@ class CreateNewFile() extends CodeAction {
   }
 }
 
-object CreateNewFile {
+object CreateNewSymbol {
   def title(name: String): String = s"Create new symbol '$name'..."
 }

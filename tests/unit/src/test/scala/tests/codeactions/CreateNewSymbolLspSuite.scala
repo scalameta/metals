@@ -2,21 +2,21 @@ package tests.codeactions
 
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
-import scala.meta.internal.metals.codeactions.CreateNewFile
+import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import munit.Location
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import scala.meta.internal.metals.MetalsEnrichments._
 
-class CreateNewFileLspSuite extends BaseCodeActionLspSuite("createNew") {
+class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
 
-  checkNewFile(
+  checkNewSymbol(
     "case-class",
     """|package a
        |
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${CreateNewFile.title("Location")}""".stripMargin,
+        |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = 1,
     pickedKind = "case-class",
     newFile =
@@ -27,14 +27,14 @@ class CreateNewFileLspSuite extends BaseCodeActionLspSuite("createNew") {
            |""".stripMargin
   )
 
-  checkNewFile(
+  checkNewSymbol(
     "trait",
     """|package a
        |
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${CreateNewFile.title("Location")}""".stripMargin,
+        |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = 1,
     pickedKind = "trait",
     newFile =
@@ -49,7 +49,7 @@ class CreateNewFileLspSuite extends BaseCodeActionLspSuite("createNew") {
 
   private def indent = "  "
 
-  def checkNewFile(
+  def checkNewSymbol(
       name: String,
       input: String,
       expectedActions: String,
