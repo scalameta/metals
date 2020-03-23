@@ -32,7 +32,10 @@ class NewFilesProvider(
   private val worksheetPick =
     MetalsQuickPickItem(id = "worksheet", label = "Worksheet")
 
-  def createNewFileDialog(directoryUri: Option[URI]): Future[Unit] = {
+  def createNewFileDialog(
+      directoryUri: Option[URI],
+      name: Option[String]
+  ): Future[Unit] = {
     val directory = directoryUri
       .map(_.toString.toAbsolutePath)
       .orElse(focusedDocument().map(_.parent))
@@ -42,12 +45,12 @@ class NewFilesProvider(
         .flatMapOption {
           case kind @ (classPick.id | caseClassPick.id | objectPick.id |
               traitPick.id) =>
-            askForName(kind)
+            getName(kind, name)
               .mapOption(
                 createClass(directory, _, kind)
               )
           case worksheetPick.id =>
-            askForName(worksheetPick.id)
+            getName(worksheetPick.id, name)
               .mapOption(
                 createWorksheet(directory, _)
               )
@@ -96,6 +99,16 @@ class NewFilesProvider(
         case name if !name.cancelled => Some(name.value)
         case _ => None
       }
+  }
+
+  private def getName(
+      kind: String,
+      name: Option[String]
+  ): Future[Option[String]] = {
+    name match {
+      case Some(_) => Future.successful(name)
+      case None => askForName(kind)
+    }
   }
 
   private def createClass(
@@ -184,7 +197,7 @@ class NewFilesProvider(
 
   private def classTemplate(kind: String, name: String): String =
     s"""|$kind $name {
-        |  
+        |
         |}
         |""".stripMargin
 

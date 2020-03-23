@@ -53,7 +53,6 @@ import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
-import com.google.gson.JsonNull
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1290,18 +1289,15 @@ class MetalsLanguageServer(
         }
       case ServerCommands.NewScalaFile() =>
         val args = params.getArguments.asScala
-        (args match {
-          case Seq(directory: JsonPrimitive) if directory.isString =>
-            newFilesProvider.createNewFileDialog(
-              Some(directory.getAsString()).map(new URI(_))
-            )
-          case Seq(_: JsonNull) =>
-            newFilesProvider.createNewFileDialog(directoryUri = None)
-          case _ =>
-            Future.failed(
-              new IllegalArgumentException(s"Invalid arguments: $args.")
-            )
-        }).asJavaObject
+        val directoryURI = args.lift(0).collect {
+          case directory: JsonPrimitive if directory.isString =>
+            new URI(directory.getAsString())
+        }
+        val name = args.lift(1).collect {
+          case name: JsonPrimitive if name.isString =>
+            name.getAsString()
+        }
+        newFilesProvider.createNewFileDialog(directoryURI, name).asJavaObject
 
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
