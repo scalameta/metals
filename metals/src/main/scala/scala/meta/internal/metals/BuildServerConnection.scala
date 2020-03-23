@@ -26,9 +26,9 @@ import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 /**
  * An actively running and initialized BSP connection.
  */
-case class BuildServerConnection(
+class BuildServerConnection private (
     reestablishConnection: () => Future[LauncherConnection],
-    private val initialConnection: LauncherConnection,
+    initialConnection: LauncherConnection,
     languageClient: LanguageClient,
     tables: Tables
 )(implicit ec: ExecutionContextExecutorService)
@@ -212,7 +212,7 @@ object BuildServerConnection {
     }
 
     setupServer().map { connection =>
-      BuildServerConnection(
+      new BuildServerConnection(
         setupServer,
         connection,
         languageClient,
