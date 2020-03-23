@@ -115,15 +115,13 @@ case class BuildServerConnection(
     }
   }
 
-  private def askUser(
-      reconnect: () => Future[LauncherConnection]
-  ): Future[LauncherConnection] = {
+  private def askUser(): Future[LauncherConnection] = {
     val notification = tables.dismissedNotifications.ReconnectBsp
     if (!notification.isDismissed) {
       val params = Messages.DisconnectedServer.params()
       languageClient.showMessageRequest(params).asScala.flatMap {
         case response if response == Messages.DisconnectedServer.reconnect =>
-          reconnect()
+          reestablishConnection()
         case response if response == Messages.DisconnectedServer.notNow =>
           notification.dismiss(5, TimeUnit.MINUTES)
           connection
@@ -152,7 +150,7 @@ case class BuildServerConnection(
           synchronized {
             // if the future is different then the connection is already being reestablished
             if (connection eq original) {
-              connection = askUser(reestablishConnection).map { conn =>
+              connection = askUser().map { conn =>
                 // version can change when reconnecting
                 _version.set(conn.version)
                 ongoingRequests.addAll(conn.cancelables)
