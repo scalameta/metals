@@ -262,10 +262,18 @@ private class BloopPants(
     )
     val isBaseDirectory =
       projects.iterator.filter(_.sources.nonEmpty).map(_.directory).toSet
+
+    def existsProjectDefinedAtRoot(
+        projects: Seq[C.Project],
+        root: AbsolutePath
+    ): Boolean =
+      projects.exists(_.directory == root.toNIO)
+
     // NOTE(olafur): generate synthetic projects to improve the file tree view
     // in IntelliJ. Details: https://github.com/olafurpg/intellij-bsp-pants/issues/7
     val syntheticProjects: List[C.Project] = sourceRoots.flatMap { root =>
-      if (isBaseDirectory(root.toNIO) || args.export.noRootProject) {
+      if (isBaseDirectory(root.toNIO) ||
+        existsProjectDefinedAtRoot(projects, root)) {
         Nil
       } else {
         val name = root
