@@ -1,6 +1,7 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.CreateNewSymbol
 
 class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
@@ -15,6 +16,7 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     """|package a
        |
@@ -36,6 +38,7 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     """|package a
        |

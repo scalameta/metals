@@ -12,7 +12,8 @@ final class CodeActionProvider(
 ) {
   val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
-    new ImportMissingSymbol(compilers)
+    new ImportMissingSymbol(compilers),
+    new CreateNewSymbol()
   )
 
   def codeActions(

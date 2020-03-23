@@ -32,7 +32,7 @@ abstract class BaseCodeActionLspSuite(suiteName: String)
           if (selectedActionIndex >= codeActions.length) {
             fail(s"selectedActionIndex ($selectedActionIndex) is out of bounds")
           }
-          client.applyCodeAction(codeActions(selectedActionIndex))
+          client.applyCodeAction(codeActions(selectedActionIndex), server)
           server.toPath(path).readText
         }
         _ = assertNoDiff(server.bufferContents(path), expectedCode)
