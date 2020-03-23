@@ -16,7 +16,7 @@ class CreateNewFileLspSuite extends BaseCodeActionLspSuite("createNew") {
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${CreateNewFile.title}""".stripMargin,
+        |${CreateNewFile.title("Location")}""".stripMargin,
     selectedActionIndex = 1,
     pickedKind = "case-class",
     newFile =
@@ -34,7 +34,7 @@ class CreateNewFileLspSuite extends BaseCodeActionLspSuite("createNew") {
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
-        |${CreateNewFile.title}""".stripMargin,
+        |${CreateNewFile.title("Location")}""".stripMargin,
     selectedActionIndex = 1,
     pickedKind = "trait",
     newFile =

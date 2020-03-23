@@ -19,7 +19,7 @@ class CreateNewFile() extends CodeAction {
 
     def createNewFile(diagnostic: l.Diagnostic, name: String): l.CodeAction = {
       val codeAction = new l.CodeAction()
-      codeAction.setTitle(CreateNewFile.title)
+      codeAction.setTitle(CreateNewFile.title(name))
       codeAction.setKind(l.CodeActionKind.QuickFix)
       codeAction.setDiagnostics(List(diagnostic).asJava)
       val directory = Paths
@@ -42,5 +42,5 @@ class CreateNewFile() extends CodeAction {
 }
 
 object CreateNewFile {
-  val title = "Create new..."
+  def title(name: String): String = s"Create new symbol '$name'..."
 }
