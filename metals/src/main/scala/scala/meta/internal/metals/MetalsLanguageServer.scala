@@ -738,7 +738,6 @@ class MetalsLanguageServer(
 
     // unpublish diagnostic for dependencies
     interactiveSemanticdbs.didFocus(path)
-    Future(treeView.didFocusTextDocument(path))
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(workspace)) {
@@ -1480,7 +1479,6 @@ class MetalsLanguageServer(
       }
       _ = {
         treeView.init()
-        focusedDocument.foreach(treeView.didFocusTextDocument)
       }
     } yield result
   }.recover {
