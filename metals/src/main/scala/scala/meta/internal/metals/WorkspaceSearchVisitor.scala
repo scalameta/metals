@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.mutable
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -28,7 +28,7 @@ class WorkspaceSearchVisitor(
     workspace: AbsolutePath,
     query: WorkspaceSymbolQuery,
     token: CancelChecker,
-    index: OnDemandSymbolIndex,
+    index: GlobalSymbolIndex,
     fileOnDisk: AbsolutePath => AbsolutePath
 ) extends SymbolSearchVisitor {
   private val fromWorkspace = new ju.ArrayList[l.SymbolInformation]()
@@ -82,7 +82,7 @@ class WorkspaceSearchVisitor(
   private def definition(
       pkg: String,
       filename: String,
-      index: OnDemandSymbolIndex
+      index: GlobalSymbolIndex
   ): Option[SymbolDefinition] = {
     val nme = Classfile.name(filename)
     val tpe = Symbol(Symbols.Global(pkg, Descriptor.Type(nme)))

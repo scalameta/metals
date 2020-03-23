@@ -7,7 +7,7 @@ import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
-import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearch
@@ -22,7 +22,7 @@ final class WorkspaceSymbolProvider(
     val workspace: AbsolutePath,
     statistics: StatisticsConfig,
     val buildTargets: BuildTargets,
-    val index: OnDemandSymbolIndex,
+    val index: GlobalSymbolIndex,
     fileOnDisk: AbsolutePath => AbsolutePath,
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
 )(implicit ec: ExecutionContext) {
