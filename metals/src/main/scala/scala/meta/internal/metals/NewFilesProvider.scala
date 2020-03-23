@@ -106,8 +106,8 @@ class NewFilesProvider(
       name: Option[String]
   ): Future[Option[String]] = {
     name match {
-      case Some(_) => Future.successful(name)
-      case None => askForName(kind)
+      case Some(v) if v.trim.length > 0 => Future.successful(name)
+      case _ => askForName(kind)
     }
   }
 
