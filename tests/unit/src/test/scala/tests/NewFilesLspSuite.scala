@@ -82,7 +82,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
         |""".stripMargin
   )
 
-  private val indent = "  "
+  private def indent = "  "
 
   private def check(testName: String)(
       directory: Option[String],

@@ -10,7 +10,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 class CreateNewFileLspSuite extends BaseCodeActionLspSuite("createNew") {
 
   checkNewFile(
-    "basic",
+    "case-class",
     """|package a
        |
        |case class School(name: String, location: <<Location>>)
@@ -26,6 +26,28 @@ class CreateNewFileLspSuite extends BaseCodeActionLspSuite("createNew") {
            |final case class Location()
            |""".stripMargin
   )
+
+  checkNewFile(
+    "trait",
+    """|package a
+       |
+       |case class School(name: String, location: <<Location>>)
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
+        |${CreateNewFile.title}""".stripMargin,
+    selectedActionIndex = 1,
+    pickedKind = "trait",
+    newFile =
+      "a/src/main/scala/a/Location.scala" ->
+        s"""|package a
+            |
+            |trait Location {
+            |$indent
+            |}
+            |""".stripMargin
+  )
+
+  private def indent = "  "
 
   def checkNewFile(
       name: String,
