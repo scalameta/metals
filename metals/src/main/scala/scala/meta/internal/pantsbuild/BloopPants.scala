@@ -1,6 +1,7 @@
 package scala.meta.internal.pantsbuild
 
 import bloop.config.{Config => C}
+import bloop.config.Tag
 import coursierapi.Dependency
 import coursierapi.MavenRepository
 import java.io.IOException
@@ -408,6 +409,9 @@ private class BloopPants(
 
     val sourceRoots = BloopPants.approximateSourceRoot(baseDirectory).toList
 
+    val tags =
+      if (target.targetType.isTest) List(Tag.Test) else List(Tag.Library)
+
     C.Project(
       name = target.dependencyName,
       directory = baseDirectory,
@@ -435,7 +439,8 @@ private class BloopPants(
           None
         )
       ),
-      resolution = resolution
+      resolution = resolution,
+      tags = Some(tags)
     )
   }
 
@@ -467,7 +472,8 @@ private class BloopPants(
       sbt = None,
       test = None,
       platform = None,
-      resolution = None
+      resolution = None,
+      tags = None
     )
   }
 
