@@ -23,6 +23,7 @@ object VSCode {
       scribe.info(s"updated: $settings")
       val code = codeCommand()
       exec(code, "--install-extension", "scalameta.metals")
+      exec(code, "--install-extension", "ms-vsliveshare.vsliveshare-pack")
       exec(code, "--new-window", project.common.workspace.toString())
       findFileToOpen(project).headOption.foreach { file =>
         exec(code, "--reuse-window", file.toString())
