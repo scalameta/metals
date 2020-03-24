@@ -70,13 +70,15 @@ abstract class BasePCSuite extends BaseSuite {
     JdkSources().foreach(jdk => index.addSourceJar(jdk))
   }
 
-  override def munitNewTest(test: Test): Test = {
-    val testName =
-      if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
-        s"${BuildInfo.scalaCompilerVersion}-${test.name}"
-      else test.name
-    test.withName(testName)
-  }
+  override def munitTestTransforms: List[TestTransform] =
+    super.munitTestTransforms :+
+      new TestTransform("Add Compiler Version", { test =>
+        val testName =
+          if (isCI && BuildInfo.scalaCompilerVersion != BuildInfoVersions.scala212)
+            s"${BuildInfo.scalaCompilerVersion}-${test.name}"
+          else test.name
+        test.withName(testName)
+      })
 
   def indexScalaLibrary(): Unit = {
     val sources = Fetch()
