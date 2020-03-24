@@ -92,9 +92,9 @@ final class DefinitionProvider(
       .definition(Symbol(sym))
       .map(symDef => symDef.path.toInputFromBuffers(buffers))
 
-  def symbolOccurence(
+  def symbolOccurrence(
       source: AbsolutePath,
-      dirtyPosition: TextDocumentPositionParams
+      dirtyPosition: Position
   ): Option[(SymbolOccurrence, TextDocument)] = {
     for {
       currentDocument <- semanticdbs
@@ -107,7 +107,7 @@ final class DefinitionProvider(
       )
       symbolOccurrence <- {
         def mtagsOccurrence =
-          fromMtags(source, dirtyPosition.getPosition())
+          fromMtags(source, dirtyPosition)
         posOcc.occurrence.orElse(mtagsOccurrence)
       }
     } yield (symbolOccurrence, currentDocument)
@@ -115,20 +115,20 @@ final class DefinitionProvider(
 
   def positionOccurrence(
       source: AbsolutePath,
-      dirtyPosition: TextDocumentPositionParams,
+      dirtyPosition: Position,
       snapshot: TextDocument
   ): ResolvedSymbolOccurrence = {
     // Convert dirty buffer position to snapshot position in "source"
     val sourceDistance =
       TokenEditDistance.fromBuffer(source, snapshot.text, buffers)
     val snapshotPosition = sourceDistance.toOriginal(
-      dirtyPosition.getPosition.getLine,
-      dirtyPosition.getPosition.getCharacter
+      dirtyPosition.getLine,
+      dirtyPosition.getCharacter
     )
 
     // Find matching symbol occurrence in SemanticDB snapshot
     val occurrence = for {
-      queryPosition <- snapshotPosition.toPosition(dirtyPosition.getPosition)
+      queryPosition <- snapshotPosition.toPosition(dirtyPosition)
       occurrence <- snapshot.occurrences
         .find(_.encloses(queryPosition, true))
         // In case of macros we might need to get the postion from the presentation compiler
@@ -144,7 +144,7 @@ final class DefinitionProvider(
       snapshot: TextDocument
   ): DefinitionResult = {
     val ResolvedSymbolOccurrence(sourceDistance, occurrence) =
-      positionOccurrence(source, dirtyPosition, snapshot)
+      positionOccurrence(source, dirtyPosition.getPosition, snapshot)
     // Find symbol definition location.
     val result: Option[DefinitionResult] = occurrence.flatMap { occ =>
       val isLocal = occ.symbol.isLocal || snapshot.definesSymbol(occ.symbol)

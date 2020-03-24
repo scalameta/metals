@@ -89,9 +89,12 @@ import scala.meta.internal.metals.debug.Stoppage
 import scala.util.Properties
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeActionContext
+import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
+import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
+import scala.meta.internal.metals.ClientCommands
 
 /**
- * Wrapper around `MetalsLanguageServer` with helpers methods for testing purpopses.
+ * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
  *
  * - manages text synchronization, example didSave writes file contents to disk.
  * - pretty-prints results of textDocument/definition for readable multiline string diffing.
@@ -193,6 +196,76 @@ final class TestingServer(
       case None =>
         Future.successful(Seq.empty)
     }
+  }
+
+  def assertGotoSuperMethod(
+      asserts: Map[Int, Option[Int]],
+      context: Map[Int, (l.Position, String)]
+  )(implicit loc: munit.Location): Future[Unit] = {
+    def exec(
+        toCheck: List[(Int, Option[Int])]
+    ): Future[List[Option[(l.Position, String)]]] = {
+      toCheck match {
+        case (pos, expectedPos) :: tl =>
+          val (position, document) = context(pos)
+          val command = GoToSuperMethodParams(document, position)
+          executeCommand(ServerCommands.GotoSuperMethod.id, command)
+            .flatMap(_ =>
+              exec(tl).map(rest => expectedPos.flatMap(context.get) +: rest)
+            )
+        case _ =>
+          Future.successful(List.empty)
+      }
+    }
+
+    val resultsF = exec(asserts.toList)
+
+    resultsF.map { expectedGotoPositionsOpts =>
+      val expectedGotoPositions = expectedGotoPositionsOpts.collect {
+        case Some(pos) => pos
+      }
+      val gotoExecutedCommandPositions = client.clientCommands.asScala
+        .filter(_.getCommand == ClientCommands.GotoLocation.id)
+        .map(_.getArguments.asScala.head.asInstanceOf[l.Location])
+        .map(l => (l.getRange.getStart, l.getUri))
+        .toList
+
+      Assertions.assertEquals(
+        gotoExecutedCommandPositions,
+        expectedGotoPositions
+      )
+    }
+  }
+
+  def assertSuperMethodHierarchy(
+      uri: String,
+      expectations: List[(Int, List[String])],
+      context: Map[Int, l.Position]
+  )(implicit loc: munit.Location): Future[Unit] = {
+    val obtained = scala.collection.mutable.Buffer[Set[String]]()
+    client.showMessageRequestHandler = { req =>
+      val titles = req.getActions.asScala
+        .map(action => formatMethodSymbolForQuickPick(action.getTitle))
+        .toSet
+      obtained.append(titles)
+      Some(req.getActions.get(0))
+    }
+
+    def exec(toCheck: List[(Int, List[String])]): Future[List[Set[String]]] = {
+      toCheck match {
+        case (pos, expected) :: tl =>
+          val command = GoToSuperMethodParams(uri, context(pos))
+          executeCommand(ServerCommands.SuperMethodHierarchy.id, command)
+            .flatMap(_ => exec(tl).map(rest => expected.toSet +: rest))
+
+        case _ =>
+          Future.successful(List.empty)
+      }
+    }
+
+    exec(expectations).map(expected => {
+      Assertions.assertEquals(obtained.toList, expected)
+    })
   }
 
   def assertReferenceDefinitionBijection()(
@@ -822,7 +895,7 @@ final class TestingServer(
     renames
       .getDocumentChanges()
       .asScala
-      .collect {
+      .collectFirst {
         case either if either.isRight() =>
           val rename = either.getRight().asInstanceOf[RenameFile]
           if (rename.getOldUri().contains(file)) {
@@ -836,7 +909,6 @@ final class TestingServer(
             file
           }
       }
-      .headOption
       .getOrElse(file)
   }
 

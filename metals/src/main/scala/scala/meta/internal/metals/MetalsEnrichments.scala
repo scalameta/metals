@@ -39,6 +39,7 @@ import scala.util.Properties
 import scala.{meta => m}
 import java.nio.file.StandardOpenOption
 import scala.util.control.NonFatal
+import scala.util.Try
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -410,6 +411,8 @@ object MetalsEnrichments
       }
       index
     }
+
+    def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
 
     def toAbsolutePath: AbsolutePath =
       AbsolutePath(

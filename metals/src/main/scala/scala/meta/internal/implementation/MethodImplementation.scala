@@ -49,7 +49,7 @@ object MethodImplementation {
         findSymbol,
         asSeenFrom
       )
-      if isOverridenMethod(
+      if isOverriddenMethod(
         methodSymbolInfo,
         bottomSymbolInformation,
         findParent = true
@@ -88,12 +88,12 @@ object MethodImplementation {
         inheritanceContext.findSymbol,
         asSeenFrom
       )
-      if isOverridenMethod(methodSymbolInfo, parentSymbol)(context)
+      if isOverriddenMethod(methodSymbolInfo, parentSymbol)(context)
     } yield methodSymbol
     validMethods.headOption
   }
 
-  private def isOverridenMethod(
+  private def isOverriddenMethod(
       methodSymbolInfo: SymbolInformation,
       otherSymbol: SymbolInformation,
       findParent: Boolean = false
@@ -202,22 +202,35 @@ object MethodImplementation {
     }
   }
 
+  def checkSignaturesEqual(
+      parentSignature: MethodSignature,
+      childSignature: MethodSignature,
+      asSeenFrom: Map[String, String],
+      findSymbol: String => Option[SymbolInformation]
+  ): Boolean = {
+    val context = Context(findSymbol, findSymbol, asSeenFrom)
+    signaturesEqual(parentSignature, childSignature)(context)
+  }
+
   private def signaturesEqual(
-      parentSig: Signature,
-      sig: Signature
+      parentSignature: Signature,
+      childSignature: Signature
   )(implicit context: Context): Boolean = {
-    (parentSig, sig) match {
-      case (sig1: MethodSignature, sig2: MethodSignature) =>
+    (parentSignature, childSignature) match {
+      case (
+          methodParentSignature: MethodSignature,
+          methodChildSignature: MethodSignature
+          ) =>
         val newContext = context.addAsSeenFrom(
           typeMappingFromMethodScope(
-            sig1.typeParameters,
-            sig2.typeParameters
+            methodParentSignature.typeParameters,
+            methodChildSignature.typeParameters
           )
         )
         lazy val enrichedSig1 =
-          addParameterSignatures(sig1, context.findSymbol)
+          addParameterSignatures(methodParentSignature, context.findSymbol)
         lazy val enrichedSig2 =
-          addParameterSignatures(sig2, context.findSymbol)
+          addParameterSignatures(methodChildSignature, context.findSymbol)
         paramsAreEqual(
           enrichedSig1.parameterLists,
           enrichedSig2.parameterLists

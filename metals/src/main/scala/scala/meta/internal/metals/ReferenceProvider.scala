@@ -74,7 +74,7 @@ final class ReferenceProvider(
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         val ResolvedSymbolOccurrence(distance, maybeOccurrence) =
-          definition.positionOccurrence(source, params, doc)
+          definition.positionOccurrence(source, params.getPosition, doc)
         maybeOccurrence match {
           case Some(occurrence) =>
             val alternatives = referenceAlternatives(doc, occurrence)

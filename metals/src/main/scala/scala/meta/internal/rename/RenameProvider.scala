@@ -60,7 +60,7 @@ final class RenameProvider(
     } else {
       val source = params.getTextDocument.getUri.toAbsolutePath
       val symbolOccurence =
-        definitionProvider.symbolOccurence(source, params)
+        definitionProvider.symbolOccurrence(source, params.getPosition)
       for {
         (occurence, semanticDb) <- symbolOccurence
         if canRenameSymbol(occurence.symbol, None)
@@ -81,7 +81,7 @@ final class RenameProvider(
       )
 
       val symbolOccurence =
-        definitionProvider.symbolOccurence(source, textParams)
+        definitionProvider.symbolOccurrence(source, textParams.getPosition)
 
       val suggestedName = params.getNewName()
       val newName =
@@ -316,7 +316,7 @@ final class RenameProvider(
       textParams.setPosition(loc.getRange().getStart())
       val isImplicitApply =
         definitionProvider
-          .symbolOccurence(locSource, textParams)
+          .symbolOccurrence(locSource, textParams.getPosition)
           .exists(_._1.symbol.desc.name.value != "apply")
       if (isImplicitApply) {
         val range = loc.getRange()

@@ -53,6 +53,9 @@ import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
+import scala.meta.internal.implementation.Supermethods
+import scala.meta.internal.metals.codelenses.RunTestCodeLens
+import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -161,6 +164,7 @@ class MetalsLanguageServer(
   private var bloopServers: BloopServers = _
   private var bspServers: BspServers = _
   private var codeLensProvider: CodeLensProvider = _
+  private var supermethods: Supermethods = _
   private var codeActionProvider: CodeActionProvider = _
   private var definitionProvider: DefinitionProvider = _
   private var semanticDBIndexer: SemanticdbIndexer = _
@@ -321,14 +325,6 @@ class MetalsLanguageServer(
         interactiveSemanticdbs
       )
     )
-    codeLensProvider = CodeLensProvider(
-      buildTargetClasses,
-      buffers,
-      buildTargets,
-      compilations,
-      semanticdbs,
-      clientExperimentalCapabilities
-    )
     definitionProvider = new DefinitionProvider(
       workspace,
       mtags,
@@ -361,7 +357,6 @@ class MetalsLanguageServer(
       workspace,
       languageClient,
       packageProvider,
-      config,
       () => focusedDocument
     )
     multilineStringFormattingProvider = new MultilineStringFormattingProvider(
@@ -381,6 +376,31 @@ class MetalsLanguageServer(
       buildTargets,
       buffers,
       definitionProvider
+    )
+
+    supermethods = new Supermethods(
+      languageClient,
+      definitionProvider,
+      implementationProvider
+    )
+
+    val runTestLensProvider =
+      new RunTestCodeLens(
+        buildTargetClasses,
+        buffers,
+        buildTargets,
+        clientExperimentalCapabilities
+      )
+
+    val goSuperLensProvider = new SuperMethodCodeLens(
+      implementationProvider,
+      buffers,
+      () => userConfig,
+      config
+    )
+    codeLensProvider = new CodeLensProvider(
+      List(runTestLensProvider, goSuperLensProvider),
+      semanticdbs
     )
     renameProvider = new RenameProvider(
       referencesProvider,
@@ -1034,7 +1054,7 @@ class MetalsLanguageServer(
   def prepareRename(
       params: TextDocumentPositionParams
   ): CompletableFuture[l.Range] =
-    CancelTokens { _ => renameProvider.prepareRename(params).getOrElse(null) }
+    CancelTokens { _ => renameProvider.prepareRename(params).orNull }
 
   @JsonRequest("textDocument/rename")
   def rename(
@@ -1150,8 +1170,7 @@ class MetalsLanguageServer(
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens { _ =>
       val path = params.getTextDocument.getUri.toAbsolutePath
-      val lenses = codeLensProvider.findLenses(path)
-      lenses.asJava
+      codeLensProvider.findLenses(path).toList.asJava
     }
 
   @JsonRequest("textDocument/foldingRange")
@@ -1287,6 +1306,18 @@ class MetalsLanguageServer(
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
             Future.failed(new IllegalArgumentException(msg)).asJavaObject
         }
+
+      case ServerCommands.GotoSuperMethod() =>
+        Future {
+          val command = supermethods.getGoToSuperMethodCommand(params)
+          command.foreach(languageClient.metalsExecuteClientCommand)
+          scribe.debug(s"Executing GoToSuperMethod ${command}")
+        }.asJavaObject
+
+      case ServerCommands.SuperMethodHierarchy() =>
+        scribe.debug(s"Executing SuperMethodHierarchy ${command}")
+        supermethods.jumpToSelectedSuperMethod(params).asJavaObject
+
       case ServerCommands.NewScalaFile() =>
         val args = params.getArguments.asScala
         val directoryURI = args.lift(0).collect {
@@ -1862,11 +1893,11 @@ class MetalsLanguageServer(
    * https://github.com/scalameta/metals/issues/755
    */
   def definitionOrReferences(
-      position: TextDocumentPositionParams,
+      positionParams: TextDocumentPositionParams,
       token: CancelToken = EmptyCancelToken,
       definitionOnly: Boolean = false
   ): Future[DefinitionResult] = {
-    val source = position.getTextDocument.getUri.toAbsolutePath
+    val source = positionParams.getTextDocument.getUri.toAbsolutePath
     if (source.isScalaFilename) {
       val semanticDBDoc =
         semanticdbs.textDocument(source).documentIncludingStale
@@ -1874,7 +1905,7 @@ class MetalsLanguageServer(
         doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
           source,
-          position,
+          positionParams.getPosition,
           doc
         )
         occ <- positionOccurrence.occurrence
@@ -1883,14 +1914,14 @@ class MetalsLanguageServer(
           if (occ.role.isDefinition && !definitionOnly) {
             val referenceContext = new ReferenceContext(false)
             val refParams = new ReferenceParams(referenceContext)
-            refParams.setTextDocument(position.getTextDocument())
-            refParams.setPosition(position.getPosition())
+            refParams.setTextDocument(positionParams.getTextDocument())
+            refParams.setPosition(positionParams.getPosition())
             val result = referencesResult(refParams)
             if (result.locations.isEmpty) {
               // Fallback again to the original behavior that returns
               // the definition location itself if no reference locations found,
               // for avoiding the confusing messages like "No definition found ..."
-              definitionResult(position, token)
+              definitionResult(positionParams, token)
             } else {
               Future.successful(
                 DefinitionResult(
@@ -1902,7 +1933,7 @@ class MetalsLanguageServer(
               )
             }
           } else {
-            definitionResult(position, token)
+            definitionResult(positionParams, token)
           }
         case None =>
           if (semanticDBDoc.isEmpty) {
@@ -1910,7 +1941,7 @@ class MetalsLanguageServer(
           }
           // Even if it failed to retrieve the symbol occurrence from semanticdb,
           // try to find its definitions from presentation compiler.
-          definitionResult(position, token)
+          definitionResult(positionParams, token)
       }
     } else {
       // Ignore non-scala files.

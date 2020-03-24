@@ -130,6 +130,48 @@ object ServerCommands {
        |""".stripMargin
   )
 
+  val GotoSuperMethod = new Command(
+    "goto-super-method",
+    "Go to super method/field definition",
+    """|Jumps to super method/field definition of a symbol under cursor according to inheritance rules.
+       |When A {override def x()} <:< B <:< C {def x()} and on method 'A.x' it will jump directly to 'C.x'
+       |as method x() is not overridden in B.
+       |If symbol is a reference of a method it will jump to a definition.
+       |If symbol under cursor is invalid or does not override anything then command is ignored.
+       |
+       |Note: document in json argument must be absolute path.
+       |
+       |Arguments:
+       |```json
+       |{
+       |  document: "file:///home/dev/foo/Bar.scala",
+       |  position: {line: 5, character: 12}
+       |}
+       |```
+       |""".stripMargin
+  )
+
+  val SuperMethodHierarchy = new Command(
+    "super-method-hierarchy",
+    "Go to super method/field definition in hierarchy",
+    """|When user executes this command it will calculate inheritance hierarchy of a class that contains given method.
+       |Then it will filter out classes not overriding given method and a list using 'metalsQuickPick' will be
+       |displayed to which super method user would like to go to.
+       |Command has no effect on other symbols than method definition.
+       |QuickPick will show up only if more than one result is found.
+       |
+       |Note: document in json argument must be absolute path.
+       |
+       |Arguments:
+       |```json
+       |{
+       |  document: "file:///home/dev/foo/Bar.scala",
+       |  position: {line: 5, character: 12}
+       |}
+       |```
+       |""".stripMargin
+  )
+
   val NewScalaFile = new Command(
     "new-scala-file",
     "Create new scala file",
@@ -211,6 +253,9 @@ object ServerCommands {
     CancelCompile,
     BspSwitch,
     StartDebugAdapter,
-    NewScalaFile
+    GotoLocation,
+    NewScalaFile,
+    GotoSuperMethod,
+    SuperMethodHierarchy
   )
 }

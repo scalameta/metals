@@ -1,8 +1,9 @@
 package tests
 import scala.concurrent.Future
 import munit.Location
+import munit.TestOptions
 
-class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
+class CodeLensLspSuite extends BaseLspSuite("codeLenses") {
   check("empty-package")(
     """|<<run>><<debug>>
        |object Main {
@@ -49,7 +50,8 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     """|package foo.bar
        |<<test>><<debug test>>
        |object Foo extends utest.TestSuite {
-       |  val tests = utest.Tests {}
+       |<< tests>>
+       |val tests = utest.Tests {}
        |}
        |""".stripMargin
   )
@@ -188,7 +190,63 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
     } yield ()
   }
 
-  def check(name: String, library: String = "")(
+  check("go-to-super-method-lenses")(
+    """package gameofthrones
+      |
+      |abstract class Lannister {
+      |  def payTheirDebts: Boolean
+      |  def trueLannister = payTheirDebts
+      |}
+      |
+      |trait Tywin extends Lannister{
+      |<< payTheirDebts>>
+      |override def payTheirDebts = true
+      |}
+      |
+      |trait Jamie extends Tywin {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = true
+      |}
+      |
+      |trait Tyrion extends Tywin {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = true
+      |}
+      |
+      |trait Cersei extends Tywin {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = false
+      |<< trueLannister>>
+      |override def trueLannister = false
+      |}
+      |
+      |class Joffrey extends Lannister with Jamie with Cersei {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = false
+      |}
+      |
+      |class Tommen extends Lannister with Cersei with Jamie {
+      |<< payTheirDebts>>
+      |override def payTheirDebts = true
+      |}
+      |""".stripMargin
+  )
+
+  check("go-to-super-method-lenses-anonymous-class")(
+    """package a
+      |
+      |class A { def afx(): Unit = ??? }
+      |object X {
+      |  val t = new A {
+      |<< afx>>
+      |override def afx(): Unit = ???
+      |  }
+      |}
+      |
+    """.stripMargin
+  )
+
+  def check(name: TestOptions, library: String = "")(
       expected: String
   )(implicit loc: Location): Unit = {
     test(name) {
@@ -242,7 +300,7 @@ class CodeLensesLspSuite extends BaseLspSuite("codeLenses") {
   private def assertNoCodeLenses(
       relativeFile: String,
       maxRetries: Int = 4
-  )(implicit loc: Location): Future[Unit] = {
+  ): Future[Unit] = {
     server.codeLenses(relativeFile)(maxRetries).failed.flatMap {
       case _: NoSuchElementException => Future.unit
       case e => Future.failed(e)

@@ -32,7 +32,8 @@ case class UserConfiguration(
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
-    pantsTargets: Option[List[String]] = None
+    pantsTargets: Option[List[String]] = None,
+    superMethodLensesEnabled: Boolean = true
 ) {
 
   def currentBloopVersion: String =
@@ -126,8 +127,18 @@ object UserConfiguration {
       BuildInfo.bloopVersion,
       "1.4.0-RC1",
       "Version of Bloop",
-      """|This version will be used for the Bloop build tool plugin, for any supported build tool, 
+      """|This version will be used for the Bloop build tool plugin, for any supported build tool,
          |while importing in Metals as well as for running the embedded server""".stripMargin
+    ),
+    UserConfigurationOption(
+      "super-method-lenses-enabled",
+      "false",
+      "false",
+      "Should display lenses with links to super methods",
+      """|Super method lenses are visible above methods definition that override another methods. Clicking on a lens jumps to super method definition.
+         |Disabled lenses are not calculated for opened documents which might speed up document processing.
+         |
+         |""".stripMargin
     )
   )
 
@@ -241,7 +252,10 @@ object UserConfiguration {
       )
     val bloopSbtAlreadyInstalled =
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
-    val bloopVersion = getStringKey("bloop-version")
+    val bloopVersion =
+      getStringKey("bloop-version")
+    val superMethodLensesEnabled =
+      getBooleanKey("super-method-lenses-enabled").getOrElse(false)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -256,7 +270,8 @@ object UserConfiguration {
           worksheetCancelTimeout,
           bloopSbtAlreadyInstalled,
           bloopVersion,
-          pantsTargets
+          pantsTargets,
+          superMethodLensesEnabled
         )
       )
     } else {
