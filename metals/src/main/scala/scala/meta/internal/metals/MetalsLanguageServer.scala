@@ -1689,9 +1689,7 @@ class MetalsLanguageServer(
     val tracked = statusBar.trackFuture(
       s"Indexing",
       timed("indexed workspace", reportStatus = true) {
-        val t = thunk()
-        t.onComplete(_ => onFinally())
-        t
+        thunk().andThen { case _ => onFinally() }
       }
     )
     tracked.foreach { _ =>
