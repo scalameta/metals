@@ -1,6 +1,7 @@
 package tests
 
 import bloop.config.{Config => C}
+import bloop.config.Tag
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -83,8 +84,8 @@ case class QuickBuild(
     val baseDirectory: Path = workspace.resolve(id).toNIO
     val binaryVersion: String = scalaBinaryVersion
     val out: Path = workspace.resolve(".bloop").resolve(id).toNIO
+    val isTest = id.endsWith("-test")
     val classDirectory: Path = {
-      val isTest = id.endsWith("-test")
       val testPrefix = if (isTest) "test-" else ""
       out
         .resolve(s"scala-$binaryVersion")
@@ -166,6 +167,8 @@ case class QuickBuild(
       else Some(Config.Test(frameworks, Config.TestOptions.empty))
     }
 
+    val tags = if (isTest) Tag.Test :: Nil else Nil
+
     C.Project(
       id,
       baseDirectory,
@@ -209,7 +212,8 @@ case class QuickBuild(
       test = testFrameworks,
       platform = Some(C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None)),
       resolution = Some(C.Resolution(resolution)),
-      resources = None
+      resources = None,
+      tags = Some(tags)
     )
   }
 }
