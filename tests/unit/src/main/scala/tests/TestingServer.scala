@@ -275,8 +275,11 @@ final class TestingServer(
       base: Map[String, String]
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      references <- references(filename, query, base)
+      referenceLocations <- getReferenceLocations(filename, query, base)
     } yield {
+      Assertions.assertSimpleLocationOrdering(referenceLocations)
+      val references =
+        TestRanges.renderLocationsAsString(base, referenceLocations)
       references.foreach {
         case (file, obtained) =>
           val expectedImpl = expected(file)
@@ -966,19 +969,19 @@ final class TestingServer(
     }
   }
 
-  def references(
+  def getReferenceLocations(
       filename: String,
       query: String,
       base: Map[String, String]
-  ): Future[Map[String, String]] = {
+  ): Future[List[Location]] = {
     for {
       (_, params) <- offsetParams(filename, query, workspace)
       refParams = new ReferenceParams(new ReferenceContext(true))
       _ = refParams.setPosition(params.getPosition())
       _ = refParams.setTextDocument(params.getTextDocument())
-      references <- server.references(refParams).asScala
+      referenceLocations <- server.references(refParams).asScala
     } yield {
-      TestRanges.renderLocationsAsString(base, references.asScala.toList)
+      referenceLocations.asScala.toList
     }
   }
 

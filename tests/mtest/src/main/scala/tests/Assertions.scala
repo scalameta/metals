@@ -1,5 +1,6 @@
 package tests
 
+import org.eclipse.lsp4j
 import munit.Location
 import scala.meta.io.AbsolutePath
 
@@ -57,6 +58,15 @@ trait Assertions extends munit.Assertions {
     }
   }
 
+  def assertSimpleLocationOrdering(locations: List[lsp4j.Location]): Unit = {
+    val grouped = locations.groupBy(_.getUri)
+    grouped.foreach {
+      case (_, group) => {
+        val lineStarts = group.map(_.getRange.getStart.getLine)
+        assert(lineStarts == lineStarts.sorted)
+      }
+    }
+  }
 }
 
 object Assertions extends Assertions

@@ -210,17 +210,15 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
   }
 
   check(
-    "companion",
+    "ordering",
     """|/a/src/main/scala/a/Main.scala
        |package a
-       |case class <<Ma@@in>>(name : String){
-       |  val appl = <<Main>>.apply("")
-       |}
+       |trait <<A@@A>>
        |/a/src/main/scala/a/Other.scala
        |package a
-       |object Other{
-       | val appl = <<Main>>.apply("")
-       |}
+       |trait BB extends <<AA>>
+       |trait CC extends <<AA>>
+       |trait DD extends <<AA>>
        |""".stripMargin
   )
 
