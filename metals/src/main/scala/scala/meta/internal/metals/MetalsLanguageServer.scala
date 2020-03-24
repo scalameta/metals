@@ -53,7 +53,6 @@ import scala.meta.internal.rename.RenameProvider
 import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
-import com.google.gson.JsonNull
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
