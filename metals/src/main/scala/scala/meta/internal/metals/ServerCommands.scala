@@ -243,6 +243,18 @@ object ServerCommands {
     "Stay up to date with the latest release announcements and learn new Scala code editing tricks."
   )
 
+  val StartAmmoniteBuildServer = new Command(
+    "ammonite-start",
+    "Start an Ammonite build server",
+    "Something"
+  )
+
+  val StopAmmoniteBuildServer = new Command(
+    "ammonite-stop",
+    "Stop Ammonite build server",
+    "Something"
+  )
+
   def all: List[Command] = List(
     ImportBuild,
     RestartBuildServer,
@@ -256,6 +268,8 @@ object ServerCommands {
     GotoLocation,
     NewScalaFile,
     GotoSuperMethod,
-    SuperMethodHierarchy
+    SuperMethodHierarchy,
+    StartAmmoniteBuildServer,
+    StopAmmoniteBuildServer
   )
 }

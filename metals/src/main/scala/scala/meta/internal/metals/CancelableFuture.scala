@@ -6,6 +6,13 @@ case class CancelableFuture[T](
     future: Future[T],
     cancelable: Cancelable = Cancelable.empty
 ) extends Cancelable {
+  def merge[U](
+      other: CancelableFuture[U]
+  )(implicit ec: ExecutionContext): CancelableFuture[(T, U)] =
+    CancelableFuture(
+      future.flatMap(t => other.future.map(u => (t, u))),
+      new MutableCancelable().addAll(Seq(cancelable, other.cancelable))
+    )
   def cancel(): Unit = {
     cancelable.cancel()
   }

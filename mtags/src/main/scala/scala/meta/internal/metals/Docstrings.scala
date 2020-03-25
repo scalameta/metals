@@ -50,12 +50,15 @@ class Docstrings(index: GlobalSymbolIndex) {
    * Otherwise, if we update the cache for symbols every time we save a file,
    * metals will cache all symbols in files we've saved, and it consumes a considerable amount of memory.
    *
-   * @param path the absolute path for the source file to update.
+   * @param source the absolute path for the source file to update.
    */
-  def expireSymbolDefinition(path: AbsolutePath): Unit = {
-    path.toLanguage match {
+  def expireSymbolDefinition(
+      source: AbsolutePath,
+      toIndexSource: AbsolutePath
+  ): Unit = {
+    source.toLanguage match {
       case Language.SCALA =>
-        new Deindexer(path.toInput).indexRoot()
+        new Deindexer(toIndexSource.toInput).indexRoot()
       case _ =>
     }
   }

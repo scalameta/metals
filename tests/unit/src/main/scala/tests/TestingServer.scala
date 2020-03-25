@@ -107,7 +107,7 @@ import scala.meta.internal.metals.ClientCommands
  */
 final class TestingServer(
     workspace: AbsolutePath,
-    client: TestingClient,
+    val client: TestingClient,
     buffers: Buffers,
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
@@ -580,7 +580,7 @@ final class TestingServer(
         if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
         else if (retries > 0) {
           retries -= 1
-          server.compilations.compileFiles(List(path))
+          server.compilations.compileFile(path)
         } else {
           val error = s"Could not fetch any code lenses in $maxRetries tries"
           codeLenses.tryFailure(new NoSuchElementException(error))
@@ -594,7 +594,7 @@ final class TestingServer(
         .asScala // model is refreshed only for focused document
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
-      _ <- server.compilations.compileFiles(List(path))
+      _ <- server.compilations.compileFile(path)
       lenses <- codeLenses.future
       textEdits = CodeLensesTextEdits(lenses)
     } yield TextEdits.applyEdits(textContents(filename), textEdits.toList)
@@ -1187,6 +1187,55 @@ final class TestingServer(
       }
       .mkString("\n")
     Assertions.assertNoDiff(obtained, expected)
+  }
+
+  def assertDefinitionAtLocation(
+      file: String,
+      line: Int,
+      char: Int,
+      expectedLocation: String,
+      expectedLine: java.lang.Integer = null
+  ): Future[Unit] =
+    server
+      .definition(
+        new TextDocumentPositionParams(
+          new TextDocumentIdentifier(toPath(file).toNIO.toUri.toString),
+          new l.Position(line, char)
+        )
+      )
+      .asScala
+      .map { locations =>
+        val locations0 = locations.asScala
+        assert(
+          locations0.length == 1,
+          s"Expected a single location, got ${locations0.length} ($locations0)"
+        )
+        val locationUri = new URI(locations0.head.getUri)
+        assert(
+          locationUri.getScheme == "file",
+          s"Expected file location, got URI $locationUri"
+        )
+        val locationPath = workspace.toNIO.relativize(Paths.get(locationUri))
+        assert(
+          locationPath.toString == expectedLocation,
+          s"Expected location $expectedLocation, got $locationPath"
+        )
+        for (expectedLine0 <- Option(expectedLine)) {
+          val line = locations0.head.getRange.getStart.getLine
+          assert(
+            line == expectedLine0,
+            s"Expected line $expectedLine0, got $line"
+          )
+        }
+        ()
+      }
+
+  def expectDiagnostics(path: String, expectedDiagnostics: String): Unit = {
+    val diagnostics = client.pathDiagnostics(path)
+    assert(
+      diagnostics == expectedDiagnostics,
+      s"Expected diagnostics:\n'$expectedDiagnostics', got\n'$diagnostics'"
+    )
   }
 
   def textContents(filename: String): String =

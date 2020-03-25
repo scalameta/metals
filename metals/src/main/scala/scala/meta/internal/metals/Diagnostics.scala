@@ -57,6 +57,14 @@ final class Diagnostics(
     keys.foreach { key => publishDiagnostics(key) }
   }
 
+  def resetAmmoniteScripts(): Unit =
+    // FIXME Ignore worksheets
+    for (key <- diagnostics.keys
+      if key.toNIO.getFileName.toString.endsWith(".sc")) {
+      diagnostics.remove(key)
+      publishDiagnostics(key)
+    }
+
   def onStartCompileBuildTarget(target: BuildTargetIdentifier): Unit = {
     if (statistics.isDiagnostics) {
       compileTimer(target) = new Timer(Time.system)

@@ -13,6 +13,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val DoctorWarning = new Notification(4)
   val IncompatibleBloop = new Notification(5)
   val ReconnectBsp = new Notification(6)
+  val ReconnectAmmonite = new Notification(7)
 
   class Notification(val id: Int)(implicit name: sourcecode.Name) {
     override def toString: String = s"Notification(${name.value}, $id)"

@@ -36,6 +36,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.DebugServer
 import scala.meta.internal.mtags._
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.tvp._
@@ -56,6 +57,7 @@ import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
+import java.io.InputStream
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -113,6 +115,8 @@ class MetalsLanguageServer(
   private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer: Option[BuildServerConnection] =
     Option.empty[BuildServerConnection]
+  private var ammoniteBuildServer: Option[BuildServerConnection] =
+    Option.empty[BuildServerConnection]
   private val buildTargetClasses = new BuildTargetClasses(() => buildServer)
   private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
@@ -125,7 +129,10 @@ class MetalsLanguageServer(
     buildTargets,
     buildTargetClasses,
     () => workspace,
-    () => buildServer,
+    target =>
+      // FIXME Make that more robust?
+      if (target.getUri.endsWith(".sc")) ammoniteBuildServer
+      else buildServer,
     languageClient,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
@@ -488,7 +495,7 @@ class MetalsLanguageServer(
         () => buildClient.ongoingCompilations(),
         definitionIndex,
         config.statistics,
-        id => compilations.compileTargets(List(id)),
+        compilations.compileTarget,
         sh
       )
     }
@@ -723,7 +730,7 @@ class MetalsLanguageServer(
       }
     } else {
       compilers.load(List(path))
-      compilations.compileFiles(List(path)).ignoreValue.asJava
+      compilations.compileFile(path).ignoreValue.asJava
     }
   }
   @JsonNotification("metals/didFocusTextDocument")
@@ -762,7 +769,7 @@ class MetalsLanguageServer(
             isAffectedByCurrentCompilation || isAffectedByLastCompilation
           if (needsCompile) {
             compilations
-              .compileFiles(List(path))
+              .compileFile(path)
               .map(_ => DidFocusResult.Compiled)
               .asJava
           } else {
@@ -947,7 +954,7 @@ class MetalsLanguageServer(
       .sequence(
         List(
           Future(reindexWorkspaceSources(paths)),
-          compilations.compileFiles(paths).ignoreValue,
+          compilations.compileFiles(paths),
           onBuildChanged(paths).ignoreValue
         )
       )
@@ -1293,7 +1300,7 @@ class MetalsLanguageServer(
                 params,
                 definitionProvider,
                 buildTargets,
-                buildServer
+                buildServer // TODO Pass ammoniteBuildServer too
               )
             } yield {
               cancelables.add(server)
@@ -1329,6 +1336,113 @@ class MetalsLanguageServer(
             name.getAsString()
         }
         newFilesProvider.createNewFileDialog(directoryURI, name).asJavaObject
+
+      case ServerCommands.StartAmmoniteBuildServer() =>
+        val cpMainClassScriptOpt = focusedDocument match {
+          case None =>
+            val msg = "No Ammonite script is opened"
+            scribe.error(msg)
+            Left(new Exception(msg))
+          case Some(path) if path.toNIO.toString.endsWith(".worksheet.sc") =>
+            val msg = "Current document is a worksheet, not an Ammonite script"
+            scribe.error(msg)
+            Left(new Exception(msg))
+          case Some(path) if !path.toNIO.toString.endsWith(".sc") =>
+            val msg = "Current document is not an Ammonite script"
+            scribe.error(msg)
+            Left(new Exception(msg))
+          case Some(path) =>
+            val it = path.toInputFromBuffers(buffers).value.linesIterator
+            val versionsOpt = ammrunner.AmmRunner.versions(it)
+            val versions = versionsOpt.getOrElse(
+              // TODO Warn if any of the default versions is used
+              // FIXME Don't hardcode those, or at least don't hardcode them here
+              ammrunner.Versions(
+                "2.0.5-SNAPSHOT",
+                "2.12.10"
+              )
+            )
+            ammrunner.AmmRunner.command(versions) match {
+              case Left(e) =>
+                scribe.error(
+                  s"Error getting Ammonite ${versions.ammoniteVersion} (scala ${versions.scalaVersion})",
+                  e
+                )
+                Left(e)
+              case Right((cp, mainClass)) => Right((cp, mainClass, path))
+            }
+        }
+
+        cpMainClassScriptOpt match {
+          case Left(e) =>
+            val f = new CompletableFuture[Object]
+            f.completeExceptionally(e)
+            f
+          case Right((cp, mainClass, script)) =>
+            def socketConn(): Future[SocketConnection] =
+              // meh, blocks on random ec
+              Future {
+                val proc = ammrunner.Launch.launchBg(
+                  cp,
+                  mainClass,
+                  Array("--bsp", script.toNIO.toString),
+                  proc0 =>
+                    proc0
+                      .redirectInput(ProcessBuilder.Redirect.PIPE)
+                      .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                      .redirectError(ProcessBuilder.Redirect.PIPE)
+                      .directory(workspace.toFile)
+                )
+                val os =
+                  new ClosableOutputStream(proc.getOutputStream(), "Ammonite")
+                @volatile var stopSendingOutput = false
+                val sendOutput: Thread =
+                  new Thread {
+                    setDaemon(true)
+                    val buf = Array.ofDim[Byte](2048)
+                    override def run(): Unit = {
+                      val is: InputStream = proc.getErrorStream
+                      var read = 0
+                      while ({
+                        !stopSendingOutput && {
+                          read = is.read(buf)
+                          read >= 0
+                        }
+                      }) {
+                        if (read > 0) {
+                          val content =
+                            new String(buf, 0, read, Charset.defaultCharset())
+                          scribe.info("Ammonite: " + content)
+                        }
+                      }
+                    }
+                  }
+                sendOutput.start()
+                SocketConnection(
+                  "Ammonite",
+                  os,
+                  proc.getInputStream(),
+                  List(
+                    Cancelable { () => proc.destroyForcibly() },
+                    Cancelable { () => stopSendingOutput = true }
+                  )
+                )
+              }
+
+            val futureConn = BuildServerConnection.fromSockets(
+              workspace,
+              buildClient,
+              languageClient,
+              () => socketConn(),
+              tables.dismissedNotifications.ReconnectAmmonite
+            )
+            futureConn.flatMap { conn =>
+              connectToNewAmmoniteBuildServer(conn).map(_ => ())
+            }.asJavaObject
+        }
+
+      case ServerCommands.StopAmmoniteBuildServer() =>
+        disconnectOldAmmoniteBuildServer().asJavaObject
 
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
@@ -1506,6 +1620,18 @@ class MetalsLanguageServer(
         value.shutdown()
     }
   }
+  private def disconnectOldAmmoniteBuildServer(): Future[Unit] = {
+    if (ammoniteBuildServer.isDefined) {
+      scribe.info("disconnected: ammonite build server")
+    }
+    ammoniteBuildServer match {
+      case None => Future.successful(())
+      case Some(value) =>
+        ammoniteBuildServer = None
+        diagnostics.resetAmmoniteScripts()
+        value.shutdown()
+    }
+  }
   private def importedBuild(
       build: BuildServerConnection
   ): Future[ImportedBuild] =
@@ -1541,7 +1667,7 @@ class MetalsLanguageServer(
       i <- statusBar.trackFuture("Importing build", importedBuild0)
       _ = doctor.check(build.name, build.version)
       _ <- profiledIndexWorkspace(
-        () => indexWorkspace(i),
+        () => indexWorkspace(i ++ lastAmmoniteImportedBuild),
         () => indexingPromise.trySuccess(())
       )
       _ = checkRunningBloopVersion(build.version)
@@ -1550,6 +1676,40 @@ class MetalsLanguageServer(
           .cascadeCompileFiles(buffers.open.toSeq)
           .ignoreValue ::
           compilers.load(buffers.open.toSeq) ::
+          Nil
+      )
+    } yield {
+      BuildChange.Reconnected
+    }
+  }
+
+  private def connectToNewAmmoniteBuildServer(
+      build: BuildServerConnection
+  ): Future[BuildChange] = {
+    scribe.info(s"Connected to Ammonite Build server v${build.version}")
+    cancelables.add(build)
+    compilers.cancel()
+    ammoniteBuildServer = Some(build)
+    val importedBuild0 = timed("imported ammonite build") {
+      importedBuild(build)
+    }
+    for {
+      i <- statusBar.trackFuture("Importing ammonite build", importedBuild0)
+      _ <- profiledIndexWorkspace(
+        () => indexWorkspace(lastImportedBuild ++ i),
+        () => indexingPromise.trySuccess(())
+      )
+      _ = checkRunningBloopVersion(build.version)
+      _ <- Future.sequence[Unit, List](
+        compilations
+          .cascadeCompileFiles(buffers.open.toSeq)
+          .ignoreValue ::
+          compilers.load(
+            buffers.open.toSeq.filter(p =>
+              !p.toNIO.toString.endsWith(".sc") || p.toNIO.toString
+                .endsWith(".worksheet.sc")
+            )
+          ) ::
           Nil
       )
     } yield {
@@ -1566,7 +1726,7 @@ class MetalsLanguageServer(
       targets.asScala.foreach { target =>
         buildTargets.linkSourceFile(target, source)
       }
-      indexSourceFile(source, Some(sourceItem))
+      indexSourceFile(source, Some(sourceItem), targets.asScala.headOption)
     }
   }
 
@@ -1577,17 +1737,36 @@ class MetalsLanguageServer(
       path <- paths.iterator
       if path.isScalaOrJava
     } {
-      indexSourceFile(path, buildTargets.inverseSourceItem(path))
+      indexSourceFile(path, buildTargets.inverseSourceItem(path), None)
     }
   }
 
   private def indexSourceFile(
       source: AbsolutePath,
-      sourceItem: Option[AbsolutePath]
+      sourceItem: Option[AbsolutePath],
+      targetOpt: Option[b.BuildTargetIdentifier]
   ): Unit = {
+
+    val name = source.toNIO.getFileName.toString
+    val isAmmScript = name.endsWith(".sc") && !name.endsWith(".worksheet.sc")
+
+    val toIndexSource =
+      targetOpt.flatMap(buildTargets.scalacOptions) match {
+        case Some(target) if isAmmScript =>
+          val rel = source.toRelative(workspace)
+          val toIndex = Paths
+            .get(new URI(target.getClassDirectory))
+            .getParent
+            .resolve(
+              s"src/ammonite/$$file/${rel.toString.stripSuffix(".sc")}.scala"
+            )
+          AbsolutePath(toIndex.toAbsolutePath.normalize)
+        case _ =>
+          source
+      }
     try {
       val reluri = source.toIdeallyRelativeURI(sourceItem)
-      val input = source.toInput
+      val input = toIndexSource.toInput
       val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
       SemanticdbDefinition.foreach(input) {
         case SemanticdbDefinition(info, occ, owner) =>
@@ -1602,7 +1781,7 @@ class MetalsLanguageServer(
           }
           if (sourceItem.isDefined &&
             !info.symbol.isPackage &&
-            owner.isPackage) {
+            (owner.isPackage || isAmmScript)) {
             definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
           }
       }
@@ -1610,7 +1789,7 @@ class MetalsLanguageServer(
 
       // Since the `symbols` here are toplevel symbols,
       // we cannot use `symbols` for expiring the cache for all symbols in the source.
-      symbolDocs.expireSymbolDefinition(source)
+      symbolDocs.expireSymbolDefinition(source, toIndexSource)
     } catch {
       case NonFatal(e) =>
         scribe.error(source.toString(), e)
@@ -1696,7 +1875,11 @@ class MetalsLanguageServer(
     scribe.info(s"memory: $footprint")
   }
 
+  private var lastImportedBuild = ImportedBuild.empty
+  private var lastAmmoniteImportedBuild = ImportedBuild.empty
+
   def indexWorkspace(i: ImportedBuild): Unit = {
+    lastImportedBuild = i
     timedThunk("updated build targets", config.statistics.isIndex) {
       buildTargets.reset()
       interactiveSemanticdbs.reset()
@@ -1988,12 +2171,20 @@ class MetalsLanguageServer(
   }
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
-    OnDemandSymbolIndex(onError = {
-      case e @ (_: ParseException | _: TokenizeException) =>
-        scribe.error(e.toString)
-      case NonFatal(e) =>
-        scribe.error("unexpected error during source scanning", e)
-    })
+    OnDemandSymbolIndex(
+      onError = {
+        case e @ (_: ParseException | _: TokenizeException) =>
+          scribe.error(e.toString)
+        case NonFatal(e) =>
+          scribe.error("unexpected error during source scanning", e)
+      },
+      semanticdb = path => {
+        fileSystemSemanticdbs
+          .textDocument(path)
+          .documentIncludingStale
+          .map { doc => s.TextDocuments(Seq(doc)) }
+      }
+    )
   }
 
 }

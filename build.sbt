@@ -298,7 +298,9 @@ lazy val metals = project
       "ch.epfl.scala" %% "bloop-frontend" % V.bloop,
       // for producing SemanticDB from Scala source files
       "org.scalameta" %% "scalameta" % V.scalameta,
-      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
+      "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
+      // For starting Ammonite
+      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.1.0-SNAPSHOT"
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](

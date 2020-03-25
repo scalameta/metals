@@ -60,7 +60,7 @@ class UnsupportedDebuggingLspSuite
            |""".stripMargin
       )
       _ <- server.server.compilations
-        .compileFiles(List(server.toPath("a/src/main/scala/Main.scala")))
+        .compileFile(server.toPath("a/src/main/scala/Main.scala"))
     } yield {
       val clientCommands = client.clientCommands.asScala.map(_.getCommand).toSet
       assert(!clientCommands.contains(ClientCommands.RefreshModel.id))

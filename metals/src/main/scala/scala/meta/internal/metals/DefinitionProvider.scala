@@ -216,15 +216,21 @@ class DestinationProvider(
     val defnRevisedInput = symbolDefinition.path.toInput
     // Read text file from disk instead of editor buffers because the file
     // on disk is more likely to parse.
-    val parsed =
+    lazy val parsed =
       mtags.index(symbolDefinition.path.toLanguage, defnRevisedInput)
-    if (parsed.occurrences.isEmpty) {
-      // Fall back to SemanticDB on disk, if any
+
+    def onDisk =
       semanticdbsFallback
         .flatMap {
           _.textDocument(symbolDefinition.path).documentIncludingStale
         }
         .getOrElse(parsed)
+
+    if (symbolDefinition.path.toNIO.toString.endsWith(".sc"))
+      onDisk
+    else if (parsed.occurrences.isEmpty) {
+      // Fall back to SemanticDB on disk, if any
+      onDisk
     } else {
       parsed
     }

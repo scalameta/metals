@@ -37,7 +37,8 @@ import java.util.zip.ZipError
 final case class OnDemandSymbolIndex(
     toplevels: TrieMap[String, AbsolutePath] = TrieMap.empty,
     definitions: TrieMap[String, AbsolutePath] = TrieMap.empty,
-    onError: PartialFunction[Throwable, Unit] = PartialFunction.empty
+    onError: PartialFunction[Throwable, Unit] = PartialFunction.empty,
+    semanticdb: AbsolutePath => Option[s.TextDocuments] = _ => None
 ) extends GlobalSymbolIndex {
   val mtags = new Mtags
   private val sourceJars = new ClasspathLoader()
@@ -116,7 +117,9 @@ final case class OnDemandSymbolIndex(
       source: AbsolutePath,
       toplevel: String
   ): Unit = {
-    if (!isTrivialToplevelSymbol(path, toplevel)) {
+    val name = source.toNIO.getFileName.toString
+    val isAmmScript = name.endsWith(".sc") && !name.endsWith(".worksheet.sc")
+    if (isAmmScript || !isTrivialToplevelSymbol(path, toplevel)) {
       toplevels(toplevel) = source
     }
   }
@@ -145,6 +148,9 @@ final case class OnDemandSymbolIndex(
         val input = file.toInput
         val document = mtags.index(language, input)
         s.TextDocuments(List(document))
+      case "sc" =>
+        val res = semanticdb(file)
+        res.getOrElse(s.TextDocuments(Nil))
       case _ =>
         s.TextDocuments(Nil)
     }

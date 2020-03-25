@@ -9,12 +9,13 @@ import scala.meta.io.AbsolutePath
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 final class Compilations(
     buildTargets: BuildTargets,
     classes: BuildTargetClasses,
     workspace: () => AbsolutePath,
-    buildServer: () => Option[BuildServerConnection],
+    buildServer: BuildTargetIdentifier => Option[BuildServerConnection],
     languageClient: MetalsLanguageClient,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit]
@@ -38,23 +39,32 @@ final class Compilations(
   def wasPreviouslyCompiled(buildTarget: b.BuildTargetIdentifier): Boolean =
     lastCompile.contains(buildTarget)
 
-  def compileTargets(
-      targets: Seq[b.BuildTargetIdentifier]
+  def compileTarget(
+      target: b.BuildTargetIdentifier
   ): Future[b.CompileResult] = {
-    compileBatch(targets)
+    compileBatch(Seq(target))
   }
 
-  def compileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
+  def compileFile(path: AbsolutePath): Future[b.CompileResult] = {
+    val targetOpt = expand(path)
+    for {
+      result <- compileBatch(targetOpt.toSeq)
+      _ <- compileWorksheets(Seq(path))
+    } yield result
+  }
+
+  def compileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
     val targets = expand(paths)
     for {
       result <- compileBatch(targets)
       _ <- compileWorksheets(paths)
-    } yield result
+    } yield ()
   }
 
   def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
+    val pathsTargets = expand(paths)
     val targets =
-      expand(paths).flatMap(buildTargets.inverseDependencies).distinct
+      (pathsTargets ++ pathsTargets.flatMap(buildTargets.inverseDependencies)).distinct
     for {
       result <- cascadeBatch(targets)
       _ <- compileWorksheets(paths)
@@ -66,31 +76,46 @@ final class Compilations(
     cascadeBatch.cancelCurrentRequest()
   }
 
-  def expand(paths: Seq[AbsolutePath]): Seq[b.BuildTargetIdentifier] = {
-    def isCompilable(path: AbsolutePath): Boolean =
+  def expand(path: AbsolutePath): Option[b.BuildTargetIdentifier] = {
+    def isCompilable: Boolean =
       path.isScalaOrJava && !path.isDependencySource(workspace())
 
-    val compilablePaths = paths.filter(isCompilable)
-    val targets = compilablePaths.flatMap(buildTargets.inverseSources).distinct
+    val targetOpt =
+      if (isCompilable) buildTargets.inverseSources(path)
+      else None
 
-    if (targets.isEmpty && compilablePaths.nonEmpty) {
-      scribe.warn(s"no build target for: ${compilablePaths.mkString("\n  ")}")
-    }
+    if (targetOpt.isEmpty && isCompilable)
+      scribe.warn(s"no build target for: $path")
 
-    targets
+    targetOpt
   }
+
+  private def expand(paths: Seq[AbsolutePath]): Seq[b.BuildTargetIdentifier] =
+    paths.flatMap(path => expand(path).toSeq)
 
   private def compile(
       targets: Seq[b.BuildTargetIdentifier]
   ): CancelableFuture[b.CompileResult] = {
-    val result = for {
-      connection <- buildServer()
-      if targets.nonEmpty
-    } yield compile(connection, targets)
 
-    result.getOrElse {
-      val result = new b.CompileResult(b.StatusCode.CANCELLED)
-      Future.successful(result).asCancelable
+    val targetsByBuildServer = targets
+      .flatMap(t => buildServer(t).map(_ -> t).toSeq)
+      .groupBy(_._1)
+      .map {
+        case (k, l) =>
+          (k, l.map(_._2))
+      }
+
+    targetsByBuildServer.toList match {
+      case Nil =>
+        val result = new b.CompileResult(b.StatusCode.CANCELLED)
+        Future.successful(result).asCancelable
+      case (bs, bsTargets) :: Nil =>
+        compile(bs, bsTargets)
+      case l =>
+        scribe.warn(
+          "Cannot compile files from different build tools at the same time"
+        )
+        ???
     }
   }
 
