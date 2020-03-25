@@ -1,9 +1,9 @@
 package tests
+
 import java.nio.file.Files
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
-import scala.concurrent.Future
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientExperimentalCapabilities
@@ -121,21 +121,6 @@ abstract class BaseLspSuite(suiteName: String) extends BaseSuite {
         case NonFatal(_) =>
           scribe.warn(s"Unable to delete workspace $workspace")
       }
-    }
-  }
-
-  def flakyTest(name: String, maxRetries: Int = 3)(
-      run: => Future[Unit]
-  ): Unit = {
-    test(name) {
-      def loop(n: Int): Future[Unit] = {
-        run.recoverWith {
-          case NonFatal(_) if n > 0 =>
-            scribe.info(s"test retry: $name")
-            loop(n - 1)
-        }
-      }
-      loop(maxRetries)
     }
   }
 }

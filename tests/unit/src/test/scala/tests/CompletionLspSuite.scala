@@ -12,7 +12,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     basicTest(V.scala212)
   }
 
-  flakyTest("workspace") {
+  test("workspace".flaky) {
     cleanWorkspace()
     for {
       _ <- server.initialize(
@@ -206,7 +206,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     } yield ()
   }
 
-  flakyTest("rambo") {
+  test("rambo".flaky) {
     cleanWorkspace()
     for {
       _ <- server.initialize(

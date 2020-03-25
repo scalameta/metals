@@ -5,8 +5,8 @@ import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.mtags
 import scala.meta.internal.semver.SemVer
 import scala.util.Properties
+import munit.Flaky
 import munit.Tag
-import munit.TestOptions
 
 class BaseSuite extends munit.FunSuite with Assertions {
 
@@ -32,18 +32,19 @@ class BaseSuite extends munit.FunSuite with Assertions {
 
   override def munitTimeout: Duration = Duration("10min")
 
-  // NOTE(olafur): always ignore flak test failures.
+  // NOTE(olafur): always ignore flaky test failures.
   override def munitFlakyOK = true
-  override def munitRunTest(
-      options: TestOptions,
-      body: => Any
-  ): Any = {
-    if (Properties.isWin && options.tags(FlakyWindows)) {
-      munitFlaky(options, body)
-    } else {
-      super.munitRunTest(options, body)
-    }
-  }
+
+  override def munitTestTransforms: List[TestTransform] =
+    super.munitTestTransforms ++ List(
+      new TestTransform(
+        "FlakyWindows",
+        test =>
+          if (test.tags(FlakyWindows) && Properties.isWin) test.tag(Flaky)
+          else test
+      ),
+      munitFlakyTransform
+    )
 
   private def scalaVersion: String =
     Properties.versionNumberString
