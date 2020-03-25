@@ -1506,6 +1506,27 @@ class MetalsLanguageServer(
         value.shutdown()
     }
   }
+  private def importedBuild(
+      build: BuildServerConnection
+  ): Future[ImportedBuild] =
+    for {
+      workspaceBuildTargets <- build.workspaceBuildTargets()
+      ids = workspaceBuildTargets.getTargets.map(_.getId)
+      scalacOptions <- build
+        .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
+      sources <- build
+        .buildTargetSources(new b.SourcesParams(ids))
+      dependencySources <- build
+        .buildTargetDependencySources(new b.DependencySourcesParams(ids))
+    } yield {
+      ImportedBuild(
+        workspaceBuildTargets,
+        scalacOptions,
+        sources,
+        dependencySources
+      )
+    }
+
   private def connectToNewBuildServer(
       build: BuildServerConnection
   ): Future[BuildChange] = {
@@ -1513,27 +1534,11 @@ class MetalsLanguageServer(
     cancelables.add(build)
     compilers.cancel()
     buildServer = Some(build)
-    val importedBuild = timed("imported build") {
-      for {
-        workspaceBuildTargets <- build.workspaceBuildTargets()
-        ids = workspaceBuildTargets.getTargets.map(_.getId)
-        scalacOptions <- build
-          .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
-        sources <- build
-          .buildTargetSources(new b.SourcesParams(ids))
-        dependencySources <- build
-          .buildTargetDependencySources(new b.DependencySourcesParams(ids))
-      } yield {
-        ImportedBuild(
-          workspaceBuildTargets,
-          scalacOptions,
-          sources,
-          dependencySources
-        )
-      }
+    val importedBuild0 = timed("imported build") {
+      importedBuild(build)
     }
     for {
-      i <- statusBar.trackFuture("Importing build", importedBuild)
+      i <- statusBar.trackFuture("Importing build", importedBuild0)
       _ = doctor.check(build.name, build.version)
       _ <- profiledIndexWorkspace(
         () => indexWorkspace(i),
