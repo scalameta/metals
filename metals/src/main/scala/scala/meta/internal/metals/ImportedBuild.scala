@@ -9,7 +9,5 @@ case class ImportedBuild(
     workspaceBuildTargets: WorkspaceBuildTargetsResult,
     scalacOptions: ScalacOptionsResult,
     sources: SourcesResult,
-    dependencySources: DependencySourcesResult,
-    bspServerVersion: String,
-    bspServerName: String
+    dependencySources: DependencySourcesResult
 )

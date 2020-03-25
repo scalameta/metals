@@ -1528,19 +1528,18 @@ class MetalsLanguageServer(
           workspaceBuildTargets,
           scalacOptions,
           sources,
-          dependencySources,
-          build.version,
-          build.name
+          dependencySources
         )
       }
     }
     for {
       i <- statusBar.trackFuture("Importing build", importedBuild)
+      _ = doctor.check(build.name, build.version)
       _ <- profiledIndexWorkspace(
         () => indexWorkspace(i),
         () => indexingPromise.trySuccess(())
       )
-      _ = checkRunningBloopVersion(i.bspServerVersion)
+      _ = checkRunningBloopVersion(build.version)
       _ <- Future.sequence[Unit, List](
         compilations
           .cascadeCompileFiles(buffers.open.toSeq)
@@ -1710,7 +1709,6 @@ class MetalsLanguageServer(
         val sourceItemPath = source.getUri.toAbsolutePath
         buildTargets.addSourceItem(sourceItemPath, item.getTarget)
       }
-      doctor.check(i.bspServerName, i.bspServerVersion)
       buildTools
         .loadSupported()
         .foreach(_.onBuildTargets(workspace, buildTargets))
