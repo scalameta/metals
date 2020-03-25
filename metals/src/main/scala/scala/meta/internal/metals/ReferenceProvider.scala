@@ -21,12 +21,14 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.meta.internal.semanticdb.Synthetic
+import scala.meta.internal.remotels.RemoteLanguageServer
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
     semanticdbs: Semanticdbs,
     buffers: Buffers,
-    definition: DefinitionProvider
+    definition: DefinitionProvider,
+    remote: RemoteLanguageServer
 ) {
   var referencedPackages: BloomFilter[CharSequence] = BloomFilters.create(10000)
   val index: TrieMap[Path, BloomFilter[CharSequence]] =
@@ -94,7 +96,7 @@ final class ReferenceProvider(
             ReferencesResult.empty
         }
       case None =>
-        ReferencesResult.empty
+        remote.references(params).getOrElse(ReferencesResult.empty)
     }
   }
 

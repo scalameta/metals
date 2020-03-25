@@ -164,7 +164,7 @@ final class TestingServer(
       }
       .mkString("\n")
   }
-  def workspaceSources: Seq[AbsolutePath] = {
+  def workspaceSources(): Seq[AbsolutePath] = {
     for {
       sourceItem <- server.buildTargets.sourceItems.toSeq
       if sourceItem.exists
@@ -304,7 +304,7 @@ final class TestingServer(
     def newRef(symbol: String, loc: Location): SymbolReference =
       SymbolReference(symbol, loc, loc.getRange.toMeta(readInput(loc.getUri)))
     for {
-      source <- workspaceSources
+      source <- workspaceSources()
       input = source.toInputFromBuffers(buffers)
       identifier = source.toTextDocumentIdentifier
       token <- input.tokenize.get

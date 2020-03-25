@@ -33,7 +33,8 @@ case class UserConfiguration(
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
     pantsTargets: Option[List[String]] = None,
-    superMethodLensesEnabled: Boolean = true
+    superMethodLensesEnabled: Boolean = true,
+    remoteLanguageServer: Option[String] = None
 ) {
 
   def currentBloopVersion: String =
@@ -139,6 +140,17 @@ object UserConfiguration {
          |Disabled lenses are not calculated for opened documents which might speed up document processing.
          |
          |""".stripMargin
+    ),
+    UserConfigurationOption(
+      "remote-language-server",
+      """empty string `""`.""",
+      "https://language-server.company.com/message",
+      "Remote language server",
+      """A URL pointing to an endpoint that implements a remote language server.
+        |
+        |See https://scalameta.org/metals/docs/contributors/remote-language-server.html for
+        |documentation on remote language servers.
+        |""".stripMargin
     )
   )
 
@@ -256,6 +268,8 @@ object UserConfiguration {
       getStringKey("bloop-version")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(true)
+    val remoteLanguageServer =
+      getStringKey("remote-language-server")
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -271,7 +285,8 @@ object UserConfiguration {
           bloopSbtAlreadyInstalled,
           bloopVersion,
           pantsTargets,
-          superMethodLensesEnabled
+          superMethodLensesEnabled,
+          remoteLanguageServer
         )
       )
     } else {

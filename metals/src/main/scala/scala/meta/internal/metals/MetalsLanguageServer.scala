@@ -56,6 +56,7 @@ import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
+import scala.meta.internal.remotels.RemoteLanguageServer
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -121,6 +122,12 @@ class MetalsLanguageServer(
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
+  private val remote = new RemoteLanguageServer(
+    () => workspace,
+    () => userConfig,
+    buffers,
+    buildTargets
+  )
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
@@ -334,7 +341,8 @@ class MetalsLanguageServer(
       config.icons,
       statusBar,
       warnings,
-      () => compilers
+      () => compilers,
+      remote
     )
     formattingProvider = new FormattingProvider(
       workspace,
@@ -367,7 +375,8 @@ class MetalsLanguageServer(
       workspace,
       semanticdbs,
       buffers,
-      definitionProvider
+      definitionProvider,
+      remote
     )
     implementationProvider = new ImplementationProvider(
       semanticdbs,
@@ -413,7 +422,8 @@ class MetalsLanguageServer(
       buffers,
       compilations,
       config,
-      clientExperimentalCapabilities
+      clientExperimentalCapabilities,
+      remote
     )
     semanticDBIndexer = new SemanticdbIndexer(
       referencesProvider,

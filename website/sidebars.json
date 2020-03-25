@@ -24,6 +24,7 @@
       "editors/tree-view-protocol",
       "editors/decoration-protocol",
       "editors/debug-adapter-protocol",
+      "contributors/remote-language-server",
       "contributors/project-goals",
       "contributors/getting-started",
       "contributors/updating-website",
