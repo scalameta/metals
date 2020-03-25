@@ -88,7 +88,7 @@ final class BspServers(
       buildClient,
       client,
       newConnection,
-      tables
+      tables.dismissedNotifications.ReconnectBsp
     )
   }
 

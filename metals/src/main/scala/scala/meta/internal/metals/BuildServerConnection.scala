@@ -30,7 +30,7 @@ case class BuildServerConnection(
     reestablishConnection: () => Future[LauncherConnection],
     private val initialConnection: LauncherConnection,
     languageClient: LanguageClient,
-    tables: Tables
+    reconnectNotification: DismissedNotifications#Notification
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -118,14 +118,13 @@ case class BuildServerConnection(
   private def askUser(
       reconnect: () => Future[LauncherConnection]
   ): Future[LauncherConnection] = {
-    val notification = tables.dismissedNotifications.ReconnectBsp
-    if (!notification.isDismissed) {
+    if (!reconnectNotification.isDismissed) {
       val params = Messages.DisconnectedServer.params()
       languageClient.showMessageRequest(params).asScala.flatMap {
         case response if response == Messages.DisconnectedServer.reconnect =>
           reconnect()
         case response if response == Messages.DisconnectedServer.notNow =>
-          notification.dismiss(5, TimeUnit.MINUTES)
+          reconnectNotification.dismiss(5, TimeUnit.MINUTES)
           connection
       }
     } else {
@@ -181,7 +180,7 @@ object BuildServerConnection {
       localClient: MetalsBuildClient,
       languageClient: LanguageClient,
       connect: () => Future[SocketConnection],
-      tables: Tables
+      reconnectNotification: DismissedNotifications#Notification
   )(
       implicit ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -218,7 +217,7 @@ object BuildServerConnection {
         setupServer,
         connection,
         languageClient,
-        tables
+        reconnectNotification
       )
     }
   }
