@@ -62,6 +62,8 @@ class ImportMissingSymbolLspSuite
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
         |${ImportMissingSymbol.title("Instant", "java.time")}
+        |${CreateNewSymbol.title("Future")}
+        |${CreateNewSymbol.title("Instant")}
         |""".stripMargin,
     """|package a
        |
@@ -86,6 +88,8 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Instant", "java.time")}
         |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
+        |${CreateNewSymbol.title("Instant")}
+        |${CreateNewSymbol.title("ListBuffer")}
         |""".stripMargin,
     """|package a
        |

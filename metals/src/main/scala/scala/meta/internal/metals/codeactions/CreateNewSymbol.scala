@@ -35,7 +35,7 @@ class CreateNewSymbol() extends CodeAction {
 
     val codeActions = params.getContext().getDiagnostics().asScala.collect {
       case d @ ScalacDiagnostic.SymbolNotFound(name)
-          if d.getRange().encloses(params.getRange()) =>
+          if params.getRange().overlapsWith(d.getRange()) =>
         createNewSymbol(d, name)
     }
 
