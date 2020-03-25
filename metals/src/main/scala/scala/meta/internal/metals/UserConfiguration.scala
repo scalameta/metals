@@ -132,7 +132,7 @@ object UserConfiguration {
     ),
     UserConfigurationOption(
       "super-method-lenses-enabled",
-      "false",
+      "true",
       "false",
       "Should display lenses with links to super methods",
       """|Super method lenses are visible above methods definition that override another methods. Clicking on a lens jumps to super method definition.
@@ -255,7 +255,7 @@ object UserConfiguration {
     val bloopVersion =
       getStringKey("bloop-version")
     val superMethodLensesEnabled =
-      getBooleanKey("super-method-lenses-enabled").getOrElse(false)
+      getBooleanKey("super-method-lenses-enabled").getOrElse(true)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
