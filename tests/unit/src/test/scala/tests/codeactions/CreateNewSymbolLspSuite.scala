@@ -47,6 +47,29 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
             |""".stripMargin
   )
 
+  checkNewSymbol(
+    "multi",
+    """|package a
+       |
+       |<<case class School(name: Missing, location: Location)>>
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Location", "scala.collection.script")}
+        |${CreateNewSymbol.title("Missing")}
+        |${CreateNewSymbol.title("Location")}
+        |""".stripMargin,
+    selectedActionIndex = 1,
+    pickedKind = "class",
+    newFile =
+      "a/src/main/scala/a/Missing.scala" ->
+        s"""|package a
+            |
+            |class Missing {
+            |$indent
+            |}
+            |""".stripMargin,
+    expectNoDiagnostics = false
+  )
+
   private def indent = "  "
 
   def checkNewSymbol(
