@@ -3,7 +3,7 @@ package tests.pc
 import tests.BasePCSuite
 import scala.concurrent.duration.Duration
 
-object TypeDefinitionSuite extends BasePCSuite {
+class TypeDefinitionSuite extends BasePCSuite {
   val runCheck: (String, String) => (String, String) =
     obtainedAndExpected(params => pc.typeDefinition(params))
 
@@ -113,7 +113,7 @@ object TypeDefinitionSuite extends BasePCSuite {
       code: String,
       compat: Map[String, String] = Map(),
       duration: Duration = Duration("3 min")
-  ): Unit = {
+  )(implicit loc: munit.Location): Unit = {
     test(name) {
       val uri = "Main.scala"
       val (obtained, expected) = runCheck(code, uri)

@@ -9,7 +9,7 @@ import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.mtags.MtagsEnrichments._
 import org.eclipse.{lsp4j => l}
 
-object TypeDefinitionLspSuite
+class TypeDefinitionLspSuite
     extends BaseLspSuite("typeDefinition")
     with TestHovers {
   override def serverConfig: MetalsServerConfig =
@@ -17,60 +17,65 @@ object TypeDefinitionLspSuite
       statistics = new StatisticsConfig("diagnostics")
     )
 
-  check("multi-target")(
-    query = """
-              |/a/src/main/scala/a/A.scala
-              |package a
-              |object A {
-              |  val name = "John"
-              |  def main() = {
-              |    print/*.metals/readonly/scala/Unit.scala*/@@ln(name)
-              |  }
-              |}
-              |/b/src/main/scala/a/B.scala
-              |package a
-              |object B {
-              |  def main() = {
-              |    println(A.name)
-              |  }
-              |}""".stripMargin
+  check(
+    "multi-target",
+    """
+      |/a/src/main/scala/a/A.scala
+      |package a
+      |object A {
+      |  val name = "John"
+      |  def main() = {
+      |    print/*.metals/readonly/scala/Unit.scala*/@@ln(name)
+      |  }
+      |}
+      |/b/src/main/scala/a/B.scala
+      |package a
+      |object B {
+      |  def main() = {
+      |    println(A.name)
+      |  }
+      |}""".stripMargin
   )
 
-  check("int")(
-    query = """
-              |/a/src/main/scala/a/Main.scala
-              |object Main {
-              |  val ts/*.metals/readonly/scala/Int.scala*/@@t: Int = 2
-              |}""".stripMargin
+  check(
+    "int",
+    """
+      |/a/src/main/scala/a/Main.scala
+      |object Main {
+      |  val ts/*.metals/readonly/scala/Int.scala*/@@t: Int = 2
+      |}""".stripMargin
   )
 
-  check("basic")(
-    query = """
-              |/a/src/main/scala/a/Main.scala
-              |
-              |package a
-              |
-              |<<class Main(i: Int) {}>>
-              |
-              |object Main extends App {
-              |  val te@@st = new Main(1)
-              |}
+  check(
+    "basic",
+    """
+      |/a/src/main/scala/a/Main.scala
+      |
+      |package a
+      |
+      |<<class Main(i: Int) {}>>
+      |
+      |object Main extends App {
+      |  val te@@st = new Main(1)
+      |}
         """.stripMargin
   )
-  check("basicMultifile")(
-    query = """
-              |/a/src/main/scala/a/Main.scala
-              |package a
-              |object Main {
-              |  val ts@@t = new A(2)
-              |}
-              |/a/src/main/scala/a/Clazz.scala
-              |package a
-              |class <<A>>(i: Int){}
-              |""".stripMargin
+  check(
+    "basicMultifile",
+    """
+      |/a/src/main/scala/a/Main.scala
+      |package a
+      |object Main {
+      |  val ts@@t = new A(2)
+      |}
+      |/a/src/main/scala/a/Clazz.scala
+      |package a
+      |class <<A>>(i: Int){}
+      |""".stripMargin
   )
 
-  check("ext-library")(
+  check(
+    "ext-library",
     query = """
               |/a/src/main/java/a/Message.java
               |package a;
@@ -103,83 +108,90 @@ object TypeDefinitionLspSuite
     )
   )
 
-  check("method")(
-    query = """
-              |/a/src/main/scala/a/Main.scala
-              |
-              |package a
-              |
-              |<<class Main(i: Int) {}>>
-              |
-              |object Main extends App {
-              |  def foo(mn: Main): Unit = {
-              |     println(m@@n)
-              |  }
-              |}
+  check(
+    "method",
+    """
+      |/a/src/main/scala/a/Main.scala
+      |
+      |package a
+      |
+      |<<class Main(i: Int) {}>>
+      |
+      |object Main extends App {
+      |  def foo(mn: Main): Unit = {
+      |     println(m@@n)
+      |  }
+      |}
         """.stripMargin
   )
 
-  check("method-definition")(
-    query = """
-              |/a/src/main/scala/a/Main.scala
-              |package a
-              |class Main(i: Int) {}
-              |object Main extends App {
-              |  def foo(mn: Main): Unit = {
-              |     println(mn)
-              |  }
-              |  fo/*.metals/readonly/scala/Unit.scala*/@@o(new Main(1))
-              |}
+  check(
+    "method-definition",
+    """
+      |/a/src/main/scala/a/Main.scala
+      |package a
+      |class Main(i: Int) {}
+      |object Main extends App {
+      |  def foo(mn: Main): Unit = {
+      |     println(mn)
+      |  }
+      |  fo/*.metals/readonly/scala/Unit.scala*/@@o(new Main(1))
+      |}
         """.stripMargin
   )
 
-  check("named-parameter")(
-    query = """
-              |/a/src/main/scala/a/Main.scala
-              |<<case class CClass(str: String) {}>>
-              |
-              |object Main {
-              |  def tst(par: CClass): Unit = {}
-              |
-              |  tst(p@@ar = CClass("dads"))
-              |}""".stripMargin
+  check(
+    "named-parameter",
+    """
+      |/a/src/main/scala/a/Main.scala
+      |<<case class CClass(str: String) {}>>
+      |
+      |object Main {
+      |  def tst(par: CClass): Unit = {}
+      |
+      |  tst(p@@ar = CClass("dads"))
+      |}""".stripMargin
   )
 
-  check("pattern-match")(
-    query = """
-              |/a/src/main/scala/a/Main.scala
-              |case class CClass(str: String) {}
-              |
-              |object Main {
-              |  CClass("test") match {
-              |    case CClass(st/*.metals/readonly/java/lang/String.java*/@@r) =>
-              |       println(str)
-              |    case _ =>
-              |  }
-              |}""".stripMargin
+  check(
+    "pattern-match",
+    """
+      |/a/src/main/scala/a/Main.scala
+      |case class CClass(str: String) {}
+      |
+      |object Main {
+      |  CClass("test") match {
+      |    case CClass(st/*.metals/readonly/java/lang/String.java*/@@r) =>
+      |       println(str)
+      |    case _ =>
+      |  }
+      |}""".stripMargin
   )
 
-  check("pattern-match-defined-unapply")(
-    query = """
-              |/a/src/main/scala/a/Main.scala
-              |object CClass {
-              | def unapply(c: CClass): Option[Int] = Some(1)
-              |}
-              |case class CClass(str: String)
-              |
-              |object Main {
-              |  CClass("test") match {
-              |    case CClass(st/*.metals/readonly/java/lang/String.java*/@@r) =>
-              |       println(str)
-              |    case _ =>
-              |  }
-              |}""".stripMargin
+  check(
+    "pattern-match-defined-unapply",
+    """
+      |/a/src/main/scala/a/Main.scala
+      |object CClass {
+      | def unapply(c: CClass): Option[Int] = Some(1)
+      |}
+      |case class CClass(str: String)
+      |
+      |object Main {
+      |  CClass("test") match {
+      |    case CClass(st/*.metals/readonly/java/lang/String.java*/@@r) =>
+      |       println(str)
+      |    case _ =>
+      |  }
+      |}""".stripMargin
   )
 
   def check(
-      name: String
-  )(query: String, expectedLocs: List[String] = Nil): Unit = {
-    testAsync(name) {
+      name: String,
+      query: String,
+      expectedLocs: List[String] = Nil
+  )(implicit loc: munit.Location): Unit = {
+    test(name) {
       cleanWorkspace()
       val code =
         TestingUtils

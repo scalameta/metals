@@ -1,6 +1,7 @@
 package tests.pc
 
 import tests.BasePCSuite
+import munit.Location
 
 abstract class BasePcDefinitionSuite extends BasePCSuite {
   val runCheck: (String, String) => (String, String) =

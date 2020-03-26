@@ -34,7 +34,7 @@ trait Trees { this: MetalsGlobal =>
         None
     }
 
-    lastVisistedParentTrees match {
+    lastVisitedParentTrees match {
       case head :: tail =>
         tryTail(tail) match {
           case Some(value) =>

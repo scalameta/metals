@@ -1116,7 +1116,7 @@ final class TestingServer(
             .map(o =>
               TestingUtils.uriToRelative(o.getUri, root).stripPrefix("/")
             )
-            .map(o => DiffAssertions.assertNoDiff(o, uriStr))
+            .map(o => Assertions.assertNoDiff(o, uriStr))
         case None =>
           val obtained = TestingUtils
             .compatJDK(typeDefinitions, isJava8)
@@ -1127,7 +1127,7 @@ final class TestingServer(
             .map(TestingUtils.locationToString(_, root).stripPrefix("/"))
             .sorted
             .mkString("\n")
-          DiffAssertions.assertNoDiff(obtained, expected)
+          Assertions.assertNoDiff(obtained, expected)
       }
 
     }
