@@ -422,8 +422,7 @@ class MetalsLanguageServer(
       buffers,
       compilations,
       config,
-      clientExperimentalCapabilities,
-      remote
+      clientExperimentalCapabilities
     )
     semanticDBIndexer = new SemanticdbIndexer(
       referencesProvider,

@@ -22,6 +22,9 @@ import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.remotels.RemoteLanguageServer
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -96,7 +99,14 @@ final class ReferenceProvider(
             ReferencesResult.empty
         }
       case None =>
-        remote.references(params).getOrElse(ReferencesResult.empty)
+        // NOTE(olafur): we block here instead of returning a Future because it
+        // requires a significant refactoring to make the reference provider and
+        // its dependencies (including rename provider) asynchronous. The remote
+        // language server returns `Future.successful(None)` when it's disabled
+        // so this isn't even blocking for normal usage of Metals.
+        Await
+          .result(remote.references(params), Duration(1, TimeUnit.MINUTES))
+          .getOrElse(ReferencesResult.empty)
     }
   }
 

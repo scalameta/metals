@@ -16,22 +16,25 @@ import com.google.gson.JsonPrimitive
 import com.google.gson.JsonObject
 import org.eclipse.lsp4j.Location
 import scala.meta.internal.metals.BuildTargets
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 class RemoteLanguageServer(
     workspace: () => AbsolutePath,
     config: () => UserConfiguration,
     buffers: Buffers,
     buildTargets: BuildTargets
-) {
+)(implicit ec: ExecutionContext) {
   def isEnabled: Boolean = config().remoteLanguageServer.isDefined
   def isEnabledForPath(path: AbsolutePath): Boolean =
     isEnabled && buildTargets.inverseSources(path).isEmpty
 
   def references(
       params: l.ReferenceParams
-  ): Option[ReferencesResult] = {
+  ): Future[Option[ReferencesResult]] = blockingRequest { url =>
     for {
       locations <- postLocationRequest(
+        url,
         params.toJsonObject,
         "textDocument/references"
       )
@@ -40,31 +43,39 @@ class RemoteLanguageServer(
 
   def definition(
       params: l.TextDocumentPositionParams
-  ): Option[DefinitionResult] = {
+  ): Future[Option[DefinitionResult]] = blockingRequest { url =>
     for {
       locations <- postLocationRequest(
+        url,
         params.toJsonObject,
         "textDocument/definition"
       )
     } yield DefinitionResult(locations, Symbols.None, None, None)
   }
 
+  private def blockingRequest[T](fn: String => Option[T]): Future[Option[T]] = {
+    config().remoteLanguageServer match {
+      case Some(url) => Future(concurrent.blocking(fn(url)))
+      case None => Future.successful(None)
+    }
+  }
+
   private def postLocationRequest(
+      url: String,
       params: JsonObject,
       method: String
   ): Option[ju.List[Location]] = {
-    for {
-      url <- config().remoteLanguageServer
-      maybeResponse = Try(
-        requests.post(
-          url,
-          data = asRemoteParameters(params, method).toString(),
-          headers = List("Content-Type" -> "application/json")
-        )
+    val maybeResponse = Try(
+      requests.post(
+        url,
+        data = asRemoteParameters(params, method).toString(),
+        headers = List("Content-Type" -> "application/json")
       )
-      _ = maybeResponse.toEither.left.foreach { error =>
-        scribe.error(s"remote: request failed '${error.getMessage()}'")
-      }
+    )
+    maybeResponse.toEither.left.foreach { error =>
+      scribe.error(s"remote: request failed '${error.getMessage()}'")
+    }
+    for {
       response <- maybeResponse.toOption
       if response.statusCode == 200
       result <- response.text().parseJson.as[RemoteLocationResult].toOption

@@ -73,7 +73,7 @@ final class DefinitionProvider(
     val fromCompiler =
       if (fromSnapshot.locations.isEmpty()) {
         if (remote.isEnabledForPath(path)) {
-          Future(remote.definition(params).getOrElse(fromSnapshot))
+          remote.definition(params).map(_.getOrElse(fromSnapshot))
         } else {
           compilers().definition(params, token)
         }
