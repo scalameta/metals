@@ -25,9 +25,9 @@ class RemoteLanguageServer(
     buffers: Buffers,
     buildTargets: BuildTargets
 )(implicit ec: ExecutionContext) {
-  def isEnabled: Boolean = config().remoteLanguageServer.isDefined
   def isEnabledForPath(path: AbsolutePath): Boolean =
-    isEnabled && buildTargets.inverseSources(path).isEmpty
+    config().remoteLanguageServer.isDefined &&
+      buildTargets.inverseSources(path).isEmpty
 
   def references(
       params: l.ReferenceParams

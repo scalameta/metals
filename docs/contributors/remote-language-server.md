@@ -4,7 +4,7 @@ title: Remote Language Servers
 ---
 
 Metals has experimental support to offload certain requests to a remote language
-server. This feature can be used to navigate large codebases when its not
+server. This feature can be used to navigate large codebases when it's not
 possible to index all the code on a local computer.
 
 ## Difference from local language servers
@@ -149,3 +149,21 @@ _Example response_:
   }
 ]
 ```
+
+## Open questions
+
+The protocol for remote language servers is new and likely to have breaking
+changes in upcoming releases. The protocol in this document should be considered
+as a proof-of-concept that demonstrates the feasibility of this approach. There
+remain a few open questions in order to extend remote language servers to
+support richer functionality:
+
+- how do we ensure that results from the remote server are synchronized with the
+  file changes to the local disk?
+- how do we combine local and remote `workspace/symbol` results?
+- how should `textDocument/definition` return results to library dependency
+  sources that are not present on local disk?
+
+Given these open questions and the experimental status of remote language
+servers, this functionality may be removed from Metals in future releases
+without notice.
