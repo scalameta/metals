@@ -60,8 +60,8 @@ class NewFilesProvider(
         }
 
     newlyCreatedFile.map {
-      case Some(path) =>
-        openFile(path)
+      case Some((path, cursorRange)) =>
+        openFile(path, cursorRange)
       case None => ()
     }
   }
@@ -114,7 +114,7 @@ class NewFilesProvider(
       directory: Option[AbsolutePath],
       name: String,
       kind: String
-  ): Future[AbsolutePath] = {
+  ): Future[(AbsolutePath, Range)] = {
     val path = directory.getOrElse(workspace).resolve(name + ".scala")
     //name can be actually be "foo/Name", where "foo" is a folder to create
     val className = directory.getOrElse(workspace).resolve(name).filename
@@ -122,20 +122,26 @@ class NewFilesProvider(
       case caseClassPick.id => caseClassTemplate(className)
       case _ => classTemplate(kind, className)
     }
-    val editText =
-      packageProvider.packageStatement(path).getOrElse("") + template
+    val editText = template.map { s =>
+      packageProvider
+        .packageStatement(path)
+        .map(_.fileContent)
+        .getOrElse("") + s
+    }
     createFileAndWriteText(path, editText)
   }
 
   private def createPackageObject(
       directory: Option[AbsolutePath]
-  ): Future[AbsolutePath] = {
+  ): Future[(AbsolutePath, Range)] = {
     directory
       .map { directory =>
         val path = directory.resolve("package.scala")
         createFileAndWriteText(
           path,
-          packageProvider.packageStatement(path).getOrElse("")
+          packageProvider
+            .packageStatement(path)
+            .getOrElse(NewFileTemplate.empty)
         )
       }
       .getOrElse(
@@ -150,9 +156,9 @@ class NewFilesProvider(
   private def createWorksheet(
       directory: Option[AbsolutePath],
       name: String
-  ): Future[AbsolutePath] = {
+  ): Future[(AbsolutePath, Range)] = {
     val path = directory.getOrElse(workspace).resolve(name + ".worksheet.sc")
-    createFile(path)
+    createFile(path).map((_, new Range))
   }
 
   private def createFile(
@@ -175,34 +181,34 @@ class NewFilesProvider(
 
   private def createFileAndWriteText(
       path: AbsolutePath,
-      text: String
-  ): Future[AbsolutePath] = {
+      template: NewFileTemplate
+  ): Future[(AbsolutePath, Range)] = {
     createFile(path).map { _ =>
-      path.writeText(text)
-      path
+      path.writeText(template.fileContent)
+      (path, template.cursorPosition.toLSP)
     }
   }
 
-  private def openFile(path: AbsolutePath): Unit = {
+  private def openFile(path: AbsolutePath, cursorRange: Range): Unit = {
     client.metalsExecuteClientCommand(
       new ExecuteCommandParams(
         ClientCommands.GotoLocation.id,
         List(
-          new Location(path.toURI.toString(), new Range()): Object
+          new Location(path.toURI.toString(), cursorRange): Object
         ).asJava
       )
     )
   }
 
-  private def classTemplate(kind: String, name: String): String = {
+  private def classTemplate(kind: String, name: String): NewFileTemplate = {
     val indent = "  "
-    s"""|$kind $name {
-        |$indent
-        |}
-        |""".stripMargin
+    NewFileTemplate(s"""|$kind $name {
+                        |$indent@@
+                        |}
+                        |""".stripMargin)
   }
 
-  private def caseClassTemplate(name: String): String =
-    s"final case class $name()"
+  private def caseClassTemplate(name: String): NewFileTemplate =
+    NewFileTemplate(s"final case class $name(@@)")
 
 }

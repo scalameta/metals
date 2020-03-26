@@ -12,22 +12,29 @@ import java.nio.file.Path
 class PackageProvider(private val buildTargets: BuildTargets) {
 
   def workspaceEdit(path: AbsolutePath): Option[WorkspaceEdit] = {
-    packageStatement(path).map(workspaceEdit(path, _))
+    packageStatement(path).map(template =>
+      workspaceEdit(path, template.fileContent)
+    )
   }
 
-  def packageStatement(path: AbsolutePath): Option[String] = {
+  def packageStatement(path: AbsolutePath): Option[NewFileTemplate] = {
 
-    def packageObjectStatement(path: Iterator[Path]): Option[String] = {
+    def packageObjectStatement(
+        path: Iterator[Path]
+    ): Option[NewFileTemplate] = {
       val pathList = path.toList
       val packageDeclaration =
         if (pathList.size > 1)
           s"package ${pathList.dropRight(1).mkString(".")}\n\n"
         else ""
       pathList.lastOption.map { packageObjectName =>
-        s"""|${packageDeclaration}package object $packageObjectName {
-            |  
-            |}
-            |""".stripMargin
+        val indent = "  "
+        NewFileTemplate(
+          s"""|${packageDeclaration}package object $packageObjectName {
+              |${indent}@@
+              |}
+              |""".stripMargin
+        )
       }
     }
 
@@ -42,7 +49,7 @@ class PackageProvider(private val buildTargets: BuildTargets) {
             packageObjectStatement(pathIterator)
           } else {
             val packageName = parent.iterator().asScala.mkString(".")
-            Some(s"package $packageName\n\n")
+            Some(NewFileTemplate(s"package $packageName\n\n@@"))
           }
         }
     } else {

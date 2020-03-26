@@ -445,7 +445,8 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "org.scalameta" %% "testkit" % V.scalameta,
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
-      "org.scalameta" %% "munit" % V.munit
+      "org.scalameta" %% "munit" % V.munit,
+      "org.scalameta" %% "munit-scalacheck" % V.munit
     ),
     buildInfoPackage := "tests",
     resourceGenerators.in(Compile) += InputProperties.resourceGenerator(input),
