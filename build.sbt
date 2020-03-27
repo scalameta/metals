@@ -213,7 +213,7 @@ lazy val mtags = project
     ),
     libraryDependencies ++= List(
       "com.thoughtworks.qdox" % "qdox" % "2.0.0", // for java mtags
-      "org.jsoup" % "jsoup" % "1.12.2", // for extracting HTML from javadocs
+      "org.jsoup" % "jsoup" % "1.13.1", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.7.1", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
       "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
@@ -255,10 +255,10 @@ lazy val metals = project
       // for file watching
       "io.methvin" % "directory-watcher" % "0.9.9",
       // for http client
-      "io.undertow" % "undertow-core" % "2.0.29.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.7.7.Final",
+      "io.undertow" % "undertow-core" % "2.0.30.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.8.0.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.2.3",
+      "org.flywaydb" % "flyway-core" % "6.2.4",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "1.2.6",
@@ -281,19 +281,19 @@ lazy val metals = project
       // ==================
       // Scala dependencies
       // ==================
-      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % "0.0.18",
       // for logging
-      "com.outr" %% "scribe" % "2.7.10",
-      "com.outr" %% "scribe-slf4j" % "2.7.10", // needed for flyway database migrations
+      "com.outr" %% "scribe" % "2.7.12",
+      "com.outr" %% "scribe-slf4j" % "2.7.12", // needed for flyway database migrations
       // for debugging purposes, not strictly needed but nice for productivity
       "com.lihaoyi" %% "pprint" % "0.5.9",
       // For exporting Pants builds.
-      "com.lihaoyi" %% "ujson" % "0.9.9",
+      "com.lihaoyi" %% "ujson" % "1.0.0",
       "ch.epfl.scala" %% "bloop-config" % V.bloop,
       "ch.epfl.scala" %% "bloop-frontend" % V.bloop,
       // for producing SemanticDB from Scala source files
@@ -416,7 +416,7 @@ lazy val cross = project
     testSettings,
     libraryDependencies ++= List(
       "com.chuusai" %% "shapeless" % "2.3.3",
-      "org.typelevel" %% "cats-core" % "2.1.0",
+      "org.typelevel" %% "cats-core" % "2.1.1",
       "org.typelevel" %% "simulacrum" % "1.0.0",
       "com.olegpy" %% "better-monadic-for" % "0.3.1",
       "org.typelevel" %% "kind-projector" % "0.10.3"
