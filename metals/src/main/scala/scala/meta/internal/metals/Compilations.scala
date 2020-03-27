@@ -9,12 +9,13 @@ import scala.meta.io.AbsolutePath
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 final class Compilations(
     buildTargets: BuildTargets,
     classes: BuildTargetClasses,
     workspace: () => AbsolutePath,
-    buildServer: () => Option[BuildServerConnection],
+    buildServer: BuildTargetIdentifier => Option[BuildServerConnection],
     languageClient: MetalsLanguageClient,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit]
@@ -22,9 +23,15 @@ final class Compilations(
 
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
   private val compileBatch =
-    new BatchedFunction[b.BuildTargetIdentifier, b.CompileResult](compile)
+    new BatchedFunction[
+      b.BuildTargetIdentifier,
+      Map[BuildTargetIdentifier, b.CompileResult]
+    ](compile)
   private val cascadeBatch =
-    new BatchedFunction[b.BuildTargetIdentifier, b.CompileResult](compile)
+    new BatchedFunction[
+      b.BuildTargetIdentifier,
+      Map[BuildTargetIdentifier, b.CompileResult]
+    ](compile)
   def pauseables: List[Pauseable] = List(compileBatch, cascadeBatch)
 
   private val isCompiling = TrieMap.empty[b.BuildTargetIdentifier, Boolean]
@@ -38,27 +45,50 @@ final class Compilations(
   def wasPreviouslyCompiled(buildTarget: b.BuildTargetIdentifier): Boolean =
     lastCompile.contains(buildTarget)
 
-  def compileTargets(
-      targets: Seq[b.BuildTargetIdentifier]
+  def compileTarget(
+      target: b.BuildTargetIdentifier
   ): Future[b.CompileResult] = {
-    compileBatch(targets)
+    compileBatch(target).map { results =>
+      results.getOrElse(target, new b.CompileResult(b.StatusCode.CANCELLED))
+    }
   }
 
-  def compileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
+  def compileTargets(
+      targets: Seq[b.BuildTargetIdentifier]
+  ): Future[Unit] = {
+    compileBatch(targets).ignoreValue
+  }
+
+  def compileFile(path: AbsolutePath): Future[b.CompileResult] = {
+    def empty = new b.CompileResult(b.StatusCode.CANCELLED)
+    for {
+      result <- {
+        expand(path) match {
+          case None => Future.successful(empty)
+          case Some(target) =>
+            compileBatch(target)
+              .map(res => res.getOrElse(target, empty))
+        }
+      }
+      _ <- compileWorksheets(Seq(path))
+    } yield result
+  }
+
+  def compileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
     val targets = expand(paths)
     for {
       result <- compileBatch(targets)
       _ <- compileWorksheets(paths)
-    } yield result
+    } yield ()
   }
 
-  def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[b.CompileResult] = {
+  def cascadeCompileFiles(paths: Seq[AbsolutePath]): Future[Unit] = {
     val targets =
       expand(paths).flatMap(buildTargets.inverseDependencyLeaves).distinct
     for {
-      result <- cascadeBatch(targets)
+      _ <- cascadeBatch(targets)
       _ <- compileWorksheets(paths)
-    } yield result
+    } yield ()
   }
 
   def cancel(): Unit = {
@@ -68,49 +98,93 @@ final class Compilations(
 
   def recompileAll(): Future[Unit] = {
     cancel()
-    val allTargetIds = buildTargets.allBuildTargetIds
-    val clean = for {
-      connection <- buildServer()
-      params = new b.CleanCacheParams(allTargetIds.asJava)
-    } yield connection.clean(params).asScala
 
-    // if we don't have a connection that will show up later
-    val cleaned = clean.getOrElse {
-      Future.successful(new b.CleanCacheResult("", false))
+    def clean(
+        connectionOpt: Option[BuildServerConnection],
+        targetIds: Seq[BuildTargetIdentifier]
+    ): Future[Unit] = {
+      val cleaned = connectionOpt match {
+        case None =>
+          Future.failed(
+            new Exception(
+              s"No build server for target IDs ${targetIds.map(_.getUri).mkString(", ")}"
+            )
+          )
+        case Some(connection) =>
+          val params = new b.CleanCacheParams(targetIds.asJava)
+          connection.clean(params).asScala
+      }
+
+      for {
+        cleanResult <- cleaned
+        if cleanResult.getCleaned() == true
+        compiled <- compile(targetIds).future
+      } yield ()
     }
 
-    for {
-      cleanResult <- cleaned
-      if cleanResult.getCleaned() == true
-      compiled <- compile(allTargetIds).future
-    } yield ()
+    val groupedTargetIds = buildTargets.allBuildTargetIds
+      .groupBy(buildServer(_))
+    Future
+      .traverse(groupedTargetIds) {
+        case (connectionOpt, targetIds) =>
+          clean(connectionOpt, targetIds)
+      }
+      .ignoreValue
   }
 
-  private def expand(paths: Seq[AbsolutePath]): Seq[b.BuildTargetIdentifier] = {
-    def isCompilable(path: AbsolutePath): Boolean =
+  private def expand(path: AbsolutePath): Option[b.BuildTargetIdentifier] = {
+    val isCompilable =
       path.isScalaOrJava && !path.isDependencySource(workspace())
 
-    val compilablePaths = paths.filter(isCompilable)
-    val targets = compilablePaths.flatMap(buildTargets.inverseSources).distinct
+    if (isCompilable) {
+      val targetOpt = buildTargets.inverseSources(path)
 
-    if (targets.isEmpty && compilablePaths.nonEmpty) {
-      scribe.warn(s"no build target for: ${compilablePaths.mkString("\n  ")}")
-    }
+      if (targetOpt.isEmpty) {
+        scribe.warn(s"no build target for: $path")
+      }
 
-    targets
+      targetOpt
+    } else
+      None
   }
+
+  def expand(paths: Seq[AbsolutePath]): Seq[b.BuildTargetIdentifier] =
+    paths.flatMap(expand(_)).distinct
 
   private def compile(
       targets: Seq[b.BuildTargetIdentifier]
-  ): CancelableFuture[b.CompileResult] = {
-    val result = for {
-      connection <- buildServer()
-      if targets.nonEmpty
-    } yield compile(connection, targets)
+  ): CancelableFuture[Map[BuildTargetIdentifier, b.CompileResult]] = {
 
-    result.getOrElse {
-      val result = new b.CompileResult(b.StatusCode.CANCELLED)
-      Future.successful(result).asCancelable
+    val targetsByBuildServer = targets
+      .flatMap(target => buildServer(target).map(_ -> target).toSeq)
+      .groupBy {
+        case (buildServer, _) =>
+          buildServer
+      }
+      .map {
+        case (buildServer, targets) =>
+          val targets0 = targets.map {
+            case (_, target) => target
+          }
+          (buildServer, targets0)
+      }
+
+    targetsByBuildServer.toList match {
+      case Nil =>
+        Future
+          .successful(Map.empty[BuildTargetIdentifier, b.CompileResult])
+          .asCancelable
+      case (buildServer, targets) :: Nil =>
+        compile(buildServer, targets)
+          .map(res => targets.map(target => target -> res).toMap)
+      case targetList =>
+        val futures = targetList.map {
+          case (buildServer, targets) =>
+            compile(buildServer, targets).map(res =>
+              targets.map(target => target -> res)
+            )
+        }
+        CancelableFuture.sequence(futures).map(_.flatten.toMap)
     }
   }
 

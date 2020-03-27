@@ -134,7 +134,7 @@ class MetalsLanguageServer(
     buildTargets,
     buildTargetClasses,
     () => workspace,
-    () => buildServer,
+    _ => buildServer,
     languageClient,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
@@ -501,7 +501,7 @@ class MetalsLanguageServer(
         () => buildClient.ongoingCompilations(),
         definitionIndex,
         clientConfig.initialConfig.statistics,
-        id => compilations.compileTargets(List(id)),
+        id => compilations.compileTarget(id),
         sh
       )
     }
@@ -741,7 +741,7 @@ class MetalsLanguageServer(
     } else {
       val loadFuture = compilers.load(List(path))
       val compileFuture =
-        compilations.compileFiles(List(path))
+        compilations.compileFile(path)
       Future
         .sequence(List(didChangeFuture, loadFuture, compileFuture))
         .ignoreValue
@@ -783,7 +783,7 @@ class MetalsLanguageServer(
             isAffectedByCurrentCompilation || isAffectedByLastCompilation
           if (needsCompile) {
             compilations
-              .compileFiles(List(path))
+              .compileFile(path)
               .map(_ => DidFocusResult.Compiled)
               .asJava
           } else {
@@ -969,7 +969,7 @@ class MetalsLanguageServer(
       .sequence(
         List(
           Future(reindexWorkspaceSources(paths)),
-          compilations.compileFiles(paths).ignoreValue,
+          compilations.compileFiles(paths),
           onBuildChanged(paths).ignoreValue
         )
       )

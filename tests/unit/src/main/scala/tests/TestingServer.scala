@@ -675,7 +675,7 @@ final class TestingServer(
         if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
         else if (retries > 0) {
           retries -= 1
-          server.compilations.compileFiles(List(path))
+          server.compilations.compileFile(path)
         } else {
           val error = s"Could not fetch any code lenses in $maxRetries tries"
           codeLenses.tryFailure(new NoSuchElementException(error))
@@ -689,7 +689,7 @@ final class TestingServer(
         .asScala // model is refreshed only for focused document
       _ = client.refreshModelHandler = handler
       // first compilation, to trigger the handler
-      _ <- server.compilations.compileFiles(List(path))
+      _ <- server.compilations.compileFile(path)
       lenses <- codeLenses.future
       textEdits = CodeLensesTextEdits(lenses)
     } yield TextEdits.applyEdits(textContents(filename), textEdits.toList)
