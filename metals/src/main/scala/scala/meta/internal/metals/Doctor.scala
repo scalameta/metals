@@ -179,38 +179,47 @@ final class Doctor(
   }
 
   private def problemSummary: Option[String] = {
-    val deprecatedVersions = (for {
-      target <- allTargets.toIterator
-      if ScalaVersions.isDeprecatedScalaVersion(target.scalaVersion)
-    } yield target.scalaVersion).toSet
 
-    val unsupportedVersions = (for {
-      target <- allTargets.toIterator
-      if !ScalaVersions.isSupportedScalaVersion(target.scalaVersion)
-    } yield target.scalaVersion).toSet
+    def message(
+        filter: String => Boolean,
+        apply: (Iterable[String], Iterable[String]) => String
+    ): Option[String] = {
+      val versions = (for {
+        target <- allTargets.toIterator
+        if filter(target.scalaVersion)
+      } yield target.scalaVersion).toSet
 
-    val missingSemanticDB = possiblyMissingSemanticDB
-    if (unsupportedVersions.nonEmpty) {
-      val recommendedVersions = unsupportedVersions.map(recommendedVersion)
-      Some(
-        messages.UnsupportedScalaVersion.message(
-          unsupportedVersions,
-          recommendedVersions
+      if (versions.nonEmpty) {
+        val recommendedVersions = versions.map(recommendedVersion)
+        Some(
+          apply(
+            versions,
+            recommendedVersions
+          )
         )
-      )
-    } else if (missingSemanticDB.isDefined) {
-      missingSemanticDB
-    } else if (deprecatedVersions.nonEmpty) {
-      val recommendedVersions = deprecatedVersions.map(recommendedVersion)
-      Some(
-        messages.DeprecatedScalaVersion.message(
-          deprecatedVersions,
-          recommendedVersions
-        )
-      )
-    } else {
-      None
+      } else {
+        None
+      }
     }
+
+    message(
+      ScalaVersions.isFutureVersion,
+      messages.FutureScalaVersion.message
+    ).orElse {
+        message(
+          ver => !ScalaVersions.isSupportedScalaVersion(ver),
+          messages.UnsupportedScalaVersion.message
+        )
+      }
+      .orElse {
+        possiblyMissingSemanticDB
+      }
+      .orElse {
+        message(
+          ScalaVersions.isDeprecatedScalaVersion,
+          messages.DeprecatedScalaVersion.message
+        )
+      }
   }
 
   def allTargets(): List[ScalaTarget] = buildTargets.all.toList

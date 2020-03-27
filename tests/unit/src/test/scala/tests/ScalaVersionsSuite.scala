@@ -59,6 +59,42 @@ class ScalaVersionsSuite extends BaseSuite {
     )
   }
 
+  test("future-213") {
+    assert(
+      ScalaVersions.isFutureVersion("2.13.31")
+    )
+  }
+
+  test("not-future-213") {
+    assert(
+      !ScalaVersions.isFutureVersion("2.13.1")
+    )
+  }
+
+  test("future-212") {
+    assert(
+      ScalaVersions.isFutureVersion("2.12.31")
+    )
+  }
+
+  test("not-future-212") {
+    assert(
+      !ScalaVersions.isFutureVersion("2.12.10")
+    )
+  }
+
+  test("not-future-211") {
+    assert(
+      !ScalaVersions.isFutureVersion("2.11.10")
+    )
+  }
+
+  test("future-214") {
+    assert(
+      ScalaVersions.isFutureVersion("2.15.10")
+    )
+  }
+
   test("2.12.11-comapatible-with-2.12.5") {
     assert(
       SemVer.isCompatibleVersion("2.12.5", "2.12.11")

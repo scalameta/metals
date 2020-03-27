@@ -367,6 +367,12 @@ class Messages(icons: Icons) {
          |""".stripMargin
   }
 
+  object NewScalaFile {
+    def selectTheKindOfFileMessage = "Select the kind of file to create"
+    def enterNameMessage(kind: String): String =
+      s"Enter the name for the new $kind"
+  }
+
   object DeprecatedScalaVersion {
     def message(
         usingNow: Iterable[String],
@@ -406,9 +412,25 @@ class Messages(icons: Icons) {
     }
   }
 
-  object NewScalaFile {
-    def selectTheKindOfFileMessage = "Select the kind of file to create"
-    def enterNameMessage(kind: String): String =
-      s"Enter the name for the new $kind"
+  object FutureScalaVersion {
+    def message(
+        usingNow: Iterable[String],
+        shouldBeUsing: Iterable[String]
+    ): String = {
+      val using =
+        if (usingNow.size == 1)
+          s"a Scala version ${usingNow.head}"
+        else
+          usingNow.toSeq
+            .sortWith(SemVer.isCompatibleVersion)
+            .mkString("Scala versions ", ", ", "")
+      val recommended =
+        shouldBeUsing.toSeq
+          .sortWith(SemVer.isCompatibleVersion)
+          .mkString(" or ")
+      val isAre = if (usingNow.size == 1) "is" else "are"
+      s"You are using $using, which $isAre not yet supported in this version of Metals. " +
+        s"Please downgrade to Scala $recommended for the moment until the new Metals release."
+    }
   }
 }
