@@ -15,6 +15,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val ReconnectBsp = new Notification(6)
   val CreateScalafmtFile = new Notification(7)
   val ChangeScalafmtVersion = new Notification(8)
+  val ReconnectAmmonite = new Notification(9)
 
   class Notification(val id: Int)(implicit name: sourcecode.Name) {
     override def toString: String = s"Notification(${name.value}, $id)"

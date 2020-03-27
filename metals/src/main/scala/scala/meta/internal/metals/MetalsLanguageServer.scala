@@ -55,6 +55,7 @@ import ch.epfl.scala.bsp4j.CompileReport
 import java.{util => ju}
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.implementation.Supermethods
+import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.remotels.RemoteLanguageServer
@@ -201,6 +202,7 @@ class MetalsLanguageServer(
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
+  private var ammonite: Ammonite = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -493,6 +495,23 @@ class MetalsLanguageServer(
         embedded,
         worksheetPublisher
       )
+    )
+    ammonite = new Ammonite(
+      buffers,
+      compilers,
+      compilations,
+      statusBar,
+      diagnostics,
+      doctor,
+      () => tables,
+      languageClient,
+      buildClient,
+      () => userConfig,
+      () => profiledIndexWorkspace(() => ()),
+      () => workspace,
+      () => focusedDocument,
+      buildTargets,
+      clientConfig.initialConfig
     )
     if (clientConfig.isTreeViewProvider) {
       treeView = new MetalsTreeViewProvider(
@@ -1354,6 +1373,12 @@ class MetalsLanguageServer(
         }
         newFilesProvider.createNewFileDialog(directoryURI, name).asJavaObject
 
+      case ServerCommands.StartAmmoniteBuildServer() =>
+        ammonite.start().asJavaObject
+
+      case ServerCommands.StopAmmoniteBuildServer() =>
+        ammonite.stop()
+
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject
@@ -1720,7 +1745,7 @@ class MetalsLanguageServer(
   private var lastImportedBuild = ImportedBuild.empty
 
   private def indexWorkspace(check: () => Unit): Unit = {
-    val i = lastImportedBuild
+    val i = lastImportedBuild ++ ammonite.lastImportedBuild
     timedThunk(
       "updated build targets",
       clientConfig.initialConfig.statistics.isIndex
