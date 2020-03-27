@@ -15,6 +15,7 @@ import ammrunner.{Command => AmmCommand}
 import ammrunner.{Versions => AmmVersions}
 import ammrunner.VersionsOption
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.{Range => LspRange}
@@ -325,6 +326,19 @@ object Ammonite {
       newHover.setRange(newRange)
       newHover
     }
+
+  def adjustCompletionListInPlace(
+      list: CompletionList,
+      scalaCode: String
+  ): Unit = {
+    val adjustPos = adjustPosition(scalaCode)
+    for (item <- list.getItems.asScala) {
+      for (textEdit <- Option(item.getTextEdit))
+        textEdit.setRange(adjustRange(textEdit.getRange, adjustPos))
+      for (l <- Option(item.getAdditionalTextEdits); textEdit <- l.asScala)
+        textEdit.setRange(adjustRange(textEdit.getRange, adjustPos))
+    }
+  }
 
   private def logOutputThread(
       is: InputStream,

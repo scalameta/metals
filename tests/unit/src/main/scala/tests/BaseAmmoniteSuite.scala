@@ -126,6 +126,46 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
     } yield ()
   }
 
+  test("completion") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/main.sc
+           | // scala $scalaVersion
+           |import $$ivy.`io.circe::circe-core:0.12.3`
+           |import $$ivy.`io.circe::circe-generic:0.12.3`
+           |import $$ivy.`io.circe::circe-parser:0.12.3`
+           |import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
+           |
+           |sealed trait Foo
+           |case class Bar(xs: Vector[String]) extends Foo
+           |case class Qux(i: Int, d: Option[Double]) extends Foo
+           |
+           |val foo: Foo = Qux(13, Some(14.0))
+           |
+           |val json = foo.asJson.noSpaces
+           |
+           |val decodedFoo = decode[Foo](json)
+           |""".stripMargin
+      )
+      _ <- server.didOpen("main.sc")
+      _ <- server.didSave("main.sc")(identity)
+      _ <- server.executeCommand("ammonite-start")
+
+      expectedCompletionList = """noSpaces: String
+                                 |noSpacesSortKeys: String""".stripMargin
+      completionList <- server.completion("main.sc", "noSpaces@@")
+      _ = assertNoDiff(completionList, expectedCompletionList)
+
+    } yield ()
+  }
+
   test("simple errored script") {
     val expectedDiagnostics =
       """main.sc:15:25: error: not found: type Fooz
