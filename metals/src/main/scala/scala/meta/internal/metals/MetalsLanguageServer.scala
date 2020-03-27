@@ -461,6 +461,7 @@ class MetalsLanguageServer(
         workspace,
         clientConfig.initialConfig,
         () => userConfig,
+        () => ammonite,
         buildTargets,
         buffers,
         symbolSearch,

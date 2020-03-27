@@ -11,9 +11,11 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import scala.concurrent.ExecutionContextExecutorService
+import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags
@@ -36,6 +38,7 @@ import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.DocumentSymbol
 import java.nio.file.Paths
+import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.pc.EmptySymbolSearch
 
 /**
@@ -48,6 +51,7 @@ class Compilers(
     workspace: AbsolutePath,
     config: MetalsServerConfig,
     userConfig: () => UserConfiguration,
+    ammonite: () => Ammonite,
     buildTargets: BuildTargets,
     buffers: Buffers,
     search: SymbolSearch,
@@ -334,18 +338,45 @@ class Compilers(
     }
   }
 
+  private def ammoniteInputPosOpt(
+      path: AbsolutePath,
+      position: LspPosition,
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+  ): Option[(Input.VirtualFile, LspPosition)] =
+    if (path.isAmmoniteScript)
+      for {
+        target <- buildTargets
+          .inverseSources(path)
+          .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
+        res <- ammonite().generatedScalaInputForPc(
+          target,
+          path,
+          position
+        )
+      } yield res
+    else
+      None
+
   private def withPC[T](
       params: TextDocumentPositionParams,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
   )(fn: (PresentationCompiler, Position) => T): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     loadCompiler(path, interactiveSemanticdbs).map { compiler =>
-      val input = path
-        .toInputFromBuffers(buffers)
-        .copy(path = params.getTextDocument.getUri())
-      val pos = params.getPosition.toMeta(input)
-      val result = fn(compiler, pos)
-      result
+      def defaultInputPos = {
+        val input = path
+          .toInputFromBuffers(buffers)
+          .copy(path = params.getTextDocument.getUri())
+        val pos = params.getPosition
+        (input, pos)
+      }
+
+      val (input, paramsPos) =
+        ammoniteInputPosOpt(path, params.getPosition, interactiveSemanticdbs)
+          .getOrElse(defaultInputPos)
+      val pos = paramsPos.toMeta(input)
+
+      fn(compiler, pos)
     }
   }
 
