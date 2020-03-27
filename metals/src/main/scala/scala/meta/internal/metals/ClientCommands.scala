@@ -123,12 +123,21 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  val Liveshare = new Command(
+    "metals-liveshare",
+    "Liveshare!!",
+    "Something something liveshare",
+    """|No Idea Sorry
+       |""".stripMargin
+  )
+
   def all: List[Command] = List(
     RunDoctor,
     ReloadDoctor,
     ToggleLogs,
     FocusDiagnostics,
     GotoLocation,
-    EchoCommand
+    EchoCommand,
+    Liveshare
   )
 }
