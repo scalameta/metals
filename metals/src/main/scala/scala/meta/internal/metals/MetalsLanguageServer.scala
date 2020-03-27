@@ -1656,7 +1656,7 @@ class MetalsLanguageServer(
           }
           if (sourceItem.isDefined &&
             !info.symbol.isPackage &&
-            owner.isPackage) {
+            (owner.isPackage || source.isAmmoniteScript)) {
             definitionIndex.addToplevelSymbol(reluri, source, info.symbol)
           }
       }
