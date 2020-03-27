@@ -2048,12 +2048,23 @@ class MetalsLanguageServer(
   }
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
-    OnDemandSymbolIndex(onError = {
-      case e @ (_: ParseException | _: TokenizeException) =>
-        scribe.error(e.toString)
-      case NonFatal(e) =>
-        scribe.error("unexpected error during source scanning", e)
-    })
+    OnDemandSymbolIndex(
+      onError = {
+        case e @ (_: ParseException | _: TokenizeException) =>
+          scribe.error(e.toString)
+        case NonFatal(e) =>
+          scribe.error("unexpected error during source scanning", e)
+      },
+      toIndexSource = path => {
+        if (path.isAmmoniteScript)
+          for {
+            target <- buildTargets.sourceBuildTargets(path).headOption
+            toIndex <- ammonite.generatedScalaPath(target, path)
+          } yield toIndex
+        else
+          None
+      }
+    )
   }
 
 }

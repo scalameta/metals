@@ -340,7 +340,8 @@ final class BuildTargets() {
     sourceItemsToBuildTarget
       .collectFirst {
         case (source, buildTargets)
-            if sourceItem.toNIO.startsWith(source.toNIO) =>
+            if sourceItem.toNIO.getFileSystem == source.toNIO.getFileSystem &&
+              sourceItem.toNIO.startsWith(source.toNIO) =>
           buildTargets.asScala
       }
       .getOrElse(Iterable.empty)

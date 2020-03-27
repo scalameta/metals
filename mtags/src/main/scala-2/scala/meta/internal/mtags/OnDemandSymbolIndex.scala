@@ -37,7 +37,8 @@ import java.util.zip.ZipError
 final class OnDemandSymbolIndex(
     val toplevels: TrieMap[String, AbsolutePath] = TrieMap.empty,
     definitions: TrieMap[String, AbsolutePath] = TrieMap.empty,
-    onError: PartialFunction[Throwable, Unit] = PartialFunction.empty
+    onError: PartialFunction[Throwable, Unit] = PartialFunction.empty,
+    toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None
 ) extends GlobalSymbolIndex {
   val mtags = new Mtags
   private val sourceJars = new ClasspathLoader()
@@ -116,7 +117,7 @@ final class OnDemandSymbolIndex(
       source: AbsolutePath,
       toplevel: String
   ): Unit = {
-    if (!isTrivialToplevelSymbol(path, toplevel)) {
+    if (source.isAmmoniteScript || !isTrivialToplevelSymbol(path, toplevel)) {
       toplevels(toplevel) = source
     }
   }
@@ -140,9 +141,10 @@ final class OnDemandSymbolIndex(
   // only non-trivial toplevel symbols.
   private def addMtagsSourceFile(file: AbsolutePath): Unit = {
     val docs: s.TextDocuments = PathIO.extension(file.toNIO) match {
-      case "scala" | "java" =>
+      case "scala" | "java" | "sc" =>
         val language = file.toLanguage
-        val input = file.toInput
+        val toIndexSource0 = toIndexSource(file).getOrElse(file)
+        val input = toIndexSource0.toInput
         val document = mtags.index(language, input)
         s.TextDocuments(List(document))
       case _ =>
@@ -242,7 +244,8 @@ object OnDemandSymbolIndex {
   def apply(
       toplevels: TrieMap[String, AbsolutePath] = TrieMap.empty,
       definitions: TrieMap[String, AbsolutePath] = TrieMap.empty,
-      onError: PartialFunction[Throwable, Unit] = PartialFunction.empty
+      onError: PartialFunction[Throwable, Unit] = PartialFunction.empty,
+      toIndexSource: AbsolutePath => Option[AbsolutePath] = _ => None
   ): OnDemandSymbolIndex =
-    new OnDemandSymbolIndex(toplevels, definitions, onError)
+    new OnDemandSymbolIndex(toplevels, definitions, onError, toIndexSource)
 }
