@@ -110,7 +110,7 @@ import scala.meta.internal.metals.Trees
  */
 final class TestingServer(
     workspace: AbsolutePath,
-    client: TestingClient,
+    val client: TestingClient,
     buffers: Buffers,
     config: MetalsServerConfig,
     bspGlobalDirectories: List[AbsolutePath],
