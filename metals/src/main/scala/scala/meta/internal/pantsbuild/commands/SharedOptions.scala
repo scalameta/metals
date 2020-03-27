@@ -19,7 +19,7 @@ case class SharedOptions(
   val home: AbsolutePath = AbsolutePath {
     Option(System.getenv("FASTPASS_HOME")) match {
       case Some(value) => Paths.get(value)
-      case None => workspace.resolveSibling("intellij-bsp")
+      case None => workspace.resolveSibling("bsp-projects")
     }
   }
 }

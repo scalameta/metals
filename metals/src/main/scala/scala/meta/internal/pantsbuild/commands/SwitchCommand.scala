@@ -101,14 +101,14 @@ object SwitchCommand extends Command[SwitchOptions]("switch") {
     }
 
     val inScalafmt = {
-      val link = workspace.resolve(".scalafmt.conf")
+      var link = workspace.resolve(".scalafmt.conf")
       // Configuration file may be symbolic link.
-      val relpath =
-        if (Files.isSymbolicLink(link)) Files.readSymbolicLink(link)
-        else link
+      while (Files.isSymbolicLink(link)) {
+        link = Files.readSymbolicLink(link)
+      }
       // Symbolic link may be relative to workspace directory.
-      if (relpath.isAbsolute()) relpath
-      else workspace.resolve(relpath)
+      if (link.isAbsolute()) link
+      else workspace.resolve(link)
     }
     val outScalafmt = out.resolve(".scalafmt.conf")
     if (!out.startsWith(workspace) &&

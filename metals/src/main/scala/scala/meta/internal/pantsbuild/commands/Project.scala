@@ -10,7 +10,6 @@ case class Project(
     targets: List[String],
     root: ProjectRoot
 ) {
-  def parentRoot: AbsolutePath = root.root
   def bspRoot: AbsolutePath = root.bspRoot
 }
 

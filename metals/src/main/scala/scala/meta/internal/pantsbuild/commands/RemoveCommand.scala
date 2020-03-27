@@ -21,8 +21,8 @@ object RemoveCommand extends Command[RemoveOptions]("remove") {
     val errors: List[Int] = remove.projects.map { name =>
       Project.fromName(name, remove.common) match {
         case Some(value) =>
-          app.info(s"removing directory '${value.root.root}'")
-          RecursivelyDelete(value.root.root)
+          app.info(s"removing directory '${value.root.bspRoot}'")
+          RecursivelyDelete(value.root.bspRoot)
           0
         case None =>
           app.error(s"project '$name' does not exist")
