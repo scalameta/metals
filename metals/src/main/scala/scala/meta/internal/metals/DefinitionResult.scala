@@ -12,7 +12,9 @@ case class DefinitionResult(
     symbol: String,
     definition: Option[AbsolutePath],
     semanticdb: Option[TextDocument]
-)
+) {
+  def isEmpty: Boolean = locations.isEmpty()
+}
 
 object DefinitionResult {
   def empty(symbol: String): DefinitionResult =

@@ -56,6 +56,10 @@ final case class MetalsServerConfig(
       "metals.warnings",
       default = true
     ),
+    remoteTimeout: String = System.getProperty(
+      "metals.timeout",
+      "1 minute"
+    ),
     openFilesOnRenames: Boolean = false,
     renameFileThreshold: Int = 300,
     bloopEmbeddedVersion: String = System.getProperty(

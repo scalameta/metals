@@ -24,6 +24,7 @@ import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import scala.util.control.NonFatal
+import io.undertow.server.handlers.BlockingHandler
 
 /**
  * Http server
@@ -35,12 +36,7 @@ final class MetalsHttpServer private (
 ) extends Cancelable {
   override def cancel(): Unit = stop()
   def address: String =
-    server.getListenerInfo.asScala.headOption match {
-      case Some(listener) =>
-        s"${listener.getProtcol}:/" + listener.getAddress.toString
-      case None =>
-        ""
-    }
+    MetalsHttpServer.address(server)
   def start(): Unit = {
     server.start()
     scribe.info(s"Started Metals http server at $address")
@@ -136,13 +132,28 @@ object MetalsHttpServer {
     new MetalsHttpServer(languageServer, httpServer, openChannels)
   }
 
-  def textHtmlHandler(render: () => String): HttpHandler = new HttpHandler {
-    override def handleRequest(exchange: HttpServerExchange): Unit = {
-      val html = render()
-      exchange.getResponseHeaders.put(Headers.CONTENT_TYPE, "text/html")
-      exchange.getResponseSender.send(html)
+  def address(server: Undertow): String = {
+    server.getListenerInfo.asScala.headOption match {
+      case Some(listener) =>
+        s"${listener.getProtcol}:/" + listener.getAddress.toString
+      case None =>
+        ""
     }
   }
+
+  def textHtmlHandler(render: () => String): HttpHandler =
+    textHandler("text/html", _ => render())
+  def textHandler(
+      contentType: String,
+      render: HttpServerExchange => String
+  ): HttpHandler =
+    new BlockingHandler(new HttpHandler {
+      override def handleRequest(exchange: HttpServerExchange): Unit = {
+        val response = render(exchange)
+        exchange.getResponseHeaders.put(Headers.CONTENT_TYPE, contentType)
+        exchange.getResponseSender.send(response)
+      }
+    })
 
   final def freePort(host: String, port: Int, maxRetries: Int = 20): Int = {
     try {

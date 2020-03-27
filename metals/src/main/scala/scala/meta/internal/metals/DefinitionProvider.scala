@@ -19,6 +19,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import org.eclipse.lsp4j.Position
+import scala.meta.internal.remotels.RemoteLanguageServer
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -44,7 +45,8 @@ final class DefinitionProvider(
     icons: Icons,
     statusBar: StatusBar,
     warnings: Warnings,
-    compilers: () => Compilers
+    compilers: () => Compilers,
+    remote: RemoteLanguageServer
 )(implicit ec: ExecutionContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -61,17 +63,28 @@ final class DefinitionProvider(
       token: CancelToken
   ): Future[DefinitionResult] = {
     val fromSemanticdb =
-      semanticdbs.textDocument(path).documentIncludingStale match {
-        case Some(doc) =>
-          definitionFromSnapshot(path, params, doc)
-        case _ =>
-          warnings.noSemanticdb(path)
-          DefinitionResult.empty
+      semanticdbs.textDocument(path).documentIncludingStale
+    val fromSnapshot = fromSemanticdb match {
+      case Some(doc) =>
+        definitionFromSnapshot(path, params, doc)
+      case _ =>
+        DefinitionResult.empty
+    }
+    val fromIndex =
+      if (fromSnapshot.isEmpty && remote.isEnabledForPath(path)) {
+        remote.definition(params).map(_.getOrElse(fromSnapshot))
+      } else {
+        Future.successful(fromSnapshot)
       }
-    if (fromSemanticdb.locations.isEmpty()) {
-      compilers().definition(params, token)
-    } else {
-      Future.successful(fromSemanticdb)
+    fromIndex.flatMap { result =>
+      if (result.isEmpty) {
+        compilers().definition(params, token)
+      } else {
+        if (result.isEmpty && fromSemanticdb.isEmpty) {
+          warnings.noSemanticdb(path)
+        }
+        Future.successful(result)
+      }
     }
   }
 

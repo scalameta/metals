@@ -21,12 +21,14 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import scala.meta.internal.semanticdb.Synthetic
+import scala.meta.internal.remotels.RemoteLanguageServer
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
     semanticdbs: Semanticdbs,
     buffers: Buffers,
-    definition: DefinitionProvider
+    definition: DefinitionProvider,
+    remote: RemoteLanguageServer
 ) {
   var referencedPackages: BloomFilter[CharSequence] = BloomFilters.create(10000)
   val index: TrieMap[Path, BloomFilter[CharSequence]] =
@@ -94,7 +96,12 @@ final class ReferenceProvider(
             ReferencesResult.empty
         }
       case None =>
-        ReferencesResult.empty
+        // NOTE(olafur): we block here instead of returning a Future because it
+        // requires a significant refactoring to make the reference provider and
+        // its dependencies (including rename provider) asynchronous. The remote
+        // language server returns `Future.successful(None)` when it's disabled
+        // so this isn't even blocking for normal usage of Metals.
+        remote.referencesBlocking(params).getOrElse(ReferencesResult.empty)
     }
   }
 
