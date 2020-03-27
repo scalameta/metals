@@ -149,16 +149,12 @@ object SharedCommand {
       context: TabCompletionContext,
       allowsMultipleProjects: Boolean = false
   ): List[TabCompletionItem] = {
-    if (!allowsMultipleProjects & context.arguments.length > 1) {
-      Nil
-    } else {
-      context.setting match {
-        case None =>
-          Project
-            .fromCommon(SharedOptions())
-            .map(project => TabCompletionItem(project.name))
-        case Some(_) => Nil
-      }
+    context.setting match {
+      case None =>
+        Project
+          .fromCommon(SharedOptions())
+          .map(project => TabCompletionItem(project.name))
+      case Some(_) => Nil
     }
   }
 
