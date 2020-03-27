@@ -1,0 +1,224 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Remote Language Servers · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Metals has experimental support to offload certain requests to a remote language"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Remote Language Servers · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="Metals has experimental support to offload certain requests to a remote language"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+              (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+              (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+              ga('create', 'UA-140140828-1', 'auto');
+              ga('send', 'pageview');
+            </script><link rel="stylesheet" href="/metals/css/custom.css"/><script src="/metals/js/scrollSpy.js"></script><link rel="stylesheet" href="/metals/css/main.css"/><script src="/metals/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/metals/"><img class="logo" src="/metals/img/scalameta-logo.png" alt="Metals"/><h2 class="headerTitleWithLogo">Metals</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/metals/docs/editors/overview.html" target="_self">Docs</a></li><li class=""><a href="/metals/blog/" target="_self">Blog</a></li><li class=""><a href="https://github.com/scalameta/metals" target="_blank">GitHub</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Contributing</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Text Editors</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/docs/editors/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vscode.html">Visual Studio Code</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/atom.html">Atom</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/vim.html">Vim</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/sublime.html">Sublime Text</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/emacs.html">Emacs</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/eclipse.html">Eclipse</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Build Tools</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/overview.html">Overview</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/bloop.html">Bloop</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/gradle.html">Gradle</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/maven.html">Maven</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/mill.html">Mill</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/sbt.html">sbt</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/proxy.html">Proxy and mirrors</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Contributing</h3><ul class=""><li class="navListItem"><a class="navItem" href="/metals/docs/build-tools/new-build-tool.html">Integrating a new build tool</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/new-editor.html">Integrating a new editor</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/tree-view-protocol.html">Tree View Protocol</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/decoration-protocol.html">Decoration Protocol</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/editors/debug-adapter-protocol.html">Debug Adapter Protocol</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/metals/docs/contributors/remote-language-server.html">Remote Language Servers</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/project-goals.html">Project Goals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/getting-started.html">Contributing to Metals</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/updating-website.html">Contributing to the website</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/releasing.html">Making a release</a></li><li class="navListItem"><a class="navItem" href="/metals/docs/contributors/tests.html">Tests overview</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/contributors/remote-language-server.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Remote Language Servers</h1></header><article><div><span><p>Metals has experimental support to offload certain requests to a remote language
+server. This feature can be used to navigate large codebases when it's not
+possible to index all the code on a local computer.</p>
+<h2><a class="anchor" aria-hidden="true" id="difference-from-local-language-servers"></a><a href="#difference-from-local-language-servers" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Difference from local language servers</h2>
+<p>There are some important differences between local and remote language servers:</p>
+<ul>
+<li>Instead of JSON-RPC, a remote language server responds to HTTP POST requests
+with an <code>application/json</code> header and a JSON-formatted body. The reason HTTP
+is chosen over JSON-RPC is because it makes the remote language server
+accesible from more clients, for example via <code>curl</code>. A caveat with using HTTP
+instead of JSON-RPC is that it's not possible for the remote language server
+to push notification down to the client. In the future, we could consider
+using JSON-RPC via websockets instead.</li>
+<li>Instead of using absolute <code>file://</code> URIs, a remote language server uses
+relative <code>source://</code> URIs. For example, the absolute URI
+<code>file://path/to/workspace/src/main/scala/Address.scala</code> becomes the relative
+URI <code>source://src/main/scala/Address.scala</code> when communicating with a remote
+language server.</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="methods"></a><a href="#methods" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Methods</h2>
+<p>Each remote language server method expects a JSON-formatted body of type
+<code>JsonRpcRequest&lt;T&gt;</code>.</p>
+<pre><code class="hljs css language-ts"><span class="hljs-keyword">interface</span> JsonRpcRequest&lt;T&gt; {
+  <span class="hljs-comment">/** The JSON-RPC method name, for example textDocument/definition */</span>
+  method: <span class="hljs-built_in">string</span>;
+
+  <span class="hljs-comment">/** The parameter for the JSON-RPC method, for example `TextDocumentPositionParams` */</span>
+  params: T;
+
+  <span class="hljs-comment">/** The ID of this request, can be any integer number. */</span>
+  id: <span class="hljs-built_in">number</span>;
+}
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="textdocumentdefinition"></a><a href="#textdocumentdefinition" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>textDocument/definition</code></h3>
+<p>The <code>textDocument/definition</code> request is sent from the client to the server to
+get the list of definitions for a given position.</p>
+<p><em>Request</em>:</p>
+<ul>
+<li>method: <code>textDocument/definition</code></li>
+<li>params: <code>JsonRpcRequest&lt;TextDocumentPositionParams&gt;</code>, where
+<code>TextDocumentPositionParams</code> is defined in LSP.</li>
+</ul>
+<p><em>Response</em>:</p>
+<ul>
+<li>result: <code>Location[]</code>, as defined in LSP.</li>
+</ul>
+<p><em>Example request</em>:</p>
+<pre><code class="hljs css language-sh">curl --location --request POST <span class="hljs-string">'http://remote-language-server.com'</span> \
+--header <span class="hljs-string">'Content-Type: application/json'</span> \
+--data-raw <span class="hljs-string">'{
+  "method": "textDocument/definition",
+  "params": {
+    "textDocument": {
+      "uri": "source://src/main/scala/Address.scala"
+    },
+    "position": {
+      "line": 5,
+      "character": 10
+    }
+  },
+  "id": 10
+}'</span>
+</code></pre>
+<p><em>Example response</em>:</p>
+<pre><code class="hljs css language-json">[
+  {
+    <span class="hljs-attr">"uri"</span>: <span class="hljs-string">"source://src/main/scala/User.scala"</span>,
+    <span class="hljs-attr">"range"</span>: {
+      <span class="hljs-attr">"start"</span>: { <span class="hljs-attr">"line"</span>: <span class="hljs-number">61</span>, <span class="hljs-attr">"character"</span>: <span class="hljs-number">15</span> },
+      <span class="hljs-attr">"end"</span>: { <span class="hljs-attr">"line"</span>: <span class="hljs-number">61</span>, <span class="hljs-attr">"character"</span>: <span class="hljs-number">31</span> }
+    }
+  }
+]
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="textdocumentreferences"></a><a href="#textdocumentreferences" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a><code>textDocument/references</code></h3>
+<p>The <code>textDocument/references</code> request is sent from the client to the server to
+get the list of all references to a symbol at a given position.</p>
+<p><em>Request</em>:</p>
+<ul>
+<li>method: <code>textDocument/references</code></li>
+<li>params: <code>JsonRpcRequest&lt;ReferenceParams&gt;</code>, where <code>ReferenceParams</code> is defined
+in LSP.</li>
+</ul>
+<p><em>Response</em>:</p>
+<ul>
+<li>result: <code>Location[]</code>, as defined in LSP.</li>
+</ul>
+<p><em>Example request</em>:</p>
+<pre><code class="hljs css language-sh">curl --location --request POST <span class="hljs-string">'http://remote-language-server.com'</span> \
+--header <span class="hljs-string">'Content-Type: application/json'</span> \
+--data-raw <span class="hljs-string">'{
+  "method": "textDocument/references",
+  "params": {
+    "textDocument": {
+      "uri": "source://src/main/scala/Address.scala"
+    },
+    "position": {
+      "line": 5,
+      "character": 10
+    },
+    "context": {
+      "includeDeclaration": true
+    }
+  },
+  "id": 10
+}'</span>
+</code></pre>
+<p><em>Example response</em>:</p>
+<pre><code class="hljs css language-json">[
+  {
+    <span class="hljs-attr">"uri"</span>: <span class="hljs-string">"source://src/main/scala/User.scala"</span>,
+    <span class="hljs-attr">"range"</span>: {
+      <span class="hljs-attr">"start"</span>: { <span class="hljs-attr">"line"</span>: <span class="hljs-number">61</span>, <span class="hljs-attr">"character"</span>: <span class="hljs-number">15</span> },
+      <span class="hljs-attr">"end"</span>: { <span class="hljs-attr">"line"</span>: <span class="hljs-number">61</span>, <span class="hljs-attr">"character"</span>: <span class="hljs-number">31</span> }
+    }
+  },
+  {
+    <span class="hljs-attr">"uri"</span>: <span class="hljs-string">"source://src/main/scala/Country.scala"</span>,
+    <span class="hljs-attr">"range"</span>: {
+      <span class="hljs-attr">"start"</span>: { <span class="hljs-attr">"line"</span>: <span class="hljs-number">62</span>, <span class="hljs-attr">"character"</span>: <span class="hljs-number">16</span> },
+      <span class="hljs-attr">"end"</span>: { <span class="hljs-attr">"line"</span>: <span class="hljs-number">62</span>, <span class="hljs-attr">"character"</span>: <span class="hljs-number">32</span> }
+    }
+  }
+]
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="open-questions"></a><a href="#open-questions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Open questions</h2>
+<p>The protocol for remote language servers is new and likely to have breaking
+changes in upcoming releases. The protocol in this document should be considered
+as a proof-of-concept that demonstrates the feasibility of this approach. There
+remain a few open questions in order to extend remote language servers to
+support richer functionality:</p>
+<ul>
+<li>how do we ensure that results from the remote server are synchronized with the
+file changes to the local disk?</li>
+<li>how do we combine local and remote <code>workspace/symbol</code> results?</li>
+<li>how should <code>textDocument/definition</code> return results to library dependency
+sources that are not present on local disk?</li>
+</ul>
+<p>Given these open questions and the experimental status of remote language
+servers, this functionality may be removed from Metals in future releases
+without notice.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/debug-adapter-protocol.html"><span class="arrow-prev">← </span><span>Debug Adapter Protocol</span></a><a class="docs-next button" href="/metals/docs/contributors/project-goals.html"><span>Project Goals</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#difference-from-local-language-servers">Difference from local language servers</a></li><li><a href="#methods">Methods</a><ul class="toc-headings"><li><a href="#textdocumentdefinition"><code>textDocument/definition</code></a></li><li><a href="#textdocumentreferences"><code>textDocument/references</code></a></li></ul></li><li><a href="#open-questions">Open questions</a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2020 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+                document.addEventListener('keyup', function(e) {
+                  if (e.target !== document.body) {
+                    return;
+                  }
+                  // keyCode for '/' (slash)
+                  if (e.keyCode === 191) {
+                    const search = document.getElementById('search_input_react');
+                    search && search.focus();
+                  }
+                });
+              </script><script>
+              var search = docsearch({
+                
+                apiKey: 'c865f6d974a3072a35d4b53d48ac2307',
+                indexName: 'metals',
+                inputSelector: '#search_input_react'
+              });
+            </script></body></html>
