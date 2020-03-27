@@ -266,7 +266,12 @@ class Compilers(
     withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
       pc.hover(CompilerOffsetParams.fromPos(pos, token))
         .asScala
-        .map(_.asScala)
+        .map(_.asScala.map { hover =>
+          if (params.getTextDocument.getUri.isAmmoniteScript)
+            Ammonite.adjustHoverResp(hover, pos.input.text)
+          else
+            hover
+        })
     }.getOrElse {
       Future.successful(Option.empty)
     }

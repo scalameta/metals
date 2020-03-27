@@ -15,7 +15,9 @@ import ammrunner.{Command => AmmCommand}
 import ammrunner.{Versions => AmmVersions}
 import ammrunner.VersionsOption
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.{Range => LspRange}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
@@ -289,6 +291,40 @@ object Ammonite {
 
   def isAmmBuildTarget(id: BuildTargetIdentifier): Boolean =
     id.getUri.endsWith(".sc")
+
+  private def adjustPosition(scalaCode: String): Position => Position = {
+    val startIdx = scalaCode.indexOf(startTag)
+    if (startIdx >= 0) {
+      val linesBefore = scalaCode.lineAtIndex(startIdx + startTag.length)
+      pos =>
+        if (pos.getLine < linesBefore)
+          new Position(0, 0)
+        else
+          new Position(pos.getLine - linesBefore, pos.getCharacter)
+    } else
+      identity _
+  }
+
+  private def adjustRange(
+      range: LspRange,
+      adjustPos: Position => Position
+  ): LspRange =
+    new LspRange(
+      adjustPos(range.getStart),
+      adjustPos(range.getEnd)
+    )
+
+  def adjustHoverResp(hover: Hover, scalaCode: String): Hover =
+    if (hover.getRange == null)
+      hover
+    else {
+      val adjustPos = adjustPosition(scalaCode)
+      val newRange = adjustRange(hover.getRange, adjustPos)
+      val newHover = new Hover
+      newHover.setContents(hover.getContents)
+      newHover.setRange(newRange)
+      newHover
+    }
 
   private def logOutputThread(
       is: InputStream,

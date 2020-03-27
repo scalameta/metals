@@ -4,6 +4,7 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
@@ -77,6 +78,50 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         "main.sc",
         6
       )
+
+    } yield ()
+  }
+
+  test("hover") {
+    for {
+      _ <- server.initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "$scalaVersion"
+           |  }
+           |}
+           |/main.sc
+           | // scala $scalaVersion
+           |import $$ivy.`io.circe::circe-core:0.12.3`
+           |import $$ivy.`io.circe::circe-generic:0.12.3`
+           |import $$ivy.`io.circe::circe-parser:0.12.3`
+           |import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
+           |
+           |sealed trait Foo
+           |case class Bar(xs: Vector[String]) extends Foo
+           |case class Qux(i: Int, d: Option[Double]) extends Foo
+           |
+           |val foo: Foo = Qux(13, Some(14.0))
+           |
+           |val json = foo.asJson.noSpaces
+           |
+           |val decodedFoo = decode[Foo](json)
+           |""".stripMargin
+      )
+      _ <- server.didOpen("main.sc")
+      _ <- server.didSave("main.sc")(identity)
+      _ <- server.executeCommand("ammonite-start")
+
+      expectedHoverRes = """```scala
+                           |val foo: Foo
+                           |```
+                           |```range
+                           |val foo: Foo = Qux(13, Some(14.0))
+                           |```""".stripMargin
+      hoverRes <- assertHoverAtPos("main.sc", 10, 5)
+      _ = assertNoDiff(hoverRes, expectedHoverRes)
 
     } yield ()
   }
@@ -328,4 +373,24 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         ()
       }
   }
+
+  private def assertHoverAtPos(
+      path: String,
+      line: Int,
+      char: Int
+  ): Future[String] =
+    server.server
+      .hover(
+        new TextDocumentPositionParams(
+          new TextDocumentIdentifier(
+            server.toPath("main.sc").toNIO.toUri.toASCIIString
+          ),
+          new Position(line, char)
+        )
+      )
+      .asScala
+      .map { res =>
+        val code = server.textContents(path)
+        TestHovers.renderAsString(code, Option(res), includeRange = true)
+      }
 }
