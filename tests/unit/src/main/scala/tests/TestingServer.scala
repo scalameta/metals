@@ -268,6 +268,29 @@ final class TestingServer(
     })
   }
 
+  def assertReferences(
+      filename: String,
+      query: String,
+      expected: Map[String, String],
+      base: Map[String, String]
+  )(implicit loc: munit.Location): Future[Unit] = {
+    for {
+      referenceLocations <- getReferenceLocations(filename, query, base)
+    } yield {
+      Assertions.assertSimpleLocationOrdering(referenceLocations)
+      val references =
+        TestRanges.renderLocationsAsString(base, referenceLocations)
+      references.foreach {
+        case (file, obtained) =>
+          val expectedImpl = expected(file)
+          Assertions.assertNoDiff(
+            obtained,
+            expectedImpl
+          )
+      }
+    }
+  }
+
   def assertReferenceDefinitionBijection()(
       implicit loc: munit.Location
   ): Unit = {
@@ -279,6 +302,7 @@ final class TestingServer(
       compare.definitionFormat
     )
   }
+
   def assertReferenceDefinitionDiff(
       expectedDiff: String
   )(implicit loc: munit.Location): Unit = {
@@ -942,6 +966,22 @@ final class TestingServer(
       implementations <- server.implementation(params).asScala
     } yield {
       TestRanges.renderLocationsAsString(base, implementations.asScala.toList)
+    }
+  }
+
+  def getReferenceLocations(
+      filename: String,
+      query: String,
+      base: Map[String, String]
+  ): Future[List[Location]] = {
+    for {
+      (_, params) <- offsetParams(filename, query, workspace)
+      refParams = new ReferenceParams(new ReferenceContext(true))
+      _ = refParams.setPosition(params.getPosition())
+      _ = refParams.setTextDocument(params.getTextDocument())
+      referenceLocations <- server.references(refParams).asScala
+    } yield {
+      referenceLocations.asScala.toList
     }
   }
 

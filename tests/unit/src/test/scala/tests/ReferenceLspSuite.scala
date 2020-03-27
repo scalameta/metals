@@ -1,8 +1,10 @@
 package tests
 
 import scala.meta.internal.metals.ServerCommands
+import scala.concurrent.Future
 
-class ReferenceLspSuite extends BaseLspSuite("reference") {
+class ReferenceLspSuite extends BaseRangesSuite("reference") {
+
   test("case-class") {
     cleanWorkspace()
     for {
@@ -205,5 +207,27 @@ class ReferenceLspSuite extends BaseLspSuite("reference") {
       _ = assertNoDiagnostics()
       _ = server.assertReferenceDefinitionBijection()
     } yield ()
+  }
+
+  check(
+    "ordering",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait <<A@@A>>
+       |/a/src/main/scala/a/Other.scala
+       |package a
+       |trait BB extends <<AA>>
+       |trait CC extends <<AA>>
+       |trait DD extends <<AA>>
+       |""".stripMargin
+  )
+
+  override def assertCheck(
+      filename: String,
+      edit: String,
+      expected: Map[String, String],
+      base: Map[String, String]
+  ): Future[Unit] = {
+    server.assertReferences(filename, edit, expected, base)
   }
 }

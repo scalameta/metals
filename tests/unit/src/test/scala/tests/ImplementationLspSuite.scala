@@ -1,8 +1,7 @@
 package tests
 import scala.concurrent.Future
-import munit.Location
 
-class ImplementationLspSuite extends BaseLspSuite("implementation") {
+class ImplementationLspSuite extends BaseRangesSuite("implementation") {
 
   check(
     "basic",
@@ -519,57 +518,17 @@ class ImplementationLspSuite extends BaseLspSuite("implementation") {
        |""".stripMargin
   )
 
-  def check(name: String, input: String)(implicit loc: Location): Unit = {
-    val files = FileLayout.mapFromString(input)
-    val (filename, edit) = files
-      .find(_._2.contains("@@"))
-      .map {
-        case (fileName, code) =>
-          (fileName, code.replaceAll("(<<|>>)", ""))
-      }
-      .getOrElse {
-        throw new IllegalArgumentException(
-          "No `@@` was defined that specifies cursor position"
-        )
-      }
-    val expected = files.map {
-      case (fileName, code) =>
-        fileName -> code.replaceAll("@@", "")
-    }
-    val base = files.map {
-      case (fileName, code) =>
-        fileName -> code.replaceAll("(<<|>>|@@)", "")
-    }
-
-    test(name) {
-      cleanWorkspace()
-      for {
-        _ <- server.initialize(
-          s"""/metals.json
-             |{"a":
-             |  {
-             |    "compilerPlugins": [
-             |      "org.scalamacros:::paradise:2.1.1"
-             |    ],
-             |    "libraryDependencies": [
-             |      "org.scalatest::scalatest:3.0.5",
-             |      "io.circe::circe-generic:0.12.0"
-             |    ]
-             |  }
-             |}
-             |${input
-               .replaceAll("(<<|>>|@@)", "")}""".stripMargin
-        )
-        _ <- Future.sequence(
-          files.map(file => server.didOpen(s"${file._1}"))
-        )
-        _ <- server.assertImplementation(
-          filename,
-          edit,
-          expected.toMap,
-          base.toMap
-        )
-      } yield ()
-    }
+  override def assertCheck(
+      filename: String,
+      edit: String,
+      expected: Map[String, String],
+      base: Map[String, String]
+  ): Future[Unit] = {
+    server.assertImplementation(
+      filename,
+      edit,
+      expected.toMap,
+      base.toMap
+    )
   }
 }

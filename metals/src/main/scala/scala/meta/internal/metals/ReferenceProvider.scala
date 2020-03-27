@@ -285,7 +285,11 @@ final class ReferenceProvider(
       range <- synthetic.range.toList
     } add(range)
 
-    buf.result()
+    buf.result().sortWith(sortByLocationPosition)
+  }
+
+  private def sortByLocationPosition(l1: Location, l2: Location): Boolean = {
+    l1.getRange.getStart.getLine < l2.getRange.getStart.getLine
   }
 
   private def findRealRange(
