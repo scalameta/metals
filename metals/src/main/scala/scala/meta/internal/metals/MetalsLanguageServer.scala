@@ -1573,19 +1573,17 @@ class MetalsLanguageServer(
           workspaceBuildTargets,
           scalacOptions,
           sources,
-          dependencySources,
-          build.version,
-          build.name
+          dependencySources
         )
       }
     }
     for {
       i <- statusBar.trackFuture("Importing build", importedBuild)
       _ <- profiledIndexWorkspace(
-        () => indexWorkspace(i),
+        () => indexWorkspace(i, () => doctor.check(build.name, build.version)),
         () => indexingPromise.trySuccess(())
       )
-      _ = checkRunningBloopVersion(i.bspServerVersion)
+      _ = checkRunningBloopVersion(build.version)
     } yield {
       BuildChange.Reconnected
     }
@@ -1736,7 +1734,7 @@ class MetalsLanguageServer(
     scribe.info(s"memory: $footprint")
   }
 
-  private def indexWorkspace(i: ImportedBuild): Unit = {
+  private def indexWorkspace(i: ImportedBuild, check: () => Unit): Unit = {
     timedThunk(
       "updated build targets",
       clientConfig.initialConfig.statistics.isIndex
@@ -1757,7 +1755,7 @@ class MetalsLanguageServer(
         val sourceItemPath = source.getUri.toAbsolutePath
         buildTargets.addSourceItem(sourceItemPath, item.getTarget)
       }
-      doctor.check(i.bspServerName, i.bspServerVersion)
+      check()
       buildTools
         .loadSupported()
         .foreach(_.onBuildTargets(workspace, buildTargets))
