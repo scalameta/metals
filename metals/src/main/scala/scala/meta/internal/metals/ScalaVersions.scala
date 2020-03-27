@@ -31,7 +31,7 @@ object ScalaVersions {
         binaryVersion == scalaBinaryVersionFromFullVersion(latest)
       )
       .getOrElse {
-        BuildInfo.scala212
+        BuildInfo.scala213
       }
   }
 

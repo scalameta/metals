@@ -9,6 +9,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.collection.mutable
 import scala.meta.internal.builds.BuildTool
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.semver.SemVer
 
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
@@ -391,8 +392,14 @@ class Messages(icons: Icons) {
       val using =
         if (usingNow.size == 1)
           s"a Scala version ${usingNow.head}"
-        else usingNow.toSeq.sorted.mkString("Scala versions ", ", ", "")
-      val recommended = shouldBeUsing.mkString(" and ")
+        else
+          usingNow.toSeq
+            .sortWith(SemVer.isCompatibleVersion)
+            .mkString("Scala versions ", ", ", "")
+      val recommended =
+        shouldBeUsing.toSeq
+          .sortWith(SemVer.isCompatibleVersion)
+          .mkString(" or ")
       val isAre = if (usingNow.size == 1) "is" else "are"
       s"You are using $using, which $isAre not supported in this version of Metals. " +
         s"Please upgrade to Scala $recommended."

@@ -35,7 +35,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
   test("deprecated-scala-211") {
     cleanWorkspace()
     val using = V.scala211
-    val recommended = V.scala212
+    val recommended = V.scala213
     for {
       _ <- server.initialize(
         s"""/metals.json

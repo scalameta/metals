@@ -240,7 +240,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
         client.messageRequests.peekLast(),
         UnsupportedScalaVersion.message(
           Seq("2.12.4", "2.12.3", "2.11.8", "2.10.7"),
-          Seq(V.scala212)
+          Seq(V.scala212, V.scala213)
         )
       )
       sourceJars <- server.buildTargetSourceJars("a")
