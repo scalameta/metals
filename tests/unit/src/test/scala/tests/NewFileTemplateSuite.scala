@@ -7,7 +7,7 @@ import org.scalacheck.Prop.forAll
 
 class NewFileTemplateSuite extends BaseSuite with ScalaCheckSuite {
 
-  test("it requires exactly one cursor marker") {
+  test("cursor-marker-errors") {
     intercept[IllegalArgumentException] {
       NewFileTemplate("no cursor markers")
     }
@@ -16,7 +16,7 @@ class NewFileTemplateSuite extends BaseSuite with ScalaCheckSuite {
     }
   }
 
-  property("cursor marker position is computed correctly") {
+  property("cursor-marker-position") {
     val template =
       s"""|package a
           |
