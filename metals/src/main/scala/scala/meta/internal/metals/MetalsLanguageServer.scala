@@ -1609,7 +1609,7 @@ class MetalsLanguageServer(
       targets.asScala.foreach { target =>
         buildTargets.linkSourceFile(target, source)
       }
-      indexSourceFile(source, Some(sourceItem))
+      indexSourceFile(source, Some(sourceItem), targets.asScala.headOption)
     }
   }
 
@@ -1620,17 +1620,28 @@ class MetalsLanguageServer(
       path <- paths.iterator
       if path.isScalaOrJava
     } {
-      indexSourceFile(path, buildTargets.inverseSourceItem(path))
+      indexSourceFile(path, buildTargets.inverseSourceItem(path), None)
     }
   }
 
+  private def sourceToIndex(
+      source: AbsolutePath,
+      targetOpt: Option[b.BuildTargetIdentifier]
+  ): AbsolutePath =
+    targetOpt
+      .flatMap(ammonite.generatedScalaPath(_, source))
+      .getOrElse(source)
+
   private def indexSourceFile(
       source: AbsolutePath,
-      sourceItem: Option[AbsolutePath]
+      sourceItem: Option[AbsolutePath],
+      targetOpt: Option[b.BuildTargetIdentifier]
   ): Unit = {
+
     try {
+      val sourceToIndex0 = sourceToIndex(source, targetOpt)
       val reluri = source.toIdeallyRelativeURI(sourceItem)
-      val input = source.toInput
+      val input = sourceToIndex0.toInput
       val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
       SemanticdbDefinition.foreach(input) {
         case SemanticdbDefinition(info, occ, owner) =>
@@ -1653,7 +1664,7 @@ class MetalsLanguageServer(
 
       // Since the `symbols` here are toplevel symbols,
       // we cannot use `symbols` for expiring the cache for all symbols in the source.
-      symbolDocs.expireSymbolDefinition(source)
+      symbolDocs.expireSymbolDefinition(sourceToIndex0)
     } catch {
       case NonFatal(e) =>
         scribe.error(source.toString(), e)
