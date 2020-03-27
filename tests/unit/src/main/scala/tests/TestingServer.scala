@@ -526,9 +526,6 @@ final class TestingServer(
     server.didChangeConfiguration(params).asScala
   }
 
-  def indexingDone(): Future[Unit] =
-    server.indexingPromise.future
-
   def completionList(
       filename: String,
       query: String

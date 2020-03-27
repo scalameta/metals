@@ -80,6 +80,14 @@ final class Compilations(
     targets
   }
 
+  def onLatestCompleted(): Future[Unit] = {
+    val regular = compileBatch.onLatestCompleted()
+    val cascade = cascadeBatch.onLatestCompleted()
+    //we need to wait until all of them are completed,
+    //but don't need both of them being ever scheduled
+    regular.flatMap(_ => cascade).fallbackTo(cascade)
+  }
+
   private def compile(
       targets: Seq[b.BuildTargetIdentifier]
   ): CancelableFuture[b.CompileResult] = {

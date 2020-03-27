@@ -146,7 +146,7 @@ class MetalsLanguageServer(
       params => didChangeWatchedFiles(params)
     )
   )
-  val indexingPromise: Promise[Unit] = Promise[Unit]()
+  private val indexingPromise: Promise[Unit] = Promise[Unit]()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](paths =>
     CancelableFuture(paths.distinct.foreach(trees.didChange))
   )
@@ -1573,10 +1573,7 @@ class MetalsLanguageServer(
       i <- statusBar.trackFuture("Importing build", importedBuild)
       _ <- profiledIndexWorkspace(
         () => indexWorkspace(i),
-        () => {
-          indexingPromise.trySuccess(())
-          languageClient.refreshModel()
-        }
+        () => indexingPromise.trySuccess(())
       )
       _ = checkRunningBloopVersion(i.bspServerVersion)
       _ <- Future.sequence[Unit, List](
@@ -1683,13 +1680,18 @@ class MetalsLanguageServer(
   }
 
   def profiledIndexWorkspace(
-      thunk: () => Future[Unit],
+      thunk: () => Unit,
       onFinally: () => Unit
   ): Future[Unit] = {
     val tracked = statusBar.trackFuture(
       s"Indexing",
-      timed("indexed workspace", reportStatus = true) {
-        thunk().andThen { case _ => onFinally() }
+      Future {
+        timedThunk("indexed workspace", onlyIf = true) {
+          try thunk()
+          finally {
+            onFinally()
+          }
+        }
       }
     )
     tracked.foreach { _ =>
@@ -1725,7 +1727,7 @@ class MetalsLanguageServer(
     scribe.info(s"memory: $footprint")
   }
 
-  def indexWorkspace(i: ImportedBuild): Future[Unit] = {
+  def indexWorkspace(i: ImportedBuild): Unit = {
     timedThunk("updated build targets", config.statistics.isIndex) {
       buildTargets.reset()
       interactiveSemanticdbs.reset()
@@ -1785,6 +1787,7 @@ class MetalsLanguageServer(
     val targets = buildTargets.all.map(_.id).toSeq
     buildTargetClasses
       .rebuildIndex(targets)
+      .foreach(_ => languageClient.refreshModel())
   }
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
@@ -2015,6 +2018,12 @@ class MetalsLanguageServer(
     documentSymbolProvider
       .documentSymbols(params.getTextDocument.getUri.toAbsolutePath)
   }
+
+  def onLatestCycleCompleted(): Future[Unit] =
+    for {
+      _ <- compilations.onLatestCompleted()
+      _ <- buildTargetClasses.rebuildIndex.onLatestCompleted()
+    } yield ()
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
     OnDemandSymbolIndex(onError = {

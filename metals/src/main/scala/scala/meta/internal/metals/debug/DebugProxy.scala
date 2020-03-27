@@ -152,7 +152,7 @@ private[debug] object DebugProxy {
       endpoint: RemoteEndpoint,
       name: String
   ): RemoteEndpoint = {
-    val trace = GlobalTrace.setup(name)
+    val trace = GlobalTrace.setupTracePrinter(name)
     if (trace == null) endpoint
     else new EndpointLogger(endpoint, trace)
   }

@@ -8,6 +8,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 import scala.meta.internal.async.ConcurrentQueue
+import MetalsEnrichments._
 
 /**
  * Helper to batch multiple asynchronous requests and ensure only one request is active at a time.
@@ -36,6 +37,7 @@ final class BatchedFunction[A, B](
     val promise = Promise[B]()
     queue.add(Request(arguments, promise))
     runAcquire()
+    latestPromise.set(promise)
     promise.future
   }
 
@@ -51,11 +53,19 @@ final class BatchedFunction[A, B](
   def currentFuture(): Future[B] = {
     current.get().future
   }
+
+  def onLatestCompleted(): Future[Unit] = {
+    latestPromise.get.future.ignoreValue
+  }
+
   private val current = new AtomicReference(
     CancelableFuture[B](
       Future.failed(new NoSuchElementException("BatchedFunction")),
       Cancelable.empty
     )
+  )
+  private val latestPromise = new AtomicReference(
+    Promise.failed[B](new NoSuchElementException("BatchedFunction"))
   )
 
   private val queue = new ConcurrentLinkedQueue[Request]()

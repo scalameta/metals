@@ -112,6 +112,8 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
   }
 
   test("run-unresolved-params") {
+    cleanCompileCache("a")
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -127,7 +129,8 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |}
            |""".stripMargin
       )
-      _ <- server.indexingDone()
+      _ = Thread.sleep(2000)
+      _ <- server.server.onLatestCycleCompleted()
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedMainClassParams(
           "a.Main",
@@ -144,6 +147,8 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
   }
 
   test("test-unresolved-params") {
+    cleanCompileCache("a")
+    cleanWorkspace()
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -159,7 +164,7 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |}
            |""".stripMargin
       )
-      _ <- server.indexingDone()
+      _ <- server.server.onLatestCycleCompleted()
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedTestClassParams(
           "a.Foo"
