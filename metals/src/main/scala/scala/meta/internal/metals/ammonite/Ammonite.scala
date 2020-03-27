@@ -79,6 +79,12 @@ final class Ammonite(
     }
   }
 
+  def loaded(path: AbsolutePath): Boolean =
+    path.isAmmoniteScript && {
+      val uri = path.toNIO.toUri.toASCIIString
+      lastImportedBuild0.targetUris.contains(uri)
+    }
+
   private def connectToNewBuildServer(
       build: BuildServerConnection
   ): Future[BuildChange] = {
@@ -159,6 +165,28 @@ final class Ammonite(
     }
   }
 
+  def maybeImport(path: AbsolutePath): Unit =
+    if (path.isAmmoniteScript && !loaded(path))
+      languageClient
+        .showMessageRequest(Messages.ImportAmmoniteScript.params())
+        .asScala
+        .onComplete {
+          case Failure(e) => scribe.warn("Error requesting Ammonite import", e)
+          case Success(resp) =>
+            resp.getTitle match {
+              case Messages.ImportAmmoniteScript.doImport =>
+                start(Some(path)).onComplete {
+                  case Failure(e) =>
+                    languageClient.showMessage(
+                      Messages.ImportAmmoniteScript.ImportFailed(path.toString)
+                    )
+                    scribe.warn(s"Error importing Ammonite script $path", e)
+                  case Success(_) =>
+                }
+              case _ =>
+            }
+        }
+
   def start(doc: Option[AbsolutePath] = None): Future[Unit] = {
 
     disconnectOldBuildServer().onComplete {
@@ -168,7 +196,7 @@ final class Ammonite(
     }
 
     // TODO Look at buffers.open rather than focusedDocument?
-    val commandScriptOpt = focusedDocument() match {
+    val commandScriptOpt = doc.orElse(focusedDocument()) match {
       case None =>
         val msg = "No Ammonite script is opened"
         scribe.error(msg)

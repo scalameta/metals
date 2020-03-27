@@ -765,6 +765,8 @@ class MetalsLanguageServer(
         ()
       }
     } else {
+      if (path.isAmmoniteScript)
+        ammonite.maybeImport(path)
       val loadFuture = compilers.load(List(path))
       val compileFuture =
         compilations.compileFile(path)

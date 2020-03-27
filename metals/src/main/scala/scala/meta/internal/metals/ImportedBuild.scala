@@ -35,6 +35,11 @@ case class ImportedBuild(
       updatedDependencySources
     )
   }
+
+  lazy val targetUris: Set[String] =
+    workspaceBuildTargets.getTargets.asScala
+      .map(_.getId.getUri)
+      .toSet
 }
 
 object ImportedBuild {

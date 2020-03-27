@@ -479,4 +479,23 @@ object Messages {
         "Build target can be specified with 'buildTarget' debug configuration"
     }
   }
+
+  object ImportAmmoniteScript {
+    val doImport: String = "Import"
+    val dismiss: String = "Dismiss"
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams(
+        List(doImport, dismiss)
+          .map(new MessageActionItem(_))
+          .asJava
+      )
+      params.setMessage("Ammonite script detected.")
+      params.setType(MessageType.Info)
+      params
+    }
+    def ImportFailed(script: String) = new MessageParams(
+      MessageType.Error,
+      s"Error importing $script. See the logs for more details."
+    )
+  }
 }

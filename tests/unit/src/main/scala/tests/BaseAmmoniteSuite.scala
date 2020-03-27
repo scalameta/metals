@@ -4,11 +4,13 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
+import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 import scala.concurrent.Future
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 
 abstract class BaseAmmoniteSuite(scalaVersion: String)
@@ -16,6 +18,16 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
 
   override def munitIgnore: Boolean =
     !isValidScalaVersionForEnv(scalaVersion)
+
+  override def newServer(workspaceName: String): Unit = {
+    super.newServer(workspaceName)
+    server.client.showMessageRequestHandler = { params =>
+      if (params == Messages.ImportAmmoniteScript.params())
+        Some(new MessageActionItem(Messages.ImportAmmoniteScript.dismiss))
+      else
+        None
+    }
+  }
 
   test("simple script") {
     // single script with import $ivy-s
