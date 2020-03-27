@@ -383,6 +383,22 @@ class Messages(icons: Icons) {
     }
   }
 
+  object UnsupportedScalaVersion {
+    def message(
+        usingNow: Iterable[String],
+        shouldBeUsing: Iterable[String]
+    ): String = {
+      val using =
+        if (usingNow.size == 1)
+          s"a Scala version ${usingNow.head}"
+        else usingNow.toSeq.sorted.mkString("Scala versions ", ", ", "")
+      val recommended = shouldBeUsing.mkString(" and ")
+      val isAre = if (usingNow.size == 1) "is" else "are"
+      s"You are using $using, which $isAre not supported in this version of Metals. " +
+        s"Please upgrade to Scala $recommended."
+    }
+  }
+
   object NewScalaFile {
     def selectTheKindOfFileMessage = "Select the kind of file to create"
     def enterNameMessage(kind: String): String =
