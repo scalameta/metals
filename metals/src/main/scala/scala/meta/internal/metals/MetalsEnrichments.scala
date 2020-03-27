@@ -436,6 +436,32 @@ object MetalsEnrichments
       }
       new l.Position(lineCount, index - lineStartIdx)
     }
+
+    def replaceAllBetween(start: String, end: String)(
+        replacement: String
+    ): String =
+      if (start.isEmpty || end.isEmpty)
+        value
+      else {
+        val startIdx = value.indexOf(start)
+        if (startIdx < 0)
+          value
+        else {
+          val endIdx = value.indexOf(end, startIdx + start.length)
+          if (endIdx < 0)
+            value
+          else {
+            val b = new java.lang.StringBuilder
+            b.append(value, 0, startIdx)
+            b.append(replacement)
+            b.append(value, endIdx + end.length, value.length)
+            b.toString
+          }
+        }
+      }
+
+    def lineAtIndex(index: Int): Int =
+      indexToLspPosition(index).getLine
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
