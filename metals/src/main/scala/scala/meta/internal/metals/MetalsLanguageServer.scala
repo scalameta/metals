@@ -59,6 +59,7 @@ import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext
 
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
@@ -1551,26 +1552,6 @@ class MetalsLanguageServer(
         value.shutdown()
     }
   }
-  private def importedBuild(
-      build: BuildServerConnection
-  ): Future[ImportedBuild] =
-    for {
-      workspaceBuildTargets <- build.workspaceBuildTargets()
-      ids = workspaceBuildTargets.getTargets.map(_.getId)
-      scalacOptions <- build
-        .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
-      sources <- build
-        .buildTargetSources(new b.SourcesParams(ids))
-      dependencySources <- build
-        .buildTargetDependencySources(new b.DependencySourcesParams(ids))
-    } yield {
-      ImportedBuild(
-        workspaceBuildTargets,
-        scalacOptions,
-        sources,
-        dependencySources
-      )
-    }
 
   private def connectToNewBuildServer(
       build: BuildServerConnection
@@ -1580,14 +1561,14 @@ class MetalsLanguageServer(
     compilers.cancel()
     buildServer = Some(build)
     val importedBuild0 = timed("imported build") {
-      importedBuild(build)
+      MetalsLanguageServer.importedBuild(build)
     }
     for {
       i <- statusBar.trackFuture("Importing build", importedBuild0)
-      _ <- profiledIndexWorkspace(
-        () => indexWorkspace(i, () => doctor.check(build.name, build.version)),
-        () => indexingPromise.trySuccess(())
-      )
+      _ = {
+        lastImportedBuild = i
+      }
+      _ <- profiledIndexWorkspace(() => doctor.check(build.name, build.version))
       _ = checkRunningBloopVersion(build.version)
     } yield {
       BuildChange.Reconnected
@@ -1689,17 +1670,14 @@ class MetalsLanguageServer(
     }
   }
 
-  def profiledIndexWorkspace(
-      thunk: () => Unit,
-      onFinally: () => Unit
-  ): Future[Unit] = {
+  private def profiledIndexWorkspace(check: () => Unit): Future[Unit] = {
     val tracked = statusBar.trackFuture(
       s"Indexing",
       Future {
         timedThunk("indexed workspace", onlyIf = true) {
-          try thunk()
+          try indexWorkspace(check)
           finally {
-            onFinally()
+            indexingPromise.trySuccess(())
           }
         }
       }
@@ -1739,7 +1717,10 @@ class MetalsLanguageServer(
     scribe.info(s"memory: $footprint")
   }
 
-  private def indexWorkspace(i: ImportedBuild, check: () => Unit): Unit = {
+  private var lastImportedBuild = ImportedBuild.empty
+
+  private def indexWorkspace(check: () => Unit): Unit = {
+    val i = lastImportedBuild
     timedThunk(
       "updated build targets",
       clientConfig.initialConfig.statistics.isIndex
@@ -2050,4 +2031,28 @@ class MetalsLanguageServer(
     })
   }
 
+}
+
+object MetalsLanguageServer {
+
+  def importedBuild(
+      build: BuildServerConnection
+  )(implicit ec: ExecutionContext): Future[ImportedBuild] =
+    for {
+      workspaceBuildTargets <- build.workspaceBuildTargets()
+      ids = workspaceBuildTargets.getTargets.map(_.getId)
+      scalacOptions <- build
+        .buildTargetScalacOptions(new b.ScalacOptionsParams(ids))
+      sources <- build
+        .buildTargetSources(new b.SourcesParams(ids))
+      dependencySources <- build
+        .buildTargetDependencySources(new b.DependencySourcesParams(ids))
+    } yield {
+      ImportedBuild(
+        workspaceBuildTargets,
+        scalacOptions,
+        sources,
+        dependencySources
+      )
+    }
 }
