@@ -18,17 +18,32 @@ import org.eclipse.lsp4j.Location
 import scala.meta.internal.metals.BuildTargets
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.concurrent.duration.Duration
+import scala.concurrent.Await
 
 class RemoteLanguageServer(
     workspace: () => AbsolutePath,
-    config: () => UserConfiguration,
+    userConfig: () => UserConfiguration,
+    serverConfig: MetalsServerConfig,
     buffers: Buffers,
     buildTargets: BuildTargets
 )(implicit ec: ExecutionContext) {
+  val timeout: Duration = Duration(serverConfig.remoteTimeout)
   def isEnabledForPath(path: AbsolutePath): Boolean =
-    config().remoteLanguageServer.isDefined &&
+    userConfig().remoteLanguageServer.isDefined &&
       buildTargets.inverseSources(path).isEmpty
 
+  def referencesBlocking(
+      params: l.ReferenceParams
+  ): Option[ReferencesResult] = {
+    // NOTE(olafur): we provide this blocking implementation because it requires
+    // a significant refactoring to make the reference provider and its
+    // dependencies (including rename provider) asynchronous. The remote
+    // language server returns `Future.successful(None)` when it's disabled so
+    // this isn't even blocking for normal usage of Metals.
+    Await.result(references(params), timeout)
+  }
   def references(
       params: l.ReferenceParams
   ): Future[Option[ReferencesResult]] = blockingRequest { url =>
@@ -54,7 +69,7 @@ class RemoteLanguageServer(
   }
 
   private def blockingRequest[T](fn: String => Option[T]): Future[Option[T]] = {
-    config().remoteLanguageServer match {
+    userConfig().remoteLanguageServer match {
       case Some(url) => Future(concurrent.blocking(fn(url)))
       case None => Future.successful(None)
     }

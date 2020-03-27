@@ -70,21 +70,21 @@ final class DefinitionProvider(
       case _ =>
         DefinitionResult.empty
     }
-    val fromCompiler =
-      if (fromSnapshot.locations.isEmpty()) {
-        if (remote.isEnabledForPath(path)) {
-          remote.definition(params).map(_.getOrElse(fromSnapshot))
-        } else {
-          compilers().definition(params, token)
-        }
+    val fromIndex =
+      if (fromSnapshot.isEmpty && remote.isEnabledForPath(path)) {
+        remote.definition(params).map(_.getOrElse(fromSnapshot))
       } else {
         Future.successful(fromSnapshot)
       }
-    fromCompiler.map { result =>
-      if (result.locations.isEmpty() && fromSemanticdb.isEmpty) {
-        warnings.noSemanticdb(path)
+    fromIndex.flatMap { result =>
+      if (result.isEmpty) {
+        compilers().definition(params, token)
+      } else {
+        if (result.isEmpty && fromSemanticdb.isEmpty) {
+          warnings.noSemanticdb(path)
+        }
+        Future.successful(result)
       }
-      result
     }
   }
 

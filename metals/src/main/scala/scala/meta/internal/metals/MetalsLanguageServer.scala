@@ -125,6 +125,7 @@ class MetalsLanguageServer(
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
+    config,
     buffers,
     buildTargets
   )
