@@ -118,13 +118,18 @@ class MetalsLanguageServer(
   private val symbolDocs = new Docstrings(definitionIndex)
   var buildServer: Option[BuildServerConnection] =
     Option.empty[BuildServerConnection]
+  private def buildServerOf(
+      target: b.BuildTargetIdentifier
+  ): Option[BuildServerConnection] =
+    if (Ammonite.isAmmBuildTarget(target)) ammonite.buildServer
+    else buildServer
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
   private val buildTargetClasses =
-    new BuildTargetClasses(_ => buildServer, buildTargets)
+    new BuildTargetClasses(buildServerOf, buildTargets)
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
@@ -136,7 +141,7 @@ class MetalsLanguageServer(
     buildTargets,
     buildTargetClasses,
     () => workspace,
-    _ => buildServer,
+    buildServerOf,
     languageClient,
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets)
