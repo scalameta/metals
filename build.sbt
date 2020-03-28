@@ -216,7 +216,7 @@ lazy val mtags = project
       "org.jsoup" % "jsoup" % "1.13.1", // for extracting HTML from javadocs
       "org.lz4" % "lz4-java" % "1.7.1", // for streaming hashing when indexing classpaths
       "com.lihaoyi" %% "geny" % genyVersion.value,
-      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
+      "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",
       "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full
     ),
     libraryDependencies ++= {
@@ -258,7 +258,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.0.30.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.0.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "6.2.4",
+      "org.flywaydb" % "flyway-core" % "6.3.2",
       "com.h2database" % "h2" % "1.4.200",
       // for starting `sbt bloopInstall` process
       "com.zaxxer" % "nuprocess" % "1.2.6",
@@ -521,7 +521,7 @@ lazy val docs = project
     mdoc := run.in(Compile).evaluated,
     munitRepository := Some("scalameta/metals"),
     libraryDependencies ++= List(
-      "org.jsoup" % "jsoup" % "1.12.2"
+      "org.jsoup" % "jsoup" % "1.13.1"
     )
   )
   .dependsOn(metals)
