@@ -1922,10 +1922,11 @@ class MetalsLanguageServer(
       } yield occ) match {
         case Some(occ) =>
           if (occ.role.isDefinition && !definitionOnly) {
-            val referenceContext = new ReferenceContext(false)
-            val refParams = new ReferenceParams(referenceContext)
-            refParams.setTextDocument(positionParams.getTextDocument())
-            refParams.setPosition(positionParams.getPosition())
+            val refParams = new ReferenceParams(
+              positionParams.getTextDocument(),
+              positionParams.getPosition(),
+              new ReferenceContext(false)
+            )
             val result = referencesResult(refParams)
             if (result.locations.isEmpty) {
               // Fallback again to the original behavior that returns

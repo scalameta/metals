@@ -350,9 +350,13 @@ final class TestingServer(
     for {
       (ref, expectedLocations) <- inverse.toSeq.sortBy(_._1.symbol)
     } {
-      val params = new ReferenceParams(new ReferenceContext(true))
-      params.setPosition(ref.location.getRange.getStart)
-      params.setTextDocument(new TextDocumentIdentifier(ref.location.getUri))
+      val params = new ReferenceParams(
+        new TextDocumentIdentifier(
+          ref.location.getUri
+        ),
+        ref.location.getRange.getStart,
+        new ReferenceContext(true)
+      )
       val obtainedLocations = server.referencesResult(params)
       references ++= obtainedLocations.locations.map(l =>
         newRef(obtainedLocations.symbol, l)
@@ -739,8 +743,12 @@ final class TestingServer(
       case (text, textId, start) =>
         start.setLine(start.getLine() + 1) // + newline
         start.setCharacter(autoIndent.size)
-        val params = new DocumentOnTypeFormattingParams(start, "\n")
-        params.setTextDocument(textId)
+        val params = new DocumentOnTypeFormattingParams(
+          textId,
+          new FormattingOptions,
+          start,
+          "\n"
+        )
         (text, params)
     }
   }
@@ -976,9 +984,11 @@ final class TestingServer(
   ): Future[List[Location]] = {
     for {
       (_, params) <- offsetParams(filename, query, workspace)
-      refParams = new ReferenceParams(new ReferenceContext(true))
-      _ = refParams.setPosition(params.getPosition())
-      _ = refParams.setTextDocument(params.getTextDocument())
+      refParams = new ReferenceParams(
+        params.getTextDocument(),
+        params.getPosition(),
+        new ReferenceContext(true)
+      )
       referenceLocations <- server.references(refParams).asScala
     } yield {
       referenceLocations.asScala.toList
@@ -997,11 +1007,13 @@ final class TestingServer(
         s"the string '$substring' is not a substring of text '${input.text}'"
       )
     }
-    val params = new ReferenceParams(new ReferenceContext(true))
-    params.setTextDocument(path.toTextDocumentIdentifier)
     val offset = index + substring.length - 1
     val pos = m.Position.Range(input, offset, offset + 1)
-    params.setPosition(new l.Position(pos.startLine, pos.startColumn))
+    val params = new ReferenceParams(
+      path.toTextDocumentIdentifier,
+      new l.Position(pos.startLine, pos.startColumn),
+      new ReferenceContext(true)
+    )
     server.references(params).asScala.map { r =>
       r.asScala
         .map { l =>

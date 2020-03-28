@@ -168,13 +168,14 @@ class NewFilesProvider(
       path.touch()
       path
     }
-    result.onFailure {
-      case NonFatal(e) =>
+    result.failed.foreach {
+      case NonFatal(e) => {
         scribe.error("Cannot create file", e)
         client.showMessage(
           MessageType.Error,
           s"Cannot create file:\n ${e.toString()}"
         )
+      }
     }
     result
   }

@@ -11,7 +11,7 @@ case class Graph(
 )
 object Graph {
   def fromSeq(graph: Seq[Seq[Int]]): Graph = {
-    Graph(Value.Str(""), _.toInt, _.toString, graph.map(_.toArray).toArray)
+    Graph(ujson.Str(""), _.toInt, _.toString, graph.map(_.toArray).toArray)
   }
   def fromProjects(projects: Seq[C.Project]): Graph = {
     val edges = new Array[Array[Int]](projects.length)
@@ -21,7 +21,7 @@ object Graph {
       case (project, i) =>
         edges(i) = project.dependencies.iterator.map(index).toArray
     }
-    Graph(Value.Str(""), index.apply _, rindex.apply _, edges)
+    Graph(ujson.Str(""), index.apply _, rindex.apply _, edges)
   }
   def fromTargets(targets: IndexedSeq[PantsTarget]): Graph = {
     val edges = new Array[Array[Int]](targets.length)
@@ -31,7 +31,7 @@ object Graph {
       case (project, i) =>
         edges(i) = project.dependencies.iterator.map(index).toArray
     }
-    Graph(Value.Str(""), index.apply _, rindex.apply _, edges)
+    Graph(ujson.Str(""), index.apply _, rindex.apply _, edges)
   }
   def fromExport(export: Value): Graph = {
     val targets = export.obj("targets").obj
