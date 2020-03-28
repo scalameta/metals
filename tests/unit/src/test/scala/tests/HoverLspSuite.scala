@@ -4,7 +4,7 @@ import scala.meta.internal.metals.Directories
 
 class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
 
-  test("basic") {
+  test("basic".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         """/metals.json
@@ -22,7 +22,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
     } yield ()
   }
 
-  test("basic-rambo") {
+  test("basic-rambo".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         """|/a/src/main/scala/a/Main.scala
@@ -43,7 +43,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
     } yield ()
   }
 
-  test("docstrings") {
+  test("docstrings".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         """/metals.json
@@ -75,7 +75,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
     } yield ()
   }
 
-  test("update-docstrings") {
+  test("update-docstrings".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         """/metals.json
@@ -123,7 +123,7 @@ class HoverLspSuite extends BaseLspSuite("hover") with TestHovers {
     } yield ()
   }
 
-  test("dependencies") {
+  test("dependencies".tag(FlakyWindows)) {
     for {
       _ <- server.initialize(
         """/metals.json
