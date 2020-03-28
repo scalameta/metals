@@ -1,11 +1,8 @@
 package tests
 
-import munit.ScalaCheckSuite
 import scala.meta.internal.metals.NewFileTemplate
-import org.scalacheck.Gen
-import org.scalacheck.Prop.forAll
 
-class NewFileTemplateSuite extends BaseSuite with ScalaCheckSuite {
+class NewFileTemplateSuite extends BaseSuite {
 
   test("cursor-marker-errors") {
     intercept[IllegalArgumentException] {
@@ -16,14 +13,14 @@ class NewFileTemplateSuite extends BaseSuite with ScalaCheckSuite {
     }
   }
 
-  property("cursor-marker-position") {
+  test("cursor-marker-position") {
     val template =
       s"""|package a
           |
           |case class Foo()
           |""".stripMargin
-    val cursorOffsetGen = Gen.chooseNum(0, template.length)
-    forAll(cursorOffsetGen) { cursorOffset =>
+    val cursorOffsets = 0.to(template.length)
+    cursorOffsets.foreach { cursorOffset =>
       val templateWithCursor = template.patch(cursorOffset, "@@", 0)
       val newFileTemplate = NewFileTemplate(templateWithCursor)
       assertEquals(newFileTemplate.cursorPosition.start, cursorOffset)
