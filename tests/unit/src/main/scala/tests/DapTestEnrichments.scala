@@ -18,8 +18,8 @@ object DapTestEnrichments {
   implicit class DapXtensionPosition(position: Position) {
     def toBreakpoint: SourceBreakpoint = {
       val breakpoint = new SourceBreakpoint
-      breakpoint.setLine(position.startLine.toLong + 1) // need to start at 1
-      breakpoint.setColumn(position.startColumn.toLong)
+      breakpoint.setLine(position.startLine + 1) // need to start at 1
+      breakpoint.setColumn(position.startColumn)
       breakpoint
     }
   }

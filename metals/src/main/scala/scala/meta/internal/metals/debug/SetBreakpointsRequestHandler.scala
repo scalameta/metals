@@ -82,7 +82,9 @@ private[debug] final class SetBreakpointsRequestHandler(
     val source = DebugProtocol.copy(request.getSource)
     source.setPath(s"dap-fqcn:$fqcn")
 
-    val lines = breakpoints.map(_.getLine).distinct
+    val lines = breakpoints
+      .map(_.getLine: Integer)
+      .distinct
 
     val partition = new SetBreakpointsArguments
     partition.setBreakpoints(breakpoints)

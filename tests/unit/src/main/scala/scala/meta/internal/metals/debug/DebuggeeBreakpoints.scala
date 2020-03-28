@@ -3,7 +3,7 @@ import org.eclipse.lsp4j.debug.Breakpoint
 import scala.collection.concurrent.TrieMap
 
 final class DebuggeeBreakpoints {
-  private val breakpoints = TrieMap.empty[Long, Breakpoint]
+  private val breakpoints = TrieMap.empty[Int, Breakpoint]
 
   def register(breakpoint: Breakpoint): Unit = {
     breakpoints.put(breakpoint.getId, breakpoint)

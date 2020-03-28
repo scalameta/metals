@@ -76,7 +76,7 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
     server.setBreakpoints(args).asScala
   }
 
-  def step(threadId: Long, nextStep: DebugStep): Future[Unit] = {
+  def step(threadId: Int, nextStep: DebugStep): Future[Unit] = {
     nextStep match {
       case DebugStep.Continue =>
         val args = new ContinueArguments()
@@ -100,7 +100,7 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
     }
   }
 
-  def stackFrame(threadId: Long): Future[StackFrame] = {
+  def stackFrame(threadId: Int): Future[StackFrame] = {
     for {
       frame <- stackTrace(threadId).map(_.getStackFrames.head)
       scopes <- scopes(frame.getId).map(_.getScopes)
@@ -120,20 +120,20 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
 
   }
 
-  def stackTrace(thread: Long): Future[StackTraceResponse] = {
+  def stackTrace(thread: Int): Future[StackTraceResponse] = {
     val args = new StackTraceArguments
     args.setThreadId(thread)
-    args.setLevels(1L)
+    args.setLevels(1)
     server.stackTrace(args).asScala
   }
 
-  def scopes(frame: Long): Future[ScopesResponse] = {
+  def scopes(frame: Int): Future[ScopesResponse] = {
     val args = new ScopesArguments
     args.setFrameId(frame)
     server.scopes(args).asScala
   }
 
-  def variables(id: Long): Future[VariablesResponse] = {
+  def variables(id: Int): Future[VariablesResponse] = {
     val args = new VariablesArguments
     args.setVariablesReference(id)
     server
