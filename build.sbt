@@ -173,7 +173,7 @@ lazy val V = new {
   def lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.9.0"
   def dap4j =
     "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % "0.8.1"
-  val coursier = "2.0.0-RC5-6"
+  val coursier = "2.0.0-RC6-11"
 }
 
 skip.in(publish) := true
@@ -286,7 +286,7 @@ lazy val metals = project
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
-      "io.get-coursier" % "interface" % "0.0.18",
+      "io.get-coursier" % "interface" % "0.0.21",
       // for logging
       "com.outr" %% "scribe" % "2.7.12",
       "com.outr" %% "scribe-slf4j" % "2.7.12", // needed for flyway database migrations
