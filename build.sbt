@@ -47,7 +47,7 @@ inThisBuild(
         "ckipp01",
         "Chris Kipp",
         "ckipp@pm.me",
-        url("https://chronica.xyz")
+        url("https://chris-kipp.io")
       ),
       Developer(
         "gabro",
