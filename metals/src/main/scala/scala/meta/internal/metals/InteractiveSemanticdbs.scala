@@ -16,7 +16,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.tokenizers.PlatformTokenizerCache
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
@@ -145,7 +144,6 @@ final class InteractiveSemanticdbs(
         .semanticdbTextDocument(uri, text)
         .get(config.compilers.timeoutDelay, config.compilers.timeoutUnit)
       val textDocument = TextDocument.parseFrom(bytes)
-      PlatformTokenizerCache.megaCache.clear() // :facepalm:
       textDocument
     }
   }

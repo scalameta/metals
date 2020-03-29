@@ -3,18 +3,20 @@ package scala.meta.internal.worksheets
 import scala.meta.internal.metals.MetalsLanguageClient
 import mdoc.interfaces.EvaluatedWorksheet
 import scala.meta.io.AbsolutePath
-import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
+import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.MarkupContent
+import org.eclipse.lsp4j.MarkupKind
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import org.eclipse.lsp4j.MarkedString
+import org.eclipse.lsp4j.WorkspaceEdit
 import scala.meta.internal.metals.MetalsEnrichments._
 import mdoc.interfaces.EvaluatedWorksheetStatement
 import scala.meta.inputs.Input
-import org.eclipse.lsp4j.{Position, Range}
 import scala.meta.internal.metals.Buffers
-import org.eclipse.lsp4j.Hover
 import scala.meta.internal.metals.TokenEditDistance
+import scala.meta.internal.pc.HoverMarkup
 import WorkspaceEditWorksheetPublisher._
 
 class WorkspaceEditWorksheetPublisher(buffers: Buffers)
@@ -44,11 +46,10 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
         .toPosition(position)
       message <- getHoverMessage(snapshotPosition, messages.hovers)
     } yield new Hover(
-      List(
-        JEither.forRight[String, MarkedString](
-          new MarkedString("scala", message)
-        )
-      ).asJava
+      new MarkupContent(
+        MarkupKind.MARKDOWN,
+        HoverMarkup(message)
+      )
     )
   }
 

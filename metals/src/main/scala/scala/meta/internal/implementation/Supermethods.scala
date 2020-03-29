@@ -50,7 +50,7 @@ class Supermethods(
       params <- parseJsonParams(commandParams)
       methodsHierarchy <- getSuperMethodHierarchySymbols(params)
       if methodsHierarchy.nonEmpty
-    } yield execute(methodsHierarchy)).getOrElse(Future.successful())
+    } yield execute(methodsHierarchy)).getOrElse(Future.successful(()))
   }
 
   def getGoToSuperMethodLocation(

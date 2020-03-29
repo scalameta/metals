@@ -5,7 +5,6 @@ import scala.meta.inputs.Input
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
-import scala.meta.internal.tokenizers.PlatformTokenizerCache
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.transversers.SimpleTraverser
 
@@ -25,8 +24,6 @@ class ScalaMtags(val input: Input.VirtualFile)
       case Parsed.Success(tree) => apply(tree)
       case _ => // do nothing in case of parse error
     }
-    // :facepalm: https://github.com/scalameta/scalameta/issues/1068
-    PlatformTokenizerCache.megaCache.clear()
   }
   def currentTree: Tree = myCurrentTree
   private var myCurrentTree: Tree = q"a"
