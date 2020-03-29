@@ -8,7 +8,6 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
   test("deprecated-scala-212") {
     cleanWorkspace()
     val using = V.deprecatedScalaVersions.filter(_.startsWith("2.12")).head
-    val recommended = V.scala212
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -25,8 +24,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         Messages.DeprecatedScalaVersion.message(
-          Set(using),
-          Set(recommended)
+          Set(using)
         )
       )
     } yield ()
@@ -35,7 +33,6 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
   test("deprecated-scala-211") {
     cleanWorkspace()
     val using = V.scala211
-    val recommended = V.scala213
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -51,10 +48,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.DeprecatedScalaVersion.message(
-          Set(using),
-          Set(recommended)
-        )
+        Messages.DeprecatedScalaVersion.message(Set(using))
       )
     } yield ()
   }
@@ -62,7 +56,6 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
   test("unsupported-scala-212") {
     cleanWorkspace()
     val using = "2.12.4"
-    val recommended = V.scala212
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -78,10 +71,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.UnsupportedScalaVersion.message(
-          Set(using),
-          Set(recommended)
-        )
+        Messages.UnsupportedScalaVersion.message(Set(using))
       )
     } yield ()
   }
@@ -89,7 +79,6 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
   test("deprecated-scala-213") {
     cleanWorkspace()
     val using = V.deprecatedScalaVersions.filter(_.startsWith("2.13")).head
-    val recommended = V.scala213
     for {
       _ <- server.initialize(
         s"""/metals.json
@@ -105,10 +94,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.DeprecatedScalaVersion.message(
-          Set(using),
-          Set(recommended)
-        )
+        Messages.DeprecatedScalaVersion.message(Set(using))
       )
     } yield ()
   }

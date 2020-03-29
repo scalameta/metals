@@ -35,7 +35,7 @@ object ScalaVersions {
 
   def recommendedVersion(scalaVersion: String): String = {
     latestBinaryVersionFor(scalaVersion).getOrElse {
-      BuildInfo.scala213
+      BuildInfo.scala212
     }
   }
 

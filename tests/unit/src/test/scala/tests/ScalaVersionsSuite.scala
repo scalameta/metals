@@ -48,7 +48,7 @@ class ScalaVersionsSuite extends BaseSuite {
   test("recommended-211") {
     assert(
       ScalaVersions.recommendedVersion("2.11.4") ==
-        V.scala213
+        V.scala212
     )
   }
 

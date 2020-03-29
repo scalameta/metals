@@ -239,8 +239,7 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
         UnsupportedScalaVersion.message(
-          Seq("2.12.4", "2.12.3", "2.11.8", "2.10.7"),
-          Seq(V.scala212, V.scala213)
+          Seq("2.12.4", "2.12.3", "2.11.8", "2.10.7")
         )
       )
       sourceJars <- server.buildTargetSourceJars("a")

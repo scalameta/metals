@@ -182,7 +182,7 @@ final class Doctor(
 
     def message(
         filter: String => Boolean,
-        apply: (Iterable[String], Iterable[String]) => String
+        apply: Iterable[String] => String
     ): Option[String] = {
       val versions = (for {
         target <- allTargets.toIterator
@@ -190,13 +190,7 @@ final class Doctor(
       } yield target.scalaVersion).toSet
 
       if (versions.nonEmpty) {
-        val recommendedVersions = versions.map(recommendedVersion)
-        Some(
-          apply(
-            versions,
-            recommendedVersions
-          )
-        )
+        Some(apply(versions))
       } else {
         None
       }
