@@ -55,10 +55,11 @@ object SharedCommand {
               exception.printStackTrace(export.app.out)
           }
           1
-        case Success(exportedProjectsCount) =>
+        case Success(exportRestult) =>
           IntelliJ.writeBsp(export.project, export.export.coursierBinary)
-          exportedProjectsCount.foreach { count =>
-            val targets = LogMessages.pluralName("Pants target", count)
+          exportRestult.foreach { result =>
+            val targets =
+              LogMessages.pluralName("Pants target", result.exportedTargets)
             export.app.info(
               s"exported ${targets} to project '${export.project.name}' in $timer"
             )
@@ -70,11 +71,16 @@ object SharedCommand {
             isStrict = false
           )
           symlinkProjectViewRoots(export.project)
-          val updatedZipkin = ZipkinUrls.updateZipkinServerUrl()
-          if (updatedZipkin) {
-            restartBloopServer()
-          } else {
-            restartOldBloopServer()
+          for {
+            result <- exportRestult
+          } {
+            val isUpdatedBloopSettings =
+              BloopGlobalSettings.update(result.pantsExport)
+            if (isUpdatedBloopSettings) {
+              restartBloopServer()
+            } else {
+              restartOldBloopServer()
+            }
           }
           if (export.open.isEmpty) {
             OpenCommand.onEmpty(export.project, export.app)

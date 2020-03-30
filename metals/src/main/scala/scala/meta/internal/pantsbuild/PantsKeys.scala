@@ -15,4 +15,10 @@ object PantsKeys {
   val scalaVersion = "scala_version"
   val roots = "roots"
   val sourceRoot = "source_root"
+  val preferredJvmDistributions = "preferred_jvm_distributions"
+  val platform = "platform"
+  val jvmPlatforms = "jvm_platforms"
+  val defaultPlatform = "default_platform"
+  val java8 = "java8"
+  val strict = "strict"
 }
