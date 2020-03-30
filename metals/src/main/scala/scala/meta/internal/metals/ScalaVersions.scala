@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import scala.meta.internal.mtags
+import scala.meta.internal.semver.SemVer
 
 object ScalaVersions {
 
@@ -22,9 +23,33 @@ object ScalaVersions {
     }
 
   val isLatestScalaVersion: Set[String] =
-    Set(BuildInfo.scala213, BuildInfo.scala212, BuildInfo.scala211)
+    Set(BuildInfo.scala212, BuildInfo.scala213)
 
-  def recommendedVersion(scalaVersion: String): String = BuildInfo.scala212
+  def latestBinaryVersionFor(scalaVersion: String): Option[String] = {
+    val binaryVersion = scalaBinaryVersionFromFullVersion(scalaVersion)
+    isLatestScalaVersion
+      .find(latest =>
+        binaryVersion == scalaBinaryVersionFromFullVersion(latest)
+      )
+  }
+
+  def recommendedVersion(scalaVersion: String): String = {
+    latestBinaryVersionFor(scalaVersion).getOrElse {
+      BuildInfo.scala212
+    }
+  }
+
+  def isFutureVersion(scalaVersion: String): Boolean = {
+    latestBinaryVersionFor(scalaVersion)
+      .map(latest =>
+        latest != scalaVersion && SemVer
+          .isCompatibleVersion(latest, scalaVersion)
+      )
+      .getOrElse(
+        isLatestScalaVersion
+          .forall(ver => SemVer.isCompatibleVersion(ver, scalaVersion))
+      )
+  }
 
   def isCurrentScalaCompilerVersion(version: String): Boolean =
     ScalaVersions.dropVendorSuffix(version) == mtags.BuildInfo.scalaCompilerVersion

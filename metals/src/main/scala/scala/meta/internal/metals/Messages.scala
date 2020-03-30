@@ -9,6 +9,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.collection.mutable
 import scala.meta.internal.builds.BuildTool
 import scala.meta.io.AbsolutePath
+import scala.meta.internal.semver.SemVer
 
 /**
  * Constants for requests/dialogues via LSP window/showMessage and window/showMessageRequest.
@@ -366,26 +367,70 @@ class Messages(icons: Icons) {
          |""".stripMargin
   }
 
-  object DeprecatedScalaVersion {
-    def message(
-        usingNow: Iterable[String],
-        shouldBeUsing: Iterable[String]
-    ): String = {
-      val using =
-        if (usingNow.size == 1)
-          s"a legacy Scala version ${usingNow.head}"
-        else usingNow.mkString("legacy Scala versions ", ", ", "")
-      val recommended =
-        if (shouldBeUsing.size == 1) shouldBeUsing.head
-        else shouldBeUsing.mkString(" and ")
-      s"You are using $using, which might not be supported in future versions of Metals. " +
-        s"Please upgrade to Scala $recommended."
-    }
-  }
-
   object NewScalaFile {
     def selectTheKindOfFileMessage = "Select the kind of file to create"
     def enterNameMessage(kind: String): String =
       s"Enter the name for the new $kind"
+
+  }
+
+  private def usingString(usingNow: Iterable[String]): String = {
+    if (usingNow.size == 1)
+      s"Scala version ${usingNow.head}"
+    else
+      usingNow.toSeq
+        .sortWith(SemVer.isCompatibleVersion)
+        .mkString("Scala versions ", ", ", "")
+  }
+
+  private def recommendationString(usingNow: Iterable[String]): String = {
+    val shouldBeUsing = usingNow.map(ScalaVersions.recommendedVersion).toSet
+
+    if (shouldBeUsing.size == 1) s"Scala version ${shouldBeUsing.head}"
+    else
+      shouldBeUsing.toSeq
+        .sortWith(SemVer.isCompatibleVersion)
+        .mkString("Scala versions ", ", ", "")
+  }
+
+  object DeprecatedScalaVersion {
+    def message(
+        usingNow: Iterable[String]
+    ): String = {
+      val using = "legacy " + usingString(usingNow)
+      val recommended = recommendationString(usingNow)
+      s"You are using $using, which might not be supported in future versions of Metals. " +
+        s"Please upgrade to $recommended."
+    }
+  }
+
+  object UnsupportedScalaVersion {
+    def message(
+        usingNow: Iterable[String]
+    ): String = {
+      val using = usingString(usingNow)
+      val recommended = recommendationString(usingNow)
+      val uses211 = usingNow.exists(
+        ScalaVersions.scalaBinaryVersionFromFullVersion(_) == "2.11"
+      )
+      val deprecatedAleternative =
+        if (uses211) s" or alternatively to legacy Scala ${BuildInfo.scala211}"
+        else ""
+      val isAre = if (usingNow.size == 1) "is" else "are"
+      s"You are using $using, which $isAre not supported in this version of Metals. " +
+        s"Please upgrade to $recommended$deprecatedAleternative."
+    }
+  }
+
+  object FutureScalaVersion {
+    def message(
+        usingNow: Iterable[String]
+    ): String = {
+      val using = usingString(usingNow)
+      val recommended = recommendationString(usingNow)
+      val isAre = if (usingNow.size == 1) "is" else "are"
+      s"You are using $using, which $isAre not yet supported in this version of Metals. " +
+        s"Please downgrade to $recommended for the moment until the new Metals release."
+    }
   }
 }

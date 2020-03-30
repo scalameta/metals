@@ -238,7 +238,9 @@ class SbtLspSuite extends BaseImportSuite("sbt-import") {
       _ = assertStatus(_.isInstalled)
       _ = assertNoDiff(
         client.messageRequests.peekLast(),
-        CheckDoctor.multipleMisconfiguredProjects(8)
+        UnsupportedScalaVersion.message(
+          Seq("2.12.4", "2.12.3", "2.11.8", "2.10.7")
+        )
       )
       sourceJars <- server.buildTargetSourceJars("a")
       _ = assert(sourceJars.nonEmpty) // source jars should not be empty

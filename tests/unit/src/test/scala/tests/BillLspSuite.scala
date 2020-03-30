@@ -7,6 +7,7 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.RecursivelyDelete
 
 class BillLspSuite extends BaseLspSuite("bill") {
 
@@ -43,6 +44,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
   }
 
   test("diagnostics") {
+    cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO)
     testRoundtripCompilation()
   }
@@ -86,6 +88,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
   }
 
   test("global") {
+    RecursivelyDelete(globalBsp)
+    cleanWorkspace()
     Bill.installGlobal(globalBsp.toNIO)
     testRoundtripCompilation()
   }
@@ -109,14 +113,14 @@ class BillLspSuite extends BaseLspSuite("bill") {
   }
 
   test("conflict") {
-    cleanDatabase()
+    cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO, "Bill")
     Bill.installWorkspace(workspace.toNIO, "Bob")
     testSelectServerDialogue()
   }
 
   test("mix") {
-    cleanDatabase()
+    cleanWorkspace()
     Bill.installWorkspace(workspace.toNIO, "Bill")
     Bill.installGlobal(globalBsp.toNIO, "Bob")
     testSelectServerDialogue()

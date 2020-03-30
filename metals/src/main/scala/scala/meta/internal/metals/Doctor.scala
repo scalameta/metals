@@ -144,10 +144,17 @@ final class Doctor(
         )) {
         hint().capitalize
       } else if (isSupportedScalaBinaryVersion(scalaVersion)) {
-        s"Upgrade to Scala ${recommendedVersion(scalaVersion)} and " + hint()
+        val recommended = recommendedVersion(scalaVersion)
+        val isRecommenedVersionNewer =
+          SemVer.isCompatibleVersion(scalaVersion, recommended)
+        if (isRecommenedVersionNewer) {
+          s"Upgrade to Scala $recommended and " + hint
+        } else {
+          s"Scala $scalaVersion is not yet supported"
+        }
       } else {
-        s"Code navigation is not supported for this compiler version, upgrade to " +
-          s"Scala ${BuildInfo.scala212} or ${BuildInfo.scala211} and " +
+        s"Code navigation is not supported for this compiler version, change to " +
+          s"Scala ${BuildInfo.scala213} or ${BuildInfo.scala212} and " +
           s"run 'Build import' to enable code navigation."
       }
     } else {
@@ -158,7 +165,7 @@ final class Doctor(
       } else if (!isLatestScalaVersion(scalaVersion)) {
         messages += s"Upgrade to Scala ${recommendedVersion(scalaVersion)} to enjoy the latest compiler improvements."
       }
-      if (!scala.scalac.isSourcerootDeclared) {
+      if (!scala.isSourcerootDeclared) {
         messages += s"Add the compiler option ${workspace.sourcerootOption} to ensure code navigation works."
       }
       messages.toList match {
@@ -171,33 +178,53 @@ final class Doctor(
     }
   }
 
-  def deprecatedVersionWarning: Option[String] = {
-    val deprecatedVersions = (for {
-      target <- allTargets.toIterator
-      if ScalaVersions.isDeprecatedScalaVersion(target.scalaVersion)
-    } yield target.scalaVersion).toSet
-    if (deprecatedVersions.isEmpty) {
-      None
-    } else {
-      val recommendedVersions = deprecatedVersions.map(recommendedVersion)
-      Some(
-        messages.DeprecatedScalaVersion.message(
-          deprecatedVersions,
-          recommendedVersions
-        )
-      )
+  private def problemSummary: Option[String] = {
+
+    def message(
+        filter: String => Boolean,
+        apply: Iterable[String] => String
+    ): Option[String] = {
+      val versions = (for {
+        target <- allTargets.toIterator
+        if filter(target.scalaVersion)
+      } yield target.scalaVersion).toSet
+
+      if (versions.nonEmpty) {
+        Some(apply(versions))
+      } else {
+        None
+      }
     }
+
+    message(
+      ScalaVersions.isFutureVersion,
+      messages.FutureScalaVersion.message
+    ).orElse {
+        message(
+          ver => !ScalaVersions.isSupportedScalaVersion(ver),
+          messages.UnsupportedScalaVersion.message
+        )
+      }
+      .orElse {
+        possiblyMissingSemanticDB
+      }
+      .orElse {
+        message(
+          ScalaVersions.isDeprecatedScalaVersion,
+          messages.DeprecatedScalaVersion.message
+        )
+      }
   }
 
   def allTargets(): List[ScalaTarget] = buildTargets.all.toList
 
-  private def problemSummary: Option[String] = {
+  private def possiblyMissingSemanticDB: Option[String] = {
     val targets = allTargets()
     val isMissingSemanticdb = targets.filter(!_.isSemanticdbEnabled)
     val count = isMissingSemanticdb.length
     val isAllProjects = count == targets.size
     if (isMissingSemanticdb.isEmpty) {
-      deprecatedVersionWarning
+      None
     } else if (isAllProjects) {
       Some(CheckDoctor.allProjectsMisconfigured)
     } else if (count == 1) {
