@@ -106,7 +106,9 @@ object PantsExport {
           targetType = targetType,
           pantsTargetType = pantsTargetType,
           globs = PantsGlobs.fromJson(value),
-          roots = PantsRoots.fromJson(value)
+          roots = PantsRoots.fromJson(value),
+          scalacOptions = asStringList(value, PantsKeys.scalacArgs),
+          javacOptions = asStringList(value, PantsKeys.javacArgs)
         )
     }.toMap
 
@@ -135,5 +137,11 @@ object PantsExport {
       jvmDistribution = jvmDistribution
     )
   }
+
+  private def asStringList(obj: Obj, key: String): List[String] =
+    obj.value.get(key) match {
+      case None => Nil
+      case Some(value) => value.arr.map(_.str).toList
+    }
 
 }
