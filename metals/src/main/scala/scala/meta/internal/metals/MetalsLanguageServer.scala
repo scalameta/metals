@@ -1307,21 +1307,23 @@ class MetalsLanguageServer(
             Future.successful(params)
           case Seq(mainClassParamsParser.Jsonized(params))
               if params.mainClass != null =>
-            Future.fromTry(
-              DebugServer.resolveMainClassParams(
-                params,
-                buildTargetClassesFinder,
-                languageClient.showMessage(MessageType.Warning, _)
-              )
+            DebugServer.resolveMainClassParams(
+              params,
+              buildTargetClassesFinder,
+              compilations,
+              buildTargets,
+              buildTargetClasses,
+              languageClient.showMessage(MessageType.Warning, _)
             )
           case Seq(testClassParamsParser.Jsonized(params))
               if params.testClass != null =>
-            Future.fromTry(
-              DebugServer.resolveTestClassParams(
-                params,
-                buildTargetClassesFinder,
-                languageClient.showMessage(MessageType.Warning, _)
-              )
+            DebugServer.resolveTestClassParams(
+              params,
+              buildTargetClassesFinder,
+              compilations,
+              buildTargets,
+              buildTargetClasses,
+              languageClient.showMessage(MessageType.Warning, _)
             )
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
@@ -2018,12 +2020,6 @@ class MetalsLanguageServer(
     documentSymbolProvider
       .documentSymbols(params.getTextDocument.getUri.toAbsolutePath)
   }
-
-  def onLatestCycleCompleted(): Future[Unit] =
-    for {
-      _ <- compilations.onLatestCompleted()
-      _ <- buildTargetClasses.rebuildIndex.onLatestCompleted()
-    } yield ()
 
   private def newSymbolIndex(): OnDemandSymbolIndex = {
     OnDemandSymbolIndex(onError = {

@@ -25,6 +25,9 @@ import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.BuildTargetClassesFinder
 import java.util.Collections.singletonList
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.BuildTargetNotFoundException
+import scala.meta.internal.metals.Compilations
+import scala.meta.internal.metals.BuildTargetClasses
 
 final class DebugServer(
     val sessionName: String,
@@ -114,63 +117,80 @@ object DebugServer {
   def resolveMainClassParams(
       params: DebugUnresolvedMainClassParams,
       buildTargetClassesFinder: BuildTargetClassesFinder,
+      compilations: Compilations,
+      buildTargets: BuildTargets,
+      buildTargetClasses: BuildTargetClasses,
       showWarningMessage: String => Unit
-  ): Try[b.DebugSessionParams] = {
-    buildTargetClassesFinder
-      .findMainClassAndItsBuildTarget(
-        params.mainClass,
-        Option(params.buildTarget)
-      )
-      .map {
-        case (clazz, target) :: others =>
-          if (others.nonEmpty) {
-            reportOtherBuildTargets(
-              clazz.getClassName(),
-              target,
-              others,
-              "main",
-              showWarningMessage
-            )
-          }
-          clazz.setArguments(Option(params.args).getOrElse(List().asJava))
-          clazz.setJvmOptions(
-            Option(params.jvmOptions).getOrElse(List().asJava)
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    withRebuildRetry(
+      () =>
+        buildTargetClassesFinder
+          .findMainClassAndItsBuildTarget(
+            params.mainClass,
+            Option(params.buildTarget)
+          ),
+      compilations,
+      buildTargets,
+      buildTargetClasses
+    ).map {
+      case (clazz, target) :: others =>
+        if (others.nonEmpty) {
+          reportOtherBuildTargets(
+            clazz.getClassName(),
+            target,
+            others,
+            "main",
+            showWarningMessage
           )
-          new b.DebugSessionParams(
-            singletonList(target.getId()),
-            b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
-            clazz.toJson
-          )
-      }
+        }
+        clazz.setArguments(Option(params.args).getOrElse(List().asJava))
+        clazz.setJvmOptions(
+          Option(params.jvmOptions).getOrElse(List().asJava)
+        )
+        new b.DebugSessionParams(
+          singletonList(target.getId()),
+          b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+          clazz.toJson
+        )
+    }
   }
 
   def resolveTestClassParams(
       params: DebugUnresolvedTestClassParams,
       buildTargetClassesFinder: BuildTargetClassesFinder,
+      compilations: Compilations,
+      buildTargets: BuildTargets,
+      buildTargetClasses: BuildTargetClasses,
       showWarningMessage: String => Unit
-  ): Try[b.DebugSessionParams] = {
-    buildTargetClassesFinder
-      .findTestClassAndItsBuildTarget(
-        params.testClass,
-        Option(params.buildTarget)
-      )
-      .map {
-        case (clazz, target) :: others =>
-          if (others.nonEmpty) {
-            reportOtherBuildTargets(
-              clazz,
-              target,
-              others,
-              "test",
-              showWarningMessage
-            )
-          }
-          new b.DebugSessionParams(
-            singletonList(target.getId()),
-            b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
-            singletonList(clazz).toJson
+  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
+    withRebuildRetry(
+      () => {
+        buildTargetClassesFinder
+          .findTestClassAndItsBuildTarget(
+            params.testClass,
+            Option(params.buildTarget)
           )
-      }
+      },
+      compilations,
+      buildTargets,
+      buildTargetClasses
+    ).map {
+      case (clazz, target) :: others =>
+        if (others.nonEmpty) {
+          reportOtherBuildTargets(
+            clazz,
+            target,
+            others,
+            "test",
+            showWarningMessage
+          )
+        }
+        new b.DebugSessionParams(
+          singletonList(target.getId()),
+          b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
+          singletonList(clazz).toJson
+        )
+    }
   }
 
   private def parseSessionName(
@@ -199,6 +219,23 @@ object DebugServer {
     socket.connect(address, timeout)
 
     socket
+  }
+
+  private def withRebuildRetry[A](
+      f: () => Try[A],
+      compilations: Compilations,
+      buildTargets: BuildTargets,
+      buildTargetClasses: BuildTargetClasses
+  )(implicit ec: ExecutionContext): Future[A] = {
+    Future.fromTry(f()).recoverWith {
+      case _: ClassNotFoundException | _: BuildTargetNotFoundException =>
+        val allTargets = buildTargets.all.toSeq.map(_.info.getId())
+        for {
+          _ <- compilations.compileTargets(allTargets)
+          _ <- buildTargetClasses.rebuildIndex(allTargets)
+          result <- Future.fromTry(f())
+        } yield result
+    }
   }
 
   private def reportOtherBuildTargets(

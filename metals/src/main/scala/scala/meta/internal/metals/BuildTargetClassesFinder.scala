@@ -106,6 +106,6 @@ class BuildTargetNotFoundException(buildTargetName: String)
 class ClassNotFoundInBuildTargetException(
     className: String,
     buildTargetName: String
-) extends Exception(
+) extends ClassNotFoundException(
       s"Class '$className' not found in build target '$buildTargetName'"
     )

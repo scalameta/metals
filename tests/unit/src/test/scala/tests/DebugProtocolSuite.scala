@@ -129,8 +129,6 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ <- server.server.onLatestCycleCompleted()
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedMainClassParams(
           "a.Main",
@@ -164,8 +162,6 @@ class DebugProtocolSuite extends BaseLspSuite("debug-protocol") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
-      _ <- server.server.onLatestCycleCompleted()
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedTestClassParams(
           "a.Foo"
