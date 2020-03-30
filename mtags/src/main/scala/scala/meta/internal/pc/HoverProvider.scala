@@ -170,7 +170,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   ): Option[Hover] = {
     if (tpe == null || tpe.isErroneous || tpe == NoType) None
     else if (symbol == null || symbol == NoSymbol || symbol.isErroneous) None
-    else if (symbol.info.finalResultType.isInstanceOf[ClassInfoType]) None
+    else if (tpe.typeSymbol.isAnonymousClass) None
     else if (symbol.hasPackageFlag || symbol.hasModuleFlag) {
       Some(
         new Hover(

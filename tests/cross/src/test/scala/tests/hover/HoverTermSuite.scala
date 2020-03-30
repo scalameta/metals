@@ -16,6 +16,13 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
+    "app",
+    """|object Main extends <<Ap@@p>>{}
+       |""".stripMargin,
+    "abstract trait App: App".hover
+  )
+
+  check(
     "apply",
     """object a {
       |  <<Li@@st(1)>>.map(x => x.toString)
