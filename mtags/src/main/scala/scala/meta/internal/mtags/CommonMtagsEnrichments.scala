@@ -284,6 +284,10 @@ trait CommonMtagsEnrichments {
       AbsolutePath(path.toNIO.getParent)
     }
 
+    def hasParent: Boolean = {
+      path.toNIO.getParent != null
+    }
+
     def exists: Boolean = {
       Files.exists(path.toNIO)
     }

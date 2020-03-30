@@ -65,6 +65,17 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.{lsp4j => l}
 
+import java.{util => ju}
+import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
+import scala.meta.internal.implementation.Supermethods
+import scala.meta.internal.metals.codelenses.RunTestCodeLens
+import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
+import scala.meta.internal.remotels.RemoteLanguageServer
+import scala.concurrent.duration._
+import scala.meta.internal.builds.NewProjectProvider
+import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.builds.BloopInstall
+
 class MetalsLanguageServer(
     ec: ExecutionContextExecutorService,
     buffers: Buffers = Buffers(),
@@ -173,12 +184,14 @@ class MetalsLanguageServer(
   )
 
   // These can't be instantiated until we know the workspace root directory.
+  private var shellRunner: ShellRunner = _
   private var bloopInstall: BloopInstall = _
   private var diagnostics: Diagnostics = _
   private var warnings: Warnings = _
   private var fileSystemSemanticdbs: FileSystemSemanticdbs = _
   private var interactiveSemanticdbs: InteractiveSemanticdbs = _
   private var buildTools: BuildTools = _
+  private var newProjectProvider: NewProjectProvider = _
   private var semanticdbs: Semanticdbs = _
   private var buildClient: ForwardingMetalsBuildClient = _
   private var bloopServers: BloopServers = _
@@ -312,18 +325,25 @@ class MetalsLanguageServer(
       () => worksheetProvider,
       () => ammonite
     )
-    bloopInstall = register(
-      new BloopInstall(
-        workspace,
-        languageClient,
-        sh,
-        buildTools,
-        time,
-        tables,
-        embedded,
-        statusBar,
-        () => userConfig
-      )
+    shellRunner = register(
+      new ShellRunner(languageClient, () => userConfig, time, statusBar)
+    )
+    bloopInstall = new BloopInstall(
+      workspace,
+      languageClient,
+      buildTools,
+      tables,
+      messages,
+      shellRunner
+    )
+    newProjectProvider = new NewProjectProvider(
+      buildTools,
+      languageClient,
+      statusBar,
+      () => userConfig,
+      time,
+      messages,
+      shellRunner
     )
     bloopServers = new BloopServers(
       workspace,
@@ -1388,13 +1408,12 @@ class MetalsLanguageServer(
             name.getAsString()
         }
         newFilesProvider.createNewFileDialog(directoryURI, name).asJavaObject
-
       case ServerCommands.StartAmmoniteBuildServer() =>
         ammonite.start().asJavaObject
-
       case ServerCommands.StopAmmoniteBuildServer() =>
         ammonite.stop()
-
+      case ServerCommands.NewScalaProject() =>
+        newProjectProvider.checkNew().asJavaObject
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject

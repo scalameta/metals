@@ -147,6 +147,11 @@ case class MetalsQuickPickResult(
     @Nullable cancelled: java.lang.Boolean = null
 )
 
+case class MetalsOpenWindowParams(
+    uri: String,
+    openNewWindow: java.lang.Boolean
+)
+
 case class MetalsQuickPickItem(
     id: String,
     // A human readable string which is rendered prominent.

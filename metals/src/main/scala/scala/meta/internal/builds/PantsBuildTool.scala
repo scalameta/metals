@@ -4,6 +4,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.BloopInstallResult
+import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.FutureCancelToken
 import scala.meta.internal.metals.Messages

@@ -220,6 +220,12 @@ object ServerCommands {
     "[string], where the string is a directory location for the new file."
   )
 
+  val NewScalaProject = new Command(
+    "new-scala-project",
+    "New Scala Project",
+    """Create a new Scala project, works with sbt"""
+  )
+
   /**
    * Open the browser at the given url.
    */
@@ -304,6 +310,7 @@ object ServerCommands {
     StartDebugAdapter,
     GotoLocation,
     NewScalaFile,
+    NewScalaProject,
     GotoSuperMethod,
     SuperMethodHierarchy,
     StartAmmoniteBuildServer,

@@ -660,6 +660,13 @@ object MetalsEnrichments
       state.flatMap(
         _.fold(Future.successful(Option.empty[B]))(f(_).liftOption)
       )
+
+    def mapOptionInside[B](
+        f: A => B
+    )(implicit ec: ExecutionContext): Future[Option[B]] =
+      state.map(
+        _.map(f)
+      )
   }
 
 }

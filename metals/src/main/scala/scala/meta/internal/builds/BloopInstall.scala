@@ -1,6 +1,5 @@
-package scala.meta.internal.metals
+package scala.meta.internal.builds
 
-import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
@@ -18,6 +17,17 @@ import scala.meta.io.AbsolutePath
 
 import com.zaxxer.nuprocess.NuProcessBuilder
 import org.eclipse.lsp4j.MessageActionItem
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.meta.internal.builds.Digest.Status
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
+import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.metals.MetalsLanguageClient
+import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.Confirmation
 
 /**
  * Runs `sbt/gradle/mill/mvn bloopInstall` processes.
@@ -30,19 +40,10 @@ import org.eclipse.lsp4j.MessageActionItem
 final class BloopInstall(
     workspace: AbsolutePath,
     languageClient: MetalsLanguageClient,
-    sh: ScheduledExecutorService,
     buildTools: BuildTools,
-    time: Time,
     tables: Tables,
-    embedded: Embedded,
-    statusBar: StatusBar,
-    userConfig: () => UserConfiguration
-)(implicit ec: ExecutionContext)
-    extends Cancelable {
-  private val cancelables = new MutableCancelable()
-  override def cancel(): Unit = {
-    cancelables.cancel()
-  }
+    shellRunner: ShellRunner
+)(implicit ec: ExecutionContext) {
 
   override def toString: String = s"BloopInstall($workspace)"
 
@@ -69,52 +70,23 @@ final class BloopInstall(
       args: List[String]
   ): Future[BloopInstallResult] = {
     persistChecksumStatus(Status.Started, buildTool)
-    val elapsed = new Timer(time)
-    val handler = ProcessHandler(
-      joinErrorWithInfo = buildTool.redirectErrorOutput
-    )
-    val pb = new NuProcessBuilder(handler, args.asJava)
-    pb.setCwd(workspace.toNIO)
-    userConfig().javaHome.foreach(pb.environment().put("JAVA_HOME", _))
-    pb.environment().put("COURSIER_PROGRESS", "disable")
-    pb.environment().put("METALS_ENABLED", "true")
-    pb.environment().put("SCALAMETA_VERSION", BuildInfo.semanticdbVersion)
-    val runningProcess = pb.start()
-    // NOTE(olafur): older versions of VS Code don't respect cancellation of
-    // window/showMessageRequest, meaning the "cancel build import" button
-    // stays forever in view even after successful build import. In newer
-    // VS Code versions the message is hidden after a delay.
-    val taskResponse =
-      languageClient.metalsSlowTask(
-        Messages.bloopInstallProgress(buildTool.executableName)
+    val processFuture = shellRunner
+      .run(
+        s"${buildTool.executableName} bloopInstall",
+        args,
+        workspace,
+        buildTool.redirectErrorOutput,
+        Map(
+          "COURSIER_PROGRESS" -> "disable",
+          "METALS_ENABLED" -> "true",
+          "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion
+        )
       )
-    handler.response = Some(taskResponse)
-    val processFuture = handler.completeProcess.future.map { result =>
-      taskResponse.cancel(false)
-      scribe.info(
-        s"time: ran '${buildTool.executableName} bloopInstall' in $elapsed"
-      )
-      result match {
+      .map {
         case ExitCodes.Success => BloopInstallResult.Installed
         case ExitCodes.Cancel => BloopInstallResult.Cancelled
-        case _ => BloopInstallResult.Failed(result)
+        case result => BloopInstallResult.Failed(result)
       }
-    }
-    statusBar.trackFuture(
-      s"Running ${buildTool.executableName} bloopInstall",
-      processFuture
-    )
-    taskResponse.asScala.foreach { item =>
-      if (item.cancel) {
-        scribe.info("user cancelled build import")
-        handler.completeProcess.trySuccess(ExitCodes.Cancel)
-        ProcessHandler.destroyProcess(runningProcess)
-      }
-    }
-    cancelables
-      .add(() => ProcessHandler.destroyProcess(runningProcess))
-      .add(() => taskResponse.cancel(false))
-
     processFuture.foreach { result =>
       try result.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))
       catch {

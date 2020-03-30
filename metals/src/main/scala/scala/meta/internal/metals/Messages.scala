@@ -515,4 +515,34 @@ object Messages {
       s"Error importing $script. See the logs for more details."
     )
   }
+
+  object NewScalaProject {
+    def selectTheTemplate: String = "Select the template to use"
+    def enterName: String =
+      "Enter a name or a relative path for the new project"
+    def enterG8Template: String =
+      "Enter the gitter template for example `scala/hello-world.g8`," +
+        " which corresponds to a github path `github.com/scala/hello-world.g8`"
+    def creationFailed(what: String, where: String) = new MessageParams(
+      MessageType.Error,
+      s"Could not create $what in $where"
+    )
+
+    def yes = new MessageActionItem("Yes")
+    def no = new MessageActionItem("No")
+    def newWindowMessage =
+      "Do you want to open the new project in an another window?"
+    def askForNewWindowParams(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(newWindowMessage)
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          yes,
+          no
+        ).asJava
+      )
+      params
+    }
+  }
 }

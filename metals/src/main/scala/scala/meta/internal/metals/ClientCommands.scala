@@ -123,7 +123,23 @@ object ClientCommands {
        |""".stripMargin
   )
 
+  val OpenWindow = new Command(
+    "metals-open-window",
+    "Open new window",
+    """Open a new window with the specified directory.""".stripMargin,
+    """|An object with `uri` and `newWindow` fields.
+       |Example: 
+       |```json
+       |{
+       |  "uri": "file://path/to/Definition.scala",
+       |  "newWindow": true
+       |}
+       |```
+       |""".stripMargin
+  )
+
   def all: List[Command] = List(
+    OpenWindow,
     RunDoctor,
     ReloadDoctor,
     ToggleLogs,
