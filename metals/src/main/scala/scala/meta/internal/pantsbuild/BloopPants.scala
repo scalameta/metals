@@ -98,7 +98,9 @@ object BloopPants {
       case e @ InterruptException() => Failure(e)
     }
 
-  def bloopInstall(args: Export)(implicit ec: ExecutionContext): Try[Int] =
+  def bloopInstall(
+      args: Export
+  )(implicit ec: ExecutionContext): Try[PantsExportResult] =
     interruptedTry {
       val cacheDir = Files.createDirectories(
         args.workspace.resolve(".pants.d").resolve("metals")
@@ -183,10 +185,14 @@ object BloopPants {
   private val sourceRootPattern = FileSystems.getDefault.getPathMatcher(
     "glob:**/{main,test,tests,src,3rdparty,3rd_party,thirdparty,third_party}/{resources,scala,java,jvm,proto,python,protobuf,py}"
   )
+  private val defaultTestRootPattern = FileSystems.getDefault.getPathMatcher(
+    "glob:**/{test,tests}"
+  )
 
   private def approximateSourceRoot(dir: Path): Option[Path] = {
     @tailrec def loop(d: Path): Option[Path] = {
       if (sourceRootPattern.matches(d)) Some(d)
+      else if (defaultTestRootPattern.matches(d)) Some(d)
       else {
         Option(d.getParent) match {
           case Some(parent) => loop(parent)
@@ -249,7 +255,7 @@ private class BloopPants(
       .map(jar => toImmutableJar(jar.filename, jar))
       .toList
 
-  def run(): Int = {
+  def run(): PantsExportResult = {
     token.checkCanceled()
     val projects = export.targets.valuesIterator
       .filter(_.isTargetRoot)
@@ -312,7 +318,7 @@ private class BloopPants(
     }
     cleanStaleBloopFiles(generatedProjects)
     token.checkCanceled()
-    generatedProjects.size
+    new PantsExportResult(generatedProjects.size, export)
   }
 
   private def toBloopProject(target: PantsTarget): C.Project = {
@@ -399,7 +405,7 @@ private class BloopPants(
     val out: Path = bloopDir.resolve(target.directoryName)
     val classesDir: Path = target.classesDir(bloopDir)
     val javaHome: Option[Path] =
-      Option(System.getProperty("java.home")).map(Paths.get(_))
+      target.platform.map(Paths.get(_))
 
     val resources: Option[List[Path]] =
       if (!target.targetType.isResourceOrTestResource) None

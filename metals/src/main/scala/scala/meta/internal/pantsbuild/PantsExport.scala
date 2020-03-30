@@ -3,12 +3,14 @@ package scala.meta.internal.pantsbuild
 import java.nio.file.Paths
 import scala.collection.mutable
 import java.nio.file.Files
+import ujson.Obj
 
 case class PantsExport(
     targets: Map[String, PantsTarget],
     libraries: Map[String, PantsLibrary],
     scalaPlatform: PantsScalaPlatform,
-    cycles: Cycles
+    cycles: Cycles,
+    jvmDistribution: PantsPreferredJvmDistribution
 )
 
 object PantsExport {
@@ -39,6 +41,15 @@ object PantsExport {
     val targetsByDirectory = allTargets.keys.groupBy { name =>
       PantsConfiguration.baseDirectoryString(name)
     }
+    val jvmPlatforms: Map[String, String] =
+      output.obj.get(PantsKeys.preferredJvmDistributions) match {
+        case Some(obj: Obj) =>
+          (for {
+            (key, value) <- obj.value
+            strict <- value.obj.get(PantsKeys.strict)
+          } yield key -> strict.str).toMap
+        case _ => Map.empty
+      }
     val targets: Map[String, PantsTarget] = allTargets.iterator.map {
       case (name, valueObj) =>
         val value = valueObj.obj
@@ -59,6 +70,10 @@ object PantsExport {
           excludes <- value.get(PantsKeys.excludes).iterator
           value <- excludes.arr.iterator
         } yield value.str).toSet
+        val platform = for {
+          platform <- value.get(PantsKeys.platform)
+          javaHome <- jvmPlatforms.get(platform.str)
+        } yield javaHome
         val transitiveDependencies: Seq[String] =
           value.get(PantsKeys.transitiveTargets) match {
             case None => computeTransitiveDependencies(name)
@@ -84,6 +99,7 @@ object PantsExport {
           id = value(PantsKeys.id).str,
           dependencies = dependencies,
           excludes = excludes,
+          platform = platform,
           transitiveDependencies = transitiveDependencies,
           libraries = libraries,
           isPantsTargetRoot = isPantsTargetRoot,
@@ -109,11 +125,14 @@ object PantsExport {
 
     val scalaPlatform = PantsScalaPlatform.fromJson(output)
 
+    val jvmDistribution = PantsPreferredJvmDistribution.fromJson(output.obj)
+
     PantsExport(
       targets = targets,
       libraries = libraries,
       scalaPlatform = scalaPlatform,
-      cycles = cycles
+      cycles = cycles,
+      jvmDistribution = jvmDistribution
     )
   }
 
