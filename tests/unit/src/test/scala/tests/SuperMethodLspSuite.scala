@@ -48,7 +48,21 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     checkSuperMethod(code)
   }
 
-  test("type inheritance") {
+  test("synthetic-methods") {
+    val code =
+      """
+        |package a
+        |case class A() {
+        |  override def <<1->0>>toString: String = "A"
+        |  override def <<2->0>>hashCode: Int = 1
+        |  override def <<3->0>>clone(): Object = ???
+        |}
+        |""".stripMargin
+    checkSuperMethod(code)
+
+  }
+
+  test("type-inheritance") {
     val code =
       """
         |package a
@@ -70,7 +84,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     checkSuperMethod(code)
   }
 
-  test("anonymousclass") {
+  test("anonymous-class") {
     val code =
       """
         |package a
@@ -105,7 +119,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     checkSuperMethod(code)
   }
 
-  test("generic types") {
+  test("generic-types") {
     val code =
       """
         |package a
@@ -130,7 +144,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     checkSuperMethod(code)
   }
 
-  test("matching methods") {
+  test("matching-methods") {
     val code =
       """
         |package a
@@ -166,7 +180,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     checkSuperMethod(code)
   }
 
-  test("multi files") {
+  test("multi-files") {
     val codeA =
       """
         |package a
@@ -194,7 +208,7 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     )
   }
 
-  test("jump to external dependency") {
+  test("jump-to-external-dependency") {
     val code =
       """
         |package a
