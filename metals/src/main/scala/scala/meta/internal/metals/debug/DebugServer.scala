@@ -25,9 +25,12 @@ import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.BuildTargetClassesFinder
 import java.util.Collections.singletonList
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.BuildTargetNotFoundException
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.BuildTargetClasses
+import scala.meta.internal.metals.ClassNotFoundInBuildTargetException
+import scala.meta.internal.metals.MetalsLanguageClient
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 
 final class DebugServer(
     val sessionName: String,
@@ -120,7 +123,7 @@ object DebugServer {
       compilations: Compilations,
       buildTargets: BuildTargets,
       buildTargetClasses: BuildTargetClasses,
-      showWarningMessage: String => Unit
+      languageClient: MetalsLanguageClient
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
     withRebuildRetry(
       () =>
@@ -140,7 +143,7 @@ object DebugServer {
             target,
             others,
             "main",
-            showWarningMessage
+            languageClient
           )
         }
         clazz.setArguments(Option(params.args).getOrElse(List().asJava))
@@ -161,7 +164,7 @@ object DebugServer {
       compilations: Compilations,
       buildTargets: BuildTargets,
       buildTargetClasses: BuildTargetClasses,
-      showWarningMessage: String => Unit
+      languageClient: MetalsLanguageClient
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
     withRebuildRetry(
       () => {
@@ -182,7 +185,7 @@ object DebugServer {
             target,
             others,
             "test",
-            showWarningMessage
+            languageClient
           )
         }
         new b.DebugSessionParams(
@@ -228,7 +231,14 @@ object DebugServer {
       buildTargetClasses: BuildTargetClasses
   )(implicit ec: ExecutionContext): Future[A] = {
     Future.fromTry(f()).recoverWith {
-      case _: ClassNotFoundException | _: BuildTargetNotFoundException =>
+      case ClassNotFoundInBuildTargetException(_, buildTarget) =>
+        val target = Seq(buildTarget.getId())
+        for {
+          _ <- compilations.compileTargets(target)
+          _ <- buildTargetClasses.rebuildIndex(target)
+          result <- Future.fromTry(f())
+        } yield result
+      case _: ClassNotFoundException =>
         val allTargets = buildTargets.all.toSeq.map(_.info.getId())
         for {
           _ <- compilations.compileTargets(allTargets)
@@ -243,17 +253,20 @@ object DebugServer {
       buildTarget: b.BuildTarget,
       others: List[(_, b.BuildTarget)],
       mainOrTest: String,
-      showWarningMessage: String => Unit
+      languageClient: MetalsLanguageClient
   ) = {
     val otherTargets = others.map(_._2.getDisplayName())
-    showWarningMessage(
-      UnresolvedDebugSessionParams
-        .runningClassMultipleBuildTargetsMessage(
-          className,
-          buildTarget.getDisplayName(),
-          otherTargets,
-          mainOrTest
-        )
+    languageClient.showMessage(
+      new MessageParams(
+        MessageType.Warning,
+        UnresolvedDebugSessionParams
+          .runningClassMultipleBuildTargetsMessage(
+            className,
+            buildTarget.getDisplayName(),
+            otherTargets,
+            mainOrTest
+          )
+      )
     )
   }
 

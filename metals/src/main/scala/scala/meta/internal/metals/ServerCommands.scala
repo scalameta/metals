@@ -115,7 +115,8 @@ object ServerCommands {
         |{
         |   mainClass: "com.foo.App",
         |   buildTarget: "foo",
-        |   args: ["bar"]
+        |   args: ["bar"],
+        |   jvmOptions: ["-Dfile.encoding=UTF-16"]
         |}
         |```
         |

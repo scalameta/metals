@@ -15,48 +15,40 @@ class BuildTargetClassesFinder(
       className: String,
       buildTarget: Option[String]
   ): Try[List[(b.ScalaMainClass, b.BuildTarget)]] =
-    buildTarget.fold {
-      val classes =
-        buildTargetClasses.findMainClassByName(className).collect {
-          case (clazz, BuildTargetIdOf(buildTarget)) => (clazz, buildTarget)
-        }
-      if (classes.nonEmpty) Success(classes)
-      else
-        Failure(new ClassNotFoundException(className))
-    } { targetName =>
-      buildTargets
-        .findByDisplayName(targetName)
-        .fold[Try[List[(b.ScalaMainClass, b.BuildTarget)]]] {
-          Failure(
-            new BuildTargetNotFoundException(targetName)
-          )
-        } { target =>
-          buildTargetClasses
-            .classesOf(target.getId())
-            .mainClasses
-            .values
-            .find(
-              _.getClassName == className
-            )
-            .fold[Try[List[(b.ScalaMainClass, b.BuildTarget)]]] {
-              Failure(
-                new ClassNotFoundInBuildTargetException(
-                  className,
-                  targetName
-                )
-              )
-            } { clazz => Success(List(clazz -> target)) }
-        }
-    }
+    findClassAndBuildTarget(
+      className,
+      buildTarget,
+      buildTargetClasses.findMainClassByName(_),
+      buildTargetClasses
+        .classesOf(_)
+        .mainClasses
+        .values,
+      { clazz: b.ScalaMainClass => clazz.getClassName }
+    )
 
   //In case of success returns non-empty list
   def findTestClassAndItsBuildTarget(
       className: String,
       buildTarget: Option[String]
   ): Try[List[(String, b.BuildTarget)]] =
+    findClassAndBuildTarget(
+      className,
+      buildTarget,
+      buildTargetClasses.findTestClassByName(_),
+      buildTargetClasses.classesOf(_).testClasses.values,
+      { clazz: String => clazz }
+    )
+
+  private def findClassAndBuildTarget[A](
+      className: String,
+      buildTarget: Option[String],
+      findClassesByName: String => List[(A, b.BuildTargetIdentifier)],
+      classesByBuildTarget: b.BuildTargetIdentifier => Iterable[A],
+      getClassName: A => String
+  ): Try[List[(A, b.BuildTarget)]] =
     buildTarget.fold {
       val classes =
-        buildTargetClasses.findTestClassByName(className).collect {
+        findClassesByName(className).collect {
           case (clazz, BuildTargetIdOf(buildTarget)) => (clazz, buildTarget)
         }
       if (classes.nonEmpty) Success(classes)
@@ -65,23 +57,20 @@ class BuildTargetClassesFinder(
     } { targetName =>
       buildTargets
         .findByDisplayName(targetName)
-        .fold[Try[List[(String, b.BuildTarget)]]] {
+        .fold[Try[List[(A, b.BuildTarget)]]] {
           Failure(
             new BuildTargetNotFoundException(targetName)
           )
         } { target =>
-          buildTargetClasses
-            .classesOf(target.getId())
-            .testClasses
-            .values
+          classesByBuildTarget(target.getId())
             .find(
-              _ == className
+              getClassName(_) == className
             )
-            .fold[Try[List[(String, b.BuildTarget)]]] {
+            .fold[Try[List[(A, b.BuildTarget)]]] {
               Failure(
-                new ClassNotFoundInBuildTargetException(
+                ClassNotFoundInBuildTargetException(
                   className,
-                  targetName
+                  target
                 )
               )
             } { clazz =>
@@ -103,9 +92,9 @@ class BuildTargetClassesFinder(
 class BuildTargetNotFoundException(buildTargetName: String)
     extends Exception(s"Build target not found: $buildTargetName")
 
-class ClassNotFoundInBuildTargetException(
+case class ClassNotFoundInBuildTargetException(
     className: String,
-    buildTargetName: String
-) extends ClassNotFoundException(
-      s"Class '$className' not found in build target '$buildTargetName'"
+    buildTarget: b.BuildTarget
+) extends Exception(
+      s"Class '$className' not found in build target '${buildTarget.getDisplayName()}'"
     )

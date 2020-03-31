@@ -1313,7 +1313,7 @@ class MetalsLanguageServer(
               compilations,
               buildTargets,
               buildTargetClasses,
-              languageClient.showMessage(MessageType.Warning, _)
+              languageClient
             )
           case Seq(testClassParamsParser.Jsonized(params))
               if params.testClass != null =>
@@ -1323,7 +1323,7 @@ class MetalsLanguageServer(
               compilations,
               buildTargets,
               buildTargetClasses,
-              languageClient.showMessage(MessageType.Warning, _)
+              languageClient
             )
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
