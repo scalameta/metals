@@ -42,8 +42,6 @@ final class DefinitionProvider(
     buffers: Buffers,
     index: GlobalSymbolIndex,
     semanticdbs: Semanticdbs,
-    icons: Icons,
-    statusBar: StatusBar,
     warnings: Warnings,
     compilers: () => Compilers,
     remote: RemoteLanguageServer
@@ -151,7 +149,7 @@ final class DefinitionProvider(
     ResolvedSymbolOccurrence(sourceDistance, occurrence)
   }
 
-  def definitionFromSnapshot(
+  private def definitionFromSnapshot(
       source: AbsolutePath,
       dirtyPosition: TextDocumentPositionParams,
       snapshot: TextDocument

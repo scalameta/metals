@@ -30,7 +30,8 @@ final class ReferenceProvider(
     definition: DefinitionProvider,
     remote: RemoteLanguageServer
 ) {
-  var referencedPackages: BloomFilter[CharSequence] = BloomFilters.create(10000)
+  private var referencedPackages: BloomFilter[CharSequence] =
+    BloomFilters.create(10000)
   val index: TrieMap[Path, BloomFilter[CharSequence]] =
     TrieMap.empty[Path, BloomFilter[CharSequence]]
 

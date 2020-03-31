@@ -166,7 +166,7 @@ final class StatusBar(
     case m: Message => !m.isOutdated
     case _ => false
   }
-  sealed abstract class Item {
+  private sealed abstract class Item {
     val timer = new Timer(time)
     private var firstShow: Option[Timer] = None
     def show(): Unit = {

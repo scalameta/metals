@@ -115,7 +115,6 @@ class MetalsLanguageServer(
   var buildServer: Option[BuildServerConnection] =
     Option.empty[BuildServerConnection]
   private val buildTargetClasses = new BuildTargetClasses(() => buildServer)
-  private val openTextDocument = new AtomicReference[AbsolutePath]()
   private val savedFiles = new ActiveFiles(time)
   private val openedFiles = new ActiveFiles(time)
   private val messages = new Messages(config.icons)
@@ -313,7 +312,6 @@ class MetalsLanguageServer(
       )
     )
     bloopServers = new BloopServers(
-      sh,
       workspace,
       buildClient,
       languageClient,
@@ -339,8 +337,6 @@ class MetalsLanguageServer(
       buffers,
       definitionIndex,
       semanticdbs,
-      config.icons,
-      statusBar,
       warnings,
       () => compilers,
       remote
@@ -348,7 +344,6 @@ class MetalsLanguageServer(
     formattingProvider = new FormattingProvider(
       workspace,
       buffers,
-      embedded,
       config,
       () => userConfig,
       languageClient,
@@ -369,7 +364,6 @@ class MetalsLanguageServer(
       () => focusedDocument
     )
     multilineStringFormattingProvider = new MultilineStringFormattingProvider(
-      semanticdbs,
       buffers
     )
     referencesProvider = new ReferenceProvider(
@@ -416,7 +410,6 @@ class MetalsLanguageServer(
       referencesProvider,
       implementationProvider,
       definitionProvider,
-      semanticdbs,
       definitionIndex,
       workspace,
       languageClient,
@@ -710,7 +703,6 @@ class MetalsLanguageServer(
     val path = params.getTextDocument.getUri.toAbsolutePath
     focusedDocument = Some(path)
     openedFiles.add(path)
-    openTextDocument.set(path)
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -746,7 +738,6 @@ class MetalsLanguageServer(
 
     // unpublish diagnostic for dependencies
     interactiveSemanticdbs.didFocus(path)
-    Future(treeView.didFocusTextDocument(path))
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(workspace)) {
@@ -831,7 +822,7 @@ class MetalsLanguageServer(
       .asJava
   }
 
-  def didCompileTarget(report: CompileReport): Unit = {
+  private def didCompileTarget(report: CompileReport): Unit = {
     if (!isReliableFileWatcher) {
       // NOTE(olafur) this step is exclusively used when running tests on
       // non-Linux computers to avoid flaky failures caused by delayed file
@@ -909,7 +900,7 @@ class MetalsLanguageServer(
   }
 
   // This method is run the FileWatcher, so it should not do anything expensive on the main thread
-  def didChangeWatchedFiles(
+  private def didChangeWatchedFiles(
       event: DirectoryChangeEvent
   ): CompletableFuture[Unit] = {
     if (event.eventType() == EventType.OVERFLOW && event.path() == null) {
@@ -1488,7 +1479,6 @@ class MetalsLanguageServer(
       }
       _ = {
         treeView.init()
-        focusedDocument.foreach(treeView.didFocusTextDocument)
       }
     } yield result
   }.recover {
@@ -1702,7 +1692,7 @@ class MetalsLanguageServer(
     scribe.info(s"memory: $footprint")
   }
 
-  def indexWorkspace(i: ImportedBuild): Unit = {
+  private def indexWorkspace(i: ImportedBuild): Unit = {
     timedThunk("updated build targets", config.statistics.isIndex) {
       buildTargets.reset()
       interactiveSemanticdbs.reset()

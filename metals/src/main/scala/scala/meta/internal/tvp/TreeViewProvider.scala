@@ -10,9 +10,6 @@ trait TreeViewProvider {
   val Help = TreeViewProvider.Help
   def init(): Unit = ()
   def reset(): Unit = ()
-  def didFocusTextDocument(
-      path: AbsolutePath
-  ): Unit = ()
   def children(
       params: TreeViewChildrenParams
   ): MetalsTreeViewChildrenResult = MetalsTreeViewChildrenResult(Array.empty)

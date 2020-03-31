@@ -26,9 +26,11 @@ import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 /**
  * An actively running and initialized BSP connection.
  */
-case class BuildServerConnection(
-    reestablishConnection: () => Future[LauncherConnection],
-    private val initialConnection: LauncherConnection,
+class BuildServerConnection private (
+    reestablishConnection: () => Future[
+      BuildServerConnection.LauncherConnection
+    ],
+    initialConnection: BuildServerConnection.LauncherConnection,
     languageClient: LanguageClient,
     tables: Tables
 )(implicit ec: ExecutionContextExecutorService)
@@ -115,15 +117,13 @@ case class BuildServerConnection(
     }
   }
 
-  private def askUser(
-      reconnect: () => Future[LauncherConnection]
-  ): Future[LauncherConnection] = {
+  private def askUser(): Future[BuildServerConnection.LauncherConnection] = {
     val notification = tables.dismissedNotifications.ReconnectBsp
     if (!notification.isDismissed) {
       val params = Messages.DisconnectedServer.params()
       languageClient.showMessageRequest(params).asScala.flatMap {
         case response if response == Messages.DisconnectedServer.reconnect =>
-          reconnect()
+          reestablishConnection()
         case response if response == Messages.DisconnectedServer.notNow =>
           notification.dismiss(5, TimeUnit.MINUTES)
           connection
@@ -152,7 +152,7 @@ case class BuildServerConnection(
           synchronized {
             // if the future is different then the connection is already being reestablished
             if (connection eq original) {
-              connection = askUser(reestablishConnection).map { conn =>
+              connection = askUser().map { conn =>
                 // version can change when reconnecting
                 _version.set(conn.version)
                 ongoingRequests.addAll(conn.cancelables)
@@ -214,7 +214,7 @@ object BuildServerConnection {
     }
 
     setupServer().map { connection =>
-      BuildServerConnection(
+      new BuildServerConnection(
         setupServer,
         connection,
         languageClient,
@@ -265,6 +265,17 @@ object BuildServerConnection {
     server.onBuildInitialized()
     result
   }
+
+  private case class LauncherConnection(
+      socketConnection: SocketConnection,
+      server: MetalsBuildServer,
+      displayName: String,
+      cancelServer: Cancelable,
+      version: String
+  ) {
+    def cancelables: List[Cancelable] =
+      cancelServer :: socketConnection.cancelables
+  }
 }
 
 case class SocketConnection(
@@ -273,14 +284,3 @@ case class SocketConnection(
     input: InputStream,
     cancelables: List[Cancelable]
 )
-
-case class LauncherConnection(
-    socketConnection: SocketConnection,
-    server: MetalsBuildServer,
-    displayName: String,
-    cancelServer: Cancelable,
-    version: String
-) {
-  def cancelables: List[Cancelable] =
-    cancelServer :: socketConnection.cancelables
-}

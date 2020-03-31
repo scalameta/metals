@@ -13,7 +13,6 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.ReferenceContext
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.mtags.{Symbol => MSymbol}
-import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.io.AbsolutePath
@@ -41,7 +40,6 @@ final class RenameProvider(
     referenceProvider: ReferenceProvider,
     implementationProvider: ImplementationProvider,
     definitionProvider: DefinitionProvider,
-    semanticdbs: Semanticdbs,
     index: GlobalSymbolIndex,
     workspace: AbsolutePath,
     client: MetalsLanguageClient,
