@@ -21,4 +21,6 @@ object PantsKeys {
   val defaultPlatform = "default_platform"
   val java8 = "java8"
   val strict = "strict"
+  val scalacArgs = "scalac_args"
+  val javacArgs = "javac_args"
 }

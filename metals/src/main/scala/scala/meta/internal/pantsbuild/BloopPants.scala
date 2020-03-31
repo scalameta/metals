@@ -430,8 +430,8 @@ private class BloopPants(
       out = out,
       classesDir = classesDir,
       resources = resources,
-      scala = bloopScala,
-      java = Some(C.Java(Nil)),
+      scala = bloopScala(target.scalacOptions),
+      java = Some(C.Java(target.javacOptions)),
       sbt = None,
       test = bloopTestFrameworks,
       platform = Some(
@@ -529,13 +529,13 @@ private class BloopPants(
     }
   }
 
-  def bloopScala: Option[C.Scala] =
+  def bloopScala(scalacOptions: List[String]): Option[C.Scala] =
     Some(
       C.Scala(
         "org.scala-lang",
         "scala-compiler",
         compilerVersion,
-        List.empty[String],
+        scalacOptions,
         allScalaJars,
         None,
         setup = Some(
