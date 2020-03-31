@@ -247,7 +247,8 @@ object SuperMethodProvider {
     "scala/AnyRef#",
     "scala/Serializable#",
     "java/io/Serializable#",
-    "scala/AnyVal#"
+    "scala/AnyVal#",
+    "scala/Any#"
   )
 
   def findClassInfo(
