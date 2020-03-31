@@ -34,7 +34,8 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.debug.DebugServer
+import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.DebugParametersJsonParsers
 import scala.meta.internal.mtags._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semver.SemVer
@@ -193,6 +194,7 @@ class MetalsLanguageServer(
   private val packageProvider: PackageProvider =
     new PackageProvider(buildTargets)
   private var newFilesProvider: NewFilesProvider = _
+  private var debugProvider: DebugProvider = _
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
   var tables: Tables = _
@@ -369,6 +371,14 @@ class MetalsLanguageServer(
       languageClient,
       packageProvider,
       () => focusedDocument
+    )
+    debugProvider = new DebugProvider(
+      definitionProvider,
+      buildServer,
+      buildTargets,
+      buildTargetClasses,
+      compilations,
+      languageClient
     )
     multilineStringFormattingProvider = new MultilineStringFormattingProvider(
       semanticdbs,
@@ -1296,35 +1306,17 @@ class MetalsLanguageServer(
         }.asJavaObject
       case ServerCommands.StartDebugAdapter() =>
         val args = params.getArguments.asScala
-        val debugSessionParamsParser = new JsonParser.Of[b.DebugSessionParams]
-        val mainClassParamsParser =
-          new JsonParser.Of[DebugUnresolvedMainClassParams]
-        val testClassParamsParser =
-          new JsonParser.Of[DebugUnresolvedTestClassParams]
+        import DebugParametersJsonParsers._
         val debugSessionParams: Future[b.DebugSessionParams] = args match {
           case Seq(debugSessionParamsParser.Jsonized(params))
               if params.getData != null =>
             Future.successful(params)
           case Seq(mainClassParamsParser.Jsonized(params))
               if params.mainClass != null =>
-            DebugServer.resolveMainClassParams(
-              params,
-              buildTargetClassesFinder,
-              compilations,
-              buildTargets,
-              buildTargetClasses,
-              languageClient
-            )
+            debugProvider.resolveMainClassParams(params)
           case Seq(testClassParamsParser.Jsonized(params))
               if params.testClass != null =>
-            DebugServer.resolveTestClassParams(
-              params,
-              buildTargetClassesFinder,
-              compilations,
-              buildTargets,
-              buildTargetClasses,
-              languageClient
-            )
+            debugProvider.resolveTestClassParams(params)
           case _ =>
             val argExample = ServerCommands.StartDebugAdapter.arguments
             val msg = s"Invalid arguments: $args. Expecting: $argExample"
@@ -1332,11 +1324,8 @@ class MetalsLanguageServer(
         }
         val session = for {
           params <- debugSessionParams
-          server <- DebugServer.start(
-            params,
-            definitionProvider,
-            buildTargets,
-            buildServer
+          server <- debugProvider.start(
+            params
           )
         } yield {
           cancelables.add(server)
