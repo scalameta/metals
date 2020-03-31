@@ -3,7 +3,7 @@ id: emacs
 title: Emacs
 ---
 
-Metals works in Emacs thanks to the the
+Metals works in Emacs thanks to the
 [`lsp-mode`](https://github.com/emacs-lsp/lsp-mode) package.
 
 ![Emacs demo](https://i.imgur.com/KJQLMZ7.gif)
