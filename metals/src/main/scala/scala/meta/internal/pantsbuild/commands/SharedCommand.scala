@@ -55,9 +55,9 @@ object SharedCommand {
               exception.printStackTrace(export.app.out)
           }
           1
-        case Success(exportRestult) =>
+        case Success(exportResult) =>
           IntelliJ.writeBsp(export.project, export.export.coursierBinary)
-          exportRestult.foreach { result =>
+          exportResult.foreach { result =>
             val targets =
               LogMessages.pluralName("Pants target", result.exportedTargets)
             export.app.info(
@@ -71,16 +71,14 @@ object SharedCommand {
             isStrict = false
           )
           symlinkProjectViewRoots(export.project)
-          for {
-            result <- exportRestult
-          } {
-            val isUpdatedBloopSettings =
-              BloopGlobalSettings.update(result.pantsExport)
-            if (isUpdatedBloopSettings) {
-              restartBloopServer()
-            } else {
-              restartOldBloopServer()
-            }
+          val isUpdatedBloopSettings =
+            BloopGlobalSettings.update(
+              exportResult.flatMap(_.pantsExport.jvmDistribution.javaHome)
+            )
+          if (isUpdatedBloopSettings) {
+            restartBloopServer()
+          } else {
+            restartOldBloopServer()
           }
           if (export.open.isEmpty) {
             OpenCommand.onEmpty(export.project, export.app)
