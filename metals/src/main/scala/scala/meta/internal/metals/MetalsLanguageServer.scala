@@ -333,7 +333,6 @@ class MetalsLanguageServer(
       languageClient,
       buildTools,
       tables,
-      messages,
       shellRunner
     )
     newProjectProvider = new NewProjectProvider(
@@ -342,8 +341,8 @@ class MetalsLanguageServer(
       statusBar,
       () => userConfig,
       time,
-      messages,
-      shellRunner
+      shellRunner,
+      initialConfig.icons
     )
     bloopServers = new BloopServers(
       workspace,
@@ -1413,7 +1412,7 @@ class MetalsLanguageServer(
       case ServerCommands.StopAmmoniteBuildServer() =>
         ammonite.stop()
       case ServerCommands.NewScalaProject() =>
-        newProjectProvider.checkNew().asJavaObject
+        newProjectProvider.checkNew(existingDirectory = None).asJavaObject
       case cmd =>
         scribe.error(s"Unknown command '$cmd'")
         Future.successful(()).asJavaObject

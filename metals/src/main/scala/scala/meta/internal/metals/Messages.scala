@@ -521,7 +521,7 @@ object Messages {
     def enterName: String =
       "Enter a name or a relative path for the new project"
     def enterG8Template: String =
-      "Enter the gitter template for example `scala/hello-world.g8`," +
+      "Enter the gitter template, for example `scala/hello-world.g8`," +
         " which corresponds to a github path `github.com/scala/hello-world.g8`"
     def creationFailed(what: String, where: String) = new MessageParams(
       MessageType.Error,
@@ -531,7 +531,7 @@ object Messages {
     def yes = new MessageActionItem("Yes")
     def no = new MessageActionItem("No")
     def newWindowMessage =
-      "Do you want to open the new project in an another window?"
+      "Do you want to open the new project in the current window?"
     def askForNewWindowParams(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(newWindowMessage)
@@ -544,5 +544,32 @@ object Messages {
       )
       params
     }
+
+  }
+
+  object NoBuildTool {
+
+    def newProject =
+      "No build tool detected in the current folder." +
+        " Do you want to create a new project?"
+
+    def inCurrent = new MessageActionItem("In current folder")
+    def newWindow = new MessageActionItem("In new folder")
+    def dismiss = new MessageActionItem("Not now")
+
+    def noBuildToolAskForTemplate(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(newProject)
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          inCurrent,
+          newWindow,
+          dismiss
+        ).asJava
+      )
+      params
+    }
+
   }
 }

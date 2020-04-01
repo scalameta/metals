@@ -16,9 +16,10 @@ import scala.util.Try
 import scala.meta.internal.metals.StatusBar
 import coursierapi._
 import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsOpenWindowParams
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.Icons
 
 class NewProjectProvider(
     buildTools: BuildTools,
@@ -26,11 +27,9 @@ class NewProjectProvider(
     statusBar: StatusBar,
     userConfig: () => UserConfiguration,
     time: Time,
-    messages: Messages,
-    shell: ShellRunner
+    shell: ShellRunner,
+    icons: Icons
 )(implicit context: ExecutionContext) {
-
-  // TODO ask if not build tool
 
   private val templatesUrl =
     "https://github.com/foundweekends/giter8/wiki/giter8-templates.md"
@@ -51,10 +50,9 @@ class NewProjectProvider(
       } yield {
         pattern.findAllIn(result.text).matchData.toList.collect {
           case matching if matching.groupCount == 2 =>
-            val id = nameFromPath(matching.group(1))
             MetalsQuickPickItem(
-              id = id,
-              label = matching.group(1),
+              id = matching.group(1),
+              label = s"${icons.github} " + matching.group(1),
               description = matching.group(2)
             )
         }
@@ -63,31 +61,49 @@ class NewProjectProvider(
     }
   }
 
-  def checkNew(): Future[Unit] = {
+  def checkNew(existingDirectory: Option[AbsolutePath]): Future[Boolean] = {
     val base = AbsolutePath(System.getProperty("user.home"))
-    askForTemplate(NewProjectProvider.defaultTemplates)
-      .flatMapOption { template =>
-        constructPath(base).mapOptionInside { path => (template, path) }
+    val withTemplate = askForTemplate(
+      NewProjectProvider.defaultTemplates(icons)
+    )
+    val fullySpecified = if (existingDirectory.isDefined) {
+      withTemplate.mapOption { template =>
+        val Some(directory) = existingDirectory
+        Future.successful(
+          (template, directory.parent, Some(directory.filename))
+        )
       }
-      .flatMapOption {
-        case (template, path) =>
-          askForName(template.id, messages.NewScalaProject.enterName).map {
-            name => Some((template, path, name))
-          }
-      }
-      .flatMap {
-        case Some((template, inputPath, Some(projectName))) =>
-          createNewProject(inputPath, template.label, projectName)
-        // It's fine to just return if the user resigned
-        case _ => Future.successful(())
-      }
+    } else {
+      withTemplate
+        .flatMapOption { template =>
+          constructPath(base).mapOptionInside { path => (template, path) }
+        }
+        .flatMapOption {
+          case (template, path) =>
+            askForName(nameFromPath(template.id), NewScalaProject.enterName)
+              .map { name => Some((template, path, name)) }
+        }
+    }
+
+    fullySpecified.flatMap {
+      case Some((template, inputPath, Some(projectName))) =>
+        createNewProject(
+          inputPath,
+          template.label.replace(s"${icons.github} ", ""),
+          projectName,
+          existingDirectory.isDefined
+        )
+      // It's fine to just return if the user resigned
+      case _ => Future.successful(false)
+    }
   }
 
   private def createNewProject(
       inputPath: AbsolutePath,
       template: String,
-      projectName: String
-  ) = {
+      projectName: String,
+      createdLocally: Boolean
+  ): Future[Boolean] = {
     val projectPath = inputPath.resolve(projectName)
     val parent = projectPath.parent
     projectPath.createDirectories()
@@ -104,20 +120,23 @@ class NewProjectProvider(
       )
       .flatMap {
         case result if result == 0 =>
-          askForWindow(projectPath.toURI)
+          if (!createdLocally) {
+            askForWindow(projectPath.toURI).map(_ => false)
+          } else {
+            Future.successful(true)
+          }
         case _ =>
           Future.successful {
             client.showMessage(
-              messages.NewScalaProject
+              NewScalaProject
                 .creationFailed(template, parent.toString())
             )
+            false
           }
       }
   }
 
-  // TODO use proper class instead of separate params
   private def askForWindow(uri: URI): Future[Unit] = {
-
     def openWindow(newWindow: Boolean) = {
       val params = MetalsOpenWindowParams(
         uri.toString(),
@@ -132,13 +151,14 @@ class NewProjectProvider(
       client.metalsExecuteClientCommand(command)
     }
     client
-      .showMessageRequest(messages.NewScalaProject.askForNewWindowParams())
+      .showMessageRequest(NewScalaProject.askForNewWindowParams())
       .asScala
       .map {
-        case msg if msg == messages.NewScalaProject.yes =>
+        case msg if msg == NewScalaProject.no =>
           openWindow(newWindow = true)
-        case msg if msg == messages.NewScalaProject.no =>
+        case msg if msg == NewScalaProject.yes =>
           openWindow(newWindow = false)
+        case _ =>
       }
   }
 
@@ -149,7 +169,7 @@ class NewProjectProvider(
       .metalsQuickPick(
         MetalsQuickPickParams(
           templates.asJava,
-          placeHolder = messages.NewScalaProject.selectTheTemplate
+          placeHolder = NewScalaProject.selectTheTemplate
         )
       )
       .asScala
@@ -157,9 +177,9 @@ class NewProjectProvider(
         case kind if kind.itemId == NewProjectProvider.more.id =>
           askForTemplate(allTemplatesFromWeb)
         case kind if kind.itemId == NewProjectProvider.back.id =>
-          askForTemplate(NewProjectProvider.defaultTemplates)
+          askForTemplate(NewProjectProvider.defaultTemplates(icons))
         case kind if kind.itemId == NewProjectProvider.custom.id =>
-          askForName("", messages.NewScalaProject.enterG8Template)
+          askForName("", NewScalaProject.enterG8Template)
             .mapOptionInside { g8Path =>
               MetalsQuickPickItem(
                 nameFromPath(g8Path),
@@ -178,12 +198,12 @@ class NewProjectProvider(
 
   private def askForName(
       default: String,
-      pompt: String
+      prompt: String
   ): Future[Option[String]] = {
     client
       .metalsInputBox(
         MetalsInputBoxParams(
-          prompt = pompt,
+          prompt = prompt,
           value = default
         )
       )
@@ -193,7 +213,7 @@ class NewProjectProvider(
           Future.successful(Some(name.value))
         case name if name.cancelled => Future.successful(None)
         // reask if empty
-        case _ => askForName(default, pompt)
+        case _ => askForName(default, prompt)
       }
   }
 
@@ -201,10 +221,17 @@ class NewProjectProvider(
       from: AbsolutePath
   ): Future[Option[AbsolutePath]] = {
     val paths = from.list.toList
-      .map(_.filename)
-      .map(path => MetalsQuickPickItem(id = path, label = path))
-    val currentDir = MetalsQuickPickItem(id = ".", label = ".")
-    val parentDir = MetalsQuickPickItem(id = "..", label = "..")
+      .collect {
+        case path if path.isDirectory =>
+          MetalsQuickPickItem(
+            id = path.filename,
+            label = s"${icons.folder} ${path.filename}"
+          )
+      }
+    val currentDir =
+      MetalsQuickPickItem(id = "ok", label = s"${icons.check} Ok")
+    val parentDir =
+      MetalsQuickPickItem(id = "..", label = s"${icons.folder} ..")
     val includeUp = if (from.hasParent) List(parentDir) else Nil
     client
       .metalsQuickPick(
@@ -252,55 +279,57 @@ object NewProjectProvider {
   )
 
   // TODO - templates for maven/gradle/mill
-  val defaultTemplates = Seq(
-    MetalsQuickPickItem(
-      id = "hello-world",
-      label = "scala/hello-world.g8",
-      description = "A template to demonstrate a minimal Scala application"
-    ),
-    MetalsQuickPickItem(
-      id = "hello-world",
-      label = "scala/scalatest-example.g8",
-      description = "A template for trying out ScalaTest"
-    ),
-    MetalsQuickPickItem(
-      id = "akka-scala-seed",
-      label = "akka/akka-scala-seed.g8",
-      description = "A minimal seed template for an Akka with Scala build"
-    ),
-    MetalsQuickPickItem(
-      id = "zio-project-seed",
-      label = "zio/zio-project-seed.g8",
-      description = "A template for ZIO"
-    ),
-    MetalsQuickPickItem(
-      id = "play-scala-seed",
-      label = "playframework/play-scala-seed.g8",
-      description = "Play Scala Seed Template"
-    ),
-    MetalsQuickPickItem(
-      id = "lagom-scala",
-      label = "lagom/lagom-scala.g8",
-      description = "A Lagom Scala seed template for sbt"
-    ),
-    MetalsQuickPickItem(
-      id = "scala-native",
-      label = "scala-native/scala-native.g8",
-      description = "Scala Native"
-    ),
-    // Uncomment once Scala 3 support is merged
-    // MetalsQuickPickItem(
-    //   id = "dotty",
-    //   label = "lampepfl/dotty.g8",
-    //   description = "A template for trying out Dotty"
-    // ),
-    MetalsQuickPickItem(
-      id = "http4s",
-      label = "http4s/http4s.g8",
-      description = "http4s services"
-    ),
-    custom,
-    more
-  )
+  def defaultTemplates(icons: Icons) = {
+    Seq(
+      MetalsQuickPickItem(
+        id = "scala/hello-world.g8",
+        label = "scala/hello-world.g8",
+        description = "A template to demonstrate a minimal Scala application"
+      ),
+      MetalsQuickPickItem(
+        id = "scala/scalatest-example.g8",
+        label = "scala/scalatest-example.g8",
+        description = "A template for trying out ScalaTest"
+      ),
+      MetalsQuickPickItem(
+        id = "akka/akka-scala-seed.g8",
+        label = "akka/akka-scala-seed.g8",
+        description = "A minimal seed template for an Akka with Scala build"
+      ),
+      MetalsQuickPickItem(
+        id = "zio/zio-project-seed.g8",
+        label = "zio/zio-project-seed.g8",
+        description = "A template for ZIO"
+      ),
+      MetalsQuickPickItem(
+        id = "playframework/play-scala-seed.g8",
+        label = "playframework/play-scala-seed.g8",
+        description = "Play Scala Seed Template"
+      ),
+      MetalsQuickPickItem(
+        id = "lagom/lagom-scala.g8",
+        label = "lagom/lagom-scala.g8",
+        description = "A Lagom Scala seed template for sbt"
+      ),
+      MetalsQuickPickItem(
+        id = "scala-native/scala-native.g8",
+        label = "scala-native/scala-native.g8",
+        description = "Scala Native"
+      ),
+      MetalsQuickPickItem(
+        id = "lampepfl/dotty.g8",
+        label = "lampepfl/dotty.g8",
+        description = "A template for trying out Dotty"
+      ),
+      MetalsQuickPickItem(
+        id = "http4s/http4s.g8",
+        label = "http4s/http4s.g8",
+        description = "http4s services"
+      )
+    ).map { item =>
+      item.copy(label = s"${icons.github} " + item.label)
+    } ++ Seq(custom, more)
+
+  }
 
 }
