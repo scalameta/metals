@@ -77,7 +77,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
            |import java.nio.file.Files
            |val name = "Susan" // "Susan"
            |val greeting = s"Hello $name" // "Hello Susan"
-           |println(greeting + "\nHow are you?") // Hello Susan
+           |println(greeting + "\nHow are you?") // Hello Susan…
            |1.to(10).toVector // Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
            |val List(a, b) = List(42, 10) // a=42, b=10
            |""".stripMargin
@@ -108,7 +108,7 @@ abstract class BaseWorksheetLspSuite(scalaVersion: String)
            |import java.nio.file.Files
            |val name = "Susan" // "Susan"
            |val greeting = s"Hello $name" // "Hello Susan"
-           |println(greeting + "\nHow are you?") // Hello Susan
+           |println(greeting + "\nHow are you?") // Hello Susan…
            |1.to(10).toVector // Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
            |val List(a, b) = List(42, 10) // a=42, b=10
            |""".stripMargin

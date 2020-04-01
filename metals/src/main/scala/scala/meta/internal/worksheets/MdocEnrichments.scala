@@ -1,6 +1,7 @@
 package scala.meta.internal.worksheets
 
 import org.eclipse.{lsp4j => l}
+import mdoc.interfaces.EvaluatedWorksheetStatement
 import mdoc.{interfaces => i}
 
 object MdocEnrichments {
@@ -47,6 +48,17 @@ object MdocEnrichments {
         "mdoc"
       )
     }
+  }
+
+  /**
+   * Determines whether or not an evaluated worksheet statement summary is
+   * complete or not. If it is complete, it just returns the summary, otherwise
+   * it will chop off the last 3 chars and replace them with … to signify
+   * continuation
+   */
+  def truncatify(statement: EvaluatedWorksheetStatement): String = {
+    if (statement.isSummaryComplete()) statement.summary()
+    else statement.summary() + "…"
   }
 
 }
