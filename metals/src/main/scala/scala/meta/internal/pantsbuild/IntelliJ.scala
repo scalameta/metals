@@ -66,6 +66,8 @@ object IntelliJ {
     "$coursier",
     "launch",
     "ch.epfl.scala:bloop-launcher-core_2.12:${V.bloopNightlyVersion}",
+    "--ttl",
+    "Inf",
     "--",
     "${V.bloopVersion}"
   ],
