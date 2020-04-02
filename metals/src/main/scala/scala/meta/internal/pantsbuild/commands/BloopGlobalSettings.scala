@@ -5,7 +5,7 @@ import scala.util.control.NonFatal
 import ujson.Obj
 import java.nio.file.Paths
 import java.nio.file.Path
-import scala.meta.internal.zipkin.ZipkinUrls
+import scala.meta.internal.zipkin.ZipkinProperties
 import ujson.Str
 
 object BloopGlobalSettings {
@@ -25,25 +25,8 @@ object BloopGlobalSettings {
         .map(_.arr.map(_.str).toList)
         .getOrElse(Nil)
 
-      val properties = List(
-        ZipkinUrls.zipkinServerUrl,
-        BloopZipkinTraceProperties.localServiceName,
-        BloopZipkinTraceProperties.traceStartAnnotation,
-        BloopZipkinTraceProperties.traceEndAnnotation
-      )
-      val newOptions: List[String] = properties.foldLeft(oldOptions) {
-        (options, prop) =>
-          prop.value match {
-            case Some(newValue) =>
-              val oldValue = optionValue(options, prop.bloopProperty)
-              if (!oldValue.contains(newValue)) {
-                updateOption(options, prop.bloopProperty, newValue)
-              } else {
-                options
-              }
-            case None =>
-              options
-          }
+      val newOptions: List[String] = ZipkinProperties.All.foldLeft(oldOptions) {
+        (options, prop) => prop.updateOptions(options)
       }
       val isHomeChanged = newHome.isDefined && newHome != oldHome
       val isOptionsChanged = newOptions != oldOptions
@@ -62,30 +45,5 @@ object BloopGlobalSettings {
         false
     }
 
-  }
-
-  case class Property(metalsProperty: String) {
-
-    val bloopProperty: String = metalsProperty.stripPrefix("metals.")
-
-    def value: Option[String] = Option(System.getProperty(metalsProperty))
-  }
-
-  private def optionValue(
-      options: List[String],
-      key: String
-  ): Option[String] = {
-    val regex = s"-D$key=(.*)".r
-    options.collectFirst { case regex(value) => value.stripPrefix(s"-D$key=") }
-  }
-
-  private def updateOption(
-      options: List[String],
-      key: String,
-      newValue: String
-  ): List[String] = {
-    val otherOptions = options.filterNot(_.startsWith(s"-D$key="))
-    val newOption = s"-D$key=$newValue"
-    newOption :: otherOptions
   }
 }

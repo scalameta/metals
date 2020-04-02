@@ -1,8 +1,8 @@
-package scala.meta.internal.pantsbuild.commands
+package scala.meta.internal.zipkin
 
-import scala.meta.internal.pantsbuild.commands.BloopGlobalSettings.Property
+object ZipkinProperties {
 
-object BloopZipkinTraceProperties {
+  val zipkinServerUrl: Property = Property("metals.zipkin.server.url")
 
   val localServiceName: Property = Property(
     "metals.bloop.trace.localServiceName"
@@ -14,5 +14,12 @@ object BloopZipkinTraceProperties {
 
   val traceEndAnnotation: Property = Property(
     "metals.bloop.trace.traceEndAnnotation"
+  )
+
+  val All: List[Property] = List(
+    zipkinServerUrl,
+    localServiceName,
+    traceStartAnnotation,
+    traceEndAnnotation
   )
 }
