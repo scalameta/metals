@@ -3,14 +3,14 @@ package scala.meta.internal.metals
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.tokens.Token
-import scala.meta.tokens.Token.Constant
+import scala.meta.tokens.Token.{Constant, Interpolation}
 import scala.meta.tokens.Tokens
-import scala.meta.tokens.Token.Interpolation
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.Position
@@ -33,7 +33,7 @@ final class MultilineStringFormattingProvider(
     tokens(methodIndex) match {
       case token: Token.Ident if token.value == stripMargin =>
         true
-      case other =>
+      case _ =>
         false
     }
   }
@@ -43,8 +43,13 @@ final class MultilineStringFormattingProvider(
       lineNumberToCheck: Int
   ): String = {
     val lineToCheck = lines(lineNumberToCheck)
-    val lastPipe = lineToCheck.indexOf('|')
-    space * lastPipe
+    val index =
+      if (lineToCheck.contains("\"\"\"|")) {
+        lineToCheck.indexOf('"') + 3
+      } else if (lineToCheck.contains("\"\"\"")) {
+        lineToCheck.indexOf('"') + 2
+      } else lineToCheck.indexOf('|')
+    space * index
   }
 
   private def indent(
@@ -63,38 +68,52 @@ final class MultilineStringFormattingProvider(
     new TextEdit(new Range(position, endPosition), addedSpaces + "|")
   }
 
-  private def isMultilineString(text: String, token: Token) = {
+  private def isMultilineString(text: String, token: Token): Boolean = {
     val start = token.start
     text(start) == quote &&
     text(start + 1) == quote &&
     text(start + 2) == quote
   }
 
-  private def inToken(pos: meta.Position, token: Token): Boolean = {
-    pos.start >= token.start && pos.end <= token.end
-  }
+  private def inToken(
+      startPos: meta.Position,
+      endPos: meta.Position,
+      token: Token
+  ): Boolean =
+    startPos.startLine >= token.pos.startLine && endPos.endLine <= token.pos.endLine
 
   private def pipeInScope(
-      pos: meta.Position,
+      startPos: meta.Position,
+      endPos: meta.Position,
       text: String,
       newlineAdded: Boolean
   ): Boolean = {
-    val newLineBeforePos =
-      text.lastIndexBetween('\n', upperBound = Math.max(pos.start - 1, 0))
-    val pipeSearchStop =
-      if (newlineAdded)
-        text.lastIndexBetween(
-          '\n',
-          upperBound = Math.max(newLineBeforePos - 1, 0)
-        )
-      else newLineBeforePos
-    val lastPipe = text.lastIndexBetween('|', pipeSearchStop, pos.start - 1)
-    lastPipe > pipeSearchStop
+    val indexOfLastBackToLine = text.lastIndexBetween(
+      '\n',
+      0,
+      upperBound = startPos.start - 1
+    )
+    val lastBackToLine =
+      if (!newlineAdded) indexOfLastBackToLine
+      else
+        text.lastIndexBetween('\n', 0, upperBound = indexOfLastBackToLine - 1)
+    val pipeBetweenLastLineAndPos = text.lastIndexBetween(
+      '|',
+      lastBackToLine,
+      startPos.start - 1
+    )
+    val pipeBetweenSelection = text.lastIndexBetween(
+      '|',
+      startPos.start - 1,
+      endPos.end - 1
+    )
+    pipeBetweenLastLineAndPos != -1 || pipeBetweenSelection != -1
   }
 
   private def multilineStringInTokens(
       tokens: Tokens,
-      pos: meta.Position,
+      startPos: meta.Position,
+      endPos: meta.Position,
       sourceText: String
   ): Boolean = {
     var tokenIndex = 0
@@ -102,16 +121,16 @@ final class MultilineStringFormattingProvider(
     var shouldAddPipes = false
     while (!stringFound && tokenIndex < tokens.size) {
       tokens(tokenIndex) match {
-        case token: Constant.String if inToken(pos, token) =>
+        case token: Constant.String if inToken(startPos, endPos, token) =>
           stringFound = true
           shouldAddPipes = isMultilineString(sourceText, token) &&
             hasStripMarginSuffix(tokenIndex, tokens)
-        case start: Interpolation.Start if start.start < pos.start =>
+        case start: Interpolation.Start if start.start < startPos.start =>
           var endIndex = tokenIndex + 1
           while (!tokens(endIndex)
               .isInstanceOf[Interpolation.End]) endIndex += 1
           val end = tokens(endIndex)
-          stringFound = end.end > pos.end
+          stringFound = end.end > startPos.end
           shouldAddPipes =
             stringFound && isMultilineString(sourceText, start) &&
               hasStripMarginSuffix(endIndex, tokens)
@@ -131,15 +150,16 @@ final class MultilineStringFormattingProvider(
       val source = textId.getUri.toAbsolutePath
       if (source.exists) {
         val sourceText = buffer.get(source).getOrElse("")
-        val pos = range.getStart.toMeta(
-          Input.VirtualFile(source.toString(), sourceText)
-        )
-        if (pipeInScope(pos, sourceText, newlineAdded)) {
+        val virtualFile = Input.VirtualFile(source.toString(), sourceText)
+        val startPos = range.getStart.toMeta(virtualFile)
+        val endPos = range.getEnd.toMeta(virtualFile)
+        if (pipeInScope(startPos, endPos, sourceText, newlineAdded)) {
           val tokens =
-            Input.VirtualFile(source.toString(), sourceText).tokenize.toOption
-          tokens.toList
-            .filter(multilineStringInTokens(_, pos, sourceText))
-            .flatMap(_ => fn(sourceText, pos))
+            virtualFile.tokenize.toOption
+          tokens
+            .filter(multilineStringInTokens(_, startPos, endPos, sourceText))
+            .map(_ => fn(sourceText, startPos))
+            .getOrElse(Nil)
         } else Nil
       } else Nil
     }
@@ -152,7 +172,6 @@ final class MultilineStringFormattingProvider(
     val zeroPos = new Position(line, 0)
     val lineText = lines(line)
     val firstChar = lineText.trim.headOption
-
     firstChar match {
       case Some('|') =>
         val firstPipeIndex = lineText.indexOf('|')
@@ -172,7 +191,7 @@ final class MultilineStringFormattingProvider(
             Some(textEdit)
         }
       case _ =>
-        val isFirstLineOfMultiLine = lineText.trim.contains("\"\"\"|")
+        val isFirstLineOfMultiLine = lineText.trim.contains("\"\"\"")
         if (isFirstLineOfMultiLine) {
           None
         } else {

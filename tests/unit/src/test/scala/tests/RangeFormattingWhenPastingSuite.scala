@@ -2,7 +2,7 @@ package tests
 
 import munit.Location
 
-class RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
+class RangeFormattingWhenPastingSuite extends BaseLspSuite("rangeFormatting") {
 
   check(
     "lines",
@@ -257,6 +257,28 @@ class RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
        |  '''.stripMargin
        |}""".stripMargin
   )
+  check(
+    "with-wrong-indentation",
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |
+       |      |@@
+       |  '''.stripMargin
+       |}""".stripMargin,
+    s"""| |first line
+        |
+        | |second line""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = '''
+       |  |
+       |      |first line
+       |      |
+       |      |second line
+       |  '''.stripMargin
+       |}""".stripMargin
+  )
 
   check(
     "with-pipes-skip-line",
@@ -305,7 +327,8 @@ class RangeFormattingSuite extends BaseLspSuite("rangeFormatting") {
           "a/src/main/scala/a/Main.scala",
           testCode, // bez @@
           expected,
-          paste
+          paste,
+          workspace
         )
       } yield ()
     }

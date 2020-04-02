@@ -582,10 +582,27 @@ final class TestingServer(
       query: String,
       expected: String,
       paste: String,
-      root: AbsolutePath = workspace
+      root: AbsolutePath
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
       (_, params) <- rangeFormattingParams(filename, query, paste, root)
+      multiline <- server.rangeFormatting(params).asScala
+      format = TextEdits.applyEdits(
+        textContents(filename),
+        multiline.asScala.toList
+      )
+    } yield {
+      Assertions.assertNoDiff(format, expected)
+    }
+  }
+  def rangeFormatting(
+      filename: String,
+      query: String,
+      expected: String,
+      root: AbsolutePath = workspace
+  )(implicit loc: munit.Location): Future[Unit] = {
+    for {
+      (_, params) <- rangeFormattingParams(filename, query, root)
       multiline <- server.rangeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
@@ -776,6 +793,20 @@ final class TestingServer(
         val range = new l.Range(start, end)
         val params = new DocumentRangeFormattingParams()
         params.setRange(range)
+        params.setTextDocument(textId)
+        (text, params)
+    }
+  }
+
+  private def rangeFormattingParams(
+      filename: String,
+      original: String,
+      root: AbsolutePath
+  ): Future[(String, DocumentRangeFormattingParams)] = {
+    rangeFromString(filename, original, root) {
+      case (text, textId, rangeSelection) =>
+        val params = new DocumentRangeFormattingParams()
+        params.setRange(rangeSelection)
         params.setTextDocument(textId)
         (text, params)
     }

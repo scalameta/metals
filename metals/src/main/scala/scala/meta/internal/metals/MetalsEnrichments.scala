@@ -402,14 +402,14 @@ object MetalsEnrichments
 
     def lastIndexBetween(
         char: Char,
-        lowerBound: Int = 0,
-        upperBound: Int = value.size
+        lowerBound: Int,
+        upperBound: Int
     ): Int = {
       var index = upperBound
       while (index >= lowerBound && value(index) != char) {
         index -= 1
       }
-      index
+      if (index < lowerBound) -1 else index
     }
 
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
