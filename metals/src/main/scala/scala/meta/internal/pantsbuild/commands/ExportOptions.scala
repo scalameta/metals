@@ -16,8 +16,13 @@ case class ExportOptions(
     )
     coursierBinary: Option[Path] = None,
     @Hidden()
+    @Description("When enabled, Fastpass will not exit the Bloop server.")
+    noBloopExit: Boolean = false,
+    @Hidden()
     mergeTargetsInSameDirectory: Boolean = false
-)
+) {
+  def canBloopExit: Boolean = !noBloopExit
+}
 
 object ExportOptions {
   val default: ExportOptions = ExportOptions()

@@ -94,6 +94,7 @@ object IntelliJ {
       RefreshCommand.name,
       "--workspace",
       project.common.workspace.toString,
+      "--no-bloop-exit",
       project.name
     )
     val configDir = AbsolutePath(project.root.bloopRoot.toNIO)

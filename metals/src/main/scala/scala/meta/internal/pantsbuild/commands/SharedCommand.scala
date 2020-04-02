@@ -72,7 +72,9 @@ object SharedCommand {
             isStrict = false
           )
           symlinkProjectViewRoots(export.project)
-          restartBloopIfNewSettings()
+          if (export.export.canBloopExit) {
+            restartBloopIfNewSettings()
+          }
           if (export.open.isEmpty) {
             OpenCommand.onEmpty(export.project, export.app)
           } else {
