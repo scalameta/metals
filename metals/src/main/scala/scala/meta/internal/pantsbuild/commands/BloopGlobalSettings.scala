@@ -1,15 +1,15 @@
 package scala.meta.internal.pantsbuild.commands
 
-import scala.meta.internal.pantsbuild.PantsExport
 import scala.meta.io.AbsolutePath
 import scala.util.control.NonFatal
 import ujson.Obj
 import java.nio.file.Paths
 import java.nio.file.Path
 import ujson.Str
+import scala.meta.internal.zipkin.ZipkinUrls
 
 object BloopGlobalSettings {
-  def update(export: PantsExport): Boolean = {
+  def update(newHome: Option[Path]): Boolean = {
     import scala.meta.internal.metals.MetalsEnrichments._
     val homedir = AbsolutePath(System.getProperty("user.home"))
     val file = homedir.resolve(".bloop").resolve("bloop.json")
@@ -31,8 +31,7 @@ object BloopGlobalSettings {
             oldOptions.filterNot(_.startsWith("-Dzipkin.server.url")).toList
           s"-Dzipkin.server.url=$url" :: otherOptions
       }
-      val newHome = export.jvmDistribution.javaHome
-      val isHomeChanged = newHome != oldHome
+      val isHomeChanged = newHome.isDefined && newHome != oldHome
       val isOptionsChanged = newOptions != oldOptions
       val isChanged = isHomeChanged || isOptionsChanged
       if (isChanged) {

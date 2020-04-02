@@ -66,6 +66,8 @@ object IntelliJ {
     "$coursier",
     "launch",
     "ch.epfl.scala:bloop-launcher-core_2.12:${V.bloopNightlyVersion}",
+    "--ttl",
+    "Inf",
     "--",
     "${V.bloopVersion}"
   ],
@@ -92,6 +94,7 @@ object IntelliJ {
       RefreshCommand.name,
       "--workspace",
       project.common.workspace.toString,
+      "--no-bloop-exit",
       project.name
     )
     val configDir = AbsolutePath(project.root.bloopRoot.toNIO)

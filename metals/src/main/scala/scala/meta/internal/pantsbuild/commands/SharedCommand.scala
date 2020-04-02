@@ -25,6 +25,7 @@ import scala.meta.internal.metals.BuildInfo
 import java.nio.file.Files
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.pantsbuild.PantsConfiguration
+import scala.meta.internal.metals.JdkSources
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
@@ -55,9 +56,9 @@ object SharedCommand {
               exception.printStackTrace(export.app.out)
           }
           1
-        case Success(exportRestult) =>
+        case Success(exportResult) =>
           IntelliJ.writeBsp(export.project, export.export.coursierBinary)
-          exportRestult.foreach { result =>
+          exportResult.foreach { result =>
             val targets =
               LogMessages.pluralName("Pants target", result.exportedTargets)
             export.app.info(
@@ -71,16 +72,8 @@ object SharedCommand {
             isStrict = false
           )
           symlinkProjectViewRoots(export.project)
-          for {
-            result <- exportRestult
-          } {
-            val isUpdatedBloopSettings =
-              BloopGlobalSettings.update(result.pantsExport)
-            if (isUpdatedBloopSettings) {
-              restartBloopServer()
-            } else {
-              restartOldBloopServer()
-            }
+          if (export.export.canBloopExit) {
+            restartBloopIfNewSettings()
           }
           if (export.open.isEmpty) {
             OpenCommand.onEmpty(export.project, export.app)
@@ -92,6 +85,16 @@ object SharedCommand {
           }
           0
       }
+    }
+  }
+
+  def restartBloopIfNewSettings(): Unit = {
+    val isUpdatedBloopSettings =
+      BloopGlobalSettings.update(JdkSources.defaultJavaHomePath)
+    if (isUpdatedBloopSettings) {
+      restartBloopServer()
+    } else {
+      restartOldBloopServer()
     }
   }
 

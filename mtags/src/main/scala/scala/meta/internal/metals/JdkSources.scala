@@ -4,6 +4,7 @@ import java.nio.file.Paths
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.meta.internal.mtags.MtagsEnrichments._
+import java.nio.file.Path
 
 /**
  * Locates zip file on disk that contains the source code for the JDK.
@@ -16,6 +17,9 @@ object JdkSources {
     candidates(userJavaHome).headOption
   }
 
+  def defaultJavaHomePath: Option[Path] = {
+    defaultJavaHome.map(Paths.get(_))
+  }
   def defaultJavaHome: Option[String] = {
     Option(System.getenv("JAVA_HOME")).orElse(
       Option(System.getProperty("java.home"))
