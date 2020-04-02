@@ -418,6 +418,11 @@ private class BloopPants(
     val tags =
       if (target.targetType.isTest) List(Tag.Test) else List(Tag.Library)
 
+    // Pants' `extra_jvm_options` should apply only to test execution,
+    // so we ignore them for non-test targets.
+    val extraJvmOptions =
+      if (target.targetType.isTest) target.extraJvmOptions else Nil
+
     C.Project(
       name = target.dependencyName,
       directory = baseDirectory,
@@ -440,7 +445,7 @@ private class BloopPants(
             javaHome,
             List(
               s"-Duser.dir=$workspace"
-            )
+            ) ++ extraJvmOptions
           ),
           None
         )
