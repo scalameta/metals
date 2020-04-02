@@ -108,7 +108,8 @@ object PantsExport {
           globs = PantsGlobs.fromJson(value),
           roots = PantsRoots.fromJson(value),
           scalacOptions = asStringList(value, PantsKeys.scalacArgs),
-          javacOptions = asStringList(value, PantsKeys.javacArgs)
+          javacOptions = asStringList(value, PantsKeys.javacArgs),
+          extraJvmOptions = asStringList(value, PantsKeys.extraJvmOptions)
         )
     }.toMap
 

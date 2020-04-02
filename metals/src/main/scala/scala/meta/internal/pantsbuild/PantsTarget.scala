@@ -18,7 +18,8 @@ case class PantsTarget(
     globs: PantsGlobs,
     roots: PantsRoots,
     scalacOptions: List[String],
-    javacOptions: List[String]
+    javacOptions: List[String],
+    extraJvmOptions: List[String]
 ) {
   def isGeneratedTarget: Boolean = name.startsWith(".pants.d")
   private val prefixedId = id.stripPrefix(".")

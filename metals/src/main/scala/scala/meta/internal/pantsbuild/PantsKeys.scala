@@ -23,4 +23,5 @@ object PantsKeys {
   val strict = "strict"
   val scalacArgs = "scalac_args"
   val javacArgs = "javac_args"
+  val extraJvmOptions = "extra_jvm_options"
 }
