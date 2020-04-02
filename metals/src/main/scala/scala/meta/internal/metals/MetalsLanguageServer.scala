@@ -123,8 +123,6 @@ class MetalsLanguageServer(
   private val languageClient = new DelegatingLanguageClient(NoopLanguageClient)
   var userConfig: UserConfiguration = UserConfiguration()
   val buildTargets: BuildTargets = new BuildTargets()
-  private val buildTargetClassesFinder =
-    new BuildTargetClassesFinder(buildTargets, buildTargetClasses)
   private val remote = new RemoteLanguageServer(
     () => workspace,
     () => userConfig,
