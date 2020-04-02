@@ -17,6 +17,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.TokenEditDistance
 import scala.meta.internal.pc.HoverMarkup
+import scala.meta.internal.worksheets.MdocEnrichments.truncatify
 import WorkspaceEditWorksheetPublisher._
 
 class WorkspaceEditWorksheetPublisher(buffers: Buffers)
@@ -110,11 +111,9 @@ class WorkspaceEditWorksheetPublisher(buffers: Buffers)
   }
 
   private def renderMessage(statement: EvaluatedWorksheetStatement): String = {
-    import statement._
     val out = new StringBuilder()
     out.append("  /*>  ")
-    out.append(summary())
-    out.append(if (!isSummaryComplete()) "..." else "")
+    out.append(truncatify(statement))
     out.append("  */")
     out.result()
   }

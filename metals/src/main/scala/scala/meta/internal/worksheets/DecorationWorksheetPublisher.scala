@@ -48,7 +48,7 @@ class DecorationWorksheetPublisher() extends WorksheetPublisher {
           ),
           ThemableDecorationInstanceRenderOptions(
             after = ThemableDecorationAttachmentRenderOptions(
-              commentHeader + s.summary(),
+              commentHeader + truncatify(s),
               color = "green",
               fontStyle = "italic"
             )
