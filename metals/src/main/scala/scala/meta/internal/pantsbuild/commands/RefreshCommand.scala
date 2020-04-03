@@ -25,7 +25,7 @@ object RefreshCommand extends Command[RefreshOptions]("refresh") {
   def run(refresh: RefreshOptions, app: CliApp): Int = {
     val projects = Project.fromCommon(refresh.common)
     val errors = refresh.projects.map { projectName =>
-      projects.find(_.name == projectName) match {
+      projects.find(_.matchesName(projectName)) match {
         case Some(project) =>
           SharedCommand.interpretExport(
             Export(project, refresh.open, app).copy(

@@ -1,6 +1,7 @@
 package scala.meta.internal.pantsbuild.commands
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.pantsbuild.PantsConfiguration
 import scala.meta.io.AbsolutePath
 import scala.util.Try
 
@@ -10,6 +11,9 @@ case class Project(
     targets: List[String],
     root: ProjectRoot
 ) {
+  val fuzzyName: String = PantsConfiguration.outputFilename(name)
+  def matchesName(query: String): Boolean =
+    Project.matchesFuzzyName(query, name, fuzzyName)
   def bspRoot: AbsolutePath = root.bspRoot
 }
 
@@ -23,11 +27,24 @@ object Project {
   }
   def names(common: SharedOptions): List[String] =
     fromCommon(common).map(_.name)
+
+  def matchesFuzzyName(
+      query: String,
+      projectName: String,
+      fuzzyProjectName: String
+  ): Boolean =
+    projectName == query ||
+      fuzzyProjectName == query
+
   def fromName(
       name: String,
       common: SharedOptions
-  ): Option[Project] =
-    fromCommon(common, _ == name).headOption
+  ): Option[Project] = {
+    val fuzzyName = PantsConfiguration.outputFilename(name)
+    fromCommon(common, { candidate =>
+      matchesFuzzyName(candidate, name, fuzzyName)
+    }).headOption
+  }
   def fromCommon(
       common: SharedOptions,
       isEnabled: String => Boolean = _ => true
