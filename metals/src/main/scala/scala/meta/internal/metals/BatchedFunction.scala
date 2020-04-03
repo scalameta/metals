@@ -51,6 +51,7 @@ final class BatchedFunction[A, B](
   def currentFuture(): Future[B] = {
     current.get().future
   }
+
   private val current = new AtomicReference(
     CancelableFuture[B](
       Future.failed(new NoSuchElementException("BatchedFunction")),

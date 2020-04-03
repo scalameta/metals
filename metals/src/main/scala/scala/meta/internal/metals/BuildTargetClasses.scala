@@ -28,6 +28,27 @@ final class BuildTargetClasses(
     index.put(target, new Classes)
   }
 
+  def findMainClassByName(
+      name: String
+  ): List[(b.ScalaMainClass, b.BuildTargetIdentifier)] =
+    findClassesBy(_.mainClasses.values.find(_.getClassName() == name))
+
+  def findTestClassByName(
+      name: String
+  ): List[(String, b.BuildTargetIdentifier)] =
+    findClassesBy(_.testClasses.values.find(_ == name))
+
+  private def findClassesBy[A](
+      f: Classes => Option[A]
+  ): List[(A, b.BuildTargetIdentifier)] = {
+    index
+      .mapValues(f)
+      .toList
+      .collect {
+        case (target, Some(clazz)) => clazz -> target
+      }
+  }
+
   private def fetchClasses(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {

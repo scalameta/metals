@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.util.matching.Regex
 import ch.epfl.scala.{bsp4j => b}
+import javax.annotation.Nullable
 
 /**
  * LSP commands supported by the Metals language server.
@@ -107,7 +108,27 @@ object ServerCommands {
         |   }
         |}
         |```
-    """.stripMargin
+        |
+        |or DebugUnresolvedMainClassParams object
+        |Example:
+        |```json
+        |{
+        |   mainClass: "com.foo.App",
+        |   buildTarget: "foo",
+        |   args: ["bar"],
+        |   jvmOptions: ["-Dfile.encoding=UTF-16"]
+        |}
+        |```
+        |
+        |or DebugUnresolvedTestClassParams object
+        |Example:
+        |```json
+        |{
+        |   testClass: "com.foo.FooSuite",
+        |   buildTarget: "foo"
+        |}
+        |```
+        |""".stripMargin
   )
 
   val PresentationCompilerRestart = new Command(
@@ -259,3 +280,15 @@ object ServerCommands {
     SuperMethodHierarchy
   )
 }
+
+case class DebugUnresolvedMainClassParams(
+    mainClass: String,
+    @Nullable buildTarget: String = null,
+    @Nullable args: java.util.List[String] = null,
+    @Nullable jvmOptions: java.util.List[String] = null
+)
+
+case class DebugUnresolvedTestClassParams(
+    testClass: String,
+    @Nullable buildTarget: String = null
+)
