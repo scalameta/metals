@@ -26,6 +26,7 @@ import java.nio.file.Files
 import scala.meta.io.AbsolutePath
 import scala.meta.internal.pantsbuild.PantsConfiguration
 import scala.meta.internal.metals.JdkSources
+import scala.util.control.NonFatal
 
 object SharedCommand {
   def interpretExport(export: Export): Int = {
@@ -99,14 +100,21 @@ object SharedCommand {
   }
 
   def symlinkProjectViewRoots(project: Project): Unit = {
-    val workspace = AbsolutePath(project.common.workspace)
-    deleteSymlinkDirectories(project.bspRoot)
-    val projectViewRoots = PantsConfiguration
-      .sourceRoots(workspace, project.targets)
-      .map(_.toNIO)
-    projectViewRoots.foreach { root =>
-      val link = project.bspRoot.toNIO.resolve(root.getFileName())
-      Files.createSymbolicLink(link, root)
+    try {
+      val workspace = AbsolutePath(project.common.workspace)
+      deleteSymlinkDirectories(project.bspRoot)
+      val projectViewRoots = PantsConfiguration
+        .sourceRoots(workspace, project.targets)
+        .map(_.toNIO)
+      projectViewRoots.foreach { root =>
+        val link = project.bspRoot.toNIO.resolve(root.getFileName())
+        if (!Files.exists(link)) {
+          Files.createSymbolicLink(link, root)
+        }
+      }
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(e)
     }
   }
 
