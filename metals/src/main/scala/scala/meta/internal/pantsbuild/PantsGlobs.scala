@@ -37,12 +37,25 @@ case class PantsGlobs(
       excludes = excludeGlobs
     )
   }
+
+  private def isRecursiveGlob(glob: String) =
+    glob.endsWith("**/*.scala") ||
+      glob.endsWith("**/*.java")
+  private def stripRecursiveGlob(glob: String) =
+    glob
+      .stripSuffix("**/*.scala")
+      .stripSuffix("**/*.java")
+
   def isStatic: Boolean =
-    exclude.isEmpty && include.forall(_.indexOf('*') < 0)
+    exclude.isEmpty && include.forall(glob =>
+      glob.indexOf('*') < 0 || isRecursiveGlob(glob)
+    )
 
   def staticPaths(workspace: Path): Option[List[Path]] =
     if (isStatic) {
-      Some(include.map(relpath => workspace.resolve(relpath)))
+      Some(
+        include.map(relpath => workspace.resolve(stripRecursiveGlob(relpath)))
+      )
     } else {
       None
     }
