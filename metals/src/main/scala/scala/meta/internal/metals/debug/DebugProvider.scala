@@ -122,6 +122,9 @@ class DebugProvider(
           b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
           clazz.toJson
         )
+      //should not really happen due to
+      //`findMainClassAndItsBuildTarget` succeeding with non-empty list
+      case Nil => throw new ju.NoSuchElementException(params.mainClass)
     }
   }
 
@@ -149,6 +152,9 @@ class DebugProvider(
           b.DebugSessionParamsDataKind.SCALA_TEST_SUITES,
           singletonList(clazz).toJson
         )
+      //should not really happen due to
+      //`findMainClassAndItsBuildTarget` succeeding with non-empty list
+      case Nil => throw new ju.NoSuchElementException(params.testClass)
     }
   }
 
