@@ -39,6 +39,9 @@
       "contributors/releasing": {
         "title": "Making a release"
       },
+      "contributors/remote-language-server": {
+        "title": "Remote Language Servers"
+      },
       "contributors/tests": {
         "title": "Tests overview"
       },
@@ -53,7 +56,7 @@
         "sidebar_label": "Debug Adapter Protocol"
       },
       "editors/decoration-protocol": {
-        "title": "Decoration Protocol v0.1.0",
+        "title": "Decoration Protocol v0.2.0",
         "sidebar_label": "Decoration Protocol"
       },
       "editors/eclipse": {
