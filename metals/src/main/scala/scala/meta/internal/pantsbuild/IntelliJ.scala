@@ -88,6 +88,8 @@ object IntelliJ {
       s"org.scalameta:metals_2.12:${V.metalsVersion}",
       "-r",
       "sonatype:snapshots",
+      "--ttl",
+      "Inf",
       "--main",
       classOf[BloopPants].getName,
       "--",

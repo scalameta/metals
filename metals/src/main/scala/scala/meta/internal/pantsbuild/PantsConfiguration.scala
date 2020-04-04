@@ -108,9 +108,12 @@ object PantsConfiguration {
     }
     buf.result().map(workspace.resolve)
   }
+  def outputFilename(target: String): String = {
+    target.replace('/', '.').replaceAll("[^a-zA-Z0-9\\._]", "")
+  }
   def outputFilename(targets: List[String]): String = {
     val processed = targets
-      .map(_.replace('/', '.').replaceAll("[^a-zA-Z0-9\\.]", ""))
+      .map(outputFilename)
       .mkString("__")
     if (processed.isEmpty()) {
       MD5.compute(targets.mkString) // necessary for targets like "::/"
