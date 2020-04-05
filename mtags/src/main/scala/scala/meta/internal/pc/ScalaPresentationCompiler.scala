@@ -41,6 +41,17 @@ case class ScalaPresentationCompiler(
 ) extends PresentationCompiler {
   val logger: Logger =
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
+
+  val sourceModificator: SourceModificator = {
+    val autoImports =
+      if (config.autoImports().isPresent()) Some(config.autoImports().get())
+      else None
+    autoImports match {
+      case Some(v) => SourceModificator.appendAutoImports(v.asScala)
+      case None => SourceModificator.NoModification
+    }
+  }
+
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
   override def withExecutorService(
@@ -89,7 +100,9 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[CompletionList] =
     access.withInterruptableCompiler(emptyCompletion, params.token) { global =>
-      new CompletionProvider(global, params).completions()
+      sourceModificator.forCompletion(params)(params2 => {
+        new CompletionProvider(global, params2).completions()
+      })
     }
 
   override def implementAbstractMembers(
@@ -140,14 +153,21 @@ case class ScalaPresentationCompiler(
       Optional.empty[Hover](),
       params.token
     ) { global =>
-      Optional.ofNullable(new HoverProvider(global, params).hover().orNull)
+      val out = sourceModificator.forHover(params)(params2 => {
+        new HoverProvider(global, params2).hover()
+      })
+      Optional.ofNullable(out.orNull)
     }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
     access.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,
       params.token
-    ) { global => new PcDefinitionProvider(global, params).definition() }
+    ) { global =>
+      sourceModificator.forDefinition(params)(params2 =>
+        new PcDefinitionProvider(global, params2).definition()
+      )
+    }
   }
 
   override def semanticdbTextDocument(
@@ -222,4 +242,5 @@ case class ScalaPresentationCompiler(
       .toList
       .asJava
   }
+
 }

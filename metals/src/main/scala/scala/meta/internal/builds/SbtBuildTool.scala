@@ -52,6 +52,7 @@ case class SbtBuildTool(
     }
     removeLegacyGlobalPlugin()
     writeSbtMetalsPlugin(workspace, config)
+    writeSbtMetalsPlugin(workspace.resolve("project"), config)
     allArgs
   }
 

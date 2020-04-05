@@ -73,18 +73,20 @@ final class BuildTargets() {
     scalacTargetInfo.values
 
   def all: Iterator[ScalaTarget] =
-    for {
-      (id, target) <- buildTargetInfo.iterator
-      scalac <- scalacTargetInfo.get(id)
-      scalaTarget <- target.asScalaBuildTarget
-    } yield ScalaTarget(target, scalaTarget, scalac)
+    buildTargetInfo.iterator.flatMap({ case (_, bt) => toScalaTarget(bt) })
 
   def scalaTarget(id: BuildTargetIdentifier): Option[ScalaTarget] =
+    buildTargetInfo.get(id).flatMap(toScalaTarget)
+
+  private def toScalaTarget(target: BuildTarget): Option[ScalaTarget] = {
     for {
-      info <- buildTargetInfo.get(id)
-      scalac <- scalacTargetInfo.get(id)
-      scalaTarget <- info.asScalaBuildTarget
-    } yield ScalaTarget(info, scalaTarget, scalac)
+      scalac <- scalacTargetInfo.get(target.getId)
+      scalaTarget <- target.asScalaBuildTarget
+    } yield {
+      val autoImports = target.asSbtBuildTarget.map(_.getAutoImports.asScala)
+      ScalaTarget(target, scalaTarget, scalac, autoImports)
+    }
+  }
 
   def allWorkspaceJars: Iterator[AbsolutePath] = {
     val isVisited = new ju.HashSet[AbsolutePath]()
@@ -193,6 +195,11 @@ final class BuildTargets() {
       buildTarget: BuildTargetIdentifier
   ): Option[ScalacOptionsItem] =
     scalacTargetInfo.get(buildTarget)
+
+  def sbtBuildScalaTarget: Option[ScalaTarget] =
+    buildTargetInfo.values
+      .find(bt => bt.getDataKind == "sbt")
+      .flatMap(toScalaTarget)
 
   /**
    * Returns the first build target containing this source file.

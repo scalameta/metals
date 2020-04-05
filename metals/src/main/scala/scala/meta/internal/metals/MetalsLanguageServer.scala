@@ -1448,6 +1448,19 @@ class MetalsLanguageServer(
         if (forceImport) bloopInstall.runUnconditionally(buildTool)
         else bloopInstall.runIfApproved(buildTool, checksum)
       }
+      _ = if (buildTools.isSbt) {
+        val projectBloopDir = workspace.resolve("project").resolve(".bloop")
+        val metaBloopConfig = projectBloopDir.list.find(p =>
+          p.isFile && p.toFile.getName.endsWith("-build.json")
+        )
+        metaBloopConfig match {
+          case Some(v) =>
+            val copyTo = workspace.resolve(".bloop").resolve(v.toFile.getName)
+            if (copyTo.toFile.exists) Files.delete(copyTo.toNIO)
+            Files.copy(v.toNIO, copyTo.toNIO)
+          case None =>
+        }
+      }
       change <- {
         if (result.isInstalled) quickConnectToBuildServer()
         else if (result.isFailed) {

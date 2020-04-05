@@ -66,8 +66,24 @@ object MetalsEnrichments
     with MtagsEnrichments {
 
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
+
+    def isSbtBuild: Boolean =
+      buildTarget.getDataKind == "sbt"
+
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
-      decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])
+      if (isSbtBuild) {
+        decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
+          .map(_.getScalaBuildTarget)
+      } else {
+        decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])
+      }
+    }
+
+    def asSbtBuildTarget: Option[b.SbtBuildTarget] = {
+      buildTarget.getDataKind match {
+        case "sbt" => decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
+        case _ => None
+      }
     }
   }
 

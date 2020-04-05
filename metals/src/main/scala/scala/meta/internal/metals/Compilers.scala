@@ -2,8 +2,6 @@ package scala.meta.internal.metals
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
-import ch.epfl.scala.bsp4j.ScalaBuildTarget
-import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import org.eclipse.lsp4j.InitializeParams
@@ -218,21 +216,6 @@ class Compilers(
     }.getOrElse(Future.successful(new SignatureHelp()))
 
   def loadCompiler(
-      path: AbsolutePath,
-      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
-  ): Option[PresentationCompiler] = {
-    val target = buildTargets
-      .inverseSources(path)
-      .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
-    target match {
-      case None =>
-        if (path.isScalaFilename) Some(ramboCompiler)
-        else None
-      case Some(value) => loadCompiler(value)
-    }
-  }
-
-  def loadCompiler(
       target: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
     for {
@@ -244,14 +227,13 @@ class Compilers(
         }
       }
       if isSupported
-      scalac <- buildTargets.scalacOptions(target)
     } yield {
       jcache.computeIfAbsent(
         target, { _ =>
           statusBar.trackBlockingTask(
             s"${statusBar.icons.sync}Loading presentation compiler"
           ) {
-            newCompiler(scalac, info.scalaInfo)
+            newCompiler(info)
           }
         }
       )
@@ -262,20 +244,67 @@ class Compilers(
       params: TextDocumentPositionParams,
       interactiveSemanticdbs: Option[InteractiveSemanticdbs]
   )(fn: (PresentationCompiler, Position) => T): Option[T] = {
+
+    def isSupported(st: ScalaTarget): Boolean =
+      ScalaVersions.isSupportedScalaVersion(st.scalaVersion)
+
+    def loadCompiler(st: ScalaTarget): PresentationCompiler =
+      jcache.computeIfAbsent(
+        st.info.getId, { _ =>
+          statusBar.trackBlockingTask(
+            s"${statusBar.icons.sync}Loading presentation compiler"
+          ) {
+            newCompiler(st)
+          }
+        }
+      )
+
     val path = params.getTextDocument.getUri.toAbsolutePath
-    loadCompiler(path, interactiveSemanticdbs).map { compiler =>
-      val input = path
-        .toInputFromBuffers(buffers)
-        .copy(path = params.getTextDocument.getUri())
-      val pos = params.getPosition.toMeta(input)
-      val result = fn(compiler, pos)
-      result
+
+    findTarget(path, interactiveSemanticdbs) match {
+      case None if path.isScalaFilename =>
+        val out = fn(ramboCompiler, metaPosition(params, path))
+        Some(out)
+      case Some(scalaTarget) if isSupported(scalaTarget) =>
+        val compiler = loadCompiler(scalaTarget)
+        val pos = metaPosition(params, path)
+        val out = fn(compiler, pos)
+        Some(out)
+      case Some(v) =>
+        scribe.warn(s"unsupported Scala ${v.scalaVersion}")
+        None
+      case None => None
+    }
+  }
+
+  private def metaPosition(
+      params: TextDocumentPositionParams,
+      path: AbsolutePath
+  ): meta.Position = {
+    val input = path
+      .toInputFromBuffers(buffers)
+      .copy(path = params.getTextDocument.getUri())
+    params.getPosition.toMeta(input)
+  }
+
+  private def findTarget(
+      path: AbsolutePath,
+      interactiveSemanticdbs: Option[InteractiveSemanticdbs]
+  ): Option[ScalaTarget] = {
+    if (path.isSbt) {
+      buildTargets.sbtBuildScalaTarget
+    } else {
+      buildTargets
+        .inverseSources(path)
+        .orElse(interactiveSemanticdbs.flatMap(_.getBuildTarget(path)))
+        .flatMap(id => buildTargets.scalaTarget(id))
     }
   }
 
   private def configure(
       pc: PresentationCompiler,
-      search: SymbolSearch
+      search: SymbolSearch,
+      autoImports: Option[Seq[String]] = None
   ): PresentationCompiler =
     pc.withSearch(search)
       .withExecutorService(ec)
@@ -284,14 +313,14 @@ class Compilers(
         config.compilers.copy(
           _symbolPrefixes = userConfig().symbolPrefixes,
           isCompletionSnippetsEnabled =
-            initializeParams.supportsCompletionSnippets
+            initializeParams.supportsCompletionSnippets,
+          _autoImports = autoImports
         )
       )
 
-  def newCompiler(
-      scalac: ScalacOptionsItem,
-      info: ScalaBuildTarget
-  ): PresentationCompiler = {
+  def newCompiler(scalaTarget: ScalaTarget): PresentationCompiler = {
+    val scalac = scalaTarget.scalac
+    val info = scalaTarget.scalaInfo
     val classpath = scalac.classpath.map(_.toNIO).toSeq
     // The metals_2.12 artifact depends on mtags_2.12.x where "x" matches
     // `mtags.BuildInfo.scalaCompilerVersion`. In the case when
@@ -304,7 +333,7 @@ class Compilers(
         embedded.presentationCompiler(info, scalac)
       }
     val options = plugins.filterSupportedOptions(scalac.getOptions.asScala)
-    configure(pc, search).newInstance(
+    configure(pc, search, scalaTarget.autoImports).newInstance(
       scalac.getTarget.getUri,
       classpath.asJava,
       (log ++ options).asJava

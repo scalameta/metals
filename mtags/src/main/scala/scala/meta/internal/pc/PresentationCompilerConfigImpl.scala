@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import java.{util => ju}
 
 case class PresentationCompilerConfigImpl(
     debug: Boolean = false,
@@ -22,12 +23,16 @@ case class PresentationCompilerConfigImpl(
     isCompletionSnippetsEnabled: Boolean = true,
     isCompletionItemResolve: Boolean = true,
     timeoutDelay: Long = 20,
-    timeoutUnit: TimeUnit = TimeUnit.SECONDS
+    timeoutUnit: TimeUnit = TimeUnit.SECONDS,
+    _autoImports: Option[Seq[String]] = None
 ) extends PresentationCompilerConfig {
+
   override def symbolPrefixes(): util.Map[String, String] =
     _symbolPrefixes.asJava
   override def parameterHintsCommand: Optional[String] =
     Optional.ofNullable(_parameterHintsCommand.orNull)
   override def completionCommand: Optional[String] =
     Optional.ofNullable(_completionCommand.orNull)
+  override def autoImports(): Optional[ju.List[String]] =
+    Optional.ofNullable(_autoImports.map(_.asJava).orNull)
 }

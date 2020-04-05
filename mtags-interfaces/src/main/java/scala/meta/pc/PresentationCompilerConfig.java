@@ -1,6 +1,7 @@
 package scala.meta.pc;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -88,4 +89,8 @@ public interface PresentationCompilerConfig {
      */
     TimeUnit timeoutUnit();
 
+    /**
+     *  Sbt files support
+     */
+    Optional<List<String>> autoImports();
 }
