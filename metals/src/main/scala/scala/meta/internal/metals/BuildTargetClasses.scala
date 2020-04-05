@@ -15,7 +15,6 @@ import ch.epfl.scala.{bsp4j => b}
  * In-memory index of main class symbols grouped by their enclosing build target
  */
 final class BuildTargetClasses(
-    buildServer: b.BuildTargetIdentifier => Option[BuildServerConnection],
     buildTargets: BuildTargets
 )(implicit val ec: ExecutionContext) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
@@ -56,7 +55,7 @@ final class BuildTargetClasses(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {
     Future
-      .traverse(targets.groupBy(buildServer)) {
+      .traverse(targets.groupBy(buildTargets.buildServerOf)) {
         case (None, _) =>
           Future.successful(())
         case (Some(connection), targets0) =>

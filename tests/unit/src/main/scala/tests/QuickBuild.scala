@@ -66,7 +66,9 @@ case class QuickBuild(
     compilerPlugins: Array[String],
     scalacOptions: Array[String],
     dependsOn: Array[String],
-    additionalSources: Array[String]
+    additionalSources: Array[String],
+    sbtVersion: String,
+    sbtAutoImports: Array[String]
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
@@ -77,7 +79,9 @@ case class QuickBuild(
       orEmpty(compilerPlugins),
       orEmpty(scalacOptions),
       orEmpty(dependsOn),
-      orEmpty(additionalSources)
+      orEmpty(additionalSources),
+      sbtVersion,
+      orEmpty(sbtAutoImports)
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
@@ -198,6 +202,10 @@ case class QuickBuild(
         s"dotty-compiler_$binaryVersion"
       else s"scala-compiler"
 
+    val sbt = Option(sbtVersion).map { version =>
+      C.Sbt(version, sbtAutoImports.toList)
+    }
+
     C.Project(
       id,
       baseDirectory,
@@ -237,7 +245,7 @@ case class QuickBuild(
         )
       ),
       java = Some(C.Java(Nil)),
-      sbt = None,
+      sbt = sbt,
       test = testFrameworks,
       platform =
         Some(C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None, None, None)),

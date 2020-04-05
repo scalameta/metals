@@ -25,7 +25,7 @@ import io.github.soc.directories.ProjectDirectories
  * See https://github.com/scalacenter/bsp/blob/master/docs/bsp.md#bsp-connection-protocol
  */
 final class BspServers(
-    workspace: AbsolutePath,
+    mainWorkspace: AbsolutePath,
     charset: Charset,
     client: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
@@ -34,10 +34,12 @@ final class BspServers(
     config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService) {
 
-  def newServer(): Future[Option[BuildServerConnection]] = {
-    findServer().flatMap { details =>
+  def newServer(
+      projectDirectory: AbsolutePath
+  ): Future[Option[BuildServerConnection]] = {
+    findServer(projectDirectory).flatMap { details =>
       details
-        .map(d => newServer(d).map(Option(_)))
+        .map(d => newServer(projectDirectory, d).map(Option(_)))
         .getOrElse(Future.successful(None))
     }
   }
@@ -46,7 +48,7 @@ final class BspServers(
    * Runs "Switch build server" command, returns true if build server was changed
    */
   def switchBuildServer(): Future[Boolean] = {
-    findAvailableServers() match {
+    findAvailableServers(mainWorkspace) match {
       case Nil =>
         client.showMessage(BspSwitch.noInstalledServer)
         Future.successful(false)
@@ -60,12 +62,13 @@ final class BspServers(
   }
 
   private def newServer(
+      projectDirectory: AbsolutePath,
       details: BspConnectionDetails
   ): Future[BuildServerConnection] = {
 
     def newConnection(): Future[SocketConnection] = {
       val process = new ProcessBuilder(details.getArgv)
-        .directory(workspace.toFile)
+        .directory(projectDirectory.toFile)
         .start()
 
       val output = new ClosableOutputStream(
@@ -98,7 +101,7 @@ final class BspServers(
     }
 
     BuildServerConnection.fromSockets(
-      workspace,
+      projectDirectory,
       buildClient,
       client,
       newConnection,
@@ -107,8 +110,10 @@ final class BspServers(
     )
   }
 
-  private def findServer(): Future[Option[BspConnectionDetails]] = {
-    findAvailableServers() match {
+  private def findServer(
+      projectDirectory: AbsolutePath
+  ): Future[Option[BspConnectionDetails]] = {
+    findAvailableServers(projectDirectory) match {
       case Nil =>
         Future.successful(None)
       case head :: Nil =>
@@ -131,8 +136,10 @@ final class BspServers(
     }
   }
 
-  private def findAvailableServers(): List[BspConnectionDetails] = {
-    val jsonFiles = findJsonFiles()
+  private def findAvailableServers(
+      projectDirectory: AbsolutePath
+  ): List[BspConnectionDetails] = {
+    val jsonFiles = findJsonFiles(projectDirectory)
     val gson = new Gson()
     for {
       candidate <- jsonFiles
@@ -151,7 +158,9 @@ final class BspServers(
     }
   }
 
-  private def findJsonFiles(): List[AbsolutePath] = {
+  private def findJsonFiles(
+      projectDirectory: AbsolutePath
+  ): List[AbsolutePath] = {
     val buf = List.newBuilder[AbsolutePath]
     def visit(dir: AbsolutePath): Unit =
       dir.list.foreach { p =>
@@ -159,7 +168,7 @@ final class BspServers(
           buf += p
         }
       }
-    visit(workspace.resolve(".bsp"))
+    visit(projectDirectory.resolve(".bsp"))
     bspGlobalInstallDirectories.foreach(visit)
     buf.result()
   }

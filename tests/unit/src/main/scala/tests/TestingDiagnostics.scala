@@ -11,7 +11,7 @@ import scala.meta.io.AbsolutePath
 object TestingDiagnostics {
   def apply(
       workspace: AbsolutePath = PathIO.workingDirectory,
-      buildTargets: BuildTargets = new BuildTargets(),
+      buildTargets: BuildTargets = BuildTargets.withoutAmmonite,
       buffers: Buffers = Buffers()
   ): Diagnostics = {
     new Diagnostics(
