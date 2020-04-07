@@ -157,13 +157,33 @@ object BloopPants {
       s"export-dep-as-jar"
     ) ++ args.targets
     val shortName = "pants export-classpath export"
-    SystemProcess.run(
-      shortName,
-      command,
-      command,
-      args.workspace,
-      args.token
-    )
+    val bloopSymlink = args.workspace.resolve(".bloop")
+    val bloopSymlinkTarget =
+      if (Files.isSymbolicLink(bloopSymlink)) {
+        Some(Files.readSymbolicLink(bloopSymlink))
+      } else {
+        None
+      }
+    try {
+      // NOTE(olafur): Delete `.bloop` symbolic link while doing `./pants
+      // export-dep-as-jar` because the symbolic link can trigger errors in
+      // Pants. The symbolic link is recovered in the finally block after the
+      // export command completes.
+      bloopSymlinkTarget.foreach(_ => Files.deleteIfExists(bloopSymlink))
+      SystemProcess.run(
+        shortName,
+        command,
+        command,
+        args.workspace,
+        args.token
+      )
+    } finally {
+      bloopSymlinkTarget.foreach { target =>
+        if (!Files.exists(bloopSymlink)) {
+          Files.createSymbolicLink(bloopSymlink, target)
+        }
+      }
+    }
   }
 
   private val nonAlphanumeric = "[^a-zA-Z0-9\\._]".r
