@@ -8,7 +8,7 @@ class CompletionSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
 
   check(
-    "scope",
+    "scope".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object A {
       |  Lis@@
@@ -28,8 +28,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |ListMap - scala.collection.immutable
            |""".stripMargin
     ),
-    topLines = Some(5),
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+    topLines = Some(5)
   )
 
   check(
@@ -104,7 +103,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "cursor",
+    "cursor".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object A {
       |  val default = 1
@@ -117,12 +116,12 @@ class CompletionSuite extends BaseCompletionSuite {
        |override def toString(): String
        |override def clone(): Object
        |override def finalize(): Unit
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
-    "dot",
+    // @tgodzik different results might be returned on each run for Scala 3
+    "dot".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object A {
       |  List.@@
@@ -229,9 +228,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |synchronized[T0](x$1: T0): T0
            |toString(): String
            |""".stripMargin
-    ),
-    // different results might be returned on each run
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+    )
   )
 
   check(
@@ -251,19 +248,18 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "fuzzy",
+    "fuzzy".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object A {
       |  def userService = 1
       |  uService@@
       |}""".stripMargin,
     """|userService: Int
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
-    "fuzzy1",
+    "fuzzy1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object A {
       |  new PBuil@@
@@ -277,8 +273,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |PKIXBuilderParameters - java.security.cert
        |CertPathBuilderException - java.security.cert
        |PKIXCertPathBuilderResult - java.security.cert
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
@@ -317,7 +312,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import",
+    "import".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |import JavaCon@@
       |""".stripMargin,
@@ -342,32 +337,29 @@ class CompletionSuite extends BaseCompletionSuite {
                    |JavaConversions - scala.collection
                    |JavaConversions - scala.concurrent
                    |""".stripMargin
-    ),
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+    )
   )
 
   check(
-    "import1",
+    "import1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |import Paths@@
       |""".stripMargin,
     """|Paths - java.nio.file
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
-    "import2",
+    "import2".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |import Catch@@
       |""".stripMargin,
     """|Catch - scala.util.control.Exception
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
-    "import3",
+    "import3".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |import Path@@
       |""".stripMargin,
@@ -382,12 +374,11 @@ class CompletionSuite extends BaseCompletionSuite {
        |PathIterator - java.awt.geom
        |XPathEvaluator - org.w3c.dom.xpath
        |XPathException - org.w3c.dom.xpath
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
-    "accessible",
+    "accessible".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |package a
       |import MetaData@@
@@ -395,12 +386,11 @@ class CompletionSuite extends BaseCompletionSuite {
     """|DatabaseMetaData - java.sql
        |ParameterMetaData - java.sql
        |ResultSetMetaData - java.sql
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
-    "source",
+    "source".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |package a
       |object Main {
@@ -411,8 +401,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|Inner - a.Outer
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
@@ -485,7 +474,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "numeric-sort",
+    "numeric-sort".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |package a
       |
@@ -519,8 +508,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |Function21 scala
        |Function22 scala
        |PartialFunction scala
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
@@ -582,7 +570,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
   check(
-    "local1",
+    "local1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |import scala.concurrent.DelayedLazyVal
       |
@@ -597,8 +585,7 @@ class CompletionSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|DelayedLazyVal scala.concurrent
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
@@ -769,29 +756,27 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "type",
+    "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     s"""|object Main {
         |  val foo: ListBuffe@@
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
-    "type1",
+    "type1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     s"""|object Main {
         |  val foo: Map[Int, ListBuffe@@]
         |}
         |""".stripMargin,
     """|ListBuffer - scala.collection.mutable
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
-    "type2",
+    "type2".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     s"""|object Main {
         |  new scala.Iterable@@
         |}
@@ -805,8 +790,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |Iterable[+A] = Iterable
            |IterableOnce[+A] = IterableOnce
            |""".stripMargin
-    ),
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+    )
   )
 
   check(
@@ -1045,7 +1029,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "fuzzy-member",
+    "fuzzy-member".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     s"""|class Foo {
         |  def getTimeStamp: Int = 0
         |}
@@ -1054,8 +1038,7 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|getTimeStamp: Int
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(

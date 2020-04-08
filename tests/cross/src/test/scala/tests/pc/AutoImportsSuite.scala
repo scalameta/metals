@@ -8,11 +8,9 @@ import scala.meta.internal.metals.TextEdits
 import munit.Location
 import java.nio.file.Paths
 import tests.BuildInfoVersions
-import scala.meta.pc.PresentationCompiler
 
 class AutoImportsSuite extends BaseCodeActionSuite {
 
-  // @tgodzik TODO currently not implemented for Dotty
   override def excludedScalaVersions: Set[String] =
     Set(BuildInfoVersions.scala3)
 
@@ -115,7 +113,7 @@ class AutoImportsSuite extends BaseCodeActionSuite {
       expected: String,
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit =
-    testPc(name) { implicit pc =>
+    test(name) {
       val imports = getAutoImports(original)
       val obtained = imports.map(_.packageName()).mkString("\n")
       assertNoDiff(
@@ -127,7 +125,7 @@ class AutoImportsSuite extends BaseCodeActionSuite {
   def checkEdit(name: String, original: String, expected: String)(
       implicit loc: Location
   ): Unit =
-    testPc(name) { implicit pc =>
+    test(name) {
       val imports = getAutoImports(original)
       if (imports.isEmpty) fail("obtained no imports")
       val edits = imports.head.edits().asScala.toList
@@ -139,9 +137,9 @@ class AutoImportsSuite extends BaseCodeActionSuite {
   def getAutoImports(
       original: String,
       filename: String = "A.scala"
-  )(implicit pc: PresentationCompiler): List[AutoImportsResult] = {
+  ): List[AutoImportsResult] = {
     val (code, symbol, offset) = params(original)
-    val result = pc
+    val result = presentationCompiler
       .autoImports(
         symbol,
         CompilerOffsetParams(

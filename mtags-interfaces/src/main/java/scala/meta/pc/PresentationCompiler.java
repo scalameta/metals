@@ -201,10 +201,4 @@ public abstract class PresentationCompiler {
      */
     public abstract boolean isLoaded();
 
-    protected CompletionList emptyCompletion(){
-        CompletionList items = new CompletionList(new LinkedList<>());
-        items.setIsIncomplete(true);
-        return items;
-    }
-
 }

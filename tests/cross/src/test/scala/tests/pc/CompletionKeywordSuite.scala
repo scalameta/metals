@@ -5,7 +5,6 @@ import tests.BuildInfoVersions
 
 class CompletionKeywordSuite extends BaseCompletionSuite {
 
-  // @tgodzik TODO currently not implemented for Dotty
   override def excludedScalaVersions: Set[String] =
     Set(BuildInfoVersions.scala3)
 

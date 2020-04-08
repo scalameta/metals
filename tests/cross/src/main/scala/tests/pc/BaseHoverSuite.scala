@@ -22,7 +22,7 @@ abstract class BaseHoverSuite
       automaticPackage: Boolean = true,
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    testPc(name) { implicit pc =>
+    test(name) {
       val filename = "Hover.scala"
       val pkg = scala.meta.Term.Name(name).syntax
       val noRange = original
@@ -33,7 +33,7 @@ abstract class BaseHoverSuite
         else ""
       val codeOriginal = packagePrefix + noRange
       val (code, offset) = params(codeOriginal, filename)
-      val hover = pc
+      val hover = presentationCompiler
         .hover(
           CompilerOffsetParams(Paths.get(filename).toUri(), code, offset)
         )

@@ -128,25 +128,30 @@ case class QuickBuild(
         .toDependency(plugin, scalaVersion, binaryVersion)
         .withTransitive(false)
     )
-    val pluginJars = QuickBuild.fetchDependencies(pluginDependencies)
-    val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
-    val cache =
-      if (scalaVersion == V.scala212)
-        List("-Ycache-plugin-class-loader:last-modified")
-      else List()
-    val allScalacOptions = List(
-      List(
-        "-Yrangepos",
-        s"-Xplugin-require:semanticdb",
-        s"-P:semanticdb:failures:warning",
-        s"-P:semanticdb:synthetics:on",
-        s"-P:semanticdb:sourceroot:$workspace",
-        s"-P:semanticdb:targetroot:$classDirectory"
-      ),
-      plugins,
-      cache,
-      scalacOptions.toList
-    ).flatten
+    val allScalacOptions =
+      if (ScalaVersions.isScala3Version(scalaVersion)) {
+        scalacOptions.toList
+      } else {
+        val pluginJars = QuickBuild.fetchDependencies(pluginDependencies)
+        val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
+        val cache =
+          if (scalaVersion == V.scala212)
+            List("-Ycache-plugin-class-loader:last-modified")
+          else List()
+        List(
+          List(
+            "-Yrangepos",
+            s"-Xplugin-require:semanticdb",
+            s"-P:semanticdb:failures:warning",
+            s"-P:semanticdb:synthetics:on",
+            s"-P:semanticdb:sourceroot:$workspace",
+            s"-P:semanticdb:targetroot:$classDirectory"
+          ),
+          plugins,
+          cache,
+          scalacOptions.toList
+        ).flatten
+      }
     val resolution = dependencySources.map { jar =>
       C.Module(
         "",

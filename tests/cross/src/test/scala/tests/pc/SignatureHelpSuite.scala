@@ -310,7 +310,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "tparam2",
+    "tparam2".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object a {
       |  Option.empty[I@@]
@@ -318,9 +318,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|empty[A]: Option[A]
        |      ^
-       |""".stripMargin,
-    // TODO type signatures aren't handled
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
   check(
@@ -342,7 +340,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     )
   )
   check(
-    "tparam4",
+    "tparam4".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object a {
       |  Map.empty[I@@]
@@ -356,9 +354,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|empty[A, B]: Map[A,B]
            |      ^
            |""".stripMargin
-    ),
-    // TODO type signatures aren't handled
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+    )
   )
 
   check(
@@ -779,7 +775,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
   )
 
   check(
-    "type",
+    "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object a {
       |  val x: Map[Int, Stri@@ng]
@@ -787,13 +783,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Map[A, B]: Map
        |       ^
-       | """.stripMargin,
-    // TODO type signatures are not yet supported
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       | """.stripMargin
   )
 
   check(
-    "type1",
+    "type1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object a {
       |  val x: Map[Int, Stri@@]
@@ -801,13 +795,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|Map[A, B]: Map
        |       ^
-       | """.stripMargin,
-    // TODO type signatures are not yet supported
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       | """.stripMargin
   )
 
   check(
-    "pat",
+    "pat".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |case class Person(name: String, age: Int)
       |object a {
@@ -817,13 +809,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|unapply(name: String, age: Int): Person
        |        ^^^^^^^^^^^^
-       | """.stripMargin,
-    // TODO pattern matches are not translated to unapply signatures yet
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       | """.stripMargin
   )
 
   check(
-    "pat1",
+    "pat1".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |class Person(name: String, age: Int)
       |object Person {
@@ -837,13 +827,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """|unapply(name: String, age: Int): Person
        |        ^^^^^^^^^^^^
-       | """.stripMargin,
-    // TODO pattern matches are not translated to unapply signatures yet
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       | """.stripMargin
   )
 
   check(
-    "pat2",
+    "pat2".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object a {
       |  val Number = "$a, $b".r
@@ -865,13 +853,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |unapplySeq(s: CharSequence): Option[List[String]]
            |           ^^^^^^^^^^^^^^^
            | """.stripMargin
-    ),
-    // TODO pattern matches are not translated to unapply signatures yet
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+    )
   )
 
   check(
-    "pat3",
+    "pat3".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object And {
       |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
@@ -883,13 +869,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |}
   """.stripMargin,
     """|unapply[A](a: A): Some[(A, A)]
-       | """.stripMargin,
-    // TODO pattern matches are not translated to unapply signatures yet
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       | """.stripMargin
   )
 
   check(
-    "pat4",
+    "pat4".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     """
       |object & {
       |  def unapply[A](a: A): Some[(A, A)] = Some((a, a))
@@ -906,9 +890,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     // generated code. Feel free to update this test to have the same expected output as
     // `pat3` without regressing signature help in othere cases like partial functions that
     // generate qualifiers with offset positions.
-    "",
-    // TODO pattern matches are not translated to unapply signatures yet
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+    ""
   )
 
   check(

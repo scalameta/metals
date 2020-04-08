@@ -4,14 +4,13 @@ import tests.BaseCompletionSuite
 import scala.collection.Seq
 import coursierapi.Dependency
 import java.nio.file.Path
-import tests.ScalaDependencies
 import tests.BuildInfoVersions
 
 class MacroCompletionSuite extends BaseCompletionSuite {
 
   override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
 
-    val scalaBinaryVersion = ScalaDependencies.createBinaryVersion(scalaVersion)
+    val scalaBinaryVersion = createBinaryVersion(scalaVersion)
     val macrosDependencies =
       if (scalaBinaryVersion == "2.11" || scalaBinaryVersion == "2.12") {
         Seq(
@@ -20,7 +19,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
       } else {
         Nil
       }
-    if (ScalaDependencies.isScala3Version(scalaVersion)) {
+    if (isScala3Version(scalaVersion)) {
       Seq.empty
     } else {
       Seq(

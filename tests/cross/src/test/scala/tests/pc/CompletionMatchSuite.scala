@@ -7,7 +7,6 @@ class CompletionMatchSuite extends BaseCompletionSuite {
 
   override def requiresScalaLibrarySources: Boolean = true
 
-  // @tgodzik TODO currently not implemented for Dotty
   override def excludedScalaVersions: Set[String] =
     Set(BuildInfoVersions.scala3)
 
@@ -57,7 +56,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
 
   // Assert that Workday/Weekend symbols from previous test don't appear in result.
   checkEdit(
-    "stale2",
+    "stale2".tag(IgnoreScalaVersion("2.11.12")),
     """package stale
       |sealed abstract class Weekday
       |object Weekday {
@@ -85,8 +84,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |}
        |}
        |""".stripMargin,
-    filter = _.contains("exhaustive"),
-    ignoredScalaVersions = Set("2.11.12")
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(

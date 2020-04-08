@@ -160,9 +160,10 @@ case class ScalaPresentationCompiler(
   override def complete(
       params: OffsetParams
   ): CompletableFuture[CompletionList] =
-    compilerAccess.withInterruptableCompiler(emptyCompletion(), params.token) {
-      pc => new CompletionProvider(pc.compiler, params).completions()
-    }
+    compilerAccess.withInterruptableCompiler(
+      EmptyCompletionList(),
+      params.token
+    ) { pc => new CompletionProvider(pc.compiler, params).completions() }
 
   override def implementAbstractMembers(
       params: OffsetParams

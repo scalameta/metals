@@ -7,7 +7,6 @@ import tests.BuildInfoVersions
 
 class CompletionCaseSuite extends BaseCompletionSuite {
 
-  // @tgodzik TODO currently not implemented for Dotty
   override def excludedScalaVersions: Set[String] =
     Set(BuildInfoVersions.scala3)
 
@@ -428,7 +427,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
 
   // Apparently, known-direct subclasses does not work so well in 2.11.
   checkEditLine(
-    "infix-custom",
+    "infix-custom".tag(IgnoreScalaVersion("2.11.12")),
     """package pkg
       |object Outer {
       |  sealed trait ADT
@@ -443,12 +442,11 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "cas@@",
-    "case a :+: b => $0",
-    ignoredScalaVersions = Set("2.11.12")
+    "case a :+: b => $0"
   )
 
   checkEditLine(
-    "infix-conflict",
+    "infix-conflict".tag(IgnoreScalaVersion("2.11.12")),
     """
       |object Outer {
       |  sealed trait List
@@ -463,8 +461,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "cas@@",
     // Assert we don't use infix syntax because `::` resolves to conflicting symbol in scope.
-    "case Outer.::(a, b) => $0",
-    ignoredScalaVersions = Set("2.11.12")
+    "case Outer.::(a, b) => $0"
   )
 
 }

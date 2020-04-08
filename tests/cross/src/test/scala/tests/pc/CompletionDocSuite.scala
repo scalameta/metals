@@ -7,7 +7,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
   override def requiresScalaLibrarySources: Boolean = true
 
-  // @tgodzik TODO currently not implemented for Dotty
   override def excludedScalaVersions: Set[String] =
     Set(BuildInfoVersions.scala3)
 

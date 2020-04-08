@@ -217,6 +217,12 @@ final class BuildTargets() {
         val isJVM = scalacOptions(t).exists(_.isJVM)
         if (isJVM) score <<= 1
 
+        // note(@tgodzik) once the support for Scala 3 is on par with Scala 2 this can be removed
+        val isScala2 = scalaInfo(t).exists(info =>
+          !ScalaVersions.isScala3Version(info.getScalaVersion())
+        )
+        if (isScala2) score <<= 1
+
         score
       })
     }

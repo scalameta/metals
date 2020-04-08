@@ -13,7 +13,6 @@ import munit.TestOptions
 import munit.Location
 import java.nio.file.Paths
 import scala.meta.internal.pc.EmptyCancelToken
-import scala.meta.pc.PresentationCompiler
 
 abstract class BaseCompletionSuite extends BasePCSuite {
 
@@ -21,11 +20,13 @@ abstract class BaseCompletionSuite extends BasePCSuite {
 
   private def resolvedCompletions(
       params: CompilerOffsetParams
-  )(implicit pc: PresentationCompiler): CompletionList = {
-    val result = pc.complete(params).get()
+  ): CompletionList = {
+    val result = presentationCompiler.complete(params).get()
     val newItems = result.getItems.asScala.map { item =>
       item.data
-        .map { data => pc.completionItemResolve(item, data.symbol).get() }
+        .map { data =>
+          presentationCompiler.completionItemResolve(item, data.symbol).get()
+        }
         .getOrElse(item)
     }
     result.setItems(newItems.asJava)
@@ -35,7 +36,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   def getItems(
       original: String,
       filename: String = "A.scala"
-  )(implicit pc: PresentationCompiler): Seq[CompletionItem] = {
+  ): Seq[CompletionItem] = {
     val (code, offset) = params(original)
     val result = resolvedCompletions(
       CompilerOffsetParams(
@@ -55,7 +56,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       original: String,
       fn: Seq[CompletionItem] => Unit
   )(implicit loc: Location): Unit = {
-    testPc(name) { implicit pc => fn(getItems(original)) }
+    test(name) { fn(getItems(original)) }
   }
 
   def checkEditLine(
@@ -67,8 +68,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
-      compat: Map[String, String] = Map.empty,
-      ignoredScalaVersions: Set[String] = Set.empty
+      compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
     val compatTemplate = compat.map {
       case (key, value) =>
@@ -82,8 +82,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem = assertSingleItem,
       filter = filter,
       command = command,
-      compat = compatTemplate,
-      ignoredScalaVersions = ignoredScalaVersions
+      compat = compatTemplate
     )
   }
 
@@ -95,10 +94,9 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
-      compat: Map[String, String] = Map.empty,
-      ignoredScalaVersions: Set[String] = Set.empty
+      compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    testPc(name, ignoredScalaVersions) { implicit pc =>
+    test(name) {
       val items = getItems(original).filter(item => filter(item.getLabel))
       if (items.isEmpty) fail("obtained empty completions!")
       if (assertSingleItem && items.length != 1) {
@@ -125,13 +123,12 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   }
 
   def checkSnippet(
-      name: String,
+      name: TestOptions,
       original: String,
       expected: String,
-      compat: Map[String, String] = Map.empty,
-      ignoredScalaVersions: Set[String] = Set.empty
+      compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    testPc(name, ignoredScalaVersions) { implicit pc =>
+    test(name) {
       val items = getItems(original)
       val obtained = items
         .map { item =>
@@ -163,10 +160,9 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       includeDetail: Boolean = true,
       filename: String = "A.scala",
       filter: String => Boolean = _ => true,
-      enablePackageWrap: Boolean = true,
-      ignoredScalaVersions: Set[String] = Set.empty
+      enablePackageWrap: Boolean = true
   )(implicit loc: Location): Unit = {
-    testPc(name, ignoredScalaVersions) { implicit pc =>
+    test(name) {
       val out = new StringBuilder()
       val withPkg =
         if (original.contains("package") || !enablePackageWrap) original

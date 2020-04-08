@@ -666,8 +666,10 @@ final class TestingServer(
       .filter(item => filter(item.getLabel()))
       .map { item =>
         val label = TestCompletions.getFullyQualifiedLabel(item)
+        val shouldIncludeDetail = item.getDetail != null && includeDetail
         val detail =
-          if (includeDetail && !label.contains(item.getDetail)) item.getDetail
+          if (shouldIncludeDetail && !label.contains(item.getDetail))
+            item.getDetail
           else ""
         label + detail
       }

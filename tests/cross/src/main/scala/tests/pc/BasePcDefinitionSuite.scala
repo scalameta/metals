@@ -16,7 +16,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       original: String,
       compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
-    testPc(name) { implicit pc =>
+    test(name) {
       val noRange = original
         .replaceAllLiterally("<<", "")
         .replaceAllLiterally(">>", "")
@@ -26,7 +26,7 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
       import scala.meta.inputs.Position
       import scala.meta.inputs.Input
       val offsetRange = Position.Range(Input.String(code), offset, offset).toLSP
-      val defn = pc
+      val defn = presentationCompiler
         .definition(CompilerOffsetParams(URI.create(uri), code, offset))
         .get()
       val edits = defn.locations().asScala.toList.flatMap { location =>

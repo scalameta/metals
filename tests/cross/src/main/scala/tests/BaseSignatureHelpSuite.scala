@@ -5,6 +5,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import munit.Location
 import java.nio.file.Paths
 import scala.meta.XtensionSyntax
+import munit.TestOptions
 
 abstract class BaseSignatureHelpSuite extends BasePCSuite {
   def checkDoc(
@@ -16,19 +17,19 @@ abstract class BaseSignatureHelpSuite extends BasePCSuite {
     check(name, code, expected, includeDocs = true, compat = compat)
   }
   def check(
-      name: String,
+      name: TestOptions,
       original: String,
       expected: String,
       includeDocs: Boolean = false,
       compat: Map[String, String] = Map.empty,
-      stableOrder: Boolean = true,
-      ignoredScalaVersions: Set[String] = Set.empty
+      stableOrder: Boolean = true
   )(implicit loc: Location): Unit = {
-    testPc(name, ignoredScalaVersions) { implicit pc =>
-      val pkg = scala.meta.Term.Name(name).syntax
+    test(name) {
+      val pkg = scala.meta.Term.Name(name.name).syntax
       val (code, offset) = params(s"package $pkg\n" + original)
       val result =
-        pc.signatureHelp(
+        presentationCompiler
+          .signatureHelp(
             CompilerOffsetParams(Paths.get("A.scala").toUri(), code, offset)
           )
           .get()

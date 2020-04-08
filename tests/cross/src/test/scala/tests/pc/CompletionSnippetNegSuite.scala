@@ -70,7 +70,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
   )
 
   checkSnippet(
-    "type",
+    "type".tag(IgnoreScalaVersion(BuildInfoVersions.scala3)),
     s"""|object Main {
         |  val x: scala.IndexedSe@@
         |}
@@ -78,8 +78,7 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite {
     // It's expected to have two separate results, one for `object IndexedSeq` and one for `type IndexedSeq[T]`.
     """|IndexedSeq
        |IndexedSeq
-       |""".stripMargin,
-    ignoredScalaVersions = Set(BuildInfoVersions.scala3)
+       |""".stripMargin
   )
 
 }

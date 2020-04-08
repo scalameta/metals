@@ -215,7 +215,7 @@ object Embedded {
   ): URLClassLoader = {
     val pc = Dependency.of(
       "org.scalameta",
-      s"mtags3_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
+      s"mtags_${ScalaVersions.dropVendorSuffix(info.getScalaVersion)}",
       BuildInfo.metalsVersion
     )
     val settings = Fetch

@@ -6,7 +6,6 @@ import tests.BuildInfoVersions
 
 class PrettyPrintSuite extends BaseCompletionSuite {
 
-  // @tgodzik TODO this doesn't seem to work in Scala 3 yet
   override def excludedScalaVersions: Set[String] =
     Set(BuildInfoVersions.scala3)
 

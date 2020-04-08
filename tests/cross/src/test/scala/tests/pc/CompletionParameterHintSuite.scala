@@ -8,7 +8,6 @@ import tests.BuildInfoVersions
 
 class CompletionParameterHintSuite extends BaseCompletionSuite {
 
-  // @tgodzik TODO currently not implemented for Dotty
   override def excludedScalaVersions: Set[String] =
     Set(BuildInfoVersions.scala3)
 

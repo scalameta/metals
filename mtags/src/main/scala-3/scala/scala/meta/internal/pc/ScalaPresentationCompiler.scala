@@ -103,24 +103,26 @@ case class ScalaPresentationCompiler(
   }
 
   def complete(params: OffsetParams): CompletableFuture[CompletionList] = {
-    compilerAccess.withInterruptableCompiler(emptyCompletion(), params.token) {
-      access =>
-        val driver = access.compiler()
-        val uri = params.uri
-        driver.run(uri, params.text)
-        implicit def ctx: Context = driver.currentCtx
+    compilerAccess.withInterruptableCompiler(
+      EmptyCompletionList(),
+      params.token
+    ) { access =>
+      val driver = access.compiler()
+      val uri = params.uri
+      driver.run(uri, params.text)
+      implicit def ctx: Context = driver.currentCtx
 
-        val pos = sourcePosition(driver, params, uri)
-        val items = driver.compilationUnits.get(uri) match {
-          case Some(unit) =>
-            Completion.completions(pos)(ctx.fresh.setCompilationUnit(unit))._2
-          case None => Nil
-        }
+      val pos = sourcePosition(driver, params, uri)
+      val items = driver.compilationUnits.get(uri) match {
+        case Some(unit) =>
+          Completion.completions(pos)(ctx.fresh.setCompilationUnit(unit))._2
+        case None => Nil
+      }
 
-        new CompletionList(
-          /*isIncomplete = */ false,
-          items.map(completionItem).asJava
-        )
+      new CompletionList(
+        /*isIncomplete = */ false,
+        items.map(completionItem).asJava
+      )
     }
   }
 

@@ -37,11 +37,12 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       expected: String,
       compat: Map[String, String]
   )(implicit loc: Location): Unit = {
-    testPc(name) { implicit pc =>
+    test(name) {
       val (code, offset) = params(query)
       val token = new AlwaysCancelToken
       try {
-        pc.complete(
+        presentationCompiler
+          .complete(
             CompilerOffsetParams(
               URI.create("file:///A.scala"),
               code,
@@ -57,7 +58,7 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       }
 
       // assert that regular completion works as expected.
-      val completion = pc
+      val completion = presentationCompiler
         .complete(
           CompilerOffsetParams(
             URI.create("file:///A.scala"),

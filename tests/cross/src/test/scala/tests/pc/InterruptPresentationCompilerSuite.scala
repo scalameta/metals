@@ -50,12 +50,12 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       original: String,
       act: (PresentationCompiler, OffsetParams) => CompletableFuture[_]
   )(implicit loc: Location): Unit = {
-    testPc(name) { implicit pc =>
+    test(name) {
       val (code, offset) = this.params(original)
       val interrupt = index.asInstanceOf[InterruptSymbolIndex]
       try {
         val result = act(
-          pc,
+          presentationCompiler,
           CompilerOffsetParams(
             URI.create("file:///A.scala"),
             code,

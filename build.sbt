@@ -525,10 +525,7 @@ def publishBinaryMtags =
   publishLocal
     .in(interfaces)
     .dependsOn(
-      publishAllMtags(List(V.scala211, V.scala212, V.scala213))
-    )
-    .dependsOn(
-      publishLocal.in(mtags3)
+      publishAllMtags(List(V.scala211, V.scala212, V.scala213, V.scala3))
     )
 
 lazy val mtest = project

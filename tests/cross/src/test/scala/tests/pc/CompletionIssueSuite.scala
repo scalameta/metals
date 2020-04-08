@@ -5,7 +5,6 @@ import tests.BuildInfoVersions
 
 class CompletionIssueSuite extends BaseCompletionSuite {
 
-  // @tgodzik TODO due to other features not working, this will not work yet
   override def excludedScalaVersions: Set[String] =
     Set(BuildInfoVersions.scala3)
 

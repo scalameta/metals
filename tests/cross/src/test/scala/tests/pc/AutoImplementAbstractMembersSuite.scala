@@ -8,11 +8,9 @@ import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.jdk.CollectionConverters._
 import java.net.URI
 import tests.BuildInfoVersions
-import scala.meta.pc.PresentationCompiler
 
 class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
 
-  // @tgodzik currently not implemented for Dotty
   override def excludedScalaVersions: Set[String] =
     Set(BuildInfoVersions.scala3)
 
@@ -668,7 +666,7 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
       original: String,
       expected: String
   ): Unit =
-    testPc(name) { implicit pc =>
+    test(name) {
       val edits = getAutoImplement(original)
       if (edits.isEmpty) fail("obtained no edits")
       val (code, _, _) = params(original)
@@ -679,9 +677,9 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
   def getAutoImplement(
       original: String,
       filename: String = "A.scala"
-  )(implicit pc: PresentationCompiler): List[l.TextEdit] = {
+  ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
-    val result = pc
+    val result = presentationCompiler
       .implementAbstractMembers(
         CompilerOffsetParams(URI.create(filename), code, offset, cancelToken)
       )
