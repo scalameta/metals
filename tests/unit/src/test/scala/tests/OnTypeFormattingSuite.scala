@@ -9,15 +9,13 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
   // https://github.com/scalameta/metals/issues/1469
   check(
     "top-of-file",
-    s"""
-       |@@
-       |object Main {}
-       |""".stripMargin,
-    s"""
-       |
-       |
-       |object Main {}
-       |""".stripMargin
+    s"""|@@
+        |object Main {}
+        |""".stripMargin,
+    s"""|
+        |
+        |object Main {}
+        |""".stripMargin
   )
 
   check(
