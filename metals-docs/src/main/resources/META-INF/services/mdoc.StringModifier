@@ -8,3 +8,4 @@ docs.TextEditorModifier
 docs.CommandsModifiers
 docs.BootstrapModifier
 docs.RequirementsModifier
+docs.VersionedDocsModifier
