@@ -82,6 +82,24 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
         |""".stripMargin
   )
 
+  check("new-class-on-file")(
+    Some("a/src/main/scala/foo/Other.scala"),
+    "class",
+    Some("Foo"),
+    "a/src/main/scala/foo/Foo.scala",
+    s"""|package foo
+        |
+        |class Foo {
+        |$indent
+        |}
+        |""".stripMargin,
+    existingFiles = """|/a/src/main/scala/foo/Other.scala
+                       |package foo
+                       |
+                       |class Other
+                       |""".stripMargin
+  )
+
   private def indent = "  "
 
   private def check(testName: String)(
@@ -89,7 +107,8 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
       pickedKind: String,
       name: Option[String],
       expectedFilePath: String,
-      expectedContent: String
+      expectedContent: String,
+      existingFiles: String = ""
   ): Unit = test(testName) {
     val directoryUri = directory.fold(null.asInstanceOf[String])(
       workspace.resolve(_).toURI.toString()
@@ -131,6 +150,7 @@ class NewFilesLspSuite extends BaseLspSuite("new-files") {
                                 |{
                                 |  "a": { }
                                 |}
+                                |$existingFiles
                                 |""".stripMargin)
       _ <- server.executeCommand(
         ServerCommands.NewScalaFile.id,
