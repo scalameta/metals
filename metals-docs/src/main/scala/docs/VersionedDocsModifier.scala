@@ -19,7 +19,9 @@ class VersionedDocsModifier extends StringModifier {
 
     if (unreleased) {
       s"> 🚧 This documentation section describes a feature that is currently unreleased. The expected release version is $version\n"
-    } else ""
+    } else {
+      ""
+    }
 
   }
 }
