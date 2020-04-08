@@ -67,6 +67,8 @@ case class ScalaPresentationCompiler(
     access.shutdownCurrentCompiler()
   }
 
+  def isLoaded(): Boolean = access.isLoaded()
+
   override def newInstance(
       buildTargetIdentifier: String,
       classpath: util.List[Path],

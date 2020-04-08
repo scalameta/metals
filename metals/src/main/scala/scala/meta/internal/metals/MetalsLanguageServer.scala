@@ -194,6 +194,8 @@ class MetalsLanguageServer(
   private var debugProvider: DebugProvider = _
   private var symbolSearch: MetalsSymbolSearch = _
   private var compilers: Compilers = _
+  def loadedPresentationCompilerCount(): Int =
+    compilers.loadedPresentationCompilerCount()
   var tables: Tables = _
   var statusBar: StatusBar = _
   private var embedded: Embedded = _

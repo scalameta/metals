@@ -79,6 +79,8 @@ class Compilers(
   }
   var ramboCancelable = Cancelable.empty
 
+  def loadedPresentationCompilerCount(): Int = cache.values.count(_.isLoaded())
+
   override def cancel(): Unit = {
     Cancelable.cancelEach(cache.values)(_.shutdown())
     cache.clear()
@@ -120,7 +122,7 @@ class Compilers(
       // Restart PC for all build targets that depend on this target since the classfiles
       // may have changed.
       for {
-        target <- buildTargets.inverseDependencies(report.getTarget)
+        target <- buildTargets.allInverseDependencies(report.getTarget)
         compiler <- cache.get(target)
       } {
         compiler.restart()
