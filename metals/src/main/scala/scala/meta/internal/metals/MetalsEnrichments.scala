@@ -405,11 +405,12 @@ object MetalsEnrichments
         lowerBound: Int,
         upperBound: Int
     ): Int = {
+      val safeLowerBound = Math.max(0, lowerBound)
       var index = upperBound
-      while (index >= lowerBound && value(index) != char) {
+      while (index >= safeLowerBound && value(index) != char) {
         index -= 1
       }
-      if (index < lowerBound) -1 else index
+      if (index < safeLowerBound) -1 else index
     }
 
     def toAbsolutePathSafe: Option[AbsolutePath] = Try(toAbsolutePath).toOption
