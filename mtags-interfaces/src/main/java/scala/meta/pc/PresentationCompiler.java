@@ -149,4 +149,16 @@ public abstract class PresentationCompiler {
     // Internal methods - not intended for public use
     // ==============================================
     public abstract List<String> diagnosticsForDebuggingPurposes();
+
+    /**
+     * Returns false if the presentation compiler has not been used since the last reset.
+     * 
+     * NOTE(olafur) This method was added for testing purposes. It's critical
+     * that we correctly reset the presentation compiler when build compilation
+     * complete to prevent the presentatin compiler from returning stale
+     * results. It's difficult to reliably test that a compiler is not
+     * returning stale results so we test instead against the implementation
+     * detail that the compiler is `null` when it has been reset.
+     */
+    public abstract boolean isLoaded();
 }

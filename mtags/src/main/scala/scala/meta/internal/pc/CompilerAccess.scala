@@ -42,6 +42,8 @@ class CompilerAccess(
     if (isEmpty) new StoreReporter()
     else _compiler.reporter.asInstanceOf[StoreReporter]
 
+  def isLoaded(): Boolean = _compiler != null
+
   def shutdown(): Unit = {
     shutdownCurrentCompiler()
     jobs.shutdown()

@@ -32,7 +32,7 @@ class InverseDependenciesSuite extends BaseSuite {
         }
       )
       assertNoDiff(
-        obtained.toSeq.map(_.getUri).sorted.mkString("\n"),
+        obtained.leaves.toSeq.map(_.getUri).sorted.mkString("\n"),
         expected
       )
     }
