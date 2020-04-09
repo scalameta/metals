@@ -481,6 +481,7 @@ object Messages {
   }
 
   object ImportAmmoniteScript {
+    val message: String = "Ammonite script detected."
     val doImport: String = "Import"
     val dismiss: String = "Dismiss"
     def params(): ShowMessageRequestParams = {
@@ -489,7 +490,7 @@ object Messages {
           .map(new MessageActionItem(_))
           .asJava
       )
-      params.setMessage("Ammonite script detected.")
+      params.setMessage(message)
       params.setType(MessageType.Info)
       params
     }

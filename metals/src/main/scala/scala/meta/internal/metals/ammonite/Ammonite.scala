@@ -25,6 +25,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.meta.inputs.Input
+import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
@@ -47,6 +48,7 @@ final class Ammonite(
     workspace: () => AbsolutePath,
     focusedDocument: () => Option[AbsolutePath],
     buildTargets: BuildTargets,
+    buildTools: () => BuildTools,
     config: MetalsServerConfig
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
@@ -165,27 +167,36 @@ final class Ammonite(
     }
   }
 
-  def maybeImport(path: AbsolutePath): Unit =
-    if (path.isAmmoniteScript && !loaded(path))
-      languageClient
+  private def isMillBuildSc(path: AbsolutePath): Boolean =
+    path.toNIO.getFileName.toString == "build.sc" &&
+      // for now, this only checks for build.sc, but this could be made more strict in the future
+      // (require ./mill or ./.mill-version)
+      buildTools().isMill
+
+  def maybeImport(path: AbsolutePath): Future[Unit] =
+    if (path.isAmmoniteScript && !isMillBuildSc(path) && !loaded(path)) {
+      val futureResp = languageClient
         .showMessageRequest(Messages.ImportAmmoniteScript.params())
         .asScala
-        .onComplete {
-          case Failure(e) => scribe.warn("Error requesting Ammonite import", e)
-          case Success(resp) =>
-            resp.getTitle match {
-              case Messages.ImportAmmoniteScript.doImport =>
-                start(Some(path)).onComplete {
-                  case Failure(e) =>
-                    languageClient.showMessage(
-                      Messages.ImportAmmoniteScript.ImportFailed(path.toString)
-                    )
-                    scribe.warn(s"Error importing Ammonite script $path", e)
-                  case Success(_) =>
-                }
-              case _ =>
-            }
-        }
+      futureResp.onComplete {
+        case Failure(e) => scribe.warn("Error requesting Ammonite import", e)
+        case Success(resp) =>
+          resp.getTitle match {
+            case Messages.ImportAmmoniteScript.doImport =>
+              start(Some(path)).onComplete {
+                case Failure(e) =>
+                  languageClient.showMessage(
+                    Messages.ImportAmmoniteScript.ImportFailed(path.toString)
+                  )
+                  scribe.warn(s"Error importing Ammonite script $path", e)
+                case Success(_) =>
+              }
+            case _ =>
+          }
+      }
+      futureResp.ignoreValue
+    } else
+      Future.unit
 
   def start(doc: Option[AbsolutePath] = None): Future[Unit] = {
 

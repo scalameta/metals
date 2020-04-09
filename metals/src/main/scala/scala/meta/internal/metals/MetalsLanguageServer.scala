@@ -207,7 +207,7 @@ class MetalsLanguageServer(
   var httpServer: Option[MetalsHttpServer] = None
   var treeView: TreeViewProvider = NoopTreeViewProvider
   var worksheetProvider: WorksheetProvider = _
-  private var ammonite: Ammonite = _
+  var ammonite: Ammonite = _
 
   private val clientConfig: ClientConfiguration =
     new ClientConfiguration(
@@ -517,6 +517,7 @@ class MetalsLanguageServer(
       () => workspace,
       () => focusedDocument,
       buildTargets,
+      () => buildTools,
       clientConfig.initialConfig
     )
     if (clientConfig.isTreeViewProvider) {
