@@ -36,7 +36,13 @@ class NewFilesProvider(
       name: Option[String]
   ): Future[Unit] = {
     val directory = directoryUri
-      .map(_.toString.toAbsolutePath)
+      .map { uri =>
+        val path = uri.toString.toAbsolutePath
+        if (path.isFile)
+          path.parent
+        else
+          path
+      }
       .orElse(focusedDocument().map(_.parent))
 
     val newlyCreatedFile =
