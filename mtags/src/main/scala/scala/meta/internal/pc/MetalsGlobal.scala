@@ -542,6 +542,9 @@ class MetalsGlobal(
             else if (s.isRootPackage || s.isRoot) TermName("_root_")
             else s.name
           out.append(Identifier(name))
+        } else if (s.isPackageObjectOrClass) {
+          // package object doesn't have a name if we use s.name we will get `package`
+          loop(s.effectiveOwner.enclClass)
         } else {
           loop(s.effectiveOwner.enclClass)
           out.append('.').append(Identifier(s.name))

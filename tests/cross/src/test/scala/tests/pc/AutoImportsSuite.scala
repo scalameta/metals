@@ -81,6 +81,27 @@ class AutoImportsSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "package-object",
+    """|
+       |package object metals{
+       |  object ABC
+       |}
+       |object Main{
+       | val obj = <<ABC>>
+       |}
+       |""".stripMargin,
+    """|import metals.ABC
+       |
+       |package object metals{
+       |  object ABC
+       |}
+       |object Main{
+       | val obj = ABC
+       |}
+       |""".stripMargin
+  )
+
   def check(
       name: String,
       original: String,
