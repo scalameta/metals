@@ -3,7 +3,7 @@ id: sublime
 title: Sublime Text
 ---
 
-Metals works with Sublime Text 3 thanks to
+Metals works with Sublime Text 3 thanks to the
 [sublimelsp/LSP](https://github.com/sublimelsp/LSP) and [scalameta/metals-sublime](https://github.com/scalameta/metals-sublime) plugins.
 
 ![Sublime Text demo](https://i.imgur.com/vJKP0T3.gif)
