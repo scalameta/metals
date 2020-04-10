@@ -52,14 +52,15 @@ repository:
 
 - [scalameta/metals-vscode](https://github.com/scalameta/metals-vscode/): the
   Visual Studio Code extension for Metals.
-- [scalameta/coc-metals](https://github.com/scalameta/coc-metals/): the Coc Vim
-  extension for Metals.
+- [scalameta/coc-metals](https://github.com/scalameta/coc-metals/): the
+  [coc.nvim](https://github.com/neoclide/coc.nvim) Vim/Nvim extension for
+  Metals.
 - [scalameta/metals-eclipse](https://github.com/scalameta/metals-eclipse/): the
   Eclipse extension for Metals.
 - [scalameta/scalameta](https://github.com/scalameta/scalameta/): SemanticDB,
   parsing, tokenization.
 - [scalameta/munit](https://github.com/scalameta/munit/): Test framework used in
-  main Metals repository
+  the main Metals repository
 - [scalacenter/bloop](https://github.com/scalacenter/bloop/): build server for
   compilation.
 - [scala/scala](https://github.com/scala/scala/): presentation compiler.

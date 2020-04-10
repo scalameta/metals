@@ -23,7 +23,7 @@ activates a code lens. The difference between them is that the former ignores
 all breakpoints being set while the latter respects them. The procedure of
 starting the run/debug session is as follows:
 
-Then we can request the debug adapter uri from metals server using the
+Then we can request the debug adapter uri from the metals server using the
 [`debug-adapter-start`](https://github.com/scalameta/metals/blob/master/metals/src/main/scala/scala/meta/internal/metals/ServerCommands.scala#L95)
 command.
 
@@ -51,13 +51,13 @@ Apart from using code lenses, users can start a debug session by executing the
 }
 ```
 
-`buildTarget` is an optional parameter, which might be useful if there identical
-class names in different modules. A uri will be returned that can be used by the
-DAP client.
+`buildTarget` is an optional parameter, which might be useful if there are
+identically named classes in different modules. A uri will be returned that can be
+used by the DAP client.
 
 ### Wiring it all together
 
-No matter which method you used, you still need to connect the debug adapter
+No matter which method you use, you still need to connect the debug adapter
 extension specific to you editor using the aforementioned uri and let it drive
 the run/debug session. For reference, take a look at the
 [vscode implementation](https://github.com/scalameta/metals-vscode/blob/master/src/scalaDebugger.ts)
