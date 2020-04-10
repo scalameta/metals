@@ -80,4 +80,4 @@ if not exist "%MILL%" (
 set MILL_DOWNLOAD_PATH=
 set MILL_VERSION=
 
-%MILL% %*
+"%MILL%" %*
