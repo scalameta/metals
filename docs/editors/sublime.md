@@ -64,7 +64,7 @@ in insert-mode.
 
 ## Goto symbol in workspace
 
-You can search for symbols in your dependency source using the command palette
+You can search for symbols in your dependency source using the command palette.
 
 ![workspace symbols](https://i.imgur.com/8X0XNi2.gif)
 
