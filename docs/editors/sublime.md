@@ -19,7 +19,7 @@ Install the following packages:
 - [sublimelsp/LSP](https://github.com/sublimelsp/LSP): Language Server Protocol support for Sublime Text.  
 `Command Palette (Cmd + Shift + P) > Install package > LSP`
 
-- [scalameta/metals-sublime](https://github.com/scalameta/metals-sublime): For automatic installation of metals and custom endpoints. 
+- [scalameta/metals-sublime](https://github.com/scalameta/metals-sublime): For automatic installation of metals and custom commands. 
 `Command Palette (Cmd + Shift + P) > Install package > LSP-metals`
 
 Finally restart sublime text.
