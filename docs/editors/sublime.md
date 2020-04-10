@@ -42,7 +42,7 @@ definition.
 
 Open Sublime in the base directory of an sbt build and it will then prompt you to import the build. Click "Import build" to start the installation step.
 
-This starts the Metal language server but no functionality will work because the
+This starts the Metal language server but no functionality will work yet because the
 build has not been imported. 
 
 This step can take a long time, especially the first time you run it in a new
