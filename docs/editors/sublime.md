@@ -48,8 +48,12 @@ build has not been imported.
 This step can take a long time, especially the first time you run it in a new
 workspace. The exact time depends on the complexity of the build and if the library dependencies are cached or need to be downloaded. For example, this step can take anywhere from 10 seconds in small cached builds up to 10-15 minutes in large un-cached builds.
 
+## Server logs
+
 For more detailed information about what is happening behind the scenes during
 `sbt bloopInstall` run `lsp toggle server panel` in the command palette. You can optionally add key binding for this command.
+
+![Server logs](https://i.imgur.com/PilER2E.png)
 
 Once the import step completes, compilation starts for your open `*.scala`
 files. Once the sources have compiled successfully, you can navigate the the
