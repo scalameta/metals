@@ -68,16 +68,19 @@
 <h2><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h2>
 <p>You will need the following applications installed:</p>
 <ul>
-<li>Java 11 or 8 - Make sure <code>JAVA_HOME</code> points to a Java 11 or 8 installation. Metals will need to build and run on <em>both</em>.</li>
+<li>Java 11 or 8 - Make sure <code>JAVA_HOME</code> points to a Java 11 or 8 installation.
+Metals will need to build and run on <em>both</em>.</li>
 <li><code>git</code></li>
 <li><code>sbt</code> (for building a local version of the server)</li>
 </ul>
 <h2><a class="anchor" aria-hidden="true" id="project-structure"></a><a href="#project-structure" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Project structure</h2>
 <ul>
 <li><code>metals</code> the main project with sources of the Metals language server.</li>
-<li><code>mtags</code> source file indexer for Java and Scala, it's a dependency of the
-<code>metals</code> project but kept in a separate module so it can be used by other
-projects like <a href="https://github.com/scalameta/metabrowse">Metabrowse</a>.</li>
+<li><code>mtags</code> Scala version specific module used to interact with the Scala
+presentation compiler. It's a dependency of the <code>metals</code> project and can
+additionally be used by via <code>mtags-interfaces</code> to support multiple Scala
+versions inside the Metals server. It's also used by other projects like
+<a href="https://github.com/scalameta/metabrowse">Metabrowse</a>.</li>
 <li><code>mtags-interfaces</code> - java interfaces for the presentation compiler.</li>
 <li><code>tests/cross</code> - tests targeting cross builds for common features such as
 hover, completions, signatures etc.</li>
@@ -86,22 +89,31 @@ hover, completions, signatures etc.</li>
 <li><code>tests/slow</code> slow integration tests.</li>
 <li><code>test-workspace</code> demo project for manually testing Metals through an editor.</li>
 <li><code>docs</code> documentation markdown for the Metals website.</li>
-<li><code>metals-docs</code> methods used for generating documentation across multiple pages in <code>docs</code>.</li>
-<li><code>website</code> holds the static site configuraton, style and blogs posts for the Metals website.</li>
+<li><code>metals-docs</code> methods used for generating documentation across multiple pages
+in <code>docs</code>.</li>
+<li><code>website</code> holds the static site configuraton, style and blogs posts for the
+Metals website.</li>
 </ul>
 <h2><a class="anchor" aria-hidden="true" id="git-hooks"></a><a href="#git-hooks" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Git hooks</h2>
 <p>This git repository has a pre-push hook to run Scalafmt.</p>
 <p>The CI also uses Scalafix to assert that there a no unused imports. To
-automatically remove unused imports run <code>sbt scalafixAll</code>. We don't run
-Scalafix as a pre-push git hook since starting sbt takes a long time.</p>
+automatically remove unused imports run <code>sbt scalafixAll</code>. We don't run Scalafix
+as a pre-push git hook since starting sbt takes a long time.</p>
 <h2><a class="anchor" aria-hidden="true" id="related-projects"></a><a href="#related-projects" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Related projects</h2>
 <p>The improvement you are looking to contribute may belong in a separate
 repository:</p>
 <ul>
 <li><a href="https://github.com/scalameta/metals-vscode/">scalameta/metals-vscode</a>: the
 Visual Studio Code extension for Metals.</li>
+<li><a href="https://github.com/scalameta/coc-metals/">scalameta/coc-metals</a>: the
+<a href="https://github.com/neoclide/coc.nvim">coc.nvim</a> Vim/Nvim extension for
+Metals.</li>
+<li><a href="https://github.com/scalameta/metals-eclipse/">scalameta/metals-eclipse</a>: the
+Eclipse extension for Metals.</li>
 <li><a href="https://github.com/scalameta/scalameta/">scalameta/scalameta</a>: SemanticDB,
 parsing, tokenization.</li>
+<li><a href="https://github.com/scalameta/munit/">scalameta/munit</a>: Test framework used in
+the main Metals repository</li>
 <li><a href="https://github.com/scalacenter/bloop/">scalacenter/bloop</a>: build server for
 compilation.</li>
 <li><a href="https://github.com/scala/scala/">scala/scala</a>: presentation compiler.</li>
@@ -113,18 +125,24 @@ refactoring and linting.</li>
 <p>To run the unit tests open an sbt shell and run <code>unit/test</code></p>
 <pre><code class="hljs css language-sh">sbt
 <span class="hljs-comment"># (recommended) run a specific test suite, great for edit/test/debug workflows.</span>
-&gt; metals/testOnly -- tests.DefinitionSuite
+&gt; metals/testOnly tests.DefinitionSuite
+<span class="hljs-comment"># run a specific test case inside the suite.</span>
+&gt; metals/testOnly tests.DefinitionSuite -- *exact-test-name*
 <span class="hljs-comment"># run unit tests, moderately fast but still a bit too slow for edit/test/debug workflows.</span>
 &gt; unit/<span class="hljs-built_in">test</span>
 <span class="hljs-comment"># run slow integration tests, takes several minutes.</span>
 &gt; slow/<span class="hljs-built_in">test</span>
+<span class="hljs-comment"># run slow presentation compiler tests</span>
+&gt; cross/<span class="hljs-built_in">test</span>
+<span class="hljs-comment"># run slow presentation compiler tests for all Scala versions</span>
+&gt; +cross/<span class="hljs-built_in">test</span>
 <span class="hljs-comment"># (not recommended) run all tests, slow. It's better to target individual projects.</span>
 &gt; <span class="hljs-built_in">test</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="manually-testing-a-lspsuite"></a><a href="#manually-testing-a-lspsuite" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manually testing a <code>LspSuite</code></h3>
 <p>Every test suite that extends <code>LspSuite</code> generates a workspace directory under
-<code>tests/unit/target/e2e/$suitename/$testname</code>. To debug why a <code>LspSuite</code> might
-be failing, run the test once and then open it directly in your editor. For
+<code>tests/unit/target/e2e/$suitename/$testname</code>. To debug why a <code>LspSuite</code> might be
+failing, run the test once and then open it directly in your editor. For
 example, for the test case <code>&quot;deprecated-scala&quot;</code> in <code>WarningsLspSuite</code> run the
 following command:</p>
 <pre><code class="hljs">code tests/<span class="hljs-keyword">unit</span>/target/e2e/warnings/<span class="hljs-keyword">deprecated</span>-scala
@@ -147,13 +165,17 @@ version you published locally via <code>sbt publishLocal</code>.</p>
 <li>execute the &quot;Metals: Restart server&quot; command in Visual Studio Code (via
 command palette)</li>
 </ul>
+<p>It's important to note that <code>sbt publishLocal</code> will create artifacts only for
+the Scala version currently used in Metals and trying to use the snapshot
+version with any other Scala version will not work. In that case you need to run
+a full cross publish with <code>sbt +publishLocal</code>.</p>
 <h3><a class="anchor" aria-hidden="true" id="vim"></a><a href="#vim" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Vim</h3>
 <p>First, follow the <a href="/metals/docs/editors/vim.html"><code>vim</code> installation instruction</a>.</p>
 <p>Next, write a <code>new-metals-vim</code> script that builds a new <code>metals-vim</code> bootstrap
 script using the locally published version.</p>
 <pre><code class="hljs css language-sh">coursier bootstrap \
   --java-opt -Dmetals.client=coc.nvim \
-  org.scalameta:metals_2.12:0.8.4-SNAPSHOT \ <span class="hljs-comment"># double-check version here</span>
+  org.scalameta:metals_2.12:0.8.5-SNAPSHOT \ <span class="hljs-comment"># double-check version here</span>
   -r bintray:scalacenter/releases \
   -o /usr/<span class="hljs-built_in">local</span>/bin/metals-vim -f
 </code></pre>
@@ -175,9 +197,14 @@ build server, create empty files in your machine cache directory.</p>
 <pre><code class="hljs css language-sh"><span class="hljs-comment"># macOS</span>
 touch -f ~/Library/Caches/org.scalameta.metals/lsp.trace.json <span class="hljs-comment"># text editor</span>
 touch -f ~/Library/Caches/org.scalameta.metals/bsp.trace.json <span class="hljs-comment"># build server</span>
+touch ~/Library/Caches/org.scalameta.metals/dap-server.trace.json <span class="hljs-comment"># debug adapter</span>
+touch ~/Library/Caches/org.scalameta.metals/dap-client.trace.json <span class="hljs-comment"># debug adapter</span>
+
 <span class="hljs-comment"># Linux</span>
 touch ~/.cache/metals/lsp.trace.json <span class="hljs-comment"># text editor</span>
 touch ~/.cache/metals/bsp.trace.json <span class="hljs-comment"># build server</span>
+touch ~/.cache/metals/dap-server.trace.json <span class="hljs-comment"># debug adapter</span>
+touch ~/.cache/metals/dap-client.trace.json <span class="hljs-comment"># debug adapter</span>
 </code></pre>
 <p>Next when you start Metals, watch the logs with <code>tail -f</code>.</p>
 <pre><code class="hljs css language-sh"><span class="hljs-comment"># macOS</span>
@@ -188,9 +215,13 @@ tail -f ~/.cache/metals/lsp.trace.json
 <p>The traces are very verbose so it's recommended to delete the files if you are
 not interested in debugging the JSON communication.</p>
 <h3><a class="anchor" aria-hidden="true" id="jvm-debugging"></a><a href="#jvm-debugging" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>JVM Debugging</h3>
-<p>To debug the JVM with the Metals server, add a property to your <code>Server Properties</code> with the usual Java debugging flags, making sure you have the <code>quiet</code> option on.
-It's important to remember about the flag, as the server uses standard input/output to communicate with the client, and the default output of the debuggee interferes with that.</p>
-<p>This property will make your server run in debug mode on port 5005 without waiting for the debugger to connect:</p>
+<p>To debug the JVM with the Metals server, add a property to your
+<code>Server Properties</code> with the usual Java debugging flags, making sure you have
+the <code>quiet</code> option on. It's important to remember about the flag, as the server
+uses standard input/output to communicate with the client, and the default
+output of the debuggee interferes with that.</p>
+<p>This property will make your server run in debug mode on port 5005 without
+waiting for the debugger to connect:</p>
 <p><code>-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y</code></p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/contributors/project-goals.html"><span class="arrow-prev">← </span><span>Project Goals</span></a><a class="docs-next button" href="/metals/docs/contributors/updating-website.html"><span>Contributing to the website</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#project-structure">Project structure</a></li><li><a href="#git-hooks">Git hooks</a></li><li><a href="#related-projects">Related projects</a></li><li><a href="#unit-tests">Unit tests</a><ul class="toc-headings"><li><a href="#manually-testing-a-lspsuite">Manually testing a <code>LspSuite</code></a></li></ul></li><li><a href="#manual-tests">Manual tests</a><ul class="toc-headings"><li><a href="#visual-studio-code">Visual Studio Code</a></li><li><a href="#vim">Vim</a></li><li><a href="#workspace-logs">Workspace logs</a></li><li><a href="#json-rpc-trace">JSON-RPC trace</a></li><li><a href="#jvm-debugging">JVM Debugging</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2020 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
