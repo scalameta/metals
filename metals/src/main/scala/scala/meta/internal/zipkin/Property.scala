@@ -1,10 +1,12 @@
 package scala.meta.internal.zipkin
+import java.util.Properties
 
 case class Property(metalsProperty: String) {
 
   val bloopProperty: String = metalsProperty.stripPrefix("metals.")
 
-  def value: Option[String] = Option(System.getProperty(metalsProperty))
+  def value: Option[String] =
+    Property.definitions.map(_.getProperty(metalsProperty))
 
   def updateOptions(options: List[String]): List[String] = {
     value match {
@@ -27,6 +29,18 @@ case class Property(metalsProperty: String) {
     val regex = s"-D$bloopProperty=(.*)".r
     options.collectFirst {
       case regex(value) => value.stripPrefix(s"-D$bloopProperty=")
+    }
+  }
+}
+object Property {
+
+  val definitions: Option[Properties] = {
+    Option(
+      getClass.getResourceAsStream("/fastpass.properties")
+    ).map { in =>
+      val prop = new Properties
+      prop.load(in)
+      prop
     }
   }
 }
