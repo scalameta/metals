@@ -40,6 +40,8 @@ definition.
 
 ## Importing a build
 
+![Build Import](https://i.imgur.com/eUk30Zy.png)
+
 Open Sublime in the base directory of your Scala project and it will then prompt you to import the build as long as you're using one of the [supported build tools](https://scalameta.org/metals/docs/build-tools/overview.html). Click "Import build" to start the installation step.
 
 This starts the Metal language server but no functionality will work yet because the
