@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Sublime Text · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Metals has experimental support for Sublime Text 3 thanks to"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Sublime Text · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="Metals has experimental support for Sublime Text 3 thanks to"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Sublime Text · Metals</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Metals works with Sublime Text 3 thanks to the"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Sublime Text · Metals"/><meta property="og:type" content="website"/><meta property="og:url" content="http://scalameta.org/metals/index.html"/><meta property="og:description" content="Metals works with Sublime Text 3 thanks to the"/><meta property="og:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="http://scalameta.org/metals/img/scalameta-logo.png"/><link rel="shortcut icon" href="/metals/img/favicon.ico"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><link rel="alternate" type="application/atom+xml" href="http://scalameta.org/metals/blog/atom.xml" title="Metals Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="http://scalameta.org/metals/blog/feed.xml" title="Metals Blog RSS Feed"/><script>
               (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
               (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
               m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -62,8 +62,8 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/editors/sublime.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Sublime Text</h1></header><article><div><span><p>Metals has experimental support for Sublime Text 3 thanks to
-<a href="https://github.com/tomv564/LSP">tomv564/LSP</a>.</p>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/scalameta/metals/edit/master/docs/editors/sublime.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Sublime Text</h1></header><article><div><span><p>Metals works with Sublime Text 3 thanks to the
+<a href="https://github.com/sublimelsp/LSP">sublimelsp/LSP</a> and <a href="https://github.com/scalameta/metals-sublime">scalameta/metals-sublime</a> plugins.</p>
 <p><img src="https://i.imgur.com/vJKP0T3.gif" alt="Sublime Text demo"></p>
 <h2><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h2>
 <p><strong>Java 8 or 11 provided by OpenJDK or Oracle</strong>. Eclipse OpenJ9 is not
@@ -74,47 +74,15 @@ tested on Ubuntu+Windows.</p>
 <p><strong>Scala 2.13, 2.12 and 2.11</strong>. Metals supports these Scala versions 2.13.1, 2.12.11, 2.12.10, 2.11.12, 2.12.8, 2.12.9 and 2.13.0.
 Note that 2.11.x support is deprecated and it will be removed in future releases.
 It's recommended to upgrade to Scala 2.12 or Scala 2.13</p>
-<h2><a class="anchor" aria-hidden="true" id="installing-the-plugin"></a><a href="#installing-the-plugin" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing the plugin</h2>
-<p>First, install the LSP plugin:
-<code>Command Palette (Cmd + Shift + P) &gt; Install package &gt; LSP</code></p>
-<p>Next, build a <code>metals-sublime</code> binary for the latest Metals release using the
-<a href="https://github.com/coursier/coursier">Coursier</a> command-line interface.</p>
-<table>
-      <thead>
-        <th>Version</th>
-        <th>Published</th>
-        <th>Resolver</th>
-      </thead>
-      <tbody>
-        <tr>
-          <td>0.8.4</td>
-          <td>10 Apr 2020 14:52</td>
-          <td><code>-r sonatype:releases</code></td>
-        </tr>
-        <tr>
-          <td>0.8.4+3-23bbfa90-SNAPSHOT</td>
-          <td>10 Apr 2020 18:45</td>
-          <td><code>-r sonatype:snapshots</code></td>
-        </tr>
-      </tbody>
-    </table>
-<pre><code class="hljs css language-sh"><span class="hljs-comment"># Make sure to use coursier v1.1.0-M9 or newer.</span>
-curl -L -o coursier https://git.io/coursier-cli
-chmod +x coursier
-./coursier bootstrap \
-  --java-opt -Xss4m \
-  --java-opt -Xms100m \
-  --java-opt -Dmetals.client=sublime \
-  org.scalameta:metals_2.12:0.8.4 \
-  -r bintray:scalacenter/releases \
-  -r sonatype:snapshots \
-  -o /usr/<span class="hljs-built_in">local</span>/bin/metals-sublime -f
-</code></pre>
-<p>Make sure the generated <code>metals-sublime</code> binary is available on your <code>$PATH</code>.</p>
-<p>Configure the system properties <code>-Dhttps.proxyHost=… -Dhttps.proxyPort=…</code>
-if you are behind an HTTP proxy.</p>
-<p>The <code>-Dmetals.client=sublime</code> flag configures Metals for usage with the Sublime
-Text LSP client.</p>
+<h2><a class="anchor" aria-hidden="true" id="installing-the-plugins"></a><a href="#installing-the-plugins" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installing the plugins</h2>
+<p>Install the following packages:</p>
+<ul>
+<li><p><a href="https://github.com/sublimelsp/LSP">sublimelsp/LSP</a>: Language Server Protocol support for Sublime Text.<br>
+<code>Command Palette (Cmd + Shift + P) &gt; Install package &gt; LSP</code></p></li>
+<li><p><a href="https://github.com/scalameta/metals-sublime">scalameta/metals-sublime</a>: For automatic installation of metals and custom commands.
+<code>Command Palette (Cmd + Shift + P) &gt; Install package &gt; LSP-metals</code></p></li>
+</ul>
+<p>Finally restart sublime text.</p>
 <p>Next, open &quot;Preferences &gt; Key Binding&quot; and register <code>F12</code> to trigger goto
 definition.</p>
 <pre><code class="hljs css language-json">[
@@ -126,23 +94,16 @@ definition.</p>
 ]
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="importing-a-build"></a><a href="#importing-a-build" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Importing a build</h2>
-<p>Open Sublime in the base directory of an sbt build. Run the &quot;Enable Language
-Server in project&quot; command.</p>
-<p><img src="https://i.imgur.com/3c0ZSZm.gif" alt="Enable Language Server for this project"></p>
-<p>This starts the Metal language server but no functionality will work because the
-build has not been imported. The first time you enable Language Server in a
-project you must open a <code>*.scala</code> file, and then it will prompt you to &quot;Import changes&quot;.
-This step is required for compile errors and goto definition to work. While it's
-running, no Metals functionality will work.</p>
+<p><img src="https://i.imgur.com/eUk30Zy.png" alt="Build Import"></p>
+<p>Open Sublime in the base directory of your Scala project and it will then prompt you to import the build as long as you're using one of the <a href="https://scalameta.org/metals/docs/build-tools/overview.html">supported build tools</a>. Click &quot;Import build&quot; to start the installation step.</p>
+<p>This starts the Metal language server but no functionality will work yet because the
+build has not been imported.</p>
 <p>This step can take a long time, especially the first time you run it in a new
-workspace. The exact time depends on the complexity of the build and if the library
-dependencies are cached or need to be downloaded. For example, this step can
-take anywhere from 10 seconds in small cached builds up to 10-15 minutes in
-large uncached builds.</p>
+workspace. The exact time depends on the complexity of the build and if the library dependencies are cached or need to be downloaded. For example, this step can take anywhere from 10 seconds in small cached builds up to 10-15 minutes in large un-cached builds.</p>
+<h2><a class="anchor" aria-hidden="true" id="server-logs"></a><a href="#server-logs" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Server logs</h2>
 <p>For more detailed information about what is happening behind the scenes during
-<code>sbt bloopInstall</code>:</p>
-<pre><code class="hljs"><span class="hljs-built_in">tail</span> -f .metals/metals.<span class="hljs-built_in">log</span>
-</code></pre>
+<code>sbt bloopInstall</code> run <code>lsp toggle server panel</code> in the command palette. You can optionally add key binding for this command.</p>
+<p><img src="https://i.imgur.com/PilER2E.png" alt="Server logs"></p>
 <p>Once the import step completes, compilation starts for your open <code>*.scala</code>
 files. Once the sources have compiled successfully, you can navigate the the
 sources with &quot;Goto definition&quot; by pressing <code>F12</code>.</p>
@@ -151,31 +112,9 @@ sources with &quot;Goto definition&quot; by pressing <code>F12</code>.</p>
 in insert-mode.</p>
 <p><img src="https://i.imgur.com/BJDkczD.gif" alt="Find references"></p>
 <h2><a class="anchor" aria-hidden="true" id="goto-symbol-in-workspace"></a><a href="#goto-symbol-in-workspace" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Goto symbol in workspace</h2>
-<p>You can search for symbols in your dependency source using the command palette</p>
+<p>You can search for symbols in your dependency source using the command palette.</p>
 <p><img src="https://i.imgur.com/8X0XNi2.gif" alt="workspace symbols"></p>
 <h2><a class="anchor" aria-hidden="true" id="manually-trigger-build-import"></a><a href="#manually-trigger-build-import" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Manually trigger build import</h2>
-<p>You can configure a custom command &quot;Metals: Import Build&quot; to manually trigger
-build import when changing <code>build.sbt</code>. To learn about Sublime Text commands see
-<a href="http://docs.sublimetext.info/en/latest/reference/command_palette.html">here</a>.</p>
-<p>Update the contents of your <code>*.sublime-commands</code> file to include the following
-command.</p>
-<pre><code class="hljs css language-json">[
-  <span class="hljs-comment">// ...</span>
-  {
-    <span class="hljs-attr">"caption"</span>: <span class="hljs-string">"Metals: Import Build"</span>,
-    <span class="hljs-attr">"command"</span>: <span class="hljs-string">"lsp_execute"</span>,
-    <span class="hljs-attr">"args"</span>: { <span class="hljs-attr">"command_name"</span>: <span class="hljs-string">"build-import"</span> }
-  }
-]
-</code></pre>
-<p>If you don't have a existing <code>.sublime-commands</code> file, you can create a new one
-in this location.</p>
-<pre><code class="hljs css language-sh"><span class="hljs-comment"># macOS</span>
-~/Library/Application\ Support/Sublime\ Text\ 3/Packages/Metals.sublime-commands
-<span class="hljs-comment"># Ubuntu</span>
-~/.config/sublime-text-3/Packages/Metals.sublime-commands
-</code></pre>
-<p>Once configured, the command can be called from the command palette.</p>
 <p><img src="https://i.imgur.com/LViPc95.png" alt="Import build command"></p>
 <p>You can optionally register a key binding for the command.</p>
 <h2><a class="anchor" aria-hidden="true" id="tweaking-sublime-text-for-a-better-productivity"></a><a href="#tweaking-sublime-text-for-a-better-productivity" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Tweaking Sublime Text for a better productivity</h2>
@@ -235,6 +174,25 @@ Open &quot;Preferences &gt; Key Binding&quot; and add:</p>
 ]
 </code></pre>
 <p><img src="https://i.imgur.com/RDYx9mB.gif" alt="Import after Enter key was hit"></p>
+<h2><a class="anchor" aria-hidden="true" id="using-latest-metals-snapshot"></a><a href="#using-latest-metals-snapshot" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Using latest Metals SNAPSHOT</h2>
+<p>Update the &quot;server_version&quot; setting to try out the latest pending Metals
+features by accessing <code>Preferences &gt; Package Settings &gt; LSP &gt; Servers &gt; LSP-metals</code></p>
+<table>
+      <thead>
+        <th>Version</th>
+        <th>Published</th>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0.8.4</td>
+          <td>10 Apr 2020 14:52</td>
+        </tr>
+        <tr>
+          <td>0.8.4+13-9f810034-SNAPSHOT</td>
+          <td>11 Apr 2020 15:12</td>
+        </tr>
+      </tbody>
+    </table>
 <h2><a class="anchor" aria-hidden="true" id="gitignore-projectmetalssbt-metals-and-bloop"></a><a href="#gitignore-projectmetalssbt-metals-and-bloop" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Gitignore <code>project/metals.sbt</code> <code>.metals/</code> and <code>.bloop/</code></h2>
 <p>The Metals server places logs and other files in the <code>.metals/</code> directory. The
 Bloop compile server places logs and compilation artifacts in the <code>.bloop</code>
@@ -246,7 +204,7 @@ from version control systems like git.</p>
 .bloop/
 project/metals.sbt
 </code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/vim.html"><span class="arrow-prev">← </span><span>Vim</span></a><a class="docs-next button" href="/metals/docs/editors/emacs.html"><span>Emacs</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-the-plugin">Installing the plugin</a></li><li><a href="#importing-a-build">Importing a build</a></li><li><a href="#find-symbol-references">Find symbol references</a></li><li><a href="#goto-symbol-in-workspace">Goto symbol in workspace</a></li><li><a href="#manually-trigger-build-import">Manually trigger build import</a></li><li><a href="#tweaking-sublime-text-for-a-better-productivity">Tweaking Sublime Text for a better productivity</a><ul class="toc-headings"><li><a href="#optional-lsp-client-tweaks">Optional LSP client tweaks</a></li><li><a href="#additional-key-mappings">Additional key mappings</a></li><li><a href="#add-key-mapping-for-goto-symbol-in-workspace">Add key mapping for Goto symbol in workspace</a></li><li><a href="#enabling-auto-import-on-completion">Enabling auto-import on completion</a></li></ul></li><li><a href="#gitignore-projectmetalssbt-metals-and-bloop">Gitignore <code>project/metals.sbt</code> <code>.metals/</code> and <code>.bloop/</code></a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2020 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/metals/docs/editors/vim.html"><span class="arrow-prev">← </span><span>Vim</span></a><a class="docs-next button" href="/metals/docs/editors/emacs.html"><span>Emacs</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#installing-the-plugins">Installing the plugins</a></li><li><a href="#importing-a-build">Importing a build</a></li><li><a href="#server-logs">Server logs</a></li><li><a href="#find-symbol-references">Find symbol references</a></li><li><a href="#goto-symbol-in-workspace">Goto symbol in workspace</a></li><li><a href="#manually-trigger-build-import">Manually trigger build import</a></li><li><a href="#tweaking-sublime-text-for-a-better-productivity">Tweaking Sublime Text for a better productivity</a><ul class="toc-headings"><li><a href="#optional-lsp-client-tweaks">Optional LSP client tweaks</a></li><li><a href="#additional-key-mappings">Additional key mappings</a></li><li><a href="#add-key-mapping-for-goto-symbol-in-workspace">Add key mapping for Goto symbol in workspace</a></li><li><a href="#enabling-auto-import-on-completion">Enabling auto-import on completion</a></li></ul></li><li><a href="#using-latest-metals-snapshot">Using latest Metals SNAPSHOT</a></li><li><a href="#gitignore-projectmetalssbt-metals-and-bloop">Gitignore <code>project/metals.sbt</code> <code>.metals/</code> and <code>.bloop/</code></a></li></ul></nav></div><footer class="nav-footer" id="footer" style="background-color:#1B555C"><section class="sitemap"><a href="/metals/" class="nav-home"><img src="/metals/img/scalameta-logo.png" alt="Metals" width="66" height="58"/></a><div><h5>Overview</h5><a href="/metals/docs/editors/overview.html">Text Editors</a><a href="/metals/docs/build-tools/overview.html">Build Tools</a><a href="/metals/docs/contributors/project-goals.html">Project Goals</a><a href=" /metals/docs/contributors/getting-started.html">Contributing</a></div><div><h5>Editors</h5><a href="/metals/docs/editors/vscode.html">Visual Studio Code</a><a href="/metals/docs/editors/atom.html">Atom</a><a href="/metals/docs/editors/vim.html">Vim</a><a href="/metals/docs/editors/sublime.html">Sublime Text</a><a href="/metals/docs/editors/emacs.html">Emacs</a><a href="/metals/docs/editors/eclipse.html">Eclipse</a></div><div><h5>Social</h5><a href="https://github.com/scalameta/metals" target="_blank"><img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&amp;label=stars&amp;logo=github&amp;style=social"/></a><a href="https://discord.gg/RFpSVth" target="_blank"><img src="https://img.shields.io/discord/632642981228314653?logo=discord&amp;style=social"/></a><a href="https://gitter.im/scalameta/metals" target="_blank"><img src="https://img.shields.io/gitter/room/scalameta/metals.svg?logo=gitter&amp;style=social"/></a><a href="https://twitter.com/scalameta" target="_blank"><img src="https://img.shields.io/twitter/follow/scalameta.svg?logo=twitter&amp;style=social"/></a></div></section><section class="copyright">Copyright © 2020 Metals</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
