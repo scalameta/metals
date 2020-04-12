@@ -355,7 +355,8 @@ class MetalsLanguageServer(
           folders.asScala.map(_.getUri.toAbsolutePath).toList
         case _ =>
           Nil
-      }
+      },
+      tables
     )
     newFilesProvider = new NewFilesProvider(
       workspace,

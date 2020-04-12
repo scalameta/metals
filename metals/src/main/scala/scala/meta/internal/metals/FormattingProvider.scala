@@ -22,6 +22,7 @@ import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import java.io.OutputStream
 import java.io.OutputStreamWriter
+import java.util.concurrent.TimeUnit
 
 /**
  * Implement text formatting using Scalafmt
@@ -34,7 +35,8 @@ final class FormattingProvider(
     clientConfig: ClientConfiguration,
     statusBar: StatusBar,
     icons: Icons,
-    workspaceFolders: List[AbsolutePath]
+    workspaceFolders: List[AbsolutePath],
+    tables: Tables
 )(implicit ec: ExecutionContext)
     extends Cancelable {
   override def cancel(): Unit = {
@@ -138,40 +140,56 @@ final class FormattingProvider(
   }
 
   private def askScalafmtVersion(): Future[Option[String]] = {
-    if (clientConfig.isInputBoxEnabled) {
-      client
-        .metalsInputBox(MissingScalafmtVersion.inputBox())
-        .asScala
-        .map(response => Option(response.value))
-    } else {
-      client
-        .showMessageRequest(MissingScalafmtVersion.messageRequest())
-        .asScala
-        .map { item =>
-          if (item == MissingScalafmtVersion.changeVersion) {
-            Some(BuildInfo.scalafmtVersion)
-          } else {
-            None
+    if (!tables.dismissedNotifications.ChangeScalafmtVersion.isDismissed) {
+      if (clientConfig.isInputBoxEnabled) {
+        client
+          .metalsInputBox(MissingScalafmtVersion.inputBox())
+          .asScala
+          .map(response => Option(response.value))
+      } else {
+        client
+          .showMessageRequest(MissingScalafmtVersion.messageRequest())
+          .asScala
+          .map { item =>
+            if (item == MissingScalafmtVersion.changeVersion) {
+              Some(BuildInfo.scalafmtVersion)
+            } else if (item == Messages.notNow) {
+              tables.dismissedNotifications.ChangeScalafmtVersion
+                .dismiss(24, TimeUnit.HOURS)
+              None
+            } else {
+              tables.dismissedNotifications.ChangeScalafmtVersion
+                .dismissForever()
+              None
+            }
           }
-        }
-    }
+      }
+    } else Future.successful(None)
   }
 
   private def handleMissingFile(path: AbsolutePath): Future[Boolean] = {
-    val params = MissingScalafmtConf.params(path)
-    client.showMessageRequest(params).asScala.map { item =>
-      if (item == MissingScalafmtConf.createFile) {
-        val text =
-          s"""version = "${BuildInfo.scalafmtVersion}"
-             |""".stripMargin
-        Files.createDirectories(path.toNIO.getParent)
-        Files.write(path.toNIO, text.getBytes(StandardCharsets.UTF_8))
-        client.showMessage(MissingScalafmtConf.fixedParams(isCancelled))
-        true
-      } else {
-        false
+    if (!tables.dismissedNotifications.CreateScalafmtFile.isDismissed) {
+      val params = MissingScalafmtConf.params(path)
+      client.showMessageRequest(params).asScala.map { item =>
+        if (item == MissingScalafmtConf.createFile) {
+          val text =
+            s"""version = "${BuildInfo.scalafmtVersion}"
+               |""".stripMargin
+          Files.createDirectories(path.toNIO.getParent)
+          Files.write(path.toNIO, text.getBytes(StandardCharsets.UTF_8))
+          client.showMessage(MissingScalafmtConf.fixedParams(isCancelled))
+          true
+        } else if (item == Messages.notNow) {
+          tables.dismissedNotifications.CreateScalafmtFile
+            .dismiss(24, TimeUnit.HOURS)
+          false
+        } else {
+          tables.dismissedNotifications.CreateScalafmtFile
+            .dismissForever()
+          false
+        }
       }
-    }
+    } else Future.successful(false)
   }
 
   private def scalafmtConf: AbsolutePath = {
