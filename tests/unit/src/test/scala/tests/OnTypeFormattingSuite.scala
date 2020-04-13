@@ -3,6 +3,7 @@ package tests
 import munit.Location
 
 class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
+  private val indent = "  "
 
   // Ensures that entering a newline at the beginning of a file doesn't
   // throw an exception
@@ -129,8 +130,8 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val number = 102
-       |  val str = s"|
-       |  $$number".stripMargin
+       |  val str = s"|" +
+       |    "$$number".stripMargin
        |}""".stripMargin
   )
 
@@ -168,7 +169,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |  | a multiline
        |  | string
        |  '''.stripMargin
-       |  
+       |$indent
        |}""".stripMargin
   )
 
@@ -247,17 +248,44 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     s"""
        |object Main {
        |  val str = '''
-       |  |word this is a `|` @@sign
+       |  |word this is a `|`@@sign
        |  '''.stripMargin
        |}@@""".stripMargin,
     s"""
        |object Main {
        |  val str = '''
-       |  |word this is a `|` 
+       |  |word this is a `|`
        |  |sign
        |  '''.stripMargin
        |}
        |""".stripMargin
+  )
+  check(
+    "string-two-lines",
+    s"""
+       |object Main {
+       |  val str = "test1@@ test2"
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = "test1" +
+       |    " test2"
+       |}""".stripMargin
+  )
+
+  check(
+    "string-tree-lines",
+    s"""
+       |object Main {
+       |  val str = "test1" +
+       |    "test@@2"
+       |}""".stripMargin,
+    s"""
+       |object Main {
+       |  val str = "test1" +
+       |    "test" +
+       |    "2"
+       |}""".stripMargin
   )
 
   def check(
