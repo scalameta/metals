@@ -80,7 +80,7 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
           Some(tree.tpe.typeSymbol)
         case tree: Tree if tree.children.nonEmpty =>
           Some(tree.children.head.tpe.typeSymbol)
-        case vd: compiler.ValDef if vd.rhs.tpe != null =>
+        case vd: compiler.ValDef if vd.rhs.isTyped =>
           Some(vd.rhs.tpe.typeSymbol)
         case tree: Tree =>
           val expTree = expandRangeToEnclosingApply(tree.pos)
@@ -124,13 +124,5 @@ class TypeDefinitionProvider(val compiler: MetalsGlobal) extends Api {
       val typeSym = semanticdbSymbol(sym)
       search.definition(typeSym).asScala.toList
     }
-  }
-
-  object Xtensions {
-
-    implicit class XtensionPosition(pos: Position) {
-      def includes(point: Int): Boolean = pos.start <= point && pos.end >= point
-    }
-
   }
 }

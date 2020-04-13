@@ -991,7 +991,6 @@ class MetalsLanguageServer(
     CancelTokens.future { token =>
       compilers
         .typeDefinition(params, token, interactiveSemanticdbs)
-        .map(_.asJava)
     }
 
   @JsonRequest("textDocument/implementation")

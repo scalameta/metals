@@ -24,6 +24,15 @@ trait Trees { this: MetalsGlobal =>
     (unit, pos, tree)
   }
 
+  /**
+   * Traverses up the parent tree nodes to the largest enclosing application node.
+   *
+   * Example: {{{
+   *   original = println(List(1).map(_.toString))
+   *   pos      = List(1).map
+   *   expanded = List(1).map(_.toString)
+   * }}}
+   */
   def expandRangeToEnclosingApply(pos: Position): Tree = {
     def tryTail(enclosing: List[Tree]): Option[Tree] = enclosing match {
       case TreeApply(qual, _) :: tail if qual.pos.includes(pos) =>

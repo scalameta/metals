@@ -239,23 +239,10 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken,
       interactiveSemanticdbs: InteractiveSemanticdbs
-  ): Future[List[Location]] = {
-    val locations = withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
-      pc.typeDefinition(
-          CompilerOffsetParams(
-            pos.input.syntax,
-            pos.input.text,
-            pos.start,
-            token
-          )
-        )
-        .asScala
-        .map(_.asScala.toList)
-    }
-
-    locations.getOrElse {
-      Future.successful(List())
-    }
+  ): Future[ju.List[Location]] = {
+    withPC(params, Some(interactiveSemanticdbs)) { (pc, pos) =>
+      pc.typeDefinition(CompilerOffsetParams.fromPos(pos, token)).asScala
+    }.getOrElse(Future.successful(new ju.ArrayList))
   }
 
   def autoImports(

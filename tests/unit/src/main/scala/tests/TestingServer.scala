@@ -80,7 +80,6 @@ import scala.meta.internal.metals.ClientExperimentalCapabilities
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.DebugSession
-import scala.util.matching.Regex
 import org.eclipse.lsp4j.RenameParams
 import scala.meta.internal.metals.TextEdits
 import org.eclipse.lsp4j.WorkspaceEdit
@@ -92,6 +91,7 @@ import org.eclipse.lsp4j.CodeActionContext
 import scala.meta.internal.implementation.Supermethods.GoToSuperMethodParams
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.DefinitionResult
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -1214,17 +1214,56 @@ final class TestingServer(
     }
   }
 
+  private def workspaceDefinitions(
+      getDocumentMarkedWithDefinitions: AbsolutePath => s.TextDocument
+  ): String = {
+    buffers.open.toSeq
+      .sortBy(_.toURI.toString)
+      .map { path =>
+        val textDocument = getDocumentMarkedWithDefinitions(path)
+        val relpath =
+          path.toRelative(workspace).toURI(isDirectory = false).toString
+        val printedTextDocument = Semanticdbs.printTextDocument(textDocument)
+        s"/$relpath\n$printedTextDocument"
+      }
+      .mkString("\n")
+  }
+
   private def toSemanticdbTextDocument(path: AbsolutePath): s.TextDocument = {
+    toDefinitionsTextDocument(path, { params =>
+      server
+        .definitionOrReferences(params, definitionOnly = true)
+        .asJava
+        .get()
+    })
+  }
+
+  private def toTypeDefinitionsTextDocument(
+      path: AbsolutePath
+  ): s.TextDocument = {
+    toDefinitionsTextDocument(path, { params =>
+      server
+        .typeDefinition(params)
+        .asScala
+        .map(DefinitionResult(_, "", None, None))
+        .asJava
+        .get()
+    }, markNoSymbol = false)
+  }
+
+  private def toDefinitionsTextDocument(
+      path: AbsolutePath,
+      getDefinition: TextDocumentPositionParams => DefinitionResult,
+      //in case no resolved symbol gotten
+      markNoSymbol: Boolean = true
+  ): s.TextDocument = {
     val input = path.toInputFromBuffers(buffers)
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
     input.tokenize.get.foreach { token =>
       val params = token.toPositionParams(identifier)
-      val definition = server
-        .definitionOrReferences(params, definitionOnly = true)
-        .asJava
-        .get()
+      val definition = getDefinition(params)
       definition.definition.foreach { path =>
         if (path.isDependencySource(workspace)) {
           readonlySources(path.toNIO.getFileName.toString) = path
@@ -1245,8 +1284,10 @@ final class TestingServer(
       last = symbols
       val occurrence = if (token.isIdentifier) {
         if (definition.symbol.isPackage) None // ignore packages
-        else if (symbols.isEmpty) Some("<no symbol>")
-        else Some(Symbols.Multi(symbols.sorted))
+        else if (symbols.isEmpty) {
+          if (markNoSymbol) Some("<no symbol>")
+          else None
+        } else Some(Symbols.Multi(symbols.sorted))
       } else {
         if (symbols.isEmpty) None // OK, expected
         else if (last == symbols) None //OK, expected
@@ -1264,18 +1305,12 @@ final class TestingServer(
     )
   }
 
-  val Docstring: Regex = " *\\/?\\*.*".r
   def workspaceDefinitions: String = {
-    buffers.open.toSeq
-      .sortBy(_.toURI.toString)
-      .map { path =>
-        val textDocument = toSemanticdbTextDocument(path)
-        val relpath =
-          path.toRelative(workspace).toURI(isDirectory = false).toString
-        val printedTextDocument = Semanticdbs.printTextDocument(textDocument)
-        s"/$relpath\n$printedTextDocument"
-      }
-      .mkString("\n")
+    workspaceDefinitions(toSemanticdbTextDocument)
+  }
+
+  def workspaceTypeDefinitions: String = {
+    workspaceDefinitions(toTypeDefinitionsTextDocument)
   }
 
   def documentSymbols(uri: String): Future[String] = {

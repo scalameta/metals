@@ -1,13 +1,20 @@
 package tests.pc
 
-import tests.BasePCSuite
-import scala.concurrent.duration.Duration
+import org.eclipse.lsp4j.Location
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.jdk.CollectionConverters._
 
-class TypeDefinitionSuite extends BasePCSuite {
-  val runCheck: (String, String) => (String, String) =
-    obtainedAndExpected(params => pc.typeDefinition(params))
+class TypeDefinitionSuite extends BasePcDefinitionSuite {
 
-  check("val")(
+  override def requiresJdkSources: Boolean = true
+
+  override def requiresScalaLibrarySources: Boolean = true
+
+  override def definitions(offsetParams: CompilerOffsetParams): List[Location] =
+    pc.typeDefinition(offsetParams).get().asScala.toList
+
+  check(
+    "val",
     """
       |<<class TClass(i: Int)>>
       |
@@ -16,7 +23,8 @@ class TypeDefinitionSuite extends BasePCSuite {
       |}""".stripMargin
   )
 
-  check("constructor")(
+  check(
+    "constructor",
     """
       |<<class TClass(i: Int) {}>>
       |
@@ -27,7 +35,8 @@ class TypeDefinitionSuite extends BasePCSuite {
       |}""".stripMargin
   )
 
-  check("method")(
+  check(
+    "method",
     """
       |object Main {
       |  def tst(): Unit = {}
@@ -36,16 +45,18 @@ class TypeDefinitionSuite extends BasePCSuite {
       |}""".stripMargin
   )
 
-  check("named-parameter")(
+  check(
+    "named-parameter",
     """
       |object Main {
-      |  def tst(par: Int): Unit = {}
+      |  def tst(par1: Int, par2: String): Unit = {}
       |
-      |  tst(p@@/*scala/Int# Int.scala*/ar = 1)
+      |  tst(par1 = 1, p/*java/lang/String# String.java*/@@ar2 = "foo")
       |}""".stripMargin
   )
 
-  check("list")(
+  check(
+    "list",
     """
       |object Main {
       | List(1).hea/*scala/Int# Int.scala*/@@d
@@ -53,7 +64,8 @@ class TypeDefinitionSuite extends BasePCSuite {
       |""".stripMargin
   )
 
-  check("class")(
+  check(
+    "class",
     """
       |object Main {
       | <<class F@@oo(val x: Int)>>
@@ -61,7 +73,8 @@ class TypeDefinitionSuite extends BasePCSuite {
       |""".stripMargin
   )
 
-  check("val-keyword")(
+  check(
+    "val-keyword",
     """
       |object Main {
       | va@@l x = 42
@@ -69,26 +82,26 @@ class TypeDefinitionSuite extends BasePCSuite {
       |""".stripMargin
   )
 
-  check("literal")(
-    """
-      |object Main {
-      | val x = 4@@2
-      |}
-      |""".stripMargin
-  )
+  check("literal", """
+                     |object Main {
+                     | val x = 4@@2
+                     |}
+                     |""".stripMargin)
 
-  check("if")(
+  check(
+    "if",
     """
       |object Main {
       | for {
       |   x <- List(1)
-      |   i/*scala/collection/generic/FilterMonadic# FilterMonadic.scala*/@@f x > 1 // I'm not sure what's the expected behavior
+      |   i/*scala/collection/generic/FilterMonadic# FilterMonadic.scala*/@@f x > 1
       | } println(x)
       |}
       |""".stripMargin
   )
 
-  check("predef")(
+  check(
+    "string",
     """
       |object Main {
       | "".stripS/*java/lang/String# String.java*/@@uffix("foo")
@@ -96,7 +109,8 @@ class TypeDefinitionSuite extends BasePCSuite {
       |""".stripMargin
   )
 
-  check("method-generic")(
+  check(
+    "method-generic",
     """
       |object Main {
       | def foo[<<T>>](param: T): T = para@@m
@@ -107,18 +121,6 @@ class TypeDefinitionSuite extends BasePCSuite {
   override def beforeAll(): Unit = {
     indexJDK()
     indexScalaLibrary()
-  }
-
-  def check(name: String)(
-      code: String,
-      compat: Map[String, String] = Map(),
-      duration: Duration = Duration("3 min")
-  )(implicit loc: munit.Location): Unit = {
-    test(name) {
-      val uri = "Main.scala"
-      val (obtained, expected) = runCheck(code, uri)
-      assertNoDiff(obtained, getExpected(expected, compat))
-    }
   }
 
 }

@@ -8,7 +8,6 @@ import java.nio.charset.StandardCharsets
 import coursierapi.Dependency
 import coursierapi.Fetch
 import java.nio.file.Paths
-import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import scala.meta.internal.jdk.CollectionConverters._
@@ -25,10 +24,7 @@ import scala.util.control.NonFatal
 import scala.util.control.NonFatal
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import org.eclipse.{lsp4j => l}
 import scala.collection.Seq
-import scala.meta.internal.metals.CompilerOffsetParams
-import scala.meta.internal.metals.TextEdits
 import scala.meta.pc.PresentationCompiler
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.metals.PackageIndex
@@ -235,4 +231,5 @@ abstract class BasePCSuite extends BaseSuite {
   object IgnoreScalaVersion {
     def apply(versions: String*): IgnoreScalaVersion =
       IgnoreScalaVersion(versions.toSet)
+  }
 }

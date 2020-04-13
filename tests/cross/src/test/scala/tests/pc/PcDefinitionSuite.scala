@@ -1,10 +1,17 @@
 package tests.pc
 
+import org.eclipse.lsp4j.Location
+import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.jdk.CollectionConverters._
+
 class PcDefinitionSuite extends BasePcDefinitionSuite {
 
   override def requiresJdkSources: Boolean = true
 
   override def requiresScalaLibrarySources: Boolean = true
+
+  override def definitions(offsetParams: CompilerOffsetParams): List[Location] =
+    pc.definition(offsetParams).get().locations().asScala.toList
 
   check(
     "basic",

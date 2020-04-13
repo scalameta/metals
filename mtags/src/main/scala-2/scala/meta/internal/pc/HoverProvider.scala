@@ -108,15 +108,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  /**
-   * Traverses up the parent tree nodes to the largest enclosing application node.
-   *
-   * Example: {{{
-   *   original = println(List(1).map(_.toString))
-   *   pos      = List(1).map
-   *   expanded = List(1).map(_.toString)
-   * }}}
-   */
   def toHover(
       symbol: Symbol,
       pos: Position
